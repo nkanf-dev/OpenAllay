@@ -1,5 +1,6 @@
 package dev.tomewisp.tool;
 
+import dev.tomewisp.context.ToolInvocationContext;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -38,7 +39,7 @@ final class ToolRegistryTest {
             }
 
             @Override
-            public ToolResult<Output> invoke(Input input) {
+            public ToolResult<Output> invoke(ToolInvocationContext context, Input input) {
                 return new ToolResult.Success<>(new Output(id));
             }
         };

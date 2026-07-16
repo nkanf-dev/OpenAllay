@@ -1,5 +1,6 @@
 package dev.tomewisp.devmode;
 
+import dev.tomewisp.context.ToolInvocationContext;
 import dev.tomewisp.tool.ToolResult;
 import java.util.List;
 
@@ -15,7 +16,11 @@ public final class DevelopmentCommandHandler {
     }
 
     public String invoke(String id) {
-        return switch (inspector.invokeNoArgument(id)) {
+        return invoke(ToolInvocationContext.developmentConsole("dev:" + id), id);
+    }
+
+    public String invoke(ToolInvocationContext context, String id) {
+        return switch (inspector.invokeNoArgument(context, id)) {
             case ToolResult.Success<?> success -> "SUCCESS " + success.value();
             case ToolResult.Failure<?> failure ->
                 "FAILURE " + failure.code() + ": " + failure.message();

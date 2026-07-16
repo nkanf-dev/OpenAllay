@@ -1,5 +1,6 @@
 package dev.tomewisp.devmode;
 
+import dev.tomewisp.context.ToolInvocationContext;
 import dev.tomewisp.tool.Tool;
 import dev.tomewisp.tool.ToolRegistry;
 import dev.tomewisp.tool.ToolResult;
@@ -18,14 +19,14 @@ public final class DevelopmentToolInspector {
                 .toList();
     }
 
-    public ToolResult<?> invokeNoArgument(String id) {
+    public ToolResult<?> invokeNoArgument(ToolInvocationContext context, String id) {
         Tool<?, ?> raw = registry.find(id).orElse(null);
         if (raw == null) {
             return new ToolResult.Failure<>("unknown_tool", "Unknown tool: " + id);
         }
         try {
             Object input = raw.descriptor().inputType().getDeclaredConstructor().newInstance();
-            return invokeUnchecked(raw, input);
+            return invokeUnchecked(raw, context, input);
         } catch (ReflectiveOperationException exception) {
             return new ToolResult.Failure<>(
                     "input_required", "Tool requires explicit input: " + id);
@@ -33,7 +34,8 @@ public final class DevelopmentToolInspector {
     }
 
     @SuppressWarnings("unchecked")
-    private static ToolResult<?> invokeUnchecked(Tool<?, ?> raw, Object input) {
-        return ((Tool<Object, Object>) raw).invoke(input);
+    private static ToolResult<?> invokeUnchecked(
+            Tool<?, ?> raw, ToolInvocationContext context, Object input) {
+        return ((Tool<Object, Object>) raw).invoke(context, input);
     }
 }

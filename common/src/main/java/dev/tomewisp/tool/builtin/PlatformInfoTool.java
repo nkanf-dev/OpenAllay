@@ -1,6 +1,7 @@
 package dev.tomewisp.tool.builtin;
 
 import dev.tomewisp.platform.PlatformService;
+import dev.tomewisp.context.ToolInvocationContext;
 import dev.tomewisp.tool.Tool;
 import dev.tomewisp.tool.ToolAccess;
 import dev.tomewisp.tool.ToolDescriptor;
@@ -31,7 +32,7 @@ public final class PlatformInfoTool
     }
 
     @Override
-    public ToolResult<Output> invoke(Input input) {
+    public ToolResult<Output> invoke(ToolInvocationContext context, Input input) {
         return new ToolResult.Success<>(
                 new Output(platform.platformName(), platform.isDevelopmentEnvironment()));
     }

@@ -1,5 +1,6 @@
 package dev.tomewisp.devmode;
 
+import dev.tomewisp.context.ToolInvocationContext;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
@@ -28,7 +29,7 @@ final class DevelopmentToolInspectorTest {
             }
 
             @Override
-            public ToolResult<Output> invoke(Input input) {
+            public ToolResult<Output> invoke(ToolInvocationContext context, Input input) {
                 return new ToolResult.Success<>(new Output("pong"));
             }
         };
@@ -39,6 +40,8 @@ final class DevelopmentToolInspectorTest {
 
         assertEquals(List.of("test:ping - Ping"), inspector.listTools());
         assertInstanceOf(
-                ToolResult.Success.class, inspector.invokeNoArgument("test:ping"));
+                ToolResult.Success.class,
+                inspector.invokeNoArgument(
+                        ToolInvocationContext.developmentConsole("test:ping"), "test:ping"));
     }
 }
