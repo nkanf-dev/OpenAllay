@@ -29,6 +29,7 @@ final class ClientArchitectureTest {
                 new FakePlatform(),
                 tools,
                 new KnowledgeRegistry(),
+                new dev.tomewisp.integration.patchouli.PatchouliMultiblockStore(),
                 new SkillRepository(new SkillParser(), List.of()),
                 new DevelopmentToolInspector(tools),
                 null);

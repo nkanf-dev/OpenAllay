@@ -134,7 +134,8 @@ public final class NeoForgeGuideCommands {
                 new java.util.ArrayList<>();
         providers.add(new PatchouliKnowledgeProvider(
                 new MinecraftClientResourceAccess(client.getResourceManager()),
-                client.getLanguageManager().getSelected()));
+                client.getLanguageManager().getSelected(),
+                base.patchouliMultiblocks()));
         if (base.platform().isModLoaded("ftbquests") && client.player != null) {
             providers.add(new dev.tomewisp.integration.ftb.quests.FtbQuestsKnowledgeProvider(
                     new dev.tomewisp.integration.ftb.quests.ReflectiveFtbQuestsBridge(

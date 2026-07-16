@@ -16,7 +16,8 @@ final class BundledSkillsTest {
                 "tomewisp:player_context",
                 "tomewisp:list_knowledge_sources",
                 "tomewisp:search_knowledge",
-                "tomewisp:get_knowledge_document");
+                "tomewisp:get_knowledge_document",
+                "tomewisp:get_patchouli_multiblock");
         SkillRepository repository = new SkillRepository(new SkillParser(), tools);
         assertTrue(repository.reload(new BundledSkillLoader().load(), Set.of("ftbquests")));
         assertEquals(BundledSkillLoader.NAMES.stream().sorted().toList(), repository.metadata().stream()

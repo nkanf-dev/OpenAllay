@@ -10,6 +10,9 @@ import dev.tomewisp.knowledge.KnowledgeDocument;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import dev.tomewisp.tool.builtin.GetPatchouliMultiblockTool;
+import dev.tomewisp.tool.ToolResult;
+import dev.tomewisp.context.ToolInvocationContext;
 
 final class PatchouliKnowledgeProviderTest {
     @Test
@@ -58,6 +61,27 @@ final class PatchouliKnowledgeProviderTest {
         assertEquals(-1, block.x());
         assertFalse(result.diagnostics().isEmpty());
         assertEquals("visibility_unresolved", result.diagnostics().getFirst().code());
+    }
+
+    @Test
+    void publishesParsedCoordinatesThroughTheReadTool() {
+        PatchouliMultiblockStore store = new PatchouliMultiblockStore();
+        ClientResource resource = resource("zh_cn", "Structure", """
+                [{"type":"patchouli:multiblock","multiblock":{
+                  "blocks":[{"x":1,"y":2,"z":3,"state":"example:casing"}]
+                }}]
+                """);
+        PatchouliKnowledgeProvider provider = new PatchouliKnowledgeProvider(
+                prefix -> List.of(resource), "zh_cn", store);
+        String structureRef = provider.load().documents().getFirst().structureRef();
+
+        ToolResult.Success<GetPatchouliMultiblockTool.Output> result =
+                org.junit.jupiter.api.Assertions.assertInstanceOf(
+                        ToolResult.Success.class,
+                        new GetPatchouliMultiblockTool(store).invoke(
+                                ToolInvocationContext.developmentConsole("patchouli-test"),
+                                new GetPatchouliMultiblockTool.Input(structureRef)));
+        assertEquals("example:casing", result.value().multiblock().blocks().getFirst().state());
     }
 
     private static ClientResource resource(String locale, String name, String pages) {

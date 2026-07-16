@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import dev.tomewisp.context.minecraft.MinecraftContextCapture;
 import dev.tomewisp.devmode.DevelopmentToolInspector;
 import dev.tomewisp.knowledge.KnowledgeRegistry;
+import dev.tomewisp.integration.patchouli.PatchouliMultiblockStore;
 import dev.tomewisp.platform.PlatformService;
 import dev.tomewisp.platform.PlatformServices;
 import dev.tomewisp.skill.BundledSkillLoader;
@@ -13,6 +14,7 @@ import dev.tomewisp.skill.SkillRepository;
 import dev.tomewisp.tool.ToolRegistry;
 import dev.tomewisp.tool.builtin.FindRecipesTool;
 import dev.tomewisp.tool.builtin.GetKnowledgeDocumentTool;
+import dev.tomewisp.tool.builtin.GetPatchouliMultiblockTool;
 import dev.tomewisp.tool.builtin.ListKnowledgeSourcesTool;
 import dev.tomewisp.tool.builtin.PlatformInfoTool;
 import dev.tomewisp.tool.builtin.PlayerContextTool;
@@ -44,12 +46,14 @@ public final class TomeWispBootstrap {
                         new FindRecipesTool(),
                         new PlayerContextTool()));
         KnowledgeRegistry knowledge = new KnowledgeRegistry();
+        PatchouliMultiblockStore patchouliMultiblocks = new PatchouliMultiblockStore();
         tools.register(
                 "tomewisp:knowledge",
                 List.of(
                         new ListKnowledgeSourcesTool(knowledge),
                         new SearchKnowledgeTool(knowledge),
-                        new GetKnowledgeDocumentTool(knowledge)));
+                        new GetKnowledgeDocumentTool(knowledge),
+                        new GetPatchouliMultiblockTool(patchouliMultiblocks)));
         SkillRepository skills = new SkillRepository(
                 new SkillParser(),
                 tools.descriptors().stream().map(descriptor -> descriptor.id()).toList());
@@ -70,6 +74,7 @@ public final class TomeWispBootstrap {
                 platform,
                 tools,
                 knowledge,
+                patchouliMultiblocks,
                 skills,
                 new DevelopmentToolInspector(tools),
                 traceReplay);
