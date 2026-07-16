@@ -130,9 +130,19 @@ public final class NeoForgeGuideCommands {
     }
 
     private static void reloadKnowledge(TomeWispRuntime base, Minecraft client) {
-        base.knowledge().reload(List.of(new PatchouliKnowledgeProvider(
+        java.util.List<dev.tomewisp.knowledge.KnowledgeSourceProvider> providers =
+                new java.util.ArrayList<>();
+        providers.add(new PatchouliKnowledgeProvider(
                 new MinecraftClientResourceAccess(client.getResourceManager()),
-                client.getLanguageManager().getSelected())));
+                client.getLanguageManager().getSelected()));
+        if (base.platform().isModLoaded("ftbquests") && client.player != null) {
+            providers.add(new dev.tomewisp.integration.ftb.quests.FtbQuestsKnowledgeProvider(
+                    new dev.tomewisp.integration.ftb.quests.ReflectiveFtbQuestsBridge(
+                            NeoForgeGuideCommands.class.getClassLoader()),
+                    client.player,
+                    true));
+        }
+        base.knowledge().reload(providers);
     }
 
     private static void publish(CommandSourceStack source, AgentEvent event) {

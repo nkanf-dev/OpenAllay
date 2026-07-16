@@ -129,8 +129,18 @@ public final class FabricGuideCommands {
 
     private static void reloadKnowledge(TomeWispRuntime base, Minecraft client) {
         String locale = client.getLanguageManager().getSelected();
-        base.knowledge().reload(List.of(new PatchouliKnowledgeProvider(
-                new MinecraftClientResourceAccess(client.getResourceManager()), locale)));
+        java.util.List<dev.tomewisp.knowledge.KnowledgeSourceProvider> providers =
+                new java.util.ArrayList<>();
+        providers.add(new PatchouliKnowledgeProvider(
+                new MinecraftClientResourceAccess(client.getResourceManager()), locale));
+        if (base.platform().isModLoaded("ftbquests") && client.player != null) {
+            providers.add(new dev.tomewisp.integration.ftb.quests.FtbQuestsKnowledgeProvider(
+                    new dev.tomewisp.integration.ftb.quests.ReflectiveFtbQuestsBridge(
+                            FabricGuideCommands.class.getClassLoader()),
+                    client.player,
+                    true));
+        }
+        base.knowledge().reload(providers);
     }
 
     private static void publish(FabricClientCommandSource source, AgentEvent event) {
