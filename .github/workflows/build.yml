@@ -1,0 +1,32 @@
+name: build
+
+on:
+  push:
+    branches: [main, "mc/**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "25"
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Test common
+        run: ./gradlew :common:test
+      - name: Build loaders
+        run: ./gradlew :fabric:build :neoforge:build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tomewisp-26.2
+          path: |
+            fabric/build/libs/*.jar
+            neoforge/build/libs/*.jar
+          if-no-files-found: error
