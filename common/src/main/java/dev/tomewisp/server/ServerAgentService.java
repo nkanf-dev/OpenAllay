@@ -18,6 +18,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 
 public final class ServerAgentService {
     @FunctionalInterface
@@ -33,6 +34,7 @@ public final class ServerAgentService {
     private final ServerGuideEvents events;
     private final Gson gson;
     private final String systemPrompt;
+    private final Function<dev.tomewisp.model.CancellationSignal, CompletableFuture<Void>> dispatchReady;
     private final Map<UUID, Owner> active = new ConcurrentHashMap<>();
 
     public ServerAgentService(
@@ -43,6 +45,19 @@ public final class ServerAgentService {
             ServerGuideEvents events,
             Gson gson,
             String systemPrompt) {
+        this(agent, tools, sessions, contexts, events, gson, systemPrompt,
+                cancellation -> CompletableFuture.completedFuture(null));
+    }
+
+    public ServerAgentService(
+            GameGuideAgent agent,
+            AgentToolExecutor tools,
+            AgentSessionStore sessions,
+            ContextProvider contexts,
+            ServerGuideEvents events,
+            Gson gson,
+            String systemPrompt,
+            Function<dev.tomewisp.model.CancellationSignal, CompletableFuture<Void>> dispatchReady) {
         this.agent = agent;
         this.tools = tools;
         this.sessions = sessions;
@@ -50,16 +65,27 @@ public final class ServerAgentService {
         this.events = events;
         this.gson = gson;
         this.systemPrompt = systemPrompt;
+        this.dispatchReady = dispatchReady;
     }
 
     public ToolResult<Accepted> ask(UUID sender, ServerAgentRequestPayload payload) {
-        Owner owner = new Owner(sender, payload.sessionId());
+        Owner owner = new Owner(
+                sender, payload.sessionId(), new dev.tomewisp.model.CancellationSignal());
         if (active.putIfAbsent(payload.requestId(), owner) != null) {
             return new ToolResult.Failure<>("duplicate_request", "Request ID is already active");
         }
-        contexts.capture(sender, tools.requiredContext(), payload.requestId().toString())
+        dispatchReady.apply(owner.cancellation())
+                .thenCompose(ignored -> {
+                    if (!owns(payload.requestId(), owner) || owner.cancellation().isCancelled()) {
+                        return CompletableFuture.completedFuture(null);
+                    }
+                    return contexts.capture(
+                            sender, tools.requiredContext(), payload.requestId().toString());
+                })
                 .thenCompose(context -> {
-                    if (!owns(payload.requestId(), owner)) {
+                    if (context == null
+                            || !owns(payload.requestId(), owner)
+                            || owner.cancellation().isCancelled()) {
                         return CompletableFuture.completedFuture(null);
                     }
                     AgentRequest request = new AgentRequest(
@@ -81,14 +107,28 @@ public final class ServerAgentService {
 
     public boolean cancel(UUID sender, UUID requestId) {
         Owner owner = active.get(requestId);
-        return owner != null
-                && owner.actorId().equals(sender)
-                && sessions.cancel(new AgentSessionKey(sender, owner.sessionId()));
+        if (owner == null || !owner.actorId().equals(sender)) {
+            return false;
+        }
+        boolean cancelledBeforeCapture = owner.cancellation().cancel();
+        boolean cancelledAgent = sessions.cancel(new AgentSessionKey(sender, owner.sessionId()));
+        if (cancelledBeforeCapture || cancelledAgent) {
+            publish(requestId, owner, new AgentEvent.Failed(
+                    "agent_cancelled", "Agent request was cancelled"));
+            return true;
+        }
+        return false;
     }
 
     public int disconnect(UUID sender) {
         long count = active.values().stream().filter(owner -> owner.actorId().equals(sender)).count();
-        active.entrySet().removeIf(entry -> entry.getValue().actorId().equals(sender));
+        active.entrySet().removeIf(entry -> {
+            if (entry.getValue().actorId().equals(sender)) {
+                entry.getValue().cancellation().cancel();
+                return true;
+            }
+            return false;
+        });
         sessions.clearActor(sender);
         return Math.toIntExact(count);
     }
@@ -136,5 +176,6 @@ public final class ServerAgentService {
     }
 
     public record Accepted(UUID requestId, String sessionId) {}
-    private record Owner(UUID actorId, String sessionId) {}
+    private record Owner(
+            UUID actorId, String sessionId, dev.tomewisp.model.CancellationSignal cancellation) {}
 }

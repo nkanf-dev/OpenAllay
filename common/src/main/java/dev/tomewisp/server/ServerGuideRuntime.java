@@ -35,7 +35,7 @@ public record ServerGuideRuntime(ModelConfig config, ServerAgentService service)
             case ANTHROPIC_MESSAGES -> new AnthropicMessagesClient(config, gson);
             case OPENAI_CHAT -> new OpenAiChatClient(config, gson);
         };
-        ModelClient scheduled = new ModelRequestScheduler(raw);
+        ModelRequestScheduler scheduled = new ModelRequestScheduler(raw);
         LocalAgentToolExecutor tools = new LocalAgentToolExecutor(runtime.tools(), gson);
         AgentSessionStore sessions = new AgentSessionStore();
         GameGuideAgent agent = new GameGuideAgent(scheduled, tools, sessions, gson);
@@ -43,7 +43,7 @@ public record ServerGuideRuntime(ModelConfig config, ServerAgentService service)
                 + "read tools and visible evidence. Never expose credentials.\n\n"
                 + runtime.skills().metadataPrompt();
         ServerAgentService service = new ServerAgentService(
-                agent, tools, sessions, contexts, events, gson, prompt);
+                agent, tools, sessions, contexts, events, gson, prompt, scheduled::awaitReady);
         return new ToolResult.Success<>(new ServerGuideRuntime(config, service));
     }
 }

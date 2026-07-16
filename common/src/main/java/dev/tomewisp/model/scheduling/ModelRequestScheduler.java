@@ -25,6 +25,7 @@ public final class ModelRequestScheduler implements ModelClient {
     private final Map<String, ArrayDeque<Pending>> queues = new HashMap<>();
     private final ArrayDeque<String> rotation = new ArrayDeque<>();
     private final Set<String> inRotation = new HashSet<>();
+    private final List<GateWaiter> gateWaiters = new ArrayList<>();
     private long gateUntilNanos;
     private boolean wakeScheduled;
 
@@ -45,6 +46,26 @@ public final class ModelRequestScheduler implements ModelClient {
 
     public synchronized int queuedRequests() {
         return queues.values().stream().mapToInt(ArrayDeque::size).sum();
+    }
+
+    /**
+     * Completes when a request can capture fresh context without knowingly
+     * waiting behind an existing endpoint cooldown.
+     */
+    public CompletableFuture<Void> awaitReady(CancellationSignal cancellation) {
+        GateWaiter waiter;
+        synchronized (this) {
+            long remaining = gateUntilNanos - System.nanoTime();
+            if (remaining <= 0) {
+                return CompletableFuture.completedFuture(null);
+            }
+            waiter = new GateWaiter(cancellation, new CompletableFuture<>());
+            gateWaiters.add(waiter);
+            scheduleWakeLocked(remaining);
+        }
+        GateWaiter registered = waiter;
+        cancellation.onCancel(() -> cancelGateWaiter(registered));
+        return waiter.result;
     }
 
     private void enqueue(Pending pending, boolean front) {
@@ -141,10 +162,20 @@ public final class ModelRequestScheduler implements ModelClient {
                     }
                 }
                 List<Pending> dispatch;
+                List<GateWaiter> ready;
                 synchronized (ModelRequestScheduler.this) {
                     wakeScheduled = false;
                     dispatch = drainLocked();
+                    ready = gateUntilNanos == 0 ? List.copyOf(gateWaiters) : List.of();
+                    if (!ready.isEmpty()) {
+                        gateWaiters.clear();
+                    }
                 }
+                ready.forEach(waiter -> {
+                    if (!waiter.cancellation.isCancelled()) {
+                        waiter.result.complete(null);
+                    }
+                });
                 dispatch.forEach(this::dispatch);
             } catch (InterruptedException exception) {
                 Thread.currentThread().interrupt();
@@ -165,6 +196,14 @@ public final class ModelRequestScheduler implements ModelClient {
             }
         }
         pending.result.completeExceptionally(new ModelClientException(
+                new ModelFailure("agent_cancelled", "Agent request was cancelled", null)));
+    }
+
+    private void cancelGateWaiter(GateWaiter waiter) {
+        synchronized (this) {
+            gateWaiters.remove(waiter);
+        }
+        waiter.result.completeExceptionally(new ModelClientException(
                 new ModelFailure("agent_cancelled", "Agent request was cancelled", null)));
     }
 
@@ -208,4 +247,7 @@ public final class ModelRequestScheduler implements ModelClient {
             this.cancellation = cancellation;
         }
     }
+
+    private record GateWaiter(
+            CancellationSignal cancellation, CompletableFuture<Void> result) {}
 }

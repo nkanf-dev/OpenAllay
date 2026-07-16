@@ -84,6 +84,22 @@ final class ModelRequestSchedulerTest {
         assertFalse(scheduler.queuedRequests() > 0);
     }
 
+    @Test
+    void delaysFreshContextCaptureWhileEndpointCooldownIsKnown() throws Exception {
+        Deque<CompletableFuture<ModelTurn>> turns = new ArrayDeque<>();
+        turns.add(CompletableFuture.failedFuture(
+                new ModelRateLimitException("limited", Duration.ofMillis(80))));
+        turns.add(CompletableFuture.completedFuture(turn("resumed")));
+        ModelRequestScheduler scheduler = new ModelRequestScheduler(
+                (request, events, cancellation) -> turns.removeFirst());
+        scheduler.complete(request("one"), event -> {}, new CancellationSignal());
+
+        CompletableFuture<Void> ready = scheduler.awaitReady(new CancellationSignal());
+        assertFalse(ready.isDone());
+        ready.get(2, TimeUnit.SECONDS);
+        assertTrue(ready.isDone());
+    }
+
     private static ModelRequest request(String session) {
         return new ModelRequest(
                 "system",

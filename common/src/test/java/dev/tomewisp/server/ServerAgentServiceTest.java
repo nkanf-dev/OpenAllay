@@ -85,6 +85,61 @@ final class ServerAgentServiceTest {
         assertEquals(before, events.size());
     }
 
+    @Test
+    void waitsForEndpointReadinessBeforeCapturingServerContext() {
+        PendingModel model = new PendingModel();
+        AgentSessionStore sessions = new AgentSessionStore();
+        AgentToolExecutor tools = new EmptyTools();
+        CompletableFuture<Void> ready = new CompletableFuture<>();
+        java.util.concurrent.atomic.AtomicInteger captures = new java.util.concurrent.atomic.AtomicInteger();
+        ServerAgentService service = new ServerAgentService(
+                new GameGuideAgent(model, tools, sessions, new Gson()),
+                tools,
+                sessions,
+                (actor, capabilities, id) -> {
+                    captures.incrementAndGet();
+                    return CompletableFuture.completedFuture(
+                            ToolInvocationContext.developmentConsole(id));
+                },
+                (actor, event) -> {},
+                new Gson(),
+                "system",
+                cancellation -> ready);
+
+        service.ask(UUID.randomUUID(), request(UUID.randomUUID(), "fresh"));
+        assertEquals(0, captures.get());
+        ready.complete(null);
+        assertEquals(1, captures.get());
+    }
+
+    @Test
+    void cancelsWhileWaitingForEndpointWithoutCapturingContextLater() {
+        PendingModel model = new PendingModel();
+        AgentSessionStore sessions = new AgentSessionStore();
+        AgentToolExecutor tools = new EmptyTools();
+        CompletableFuture<Void> ready = new CompletableFuture<>();
+        java.util.concurrent.atomic.AtomicInteger captures = new java.util.concurrent.atomic.AtomicInteger();
+        List<ServerAgentEventPayload> events = new ArrayList<>();
+        ServerAgentService service = new ServerAgentService(
+                new GameGuideAgent(model, tools, sessions, new Gson()), tools, sessions,
+                (actor, capabilities, id) -> {
+                    captures.incrementAndGet();
+                    return CompletableFuture.completedFuture(
+                            ToolInvocationContext.developmentConsole(id));
+                },
+                (actor, event) -> events.add(event),
+                new Gson(), "system", cancellation -> ready);
+        UUID actor = UUID.randomUUID();
+        UUID request = UUID.randomUUID();
+        service.ask(actor, request(request, "waiting"));
+
+        org.junit.jupiter.api.Assertions.assertTrue(service.cancel(actor, request));
+        ready.complete(null);
+        assertEquals(0, captures.get());
+        assertEquals(0, service.activeRequests());
+        assertEquals(1, events.stream().filter(ServerAgentEventPayload::terminal).count());
+    }
+
     private static ServerAgentRequestPayload request(UUID id, String session) {
         return new ServerAgentRequestPayload(BridgeProtocol.VERSION, id, session, "question", true);
     }
