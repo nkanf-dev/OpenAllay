@@ -1,0 +1,114 @@
+#!/usr/bin/env bash
+set -uo pipefail
+
+project_dir="$(cd "$(dirname "$0")" && pwd)"
+mirror_dir="$project_dir/.gradle/curl-mirror"
+log_dir="$project_dir/.gradle/curl-fallback"
+log_file="$log_dir/gradle.log"
+max_rounds="${TOMEWISP_GRADLE_DOWNLOAD_ROUNDS:-60}"
+curl_proxy="${TOMEWISP_CURL_PROXY:-}"
+
+if [[ -z "$curl_proxy" && "$(uname -s)" == "Darwin" ]] && command -v scutil >/dev/null 2>&1; then
+    curl_proxy="$(scutil --proxy | awk '
+        /HTTPEnable : 1/ { enabled = 1 }
+        /HTTPProxy :/ && host == "" { host = $3 }
+        /HTTPPort :/ && port == "" { port = $3 }
+        END { if (enabled && host != "" && port != "") printf "http://%s:%s", host, port }
+    ')"
+fi
+
+mkdir -p "$mirror_dir" "$log_dir"
+
+relative_maven_path() {
+    local url="$1"
+    case "$url" in
+        https://maven.fabricmc.net/*)
+            printf '%s\n' "${url#https://maven.fabricmc.net/}" ;;
+        https://maven.neoforged.net/releases/*)
+            printf '%s\n' "${url#https://maven.neoforged.net/releases/}" ;;
+        https://maven.neoforged.net/mojang-meta/*)
+            printf '%s\n' "${url#https://maven.neoforged.net/mojang-meta/}" ;;
+        https://repo.maven.apache.org/maven2/*)
+            printf '%s\n' "${url#https://repo.maven.apache.org/maven2/}" ;;
+        https://repo1.maven.org/maven2/*)
+            printf '%s\n' "${url#https://repo1.maven.org/maven2/}" ;;
+        https://plugins.gradle.org/m2/*)
+            printf '%s\n' "${url#https://plugins.gradle.org/m2/}" ;;
+        https://libraries.minecraft.net/*)
+            printf '%s\n' "${url#https://libraries.minecraft.net/}" ;;
+        https://maven.aliyun.com/repository/public/*)
+            printf '%s\n' "${url#https://maven.aliyun.com/repository/public/}" ;;
+        https://maven.aliyun.com/repository/gradle-plugin/*)
+            printf '%s\n' "${url#https://maven.aliyun.com/repository/gradle-plugin/}" ;;
+        *) return 1 ;;
+    esac
+}
+
+download_one() {
+    local url="$1"
+    local destination="$2"
+    local temporary="$destination.part"
+    local -a proxy_args
+
+    [[ -s "$destination" ]] && return 1
+    mkdir -p "$(dirname "$destination")"
+    printf 'curl fallback: %s\n' "$url"
+    proxy_args=()
+    [[ -n "$curl_proxy" ]] && proxy_args=(--proxy "$curl_proxy")
+    if curl "${proxy_args[@]}" --fail --location --retry 8 --retry-delay 1 \
+            --retry-all-errors --connect-timeout 15 --output "$temporary" "$url" \
+        || curl "${proxy_args[@]}" --insecure --fail --location --retry 8 \
+            --retry-delay 1 --retry-all-errors --connect-timeout 15 \
+            --output "$temporary" "$url"; then
+        mv "$temporary" "$destination"
+        return 0
+    fi
+    rm -f "$temporary"
+    return 1
+}
+
+download_failed_urls() {
+    local downloaded=0
+    local url relative destination directory version artifact_directory artifact pom_relative pom_url
+
+    while IFS= read -r url; do
+        url="${url%\?}"
+        relative="$(relative_maven_path "$url")" || continue
+        destination="$mirror_dir/$relative"
+        if download_one "$url" "$destination"; then
+            downloaded=$((downloaded + 1))
+        fi
+
+        if [[ "$relative" == *.jar ]]; then
+            directory="${relative%/*}"
+            version="${directory##*/}"
+            artifact_directory="${directory%/*}"
+            artifact="${artifact_directory##*/}"
+            pom_relative="$directory/$artifact-$version.pom"
+            pom_url="${url%/*}/$artifact-$version.pom"
+            if download_one "$pom_url" "$mirror_dir/$pom_relative"; then
+                downloaded=$((downloaded + 1))
+            fi
+        fi
+    done < <(grep -Eo "https://[^'\" )]+" "$log_file" | sed 's/[.;,]$//' | sort -u)
+
+    [[ "$downloaded" -gt 0 ]]
+}
+
+cd "$project_dir"
+for ((round = 1; round <= max_rounds; round++)); do
+    printf 'Gradle attempt %d/%d\n' "$round" "$max_rounds"
+    set +e
+    ./gradlew --no-configuration-cache "$@" 2>&1 | tee "$log_file"
+    status=${PIPESTATUS[0]}
+    set -e
+
+    [[ "$status" -eq 0 ]] && exit 0
+    if ! download_failed_urls; then
+        printf 'Gradle failed, but no new downloadable dependency URL was found.\n' >&2
+        exit "$status"
+    fi
+done
+
+printf 'Gradle still failed after %d curl fallback rounds.\n' "$max_rounds" >&2
+exit 1
