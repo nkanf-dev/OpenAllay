@@ -19,7 +19,8 @@ public final class KnowledgeRegistry {
                 KnowledgeLoad load = provider.load();
                 nextDiagnostics.addAll(load.diagnostics());
                 for (KnowledgeDocument document : load.documents()) {
-                    if (!document.sourceId().equals(provider.sourceId())) {
+                    if (!document.sourceId().equals(provider.sourceId())
+                            && !document.sourceId().startsWith(provider.sourceId() + ":")) {
                         throw new IllegalArgumentException("Provider " + provider.sourceId()
                                 + " emitted document for " + document.sourceId());
                     }
