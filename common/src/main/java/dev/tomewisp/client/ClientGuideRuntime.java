@@ -9,6 +9,8 @@ import dev.tomewisp.agent.GameGuideAgent;
 import dev.tomewisp.agent.session.AgentSessionKey;
 import dev.tomewisp.agent.session.AgentSessionStore;
 import dev.tomewisp.agent.tool.LocalAgentToolExecutor;
+import dev.tomewisp.agent.tool.AgentToolExecutor;
+import dev.tomewisp.agent.tool.CompositeAgentToolExecutor;
 import dev.tomewisp.context.ToolInvocationContext;
 import dev.tomewisp.model.ModelClient;
 import dev.tomewisp.model.anthropic.AnthropicMessagesClient;
@@ -30,7 +32,7 @@ public final class ClientGuideRuntime {
     private final TomeWispRuntime runtime;
     private final AgentSessionStore sessions;
     private final GameGuideAgent agent;
-    private final LocalAgentToolExecutor toolExecutor;
+    private final AgentToolExecutor toolExecutor;
     private final ClientEventDispatcher dispatcher;
     private final Map<UUID, String> selectedSessions = new ConcurrentHashMap<>();
 
@@ -40,10 +42,23 @@ public final class ClientGuideRuntime {
             AgentSessionStore sessions,
             Gson gson,
             ClientEventDispatcher dispatcher) {
+        this(runtime, model, sessions, gson, dispatcher, null);
+    }
+
+    public ClientGuideRuntime(
+            TomeWispRuntime runtime,
+            ModelClient model,
+            AgentSessionStore sessions,
+            Gson gson,
+            ClientEventDispatcher dispatcher,
+            AgentToolExecutor extension) {
         this.runtime = runtime;
         this.sessions = sessions;
         this.dispatcher = dispatcher;
-        toolExecutor = new LocalAgentToolExecutor(runtime.tools(), gson);
+        LocalAgentToolExecutor local = new LocalAgentToolExecutor(runtime.tools(), gson);
+        toolExecutor = extension == null
+                ? local
+                : new CompositeAgentToolExecutor(List.of(local, extension));
         agent = new GameGuideAgent(new ModelRequestScheduler(model), toolExecutor, sessions, gson);
     }
 
@@ -52,6 +67,15 @@ public final class ClientGuideRuntime {
             Path configPath,
             Map<String, String> environment,
             ClientEventDispatcher dispatcher) {
+        return create(runtime, configPath, environment, dispatcher, null);
+    }
+
+    public static ToolResult<ClientGuideRuntime> create(
+            TomeWispRuntime runtime,
+            Path configPath,
+            Map<String, String> environment,
+            ClientEventDispatcher dispatcher,
+            AgentToolExecutor extension) {
         ToolResult<ModelConfig> loaded = new ModelConfigLoader().load(configPath, environment);
         if (loaded instanceof ToolResult.Failure<ModelConfig> failure) {
             return new ToolResult.Failure<>(failure.code(), failure.message());
@@ -66,7 +90,7 @@ public final class ClientGuideRuntime {
             case OPENAI_CHAT -> new OpenAiChatClient(config, gson);
         };
         return new ToolResult.Success<>(new ClientGuideRuntime(
-                runtime, model, new AgentSessionStore(), gson, dispatcher));
+                runtime, model, new AgentSessionStore(), gson, dispatcher, extension));
     }
 
     public Set<dev.tomewisp.context.ContextCapability> requiredContext() {

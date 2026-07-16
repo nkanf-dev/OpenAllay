@@ -19,19 +19,29 @@ import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallba
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
+import dev.tomewisp.fabric.network.FabricClientBridge;
 
 public final class FabricGuideCommands {
+    private static final java.util.Map<java.util.UUID, String> MODEL_MODES =
+            new java.util.concurrent.ConcurrentHashMap<>();
     private FabricGuideCommands() {}
 
     public static void register(
-            TomeWispRuntime base, ToolResult<ClientGuideRuntime> configured) {
+            TomeWispRuntime base,
+            ToolResult<ClientGuideRuntime> configured,
+            FabricClientBridge bridge) {
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, access) -> dispatcher.register(
                 literal("guide")
                         .then(literal("cancel").executes(context -> cancel(configured, context.getSource())))
                         .then(literal("clear").executes(context -> clear(configured, context.getSource())))
-                        .then(literal("status").executes(context -> status(base, configured, context.getSource())))
+                        .then(literal("status").executes(context -> status(base, configured, bridge, context.getSource())))
                         .then(literal("skills").executes(context -> skills(base, context.getSource())))
                         .then(literal("sources").executes(context -> sources(base, context.getSource())))
+                        .then(literal("model")
+                                .then(literal("client").executes(context -> modelMode(
+                                        context.getSource(), "client", bridge)))
+                                .then(literal("server").executes(context -> modelMode(
+                                        context.getSource(), "server", bridge))))
                         .then(literal("session")
                                 .then(literal("list").executes(context -> sessions(configured, context.getSource())))
                                 .then(literal("new").then(argument("id", word()).executes(context ->
@@ -41,16 +51,34 @@ public final class FabricGuideCommands {
                                 .then(literal("close").then(argument("id", word()).executes(context ->
                                         close(configured, context.getSource(), getString(context, "id"))))))
                         .then(literal("ask").then(argument("question", greedyString()).executes(context ->
-                                ask(base, configured, context.getSource(), getString(context, "question")))))
+                                ask(base, configured, bridge, context.getSource(), getString(context, "question")))))
                         .then(argument("question", greedyString()).executes(context ->
-                                ask(base, configured, context.getSource(), getString(context, "question"))))));
+                                ask(base, configured, bridge, context.getSource(), getString(context, "question"))))));
     }
 
     private static int ask(
             TomeWispRuntime base,
             ToolResult<ClientGuideRuntime> configured,
+            FabricClientBridge bridge,
             FabricClientCommandSource source,
             String question) {
+        String mode = MODEL_MODES.getOrDefault(source.getPlayer().getUUID(), "client");
+        if (mode.equals("server")) {
+            String session = configured instanceof ToolResult.Success<ClientGuideRuntime> success
+                    ? success.value().selectedSession(source.getPlayer().getUUID())
+                    : "main";
+            dev.tomewisp.bridge.protocol.ServerAgentRequestPayload request =
+                    new dev.tomewisp.bridge.protocol.ServerAgentRequestPayload(
+                            dev.tomewisp.bridge.protocol.BridgeProtocol.VERSION,
+                            java.util.UUID.randomUUID(), session, question, true);
+            boolean accepted = bridge.askServer(request, event -> publishServer(source, event));
+            if (!accepted) {
+                source.sendError(Component.literal("[TomeWisp] 当前服务器没有提供模型能力"));
+                return 0;
+            }
+            source.sendFeedback(Component.literal("[TomeWisp] 已提交到服务端模型；会话: " + session));
+            return 1;
+        }
         if (!(configured instanceof ToolResult.Success<ClientGuideRuntime> success)) {
             failure(source, (ToolResult.Failure<ClientGuideRuntime>) configured);
             return 0;
@@ -63,6 +91,39 @@ public final class FabricGuideCommands {
         source.sendFeedback(Component.literal("[TomeWisp] 思索中… 会话: "
                 + guide.selectedSession(source.getPlayer().getUUID())));
         guide.ask(source.getPlayer().getUUID(), question, context, event -> publish(source, event));
+        return 1;
+    }
+
+    private static void publishServer(
+            FabricClientCommandSource source,
+            dev.tomewisp.bridge.protocol.ServerAgentEventPayload event) {
+        try {
+            com.google.gson.JsonObject json = com.google.gson.JsonParser.parseString(event.eventJson())
+                    .getAsJsonObject();
+            if (event.eventType().equals("final_text")) {
+                source.sendFeedback(Component.literal("[TomeWisp/server] "
+                        + json.get("text").getAsString()));
+            } else if (event.eventType().equals("failed")) {
+                source.sendError(Component.literal("[TomeWisp/server] "
+                        + json.get("code").getAsString() + ": "
+                        + json.get("message").getAsString()));
+            } else if (event.eventType().equals("tool_started")) {
+                source.sendFeedback(Component.literal("[TomeWisp/server] 查询 "
+                        + json.get("toolId").getAsString()));
+            }
+        } catch (RuntimeException failure) {
+            source.sendError(Component.literal("[TomeWisp] 无法解析服务端 Agent 事件"));
+        }
+    }
+
+    private static int modelMode(
+            FabricClientCommandSource source, String mode, FabricClientBridge bridge) {
+        if (mode.equals("server") && !bridge.capabilities().serverModel()) {
+            source.sendError(Component.literal("[TomeWisp] 当前服务器没有提供模型能力"));
+            return 0;
+        }
+        MODEL_MODES.put(source.getPlayer().getUUID(), mode);
+        source.sendFeedback(Component.literal("[TomeWisp] 模型模式已切换为 " + mode));
         return 1;
     }
 
@@ -125,11 +186,15 @@ public final class FabricGuideCommands {
     private static int status(
             TomeWispRuntime base,
             ToolResult<ClientGuideRuntime> configured,
+            FabricClientBridge bridge,
             FabricClientCommandSource source) {
         if (configured instanceof ToolResult.Success<ClientGuideRuntime> success) {
             source.sendFeedback(Component.literal("[TomeWisp] 客户端模型已配置；当前会话 "
                     + success.value().selectedSession(source.getPlayer().getUUID())
-                    + "；知识文档 " + base.knowledge().snapshot().documents().size()));
+                    + "；知识文档 " + base.knowledge().snapshot().documents().size()
+                    + "；服务端工具 " + bridge.capabilities().remoteTools().size()
+                    + "；服务端模型 " + bridge.capabilities().serverModel()
+                    + "；当前模式 " + MODEL_MODES.getOrDefault(source.getPlayer().getUUID(), "client")));
             return 1;
         }
         failure(source, (ToolResult.Failure<ClientGuideRuntime>) configured);

@@ -24,6 +24,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class RemoteToolExecutor implements AgentToolExecutor {
+    private static final String MODEL_PREFIX = "server__";
     public interface Transport {
         void call(RemoteToolCallPayload payload);
         void cancel(RemoteCancelPayload payload);
@@ -43,8 +44,8 @@ public final class RemoteToolExecutor implements AgentToolExecutor {
     public List<ModelToolDefinition> definitions() {
         return capabilities.snapshot().remoteTools().stream()
                 .map(tool -> new ModelToolDefinition(
-                        codec().encode(tool.id()),
-                        tool.description(),
+                        MODEL_PREFIX + codec().encode(tool.id()),
+                        "[server read tool] " + tool.description(),
                         JsonParser.parseString(tool.inputSchemaJson()).getAsJsonObject()))
                 .toList();
     }
@@ -60,7 +61,11 @@ public final class RemoteToolExecutor implements AgentToolExecutor {
             JsonObject arguments,
             ToolInvocationContext context,
             CancellationSignal cancellation) {
-        String toolId = codec().decode(modelToolName);
+        if (!modelToolName.startsWith(MODEL_PREFIX)) {
+            return CompletableFuture.failedFuture(
+                    new IllegalArgumentException("Not a server tool name: " + modelToolName));
+        }
+        String toolId = codec().decode(modelToolName.substring(MODEL_PREFIX.length()));
         UUID correlation = UUID.randomUUID();
         Pending value = new Pending(toolId, new CompletableFuture<>());
         pending.put(correlation, value);
@@ -102,6 +107,14 @@ public final class RemoteToolExecutor implements AgentToolExecutor {
             value.result.completeExceptionally(failure);
             return false;
         }
+    }
+
+    public void disconnect() {
+        capabilities.clear();
+        pending.forEach((correlation, value) -> value.result.completeExceptionally(
+                new ModelClientException(new ModelFailure(
+                        "server_disconnected", "Server enhancement connection closed", null))));
+        pending.clear();
     }
 
     private ToolNameCodec codec() {
