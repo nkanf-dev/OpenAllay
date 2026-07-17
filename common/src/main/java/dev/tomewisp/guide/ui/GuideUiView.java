@@ -34,7 +34,8 @@ public record GuideUiView(
                 .filter(value -> !value.terminal()).reduce((first, second) -> second).orElse(null);
         GuideRequestSnapshot retry = selected.requests().stream()
                 .filter(value -> value.status() == GuideRequestStatus.FAILED
-                        || value.status() == GuideRequestStatus.CANCELLED)
+                        || value.status() == GuideRequestStatus.CANCELLED
+                        || value.status() == GuideRequestStatus.INTERRUPTED)
                 .reduce((first, second) -> second).orElse(null);
         boolean targetAvailable = snapshot.modelMode() == GuideModelMode.CLIENT
                 ? snapshot.clientModelAvailable()
@@ -47,6 +48,21 @@ public record GuideUiView(
                         value.requests().size()))
                 .toList();
         List<GuideUiRow> rows = new ArrayList<>();
+        switch (snapshot.persistence().state()) {
+            case LOADING -> rows.add(new GuideUiRow.Persistence(
+                    snapshot.persistence().state(),
+                    "screen.tomewisp.history.loading",
+                    null));
+            case SAVING -> rows.add(new GuideUiRow.Persistence(
+                    snapshot.persistence().state(),
+                    "screen.tomewisp.history.saving",
+                    null));
+            case UNAVAILABLE -> rows.add(new GuideUiRow.Persistence(
+                    snapshot.persistence().state(),
+                    "screen.tomewisp.history.unavailable",
+                    snapshot.persistence().failure()));
+            case DISABLED, AVAILABLE -> { }
+        }
         for (GuideRequestSnapshot request : selected.requests()) {
             rows.add(new GuideUiRow.User(request.requestId(), request.userMessage()));
             for (GuideTimelineEntry entry : request.timeline()) {
@@ -72,7 +88,8 @@ public record GuideUiView(
                         "模型限流，等待 " + request.retryAfterMillis() + "ms",
                         null));
             } else if (request.status() == GuideRequestStatus.FAILED
-                    || request.status() == GuideRequestStatus.CANCELLED) {
+                    || request.status() == GuideRequestStatus.CANCELLED
+                    || request.status() == GuideRequestStatus.INTERRUPTED) {
                 rows.add(new GuideUiRow.Status(
                         request.requestId(),
                         request.status(),
@@ -90,7 +107,10 @@ public record GuideUiView(
                 snapshot.modelMode(),
                 snapshot.clientModelAvailable(),
                 snapshot.serverModelAvailable(),
-                active == null && targetAvailable,
+                active == null
+                        && targetAvailable
+                        && snapshot.persistence().state()
+                                != dev.tomewisp.guide.GuidePersistenceSnapshot.State.LOADING,
                 active != null,
                 retry != null && active == null,
                 sessions,

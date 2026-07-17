@@ -289,9 +289,24 @@ public final class TomeWispScreen extends Screen {
                     HitKind.CONTENT, () -> open(activity)));
             return y + 21;
         }
+        if (row instanceof GuideUiRow.Persistence persistence) {
+            int color = persistence.state()
+                            == dev.tomewisp.guide.GuidePersistenceSnapshot.State.UNAVAILABLE
+                    ? 0xFFFFD479
+                    : MUTED;
+            Component message = Component.translatable(persistence.translationKey());
+            if (persistence.failure() != null) {
+                message = message.copy().append(" (" + persistence.failure().code() + ")");
+            }
+            graphics.text(font, message, x + 6, y, color, false);
+            return y + 18;
+        }
         GuideUiRow.Status status = (GuideUiRow.Status) row;
         int color = status.status() == GuideRequestStatus.RATE_LIMITED ? 0xFFFFD479 : ERROR;
-        graphics.text(font, status.text(), x + 6, y, color, false);
+        Component message = status.status() == GuideRequestStatus.INTERRUPTED
+                ? Component.translatable("screen.tomewisp.history.interrupted")
+                : Component.literal(status.text());
+        graphics.text(font, message, x + 6, y, color, false);
         return y + 18;
     }
 
@@ -419,7 +434,8 @@ public final class TomeWispScreen extends Screen {
     private void retry() {
         GuideRequestSnapshot request = selectedRequests().stream()
                 .filter(value -> value.status() == GuideRequestStatus.FAILED
-                        || value.status() == GuideRequestStatus.CANCELLED)
+                        || value.status() == GuideRequestStatus.CANCELLED
+                        || value.status() == GuideRequestStatus.INTERRUPTED)
                 .reduce((first, second) -> second).orElse(null);
         if (request != null) accept(service.retry(request.requestId()), ignored -> notice = "");
     }

@@ -1,5 +1,9 @@
 {
   "key.category.tomewisp.guide": "TomeWisp 书灵",
   "key.tomewisp.open_guide": "打开 TomeWisp 书灵",
-  "screen.tomewisp.guide": "TomeWisp 书灵"
+  "screen.tomewisp.guide": "TomeWisp 书灵",
+  "screen.tomewisp.history.loading": "正在加载对话历史...",
+  "screen.tomewisp.history.saving": "正在保存对话历史...",
+  "screen.tomewisp.history.unavailable": "历史记录当前不可用；新消息暂时只保留在内存中。",
+  "screen.tomewisp.history.interrupted": "游戏关闭时中断了这个请求；请手动重试以继续。"
 }

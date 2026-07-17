@@ -538,13 +538,13 @@ client-stopping lifecycle event.
 - Modify: `docs/development.md`
 - Modify: `docs/superpowers/specs/2026-07-18-phase-4-knowledge-persistence-rich-ui-design.md`
 
-- [ ] **Step 1: Write failing UI projection tests**
+- [x] **Step 1: Write failing UI projection tests**
 
 Assert loading disables submission with a status row, unavailable history is a
 nonfatal unsaved diagnostic, saving does not reorder timeline rows, interrupted
 requests expose retry, and normal available state adds no transcript noise.
 
-- [ ] **Step 2: Run and confirm missing projection**
+- [x] **Step 2: Run and confirm missing projection**
 
 ```bash
 ./gradlew :common:test --tests 'dev.tomewisp.guide.ui.*'
@@ -552,21 +552,21 @@ requests expose retry, and normal available state adds no transcript noise.
 
 Expected: FAIL until persistence and interruption rows/actions exist.
 
-- [ ] **Step 3: Add localized narrow UI states**
+- [x] **Step 3: Add localized narrow UI states**
 
 Project unframed status rows for `LOADING`, `SAVING`, and `UNAVAILABLE`. Keep
 timeline chronology untouched. Disable submit while loading, keep it enabled
 but visibly unsaved when unavailable, and use the existing retry action for
 `INTERRUPTED`. Add English and Simplified Chinese translations for all text.
 
-- [ ] **Step 4: Update documentation**
+- [x] **Step 4: Update documentation**
 
 Document database location, hashed partition derivation, schema version,
 normal-mode fields, interruption/manual retry, unsaved diagnostics, packaging
 verification, and that developer payloads/history management arrive later in
 Phase 4. Do not claim Phase 4 or graphical restart acceptance complete.
 
-- [ ] **Step 5: Run checks and commit**
+- [x] **Step 5: Run checks and commit**
 
 ```bash
 ./gradlew :common:test --tests 'dev.tomewisp.guide.ui.*'
@@ -581,6 +581,13 @@ git commit -m "feat: expose durable history state"
 ```
 
 Expected: UI tests pass and documentation has no whitespace errors.
+
+Verification on 2026-07-18 passed all focused UI projection, presenter, layout,
+and markup tests. Persistence rows preserve the relative Agent timeline order,
+loading disables submission, unavailable history remains explicitly usable but
+unsaved, available/disabled state adds no row, and interrupted requests expose
+the existing manual retry action. Both new persistence and interruption strings
+are localized in English and Simplified Chinese.
 
 ### Task 8: Full Phase 4B Verification
 

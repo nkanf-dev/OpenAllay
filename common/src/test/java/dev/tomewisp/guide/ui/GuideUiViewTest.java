@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import dev.tomewisp.guide.GuideFailure;
 import dev.tomewisp.guide.GuideMessage;
 import dev.tomewisp.guide.GuideModelMode;
+import dev.tomewisp.guide.GuidePersistenceSnapshot;
 import dev.tomewisp.guide.GuideRequestSnapshot;
 import dev.tomewisp.guide.GuideRequestStatus;
 import dev.tomewisp.guide.GuideSessionSnapshot;
@@ -104,16 +105,88 @@ final class GuideUiViewTest {
                 .map(row -> switch (row) {
                     case GuideUiRow.Assistant assistant -> assistant.ordinal();
                     case GuideUiRow.Tool tool -> tool.ordinal();
+                    case GuideUiRow.Persistence ignored -> -1;
                     case GuideUiRow.Status ignored -> -1;
                     case GuideUiRow.User ignored -> -1;
                 })
                 .toList());
     }
 
+    @Test
+    void persistenceHealthControlsSubmissionWithoutReorderingTimeline() {
+        GuideRequestSnapshot completed = request(
+                GuideRequestStatus.COMPLETED,
+                "answer",
+                Instant.EPOCH.plusSeconds(2),
+                null);
+        GuideUiView loading = GuideUiView.from(snapshot(
+                completed, GuidePersistenceSnapshot.loading()));
+        assertFalse(loading.canSend());
+        assertEquals(GuidePersistenceSnapshot.State.LOADING,
+                ((GuideUiRow.Persistence) loading.rows().getFirst()).state());
+
+        GuideUiView saving = GuideUiView.from(snapshot(
+                completed,
+                new GuidePersistenceSnapshot(
+                        GuidePersistenceSnapshot.State.SAVING, 2, 1, null)));
+        assertEquals(
+                List.of(
+                        GuideUiRow.Persistence.class,
+                        GuideUiRow.User.class,
+                        GuideUiRow.Assistant.class),
+                saving.rows().stream().map(Object::getClass).toList());
+
+        GuideUiView unavailable = GuideUiView.from(snapshot(
+                completed,
+                new GuidePersistenceSnapshot(
+                        GuidePersistenceSnapshot.State.UNAVAILABLE,
+                        2,
+                        1,
+                        new GuideFailure("history_write_failed", "not durable"))));
+        assertTrue(unavailable.canSend());
+        assertEquals("history_write_failed",
+                ((GuideUiRow.Persistence) unavailable.rows().getFirst()).failure().code());
+
+        GuideUiView available = GuideUiView.from(snapshot(
+                completed, GuidePersistenceSnapshot.available(2)));
+        assertFalse(available.rows().stream().anyMatch(GuideUiRow.Persistence.class::isInstance));
+    }
+
+    @Test
+    void interruptedRequestIsVisibleAndRetryable() {
+        GuideRequestSnapshot interrupted = request(
+                GuideRequestStatus.INTERRUPTED,
+                "partial",
+                Instant.EPOCH.plusSeconds(2),
+                new GuideFailure("request_interrupted", "interrupted"));
+
+        GuideUiView view = GuideUiView.from(snapshot(interrupted));
+
+        assertTrue(view.canRetry());
+        assertTrue(view.rows().stream()
+                .filter(GuideUiRow.Status.class::isInstance)
+                .map(GuideUiRow.Status.class::cast)
+                .anyMatch(row -> row.status() == GuideRequestStatus.INTERRUPTED));
+    }
+
     private static GuideSnapshot snapshot(GuideRequestSnapshot request) {
         return new GuideSnapshot(
                 ACTOR, "main", GuideModelMode.CLIENT, true, false,
                 List.of(new GuideSessionSnapshot("main", List.<GuideMessage>of(), List.of(request))),
+                request.updatedAt());
+    }
+
+    private static GuideSnapshot snapshot(
+            GuideRequestSnapshot request, GuidePersistenceSnapshot persistence) {
+        return new GuideSnapshot(
+                ACTOR,
+                "main",
+                GuideModelMode.CLIENT,
+                true,
+                false,
+                persistence,
+                List.of(new GuideSessionSnapshot(
+                        "main", List.<GuideMessage>of(), List.of(request))),
                 request.updatedAt());
     }
 

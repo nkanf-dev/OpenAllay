@@ -125,6 +125,14 @@ navigation is a disabled action with a diagnostic, not a fabricated success.
 
 ## 4. Durable history
 
+Implementation status on 2026-07-18: the schema-v1 normal-mode projection,
+hashed player/connection partitions, ordered asynchronous SQLite repository,
+interruption recovery, GuideService lifecycle integration, Fabric/NeoForge
+packaging and lifecycle hooks, and player-visible persistence health are
+implemented. Developer-mode payloads, explicit partition/all-history management,
+compaction records, paging, and retained graphical restart acceptance remain
+open Phase 4 work.
+
 ### 4.1 Ownership and partitioning
 
 `GuideService` remains the single owner of active connection-scoped request,
@@ -154,7 +162,7 @@ The versioned schema stores:
 - semantic message nodes and player-visible card projections;
 - source and evidence summaries;
 - structured terminal, cancelled, interrupted, and error states;
-- model mode and a redacted model identifier;
+- model mode (a redacted model identifier remains planned);
 - compaction checkpoints and their source-message ranges;
 - schema and migration metadata.
 

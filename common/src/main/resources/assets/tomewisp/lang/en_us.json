@@ -1,5 +1,9 @@
 {
   "key.category.tomewisp.guide": "TomeWisp",
   "key.tomewisp.open_guide": "Open TomeWisp Guide",
-  "screen.tomewisp.guide": "TomeWisp Guide"
+  "screen.tomewisp.guide": "TomeWisp Guide",
+  "screen.tomewisp.history.loading": "Loading conversation history...",
+  "screen.tomewisp.history.saving": "Saving conversation history...",
+  "screen.tomewisp.history.unavailable": "History is unavailable; new messages are currently kept only in memory.",
+  "screen.tomewisp.history.interrupted": "This request was interrupted when the game closed. Retry it manually to continue."
 }

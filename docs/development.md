@@ -97,6 +97,23 @@ The server Agent event protocol is version 3 and is decoded once in common
 code. Unknown or malformed events fail only their correlated request; there is
 no silent client/server fallback.
 
+Normal-mode guide history is stored at `config/tomewisp/history.sqlite3` in one
+schema-v1 SQLite database. Each partition key is a SHA-256 digest of the player
+UUID, connection kind, and normalized integrated-world path or multiplayer
+address; the raw path/address is not stored. Database work runs on one ordered
+background worker and never blocks the client or render thread.
+
+The durable projection contains sessions, user messages, chronological visible
+assistant/tool/status entries, evidence summaries, model mode, and terminal
+request state. It excludes model reasoning, credentials, authorization data,
+raw provider bodies, full inventory snapshots, and full normalized tool
+results. Loading temporarily disables submission. A load or write failure keeps
+the in-memory Agent usable and shows that new messages are not durable. Work
+left active by process loss restores as `INTERRUPTED`; continuing it always
+requires an explicit retry with a new request ID. Developer-mode payloads,
+partition management, compaction checkpoints, and history paging are later
+Phase 4 work.
+
 The real-client probe is disabled unless `tomewisp.e2e.enabled=true`. When
 enabled, it waits for a real client player, submits through the same
 `GuideService`, records status transitions, tool IDs, evidence, timings and

@@ -60,9 +60,13 @@ loaders through one shared GuideService and an opt-in real-client probe:
 - a default-off Fabric/NeoForge real-client E2E controller plus deterministic
   loopback model fixture and redacted report contract.
 
-A server mod is not required for the main client model mode. Phase 4 is planned
-to add all-known recipe sources and viewer integration, durable partitioned
-history and context compaction, and Minecraft-native rich messages. Dynamic
+A server mod is not required for the main client model mode. Phase 4 now has a
+versioned SQLite history foundation: normal-mode conversation projections are
+partitioned by player and world/server, interrupted work restores without an
+automatic provider retry, and persistence health is visible in the screen.
+All-known recipe sources and viewer integration, context compaction,
+history management, developer diagnostics, and Minecraft-native rich messages
+remain Phase 4 work. Dynamic
 Ponder generation is deferred beyond Phase 4 because Ponder/Ponderer do not yet
 provide a verified 26.2 runtime target. Phase 3C now provides the native player
 GUI; graphical E2E remains explicit opt-in and is never inferred from
