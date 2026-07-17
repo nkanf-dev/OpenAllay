@@ -58,13 +58,17 @@ native-access, Xerial version-format, and Javadoc warnings remain unchanged.
 
 ## Task 3: Merge Canonical Provider Snapshots
 
-- [ ] Implement deterministic semantic fingerprints and authority ordering.
-- [ ] Group only identical semantics while retaining all references/evidence.
-- [ ] Preserve same-ID conflicts as distinct variants with diagnostics.
-- [ ] Aggregate completeness honestly; vanilla recipe-book-only capture is
+- [x] Implement deterministic semantic fingerprints and authority ordering.
+- [x] Group only identical semantics while retaining all references/evidence.
+- [x] Preserve same-ID conflicts as distinct variants with diagnostics.
+- [x] Aggregate completeness honestly; vanilla recipe-book-only capture is
   partial under `ALL_KNOWN`.
-- [ ] Add permutation, conflict, failure-isolation, and visibility tests.
-- [ ] Commit `feat: merge recipe provider snapshots`.
+- [x] Add permutation, conflict, failure-isolation, and visibility tests.
+- [x] Commit `feat: merge recipe provider snapshots`.
+
+Verification on 2026-07-18 passed the provider/catalog tests and the complete
+common suite. Provider generations exclude capture time, remain stable across
+record-order permutations, and change when normalized record contents change.
 
 ## Task 4: Capture Vanilla Unlock Metadata
 

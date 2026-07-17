@@ -4,11 +4,15 @@ public record RecipeReference(String sourceId, String generation, String recipeI
     public RecipeReference {
         sourceId = requireSourceId(sourceId);
         generation = requireGeneration(generation);
-        recipeId = ContextValidation.identifier(recipeId, "recipeId");
+        recipeId = requireRecipeId(recipeId);
     }
 
     public static String requireSourceId(String value) {
         return ContextValidation.identifier(value, "sourceId");
+    }
+
+    public static String requireRecipeId(String value) {
+        return ContextValidation.identifier(value, "recipeId");
     }
 
     public static String requireGeneration(String value) {

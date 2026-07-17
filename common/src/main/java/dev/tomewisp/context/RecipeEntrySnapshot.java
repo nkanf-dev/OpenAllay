@@ -86,6 +86,25 @@ public record RecipeEntrySnapshot(
         return Collections.unmodifiableMap(copy);
     }
 
+    public RecipeEntrySnapshot withReference(RecipeReference replacement) {
+        return new RecipeEntrySnapshot(
+                replacement,
+                id,
+                type,
+                layout,
+                workstation,
+                ingredients,
+                catalysts,
+                fluids,
+                outputs,
+                byproducts,
+                processing,
+                conditions,
+                extensions,
+                unlockState,
+                evidence);
+    }
+
     private static List<IngredientRequirementSnapshot> copyRequirements(
             List<IngredientRequirementSnapshot> values, String name) {
         List<IngredientRequirementSnapshot> copy = List.copyOf(values);

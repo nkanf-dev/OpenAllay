@@ -14,19 +14,15 @@ final class RecipeProviderSnapshotTest {
     @Test
     void validatesGenerationAndProviderOwnership() {
         RecipeEntrySnapshot recipe = GroundedTestFixtures.ironBlockRecipe();
-        RecipeProviderSnapshot snapshot = new RecipeProviderSnapshot(
+        RecipeProviderSnapshot snapshot = RecipeProviderSnapshot.available(
                 "minecraft:recipe_manager",
-                GroundedTestFixtures.RECIPE_GENERATION,
-                RecipeProviderState.AVAILABLE,
                 DataCompleteness.COMPLETE,
                 List.of(recipe),
                 List.of());
 
-        assertEquals(GroundedTestFixtures.RECIPE_GENERATION, snapshot.generation());
-        assertThrows(IllegalArgumentException.class, () -> new RecipeProviderSnapshot(
+        assertEquals(64, snapshot.generation().length());
+        assertThrows(IllegalArgumentException.class, () -> RecipeProviderSnapshot.available(
                 "viewer:jei",
-                GroundedTestFixtures.RECIPE_GENERATION,
-                RecipeProviderState.AVAILABLE,
                 DataCompleteness.COMPLETE,
                 List.of(recipe),
                 List.of()));
