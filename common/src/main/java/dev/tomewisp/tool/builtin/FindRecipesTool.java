@@ -1,6 +1,8 @@
 package dev.tomewisp.tool.builtin;
 
 import dev.tomewisp.context.RecipeEntrySnapshot;
+import dev.tomewisp.context.EvidenceBearing;
+import dev.tomewisp.context.EvidenceMetadata;
 import dev.tomewisp.context.ToolInvocationContext;
 import dev.tomewisp.tool.Tool;
 import dev.tomewisp.tool.ToolAccess;
@@ -14,9 +16,14 @@ public final class FindRecipesTool
         implements Tool<FindRecipesTool.Input, FindRecipesTool.Output> {
     public record Input(String outputItem) {}
 
-    public record Output(String outputItem, List<RecipeEntrySnapshot> recipes) {
+    public record Output(
+            String outputItem,
+            List<RecipeEntrySnapshot> recipes,
+            List<EvidenceMetadata> evidence)
+            implements EvidenceBearing {
         public Output {
             recipes = List.copyOf(recipes);
+            evidence = List.copyOf(evidence);
         }
     }
 
@@ -45,10 +52,12 @@ public final class FindRecipesTool
                     "missing_context", "recipe context was not captured for this invocation");
         }
 
-        List<RecipeEntrySnapshot> recipes = context.recipes().orElseThrow().recipes().stream()
+        var snapshot = context.recipes().orElseThrow();
+        List<RecipeEntrySnapshot> recipes = snapshot.recipes().stream()
                 .filter(recipe -> recipe.outputs().stream()
                         .anyMatch(output -> output.stack().itemId().equals(input.outputItem())))
                 .toList();
-        return new ToolResult.Success<>(new Output(input.outputItem(), recipes));
+        return new ToolResult.Success<>(new Output(
+                input.outputItem(), recipes, List.of(snapshot.evidence())));
     }
 }

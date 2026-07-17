@@ -134,13 +134,17 @@ public final class FabricGuideCommands {
         providers.add(new PatchouliKnowledgeProvider(
                 new MinecraftClientResourceAccess(client.getResourceManager()),
                 locale,
-                base.patchouliMultiblocks()));
+                base.patchouliMultiblocks(),
+                base.platform().gameVersion(),
+                base.platform().platformName()));
         if (base.platform().isModLoaded("ftbquests") && client.player != null) {
             providers.add(new dev.tomewisp.integration.ftb.quests.FtbQuestsKnowledgeProvider(
                     new dev.tomewisp.integration.ftb.quests.ReflectiveFtbQuestsBridge(
                             FabricGuideCommands.class.getClassLoader()),
                     client.player,
-                    true));
+                    true,
+                    base.platform().gameVersion(),
+                    base.platform().platformName()));
         }
         base.knowledge().reload(providers);
     }
