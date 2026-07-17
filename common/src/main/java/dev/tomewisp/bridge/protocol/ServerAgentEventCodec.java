@@ -59,10 +59,13 @@ public final class ServerAgentEventCodec {
             case "model_complete" -> new AgentEvent.ModelProgress(
                     read(body, Set.of("stopReason"), ModelEvent.MessageComplete.class));
             case "model_failure" -> new AgentEvent.ModelProgress(readModelFailure(body));
-            case "tool_started" -> read(body, Set.of("toolId"), AgentEvent.ToolStarted.class);
+            case "tool_started" -> read(
+                    body,
+                    Set.of("invocationId", "toolId"),
+                    AgentEvent.ToolStarted.class);
             case "tool_completed" -> read(
                     body,
-                    Set.of("toolId", "failure", "normalized"),
+                    Set.of("invocationId", "toolId", "failure", "normalized"),
                     AgentEvent.ToolCompleted.class);
             case "final_text" -> read(body, Set.of("text"), AgentEvent.FinalText.class);
             case "failed" -> read(body, Set.of("code", "message"), AgentEvent.Failed.class);

@@ -338,7 +338,7 @@ git commit -m "feat: correlate guide tools by invocation id"
 - Modify: `common/src/main/java/dev/tomewisp/bridge/protocol/ServerAgentEventCodec.java`
 - Modify: `common/src/test/java/dev/tomewisp/bridge/protocol/ServerAgentEventCodecTest.java`
 
-- [ ] **Step 1: Write failing protocol-v3 tests**
+- [x] **Step 1: Write failing protocol-v3 tests**
 
 Add round trips for:
 
@@ -359,7 +359,7 @@ assertEquals("call-1", completed.invocationId());
 
 Add a strict rejection test whose `tool_started` body omits `invocationId`.
 
-- [ ] **Step 2: Run the codec test and confirm schema failure**
+- [x] **Step 2: Run the codec test and confirm schema failure**
 
 ```bash
 ./gradlew :common:test --tests 'dev.tomewisp.bridge.protocol.ServerAgentEventCodecTest'
@@ -367,7 +367,7 @@ Add a strict rejection test whose `tool_started` body omits `invocationId`.
 
 Expected: FAIL because the codec still expects the version-2 fields.
 
-- [ ] **Step 3: Bump the bridge protocol**
+- [x] **Step 3: Bump the bridge protocol**
 
 Set:
 
@@ -378,7 +378,7 @@ public static final int VERSION = 3;
 No backwards decoder is added because the existing bridge is strict and both
 loader artifacts ship together.
 
-- [ ] **Step 4: Update strict codec field sets**
+- [x] **Step 4: Update strict codec field sets**
 
 Decode with:
 
@@ -393,7 +393,7 @@ case "tool_completed" -> read(
 
 Encoding remains Gson-based through the event record.
 
-- [ ] **Step 5: Run all bridge protocol tests**
+- [x] **Step 5: Run all bridge protocol tests**
 
 ```bash
 ./gradlew :common:test --tests 'dev.tomewisp.bridge.protocol.*'
@@ -401,7 +401,7 @@ Encoding remains Gson-based through the event record.
 
 Expected: PASS with version 3 and strict unknown/malformed rejection.
 
-- [ ] **Step 6: Commit the protocol upgrade**
+- [x] **Step 6: Commit the protocol upgrade**
 
 ```bash
 git add common/src/main/java/dev/tomewisp/bridge/protocol \

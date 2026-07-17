@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import dev.tomewisp.agent.AgentEvent;
 import dev.tomewisp.model.ModelEvent;
 import dev.tomewisp.model.ModelUsage;
@@ -45,6 +46,25 @@ final class ServerAgentEventCodecTest {
                                         .event())
                         .usage());
 
+        AgentEvent.ToolStarted started = assertInstanceOf(
+                AgentEvent.ToolStarted.class,
+                codec.decode(
+                        codec.encode(request, new AgentEvent.ToolStarted(
+                                "call-1", "tomewisp:get_recipe")),
+                        request));
+        assertEquals("call-1", started.invocationId());
+
+        AgentEvent.ToolCompleted completed = assertInstanceOf(
+                AgentEvent.ToolCompleted.class,
+                codec.decode(
+                        codec.encode(request, new AgentEvent.ToolCompleted(
+                                "call-1",
+                                "tomewisp:get_recipe",
+                                false,
+                                new JsonObject())),
+                        request));
+        assertEquals("call-1", completed.invocationId());
+
         ServerAgentEventPayload terminal =
                 codec.encode(request, new AgentEvent.FinalText("done"));
         assertEquals(true, terminal.terminal());
@@ -58,6 +78,14 @@ final class ServerAgentEventCodecTest {
         assertThrows(IllegalArgumentException.class, () -> codec.decode(
                 new ServerAgentEventPayload(
                         BridgeProtocol.VERSION, request, "future_event", "{}", false),
+                request));
+        assertThrows(IllegalArgumentException.class, () -> codec.decode(
+                new ServerAgentEventPayload(
+                        BridgeProtocol.VERSION,
+                        request,
+                        "tool_started",
+                        "{\"toolId\":\"tomewisp:get_recipe\"}",
+                        false),
                 request));
         assertThrows(IllegalArgumentException.class, () -> codec.decode(
                 codec.encode(request, new AgentEvent.FinalText("done")), UUID.randomUUID()));
