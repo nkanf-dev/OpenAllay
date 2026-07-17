@@ -52,6 +52,7 @@ import net.minecraft.world.item.crafting.display.ShapedCraftingRecipeDisplay;
 import net.minecraft.world.item.crafting.display.ShapelessCraftingRecipeDisplay;
 
 public final class MinecraftContextCapture {
+    private static final String LEGACY_RECIPE_GENERATION = "0".repeat(64);
     private static final String REGISTRY_PROVENANCE = "minecraft:registry";
     private static final String RECIPE_PROVENANCE = "minecraft:recipe_manager";
     private final Gson gson;
@@ -223,7 +224,7 @@ public final class MinecraftContextCapture {
                 "minecraft:recipe_manager",
                 RECIPE_PROVENANCE);
         return new RecipeEntrySnapshot(
-                new RecipeReference("minecraft:recipe_manager", recipeId),
+                new RecipeReference("minecraft:recipe_manager", LEGACY_RECIPE_GENERATION, recipeId),
                 recipeId,
                 type.toString(),
                 layout,

@@ -31,9 +31,31 @@ final class RecipeQueryToolsTest {
                 new GetRecipeTool().invoke(
                         GroundedTestFixtures.fullContext(),
                         new GetRecipeTool.Input(
-                                "minecraft:recipe_manager", "minecraft:iron_block")));
+                                "minecraft:recipe_manager",
+                                GroundedTestFixtures.RECIPE_GENERATION,
+                                "minecraft:iron_block")));
         assertEquals(9, details.value().recipe().ingredients().getFirst().count());
         assertTrue(!details.value().evidence().isEmpty());
+    }
+
+    @Test
+    void distinguishesMalformedAndStaleRecipeReferences() {
+        GetRecipeTool tool = new GetRecipeTool();
+        ToolResult.Failure<GetRecipeTool.Output> invalid = assertInstanceOf(
+                ToolResult.Failure.class,
+                tool.invoke(
+                        GroundedTestFixtures.fullContext(),
+                        new GetRecipeTool.Input(
+                                "minecraft:recipe_manager", "not-a-digest", "minecraft:iron_block")));
+        assertEquals("invalid_arguments", invalid.code());
+
+        ToolResult.Failure<GetRecipeTool.Output> stale = assertInstanceOf(
+                ToolResult.Failure.class,
+                tool.invoke(
+                        GroundedTestFixtures.fullContext(),
+                        new GetRecipeTool.Input(
+                                "minecraft:recipe_manager", "f".repeat(64), "minecraft:iron_block")));
+        assertEquals("stale_reference", stale.code());
     }
 
     @Test

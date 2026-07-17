@@ -57,7 +57,11 @@ final class BuiltinEvidenceContractTest {
                 new SearchRecipesTool().invoke(
                         context, new SearchRecipesTool.Input(null, "minecraft:iron_block", null, null)),
                 new GetRecipeTool().invoke(
-                        context, new GetRecipeTool.Input("minecraft:recipe_manager", "minecraft:iron_block")),
+                        context,
+                        new GetRecipeTool.Input(
+                                "minecraft:recipe_manager",
+                                GroundedTestFixtures.RECIPE_GENERATION,
+                                "minecraft:iron_block")),
                 new FindItemUsagesTool().invoke(
                         context, new FindItemUsagesTool.Input("minecraft:iron_ingot")),
                 new PlayerContextTool().invoke(context, new PlayerContextTool.Input()),
@@ -65,7 +69,10 @@ final class BuiltinEvidenceContractTest {
                 new CalculateCraftabilityTool().invoke(
                         context,
                         new CalculateCraftabilityTool.Input(
-                                "minecraft:recipe_manager", "minecraft:iron_block", 1)),
+                                "minecraft:recipe_manager",
+                                GroundedTestFixtures.RECIPE_GENERATION,
+                                "minecraft:iron_block",
+                                1)),
                 new ListKnowledgeSourcesTool(knowledge).invoke(
                         context, new ListKnowledgeSourcesTool.Input()),
                 new SearchKnowledgeTool(knowledge).invoke(

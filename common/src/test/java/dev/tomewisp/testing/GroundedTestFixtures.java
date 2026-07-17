@@ -33,6 +33,7 @@ import java.util.UUID;
 public final class GroundedTestFixtures {
     public static final UUID PLAYER_ID =
             UUID.fromString("54a6fbd8-c548-4c4d-b9a7-7b9e310d2b71");
+    public static final String RECIPE_GENERATION = "0".repeat(64);
 
     private GroundedTestFixtures() {}
 
@@ -62,7 +63,8 @@ public final class GroundedTestFixtures {
 
     public static RecipeEntrySnapshot ironBlockRecipe() {
         return new RecipeEntrySnapshot(
-                new RecipeReference("minecraft:recipe_manager", "minecraft:iron_block"),
+                new RecipeReference(
+                        "minecraft:recipe_manager", RECIPE_GENERATION, "minecraft:iron_block"),
                 "minecraft:iron_block",
                 "minecraft:crafting",
                 new RecipeLayoutSnapshot(3, 3, true),
@@ -148,7 +150,8 @@ public final class GroundedTestFixtures {
                 "minecraft:planks",
                 List.of("minecraft:birch_planks", "minecraft:oak_planks"));
         return new RecipeEntrySnapshot(
-                new RecipeReference("minecraft:recipe_manager", "test:overlapping_planks"),
+                new RecipeReference(
+                        "minecraft:recipe_manager", RECIPE_GENERATION, "test:overlapping_planks"),
                 "test:overlapping_planks",
                 "minecraft:crafting",
                 new RecipeLayoutSnapshot(2, 1, true),

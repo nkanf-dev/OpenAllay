@@ -10,11 +10,13 @@ STEPS = (
     ("tomewisp__search_recipes", {"outputItem": "minecraft:iron_block"}),
     ("tomewisp__get_recipe", {
         "sourceId": "minecraft:recipe_manager",
+        "generation": "0" * 64,
         "recipeId": "minecraft:iron_block",
     }),
     ("tomewisp__inspect_inventory", {}),
     ("tomewisp__calculate_craftability", {
         "sourceId": "minecraft:recipe_manager",
+        "generation": "0" * 64,
         "recipeId": "minecraft:iron_block",
         "crafts": 1,
     }),

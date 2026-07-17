@@ -42,14 +42,19 @@ viewer nested JAR, proving these dependencies remain optional.
 
 ## Task 2: Define Provider, Generation, and Visibility Domain
 
-- [ ] Add provider state/diagnostic/snapshot records and `RecipeUnlockState`.
-- [ ] Extend `RecipeReference` with a required generation and update tool schemas.
-- [ ] Return `stale_reference` for absent generation/record; keep malformed input
+- [x] Add provider state/diagnostic/snapshot records and `RecipeUnlockState`.
+- [x] Extend `RecipeReference` with a required generation and update tool schemas.
+- [x] Return `stale_reference` for absent generation/record; keep malformed input
   distinct as `invalid_arguments`.
-- [ ] Add persisted client recipe config with default `ALL_KNOWN`, per-source
+- [x] Add persisted client recipe config with default `ALL_KNOWN`, per-source
   enable flags, and preferred viewer; never store credentials.
-- [ ] Add strict configuration, generation stability, and stale-reference tests.
-- [ ] Commit `feat: define all-known recipe sources`.
+- [x] Add strict configuration, generation stability, and stale-reference tests.
+- [x] Commit `feat: define all-known recipe sources`.
+
+Verification on 2026-07-18 passed 161 common tests (160 passed and one opt-in
+skip) plus clean Fabric and NeoForge production builds. Deterministic trace and
+model fixtures now round-trip the required generation field. Existing SQLite
+native-access, Xerial version-format, and Javadoc warnings remain unchanged.
 
 ## Task 3: Merge Canonical Provider Snapshots
 

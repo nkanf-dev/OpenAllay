@@ -48,6 +48,7 @@ import net.minecraft.world.item.crafting.display.ShapelessCraftingRecipeDisplay;
 import net.minecraft.world.item.crafting.display.SlotDisplayContext;
 
 public final class ClientContextCapture {
+    private static final String LEGACY_RECIPE_GENERATION = "0".repeat(64);
     private final Gson gson;
     private final PlatformService platform;
 
@@ -200,7 +201,8 @@ public final class ClientContextCapture {
                         "minecraft:client_recipe_book",
                         "minecraft:client_recipe_display");
                 recipes.add(new RecipeEntrySnapshot(
-                        new RecipeReference("minecraft:client_recipe_book", recipeId),
+                        new RecipeReference(
+                                "minecraft:client_recipe_book", LEGACY_RECIPE_GENERATION, recipeId),
                         recipeId,
                         java.util.Objects.requireNonNull(
                                         BuiltInRegistries.RECIPE_DISPLAY.getKey(entry.display().type()))

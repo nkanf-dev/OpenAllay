@@ -56,10 +56,12 @@ final class GuideProductE2ETest {
                         "outputItem", "minecraft:iron_block")),
                 toolWithText("2", "我再确认完整配方。", "tomewisp__get_recipe", json(
                         "sourceId", "minecraft:recipe_manager",
+                        "generation", GroundedTestFixtures.RECIPE_GENERATION,
                         "recipeId", "minecraft:iron_block")),
                 toolWithText("3", "现在检查你的库存。", "tomewisp__inspect_inventory", new JsonObject()),
                 toolWithText("4", "最后计算材料缺口。", "tomewisp__calculate_craftability", json(
                         "sourceId", "minecraft:recipe_manager",
+                        "generation", GroundedTestFixtures.RECIPE_GENERATION,
                         "recipeId", "minecraft:iron_block",
                         "crafts", 1)),
                 text("你有 4 个铁锭；制作 1 个铁块还缺 5 个。")));

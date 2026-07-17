@@ -7,6 +7,8 @@ references: []
 ---
 Use this Skill for general questions about items, blocks, recipes, mechanics, or progression.
 
+For exact recipe details or craftability, pass sourceId, generation, and recipeId unchanged from the current recipe search result. A stale_reference requires a new search; never invent a generation.
+
 1. Resolve ambiguous names before making factual claims.
 2. Search indexed knowledge and fetch the full relevant documents.
 3. For recipes, search first and fetch exact details. Inspect inventory and calculate craftability only when the player asks about sufficiency; do not estimate overlapping alternatives yourself.
