@@ -7,6 +7,7 @@ import dev.tomewisp.bridge.protocol.CapabilityPayload;
 import dev.tomewisp.bridge.protocol.RemoteToolResultChunkPayload;
 import dev.tomewisp.bridge.protocol.ServerAgentEventPayload;
 import dev.tomewisp.bridge.protocol.ServerAgentRequestPayload;
+import dev.tomewisp.bridge.protocol.ServerAgentCancelPayload;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -62,6 +63,16 @@ public final class FabricClientBridge {
         }
         serverRequests.put(request.requestId(), events);
         send("agent_request", request);
+        return true;
+    }
+
+    public boolean cancelServer(UUID requestId) {
+        Consumer<ServerAgentEventPayload> removed = serverRequests.remove(requestId);
+        if (removed == null || !ClientPlayNetworking.canSend(FabricBridgePayloads.Packet.TYPE)) {
+            return false;
+        }
+        send("agent_cancel", new ServerAgentCancelPayload(
+                dev.tomewisp.bridge.protocol.BridgeProtocol.VERSION, requestId));
         return true;
     }
 
