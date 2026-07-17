@@ -72,12 +72,17 @@ record-order permutations, and change when normalized record contents change.
 
 ## Task 4: Capture Vanilla Unlock Metadata
 
-- [ ] Refactor current recipe-book traversal behind the provider contract.
-- [ ] Mark synchronized entries `UNLOCKED`, source them from
+- [x] Refactor current recipe-book traversal behind the provider contract.
+- [x] Mark synchronized entries `UNLOCKED`, source them from
   `minecraft:client_recipe_book`, and never claim all-known completeness.
-- [ ] Preserve immutable thread capture and existing ingredient/layout behavior.
-- [ ] Add locked/unknown filter and no-viewer regression tests.
-- [ ] Commit `refactor: isolate vanilla recipe provider`.
+- [x] Preserve immutable thread capture and existing ingredient/layout behavior.
+- [x] Add locked/unknown filter and no-viewer regression tests.
+- [x] Commit `refactor: isolate vanilla recipe provider`.
+
+Verification on 2026-07-18 passed 165 common tests (164 passed and one opt-in
+skip) and clean Fabric/NeoForge production builds. Client recipe-book capture
+is partial and unlocked-only metadata; server recipe-manager capture remains a
+complete authoritative provider. Both use content-derived generations.
 
 ## Task 5: Integrate JEI Through Its Public API
 

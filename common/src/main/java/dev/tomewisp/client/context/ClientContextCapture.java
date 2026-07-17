@@ -26,6 +26,11 @@ import dev.tomewisp.context.RegistrySnapshot;
 import dev.tomewisp.context.ToolInvocationContext;
 import dev.tomewisp.platform.PlatformService;
 import dev.tomewisp.platform.PlatformServices;
+import dev.tomewisp.recipe.RecipeKnowledgeProvider;
+import dev.tomewisp.recipe.RecipeKnowledgeService;
+import dev.tomewisp.recipe.RecipeProviderSnapshot;
+import dev.tomewisp.recipe.RecipeUnlockState;
+import dev.tomewisp.recipe.RecipeVisibilityPolicy;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -48,9 +53,10 @@ import net.minecraft.world.item.crafting.display.ShapelessCraftingRecipeDisplay;
 import net.minecraft.world.item.crafting.display.SlotDisplayContext;
 
 public final class ClientContextCapture {
-    private static final String LEGACY_RECIPE_GENERATION = "0".repeat(64);
+    private static final String CAPTURE_GENERATION_PLACEHOLDER = "0".repeat(64);
     private final Gson gson;
     private final PlatformService platform;
+    private final RecipeKnowledgeService recipeKnowledge = new RecipeKnowledgeService();
 
     public ClientContextCapture(Gson gson) {
         this(gson, PlatformServices.load());
@@ -159,6 +165,29 @@ public final class ClientContextCapture {
     }
 
     private RecipeSnapshot recipes(LocalPlayer player, Minecraft client, Instant capturedAt) {
+        RecipeKnowledgeProvider vanilla = new RecipeKnowledgeProvider() {
+            @Override
+            public String sourceId() {
+                return "minecraft:client_recipe_book";
+            }
+
+            @Override
+            public RecipeProviderSnapshot capture() {
+                return vanillaRecipes(player, client, capturedAt);
+            }
+        };
+        return recipeKnowledge.capture(
+                evidence(
+                        DataCompleteness.UNKNOWN,
+                        capturedAt,
+                        "tomewisp:recipe_catalog",
+                        "tomewisp:recipe_catalog"),
+                RecipeVisibilityPolicy.ALL_KNOWN,
+                List.of(vanilla));
+    }
+
+    private RecipeProviderSnapshot vanillaRecipes(
+            LocalPlayer player, Minecraft client, Instant capturedAt) {
         Set<Integer> seen = new HashSet<>();
         List<RecipeEntrySnapshot> recipes = new ArrayList<>();
         var context = SlotDisplayContext.fromLevel(client.level);
@@ -196,13 +225,15 @@ public final class ClientContextCapture {
                         .findFirst()
                         .orElse(null);
                 EvidenceMetadata recipeEvidence = evidence(
-                        DataCompleteness.COMPLETE,
+                        DataCompleteness.PARTIAL,
                         capturedAt,
                         "minecraft:client_recipe_book",
                         "minecraft:client_recipe_display");
                 recipes.add(new RecipeEntrySnapshot(
                         new RecipeReference(
-                                "minecraft:client_recipe_book", LEGACY_RECIPE_GENERATION, recipeId),
+                                "minecraft:client_recipe_book",
+                                CAPTURE_GENERATION_PLACEHOLDER,
+                                recipeId),
                         recipeId,
                         java.util.Objects.requireNonNull(
                                         BuiltInRegistries.RECIPE_DISPLAY.getKey(entry.display().type()))
@@ -217,15 +248,19 @@ public final class ClientContextCapture {
                         RecipeProcessingSnapshot.unknown(),
                         List.of(),
                         Map.of(),
+                        RecipeUnlockState.UNLOCKED,
                         recipeEvidence));
             }
         }
         recipes.sort(Comparator.comparing(RecipeEntrySnapshot::id));
-        return new RecipeSnapshot(evidence(
-                DataCompleteness.COMPLETE,
-                capturedAt,
+        return RecipeProviderSnapshot.available(
                 "minecraft:client_recipe_book",
-                "minecraft:client_recipe_display"), recipes);
+                DataCompleteness.PARTIAL,
+                recipes,
+                List.of(new dev.tomewisp.recipe.RecipeProviderDiagnostic(
+                        "minecraft:client_recipe_book",
+                        "recipe_book_only",
+                        "Only synchronized unlocked recipe-book entries are visible")));
     }
 
     private ItemStackSnapshot stack(ItemStack stack) {

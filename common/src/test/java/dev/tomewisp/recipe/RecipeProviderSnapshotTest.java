@@ -21,6 +21,8 @@ final class RecipeProviderSnapshotTest {
                 List.of());
 
         assertEquals(64, snapshot.generation().length());
+        assertEquals(recipe.layout(), snapshot.recipes().getFirst().layout());
+        assertEquals(recipe.ingredients(), snapshot.recipes().getFirst().ingredients());
         assertThrows(IllegalArgumentException.class, () -> RecipeProviderSnapshot.available(
                 "viewer:jei",
                 DataCompleteness.COMPLETE,

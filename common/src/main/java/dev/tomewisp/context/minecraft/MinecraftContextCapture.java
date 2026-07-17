@@ -26,6 +26,10 @@ import dev.tomewisp.context.RegistrySnapshot;
 import dev.tomewisp.context.ToolInvocationContext;
 import dev.tomewisp.platform.PlatformService;
 import dev.tomewisp.platform.PlatformServices;
+import dev.tomewisp.recipe.RecipeKnowledgeProvider;
+import dev.tomewisp.recipe.RecipeKnowledgeService;
+import dev.tomewisp.recipe.RecipeProviderSnapshot;
+import dev.tomewisp.recipe.RecipeVisibilityPolicy;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -52,11 +56,12 @@ import net.minecraft.world.item.crafting.display.ShapedCraftingRecipeDisplay;
 import net.minecraft.world.item.crafting.display.ShapelessCraftingRecipeDisplay;
 
 public final class MinecraftContextCapture {
-    private static final String LEGACY_RECIPE_GENERATION = "0".repeat(64);
+    private static final String CAPTURE_GENERATION_PLACEHOLDER = "0".repeat(64);
     private static final String REGISTRY_PROVENANCE = "minecraft:registry";
     private static final String RECIPE_PROVENANCE = "minecraft:recipe_manager";
     private final Gson gson;
     private final PlatformService platform;
+    private final RecipeKnowledgeService recipeKnowledge = new RecipeKnowledgeService();
 
     public MinecraftContextCapture(Gson gson) {
         this(gson, PlatformServices.load());
@@ -175,17 +180,37 @@ public final class MinecraftContextCapture {
 
     private RecipeSnapshot captureRecipes(
             CommandSourceStack source, java.time.Instant capturedAt) {
+        RecipeKnowledgeProvider recipeManager = new RecipeKnowledgeProvider() {
+            @Override
+            public String sourceId() {
+                return "minecraft:recipe_manager";
+            }
+
+            @Override
+            public RecipeProviderSnapshot capture() {
+                return captureRecipeManager(source, capturedAt);
+            }
+        };
+        return recipeKnowledge.capture(
+                evidence(
+                        DataCompleteness.UNKNOWN,
+                        capturedAt,
+                        "minecraft:recipe_manager",
+                        RECIPE_PROVENANCE),
+                RecipeVisibilityPolicy.ALL_KNOWN,
+                List.of(recipeManager));
+    }
+
+    private RecipeProviderSnapshot captureRecipeManager(
+            CommandSourceStack source, java.time.Instant capturedAt) {
         ContextMap displayContext = SlotDisplayContext.fromLevel(source.getLevel());
         List<RecipeEntrySnapshot> recipes = source.getServer().getRecipeManager().getRecipes()
                 .stream()
                 .map(holder -> captureRecipe(holder, displayContext, capturedAt))
                 .sorted(Comparator.comparing(RecipeEntrySnapshot::id))
                 .toList();
-        return new RecipeSnapshot(evidence(
-                DataCompleteness.COMPLETE,
-                capturedAt,
-                "minecraft:recipe_manager",
-                RECIPE_PROVENANCE), recipes);
+        return RecipeProviderSnapshot.available(
+                "minecraft:recipe_manager", DataCompleteness.COMPLETE, recipes, List.of());
     }
 
     private RecipeEntrySnapshot captureRecipe(
@@ -224,7 +249,8 @@ public final class MinecraftContextCapture {
                 "minecraft:recipe_manager",
                 RECIPE_PROVENANCE);
         return new RecipeEntrySnapshot(
-                new RecipeReference("minecraft:recipe_manager", LEGACY_RECIPE_GENERATION, recipeId),
+                new RecipeReference(
+                        "minecraft:recipe_manager", CAPTURE_GENERATION_PLACEHOLDER, recipeId),
                 recipeId,
                 type.toString(),
                 layout,
