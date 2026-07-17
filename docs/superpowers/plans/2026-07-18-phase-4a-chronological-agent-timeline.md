@@ -10,6 +10,20 @@
 
 ---
 
+## Execution review correction
+
+Task 1 changes the primary snapshot and tool constructors before Task 4 rewrites
+the reducer. To keep every intermediate commit compilable, Task 1 may add
+package-private migration constructors that translate the old flattened
+arguments into a timeline and assign an explicit `migration-<index>` invocation
+ID only for existing in-process test fixtures. Task 4 must delete those
+migration constructors after every production and test call site supplies the
+real model invocation ID. The final implementation must contain no path that
+correlates tools by name or invents runtime invocation identity.
+
+This correction changes only implementation sequencing; it does not change the
+approved product semantics.
+
 ## File map
 
 - Create `common/src/main/java/dev/tomewisp/guide/GuideTimelineEntry.java`: immutable ordered assistant/tool entries and ordinal validation.
