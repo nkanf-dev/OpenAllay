@@ -11,7 +11,9 @@ import dev.tomewisp.tool.ToolResult;
 import java.util.List;
 import java.util.Set;
 import dev.tomewisp.context.ContextCapability;
+import dev.tomewisp.recipe.RecipeCatalog;
 
+@Deprecated(forRemoval = false)
 public final class FindRecipesTool
         implements Tool<FindRecipesTool.Input, FindRecipesTool.Output> {
     public record Input(String outputItem) {}
@@ -53,9 +55,11 @@ public final class FindRecipesTool
         }
 
         var snapshot = context.recipes().orElseThrow();
-        List<RecipeEntrySnapshot> recipes = snapshot.recipes().stream()
-                .filter(recipe -> recipe.outputs().stream()
-                        .anyMatch(output -> output.stack().itemId().equals(input.outputItem())))
+        RecipeCatalog catalog = new RecipeCatalog(snapshot);
+        List<RecipeEntrySnapshot> recipes = catalog.search(new RecipeCatalog.Query(
+                        null, input.outputItem(), null, null))
+                .stream()
+                .map(summary -> catalog.get(summary.reference()).orElseThrow())
                 .toList();
         return new ToolResult.Success<>(new Output(
                 input.outputItem(), recipes, List.of(snapshot.evidence())));
