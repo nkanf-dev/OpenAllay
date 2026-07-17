@@ -83,6 +83,19 @@ canonical redacted report outside the tool registry, and may request clean
 shutdown. CI may claim controller/build coverage without claiming a graphical
 run; real-client coverage requires a retained report from an explicit run.
 
+The Phase 3C implementation uses only Minecraft native Screen/widgets and a
+pure immutable `GuideUiView`; it introduces no second UI framework. Normal
+widths show a session rail and inline detail drawer, while narrow widths use
+overlays without truncating the underlying transcript data. Transcript drawing
+is scissored and virtualized by visible wrapped lines. The multiline composer
+uses `Ctrl+Enter` for submission so ordinary Enter remains available for text.
+
+Tool/source detail is a projection of normalized authorized results and
+evidence. Recipe search, recipe detail, inventory and craftability have
+first-class concise presenters; unknown tools retain a deterministic JSON
+fallback. Switching sessions or receiving disconnect-cleared state also clears
+stale detail selections. No source action launches an external browser.
+
 ## Applies To
 
 - grounded recipe, inventory, and craftability DTOs/tools
@@ -112,6 +125,10 @@ run; real-client coverage requires a retained report from an explicit run.
     GuideService; loader adapters do not reinterpret event semantics.
 13. Disabled E2E instrumentation has no session, model, file, or shutdown side
     effects, and its filesystem writer is never exposed to the model.
+14. Closing or replacing TomeWispScreen detaches only its subscription; request
+    cancellation remains an explicit GuideService intent.
+15. A detail drawer cannot retain evidence after its session/source disappears
+    from the current GuideSnapshot.
 
 ## Failure Semantics
 

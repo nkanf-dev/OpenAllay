@@ -62,9 +62,14 @@ loaders through one shared GuideService and an opt-in real-client probe:
 
 A server mod is not required for the main client model mode. Dynamic Ponder
 generation remains Phase 4 because Ponder/Ponderer do not yet provide a 26.2
-runtime target. Phase 3C next adds the player GUI; graphical E2E remains
-explicit opt-in and is never inferred from compilation. The knowledge layer already retains Patchouli
+runtime target. Phase 3C now provides the native player GUI; graphical E2E
+remains explicit opt-in and is never inferred from compilation. The knowledge layer already retains Patchouli
 multiblock coordinates and structure references for the later Ponder workflow.
+
+Press the configurable `K` mapping or run bare `/guide` in-world to open the
+non-pausing screen. It streams the current GuideService transcript, displays
+grounded tool/source details, and supports cancel, retry, sessions and explicit
+client/server model selection. Escape closes only the screen, not the request.
 
 ## License
 

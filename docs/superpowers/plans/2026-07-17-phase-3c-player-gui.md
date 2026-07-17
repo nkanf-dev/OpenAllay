@@ -50,3 +50,21 @@ and reconstructs from immutable snapshots; closing only detaches its listener.
    behavior and remaining explicit acceptance gap.
 2. Run final clean verification, review diff/history, push the branch with
    network retries, and integrate only after checks pass.
+
+## Execution record
+
+- Tasks 1–3 completed in commits `977870f`, `6a0b4a6`, `ac0cc37`, and
+  `c0ca8b8`. Fabric and NeoForge use the same native screen, GuideService and
+  default `K` mapping identity; bare `/guide` uses the same opener.
+- Task 4: 125 common tests, 0 failures, 0 errors, and 1 opt-in live-provider
+  test skipped. Both production builds passed. Both JARs contain TomeWispScreen,
+  key mappings, GuideUiView, GuideToolPresenter and GuideService. Tracked/JAR
+  credential scans returned zero matches.
+- Artifact SHA-256 at this verification point:
+  `157dcf0fd50bc4b85fa41ee24d363f42b8c7e8d8f24bb8b79a7fddb13cf55f56`
+  (Fabric) and
+  `2d6d31bef6a8f023ee4f95399ba8e6ab6bd89333c7cb4276c77b99c2d2b7f347`
+  (NeoForge).
+- Per unattended-execution constraint, no graphical client or screenshot run
+  was performed. Compilation/unit/artifact coverage is claimed; visual and
+  real-client gameplay acceptance is explicitly not claimed.

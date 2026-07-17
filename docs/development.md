@@ -119,6 +119,28 @@ opens a graphical client. CI validates the controller, both loader hooks, shell
 syntax and fixture syntax, but does not claim a real-client run. A release may
 claim that coverage only when the generated report is retained and reviewed.
 
+## Player GUI
+
+The configurable `key.tomewisp.open_guide` mapping defaults to `K`; bare
+`/guide` uses the same opener on Fabric and NeoForge. The native full-screen
+Screen does not pause the world. Escape and opening another Screen only detach
+the UI subscription, so active work continues and reopening reconstructs from
+the latest immutable GuideSnapshot.
+
+The screen provides a responsive session rail/overlay, virtualized wrapped
+transcript, multiline composer (`Ctrl+Enter` sends), stop/retry controls, and an
+explicit local/server model selector. Only model text deltas are visible;
+reasoning is absent from the UI view type. Grounded recipe, inventory and
+craftability tools receive first-class summaries, while other tools use a
+deterministic normalized-result fallback. Clicking a tool or source opens an
+in-game evidence detail panel; no browser is launched. Session switches and
+disconnect cleanup remove stale detail state.
+
+If the selected model is unavailable, the screen still opens and shows the
+configuration/capability state. Client configuration remains at
+`config/tomewisp/model.json`; credentials are never displayed. Model-mode
+changes affect future requests only and never trigger silent fallback.
+
 ## Grounded built-in tools
 
 Every factual success carries immutable evidence: authority, completeness,
