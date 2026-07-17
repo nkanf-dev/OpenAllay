@@ -8,11 +8,16 @@ import dev.tomewisp.guide.GuideCommandFacade;
 import dev.tomewisp.guide.GuideLocalEndpoint;
 import dev.tomewisp.guide.GuideServiceManager;
 import dev.tomewisp.guide.PayloadGuideRemoteEndpoint;
+import dev.tomewisp.guide.e2e.GuideClientE2EConfig;
+import dev.tomewisp.guide.e2e.GuideClientE2EController;
 import dev.tomewisp.tool.ToolResult;
 import net.minecraft.client.Minecraft;
+import net.neoforged.fml.ModList;
 import net.neoforged.fml.loading.FMLPaths;
 import net.neoforged.bus.api.IEventBus;
 import dev.tomewisp.neoforge.network.NeoForgeClientBridge;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.common.NeoForge;
 
 public final class TomeWispNeoForgeClient {
     private TomeWispNeoForgeClient() {}
@@ -63,5 +68,24 @@ public final class TomeWispNeoForgeClient {
                 contexts,
                 service -> new ToolResult.Failure<>(
                         "gui_unavailable", "玩家界面将在 Phase 3C 启用")));
+        GuideClientE2EConfig.from(System.getProperties()).ifPresent(config -> {
+            String modVersion = ModList.get().getModContainerById("tomewisp")
+                    .map(container -> container.getModInfo().getVersion().toString())
+                    .orElse("unknown");
+            String secret = System.getenv("TOMEWISP_API_KEY");
+            GuideClientE2EController controller = new GuideClientE2EController(
+                    config,
+                    "neoforge",
+                    runtime.platform().gameVersion(),
+                    modVersion,
+                    services,
+                    gson,
+                    () -> Minecraft.getInstance().stop(),
+                    secret == null || secret.isBlank() ? java.util.Set.of() : java.util.Set.of(secret));
+            NeoForge.EVENT_BUS.addListener((ClientTickEvent.Post event) -> {
+                Minecraft client = Minecraft.getInstance();
+                if (client.player != null) controller.tick(client.player.getUUID());
+            });
+        });
     }
 }

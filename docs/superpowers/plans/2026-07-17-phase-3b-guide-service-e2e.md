@@ -87,3 +87,16 @@
 3. Scan tracked files, reports, resources, JARs, and Git objects for credentials.
 4. Persist exact tests/artifacts/commit IDs and the no-graphical-run limitation in repository docs, SKMB if semantics changed, and `/Users/nkanf/docs/neolongsur/PRODUCT_DESIGN.md`.
 5. Mark only Phase 3B complete; Phase 3C GUI remains incomplete.
+
+## Execution record
+
+- Tasks 1–7 implemented through commit `f3afd54`; deterministic product E2E
+  drives the real Agent, GuideService, grounded recipe tools and report codec.
+- Task 8 controller and loader hooks are default-off and are covered by common
+  tests plus both loader compilers. The loopback HTTP/SSE fixture was exercised
+  directly. Per designer instruction, no graphical client was launched, so a
+  real-client report is not claimed by this execution.
+- Task 9 closeout: 119 common tests, 0 failures, 0 errors, 1 opt-in live test
+  skipped; both production loader builds passed; required classes were found in
+  both JARs; tracked/JAR credential scans returned zero matches. No graphical
+  client report is claimed.

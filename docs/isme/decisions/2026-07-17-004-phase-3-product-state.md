@@ -76,6 +76,13 @@ The GUI is an independent full-screen non-pausing in-world Screen opened by a
 configurable default `K` mapping or `/guide`. Escape closes without cancelling.
 Reasoning deltas are diagnostic-only. Visible state comes only from GuideService.
 
+Real-client automation is a development harness, not an Agent capability. It is
+inert unless an explicit JVM property enables it, starts only after a player
+exists, uses GuideService asynchronously on the client thread, writes a
+canonical redacted report outside the tool registry, and may request clean
+shutdown. CI may claim controller/build coverage without claiming a graphical
+run; real-client coverage requires a retained report from an explicit run.
+
 ## Applies To
 
 - grounded recipe, inventory, and craftability DTOs/tools
@@ -103,6 +110,8 @@ Reasoning deltas are diagnostic-only. Visible state comes only from GuideService
     slot has been reused.
 12. One server event is decoded and correlated exactly once before it reaches
     GuideService; loader adapters do not reinterpret event semantics.
+13. Disabled E2E instrumentation has no session, model, file, or shutdown side
+    effects, and its filesystem writer is never exposed to the model.
 
 ## Failure Semantics
 

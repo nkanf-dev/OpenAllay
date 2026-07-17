@@ -88,6 +88,37 @@ recipe-display snapshots. If the server advertises enhancements, the same
 client Agent also sees separately named server read tools. Model location and
 tool location are independent.
 
+## Shared GuideService and opt-in client E2E
+
+Commands, the Phase 3C screen, and development probes consume one
+connection-scoped `GuideService`. It owns immutable request/session snapshots,
+model mode, topology, cancellation, retry, sources, and disconnect cleanup.
+The server Agent event protocol is version 2 and is decoded once in common
+code. Unknown or malformed events fail only their correlated request; there is
+no silent client/server fallback.
+
+The real-client probe is disabled unless `tomewisp.e2e.enabled=true`. When
+enabled, it waits for a real client player, submits through the same
+`GuideService`, records status transitions, tool IDs, evidence, timings and
+payload hashes, writes a redacted JSON report, then optionally requests clean
+client shutdown. Report writing belongs to this development harness and is not
+an Agent tool.
+
+The helper below starts a deterministic loopback OpenAI/SSE fixture and launches
+the selected graphical development client:
+
+```bash
+./scripts/run-real-client-e2e.sh fabric
+./scripts/run-real-client-e2e.sh neoforge
+```
+
+Connect the launched client to a disposable world or test server. The fixture
+requests the grounded iron-block chain: recipe search, exact recipe, inventory,
+then deterministic craftability. The script is intentionally opt-in because it
+opens a graphical client. CI validates the controller, both loader hooks, shell
+syntax and fixture syntax, but does not claim a real-client run. A release may
+claim that coverage only when the generated report is retained and reviewed.
+
 ## Grounded built-in tools
 
 Every factual success carries immutable evidence: authority, completeness,
@@ -241,6 +272,17 @@ Both JARs contain the five new grounded workflow tools,
 `EvidenceMetadata`, and `CraftabilityCalculator`. Repository and artifact
 credential-pattern scans returned no matches. Phase 3B command E2E,
 GuideService, and Phase 3C GUI are not included in this baseline.
+
+## Phase 3B verification baseline
+
+On 2026-07-17 the complete common suite reported 119 tests, 0 failures, 0
+errors, and 1 opt-in live-provider test skipped. Fabric and NeoForge production
+builds both passed and contain `GuideService`, `GuideStateReducer`, the strict
+server event codec, and the gated real-client controller. Tracked-file and JAR
+credential-pattern scans returned no matches. The deterministic HTTP/SSE model
+fixture answered a direct contract request successfully. No graphical client
+was launched during this unattended run, so no real-client report or visual
+gameplay acceptance is claimed by this baseline.
 
 ## Loader boundary
 

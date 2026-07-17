@@ -9,8 +9,11 @@ import dev.tomewisp.guide.GuideCommandFacade;
 import dev.tomewisp.guide.GuideLocalEndpoint;
 import dev.tomewisp.guide.GuideServiceManager;
 import dev.tomewisp.guide.PayloadGuideRemoteEndpoint;
+import dev.tomewisp.guide.e2e.GuideClientE2EConfig;
+import dev.tomewisp.guide.e2e.GuideClientE2EController;
 import dev.tomewisp.tool.ToolResult;
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
 import dev.tomewisp.fabric.network.FabricBridgePayloads;
@@ -66,5 +69,23 @@ public final class TomeWispFabricClient implements ClientModInitializer {
                 contexts,
                 service -> new ToolResult.Failure<>(
                         "gui_unavailable", "玩家界面将在 Phase 3C 启用")));
+        GuideClientE2EConfig.from(System.getProperties()).ifPresent(config -> {
+            String modVersion = FabricLoader.getInstance().getModContainer("tomewisp")
+                    .map(container -> container.getMetadata().getVersion().getFriendlyString())
+                    .orElse("unknown");
+            String secret = System.getenv("TOMEWISP_API_KEY");
+            GuideClientE2EController controller = new GuideClientE2EController(
+                    config,
+                    "fabric",
+                    runtime.platform().gameVersion(),
+                    modVersion,
+                    services,
+                    gson,
+                    () -> Minecraft.getInstance().stop(),
+                    secret == null || secret.isBlank() ? java.util.Set.of() : java.util.Set.of(secret));
+            ClientTickEvents.END_CLIENT_TICK.register(client -> {
+                if (client.player != null) controller.tick(client.player.getUUID());
+            });
+        });
     }
 }
