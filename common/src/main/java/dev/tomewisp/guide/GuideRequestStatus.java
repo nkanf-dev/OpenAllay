@@ -8,5 +8,6 @@ public enum GuideRequestStatus {
     COMPLETING,
     COMPLETED,
     FAILED,
-    CANCELLED
+    CANCELLED,
+    INTERRUPTED
 }

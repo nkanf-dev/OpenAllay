@@ -250,10 +250,12 @@ git commit -m "feat: define strict durable guide history"
 
 **Files:**
 - Create: `common/src/main/java/dev/tomewisp/guide/history/GuideHistoryStore.java`
+- Create: `common/src/main/java/dev/tomewisp/guide/history/GuideHistoryException.java`
 - Create: `common/src/main/java/dev/tomewisp/guide/history/SqliteGuideHistoryStore.java`
+- Modify: `common/src/main/java/dev/tomewisp/guide/GuideRequestStatus.java`
 - Test: `common/src/test/java/dev/tomewisp/guide/history/SqliteGuideHistoryStoreTest.java`
 
-- [ ] **Step 1: Write failing store tests**
+- [x] **Step 1: Write failing store tests**
 
 Test new database migration, repeated open, exact partition isolation,
 replacement without cross-partition mutation, deletion through replacement,
@@ -272,7 +274,7 @@ assertEquals(GuideRequestStatus.INTERRUPTED, request.status());
 assertEquals("request_interrupted", request.failure().code());
 ```
 
-- [ ] **Step 2: Run and confirm the store is absent**
+- [x] **Step 2: Run and confirm the store is absent**
 
 ```bash
 ./gradlew :common:test --tests 'dev.tomewisp.guide.history.SqliteGuideHistoryStoreTest'
@@ -280,7 +282,7 @@ assertEquals("request_interrupted", request.failure().code());
 
 Expected: compilation fails on missing store types.
 
-- [ ] **Step 3: Create schema version 1 transactionally**
+- [x] **Step 3: Create schema version 1 transactionally**
 
 Create `schema_metadata`, `partitions`, `sessions`, `messages`, `requests`,
 `timeline_entries`, and `request_sources`. Use composite foreign keys with
@@ -291,7 +293,7 @@ updated time and request/timeline order. Enable `foreign_keys=on`,
 Store complex timeline/evidence payloads through `GuideHistoryCodec`, not Java
 serialization. Keep `capture_mode='NORMAL'` explicit for later migration.
 
-- [ ] **Step 4: Implement atomic save, load, and recovery**
+- [x] **Step 4: Implement atomic save, load, and recovery**
 
 `save` replaces exactly one partition inside one transaction. `load` validates
 all row relationships and codec payloads. It converts every nonterminal request
@@ -302,7 +304,7 @@ and at-loss tool status.
 Corrupt rows produce a partition-scoped diagnostic and remain untouched. Never
 delete or repair them by guessing, and never block other partitions.
 
-- [ ] **Step 5: Run store tests and commit**
+- [x] **Step 5: Run store tests and commit**
 
 ```bash
 ./gradlew :common:test --tests 'dev.tomewisp.guide.history.SqliteGuideHistoryStoreTest'
@@ -316,7 +318,7 @@ Expected: tests pass before the commit.
 ### Task 4: Serialize Database Work Off the Client Thread
 
 **Files:**
-- Create: `common/src/main/java/dev/tomewisp/guide/history/GuideHistoryException.java`
+- Modify: `common/src/main/java/dev/tomewisp/guide/history/GuideHistoryException.java`
 - Create: `common/src/main/java/dev/tomewisp/guide/history/GuideHistoryRepository.java`
 - Test: `common/src/test/java/dev/tomewisp/guide/history/GuideHistoryRepositoryTest.java`
 
@@ -373,7 +375,7 @@ Expected: ordering, caller-thread isolation, flush, and close tests pass.
 
 **Files:**
 - Create: `common/src/main/java/dev/tomewisp/guide/GuidePersistenceSnapshot.java`
-- Modify: `common/src/main/java/dev/tomewisp/guide/GuideRequestStatus.java`
+- Modify: `common/src/main/java/dev/tomewisp/guide/GuideRequestStatus.java` (already adds `INTERRUPTED` in Task 3)
 - Modify: `common/src/main/java/dev/tomewisp/guide/GuideSnapshot.java`
 - Modify: `common/src/main/java/dev/tomewisp/guide/GuideService.java`
 - Modify: `common/src/main/java/dev/tomewisp/guide/GuideServiceManager.java`

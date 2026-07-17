@@ -33,12 +33,17 @@ public final class GuideHistoryCodec {
     public String encodeTimeline(List<GuideTimelineEntry> timeline) {
         JsonArray encoded = new JsonArray();
         for (GuideTimelineEntry entry : timeline) {
-            encoded.add(switch (entry) {
-                case GuideTimelineEntry.Assistant assistant -> encodeAssistant(assistant);
-                case GuideTimelineEntry.Tool tool -> encodeTool(tool);
-            });
+            encoded.add(encodeEntryObject(entry));
         }
         return encoded.toString();
+    }
+
+    public String encodeEntry(GuideTimelineEntry entry) {
+        return encodeEntryObject(entry).toString();
+    }
+
+    public GuideTimelineEntry decodeEntry(String json) {
+        return decodeEntryObject(object(JsonParser.parseString(json), "timeline entry"));
     }
 
     public List<GuideTimelineEntry> decodeTimeline(String json) {
@@ -48,14 +53,7 @@ public final class GuideHistoryCodec {
         }
         List<GuideTimelineEntry> decoded = new ArrayList<>();
         for (JsonElement element : parsed.getAsJsonArray()) {
-            JsonObject object = object(element, "timeline entry");
-            String type = string(object, "type");
-            decoded.add(switch (type) {
-                case "assistant" -> decodeAssistant(object);
-                case "tool" -> decodeTool(object);
-                default -> throw new IllegalArgumentException(
-                        "unknown durable timeline entry type " + type);
-            });
+            decoded.add(decodeEntryObject(object(element, "timeline entry")));
         }
         for (int index = 0; index < decoded.size(); index++) {
             if (decoded.get(index).ordinal() != index) {
@@ -65,13 +63,30 @@ public final class GuideHistoryCodec {
         return List.copyOf(decoded);
     }
 
+    private static JsonObject encodeEntryObject(GuideTimelineEntry entry) {
+        return switch (entry) {
+            case GuideTimelineEntry.Assistant assistant -> encodeAssistant(assistant);
+            case GuideTimelineEntry.Tool tool -> encodeTool(tool);
+        };
+    }
+
+    private static GuideTimelineEntry decodeEntryObject(JsonObject object) {
+        String type = string(object, "type");
+        return switch (type) {
+            case "assistant" -> decodeAssistant(object);
+            case "tool" -> decodeTool(object);
+            default -> throw new IllegalArgumentException(
+                    "unknown durable timeline entry type " + type);
+        };
+    }
+
     private static JsonObject encodeAssistant(GuideTimelineEntry.Assistant assistant) {
         JsonObject object = new JsonObject();
         object.addProperty("type", "assistant");
         object.addProperty("ordinal", assistant.ordinal());
         object.addProperty("text", assistant.text());
         object.addProperty("streaming", assistant.streaming());
-        object.add("sources", encodeSources(assistant.sources()));
+        object.add("sources", encodeSourcesArray(assistant.sources()));
         return object;
     }
 
@@ -87,7 +102,7 @@ public final class GuideHistoryCodec {
         JsonArray lines = new JsonArray();
         activity.presentationLines().forEach(lines::add);
         object.add("presentationLines", lines);
-        object.add("sources", encodeSources(activity.sources()));
+        object.add("sources", encodeSourcesArray(activity.sources()));
         return object;
     }
 
@@ -97,7 +112,7 @@ public final class GuideHistoryCodec {
                 integer(object, "ordinal"),
                 string(object, "text"),
                 bool(object, "streaming"),
-                decodeSources(array(object, "sources")));
+                decodeSourcesArray(array(object, "sources")));
     }
 
     private static GuideTimelineEntry.Tool decodeTool(JsonObject object) {
@@ -116,11 +131,23 @@ public final class GuideHistoryCodec {
                 enumValue(GuideToolStatus.class, string(object, "status"), "tool status"),
                 null,
                 lines,
-                decodeSources(array(object, "sources")));
+                decodeSourcesArray(array(object, "sources")));
         return new GuideTimelineEntry.Tool(integer(object, "ordinal"), activity);
     }
 
-    private static JsonArray encodeSources(List<GuideSource> sources) {
+    public String encodeSources(List<GuideSource> sources) {
+        return encodeSourcesArray(sources).toString();
+    }
+
+    public List<GuideSource> decodeSources(String json) {
+        JsonElement parsed = JsonParser.parseString(json);
+        if (!parsed.isJsonArray()) {
+            throw new IllegalArgumentException("durable sources must be an array");
+        }
+        return decodeSourcesArray(parsed.getAsJsonArray());
+    }
+
+    private static JsonArray encodeSourcesArray(List<GuideSource> sources) {
         JsonArray encoded = new JsonArray();
         for (GuideSource source : sources) {
             JsonObject object = new JsonObject();
@@ -131,7 +158,7 @@ public final class GuideHistoryCodec {
         return encoded;
     }
 
-    private static List<GuideSource> decodeSources(JsonArray sources) {
+    private static List<GuideSource> decodeSourcesArray(JsonArray sources) {
         List<GuideSource> decoded = new ArrayList<>();
         for (JsonElement element : sources) {
             JsonObject object = object(element, "durable source");
