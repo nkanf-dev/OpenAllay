@@ -158,10 +158,20 @@ public final class GuideStateReducer {
         for (int index = tools.size() - 1; index >= 0; index--) {
             GuideToolActivity tool = tools.get(index);
             if (tool.status() == GuideToolStatus.RUNNING
-                    && (tool.toolId().equals(toolId) || toolId.endsWith(tool.toolId()))) {
+                    && (tool.toolId().equals(toolId)
+                            || decodedModelToolId(tool.toolId()).equals(toolId))) {
                 return index;
             }
         }
         return -1;
+    }
+
+    private static String decodedModelToolId(String value) {
+        String local = value.startsWith("server__")
+                ? value.substring("server__".length())
+                : value;
+        return local.replace("_slash_", "/")
+                .replace("_dot_", ".")
+                .replace("__", ":");
     }
 }

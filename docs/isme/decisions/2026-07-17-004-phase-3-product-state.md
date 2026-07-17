@@ -41,6 +41,19 @@ original topology. Failure never silently switches from client to server model,
 from server to client model, or to a different tool. Retry is explicit, uses a
 new request ID in the same session, and reuses only the retained user message.
 
+Cancellation releases the `(actorId, sessionId)` admission slot immediately,
+while the canceled execution may still be unwinding. Its lease is fenced by
+request ID, so a late completion cannot overwrite a newer request in the same
+session. This keeps cancellation responsive without permitting concurrent
+history mutation.
+
+The server Agent event protocol is version 2 and has one strict common codec.
+It validates request correlation, terminal flags, and concrete event fields;
+unknown or malformed events fail only the correlated request closed. Model-safe
+encoded tool names are normalized back to registered tool IDs when start and
+completion events are joined, preventing duplicate tool activities in command,
+GUI, trace, and E2E projections.
+
 Tool facts carry authority, completeness, capture time, source, and provenance.
 Incomplete evidence cannot produce a conclusive positive craftability result.
 Context is captured on the owning Minecraft thread when queued work starts and
@@ -86,6 +99,10 @@ Reasoning deltas are diagnostic-only. Visible state comes only from GuideService
 8. No automatic topology fallback changes who pays for or answers a request.
 9. Empty evidence cannot cross the factual tool-result boundary as success.
 10. An observed craftability result is distinct from a conclusive result.
+11. A canceled request lease cannot mutate history or state after its session
+    slot has been reused.
+12. One server event is decoded and correlated exactly once before it reaches
+    GuideService; loader adapters do not reinterpret event semantics.
 
 ## Failure Semantics
 
@@ -94,6 +111,7 @@ Reasoning deltas are diagnostic-only. Visible state comes only from GuideService
 - Stale recipe/source reference: `stale_reference` with no fabricated fallback.
 - Disconnect/shutdown: cancel, suppress late events, clear scoped state.
 - Malformed remote event: fail the correlated request closed.
+- Late event from canceled/replaced lease: ignore without affecting its successor.
 - Provider 429: retain cancellable endpoint-scoped fair waiting.
 - Incomplete recipe/inventory: return non-conclusive craftability evidence.
 
