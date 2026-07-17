@@ -382,7 +382,7 @@ Expected: ordering, caller-thread isolation, flush, and close tests pass.
 - Create: `common/src/test/java/dev/tomewisp/guide/GuideServiceHistoryTest.java`
 - Modify: `common/src/test/java/dev/tomewisp/guide/GuideServiceTest.java`
 
-- [ ] **Step 1: Write failing lifecycle and race tests**
+- [x] **Step 1: Write failing lifecycle and race tests**
 
 Cover loading visibility, `history_loading` rejection, hydration, partition
 mismatch, ordered per-event saves, failure that keeps in-memory requests usable
@@ -400,7 +400,7 @@ UUID retry = success(service.retry(restoredId).join());
 assertNotEquals(restoredId, retry);
 ```
 
-- [ ] **Step 2: Run and confirm missing persistence state**
+- [x] **Step 2: Run and confirm missing persistence state**
 
 ```bash
 ./gradlew :common:test --tests 'dev.tomewisp.guide.GuideServiceHistoryTest' \
@@ -409,14 +409,14 @@ assertNotEquals(restoredId, retry);
 
 Expected: compilation fails on new persistence constructors and status.
 
-- [ ] **Step 3: Add UI-safe persistence state and interruption**
+- [x] **Step 3: Add UI-safe persistence state and interruption**
 
 Expose only `DISABLED`, `LOADING`, `SAVING`, `AVAILABLE`, or `UNAVAILABLE`, the
 latest submitted/committed generation, and an optional stable `GuideFailure`.
 Add it to `GuideSnapshot`. Add `INTERRUPTED` to `GuideRequestStatus`; terminal
 truth continues to use `terminalAt`.
 
-- [ ] **Step 4: Hydrate before normal actions**
+- [x] **Step 4: Hydrate before normal actions**
 
 Construct the service with its exact scope and repository. Load immediately,
 marshal completion through `ClientEventDispatcher`, validate scope, replace
@@ -428,21 +428,21 @@ While loading, reject ask, retry, session/model mutations, clear, and close as
 `history_loading`. On load failure, publish `UNAVAILABLE` and permit in-memory
 actions with unsaved diagnostics.
 
-- [ ] **Step 5: Persist accepted transitions by generation**
+- [x] **Step 5: Persist accepted transitions by generation**
 
 After request creation and every reducer, session, model, clear, and close
 mutation, detach a normal-mode `GuideHistoryPartition` and submit it. Mark
 `SAVING`; only the newest generation can change health. Never wait on repository
 work from the dispatcher. Strip full normalized tool output before submission.
 
-- [ ] **Step 6: Preserve history on disconnect**
+- [x] **Step 6: Preserve history on disconnect**
 
 Cancel active work through the reducer, submit terminal state, and clear only
 connection maps without scheduling the empty snapshot. Return a future that
 settles after the latest write; do not block the disconnect callback. Late Agent
 or persistence completions cannot mutate a replacement service/scope.
 
-- [ ] **Step 7: Run tests and commit**
+- [x] **Step 7: Run tests and commit**
 
 ```bash
 ./gradlew :common:test --tests 'dev.tomewisp.guide.GuideServiceHistoryTest' \
@@ -454,6 +454,14 @@ git commit -m "feat: restore durable guide sessions"
 ```
 
 Expected: hydration, retry, failure, race, deletion, and disconnect tests pass.
+
+Verification on 2026-07-18 covered loading rejection, interrupted hydration and
+retry, sanitized per-event saves, stale completion suppression, nonfatal load
+and write failures, disconnect cancellation durability, and replacement-scope
+ordering with a queued client dispatcher. The focused service/command/product
+E2E selection passed, followed by the full common suite with 148 tests,
+0 failures, 0 errors, and 1 existing skip. Java 25 continued to emit the
+already-recorded Xerial restricted native-access warning.
 
 ### Task 6: Resolve Scope and Wire Both Loaders
 

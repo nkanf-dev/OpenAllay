@@ -11,6 +11,7 @@ public record GuideSnapshot(
         GuideModelMode modelMode,
         boolean clientModelAvailable,
         boolean serverModelAvailable,
+        GuidePersistenceSnapshot persistence,
         List<GuideSessionSnapshot> sessions,
         Instant updatedAt) {
     public GuideSnapshot {
@@ -19,9 +20,29 @@ public record GuideSnapshot(
             throw new IllegalArgumentException("selectedSession must not be blank");
         }
         java.util.Objects.requireNonNull(modelMode, "modelMode");
+        java.util.Objects.requireNonNull(persistence, "persistence");
         sessions = sessions.stream()
                 .sorted(Comparator.comparing(GuideSessionSnapshot::sessionId))
                 .toList();
         java.util.Objects.requireNonNull(updatedAt, "updatedAt");
+    }
+
+    public GuideSnapshot(
+            UUID actorId,
+            String selectedSession,
+            GuideModelMode modelMode,
+            boolean clientModelAvailable,
+            boolean serverModelAvailable,
+            List<GuideSessionSnapshot> sessions,
+            Instant updatedAt) {
+        this(
+                actorId,
+                selectedSession,
+                modelMode,
+                clientModelAvailable,
+                serverModelAvailable,
+                GuidePersistenceSnapshot.disabled(),
+                sessions,
+                updatedAt);
     }
 }

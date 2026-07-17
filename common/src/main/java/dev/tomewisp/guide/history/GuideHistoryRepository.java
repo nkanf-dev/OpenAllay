@@ -7,7 +7,7 @@ import java.util.concurrent.Executors;
 import java.util.function.Supplier;
 
 /** Ordered asynchronous boundary around the synchronous durable store. */
-public final class GuideHistoryRepository {
+public final class GuideHistoryRepository implements GuideHistoryAccess {
     private final GuideHistoryStore store;
     private final ExecutorService worker;
     private CompletableFuture<Void> latest = CompletableFuture.completedFuture(null);
@@ -28,6 +28,7 @@ public final class GuideHistoryRepository {
         this.worker = Objects.requireNonNull(worker, "worker");
     }
 
+    @Override
     public CompletableFuture<GuideHistoryLoad> load(GuideHistoryScope scope) {
         Objects.requireNonNull(scope, "scope");
         return submit(
@@ -36,6 +37,7 @@ public final class GuideHistoryRepository {
                 () -> store.load(scope));
     }
 
+    @Override
     public CompletableFuture<Void> save(GuideHistoryPartition partition) {
         Objects.requireNonNull(partition, "partition");
         return submit(
@@ -47,6 +49,7 @@ public final class GuideHistoryRepository {
                 });
     }
 
+    @Override
     public synchronized CompletableFuture<Void> flush() {
         return latest;
     }

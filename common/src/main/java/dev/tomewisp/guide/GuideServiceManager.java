@@ -2,9 +2,13 @@ package dev.tomewisp.guide;
 
 import com.google.gson.Gson;
 import dev.tomewisp.client.ClientEventDispatcher;
+import dev.tomewisp.guide.history.GuideHistoryAccess;
+import dev.tomewisp.guide.history.GuideHistoryScope;
+import dev.tomewisp.guide.history.GuideHistoryScopeProvider;
 import java.time.Clock;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 /** Creates exactly one connection-scoped GuideService for the current client actor. */
 public final class GuideServiceManager {
@@ -14,6 +18,8 @@ public final class GuideServiceManager {
     private final ClientEventDispatcher dispatcher;
     private final Clock clock;
     private final Gson gson;
+    private final GuideHistoryAccess history;
+    private final GuideHistoryScopeProvider historyScopes;
     private GuideService current;
 
     public GuideServiceManager(
@@ -23,21 +29,45 @@ public final class GuideServiceManager {
             ClientEventDispatcher dispatcher,
             Clock clock,
             Gson gson) {
+        this(local, remote, contexts, dispatcher, clock, gson, null, null);
+    }
+
+    public GuideServiceManager(
+            GuideLocalEndpoint local,
+            GuideRemoteEndpoint remote,
+            GuideContextProvider contexts,
+            ClientEventDispatcher dispatcher,
+            Clock clock,
+            Gson gson,
+            GuideHistoryAccess history,
+            GuideHistoryScopeProvider historyScopes) {
         this.local = local;
         this.remote = Objects.requireNonNull(remote, "remote");
         this.contexts = Objects.requireNonNull(contexts, "contexts");
         this.dispatcher = Objects.requireNonNull(dispatcher, "dispatcher");
         this.clock = Objects.requireNonNull(clock, "clock");
         this.gson = Objects.requireNonNull(gson, "gson");
+        if ((history == null) != (historyScopes == null)) {
+            throw new IllegalArgumentException("history access and scope provider must be configured together");
+        }
+        this.history = history;
+        this.historyScopes = historyScopes;
     }
 
     public synchronized GuideService forActor(UUID actor) {
-        if (current == null || !current.snapshot().actorId().equals(actor)) {
+        GuideHistoryScope scope = historyScopes == null ? null : historyScopes.resolve(actor);
+        if (current == null
+                || !current.snapshot().actorId().equals(actor)
+                || !Objects.equals(current.historyScope(), scope)) {
+            GuideHistoryAccess nextHistory = history;
             if (current != null) {
-                current.disconnect();
+                CompletableFuture<Void> disconnected = current.disconnect();
+                if (history != null) {
+                    nextHistory = afterDisconnect(disconnected);
+                }
             }
             current = new GuideService(
-                    actor, local, remote, contexts, dispatcher, clock, gson);
+                    actor, local, remote, contexts, dispatcher, clock, gson, scope, nextHistory);
         }
         return current;
     }
@@ -53,5 +83,26 @@ public final class GuideServiceManager {
 
     public synchronized GuideService current() {
         return current;
+    }
+
+    private GuideHistoryAccess afterDisconnect(CompletableFuture<Void> disconnected) {
+        return new GuideHistoryAccess() {
+            @Override
+            public CompletableFuture<dev.tomewisp.guide.history.GuideHistoryLoad> load(
+                    GuideHistoryScope scope) {
+                return disconnected.thenCompose(ignored -> history.load(scope));
+            }
+
+            @Override
+            public CompletableFuture<Void> save(
+                    dev.tomewisp.guide.history.GuideHistoryPartition partition) {
+                return disconnected.thenCompose(ignored -> history.save(partition));
+            }
+
+            @Override
+            public CompletableFuture<Void> flush() {
+                return disconnected.thenCompose(ignored -> history.flush());
+            }
+        };
     }
 }
