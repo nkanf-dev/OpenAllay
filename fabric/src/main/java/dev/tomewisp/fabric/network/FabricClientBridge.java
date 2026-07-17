@@ -20,6 +20,10 @@ public final class FabricClientBridge {
     private final RemoteCapabilityStore capabilities = new RemoteCapabilityStore();
     private final Map<UUID, Consumer<ServerAgentEventPayload>> serverRequests =
             new ConcurrentHashMap<>();
+    private final java.util.List<Runnable> disconnectListeners =
+            new java.util.concurrent.CopyOnWriteArrayList<>();
+    private final java.util.List<Runnable> capabilityListeners =
+            new java.util.concurrent.CopyOnWriteArrayList<>();
     private final RemoteToolExecutor remoteTools = new RemoteToolExecutor(
             capabilities,
             new RemoteToolExecutor.Transport() {
@@ -41,9 +45,8 @@ public final class FabricClientBridge {
                 FabricBridgePayloads.Packet.TYPE,
                 (packet, context) -> context.client().execute(() -> receive(packet)));
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
-            capabilities.clear();
-            remoteTools.disconnect();
-            serverRequests.clear();
+            disconnectState();
+            disconnectListeners.forEach(Runnable::run);
         });
     }
 
@@ -53,6 +56,14 @@ public final class FabricClientBridge {
 
     public CapabilityPayload capabilities() {
         return capabilities.snapshot();
+    }
+
+    public void onDisconnect(Runnable listener) { disconnectListeners.add(listener); }
+    public void onCapabilitiesChanged(Runnable listener) { capabilityListeners.add(listener); }
+    public void disconnectState() {
+        capabilities.clear();
+        remoteTools.disconnect();
+        serverRequests.clear();
     }
 
     public boolean askServer(
@@ -78,8 +89,10 @@ public final class FabricClientBridge {
 
     private void receive(FabricBridgePayloads.Packet packet) {
         switch (packet.kind()) {
-            case "capabilities" -> capabilities.replace(
-                    codec.decode(packet.json(), CapabilityPayload.class));
+            case "capabilities" -> {
+                capabilities.replace(codec.decode(packet.json(), CapabilityPayload.class));
+                capabilityListeners.forEach(Runnable::run);
+            }
             case "tool_result" -> remoteTools.receive(
                     codec.decode(packet.json(), RemoteToolResultChunkPayload.class));
             case "agent_event" -> {

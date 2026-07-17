@@ -9,4 +9,8 @@ import java.util.Set;
 public interface GuideContextProvider {
     ToolResult<ToolInvocationContext> capture(
             Set<ContextCapability> capabilities, String correlationId);
+
+    default ToolResult<Integer> refreshKnowledge() {
+        return new ToolResult.Success<>(0);
+    }
 }

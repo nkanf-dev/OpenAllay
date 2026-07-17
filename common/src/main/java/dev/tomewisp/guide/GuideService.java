@@ -196,6 +196,26 @@ public final class GuideService {
         return result;
     }
 
+    public CompletableFuture<Void> refreshCapabilities() {
+        CompletableFuture<Void> result = new CompletableFuture<>();
+        dispatcher.execute(() -> {
+            if (!remote.serverModelAvailable()) {
+                List<UUID> affected = sessions.values().stream()
+                        .map(GuideService::active)
+                        .filter(Objects::nonNull)
+                        .filter(request -> request.topology() == GuideTopology.SERVER)
+                        .map(GuideRequestSnapshot::requestId)
+                        .toList();
+                affected.forEach(requestId -> apply(requestId, new AgentEvent.Failed(
+                        "capability_unavailable",
+                        "The active server model capability disappeared")));
+            }
+            publish();
+            result.complete(null);
+        });
+        return result;
+    }
+
     public CompletableFuture<Void> disconnect() {
         CompletableFuture<Void> result = new CompletableFuture<>();
         dispatcher.execute(() -> {

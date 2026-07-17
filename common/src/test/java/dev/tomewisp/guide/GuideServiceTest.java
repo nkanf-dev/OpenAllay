@@ -89,6 +89,25 @@ final class GuideServiceTest {
     }
 
     @Test
+    void enhancedLocalTopologyAndCapabilityLossRemainExplicit() {
+        FakeRemote remote = new FakeRemote(true);
+        GuideService localService = service(new FakeLocal(), remote);
+        UUID local = success(localService.ask("enhanced").join());
+        assertEquals(
+                GuideTopology.CLIENT_WITH_SERVER_TOOLS,
+                request(localService, "main", local).topology());
+
+        GuideService serverService = service(null, remote);
+        success(serverService.setModelMode(GuideModelMode.SERVER).join());
+        UUID active = success(serverService.ask("server").join());
+        remote.available = false;
+        serverService.refreshCapabilities().join();
+
+        assertEquals(GuideRequestStatus.FAILED, request(serverService, "main", active).status());
+        assertEquals(GuideModelMode.SERVER, serverService.snapshot().modelMode());
+    }
+
+    @Test
     void disconnectClearsConnectionScopedStateAndResetsMode() {
         FakeRemote remote = new FakeRemote(true);
         GuideService service = service(new FakeLocal(), remote);
@@ -172,7 +191,7 @@ final class GuideServiceTest {
     }
 
     private static final class FakeRemote implements GuideRemoteEndpoint {
-        private final boolean available;
+        private boolean available;
         private final Map<UUID, Consumer<AgentEvent>> pending = new java.util.HashMap<>();
         private final List<UUID> cancelled = new ArrayList<>();
 
