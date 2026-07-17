@@ -14,6 +14,8 @@
 
 Evidence/context:
 - Create DataAuthority.java, DataCompleteness.java, EvidenceMetadata.java, and InventorySnapshot.java under common/src/main/java/dev/tomewisp/context/.
+- Create EvidenceBearing.java so factual output types declare their evidence
+  contract and the normalizer can fail closed on empty evidence.
 - Expand PlayerSnapshot.java, RegistrySnapshot.java, RecipeSnapshot.java, RecipeEntrySnapshot.java.
 - Replace IngredientSlotSnapshot.java with IngredientAlternativeSnapshot.java and IngredientRequirementSnapshot.java.
 - Add RecipeLayoutSnapshot.java, RecipeOutputSnapshot.java,
@@ -39,6 +41,7 @@ Integration:
 - Create: common/src/main/java/dev/tomewisp/context/DataAuthority.java
 - Create: common/src/main/java/dev/tomewisp/context/DataCompleteness.java
 - Create: common/src/main/java/dev/tomewisp/context/EvidenceMetadata.java
+- Create: common/src/main/java/dev/tomewisp/context/EvidenceBearing.java
 - Test: common/src/test/java/dev/tomewisp/context/EvidenceMetadataTest.java
 
 - [ ] **Step 1: Write the failing evidence test**
@@ -72,6 +75,10 @@ Expected: test compilation fails because the evidence records do not exist.
 
     public enum DataCompleteness { COMPLETE, PARTIAL, UNKNOWN }
 
+    public interface EvidenceBearing {
+        List<EvidenceMetadata> evidence();
+    }
+
     public record EvidenceMetadata(
             DataAuthority authority,
             DataCompleteness completeness,
@@ -83,6 +90,11 @@ Expected: test compilation fails because the evidence records do not exist.
             Map<String, String> details) {}
 
 The compact constructor must validate enum/time non-null, namespaced sourceId/provenance, nonblank gameVersion/loader, namespaced detail keys, nonblank detail values, and expose an unmodifiable TreeMap copy.
+
+EvidenceBearing implementations must expose a non-empty immutable evidence
+list. ToolResultNormalizer detects output classes implementing EvidenceBearing
+and rejects an empty list as tool_failure instead of serializing an ungrounded
+factual success.
 
 - [ ] **Step 4: Run the focused test and expect PASS**
 - [ ] **Step 5: Commit**
@@ -344,7 +356,60 @@ Run: ./gradlew-curl :common:test --tests 'dev.tomewisp.crafting.*' --tests '*Cal
     git add common/src/main/java/dev/tomewisp/crafting common/src/main/java/dev/tomewisp/tool/builtin/CalculateCraftabilityTool.java common/src/test
     git commit -m "feat: calculate recipe craftability deterministically"
 
-### Task 7: Register and migrate the workflow
+### Task 7: Ground every existing factual built-in tool
+
+**Files:**
+- Modify: PlatformInfoTool.java and ResolveResourceTool.java
+- Modify: PlayerContextTool.java
+- Modify: ListKnowledgeSourcesTool.java, SearchKnowledgeTool.java, and GetKnowledgeDocumentTool.java
+- Modify: GetPatchouliMultiblockTool.java
+- Modify: KnowledgeDocument.java and KnowledgeSearchResult.java
+- Modify: Patchouli/FTB knowledge providers and PatchouliMultiblock.java
+- Modify: ToolResultNormalizer.java
+- Modify: loader knowledge-provider construction sites
+- Test: common/src/test/java/dev/tomewisp/tool/builtin/BuiltinEvidenceContractTest.java
+- Test: affected knowledge, Patchouli, FTB, normalizer, and loader tests
+
+- [ ] **Step 1: Write a failing evidence contract test**
+
+Invoke every registered factual built-in against deterministic context and
+knowledge fixtures. For each successful output assert output instanceof
+EvidenceBearing, evidence is non-empty, and every evidence record has nonblank
+gameVersion/loader and namespaced source/provenance. Add a normalizer test whose
+EvidenceBearing output returns an empty list and assert explicit rejection.
+
+- [ ] **Step 2: Put evidence on knowledge and multiblock records**
+
+KnowledgeDocument and KnowledgeSearchResult carry EvidenceMetadata.
+PatchouliBookParser receives RESOURCE_ASSET evidence from its provider;
+FtbQuestsKnowledgeProvider receives INTEGRATION_API evidence. The provider
+construction sites derive gameVersion and loader from PlatformService and use
+the knowledge reload Instant as capturedAt. PatchouliMultiblock carries the same
+resource evidence as its source document.
+
+- [ ] **Step 3: Make factual outputs implement EvidenceBearing**
+
+PlatformInfoTool emits platform metadata. ResolveResourceTool uses
+RegistrySnapshot.evidence(). PlayerContextTool and InspectInventoryTool use
+player/inventory evidence. Recipe tools use RecipeEntry/Snapshot evidence.
+Knowledge and multiblock tools project evidence from returned records. Empty
+search/list results still carry the searched snapshot/source evidence.
+
+- [ ] **Step 4: Enforce the marker in ToolResultNormalizer**
+
+When outputType implements EvidenceBearing, a successful value with null or
+empty evidence throws an IllegalArgumentException with the stable message
+"Grounded tool output has no evidence". Canonical JSON includes the complete
+evidence list; failure results remain structured and do not claim completeness.
+
+- [ ] **Step 5: Verify and commit**
+
+Run: ./gradlew-curl :common:test --tests '*BuiltinEvidenceContractTest' --tests 'dev.tomewisp.knowledge.*' --tests 'dev.tomewisp.integration.*' --tests '*ToolCodecAndNormalizerTest' :fabric:compileJava :neoforge:compileJava --max-workers=1
+
+    git add common/src/main/java common/src/test fabric/src/main/java neoforge/src/main/java
+    git commit -m "feat: require evidence from factual tools"
+
+### Task 8: Register and migrate the workflow
 
 **Files:**
 - Modify: TomeWispBootstrap.java
@@ -381,7 +446,7 @@ Run: ./gradlew-curl :common:test --tests 'dev.tomewisp.skill.*' --tests 'dev.tom
     git add common/src/main/java/dev/tomewisp/TomeWispBootstrap.java common/src/main/java/dev/tomewisp/tool/builtin/FindRecipesTool.java common/src/main/resources common/src/test
     git commit -m "feat: expose grounded recipe workflow"
 
-### Task 8: Phase 3A completion evidence
+### Task 9: Phase 3A completion evidence
 
 **Files:**
 - Modify: README.md
