@@ -26,7 +26,7 @@
 - Create: `common/src/main/java/dev/tomewisp/guide/ui/GuideDisplayConfigLoader.java`
 - Test: `common/src/test/java/dev/tomewisp/guide/ui/GuideDisplayConfigLoaderTest.java`
 
-- [ ] **Step 1: Write failing default, round-trip, and strict-schema tests**
+- [x] **Step 1: Write failing default, round-trip, and strict-schema tests**
 
 ```java
 @Test
@@ -44,7 +44,7 @@ void readsVersionedDebugModeAndRejectsUnknownFields() {
 }
 ```
 
-- [ ] **Step 2: Run the red test**
+- [x] **Step 2: Run the red test**
 
 Run:
 
@@ -54,7 +54,7 @@ Run:
 
 Expected: compilation fails because the config types do not exist.
 
-- [ ] **Step 3: Implement immutable config and strict loader**
+- [x] **Step 3: Implement immutable config and strict loader**
 
 ```java
 public record GuideDisplayConfig(int schemaVersion, boolean debugMode) {
@@ -71,7 +71,7 @@ The loader accepts exactly `schemaVersion` and `debugMode`, returns defaults for
 a missing file, rejects future versions/unknown fields/type mismatches as
 `invalid_display_config`, and never rewrites a malformed file.
 
-- [ ] **Step 4: Run the focused test and commit**
+- [x] **Step 4: Run the focused test and commit**
 
 ```bash
 ./gradlew :common:test --tests 'dev.tomewisp.guide.ui.GuideDisplayConfigLoaderTest'
@@ -80,6 +80,10 @@ git commit -m "feat: configure debug UI projection"
 ```
 
 Expected: tests pass; missing config yields schema 1 with Debug Mode disabled.
+
+The red run failed with nine missing-symbol errors. The green run passed all
+three tests; malformed, future-version, and unknown-field files remain
+untouched while the runtime receives the safe default with Debug Mode off.
 
 ### Task 2: Immutable Player Card Domain
 
