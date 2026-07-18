@@ -216,5 +216,15 @@
   "settings.tomewisp.capability.skill.guide_ftb_progression.title": "指导 FTB 任务进度",
   "settings.tomewisp.capability.skill.guide_ftb_progression.description": "可用时依据玩家可见的 FTB Quests 进度与前置条件进行指导。",
   "settings.tomewisp.capability.skill.search_guide_books.title": "搜索指南书",
-  "settings.tomewisp.capability.skill.search_guide_books.description": "查找并整合已索引游戏内指南中的相关条目。"
+  "settings.tomewisp.capability.skill.search_guide_books.description": "查找并整合已索引游戏内指南中的相关条目。",
+  "screen.tomewisp.semantic.action.recipes": "配方",
+  "screen.tomewisp.semantic.action.usages": "用途",
+  "screen.tomewisp.semantic.action.open_recipe": "打开配方",
+  "screen.tomewisp.semantic.recipe": "配方",
+  "screen.tomewisp.semantic.craftable": "✓ 可以制作",
+  "screen.tomewisp.semantic.not_craftable": "! 暂不可制作",
+  "screen.tomewisp.semantic.maximum_crafts": "最多制作 %s 次",
+  "screen.tomewisp.semantic.conclusive": "结论完整",
+  "screen.tomewisp.semantic.incomplete": "信息尚不完整",
+  "screen.tomewisp.semantic.source": "来源 · %s"
 }

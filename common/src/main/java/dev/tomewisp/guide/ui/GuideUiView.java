@@ -77,7 +77,8 @@ public record GuideUiView(
                         value.sessionId(),
                         value.sessionId().equals(snapshot.selectedSession()),
                         value.requests().stream().anyMatch(request -> !request.terminal()),
-                        value.requests().size()))
+                        Math.toIntExact(Math.min(
+                                Integer.MAX_VALUE, value.historyWindow().totalRequests()))))
                 .toList();
         List<GuideUiRow> rows = new ArrayList<>();
         switch (snapshot.persistence().state()) {

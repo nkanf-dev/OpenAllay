@@ -10,6 +10,9 @@ import dev.tomewisp.guide.GuideSubscription;
 import dev.tomewisp.guide.GuideSnapshot;
 import dev.tomewisp.guide.GuideToolActivity;
 import dev.tomewisp.guide.GuideToolStatus;
+import dev.tomewisp.guide.GuideSessionSnapshot;
+import dev.tomewisp.guide.GuideHistoryPageState;
+import dev.tomewisp.guide.history.GuideHistoryPageRequest;
 import dev.tomewisp.guide.ui.GuideUiLayout;
 import dev.tomewisp.guide.ui.GuideUiModelChoice;
 import dev.tomewisp.guide.ui.GuideUiRow;
@@ -22,6 +25,11 @@ import dev.tomewisp.guide.ui.GuideItemView;
 import dev.tomewisp.guide.ui.GuideRecipeCard;
 import dev.tomewisp.guide.ui.GuideToolDetailView;
 import dev.tomewisp.guide.ui.GuideUiClickRoute;
+import dev.tomewisp.guide.ui.GuideTranscriptVirtualizer;
+import dev.tomewisp.guide.ui.GuideViewportAnchor;
+import dev.tomewisp.guide.ui.SemanticLayout;
+import dev.tomewisp.guide.ui.SemanticLayoutCache;
+import dev.tomewisp.guide.ui.SemanticLayoutEngine;
 import dev.tomewisp.recipe.RecipeNavigationResult;
 import dev.tomewisp.recipe.config.RecipeClientRuntime;
 import dev.tomewisp.tool.ToolResult;
@@ -29,6 +37,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import net.minecraft.ChatFormatting;
@@ -44,6 +54,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.Mth;
+import org.lwjgl.glfw.GLFW;
 
 /** Full-screen, non-pausing projection and intent sender for GuideService. */
 public final class TomeWispScreen extends Screen {
@@ -75,6 +86,13 @@ public final class TomeWispScreen extends Screen {
     private GuideUiRow.Tool selectedTool;
     private GuideSource selectedSource;
     private final List<Hit> hits = new ArrayList<>();
+    private final GuideTranscriptVirtualizer virtualizer = new GuideTranscriptVirtualizer();
+    private final SemanticLayoutCache semanticLayouts = new SemanticLayoutCache();
+    private final MinecraftSemanticRenderer semanticRenderer =
+            new MinecraftSemanticRenderer(new MinecraftSemanticResolver());
+    private final Map<String, Integer> semanticHashes = new LinkedHashMap<>();
+    private boolean followBottom = true;
+    private String focusedContentId;
     private GuideDisplayConfig projectedDisplay;
 
     public TomeWispScreen(GuideService service) {
@@ -195,10 +213,23 @@ public final class TomeWispScreen extends Screen {
             GuideDisplayConfig displayConfig = currentDisplay();
             GuideUiView next = GuideUiView.from(snapshot, displayConfig);
             boolean changedSession = !view.selectedSession().equals(next.selectedSession());
+            int viewportHeight = layout == null ? 0 : layout.transcript().height() - 14;
+            GuideViewportAnchor anchor = layout == null ? null : virtualizer.anchorAt(scroll);
+            boolean shouldFollow = followBottom;
             boolean closedDetail = refreshDetail(next);
             projectedDisplay = displayConfig;
             view = next;
-            if (changedSession) scroll = 0;
+            if (changedSession) {
+                scroll = 0;
+                followBottom = true;
+                semanticLayouts.clear();
+                semanticHashes.clear();
+            } else if (layout != null) {
+                updateVirtualRows(Math.max(40, layout.transcript().width() - 18));
+                scroll = shouldFollow
+                        ? virtualizer.maximumScroll(viewportHeight)
+                        : virtualizer.restore(anchor, scroll, viewportHeight);
+            }
             if ((changedSession || closedDetail) && composer != null) rebuildForDetail();
             updateControls();
         });
@@ -235,6 +266,32 @@ public final class TomeWispScreen extends Screen {
             submit();
             return true;
         }
+        if (event.key() == GLFW.GLFW_KEY_F6) {
+            List<Hit> focusable = hits.stream()
+                    .filter(hit -> hit.kind() == HitKind.CONTENT && hit.focusId() != null)
+                    .toList();
+            if (!focusable.isEmpty()) {
+                int current = -1;
+                for (int index = 0; index < focusable.size(); index++) {
+                    if (focusable.get(index).focusId().equals(focusedContentId)) current = index;
+                }
+                Hit next = focusable.get((current + 1) % focusable.size());
+                focusedContentId = next.focusId();
+                if (minecraft != null && minecraft.getNarrator().isActive()) {
+                    minecraft.getNarrator().saySystemNow(next.narration());
+                }
+                return true;
+            }
+        }
+        if (event.isConfirmation() && focusedContentId != null) {
+            Hit focused = hits.stream()
+                    .filter(hit -> focusedContentId.equals(hit.focusId()))
+                    .findFirst().orElse(null);
+            if (focused != null) {
+                focused.action().run();
+                return true;
+            }
+        }
         return super.keyPressed(event);
     }
 
@@ -246,8 +303,10 @@ public final class TomeWispScreen extends Screen {
             return true;
         }
         if (layout.transcript().contains(x, y)) {
-            int maximum = Math.max(0, contentHeight - layout.transcript().height() + 12);
+            int maximum = virtualizer.maximumScroll(Math.max(0, layout.transcript().height() - 14));
             scroll = Mth.clamp(scroll - (int) Math.round(scrollY * 24), 0, maximum);
+            followBottom = virtualizer.atBottom(
+                    scroll, Math.max(0, layout.transcript().height() - 14));
             return true;
         }
         return super.mouseScrolled(x, y, scrollX, scrollY);
@@ -266,7 +325,9 @@ public final class TomeWispScreen extends Screen {
                         event.x(),
                         event.y());
                 if (route.kind() == GuideUiClickRoute.Kind.ACTION) {
-                    detailHits.get(route.actionIndex()).action().run();
+                    Hit selected = detailHits.get(route.actionIndex());
+                    focusedContentId = selected.focusId();
+                    selected.action().run();
                     return true;
                 }
                 if (route.kind() == GuideUiClickRoute.Kind.DISMISS_DETAIL) {
@@ -287,6 +348,7 @@ public final class TomeWispScreen extends Screen {
             }
             for (Hit hit : List.copyOf(hits)) {
                 if (hit.rect().contains(event.x(), event.y())) {
+                    focusedContentId = hit.focusId();
                     hit.action().run();
                     return true;
                 }
@@ -301,7 +363,7 @@ public final class TomeWispScreen extends Screen {
         graphics.fill(0, 0, width, height, 0xC00B0D12);
         renderTop(graphics);
         renderSessions(graphics);
-        renderTranscript(graphics);
+        renderTranscript(graphics, mouseX, mouseY);
         renderDetail(graphics, mouseX, mouseY);
         super.extractRenderState(graphics, mouseX, mouseY, a);
     }
@@ -343,26 +405,47 @@ public final class TomeWispScreen extends Screen {
         }
     }
 
-    private void renderTranscript(GuiGraphicsExtractor graphics) {
+    private void renderTranscript(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         hits.removeIf(hit -> hit.kind() == HitKind.CONTENT);
         GuideUiLayout.Rect area = layout.transcript();
         graphics.fill(area.x(), area.y(), area.x() + area.width(), area.y() + area.height(), PANEL);
         graphics.enableScissor(area.x(), area.y(), area.x() + area.width(), area.y() + area.height());
-        int y = area.y() + 7 - scroll;
         int textWidth = Math.max(40, area.width() - 18);
+        updateVirtualRows(textWidth);
+        requestViewportHistory(area);
+        int viewportHeight = Math.max(0, area.height() - 14);
+        if (followBottom) scroll = virtualizer.maximumScroll(viewportHeight);
+        else scroll = virtualizer.clampScroll(scroll, viewportHeight);
+        GuideTranscriptVirtualizer.Window window = virtualizer.visible(scroll, viewportHeight, 30);
+        int contentTop = area.y() + 7;
         if (view.rows().isEmpty()) {
             graphics.text(font, "还没有对话。输入问题，TomeWisp 会先查证再回答。",
-                    area.x() + 9, y, MUTED, false);
-            y += 20;
+                    area.x() + 9, contentTop, MUTED, false);
         }
-        for (GuideUiRow row : view.rows()) {
-            y = renderRow(graphics, row, area.x() + 9, y, textWidth);
+        for (int index = window.fromIndex(); index < window.toIndexExclusive(); index++) {
+            int y = contentTop - scroll + virtualizer.offset(index);
+            renderRow(graphics, view.rows().get(index), area.x() + 9, y, textWidth, mouseX, mouseY);
         }
-        contentHeight = Math.max(0, y + scroll - area.y());
+        contentHeight = virtualizer.totalHeight() + 14;
+        hits.removeIf(hit -> hit.kind() == HitKind.CONTENT && !intersects(hit.rect(), area));
+        hits.stream()
+                .filter(hit -> hit.kind() == HitKind.CONTENT
+                        && java.util.Objects.equals(hit.focusId(), focusedContentId))
+                .findFirst()
+                .ifPresent(hit -> graphics.outline(
+                        hit.rect().x(), hit.rect().y(), hit.rect().width(), hit.rect().height(),
+                        0xFFFFFFFF));
         graphics.disableScissor();
     }
 
-    private int renderRow(GuiGraphicsExtractor graphics, GuideUiRow row, int x, int y, int width) {
+    private int renderRow(
+            GuiGraphicsExtractor graphics,
+            GuideUiRow row,
+            int x,
+            int y,
+            int width,
+            int mouseX,
+            int mouseY) {
         if (row instanceof GuideUiRow.User user) {
             graphics.text(font, "你", x, y, ACCENT, false);
             y += 11;
@@ -376,13 +459,18 @@ public final class TomeWispScreen extends Screen {
                 graphics.text(font, "正在准备证据…", x + 6, y, MUTED, false);
                 y += 10;
             } else {
-                y = renderWrapped(
-                        graphics,
-                        GuideMarkup.paragraphs(assistant.semantic().fallbackText()),
-                        x + 6,
-                        y,
-                        width - 6,
-                        TEXT);
+                SemanticLayout semantic = semanticLayout(assistant, width - 6);
+                MinecraftSemanticRenderer.Result rendered = semanticRenderer.render(
+                        graphics, font, semantic, x + 6, y, width - 6,
+                        mouseX, mouseY);
+                for (MinecraftSemanticRenderer.Hit hit : rendered.hits()) {
+                    String focusId = "semantic:" + hit.intent();
+                    hits.add(new Hit(
+                            hit.bounds(), HitKind.CONTENT,
+                            () -> semanticIntent(hit.intent()), focusId,
+                            semanticIntentNarration(hit.intent())));
+                }
+                y = rendered.bottom();
             }
             for (GuideSource source : assistant.sources()) {
                 int sourceY = y;
@@ -427,6 +515,152 @@ public final class TomeWispScreen extends Screen {
                 : Component.literal(status.text());
         graphics.text(font, message, x + 6, y, color, false);
         return y + 18;
+    }
+
+    private void updateVirtualRows(int width) {
+        ArrayList<GuideTranscriptVirtualizer.Row> measured = new ArrayList<>();
+        Map<String, Integer> nextHashes = new LinkedHashMap<>();
+        for (GuideUiRow row : view.rows()) {
+            String id = rowId(row);
+            if (row instanceof GuideUiRow.Assistant assistant) {
+                int hash = assistant.semantic().hashCode();
+                nextHashes.put(id, hash);
+                if (!java.util.Objects.equals(semanticHashes.get(id), hash)) {
+                    semanticLayouts.invalidateRow(id);
+                }
+            }
+            measured.add(new GuideTranscriptVirtualizer.Row(id, measureRow(row, width)));
+        }
+        semanticHashes.clear();
+        semanticHashes.putAll(nextHashes);
+        virtualizer.update(measured);
+    }
+
+    private int measureRow(GuideUiRow row, int width) {
+        if (row instanceof GuideUiRow.User user) {
+            return 11 + wrappedHeight(GuideMarkup.paragraphs(user.text()), width - 6) + 8;
+        }
+        if (row instanceof GuideUiRow.Assistant assistant) {
+            int body = assistant.text().isBlank()
+                    ? 10 : semanticLayout(assistant, width - 6).height();
+            return 11 + body + assistant.sources().size() * 12 + 8;
+        }
+        if (row instanceof GuideUiRow.Tool) return 21;
+        return 18;
+    }
+
+    private int wrappedHeight(List<Component> paragraphs, int width) {
+        int height = 0;
+        for (Component paragraph : paragraphs) {
+            List<FormattedCharSequence> lines = font.split(paragraph, Math.max(1, width));
+            height += Math.max(1, lines.size()) * 10;
+        }
+        return height;
+    }
+
+    private SemanticLayout semanticLayout(GuideUiRow.Assistant assistant, int width) {
+        return semanticLayouts.get(
+                rowId(assistant), assistant.semantic(), Math.max(1, width),
+                java.util.Locale.getDefault().toLanguageTag(), font.getClass().getName(),
+                true,
+                new SemanticLayoutEngine.Measurer() {
+                    @Override public int width(String text, SemanticLayout.Style style) {
+                        return font.width(Component.literal(text).withStyle(switch (style) {
+                            case EMPHASIS -> ChatFormatting.ITALIC;
+                            case STRONG -> ChatFormatting.BOLD;
+                            case CODE -> ChatFormatting.GRAY;
+                            case REFERENCE -> ChatFormatting.AQUA;
+                            case NORMAL -> ChatFormatting.WHITE;
+                        }));
+                    }
+                    @Override public int lineHeight(SemanticLayout.Kind kind) {
+                        return kind == SemanticLayout.Kind.HEADING ? 12 : 10;
+                    }
+                });
+    }
+
+    private static String rowId(GuideUiRow row) {
+        return switch (row) {
+            case GuideUiRow.Persistence value -> "persistence:" + value.state();
+            case GuideUiRow.User value -> "user:" + value.requestId();
+            case GuideUiRow.Assistant value ->
+                    "assistant:" + value.requestId() + ":" + value.ordinal();
+            case GuideUiRow.Tool value ->
+                    "tool:" + value.requestId() + ":" + value.activity().invocationId();
+            case GuideUiRow.Status value -> "status:" + value.requestId();
+        };
+    }
+
+    private void requestViewportHistory(GuideUiLayout.Rect area) {
+        GuideSessionSnapshot session = service.snapshot().sessions().stream()
+                .filter(value -> value.sessionId().equals(view.selectedSession()))
+                .findFirst().orElse(null);
+        if (session == null || session.historyWindow().state() != GuideHistoryPageState.IDLE
+                || session.historyWindow().totalRequests() == 0) return;
+        int count = Math.max(1, area.height() / 20 * 2);
+        if (session.requests().isEmpty()) {
+            service.requestHistoryWindow(
+                    session.sessionId(), GuideHistoryPageRequest.Direction.NEWEST, null, count);
+        } else if (scroll <= 32 && session.historyWindow().hasEarlier()
+                && session.historyWindow().firstLoaded() != null) {
+            service.requestHistoryWindow(
+                    session.sessionId(), GuideHistoryPageRequest.Direction.BEFORE,
+                    session.historyWindow().firstLoaded(), count);
+        }
+    }
+
+    private void semanticIntent(MinecraftSemanticRenderer.Intent intent) {
+        switch (intent) {
+            case MinecraftSemanticRenderer.Intent.BrowseRecipes value ->
+                    navigate(recipeClient.openRecipes(value.itemId()));
+            case MinecraftSemanticRenderer.Intent.BrowseUsages value ->
+                    navigate(recipeClient.openUsages(value.itemId()));
+            case MinecraftSemanticRenderer.Intent.ExactRecipe value ->
+                    navigate(recipeClient.openExact(value.reference()));
+            case MinecraftSemanticRenderer.Intent.Source value -> openSemanticSource(
+                    value.sourceId(), value.originInvocationId());
+            case MinecraftSemanticRenderer.Intent.Evidence value -> openSemanticSource(
+                    value.evidenceId(), value.originInvocationId());
+            case MinecraftSemanticRenderer.Intent.Choice value -> notice =
+                    "选择：" + value.choiceId();
+        }
+    }
+
+    private static String semanticIntentNarration(MinecraftSemanticRenderer.Intent intent) {
+        return switch (intent) {
+            case MinecraftSemanticRenderer.Intent.BrowseRecipes value ->
+                    "查看 " + value.itemId() + " 的配方";
+            case MinecraftSemanticRenderer.Intent.BrowseUsages value ->
+                    "查看 " + value.itemId() + " 的用途";
+            case MinecraftSemanticRenderer.Intent.ExactRecipe value ->
+                    "打开配方 " + value.reference().recipeId();
+            case MinecraftSemanticRenderer.Intent.Source value ->
+                    "查看来源 " + value.sourceId();
+            case MinecraftSemanticRenderer.Intent.Evidence value ->
+                    "查看证据 " + value.evidenceId();
+            case MinecraftSemanticRenderer.Intent.Choice value ->
+                    "选择 " + value.choiceId();
+        };
+    }
+
+    private static boolean intersects(GuideUiLayout.Rect first, GuideUiLayout.Rect second) {
+        return first.x() < second.x() + second.width()
+                && first.x() + first.width() > second.x()
+                && first.y() < second.y() + second.height()
+                && first.y() + first.height() > second.y();
+    }
+
+    private void openSemanticSource(String sourceId, String invocationId) {
+        GuideSource source = view.rows().stream()
+                .flatMap(row -> switch (row) {
+                    case GuideUiRow.Assistant assistant -> assistant.sources().stream();
+                    case GuideUiRow.Tool tool -> tool.activity().invocationId().equals(invocationId)
+                            ? tool.activity().sources().stream() : java.util.stream.Stream.empty();
+                    default -> java.util.stream.Stream.empty();
+                })
+                .filter(value -> value.evidence().sourceId().equals(sourceId))
+                .findFirst().orElse(null);
+        if (source != null) open(source);
     }
 
     private int renderWrapped(
@@ -1035,5 +1269,14 @@ public final class TomeWispScreen extends Screen {
     }
 
     private enum HitKind { SESSION, CONTENT, DETAIL }
-    private record Hit(GuideUiLayout.Rect rect, HitKind kind, Runnable action) {}
+    private record Hit(
+            GuideUiLayout.Rect rect,
+            HitKind kind,
+            Runnable action,
+            String focusId,
+            String narration) {
+        private Hit(GuideUiLayout.Rect rect, HitKind kind, Runnable action) {
+            this(rect, kind, action, null, "");
+        }
+    }
 }

@@ -216,5 +216,15 @@
   "settings.tomewisp.capability.skill.guide_ftb_progression.title": "Guide FTB progression",
   "settings.tomewisp.capability.skill.guide_ftb_progression.description": "Uses visible FTB Quests progression and prerequisites when available.",
   "settings.tomewisp.capability.skill.search_guide_books.title": "Search guide books",
-  "settings.tomewisp.capability.skill.search_guide_books.description": "Finds and combines relevant entries from indexed in-game guides."
+  "settings.tomewisp.capability.skill.search_guide_books.description": "Finds and combines relevant entries from indexed in-game guides.",
+  "screen.tomewisp.semantic.action.recipes": "Recipes",
+  "screen.tomewisp.semantic.action.usages": "Usages",
+  "screen.tomewisp.semantic.action.open_recipe": "Open recipe",
+  "screen.tomewisp.semantic.recipe": "Recipe",
+  "screen.tomewisp.semantic.craftable": "✓ Craftable",
+  "screen.tomewisp.semantic.not_craftable": "! Not currently craftable",
+  "screen.tomewisp.semantic.maximum_crafts": "Up to %s crafts",
+  "screen.tomewisp.semantic.conclusive": "Complete conclusion",
+  "screen.tomewisp.semantic.incomplete": "Information is incomplete",
+  "screen.tomewisp.semantic.source": "Source · %s"
 }

@@ -1109,7 +1109,7 @@ public final class GuideService implements GuideHistoryAdministration {
             publishWithoutSave();
             return;
         }
-        mergePage(session, load.key().direction(), page);
+        mergePage(session, load.key().direction(), load.key().count(), page);
         session.pageState = GuideHistoryPageState.IDLE;
         session.pageFailure = null;
         load.waiters().forEach(waiter -> waiter.complete(new ToolResult.Success<>(page)));
@@ -1119,6 +1119,7 @@ public final class GuideService implements GuideHistoryAdministration {
     private void mergePage(
             SessionState session,
             GuideHistoryPageRequest.Direction direction,
+            int neighborhoodCount,
             GuideHistoryPage page) {
         List<GuideRequestSnapshot> active = session.requests.stream()
                 .filter(request -> !request.terminal()).toList();
@@ -1134,27 +1135,48 @@ public final class GuideService implements GuideHistoryAdministration {
         } else {
             durable.addAll(incoming);
         }
+        LinkedHashMap<UUID, GuideRequestSnapshot> previous = new LinkedHashMap<>();
+        session.requests.forEach(request -> previous.put(request.requestId(), request));
         LinkedHashMap<UUID, GuideRequestSnapshot> unique = new LinkedHashMap<>();
         durable.forEach(request -> unique.put(request.requestId(), request));
+        List<GuideRequestSnapshot> bounded = new ArrayList<>(unique.values());
+        int maximumNeighborhood = Math.addExact(neighborhoodCount, page.requests().size());
+        if (bounded.size() > maximumNeighborhood) {
+            bounded = direction == GuideHistoryPageRequest.Direction.AFTER
+                    ? new ArrayList<>(bounded.subList(
+                            bounded.size() - maximumNeighborhood, bounded.size()))
+                    : new ArrayList<>(bounded.subList(0, maximumNeighborhood));
+        }
+        unique.clear();
+        bounded.forEach(request -> unique.put(request.requestId(), request));
         active.forEach(request -> unique.put(request.requestId(), request));
         session.requests.clear();
         session.requests.addAll(unique.values());
+        previous.keySet().stream()
+                .filter(requestId -> !unique.containsKey(requestId))
+                .forEach(requestSessions::remove);
         page.requests().forEach(request -> requestSessions.put(request.requestId(), session.id));
-        session.firstLoaded = page.first() == null ? session.firstLoaded
-                : direction == GuideHistoryPageRequest.Direction.AFTER && session.firstLoaded != null
-                        ? session.firstLoaded : page.first();
-        session.lastLoaded = page.last() == null ? session.lastLoaded
-                : direction == GuideHistoryPageRequest.Direction.BEFORE && session.lastLoaded != null
-                        ? session.lastLoaded : page.last();
-        session.hasEarlier = page.hasEarlier();
-        session.hasLater = page.hasLater();
         if (page.first() != null) {
             long sequence = page.first().sequence();
             for (GuideRequestSnapshot request : page.requests()) {
                 session.requestSequences.put(request.requestId(), sequence++);
             }
         }
+        List<GuideRequestSnapshot> loadedDurable = session.requests.stream()
+                .filter(GuideRequestSnapshot::terminal).toList();
+        session.firstLoaded = loadedDurable.isEmpty() ? null : cursor(
+                session, loadedDurable.getFirst());
+        session.lastLoaded = loadedDurable.isEmpty() ? null : cursor(
+                session, loadedDurable.getLast());
+        session.hasEarlier = page.hasEarlier();
+        session.hasLater = page.hasLater();
         registerPageBaseline(page);
+    }
+
+    private static GuideHistoryCursor cursor(
+            SessionState session, GuideRequestSnapshot request) {
+        Long sequence = session.requestSequences.get(request.requestId());
+        return sequence == null ? null : new GuideHistoryCursor(sequence, request.requestId());
     }
 
     private void registerPageBaseline(GuideHistoryPage page) {

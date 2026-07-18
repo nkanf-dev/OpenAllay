@@ -333,35 +333,35 @@ git commit -m "feat: window durable guide sessions"
 - Test: `common/src/test/java/dev/tomewisp/client/gui/MinecraftSemanticRendererTest.java`
 - Test: existing `TomeWispScreen`/layout/accessibility tests
 
-- [ ] **Step 1: Write viewport, anchor, and auto-scroll tests**
+- [x] **Step 1: Write viewport, anchor, and auto-scroll tests**
 
 Use thousands of variable-height rows. Assert binary-search visibility,
 measurement cache reuse, one-row invalidation, active-tail updates, earlier-page
 anchor preservation, player-owned scroll while above bottom, follow-at-bottom,
 session reset, and no heavy render state outside the neighborhood.
 
-- [ ] **Step 2: Write native semantic rendering tests**
+- [x] **Step 2: Write native semantic rendering tests**
 
 Cover headings/lists/quotes/tables/code, icon/name/count/tooltip for resolved
 items/blocks/fluids, unknown resource fallback, recipe/source/evidence handles,
 all component kinds, typed recipe/usage/viewer intents, malformed fallback,
 keyboard focus, narration, and color-independent state labels.
 
-- [ ] **Step 3: Implement pure layout and virtualization**
+- [x] **Step 3: Implement pure layout and virtualization**
 
 Cache wrapping/height by stable semantic row ID, content hash, width, locale,
 font identity, and display settings. Maintain prefix offsets with targeted
 invalidation. Ask GuideService for a viewport-derived page when approaching an
 unloaded cursor; never read SQLite or hold live registries in the pure view.
 
-- [ ] **Step 4: Implement Minecraft-thread resolver and renderer**
+- [x] **Step 4: Implement Minecraft-thread resolver and renderer**
 
 Resolve raw resource IDs only on the client thread into detached presentation
 records. Render native icons/tooltips/rarity/glint and component slots without
 retaining live registry/level objects. Dispatch only typed existing intents.
 Unknown or failed native rendering uses exact fallback text/narration.
 
-- [ ] **Step 5: Integrate scroll/focus/narration and commit**
+- [x] **Step 5: Integrate scroll/focus/narration and commit**
 
 Preserve scissor bounds, responsive narrow/wide layout, session overlay,
 details, composer, and model/settings controls. Tool entries still update in
