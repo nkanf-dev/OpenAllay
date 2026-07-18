@@ -623,9 +623,7 @@ public final class GuideService {
         sessions.clear();
         requestSessions.clear();
         for (GuideSessionSnapshot snapshot : partition.sessions()) {
-            GuideModelSelection restored = partition.modelMode() == GuideModelMode.SERVER
-                    ? GuideModelSelection.server()
-                    : defaultClientSelection();
+            GuideModelSelection restored = snapshot.modelSelection();
             SessionState session = new SessionState(snapshot.sessionId(), restored);
             if (restored.kind() == GuideModelSelection.Kind.SERVER) {
                 session.lastClientProfileId = defaultClientSelection().profileId();
@@ -698,7 +696,6 @@ public final class GuideService {
                 GuideHistoryPartition.SCHEMA_VERSION,
                 historyScope,
                 selectedSession,
-                sessions.get(selectedSession).modelSelection.modelMode(),
                 durableSessions,
                 clock.instant());
     }

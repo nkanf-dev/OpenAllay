@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import dev.tomewisp.guide.GuideModelMode;
 import dev.tomewisp.guide.GuideSessionSnapshot;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -88,7 +87,6 @@ final class GuideHistoryRepositoryTest {
                 GuideHistoryPartition.SCHEMA_VERSION,
                 SCOPE,
                 "main",
-                GuideModelMode.CLIENT,
                 List.of(new GuideSessionSnapshot("main", List.of(), List.of())),
                 Instant.ofEpochMilli(generation));
     }

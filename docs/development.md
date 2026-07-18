@@ -153,16 +153,19 @@ results. Protocol v4 splits the encoded request into independently strict,
 SHA-256-checked 24 KiB transport chunks so long histories do not depend on one
 Minecraft custom-payload string.
 
-Normal-mode guide history is stored at `config/tomewisp/history.sqlite3` in one
-schema-v2 SQLite database. Schema v1 migrates transactionally without replacing
-message or timeline rows. Each partition key is a SHA-256 digest of the player
+Normal-mode guide history is stored at `config/tomewisp/history.sqlite3` in the
+single current pre-release SQLite schema. Earlier development schemas are not
+migrated because TomeWisp has not shipped; delete the ignored database to reset
+test history. Unsupported schemas fail closed without mutation. Each partition
+key is a SHA-256 digest of the player
 UUID, connection kind, and normalized integrated-world path or multiplayer
 address; the raw path/address is not stored. Database work runs on one ordered
 background worker and never blocks the client or render thread.
 
-The durable projection contains sessions, user messages, chronological visible
-assistant/tool/status entries, evidence summaries, model mode, and terminal
-request state. It excludes model reasoning, credentials, authorization data,
+The durable projection contains sessions, their selected model profiles, user
+messages, chronological visible assistant/tool/status entries, each request's
+captured model selection, evidence summaries, and terminal request state. It
+excludes model reasoning, credentials, authorization data,
 raw provider bodies, full inventory snapshots, and full normalized tool
 results. Loading temporarily disables submission. A load or write failure keeps
 the in-memory Agent usable and shows that new messages are not durable. Work

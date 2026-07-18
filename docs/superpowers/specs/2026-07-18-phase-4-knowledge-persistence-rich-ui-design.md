@@ -50,7 +50,7 @@ targets, not owners of TomeWisp recipe identity.
 ### 2.3 Rejected: persist live GuideService objects
 
 Serializing the current in-memory service graph would retain connection-scoped
-capabilities and couple migrations to implementation classes. Phase 4 instead
+capabilities and couple schema layout to implementation classes. Phase 4 instead
 persists versioned domain records and reconstructs a new connection-scoped
 service projection on load.
 
@@ -125,12 +125,13 @@ navigation is a disabled action with a diagnostic, not a fabricated success.
 
 ## 4. Durable history
 
-Implementation status on 2026-07-18: the schema-v2 normal-mode projection,
+Implementation status on 2026-07-18: the current normal-mode projection,
 hashed player/connection partitions, ordered asynchronous SQLite repository,
 interruption recovery, GuideService lifecycle integration, Fabric/NeoForge
 packaging and lifecycle hooks, and player-visible persistence health are
-implemented. Transactional v1 migration and privacy-safe compaction checkpoints
-are also complete. Developer-mode payloads, explicit partition/all-history
+implemented. Privacy-safe compaction checkpoints and per-session/request model
+selection are also complete. SKMB-2026-07-18-011 removes all migration paths
+for unshipped development schemas. Developer-mode payloads, explicit partition/all-history
 management, paging, and retained graphical restart acceptance remain open
 Phase 4 work.
 
@@ -148,7 +149,7 @@ only the current partition. Capabilities, live recipe generations, inventories,
 and source availability never resume from an old connection.
 
 SQLite is the preferred implementation because it provides transactions,
-indexes, migrations, and recoverable local tooling. Adoption is conditional on
+indexes, strict schema metadata, and recoverable local tooling. Adoption is conditional on
 a retained Java 25, Fabric, NeoForge, Windows, macOS, and Linux packaging proof.
 If that proof fails, selecting a different embedded database requires a new
 accepted decision; the implementation must not silently fall back to ad-hoc
@@ -163,9 +164,9 @@ The versioned schema stores:
 - semantic message nodes and player-visible card projections;
 - source and evidence summaries;
 - structured terminal, cancelled, interrupted, and error states;
-- model mode (a redacted model identifier remains planned);
+- per-session selection and each request's captured credential-free selection;
 - compaction checkpoints and their source-message ranges;
-- schema and migration metadata.
+- schema metadata.
 
 Normal mode does not retain full inventory snapshots, raw provider bodies,
 authorization data, model reasoning, or full normalized tool results. It stores
@@ -434,7 +435,7 @@ read out or persist its value.
 
 Debug diagnostics expose request/session IDs, topology, provider and recipe
 source capability, snapshot generation and counts, tool and evidence data,
-queue and 429 state, database schema and migrations, compaction checkpoints,
+queue and 429 state, current database schema, compaction checkpoints,
 token estimates, and redacted trace export. They never expose reasoning,
 credentials, authorization headers, or another player's data.
 
@@ -499,7 +500,7 @@ count as a successful viewer, Patchouli, or sample-mod smoke claim.
 2. Introduce the recipe-provider contract and deterministic merge tests.
 3. Verify 26.2 viewer APIs and implement compatible JEI/REI/EMI adapters.
 4. Add the common viewer bridge and first-class recipe/item actions.
-5. Implement `GuideHistoryStore`, database schema, migrations, and recovery.
+5. Implement `GuideHistoryStore`, the current database schema, and recovery.
 6. Restore durable sessions as inactive projections and add explicit retry.
 7. Implement reducer, token-budget, tool-result reduction, and checkpoints.
 8. Add semantic message parsing, validation, and streaming reconciliation.
@@ -507,7 +508,7 @@ count as a successful viewer, Patchouli, or sample-mod smoke claim.
    version its local, remote, and durable identities.
 10. Add native item/recipe renderers and controlled component registry.
 11. Add settings, debug diagnostics, paging, and accessibility.
-12. Extend deterministic, race, migration, redaction, and loader tests.
+12. Extend deterministic, race, schema-rejection, redaction, and loader tests.
 13. Run the full build, then execute and retain the approved modded client smoke.
 
 Each implementation work package receives a focused plan and verification
@@ -528,7 +529,7 @@ Phase 4 is complete only when all applicable items are proven:
 6. Interrupted requests never automatically repeat a provider call.
 7. Normal and developer persistence retain exactly their approved data classes;
    secrets and reasoning never enter either store.
-8. Database migration, corruption, failed writes, concurrent reads, deletion,
+8. Database schema rejection, corruption, failed writes, concurrent reads, deletion,
    and disconnect behavior have deterministic coverage.
 9. Context reduction preserves system and tool-message structure, summaries
    never become factual evidence, and compaction failure is explicit.

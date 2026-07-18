@@ -10,6 +10,7 @@ import dev.tomewisp.context.DataAuthority;
 import dev.tomewisp.context.DataCompleteness;
 import dev.tomewisp.context.EvidenceMetadata;
 import dev.tomewisp.guide.GuideSource;
+import dev.tomewisp.guide.GuideModelSelection;
 import dev.tomewisp.guide.GuideTimelineEntry;
 import dev.tomewisp.guide.GuideToolActivity;
 import dev.tomewisp.guide.GuideToolStatus;
@@ -32,6 +33,35 @@ public final class GuideHistoryCodec {
     private static final Set<String> EVIDENCE_FIELDS = Set.of(
             "authority", "completeness", "capturedAt", "sourceId", "provenance",
             "gameVersion", "loader", "details");
+    private static final Set<String> SERVER_SELECTION_FIELDS = Set.of("kind");
+    private static final Set<String> CLIENT_SELECTION_FIELDS = Set.of("kind", "profileId");
+
+    public String encodeModelSelection(GuideModelSelection selection) {
+        JsonObject encoded = new JsonObject();
+        encoded.addProperty("kind", selection.kind().name());
+        if (selection.kind() == GuideModelSelection.Kind.CLIENT) {
+            encoded.addProperty("profileId", selection.profileId());
+        }
+        return encoded.toString();
+    }
+
+    public GuideModelSelection decodeModelSelection(String json) {
+        JsonObject encoded = object(JsonParser.parseString(json), "model selection");
+        GuideModelSelection.Kind kind = enumValue(
+                GuideModelSelection.Kind.class,
+                string(encoded, "kind"),
+                "model selection kind");
+        return switch (kind) {
+            case CLIENT -> {
+                requireFields(encoded, CLIENT_SELECTION_FIELDS, "client model selection");
+                yield GuideModelSelection.client(string(encoded, "profileId"));
+            }
+            case SERVER -> {
+                requireFields(encoded, SERVER_SELECTION_FIELDS, "server model selection");
+                yield GuideModelSelection.server();
+            }
+        };
+    }
 
     public String encodeCheckpoint(ContextCheckpoint checkpoint) {
         return checkpoints.encode(checkpoint);

@@ -67,6 +67,24 @@ final class GuideServiceHistoryTest {
     }
 
     @Test
+    void restoresTheSessionSelectionWithoutRebindingCapturedRequests() {
+        FakeHistory history = new FakeHistory();
+        GuideService service = service(new FakeLocal(), history);
+        GuideRequestSnapshot interrupted = interruptedRequest();
+        history.load.complete(new GuideHistoryLoad(
+                java.util.Optional.of(partition(
+                        interrupted, GuideModelSelection.client("removed-profile"))),
+                List.of()));
+
+        GuideSessionSnapshot restored = service.snapshot().sessions().getFirst();
+
+        assertEquals(GuideModelSelection.client("removed-profile"), restored.modelSelection());
+        assertEquals(GuideModelSelection.client("default"),
+                restored.requests().getFirst().modelSelection());
+        assertFailure(service.retry(interrupted.requestId()).join(), "model_not_configured");
+    }
+
+    @Test
     void persistsSanitizedEventProjectionsAndIgnoresStaleCompletions() {
         FakeHistory history = new FakeHistory();
         FakeLocal local = new FakeLocal();
@@ -187,18 +205,23 @@ final class GuideServiceHistoryTest {
     }
 
     private static GuideHistoryPartition partition(GuideRequestSnapshot request) {
+        return partition(request, GuideModelSelection.client("default"));
+    }
+
+    private static GuideHistoryPartition partition(
+            GuideRequestSnapshot request, GuideModelSelection selection) {
         return new GuideHistoryPartition(
                 GuideHistoryPartition.SCHEMA_VERSION,
                 SCOPE,
                 "main",
-                GuideModelMode.CLIENT,
                 List.of(new GuideSessionSnapshot(
                         "main",
                         List.of(new GuideMessage(
                                 request.requestId(), GuideMessage.Role.USER,
                                 request.userMessage(), request.createdAt())),
                         List.of(request),
-                        List.of(checkpoint()))),
+                        List.of(checkpoint()),
+                        selection)),
                 request.updatedAt());
     }
 

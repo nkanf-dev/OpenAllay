@@ -1,7 +1,6 @@
 package dev.tomewisp.guide.history;
 
 import dev.tomewisp.guide.GuideMessage;
-import dev.tomewisp.guide.GuideModelMode;
 import dev.tomewisp.guide.GuideSessionSnapshot;
 import java.time.Instant;
 import java.util.HashSet;
@@ -14,10 +13,9 @@ public record GuideHistoryPartition(
         int schemaVersion,
         GuideHistoryScope scope,
         String selectedSession,
-        GuideModelMode modelMode,
         List<GuideSessionSnapshot> sessions,
         Instant updatedAt) {
-    public static final int SCHEMA_VERSION = 2;
+    public static final int SCHEMA_VERSION = 3;
 
     public GuideHistoryPartition {
         if (schemaVersion != SCHEMA_VERSION) {
@@ -27,7 +25,6 @@ public record GuideHistoryPartition(
         if (selectedSession == null || selectedSession.isBlank()) {
             throw new IllegalArgumentException("selectedSession must not be blank");
         }
-        Objects.requireNonNull(modelMode, "modelMode");
         sessions = List.copyOf(sessions);
         if (sessions.stream().noneMatch(session -> session.sessionId().equals(selectedSession))) {
             throw new IllegalArgumentException("selectedSession does not exist in durable history");
@@ -51,4 +48,5 @@ public record GuideHistoryPartition(
         }
         Objects.requireNonNull(updatedAt, "updatedAt");
     }
+
 }

@@ -18,6 +18,7 @@ accepted and contains explicit approval evidence.
 | SKMB-2026-07-18-008 | reviewable_default | Phase 4 context compaction execution | A, B, C, D, E, F | decisions/2026-07-18-008-context-compaction-execution.md | pending |
 | SKMB-2026-07-18-009 | accepted | per-session model selection and metadata discovery | B, C, D, E, F | decisions/2026-07-18-009-session-model-selection.md | pending |
 | SKMB-2026-07-18-010 | accepted | normal/debug UI projection | B, E, F | decisions/2026-07-18-010-debug-ui-projection.md | pending |
+| SKMB-2026-07-18-011 | accepted | pre-release durable schema policy | B, F, G | decisions/2026-07-18-011-pre-release-durable-schema.md | pending |
 
 SKMB-2026-07-18-006 is implemented by `a0eaeff`, `19ab90f`, and `c6ca6bc`.
 Its deterministic clean-build and packaged-driver evidence is recorded in the
@@ -81,7 +82,7 @@ Delight graphical evidence are recorded in the Phase 4C plan and
 | T28 | preparing | deterministic context estimate exceeds configured input budget | compacting | Protect the current request and structural tool pairs, then reduce old tool results | SKMB-2026-07-18-008 |
 | T29 | compacting | deterministic projection still exceeds budget | compacting | Use the same selected model topology to create a source-hashed structured summary checkpoint | SKMB-2026-07-18-008 |
 | T30 | compacting | cancel arrives | cancelled | Cancel summary work, store no successful checkpoint, and suppress primary dispatch | SKMB-2026-07-18-008 |
-| T31 | history_loading | schema-v1 partition opens | history_loading | Transactionally add session-owned checkpoint storage, preserve messages/timeline, then hydrate schema v2 | SKMB-2026-07-18-008 |
+| T31 | history_loading | unsupported pre-release schema opens | persistence_unavailable | Reject it without mutation; development state must be deleted and recreated explicitly | SKMB-2026-07-18-011 |
 | T32 | any non-active session state | selected model/provider changes | unchanged | Keep the provider-neutral transcript/checkpoints; assemble the next request with the new model and its budget | SKMB-2026-07-18-008 |
 | T33 | any session state | session model selection changes | unchanged | Store the preference for that session's future requests; an active request retains its captured runtime | SKMB-2026-07-18-009 |
 | T34 | any UI state | debug mode changes | unchanged | Rebuild only the local normal/debug projection; do not rewrite history or change active work | SKMB-2026-07-18-010 |
@@ -131,6 +132,7 @@ Delight graphical evidence are recorded in the Phase 4C plan and
 | I39 | Model selection is per session and mutable; active requests retain their captured runtime and never reroute | SKMB-2026-07-18-009 |
 | I40 | Explicit model limits outrank discovered metadata, and credentials are unrepresentable in persisted multi-profile configuration | SKMB-2026-07-18-009 |
 | I41 | Normal UI exposes friendly cards and narration but cannot represent raw technical evidence/JSON; debug mode remains redacted | SKMB-2026-07-18-010 |
+| I42 | Before the first formal release, durable storage has one current schema and no migration-only compatibility surface | SKMB-2026-07-18-011 |
 
 ## Fail Semantics
 
@@ -161,6 +163,7 @@ Delight graphical evidence are recorded in the Phase 4C plan and
 | F23 | A remembered model profile is missing, disabled, or invalid | Fail the future request explicitly; retain the selection for repair and never silently fall back | SKMB-2026-07-18-009 |
 | F24 | Native/advisory model metadata is unavailable or malformed | Keep explicit configuration usable, expose a redacted diagnostic, and do not invent a context limit | SKMB-2026-07-18-009 |
 | F25 | Known card data is malformed or a tool type is unknown | Render a friendly textual fallback; expose only a redacted validation diagnostic in debug mode | SKMB-2026-07-18-010 |
+| F26 | An unsupported pre-release history schema is opened | Fail `history_schema_unsupported` without mutation; require explicit deletion/recreation of development data | SKMB-2026-07-18-011 |
 
 ## Statistical Defaults Allowed Temporarily
 

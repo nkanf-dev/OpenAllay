@@ -88,7 +88,9 @@ or local paths part of the browsable database model.
 
 Review these defaults no later than the final Phase 4 real-client acceptance.
 If the designer selects different loading or persistence behavior, record a
-superseding decision and a versioned migration where durable identity changes.
+superseding decision. Before the first formal release, SKMB-2026-07-18-011
+requires a clean schema replacement rather than a migration; shipped formats
+require a later explicit compatibility decision.
 The final review must include retained graphical restart evidence and must not
 treat packaged Windows/Linux native entries as execution on those hosts.
 

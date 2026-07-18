@@ -3,7 +3,7 @@ package dev.tomewisp.guide.history;
 import dev.tomewisp.agent.context.ContextCheckpoint;
 import dev.tomewisp.guide.GuideFailure;
 import dev.tomewisp.guide.GuideMessage;
-import dev.tomewisp.guide.GuideModelMode;
+import dev.tomewisp.guide.GuideModelSelection;
 import dev.tomewisp.guide.GuideRequestSnapshot;
 import dev.tomewisp.guide.GuideRequestStatus;
 import dev.tomewisp.guide.GuideSessionSnapshot;
@@ -32,7 +32,7 @@ import java.util.UUID;
 
 /** JDBC store used only behind the asynchronous history repository. */
 public final class SqliteGuideHistoryStore implements GuideHistoryStore {
-    private static final int SCHEMA_VERSION = 2;
+    private static final int SCHEMA_VERSION = GuideHistoryPartition.SCHEMA_VERSION;
 
     private final Path database;
     private final Clock clock;
@@ -129,6 +129,7 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
             createSchema(connection);
             return;
         }
+        int version;
         try (Statement statement = connection.createStatement();
                 ResultSet result = statement.executeQuery(
                         "select schema_version from schema_metadata where singleton = 1")) {
@@ -136,30 +137,12 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
                 throw new GuideHistoryException(
                         "history_schema_unsupported", "Guide history schema metadata is missing");
             }
-            int version = result.getInt(1);
-            if (version == 1) {
-                migrateV1ToV2(connection);
-            } else if (version != SCHEMA_VERSION) {
-                throw new GuideHistoryException(
-                        "history_schema_unsupported",
-                        "Unsupported guide history schema version " + version);
-            }
+            version = result.getInt(1);
         }
-    }
-
-    private static void migrateV1ToV2(Connection connection) throws SQLException {
-        boolean autoCommit = connection.getAutoCommit();
-        connection.setAutoCommit(false);
-        try (Statement statement = connection.createStatement()) {
-            createCheckpointTable(statement);
-            statement.executeUpdate(
-                    "update schema_metadata set schema_version = 2 where singleton = 1 and schema_version = 1");
-            connection.commit();
-        } catch (SQLException failure) {
-            rollback(connection, failure);
-            throw failure;
-        } finally {
-            connection.setAutoCommit(autoCommit);
+        if (version != SCHEMA_VERSION) {
+            throw new GuideHistoryException(
+                    "history_schema_unsupported",
+                    "Unsupported guide history schema version " + version);
         }
     }
 
@@ -189,7 +172,6 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
                         actor_id text not null,
                         connection_kind text not null,
                         selected_session text not null,
-                        model_mode text not null,
                         capture_mode text not null check(capture_mode = 'NORMAL'),
                         updated_at text not null
                     )
@@ -199,6 +181,7 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
                         scope_id text not null,
                         session_id text not null,
                         ordinal integer not null check(ordinal >= 0),
+                        model_selection_json text not null,
                         primary key(scope_id, session_id),
                         unique(scope_id, ordinal),
                         foreign key(scope_id) references partitions(scope_id) on delete cascade
@@ -211,6 +194,7 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
                         request_id text not null,
                         ordinal integer not null check(ordinal >= 0),
                         topology text not null,
+                        model_selection_json text not null,
                         user_message text not null,
                         status text not null,
                         input_tokens integer not null check(input_tokens >= 0),
@@ -270,7 +254,7 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
             statement.execute("create index requests_order_lookup on requests(scope_id, session_id, ordinal)");
             statement.execute("create index timeline_order_lookup on timeline_entries(scope_id, request_id, ordinal)");
             createCheckpointTable(statement);
-            statement.execute("insert into schema_metadata(singleton, schema_version) values (1, 2)");
+            statement.execute("insert into schema_metadata(singleton, schema_version) values (1, 3)");
             connection.commit();
         } catch (SQLException failure) {
             rollback(connection, failure);
@@ -313,15 +297,14 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
         try (PreparedStatement insert = connection.prepareStatement("""
                 insert into partitions(
                     scope_id, actor_id, connection_kind, selected_session,
-                    model_mode, capture_mode, updated_at)
-                values (?, ?, ?, ?, ?, 'NORMAL', ?)
+                    capture_mode, updated_at)
+                values (?, ?, ?, ?, 'NORMAL', ?)
                 """)) {
             insert.setString(1, partition.scope().scopeId());
             insert.setString(2, partition.scope().actorId().toString());
             insert.setString(3, partition.scope().kind().name());
             insert.setString(4, partition.selectedSession());
-            insert.setString(5, partition.modelMode().name());
-            insert.setString(6, partition.updatedAt().toString());
+            insert.setString(5, partition.updatedAt().toString());
             insert.executeUpdate();
         }
         for (int sessionOrdinal = 0; sessionOrdinal < partition.sessions().size(); sessionOrdinal++) {
@@ -376,16 +359,19 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
         }
     }
 
-    private static void insertSession(
+    private void insertSession(
             Connection connection,
             String scopeId,
             GuideSessionSnapshot session,
             int ordinal) throws SQLException {
-        try (PreparedStatement insert = connection.prepareStatement(
-                "insert into sessions(scope_id, session_id, ordinal) values (?, ?, ?)")) {
+        try (PreparedStatement insert = connection.prepareStatement("""
+                insert into sessions(scope_id, session_id, ordinal, model_selection_json)
+                values (?, ?, ?, ?)
+                """)) {
             insert.setString(1, scopeId);
             insert.setString(2, session.sessionId());
             insert.setInt(3, ordinal);
+            insert.setString(4, codec.encodeModelSelection(session.modelSelection()));
             insert.executeUpdate();
         }
     }
@@ -398,28 +384,29 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
             int ordinal) throws SQLException {
         try (PreparedStatement insert = connection.prepareStatement("""
                 insert into requests(
-                    scope_id, session_id, request_id, ordinal, topology, user_message,
+                    scope_id, session_id, request_id, ordinal, topology, model_selection_json, user_message,
                     status, input_tokens, output_tokens, cache_read_tokens,
                     retry_after_millis, failure_code, failure_message,
                     created_at, updated_at, terminal_at)
-                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """)) {
             insert.setString(1, scopeId);
             insert.setString(2, sessionId);
             insert.setString(3, request.requestId().toString());
             insert.setInt(4, ordinal);
             insert.setString(5, request.topology().name());
-            insert.setString(6, request.userMessage());
-            insert.setString(7, request.status().name());
-            insert.setLong(8, request.usage().inputTokens());
-            insert.setLong(9, request.usage().outputTokens());
-            insert.setLong(10, request.usage().cacheReadTokens());
-            nullableLong(insert, 11, request.retryAfterMillis());
-            insert.setString(12, request.failure() == null ? null : request.failure().code());
-            insert.setString(13, request.failure() == null ? null : request.failure().message());
-            insert.setString(14, request.createdAt().toString());
-            insert.setString(15, request.updatedAt().toString());
-            insert.setString(16, request.terminalAt() == null ? null : request.terminalAt().toString());
+            insert.setString(6, codec.encodeModelSelection(request.modelSelection()));
+            insert.setString(7, request.userMessage());
+            insert.setString(8, request.status().name());
+            insert.setLong(9, request.usage().inputTokens());
+            insert.setLong(10, request.usage().outputTokens());
+            insert.setLong(11, request.usage().cacheReadTokens());
+            nullableLong(insert, 12, request.retryAfterMillis());
+            insert.setString(13, request.failure() == null ? null : request.failure().code());
+            insert.setString(14, request.failure() == null ? null : request.failure().message());
+            insert.setString(15, request.createdAt().toString());
+            insert.setString(16, request.updatedAt().toString());
+            insert.setString(17, request.terminalAt() == null ? null : request.terminalAt().toString());
             insert.executeUpdate();
         }
         for (GuideTimelineEntry entry : request.timeline()) {
@@ -487,7 +474,6 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
                 GuideHistoryPartition.SCHEMA_VERSION,
                 scope,
                 header.selectedSession,
-                header.modelMode,
                 snapshots,
                 header.updatedAt);
     }
@@ -495,7 +481,7 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
     private static PartitionHeader readHeader(Connection connection, GuideHistoryScope scope)
             throws SQLException {
         try (PreparedStatement query = connection.prepareStatement("""
-                select actor_id, connection_kind, selected_session, model_mode, capture_mode, updated_at
+                select actor_id, connection_kind, selected_session, capture_mode, updated_at
                 from partitions where scope_id = ?
                 """)) {
             query.setString(1, scope.scopeId());
@@ -513,23 +499,25 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
                 }
                 return new PartitionHeader(
                         result.getString("selected_session"),
-                        GuideModelMode.valueOf(result.getString("model_mode")),
                         Instant.parse(result.getString("updated_at")));
             }
         }
     }
 
-    private static LinkedHashMap<String, SessionBuilder> readSessions(
+    private LinkedHashMap<String, SessionBuilder> readSessions(
             Connection connection, String scopeId) throws SQLException {
         LinkedHashMap<String, SessionBuilder> sessions = new LinkedHashMap<>();
         try (PreparedStatement query = connection.prepareStatement("""
-                select session_id from sessions where scope_id = ? order by ordinal
+                select session_id, model_selection_json
+                from sessions where scope_id = ? order by ordinal
                 """)) {
             query.setString(1, scopeId);
             try (ResultSet result = query.executeQuery()) {
                 while (result.next()) {
                     String sessionId = result.getString(1);
-                    if (sessions.put(sessionId, new SessionBuilder(sessionId)) != null) {
+                    GuideModelSelection selection = codec.decodeModelSelection(
+                            required(result.getString("model_selection_json"), "session model selection"));
+                    if (sessions.put(sessionId, new SessionBuilder(sessionId, selection)) != null) {
                         throw new IllegalArgumentException("duplicate durable session");
                     }
                 }
@@ -544,6 +532,7 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
             Map<String, SessionBuilder> sessions) throws SQLException {
         try (PreparedStatement query = connection.prepareStatement("""
                 select session_id, request_id, topology, user_message, status,
+                       model_selection_json,
                        input_tokens, output_tokens, cache_read_tokens, retry_after_millis,
                        failure_code, failure_message, created_at, updated_at, terminal_at
                 from requests where scope_id = ? order by session_id, ordinal
@@ -578,7 +567,10 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
                             failure,
                             Instant.parse(result.getString("created_at")),
                             Instant.parse(result.getString("updated_at")),
-                            nullableInstant(result.getString("terminal_at"))));
+                            nullableInstant(result.getString("terminal_at")),
+                            codec.decodeModelSelection(required(
+                                    result.getString("model_selection_json"),
+                                    "request model selection"))));
                 }
             }
         }
@@ -735,10 +727,15 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
                                 "The previous client process ended before this request completed"),
                         request.createdAt(),
                         recoveredAt,
-                        recoveredAt));
+                        recoveredAt,
+                        request.modelSelection()));
             }
             sessions.add(new GuideSessionSnapshot(
-                    session.sessionId(), session.messages(), requests, session.checkpoints()));
+                    session.sessionId(),
+                    session.messages(),
+                    requests,
+                    session.checkpoints(),
+                    session.modelSelection()));
         }
         if (!changed) {
             return partition;
@@ -747,7 +744,6 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
                 partition.schemaVersion(),
                 partition.scope(),
                 partition.selectedSession(),
-                partition.modelMode(),
                 sessions,
                 recoveredAt);
     }
@@ -787,21 +783,22 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
 
     private record PartitionHeader(
             String selectedSession,
-            GuideModelMode modelMode,
             Instant updatedAt) {}
 
     private static final class SessionBuilder {
         private final String id;
+        private final GuideModelSelection modelSelection;
         private final List<GuideMessage> messages = new ArrayList<>();
         private final List<GuideRequestSnapshot> requests = new ArrayList<>();
         private final List<ContextCheckpoint> checkpoints = new ArrayList<>();
 
-        private SessionBuilder(String id) {
+        private SessionBuilder(String id, GuideModelSelection modelSelection) {
             this.id = id;
+            this.modelSelection = modelSelection;
         }
 
         private GuideSessionSnapshot snapshot() {
-            return new GuideSessionSnapshot(id, messages, requests, checkpoints);
+            return new GuideSessionSnapshot(id, messages, requests, checkpoints, modelSelection);
         }
     }
 }

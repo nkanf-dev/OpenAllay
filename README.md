@@ -72,7 +72,8 @@ viewer-only Farmer's Delight discovery, generation-safe exact lookup, and
 TomeWisp-to-JEI navigation; EMI and Patchouli still have no verified 26.2
 runtime artifact. Phase 4 context management now uses an explicit per-model
 window, provider-neutral structural reduction, source-hashed derived summaries,
-schema-v2 privacy-safe checkpoint persistence, and local/server recovery. A
+privacy-safe checkpoint persistence in the single current pre-release schema,
+and local/server recovery. A
 session is not bound to one model: validated history/checkpoints survive
 provider or model changes and every future request is rebuilt against its
 selected model budget. Tool details now use scrollable Minecraft-native recipe,

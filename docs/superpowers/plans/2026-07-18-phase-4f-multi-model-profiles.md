@@ -17,7 +17,7 @@ dispatch. Durable history schema v3 stores those selections. The native screen
 projects enabled/available choices; provider metadata remains an explicit
 settings/diagnostic operation.
 
-**Authority:** SKMB-2026-07-18-009 and
+**Authority:** SKMB-2026-07-18-009, SKMB-2026-07-18-011, and
 `docs/superpowers/specs/2026-07-18-multi-model-profiles-design.md` are accepted
 designer decisions. No silent fallback, automatic routing, or provider-side
 cache portability is introduced.
@@ -203,7 +203,7 @@ profiles remain selected and fail future submission as `model_not_configured`,
 while invalid profiles keep their own structured failure. The legacy mode API
 is now only a compatibility adapter over the selected session.
 
-### Task 4: Durable schema v3 selection migration
+### Task 4: Clean durable schema v3 selection storage
 
 **Files:**
 - Modify: `common/src/main/java/dev/tomewisp/guide/history/GuideHistoryPartition.java`
@@ -213,34 +213,40 @@ is now only a compatibility adapter over the selected session.
 - Modify: `common/src/test/java/dev/tomewisp/guide/history/SqliteGuideHistoryStoreTest.java`
 - Modify: `common/src/test/java/dev/tomewisp/guide/history/GuideHistoryCodecTest.java`
 
-- [ ] **Step 1: Write red v3 round-trip and v2 migration fixtures**
+- [x] **Step 1: Write strict v3 round-trip and rejection fixtures**
 
 Cover different selections for multiple sessions, captured request selection,
-unknown-but-valid profile retention, strict unknown kind/field rejection, and a
-real schema-v2 SQLite fixture whose global client/server mode maps
-transactionally to the configured migration default/server selection without
-changing messages, timeline, evidence, or checkpoints.
+unknown-but-valid profile retention, strict unknown kind/field rejection, and
+explicit rejection of unsupported pre-release schemas without mutation.
 
-- [ ] **Step 2: Store selection per session/request**
+- [x] **Step 2: Store selection per session/request**
 
 Schema v3 adds strict selection kind/profile data at session and request
 boundaries. Remove global mode as an authority; a compatibility mode may be
 derived for old callers. Replacement writes remain transactional and partition
 isolation remains unchanged.
 
-- [ ] **Step 3: Implement v1→v2→v3 migration**
+- [x] **Step 3: Remove pre-release migration and compatibility debt**
 
-Migrate in one transaction. V2 `CLIENT` maps every session to the configured
-default profile; `SERVER` maps to server. Existing requests receive the same
-captured selection implied by topology. Unknown future database/schema values
-fail closed without partial writes.
+Keep one current writable schema. Do not retain legacy columns, constructors,
+or migration branches for layouts that never shipped. Earlier and future
+schema values fail closed without partial writes; developers explicitly delete
+the ignored test database when a reset is required.
 
-- [ ] **Step 4: Run history tests and commit**
+- [x] **Step 4: Run history tests and commit**
 
 ```bash
 ./gradlew :common:test --tests 'dev.tomewisp.guide.history.*'
 git commit -m "feat: persist per-session model selection"
 ```
+
+Implemented as one clean pre-release schema under SKMB-2026-07-18-011. The
+global `model_mode` column and all migration-only branches are absent. Strict
+credential-free JSON stores each session preference and every request's
+captured selection; interrupted recovery preserves both. Earlier/future schema
+versions fail `history_schema_unsupported` without mutation. Focused history,
+GuideService history, and model-selection suites pass, followed by the complete
+common suite: 245 tests, zero failures/errors, one opt-in skip.
 
 ### Task 5: Trusted OpenRouter metadata discovery
 
@@ -344,9 +350,9 @@ git commit -m "feat: switch models within guide sessions"
 ./gradlew clean :common:test :fabric:build :neoforge:build
 ```
 
-- [ ] **Step 2: Run migration, privacy, syntax, and artifact checks**
+- [ ] **Step 2: Run schema, privacy, syntax, and artifact checks**
 
-Record common test totals, real schema-v2 migration evidence, loader hashes,
+Record common test totals, unsupported-schema rejection evidence, loader hashes,
 tracked shell/Python/JSON syntax, `git diff --check`, source-boundary checks,
 and credential-pattern scans over production JARs. Confirm no new-format file,
 packet, history record, diagnostic, snapshot, or rendered label contains an API
@@ -354,7 +360,7 @@ key value.
 
 - [ ] **Step 3: Update truthful status and commit**
 
-Document the strict file format, legacy behavior, session switch semantics,
+Document the strict file format, pre-release reset policy, session switch semantics,
 metadata provenance/priority, explicit unavailable-profile failures, and what
 was not live-tested. Mark 009's implementation commits and retain final
 graphical/provider acceptance for the consolidated Phase 4 smoke.
@@ -367,7 +373,7 @@ git commit -m "docs: verify multi-model session switching"
 
 This package is complete when named client profiles and the server model can be
 selected per session, active requests retain their captured runtime, common
-history survives switching, schema-v2 history migrates to v3, OpenRouter
+history survives switching, the clean current schema persists selections, OpenRouter
 metadata discovery is explicit/trusted/redacted, both loaders are in parity,
 and the full gate passes. Profile CRUD UI, general settings/diagnostics pages,
 model-authored rich components, history paging, and final consolidated

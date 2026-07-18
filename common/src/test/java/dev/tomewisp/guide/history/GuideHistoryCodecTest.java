@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import dev.tomewisp.guide.GuideModelSelection;
 import dev.tomewisp.guide.GuideSource;
 import dev.tomewisp.guide.GuideTimelineEntry;
 import dev.tomewisp.guide.GuideToolActivity;
@@ -21,6 +22,26 @@ import org.junit.jupiter.api.Test;
 final class GuideHistoryCodecTest {
     private static final UUID ACTOR =
             UUID.fromString("849d783f-aa16-4c7f-ac0f-cd41f073c75f");
+
+    @Test
+    void roundTripsStrictCredentialFreeModelSelections() {
+        GuideHistoryCodec codec = new GuideHistoryCodec();
+
+        assertEquals(
+                GuideModelSelection.client("openrouter-claude"),
+                codec.decodeModelSelection(codec.encodeModelSelection(
+                        GuideModelSelection.client("openrouter-claude"))));
+        assertEquals(
+                GuideModelSelection.server(),
+                codec.decodeModelSelection(codec.encodeModelSelection(
+                        GuideModelSelection.server())));
+        assertThrows(IllegalArgumentException.class, () -> codec.decodeModelSelection(
+                "{\"kind\":\"CLIENT\",\"profileId\":\"a\",\"apiKey\":\"secret\"}"));
+        assertThrows(IllegalArgumentException.class, () -> codec.decodeModelSelection(
+                "{\"kind\":\"SERVER\",\"profileId\":\"a\"}"));
+        assertThrows(IllegalArgumentException.class, () -> codec.decodeModelSelection(
+                "{\"kind\":\"UNKNOWN\"}"));
+    }
 
     @Test
     void derivesPrivateStablePartitionIdentity() {

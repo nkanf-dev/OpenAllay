@@ -86,13 +86,13 @@ unless the provider requires the same configured environment credential, and
 redacted structured failures. No raw body or authorization value reaches logs,
 history, traces, or GUI text.
 
-## Persistence and migration
+## Persistence
 
-Guide history schema v3 stores a selection object per session. Schema v2
-partitions migrate transactionally by projecting the partition's old global
-`modelMode`: client mode maps to the configured default profile and server mode
-maps to the server selection. The migration never modifies messages, timeline
-entries, evidence, or checkpoints.
+The current pre-release guide history schema stores a selection object per
+session and per captured request. It has no global `modelMode` authority or
+migration-only compatibility columns. Under SKMB-2026-07-18-011, earlier
+development layouts are unsupported test data and are not migrated; developers
+delete the ignored database and let TomeWisp create the current format.
 
 If a recovered selection references a profile that is no longer present, it is
 retained and shown as unavailable. Submission fails closed until the player
@@ -126,7 +126,7 @@ an explicit user action but does not delete or rewrite any conversation.
 Deterministic tests cover strict profile decoding, legacy import, secret
 exclusion, metadata precedence/provenance, malformed and unavailable metadata,
 per-session selection isolation, active-request capture, cross-model history
-continuity, profile removal/reload races, schema-v2-to-v3 migration, client/
+continuity, profile removal/reload races, strict pre-release schema rejection, client/
 server selection, and Fabric/NeoForge UI parity. The full common suite and both
 loader builds remain required. Live metadata and provider calls are opt-in and
 cannot be claimed from deterministic fixtures.

@@ -72,8 +72,8 @@ failed or stale checkpoint is retained for diagnosis but never inserted into a
 model request. Summary text is prefixed as derived memory and explicitly says
 that it is not factual evidence.
 
-Durable schema v2 stores checkpoints in a session-owned table and migrates v1
-transactionally without replacing message or timeline rows. Normal recovery
+The current durable schema stores checkpoints in a session-owned table. Under
+SKMB-2026-07-18-011, earlier pre-release layouts are not migrated. Normal recovery
 reconstructs only visible user and completed-assistant messages. Client-local
 mode may reuse a validated checkpoint; server-model mode sends that same
 privacy-safe visible history over strict bridge protocol v4 and recomputes a
@@ -135,12 +135,13 @@ must not alter protected-content semantics.
 
 The implementation commits listed above cover budget/structure, old tool-result
 reduction, structured summaries, Agent integration, explicit selected-model
-windows, schema-v2 checkpoint persistence, protocol-v4 server recovery, and
+windows, checkpoint persistence, protocol-v4 server recovery, and
 provider/model-neutral session reuse. Deterministic tests cover malformed and
 failed summaries, cancellation before and during compaction, source/version
-staleness, schema migration, partition isolation, privacy exclusions,
+staleness, schema rejection, partition isolation, privacy exclusions,
 same-session races, cross-model history reuse, Unicode request chunking, and
-both loader bridge paths.
+both loader bridge paths. Historical migration coverage was removed when
+SKMB-2026-07-18-011 established the single-current-schema pre-release policy.
 
 The 2026-07-18 clean gate completed 217 common tests with zero failures/errors
 and one opt-in skip, then built Fabric and NeoForge successfully. Production

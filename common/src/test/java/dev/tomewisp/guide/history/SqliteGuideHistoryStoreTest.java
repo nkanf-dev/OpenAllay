@@ -9,7 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import dev.tomewisp.agent.context.ContextCheckpoint;
 import dev.tomewisp.guide.GuideFailure;
 import dev.tomewisp.guide.GuideMessage;
-import dev.tomewisp.guide.GuideModelMode;
+import dev.tomewisp.guide.GuideModelSelection;
 import dev.tomewisp.guide.GuideRequestSnapshot;
 import dev.tomewisp.guide.GuideRequestStatus;
 import dev.tomewisp.guide.GuideSessionSnapshot;
@@ -34,7 +34,7 @@ final class SqliteGuideHistoryStoreTest {
     @TempDir Path temporary;
 
     @Test
-    void migratesAndKeepsPartitionsIsolatedAcrossReplacement() {
+    void keepsPartitionsIsolatedAcrossReplacement() {
         SqliteGuideHistoryStore store = store();
         GuideHistoryPartition alpha = partition("alpha.example", "alpha", completed("alpha", "one"));
         GuideHistoryPartition beta = partition("beta.example", "beta", completed("beta", "two"));
@@ -50,30 +50,70 @@ final class SqliteGuideHistoryStoreTest {
     }
 
     @Test
-    void migratesSchemaOneInPlaceWithoutChangingMessagesOrTimeline() throws Exception {
+    void rejectsPreReleaseSchemaWithoutMutatingTestData() throws Exception {
         SqliteGuideHistoryStore store = store();
         GuideHistoryPartition original =
-                partition("migration.example", "main", completed("main", "saved"));
+                partition("old-schema.example", "main", completed("main", "saved"));
         store.save(original);
         try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database());
                 var statement = connection.createStatement()) {
-            statement.execute("drop table compaction_checkpoints");
             statement.executeUpdate(
                     "update schema_metadata set schema_version = 1 where singleton = 1");
         }
 
-        GuideHistoryPartition loaded = store.load(original.scope()).partition().orElseThrow();
+        GuideHistoryException failure = assertThrows(
+                GuideHistoryException.class, () -> store.load(original.scope()));
 
-        assertEquals(original, loaded);
+        assertEquals("history_schema_unsupported", failure.code());
         try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database());
                 var statement = connection.createStatement()) {
-            assertEquals(2, queryInt(
+            assertEquals(1, queryInt(
                     statement,
                     "select schema_version from schema_metadata where singleton = 1"));
             assertEquals(2, queryInt(statement, "select count(*) from messages"));
             assertEquals(2, queryInt(statement, "select count(*) from timeline_entries"));
-            assertEquals(0, queryInt(
-                    statement, "select count(*) from compaction_checkpoints"));
+        }
+    }
+
+    @Test
+    void roundTripsIndependentSessionAndCapturedRequestSelections() throws Exception {
+        GuideRequestSnapshot clientRequest = completed(
+                "client",
+                "client answer",
+                GuideTopology.CLIENT_LOCAL,
+                GuideModelSelection.client("openrouter-claude"));
+        GuideRequestSnapshot serverRequest = completed(
+                "server",
+                "server answer",
+                GuideTopology.SERVER,
+                GuideModelSelection.server());
+        GuideHistoryPartition partition = new GuideHistoryPartition(
+                GuideHistoryPartition.SCHEMA_VERSION,
+                GuideHistoryScope.derive(
+                        ACTOR, GuideHistoryScope.Kind.MULTIPLAYER, "selection.example"),
+                "client",
+                List.of(
+                        new GuideSessionSnapshot(
+                                "client", List.of(), List.of(clientRequest), List.of(),
+                                GuideModelSelection.client("openrouter-claude")),
+                        new GuideSessionSnapshot(
+                                "server", List.of(), List.of(serverRequest), List.of(),
+                                GuideModelSelection.server())),
+                RECOVERY_TIME);
+        SqliteGuideHistoryStore store = store();
+
+        store.save(partition);
+
+        assertEquals(partition, store.load(partition.scope()).partition().orElseThrow());
+        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database());
+                var result = connection.createStatement().executeQuery(
+                        "select model_selection_json from sessions order by ordinal")) {
+            assertTrue(result.next());
+            assertEquals(
+                    "{\"kind\":\"CLIENT\",\"profileId\":\"openrouter-claude\"}",
+                    result.getString(1));
+            assertTrue(result.next());
+            assertEquals("{\"kind\":\"SERVER\"}", result.getString(1));
         }
     }
 
@@ -91,10 +131,9 @@ final class SqliteGuideHistoryStoreTest {
                 GuideHistoryPartition.SCHEMA_VERSION,
                 base.scope(),
                 base.selectedSession(),
-                base.modelMode(),
                 List.of(new GuideSessionSnapshot(
                         session.sessionId(), session.messages(), session.requests(),
-                        List.of(success, failed))),
+                        List.of(success, failed), session.modelSelection())),
                 base.updatedAt());
         SqliteGuideHistoryStore store = store();
 
@@ -237,18 +276,29 @@ final class SqliteGuideHistoryStoreTest {
                 GuideHistoryPartition.SCHEMA_VERSION,
                 scope,
                 sessionId,
-                GuideModelMode.CLIENT,
                 List.of(new GuideSessionSnapshot(sessionId, messages, List.of(request))),
                 request.updatedAt());
     }
 
     private static GuideRequestSnapshot completed(String sessionId, String answer) {
+        return completed(
+                sessionId,
+                answer,
+                GuideTopology.CLIENT_LOCAL,
+                GuideModelSelection.client("default"));
+    }
+
+    private static GuideRequestSnapshot completed(
+            String sessionId,
+            String answer,
+            GuideTopology topology,
+            GuideModelSelection modelSelection) {
         UUID requestId = UUID.nameUUIDFromBytes((sessionId + answer).getBytes(java.nio.charset.StandardCharsets.UTF_8));
         Instant terminal = Instant.parse("2026-07-18T05:00:00Z");
         return new GuideRequestSnapshot(
                 requestId,
                 sessionId,
-                GuideTopology.CLIENT_LOCAL,
+                topology,
                 "question " + answer,
                 List.of(
                         new GuideTimelineEntry.Assistant(0, "checking " + answer, false, List.of()),
@@ -260,7 +310,8 @@ final class SqliteGuideHistoryStoreTest {
                 null,
                 terminal.minusSeconds(2),
                 terminal,
-                terminal);
+                terminal,
+                modelSelection);
     }
 
     private static GuideRequestSnapshot active(String sessionId, String partial) {

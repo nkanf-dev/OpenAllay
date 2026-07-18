@@ -4,7 +4,7 @@
 
 **Goal:** Add a packaged, versioned SQLite history database that restores the exact visible Agent timeline within a player/world/server partition, recovers orphaned work as interrupted, and never blocks a Minecraft-owned thread.
 
-**Architecture:** Common code owns strict durable records, schema migration, an asynchronous single-writer repository, and GuideService hydration/persistence semantics. A Minecraft-common scope resolver captures the current player and connection discriminator on the client thread, immediately hashes it into an immutable scope, and loader entrypoints provide only database/config paths. SQLite remains behind `java.sql`; Fabric and NeoForge embed the same verified driver without loader-specific persistence behavior.
+**Architecture:** Common code owns strict durable records, the current schema, an asynchronous single-writer repository, and GuideService hydration/persistence semantics. A Minecraft-common scope resolver captures the current player and connection discriminator on the client thread, immediately hashes it into an immutable scope, and loader entrypoints provide only database/config paths. SQLite remains behind `java.sql`; Fabric and NeoForge embed the same verified driver without loader-specific persistence behavior. SKMB-2026-07-18-011 later established that unshipped development layouts are replaced without migration.
 
 **Tech Stack:** Java 25 records, JDBC, Xerial SQLite JDBC 3.50.3.0, Gson strict JSON payloads, JUnit 5 temporary databases, Fabric nested JARs, NeoForge jar-in-jar packaging.
 
@@ -257,7 +257,7 @@ git commit -m "feat: define strict durable guide history"
 
 - [x] **Step 1: Write failing store tests**
 
-Test new database migration, repeated open, exact partition isolation,
+Test new database creation, repeated open, exact partition isolation,
 replacement without cross-partition mutation, deletion through replacement,
 rollback after an injected constraint failure, active-request recovery, corrupt
 row isolation, and rejection of a future schema version.
@@ -291,7 +291,7 @@ updated time and request/timeline order. Enable `foreign_keys=on`,
 `journal_mode=wal`, and `synchronous=full` on every connection.
 
 Store complex timeline/evidence payloads through `GuideHistoryCodec`, not Java
-serialization. Keep `capture_mode='NORMAL'` explicit for later migration.
+serialization. Keep `capture_mode='NORMAL'` explicit for capture-policy separation.
 
 - [x] **Step 4: Implement atomic save, load, and recovery**
 

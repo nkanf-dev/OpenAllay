@@ -61,7 +61,7 @@ API keys, or raw error bodies.
 ## Applies To
 
 - versioned multi-profile model configuration and legacy single-profile import
-- per-session durable model selection and migration
+- per-session durable model selection in the single current pre-release schema
 - GuideService selection, submission, retry, disconnect, and recovery
 - client model runtime registry and active-request capture
 - server-model selection compatibility
