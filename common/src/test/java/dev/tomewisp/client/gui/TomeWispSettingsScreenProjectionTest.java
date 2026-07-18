@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.tomewisp.guide.ui.GuideDisplayConfig;
+import dev.tomewisp.client.gui.settings.SettingsSection;
 import dev.tomewisp.model.config.ModelProfileDefinition;
 import dev.tomewisp.model.config.ModelProfilesConfig;
 import dev.tomewisp.model.config.ModelProtocol;
@@ -45,6 +46,11 @@ final class TomeWispSettingsScreenProjectionTest {
                 .toList());
         assertTrue(projection.toString().contains("ALPHA_KEY"));
         assertFalse(projection.toString().contains("secret-value"));
+        assertTrue(projection.sections().contains(SettingsSection.KNOWLEDGE_AND_CAPABILITIES));
+        assertFalse(projection.sections().stream()
+                .anyMatch(section -> section.name().equals("RECIPES")));
+        assertEquals(0, projection.capabilities().cards().size());
+        assertEquals(0, projection.recipes().sources().size());
     }
 
     private static ModelProfileDefinition profile(String id) {

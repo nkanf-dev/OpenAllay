@@ -24,7 +24,19 @@ final class SettingsLocalizationTest {
             "screen.tomewisp.settings.models.api_key_env",
             "screen.tomewisp.settings.models.context_window",
             "screen.tomewisp.settings.models.test",
-            "screen.tomewisp.settings.confirm_billable_test");
+            "screen.tomewisp.settings.confirm_billable_test",
+            "screen.tomewisp.settings.capability.filter",
+            "screen.tomewisp.settings.capability.enabled",
+            "screen.tomewisp.settings.capability.disabled",
+            "screen.tomewisp.settings.capability.unavailable",
+            "screen.tomewisp.settings.capability.help",
+            "screen.tomewisp.settings.recipe.title",
+            "screen.tomewisp.settings.recipe.visibility_all",
+            "screen.tomewisp.settings.recipe.visibility_unlocked",
+            "screen.tomewisp.settings.recipe.preferred_auto",
+            "screen.tomewisp.settings.recipe.source.minecraft_client_recipe_book",
+            "settings.tomewisp.capability.tool.tomewisp_recipes.title",
+            "settings.tomewisp.capability.skill.search_guide_books.description");
 
     @Test
     void englishAndChineseExposeTheSameCompleteSettingsKeys() throws Exception {

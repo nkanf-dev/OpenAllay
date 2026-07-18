@@ -497,7 +497,7 @@ git commit -m "feat: manage capability-owned settings"
 - Modify: `common/src/main/resources/assets/tomewisp/lang/en_us.json`
 - Modify: `common/src/main/resources/assets/tomewisp/lang/zh_cn.json`
 
-- [ ] **Step 1: Write player-facing projection/navigation tests**
+- [x] **Step 1: Write player-facing projection/navigation tests**
 
 Test source/Tool/Skill filters, stable friendly ordering, dependency conflict
 text, enabled/unavailable distinction, read-only server cards, no raw IDs in
@@ -514,13 +514,13 @@ void recipeSettingsAreReachedThroughToolCardOnly() {
 }
 ```
 
-- [ ] **Step 2: Run settings GUI tests and verify missing projections**
+- [x] **Step 2: Run settings GUI tests and verify missing projections**
 
 ```bash
 ./gradlew :common:test --tests 'dev.tomewisp.client.gui.*Settings*'
 ```
 
-- [ ] **Step 3: Implement cards, toggles, child route, narration, and localization**
+- [x] **Step 3: Implement cards, toggles, child route, narration, and localization**
 
 Normal cards show localized name/type, enabled/disabled/unavailable text,
 installed integration name, and friendly diagnostics. Debug-only technical IDs
@@ -528,7 +528,7 @@ use the existing redacted debug projection. A toggle mutation edits the screen
 draft; Save applies the complete domain candidate. Recipe source rows come from
 registered snapshot entries rather than fixed JEI/REI/EMI widgets.
 
-- [ ] **Step 4: Run UI/privacy/localization tests and commit**
+- [x] **Step 4: Run UI/privacy/localization tests and commit**
 
 ```bash
 ./gradlew :common:test --tests 'dev.tomewisp.client.gui.*' \
