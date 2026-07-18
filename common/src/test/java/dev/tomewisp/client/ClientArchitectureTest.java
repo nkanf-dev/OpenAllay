@@ -93,6 +93,12 @@ final class ClientArchitectureTest {
                     < source.indexOf("settings.closeAsync()"), entrypoint::toString);
         }
 
+        String neoForgeClient = Files.readString(entrypoints.get(1));
+        assertTrue(neoForgeClient.contains("ClientStartedEvent"));
+        assertTrue(neoForgeClient.contains("start(runtime, bridge, event.getClient())"));
+        assertTrue(neoForgeClient.indexOf("new MinecraftGuideHistoryScope(client)")
+                > neoForgeClient.indexOf("ClientStartedEvent"));
+
         List<Path> commands = List.of(
                 root.resolve("fabric/src/main/java/dev/tomewisp/fabric/FabricGuideCommands.java"),
                 root.resolve("neoforge/src/main/java/dev/tomewisp/neoforge/NeoForgeGuideCommands.java"));

@@ -28,20 +28,40 @@ import net.neoforged.fml.loading.FMLPaths;
 import net.neoforged.bus.api.IEventBus;
 import dev.tomewisp.neoforge.network.NeoForgeClientBridge;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.client.event.lifecycle.ClientStartedEvent;
 import net.neoforged.neoforge.client.event.lifecycle.ClientStoppingEvent;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.common.NeoForge;
 
 public final class TomeWispNeoForgeClient {
+    private static final java.util.concurrent.atomic.AtomicBoolean REGISTERED =
+            new java.util.concurrent.atomic.AtomicBoolean();
+    private static final java.util.concurrent.atomic.AtomicBoolean STARTED =
+            new java.util.concurrent.atomic.AtomicBoolean();
+
     private TomeWispNeoForgeClient() {}
 
     public static void initialize(TomeWispRuntime runtime, IEventBus modBus) {
+        if (!REGISTERED.compareAndSet(false, true)) return;
         NeoForgeClientBridge bridge = new NeoForgeClientBridge();
         bridge.register(modBus);
+        modBus.addListener((RegisterKeyMappingsEvent event) -> {
+            event.registerCategory(TomeWispKeyMappings.CATEGORY);
+            event.register(TomeWispKeyMappings.OPEN_GUIDE);
+        });
+        NeoForge.EVENT_BUS.addListener((ClientStartedEvent event) ->
+                start(runtime, bridge, event.getClient()));
+    }
+
+    private static void start(
+            TomeWispRuntime runtime,
+            NeoForgeClientBridge bridge,
+            Minecraft client) {
+        if (!STARTED.compareAndSet(false, true)) return;
         Gson gson = new Gson();
         java.time.Clock clock = java.time.Clock.systemUTC();
         var dispatcher = (dev.tomewisp.client.ClientEventDispatcher)
-                runnable -> Minecraft.getInstance().execute(runnable);
+                client::execute;
         java.nio.file.Path configDirectory = FMLPaths.CONFIGDIR.get().resolve("tomewisp");
         GuideDisplayRuntime display = new GuideDisplayRuntime(
                 configDirectory.resolve("display.json"));
@@ -71,7 +91,7 @@ public final class TomeWispNeoForgeClient {
         GuideLocalEndpoint local = modelRegistry;
         MinecraftGuideContextProvider contexts = new MinecraftGuideContextProvider(
                 runtime,
-                Minecraft.getInstance(),
+                client,
                 gson,
                 TomeWispNeoForgeClient.class.getClassLoader(),
                 recipeClient);
@@ -103,7 +123,7 @@ public final class TomeWispNeoForgeClient {
                 clock,
                 gson,
                 history,
-                new MinecraftGuideHistoryScope(Minecraft.getInstance()));
+                new MinecraftGuideHistoryScope(client));
         historySettings.bind(services);
         bridge.onDisconnect(services::disconnect);
         NeoForge.EVENT_BUS.addListener((ClientStoppingEvent event) ->
@@ -122,9 +142,9 @@ public final class TomeWispNeoForgeClient {
                     @Override
                     public void accept(dev.tomewisp.guide.GuideService service) {
                         Runnable openSettings = settings == null ? null : () ->
-                                Minecraft.getInstance().gui.setScreen(new TomeWispSettingsScreen(
+                                client.gui.setScreen(new TomeWispSettingsScreen(
                                         settings.settings(), () -> accept(service)));
-                        Minecraft.getInstance().gui.setScreen(new TomeWispScreen(
+                        client.gui.setScreen(new TomeWispScreen(
                                 service,
                                 recipeClient,
                                 display,
@@ -140,12 +160,7 @@ public final class TomeWispNeoForgeClient {
                 services,
                 contexts,
                 screens));
-        modBus.addListener((RegisterKeyMappingsEvent event) -> {
-            event.registerCategory(TomeWispKeyMappings.CATEGORY);
-            event.register(TomeWispKeyMappings.OPEN_GUIDE);
-        });
         NeoForge.EVENT_BUS.addListener((ClientTickEvent.Post event) -> {
-            Minecraft client = Minecraft.getInstance();
             while (TomeWispKeyMappings.OPEN_GUIDE.consumeClick()) {
                 if (client.player != null) screens.open(services.forActor(client.player.getUUID()));
             }
@@ -162,11 +177,10 @@ public final class TomeWispNeoForgeClient {
                     modVersion,
                     services,
                     gson,
-                    () -> Minecraft.getInstance().stop(),
+                    client::stop,
                     secret == null || secret.isBlank() ? java.util.Set.of() : java.util.Set.of(secret),
                     contexts::recipeProviderReadiness);
             NeoForge.EVENT_BUS.addListener((ClientTickEvent.Post event) -> {
-                Minecraft client = Minecraft.getInstance();
                 if (client.player != null) controller.tick(client.player.getUUID());
             });
         });

@@ -30,6 +30,10 @@ neoForge {
         client {
             client()
             gameDirectory = this.mkdir(this.file('runs/client'))
+            def quickPlayWorld = System.getProperty('tomewisp.e2e.quickPlayWorld')
+            if (quickPlayWorld != null && !quickPlayWorld.isBlank()) {
+                programArguments.addAll '--quickPlaySingleplayer', quickPlayWorld
+            }
         }
         data {
             clientData()

@@ -165,6 +165,28 @@ final class GuideClientE2EControllerTest {
         assertEquals("recipe_provider_failed", json.get("failureCode").getAsString());
     }
 
+    @Test
+    void seedsLongHistoryBeforeReportingTheAcceptanceRequest() throws Exception {
+        Path report = temporary.resolve("history-seed/report.json");
+        ArrayDeque<Runnable> clientTasks = new ArrayDeque<>();
+        CountingLocal local = new CountingLocal();
+        GuideClientE2EConfig config = new GuideClientE2EConfig(
+                "fixture", "e2e", "question", GuideModelMode.CLIENT, report, true, 3);
+        GuideClientE2EController controller = new GuideClientE2EController(
+                config, "fabric", "26.2", "test", services(local, clientTasks), new Gson(),
+                () -> {}, Set.of());
+
+        controller.tick(UUID.fromString("30ab22ed-23fb-46f2-82ca-d4a656698eec"));
+        while (!clientTasks.isEmpty()) clientTasks.removeFirst().run();
+
+        assertTrue(controller.finished());
+        assertEquals(4, local.calls.get());
+        var json = JsonParser.parseString(Files.readString(report)).getAsJsonObject();
+        assertEquals(4, json.getAsJsonObject("historyMetrics")
+                .get("totalRequests").getAsLong());
+        assertEquals("COMPLETED", json.get("outcome").getAsString());
+    }
+
     private static GuideClientE2EConfig config(Path report) {
         return new GuideClientE2EConfig(
                 "fixture", "e2e", "question", GuideModelMode.CLIENT, report, true);

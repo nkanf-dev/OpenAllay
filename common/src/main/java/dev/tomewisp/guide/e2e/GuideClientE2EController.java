@@ -7,6 +7,11 @@ import dev.tomewisp.guide.GuideService;
 import dev.tomewisp.guide.GuideServiceManager;
 import dev.tomewisp.guide.GuideSnapshot;
 import dev.tomewisp.guide.GuideSubscription;
+import dev.tomewisp.guide.GuideSessionSnapshot;
+import dev.tomewisp.guide.GuideTimelineEntry;
+import dev.tomewisp.guide.semantic.RichComponent;
+import dev.tomewisp.guide.semantic.SemanticBlock;
+import dev.tomewisp.guide.ui.SemanticLayoutCache;
 import dev.tomewisp.tool.ToolResult;
 import dev.tomewisp.recipe.RecipeProviderReadiness;
 import java.io.IOException;
@@ -18,7 +23,9 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.UUID;
 import java.util.function.Supplier;
 
@@ -41,6 +48,8 @@ public final class GuideClientE2EController {
     private UUID requestId;
     private GuideSubscription subscription;
     private RecipeProviderReadiness lastRecipeReadiness;
+    private int remainingHistorySeeds;
+    private boolean seedingHistory;
     private boolean started;
     private boolean finished;
 
@@ -120,8 +129,25 @@ public final class GuideClientE2EController {
             if (mode instanceof ToolResult.Failure<?> failure) {
                 failWithoutRequest(failure.code(), failure.message());
             } else {
-                ask(service);
+                remainingHistorySeeds = config.historySeedRequests();
+                if (remainingHistorySeeds > 0) {
+                    seedingHistory = true;
+                    seedHistory(service);
+                } else {
+                    ask(service);
+                }
             }
+        });
+    }
+
+    private void seedHistory(GuideService service) {
+        service.ask("TomeWisp E2E 历史分页种子 " + remainingHistorySeeds).thenAccept(asked -> {
+            if (asked instanceof ToolResult.Failure<UUID> failure) {
+                failWithoutRequest(failure.code(), failure.message());
+                return;
+            }
+            requestId = ((ToolResult.Success<UUID>) asked).value();
+            observe(service.snapshot());
         });
     }
 
@@ -147,11 +173,36 @@ public final class GuideClientE2EController {
             transitions.add(request.status());
         }
         if (!request.terminal()) return;
+        if (seedingHistory) {
+            requestId = null;
+            remainingHistorySeeds--;
+            if (remainingHistorySeeds > 0) {
+                seedHistory(services.forActor(snapshot.actorId()));
+            } else {
+                seedingHistory = false;
+                transitions.clear();
+                startedAt = Instant.now();
+                ask(services.forActor(snapshot.actorId()));
+            }
+            return;
+        }
         LinkedHashMap<String, Long> timings = new LinkedHashMap<>();
         timings.put("total", Duration.between(startedAt, request.terminalAt()).toMillis());
         LinkedHashMap<String, String> hashes = new LinkedHashMap<>();
         hashes.put("assistantTextSha256", sha256(request.assistantText()));
         hashes.put("userMessageSha256", sha256(request.userMessage()));
+        GuideSessionSnapshot session = snapshot.sessions().stream()
+                .filter(value -> value.sessionId().equals(request.sessionId()))
+                .findFirst().orElseThrow();
+        SemanticSummary semantic = summarize(request);
+        SemanticLayoutCache.Stats cache = SemanticLayoutCache.globalStats();
+        LinkedHashMap<String, Long> historyMetrics = new LinkedHashMap<>();
+        historyMetrics.put("loadedRequests", (long) session.requests().size());
+        historyMetrics.put("totalRequests", session.historyWindow().totalRequests());
+        historyMetrics.put("hasEarlier", session.historyWindow().hasEarlier() ? 1L : 0L);
+        historyMetrics.put("hasLater", session.historyWindow().hasLater() ? 1L : 0L);
+        historyMetrics.put("cacheHits", cache.hits());
+        historyMetrics.put("cacheMisses", cache.misses());
         GuideE2EReport report = new GuideE2EReport(
                 loader,
                 gameVersion,
@@ -163,11 +214,88 @@ public final class GuideClientE2EController {
                 transitions,
                 request.tools().stream().map(value -> value.toolId()).toList(),
                 request.sources().stream().map(value -> value.evidence()).toList(),
+                request.timeline().stream().map(value -> switch (value) {
+                    case GuideTimelineEntry.Assistant ignored -> "assistant";
+                    case GuideTimelineEntry.Tool ignored -> "tool";
+                }).toList(),
+                semantic.metrics(),
+                semantic.diagnosticCodes(),
+                semantic.componentTypes(),
+                session.historyWindow().state().name(),
+                historyMetrics,
                 request.status(),
                 timings,
                 hashes);
         finish(new GuideE2EReportJson(gson).encode(report, secrets));
     }
+
+    private static SemanticSummary summarize(GuideRequestSnapshot request) {
+        long assistants = 0;
+        long blocks = 0;
+        long components = 0;
+        long fallbacks = 0;
+        TreeSet<String> diagnostics = new TreeSet<>();
+        TreeSet<String> componentTypes = new TreeSet<>();
+        for (GuideTimelineEntry entry : request.timeline()) {
+            if (!(entry instanceof GuideTimelineEntry.Assistant assistant)) continue;
+            assistants++;
+            fallbacks += assistant.semantic().diagnostics().size();
+            assistant.semantic().diagnostics().forEach(value -> diagnostics.add(value.code()));
+            Counter counter = new Counter();
+            for (SemanticBlock block : assistant.semantic().blocks()) {
+                collect(block, counter, componentTypes);
+            }
+            blocks += counter.blocks;
+            components += counter.components;
+        }
+        LinkedHashMap<String, Long> metrics = new LinkedHashMap<>();
+        metrics.put("assistantSegments", assistants);
+        metrics.put("toolInvocations", (long) request.tools().size());
+        metrics.put("semanticBlocks", blocks);
+        metrics.put("controlledComponents", components);
+        metrics.put("semanticFallbacks", fallbacks);
+        return new SemanticSummary(
+                metrics, List.copyOf(diagnostics), List.copyOf(componentTypes));
+    }
+
+    private static void collect(
+            SemanticBlock block, Counter counter, Set<String> componentTypes) {
+        counter.blocks++;
+        switch (block) {
+            case SemanticBlock.ListBlock value -> value.items().forEach(
+                    item -> item.forEach(child -> collect(child, counter, componentTypes)));
+            case SemanticBlock.Quote value -> value.content().forEach(
+                    child -> collect(child, counter, componentTypes));
+            case SemanticBlock.Component value -> {
+                counter.components++;
+                componentTypes.add(componentType(value.component()));
+            }
+            default -> { }
+        }
+    }
+
+    private static String componentType(RichComponent component) {
+        return switch (component) {
+            case RichComponent.ItemRow ignored -> "item_row";
+            case RichComponent.RecipeGrid ignored -> "recipe_grid";
+            case RichComponent.IngredientCheck ignored -> "ingredient_check";
+            case RichComponent.CraftabilitySummary ignored -> "craftability_summary";
+            case RichComponent.ProgressSteps ignored -> "progress_steps";
+            case RichComponent.SourceSummary ignored -> "source_summary";
+            case RichComponent.StatusBadge ignored -> "status_badge";
+            case RichComponent.ChoiceGroup ignored -> "choice_group";
+        };
+    }
+
+    private static final class Counter {
+        private long blocks;
+        private long components;
+    }
+
+    private record SemanticSummary(
+            Map<String, Long> metrics,
+            List<String> diagnosticCodes,
+            List<String> componentTypes) {}
 
     private void failWithoutRequest(String code, String message) {
         String encoded = gson.toJson(java.util.Map.of(
