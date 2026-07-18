@@ -1,5 +1,7 @@
 package dev.tomewisp.guide;
 
+import dev.tomewisp.guide.semantic.SemanticDocument;
+import dev.tomewisp.guide.semantic.SemanticMessageParser;
 import java.util.List;
 
 public sealed interface GuideTimelineEntry
@@ -9,12 +11,29 @@ public sealed interface GuideTimelineEntry
     record Assistant(
             int ordinal,
             String text,
+            SemanticDocument semantic,
             boolean streaming,
             List<GuideSource> sources) implements GuideTimelineEntry {
+        private static final SemanticMessageParser DEFAULT_PARSER = new SemanticMessageParser();
+
         public Assistant {
             requireOrdinal(ordinal);
             text = text == null ? "" : text;
+            java.util.Objects.requireNonNull(semantic, "semantic");
             sources = List.copyOf(sources);
+        }
+
+        public Assistant(
+                int ordinal,
+                String text,
+                boolean streaming,
+                List<GuideSource> sources) {
+            this(
+                    ordinal,
+                    text,
+                    DEFAULT_PARSER.parse(text),
+                    streaming,
+                    sources);
         }
     }
 

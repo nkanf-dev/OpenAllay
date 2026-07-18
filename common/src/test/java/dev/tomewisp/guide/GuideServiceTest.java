@@ -90,6 +90,9 @@ final class GuideServiceTest {
                         GuideTimelineEntry.Assistant.class),
                 request.timeline().stream().map(Object::getClass).toList());
         assertEquals("final answer", request.assistantText());
+        assertEquals("final answer",
+                ((GuideTimelineEntry.Assistant) request.timeline().getLast())
+                        .semantic().fallbackText());
         assertEquals("final answer", service.snapshot().sessions().getFirst().messages().getLast().text());
     }
 

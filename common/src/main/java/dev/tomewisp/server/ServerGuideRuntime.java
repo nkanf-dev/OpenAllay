@@ -48,6 +48,7 @@ public record ServerGuideRuntime(ModelConfig config, ServerAgentService service)
         GameGuideAgent agent = new GameGuideAgent(scheduled, tools, sessions, gson, compactor);
         String prompt = "You are TomeWisp's server-hosted Minecraft guide. Use only authorized "
                 + "read tools and visible evidence. Never expose credentials.\n\n"
+                + dev.tomewisp.guide.semantic.SemanticPromptGuidance.text() + "\n\n"
                 + runtime.skills().metadataPrompt();
         ServerAgentService service = new ServerAgentService(
                 agent, tools, sessions, contexts, events, gson, prompt, scheduled::awaitReady);

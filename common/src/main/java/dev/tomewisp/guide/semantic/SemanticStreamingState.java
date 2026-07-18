@@ -31,8 +31,21 @@ public final class SemanticStreamingState {
 
     public SemanticStreamingState update(
             String replacement, boolean terminal, SemanticMessageParser parser) {
+        return update(
+                replacement,
+                terminal,
+                parser,
+                SemanticReferenceIndex.empty(new java.util.UUID(0, 0)));
+    }
+
+    public SemanticStreamingState update(
+            String replacement,
+            boolean terminal,
+            SemanticMessageParser parser,
+            SemanticReferenceIndex references) {
         replacement = replacement == null ? "" : replacement;
         Objects.requireNonNull(parser, "parser");
+        Objects.requireNonNull(references, "references");
         int boundary = terminal ? replacement.length() : completedBoundary(replacement);
         List<SemanticBlock> nextCompleted = new ArrayList<>();
         List<SemanticDiagnostic> nextDiagnostics = new ArrayList<>();
@@ -43,12 +56,13 @@ public final class SemanticStreamingState {
             nextDiagnostics.addAll(completedDiagnostics);
             String appended = replacement.substring(completedSource.length(), boundary);
             if (!appended.isBlank()) {
-                SemanticDocument parsed = parser.parseFragment(appended, nextCompleted.size());
+                SemanticDocument parsed = parser.parseFragment(
+                        appended, nextCompleted.size(), references);
                 nextCompleted.addAll(parsed.blocks());
                 nextDiagnostics.addAll(parsed.diagnostics());
             }
         } else if (!nextCompletedSource.isBlank()) {
-            SemanticDocument parsed = parser.parseFragment(nextCompletedSource, 0);
+            SemanticDocument parsed = parser.parseFragment(nextCompletedSource, 0, references);
             nextCompleted.addAll(parsed.blocks());
             nextDiagnostics.addAll(parsed.diagnostics());
         }
@@ -57,7 +71,8 @@ public final class SemanticStreamingState {
         List<SemanticBlock> allBlocks = new ArrayList<>(nextCompleted);
         List<SemanticDiagnostic> allDiagnostics = new ArrayList<>(nextDiagnostics);
         if (!tail.isBlank()) {
-            SemanticDocument parsedTail = parser.parseFragment(tail, allBlocks.size());
+            SemanticDocument parsedTail = parser.parseFragment(
+                    tail, allBlocks.size(), references);
             allBlocks.addAll(parsedTail.blocks());
             allDiagnostics.addAll(parsedTail.diagnostics());
         }

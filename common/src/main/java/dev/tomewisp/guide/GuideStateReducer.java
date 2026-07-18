@@ -8,14 +8,22 @@ import dev.tomewisp.agent.AgentState;
 import dev.tomewisp.context.EvidenceMetadata;
 import dev.tomewisp.model.ModelEvent;
 import dev.tomewisp.model.ModelFailure;
+import dev.tomewisp.guide.semantic.SemanticMessageParser;
+import dev.tomewisp.guide.semantic.SemanticReferenceIndex;
+import dev.tomewisp.guide.semantic.SemanticStreamingState;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public final class GuideStateReducer {
     private final Gson gson;
+    private final SemanticMessageParser semanticParser = new SemanticMessageParser();
+    private final ConcurrentHashMap<SegmentKey, SemanticStreamingState> semanticStates =
+            new ConcurrentHashMap<>();
 
     public GuideStateReducer(Gson gson) {
         this.gson = Objects.requireNonNull(gson, "gson");
@@ -49,6 +57,7 @@ public final class GuideStateReducer {
                             "Tool invocation identity is duplicated: " + started.invocationId(),
                             now);
                 }
+                timeline = closeAssistant(current.requestId(), timeline);
                 timeline = startTool(timeline, started);
                 status = GuideRequestStatus.TOOL_WAIT;
             }
@@ -100,7 +109,7 @@ public final class GuideStateReducer {
                 switch (progress.event()) {
                     case ModelEvent.TextDelta delta -> {
                         if (!delta.text().isEmpty()) {
-                            timeline = appendText(timeline, delta.text());
+                            timeline = appendText(current.requestId(), timeline, delta.text());
                         }
                         status = GuideRequestStatus.MODEL_WAIT;
                         retryAfter = null;
@@ -119,13 +128,15 @@ public final class GuideStateReducer {
                 }
             }
             case AgentEvent.FinalText completed -> {
-                timeline = reconcileFinal(timeline, completed.text());
+                timeline = reconcileFinal(current.requestId(), timeline, completed.text());
+                clearSemanticStates(current.requestId());
                 status = GuideRequestStatus.COMPLETED;
                 retryAfter = null;
                 terminalAt = now;
             }
             case AgentEvent.Failed failed -> {
-                timeline = closeAssistant(timeline);
+                timeline = closeAssistant(current.requestId(), timeline);
+                clearSemanticStates(current.requestId());
                 failure = new GuideFailure(failed.code(), failed.message());
                 status = failed.code().equals("agent_cancelled")
                         ? GuideRequestStatus.CANCELLED
@@ -151,26 +162,47 @@ public final class GuideStateReducer {
                 current.modelSelection());
     }
 
-    private static List<GuideTimelineEntry> appendText(
-            List<GuideTimelineEntry> timeline, String delta) {
+    private List<GuideTimelineEntry> appendText(
+            UUID requestId, List<GuideTimelineEntry> timeline, String delta) {
         ArrayList<GuideTimelineEntry> next = new ArrayList<>(timeline);
+        int ordinal;
+        String text;
         if (!next.isEmpty()
                 && next.getLast() instanceof GuideTimelineEntry.Assistant assistant
                 && assistant.streaming()) {
+            ordinal = assistant.ordinal();
+            text = assistant.text() + delta;
+            SemanticStreamingState state = semanticStates.computeIfAbsent(
+                    new SegmentKey(requestId, ordinal),
+                    ignored -> SemanticStreamingState.empty().update(
+                            assistant.text(), false, semanticParser,
+                            SemanticReferenceIndex.from(requestId, timeline)));
+            state = state.update(
+                    text, false, semanticParser,
+                    SemanticReferenceIndex.from(requestId, timeline));
+            semanticStates.put(new SegmentKey(requestId, ordinal), state);
             next.set(next.size() - 1, new GuideTimelineEntry.Assistant(
-                    assistant.ordinal(),
-                    assistant.text() + delta,
+                    ordinal,
+                    text,
+                    state.document(),
                     true,
                     assistant.sources()));
         } else {
-            next.add(new GuideTimelineEntry.Assistant(next.size(), delta, true, List.of()));
+            ordinal = next.size();
+            text = delta;
+            SemanticStreamingState state = SemanticStreamingState.empty().update(
+                    text, false, semanticParser,
+                    SemanticReferenceIndex.from(requestId, timeline));
+            semanticStates.put(new SegmentKey(requestId, ordinal), state);
+            next.add(new GuideTimelineEntry.Assistant(
+                    ordinal, text, state.document(), true, List.of()));
         }
         return List.copyOf(next);
     }
 
     private static List<GuideTimelineEntry> startTool(
             List<GuideTimelineEntry> timeline, AgentEvent.ToolStarted started) {
-        ArrayList<GuideTimelineEntry> next = new ArrayList<>(closeAssistant(timeline));
+        ArrayList<GuideTimelineEntry> next = new ArrayList<>(timeline);
         int toolIndex = (int) next.stream()
                 .filter(GuideTimelineEntry.Tool.class::isInstance)
                 .count();
@@ -185,7 +217,8 @@ public final class GuideStateReducer {
         return List.copyOf(next);
     }
 
-    private static List<GuideTimelineEntry> closeAssistant(
+    private List<GuideTimelineEntry> closeAssistant(
+            UUID requestId,
             List<GuideTimelineEntry> timeline) {
         if (timeline.isEmpty()
                 || !(timeline.getLast() instanceof GuideTimelineEntry.Assistant assistant)
@@ -193,23 +226,47 @@ public final class GuideStateReducer {
             return timeline;
         }
         ArrayList<GuideTimelineEntry> next = new ArrayList<>(timeline);
+        SegmentKey key = new SegmentKey(requestId, assistant.ordinal());
+        SemanticStreamingState state = semanticStates.getOrDefault(
+                key, SemanticStreamingState.empty());
+        state = state.update(
+                assistant.text(), true, semanticParser,
+                SemanticReferenceIndex.from(requestId, timeline));
+        semanticStates.remove(key);
         next.set(next.size() - 1, new GuideTimelineEntry.Assistant(
-                assistant.ordinal(), assistant.text(), false, assistant.sources()));
+                assistant.ordinal(), assistant.text(), state.document(), false,
+                assistant.sources()));
         return List.copyOf(next);
     }
 
-    private static List<GuideTimelineEntry> reconcileFinal(
-            List<GuideTimelineEntry> timeline, String text) {
+    private List<GuideTimelineEntry> reconcileFinal(
+            UUID requestId, List<GuideTimelineEntry> timeline, String text) {
         ArrayList<GuideTimelineEntry> next = new ArrayList<>(timeline);
+        int ordinal = next.size();
+        List<GuideSource> sources = List.of();
         if (!next.isEmpty()
                 && next.getLast() instanceof GuideTimelineEntry.Assistant assistant) {
-            next.set(next.size() - 1, new GuideTimelineEntry.Assistant(
-                    assistant.ordinal(), text, false, assistant.sources()));
+            ordinal = assistant.ordinal();
+            sources = assistant.sources();
+        }
+        SegmentKey key = new SegmentKey(requestId, ordinal);
+        SemanticStreamingState state = semanticStates.getOrDefault(
+                key, SemanticStreamingState.empty());
+        state = state.update(
+                text, true, semanticParser,
+                SemanticReferenceIndex.from(requestId, timeline));
+        GuideTimelineEntry.Assistant reconciled = new GuideTimelineEntry.Assistant(
+                ordinal, text, state.document(), false, sources);
+        if (ordinal < next.size()) {
+            next.set(ordinal, reconciled);
         } else {
-            next.add(new GuideTimelineEntry.Assistant(
-                    next.size(), text, false, List.of()));
+            next.add(reconciled);
         }
         return List.copyOf(next);
+    }
+
+    private void clearSemanticStates(UUID requestId) {
+        semanticStates.keySet().removeIf(key -> key.requestId().equals(requestId));
     }
 
     private static int toolMatches(
@@ -241,17 +298,18 @@ public final class GuideStateReducer {
         return started.equals(completed) || decodedModelToolId(started).equals(completed);
     }
 
-    private static GuideRequestSnapshot protocolFailure(
+    private GuideRequestSnapshot protocolFailure(
             GuideRequestSnapshot current,
             List<GuideTimelineEntry> timeline,
             String message,
             Instant now) {
+        clearSemanticStates(current.requestId());
         return new GuideRequestSnapshot(
                 current.requestId(),
                 current.sessionId(),
                 current.topology(),
                 current.userMessage(),
-                closeAssistant(timeline),
+                timeline,
                 GuideRequestStatus.FAILED,
                 current.sources(),
                 current.usage(),
@@ -298,4 +356,6 @@ public final class GuideStateReducer {
                 .replace("_dot_", ".")
                 .replace("__", ":");
     }
+
+    private record SegmentKey(UUID requestId, int ordinal) {}
 }

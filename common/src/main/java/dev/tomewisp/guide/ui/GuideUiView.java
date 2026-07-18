@@ -104,6 +104,7 @@ public record GuideUiView(
                                     request.requestId(),
                                     assistant.ordinal(),
                                     assistant.text(),
+                                    assistant.semantic(),
                                     assistant.streaming(),
                                     assistant.sources()));
                     case GuideTimelineEntry.Tool tool -> rows.add(

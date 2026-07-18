@@ -129,48 +129,48 @@ git commit -m "feat: validate controlled guide components"
 
 **Files:**
 - Modify: `common/src/main/java/dev/tomewisp/guide/GuideTimelineEntry.java`
-- Modify: `common/src/main/java/dev/tomewisp/guide/GuideRequestReducer.java`
-- Modify: `common/src/main/java/dev/tomewisp/guide/GuideRequestSnapshot.java`
-- Modify: `common/src/main/java/dev/tomewisp/guide/GuideMessage.java`
-- Modify: `common/src/main/java/dev/tomewisp/guide/GuideService.java`
-- Modify: relevant Agent system-prompt builder under `common/src/main/java/dev/tomewisp/agent/`
+- Modify: `common/src/main/java/dev/tomewisp/guide/GuideStateReducer.java`
+- Modify: `common/src/main/java/dev/tomewisp/client/ClientGuideRuntime.java`
+- Modify: `common/src/main/java/dev/tomewisp/server/ServerGuideRuntime.java`
+- Modify: `common/src/main/java/dev/tomewisp/client/gui/TomeWispScreen.java`
 - Create: `common/src/main/java/dev/tomewisp/guide/semantic/SemanticDocumentCodec.java`
 - Modify: `common/src/main/java/dev/tomewisp/guide/history/GuideHistoryCodec.java`
 - Modify: `common/src/main/java/dev/tomewisp/guide/ui/GuideUiRow.java`
 - Modify: `common/src/main/java/dev/tomewisp/guide/ui/GuideUiView.java`
-- Test: `common/src/test/java/dev/tomewisp/guide/GuideRequestReducerTest.java`
-- Test: `common/src/test/java/dev/tomewisp/guide/GuideServiceTimelineTest.java`
+- Test: `common/src/test/java/dev/tomewisp/guide/GuideStateReducerTest.java`
+- Test: `common/src/test/java/dev/tomewisp/guide/GuideServiceTest.java`
 - Test: `common/src/test/java/dev/tomewisp/guide/semantic/SemanticDocumentCodecTest.java`
 - Test: `common/src/test/java/dev/tomewisp/guide/ui/GuideUiViewTest.java`
 
-- [ ] **Step 1: Write streaming, final reconciliation, and privacy tests**
+- [x] **Step 1: Write streaming, final reconciliation, and privacy tests**
 
 Assert text-before-tool and text-after-tool use independent parser states;
 tool results extend only the later segment's reference index; repeated tool
 names remain invocation-correlated; final reconciliation changes only the last
 segment. Reasoning and raw provider content must remain unrepresentable.
 
-- [ ] **Step 2: Add semantic syntax guidance to the system prompt**
+- [x] **Step 2: Add semantic syntax guidance to the system prompt**
 
 Teach the two closed syntaxes, prefer handles returned by tools, explain raw
 resource IDs are presentation-only, require fallback text, and prohibit HTML,
 URLs, code/actions, arbitrary components, or claims that presentation creates
 evidence. Do not force components when ordinary prose is clearer.
 
-- [ ] **Step 3: Parse/validate the mutable timeline tail**
+- [x] **Step 3: Parse/validate the mutable timeline tail**
 
-Assistant entries retain exact fallback text plus `SemanticDocument`. The
+Assistant entries retain exact model source text plus a safe fallback-bearing
+`SemanticDocument`. The
 reducer carries streaming parse state internally, while immutable snapshots
 publish only safe semantic content and redacted diagnostics. Completed segments
 are stable across later tool updates.
 
-- [ ] **Step 4: Add strict semantic persistence codec**
+- [x] **Step 4: Add strict semantic persistence codec**
 
 Encode only TomeWisp AST version 1, exact node/component keys, validated stable
 references, and fallback text. Unknown version/key fails the containing history
 record closed. No CommonMark classes or transient layout/cache data are stored.
 
-- [ ] **Step 5: Run timeline/semantic tests and commit**
+- [x] **Step 5: Run timeline/semantic tests and commit**
 
 ```bash
 ./gradlew :common:test --tests 'dev.tomewisp.guide.*' \

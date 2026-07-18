@@ -313,7 +313,11 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
                 Load a Skill when its metadata matches the request, then follow its workflow.
 
                 %s
-                """.formatted(capabilities.skills().metadataPrompt());
+
+                %s
+                """.formatted(
+                        dev.tomewisp.guide.semantic.SemanticPromptGuidance.text(),
+                        capabilities.skills().metadataPrompt());
     }
 
     private static EndpointRuntime endpoint(

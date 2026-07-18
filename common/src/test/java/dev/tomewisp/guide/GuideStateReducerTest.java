@@ -2,6 +2,8 @@ package dev.tomewisp.guide;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
@@ -10,6 +12,7 @@ import dev.tomewisp.agent.AgentEvent;
 import dev.tomewisp.agent.AgentState;
 import dev.tomewisp.model.ModelEvent;
 import dev.tomewisp.model.ModelUsage;
+import dev.tomewisp.guide.semantic.SemanticInline;
 import dev.tomewisp.testing.GroundedTestFixtures;
 import java.time.Instant;
 import java.util.List;
@@ -143,6 +146,57 @@ final class GuideStateReducerTest {
     }
 
     @Test
+    void semanticSegmentsAreIndependentAndOnlyLaterTextCanUseToolHandles() {
+        GuideRequestSnapshot request = GuideRequestSnapshot.start(
+                UUID.randomUUID(), "main", GuideTopology.CLIENT_LOCAL, "How?", Instant.EPOCH);
+
+        request = reducer.apply(request, text("**Before lookup**"), at(1));
+        request = reducer.apply(request, new AgentEvent.ToolStarted(
+                "call-1", "tomewisp:get_recipe"), at(2));
+        request = reducer.apply(request, new AgentEvent.ToolCompleted(
+                "call-1", "tomewisp:get_recipe", false, referenceResult()), at(3));
+        request = reducer.apply(request, text("Use [[tw:item|minecraft:iron_"), at(4));
+        request = reducer.apply(request, text("block|Iron block]]."), at(5));
+        request = reducer.apply(request, new AgentEvent.FinalText(
+                "Use [[tw:item|minecraft:iron_block|Iron block]]."), at(6));
+
+        GuideTimelineEntry.Assistant before =
+                (GuideTimelineEntry.Assistant) request.timeline().get(0);
+        GuideTimelineEntry.Assistant after =
+                (GuideTimelineEntry.Assistant) request.timeline().get(2);
+        assertEquals("Before lookup", before.semantic().fallbackText());
+        assertFalse(hasReference(before));
+        assertEquals("Use Iron block.", after.semantic().fallbackText());
+        assertTrue(hasReference(after));
+        assertEquals("call-1", reference(after).originInvocationId());
+    }
+
+    @Test
+    void finalTextReconcilesOnlyTheLastSemanticSegment() {
+        GuideRequestSnapshot request = GuideRequestSnapshot.start(
+                UUID.randomUUID(), "main", GuideTopology.CLIENT_LOCAL, "How?", Instant.EPOCH);
+        request = reducer.apply(request, text("# First"), at(1));
+        request = reducer.apply(request, new AgentEvent.ToolStarted(
+                "call-1", "tomewisp:get_recipe"), at(2));
+        request = reducer.apply(request, new AgentEvent.ToolCompleted(
+                "call-1", "tomewisp:get_recipe", false, groundedResult()), at(3));
+        request = reducer.apply(request, text("Partial"), at(4));
+        GuideTimelineEntry.Assistant firstBefore =
+                (GuideTimelineEntry.Assistant) request.timeline().getFirst();
+
+        request = reducer.apply(request, new AgentEvent.FinalText("## Final"), at(5));
+
+        GuideTimelineEntry.Assistant firstAfter =
+                (GuideTimelineEntry.Assistant) request.timeline().getFirst();
+        GuideTimelineEntry.Assistant last =
+                (GuideTimelineEntry.Assistant) request.timeline().getLast();
+        assertSame(firstBefore.semantic(), firstAfter.semantic());
+        assertEquals("First", firstAfter.semantic().fallbackText());
+        assertEquals("Final", last.semantic().fallbackText());
+        assertEquals("## Final", last.text());
+    }
+
+    @Test
     void missingToolInvocationFailsRequestClosed() {
         GuideRequestSnapshot request = GuideRequestSnapshot.start(
                 UUID.randomUUID(), "main", GuideTopology.CLIENT_LOCAL, "How?", Instant.EPOCH);
@@ -183,6 +237,38 @@ final class GuideStateReducerTest {
         value.add("evidence", evidence);
         result.add("value", value);
         return result;
+    }
+
+    private static JsonObject referenceResult() {
+        JsonObject result = groundedResult();
+        JsonObject value = result.getAsJsonObject("value");
+        JsonObject recipe = new JsonObject();
+        recipe.addProperty("sourceId", "minecraft:recipe_manager");
+        recipe.addProperty("generation", GroundedTestFixtures.RECIPE_GENERATION);
+        recipe.addProperty("recipeId", "minecraft:iron_block");
+        recipe.addProperty("itemId", "minecraft:iron_block");
+        value.add("recipe", recipe);
+        return result;
+    }
+
+    private static boolean hasReference(GuideTimelineEntry.Assistant assistant) {
+        return assistant.semantic().blocks().stream()
+                .filter(dev.tomewisp.guide.semantic.SemanticBlock.Paragraph.class::isInstance)
+                .map(dev.tomewisp.guide.semantic.SemanticBlock.Paragraph.class::cast)
+                .flatMap(block -> block.content().stream())
+                .anyMatch(SemanticInline.Reference.class::isInstance);
+    }
+
+    private static dev.tomewisp.guide.semantic.SemanticReference reference(
+            GuideTimelineEntry.Assistant assistant) {
+        return assistant.semantic().blocks().stream()
+                .filter(dev.tomewisp.guide.semantic.SemanticBlock.Paragraph.class::isInstance)
+                .map(dev.tomewisp.guide.semantic.SemanticBlock.Paragraph.class::cast)
+                .flatMap(block -> block.content().stream())
+                .filter(SemanticInline.Reference.class::isInstance)
+                .map(SemanticInline.Reference.class::cast)
+                .map(SemanticInline.Reference::reference)
+                .findFirst().orElseThrow();
     }
 
     private static AgentEvent text(String value) {

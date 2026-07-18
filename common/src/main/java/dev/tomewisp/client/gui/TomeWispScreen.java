@@ -376,7 +376,13 @@ public final class TomeWispScreen extends Screen {
                 graphics.text(font, "正在准备证据…", x + 6, y, MUTED, false);
                 y += 10;
             } else {
-                y = renderWrapped(graphics, GuideMarkup.paragraphs(assistant.text()), x + 6, y, width - 6, TEXT);
+                y = renderWrapped(
+                        graphics,
+                        GuideMarkup.paragraphs(assistant.semantic().fallbackText()),
+                        x + 6,
+                        y,
+                        width - 6,
+                        TEXT);
             }
             for (GuideSource source : assistant.sources()) {
                 int sourceY = y;

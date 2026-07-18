@@ -14,6 +14,7 @@ import dev.tomewisp.guide.GuideModelSelection;
 import dev.tomewisp.guide.GuideTimelineEntry;
 import dev.tomewisp.guide.GuideToolActivity;
 import dev.tomewisp.guide.GuideToolStatus;
+import dev.tomewisp.guide.semantic.SemanticDocumentCodec;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -24,8 +25,9 @@ import java.util.Set;
 /** Strict codecs for player-visible durable projections and derived checkpoints. */
 public final class GuideHistoryCodec {
     private final ContextCheckpointCodec checkpoints = new ContextCheckpointCodec();
+    private final SemanticDocumentCodec semanticDocuments = new SemanticDocumentCodec();
     private static final Set<String> ASSISTANT_FIELDS =
-            Set.of("type", "ordinal", "text", "streaming", "sources");
+            Set.of("type", "ordinal", "text", "semantic", "streaming", "sources");
     private static final Set<String> TOOL_FIELDS = Set.of(
             "type", "ordinal", "invocationId", "index", "toolId", "status",
             "presentationLines", "sources");
@@ -104,14 +106,14 @@ public final class GuideHistoryCodec {
         return List.copyOf(decoded);
     }
 
-    private static JsonObject encodeEntryObject(GuideTimelineEntry entry) {
+    private JsonObject encodeEntryObject(GuideTimelineEntry entry) {
         return switch (entry) {
             case GuideTimelineEntry.Assistant assistant -> encodeAssistant(assistant);
             case GuideTimelineEntry.Tool tool -> encodeTool(tool);
         };
     }
 
-    private static GuideTimelineEntry decodeEntryObject(JsonObject object) {
+    private GuideTimelineEntry decodeEntryObject(JsonObject object) {
         String type = string(object, "type");
         return switch (type) {
             case "assistant" -> decodeAssistant(object);
@@ -121,11 +123,12 @@ public final class GuideHistoryCodec {
         };
     }
 
-    private static JsonObject encodeAssistant(GuideTimelineEntry.Assistant assistant) {
+    private JsonObject encodeAssistant(GuideTimelineEntry.Assistant assistant) {
         JsonObject object = new JsonObject();
         object.addProperty("type", "assistant");
         object.addProperty("ordinal", assistant.ordinal());
         object.addProperty("text", assistant.text());
+        object.add("semantic", semanticDocuments.encodeObject(assistant.semantic()));
         object.addProperty("streaming", assistant.streaming());
         object.add("sources", encodeSourcesArray(assistant.sources()));
         return object;
@@ -147,11 +150,12 @@ public final class GuideHistoryCodec {
         return object;
     }
 
-    private static GuideTimelineEntry.Assistant decodeAssistant(JsonObject object) {
+    private GuideTimelineEntry.Assistant decodeAssistant(JsonObject object) {
         requireFields(object, ASSISTANT_FIELDS, "assistant timeline entry");
         return new GuideTimelineEntry.Assistant(
                 integer(object, "ordinal"),
                 string(object, "text"),
+                semanticDocuments.decodeObject(object(object.get("semantic"), "semantic document")),
                 bool(object, "streaming"),
                 decodeSourcesArray(array(object, "sources")));
     }

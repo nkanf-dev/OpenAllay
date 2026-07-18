@@ -42,6 +42,8 @@ final class GuideUiViewTest {
                 GuideRequestStatus.COMPLETED, "complete", Instant.EPOCH.plusSeconds(2), null)));
         assertEquals(1, completed.rows().stream().filter(GuideUiRow.Assistant.class::isInstance).count());
         assertEquals("complete", ((GuideUiRow.Assistant) completed.rows().get(1)).text());
+        assertEquals("complete", ((GuideUiRow.Assistant) completed.rows().get(1))
+                .semantic().fallbackText());
         assertFalse(((GuideUiRow.Assistant) completed.rows().get(1)).streaming());
     }
 
