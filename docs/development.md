@@ -183,9 +183,40 @@ capture timestamps, provenance, internal failure codes, or normalized JSON.
 Setting `debugMode` to `true` appends a clearly separated local diagnostic
 section containing the already-redacted technical projection. An invalid file
 keeps Debug Mode off and displays a localized notice; it never rewrites the
-malformed file. General/diagnostic editing of Debug Mode remains in the later
-Phase 4 settings administration package; the current Models page already
-respects the loaded display projection.
+malformed file. The General page edits Debug Mode through the shared
+`GuideDisplayRuntime`; an atomic save immediately reprojects both the settings
+screen and newly rendered Guide content without requiring a restart. Reload
+retains the last valid projection on malformed external edits.
+
+The top-level settings sections are General, Models, Knowledge & Capabilities,
+History, and Diagnostics. Knowledge & Capabilities is the catalog for all
+registered knowledge sources, local read-only Tools, and bundled Skills. It is
+not a recipe-source page. Recipes appear as one Tool card, and only that card's
+typed child page owns recipe visibility, registered recipe sources, preferred
+JEI/REI/EMI-style viewers, and exact-navigation preferences. Adding a future
+knowledge source or online Tool does not add another top-level mod field and
+does not grant the model network or permission authority.
+
+The History page projects only friendly connection kind, persistence health,
+active-request state, and pending-write/deletion status. It can delete the
+current player/world-or-server partition or all partitions belonging to the
+current local player identity. Both actions require a fresh one-use
+confirmation and are rejected as `history_delete_busy` while matching requests
+or ordered writes are active. Whole-database reset is visible only in Debug
+Mode and requires a distinct second confirmation. Settings delegates every
+operation to the current `GuideService`/ordered repository; it never receives a
+raw scope identifier, database path, or SQL string.
+
+Diagnostics always presents localized, player-friendly cards for model,
+knowledge/capability, recipe, history, and context health. Debug Mode adds a
+separate whitelisted technical section containing only redacted endpoint
+authority, metadata/checkpoint/source generations, counts, and stable status
+codes. Neither projection can contain provider bodies, reasoning, transcript
+content, credential values, raw history scopes, or filesystem paths. Closing
+the screen discards drafts and confirmation tokens but does not cancel an
+already confirmed history/configuration transaction; shutdown disconnects the
+Guide service, closes ordered history, cancels any live probe, and closes the
+metadata cache asynchronously on both loaders.
 
 For an optional server-hosted model, use
 `config/tomewisp/server-model.json` on the server. The capability is advertised
@@ -256,8 +287,10 @@ checkpoints are retained separately as derived, non-evidence memory and reused
 only when their source hash and prompt/schema versions match. The generating
 model ID is provenance, not a reuse lock: changing provider or model keeps the
 session transcript and a valid checkpoint, then re-estimates the projection
-against the newly selected model's own budget. Developer-mode payloads,
-partition management, and history paging are later Phase 4 work.
+against the newly selected model's own budget. Player history administration
+and redacted normal/debug diagnostics are available in native settings.
+Long-history paging and semantic rich-message rendering remain later Phase 4
+work.
 
 The real-client probe is disabled unless `tomewisp.e2e.enabled=true`. When
 enabled, it waits for a real client player, submits through the same

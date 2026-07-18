@@ -91,8 +91,12 @@ persisted and captured per future request, while active requests retain their
 original Tool/Skill snapshot. Recipes are one Tool card whose child page owns
 all-known/unlocked visibility, stable source enablement, and preferred-viewer
 selection; they are not a top-level mod configuration domain. History
-administration, model-authored rich messages, and the remaining controlled
-dynamic components remain Phase 4 work. Dynamic
+administration, live Debug Mode editing, and friendly normal/debug diagnostics
+are now wired through the same common settings service on both loaders. The
+History page owns current-partition/current-player deletion and the separately
+confirmed Debug Mode database reset; it never performs SQL directly.
+Model-authored rich messages, controlled dynamic components, and long-history
+paging remain Phase 4 work. Dynamic
 Ponder generation is deferred beyond Phase 4 because Ponder/Ponderer do not yet
 provide a verified 26.2 runtime target. Phase 3C now provides the native player
 GUI; graphical E2E remains explicit opt-in and is never inferred from

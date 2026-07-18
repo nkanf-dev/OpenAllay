@@ -5,7 +5,7 @@
 - approval_source: designer stated “从现在开始，整个phase 4 的决策，我都相信你的最佳判断”; the selected design keeps domain configuration independent behind one native settings service
 - date: 2026-07-18
 - commit: e7acf43, 507d628
-- implementation_commits: 1930516, 22b3656, 6498516
+- implementation_commits: 1930516, 22b3656, 6498516, 771cc94, 154a74b, a3ae197
 - patterns:
   - A_async_wait
   - B_state_persistence
@@ -78,6 +78,15 @@ Snapshots may state that a named credential environment variable is present,
 but neither the service nor UI exposes its value. History deletion/reset goes
 through GuideService coordination and the ordered repository under
 SKMB-2026-07-18-014; settings never executes direct SQL.
+
+Fabric and NeoForge each construct exactly one shared `GuideDisplayRuntime`,
+one `ClientSettingsService`, one ordered history repository, and one
+connection-scoped `GuideServiceManager`. The display runtime is supplied to
+both settings and Guide screens. A one-time history adapter is late-bound to
+the manager and resolves its current actor/service for every action, so neither
+screen nor loader caches connection identity. Shutdown disconnects Guide state,
+closes ordered history, cancels an active probe, and closes metadata resources
+through asynchronous lifecycle chains.
 
 The top-level player section is “知识与能力” (`Knowledge & Capabilities`), not
 “配方” (`Recipes`). It inventories code-registered knowledge sources, tools,

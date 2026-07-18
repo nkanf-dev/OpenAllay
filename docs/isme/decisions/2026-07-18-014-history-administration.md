@@ -5,6 +5,7 @@
 - approval_source: designer replied “确认，这一块我相信你的判断” to the proposed deletion scope, concurrency, and reset policy
 - date: 2026-07-18
 - commit: adaffaf
+- implementation_commits: 28ebb02, ba2ed91, 1b0dd4b, 154a74b, a3ae197
 - patterns:
   - B_state_persistence
   - C_concurrent_operations
@@ -31,6 +32,13 @@ confirmation. It is unavailable in normal settings and is rejected while any
 request or history write is active. Unsupported pre-release schema is never
 deleted automatically: the developer/player must explicitly invoke the reset
 or remove the ignored development database.
+
+The native settings adapter resolves the current `GuideService` at action time
+and holds no actor ID, raw scope identifier, database path, or SQL operation.
+Confirmation tokens are service-issued but screen-held, action/generation
+bound, one-use, and invalidated by navigation, screen detach, or snapshot
+replacement. Both loader entrypoints late-bind the same connection-scoped
+`GuideServiceManager` only after construction, avoiding a second history owner.
 
 All deletion operations are scoped to the local history database. They do not
 delete model-provider data, server-side data, configuration, metadata cache,

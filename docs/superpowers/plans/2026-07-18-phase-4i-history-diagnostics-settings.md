@@ -521,7 +521,7 @@ Retain redacted report JSON, artifact/mod versions, source URLs, SHA-256 values,
 and screenshots that contain no credentials/provider bodies. If a target viewer
 is unavailable, record that fact rather than claiming it through generic code.
 
-- [ ] **Step 4: Update docs, decision commit references, and commit evidence**
+- [x] **Step 4: Update docs, decision commit references, and commit evidence**
 
 Document all settings pages, stable failures, history scope, reset safety,
 normal/debug data classes, runtime reload behavior, and exact manual/live truth.

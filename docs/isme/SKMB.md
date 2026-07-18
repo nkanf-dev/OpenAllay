@@ -21,9 +21,9 @@ accepted and contains explicit approval evidence.
 | SKMB-2026-07-18-011 | accepted | pre-release durable schema policy | B, F, G | decisions/2026-07-18-011-pre-release-durable-schema.md | pending |
 | SKMB-2026-07-18-012 | accepted | model metadata cache and refresh | A, B, D, F | decisions/2026-07-18-012-model-metadata-cache.md | 7e2a735 |
 | SKMB-2026-07-18-013 | accepted | shared outbound HTTP authority boundaries | D, E, F | decisions/2026-07-18-013-outbound-http-boundaries.md | 7e2a735 |
-| SKMB-2026-07-18-014 | accepted | player history administration | B, C, F, G | decisions/2026-07-18-014-history-administration.md | adaffaf |
+| SKMB-2026-07-18-014 | accepted | player history administration | B, C, F, G | decisions/2026-07-18-014-history-administration.md | adaffaf; implemented through a3ae197 |
 | SKMB-2026-07-18-015 | accepted | settings model administration and live connection testing | A, B, C, D, E, F, G | decisions/2026-07-18-015-settings-model-administration.md | f1ba74b; implemented through 6498516 |
-| SKMB-2026-07-18-016 | accepted | native settings coordination and domain config writes | A, B, C, E, F | decisions/2026-07-18-016-native-settings-coordination.md | e7acf43, 507d628; model settings implemented through 6498516 |
+| SKMB-2026-07-18-016 | accepted | native settings coordination and domain config writes | A, B, C, E, F | decisions/2026-07-18-016-native-settings-coordination.md | e7acf43, 507d628; implemented through a3ae197 |
 | SKMB-2026-07-18-017 | accepted | knowledge/capability catalog and local Tool/Skill policy | B, C, D, E, F | decisions/2026-07-18-017-capability-settings-policy.md | e7acf43, 507d628; implemented through 771cc94 |
 
 SKMB-2026-07-18-006 is implemented by `a0eaeff`, `19ab90f`, and `c6ca6bc`.
@@ -48,6 +48,13 @@ capture, recipe Tool child settings, friendly normal-mode projection, and
 shared Fabric/NeoForge runtime wiring have deterministic coverage. JEI and REI
 are registered; EMI remains unimplemented and is not shown as an available
 source.
+
+SKMB-2026-07-18-014 and the remaining native settings/diagnostics scope of
+SKMB-2026-07-18-016 are implemented through `a3ae197`. The service-owned,
+one-use history confirmations, actor-scoped deletion gates, live shared display
+runtime, privacy-separated diagnostics, and Fabric/NeoForge lifecycle parity
+have deterministic coverage. Final retained graphical acceptance remains part
+of the consolidated Phase 4 audit.
 
 ## Named States
 
