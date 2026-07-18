@@ -1,0 +1,170 @@
+package dev.tomewisp.settings;
+
+import com.google.gson.Gson;
+import dev.tomewisp.TomeWispRuntime;
+import dev.tomewisp.agent.tool.AgentToolExecutor;
+import dev.tomewisp.client.ClientEventDispatcher;
+import dev.tomewisp.client.ClientModelRuntimeRegistry;
+import dev.tomewisp.guide.GuideFailure;
+import dev.tomewisp.guide.ui.GuideDisplayConfig;
+import dev.tomewisp.model.ProviderModelClients;
+import dev.tomewisp.model.config.ModelProfileDefinition;
+import dev.tomewisp.model.config.ModelProfilesConfig;
+import dev.tomewisp.model.config.ModelProfilesConfigLoader;
+import dev.tomewisp.model.config.ModelProtocol;
+import dev.tomewisp.model.config.ResolvedModelProfile;
+import dev.tomewisp.model.metadata.ModelMetadataBootstrap;
+import dev.tomewisp.model.metadata.ModelMetadataCache;
+import dev.tomewisp.model.metadata.ModelMetadataUpdate;
+import dev.tomewisp.settings.model.ModelConnectionProbe;
+import dev.tomewisp.settings.model.ModelProfileSettingsView;
+import dev.tomewisp.settings.model.ModelSettingsBackend;
+import dev.tomewisp.tool.ToolResult;
+import java.net.URI;
+import java.nio.file.Path;
+import java.time.Clock;
+import java.time.Duration;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicReference;
+
+/** Loader-neutral lifecycle bundle for the model registry and native settings owner. */
+public record ClientSettingsRuntime(
+        ClientModelRuntimeRegistry models,
+        ClientSettingsService settings) {
+    public ClientSettingsRuntime {
+        Objects.requireNonNull(models, "models");
+        Objects.requireNonNull(settings, "settings");
+    }
+
+    public static ToolResult<ClientSettingsRuntime> create(
+            TomeWispRuntime product,
+            Path profilesPath,
+            Path legacyPath,
+            Path metadataCachePath,
+            Map<String, String> environment,
+            ClientEventDispatcher dispatcher,
+            AgentToolExecutor extension,
+            Clock clock,
+            GuideDisplayConfig display) {
+        Objects.requireNonNull(product, "product");
+        Objects.requireNonNull(environment, "environment");
+        Objects.requireNonNull(dispatcher, "dispatcher");
+        Objects.requireNonNull(clock, "clock");
+        Objects.requireNonNull(display, "display");
+
+        Map<String, String> environmentSnapshot = Map.copyOf(environment);
+        ToolResult<ModelProfilesConfigLoader.Load> loaded = new ModelProfilesConfigLoader()
+                .load(profilesPath, legacyPath, environmentSnapshot);
+        ModelProfilesConfigLoader.Load initial;
+        SettingsNotice startupNotice = null;
+        if (loaded instanceof ToolResult.Success<ModelProfilesConfigLoader.Load> success) {
+            initial = success.value();
+        } else {
+            ToolResult.Failure<ModelProfilesConfigLoader.Load> failure =
+                    (ToolResult.Failure<ModelProfilesConfigLoader.Load>) loaded;
+            initial = unconfigured();
+            startupNotice = SettingsNotice.failure(failure.code(), failure.message());
+        }
+
+        try {
+            Gson gson = new Gson();
+            ClientModelRuntimeRegistry registry = ClientModelRuntimeRegistry.create(
+                    product, initial, gson, dispatcher, extension);
+            ModelConnectionProbe probe = new ModelConnectionProbe(
+                    config -> ProviderModelClients.create(config, gson),
+                    clock,
+                    System::nanoTime);
+            ModelSettingsBackend backend = new ModelSettingsBackend(
+                    profilesPath,
+                    legacyPath,
+                    () -> environmentSnapshot,
+                    registry,
+                    probe);
+            AtomicReference<ClientSettingsService> serviceReference = new AtomicReference<>();
+            AtomicReference<ModelMetadataUpdate> pendingUpdate = new AtomicReference<>();
+            ModelMetadataBootstrap metadata = new ModelMetadataBootstrap(
+                    new ModelMetadataCache(metadataCachePath),
+                    profilesPath,
+                    legacyPath,
+                    environmentSnapshot,
+                    update -> {
+                        ClientSettingsService service = serviceReference.get();
+                        if (service == null) {
+                            pendingUpdate.set(update);
+                        } else {
+                            service.acceptMetadataUpdate(update);
+                        }
+                    },
+                    clock);
+            ClientSettingsService.MetadataActions metadataActions =
+                    new ClientSettingsService.MetadataActions() {
+                        @Override
+                        public CompletableFuture<Void> refresh() {
+                            return metadata.refreshAll();
+                        }
+
+                        @Override
+                        public CompletableFuture<Void> closeAsync() {
+                            return metadata.closeAsync();
+                        }
+                    };
+            ClientSettingsService.ModelState initialState = new ClientSettingsService.ModelState(
+                    initial.config(),
+                    initial.profiles().stream()
+                            .map(ModelProfileSettingsView.Resolution::from)
+                            .toList());
+            ClientSettingsService service = new ClientSettingsService(
+                    display,
+                    initialState,
+                    backend.presentEnvironmentNames(),
+                    backend,
+                    metadataActions,
+                    dispatcher,
+                    command -> Thread.startVirtualThread(command),
+                    startupNotice);
+            serviceReference.set(service);
+            ModelMetadataUpdate early = pendingUpdate.getAndSet(null);
+            if (early != null) {
+                service.acceptMetadataUpdate(early);
+            }
+            metadata.start();
+            return new ToolResult.Success<>(new ClientSettingsRuntime(registry, service));
+        } catch (RuntimeException failure) {
+            return new ToolResult.Failure<>(
+                    "settings_unavailable", "Native settings are unavailable");
+        }
+    }
+
+    public CompletableFuture<Void> closeAsync() {
+        return settings.closeAsync();
+    }
+
+    private static ModelProfilesConfigLoader.Load unconfigured() {
+        ModelProfileDefinition definition = new ModelProfileDefinition(
+                "default",
+                "Configure a model",
+                false,
+                ModelProtocol.OPENAI_CHAT,
+                URI.create("https://example.invalid/v1"),
+                "configure-model-id",
+                "TOMEWISP_API_KEY",
+                256_000,
+                4_096,
+                Duration.ofSeconds(30),
+                Duration.ofSeconds(300),
+                null);
+        ModelProfilesConfig config = new ModelProfilesConfig(
+                ModelProfilesConfig.SCHEMA_VERSION,
+                definition.id(),
+                List.of(definition));
+        ResolvedModelProfile resolved = new ResolvedModelProfile(
+                definition,
+                null,
+                new GuideFailure("model_disabled", "This model profile is disabled"));
+        return new ModelProfilesConfigLoader.Load(
+                config, List.of(resolved), false);
+    }
+}

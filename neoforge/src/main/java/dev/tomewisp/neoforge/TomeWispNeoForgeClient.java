@@ -2,6 +2,7 @@ package dev.tomewisp.neoforge;
 
 import dev.tomewisp.TomeWispRuntime;
 import dev.tomewisp.client.ClientModelRuntimeRegistry;
+import dev.tomewisp.settings.ClientSettingsRuntime;
 import com.google.gson.Gson;
 import dev.tomewisp.client.MinecraftGuideContextProvider;
 import dev.tomewisp.client.MinecraftGuideHistoryScope;
@@ -16,6 +17,7 @@ import dev.tomewisp.guide.e2e.GuideClientE2EConfig;
 import dev.tomewisp.guide.e2e.GuideClientE2EController;
 import dev.tomewisp.client.gui.TomeWispKeyMappings;
 import dev.tomewisp.client.gui.TomeWispScreen;
+import dev.tomewisp.client.gui.TomeWispSettingsScreen;
 import dev.tomewisp.guide.ui.GuideDisplayConfigLoader;
 import dev.tomewisp.tool.ToolResult;
 import dev.tomewisp.recipe.config.RecipeClientRuntime;
@@ -40,7 +42,9 @@ public final class TomeWispNeoForgeClient {
         var dispatcher = (dev.tomewisp.client.ClientEventDispatcher)
                 runnable -> Minecraft.getInstance().execute(runnable);
         java.nio.file.Path configDirectory = FMLPaths.CONFIGDIR.get().resolve("tomewisp");
-        ToolResult<ClientModelRuntimeRegistry> guide = ClientModelRuntimeRegistry.create(
+        var display = new GuideDisplayConfigLoader().load(
+                configDirectory.resolve("display.json"));
+        ToolResult<ClientSettingsRuntime> settingsResult = ClientSettingsRuntime.create(
                 runtime,
                 configDirectory.resolve("models.json"),
                 configDirectory.resolve("model.json"),
@@ -48,16 +52,17 @@ public final class TomeWispNeoForgeClient {
                 System.getenv(),
                 dispatcher,
                 bridge.remoteTools(),
-                clock);
+                clock,
+                display.config());
+        ClientSettingsRuntime settings =
+                settingsResult instanceof ToolResult.Success<ClientSettingsRuntime> success
+                        ? success.value()
+                        : null;
         ClientModelRuntimeRegistry modelRegistry =
-                guide instanceof ToolResult.Success<ClientModelRuntimeRegistry> success
-                ? success.value()
-                : null;
+                settings == null ? null : settings.models();
         GuideLocalEndpoint local = modelRegistry;
         RecipeClientRuntime recipeClient = new RecipeClientRuntime(
                 FMLPaths.CONFIGDIR.get().resolve("tomewisp/recipes.json"));
-        var display = new GuideDisplayConfigLoader().load(
-                FMLPaths.CONFIGDIR.get().resolve("tomewisp/display.json"));
         MinecraftGuideContextProvider contexts = new MinecraftGuideContextProvider(
                 runtime,
                 Minecraft.getInstance(),
@@ -98,16 +103,30 @@ public final class TomeWispNeoForgeClient {
                 services.shutdown()
                         .handle((ignored, failure) -> null)
                         .thenCompose(ignored -> history.closeAsync())
-                        .thenCompose(ignored -> modelRegistry == null
+                        .thenCompose(ignored -> settings == null
                                 ? java.util.concurrent.CompletableFuture.completedFuture(null)
-                                : modelRegistry.closeAsync()));
+                                : settings.closeAsync()));
         bridge.onCapabilitiesChanged(() -> {
             var current = services.current();
             if (current != null) current.refreshCapabilities();
         });
+        java.util.function.Consumer<dev.tomewisp.guide.GuideService> showGuide =
+                new java.util.function.Consumer<>() {
+                    @Override
+                    public void accept(dev.tomewisp.guide.GuideService service) {
+                        Runnable openSettings = settings == null ? null : () ->
+                                Minecraft.getInstance().gui.setScreen(new TomeWispSettingsScreen(
+                                        settings.settings(), () -> accept(service)));
+                        Minecraft.getInstance().gui.setScreen(new TomeWispScreen(
+                                service,
+                                recipeClient,
+                                display.config(),
+                                display.failure(),
+                                openSettings));
+                    }
+                };
         dev.tomewisp.guide.GuideScreenOpener screens = service -> {
-            Minecraft.getInstance().gui.setScreen(new TomeWispScreen(
-                    service, recipeClient, display.config(), display.failure()));
+            showGuide.accept(service);
             return new ToolResult.Success<>(true);
         };
         NeoForgeGuideCommands.register(new GuideCommandFacade(

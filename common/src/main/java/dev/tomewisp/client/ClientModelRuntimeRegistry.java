@@ -19,13 +19,9 @@ import dev.tomewisp.model.ModelClient;
 import dev.tomewisp.model.ModelContent;
 import dev.tomewisp.model.ModelMessage;
 import dev.tomewisp.model.ModelRole;
-import dev.tomewisp.model.anthropic.AnthropicMessagesClient;
 import dev.tomewisp.model.config.ModelProfilesConfigLoader;
 import dev.tomewisp.model.config.ResolvedModelProfile;
-import dev.tomewisp.model.openai.OpenAiChatClient;
-import dev.tomewisp.model.metadata.ModelMetadataBootstrap;
-import dev.tomewisp.model.metadata.ModelMetadataCache;
-import dev.tomewisp.model.metadata.ModelMetadataUpdate;
+import dev.tomewisp.model.ProviderModelClients;
 import dev.tomewisp.agent.trace.LiveTraceStore;
 import dev.tomewisp.tool.ToolResult;
 import java.nio.file.Path;
@@ -51,7 +47,6 @@ public final class ClientModelRuntimeRegistry implements GuideLocalEndpoint {
     private final Function<ResolvedModelProfile, ModelClient> modelFactory;
     private final AgentSessionStore sessions = new AgentSessionStore();
     private final AtomicReference<State> state = new AtomicReference<>();
-    private volatile ModelMetadataBootstrap metadata;
 
     ClientModelRuntimeRegistry(
             TomeWispRuntime productRuntime,
@@ -83,68 +78,20 @@ public final class ClientModelRuntimeRegistry implements GuideLocalEndpoint {
         Gson gson = new Gson();
         ModelProfilesConfigLoader.Load value =
                 ((ToolResult.Success<ModelProfilesConfigLoader.Load>) loaded).value();
-        Function<ResolvedModelProfile, ModelClient> factory = profile -> switch (
-                profile.runtimeConfig().protocol()) {
-            case ANTHROPIC_MESSAGES -> new AnthropicMessagesClient(profile.runtimeConfig(), gson);
-            case OPENAI_CHAT -> new OpenAiChatClient(profile.runtimeConfig(), gson);
-        };
-        return new ToolResult.Success<>(new ClientModelRuntimeRegistry(
-                runtime, value, gson, dispatcher, extension, factory));
+        return new ToolResult.Success<>(create(
+                runtime, value, gson, dispatcher, extension));
     }
 
-    public static ToolResult<ClientModelRuntimeRegistry> create(
+    public static ClientModelRuntimeRegistry create(
             TomeWispRuntime runtime,
-            Path profilesPath,
-            Path legacyPath,
-            Path metadataCachePath,
-            Map<String, String> environment,
+            ModelProfilesConfigLoader.Load initial,
+            Gson gson,
             ClientEventDispatcher dispatcher,
-            AgentToolExecutor extension,
-            java.time.Clock clock) {
-        ToolResult<ClientModelRuntimeRegistry> created = create(
-                runtime, profilesPath, legacyPath, environment, dispatcher, extension);
-        if (created instanceof ToolResult.Failure<ClientModelRuntimeRegistry>) {
-            return created;
-        }
-        ClientModelRuntimeRegistry registry =
-                ((ToolResult.Success<ClientModelRuntimeRegistry>) created).value();
-        Map<String, String> environmentSnapshot = Map.copyOf(environment);
-        Consumer<ModelMetadataUpdate> reconcile = update -> {
-            ToolResult<ModelProfilesConfigLoader.Load> current = new ModelProfilesConfigLoader()
-                    .load(profilesPath, legacyPath, environmentSnapshot, update.entries());
-            if (current instanceof ToolResult.Success<ModelProfilesConfigLoader.Load> success) {
-                registry.replace(success.value());
-            }
-        };
-        ModelMetadataBootstrap bootstrap = new ModelMetadataBootstrap(
-                new ModelMetadataCache(metadataCachePath),
-                profilesPath,
-                legacyPath,
-                environmentSnapshot,
-                reconcile,
-                clock);
-        registry.metadata = bootstrap;
-        bootstrap.start();
-        return created;
-    }
-
-    public GuideFailure metadataFailure() {
-        ModelMetadataBootstrap captured = metadata;
-        return captured == null ? null : captured.failure();
-    }
-
-    public CompletableFuture<Void> refreshMetadata() {
-        ModelMetadataBootstrap captured = metadata;
-        return captured == null
-                ? CompletableFuture.completedFuture(null)
-                : captured.refreshAll();
-    }
-
-    public CompletableFuture<Void> closeAsync() {
-        ModelMetadataBootstrap captured = metadata;
-        return captured == null
-                ? CompletableFuture.completedFuture(null)
-                : captured.closeAsync();
+            AgentToolExecutor extension) {
+        Function<ResolvedModelProfile, ModelClient> factory = profile ->
+                ProviderModelClients.create(profile.runtimeConfig(), gson);
+        return new ClientModelRuntimeRegistry(
+                runtime, initial, gson, dispatcher, extension, factory);
     }
 
     public synchronized void replace(

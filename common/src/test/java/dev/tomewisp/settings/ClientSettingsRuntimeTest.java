@@ -1,0 +1,83 @@
+package dev.tomewisp.settings;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+
+import dev.tomewisp.TomeWispRuntime;
+import dev.tomewisp.devmode.DevelopmentToolInspector;
+import dev.tomewisp.guide.ui.GuideDisplayConfig;
+import dev.tomewisp.knowledge.KnowledgeRegistry;
+import dev.tomewisp.platform.PlatformService;
+import dev.tomewisp.skill.SkillParser;
+import dev.tomewisp.skill.SkillRepository;
+import dev.tomewisp.tool.ToolRegistry;
+import dev.tomewisp.tool.ToolResult;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.Clock;
+import java.util.List;
+import java.util.Map;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+final class ClientSettingsRuntimeTest {
+    @Test
+    void missingFilesUseDisabledMemoryDefaultWithoutMaterializingConfiguration(
+            @TempDir Path directory) {
+        Path profiles = directory.resolve("models.json");
+        Path legacy = directory.resolve("model.json");
+        Path metadata = directory.resolve("model-metadata.json");
+
+        ToolResult<ClientSettingsRuntime> created = ClientSettingsRuntime.create(
+                runtime(),
+                profiles,
+                legacy,
+                metadata,
+                Map.of(),
+                Runnable::run,
+                null,
+                Clock.systemUTC(),
+                GuideDisplayConfig.defaults());
+
+        if (!(created instanceof ToolResult.Success<ClientSettingsRuntime> success)) {
+            throw new AssertionError("expected native settings runtime creation to succeed");
+        }
+        ClientSettingsRuntime settings = success.value();
+        assertEquals("default", settings.settings().snapshot()
+                .models().config().defaultProfileId());
+        assertFalse(settings.settings().snapshot().models().profiles().getFirst().available());
+        assertEquals("model_not_configured", settings.settings().snapshot().notice().code());
+        assertFalse(Files.exists(profiles));
+        assertFalse(Files.exists(legacy));
+        settings.closeAsync().join();
+    }
+
+    private static TomeWispRuntime runtime() {
+        ToolRegistry tools = new ToolRegistry();
+        return new TomeWispRuntime(
+                new FakePlatform(),
+                tools,
+                new KnowledgeRegistry(),
+                new dev.tomewisp.integration.patchouli.PatchouliMultiblockStore(),
+                new SkillRepository(new SkillParser(), List.of()),
+                new DevelopmentToolInspector(tools),
+                null);
+    }
+
+    private static final class FakePlatform implements PlatformService {
+        @Override
+        public String platformName() {
+            return "test";
+        }
+
+        @Override
+        public boolean isModLoaded(String modId) {
+            return false;
+        }
+
+        @Override
+        public boolean isDevelopmentEnvironment() {
+            return true;
+        }
+    }
+}

@@ -62,11 +62,14 @@ final class ClientArchitectureTest {
         for (Path entrypoint : entrypoints) {
             String source = Files.readString(entrypoint);
             assertTrue(source.contains("GuideDisplayConfigLoader"), entrypoint::toString);
-            assertTrue(source.contains("tomewisp/display.json"), entrypoint::toString);
+            assertTrue(source.contains("configDirectory.resolve(\"display.json\")"), entrypoint::toString);
             assertTrue(source.contains("display.config()"), entrypoint::toString);
             assertTrue(source.contains("ClientModelRuntimeRegistry"), entrypoint::toString);
             assertTrue(source.contains("models.json"), entrypoint::toString);
             assertTrue(source.contains("model-metadata.json"), entrypoint::toString);
+            assertTrue(source.contains("ClientSettingsRuntime"), entrypoint::toString);
+            assertTrue(source.contains("TomeWispSettingsScreen"), entrypoint::toString);
+            assertTrue(source.contains("settings.closeAsync()"), entrypoint::toString);
         }
 
         List<Path> commands = List.of(

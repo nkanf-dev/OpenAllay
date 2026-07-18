@@ -542,21 +542,21 @@ git commit -m "feat: add native model settings screen"
 - Modify: `common/src/test/java/dev/tomewisp/client/ClientArchitectureTest.java`
 - Modify: `common/src/test/java/dev/tomewisp/client/gui/TomeWispScreenProjectionTest.java`
 
-- [ ] **Step 1: Add loader-parity and localization-key failures**
+- [x] **Step 1: Add loader-parity and localization-key failures**
 
 Assert both entrypoints create one `ClientSettingsService` with the same paths,
 pass it to the same screen opener, close it before model/history repositories,
 and contain no model CRUD behavior. Assert every new English key exists in
 Simplified Chinese and normal UI has no raw failure/provider-body labels.
 
-- [ ] **Step 2: Run parity tests and verify they fail on missing wiring**
+- [x] **Step 2: Run parity tests and verify they fail on missing wiring**
 
 ```bash
 ./gradlew :common:test --tests 'dev.tomewisp.client.ClientArchitectureTest' \
   --tests 'dev.tomewisp.client.gui.*'
 ```
 
-- [ ] **Step 3: Wire common service and localized player text**
+- [x] **Step 3: Wire common service and localized player text**
 
 Both loaders pass:
 
@@ -570,7 +570,7 @@ Shutdown calls `settings.closeAsync()` before closing metadata/model resources.
 The Guide screen's settings action opens `TomeWispSettingsScreen`; no external
 browser or arbitrary path action is added.
 
-- [ ] **Step 4: Run focused tests and both loader builds, then commit**
+- [x] **Step 4: Run focused tests and both loader builds, then commit**
 
 ```bash
 ./gradlew :common:test --tests 'dev.tomewisp.settings.*' \

@@ -107,6 +107,26 @@ public final class ClientSettingsService implements AutoCloseable {
             MetadataActions metadataActions,
             ClientEventDispatcher dispatcher,
             Executor worker) {
+        this(
+                display,
+                initialModels,
+                presentEnvironmentNames,
+                models,
+                metadataActions,
+                dispatcher,
+                worker,
+                null);
+    }
+
+    public ClientSettingsService(
+            GuideDisplayConfig display,
+            ModelState initialModels,
+            Set<String> presentEnvironmentNames,
+            ModelActions models,
+            MetadataActions metadataActions,
+            ClientEventDispatcher dispatcher,
+            Executor worker,
+            SettingsNotice initialNotice) {
         this.display = Objects.requireNonNull(display, "display");
         this.modelState = Objects.requireNonNull(initialModels, "initialModels");
         this.presentEnvironmentNames = Collections.unmodifiableSet(
@@ -115,6 +135,7 @@ public final class ClientSettingsService implements AutoCloseable {
         this.metadataActions = Objects.requireNonNull(metadataActions, "metadataActions");
         this.dispatcher = Objects.requireNonNull(dispatcher, "dispatcher");
         this.worker = Objects.requireNonNull(worker, "worker");
+        this.notice = initialNotice;
         this.snapshot = buildSnapshot(0);
     }
 
