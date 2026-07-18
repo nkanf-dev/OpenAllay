@@ -4,7 +4,10 @@ import dev.tomewisp.guide.ui.GuideDisplayConfig;
 import dev.tomewisp.settings.model.ModelProfileSettingsView;
 import dev.tomewisp.settings.capability.CapabilitySettingsView;
 import dev.tomewisp.settings.capability.RecipeSettingsView;
+import dev.tomewisp.settings.diagnostics.SettingsDiagnosticsSnapshot;
+import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 /** Immutable common projection consumed by the native settings screen. */
 public record ClientSettingsSnapshot(
@@ -13,6 +16,7 @@ public record ClientSettingsSnapshot(
         ModelProfileSettingsView models,
         CapabilitySettingsView capabilities,
         RecipeSettingsView recipes,
+        SettingsDiagnosticsSnapshot diagnostics,
         SettingsOperation operation,
         SettingsNotice notice) {
     public ClientSettingsSnapshot {
@@ -23,7 +27,27 @@ public record ClientSettingsSnapshot(
         Objects.requireNonNull(models, "models");
         Objects.requireNonNull(capabilities, "capabilities");
         Objects.requireNonNull(recipes, "recipes");
+        Objects.requireNonNull(diagnostics, "diagnostics");
         Objects.requireNonNull(operation, "operation");
+    }
+
+    public ClientSettingsSnapshot(
+            long generation,
+            GuideDisplayConfig display,
+            ModelProfileSettingsView models,
+            CapabilitySettingsView capabilities,
+            RecipeSettingsView recipes,
+            SettingsOperation operation,
+            SettingsNotice notice) {
+        this(
+                generation,
+                display,
+                models,
+                capabilities,
+                recipes,
+                new SettingsDiagnosticsSnapshot(List.of(), Optional.empty()),
+                operation,
+                notice);
     }
 
     public ClientSettingsSnapshot(
@@ -38,6 +62,7 @@ public record ClientSettingsSnapshot(
                 models,
                 CapabilitySettingsView.defaults(),
                 RecipeSettingsView.defaults(),
+                new SettingsDiagnosticsSnapshot(List.of(), Optional.empty()),
                 operation,
                 notice);
     }

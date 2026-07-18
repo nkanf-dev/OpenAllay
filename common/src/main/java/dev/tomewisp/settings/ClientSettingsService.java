@@ -3,6 +3,8 @@ package dev.tomewisp.settings;
 import dev.tomewisp.capability.CapabilityPolicy;
 import dev.tomewisp.client.ClientEventDispatcher;
 import dev.tomewisp.guide.GuideFailure;
+import dev.tomewisp.guide.history.GuideHistoryActivity;
+import dev.tomewisp.guide.history.GuideHistoryPartition;
 import dev.tomewisp.guide.ui.GuideDisplayConfig;
 import dev.tomewisp.model.CancellationSignal;
 import dev.tomewisp.model.config.ModelProfileDefinition;
@@ -14,6 +16,7 @@ import dev.tomewisp.settings.model.ModelConnectionResult;
 import dev.tomewisp.settings.model.ModelProfileSettingsView;
 import dev.tomewisp.settings.capability.CapabilitySettingsView;
 import dev.tomewisp.settings.capability.RecipeSettingsView;
+import dev.tomewisp.settings.diagnostics.SettingsDiagnosticsAggregator;
 import dev.tomewisp.recipe.config.RecipeClientConfig;
 import dev.tomewisp.tool.ToolResult;
 import java.util.Collections;
@@ -104,6 +107,8 @@ public final class ClientSettingsService implements AutoCloseable {
     private final CopyOnWriteArrayList<Consumer<ClientSettingsSnapshot>> listeners =
             new CopyOnWriteArrayList<>();
     private final AtomicLong operationIds = new AtomicLong();
+    private final SettingsDiagnosticsAggregator diagnostics =
+            new SettingsDiagnosticsAggregator();
 
     private ModelState modelState;
     private CapabilitySettingsView capabilityState;
@@ -708,17 +713,30 @@ public final class ClientSettingsService implements AutoCloseable {
     }
 
     private ClientSettingsSnapshot buildSnapshot(long generation) {
+        ModelProfileSettingsView modelView = ModelProfileSettingsView.from(
+                modelState.config(),
+                modelState.profiles(),
+                presentEnvironmentNames,
+                metadataFailure,
+                connectionResult);
         return new ClientSettingsSnapshot(
                 generation,
                 display,
-                ModelProfileSettingsView.from(
-                        modelState.config(),
-                        modelState.profiles(),
-                        presentEnvironmentNames,
-                        metadataFailure,
-                        connectionResult),
+                modelView,
                 capabilityState,
                 recipeState,
+                diagnostics.snapshot(
+                        display.debugMode(),
+                        new SettingsDiagnosticsAggregator.DiagnosticsInputs(
+                                generation,
+                                modelView,
+                                capabilityState,
+                                recipeState,
+                                java.util.Optional.empty(),
+                                GuideHistoryActivity.idle(),
+                                SettingsDiagnosticsAggregator.HistoryScopeKind.NONE,
+                                GuideHistoryPartition.SCHEMA_VERSION,
+                                List.of())),
                 operation,
                 notice);
     }

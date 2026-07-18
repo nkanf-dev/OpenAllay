@@ -54,6 +54,27 @@ final class ClientSettingsServiceTest {
         assertTrue(snapshot.models().profiles().getLast().credentialPresent());
         assertFalse(snapshot.toString().contains("secret-alpha"));
         assertEquals(SettingsOperation.Kind.IDLE, snapshot.operation().kind());
+        assertEquals(4, snapshot.diagnostics().cards().size());
+        assertTrue(snapshot.diagnostics().debug().isEmpty());
+    }
+
+    @Test
+    void debugDisplayAddsOnlyTheSeparateTechnicalDiagnosticsProjection() {
+        FakeModels models = new FakeModels(state(config("alpha")));
+        ClientSettingsService service = new ClientSettingsService(
+                new GuideDisplayConfig(GuideDisplayConfig.SCHEMA_VERSION, true),
+                models.current,
+                Set.of("ALPHA_KEY"),
+                models,
+                models,
+                Runnable::run,
+                Runnable::run);
+
+        ClientSettingsSnapshot snapshot = service.snapshot();
+
+        assertEquals(4, snapshot.diagnostics().cards().size());
+        assertTrue(snapshot.diagnostics().debug().isPresent());
+        assertFalse(snapshot.diagnostics().toString().contains("secret-alpha"));
     }
 
     @Test

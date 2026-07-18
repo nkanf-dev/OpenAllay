@@ -336,7 +336,7 @@ git commit -m "feat: apply live Debug Mode settings"
 - Create: `common/src/test/java/dev/tomewisp/settings/diagnostics/SettingsDiagnosticsAggregatorTest.java`
 - Modify: `common/src/test/java/dev/tomewisp/settings/ClientSettingsServiceTest.java`
 
-- [ ] **Step 1: Write normal/debug data-class and redaction tests**
+- [x] **Step 1: Write normal/debug data-class and redaction tests**
 
 ```java
 @Test
@@ -366,14 +366,14 @@ and source counts/generations, current actor history state, selected request
 queue/429, compaction checkpoints/token estimates, and absent/unavailable
 domains. Never include assistant reasoning or provider body.
 
-- [ ] **Step 2: Run diagnostics tests and verify missing snapshot types**
+- [x] **Step 2: Run diagnostics tests and verify missing snapshot types**
 
 ```bash
 ./gradlew :common:test --tests 'dev.tomewisp.settings.diagnostics.*' \
   --tests 'dev.tomewisp.settings.ClientSettingsServiceTest'
 ```
 
-- [ ] **Step 3: Implement typed aggregation from existing immutable snapshots**
+- [x] **Step 3: Implement typed aggregation from existing immutable snapshots**
 
 ```java
 public record SettingsDiagnosticsSnapshot(
@@ -394,7 +394,7 @@ Normal and debug records use distinct types so forbidden fields are
 unrepresentable in normal mode. Redact endpoint to scheme + authority and
 history scope to a friendly world/server kind label.
 
-- [ ] **Step 4: Run privacy/settings tests and commit**
+- [x] **Step 4: Run privacy/settings tests and commit**
 
 ```bash
 ./gradlew :common:test --tests 'dev.tomewisp.settings.*' \
