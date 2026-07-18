@@ -463,10 +463,10 @@ void recipeChildSaveWritesOnlyRecipesDomain() {
 - [ ] **Step 3: Implement typed actions and snapshot projections**
 
 ```java
-public CompletableFuture<ToolResult<Void>> saveCapabilities(CapabilityPolicy candidate);
-public CompletableFuture<ToolResult<Void>> reloadCapabilities(boolean discardConfirmed);
-public CompletableFuture<ToolResult<Void>> saveRecipeSettings(RecipeClientConfig candidate);
-public CompletableFuture<ToolResult<Void>> reloadRecipeSettings(boolean discardConfirmed);
+public CompletableFuture<ToolResult<Boolean>> saveCapabilities(CapabilityPolicy candidate);
+public CompletableFuture<ToolResult<Boolean>> reloadCapabilities(boolean discardConfirmed);
+public CompletableFuture<ToolResult<Boolean>> saveRecipeSettings(RecipeClientConfig candidate);
+public CompletableFuture<ToolResult<Boolean>> reloadRecipeSettings(boolean discardConfirmed);
 ```
 
 Prepare `ClientCapabilitySnapshot` before writing `capabilities.json`, atomically

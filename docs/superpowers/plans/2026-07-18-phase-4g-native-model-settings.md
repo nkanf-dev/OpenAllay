@@ -386,7 +386,7 @@ git commit -m "feat: probe model connections safely"
 - Create: `common/src/main/java/dev/tomewisp/settings/model/ModelProfileSettingsView.java`
 - Test: `common/src/test/java/dev/tomewisp/settings/ClientSettingsServiceTest.java`
 
-- [ ] **Step 1: Write failing service state/race tests**
+- [x] **Step 1: Write failing service state/race tests**
 
 Cover initial snapshot, deterministic profile order, create/edit/delete/default,
 missing-env availability, one foreground slot, probe cancellation on owner
@@ -397,7 +397,7 @@ generation reconciliation, failed save retention, and close cancellation.
 @Test
 void probeAndMutationShareOneForegroundOperationSlot() {
     CompletableFuture<ModelConnectionResult> pending = service.testConnection(candidate());
-    ToolResult<Void> save = service.saveModels(changed());
+    ToolResult<Boolean> save = service.saveModels(changed()).join();
     assertFailure(save, "settings_busy");
     assertFailure(service.testConnection(other()), "connection_test_busy");
     service.cancelConnectionTest();
@@ -407,7 +407,7 @@ void probeAndMutationShareOneForegroundOperationSlot() {
 @Test
 void ordinaryListenerDetachDoesNotCancelConfirmedSave() {
     AutoCloseable listener = service.listen(seen::add);
-    CompletableFuture<ToolResult<Void>> save = service.saveModels(candidate());
+    CompletableFuture<ToolResult<Boolean>> save = service.saveModels(candidate());
     listener.close();
     files.completeMove();
     assertSuccess(save.join());
@@ -428,13 +428,13 @@ void lateMetadataUpdateCannotPublishOlderProfileGeneration() {
 }
 ```
 
-- [ ] **Step 2: Run the focused service test and verify missing types**
+- [x] **Step 2: Run the focused service test and verify missing types**
 
 ```bash
 ./gradlew :common:test --tests 'dev.tomewisp.settings.ClientSettingsServiceTest'
 ```
 
-- [ ] **Step 3: Implement immutable snapshots and serialized foreground actions**
+- [x] **Step 3: Implement immutable snapshots and serialized foreground actions**
 
 ```java
 public record ClientSettingsSnapshot(
@@ -447,9 +447,9 @@ public record ClientSettingsSnapshot(
 public final class ClientSettingsService implements AutoCloseable {
     public ClientSettingsSnapshot snapshot();
     public AutoCloseable listen(Consumer<ClientSettingsSnapshot> listener);
-    public CompletableFuture<ToolResult<Void>> saveModels(ModelProfilesConfig candidate);
-    public CompletableFuture<ToolResult<Void>> reloadModels(boolean discardDirtyConfirmed);
-    public CompletableFuture<ToolResult<Void>> refreshMetadata();
+    public CompletableFuture<ToolResult<Boolean>> saveModels(ModelProfilesConfig candidate);
+    public CompletableFuture<ToolResult<Boolean>> reloadModels(boolean discardDirtyConfirmed);
+    public CompletableFuture<ToolResult<Boolean>> refreshMetadata();
     public CompletableFuture<ModelConnectionResult> testConnection(ModelProfileDefinition candidate);
     public boolean cancelConnectionTest();
     public CompletableFuture<Void> closeAsync();
@@ -461,7 +461,7 @@ Run file and probe work off-thread. Marshal every published snapshot through the
 dispatcher. Never retain environment values: copy only a sorted set of present
 environment-variable names into the service constructor.
 
-- [ ] **Step 4: Run service/model/metadata tests and commit**
+- [x] **Step 4: Run service/model/metadata tests and commit**
 
 ```bash
 ./gradlew :common:test --tests 'dev.tomewisp.settings.*' \
