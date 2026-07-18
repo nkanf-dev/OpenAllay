@@ -91,6 +91,17 @@ public final class GuideServiceManager {
         return current;
     }
 
+    public synchronized GuideHistorySettingsSnapshot historySettingsSnapshot() {
+        if (history == null || current == null || current.historyScope() == null) {
+            return GuideHistorySettingsSnapshot.unavailable(history != null);
+        }
+        return new GuideHistorySettingsSnapshot(
+                true,
+                java.util.Optional.of(current.snapshot()),
+                history.activity(),
+                java.util.Optional.of(current.historyScope().kind()));
+    }
+
     public synchronized CompletableFuture<ToolResult<Boolean>> resetHistoryDatabase() {
         if (current == null) {
             return CompletableFuture.completedFuture(new ToolResult.Failure<>(

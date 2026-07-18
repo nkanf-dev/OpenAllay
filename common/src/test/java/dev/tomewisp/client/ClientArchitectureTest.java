@@ -54,16 +54,21 @@ final class ClientArchitectureTest {
     }
 
     @Test
-    void bothLoadersUseTheSharedDisplayConfigWithoutLeakingLoaderApisIntoCommon() throws Exception {
+    void bothLoadersShareSettingsHistoryAndDisplayRuntimesWithoutLoaderLeaks()
+            throws Exception {
         Path root = repositoryRoot();
         List<Path> entrypoints = List.of(
                 root.resolve("fabric/src/main/java/dev/tomewisp/fabric/TomeWispFabricClient.java"),
                 root.resolve("neoforge/src/main/java/dev/tomewisp/neoforge/TomeWispNeoForgeClient.java"));
         for (Path entrypoint : entrypoints) {
             String source = Files.readString(entrypoint);
-            assertTrue(source.contains("GuideDisplayConfigLoader"), entrypoint::toString);
+            assertTrue(source.contains("GuideDisplayRuntime"), entrypoint::toString);
+            assertEquals(1, occurrences(source, "new GuideDisplayRuntime("),
+                    entrypoint::toString);
             assertTrue(source.contains("configDirectory.resolve(\"display.json\")"), entrypoint::toString);
-            assertTrue(source.contains("display.config()"), entrypoint::toString);
+            assertTrue(source.contains("ClientSettingsHistoryBinding"), entrypoint::toString);
+            assertEquals(1, occurrences(source, "historySettings.bind(services)"),
+                    entrypoint::toString);
             assertTrue(source.contains("ClientModelRuntimeRegistry"), entrypoint::toString);
             assertTrue(source.contains("models.json"), entrypoint::toString);
             assertTrue(source.contains("model-metadata.json"), entrypoint::toString);
@@ -77,6 +82,10 @@ final class ClientArchitectureTest {
                     entrypoint::toString);
             assertTrue(source.contains("ClientSettingsRuntime"), entrypoint::toString);
             assertTrue(source.contains("TomeWispSettingsScreen"), entrypoint::toString);
+            assertTrue(source.contains("service,\n                                recipeClient,\n                                display,"),
+                    entrypoint::toString);
+            assertTrue(source.contains("services.shutdown()"), entrypoint::toString);
+            assertTrue(source.contains("history.closeAsync()"), entrypoint::toString);
             assertTrue(source.contains("settings.closeAsync()"), entrypoint::toString);
         }
 

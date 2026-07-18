@@ -108,6 +108,36 @@ final class GuideServiceManagerHistoryTest {
         assertFailure(manager.resetHistoryDatabase().join(), "history_unavailable");
     }
 
+    @Test
+    void settingsSnapshotExposesOnlyFriendlyScopeAndCurrentGuideState() {
+        RecordingHistory history = new RecordingHistory();
+        GuideHistoryScope scope = GuideHistoryScope.derive(
+                ACTOR, GuideHistoryScope.Kind.MULTIPLAYER, "private.example");
+        GuideServiceManager manager = new GuideServiceManager(
+                new IdleLocal(),
+                new IdleRemote(),
+                (capabilities, correlation) -> new ToolResult.Success<>(
+                        ToolInvocationContext.developmentConsole(correlation)),
+                Runnable::run,
+                Clock.systemUTC(),
+                new Gson(),
+                history,
+                actor -> scope);
+
+        GuideHistorySettingsSnapshot disconnected = manager.historySettingsSnapshot();
+        assertTrue(disconnected.configured());
+        assertTrue(disconnected.guide().isEmpty());
+        assertTrue(disconnected.scopeKind().isEmpty());
+
+        manager.forActor(ACTOR);
+        GuideHistorySettingsSnapshot connected = manager.historySettingsSnapshot();
+
+        assertEquals(ACTOR, connected.guide().orElseThrow().actorId());
+        assertEquals(GuideHistoryScope.Kind.MULTIPLAYER,
+                connected.scopeKind().orElseThrow());
+        assertFalse(connected.toString().contains("private.example"));
+    }
+
     private static void assertFailure(ToolResult<?> result, String code) {
         assertEquals(code,
                 ((ToolResult.Failure<?>) assertInstanceOf(ToolResult.Failure.class, result)).code());

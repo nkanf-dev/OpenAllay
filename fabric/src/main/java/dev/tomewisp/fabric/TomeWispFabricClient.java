@@ -19,7 +19,8 @@ import dev.tomewisp.guide.e2e.GuideClientE2EController;
 import dev.tomewisp.client.gui.TomeWispKeyMappings;
 import dev.tomewisp.client.gui.TomeWispScreen;
 import dev.tomewisp.client.gui.TomeWispSettingsScreen;
-import dev.tomewisp.guide.ui.GuideDisplayConfigLoader;
+import dev.tomewisp.guide.ui.GuideDisplayRuntime;
+import dev.tomewisp.settings.ClientSettingsHistoryBinding;
 import dev.tomewisp.tool.ToolResult;
 import dev.tomewisp.recipe.config.RecipeClientRuntime;
 import net.fabricmc.api.ClientModInitializer;
@@ -44,8 +45,9 @@ public final class TomeWispFabricClient implements ClientModInitializer {
                 runnable -> Minecraft.getInstance().execute(runnable);
         java.nio.file.Path configDirectory =
                 FabricLoader.getInstance().getConfigDir().resolve("tomewisp");
-        var display = new GuideDisplayConfigLoader().load(
+        GuideDisplayRuntime display = new GuideDisplayRuntime(
                 configDirectory.resolve("display.json"));
+        ClientSettingsHistoryBinding historySettings = new ClientSettingsHistoryBinding();
         RecipeClientRuntime recipeClient = new RecipeClientRuntime(
                 configDirectory.resolve("recipes.json"));
         ToolResult<ClientSettingsRuntime> settingsResult = ClientSettingsRuntime.create(
@@ -60,7 +62,8 @@ public final class TomeWispFabricClient implements ClientModInitializer {
                 dispatcher,
                 bridge.remoteTools(),
                 clock,
-                display.config());
+                display,
+                historySettings);
         ClientSettingsRuntime settings =
                 settingsResult instanceof ToolResult.Success<ClientSettingsRuntime> success
                         ? success.value()
@@ -103,6 +106,7 @@ public final class TomeWispFabricClient implements ClientModInitializer {
                 gson,
                 history,
                 new MinecraftGuideHistoryScope(Minecraft.getInstance()));
+        historySettings.bind(services);
         bridge.onDisconnect(services::disconnect);
         ClientLifecycleEvents.CLIENT_STOPPING.register(client ->
                 services.shutdown()
@@ -125,8 +129,7 @@ public final class TomeWispFabricClient implements ClientModInitializer {
                         Minecraft.getInstance().gui.setScreen(new TomeWispScreen(
                                 service,
                                 recipeClient,
-                                display.config(),
-                                display.failure(),
+                                display,
                                 openSettings));
                     }
                 };

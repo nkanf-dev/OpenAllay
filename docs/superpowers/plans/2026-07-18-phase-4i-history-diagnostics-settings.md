@@ -485,7 +485,7 @@ git commit -m "feat: complete history and diagnostics settings"
 - Modify: `docs/isme/SKMB.md`
 - Modify: `docs/superpowers/plans/2026-07-18-phase-4i-history-diagnostics-settings.md`
 
-- [ ] **Step 1: Add parity/shutdown assertions**
+- [x] **Step 1: Add parity/shutdown assertions**
 
 Assert both entrypoints supply the same `GuideDisplayRuntime`, settings service,
 GuideServiceManager history-administration binding, and config/database paths.
@@ -493,7 +493,7 @@ Shutdown must close/detach settings, cancel a probe, disconnect GuideService,
 flush/close history, close metadata, and close model resources without blocking
 the client thread. Common imports no loader APIs.
 
-- [ ] **Step 2: Run the deterministic clean product gate and security checks**
+- [x] **Step 2: Run the deterministic clean product gate and security checks**
 
 ```bash
 ./gradlew clean :common:test :fabric:build :neoforge:build

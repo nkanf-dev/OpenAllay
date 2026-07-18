@@ -7,6 +7,7 @@ import dev.tomewisp.client.ClientEventDispatcher;
 import dev.tomewisp.client.ClientModelRuntimeRegistry;
 import dev.tomewisp.guide.GuideFailure;
 import dev.tomewisp.guide.ui.GuideDisplayConfig;
+import dev.tomewisp.guide.ui.GuideDisplayRuntime;
 import dev.tomewisp.model.ProviderModelClients;
 import dev.tomewisp.model.config.ModelProfileDefinition;
 import dev.tomewisp.model.config.ModelProfilesConfig;
@@ -88,6 +89,86 @@ public record ClientSettingsRuntime(
             AgentToolExecutor extension,
             Clock clock,
             GuideDisplayConfig display) {
+        return createInternal(
+                product,
+                profilesPath,
+                legacyPath,
+                metadataCachePath,
+                capabilitiesPath,
+                recipesPath,
+                recipeRuntime,
+                environment,
+                dispatcher,
+                extension,
+                clock,
+                display,
+                unavailableDisplayActions(),
+                new ClientSettingsHistoryBinding(),
+                null);
+    }
+
+    public static ToolResult<ClientSettingsRuntime> create(
+            TomeWispRuntime product,
+            Path profilesPath,
+            Path legacyPath,
+            Path metadataCachePath,
+            Path capabilitiesPath,
+            Path recipesPath,
+            RecipeClientRuntime recipeRuntime,
+            Map<String, String> environment,
+            ClientEventDispatcher dispatcher,
+            AgentToolExecutor extension,
+            Clock clock,
+            GuideDisplayRuntime display,
+            ClientSettingsService.HistoryActions historyActions) {
+        Objects.requireNonNull(display, "display");
+        ClientSettingsService.DisplayActions displayActions =
+                new ClientSettingsService.DisplayActions() {
+                    @Override
+                    public ToolResult<GuideDisplayConfig> saveDisplay(
+                            GuideDisplayConfig candidate) {
+                        return display.save(candidate);
+                    }
+
+                    @Override
+                    public ToolResult<GuideDisplayConfig> reloadDisplay() {
+                        return display.reload();
+                    }
+                };
+        return createInternal(
+                product,
+                profilesPath,
+                legacyPath,
+                metadataCachePath,
+                capabilitiesPath,
+                recipesPath,
+                recipeRuntime,
+                environment,
+                dispatcher,
+                extension,
+                clock,
+                display.config(),
+                displayActions,
+                historyActions,
+                display.failure());
+    }
+
+    private static ToolResult<ClientSettingsRuntime> createInternal(
+            TomeWispRuntime product,
+            Path profilesPath,
+            Path legacyPath,
+            Path metadataCachePath,
+            Path capabilitiesPath,
+            Path recipesPath,
+            RecipeClientRuntime recipeRuntime,
+            Map<String, String> environment,
+            ClientEventDispatcher dispatcher,
+            AgentToolExecutor extension,
+            Clock clock,
+            GuideDisplayConfig display,
+            ClientSettingsService.DisplayActions displayActions,
+            ClientSettingsService.HistoryActions historyActions,
+            GuideFailure displayFailure) {
         Objects.requireNonNull(product, "product");
         Objects.requireNonNull(environment, "environment");
         Objects.requireNonNull(dispatcher, "dispatcher");
@@ -96,6 +177,8 @@ public record ClientSettingsRuntime(
         Objects.requireNonNull(capabilitiesPath, "capabilitiesPath");
         Objects.requireNonNull(recipesPath, "recipesPath");
         Objects.requireNonNull(recipeRuntime, "recipeRuntime");
+        Objects.requireNonNull(displayActions, "displayActions");
+        Objects.requireNonNull(historyActions, "historyActions");
 
         Map<String, String> environmentSnapshot = Map.copyOf(environment);
         ToolResult<ModelProfilesConfigLoader.Load> loaded = new ModelProfilesConfigLoader()
@@ -109,6 +192,10 @@ public record ClientSettingsRuntime(
                     (ToolResult.Failure<ModelProfilesConfigLoader.Load>) loaded;
             initial = unconfigured();
             startupNotice = SettingsNotice.failure(failure.code(), failure.message());
+        }
+        if (startupNotice == null && displayFailure != null) {
+            startupNotice = SettingsNotice.failure(
+                    displayFailure.code(), "Display settings are invalid");
         }
 
         try {
@@ -177,6 +264,7 @@ public record ClientSettingsRuntime(
                             .toList());
             ClientSettingsService service = new ClientSettingsService(
                     display,
+                    displayActions,
                     initialState,
                     backend.presentEnvironmentNames(),
                     backend,
@@ -185,6 +273,7 @@ public record ClientSettingsRuntime(
                     capabilities,
                     initialRecipes,
                     recipes,
+                    historyActions,
                     dispatcher,
                     command -> Thread.startVirtualThread(command),
                     startupNotice);
@@ -203,6 +292,22 @@ public record ClientSettingsRuntime(
 
     public CompletableFuture<Void> closeAsync() {
         return settings.closeAsync();
+    }
+
+    private static ClientSettingsService.DisplayActions unavailableDisplayActions() {
+        return new ClientSettingsService.DisplayActions() {
+            @Override
+            public ToolResult<GuideDisplayConfig> saveDisplay(GuideDisplayConfig candidate) {
+                return new ToolResult.Failure<>(
+                        "display_settings_unavailable", "Display settings are unavailable");
+            }
+
+            @Override
+            public ToolResult<GuideDisplayConfig> reloadDisplay() {
+                return new ToolResult.Failure<>(
+                        "display_settings_unavailable", "Display settings are unavailable");
+            }
+        };
     }
 
     private static ModelProfilesConfigLoader.Load unconfigured() {
