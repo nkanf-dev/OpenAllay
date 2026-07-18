@@ -104,14 +104,22 @@ classes or nested viewer artifact.
 
 ## Task 6: Integrate REI Through Its Public API
 
-- [ ] Read `DisplayRegistry.getAll()` and detach category, display location,
+- [x] Read `DisplayRegistry.getAll()` and detach category, display location,
   grouped inputs, outputs, item/fluid values, and stable fallback IDs.
-- [ ] Keep registry/display objects on the client thread.
-- [ ] Implement item recipes/usages with `ViewSearchBuilder`; exact navigation
+- [x] Keep registry/display objects on the client thread.
+- [x] Implement item recipes/usages with `ViewSearchBuilder`; exact navigation
   remains explicitly unsupported unless a verified selector exists.
-- [ ] Resolve Fabric/NeoForge compile-only dependencies without packaging REI.
-- [ ] Add adapter/failure/parity tests and commit
+- [x] Resolve Fabric/NeoForge compile-only dependencies without packaging REI.
+- [x] Add adapter/failure/parity tests and commit
   `feat: integrate rei recipe knowledge`.
+
+Verification on 2026-07-18 passed 171 common tests (170 passed and one opt-in
+skip) and clean Fabric/NeoForge production builds. Fake REI public-interface
+tests prove grouped item and fluid detachment, explicit and semantic fallback
+identity, generation finalization, lossy-component rejection, unavailable
+registry handling, and explicit unsupported exact navigation. Both production
+JARs contain the TomeWisp REI plugin adapters but package no REI or Architectury
+classes or nested viewer artifacts.
 
 ## Task 7: Connect Context, Tools, and Native Recipe Actions
 

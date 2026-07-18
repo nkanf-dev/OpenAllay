@@ -185,6 +185,11 @@ public final class ClientContextCapture {
             providers.add(inactiveViewer(
                     "viewer:jei", "plugin_unavailable", "JEI plugin has not initialized"));
         }
+        if (platform.isModLoaded("roughlyenoughitems") && providers.stream()
+                .noneMatch(provider -> provider.sourceId().equals("viewer:rei"))) {
+            providers.add(inactiveViewer(
+                    "viewer:rei", "plugin_unavailable", "REI plugin has not initialized"));
+        }
         return recipeKnowledge.capture(
                 evidence(
                         DataCompleteness.UNKNOWN,

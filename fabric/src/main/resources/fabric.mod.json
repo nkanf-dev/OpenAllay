@@ -19,6 +19,9 @@
         ],
         "client": [
             "dev.tomewisp.fabric.TomeWispFabricClient"
+        ],
+        "rei_client": [
+            "dev.tomewisp.integration.rei.TomeWispReiClientPlugin"
         ]
     },
     "depends": {

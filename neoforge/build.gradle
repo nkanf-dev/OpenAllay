@@ -8,6 +8,7 @@ dependencies {
     jarJar("org.xerial:sqlite-jdbc:${sqlite_jdbc_version}")
     compileOnly("mezz.jei:jei-${minecraft_version}-neoforge-api:${jei_version}")
     compileOnly("me.shedaniel:RoughlyEnoughItems-api-neoforge:${rei_version}")
+    compileOnly("dev.architectury:architectury-neoforge:${architectury_version}")
 }
 
 neoForge {
