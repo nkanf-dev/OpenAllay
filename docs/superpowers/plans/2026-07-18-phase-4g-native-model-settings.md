@@ -217,7 +217,7 @@ git add common/src/main/java/dev/tomewisp/client/ClientModelRuntimeRegistry.java
 git commit -m "feat: prepare atomic model profile replacement"
 ```
 
-### Task 3: Make metadata refresh generation-safe
+### Task 3: Remove stale direct metadata profile application
 
 **Files:**
 - Modify: `common/src/main/java/dev/tomewisp/model/metadata/ModelMetadataBootstrap.java`
@@ -226,7 +226,7 @@ git commit -m "feat: prepare atomic model profile replacement"
 - Modify: `common/src/test/java/dev/tomewisp/model/metadata/ModelMetadataBootstrapTest.java`
 - Modify: `common/src/test/java/dev/tomewisp/client/ClientModelRuntimeRegistryTest.java`
 
-- [ ] **Step 1: Replace direct profile-apply expectations with immutable cache-event tests**
+- [x] **Step 1: Replace direct profile-apply expectations with immutable cache-event tests**
 
 Create `ModelMetadataUpdate` containing immutable cache entries and a redacted
 failure. Prove bootstrap emits validated cache state but never constructs or
@@ -245,14 +245,14 @@ void refreshPublishesCacheUpdateWithoutApplyingProfileSnapshot() {
 }
 ```
 
-- [ ] **Step 2: Run metadata/registry tests and observe the old direct apply race**
+- [x] **Step 2: Run metadata/registry tests and observe the old direct apply race**
 
 ```bash
 ./gradlew :common:test --tests 'dev.tomewisp.model.metadata.*' \
   --tests 'dev.tomewisp.client.ClientModelRuntimeRegistryTest'
 ```
 
-- [ ] **Step 3: Emit cache updates and reconcile current generation**
+- [x] **Step 3: Emit cache updates and re-read current profiles at the caller boundary**
 
 ```java
 public record ModelMetadataUpdate(
@@ -269,7 +269,7 @@ calls `Consumer<ModelMetadataUpdate>`. No cache completion may call registry
 replacement. `ClientSettingsService` in Task 5 owns current profiles and
 generation-safe reconciliation.
 
-- [ ] **Step 4: Run tests and commit**
+- [x] **Step 4: Run tests and commit**
 
 ```bash
 ./gradlew :common:test --tests 'dev.tomewisp.model.metadata.*' \

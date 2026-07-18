@@ -25,6 +25,7 @@ import dev.tomewisp.model.config.ResolvedModelProfile;
 import dev.tomewisp.model.openai.OpenAiChatClient;
 import dev.tomewisp.model.metadata.ModelMetadataBootstrap;
 import dev.tomewisp.model.metadata.ModelMetadataCache;
+import dev.tomewisp.model.metadata.ModelMetadataUpdate;
 import dev.tomewisp.agent.trace.LiveTraceStore;
 import dev.tomewisp.tool.ToolResult;
 import java.nio.file.Path;
@@ -107,12 +108,20 @@ public final class ClientModelRuntimeRegistry implements GuideLocalEndpoint {
         }
         ClientModelRuntimeRegistry registry =
                 ((ToolResult.Success<ClientModelRuntimeRegistry>) created).value();
+        Map<String, String> environmentSnapshot = Map.copyOf(environment);
+        Consumer<ModelMetadataUpdate> reconcile = update -> {
+            ToolResult<ModelProfilesConfigLoader.Load> current = new ModelProfilesConfigLoader()
+                    .load(profilesPath, legacyPath, environmentSnapshot, update.entries());
+            if (current instanceof ToolResult.Success<ModelProfilesConfigLoader.Load> success) {
+                registry.replace(success.value());
+            }
+        };
         ModelMetadataBootstrap bootstrap = new ModelMetadataBootstrap(
                 new ModelMetadataCache(metadataCachePath),
                 profilesPath,
                 legacyPath,
-                environment,
-                registry::replace,
+                environmentSnapshot,
+                reconcile,
                 clock);
         registry.metadata = bootstrap;
         bootstrap.start();

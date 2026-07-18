@@ -24,25 +24,27 @@ public final class ModelMetadataBootstrap {
     private final Path profilesPath;
     private final Path legacyPath;
     private final Map<String, String> environment;
-    private final Consumer<ModelProfilesConfigLoader.Load> apply;
+    private final Consumer<ModelMetadataUpdate> updates;
     private final Function<ModelProfileDefinition, ModelMetadataResolver> resolverFactory;
     private final ModelProfilesConfigLoader loader = new ModelProfilesConfigLoader();
     private final List<CancellationSignal> active = new CopyOnWriteArrayList<>();
     private final AtomicReference<GuideFailure> failure = new AtomicReference<>();
+    private final AtomicReference<Map<ModelMetadata.Key, ModelMetadata>> lastEntries =
+            new AtomicReference<>(Map.of());
 
     public ModelMetadataBootstrap(
             ModelMetadataCache cache,
             Path profilesPath,
             Path legacyPath,
             Map<String, String> environment,
-            Consumer<ModelProfilesConfigLoader.Load> apply,
+            Consumer<ModelMetadataUpdate> updates,
             Clock clock) {
         this(
                 cache,
                 profilesPath,
                 legacyPath,
                 environment,
-                apply,
+                updates,
                 profile -> new OpenRouterMetadataResolver(
                         clock,
                         profile.connectTimeout(),
@@ -54,13 +56,13 @@ public final class ModelMetadataBootstrap {
             Path profilesPath,
             Path legacyPath,
             Map<String, String> environment,
-            Consumer<ModelProfilesConfigLoader.Load> apply,
+            Consumer<ModelMetadataUpdate> updates,
             Function<ModelProfileDefinition, ModelMetadataResolver> resolverFactory) {
         this.cache = Objects.requireNonNull(cache, "cache");
         this.profilesPath = Objects.requireNonNull(profilesPath, "profilesPath");
         this.legacyPath = Objects.requireNonNull(legacyPath, "legacyPath");
         this.environment = Map.copyOf(environment);
-        this.apply = Objects.requireNonNull(apply, "apply");
+        this.updates = Objects.requireNonNull(updates, "updates");
         this.resolverFactory = Objects.requireNonNull(resolverFactory, "resolverFactory");
     }
 
@@ -83,16 +85,19 @@ public final class ModelMetadataBootstrap {
 
     private CompletableFuture<Void> refresh(boolean force) {
         return cache.load().thenCompose(snapshot -> {
+            lastEntries.set(snapshot.entries());
             if (snapshot.failure() != null) {
                 failure.set(snapshot.failure());
+                publish(snapshot.entries(), snapshot.failure());
                 return CompletableFuture.completedFuture(null);
             }
             ModelProfilesConfigLoader.Load loaded = load(snapshot.entries());
             if (loaded == null) {
+                publish(snapshot.entries(), failure.get());
                 return CompletableFuture.completedFuture(null);
             }
-            apply.accept(loaded);
             failure.set(null);
+            publish(snapshot.entries(), null);
             List<CompletableFuture<Void>> refreshes = new ArrayList<>();
             for (ModelProfileDefinition profile : loaded.config().profiles()) {
                 if (!OpenRouterMetadataResolver.supports(profile.baseUri())) {
@@ -114,22 +119,29 @@ public final class ModelMetadataBootstrap {
                     .thenAccept(updated -> {
                         if (updated.failure() != null) {
                             failure.set(updated.failure());
+                            publish(lastEntries.get(), updated.failure());
                             return;
                         }
-                        ModelProfilesConfigLoader.Load replacement = load(updated.entries());
-                        if (replacement != null) {
-                            apply.accept(replacement);
-                        }
+                        lastEntries.set(updated.entries());
+                        publish(updated.entries(), failure.get());
                     });
         });
     }
 
     private CompletableFuture<Void> safeRefresh(boolean force) {
         return refresh(force).exceptionally(unexpected -> {
-            failure.set(new GuideFailure(
-                    "metadata_unavailable", "Model metadata refresh is unavailable"));
+            GuideFailure unavailable = new GuideFailure(
+                    "metadata_unavailable", "Model metadata refresh is unavailable");
+            failure.set(unavailable);
+            publish(lastEntries.get(), unavailable);
             return null;
         });
+    }
+
+    private void publish(
+            Map<ModelMetadata.Key, ModelMetadata> entries,
+            GuideFailure currentFailure) {
+        updates.accept(new ModelMetadataUpdate(entries, currentFailure));
     }
 
     private CompletableFuture<Void> refresh(ModelProfileDefinition profile) {
