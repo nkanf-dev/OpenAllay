@@ -13,7 +13,9 @@ public record GuideSnapshot(
         boolean serverModelAvailable,
         GuidePersistenceSnapshot persistence,
         List<GuideSessionSnapshot> sessions,
-        Instant updatedAt) {
+        Instant updatedAt,
+        GuideModelSelection modelSelection,
+        List<GuideClientModelProfile> clientProfiles) {
     public GuideSnapshot {
         java.util.Objects.requireNonNull(actorId, "actorId");
         if (selectedSession == null || selectedSession.isBlank()) {
@@ -25,6 +27,35 @@ public record GuideSnapshot(
                 .sorted(Comparator.comparing(GuideSessionSnapshot::sessionId))
                 .toList();
         java.util.Objects.requireNonNull(updatedAt, "updatedAt");
+        java.util.Objects.requireNonNull(modelSelection, "modelSelection");
+        clientProfiles = List.copyOf(clientProfiles);
+        if (modelMode != modelSelection.modelMode()) {
+            throw new IllegalArgumentException("modelMode must match the selected session model");
+        }
+    }
+
+    public GuideSnapshot(
+            UUID actorId,
+            String selectedSession,
+            GuideModelMode modelMode,
+            boolean clientModelAvailable,
+            boolean serverModelAvailable,
+            GuidePersistenceSnapshot persistence,
+            List<GuideSessionSnapshot> sessions,
+            Instant updatedAt) {
+        this(
+                actorId,
+                selectedSession,
+                modelMode,
+                clientModelAvailable,
+                serverModelAvailable,
+                persistence,
+                sessions,
+                updatedAt,
+                modelMode == GuideModelMode.SERVER
+                        ? GuideModelSelection.server()
+                        : GuideModelSelection.client("default"),
+                List.of());
     }
 
     public GuideSnapshot(
@@ -43,6 +74,10 @@ public record GuideSnapshot(
                 serverModelAvailable,
                 GuidePersistenceSnapshot.disabled(),
                 sessions,
-                updatedAt);
+                updatedAt,
+                modelMode == GuideModelMode.SERVER
+                        ? GuideModelSelection.server()
+                        : GuideModelSelection.client("default"),
+                List.of());
     }
 }

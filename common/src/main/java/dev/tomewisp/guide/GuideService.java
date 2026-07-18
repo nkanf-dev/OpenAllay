@@ -18,6 +18,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -40,7 +41,6 @@ public final class GuideService {
             new CopyOnWriteArrayList<>();
     private volatile GuideSnapshot snapshot;
     private String selectedSession = "main";
-    private GuideModelMode modelMode = GuideModelMode.CLIENT;
     private GuidePersistenceSnapshot persistence;
     private boolean allowHistoryWrites;
     private boolean disconnected;
@@ -81,7 +81,7 @@ public final class GuideService {
         this.historyScope = historyScope;
         this.history = history;
         reducer = new GuideStateReducer(gson);
-        sessions.put("main", new SessionState("main"));
+        sessions.put("main", new SessionState("main", defaultClientSelection()));
         persistence = history == null
                 ? GuidePersistenceSnapshot.disabled()
                 : GuidePersistenceSnapshot.loading();
@@ -165,7 +165,8 @@ public final class GuideService {
                         "invalid_session", "Session ID may contain letters, numbers, dot, underscore, and dash"));
                 return;
             }
-            sessions.computeIfAbsent(sessionId, SessionState::new);
+            sessions.computeIfAbsent(sessionId,
+                    id -> new SessionState(id, defaultClientSelection()));
             selectedSession = sessionId;
             publish();
             result.complete(new ToolResult.Success<>(sessionId));
@@ -198,7 +199,7 @@ public final class GuideService {
             session.requests.forEach(request -> requestSessions.remove(request.requestId()));
             sessions.remove(sessionId);
             if (sessions.isEmpty()) {
-                sessions.put("main", new SessionState("main"));
+                sessions.put("main", new SessionState("main", defaultClientSelection()));
             }
             if (selectedSession.equals(sessionId)) {
                 selectedSession = sessions.containsKey("main")
@@ -241,14 +242,39 @@ public final class GuideService {
             if (rejectWhileHistoryLoads(result)) {
                 return;
             }
-            if (mode == GuideModelMode.SERVER && !remote.serverModelAvailable()) {
-                result.complete(new ToolResult.Failure<>(
-                        "capability_unavailable", "The connected server does not provide a model"));
+            Objects.requireNonNull(mode, "mode");
+            SessionState session = sessions.get(selectedSession);
+            GuideModelSelection selection = mode == GuideModelMode.SERVER
+                    ? GuideModelSelection.server()
+                    : GuideModelSelection.client(session.lastClientProfileId);
+            GuideFailure failure = selectionFailure(selection);
+            if (failure != null) {
+                result.complete(new ToolResult.Failure<>(failure.code(), failure.message()));
                 return;
             }
-            modelMode = Objects.requireNonNull(mode, "mode");
+            select(session, selection);
             publish();
             result.complete(new ToolResult.Success<>(mode));
+        });
+        return result;
+    }
+
+    public CompletableFuture<ToolResult<GuideModelSelection>> setModelSelection(
+            GuideModelSelection selection) {
+        CompletableFuture<ToolResult<GuideModelSelection>> result = new CompletableFuture<>();
+        dispatcher.execute(() -> {
+            if (rejectWhileHistoryLoads(result)) {
+                return;
+            }
+            Objects.requireNonNull(selection, "selection");
+            GuideFailure failure = selectionFailure(selection);
+            if (failure != null) {
+                result.complete(new ToolResult.Failure<>(failure.code(), failure.message()));
+                return;
+            }
+            select(sessions.get(selectedSession), selection);
+            publish();
+            result.complete(new ToolResult.Success<>(selection));
         });
         return result;
     }
@@ -299,9 +325,8 @@ public final class GuideService {
             remote.disconnect();
             requestSessions.clear();
             sessions.clear();
-            sessions.put("main", new SessionState("main"));
+            sessions.put("main", new SessionState("main", defaultClientSelection()));
             selectedSession = "main";
-            modelMode = GuideModelMode.CLIENT;
             publishWithoutSave();
             durable.handle((ignored, failure) -> null).thenRun(() -> result.complete(null));
         });
@@ -322,14 +347,16 @@ public final class GuideService {
                     "invalid_arguments", "Question must not be blank"));
             return;
         }
-        SessionState session = sessions.computeIfAbsent(sessionId, SessionState::new);
+        SessionState session = sessions.computeIfAbsent(
+                sessionId, id -> new SessionState(id, defaultClientSelection()));
         if (active(session) != null) {
             result.complete(new ToolResult.Failure<>(
                     "agent_busy", "This guide session already has an active request"));
             return;
         }
+        GuideModelSelection capturedSelection = session.modelSelection;
         GuideTopology topology;
-        if (modelMode == GuideModelMode.SERVER) {
+        if (capturedSelection.kind() == GuideModelSelection.Kind.SERVER) {
             if (!remote.serverModelAvailable()) {
                 result.complete(new ToolResult.Failure<>(
                         "capability_unavailable", "The connected server does not provide a model"));
@@ -337,9 +364,9 @@ public final class GuideService {
             }
             topology = GuideTopology.SERVER;
         } else {
-            if (local == null) {
-                result.complete(new ToolResult.Failure<>(
-                        "model_not_configured", "No usable client model is configured"));
+            GuideFailure failure = selectionFailure(capturedSelection);
+            if (failure != null) {
+                result.complete(new ToolResult.Failure<>(failure.code(), failure.message()));
                 return;
             }
             topology = remote.serverToolsAvailable()
@@ -350,7 +377,7 @@ public final class GuideService {
         UUID requestId = UUID.randomUUID();
         Instant now = clock.instant();
         GuideRequestSnapshot request = GuideRequestSnapshot.start(
-                requestId, sessionId, topology, question, now);
+                requestId, sessionId, topology, question, now, capturedSelection);
         session.requests.add(request);
         session.messages.add(new GuideMessage(
                 requestId, GuideMessage.Role.USER, question, now));
@@ -373,8 +400,16 @@ public final class GuideService {
                 return;
             }
         } else {
+            Set<dev.tomewisp.context.ContextCapability> requiredContext;
+            try {
+                requiredContext = local.requiredContext(capturedSelection.profileId());
+            } catch (GuideModelProfileException failure) {
+                apply(requestId, new AgentEvent.Failed(failure.code(), failure.getMessage()));
+                result.complete(new ToolResult.Failure<>(failure.code(), failure.getMessage()));
+                return;
+            }
             ToolResult<ToolInvocationContext> captured =
-                    contexts.capture(local.requiredContext(), requestId.toString());
+                    contexts.capture(requiredContext, requestId.toString());
             if (captured instanceof ToolResult.Failure<ToolInvocationContext> failure) {
                 apply(requestId, new AgentEvent.Failed(failure.code(), failure.message()));
                 result.complete(new ToolResult.Failure<>(failure.code(), failure.message()));
@@ -383,7 +418,14 @@ public final class GuideService {
             ToolInvocationContext context =
                     ((ToolResult.Success<ToolInvocationContext>) captured).value();
             try {
-                local.ask(actor, sessionId, requestId, question, context, event -> apply(requestId, event))
+                local.ask(
+                                capturedSelection.profileId(),
+                                actor,
+                                sessionId,
+                                requestId,
+                                question,
+                                context,
+                                event -> apply(requestId, event))
                         .whenComplete((ignored, throwable) -> {
                             if (throwable != null) {
                                 dispatcher.execute(() -> failIfActive(requestId, throwable));
@@ -434,7 +476,13 @@ public final class GuideService {
     private void failIfActive(UUID requestId, Throwable throwable) {
         GuideRequestSnapshot request = find(requestId);
         if (request != null && !request.terminal()) {
-            apply(requestId, new AgentEvent.Failed("agent_failure", message(throwable)));
+            Throwable failure = unwrap(throwable);
+            if (failure instanceof GuideModelProfileException profileFailure) {
+                apply(requestId, new AgentEvent.Failed(
+                        profileFailure.code(), profileFailure.getMessage()));
+            } else {
+                apply(requestId, new AgentEvent.Failed("agent_failure", message(failure)));
+            }
         }
     }
 
@@ -487,17 +535,25 @@ public final class GuideService {
     private GuideSnapshot buildSnapshot() {
         List<GuideSessionSnapshot> copies = sessions.values().stream()
                 .map(session -> new GuideSessionSnapshot(
-                        session.id, session.messages, session.requests, session.checkpoints))
+                        session.id,
+                        session.messages,
+                        session.requests,
+                        session.checkpoints,
+                        session.modelSelection))
                 .toList();
+        GuideModelSelection currentSelection = sessions.get(selectedSession).modelSelection;
+        List<GuideClientModelProfile> profiles = local == null ? List.of() : local.profiles();
         return new GuideSnapshot(
                 actor,
                 selectedSession,
-                modelMode,
-                local != null,
+                currentSelection.modelMode(),
+                profiles.stream().anyMatch(GuideClientModelProfile::available),
                 remote.serverModelAvailable(),
                 persistence,
                 copies,
-                clock.instant());
+                clock.instant(),
+                currentSelection,
+                profiles);
     }
 
     private void startHistoryLoad() {
@@ -567,7 +623,13 @@ public final class GuideService {
         sessions.clear();
         requestSessions.clear();
         for (GuideSessionSnapshot snapshot : partition.sessions()) {
-            SessionState session = new SessionState(snapshot.sessionId());
+            GuideModelSelection restored = partition.modelMode() == GuideModelMode.SERVER
+                    ? GuideModelSelection.server()
+                    : defaultClientSelection();
+            SessionState session = new SessionState(snapshot.sessionId(), restored);
+            if (restored.kind() == GuideModelSelection.Kind.SERVER) {
+                session.lastClientProfileId = defaultClientSelection().profileId();
+            }
             session.messages.addAll(snapshot.messages());
             session.requests.addAll(snapshot.requests());
             session.checkpoints.addAll(snapshot.checkpoints());
@@ -583,7 +645,6 @@ public final class GuideService {
             }
         }
         selectedSession = partition.selectedSession();
-        modelMode = partition.modelMode();
     }
 
     private void scheduleHistorySave() {
@@ -630,13 +691,14 @@ public final class GuideService {
                         session.id,
                         session.messages,
                         session.requests.stream().map(GuideService::durableRequest).toList(),
-                        session.checkpoints))
+                        session.checkpoints,
+                        session.modelSelection))
                 .toList();
         return new GuideHistoryPartition(
                 GuideHistoryPartition.SCHEMA_VERSION,
                 historyScope,
                 selectedSession,
-                modelMode,
+                sessions.get(selectedSession).modelSelection.modelMode(),
                 durableSessions,
                 clock.instant());
     }
@@ -669,7 +731,8 @@ public final class GuideService {
                 request.failure(),
                 request.createdAt(),
                 request.updatedAt(),
-                request.terminalAt());
+                request.terminalAt(),
+                request.modelSelection());
     }
 
     private <T> boolean rejectWhileHistoryLoads(CompletableFuture<ToolResult<T>> result) {
@@ -705,6 +768,37 @@ public final class GuideService {
         return new GuideFailure(fallbackCode, "Durable guide history is unavailable");
     }
 
+    private GuideModelSelection defaultClientSelection() {
+        return GuideModelSelection.client(local == null ? "default" : local.defaultProfileId());
+    }
+
+    private GuideFailure selectionFailure(GuideModelSelection selection) {
+        if (selection.kind() == GuideModelSelection.Kind.SERVER) {
+            return remote.serverModelAvailable()
+                    ? null
+                    : new GuideFailure(
+                            "capability_unavailable",
+                            "The connected server does not provide a model");
+        }
+        if (local == null) {
+            return new GuideFailure(
+                    "model_not_configured", "No usable client model is configured");
+        }
+        GuideClientModelProfile profile = local.profile(selection.profileId()).orElse(null);
+        if (profile == null) {
+            return new GuideFailure(
+                    "model_not_configured", "The selected client model profile does not exist");
+        }
+        return profile.available() ? null : profile.failure();
+    }
+
+    private static void select(SessionState session, GuideModelSelection selection) {
+        session.modelSelection = selection;
+        if (selection.kind() == GuideModelSelection.Kind.CLIENT) {
+            session.lastClientProfileId = selection.profileId();
+        }
+    }
+
     private static boolean validSession(String value) {
         return value != null && value.matches("[a-zA-Z0-9_.-]+");
     }
@@ -714,14 +808,20 @@ public final class GuideService {
     }
 
     private static String message(Throwable failure) {
-        Throwable current = failure;
-        while (current instanceof java.util.concurrent.CompletionException
-                && current.getCause() != null) {
-            current = current.getCause();
-        }
+        Throwable current = unwrap(failure);
         return current.getMessage() == null
                 ? current.getClass().getSimpleName()
                 : current.getMessage();
+    }
+
+    private static Throwable unwrap(Throwable failure) {
+        Throwable current = failure;
+        while ((current instanceof java.util.concurrent.CompletionException
+                        || current instanceof java.util.concurrent.ExecutionException)
+                && current.getCause() != null) {
+            current = current.getCause();
+        }
+        return current;
     }
 
     private static final class SessionState {
@@ -729,12 +829,17 @@ public final class GuideService {
         private final List<GuideMessage> messages = new ArrayList<>();
         private final List<GuideRequestSnapshot> requests = new ArrayList<>();
         private final List<ContextCheckpoint> checkpoints = new ArrayList<>();
+        private GuideModelSelection modelSelection;
+        private String lastClientProfileId;
 
-        private SessionState(String id) {
+        private SessionState(String id, GuideModelSelection modelSelection) {
             if (!validSession(id)) {
                 throw new IllegalArgumentException("invalid sessionId");
             }
             this.id = id;
+            this.modelSelection = Objects.requireNonNull(modelSelection, "modelSelection");
+            this.lastClientProfileId = modelSelection.kind() == GuideModelSelection.Kind.CLIENT
+                    ? modelSelection.profileId() : "default";
         }
     }
 }

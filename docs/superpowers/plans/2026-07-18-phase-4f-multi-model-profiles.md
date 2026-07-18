@@ -153,7 +153,7 @@ in-flight call holding the previous runtime reference.
 - Test: `common/src/test/java/dev/tomewisp/guide/GuideServiceModelSelectionTest.java`
 - Modify: `common/src/test/java/dev/tomewisp/guide/GuideServiceTest.java`
 
-- [ ] **Step 1: Write red isolation/capture/switch/retry/failure tests**
+- [x] **Step 1: Write red isolation/capture/switch/retry/failure tests**
 
 Prove two sessions concurrently select different profiles; switching during an
 active request changes the session's next preference but not the request's
@@ -161,7 +161,7 @@ captured selection; retry uses the current preference; switching provider/model
 does not clear messages/checkpoints; missing local profile, invalid profile, and
 unavailable server model return distinct failures without dispatch.
 
-- [ ] **Step 2: Introduce the closed selection value**
+- [x] **Step 2: Introduce the closed selection value**
 
 `GuideModelSelection` represents exactly `CLIENT(profileId)` or `SERVER`, uses
 the stable session/profile ID grammar, derives the legacy `GuideModelMode`, and
@@ -169,7 +169,7 @@ has a strict JSON projection for persistence. Session and request snapshots
 carry preferred and captured selections respectively; compatibility
 constructors use `client("default")` only for old tests/callers.
 
-- [ ] **Step 3: Make session state authoritative**
+- [x] **Step 3: Make session state authoritative**
 
 New sessions inherit the registry default client profile. `setModelSelection`
 updates only the selected session and persists immediately, even while active.
@@ -179,20 +179,29 @@ captures the selection before creating the request and passes the captured
 profile to the registry. Snapshot-level `modelMode` becomes a derived
 compatibility projection.
 
-- [ ] **Step 4: Preserve cancellation, disconnect, and capability semantics**
+- [x] **Step 4: Preserve cancellation, disconnect, and capability semantics**
 
 Cancellation follows the request's captured topology. Server capability loss
 fails only active server requests and leaves future preferences visible.
 Disconnect clears connection-scoped sessions and creates a fresh main session
 with the configured default; it never mutates a captured in-flight runtime.
 
-- [ ] **Step 5: Run state/race tests and commit**
+- [x] **Step 5: Run state/race tests and commit**
 
 ```bash
 ./gradlew :common:test --tests 'dev.tomewisp.guide.GuideService*' \
   --tests 'dev.tomewisp.guide.GuideStateReducerTest'
 git commit -m "feat: select models per guide session"
 ```
+
+The red run failed on the absent closed selection/snapshot API. The focused
+service/reducer suites and full common suite now pass. Each session owns a
+preferred selection and remembered client profile; every request captures its
+actual choice before dispatch. Switching while active preserves that request,
+messages, and checkpoints; retry uses the current choice. Removed remembered
+profiles remain selected and fail future submission as `model_not_configured`,
+while invalid profiles keep their own structured failure. The legacy mode API
+is now only a compatibility adapter over the selected session.
 
 ### Task 4: Durable schema v3 selection migration
 

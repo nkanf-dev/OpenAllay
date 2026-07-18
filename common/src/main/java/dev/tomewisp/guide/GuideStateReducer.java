@@ -147,7 +147,8 @@ public final class GuideStateReducer {
                 failure,
                 current.createdAt(),
                 now,
-                terminalAt);
+                terminalAt,
+                current.modelSelection());
     }
 
     private static List<GuideTimelineEntry> appendText(
@@ -258,7 +259,8 @@ public final class GuideStateReducer {
                 new GuideFailure("timeline_protocol_error", message),
                 current.createdAt(),
                 now,
-                now);
+                now,
+                current.modelSelection());
     }
 
     private static GuideRequestStatus state(AgentState state) {

@@ -18,7 +18,8 @@ public record GuideRequestSnapshot(
         GuideFailure failure,
         Instant createdAt,
         Instant updatedAt,
-        Instant terminalAt) {
+        Instant terminalAt,
+        GuideModelSelection modelSelection) {
     public GuideRequestSnapshot {
         java.util.Objects.requireNonNull(requestId, "requestId");
         if (sessionId == null || !sessionId.matches("[a-zA-Z0-9_.-]+")) {
@@ -42,6 +43,48 @@ public record GuideRequestSnapshot(
         }
         java.util.Objects.requireNonNull(createdAt, "createdAt");
         java.util.Objects.requireNonNull(updatedAt, "updatedAt");
+        java.util.Objects.requireNonNull(modelSelection, "modelSelection");
+        if (modelSelection.modelMode() == GuideModelMode.SERVER
+                && topology != GuideTopology.SERVER) {
+            throw new IllegalArgumentException("server model selection requires server topology");
+        }
+        if (modelSelection.modelMode() == GuideModelMode.CLIENT
+                && topology == GuideTopology.SERVER) {
+            throw new IllegalArgumentException("client model selection cannot use server topology");
+        }
+    }
+
+    public GuideRequestSnapshot(
+            UUID requestId,
+            String sessionId,
+            GuideTopology topology,
+            String userMessage,
+            List<GuideTimelineEntry> timeline,
+            GuideRequestStatus status,
+            List<GuideSource> sources,
+            ModelUsage usage,
+            Long retryAfterMillis,
+            GuideFailure failure,
+            Instant createdAt,
+            Instant updatedAt,
+            Instant terminalAt) {
+        this(
+                requestId,
+                sessionId,
+                topology,
+                userMessage,
+                timeline,
+                status,
+                sources,
+                usage,
+                retryAfterMillis,
+                failure,
+                createdAt,
+                updatedAt,
+                terminalAt,
+                topology == GuideTopology.SERVER
+                        ? GuideModelSelection.server()
+                        : GuideModelSelection.client("default"));
     }
 
     public static GuideRequestSnapshot start(
@@ -50,6 +93,24 @@ public record GuideRequestSnapshot(
             GuideTopology topology,
             String userMessage,
             Instant now) {
+        return start(
+                requestId,
+                sessionId,
+                topology,
+                userMessage,
+                now,
+                topology == GuideTopology.SERVER
+                        ? GuideModelSelection.server()
+                        : GuideModelSelection.client("default"));
+    }
+
+    public static GuideRequestSnapshot start(
+            UUID requestId,
+            String sessionId,
+            GuideTopology topology,
+            String userMessage,
+            Instant now,
+            GuideModelSelection modelSelection) {
         return new GuideRequestSnapshot(
                 requestId,
                 sessionId,
@@ -63,7 +124,8 @@ public record GuideRequestSnapshot(
                 null,
                 now,
                 now,
-                null);
+                null,
+                modelSelection);
     }
 
     public boolean terminal() {
