@@ -29,7 +29,7 @@
 - Test: `common/src/test/java/dev/tomewisp/settings/AtomicSettingsFileTest.java`
 - Test: `common/src/test/java/dev/tomewisp/model/config/ModelProfilesConfigWriterTest.java`
 
-- [ ] **Step 1: Write failing atomicity and canonical round-trip tests**
+- [x] **Step 1: Write failing atomicity and canonical round-trip tests**
 
 Cover successful sibling replacement, move failure preserving the original,
 best-effort temporary cleanup, exact field order/shape, no inline secret field,
@@ -65,7 +65,7 @@ void encodedProfilesRoundTripWithoutCredentialFields() {
 }
 ```
 
-- [ ] **Step 2: Run tests and verify they fail because the new types do not exist**
+- [x] **Step 2: Run tests and verify they fail because the new types do not exist**
 
 ```bash
 ./gradlew :common:test --tests 'dev.tomewisp.settings.AtomicSettingsFileTest' \
@@ -75,7 +75,7 @@ void encodedProfilesRoundTripWithoutCredentialFields() {
 Expected: compilation failure for `AtomicSettingsFile` and
 `ModelProfilesConfigWriter`.
 
-- [ ] **Step 3: Implement narrow atomic mechanics and canonical encoding**
+- [x] **Step 3: Implement narrow atomic mechanics and canonical encoding**
 
 Use a package-testable move port and a stable exception code. The mechanics
 must create the parent directory, write UTF-8 to a temporary sibling, and
@@ -108,7 +108,7 @@ public final class ModelProfilesConfigWriter {
 `encodeProfiles` must emit exactly the loader's required/optional fields and
 metadata provenance. Never add `apiKey`, resolved availability, or diagnostics.
 
-- [ ] **Step 4: Run focused tests and commit**
+- [x] **Step 4: Run focused tests and commit**
 
 ```bash
 ./gradlew :common:test --tests 'dev.tomewisp.settings.AtomicSettingsFileTest' \
