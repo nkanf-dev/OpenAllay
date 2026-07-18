@@ -369,7 +369,7 @@ git commit -m "feat: capture per-request client capabilities"
 - Create: `common/src/test/java/dev/tomewisp/capability/CapabilitySettingsCatalogTest.java`
 - Modify: `common/src/main/java/dev/tomewisp/TomeWispBootstrap.java`
 
-- [ ] **Step 1: Write registration authority, ordering, and child-route tests**
+- [x] **Step 1: Write registration authority, ordering, and child-route tests**
 
 ```java
 @Test
@@ -390,13 +390,13 @@ void duplicateOrResourceAuthoredDescriptorFailsClosed() {
 }
 ```
 
-- [ ] **Step 2: Run catalog tests and verify missing types**
+- [x] **Step 2: Run catalog tests and verify missing types**
 
 ```bash
 ./gradlew :common:test --tests 'dev.tomewisp.capability.CapabilitySettingsCatalogTest'
 ```
 
-- [ ] **Step 3: Implement code-owned descriptor registration and projection**
+- [x] **Step 3: Implement code-owned descriptor registration and projection**
 
 ```java
 public record CapabilitySettingsDescriptor(
@@ -418,7 +418,7 @@ URLs, arbitrary paths, JSON schemas, Tools, or permissions. Bootstrap registers
 known Tool/Skill/source descriptors; loader integrations may register only
 their common recipe provider/navigator descriptor through existing bridges.
 
-- [ ] **Step 4: Run tests and commit**
+- [x] **Step 4: Run tests and commit**
 
 ```bash
 ./gradlew :common:test --tests 'dev.tomewisp.capability.*' \

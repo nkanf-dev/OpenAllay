@@ -1,6 +1,10 @@
 package dev.tomewisp;
 
 import com.google.gson.Gson;
+import dev.tomewisp.capability.CapabilityChildPage;
+import dev.tomewisp.capability.CapabilityKind;
+import dev.tomewisp.capability.CapabilitySettingsCatalog;
+import dev.tomewisp.capability.CapabilitySettingsDescriptor;
 import dev.tomewisp.context.minecraft.MinecraftContextCapture;
 import dev.tomewisp.devmode.DevelopmentToolInspector;
 import dev.tomewisp.knowledge.KnowledgeRegistry;
@@ -30,6 +34,7 @@ import dev.tomewisp.trace.json.TraceParser;
 import dev.tomewisp.trace.minecraft.TraceReplayService;
 import dev.tomewisp.trace.minecraft.TraceRepository;
 import dev.tomewisp.trace.replay.AgentTraceReplayer;
+import java.util.ArrayList;
 import java.util.List;
 
 public final class TomeWispBootstrap {
@@ -70,6 +75,7 @@ public final class TomeWispBootstrap {
                 new TraceRepository(new TraceParser()),
                 new MinecraftContextCapture(gson),
                 new AgentTraceReplayer(tools, gson));
+        CapabilitySettingsCatalog capabilitySettings = capabilitySettings(tools, skills);
         runtime = new TomeWispRuntime(
                 platform,
                 tools,
@@ -77,12 +83,49 @@ public final class TomeWispBootstrap {
                 patchouliMultiblocks,
                 skills,
                 new DevelopmentToolInspector(tools),
-                traceReplay);
+                traceReplay,
+                capabilitySettings);
         TomeWispConstants.LOGGER.info(
                 "Initialized TomeWisp on {} with {} tool(s)",
                 platform.platformName(),
                 tools.descriptors().size());
         return runtime;
+    }
+
+    static CapabilitySettingsCatalog capabilitySettings(
+            ToolRegistry tools, SkillRepository skills) {
+        CapabilitySettingsCatalog catalog = new CapabilitySettingsCatalog();
+        List<CapabilitySettingsDescriptor> descriptors = new ArrayList<>();
+        descriptors.add(descriptor("patchouli", CapabilityKind.KNOWLEDGE_SOURCE, "source", null));
+        descriptors.add(descriptor("ftbquests", CapabilityKind.KNOWLEDGE_SOURCE, "source", null));
+        descriptors.add(descriptor(
+                "tomewisp:recipes",
+                CapabilityKind.TOOL,
+                "tool",
+                new CapabilityChildPage("tomewisp:recipe_settings")));
+        tools.registrations().stream()
+                .filter(registration -> !registration.tool().descriptor().id()
+                        .equals("tomewisp:load_skill"))
+                .map(registration -> descriptor(
+                        registration.tool().descriptor().id(), CapabilityKind.TOOL, "tool", null))
+                .forEach(descriptors::add);
+        skills.metadata().stream()
+                .map(metadata -> descriptor(
+                        metadata.name(), CapabilityKind.SKILL, "skill", null))
+                .forEach(descriptors::add);
+        catalog.register("tomewisp:core", descriptors);
+        return catalog;
+    }
+
+    private static CapabilitySettingsDescriptor descriptor(
+            String id,
+            CapabilityKind kind,
+            String keyKind,
+            CapabilityChildPage childPage) {
+        String keyId = id.replace(':', '_').replace('/', '_').replace('-', '_');
+        String prefix = "settings.tomewisp.capability." + keyKind + "." + keyId;
+        return new CapabilitySettingsDescriptor(
+                id, kind, prefix + ".title", prefix + ".description", childPage);
     }
 
     static List<Tool<?, ?>> builtinTools(PlatformService platform) {
