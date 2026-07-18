@@ -25,6 +25,7 @@ accepted and contains explicit approval evidence.
 | SKMB-2026-07-18-015 | accepted | settings model administration and live connection testing | A, B, C, D, E, F, G | decisions/2026-07-18-015-settings-model-administration.md | f1ba74b; implemented through 6498516 |
 | SKMB-2026-07-18-016 | accepted | native settings coordination and domain config writes | A, B, C, E, F | decisions/2026-07-18-016-native-settings-coordination.md | e7acf43, 507d628; implemented through a3ae197 |
 | SKMB-2026-07-18-017 | accepted | knowledge/capability catalog and local Tool/Skill policy | B, C, D, E, F | decisions/2026-07-18-017-capability-settings-policy.md | e7acf43, 507d628; implemented through 771cc94 |
+| SKMB-2026-07-18-018 | accepted | semantic messages, controlled components, and windowed history | A, B, C, D, E, F | decisions/2026-07-18-018-semantic-history-windowing.md | pending |
 
 SKMB-2026-07-18-006 is implemented by `a0eaeff`, `19ab90f`, and `c6ca6bc`.
 Its deterministic clean-build and packaged-driver evidence is recorded in the
@@ -74,6 +75,10 @@ of the consolidated Phase 4 audit.
 | persistence_unavailable | The active service is usable but durable history cannot be read or written reliably | GuideHistoryStore | Never claim an unsaved record was persisted | SKMB-2026-07-18-005 |
 | history_loading | The current durable partition is loading off the client thread | GuideHistoryRepository | New model requests fail explicitly until hydration completes | SKMB-2026-07-18-006 |
 | integration_degraded | One optional recipe/viewer adapter failed while other sources remain available | RecipeCatalog | Publish diagnostics and preserve unaffected snapshots | SKMB-2026-07-18-005 |
+| semantic_tail_literal | The mutable assistant tail contains incomplete, unsupported, or not-yet-validated syntax | SemanticMessageParser | Readable and non-interactive | SKMB-2026-07-18-018 |
+| semantic_tail_validated | Completed assistant blocks have a strict immutable semantic projection | SemanticMessageParser | Cached by content hash with fallback text | SKMB-2026-07-18-018 |
+| history_page_loading | One viewport neighborhood is loading for the current actor/session generation | GuideHistoryRepository | Does not block unrelated sessions or context reads | SKMB-2026-07-18-018 |
+| context_loading | A model-budgeted durable context seed is loading before provider dispatch | GuideService | Cancellable; no provider request has started | SKMB-2026-07-18-018 |
 
 ## Transition Decisions
 
@@ -120,6 +125,11 @@ of the consolidated Phase 4 audit.
 | T39 | settings idle | player starts connection test after cost notice | connection_testing | Send one isolated cancellable real model probe; discard content and retain only redacted transient status/latency | SKMB-2026-07-18-015 |
 | T40 | settings idle | confirmed typed settings action starts | settings_mutating | Run one domain-owned async mutation; publish one immutable terminal snapshot and never enqueue a hidden second write | SKMB-2026-07-18-016 |
 | T41 | capability policy current | player confirms valid Tool/Skill policy | capability policy saving | Atomically persist disabled identities and publish one prepared immutable capability snapshot for future client requests | SKMB-2026-07-18-017 |
+| T42 | semantic_tail_literal | syntax closes and validates | semantic_tail_validated | Replace only the mutable tail with immutable safe Markdown/reference/component nodes | SKMB-2026-07-18-018 |
+| T43 | history window idle | viewport requests another neighborhood | history_page_loading | Start or coalesce one generation-bound page read; retain the current anchor/window | SKMB-2026-07-18-018 |
+| T44 | history_page_loading | page succeeds or fails | history window idle | Merge the matching page and preserve the anchor, or retain the prior window with a retryable diagnostic | SKMB-2026-07-18-018 |
+| T45 | preparing | selected topology requires durable context | context_loading | Stream a provider-neutral seed under the actual selected model budget before dispatch | SKMB-2026-07-18-018 |
+| T46 | context_loading | seed validates or fails | model_wait or failed | Dispatch exactly once with valid context, or fail before provider I/O and preserve history | SKMB-2026-07-18-018 |
 
 ## Invariants
 
@@ -176,6 +186,12 @@ of the consolidated Phase 4 audit.
 | I49 | Settings file/provider/SQLite work never runs on a Minecraft-owned thread, and screen detach never owns or rolls back a confirmed durable mutation | SKMB-2026-07-18-016 |
 | I50 | Knowledge/capability settings can only narrow registered local Tool/Skill access; every active request retains one captured immutable capability snapshot | SKMB-2026-07-18-017 |
 | I51 | Tool-specific source settings use stable registered IDs under that tool's child page; adding JEI/REI/EMI/future adapters does not add top-level mod settings fields | SKMB-2026-07-18-017 |
+| I52 | Semantic output is a versioned closed AST; HTML, URLs, embeds, arbitrary UI trees, code, callbacks, commands, and mutations are unrepresentable | SKMB-2026-07-18-018 |
+| I53 | Raw resource existence is presentation-only; actionable stable handles must originate in the same authorized request context | SKMB-2026-07-18-018 |
+| I54 | Every semantic component has readable fallback text and narration, and color/animation never owns state | SKMB-2026-07-18-018 |
+| I55 | GUI viewport paging and model-context selection are independent and neither loads a complete durable partition into memory | SKMB-2026-07-18-018 |
+| I56 | Incremental history writes and page/context reads remain ordered off Minecraft-owned threads and generation-check every completion | SKMB-2026-07-18-018 |
+| I57 | Auto-scroll follows only while already at the bottom; earlier-page insertion preserves the player's anchor row and pixel offset | SKMB-2026-07-18-018 |
 
 ## Fail Semantics
 
@@ -213,6 +229,10 @@ of the consolidated Phase 4 audit.
 | F30 | Connection probe is busy, cancelled, rejected, rate-limited, times out, or returns malformed/empty output | Classify it into a stable redacted `connection_*` failure, send no retry, and leave settings/history unchanged | SKMB-2026-07-18-015 |
 | F31 | A settings mutation conflicts, strict validation fails, or atomic persistence/reload fails | Reject as `settings_busy` or a stable domain/write failure; retain every unaffected prior file/runtime and never partially apply another domain | SKMB-2026-07-18-016 |
 | F32 | Capability policy has a Skill/tool dependency conflict or a disabled/unavailable capability is invoked | Reject the save or invocation explicitly; never silently enable/fallback or widen authority | SKMB-2026-07-18-017 |
+| F33 | Markdown, semantic reference, or controlled component is incomplete, malformed, unknown, or unauthorized | Keep readable fallback text, expose no action, and optionally report only a redacted debug diagnostic | SKMB-2026-07-18-018 |
+| F34 | A viewport page read fails or completes for a stale generation | Retain the current window/anchor, suppress stale publication, and allow explicit retry | SKMB-2026-07-18-018 |
+| F35 | A durable model-context seed cannot be read or structurally validated | Fail `history_context_failed` before provider dispatch and preserve every durable row | SKMB-2026-07-18-018 |
+| F36 | Native semantic rendering fails for one node | Render its text/narration fallback and keep the screen usable; never fabricate a component success | SKMB-2026-07-18-018 |
 
 ## Statistical Defaults Allowed Temporarily
 
