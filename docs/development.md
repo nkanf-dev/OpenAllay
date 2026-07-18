@@ -154,11 +154,16 @@ the selected graphical development client:
 ```
 
 Connect the launched client to a disposable world or test server. The fixture
-requests the grounded iron-block chain: recipe search, exact recipe, inventory,
-then deterministic craftability. The script is intentionally opt-in because it
-opens a graphical client. CI validates the controller, both loader hooks, shell
-syntax and fixture syntax, but does not claim a real-client run. A release may
-claim that coverage only when the generated report is retained and reviewed.
+waits for durable hydration and every enabled installed recipe viewer to
+publish a non-empty current catalog. It then requests the grounded iron-block
+chain (search, exact recipe, inventory, deterministic craftability) and a second
+Farmer's Delight apple-cider search/exact chain. The script rejects any report
+whose outcome is not `COMPLETED`. It is intentionally opt-in because it opens a
+graphical client. CI validates the controller, both loader hooks, shell syntax
+and fixture syntax, but does not claim a real-client run. The reviewed Phase 4C
+Fabric report, redacted log, exact JEI navigation screenshots, artifact URLs,
+and hashes are retained under
+`docs/verification/phase-4c-all-known-recipes/`.
 
 ## Player GUI
 

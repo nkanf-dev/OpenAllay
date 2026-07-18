@@ -20,6 +20,11 @@ SKMB-2026-07-18-006 is implemented by `a0eaeff`, `19ab90f`, and `c6ca6bc`.
 Its deterministic clean-build and packaged-driver evidence is recorded in the
 Phase 4B durable-history plan. Final graphical restart review remains open.
 
+SKMB-2026-07-18-007 is implemented through `5af5b4e`. Its deterministic
+provider/catalog/navigation coverage and retained Fabric JEI/REI/Farmer's
+Delight graphical evidence are recorded in the Phase 4C plan and
+`docs/verification/phase-4c-all-known-recipes/`.
+
 ## Named States
 
 | state | meaning | owner | notes | source |

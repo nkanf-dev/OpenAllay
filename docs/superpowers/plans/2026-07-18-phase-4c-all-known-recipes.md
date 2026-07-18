@@ -145,19 +145,36 @@ graphical client was launched at this checkpoint.
 
 ## Task 8: Verify and Retain Recipe Smoke Evidence
 
-- [ ] Run focused provider/catalog/tool/UI/architecture tests.
-- [ ] Run `./gradlew clean :common:test :fabric:build :neoforge:build`.
-- [ ] Build an ignored Fabric smoke profile with JEI, REI where coexistence is
+- [x] Run focused provider/catalog/tool/UI/architecture tests.
+- [x] Run `./gradlew clean :common:test :fabric:build :neoforge:build`.
+- [x] Build an ignored Fabric smoke profile with JEI, REI where coexistence is
   practical, Farmer's Delight Refabricated, and required dependencies.
-- [ ] Since Patchouli has no 26.2 artifact, exercise TomeWisp's retained
+- [x] Since Patchouli has no 26.2 artifact, exercise TomeWisp's retained
   resource-based Patchouli fixture and record that boundary explicitly.
-- [ ] Prove a recipe absent from the vanilla unlock set is searchable, exact
+- [x] Prove a recipe absent from the vanilla unlock set is searchable, exact
   lookup round-trips its generation, viewer navigation opens, and Farmer's
   Delight custom processing records remain grounded.
-- [ ] Retain artifact URLs, versions, SHA-256, logs/report, screenshots, and
+- [x] Retain artifact URLs, versions, SHA-256, logs/report, screenshots, and
   secret scan; do not claim EMI or Patchouli runtime integration.
-- [ ] Update SKMB-007 implementation evidence and commit
+- [x] Update SKMB-007 implementation evidence and commit
   `docs: verify all-known recipe integration`.
+
+Verification completed on 2026-07-18. The focused provider, catalog, tool, UI,
+architecture, and Patchouli resource-fixture tests passed. The clean gate then
+reported 189 common tests, 0 failures, 0 errors, and one explicit opt-in skip;
+both production loader builds passed. Fabric graphical acceptance ran JEI
+30.12.0.69 and REI 26.2.820 together with Farmer's Delight Refabricated
+26.2-3.6.7 and completed the six-tool iron-block/apple-cider scenario. The
+generation-bearing JEI apple-cider reference opened its exact custom cooking
+page after acceptance-discovered UI and navigator fixes in `5af5b4e`.
+
+The redacted report, log excerpt, two reviewed screenshots, exact artifact
+versions/URLs/SHA-256 values, production artifact hashes, compatibility
+boundaries, warnings, and secret-scan result are retained in
+`docs/verification/phase-4c-all-known-recipes/`. Modrinth's public API returned
+no Fabric/NeoForge 26.2 version for EMI or Patchouli, so neither runtime is
+claimed. NeoForge behavior remains covered by common tests and the production
+build; this graphical evidence is explicitly Fabric-only.
 
 ## Completion Boundary
 

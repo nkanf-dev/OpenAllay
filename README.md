@@ -67,8 +67,10 @@ automatic provider retry, and persistence health is visible in the screen.
 All-known recipe capture now merges vanilla, server, JEI, and REI provider
 snapshots with generation-bearing references, persisted visibility/source
 preferences, source diagnostics, native item cards, and typed viewer actions.
-EMI has no verified 26.2 artifact, and retained graphical viewer acceptance is
-still pending. Context compaction, history management, developer diagnostics,
+The retained Fabric acceptance profile now proves JEI/REI coexistence,
+viewer-only Farmer's Delight discovery, generation-safe exact lookup, and
+TomeWisp-to-JEI navigation; EMI and Patchouli still have no verified 26.2
+runtime artifact. Context compaction, history management, developer diagnostics,
 and the complete Minecraft-native rich-message layer remain Phase 4 work. Dynamic
 Ponder generation is deferred beyond Phase 4 because Ponder/Ponderer do not yet
 provide a verified 26.2 runtime target. Phase 3C now provides the native player

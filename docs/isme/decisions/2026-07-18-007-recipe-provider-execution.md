@@ -99,6 +99,29 @@ Review the generation digest cost and unsupported-entry diagnostics using the
 retained modded client smoke. Do not add a record/count/time cap without
 observed evidence and a new decision.
 
+## Implementation Evidence
+
+Implemented through `5af5b4e` on top of the Phase 4C provider/catalog/action
+commits. Deterministic coverage proves current-generation exact lookup,
+unavailable/failed provider semantics, viewer metadata filtering, partial
+unsupported-record handling, E2E readiness, detail-action routing, and both
+loader discovery paths. The final clean gate reported 189 common tests with no
+failures or errors and one opt-in skip, followed by successful Fabric and
+NeoForge production builds.
+
+The retained Fabric 26.2 client smoke installed JEI, REI, and Farmer's Delight
+Refabricated together. It completed the all-known six-tool scenario and opened
+the exact JEI apple-cider cooking page from TomeWisp. Artifact provenance,
+redacted report/log, screenshots, hashes, the Patchouli resource-fixture
+boundary, and the explicit no-EMI/no-Patchouli-runtime claim are recorded under
+`docs/verification/phase-4c-all-known-recipes/`.
+
+The smoke observed no need for a recipe-count or time cap. Unsupported viewer
+layouts remained provider-local partial diagnostics; in particular, REI could
+omit two Farmer's Delight displays while JEI and the rest of the Agent stayed
+operational. The review debt therefore remains closed for Phase 4C without
+introducing a new cap or changing authority semantics.
+
 ## Supersedes
 
 None.
