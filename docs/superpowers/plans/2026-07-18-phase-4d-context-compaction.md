@@ -92,11 +92,18 @@ Task 4, where late primary dispatch can be observed.
 - Modify: `common/src/test/java/dev/tomewisp/guide/GuideStateReducerTest.java`
 - Modify: `common/src/test/java/dev/tomewisp/bridge/protocol/ServerAgentEventCodecTest.java`
 
-- [ ] Write red tests proving `PREPARING -> COMPACTING -> MODEL_WAIT`, checkpoint event correlation, current tool continuation preservation, no primary dispatch after terminal compaction failure, failure leaves old history intact, and cancellation suppresses late summary/primary output.
-- [ ] Add `COMPACTING` state/status and a strict privacy-safe checkpoint event to local and server codecs.
-- [ ] Integrate one compactor call before initial dispatch; carry the protected boundary through later tool turns and retain original complete history on successful completion.
-- [ ] Store checkpoints by session without allowing an old lease or late request to overwrite a replacement.
-- [ ] Run Agent/Guide/bridge tests and commit `feat: compact agent request context`.
+- [x] Write red tests proving `PREPARING -> COMPACTING -> MODEL_WAIT`, checkpoint event correlation, current tool continuation preservation, no primary dispatch after terminal compaction failure, failure leaves old history intact, and cancellation suppresses late summary/primary output.
+- [x] Add `COMPACTING` state/status and a strict privacy-safe checkpoint event to local and server codecs.
+- [x] Integrate one compactor call before initial dispatch; carry the protected boundary through later tool turns and retain original complete history on successful completion.
+- [x] Store checkpoints by session without allowing an old lease or late request to overwrite a replacement.
+- [x] Run Agent/Guide/bridge tests and commit `feat: compact agent request context`.
+
+The focused Agent/Guide/bridge suite passed in five seconds. Agent integration
+proves the summarized projection is sent while six complete original/current
+messages are committed, malformed summary failure leaves the prior four-message
+history intact, cancellation during a pending summary emits no primary request,
+and the strict server event codec round-trips the checkpoint without Gson
+reflection over `Instant`.
 
 ### Task 5: Configure the Selected Model Budget on Both Topologies
 

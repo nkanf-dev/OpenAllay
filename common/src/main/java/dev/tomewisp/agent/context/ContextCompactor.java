@@ -182,6 +182,13 @@ public final class ContextCompactor {
                 checkpoint.sourceFromIndex(), checkpoint.sourceToIndexExclusive())));
     }
 
+    public boolean requiresCompaction(
+            String systemPrompt,
+            List<ModelMessage> messages,
+            List<ModelToolDefinition> tools) {
+        return estimator.estimate(systemPrompt, messages, tools) > budget.inputTokens();
+    }
+
     private Prefix summaryPrefix(
             List<ModelMessage> messages,
             int protectedFromIndex,

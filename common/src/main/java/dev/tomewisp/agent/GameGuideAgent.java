@@ -3,6 +3,7 @@ package dev.tomewisp.agent;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import dev.tomewisp.agent.session.AgentSessionStore;
+import dev.tomewisp.agent.context.ContextCompactor;
 import dev.tomewisp.agent.tool.AgentToolExecutor;
 import dev.tomewisp.agent.tool.AgentToolResult;
 import dev.tomewisp.agent.trace.LiveAgentTrace;
@@ -30,16 +31,27 @@ public final class GameGuideAgent {
     private final AgentSessionStore sessions;
     private final Gson gson;
     private final ToolResultNormalizer canonicalizer;
+    private final ContextCompactor compactor;
 
     public GameGuideAgent(
             ModelClient model,
             AgentToolExecutor tools,
             AgentSessionStore sessions,
             Gson gson) {
+        this(model, tools, sessions, gson, null);
+    }
+
+    public GameGuideAgent(
+            ModelClient model,
+            AgentToolExecutor tools,
+            AgentSessionStore sessions,
+            Gson gson,
+            ContextCompactor compactor) {
         this.model = Objects.requireNonNull(model, "model");
         this.tools = Objects.requireNonNull(tools, "tools");
         this.sessions = Objects.requireNonNull(sessions, "sessions");
         this.gson = Objects.requireNonNull(gson, "gson");
+        this.compactor = compactor;
         canonicalizer = new ToolResultNormalizer(gson);
     }
 
@@ -57,9 +69,44 @@ public final class GameGuideAgent {
         LiveAgentTraceRecorder trace = new LiveAgentTraceRecorder(gson, request);
         transition(AgentState.PREPARING, trace, events);
         List<ModelMessage> messages = new ArrayList<>(lease.history());
+        int protectedFromIndex = messages.size();
         messages.add(ModelMessage.userText(request.userMessage()));
+        List<ModelMessage> completeMessages = List.copyOf(messages);
+        if (compactor != null
+                && compactor.requiresCompaction(
+                        request.systemPrompt(), messages, tools.definitions())) {
+            transition(AgentState.COMPACTING, trace, events);
+            return compactor.compact(
+                            request.systemPrompt(),
+                            messages,
+                            protectedFromIndex,
+                            tools.definitions(),
+                            request.stream(),
+                            request.sessionKey().schedulingKey(),
+                            lease.cancellation())
+                    .thenCompose(result -> {
+                        if (result.checkpoint() != null) {
+                            sessions.recordCheckpoint(lease, result.checkpoint());
+                            events.accept(new AgentEvent.ContextCompacted(result.checkpoint()));
+                        }
+                        if (!result.successful()) {
+                            throw new ModelClientException(new dev.tomewisp.model.ModelFailure(
+                                    result.failureCode(), result.failureMessage(), null));
+                        }
+                        transition(AgentState.MODEL_WAIT, trace, events);
+                        return loop(
+                                request,
+                                lease,
+                                result.projection().messages(),
+                                completeMessages,
+                                null,
+                                trace,
+                                events);
+                    })
+                    .exceptionally(throwable -> fail(request, lease, trace, events, throwable));
+        }
         transition(AgentState.MODEL_WAIT, trace, events);
-        return loop(request, lease, messages, null, trace, events)
+        return loop(request, lease, messages, completeMessages, null, trace, events)
                 .exceptionally(throwable -> fail(request, lease, trace, events, throwable));
     }
 
@@ -67,6 +114,7 @@ public final class GameGuideAgent {
             AgentRequest request,
             AgentSessionStore.Lease lease,
             List<ModelMessage> messages,
+            List<ModelMessage> completeMessages,
             String previousCallKey,
             LiveAgentTraceRecorder trace,
             Consumer<AgentEvent> events) {
@@ -90,6 +138,8 @@ public final class GameGuideAgent {
                     trace.modelTurn(turn);
                     List<ModelMessage> nextMessages = new ArrayList<>(messages);
                     nextMessages.add(new ModelMessage(ModelRole.ASSISTANT, turn.content()));
+                    List<ModelMessage> nextCompleteMessages = new ArrayList<>(completeMessages);
+                    nextCompleteMessages.add(new ModelMessage(ModelRole.ASSISTANT, turn.content()));
                     if (turn.toolUses().isEmpty()) {
                         if (turn.text().isBlank()) {
                             throw new ModelClientException(new dev.tomewisp.model.ModelFailure(
@@ -98,7 +148,7 @@ public final class GameGuideAgent {
                                     null));
                         }
                         transition(AgentState.COMPLETED, trace, events);
-                        sessions.finish(lease, nextMessages);
+                        sessions.finish(lease, nextCompleteMessages);
                         LiveAgentTrace completed = trace.finish(AgentState.COMPLETED, turn.text(), null);
                         events.accept(new AgentEvent.FinalText(turn.text()));
                         return CompletableFuture.completedFuture(new AgentResult(
@@ -110,6 +160,7 @@ public final class GameGuideAgent {
                                     lease,
                                     turn.toolUses(),
                                     nextMessages,
+                                    nextCompleteMessages,
                                     previousCallKey,
                                     trace,
                                     events)
@@ -119,6 +170,7 @@ public final class GameGuideAgent {
                                         request,
                                         lease,
                                         outcome.messages(),
+                                        outcome.completeMessages(),
                                         outcome.lastCallKey(),
                                         trace,
                                         events);
@@ -131,11 +183,16 @@ public final class GameGuideAgent {
             AgentSessionStore.Lease lease,
             List<ModelContent.ToolUse> calls,
             List<ModelMessage> messages,
+            List<ModelMessage> completeMessages,
             String previousCallKey,
             LiveAgentTraceRecorder trace,
             Consumer<AgentEvent> events) {
         CompletableFuture<ToolOutcome> chain = CompletableFuture.completedFuture(
-                new ToolOutcome(new ArrayList<>(messages), previousCallKey, new ArrayList<>()));
+                new ToolOutcome(
+                        new ArrayList<>(messages),
+                        new ArrayList<>(completeMessages),
+                        previousCallKey,
+                        new ArrayList<>()));
         for (ModelContent.ToolUse call : calls) {
             chain = chain.thenCompose(outcome -> {
                 lease.cancellation().throwIfCancelled();
@@ -160,14 +217,17 @@ public final class GameGuideAgent {
                             List<ModelContent> results = new ArrayList<>(outcome.results());
                             results.add(new ModelContent.ToolResult(
                                     call.id(), result.normalized(), result.failure()));
-                            return new ToolOutcome(outcome.messages(), callKey, results);
+                            return new ToolOutcome(
+                                    outcome.messages(), outcome.completeMessages(), callKey, results);
                         });
             });
         }
         return chain.thenApply(outcome -> {
             List<ModelMessage> updated = new ArrayList<>(outcome.messages());
             updated.add(new ModelMessage(ModelRole.USER, outcome.results()));
-            return new ToolOutcome(updated, outcome.lastCallKey(), List.of());
+            List<ModelMessage> updatedComplete = new ArrayList<>(outcome.completeMessages());
+            updatedComplete.add(new ModelMessage(ModelRole.USER, outcome.results()));
+            return new ToolOutcome(updated, updatedComplete, outcome.lastCallKey(), List.of());
         });
     }
 
@@ -224,6 +284,7 @@ public final class GameGuideAgent {
 
     private record ToolOutcome(
             List<ModelMessage> messages,
+            List<ModelMessage> completeMessages,
             String lastCallKey,
             List<ModelContent> results) {}
 }

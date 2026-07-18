@@ -1,17 +1,25 @@
 package dev.tomewisp.agent;
 
 import com.google.gson.JsonObject;
+import dev.tomewisp.agent.context.ContextCheckpoint;
 import dev.tomewisp.model.ModelEvent;
 import java.util.Objects;
 
 public sealed interface AgentEvent
         permits AgentEvent.StateChanged,
+                AgentEvent.ContextCompacted,
                 AgentEvent.ModelProgress,
                 AgentEvent.ToolStarted,
                 AgentEvent.ToolCompleted,
                 AgentEvent.FinalText,
                 AgentEvent.Failed {
     record StateChanged(AgentState state) implements AgentEvent {}
+
+    record ContextCompacted(ContextCheckpoint checkpoint) implements AgentEvent {
+        public ContextCompacted {
+            Objects.requireNonNull(checkpoint, "checkpoint");
+        }
+    }
 
     record ModelProgress(ModelEvent event) implements AgentEvent {}
 

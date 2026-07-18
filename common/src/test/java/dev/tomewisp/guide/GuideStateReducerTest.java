@@ -20,6 +20,18 @@ final class GuideStateReducerTest {
     private final GuideStateReducer reducer = new GuideStateReducer(new Gson());
 
     @Test
+    void exposesCompactingStateWithoutAddingPlayerContent() {
+        GuideRequestSnapshot request = GuideRequestSnapshot.start(
+                UUID.randomUUID(), "main", GuideTopology.CLIENT_LOCAL, "How?", Instant.EPOCH);
+
+        request = reducer.apply(
+                request, new AgentEvent.StateChanged(AgentState.COMPACTING), at(1));
+
+        assertEquals(GuideRequestStatus.COMPACTING, request.status());
+        assertEquals(List.of(), request.timeline());
+    }
+
+    @Test
     void snapshotDerivesFinalTextAndToolsFromChronologicalTimeline() {
         UUID requestId = UUID.randomUUID();
         GuideToolActivity tool = new GuideToolActivity(

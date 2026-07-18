@@ -10,6 +10,10 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import dev.tomewisp.agent.session.AgentSessionStore;
 import dev.tomewisp.agent.session.AgentSessionKey;
+import dev.tomewisp.agent.context.ContextBudget;
+import dev.tomewisp.agent.context.ContextCompactor;
+import dev.tomewisp.agent.context.ToolResultContextReducer;
+import dev.tomewisp.agent.context.Utf8ContextTokenEstimator;
 import dev.tomewisp.agent.tool.AgentToolExecutor;
 import dev.tomewisp.agent.tool.AgentToolResult;
 import dev.tomewisp.context.ContextCapability;
@@ -34,6 +38,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
+import java.time.Clock;
 import org.junit.jupiter.api.Test;
 
 final class GameGuideAgentTest {
@@ -127,6 +132,95 @@ final class GameGuideAgentTest {
         assertEquals("repeated_tool_call", result.errorCode());
         assertEquals(1, tools.invocations.get());
         assertNotNull(result.trace());
+    }
+
+    @Test
+    void compactsBeforePrimaryDispatchAndCommitsCompleteUnreducedHistory() {
+        QueueModelClient model = new QueueModelClient();
+        model.enqueue(CompletableFuture.completedFuture(textTurn(summaryJson())));
+        model.enqueue(CompletableFuture.completedFuture(textTurn("final")));
+        AgentSessionStore sessions = new AgentSessionStore();
+        UUID actor = UUID.randomUUID();
+        AgentSessionKey key = new AgentSessionKey(actor, "main");
+        List<ModelMessage> original = List.of(
+                ModelMessage.userText("a".repeat(250)),
+                ModelMessage.userText("b".repeat(250)),
+                ModelMessage.userText("c".repeat(250)),
+                ModelMessage.userText("d".repeat(250)));
+        sessions.hydrate(key, original);
+        List<AgentEvent> events = new ArrayList<>();
+
+        AgentResult result = new GameGuideAgent(
+                        model, new FakeTools(), sessions, new Gson(), compactor(model))
+                .ask(request(actor), events::add)
+                .join();
+
+        assertTrue(result.successful());
+        assertEquals(2, model.requests.size());
+        assertEquals("final", result.text());
+        assertTrue(events.stream().anyMatch(event -> event.equals(
+                new AgentEvent.StateChanged(AgentState.COMPACTING))));
+        assertTrue(events.stream().anyMatch(AgentEvent.ContextCompacted.class::isInstance));
+        assertEquals(1, sessions.checkpoints(key).size());
+        assertEquals(6, sessions.status(key).historyMessages());
+        assertTrue(model.requests.get(1).messages().getFirst().content().stream()
+                .map(ModelContent.Text.class::cast)
+                .anyMatch(text -> text.text().contains("NOT factual evidence")));
+    }
+
+    @Test
+    void compactionFailureAndCancellationNeverDispatchPrimaryOrReplaceHistory() {
+        UUID actor = UUID.randomUUID();
+        AgentSessionKey key = new AgentSessionKey(actor, "main");
+        AgentSessionStore failedSessions = new AgentSessionStore();
+        failedSessions.hydrate(key, largeHistory());
+        QueueModelClient malformed = new QueueModelClient();
+        malformed.enqueue(CompletableFuture.completedFuture(textTurn("not-json")));
+
+        AgentResult failed = new GameGuideAgent(
+                        malformed, new FakeTools(), failedSessions, new Gson(), compactor(malformed))
+                .ask(request(actor), ignored -> {})
+                .join();
+
+        assertEquals("context_compaction_failed", failed.errorCode());
+        assertEquals(1, malformed.requests.size());
+        assertEquals(4, failedSessions.status(key).historyMessages());
+
+        AgentSessionStore cancelledSessions = new AgentSessionStore();
+        cancelledSessions.hydrate(key, largeHistory());
+        QueueModelClient pendingModel = new QueueModelClient();
+        CompletableFuture<ModelTurn> pending = new CompletableFuture<>();
+        pendingModel.enqueue(pending);
+        CompletableFuture<AgentResult> running = new GameGuideAgent(
+                        pendingModel, new FakeTools(), cancelledSessions, new Gson(), compactor(pendingModel))
+                .ask(request(actor), ignored -> {});
+        assertTrue(cancelledSessions.cancel(key));
+
+        assertEquals(AgentState.CANCELLED, running.join().state());
+        assertEquals(1, pendingModel.requests.size());
+        assertEquals(4, cancelledSessions.status(key).historyMessages());
+    }
+
+    private static ContextCompactor compactor(ModelClient model) {
+        return new ContextCompactor(
+                model, new Gson(), new Utf8ContextTokenEstimator(),
+                new ToolResultContextReducer(), new ContextBudget(1_200, 100),
+                "test-model", Clock.systemUTC());
+    }
+
+    private static List<ModelMessage> largeHistory() {
+        return List.of(
+                ModelMessage.userText("a".repeat(250)),
+                ModelMessage.userText("b".repeat(250)),
+                ModelMessage.userText("c".repeat(250)),
+                ModelMessage.userText("d".repeat(250)));
+    }
+
+    private static String summaryJson() {
+        return """
+                {"goals":[],"preferences":[],"completedTopics":[],"currentTasks":[],
+                 "decisions":[],"unresolvedQuestions":[],"evidenceReferences":[]}
+                """;
     }
 
     private static AgentRequest request(UUID actor) {

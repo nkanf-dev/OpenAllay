@@ -40,6 +40,7 @@ public final class GuideStateReducer {
 
         switch (event) {
             case AgentEvent.StateChanged changed -> status = state(changed.state());
+            case AgentEvent.ContextCompacted ignored -> {}
             case AgentEvent.ToolStarted started -> {
                 if (toolMatches(timeline, started.invocationId()) != 0) {
                     return protocolFailure(
@@ -263,6 +264,7 @@ public final class GuideStateReducer {
     private static GuideRequestStatus state(AgentState state) {
         return switch (state) {
             case IDLE, PREPARING -> GuideRequestStatus.PREPARING;
+            case COMPACTING -> GuideRequestStatus.COMPACTING;
             case MODEL_WAIT -> GuideRequestStatus.MODEL_WAIT;
             case TOOL_WAIT -> GuideRequestStatus.TOOL_WAIT;
             case COMPLETED -> GuideRequestStatus.COMPLETING;

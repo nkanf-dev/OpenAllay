@@ -1,5 +1,6 @@
 package dev.tomewisp.agent.session;
 
+import dev.tomewisp.agent.context.ContextCheckpoint;
 import dev.tomewisp.model.CancellationSignal;
 import dev.tomewisp.model.ModelMessage;
 import dev.tomewisp.tool.ToolResult;
@@ -23,6 +24,7 @@ public final class AgentSessionStore {
 
     private static final class Session {
         private List<ModelMessage> history = List.of();
+        private List<ContextCheckpoint> checkpoints = List.of();
         private Lease active;
     }
 
@@ -49,6 +51,31 @@ public final class AgentSessionStore {
         session.history = List.copyOf(history);
         session.active = null;
         return true;
+    }
+
+    public synchronized boolean recordCheckpoint(Lease lease, ContextCheckpoint checkpoint) {
+        Session session = sessions.get(lease.key());
+        if (session == null || session.active == null
+                || !session.active.requestId().equals(lease.requestId())) {
+            return false;
+        }
+        java.util.ArrayList<ContextCheckpoint> updated = new java.util.ArrayList<>(session.checkpoints);
+        updated.add(checkpoint);
+        session.checkpoints = List.copyOf(updated);
+        return true;
+    }
+
+    public synchronized List<ContextCheckpoint> checkpoints(AgentSessionKey key) {
+        Session session = sessions.get(key);
+        return session == null ? List.of() : session.checkpoints;
+    }
+
+    public synchronized void hydrate(AgentSessionKey key, List<ModelMessage> history) {
+        Session session = sessions.computeIfAbsent(key, ignored -> new Session());
+        if (session.active != null) {
+            throw new IllegalStateException("cannot hydrate an active Agent session");
+        }
+        session.history = List.copyOf(history);
     }
 
     public synchronized boolean cancel(AgentSessionKey key) {

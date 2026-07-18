@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import dev.tomewisp.agent.AgentEvent;
+import dev.tomewisp.agent.context.ContextCheckpointCodec;
 import dev.tomewisp.model.ModelEvent;
 import dev.tomewisp.model.ModelFailure;
 import java.util.Objects;
@@ -13,6 +14,7 @@ import java.util.UUID;
 /** Strict common wire codec for request-correlated server Agent events. */
 public final class ServerAgentEventCodec {
     private final Gson gson;
+    private final ContextCheckpointCodec checkpoints = new ContextCheckpointCodec();
 
     public ServerAgentEventCodec(Gson gson) {
         this.gson = Objects.requireNonNull(gson, "gson");
@@ -23,9 +25,15 @@ public final class ServerAgentEventCodec {
         Objects.requireNonNull(event, "event");
         String type = type(event);
         boolean terminal = event instanceof AgentEvent.FinalText || event instanceof AgentEvent.Failed;
-        Object body = event instanceof AgentEvent.ModelProgress progress ? progress.event() : event;
+        String eventJson;
+        if (event instanceof AgentEvent.ContextCompacted compacted) {
+            eventJson = checkpoints.encode(compacted.checkpoint());
+        } else {
+            Object body = event instanceof AgentEvent.ModelProgress progress ? progress.event() : event;
+            eventJson = gson.toJson(body);
+        }
         return new ServerAgentEventPayload(
-                BridgeProtocol.VERSION, requestId, type, gson.toJson(body), terminal);
+                BridgeProtocol.VERSION, requestId, type, eventJson, terminal);
     }
 
     public AgentEvent decode(ServerAgentEventPayload payload, UUID expectedRequestId) {
@@ -46,6 +54,8 @@ public final class ServerAgentEventCodec {
 
         AgentEvent event = switch (payload.eventType()) {
             case "state" -> new AgentEvent.StateChanged(read(body, Set.of("state"), AgentEvent.StateChanged.class).state());
+            case "context_compacted" ->
+                    new AgentEvent.ContextCompacted(checkpoints.decode(body.toString()));
             case "text_delta" -> new AgentEvent.ModelProgress(
                     read(body, Set.of("text"), ModelEvent.TextDelta.class));
             case "reasoning_delta" -> new AgentEvent.ModelProgress(
@@ -103,6 +113,7 @@ public final class ServerAgentEventCodec {
     private static String type(AgentEvent event) {
         return switch (event) {
             case AgentEvent.StateChanged ignored -> "state";
+            case AgentEvent.ContextCompacted ignored -> "context_compacted";
             case AgentEvent.ToolStarted ignored -> "tool_started";
             case AgentEvent.ToolCompleted ignored -> "tool_completed";
             case AgentEvent.FinalText ignored -> "final_text";
