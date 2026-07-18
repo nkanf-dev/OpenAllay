@@ -85,6 +85,27 @@ viewer may be `auto`, `jei`, or `rei`. Invalid edits retain the last valid
 in-memory settings and surface an explicit screen diagnostic. Configuration
 reload and editing controls are part of the later Phase 4 settings flow.
 
+Player-facing tool details are controlled separately by
+`config/tomewisp/display.json` on both loaders. A missing file uses the safe
+default below:
+
+```json
+{
+  "schemaVersion": 1,
+  "debugMode": false
+}
+```
+
+Normal mode renders scrollable recipe, inventory, usage, and craftability cards
+with native item icons, counts, tooltips, and typed recipe-viewer actions. It
+does not expose tool/invocation IDs, evidence authority/completeness enums,
+capture timestamps, provenance, internal failure codes, or normalized JSON.
+Setting `debugMode` to `true` appends a clearly separated local diagnostic
+section containing the already-redacted technical projection. An invalid file
+keeps Debug Mode off and displays a localized notice; it never rewrites the
+malformed file. In-game editing/reload belongs to the later Phase 4 settings
+screen.
+
 For an optional server-hosted model, use
 `config/tomewisp/server-model.json` on the server. The capability is advertised
 only when that configuration is valid. Client packets never contain the key.
@@ -196,9 +217,11 @@ reasoning is absent from the UI view type. Assistant segments and tool cards
 render in actual Agent event order, and a running card updates in place by its
 tool invocation ID before later assistant text appears. Grounded recipe,
 inventory and craftability tools receive first-class summaries, while other
-tools use a deterministic normalized-result fallback. Clicking a tool or source
-opens an in-game evidence detail panel; no browser is launched. Session switches
-and disconnect cleanup remove stale detail state.
+tools use a deterministic friendly fallback. Clicking a tool opens a scrollable
+card detail panel; clicking an answer's evidence link shows a player-friendly
+explanation in normal mode. Technical evidence metadata and normalized JSON are
+only representable when the local default-off Debug Mode is enabled. No browser
+is launched. Session switches and disconnect cleanup remove stale detail state.
 
 If the selected model is unavailable, the screen still opens and shows the
 configuration/capability state. Client configuration remains at

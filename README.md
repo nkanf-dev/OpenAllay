@@ -75,9 +75,12 @@ window, provider-neutral structural reduction, source-hashed derived summaries,
 schema-v2 privacy-safe checkpoint persistence, and local/server recovery. A
 session is not bound to one model: validated history/checkpoints survive
 provider or model changes and every future request is rebuilt against its
-selected model budget. Multiple named model profiles and their settings UI,
-history management, developer diagnostics, and the complete Minecraft-native
-rich-message layer remain Phase 4 work. Dynamic
+selected model budget. Tool details now use scrollable Minecraft-native recipe,
+inventory, and material cards; technical identifiers, evidence internals, and
+normalized data are absent by default and appear only in the local, default-off
+Debug Mode. Multiple named model profiles and their settings UI, history
+management, model-authored rich messages, and the remaining controlled dynamic
+components remain Phase 4 work. Dynamic
 Ponder generation is deferred beyond Phase 4 because Ponder/Ponderer do not yet
 provide a verified 26.2 runtime target. Phase 3C now provides the native player
 GUI; graphical E2E remains explicit opt-in and is never inferred from
@@ -86,7 +89,7 @@ coordinates and structure references for a later visual-tutorial workflow.
 
 Press the configurable `K` mapping or run bare `/guide` in-world to open the
 non-pausing screen. It streams the current GuideService transcript, displays
-grounded tool/source details, and preserves the real Agent chronology: assistant
+friendly grounded tool/source cards, and preserves the real Agent chronology: assistant
 segments, inline tool calls/results, later continuations, and the final answer.
 Running tool cards update in place. The screen also supports cancel, retry,
 sessions and explicit client/server model selection. Escape closes only the

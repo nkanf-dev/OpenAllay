@@ -4,7 +4,7 @@
 - decided_by: designer
 - approval_source: designer explicitly required the player-facing name “调试模式”, friendly visual cards in normal mode, and hiding confidence/authority/completeness-style technical details from ordinary players
 - date: 2026-07-18
-- commit: pending
+- commit: ba343f7, 366f2e2, 2f2a8d6, 6da6043
 - patterns:
   - B_state_persistence
   - E_security_boundary
@@ -83,3 +83,13 @@ It does not change the separately retained debug-data privacy contract.
 ## Superseded By
 
 None.
+
+## Verification
+
+- The default/debug projection, defensive-copy, known-tool, malformed/failure,
+  screen source-label, and loader-parity tests pass.
+- The 2026-07-18 clean gate passed 229 common tests with zero failures/errors
+  and one opt-in skip, followed by both production loader builds.
+- Production artifacts passed the credential-pattern scan. The graphical
+  client was not launched for this isolated UI work package; final consolidated
+  Phase 4 graphical acceptance remains pending.

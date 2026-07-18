@@ -377,7 +377,7 @@ confirms common production code has no Fabric or NeoForge imports.
 - Modify: `docs/isme/decisions/2026-07-18-010-debug-ui-projection.md`
 - Modify: this plan
 
-- [ ] **Step 1: Run focused and full gates**
+- [x] **Step 1: Run focused and full gates**
 
 ```bash
 ./gradlew :common:test --tests 'dev.tomewisp.guide.ui.*' \
@@ -385,13 +385,13 @@ confirms common production code has no Fabric or NeoForge imports.
 ./gradlew clean :common:test :fabric:build :neoforge:build
 ```
 
-- [ ] **Step 2: Run static/privacy checks**
+- [x] **Step 2: Run static/privacy checks**
 
 Run `git diff --check`, tracked shell/Python/JSON syntax checks, production-JAR
 credential scans, and source searches proving normal-mode projection types have
 no raw diagnostic JSON/evidence metadata fields.
 
-- [ ] **Step 3: Record evidence and commit**
+- [x] **Step 3: Record evidence and commit**
 
 Record test counts, artifact hashes, non-fatal warnings, the default-off Debug
 Mode behavior, and the explicit unrun graphical-client status. Commit:
@@ -400,6 +400,19 @@ Mode behavior, and the explicit unrun graphical-client status. Commit:
 git add README.md docs
 git commit -m "docs: verify player-friendly tool cards"
 ```
+
+Focused UI/history tests and the full clean gate passed. The common suite ran
+229 tests with zero failures/errors and one opt-in skip. Fabric and NeoForge
+production artifacts were built with SHA-256 values
+`484ba27736d0b593c2a5ec16fde8e6a2e23b45817be5b9c263200a2024279be3`
+and
+`353b2157cd0ca3b4d443a68cafd0f44146ce4473131934c2d74e0b7204e69363`.
+Tracked shell, Python, and JSON syntax checks, `git diff --check`, loader-boundary
+assertions, and production-JAR credential-pattern scans passed. Non-fatal output
+was limited to the existing Gradle deprecation, SQLite native-access, Unsafe,
+Javadoc, and NeoForge/Fabric annotation warnings. No graphical client was
+launched for this isolated package; final consolidated Phase 4 graphical
+acceptance remains pending.
 
 ## Completion Boundary
 
