@@ -323,17 +323,30 @@ the selected graphical development client:
 ./scripts/run-real-client-e2e.sh neoforge
 ```
 
-Connect the launched client to a disposable world or test server. The fixture
-waits for durable hydration and every enabled installed recipe viewer to
-publish a non-empty current catalog. It then requests the grounded iron-block
-chain (search, exact recipe, inventory, deterministic craftability) and a second
-Farmer's Delight apple-cider search/exact chain. The script rejects any report
-whose outcome is not `COMPLETED`. It is intentionally opt-in because it opens a
-graphical client. CI validates the controller, both loader hooks, shell syntax
-and fixture syntax, but does not claim a real-client run. The reviewed Phase 4C
-Fabric report, redacted log, exact JEI navigation screenshots, artifact URLs,
-and hashes are retained under
-`docs/verification/phase-4c-all-known-recipes/`.
+Connect the launched client to a disposable world or test server, or set
+`TOMEWISP_E2E_QUICK_PLAY_WORLD` to an existing disposable single-player world.
+The fixture waits for durable hydration and every enabled installed recipe
+viewer to publish a non-empty current catalog. It streams deliberately split
+Markdown/component tokens through a grounded five-tool chronology: recipe
+search, exact lookup, inventory, deterministic craftability, and knowledge
+sources. The report records redacted semantic/component/fallback counts and
+history-window/cache metrics, and the script rejects any outcome other than
+`COMPLETED`.
+
+Set `TOMEWISP_E2E_HISTORY_SEED_REQUESTS` to create sequential durable seed
+requests before the reported scenario. `TOMEWISP_E2E_MIN_HISTORY_REQUESTS`
+asserts the durable total; `TOMEWISP_E2E_REQUIRE_PAGED_HISTORY=true` additionally
+requires a restart to hydrate fewer requests than the durable total and expose
+an earlier-page cursor. The harness temporarily replaces `models.json` with an
+isolated loopback profile and restores the exact prior file on exit.
+
+The harness is intentionally opt-in because it opens a graphical client. CI
+validates the controller, both loader hooks, shell syntax, and fixture syntax,
+but does not claim a real-client run. The reviewed Phase 4C Fabric report,
+redacted log, exact JEI navigation screenshots, artifact URLs, and hashes are
+retained under `docs/verification/phase-4c-all-known-recipes/`. Consolidated
+Fabric/NeoForge semantic-history reports and compatibility boundaries are under
+`docs/verification/phase-4-final-acceptance/`.
 
 ## Player GUI
 

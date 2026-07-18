@@ -29,12 +29,16 @@ accepted and contains explicit approval evidence.
 
 SKMB-2026-07-18-006 is implemented by `a0eaeff`, `19ab90f`, and `c6ca6bc`.
 Its deterministic clean-build and packaged-driver evidence is recorded in the
-Phase 4B durable-history plan. Final graphical restart review remains open.
+Phase 4B durable-history plan. The final graphical restart review is closed by
+the retained 50-request seed and 51-request windowed-restart reports under
+`docs/verification/phase-4-final-acceptance/`.
 
 SKMB-2026-07-18-007 is implemented through `5af5b4e`. Its deterministic
 provider/catalog/navigation coverage and retained Fabric JEI/REI/Farmer's
 Delight graphical evidence are recorded in the Phase 4C plan and
-`docs/verification/phase-4c-all-known-recipes/`.
+`docs/verification/phase-4c-all-known-recipes/`. Final NeoForge acceptance used
+JEI plus Cooking for Blockheads; REI is explicitly unavailable in that profile
+after its upstream `@OnlyIn` loading warning.
 
 SKMB-2026-07-18-015 and the model-administration slice of
 SKMB-2026-07-18-016 are implemented through `6498516`. Their deterministic
@@ -54,8 +58,9 @@ SKMB-2026-07-18-014 and the remaining native settings/diagnostics scope of
 SKMB-2026-07-18-016 are implemented through `a3ae197`. The service-owned,
 one-use history confirmations, actor-scoped deletion gates, live shared display
 runtime, privacy-separated diagnostics, and Fabric/NeoForge lifecycle parity
-have deterministic coverage. Final retained graphical acceptance remains part
-of the consolidated Phase 4 audit.
+have deterministic coverage. Final retained graphical acceptance is recorded
+as part of the consolidated Phase 4 audit under
+`docs/verification/phase-4-final-acceptance/`.
 
 SKMB-2026-07-18-010/016/018 now use display schema 2 with Debug Mode off and
 presentation animation on by default. Animation is presentation-only, while
@@ -241,13 +246,13 @@ the Phase 4J verification report.
 | F35 | A durable model-context seed cannot be read or structurally validated | Fail `history_context_failed` before provider dispatch and preserve every durable row | SKMB-2026-07-18-018 |
 | F36 | Native semantic rendering fails for one node | Render its text/narration fallback and keep the screen usable; never fabricate a component success | SKMB-2026-07-18-018 |
 
-## Statistical Defaults Allowed Temporarily
+## Reviewed Statistical Defaults
 
 | id | pattern | context | default | reason_allowed | review_by | file |
 | --- | --- | --- | --- | --- | --- | --- |
-| SKMB-2026-07-18-006 | A, B, C, E, F | durable history execution details | hashed connection discriminator, async single writer, explicit loading rejection, ordered full-partition saves | designer delegated best implementation path; product invariants already accepted | final Phase 4 real-client acceptance | decisions/2026-07-18-006-durable-history-execution.md |
-| SKMB-2026-07-18-007 | A, B, D, E, F | recipe provider execution details | client-thread capture, generation-bearing references, public optional viewer APIs, partial omission diagnostics | designer delegated best implementation path; recipe authority and visibility already accepted | final Phase 4 real-client acceptance | decisions/2026-07-18-007-recipe-provider-execution.md |
-| SKMB-2026-07-18-008 | A, B, C, D, E, F | context compaction execution details | explicit per-model window, conservative UTF-8 estimator, structural prefix summaries, source-hash checkpoint reuse | designer delegated best implementation path; compaction authority and failure semantics already accepted | final Phase 4 real-client acceptance | decisions/2026-07-18-008-context-compaction-execution.md |
+| SKMB-2026-07-18-006 | A, B, C, E, F | durable history execution details | hashed connection discriminator, async single writer, explicit loading rejection; full-partition persistence superseded by SKMB-018 incremental/windowed execution | designer delegated best implementation path; product invariants already accepted | reviewed in final Phase 4 real-client acceptance | decisions/2026-07-18-006-durable-history-execution.md |
+| SKMB-2026-07-18-007 | A, B, D, E, F | recipe provider execution details | client-thread capture, generation-bearing references, public optional viewer APIs, partial omission diagnostics | designer delegated best implementation path; recipe authority and visibility already accepted | reviewed in final Phase 4 real-client acceptance | decisions/2026-07-18-007-recipe-provider-execution.md |
+| SKMB-2026-07-18-008 | A, B, C, D, E, F | context compaction execution details | explicit per-model window, conservative UTF-8 estimator, structural prefix summaries, source-hash checkpoint reuse | designer delegated best implementation path; compaction authority and failure semantics already accepted | reviewed in final Phase 4 real-client acceptance | decisions/2026-07-18-008-context-compaction-execution.md |
 
 ## Open Decisions
 

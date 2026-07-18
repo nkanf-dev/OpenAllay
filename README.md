@@ -60,17 +60,22 @@ loaders through one shared GuideService and an opt-in real-client probe:
 - a default-off Fabric/NeoForge real-client E2E controller plus deterministic
   loopback model fixture and redacted report contract.
 
-A server mod is not required for the main client model mode. Phase 4 now has a
+A server mod is not required for the main client model mode. Phase 4 is now
+implemented and accepted for the pre-release 26.2 main line. It has a
 versioned SQLite history foundation: normal-mode conversation projections are
 partitioned by player and world/server, interrupted work restores without an
 automatic provider retry, and persistence health is visible in the screen.
 All-known recipe capture now merges vanilla, server, JEI, and REI provider
 snapshots with generation-bearing references, persisted visibility/source
 preferences, source diagnostics, native item cards, and typed viewer actions.
-The retained Fabric acceptance profile now proves JEI/REI coexistence,
+The retained Fabric acceptance profile proves JEI/REI coexistence,
 viewer-only Farmer's Delight discovery, generation-safe exact lookup, and
 TomeWisp-to-JEI navigation; EMI and Patchouli still have no verified 26.2
-runtime artifact. Phase 4 context management now uses an explicit per-model
+runtime artifact. The final NeoForge profile proves JEI plus Cooking for
+Blockheads on NeoForge 26.2.0.25-beta. REI is intentionally excluded from that
+profile because its current NeoForge artifact raises an upstream `@OnlyIn`
+compatibility warning during loading; it is not claimed as a working NeoForge
+integration. Phase 4 context management uses an explicit per-model
 window, provider-neutral structural reduction, source-hashed derived summaries,
 privacy-safe checkpoint persistence in the single current pre-release schema,
 and local/server recovery. A
@@ -99,7 +104,12 @@ Model-authored safe Markdown, validated Minecraft references, controlled
 dynamic components, metadata-only history startup, independently budgeted
 model context, viewport paging, variable-height virtualization, stable scroll
 anchors, and optional presentation animation are now implemented in the common
-runtime and shared by both loaders. Dynamic
+runtime and shared by both loaders. Final graphical runs completed on Fabric
+and NeoForge through the deterministic loopback provider, and a NeoForge
+restart retained 51 requests while hydrating only the current one and exposing
+the earlier-history cursor. The redacted reports, artifact provenance,
+compatibility boundaries, and claim-by-claim evidence matrix are retained under
+`docs/verification/phase-4-final-acceptance/`. Dynamic
 Ponder generation is deferred beyond Phase 4 because Ponder/Ponderer do not yet
 provide a verified 26.2 runtime target. Phase 3C now provides the native player
 GUI; graphical E2E remains explicit opt-in and is never inferred from

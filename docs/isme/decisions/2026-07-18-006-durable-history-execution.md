@@ -94,6 +94,13 @@ require a later explicit compatibility decision.
 The final review must include retained graphical restart evidence and must not
 treat packaged Windows/Linux native entries as execution on those hosts.
 
+The Phase 4 final review closed this debt with a NeoForge 26.2 graphical seed
+run and process restart. The seed report retained 50 durable requests; after
+restart the next completed request reported `totalRequests=51`,
+`loadedRequests=1`, and `hasEarlier=1`. This proves metadata-only startup and a
+windowed projection on the exercised macOS host. Windows/Linux remain packaging
+claims only and were not executed.
+
 ## Supersedes
 
 None.

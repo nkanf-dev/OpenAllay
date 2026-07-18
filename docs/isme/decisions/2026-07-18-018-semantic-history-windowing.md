@@ -197,3 +197,14 @@ and failure invariants in SKMB-2026-07-18-006, 008, 010, 011, 014, and 016.
 ## Superseded By
 
 None.
+
+## Implementation Evidence
+
+The final deterministic loopback scenario splits Markdown and semantic tokens
+across streaming deltas, preserves six assistant segments interleaved with five
+tool invocations, validates three controlled component types, and retains one
+`semantic_component_unsupported` fallback without exposing its payload. It
+completed in real Fabric and NeoForge 26.2 clients. A subsequent NeoForge
+restart reported one hydrated request out of 51 durable requests with an
+earlier-page cursor. Redacted reports and the claim matrix are retained under
+`docs/verification/phase-4-final-acceptance/`.

@@ -122,6 +122,14 @@ omit two Farmer's Delight displays while JEI and the rest of the Agent stayed
 operational. The review debt therefore remains closed for Phase 4C without
 introducing a new cap or changing authority semantics.
 
+The consolidated Phase 4 run additionally launched NeoForge 26.2.0.25-beta
+with JEI 30.12.0.72 and Cooking for Blockheads 26.2.0.2. The current NeoForge
+REI 26.2.820 artifact displayed an upstream `@OnlyIn` member-stripping warning,
+so it was disabled and is not claimed as a passing NeoForge integration. This
+is an `integration_degraded` optional-adapter boundary, not a TomeWisp or sample
+mod failure. Fabric remains the retained JEI+REI+Farmer's Delight coexistence
+proof.
+
 ## Supersedes
 
 None.

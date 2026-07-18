@@ -507,7 +507,7 @@ for credential patterns/test secrets, and history-schema inspection proving
 there is one current pre-release schema with no migration code. Record exact
 test totals and loader artifact SHA-256 hashes.
 
-- [ ] **Step 3: Execute retained graphical/live settings acceptance when environment permits**
+- [x] **Step 3: Execute retained graphical/live settings acceptance when environment permits**
 
 Launch graphical clients only under the approved real-client harness. Exercise
 both loaders' settings navigation, wide/narrow layout, Debug Mode, model draft
@@ -520,6 +520,17 @@ copy it from conversation into argv, files, logs, screenshots, or reports.
 Retain redacted report JSON, artifact/mod versions, source URLs, SHA-256 values,
 and screenshots that contain no credentials/provider bodies. If a target viewer
 is unavailable, record that fact rather than claiming it through generic code.
+
+The final consolidated Fabric and NeoForge clients both launched through the
+approved harness with the complete common settings runtime wired. Destructive
+history/reset operations, busy rejection, model draft reload, Debug Mode,
+wide/narrow layout, keyboard/narration, and confirmations remained covered by
+their deterministic screen/service tests rather than being repeated against
+retained test data by coordinate-driven clicks. The final environment had no
+exported `TOMEWISP_API_KEY`, so no additional live probe was run. The redacted
+runtime reports, exact manual-vs-deterministic boundary, viewer availability,
+and artifact provenance are retained under
+`docs/verification/phase-4-final-acceptance/`.
 
 - [x] **Step 4: Update docs, decision commit references, and commit evidence**
 

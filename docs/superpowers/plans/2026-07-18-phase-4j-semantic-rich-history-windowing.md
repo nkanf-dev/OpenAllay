@@ -465,7 +465,7 @@ git commit -m "docs: verify semantic windowed history"
 - Create: `docs/verification/phase-4-final-acceptance/` reports/screenshots/manifests
 - Modify: README, development guide, Phase 4 plans, decisions, and SKMB
 
-- [ ] **Step 1: Extend the deterministic graphical scenario**
+- [x] **Step 1: Extend the deterministic graphical scenario**
 
 The loopback stream must split Markdown/semantic tokens across deltas, call
 recipe and knowledge tools, return a stable handle, render prose → tool → rich
@@ -473,7 +473,7 @@ continuation → tool → final segment, include one malformed component fallbac
 and leave a long paged history. Retain redacted semantic/component/page/cache
 assertions in the report; never retain provider body or credentials.
 
-- [ ] **Step 2: Preflight real mods and both loader profiles**
+- [x] **Step 2: Preflight real mods and both loader profiles**
 
 Use every actually compatible installed viewer practical per loader, Patchouli
 when a verified 26.2 artifact exists or the honestly labeled resource-book
@@ -481,7 +481,7 @@ fallback otherwise, and Farmer's Delight/retained compatible recipe-rich
 sample. Record source URLs, versions, SHA-256, loader/game/mod versions. Do not
 claim EMI/Patchouli through generic code when no compatible artifact exists.
 
-- [ ] **Step 3: Run Fabric and NeoForge graphical smoke**
+- [x] **Step 3: Run Fabric and NeoForge graphical smoke**
 
 With the Mac unlocked, use only the approved harness and local deterministic
 provider. Verify all-known locked recipe discovery, provenance merge, item
@@ -490,14 +490,14 @@ streaming/fallback, controlled components, keyboard/narration, animation off,
 wide/narrow layout, settings taxonomy, history paging/anchor, restart recovery,
 interrupted request, deletion/reset confirmations, and secret redaction.
 
-- [ ] **Step 4: Run an optional real provider probe only when env is present**
+- [x] **Step 4: Run an optional real provider probe only when env is present**
 
 If `TOMEWISP_API_KEY` is already exported into the launched process, run exactly
 the approved isolated settings probe and retain only redacted category/latency.
 Never reconstruct a key from conversation or put it in argv, files, logs, or
 screenshots. If absent, record the probe as not run.
 
-- [ ] **Step 5: Audit every Phase 4 completion claim**
+- [x] **Step 5: Audit every Phase 4 completion claim**
 
 Map Phase 4A–K and the consolidated completion bullets to deterministic tests,
 retained graphical evidence, or an explicit honest unavailable/deferred note.
@@ -505,12 +505,42 @@ Ensure structure-to-Ponder, recursive technology planning, old ports, and
 formal release remain deferred. No unshipped migration paths or arbitrary
 history caps remain.
 
-- [ ] **Step 6: Run final clean gate, update all plans/status, and commit**
+Steps 1–5 completed in the consolidated acceptance run. Fabric completed with
+JEI, REI, and Farmer's Delight Refabricated. NeoForge completed with JEI and
+Cooking for Blockheads on NeoForge 26.2.0.25-beta; REI was removed from the
+accepted NeoForge profile after its current artifact displayed an upstream
+`@OnlyIn` loading warning. EMI and a Patchouli 26.2 runtime remained
+unavailable, so the Patchouli claim is limited to the retained resource-parser
+fixture and knowledge-source evidence. A 50-request seed run followed by a
+graphical restart proved metadata-only recovery (`loadedRequests=1`,
+`totalRequests=51`, `hasEarlier=1`).
+
+The final environment did not contain `TOMEWISP_API_KEY`, so Step 4 made no
+provider request. The real-client harness never reconstructed the previously
+supplied conversational credential. The combined acceptance uses real-client
+reports for loader/runtime/tool/semantic/history integration, retained Phase 4C
+screenshots for exact JEI navigation, and deterministic tests for destructive
+settings actions, wide/narrow layout, keyboard/narration, cancellation,
+interruption, and confirmation semantics. It does not mislabel those
+deterministic assertions as manual clicks. The complete mapping is retained in
+`docs/verification/phase-4-final-acceptance/README.md`.
+
+- [x] **Step 6: Run final clean gate, update all plans/status, and commit**
 
 ```bash
 ./gradlew clean :common:test :fabric:build :neoforge:build
 git diff --check
 git commit -m "docs: complete phase 4 acceptance"
+```
+
+The from-clean gate completed with 427 common tests, zero failures, zero
+errors, two explicit opt-in skips, and successful Fabric/NeoForge production
+builds. Shell/Python syntax, tracked JSON, schema/package/native-library,
+credential-pattern, and diff checks passed. Final production artifact SHA-256:
+
+```text
+Fabric   55fd8070032d9675d6c0f7f6b8f2b1944971c173de21ab3233190e3173fede2d
+NeoForge 6fbad2c184700e843bd0d83b6369f61dafa225ac57d791a26151481a7b35b7e6
 ```
 
 ## Completion boundary
