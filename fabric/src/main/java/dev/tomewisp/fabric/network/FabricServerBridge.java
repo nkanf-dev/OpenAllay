@@ -164,10 +164,15 @@ public final class FabricServerBridge {
                         descriptor.id(), descriptor.description(),
                         schemas.generate(descriptor.inputType()).toString()))
                 .toList();
+        if (serverGuide instanceof ToolResult.Success<ServerGuideRuntime> success) {
+            var spec = success.value().contextSpec();
+            return new CapabilityPayload(
+                    BridgeProtocol.VERSION, tools, true,
+                    spec.budget().contextWindowTokens(), spec.budget().maxOutputTokens(),
+                    spec.promptAndToolTokens(), spec.canonicalModelId());
+        }
         return new CapabilityPayload(
-                BridgeProtocol.VERSION,
-                tools,
-                serverGuide instanceof ToolResult.Success<?>);
+                BridgeProtocol.VERSION, tools, false, 0, 0, 0, "");
     }
 
     private void send(UUID actor, String kind, Object payload) {

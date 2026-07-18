@@ -19,7 +19,10 @@ import java.nio.file.Path;
 import java.util.Map;
 import java.time.Clock;
 
-public record ServerGuideRuntime(ModelConfig config, ServerAgentService service) {
+public record ServerGuideRuntime(
+        ModelConfig config,
+        ServerAgentService service,
+        dev.tomewisp.guide.GuideContextSpec contextSpec) {
     public static ToolResult<ServerGuideRuntime> create(
             TomeWispRuntime runtime,
             Path configPath,
@@ -50,8 +53,13 @@ public record ServerGuideRuntime(ModelConfig config, ServerAgentService service)
                 + "read tools and visible evidence. Never expose credentials.\n\n"
                 + dev.tomewisp.guide.semantic.SemanticPromptGuidance.text() + "\n\n"
                 + runtime.skills().metadataPrompt();
+        int promptAndTools = new Utf8ContextTokenEstimator().estimate(
+                prompt, java.util.List.of(), tools.definitions());
+        dev.tomewisp.guide.GuideContextSpec contextSpec =
+                new dev.tomewisp.guide.GuideContextSpec(
+                        config.contextBudget(), promptAndTools, config.model());
         ServerAgentService service = new ServerAgentService(
                 agent, tools, sessions, contexts, events, gson, prompt, scheduled::awaitReady);
-        return new ToolResult.Success<>(new ServerGuideRuntime(config, service));
+        return new ToolResult.Success<>(new ServerGuideRuntime(config, service, contextSpec));
     }
 }

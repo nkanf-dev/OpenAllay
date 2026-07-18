@@ -159,7 +159,7 @@ final class GameGuideAgentTest {
     }
 
     @Test
-    void compactsBeforePrimaryDispatchAndCommitsCompleteUnreducedHistory() {
+    void compactsBeforePrimaryDispatchAndKeepsOnlyTheSuccessfulRuntimeProjection() {
         QueueModelClient model = new QueueModelClient();
         model.enqueue(CompletableFuture.completedFuture(textTurn(summaryJson())));
         model.enqueue(CompletableFuture.completedFuture(textTurn("final")));
@@ -186,7 +186,7 @@ final class GameGuideAgentTest {
                 new AgentEvent.StateChanged(AgentState.COMPACTING))));
         assertTrue(events.stream().anyMatch(AgentEvent.ContextCompacted.class::isInstance));
         assertEquals(1, sessions.checkpoints(key).size());
-        assertEquals(6, sessions.status(key).historyMessages());
+        assertEquals(5, sessions.status(key).historyMessages());
         assertTrue(model.requests.get(1).messages().getFirst().content().stream()
                 .map(ModelContent.Text.class::cast)
                 .anyMatch(text -> text.text().contains("NOT factual evidence")));

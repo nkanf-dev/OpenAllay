@@ -8,13 +8,24 @@ import java.util.Objects;
 public record ResolvedModelProfile(
         ModelProfileDefinition definition,
         ModelConfig runtimeConfig,
-        GuideFailure failure) {
+        GuideFailure failure,
+        String canonicalModelId) {
     public ResolvedModelProfile {
         Objects.requireNonNull(definition, "definition");
         if ((runtimeConfig == null) == (failure == null)) {
             throw new IllegalArgumentException(
                     "resolved profile must contain exactly one runtime or failure");
         }
+        if (canonicalModelId == null || canonicalModelId.isBlank()) {
+            throw new IllegalArgumentException("canonical model ID is required");
+        }
+    }
+
+    public ResolvedModelProfile(
+            ModelProfileDefinition definition,
+            ModelConfig runtimeConfig,
+            GuideFailure failure) {
+        this(definition, runtimeConfig, failure, definition.model());
     }
 
     public boolean available() {

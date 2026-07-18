@@ -260,35 +260,35 @@ git commit -m "feat: page incremental guide history"
 - Test: `common/src/test/java/dev/tomewisp/client/ClientModelRuntimeRegistryTest.java`
 - Test: common/fabric/neoforge bridge protocol tests
 
-- [ ] **Step 1: Write metadata-only startup and page-race tests**
+- [x] **Step 1: Write metadata-only startup and page-race tests**
 
 On restart, sessions/counts load but request bodies do not. Test first/earlier/
 later viewport reads, duplicate coalescing, superseded viewport, session switch,
 disconnect, actor/scope replacement, delete/reset, page failure/retry, active
 entry pinning, and stale late completion suppression.
 
-- [ ] **Step 2: Write model-context preparation tests**
+- [x] **Step 2: Write model-context preparation tests**
 
 Before provider dispatch, load a seed under the actual selected profile budget.
 Test model/provider switch recalculation, valid checkpoint reuse, stale hash,
 missing/invalid server budget, cancellation during context load, context failure,
 one provider dispatch only, no GUI dependency, and no summary-as-evidence.
 
-- [ ] **Step 3: Publish window metadata in immutable snapshots**
+- [x] **Step 3: Publish window metadata in immutable snapshots**
 
 Separate total request counts/cursors/page status from loaded request rows.
 `GuideService.requestHistoryWindow(...)` is the only UI entrypoint. It owns one
 active page read per session generation and returns completions through the
 client dispatcher. Commands/settings continue to use the same service snapshot.
 
-- [ ] **Step 4: Replace full saves with event-specific commits**
+- [x] **Step 4: Replace full saves with event-specific commits**
 
 Project each accepted state transition into the minimum durable batch. Commit
 terminal interruption/cancellation before clearing. Deletion/reset invalidates
 page and context generations before SQL begins so late reads cannot resurrect
 or reveal removed rows.
 
-- [ ] **Step 5: Prepare provider-neutral context asynchronously**
+- [x] **Step 5: Prepare provider-neutral context asynchronously**
 
 Add a selected-topology context-budget contract. Local profiles expose their
 resolved `ContextBudget`; server capability protocol advertises its budget.
@@ -297,14 +297,14 @@ hydrates/replaces the bounded Agent session seed, then captures current game
 context and dispatches. Cancellation stops before dispatch. Protocol decoding
 remains strict and loaders do not infer limits.
 
-- [ ] **Step 6: Bound live in-memory Agent context**
+- [x] **Step 6: Bound live in-memory Agent context**
 
 After a successful durable checkpoint/commit, discard summarized source
 messages from the runtime seed while the database retains originals. In
 non-durable mode, retain only the valid summary plus recent verbatim tail after
 compaction. Never prune a current tool pair or before checkpoint success.
 
-- [ ] **Step 7: Run service/protocol/race tests and commit**
+- [x] **Step 7: Run service/protocol/race tests and commit**
 
 ```bash
 ./gradlew :common:test --tests 'dev.tomewisp.guide.*' \

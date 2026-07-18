@@ -46,7 +46,7 @@ final class PayloadGuideRemoteEndpointTest {
         assertEquals(
                 List.of("USER:old question", "ASSISTANT:old answer"),
                 port.request.history().stream()
-                        .map(message -> message.role() + ":" + message.text())
+                        .map(message -> message.role() + ":" + message.content().getFirst().text())
                         .toList());
     }
 
@@ -71,7 +71,9 @@ final class PayloadGuideRemoteEndpointTest {
         private ServerAgentRequestPayload request;
         private final List<UUID> cancelled = new ArrayList<>();
         @Override public CapabilityPayload capabilities() {
-            return new CapabilityPayload(BridgeProtocol.VERSION, List.of(), true);
+            return new CapabilityPayload(
+                    BridgeProtocol.VERSION, List.of(), true,
+                    256_000, 8_192, 2_000, "test/model");
         }
         @Override public boolean ask(
                 ServerAgentRequestPayload request, Consumer<ServerAgentEventPayload> events) {

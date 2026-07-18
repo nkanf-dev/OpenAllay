@@ -43,6 +43,16 @@ public interface GuideLocalEndpoint {
         return requiredContext();
     }
 
+    default Optional<GuideContextSpec> contextSpec(String profileId) {
+        return Optional.empty();
+    }
+
+    default void hydrateContext(
+            UUID actor,
+            String sessionId,
+            List<dev.tomewisp.model.ModelMessage> messages,
+            List<ContextCheckpoint> checkpoints) {}
+
     CompletableFuture<AgentResult> ask(
             UUID actor,
             String sessionId,

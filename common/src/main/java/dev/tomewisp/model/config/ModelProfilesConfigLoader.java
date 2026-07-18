@@ -176,7 +176,10 @@ public final class ModelProfilesConfigLoader {
                             definition.maxOutputTokens(),
                             definition.connectTimeout(),
                             definition.requestTimeout()),
-                    null);
+                    null,
+                    discovered == null
+                            ? definition.model()
+                            : discovered.canonicalModelId());
         } catch (RuntimeException failure) {
             return failed(definition, "invalid_model_config", message(failure));
         }

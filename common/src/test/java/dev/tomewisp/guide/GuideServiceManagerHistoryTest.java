@@ -13,6 +13,7 @@ import dev.tomewisp.guide.history.GuideHistoryAccess;
 import dev.tomewisp.guide.history.GuideHistoryActivity;
 import dev.tomewisp.guide.history.GuideHistoryDeleteScope;
 import dev.tomewisp.guide.history.GuideHistoryLoad;
+import dev.tomewisp.guide.history.GuideHistoryMetadata;
 import dev.tomewisp.guide.history.GuideHistoryPartition;
 import dev.tomewisp.guide.history.GuideHistoryScope;
 import dev.tomewisp.tool.ToolResult;
@@ -167,6 +168,13 @@ final class GuideServiceManagerHistoryTest {
         public CompletableFuture<GuideHistoryLoad> load(GuideHistoryScope scope) {
             loads.add(scope);
             return CompletableFuture.completedFuture(GuideHistoryLoad.empty());
+        }
+
+        @Override
+        public CompletableFuture<java.util.Optional<GuideHistoryMetadata>> metadata(
+                GuideHistoryScope scope) {
+            loads.add(scope);
+            return CompletableFuture.completedFuture(java.util.Optional.empty());
         }
 
         @Override

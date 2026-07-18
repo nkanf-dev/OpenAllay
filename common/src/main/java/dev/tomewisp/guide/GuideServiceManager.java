@@ -125,6 +125,31 @@ public final class GuideServiceManager {
             }
 
             @Override
+            public CompletableFuture<java.util.Optional<
+                    dev.tomewisp.guide.history.GuideHistoryMetadata>> metadata(
+                    GuideHistoryScope scope) {
+                return disconnected.thenCompose(ignored -> history.metadata(scope));
+            }
+
+            @Override
+            public CompletableFuture<dev.tomewisp.guide.history.GuideHistoryPage> page(
+                    dev.tomewisp.guide.history.GuideHistoryPageRequest request) {
+                return disconnected.thenCompose(ignored -> history.page(request));
+            }
+
+            @Override
+            public CompletableFuture<dev.tomewisp.guide.history.GuideHistoryContextSeed> context(
+                    dev.tomewisp.guide.history.GuideHistoryContextRequest request) {
+                return disconnected.thenCompose(ignored -> history.context(request));
+            }
+
+            @Override
+            public CompletableFuture<Void> commit(
+                    dev.tomewisp.guide.history.GuideHistoryCommit commit) {
+                return disconnected.thenCompose(ignored -> history.commit(commit));
+            }
+
+            @Override
             public CompletableFuture<Void> delete(
                     dev.tomewisp.guide.history.GuideHistoryDeleteScope scope) {
                 return disconnected.thenCompose(ignored -> history.delete(scope));

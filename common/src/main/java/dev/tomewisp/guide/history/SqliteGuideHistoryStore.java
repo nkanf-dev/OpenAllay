@@ -1,6 +1,7 @@
 package dev.tomewisp.guide.history;
 
 import dev.tomewisp.agent.context.ContextCheckpoint;
+import dev.tomewisp.agent.context.ContextSourceHash;
 import dev.tomewisp.guide.GuideFailure;
 import dev.tomewisp.guide.GuideMessage;
 import dev.tomewisp.guide.GuideModelSelection;
@@ -17,6 +18,7 @@ import dev.tomewisp.model.ModelRole;
 import dev.tomewisp.agent.context.Utf8ContextTokenEstimator;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.google.gson.Gson;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -229,9 +231,22 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
             for (int index = acceptedNewest.size() - 1; index >= 0; index--) {
                 messages.addAll(acceptedNewest.get(index));
             }
-            List<ContextCheckpoint> checkpoints = readApplicableCheckpoint(
-                    connection, request.scope().scopeId(), request.sessionId(),
-                    request.modelIdentifier());
+            List<ContextCheckpoint> checkpoints = List.of();
+            if (oldest != null && oldest.sequence() == 0) {
+                List<ContextCheckpoint> candidate = readApplicableCheckpoint(
+                        connection, request.scope().scopeId(), request.sessionId(),
+                        request.modelIdentifier());
+                if (!candidate.isEmpty()) {
+                    ContextCheckpoint checkpoint = candidate.getFirst();
+                    if (checkpoint.sourceFromIndex() == 0
+                            && checkpoint.sourceToIndexExclusive() <= messages.size()
+                            && checkpoint.sourceHash().equals(ContextSourceHash.compute(
+                                    new Gson(), messages.subList(
+                                            0, checkpoint.sourceToIndexExclusive())))) {
+                        checkpoints = candidate;
+                    }
+                }
+            }
             return new GuideHistoryContextSeed(
                     request.sessionId(), messages, checkpoints, estimated, oldest);
         } catch (SQLException failure) {

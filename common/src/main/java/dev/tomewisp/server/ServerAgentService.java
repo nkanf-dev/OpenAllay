@@ -102,11 +102,7 @@ public final class ServerAgentService {
                             context,
                             payload.stream());
                     List<ModelMessage> restored = payload.history().stream()
-                            .map(message -> new ModelMessage(
-                                    message.role() == ServerAgentHistoryMessage.Role.USER
-                                            ? ModelRole.USER
-                                            : ModelRole.ASSISTANT,
-                                    List.of(new ModelContent.Text(message.text()))))
+                            .map(ServerAgentHistoryMessage::toModelMessage)
                             .toList();
                     return agent.askWithHistory(
                             request,

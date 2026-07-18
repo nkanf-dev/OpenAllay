@@ -15,6 +15,7 @@ import dev.tomewisp.context.ContextCapability;
 import dev.tomewisp.context.ToolInvocationContext;
 import dev.tomewisp.guide.GuideClientModelProfile;
 import dev.tomewisp.guide.GuideFailure;
+import dev.tomewisp.guide.GuideContextSpec;
 import dev.tomewisp.guide.GuideLocalEndpoint;
 import dev.tomewisp.guide.GuideMessage;
 import dev.tomewisp.guide.GuideModelProfileException;
@@ -156,6 +157,11 @@ public final class ClientModelRuntimeRegistry implements GuideLocalEndpoint {
     }
 
     @Override
+    public java.util.Optional<GuideContextSpec> contextSpec(String profileId) {
+        return runtime(state.get(), profileId).contextSpec(profileId);
+    }
+
+    @Override
     public CompletableFuture<AgentResult> ask(
             UUID actor,
             String sessionId,
@@ -215,6 +221,15 @@ public final class ClientModelRuntimeRegistry implements GuideLocalEndpoint {
         sessions.hydrate(new AgentSessionKey(actor, sessionId), history, checkpoints);
     }
 
+    @Override
+    public void hydrateContext(
+            UUID actor,
+            String sessionId,
+            List<ModelMessage> messages,
+            List<ContextCheckpoint> checkpoints) {
+        sessions.hydrate(new AgentSessionKey(actor, sessionId), messages, checkpoints);
+    }
+
     private State build(
             ModelProfilesConfigLoader.Load load,
             Function<ResolvedModelProfile, ModelClient> factory) {
@@ -228,7 +243,7 @@ public final class ClientModelRuntimeRegistry implements GuideLocalEndpoint {
                     profile.definition().displayName(),
                     profile.definition().enabled(),
                     profile.available(),
-                    profile.definition().model(),
+                    profile.canonicalModelId(),
                     failure));
             if (profile.available()) {
                 ModelClient model = Objects.requireNonNull(
@@ -243,7 +258,7 @@ public final class ClientModelRuntimeRegistry implements GuideLocalEndpoint {
                                 null,
                                 Set.of(profile.runtimeConfig().apiKey().reveal())),
                         profile.runtimeConfig().contextBudget(),
-                        profile.runtimeConfig().model(),
+                        profile.canonicalModelId(),
                         capabilities.get()));
             }
         }

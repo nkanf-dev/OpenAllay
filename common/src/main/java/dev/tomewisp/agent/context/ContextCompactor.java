@@ -10,12 +10,8 @@ import dev.tomewisp.model.ModelClientException;
 import dev.tomewisp.model.ModelMessage;
 import dev.tomewisp.model.ModelRequest;
 import dev.tomewisp.model.ModelToolDefinition;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.util.ArrayList;
-import java.util.HexFormat;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -167,7 +163,9 @@ public final class ContextCompactor {
                     String encoded = summary.toString();
                     ContextCheckpoint checkpoint = new ContextCheckpoint(
                             UUID.randomUUID(), 0, prefix.toIndexExclusive(),
-                            hash(deterministic.messages().subList(0, prefix.toIndexExclusive())),
+                            ContextSourceHash.compute(
+                                    gson, deterministic.messages().subList(
+                                            0, prefix.toIndexExclusive())),
                             modelIdentifier, PROMPT_VERSION, SCHEMA_VERSION, clock.instant(),
                             ContextCheckpoint.Status.SUCCEEDED, encoded, null, null, estimate);
                     return new Result(new ContextProjection(
@@ -179,7 +177,7 @@ public final class ContextCompactor {
     public boolean matches(ContextCheckpoint checkpoint, List<ModelMessage> source) {
         if (checkpoint.status() != ContextCheckpoint.Status.SUCCEEDED
                 || checkpoint.sourceToIndexExclusive() > source.size()) return false;
-        return checkpoint.sourceHash().equals(hash(source.subList(
+        return checkpoint.sourceHash().equals(ContextSourceHash.compute(gson, source.subList(
                 checkpoint.sourceFromIndex(), checkpoint.sourceToIndexExclusive())));
     }
 
@@ -246,7 +244,8 @@ public final class ContextCompactor {
             List<ModelMessage> messages, int from, int to, String code, String message, int estimate) {
         int safeTo = Math.min(Math.max(from + 1, to), messages.size());
         return new ContextCheckpoint(
-                UUID.randomUUID(), from, safeTo, hash(messages.subList(from, safeTo)),
+                UUID.randomUUID(), from, safeTo,
+                ContextSourceHash.compute(gson, messages.subList(from, safeTo)),
                 modelIdentifier, PROMPT_VERSION, SCHEMA_VERSION, clock.instant(),
                 ContextCheckpoint.Status.FAILED, null, code, message, Math.max(0, estimate));
     }
@@ -266,16 +265,6 @@ public final class ContextCompactor {
             }
         }
         return object.deepCopy();
-    }
-
-    private String hash(List<ModelMessage> messages) {
-        try {
-            byte[] bytes = gson.toJson(ContextStructure.summarySafe(messages))
-                    .getBytes(StandardCharsets.UTF_8);
-            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes));
-        } catch (NoSuchAlgorithmException impossible) {
-            throw new IllegalStateException("SHA-256 is unavailable", impossible);
-        }
     }
 
     private static Throwable unwrap(Throwable throwable) {

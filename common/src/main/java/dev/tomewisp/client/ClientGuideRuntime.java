@@ -22,6 +22,7 @@ import dev.tomewisp.capability.ClientCapabilityResolver;
 import dev.tomewisp.capability.ClientCapabilitySnapshot;
 import dev.tomewisp.context.ToolInvocationContext;
 import dev.tomewisp.guide.GuideLocalEndpoint;
+import dev.tomewisp.guide.GuideContextSpec;
 import dev.tomewisp.guide.GuideMessage;
 import dev.tomewisp.model.ModelClient;
 import dev.tomewisp.model.ModelContent;
@@ -38,6 +39,7 @@ import java.time.Clock;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -202,6 +204,29 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
         return toolExecutor.requiredContext();
     }
 
+    @Override
+    public Optional<GuideContextSpec> contextSpec(String profileId) {
+        if (endpoint.contextBudget() == null || endpoint.modelIdentifier() == null) {
+            return Optional.empty();
+        }
+        int promptAndTools = new Utf8ContextTokenEstimator().estimate(
+                systemPrompt(), List.of(), toolExecutor.definitions());
+        if (promptAndTools >= endpoint.contextBudget().inputTokens()) {
+            return Optional.empty();
+        }
+        return Optional.of(new GuideContextSpec(
+                endpoint.contextBudget(), promptAndTools, endpoint.modelIdentifier()));
+    }
+
+    @Override
+    public void hydrateContext(
+            UUID actor,
+            String sessionId,
+            List<ModelMessage> messages,
+            List<ContextCheckpoint> checkpoints) {
+        sessions.hydrate(new AgentSessionKey(actor, sessionId), messages, checkpoints);
+    }
+
     public CompletableFuture<AgentResult> ask(
             UUID actor,
             String question,
@@ -334,7 +359,7 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
                 contextBudget,
                 modelIdentifier,
                 Clock.systemUTC());
-        return new EndpointRuntime(scheduler, compactor);
+        return new EndpointRuntime(scheduler, compactor, contextBudget, modelIdentifier);
     }
 
     private static ClientCapabilitySnapshot defaultCapabilities(TomeWispRuntime runtime) {
@@ -350,5 +375,7 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
 
     private record EndpointRuntime(
             ModelRequestScheduler scheduler,
-            ContextCompactor compactor) {}
+            ContextCompactor compactor,
+            ContextBudget contextBudget,
+            String modelIdentifier) {}
 }
