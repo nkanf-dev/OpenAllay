@@ -4,7 +4,7 @@
 - decided_by: designer
 - approval_source: designer replied “确认，这一块我相信你的判断” to the proposed deletion scope, concurrency, and reset policy
 - date: 2026-07-18
-- commit: pending
+- commit: adaffaf
 - patterns:
   - B_state_persistence
   - C_concurrent_operations
