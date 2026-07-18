@@ -21,6 +21,7 @@ accepted and contains explicit approval evidence.
 | SKMB-2026-07-18-011 | accepted | pre-release durable schema policy | B, F, G | decisions/2026-07-18-011-pre-release-durable-schema.md | pending |
 | SKMB-2026-07-18-012 | accepted | model metadata cache and refresh | A, B, D, F | decisions/2026-07-18-012-model-metadata-cache.md | 7e2a735 |
 | SKMB-2026-07-18-013 | accepted | shared outbound HTTP authority boundaries | D, E, F | decisions/2026-07-18-013-outbound-http-boundaries.md | 7e2a735 |
+| SKMB-2026-07-18-014 | accepted | player history administration | B, C, F, G | decisions/2026-07-18-014-history-administration.md | pending |
 
 SKMB-2026-07-18-006 is implemented by `a0eaeff`, `19ab90f`, and `c6ca6bc`.
 Its deterministic clean-build and packaged-driver evidence is recorded in the
@@ -90,6 +91,7 @@ Delight graphical evidence are recorded in the Phase 4C plan and
 | T34 | any UI state | debug mode changes | unchanged | Rebuild only the local normal/debug projection; do not rewrite history or change active work | SKMB-2026-07-18-010 |
 | T35 | client startup | valid metadata cache loads | unchanged | Apply only missing profile limits asynchronously; do not block startup or override explicit values | SKMB-2026-07-18-012 |
 | T36 | cache miss or manual refresh | trusted metadata succeeds | unchanged | Atomically store the validated credential-free entry and make it available to a later registry reload | SKMB-2026-07-18-012 |
+| T37 | history idle | player confirms current-partition/current-actor deletion | deletion_pending | Serialize after prior writes, transactionally delete only the approved scope, reset matching in-memory sessions, then return idle | SKMB-2026-07-18-014 |
 
 ## Invariants
 
@@ -139,6 +141,7 @@ Delight graphical evidence are recorded in the Phase 4C plan and
 | I42 | Before the first formal release, durable storage has one current schema and no migration-only compatibility surface | SKMB-2026-07-18-011 |
 | I43 | Metadata cache/load/refresh is asynchronous, credential-free, source/model keyed, and subordinate to explicit limits | SKMB-2026-07-18-012 |
 | I44 | Shared HTTP transport grants no model tool, endpoint, credential, or evidence authority; each domain adapter must provide its own | SKMB-2026-07-18-013 |
+| I45 | Normal history management is actor-scoped; whole-database reset is Debug Mode-only, separately confirmed, and never automatic | SKMB-2026-07-18-014 |
 
 ## Fail Semantics
 
@@ -171,6 +174,7 @@ Delight graphical evidence are recorded in the Phase 4C plan and
 | F25 | Known card data is malformed or a tool type is unknown | Render a friendly textual fallback; expose only a redacted validation diagnostic in debug mode | SKMB-2026-07-18-010 |
 | F26 | An unsupported pre-release history schema is opened | Fail `history_schema_unsupported` without mutation; require explicit deletion/recreation of development data | SKMB-2026-07-18-011 |
 | F27 | Metadata cache is absent/invalid or refresh fails | Preserve explicit configuration and the last valid cache, publish a redacted diagnostic, and never block startup | SKMB-2026-07-18-012 |
+| F28 | History deletion overlaps an active request/pending write or its transaction fails | Reject or roll back without deleting/resurrecting data; require an explicit later retry | SKMB-2026-07-18-014 |
 
 ## Statistical Defaults Allowed Temporarily
 
