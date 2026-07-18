@@ -20,14 +20,15 @@ public final class BundledSkillLoader {
         List<SkillSource> sources = new ArrayList<>();
         ClassLoader loader = BundledSkillLoader.class.getClassLoader();
         for (String name : NAMES) {
-            String path = "assets/tomewisp/tomewisp_skills/" + name + "/skill.md";
+            String path = "assets/tomewisp/tomewisp_skills/" + name + "/SKILL.md";
             try (InputStream input = loader.getResourceAsStream(path)) {
                 if (input == null) {
                     throw new IllegalStateException("Missing bundled Skill " + path);
                 }
                 sources.add(new SkillSource(
                         "tomewisp:bundled", path,
-                        Map.of(path, new String(input.readAllBytes(), StandardCharsets.UTF_8))));
+                        Map.of(path, new String(input.readAllBytes(), StandardCharsets.UTF_8)),
+                        SkillSource.Origin.BUNDLED));
             } catch (IOException failure) {
                 throw new UncheckedIOException("Unable to read bundled Skill " + path, failure);
             }

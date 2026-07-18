@@ -1,9 +1,7 @@
 ---
 name: explain-machine-usage
 description: Explain how to obtain, place, configure, power, and automate a modded machine.
-required-mods: []
-allowed-tools: [tomewisp:resolve_resource, tomewisp:search_recipes, tomewisp:get_recipe, tomewisp:search_knowledge, tomewisp:get_knowledge_document, tomewisp:get_patchouli_multiblock]
-references: []
+allowed-tools: "tomewisp:resolve_resource tomewisp:search_recipes tomewisp:get_recipe tomewisp:search_knowledge tomewisp:get_knowledge_document tomewisp:get_patchouli_multiblock"
 ---
 Use this Skill when the player asks how a machine or multiblock works.
 

@@ -1,9 +1,7 @@
 ---
 name: answer-modded-minecraft-question
 description: Answer a player's modded Minecraft question from live registries, recipes, and indexed documentation.
-required-mods: []
-allowed-tools: [tomewisp:resolve_resource, tomewisp:search_recipes, tomewisp:get_recipe, tomewisp:find_item_usages, tomewisp:inspect_inventory, tomewisp:calculate_craftability, tomewisp:player_context, tomewisp:search_knowledge, tomewisp:get_knowledge_document]
-references: []
+allowed-tools: "tomewisp:resolve_resource tomewisp:search_recipes tomewisp:get_recipe tomewisp:find_item_usages tomewisp:inspect_inventory tomewisp:calculate_craftability tomewisp:player_context tomewisp:search_knowledge tomewisp:get_knowledge_document"
 ---
 Use this Skill for general questions about items, blocks, recipes, mechanics, or progression.
 

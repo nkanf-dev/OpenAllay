@@ -56,7 +56,7 @@ final class SkillRepositoryTest {
         SkillRepository repository = repository();
         SkillSource source = valid("quest-guide", "body");
         String entry = source.files().get(source.entryPath()).replace(
-                "required-mods: []", "required-mods: [ftbquests]");
+                "allowed-tools:", "metadata:\n  tomewisp/required-mods: \"ftbquests\"\nallowed-tools:");
         source = new SkillSource(source.provenance(), source.entryPath(), Map.of(
                 source.entryPath(), entry,
                 "quest-guide/references/policy.md", "Ground every claim."));
@@ -102,12 +102,9 @@ final class SkillRepositoryTest {
                 ---
                 name: %s
                 description: Answer a guide question
-                required-mods: []
-                allowed-tools: %s
-                references:
-                  - references/policy.md
+                allowed-tools: "%s"
                 ---
                 %s
-                """.formatted(name, tools, body);
+                """.formatted(name, tools.substring(1, tools.length() - 1), body);
     }
 }
