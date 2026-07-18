@@ -384,19 +384,19 @@ git commit -m "feat: virtualize semantic guide rendering"
 - Modify: display/settings tests
 - Modify: documentation and SKMB decision 010/016/018 references
 
-- [ ] **Step 1: Replace display schema cleanly and test strict failure**
+- [x] **Step 1: Replace display schema cleanly and test strict failure**
 
 Use current pre-release schema 2 with `debugMode` and `animationsEnabled` only.
 Do not migrate schema 1. Missing file defaults to debug off/animations on;
 explicit old/unknown schema fails closed and retains the last valid runtime.
 
-- [ ] **Step 2: Apply animation as presentation only**
+- [x] **Step 2: Apply animation as presentation only**
 
 The setting may control ingredient-alternative cycling or subtle progress
 presentation, but never component state, action availability, evidence, layout
 identity, or narration. Reopening rebuilds the same semantic document.
 
-- [ ] **Step 3: Add friendly and debug performance diagnostics**
+- [x] **Step 3: Add friendly and debug performance diagnostics**
 
 Normal mode may say history is loaded on demand and whether the current page is
 loading/failed. Debug mode may show redacted loaded/total row counts, page
@@ -404,7 +404,7 @@ cursors as counts (not raw IDs), cache hit/miss counts, semantic fallback count,
 and context-token estimates. No transcript, provider body, path, actor, raw
 scope, or component payload.
 
-- [ ] **Step 4: Run settings/localization/privacy tests and commit**
+- [x] **Step 4: Run settings/localization/privacy tests and commit**
 
 ```bash
 ./gradlew :common:test --tests 'dev.tomewisp.settings.*' \

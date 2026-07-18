@@ -1,7 +1,10 @@
 package dev.tomewisp.guide.ui;
 
-public record GuideDisplayConfig(int schemaVersion, boolean debugMode) {
-    public static final int SCHEMA_VERSION = 1;
+public record GuideDisplayConfig(
+        int schemaVersion,
+        boolean debugMode,
+        boolean animationsEnabled) {
+    public static final int SCHEMA_VERSION = 2;
 
     public GuideDisplayConfig {
         if (schemaVersion != SCHEMA_VERSION) {
@@ -11,6 +14,6 @@ public record GuideDisplayConfig(int schemaVersion, boolean debugMode) {
     }
 
     public static GuideDisplayConfig defaults() {
-        return new GuideDisplayConfig(SCHEMA_VERSION, false);
+        return new GuideDisplayConfig(SCHEMA_VERSION, false, true);
     }
 }

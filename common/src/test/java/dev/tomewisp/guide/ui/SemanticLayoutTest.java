@@ -54,15 +54,15 @@ final class SemanticLayoutTest {
         String locale = Locale.SIMPLIFIED_CHINESE.toLanguageTag();
 
         SemanticLayout first = cache.get(
-                "assistant-1", document, 80, locale, "font", true, MEASURER);
+                "assistant-1", document, 80, locale, "font", MEASURER);
         SemanticLayout second = cache.get(
-                "assistant-1", document, 80, locale, "font", true, MEASURER);
+                "assistant-1", document, 80, locale, "font", MEASURER);
         assertSame(first, second);
         assertEquals(new SemanticLayoutCache.Stats(1, 1, 1), cache.stats());
 
         cache.invalidateRow("assistant-1");
         SemanticLayout third = cache.get(
-                "assistant-1", document, 80, locale, "font", true, MEASURER);
+                "assistant-1", document, 80, locale, "font", MEASURER);
         assertTrue(first != third);
         assertEquals(new SemanticLayoutCache.Stats(1, 2, 1), cache.stats());
     }

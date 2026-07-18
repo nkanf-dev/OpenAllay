@@ -9,6 +9,7 @@ public record SettingsDiagnosticCard(
         FriendlyStatus friendlyStatus,
         String titleKey,
         String statusKey,
+        List<String> noteKeys,
         List<Metric> metrics) {
     public enum Domain {
         MODELS,
@@ -30,6 +31,7 @@ public record SettingsDiagnosticCard(
         Objects.requireNonNull(friendlyStatus, "friendlyStatus");
         titleKey = key(titleKey, "titleKey");
         statusKey = key(statusKey, "statusKey");
+        noteKeys = noteKeys.stream().map(value -> key(value, "noteKey")).toList();
         metrics = List.copyOf(metrics);
     }
 

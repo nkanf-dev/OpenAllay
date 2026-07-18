@@ -7,6 +7,7 @@ import dev.tomewisp.context.RecipeReference;
 import dev.tomewisp.guide.semantic.RecipeSemanticHandle;
 import dev.tomewisp.guide.semantic.SemanticReference;
 import dev.tomewisp.guide.semantic.SemanticReferenceKind;
+import dev.tomewisp.guide.semantic.RichComponent;
 import org.junit.jupiter.api.Test;
 
 final class MinecraftSemanticRendererTest {
@@ -42,5 +43,19 @@ final class MinecraftSemanticRendererTest {
         SemanticReference malformed = new SemanticReference(
                 SemanticReferenceKind.RECIPE, "not-a-handle", "Recipe", true, "tool-1");
         assertNull(MinecraftSemanticRenderer.intent(malformed));
+    }
+
+    @Test
+    void animationChangesOnlyTheActiveProgressGlyph() {
+        assertEquals("▶", MinecraftSemanticRenderer.progressMarker(
+                RichComponent.StepState.ACTIVE, false, 0));
+        assertEquals("▶", MinecraftSemanticRenderer.progressMarker(
+                RichComponent.StepState.ACTIVE, false, 80));
+        assertEquals("▷", MinecraftSemanticRenderer.progressMarker(
+                RichComponent.StepState.ACTIVE, true, 0));
+        assertEquals("▶", MinecraftSemanticRenderer.progressMarker(
+                RichComponent.StepState.ACTIVE, true, 8));
+        assertEquals("✓", MinecraftSemanticRenderer.progressMarker(
+                RichComponent.StepState.COMPLETE, true, 0));
     }
 }

@@ -1,5 +1,6 @@
 package dev.tomewisp.settings.diagnostics;
 
+import dev.tomewisp.guide.GuideHistoryPageState;
 import dev.tomewisp.guide.GuideModelMode;
 import dev.tomewisp.guide.GuidePersistenceSnapshot;
 import dev.tomewisp.guide.GuideRequestStatus;
@@ -102,7 +103,8 @@ public record SettingsDiagnosticsSnapshot(
             boolean deleting,
             long activeRequestCount,
             Optional<DebugRequest> request,
-            DebugContext context) {
+            DebugContext context,
+            DebugHistory history) {
         public DebugGuide {
             Objects.requireNonNull(scopeKind, "scopeKind");
             requireTechnical(selectedSessionId, "selectedSessionId");
@@ -115,6 +117,7 @@ public record SettingsDiagnosticsSnapshot(
             }
             request = Objects.requireNonNull(request, "request");
             Objects.requireNonNull(context, "context");
+            Objects.requireNonNull(history, "history");
         }
     }
 
@@ -146,6 +149,31 @@ public record SettingsDiagnosticsSnapshot(
                     || successfulCheckpoints + failedCheckpoints != checkpointCount
                     || estimatedProjectionTokens < 0) {
                 throw new IllegalArgumentException("debug context counts are invalid");
+            }
+        }
+    }
+
+    /** Counts only: no actor, scope, request, cursor UUID, transcript, or component payload. */
+    public record DebugHistory(
+            long loadedRequests,
+            long totalRequests,
+            Long firstLoadedCount,
+            Long lastLoadedCount,
+            GuideHistoryPageState pageState,
+            long cacheHits,
+            long cacheMisses,
+            long semanticFallbackCount) {
+        public DebugHistory {
+            if (loadedRequests < 0 || totalRequests < loadedRequests
+                    || firstLoadedCount != null && firstLoadedCount < 0
+                    || lastLoadedCount != null && lastLoadedCount < 0
+                    || cacheHits < 0 || cacheMisses < 0 || semanticFallbackCount < 0) {
+                throw new IllegalArgumentException("debug history counts are invalid");
+            }
+            Objects.requireNonNull(pageState, "pageState");
+            if ((firstLoadedCount == null) != (lastLoadedCount == null)
+                    || firstLoadedCount != null && firstLoadedCount > lastLoadedCount) {
+                throw new IllegalArgumentException("debug history cursor counts are invalid");
             }
         }
     }

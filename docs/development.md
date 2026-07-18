@@ -171,8 +171,9 @@ default below:
 
 ```json
 {
-  "schemaVersion": 1,
-  "debugMode": false
+  "schemaVersion": 2,
+  "debugMode": false,
+  "animationsEnabled": true
 }
 ```
 
@@ -187,6 +188,16 @@ malformed file. The General page edits Debug Mode through the shared
 `GuideDisplayRuntime`; an atomic save immediately reprojects both the settings
 screen and newly rendered Guide content without requiring a restart. Reload
 retains the last valid projection on malformed external edits.
+
+`animationsEnabled` controls only subtle progress presentation. It does not
+change semantic content, action availability, evidence, layout identity, or
+narration. Schema 1 is pre-release development state and is rejected rather
+than migrated. Normal diagnostics say that history is loaded on demand and
+show current-page loading/failure in friendly terms. Debug diagnostics add
+only count-based window cursors, loaded/total counts, semantic cache hits and
+misses, fallback counts, and context-token estimates; they never include raw
+cursor/request payloads, transcripts, paths, provider bodies, actors, or scope
+identifiers.
 
 The top-level settings sections are General, Models, Knowledge & Capabilities,
 History, and Diagnostics. Knowledge & Capabilities is the catalog for all

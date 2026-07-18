@@ -18,6 +18,7 @@ final class DiagnosticsSettingsProjectionTest {
                 SettingsDiagnosticCard.FriendlyStatus.READY,
                 "screen.tomewisp.settings.diagnostics.history.title",
                 "screen.tomewisp.settings.diagnostics.status.ready",
+                List.of("screen.tomewisp.settings.diagnostics.history.on_demand"),
                 List.of(new SettingsDiagnosticCard.Metric(
                         "screen.tomewisp.settings.diagnostics.metric.pending_writes", 0)));
 
@@ -28,6 +29,7 @@ final class DiagnosticsSettingsProjectionTest {
         assertEquals("screen.tomewisp.settings.diagnostics.status.ready",
                 projection.cards().getFirst().statusKey());
         assertFalse(projection.cards().getFirst().statusTextKey().isBlank());
+        assertEquals(1, projection.cards().getFirst().noteKeys().size());
         assertTrue(projection.debug().isEmpty());
         assertTrue(projection.narrationKey().contains("diagnostics"));
     }

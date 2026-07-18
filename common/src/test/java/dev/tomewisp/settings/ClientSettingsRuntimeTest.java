@@ -82,7 +82,8 @@ final class ClientSettingsRuntimeTest {
         ClientSettingsRuntime settings = success.value();
 
         assertInstanceOf(ToolResult.Success.class, settings.settings()
-                .saveDisplay(new GuideDisplayConfig(1, true)).join());
+                .saveDisplay(new GuideDisplayConfig(
+                        GuideDisplayConfig.SCHEMA_VERSION, true, true)).join());
 
         assertTrue(display.config().debugMode());
         assertTrue(settings.settings().snapshot().display().debugMode());

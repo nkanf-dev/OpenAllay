@@ -17,6 +17,7 @@ public final class GuideDisplayConfigWriter {
         JsonObject root = new JsonObject();
         root.addProperty("schemaVersion", config.schemaVersion());
         root.addProperty("debugMode", config.debugMode());
+        root.addProperty("animationsEnabled", config.animationsEnabled());
         return GSON.toJson(root) + System.lineSeparator();
     }
 }

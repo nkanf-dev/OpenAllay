@@ -71,7 +71,7 @@ final class ClientSettingsServiceTest {
     void debugDisplayAddsOnlyTheSeparateTechnicalDiagnosticsProjection() {
         FakeModels models = new FakeModels(state(config("alpha")));
         ClientSettingsService service = new ClientSettingsService(
-                new GuideDisplayConfig(GuideDisplayConfig.SCHEMA_VERSION, true),
+                new GuideDisplayConfig(GuideDisplayConfig.SCHEMA_VERSION, true, true),
                 models.current,
                 Set.of("ALPHA_KEY"),
                 models,
@@ -302,7 +302,8 @@ final class ClientSettingsServiceTest {
         ClientSettingsService service = service(
                 models, domains, display, history, Runnable::run);
 
-        assertSuccess(service.saveDisplay(new GuideDisplayConfig(1, true)).join());
+        assertSuccess(service.saveDisplay(new GuideDisplayConfig(
+                GuideDisplayConfig.SCHEMA_VERSION, true, true)).join());
 
         assertTrue(service.snapshot().display().debugMode());
         assertTrue(service.snapshot().diagnostics().debug().isPresent());
@@ -321,7 +322,8 @@ final class ClientSettingsServiceTest {
         ClientSettingsService service = service(
                 models, domains, display, new FakeHistory(), Runnable::run);
 
-        assertFailure(service.saveDisplay(new GuideDisplayConfig(1, true)).join(),
+        assertFailure(service.saveDisplay(new GuideDisplayConfig(
+                GuideDisplayConfig.SCHEMA_VERSION, true, true)).join(),
                 "settings_write_failed");
 
         assertFalse(service.snapshot().display().debugMode());
@@ -332,7 +334,8 @@ final class ClientSettingsServiceTest {
     void wholeDatabaseResetRequiresDebugModeAndFreshSecondConfirmation() {
         FakeModels models = new FakeModels(state(config("alpha")));
         FakeDomains domains = new FakeDomains();
-        FakeDisplay display = new FakeDisplay(new GuideDisplayConfig(1, true));
+        FakeDisplay display = new FakeDisplay(new GuideDisplayConfig(
+                GuideDisplayConfig.SCHEMA_VERSION, true, true));
         FakeHistory history = new FakeHistory();
         ClientSettingsService service = service(
                 models, domains, display, history, Runnable::run);
@@ -348,7 +351,8 @@ final class ClientSettingsServiceTest {
         ClientSettingsService.HistoryConfirmationToken staleFirst = successValue(
                 service.requestHistoryConfirmation(
                         ClientSettingsService.HistoryAction.RESET_DATABASE));
-        assertSuccess(service.saveDisplay(new GuideDisplayConfig(1, true)).join());
+        assertSuccess(service.saveDisplay(new GuideDisplayConfig(
+                GuideDisplayConfig.SCHEMA_VERSION, true, true)).join());
         assertFailure(service.confirmHistoryReset(staleFirst),
                 "history_delete_confirmation_required");
         assertFailure(service.resetHistoryDatabase(second).join(),

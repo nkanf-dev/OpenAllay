@@ -26,6 +26,7 @@ public record DiagnosticsSettingsProjection(
                         card.statusKey(),
                         card.statusKey(),
                         icon(card.friendlyStatus()),
+                        card.noteKeys(),
                         card.metrics()))
                 .toList();
         return new DiagnosticsSettingsProjection(
@@ -54,6 +55,7 @@ public record DiagnosticsSettingsProjection(
             String statusKey,
             String statusTextKey,
             String statusIcon,
+            List<String> noteKeys,
             List<SettingsDiagnosticCard.Metric> metrics) {
         public CardRow {
             Objects.requireNonNull(domain, "domain");
@@ -63,6 +65,7 @@ public record DiagnosticsSettingsProjection(
             if (statusIcon == null || statusIcon.isBlank()) {
                 throw new IllegalArgumentException("statusIcon is required");
             }
+            noteKeys = List.copyOf(noteKeys);
             metrics = List.copyOf(metrics);
         }
     }

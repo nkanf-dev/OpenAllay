@@ -55,6 +55,20 @@ public final class MinecraftSemanticRenderer {
             int width,
             int mouseX,
             int mouseY) {
+        return render(graphics, font, layout, x, y, width, mouseX, mouseY, false, 0);
+    }
+
+    public Result render(
+            GuiGraphicsExtractor graphics,
+            Font font,
+            SemanticLayout layout,
+            int x,
+            int y,
+            int width,
+            int mouseX,
+            int mouseY,
+            boolean animationsEnabled,
+            long presentationTicks) {
         ArrayList<Hit> hits = new ArrayList<>();
         int current = y;
         for (SemanticLayout.Line line : layout.lines()) {
@@ -65,7 +79,8 @@ public final class MinecraftSemanticRenderer {
                         x + width, current + line.height() / 2 + 1, MUTED);
                 case COMPONENT -> renderComponent(
                         graphics, font, line.component(), left, current,
-                        Math.max(20, width - line.indent()), mouseX, mouseY, hits);
+                        Math.max(20, width - line.indent()), mouseX, mouseY, hits,
+                        animationsEnabled, presentationTicks);
                 default -> {
                     if (line.kind() == SemanticLayout.Kind.CODE) {
                         graphics.fill(left - 2, current - 1, x + width, current + line.height(), PANEL);
@@ -131,7 +146,9 @@ public final class MinecraftSemanticRenderer {
             int width,
             int mouseX,
             int mouseY,
-            List<Hit> hits) {
+            List<Hit> hits,
+            boolean animationsEnabled,
+            long presentationTicks) {
         graphics.fill(x - 2, y - 1, x + width, y + componentHeight(component), PANEL);
         switch (component) {
             case RichComponent.ItemRow value -> {
@@ -186,12 +203,8 @@ public final class MinecraftSemanticRenderer {
             case RichComponent.ProgressSteps value -> {
                 int rowY = y + 2;
                 for (RichComponent.Step step : value.steps()) {
-                    String marker = switch (step.state()) {
-                        case PENDING -> "○";
-                        case ACTIVE -> "▶";
-                        case COMPLETE -> "✓";
-                        case FAILED -> "!";
-                    };
+                    String marker = progressMarker(
+                            step.state(), animationsEnabled, presentationTicks);
                     graphics.text(font, marker + " " + step.label(), x + 4, rowY,
                             step.state() == RichComponent.StepState.FAILED ? ERROR : TEXT, false);
                     rowY += 10;
@@ -226,6 +239,19 @@ public final class MinecraftSemanticRenderer {
                 }
             }
         }
+    }
+
+    static String progressMarker(
+            RichComponent.StepState state,
+            boolean animationsEnabled,
+            long presentationTicks) {
+        return switch (state) {
+            case PENDING -> "○";
+            case ACTIVE -> animationsEnabled && (presentationTicks / 8) % 2 == 0
+                    ? "▷" : "▶";
+            case COMPLETE -> "✓";
+            case FAILED -> "!";
+        };
     }
 
     private void renderItem(

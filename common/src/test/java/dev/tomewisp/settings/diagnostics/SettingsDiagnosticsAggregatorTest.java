@@ -12,6 +12,8 @@ import dev.tomewisp.capability.CapabilityKind;
 import dev.tomewisp.capability.CapabilityPolicy;
 import dev.tomewisp.capability.CapabilitySettingsEntry;
 import dev.tomewisp.guide.GuideMessage;
+import dev.tomewisp.guide.GuideHistoryPageState;
+import dev.tomewisp.guide.GuideHistoryWindowSnapshot;
 import dev.tomewisp.guide.GuideFailure;
 import dev.tomewisp.guide.GuideModelMode;
 import dev.tomewisp.guide.GuidePersistenceSnapshot;
@@ -25,6 +27,7 @@ import dev.tomewisp.guide.GuideToolStatus;
 import dev.tomewisp.guide.GuideTopology;
 import dev.tomewisp.guide.history.GuideHistoryActivity;
 import dev.tomewisp.guide.history.GuideHistoryPartition;
+import dev.tomewisp.guide.history.GuideHistoryCursor;
 import dev.tomewisp.model.ModelUsage;
 import dev.tomewisp.model.config.ModelProfileDefinition;
 import dev.tomewisp.model.config.ModelProfilesConfig;
@@ -89,6 +92,10 @@ final class SettingsDiagnosticsAggregatorTest {
         assertEquals("generation-7", technical.sources().getFirst().generation());
         assertFalse(technical.models().getFirst().metadataPresent());
         assertEquals(1, technical.capabilities().tools());
+        assertEquals(1, technical.guide().orElseThrow().history().loadedRequests());
+        assertEquals(1, technical.guide().orElseThrow().history().totalRequests());
+        assertTrue(technical.guide().orElseThrow().history().cacheHits() >= 0);
+        assertTrue(technical.guide().orElseThrow().history().cacheMisses() >= 0);
 
         String rendered = debug.toString().toLowerCase();
         assertFalse(rendered.contains("/v1/private"));
@@ -97,6 +104,53 @@ final class SettingsDiagnosticsAggregatorTest {
         assertFalse(rendered.contains("secret-value"));
         assertFalse(rendered.contains("authorization"));
         assertFalse(rendered.contains("reasoning"));
+    }
+
+    @Test
+    void historyDiagnosticsExposeFriendlyPageStateAndCountOnlyDebugCursors() {
+        SettingsDiagnosticsAggregator.DiagnosticsInputs available = inputs();
+        GuideSnapshot prior = available.guide().orElseThrow();
+        GuideSessionSnapshot original = prior.sessions().getFirst();
+        GuideHistoryCursor first = new GuideHistoryCursor(0, UUID.randomUUID());
+        GuideHistoryCursor last = new GuideHistoryCursor(99, UUID.randomUUID());
+        GuideHistoryCursor loadedFirst = new GuideHistoryCursor(20, UUID.randomUUID());
+        GuideHistoryCursor loadedLast = new GuideHistoryCursor(40, UUID.randomUUID());
+        GuideSessionSnapshot paged = new GuideSessionSnapshot(
+                original.sessionId(), original.messages(), original.requests(),
+                original.checkpoints(), original.modelSelection(),
+                new GuideHistoryWindowSnapshot(
+                        100, first, last, loadedFirst, loadedLast, true, true,
+                        GuideHistoryPageState.LOADING, 7, null));
+        GuideSnapshot guide = new GuideSnapshot(
+                prior.actorId(), prior.selectedSession(), prior.modelMode(),
+                prior.clientModelAvailable(), prior.serverModelAvailable(),
+                prior.persistence(), List.of(paged), prior.updatedAt());
+        SettingsDiagnosticsAggregator.DiagnosticsInputs pagedInputs =
+                new SettingsDiagnosticsAggregator.DiagnosticsInputs(
+                        available.settingsGeneration(), available.models(),
+                        available.capabilities(), available.recipes(), Optional.of(guide),
+                        available.historyActivity(), available.historyScopeKind(),
+                        available.databaseSchema(), available.sources());
+
+        SettingsDiagnosticsSnapshot normal =
+                new SettingsDiagnosticsAggregator().snapshot(false, pagedInputs);
+        SettingsDiagnosticCard history = normal.cards().stream()
+                .filter(card -> card.domain() == Domain.HISTORY).findFirst().orElseThrow();
+        assertEquals(FriendlyStatus.WORKING, history.friendlyStatus());
+        assertTrue(history.noteKeys().contains(
+                "screen.tomewisp.settings.diagnostics.history.on_demand"));
+        assertTrue(history.noteKeys().contains(
+                "screen.tomewisp.settings.diagnostics.history.page_loading"));
+
+        SettingsDiagnosticsSnapshot.DebugHistory debug =
+                new SettingsDiagnosticsAggregator().snapshot(true, pagedInputs)
+                        .debug().orElseThrow().guide().orElseThrow().history();
+        assertEquals(1, debug.loadedRequests());
+        assertEquals(100, debug.totalRequests());
+        assertEquals(20, debug.firstLoadedCount());
+        assertEquals(40, debug.lastLoadedCount());
+        assertFalse(debug.toString().contains(loadedFirst.requestId().toString()));
+        assertFalse(debug.toString().contains(loadedLast.requestId().toString()));
     }
 
     @Test

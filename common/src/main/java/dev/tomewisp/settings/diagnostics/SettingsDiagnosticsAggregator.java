@@ -3,10 +3,14 @@ package dev.tomewisp.settings.diagnostics;
 import dev.tomewisp.agent.context.ContextCheckpoint;
 import dev.tomewisp.capability.CapabilityKind;
 import dev.tomewisp.guide.GuideFailure;
+import dev.tomewisp.guide.GuideHistoryPageState;
+import dev.tomewisp.guide.GuideHistoryWindowSnapshot;
 import dev.tomewisp.guide.GuideRequestSnapshot;
 import dev.tomewisp.guide.GuideSessionSnapshot;
 import dev.tomewisp.guide.GuideSnapshot;
+import dev.tomewisp.guide.GuideTimelineEntry;
 import dev.tomewisp.guide.history.GuideHistoryActivity;
+import dev.tomewisp.guide.ui.SemanticLayoutCache;
 import dev.tomewisp.model.config.ModelProfileDefinition;
 import dev.tomewisp.settings.capability.CapabilitySettingsView;
 import dev.tomewisp.settings.capability.RecipeSettingsView;
@@ -16,6 +20,7 @@ import dev.tomewisp.settings.diagnostics.SettingsDiagnosticCard.Metric;
 import dev.tomewisp.settings.diagnostics.SettingsDiagnosticsSnapshot.DebugCapabilities;
 import dev.tomewisp.settings.diagnostics.SettingsDiagnosticsSnapshot.DebugContext;
 import dev.tomewisp.settings.diagnostics.SettingsDiagnosticsSnapshot.DebugGuide;
+import dev.tomewisp.settings.diagnostics.SettingsDiagnosticsSnapshot.DebugHistory;
 import dev.tomewisp.settings.diagnostics.SettingsDiagnosticsSnapshot.DebugModelProfile;
 import dev.tomewisp.settings.diagnostics.SettingsDiagnosticsSnapshot.DebugRequest;
 import dev.tomewisp.settings.diagnostics.SettingsDiagnosticsSnapshot.DebugSettingsDiagnostics;
@@ -159,17 +164,37 @@ public final class SettingsDiagnosticsAggregator {
         if (inputs.guide().isEmpty()) {
             status = FriendlyStatus.NOT_CONNECTED;
         } else {
-            status = switch (inputs.guide().orElseThrow().persistence().state()) {
+            GuideSnapshot snapshot = inputs.guide().orElseThrow();
+            status = switch (snapshot.persistence().state()) {
                 case UNAVAILABLE -> FriendlyStatus.UNAVAILABLE;
                 case LOADING, SAVING -> FriendlyStatus.WORKING;
                 case DISABLED -> FriendlyStatus.ATTENTION;
-                case AVAILABLE -> inputs.historyActivity().idleForDeletion()
-                                && guide.activeRequests() == 0
-                        ? FriendlyStatus.READY
-                        : FriendlyStatus.WORKING;
+                case AVAILABLE -> selectedSession(snapshot)
+                                .map(GuideSessionSnapshot::historyWindow)
+                                .map(window -> switch (window.state()) {
+                                    case LOADING -> FriendlyStatus.WORKING;
+                                    case FAILED -> FriendlyStatus.ATTENTION;
+                                    case IDLE -> inputs.historyActivity().idleForDeletion()
+                                                    && guide.activeRequests() == 0
+                                            ? FriendlyStatus.READY : FriendlyStatus.WORKING;
+                                })
+                                .orElse(FriendlyStatus.READY);
             };
         }
-        return card(Domain.HISTORY, status, List.of(
+        List<String> notes = new java.util.ArrayList<>();
+        if (inputs.guide().isPresent()) {
+            notes.add("screen.tomewisp.settings.diagnostics.history.on_demand");
+            selectedSession(inputs.guide().orElseThrow()).ifPresent(session -> {
+                if (session.historyWindow().state()
+                        == GuideHistoryPageState.LOADING) {
+                    notes.add("screen.tomewisp.settings.diagnostics.history.page_loading");
+                } else if (session.historyWindow().state()
+                        == GuideHistoryPageState.FAILED) {
+                    notes.add("screen.tomewisp.settings.diagnostics.history.page_failed");
+                }
+            });
+        }
+        return card(Domain.HISTORY, status, notes, List.of(
                 metric("screen.tomewisp.settings.diagnostics.metric.pending_writes",
                         inputs.historyActivity().pendingWrites()),
                 metric("screen.tomewisp.settings.diagnostics.metric.active_requests",
@@ -277,7 +302,30 @@ public final class SettingsDiagnosticsAggregator {
                         summary.checkpointCount(),
                         summary.successfulCheckpoints(),
                         summary.failedCheckpoints(),
-                        summary.estimatedProjectionTokens()));
+                        summary.estimatedProjectionTokens()),
+                debugHistory(guide));
+    }
+
+    private static DebugHistory debugHistory(GuideSnapshot guide) {
+        GuideSessionSnapshot selected = selectedSession(guide).orElse(null);
+        SemanticLayoutCache.Stats cache = SemanticLayoutCache.globalStats();
+        if (selected == null) {
+            return new DebugHistory(0, 0, null, null,
+                    GuideHistoryPageState.IDLE,
+                    cache.hits(), cache.misses(), 0);
+        }
+        GuideHistoryWindowSnapshot window = selected.historyWindow();
+        long fallbacks = selected.requests().stream()
+                .flatMap(request -> request.timeline().stream())
+                .filter(GuideTimelineEntry.Assistant.class::isInstance)
+                .map(GuideTimelineEntry.Assistant.class::cast)
+                .mapToLong(assistant -> assistant.semantic().diagnostics().size())
+                .sum();
+        return new DebugHistory(
+                selected.requests().size(), window.totalRequests(),
+                window.firstLoaded() == null ? null : window.firstLoaded().sequence(),
+                window.lastLoaded() == null ? null : window.lastLoaded().sequence(),
+                window.state(), cache.hits(), cache.misses(), fallbacks);
     }
 
     private static List<String> failureCodes(DiagnosticsInputs inputs) {
@@ -346,6 +394,11 @@ public final class SettingsDiagnosticsAggregator {
 
     private static SettingsDiagnosticCard card(
             Domain domain, FriendlyStatus status, List<Metric> metrics) {
+        return card(domain, status, List.of(), metrics);
+    }
+
+    private static SettingsDiagnosticCard card(
+            Domain domain, FriendlyStatus status, List<String> noteKeys, List<Metric> metrics) {
         String suffix = domain.name().toLowerCase(Locale.ROOT);
         return new SettingsDiagnosticCard(
                 domain,
@@ -353,6 +406,7 @@ public final class SettingsDiagnosticsAggregator {
                 "screen.tomewisp.settings.diagnostics." + suffix + ".title",
                 "screen.tomewisp.settings.diagnostics.status."
                         + status.name().toLowerCase(Locale.ROOT),
+                noteKeys,
                 metrics);
     }
 

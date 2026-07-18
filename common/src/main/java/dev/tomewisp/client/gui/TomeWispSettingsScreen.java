@@ -317,6 +317,16 @@ public final class TomeWispSettingsScreen extends Screen {
         debug.setTooltip(Tooltip.create(
                 Component.translatable(general.debugDescriptionKey())));
         debug.active = snapshot.operation().kind() == SettingsOperation.Kind.IDLE;
+        Button animations = addRenderableWidget(Button.builder(
+                        Component.translatable(
+                                general.animationsLabelKey()).copy().append(" · ")
+                                .append(Component.translatable(general.animationsStatusKey())),
+                        ignored -> accept(service.saveDisplay(general.toggleAnimations())))
+                .bounds(x, y + 30, width, 22)
+                .build());
+        animations.setTooltip(Tooltip.create(
+                Component.translatable(general.animationsDescriptionKey())));
+        animations.active = snapshot.operation().kind() == SettingsOperation.Kind.IDLE;
     }
 
     private void addHistoryPage() {
@@ -658,8 +668,15 @@ public final class TomeWispSettingsScreen extends Screen {
         List<net.minecraft.util.FormattedCharSequence> lines = font.split(
                 Component.translatable(general.debugDescriptionKey()),
                 Math.max(80, area.width() - 20));
-        int y = area.y() + 72;
+        int y = area.y() + 102;
         for (net.minecraft.util.FormattedCharSequence line : lines) {
+            graphics.text(font, line, area.x() + 10, y, MUTED, false);
+            y += 10;
+        }
+        y += 5;
+        for (net.minecraft.util.FormattedCharSequence line : font.split(
+                Component.translatable(general.animationsDescriptionKey()),
+                Math.max(80, area.width() - 20))) {
             graphics.text(font, line, area.x() + 10, y, MUTED, false);
             y += 10;
         }
@@ -699,7 +716,7 @@ public final class TomeWispSettingsScreen extends Screen {
                 width,
                 ACCENT);
         for (DiagnosticsSettingsProjection.CardRow card : diagnostics.cards()) {
-            int cardHeight = 34 + card.metrics().size() * 11;
+            int cardHeight = 34 + (card.noteKeys().size() + card.metrics().size()) * 11;
             graphics.fill(x, y, x + width, y + cardHeight, PANEL_ALT);
             graphics.text(
                     font,
@@ -717,6 +734,10 @@ public final class TomeWispSettingsScreen extends Screen {
                     MUTED,
                     false);
             int metricY = y + 30;
+            for (String noteKey : card.noteKeys()) {
+                graphics.text(font, Component.translatable(noteKey), x + 12, metricY, MUTED, false);
+                metricY += 11;
+            }
             for (SettingsDiagnosticCard.Metric metric : card.metrics()) {
                 graphics.text(
                         font,
@@ -800,6 +821,17 @@ public final class TomeWispSettingsScreen extends Screen {
                             + " · failed=" + guide.context().failedCheckpoints()
                             + " · estimatedTokens="
                             + guide.context().estimatedProjectionTokens());
+            SettingsDiagnosticsSnapshot.DebugHistory history = guide.history();
+            y = debugLine(graphics, x, y, width,
+                    "screen.tomewisp.settings.diagnostics.debug.history_window",
+                    "loaded=" + history.loadedRequests() + "/" + history.totalRequests()
+                            + " · cursorCounts=" + history.firstLoadedCount()
+                            + ".." + history.lastLoadedCount()
+                            + " · page=" + history.pageState());
+            y = debugLine(graphics, x, y, width,
+                    "screen.tomewisp.settings.diagnostics.debug.presentation",
+                    "cache=" + history.cacheHits() + "/" + history.cacheMisses()
+                            + " · fallbacks=" + history.semanticFallbackCount());
         }
         for (SettingsDiagnosticsSnapshot.DebugSource source : debug.sources()) {
             y = debugLine(graphics, x, y, width,

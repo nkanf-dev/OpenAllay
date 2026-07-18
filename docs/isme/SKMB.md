@@ -57,6 +57,12 @@ runtime, privacy-separated diagnostics, and Fabric/NeoForge lifecycle parity
 have deterministic coverage. Final retained graphical acceptance remains part
 of the consolidated Phase 4 audit.
 
+SKMB-2026-07-18-010/016/018 now use display schema 2 with Debug Mode off and
+presentation animation on by default. Animation is presentation-only, while
+normal history diagnostics expose friendly on-demand/page state and Debug Mode
+adds only redacted performance counts. The final implementation commit is
+recorded after the Task 7 verification gate.
+
 ## Named States
 
 | state | meaning | owner | notes | source |

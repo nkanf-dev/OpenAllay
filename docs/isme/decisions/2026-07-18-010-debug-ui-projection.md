@@ -46,6 +46,13 @@ authorized for local diagnostics. It never makes reasoning, credentials,
 authorization data, raw provider bodies, or another player's state
 representable.
 
+History/performance diagnostics further narrow this contract: normal mode may
+state only that history is loaded on demand and whether the current page is
+loading or failed. Debug mode may add loaded/total counts, cursor sequence
+counts without cursor UUIDs, semantic cache hit/miss counts, fallback counts,
+and context-token estimates. It cannot carry transcript text, component
+payloads, paths, actors, raw partition/scope identifiers, or provider bodies.
+
 Every card has a text/narration equivalent. Color is never the only signal.
 Malformed or unsupported card data falls back to readable friendly text; debug
 mode may additionally show the redacted validation diagnostic.
@@ -65,6 +72,7 @@ mode may additionally show the redacted validation diagnostic.
 3. Debug mode cannot reveal reasoning, credentials, authorization, raw provider bodies, or foreign-player state.
 4. Toggling debug mode changes projection only and never rewrites durable history.
 5. Every visual card has a friendly text/narration equivalent.
+6. Performance diagnostics are count-only and cannot reconstruct conversation content.
 
 ## Failure Semantics
 

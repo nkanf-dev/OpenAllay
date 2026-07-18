@@ -21,14 +21,16 @@ final class GuideDisplayRuntimeTest {
         Path path = temporary.resolve("display.json");
         GuideDisplayRuntime runtime = new GuideDisplayRuntime(path);
 
-        ToolResult<GuideDisplayConfig> saved = runtime.save(new GuideDisplayConfig(1, true));
+        ToolResult<GuideDisplayConfig> saved = runtime.save(new GuideDisplayConfig(
+                GuideDisplayConfig.SCHEMA_VERSION, true, false));
 
         assertTrue(saved instanceof ToolResult.Success<GuideDisplayConfig>);
         assertTrue(runtime.config().debugMode());
         assertNull(runtime.failure());
         assertTrue(Files.readString(path).contains("\"debugMode\": true"));
 
-        Files.writeString(path, "{\"schemaVersion\":1,\"debugMode\":false}");
+        Files.writeString(path,
+                "{\"schemaVersion\":2,\"debugMode\":false,\"animationsEnabled\":true}");
         ToolResult<GuideDisplayConfig> reloaded = runtime.reload();
 
         assertTrue(reloaded instanceof ToolResult.Success<GuideDisplayConfig>);
@@ -40,8 +42,10 @@ final class GuideDisplayRuntimeTest {
     void invalidReloadRetainsLastValidProjectionAndReportsFailure() throws Exception {
         Path path = temporary.resolve("display.json");
         GuideDisplayRuntime runtime = new GuideDisplayRuntime(path);
-        runtime.save(new GuideDisplayConfig(1, true));
-        Files.writeString(path, "{\"schemaVersion\":2,\"debugMode\":false}");
+        runtime.save(new GuideDisplayConfig(
+                GuideDisplayConfig.SCHEMA_VERSION, true, false));
+        Files.writeString(path,
+                "{\"schemaVersion\":1,\"debugMode\":false}");
 
         ToolResult<GuideDisplayConfig> result = runtime.reload();
 
@@ -56,7 +60,9 @@ final class GuideDisplayRuntimeTest {
     @Test
     void failedDebugSaveRetainsFileAndProjection() throws Exception {
         Path path = temporary.resolve("display.json");
-        Files.writeString(path, "{\"schemaVersion\":1,\"debugMode\":false}");
+        String original =
+                "{\"schemaVersion\":2,\"debugMode\":false,\"animationsEnabled\":true}";
+        Files.writeString(path, original);
         GuideDisplayRuntime runtime = new GuideDisplayRuntime(
                 path,
                 (target, contents) -> {
@@ -64,13 +70,14 @@ final class GuideDisplayRuntimeTest {
                 });
 
         ToolResult<GuideDisplayConfig> result =
-                runtime.save(new GuideDisplayConfig(1, true));
+                runtime.save(new GuideDisplayConfig(
+                        GuideDisplayConfig.SCHEMA_VERSION, true, false));
 
         ToolResult.Failure<GuideDisplayConfig> failure =
                 (ToolResult.Failure<GuideDisplayConfig>) result;
         assertEquals("settings_write_failed", failure.code());
         assertFalse(runtime.config().debugMode());
-        assertFalse(Files.readString(path).contains("true"));
+        assertEquals(original, Files.readString(path));
         assertEquals("settings_write_failed", runtime.failure().code());
     }
 }

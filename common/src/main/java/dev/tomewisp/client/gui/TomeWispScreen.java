@@ -94,6 +94,7 @@ public final class TomeWispScreen extends Screen {
     private boolean followBottom = true;
     private String focusedContentId;
     private GuideDisplayConfig projectedDisplay;
+    private long presentationTicks;
 
     public TomeWispScreen(GuideService service) {
         this(service, RecipeClientRuntime.defaults(), GuideDisplayConfig.defaults());
@@ -257,6 +258,7 @@ public final class TomeWispScreen extends Screen {
 
     @Override
     public void tick() {
+        presentationTicks++;
         updateControls();
     }
 
@@ -462,7 +464,8 @@ public final class TomeWispScreen extends Screen {
                 SemanticLayout semantic = semanticLayout(assistant, width - 6);
                 MinecraftSemanticRenderer.Result rendered = semanticRenderer.render(
                         graphics, font, semantic, x + 6, y, width - 6,
-                        mouseX, mouseY);
+                        mouseX, mouseY, projectedDisplay.animationsEnabled(),
+                        presentationTicks);
                 for (MinecraftSemanticRenderer.Hit hit : rendered.hits()) {
                     String focusId = "semantic:" + hit.intent();
                     hits.add(new Hit(
@@ -562,7 +565,6 @@ public final class TomeWispScreen extends Screen {
         return semanticLayouts.get(
                 rowId(assistant), assistant.semantic(), Math.max(1, width),
                 java.util.Locale.getDefault().toLanguageTag(), font.getClass().getName(),
-                true,
                 new SemanticLayoutEngine.Measurer() {
                     @Override public int width(String text, SemanticLayout.Style style) {
                         return font.width(Component.literal(text).withStyle(switch (style) {

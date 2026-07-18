@@ -16,29 +16,33 @@ final class GuideDisplayConfigLoaderTest {
     @TempDir Path temporary;
 
     @Test
-    void missingConfigDefaultsToDebugOff() {
+    void missingConfigDefaultsToDebugOffAndAnimationsOn() {
         GuideDisplayConfigLoader.Load load = new GuideDisplayConfigLoader()
                 .load(temporary.resolve("missing.json"));
 
         assertEquals(GuideDisplayConfig.defaults(), load.config());
         assertFalse(load.config().debugMode());
+        assertTrue(load.config().animationsEnabled());
         assertNull(load.failure());
     }
 
     @Test
     void readsVersionedDebugMode() throws Exception {
         Path path = temporary.resolve("display.json");
-        Files.writeString(path, "{\"schemaVersion\":1,\"debugMode\":true}");
+        Files.writeString(path,
+                "{\"schemaVersion\":2,\"debugMode\":true,\"animationsEnabled\":false}");
 
         GuideDisplayConfigLoader.Load load = new GuideDisplayConfigLoader().load(path);
 
         assertTrue(load.config().debugMode());
+        assertFalse(load.config().animationsEnabled());
         assertNull(load.failure());
     }
 
     @Test
     void canonicalWriterRoundTripsThroughStrictReaderLoader() {
-        GuideDisplayConfig candidate = new GuideDisplayConfig(1, true);
+        GuideDisplayConfig candidate = new GuideDisplayConfig(
+                GuideDisplayConfig.SCHEMA_VERSION, true, false);
 
         String encoded = new GuideDisplayConfigWriter().encode(candidate);
         GuideDisplayConfigLoader.Load load = new GuideDisplayConfigLoader()
@@ -48,8 +52,9 @@ final class GuideDisplayConfigLoaderTest {
         assertNull(load.failure());
         assertEquals("""
                 {
-                  \"schemaVersion\": 1,
-                  \"debugMode\": true
+                  \"schemaVersion\": 2,
+                  \"debugMode\": true,
+                  \"animationsEnabled\": false
                 }
                 """, encoded);
     }
@@ -59,9 +64,10 @@ final class GuideDisplayConfigLoaderTest {
         GuideDisplayConfigLoader loader = new GuideDisplayConfigLoader();
         Path path = temporary.resolve("display.json");
         for (String invalid : new String[] {
-                "{\"schemaVersion\":1,\"debugMode\":false,\"rawSecrets\":true}",
-                "{\"schemaVersion\":2,\"debugMode\":false}",
-                "{\"schemaVersion\":1,\"debugMode\":\"yes\"}"
+                "{\"schemaVersion\":2,\"debugMode\":false,\"animationsEnabled\":true,\"rawSecrets\":true}",
+                "{\"schemaVersion\":1,\"debugMode\":false}",
+                "{\"schemaVersion\":3,\"debugMode\":false,\"animationsEnabled\":true}",
+                "{\"schemaVersion\":2,\"debugMode\":\"yes\",\"animationsEnabled\":true}"
         }) {
             Files.writeString(path, invalid);
 

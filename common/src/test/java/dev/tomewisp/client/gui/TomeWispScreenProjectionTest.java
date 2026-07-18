@@ -94,7 +94,7 @@ final class TomeWispScreenProjectionTest {
 
         GuideUiRow.Tool normal = (GuideUiRow.Tool) TomeWispScreen
                 .project(snapshot, display::get).rows().get(1);
-        display.set(new GuideDisplayConfig(1, true));
+        display.set(new GuideDisplayConfig(GuideDisplayConfig.SCHEMA_VERSION, true, true));
         GuideUiRow.Tool debug = (GuideUiRow.Tool) TomeWispScreen
                 .project(snapshot, display::get).rows().get(1);
 

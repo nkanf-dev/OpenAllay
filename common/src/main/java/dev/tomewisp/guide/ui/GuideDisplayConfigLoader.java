@@ -12,7 +12,8 @@ import java.util.Objects;
 import java.util.Set;
 
 public final class GuideDisplayConfigLoader {
-    private static final Set<String> FIELDS = Set.of("schemaVersion", "debugMode");
+    private static final Set<String> FIELDS = Set.of(
+            "schemaVersion", "debugMode", "animationsEnabled");
 
     public record Load(GuideDisplayConfig config, GuideFailure failure) {
         public Load {
@@ -51,7 +52,9 @@ public final class GuideDisplayConfigLoader {
             }
             int version = integer(object, "schemaVersion");
             boolean debugMode = bool(object, "debugMode");
-            return new Load(new GuideDisplayConfig(version, debugMode), null);
+            boolean animationsEnabled = bool(object, "animationsEnabled");
+            return new Load(
+                    new GuideDisplayConfig(version, debugMode, animationsEnabled), null);
         } catch (RuntimeException failure) {
             return invalid(failure);
         }

@@ -52,6 +52,7 @@ final class TomeWispSettingsScreenProjectionTest {
         assertEquals(0, projection.capabilities().cards().size());
         assertEquals(0, projection.recipes().sources().size());
         assertFalse(projection.general().debugMode());
+        assertTrue(projection.general().animationsEnabled());
         assertTrue(projection.history().actions().stream()
                 .noneMatch(dev.tomewisp.client.gui.settings.HistorySettingsProjection.ActionRow::enabled));
         assertTrue(projection.diagnostics().debug().isEmpty());

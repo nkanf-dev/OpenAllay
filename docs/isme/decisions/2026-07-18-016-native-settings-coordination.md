@@ -36,8 +36,7 @@ Persistent configuration remains separated by domain:
 - `capabilities.json` owns player-disabled local tool and Skill identities;
 - capability-owned files such as `recipes.json` own only that tool/source
   family's typed preferences;
-- `display.json` owns debug and later accepted presentation/accessibility
-  preferences;
+- `display.json` schema 2 owns exactly `debugMode` and `animationsEnabled`;
 - `model-metadata.json` remains an automatically managed credential-free cache;
 - `history.sqlite3` remains owned by the ordered history repository.
 
@@ -102,6 +101,12 @@ Before the first release, settings JSON schemas follow the same clean current-
 schema policy as other development state: production does not accumulate
 migrations for unshipped formats. Unsupported explicit schema versions fail
 closed and the prior runtime remains active.
+
+For the current pre-release display schema, a missing file defaults to Debug
+Mode off and presentation animation on. Explicit schema 1 or any unknown
+schema fails closed without migration and retains the last valid runtime.
+Animation changes only transient progress glyph presentation; semantic state,
+actions, evidence, layout cache identity, and narration are invariant.
 
 ## States and Transitions
 

@@ -108,7 +108,11 @@ bottom. Scrolling up transfers ownership to the player until they explicitly
 return to the bottom. Loading an earlier page preserves the same anchor row and
 pixel offset. Keyboard focus and narration follow stable semantic node IDs;
 color is never the only status signal. Presentation animation is optional,
-stored in `display.json`, and never owns state.
+stored in schema-2 `display.json`, and never owns state, actions, evidence,
+layout identity, or narration. Window diagnostics expose only friendly page
+state in normal mode and redacted counts in Debug Mode; cursor UUIDs,
+transcripts, component payloads, actor/scope identities, paths, and provider
+bodies remain unrepresentable.
 
 ## States and Transitions
 
