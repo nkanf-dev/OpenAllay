@@ -50,7 +50,7 @@ download URL were resolved from the JAR SHA-1 through Modrinth's public v2
 | Roughly Enough Items | 26.2.820 | [RoughlyEnoughItems-26.2.820.jar](https://cdn.modrinth.com/data/nfn13YXA/versions/4o0NSIMj/RoughlyEnoughItems-26.2.820.jar) | `9ba9d2a31531759549924064f33d3d45af342e7246f877efb8cee9f75f6ddaa9` |
 | Farmer's Delight Refabricated | 26.2-3.6.7 | [FarmersDelight-26.2-3.6.7+refabricated.jar](https://cdn.modrinth.com/data/7vxePowz/versions/BD1gWJYb/FarmersDelight-26.2-3.6.7%2Brefabricated.jar) | `a44afff2c18eae5caaf8b455525cfdd704ca5bd6c5ff4bc6a1f5bf24aaa10df2` |
 | Fabric API | 0.155.2+26.2 | [fabric-api-0.155.2+26.2.jar](https://cdn.modrinth.com/data/P7dR8mSH/versions/lVXlbH4w/fabric-api-0.155.2%2B26.2.jar) | `d6518c770024cbe8a556248f16fcdbb91c6a62f50227a6c3bae8190511e2c1b8` |
-| Architectury API | 21.0.2 | [architectury-fabric-21.0.2.jar](https://cdn.modrinth.com/data/lhGA9TYQ/versions/OVFwpVeQ/architectury-fabric-21.0.2.jar) | `989f5937c9c42c033711684304a6d0d6c251e957770f9270ca01f2d1c98e67c7` |
+| Architectury API (historical provenance; incompatible with corrected TomeWisp text input) | 21.0.2 | [architectury-fabric-21.0.2.jar](https://cdn.modrinth.com/data/lhGA9TYQ/versions/OVFwpVeQ/architectury-fabric-21.0.2.jar) | `989f5937c9c42c033711684304a6d0d6c251e957770f9270ca01f2d1c98e67c7` |
 | Cloth Config | 26.2.155 | [cloth-config-26.2.155.jar](https://cdn.modrinth.com/data/9s6osm5g/versions/Nv3xnWXd/cloth-config-26.2.155.jar) | `def4be7639cd66704f7e304d658ea0f6bf490fb4a6eaa2dbf18ec2c3999d6349` |
 
 Public Modrinth queries filtered by game version `26.2` and loaders `fabric`

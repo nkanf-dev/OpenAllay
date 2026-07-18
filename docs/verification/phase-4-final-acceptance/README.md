@@ -1,12 +1,19 @@
-# Phase 4 Final Acceptance Evidence
+# Earlier Phase 4 Acceptance Evidence
 
-This directory closes the single TomeWisp Phase 4 product phase on the
-Minecraft 26.2 / Java 25 main line. The graphical runs used the deterministic
-loopback OpenAI-compatible fixture, not a billable provider, and exercised the
-same `GuideService`, model transport, tools, history store, semantic parser,
-and loader entrypoints used by the product.
+This directory retains the first Phase 4 acceptance attempt on the Minecraft
+26.2 / Java 25 main line. It does **not** close the current Phase 4 correction
+set. The Fabric run used Architectury 21.0.2; a later normal walkthrough proved
+that version's screen-input delegate can freeze TomeWisp text entry. It also
+predates the masked local-credential workflow, separate Tools/Skills pages,
+Tool-owned source configuration, external Agent Skills overrides, and
+recognized pre-release history rebuild.
 
-## Accepted Result
+The retained graphical runs used the deterministic loopback OpenAI-compatible
+fixture, not a billable provider, and remain valid evidence for the runtime
+behaviors they actually exercised. They are historical evidence, not proof of
+the later manual-acceptance corrections.
+
+## Earlier Retained Result
 
 Both graphical development clients entered a real single-player world and
 completed the semantic-history scenario with outcome `COMPLETED`. Each final
@@ -33,10 +40,11 @@ history cap was introduced.
 
 ## Loader Profiles and Compatibility Boundaries
 
-The Fabric profile retained the previously installed Farmer's Delight
-Refabricated runtime; it was not absent. It used JEI and REI together, and the
-earlier Phase 4C retained screenshots prove TomeWisp-to-JEI exact navigation to
-the Farmer's Delight apple-cider cooking page.
+The historical Fabric profile retained the previously installed Farmer's
+Delight Refabricated runtime; it was not absent. It used JEI and REI together,
+and the earlier Phase 4C retained screenshots prove TomeWisp-to-JEI exact
+navigation to the Farmer's Delight apple-cider cooking page. That profile used
+Architectury 21.0.2 and therefore does not prove text-entry acceptance.
 
 The NeoForge profile used JEI and Cooking for Blockheads as its recipe-rich
 sample. REI 26.2.820 was preflighted but displayed an upstream loading warning
@@ -71,8 +79,11 @@ were computed from the exact files used or preflighted.
 | Cooking for Blockheads 26.2.0.2 | [Modrinth CDN](https://cdn.modrinth.com/data/vJnhuDde/versions/bhljV0qf/cookingforblockheads-neoforge-26.2-26.2.0.2.jar) | `5b412cd34572a6d29cc79d8af9e0b15aa250f4fb72540bc1819874a87b3f4576` |
 | Balm 26.2.0.3 | [Modrinth CDN](https://cdn.modrinth.com/data/MBAkmtvl/versions/l5LcttiY/balm-neoforge-26.2-26.2.0.3.jar) | `7e490a2ceb0033d3ba41ad143cbd7a16e41e96c28b5e02c590f1d3925a099e4c` |
 
-Fabric JEI/REI/Fabric API/Architectury/Cloth artifact URLs and hashes are
-retained in `../phase-4c-all-known-recipes/README.md`.
+Historical Fabric JEI/REI/Fabric API/Architectury/Cloth artifact URLs and hashes
+are retained in `../phase-4c-all-known-recipes/README.md`. The Architectury
+21.0.2 row is retained for provenance only and is explicitly incompatible with
+the corrected text-entry profile. The corrected Fabric profile uses
+Architectury 21.0.4 (`87ee5f2d28252dc249e7c269973891dd0b0dc208a937ca54778aa2b2287abfcb`).
 
 ## Phase 4 Claim Matrix
 
@@ -84,8 +95,8 @@ retained in `../phase-4c-all-known-recipes/README.md`.
 | 4D context | Provider-neutral reduction/checkpoints respect the selected model budget and preserve evidence boundaries | Context reducer/checkpoint/topology tests; `CONTEXT_LOADING` real-client transitions |
 | 4E presentation | Normal mode uses friendly cards; technical evidence/JSON remains Debug-only and redacted | Card/detail/debug-policy tests; retained Phase 4C TomeWisp card screenshot |
 | 4F profiles | Sessions can switch model profiles while retaining provider-neutral history; OpenRouter metadata is cached | Registry/selection/metadata/cache tests; isolated `models.json` real-client profile |
-| 4G model settings | Atomic profile CRUD and isolated connection-probe behavior exist on both loaders | Settings service/screen/connection-probe tests; both client entrypoints launched |
-| 4H knowledge/capabilities | Knowledge sources, Tools, Skills, deny-only policy, and recipe-owned viewer settings are separated | Capability/settings tests; final `list_knowledge_sources` tool and Patchouli evidence |
+| 4G model settings | The earlier environment-reference profile CRUD and isolated connection-probe path ran on both loaders | Historical settings service/screen/connection-probe tests; both client entrypoints launched. This does not prove the later masked local-credential workflow. |
+| 4H knowledge/capabilities | The earlier combined catalog, deny-only policy, and recipe-owned viewer settings were exercised | Historical capability/settings tests; final `list_knowledge_sources` tool and Patchouli evidence. This does not prove the later separate Tools/Skills and Tool-owned source UX. |
 | 4I history/diagnostics | Actor-scoped deletion, Debug-only reset, busy/rollback/no-resurrection, friendly diagnostics | History administration/settings tests; graphical durable restart evidence |
 | 4J semantics/windowing | Safe Markdown, references, controlled components, fallback, incremental persistence, paging, virtualization, anchors | Both semantic reports; 50-request seed and 51-request restart; parser/store/UI performance and race tests |
 
@@ -108,7 +119,7 @@ The harness used a random process-local fixture key and restored the prior
 classification data, not prompts, raw tool payloads, normalized developer
 traces, provider bodies, or credentials.
 
-## Final Clean Gate
+## Historical Clean Gate
 
 The final from-clean verification completed successfully:
 
@@ -143,5 +154,6 @@ NeoForge 6fbad2c184700e843bd0d83b6369f61dafa225ac57d791a26151481a7b35b7e6
 Structure-to-Ponder generation, recursive technology production planning,
 Minecraft old-version ports, formal distribution, and execution on Windows or
 Linux remain outside Phase 4. No compatible EMI/Patchouli 26.2 runtime and no
-working NeoForge REI run are claimed. Phase 4 completion is a pre-release
-product/engineering acceptance, not a published release.
+working NeoForge REI run are claimed. These files document an earlier
+pre-release acceptance attempt; current Phase 4 completion remains contingent
+on the later manual-acceptance correction walkthrough.
