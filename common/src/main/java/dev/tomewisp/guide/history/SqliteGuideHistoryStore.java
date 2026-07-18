@@ -11,6 +11,12 @@ import dev.tomewisp.guide.GuideSource;
 import dev.tomewisp.guide.GuideTimelineEntry;
 import dev.tomewisp.guide.GuideTopology;
 import dev.tomewisp.model.ModelUsage;
+import dev.tomewisp.model.ModelContent;
+import dev.tomewisp.model.ModelMessage;
+import dev.tomewisp.model.ModelRole;
+import dev.tomewisp.agent.context.Utf8ContextTokenEstimator;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -102,6 +108,163 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
         } catch (SQLException failure) {
             throw new GuideHistoryException(
                     "history_write_failed", "Unable to save durable guide history", failure);
+        }
+    }
+
+    @Override
+    public Optional<GuideHistoryMetadata> metadata(GuideHistoryScope scope) {
+        Objects.requireNonNull(scope, "scope");
+        try (Connection connection = open()) {
+            recoverInterruptedRows(connection, scope);
+            PartitionHeader header = readHeader(connection, scope);
+            if (header == null) {
+                return Optional.empty();
+            }
+            List<GuideHistoryMetadata.Session> sessions = new ArrayList<>();
+            try (PreparedStatement query = connection.prepareStatement("""
+                    select s.session_id, s.ordinal, s.model_selection_json,
+                           count(r.request_id) as request_count,
+                           min(r.sequence) as first_sequence,
+                           max(r.sequence) as last_sequence
+                    from sessions s
+                    left join requests r
+                      on r.scope_id = s.scope_id and r.session_id = s.session_id
+                    where s.scope_id = ?
+                    group by s.session_id, s.ordinal, s.model_selection_json
+                    order by s.ordinal
+                    """)) {
+                query.setString(1, scope.scopeId());
+                try (ResultSet result = query.executeQuery()) {
+                    while (result.next()) {
+                        long count = result.getLong("request_count");
+                        Long firstSequence = nullableLong(result, "first_sequence");
+                        Long lastSequence = nullableLong(result, "last_sequence");
+                        sessions.add(new GuideHistoryMetadata.Session(
+                                result.getString("session_id"),
+                                result.getInt("ordinal"),
+                                codec.decodeModelSelection(result.getString("model_selection_json")),
+                                count,
+                                firstSequence == null ? null : cursor(
+                                        connection, scope.scopeId(),
+                                        result.getString("session_id"), firstSequence),
+                                lastSequence == null ? null : cursor(
+                                        connection, scope.scopeId(),
+                                        result.getString("session_id"), lastSequence)));
+                    }
+                }
+            }
+            return Optional.of(new GuideHistoryMetadata(
+                    scope, header.selectedSession, sessions, header.updatedAt));
+        } catch (SQLException failure) {
+            throw new GuideHistoryException(
+                    "history_metadata_failed", "Unable to load guide history metadata", failure);
+        } catch (IllegalArgumentException malformed) {
+            throw new GuideHistoryException(
+                    "history_corrupt", "Guide history metadata is malformed", malformed);
+        }
+    }
+
+    @Override
+    public GuideHistoryPage page(GuideHistoryPageRequest request) {
+        Objects.requireNonNull(request, "request");
+        try (Connection connection = open()) {
+            List<SequencedRequest> loaded = readPage(connection, request);
+            List<GuideRequestSnapshot> snapshots = loaded.stream()
+                    .map(SequencedRequest::request).toList();
+            GuideHistoryCursor first = loaded.isEmpty() ? null : loaded.getFirst().cursor();
+            GuideHistoryCursor last = loaded.isEmpty() ? null : loaded.getLast().cursor();
+            boolean hasEarlier = first != null && requestExists(
+                    connection, request.scope().scopeId(), request.sessionId(),
+                    "sequence < ?", first.sequence());
+            boolean hasLater = last != null && requestExists(
+                    connection, request.scope().scopeId(), request.sessionId(),
+                    "sequence > ?", last.sequence());
+            return new GuideHistoryPage(
+                    request.sessionId(), snapshots, first, last, hasEarlier, hasLater);
+        } catch (SQLException failure) {
+            throw new GuideHistoryException(
+                    "history_page_failed", "Unable to load a guide history page", failure);
+        } catch (IllegalArgumentException malformed) {
+            throw new GuideHistoryException(
+                    "history_corrupt", "A guide history page is malformed", malformed);
+        }
+    }
+
+    @Override
+    public GuideHistoryContextSeed context(GuideHistoryContextRequest request) {
+        Objects.requireNonNull(request, "request");
+        try (Connection connection = open()) {
+            Utf8ContextTokenEstimator estimator = new Utf8ContextTokenEstimator();
+            List<List<ModelMessage>> acceptedNewest = new ArrayList<>();
+            int estimated = 0;
+            GuideHistoryCursor oldest = null;
+            String sql = requestColumns()
+                    + " from requests where scope_id = ? and session_id = ?"
+                    + " and terminal_at is not null order by sequence desc";
+            try (PreparedStatement query = connection.prepareStatement(sql)) {
+                query.setString(1, request.scope().scopeId());
+                query.setString(2, request.sessionId());
+                try (ResultSet result = query.executeQuery()) {
+                    while (result.next()) {
+                        SequencedRequest value = readRequestRow(
+                                connection, request.scope().scopeId(), result);
+                        List<ModelMessage> requestMessages = contextMessages(value.request());
+                        List<ModelMessage> candidate = new ArrayList<>();
+                        for (int index = acceptedNewest.size() - 1; index >= 0; index--) {
+                            candidate.addAll(acceptedNewest.get(index));
+                        }
+                        candidate.addAll(0, requestMessages);
+                        int candidateEstimate = estimator.estimate(
+                                "history", candidate, List.of());
+                        if (candidateEstimate > request.availableHistoryTokens()) {
+                            break;
+                        }
+                        acceptedNewest.add(requestMessages);
+                        estimated = candidateEstimate;
+                        oldest = value.cursor();
+                    }
+                }
+            }
+            List<ModelMessage> messages = new ArrayList<>();
+            for (int index = acceptedNewest.size() - 1; index >= 0; index--) {
+                messages.addAll(acceptedNewest.get(index));
+            }
+            List<ContextCheckpoint> checkpoints = readApplicableCheckpoint(
+                    connection, request.scope().scopeId(), request.sessionId(),
+                    request.modelIdentifier());
+            return new GuideHistoryContextSeed(
+                    request.sessionId(), messages, checkpoints, estimated, oldest);
+        } catch (SQLException failure) {
+            throw new GuideHistoryException(
+                    "history_context_failed", "Unable to prepare guide history context", failure);
+        } catch (IllegalArgumentException malformed) {
+            throw new GuideHistoryException(
+                    "history_corrupt", "Guide history context is malformed", malformed);
+        }
+    }
+
+    @Override
+    public void commit(GuideHistoryCommit commit) {
+        Objects.requireNonNull(commit, "commit");
+        try (Connection connection = open()) {
+            connection.setAutoCommit(false);
+            try {
+                for (GuideHistoryMutation mutation : commit.mutations()) {
+                    applyMutation(connection, commit.scope(), mutation);
+                }
+                failureInjector.beforeCommit(Mutation.COMMIT);
+                connection.commit();
+            } catch (SQLException | RuntimeException failure) {
+                rollback(connection, failure);
+                if (failure instanceof GuideHistoryException known) {
+                    throw known;
+                }
+                throw new GuideHistoryException(
+                        "history_write_failed", "Unable to commit durable guide history", failure);
+            }
+        } catch (SQLException failure) {
+            throw new GuideHistoryException(
+                    "history_write_failed", "Unable to commit durable guide history", failure);
         }
     }
 
@@ -292,7 +455,7 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
                         scope_id text not null,
                         session_id text not null,
                         request_id text not null,
-                        ordinal integer not null check(ordinal >= 0),
+                        sequence integer not null check(sequence >= 0),
                         topology text not null,
                         model_selection_json text not null,
                         user_message text not null,
@@ -307,7 +470,7 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
                         updated_at text not null,
                         terminal_at text,
                         primary key(scope_id, request_id),
-                        unique(scope_id, session_id, ordinal),
+                        unique(scope_id, session_id, sequence),
                         foreign key(scope_id, session_id)
                             references sessions(scope_id, session_id) on delete cascade
                     )
@@ -351,7 +514,7 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
                     )
                     """);
             statement.execute("create index sessions_updated_lookup on sessions(scope_id, ordinal)");
-            statement.execute("create index requests_order_lookup on requests(scope_id, session_id, ordinal)");
+            statement.execute("create index requests_order_lookup on requests(scope_id, session_id, sequence)");
             statement.execute("create index timeline_order_lookup on timeline_entries(scope_id, request_id, ordinal)");
             createCheckpointTable(statement);
             statement.execute("insert into schema_metadata(singleton, schema_version) values (1, "
@@ -521,7 +684,7 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
             int ordinal) throws SQLException {
         try (PreparedStatement insert = connection.prepareStatement("""
                 insert into requests(
-                    scope_id, session_id, request_id, ordinal, topology, model_selection_json, user_message,
+                    scope_id, session_id, request_id, sequence, topology, model_selection_json, user_message,
                     status, input_tokens, output_tokens, cache_read_tokens,
                     retry_after_millis, failure_code, failure_message,
                     created_at, updated_at, terminal_at)
@@ -569,6 +732,524 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
                 insert.setString(4, codec.encodeSources(List.of(request.sources().get(sourceOrdinal))));
                 insert.executeUpdate();
             }
+        }
+    }
+
+    private void applyMutation(
+            Connection connection,
+            GuideHistoryScope scope,
+            GuideHistoryMutation mutation) throws SQLException {
+        String scopeId = scope.scopeId();
+        switch (mutation) {
+            case GuideHistoryMutation.UpsertPartition partition -> {
+                try (PreparedStatement statement = connection.prepareStatement("""
+                        insert into partitions(
+                            scope_id, actor_id, connection_kind, selected_session,
+                            capture_mode, updated_at)
+                        values (?, ?, ?, ?, 'NORMAL', ?)
+                        on conflict(scope_id) do update set
+                            selected_session = excluded.selected_session,
+                            updated_at = excluded.updated_at
+                        """)) {
+                    statement.setString(1, scopeId);
+                    statement.setString(2, scope.actorId().toString());
+                    statement.setString(3, scope.kind().name());
+                    statement.setString(4, partition.selectedSession());
+                    statement.setString(5, partition.updatedAt().toString());
+                    statement.executeUpdate();
+                }
+            }
+            case GuideHistoryMutation.UpsertSession session -> {
+                try (PreparedStatement statement = connection.prepareStatement("""
+                        insert into sessions(scope_id, session_id, ordinal, model_selection_json)
+                        values (?, ?, ?, ?)
+                        on conflict(scope_id, session_id) do update set
+                            ordinal = excluded.ordinal,
+                            model_selection_json = excluded.model_selection_json
+                        """)) {
+                    statement.setString(1, scopeId);
+                    statement.setString(2, session.sessionId());
+                    statement.setInt(3, session.ordinal());
+                    statement.setString(4, codec.encodeModelSelection(session.modelSelection()));
+                    statement.executeUpdate();
+                }
+            }
+            case GuideHistoryMutation.UpsertRequest request ->
+                    upsertRequest(connection, scopeId, request.sequence(), request.request());
+            case GuideHistoryMutation.UpsertMessage message ->
+                    upsertMessage(connection, scopeId, message);
+            case GuideHistoryMutation.UpsertTimelineEntry timeline -> {
+                try (PreparedStatement statement = connection.prepareStatement("""
+                        insert into timeline_entries(scope_id, request_id, ordinal, payload_json)
+                        values (?, ?, ?, ?)
+                        on conflict(scope_id, request_id, ordinal) do update set
+                            payload_json = excluded.payload_json
+                        """)) {
+                    statement.setString(1, scopeId);
+                    statement.setString(2, timeline.requestId().toString());
+                    statement.setInt(3, timeline.entry().ordinal());
+                    statement.setString(4, codec.encodeEntry(timeline.entry()));
+                    statement.executeUpdate();
+                }
+            }
+            case GuideHistoryMutation.ReplaceRequestSources sources -> {
+                try (PreparedStatement delete = connection.prepareStatement("""
+                        delete from request_sources where scope_id = ? and request_id = ?
+                        """)) {
+                    delete.setString(1, scopeId);
+                    delete.setString(2, sources.requestId().toString());
+                    delete.executeUpdate();
+                }
+                for (int ordinal = 0; ordinal < sources.sources().size(); ordinal++) {
+                    try (PreparedStatement insert = connection.prepareStatement("""
+                            insert into request_sources(
+                                scope_id, request_id, ordinal, payload_json)
+                            values (?, ?, ?, ?)
+                            """)) {
+                        insert.setString(1, scopeId);
+                        insert.setString(2, sources.requestId().toString());
+                        insert.setInt(3, ordinal);
+                        insert.setString(4, codec.encodeSources(
+                                List.of(sources.sources().get(ordinal))));
+                        insert.executeUpdate();
+                    }
+                }
+            }
+            case GuideHistoryMutation.UpsertCheckpoint checkpoint -> {
+                try (PreparedStatement statement = connection.prepareStatement("""
+                        insert into compaction_checkpoints(
+                            scope_id, session_id, ordinal, checkpoint_id, payload_json)
+                        values (?, ?, ?, ?, ?)
+                        on conflict(scope_id, session_id, ordinal) do update set
+                            checkpoint_id = excluded.checkpoint_id,
+                            payload_json = excluded.payload_json
+                        """)) {
+                    statement.setString(1, scopeId);
+                    statement.setString(2, checkpoint.sessionId());
+                    statement.setInt(3, checkpoint.ordinal());
+                    statement.setString(4, checkpoint.checkpoint().checkpointId().toString());
+                    statement.setString(5, codec.encodeCheckpoint(checkpoint.checkpoint()));
+                    statement.executeUpdate();
+                }
+            }
+            case GuideHistoryMutation.DeleteSession session -> {
+                try (PreparedStatement statement = connection.prepareStatement("""
+                        delete from sessions where scope_id = ? and session_id = ?
+                        """)) {
+                    statement.setString(1, scopeId);
+                    statement.setString(2, session.sessionId());
+                    statement.executeUpdate();
+                }
+            }
+            case GuideHistoryMutation.ClearSession session -> {
+                for (String table : List.of("messages", "compaction_checkpoints")) {
+                    try (PreparedStatement statement = connection.prepareStatement(
+                            "delete from " + table + " where scope_id = ? and session_id = ?")) {
+                        statement.setString(1, scopeId);
+                        statement.setString(2, session.sessionId());
+                        statement.executeUpdate();
+                    }
+                }
+                try (PreparedStatement statement = connection.prepareStatement("""
+                        delete from requests where scope_id = ? and session_id = ?
+                        """)) {
+                    statement.setString(1, scopeId);
+                    statement.setString(2, session.sessionId());
+                    statement.executeUpdate();
+                }
+            }
+        }
+    }
+
+    private void upsertRequest(
+            Connection connection,
+            String scopeId,
+            long sequence,
+            GuideRequestSnapshot request) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement("""
+                insert into requests(
+                    scope_id, session_id, request_id, sequence, topology,
+                    model_selection_json, user_message, status,
+                    input_tokens, output_tokens, cache_read_tokens,
+                    retry_after_millis, failure_code, failure_message,
+                    created_at, updated_at, terminal_at)
+                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                on conflict(scope_id, request_id) do update set
+                    session_id = excluded.session_id,
+                    sequence = excluded.sequence,
+                    topology = excluded.topology,
+                    model_selection_json = excluded.model_selection_json,
+                    user_message = excluded.user_message,
+                    status = excluded.status,
+                    input_tokens = excluded.input_tokens,
+                    output_tokens = excluded.output_tokens,
+                    cache_read_tokens = excluded.cache_read_tokens,
+                    retry_after_millis = excluded.retry_after_millis,
+                    failure_code = excluded.failure_code,
+                    failure_message = excluded.failure_message,
+                    created_at = excluded.created_at,
+                    updated_at = excluded.updated_at,
+                    terminal_at = excluded.terminal_at
+                """)) {
+            statement.setString(1, scopeId);
+            statement.setString(2, request.sessionId());
+            statement.setString(3, request.requestId().toString());
+            statement.setLong(4, sequence);
+            statement.setString(5, request.topology().name());
+            statement.setString(6, codec.encodeModelSelection(request.modelSelection()));
+            statement.setString(7, request.userMessage());
+            statement.setString(8, request.status().name());
+            statement.setLong(9, request.usage().inputTokens());
+            statement.setLong(10, request.usage().outputTokens());
+            statement.setLong(11, request.usage().cacheReadTokens());
+            nullableLong(statement, 12, request.retryAfterMillis());
+            statement.setString(13, request.failure() == null ? null : request.failure().code());
+            statement.setString(14, request.failure() == null ? null : request.failure().message());
+            statement.setString(15, request.createdAt().toString());
+            statement.setString(16, request.updatedAt().toString());
+            statement.setString(17,
+                    request.terminalAt() == null ? null : request.terminalAt().toString());
+            statement.executeUpdate();
+        }
+    }
+
+    private static void upsertMessage(
+            Connection connection,
+            String scopeId,
+            GuideHistoryMutation.UpsertMessage mutation) throws SQLException {
+        GuideMessage message = mutation.message();
+        try (PreparedStatement statement = connection.prepareStatement("""
+                insert into messages(
+                    scope_id, session_id, ordinal, request_id, role, message_text, created_at)
+                values (?, ?, ?, ?, ?, ?, ?)
+                on conflict(scope_id, session_id, ordinal) do update set
+                    request_id = excluded.request_id,
+                    role = excluded.role,
+                    message_text = excluded.message_text,
+                    created_at = excluded.created_at
+                """)) {
+            statement.setString(1, scopeId);
+            statement.setString(2, mutation.sessionId());
+            statement.setInt(3, mutation.ordinal());
+            statement.setString(4, message.requestId().toString());
+            statement.setString(5, message.role().name());
+            statement.setString(6, message.text());
+            statement.setString(7, message.createdAt().toString());
+            statement.executeUpdate();
+        }
+    }
+
+    private GuideHistoryCursor cursor(
+            Connection connection,
+            String scopeId,
+            String sessionId,
+            long sequence) throws SQLException {
+        try (PreparedStatement query = connection.prepareStatement("""
+                select request_id from requests
+                where scope_id = ? and session_id = ? and sequence = ?
+                """)) {
+            query.setString(1, scopeId);
+            query.setString(2, sessionId);
+            query.setLong(3, sequence);
+            try (ResultSet result = query.executeQuery()) {
+                if (!result.next()) {
+                    throw new IllegalArgumentException("history cursor row is missing");
+                }
+                return new GuideHistoryCursor(sequence,
+                        UUID.fromString(result.getString("request_id")));
+            }
+        }
+    }
+
+    private List<SequencedRequest> readPage(
+            Connection connection,
+            GuideHistoryPageRequest request) throws SQLException {
+        if (request.cursor() != null) {
+            requireCursor(connection, request);
+        }
+        String comparison = switch (request.direction()) {
+            case NEWEST -> "";
+            case BEFORE -> " and sequence < ?";
+            case AFTER -> " and sequence > ?";
+        };
+        String order = request.direction() == GuideHistoryPageRequest.Direction.AFTER
+                ? " order by sequence asc limit ?"
+                : " order by sequence desc limit ?";
+        String sql = requestColumns()
+                + " from requests where scope_id = ? and session_id = ?"
+                + comparison + order;
+        List<SequencedRequest> loaded = new ArrayList<>();
+        try (PreparedStatement query = connection.prepareStatement(sql)) {
+            query.setString(1, request.scope().scopeId());
+            query.setString(2, request.sessionId());
+            int next = 3;
+            if (request.cursor() != null) {
+                query.setLong(next++, request.cursor().sequence());
+            }
+            query.setInt(next, request.count());
+            try (ResultSet result = query.executeQuery()) {
+                while (result.next()) {
+                    loaded.add(readRequestRow(
+                            connection, request.scope().scopeId(), result));
+                }
+            }
+        }
+        if (request.direction() != GuideHistoryPageRequest.Direction.AFTER) {
+            java.util.Collections.reverse(loaded);
+        }
+        return List.copyOf(loaded);
+    }
+
+    private void requireCursor(Connection connection, GuideHistoryPageRequest request)
+            throws SQLException {
+        try (PreparedStatement query = connection.prepareStatement("""
+                select request_id from requests
+                where scope_id = ? and session_id = ? and sequence = ?
+                """)) {
+            query.setString(1, request.scope().scopeId());
+            query.setString(2, request.sessionId());
+            query.setLong(3, request.cursor().sequence());
+            try (ResultSet result = query.executeQuery()) {
+                if (!result.next() || !request.cursor().requestId().toString()
+                        .equals(result.getString("request_id"))) {
+                    throw new GuideHistoryException(
+                            "history_cursor_stale", "Guide history cursor is stale");
+                }
+            }
+        }
+    }
+
+    private static boolean requestExists(
+            Connection connection,
+            String scopeId,
+            String sessionId,
+            String comparison,
+            long sequence) throws SQLException {
+        if (!comparison.equals("sequence < ?") && !comparison.equals("sequence > ?")) {
+            throw new IllegalArgumentException("unsupported history comparison");
+        }
+        try (PreparedStatement query = connection.prepareStatement(
+                "select 1 from requests where scope_id = ? and session_id = ? and "
+                        + comparison + " limit 1")) {
+            query.setString(1, scopeId);
+            query.setString(2, sessionId);
+            query.setLong(3, sequence);
+            try (ResultSet result = query.executeQuery()) {
+                return result.next();
+            }
+        }
+    }
+
+    private static String requestColumns() {
+        return """
+                select sequence, session_id, request_id, topology, user_message, status,
+                       model_selection_json,
+                       input_tokens, output_tokens, cache_read_tokens,
+                       retry_after_millis, failure_code, failure_message,
+                       created_at, updated_at, terminal_at
+                """;
+    }
+
+    private SequencedRequest readRequestRow(
+            Connection connection,
+            String scopeId,
+            ResultSet result) throws SQLException {
+        UUID requestId = UUID.fromString(result.getString("request_id"));
+        String sessionId = result.getString("session_id");
+        if (sessionId == null) {
+            sessionId = currentSessionForRequest(connection, scopeId, requestId);
+        }
+        GuideFailure failure = result.getString("failure_code") == null
+                ? null
+                : new GuideFailure(
+                        result.getString("failure_code"),
+                        required(result.getString("failure_message"), "failure message"));
+        long sequence = result.getLong("sequence");
+        GuideRequestSnapshot request = new GuideRequestSnapshot(
+                requestId,
+                sessionId,
+                GuideTopology.valueOf(result.getString("topology")),
+                result.getString("user_message"),
+                readTimeline(connection, scopeId, requestId),
+                GuideRequestStatus.valueOf(result.getString("status")),
+                readSources(connection, scopeId, requestId),
+                new ModelUsage(
+                        result.getLong("input_tokens"),
+                        result.getLong("output_tokens"),
+                        result.getLong("cache_read_tokens")),
+                nullableLong(result, "retry_after_millis"),
+                failure,
+                Instant.parse(result.getString("created_at")),
+                Instant.parse(result.getString("updated_at")),
+                nullableInstant(result.getString("terminal_at")),
+                codec.decodeModelSelection(result.getString("model_selection_json")));
+        return new SequencedRequest(new GuideHistoryCursor(sequence, requestId), request);
+    }
+
+    private static String currentSessionForRequest(
+            Connection connection, String scopeId, UUID requestId) throws SQLException {
+        try (PreparedStatement query = connection.prepareStatement("""
+                select session_id from requests where scope_id = ? and request_id = ?
+                """)) {
+            query.setString(1, scopeId);
+            query.setString(2, requestId.toString());
+            try (ResultSet result = query.executeQuery()) {
+                if (!result.next()) {
+                    throw new IllegalArgumentException("durable request row disappeared");
+                }
+                return result.getString("session_id");
+            }
+        }
+    }
+
+    private List<ContextCheckpoint> readApplicableCheckpoint(
+            Connection connection,
+            String scopeId,
+            String sessionId,
+            String modelIdentifier) throws SQLException {
+        try (PreparedStatement query = connection.prepareStatement("""
+                select payload_json from compaction_checkpoints
+                where scope_id = ? and session_id = ? order by ordinal desc
+                """)) {
+            query.setString(1, scopeId);
+            query.setString(2, sessionId);
+            try (ResultSet result = query.executeQuery()) {
+                while (result.next()) {
+                    ContextCheckpoint checkpoint = codec.decodeCheckpoint(
+                            result.getString("payload_json"));
+                    if (checkpoint.status() == ContextCheckpoint.Status.SUCCEEDED
+                            && checkpoint.modelIdentifier().equals(modelIdentifier)) {
+                        return List.of(checkpoint);
+                    }
+                }
+            }
+        }
+        return List.of();
+    }
+
+    private static List<ModelMessage> contextMessages(GuideRequestSnapshot request) {
+        List<ModelMessage> messages = new ArrayList<>();
+        messages.add(ModelMessage.userText(request.userMessage()));
+        for (GuideTimelineEntry entry : request.timeline()) {
+            switch (entry) {
+                case GuideTimelineEntry.Assistant assistant -> {
+                    if (!assistant.text().isBlank()) {
+                        messages.add(new ModelMessage(
+                                ModelRole.ASSISTANT,
+                                List.of(new ModelContent.Text(assistant.text()))));
+                    }
+                }
+                case GuideTimelineEntry.Tool tool -> {
+                    String durableInvocationId = request.requestId()
+                            + ":" + tool.activity().invocationId();
+                    JsonObject input = new JsonObject();
+                    input.addProperty("durableProjection", true);
+                    messages.add(new ModelMessage(
+                            ModelRole.ASSISTANT,
+                            List.of(new ModelContent.ToolUse(
+                                    durableInvocationId,
+                                    tool.activity().toolId(),
+                                    input))));
+                    JsonObject result = new JsonObject();
+                    result.addProperty("status", tool.activity().status().name());
+                    JsonArray lines = new JsonArray();
+                    tool.activity().presentationLines().forEach(lines::add);
+                    result.add("presentationLines", lines);
+                    JsonArray sources = new JsonArray();
+                    for (GuideSource source : tool.activity().sources()) {
+                        JsonObject encoded = new JsonObject();
+                        encoded.addProperty("sourceId", source.evidence().sourceId());
+                        encoded.addProperty("provenance", source.evidence().provenance());
+                        encoded.addProperty("authority", source.evidence().authority().name());
+                        encoded.addProperty("completeness", source.evidence().completeness().name());
+                        sources.add(encoded);
+                    }
+                    result.add("sources", sources);
+                    messages.add(new ModelMessage(
+                            ModelRole.USER,
+                            List.of(new ModelContent.ToolResult(
+                                    durableInvocationId,
+                                    result,
+                                    tool.activity().status()
+                                            != dev.tomewisp.guide.GuideToolStatus.SUCCEEDED))));
+                }
+            }
+        }
+        dev.tomewisp.agent.context.ContextStructure.units(messages);
+        return List.copyOf(messages);
+    }
+
+    private void recoverInterruptedRows(Connection connection, GuideHistoryScope scope)
+            throws SQLException {
+        List<UUID> active = new ArrayList<>();
+        try (PreparedStatement query = connection.prepareStatement("""
+                select request_id from requests
+                where scope_id = ? and terminal_at is null
+                """)) {
+            query.setString(1, scope.scopeId());
+            try (ResultSet result = query.executeQuery()) {
+                while (result.next()) {
+                    active.add(UUID.fromString(result.getString("request_id")));
+                }
+            }
+        }
+        if (active.isEmpty()) {
+            return;
+        }
+        boolean autoCommit = connection.getAutoCommit();
+        connection.setAutoCommit(false);
+        Instant recoveredAt = clock.instant();
+        try {
+            for (UUID requestId : active) {
+                for (GuideTimelineEntry entry : readTimeline(
+                        connection, scope.scopeId(), requestId)) {
+                    if (entry instanceof GuideTimelineEntry.Assistant assistant
+                            && assistant.streaming()) {
+                        GuideTimelineEntry.Assistant closed = new GuideTimelineEntry.Assistant(
+                                assistant.ordinal(), assistant.text(), assistant.semantic(),
+                                false, assistant.sources());
+                        try (PreparedStatement update = connection.prepareStatement("""
+                                update timeline_entries set payload_json = ?
+                                where scope_id = ? and request_id = ? and ordinal = ?
+                                """)) {
+                            update.setString(1, codec.encodeEntry(closed));
+                            update.setString(2, scope.scopeId());
+                            update.setString(3, requestId.toString());
+                            update.setInt(4, closed.ordinal());
+                            update.executeUpdate();
+                        }
+                    }
+                }
+                try (PreparedStatement update = connection.prepareStatement("""
+                        update requests set status = 'INTERRUPTED',
+                            retry_after_millis = null,
+                            failure_code = 'request_interrupted',
+                            failure_message = ?, updated_at = ?, terminal_at = ?
+                        where scope_id = ? and request_id = ? and terminal_at is null
+                        """)) {
+                    update.setString(1,
+                            "The previous client process ended before this request completed");
+                    update.setString(2, recoveredAt.toString());
+                    update.setString(3, recoveredAt.toString());
+                    update.setString(4, scope.scopeId());
+                    update.setString(5, requestId.toString());
+                    update.executeUpdate();
+                }
+            }
+            try (PreparedStatement update = connection.prepareStatement("""
+                    update partitions set updated_at = ? where scope_id = ?
+                    """)) {
+                update.setString(1, recoveredAt.toString());
+                update.setString(2, scope.scopeId());
+                update.executeUpdate();
+            }
+            failureInjector.beforeCommit(Mutation.RECOVER);
+            connection.commit();
+        } catch (SQLException | RuntimeException failure) {
+            rollback(connection, failure);
+            throw failure;
+        } finally {
+            connection.setAutoCommit(autoCommit);
         }
     }
 
@@ -672,7 +1353,7 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
                        model_selection_json,
                        input_tokens, output_tokens, cache_read_tokens, retry_after_millis,
                        failure_code, failure_message, created_at, updated_at, terminal_at
-                from requests where scope_id = ? order by session_id, ordinal
+                from requests where scope_id = ? order by session_id, sequence
                 """)) {
             query.setString(1, scopeId);
             try (ResultSet result = query.executeQuery()) {
@@ -922,7 +1603,13 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
             String selectedSession,
             Instant updatedAt) {}
 
+    private record SequencedRequest(
+            GuideHistoryCursor cursor,
+            GuideRequestSnapshot request) {}
+
     enum Mutation {
+        COMMIT,
+        RECOVER,
         DELETE,
         RESET
     }

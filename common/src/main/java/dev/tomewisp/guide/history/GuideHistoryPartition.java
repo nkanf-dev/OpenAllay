@@ -15,7 +15,7 @@ public record GuideHistoryPartition(
         String selectedSession,
         List<GuideSessionSnapshot> sessions,
         Instant updatedAt) {
-    public static final int SCHEMA_VERSION = 3;
+    public static final int SCHEMA_VERSION = 4;
 
     public GuideHistoryPartition {
         if (schemaVersion != SCHEMA_VERSION) {

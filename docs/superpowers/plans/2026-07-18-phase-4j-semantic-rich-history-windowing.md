@@ -197,7 +197,7 @@ git commit -m "feat: persist semantic agent timeline"
 - Test: `common/src/test/java/dev/tomewisp/guide/history/SqliteGuideHistoryStoreTest.java`
 - Test: `common/src/test/java/dev/tomewisp/guide/history/GuideHistoryRepositoryTest.java`
 
-- [ ] **Step 1: Write schema/replacement/incremental SQL tests first**
+- [x] **Step 1: Write schema/replacement/incremental SQL tests first**
 
 Assert fresh schema version 4, strict unsupported v1/v2/v3/v99 failure without
 mutation, explicit reset recreation, stable request sequence, cascades,
@@ -205,7 +205,7 @@ interrupted recovery, and transaction rollback injection. Prove updating one
 tool entry does not delete/reinsert unrelated requests. Delete old schema-3-only
 production code rather than adding migration branches.
 
-- [ ] **Step 2: Define typed commits and independent read contracts**
+- [x] **Step 2: Define typed commits and independent read contracts**
 
 A commit contains only partition metadata/session/request/message/timeline/
 checkpoint upserts or explicit scoped deletes. Page requests use exclusive
@@ -213,7 +213,7 @@ sequence/ordinal cursors plus a positive caller count. Context requests carry
 the actual selected-model budget/reservations, not a page count or guessed
 default.
 
-- [ ] **Step 3: Implement normalized schema 4 and transaction batches**
+- [x] **Step 3: Implement normalized schema 4 and transaction batches**
 
 Use foreign keys, stable natural/UUID keys, monotonic per-session request
 sequence, indexed page order, strict semantic JSON columns, and one transaction
@@ -221,7 +221,7 @@ per ordered commit. Preserve hashed scope/actor isolation and no raw world/
 server path. Never save credentials, reasoning, provider bodies, full inventory,
 or transient render state.
 
-- [ ] **Step 4: Implement metadata/page/context reads**
+- [x] **Step 4: Implement metadata/page/context reads**
 
 Metadata reads no request/timeline bodies. Pages fetch exactly the requested
 neighborhood and cursors. Context reads stream newest structurally complete
@@ -229,7 +229,7 @@ messages/tool pairs and validated checkpoints until the supplied token budget,
 without constructing the full partition. Add query-plan/index assertions and a
 large deterministic fixture proving bounded returned objects.
 
-- [ ] **Step 5: Keep ordered async/deletion semantics and commit**
+- [x] **Step 5: Keep ordered async/deletion semantics and commit**
 
 Repository commits, metadata, page, context, delete/reset, flush, and close all
 share the existing single ordered worker and reservation rules. Page/context

@@ -42,6 +42,46 @@ public final class GuideHistoryRepository implements GuideHistoryAccess {
     @Override
     public synchronized CompletableFuture<Void> save(GuideHistoryPartition partition) {
         Objects.requireNonNull(partition, "partition");
+        return reserveWrite(() -> store.save(partition));
+    }
+
+    @Override
+    public synchronized CompletableFuture<java.util.Optional<GuideHistoryMetadata>> metadata(
+            GuideHistoryScope scope) {
+        Objects.requireNonNull(scope, "scope");
+        return submitReadLocked(
+                "history_metadata_failed",
+                "Unable to load guide history metadata",
+                () -> store.metadata(scope));
+    }
+
+    @Override
+    public synchronized CompletableFuture<GuideHistoryPage> page(
+            GuideHistoryPageRequest request) {
+        Objects.requireNonNull(request, "request");
+        return submitReadLocked(
+                "history_page_failed",
+                "Unable to load a guide history page",
+                () -> store.page(request));
+    }
+
+    @Override
+    public synchronized CompletableFuture<GuideHistoryContextSeed> context(
+            GuideHistoryContextRequest request) {
+        Objects.requireNonNull(request, "request");
+        return submitReadLocked(
+                "history_context_failed",
+                "Unable to prepare guide history context",
+                () -> store.context(request));
+    }
+
+    @Override
+    public synchronized CompletableFuture<Void> commit(GuideHistoryCommit commit) {
+        Objects.requireNonNull(commit, "commit");
+        return reserveWrite(() -> store.commit(commit));
+    }
+
+    private CompletableFuture<Void> reserveWrite(Runnable operation) {
         if (closing) {
             return closedFailure();
         }
@@ -55,7 +95,7 @@ public final class GuideHistoryRepository implements GuideHistoryAccess {
                     "history_write_failed",
                     "Unable to save durable guide history",
                     () -> {
-                        store.save(partition);
+                        operation.run();
                         return null;
                     }), worker);
         } catch (RuntimeException failure) {
@@ -138,7 +178,7 @@ public final class GuideHistoryRepository implements GuideHistoryAccess {
             CompletableFuture<Void> internal,
             CompletableFuture<Void> outward) {}
 
-    private static CompletableFuture<Void> busyFailure() {
+    private static <T> CompletableFuture<T> busyFailure() {
         return CompletableFuture.failedFuture(new GuideHistoryException(
                 "history_delete_busy", "Guide history is busy"));
     }
@@ -159,6 +199,16 @@ public final class GuideHistoryRepository implements GuideHistoryAccess {
                 () -> guarded(failureCode, failureMessage, operation), worker);
         latest = future.handle((ignored, failure) -> null);
         return future;
+    }
+
+    private <T> CompletableFuture<T> submitReadLocked(
+            String failureCode,
+            String failureMessage,
+            Supplier<T> operation) {
+        if (deleting) {
+            return busyFailure();
+        }
+        return submitLocked(failureCode, failureMessage, operation);
     }
 
     @Override

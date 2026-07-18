@@ -96,6 +96,7 @@ final class GuideHistoryRepositoryTest {
         assertTrue(store.entered.await(2, TimeUnit.SECONDS));
 
         assertEquals(new GuideHistoryActivity(0, true), repository.activity());
+        assertFutureCode(repository.metadata(SCOPE), "history_delete_busy");
         assertFutureCode(repository.save(partition(1)), "history_delete_busy");
         assertFutureCode(
                 repository.delete(GuideHistoryDeleteScope.actor(SCOPE.actorId())),
@@ -188,6 +189,30 @@ final class GuideHistoryRepositoryTest {
         assertTrue(store.closed);
         assertEquals("history_repository_closed",
                 ((GuideHistoryException) rejected.getCause()).code());
+    }
+
+    @Test
+    void incrementalCommitsAndWindowReadsShareOneOrderedWorker() throws Exception {
+        WindowStore store = new WindowStore();
+        GuideHistoryRepository repository = new GuideHistoryRepository(store);
+        long caller = Thread.currentThread().threadId();
+        GuideHistoryCommit commit = new GuideHistoryCommit(
+                SCOPE, List.of(new GuideHistoryMutation.UpsertPartition(
+                        "main", Instant.EPOCH)));
+
+        CompletableFuture<Void> writing = repository.commit(commit);
+        assertTrue(store.entered.await(2, TimeUnit.SECONDS));
+        CompletableFuture<Optional<GuideHistoryMetadata>> metadata =
+                repository.metadata(SCOPE);
+        assertFalse(metadata.isDone());
+        assertEquals(new GuideHistoryActivity(1, false), repository.activity());
+
+        store.release.countDown();
+        writing.join();
+        assertTrue(metadata.join().isEmpty());
+        assertEquals(List.of("commit", "metadata"), store.operations);
+        assertTrue(store.threadIds.stream().allMatch(id -> id != caller));
+        repository.closeAsync().join();
     }
 
     private static GuideHistoryPartition partition(long generation) {
@@ -343,5 +368,46 @@ final class GuideHistoryRepositoryTest {
                         "history_delete_failed", "History worker was interrupted", interrupted);
             }
         }
+    }
+
+    private static final class WindowStore implements GuideHistoryStore {
+        private final CountDownLatch entered = new CountDownLatch(1);
+        private final CountDownLatch release = new CountDownLatch(1);
+        private final List<String> operations = new ArrayList<>();
+        private final List<Long> threadIds = new ArrayList<>();
+
+        @Override
+        public GuideHistoryLoad load(GuideHistoryScope scope) {
+            return GuideHistoryLoad.empty();
+        }
+
+        @Override
+        public void save(GuideHistoryPartition partition) {
+            throw new AssertionError("full save is not expected");
+        }
+
+        @Override
+        public void commit(GuideHistoryCommit commit) {
+            operations.add("commit");
+            threadIds.add(Thread.currentThread().threadId());
+            entered.countDown();
+            try {
+                release.await();
+            } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+                throw new GuideHistoryException(
+                        "history_write_failed", "interrupted", interrupted);
+            }
+        }
+
+        @Override
+        public Optional<GuideHistoryMetadata> metadata(GuideHistoryScope scope) {
+            operations.add("metadata");
+            threadIds.add(Thread.currentThread().threadId());
+            return Optional.empty();
+        }
+
+        @Override public void delete(GuideHistoryDeleteScope scope) {}
+        @Override public void resetDatabase() {}
     }
 }
