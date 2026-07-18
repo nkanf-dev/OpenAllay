@@ -21,6 +21,7 @@ path.write_text(json.dumps({
     "baseUrl": f"http://127.0.0.1:{sys.argv[2]}/v1/",
     "model": "tomewisp-e2e-fixture",
     "apiKeyEnv": "TOMEWISP_E2E_FIXTURE_KEY",
+    "contextWindowTokens": 128000,
 }), encoding="utf-8")
 PY
 export TOMEWISP_E2E_FIXTURE_KEY="$(python3 -c 'import secrets; print(secrets.token_hex(16))')"

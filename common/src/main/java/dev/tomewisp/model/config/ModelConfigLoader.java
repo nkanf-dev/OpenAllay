@@ -72,12 +72,11 @@ public final class ModelConfigLoader {
                     optionalString(object, "apiKey"));
             int maxOutputTokens = integer(
                     environment, "TOMEWISP_MAX_OUTPUT_TOKENS", object, "maxOutputTokens", 8192);
-            int contextWindowTokens = integer(
+            int contextWindowTokens = requiredInteger(
                     environment,
                     "TOMEWISP_CONTEXT_WINDOW_TOKENS",
                     object,
-                    "contextWindowTokens",
-                    128_000);
+                    "contextWindowTokens");
             int connectSeconds = integer(
                     environment, "TOMEWISP_CONNECT_TIMEOUT_SECONDS", object, "connectTimeoutSeconds", 30);
             int requestSeconds = integer(
@@ -156,6 +155,26 @@ public final class ModelConfigLoader {
         }
         try {
             return value == null ? fallback : Integer.parseInt(value);
+        } catch (NumberFormatException exception) {
+            throw new IllegalArgumentException(field + " must be an integer");
+        }
+    }
+
+    private static int requiredInteger(
+            Map<String, String> environment,
+            String environmentName,
+            JsonObject object,
+            String field) {
+        String value = environment.get(environmentName);
+        if (value == null && object.has(field)) {
+            value = object.get(field).getAsString();
+        }
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException(
+                    field + " is required unless trusted model metadata resolves it");
+        }
+        try {
+            return Integer.parseInt(value);
         } catch (NumberFormatException exception) {
             throw new IllegalArgumentException(field + " must be an integer");
         }

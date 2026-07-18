@@ -21,7 +21,9 @@ rule, token-budget trigger, derived-memory authority boundary, and terminal
 failure behavior. It does not select a provider-neutral token estimator, the
 default context-window configuration, the exact summary-checkpoint lifecycle,
 or how a process-recovered checkpoint is proven to describe the current
-durable source messages.
+durable source messages. The designer subsequently confirmed that different
+provider/model pairs require different configured windows and questioned
+whether provider endpoints can supply trustworthy metadata.
 
 The designer authorized autonomous use of the best implementation path. These
 execution details are therefore reviewable statistical defaults rather than
@@ -29,9 +31,11 @@ new designer-attributed product policy.
 
 ## Decision
 
-Each model configuration has a positive `contextWindowTokens`. Existing
-configuration files receive a documented 128,000-token default and may override
-it with `TOMEWISP_CONTEXT_WINDOW_TOKENS`. The usable input budget reserves the
+Each model configuration has a positive `contextWindowTokens`. It is explicit
+and may be supplied by `TOMEWISP_CONTEXT_WINDOW_TOKENS`; no provider-independent
+window is guessed. A future trusted provider metadata adapter may resolve a
+missing value, records its provenance and capture time, and never overrides an
+explicit value. The usable input budget reserves the
 configured maximum output twice: once for the immediate model turn and once for
 one expected tool-result continuation. A configuration whose context window
 cannot hold those reserves is invalid.
@@ -99,8 +103,8 @@ history remains unchanged.
 
 ## Review Debt
 
-Review the 128,000-token default, UTF-8 estimator conservatism, and double-output
-reserve against retained provider usage during final Phase 4 acceptance. A
+Review the UTF-8 estimator conservatism and double-output reserve against
+retained provider usage during final Phase 4 acceptance. A
 provider-specific optimization requires deterministic cross-adapter tests and
 must not alter protected-content semantics.
 

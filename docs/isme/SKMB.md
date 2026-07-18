@@ -154,7 +154,7 @@ Delight graphical evidence are recorded in the Phase 4C plan and
 | --- | --- | --- | --- | --- | --- | --- |
 | SKMB-2026-07-18-006 | A, B, C, E, F | durable history execution details | hashed connection discriminator, async single writer, explicit loading rejection, ordered full-partition saves | designer delegated best implementation path; product invariants already accepted | final Phase 4 real-client acceptance | decisions/2026-07-18-006-durable-history-execution.md |
 | SKMB-2026-07-18-007 | A, B, D, E, F | recipe provider execution details | client-thread capture, generation-bearing references, public optional viewer APIs, partial omission diagnostics | designer delegated best implementation path; recipe authority and visibility already accepted | final Phase 4 real-client acceptance | decisions/2026-07-18-007-recipe-provider-execution.md |
-| SKMB-2026-07-18-008 | A, B, C, D, E, F | context compaction execution details | 128k configurable window, conservative UTF-8 estimator, structural prefix summaries, source-hash checkpoint reuse | designer delegated best implementation path; compaction authority and failure semantics already accepted | final Phase 4 real-client acceptance | decisions/2026-07-18-008-context-compaction-execution.md |
+| SKMB-2026-07-18-008 | A, B, C, D, E, F | context compaction execution details | explicit per-model window, conservative UTF-8 estimator, structural prefix summaries, source-hash checkpoint reuse | designer delegated best implementation path; compaction authority and failure semantics already accepted | final Phase 4 real-client acceptance | decisions/2026-07-18-008-context-compaction-execution.md |
 
 ## Open Decisions
 

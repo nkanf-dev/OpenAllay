@@ -18,7 +18,8 @@ final class ModelConfigLoaderTest {
         ToolResult.Success<ModelConfig> result = success(loader.load(
                 new StringReader("""
                         {"protocol":"openai_chat","baseUrl":"https://example.test/v1",
-                         "model":"old","apiKey":"file-secret","maxOutputTokens":1024}
+                         "model":"old","apiKey":"file-secret","contextWindowTokens":128000,
+                         "maxOutputTokens":1024}
                         """),
                 Map.of(
                         "TOMEWISP_MODEL_PROTOCOL", "anthropic_messages",
@@ -53,6 +54,15 @@ final class ModelConfigLoaderTest {
                          "model":"m","apiKey":"k","contextWindowTokens":8192,
                          "maxOutputTokens":4096}
                         """), Map.of())).code());
+
+        ToolResult.Failure<ModelConfig> missing = failure(loader.load(
+                new StringReader("""
+                        {"protocol":"anthropic_messages","baseUrl":"https://example.test/v1",
+                         "model":"m","apiKey":"k"}
+                        """), Map.of()));
+        assertEquals(
+                "contextWindowTokens is required unless trusted model metadata resolves it",
+                missing.message());
     }
 
     @Test
@@ -62,7 +72,7 @@ final class ModelConfigLoaderTest {
                 loader.load(
                         new StringReader("""
                                 {"protocol":"anthropic_messages","baseUrl":"http://127.0.0.1:8080/v1",
-                                 "model":"local","apiKey":"test"}
+                                 "model":"local","apiKey":"test","contextWindowTokens":128000}
                                 """),
                         Map.of()));
 
@@ -74,7 +84,8 @@ final class ModelConfigLoaderTest {
                 failure(loader.load(
                                 new StringReader("""
                                         {"protocol":"anthropic_messages","baseUrl":"https://example.test/v1",
-                                         "model":"m","apiKey":"k","surprise":true}
+                                         "model":"m","apiKey":"k","contextWindowTokens":128000,
+                                         "surprise":true}
                                         """),
                                 Map.of()))
                         .code());
@@ -84,7 +95,7 @@ final class ModelConfigLoaderTest {
         return loader.load(
                 new StringReader(("""
                         {"protocol":"anthropic_messages","baseUrl":"%s",
-                         "model":"m","apiKey":"k"}
+                         "model":"m","apiKey":"k","contextWindowTokens":128000}
                         """).formatted(url)),
                 Map.of());
     }

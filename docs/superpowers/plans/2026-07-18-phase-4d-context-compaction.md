@@ -116,7 +116,7 @@ reflection over `Instant`.
 - Modify direct `ModelConfig` fixtures under `common/src/test/java/dev/tomewisp/model/`
 - Modify: `docs/development.md`
 
-- [x] Add red config tests for JSON/environment precedence, 128,000 default, positive context window, double-output reserve validation, and redacted diagnostics.
+- [x] Add red config tests for JSON/environment precedence, required per-model context window, double-output reserve validation, and redacted diagnostics.
 - [x] Add `contextWindowTokens` / `TOMEWISP_CONTEXT_WINDOW_TOKENS`, pass the same derived `ContextBudget` into client and server agents, and update the documented sample.
 - [x] Run model config, Anthropic, OpenAI, client runtime, and server runtime tests.
 - [x] Commit `feat: configure model context budgets`.
@@ -125,7 +125,9 @@ The focused configuration, Anthropic, OpenAI, client, and server tests passed in
 five seconds. Production runtime creation now gives the compactor the exact
 same scheduled client and selected model identifier as primary dispatch; direct
 test constructors retain an explicit no-compaction path for small isolated
-fixtures.
+fixtures. A later designer review removed the provider-independent 128,000
+default: the selected model now requires an explicit window unless a trusted
+metadata adapter resolves it with provenance.
 
 ### Task 6: Persist and Recover Privacy-Safe Checkpoints
 

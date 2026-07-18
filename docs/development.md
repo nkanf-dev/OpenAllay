@@ -54,7 +54,10 @@ in an environment variable:
 
 `openai_chat` is the second protocol. Remote endpoints require HTTPS; HTTP is
 accepted only for loopback development. The API key is redacted from model
-configuration diagnostics and live traces.
+configuration diagnostics and live traces. `contextWindowTokens` is required
+for the selected provider/model unless a trusted metadata adapter resolves it;
+TomeWisp never assumes one universal model window. Its environment override is
+`TOMEWISP_CONTEXT_WINDOW_TOKENS`.
 
 Client recipe visibility and optional viewer preference live separately at
 `config/tomewisp/recipes.json`. A missing file uses the same defaults shown
