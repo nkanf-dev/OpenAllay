@@ -388,7 +388,7 @@ values are
 - Modify: `docs/isme/decisions/2026-07-18-009-session-model-selection.md`
 - Modify: this plan
 
-- [ ] **Step 1: Run focused and full deterministic gates**
+- [x] **Step 1: Run focused and full deterministic gates**
 
 ```bash
 ./gradlew :common:test --tests 'dev.tomewisp.model.config.*' \
@@ -398,7 +398,7 @@ values are
 ./gradlew clean :common:test :fabric:build :neoforge:build
 ```
 
-- [ ] **Step 2: Run schema, privacy, syntax, and artifact checks**
+- [x] **Step 2: Run schema, privacy, syntax, and artifact checks**
 
 Record common test totals, unsupported-schema rejection evidence, loader hashes,
 tracked shell/Python/JSON syntax, `git diff --check`, source-boundary checks,
@@ -406,7 +406,7 @@ and credential-pattern scans over production JARs. Confirm no new-format file,
 packet, history record, diagnostic, snapshot, or rendered label contains an API
 key value.
 
-- [ ] **Step 3: Update truthful status and commit**
+- [x] **Step 3: Update truthful status and commit**
 
 Document the strict file format, pre-release reset policy, session switch semantics,
 metadata provenance/priority, explicit unavailable-profile failures, and what
@@ -416,6 +416,28 @@ graphical/provider acceptance for the consolidated Phase 4 smoke.
 ```bash
 git commit -m "docs: verify multi-model session switching"
 ```
+
+Verification on 2026-07-18 passed the focused configuration, metadata, guide,
+and history suites, followed by the clean product gate with 263 common tests,
+zero failures/errors, and one opt-in skip. Both production loader builds passed.
+The production JAR SHA-256 values were:
+
+- Fabric: `74cef8cdae265fe97e91bbb2102fbe0fdf7c82363b3910016bcfd1ea57c9d6ce`
+- NeoForge: `23b056fd5964834756e063608a62f21db9ecb614459633b527dc446ec95c47c2`
+
+Three tracked shell files, one Python file, and nine JSON files passed syntax
+validation. `git diff --check`, common/loader source-boundary assertions, and
+both production-JAR credential scans passed. Deterministic tests prove that the
+new profile format rejects inline secrets, metadata cache records cannot
+represent credentials, history selection JSON rejects extra credential fields,
+and older/future pre-release database schema versions fail
+`history_schema_unsupported` without mutation. No model-selection packet was
+added; snapshots and rendered choices expose only profile ID/display name,
+selection kind, availability, and running/selected state.
+
+No graphical client or live OpenRouter/model-provider request was run for this
+isolated package. Profile CRUD, the settings page/manual-refresh control, and
+consolidated Phase 4 graphical/live-provider acceptance remain open.
 
 ## Completion boundary
 

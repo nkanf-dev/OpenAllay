@@ -4,7 +4,7 @@
 - decided_by: designer
 - approval_source: designer required one shared HTTP adaptation layer while explicitly separating configuration metadata from future model-callable online knowledge tools
 - date: 2026-07-18
-- commit: pending
+- commit: 7e2a735
 - patterns:
   - D_external_dependency
   - E_security_boundary

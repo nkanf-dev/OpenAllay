@@ -4,7 +4,7 @@
 - decided_by: designer
 - approval_source: designer requested startup prefetch with local reuse, manual refresh, and fetch-on-cache-miss because model-ID capability metadata is generally stable
 - date: 2026-07-18
-- commit: pending
+- commit: 7e2a735
 - patterns:
   - A_async_wait
   - B_state_persistence

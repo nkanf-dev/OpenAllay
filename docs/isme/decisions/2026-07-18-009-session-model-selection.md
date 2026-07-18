@@ -4,7 +4,7 @@
 - decided_by: designer
 - approval_source: designer approved the recommendation “每个会话记住当前选择，但可以随时切换；正在执行的请求不变” with “按照你推荐的来”
 - date: 2026-07-18
-- commit: pending
+- commit: 98a40bf, e63ecb4, 558ba67, fc20505, 7e2a735, 555ed3c
 - patterns:
   - B_state_persistence
   - C_concurrent_operations
@@ -103,3 +103,18 @@ becomes authoritative.
 ## Superseded By
 
 None.
+
+## Verification
+
+- Named-profile parsing/routing, per-session selection, active-request capture,
+  retry, missing/invalid profile, metadata, strict history, command, UI, and
+  loader-parity suites pass.
+- The clean gate passed 263 common tests with zero failures/errors and one
+  opt-in skip, followed by both production loader builds.
+- Strict selection JSON rejects unknown kinds and credential fields. Unsupported
+  earlier/future pre-release database schemas fail
+  `history_schema_unsupported` without mutation.
+- Tracked shell, Python, and JSON syntax checks passed. Both production JARs
+  passed the credential-pattern scan.
+- No graphical client or live provider request was run for this isolated
+  package; those remain part of consolidated Phase 4 smoke acceptance.
