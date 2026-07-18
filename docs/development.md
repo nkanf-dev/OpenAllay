@@ -77,6 +77,22 @@ tool. Model providers and future online knowledge tools reuse the JDK HTTP
 transport mechanics but retain separate credentials, permissions, codecs, and
 evidence policy.
 
+The guide screen's compact model control cycles through the selected session's
+available named profiles and the server model when offered. Switching during
+an active request changes only the next request; the status line continues to
+show the model captured by the running request. Commands provide the same
+semantics:
+
+```text
+/guide model list
+/guide model profile <profile-id>
+/guide model client
+/guide model server
+```
+
+The last two forms remain compatibility shortcuts. `client` restores that
+session's last named client profile and never silently chooses another one.
+
 Client recipe visibility and optional viewer preference live separately at
 `config/tomewisp/recipes.json`. A missing file uses the same defaults shown
 below: every known enabled source is queried, and recipe-book unlock state is

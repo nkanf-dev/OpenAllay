@@ -64,6 +64,18 @@ final class ClientArchitectureTest {
             assertTrue(source.contains("GuideDisplayConfigLoader"), entrypoint::toString);
             assertTrue(source.contains("tomewisp/display.json"), entrypoint::toString);
             assertTrue(source.contains("display.config()"), entrypoint::toString);
+            assertTrue(source.contains("ClientModelRuntimeRegistry"), entrypoint::toString);
+            assertTrue(source.contains("models.json"), entrypoint::toString);
+            assertTrue(source.contains("model-metadata.json"), entrypoint::toString);
+        }
+
+        List<Path> commands = List.of(
+                root.resolve("fabric/src/main/java/dev/tomewisp/fabric/FabricGuideCommands.java"),
+                root.resolve("neoforge/src/main/java/dev/tomewisp/neoforge/NeoForgeGuideCommands.java"));
+        for (Path command : commands) {
+            String source = Files.readString(command);
+            assertTrue(source.contains("literal(\"profile\")"), command::toString);
+            assertTrue(source.contains("guide.modelProfile("), command::toString);
         }
 
         try (var files = Files.walk(root.resolve("common/src/main/java"))) {

@@ -1,6 +1,6 @@
 package dev.tomewisp.client.gui;
 
-import dev.tomewisp.guide.GuideModelMode;
+import dev.tomewisp.guide.GuideModelSelection;
 import dev.tomewisp.guide.GuideFailure;
 import dev.tomewisp.guide.GuideRequestSnapshot;
 import dev.tomewisp.guide.GuideRequestStatus;
@@ -10,6 +10,7 @@ import dev.tomewisp.guide.GuideSubscription;
 import dev.tomewisp.guide.GuideToolActivity;
 import dev.tomewisp.guide.GuideToolStatus;
 import dev.tomewisp.guide.ui.GuideUiLayout;
+import dev.tomewisp.guide.ui.GuideUiModelChoice;
 import dev.tomewisp.guide.ui.GuideUiRow;
 import dev.tomewisp.guide.ui.GuideUiSession;
 import dev.tomewisp.guide.ui.GuideUiView;
@@ -58,7 +59,7 @@ public final class TomeWispScreen extends Screen {
     private Button send;
     private Button stop;
     private Button retry;
-    private Button mode;
+    private Button model;
     private String draft = "";
     private String notice = "";
     private int scroll;
@@ -116,7 +117,7 @@ public final class TomeWispScreen extends Screen {
                 .bounds(x + 36, top.y() + 2, 24, 20).build());
         addRenderableWidget(Button.builder(Component.literal("×"), button -> closeSession())
                 .bounds(x + 64, top.y() + 2, 32, 20).build());
-        mode = addRenderableWidget(Button.builder(modeLabel(), button -> toggleMode())
+        model = addRenderableWidget(Button.builder(modelLabel(), button -> cycleModel())
                 .bounds(x + 100, top.y() + 2, 52, 20).build());
         addRenderableWidget(Button.builder(Component.literal("刷新"), button -> service.refreshCapabilities())
                 .bounds(x + 156, top.y() + 2, 20, 20).build());
@@ -261,7 +262,7 @@ public final class TomeWispScreen extends Screen {
         graphics.fill(top.x(), top.y(), top.x() + top.width(), top.y() + top.height(), PANEL);
         graphics.text(font, Component.literal("TomeWisp 书灵").withStyle(ChatFormatting.BOLD),
                 top.x() + 8, top.y() + 6, TEXT);
-        graphics.text(font, view.capabilityMessage(), top.x() + 8, top.y() + 25, MUTED, false);
+        graphics.text(font, modelStatus(), top.x() + 8, top.y() + 25, MUTED, false);
         if (!notice.isBlank()) {
             graphics.text(font, notice, top.x() + 122, top.y() + 25, ERROR, false);
         }
@@ -837,10 +838,16 @@ public final class TomeWispScreen extends Screen {
         if (request != null) accept(service.retry(request.requestId()), ignored -> notice = "");
     }
 
-    private void toggleMode() {
-        GuideModelMode target = view.modelMode() == GuideModelMode.CLIENT
-                ? GuideModelMode.SERVER : GuideModelMode.CLIENT;
-        accept(service.setModelMode(target), ignored -> notice = "");
+    private void cycleModel() {
+        List<GuideUiModelChoice> choices = view.modelChoices();
+        int selected = choices.indexOf(view.selectedModel());
+        for (int offset = 1; offset <= choices.size(); offset++) {
+            GuideUiModelChoice candidate = choices.get((selected + offset) % choices.size());
+            if (candidate.available() && !candidate.selected()) {
+                accept(service.setModelSelection(candidate.selection()), ignored -> notice = "");
+                return;
+            }
+        }
     }
 
     private void createSession() {
@@ -891,14 +898,39 @@ public final class TomeWispScreen extends Screen {
         send.active = inWorld && view.canSend() && !draft.trim().isEmpty();
         stop.active = view.canCancel();
         retry.active = view.canRetry();
-        mode.setMessage(modeLabel());
-        mode.active = view.modelMode() == GuideModelMode.CLIENT
-                ? view.serverModelAvailable()
-                : view.clientModelAvailable();
+        model.setMessage(modelLabel());
+        model.active = view.modelChoices().stream()
+                .anyMatch(choice -> choice.available() && !choice.selected());
     }
 
-    private Component modeLabel() {
-        return Component.literal(view.modelMode() == GuideModelMode.CLIENT ? "本地" : "服务");
+    private Component modelLabel() {
+        GuideUiModelChoice selected = view.selectedModel();
+        Component label = choiceLabel(selected);
+        return selected.available()
+                ? label
+                : Component.translatable("screen.tomewisp.model.unavailable_short", label);
+    }
+
+    private Component modelStatus() {
+        GuideUiModelChoice selected = view.selectedModel();
+        Component selectedLabel = choiceLabel(selected);
+        if (!selected.available()) {
+            return Component.translatable(
+                    "screen.tomewisp.model.selected_unavailable", selectedLabel);
+        }
+        if (view.modelSwitchPending()) {
+            return Component.translatable(
+                    "screen.tomewisp.model.running_next",
+                    choiceLabel(view.runningModel()),
+                    selectedLabel);
+        }
+        return Component.translatable("screen.tomewisp.model.using", selectedLabel);
+    }
+
+    private static Component choiceLabel(GuideUiModelChoice choice) {
+        return choice.selection().kind() == GuideModelSelection.Kind.SERVER
+                ? Component.translatable("screen.tomewisp.model.server")
+                : Component.literal(choice.displayName());
     }
 
     static String sourceLabel(GuideSource source, boolean debugMode) {

@@ -125,6 +125,41 @@ public final class GuideCommandFacade {
                 result, notices, selected -> "模型模式已切换为 " + selected.name().toLowerCase()));
     }
 
+    public void modelProfile(UUID actor, String profileId, Consumer<GuideNotice> notices) {
+        GuideService service = services.forActor(actor);
+        GuideModelSelection selection;
+        try {
+            selection = GuideModelSelection.client(profileId);
+        } catch (IllegalArgumentException invalid) {
+            notices.accept(GuideNotice.error("invalid_model_selection: 模型配置 ID 无效"));
+            return;
+        }
+        service.setModelSelection(selection).thenAccept(result -> emit(
+                result,
+                notices,
+                selected -> "当前会话的模型已切换为 " + service.snapshot().clientProfiles().stream()
+                        .filter(profile -> profile.id().equals(selected.profileId()))
+                        .map(GuideClientModelProfile::displayName)
+                        .findFirst()
+                        .orElse(selected.profileId())));
+    }
+
+    public void models(UUID actor, Consumer<GuideNotice> notices) {
+        GuideSnapshot snapshot = services.forActor(actor).snapshot();
+        List<String> choices = new java.util.ArrayList<>();
+        snapshot.clientProfiles().stream()
+                .filter(GuideClientModelProfile::enabled)
+                .map(profile -> profile.displayName() + " (" + profile.id() + ")"
+                        + (profile.available() ? "" : " [不可用]"))
+                .forEach(choices::add);
+        if (snapshot.serverModelAvailable()
+                || snapshot.modelSelection().kind() == GuideModelSelection.Kind.SERVER) {
+            choices.add("服务端模型"
+                    + (snapshot.serverModelAvailable() ? "" : " [不可用]"));
+        }
+        notices.accept(GuideNotice.info("可选模型: " + choices));
+    }
+
     public void status(UUID actor, Consumer<GuideNotice> notices) {
         GuideSnapshot snapshot = services.forActor(actor).snapshot();
         notices.accept(GuideNotice.info(

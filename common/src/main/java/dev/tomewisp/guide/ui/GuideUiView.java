@@ -1,6 +1,8 @@
 package dev.tomewisp.guide.ui;
 
+import dev.tomewisp.guide.GuideClientModelProfile;
 import dev.tomewisp.guide.GuideModelMode;
+import dev.tomewisp.guide.GuideModelSelection;
 import dev.tomewisp.guide.GuideRequestSnapshot;
 import dev.tomewisp.guide.GuideRequestStatus;
 import dev.tomewisp.guide.GuideSessionSnapshot;
@@ -20,10 +22,33 @@ public record GuideUiView(
         boolean canRetry,
         List<GuideUiSession> sessions,
         List<GuideUiRow> rows,
+        List<GuideUiModelChoice> modelChoices,
         String capabilityMessage) {
     public GuideUiView {
         sessions = List.copyOf(sessions);
         rows = List.copyOf(rows);
+        modelChoices = List.copyOf(modelChoices);
+        if (modelChoices.stream().filter(GuideUiModelChoice::selected).count() != 1) {
+            throw new IllegalArgumentException("exactly one model choice must be selected");
+        }
+        if (modelChoices.stream().filter(GuideUiModelChoice::running).count() > 1) {
+            throw new IllegalArgumentException("at most one model choice may be running");
+        }
+    }
+
+    public GuideUiModelChoice selectedModel() {
+        return modelChoices.stream().filter(GuideUiModelChoice::selected)
+                .findFirst().orElseThrow();
+    }
+
+    public GuideUiModelChoice runningModel() {
+        return modelChoices.stream().filter(GuideUiModelChoice::running)
+                .findFirst().orElseGet(this::selectedModel);
+    }
+
+    public boolean modelSwitchPending() {
+        return modelChoices.stream().anyMatch(GuideUiModelChoice::running)
+                && !runningModel().selection().equals(selectedModel().selection());
     }
 
     public static GuideUiView from(GuideSnapshot snapshot) {
@@ -42,9 +67,11 @@ public record GuideUiView(
                         || value.status() == GuideRequestStatus.CANCELLED
                         || value.status() == GuideRequestStatus.INTERRUPTED)
                 .reduce((first, second) -> second).orElse(null);
-        boolean targetAvailable = snapshot.modelMode() == GuideModelMode.CLIENT
-                ? snapshot.clientModelAvailable()
-                : snapshot.serverModelAvailable();
+        List<GuideUiModelChoice> modelChoices = modelChoices(snapshot, active);
+        GuideUiModelChoice selectedModel = modelChoices.stream()
+                .filter(GuideUiModelChoice::selected)
+                .findFirst().orElseThrow();
+        boolean targetAvailable = selectedModel.available();
         List<GuideUiSession> sessions = snapshot.sessions().stream()
                 .map(value -> new GuideUiSession(
                         value.sessionId(),
@@ -104,11 +131,15 @@ public record GuideUiView(
                         request.failure()));
             }
         }
-        String capability = targetAvailable
-                ? (snapshot.modelMode() == GuideModelMode.CLIENT ? "客户端模型" : "服务端模型")
-                : (snapshot.modelMode() == GuideModelMode.CLIENT
-                        ? "客户端模型未配置；可配置 model.json 或选择可用的服务端模型"
-                        : "当前服务器未提供模型；请选择客户端模型");
+        GuideUiModelChoice runningModel = modelChoices.stream()
+                .filter(GuideUiModelChoice::running)
+                .findFirst().orElse(selectedModel);
+        String capability = !targetAvailable
+                ? "所选模型未配置或不可用：" + selectedModel.displayName()
+                : !runningModel.selection().equals(selectedModel.selection())
+                        ? "正在使用 " + runningModel.displayName()
+                                + "；下次请求 " + selectedModel.displayName()
+                        : "当前模型 " + selectedModel.displayName();
         return new GuideUiView(
                 snapshot.selectedSession(),
                 snapshot.modelMode(),
@@ -122,6 +153,71 @@ public record GuideUiView(
                 retry != null && active == null,
                 sessions,
                 rows,
+                modelChoices,
                 capability);
     }
+
+    private static List<GuideUiModelChoice> modelChoices(
+            GuideSnapshot snapshot, GuideRequestSnapshot active) {
+        List<ChoiceSeed> seeds = new ArrayList<>();
+        for (GuideClientModelProfile profile : snapshot.clientProfiles()) {
+            if (profile.enabled()) {
+                seeds.add(new ChoiceSeed(
+                        GuideModelSelection.client(profile.id()),
+                        profile.displayName(),
+                        profile.available()));
+            }
+        }
+        boolean compatibilityClientAvailable = snapshot.clientProfiles().isEmpty()
+                && snapshot.clientModelAvailable();
+        ensureClientChoice(
+                seeds,
+                snapshot.clientProfiles(),
+                snapshot.modelSelection(),
+                compatibilityClientAvailable);
+        if (active != null) {
+            ensureClientChoice(
+                    seeds,
+                    snapshot.clientProfiles(),
+                    active.modelSelection(),
+                    compatibilityClientAvailable
+                            && active.modelSelection().equals(snapshot.modelSelection()));
+        }
+        boolean serverRelevant = snapshot.serverModelAvailable()
+                || snapshot.modelSelection().kind() == GuideModelSelection.Kind.SERVER
+                || active != null
+                        && active.modelSelection().kind() == GuideModelSelection.Kind.SERVER;
+        if (serverRelevant) {
+            seeds.add(new ChoiceSeed(
+                    GuideModelSelection.server(), "Server model", snapshot.serverModelAvailable()));
+        }
+        GuideModelSelection running = active == null ? null : active.modelSelection();
+        return seeds.stream().map(seed -> new GuideUiModelChoice(
+                seed.selection(),
+                seed.displayName(),
+                seed.available(),
+                seed.selection().equals(snapshot.modelSelection()),
+                seed.selection().equals(running))).toList();
+    }
+
+    private static void ensureClientChoice(
+            List<ChoiceSeed> seeds,
+            List<GuideClientModelProfile> profiles,
+            GuideModelSelection selection,
+            boolean compatibilityAvailable) {
+        if (selection.kind() != GuideModelSelection.Kind.CLIENT
+                || seeds.stream().anyMatch(seed -> seed.selection().equals(selection))) {
+            return;
+        }
+        GuideClientModelProfile retained = profiles.stream()
+                .filter(profile -> profile.id().equals(selection.profileId()))
+                .findFirst().orElse(null);
+        seeds.add(new ChoiceSeed(
+                selection,
+                retained == null ? selection.profileId() : retained.displayName(),
+                retained == null ? compatibilityAvailable : retained.available()));
+    }
+
+    private record ChoiceSeed(
+            GuideModelSelection selection, String displayName, boolean available) {}
 }

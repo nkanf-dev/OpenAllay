@@ -6,8 +6,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.JsonParser;
 import dev.tomewisp.guide.GuideFailure;
+import dev.tomewisp.guide.GuideClientModelProfile;
 import dev.tomewisp.guide.GuideMessage;
 import dev.tomewisp.guide.GuideModelMode;
+import dev.tomewisp.guide.GuideModelSelection;
 import dev.tomewisp.guide.GuidePersistenceSnapshot;
 import dev.tomewisp.guide.GuideRequestSnapshot;
 import dev.tomewisp.guide.GuideRequestStatus;
@@ -204,6 +206,93 @@ final class GuideUiViewTest {
                 .filter(GuideUiRow.Status.class::isInstance)
                 .map(GuideUiRow.Status.class::cast)
                 .anyMatch(row -> row.status() == GuideRequestStatus.INTERRUPTED));
+    }
+
+    @Test
+    void modelChoicesKeepProfileOrderAndExposeUnavailableRememberedSelection() {
+        GuideModelSelection remembered = GuideModelSelection.client("removed");
+        GuideSnapshot snapshot = new GuideSnapshot(
+                ACTOR,
+                "main",
+                GuideModelMode.CLIENT,
+                true,
+                true,
+                GuidePersistenceSnapshot.disabled(),
+                List.of(new GuideSessionSnapshot(
+                        "main", List.of(), List.of(), List.of(), remembered)),
+                Instant.EPOCH,
+                remembered,
+                List.of(
+                        new GuideClientModelProfile(
+                                "a", "Model A", true, true, "provider/a", null),
+                        new GuideClientModelProfile(
+                                "disabled", "Disabled", false, false, "provider/disabled",
+                                new GuideFailure("model_disabled", "disabled")),
+                        new GuideClientModelProfile(
+                                "broken", "Broken", true, false, "provider/broken",
+                                new GuideFailure("invalid_model_config", "invalid"))));
+
+        GuideUiView view = GuideUiView.from(snapshot);
+
+        assertEquals(
+                List.of(
+                        GuideModelSelection.client("a"),
+                        GuideModelSelection.client("broken"),
+                        GuideModelSelection.client("removed"),
+                        GuideModelSelection.server()),
+                view.modelChoices().stream().map(GuideUiModelChoice::selection).toList());
+        GuideUiModelChoice selected = view.modelChoices().stream()
+                .filter(GuideUiModelChoice::selected)
+                .findFirst().orElseThrow();
+        assertEquals("removed", selected.displayName());
+        assertFalse(selected.available());
+        assertFalse(view.modelChoices().stream()
+                .anyMatch(choice -> choice.selection().equals(
+                        GuideModelSelection.client("disabled"))));
+    }
+
+    @Test
+    void activeRequestKeepsRunningModelWhileSelectorChangesNextRequest() {
+        GuideModelSelection running = GuideModelSelection.client("a");
+        GuideModelSelection next = GuideModelSelection.client("b");
+        GuideRequestSnapshot active = new GuideRequestSnapshot(
+                REQUEST,
+                "main",
+                GuideTopology.CLIENT_LOCAL,
+                "question",
+                List.of(),
+                GuideRequestStatus.MODEL_WAIT,
+                List.of(),
+                ModelUsage.empty(),
+                null,
+                null,
+                Instant.EPOCH,
+                Instant.EPOCH,
+                null,
+                running);
+        GuideSnapshot snapshot = new GuideSnapshot(
+                ACTOR,
+                "main",
+                GuideModelMode.CLIENT,
+                true,
+                false,
+                GuidePersistenceSnapshot.disabled(),
+                List.of(new GuideSessionSnapshot(
+                        "main", List.of(), List.of(active), List.of(), next)),
+                Instant.EPOCH,
+                next,
+                List.of(
+                        new GuideClientModelProfile(
+                                "a", "Model A", true, true, "provider/a", null),
+                        new GuideClientModelProfile(
+                                "b", "Model B", true, true, "provider/b", null)));
+
+        GuideUiView view = GuideUiView.from(snapshot);
+
+        assertEquals("Model B", view.selectedModel().displayName());
+        assertEquals("Model A", view.runningModel().displayName());
+        assertTrue(view.modelSwitchPending());
+        assertTrue(view.canCancel());
     }
 
     private static GuideSnapshot snapshot(GuideRequestSnapshot request) {

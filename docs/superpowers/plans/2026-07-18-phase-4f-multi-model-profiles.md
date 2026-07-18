@@ -331,7 +331,7 @@ and `tomewisp-neoforge-26.2-0.1.0-SNAPSHOT.jar`
 - Test: `common/src/test/java/dev/tomewisp/guide/ui/GuideUiViewTest.java`
 - Test: `common/src/test/java/dev/tomewisp/client/ClientArchitectureTest.java`
 
-- [ ] **Step 1: Write red selector and compatibility-command tests**
+- [x] **Step 1: Write red selector and compatibility-command tests**
 
 Show ordered enabled profiles, unavailable remembered selection, optional
 server choice, and “running with” versus “next request” when an active request
@@ -339,7 +339,7 @@ captured a different selection. Prove selecting a profile changes one session
 only. Preserve `/guide model client|server` and add explicit profile selection
 without ambiguous silent fallback.
 
-- [ ] **Step 2: Replace the global mode button with a session selector**
+- [x] **Step 2: Replace the global mode button with a session selector**
 
 The compact top-bar control cycles or opens the ordered model choices and shows
 the selected profile's display name. It remains usable during an active request
@@ -353,7 +353,7 @@ Both loaders prefer `config/tomewisp/models.json`, fall back to legacy
 profile summaries into `GuideService`. Extend the source-boundary parity test;
 common production code keeps no Fabric/NeoForge imports.
 
-- [ ] **Step 4: Compile both loaders and commit**
+- [x] **Step 4: Compile both loaders and commit**
 
 ```bash
 ./gradlew :common:test --tests 'dev.tomewisp.guide.ui.*' \
@@ -361,6 +361,23 @@ common production code keeps no Fabric/NeoForge imports.
   :fabric:compileJava :neoforge:compileJava
 git commit -m "feat: switch models within guide sessions"
 ```
+
+The view now preserves profile configuration order, omits disabled profiles
+unless one is the remembered/running exceptional choice, keeps removed or
+invalid remembered selections visible, and treats only the selected profile's
+availability as permission to send. The compact native control cycles through
+available choices and remains usable during active work; its localized status
+distinguishes the captured running model from the next-request selection.
+`/guide model client|server` remains compatible, while
+`/guide model profile <id>` selects one named profile and
+`/guide model list` exposes credential-free choices. Fabric and NeoForge
+register identical command shapes. The clean product gate passes with 263
+common tests, zero failures/errors, and one opt-in skip. Production JAR SHA-256
+values are
+`74cef8cdae265fe97e91bbb2102fbe0fdf7c82363b3910016bcfd1ea57c9d6ce`
+(Fabric) and
+`23b056fd5964834756e063608a62f21db9ecb614459633b527dc446ec95c47c2`
+(NeoForge).
 
 ### Task 7: Full verification and documentation
 
