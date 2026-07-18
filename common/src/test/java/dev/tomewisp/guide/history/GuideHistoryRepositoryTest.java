@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -57,7 +58,114 @@ final class GuideHistoryRepositoryTest {
 
         GuideHistoryException history = (GuideHistoryException) failure.getCause();
         assertEquals("history_write_failed", history.code());
+        assertTrue(repository.activity().idleForDeletion());
+        repository.delete(GuideHistoryDeleteScope.actor(SCOPE.actorId())).join();
         assertEquals(List.of(2L), store.savedGenerations);
+        assertEquals(1, store.deleteCalls);
+        repository.closeAsync().join();
+    }
+
+    @Test
+    void deleteRejectsInsteadOfQueueingBehindPendingSave() throws Exception {
+        BlockingStore store = new BlockingStore();
+        GuideHistoryRepository repository = new GuideHistoryRepository(store);
+        CompletableFuture<Void> save = repository.save(partition(1));
+        assertTrue(store.entered.await(2, TimeUnit.SECONDS));
+
+        assertEquals(new GuideHistoryActivity(1, false), repository.activity());
+        assertFutureCode(
+                repository.delete(GuideHistoryDeleteScope.actor(SCOPE.actorId())),
+                "history_delete_busy");
+        assertFutureCode(repository.resetDatabase(), "history_delete_busy");
+        assertEquals(0, store.deleteCalls);
+        assertEquals(0, store.resetCalls);
+
+        store.release.countDown();
+        save.join();
+        assertTrue(repository.activity().idleForDeletion());
+        repository.closeAsync().join();
+    }
+
+    @Test
+    void reservedDeleteBlocksNewSaveAndCannotBeResurrected() throws Exception {
+        DeletingStore store = new DeletingStore(false);
+        GuideHistoryRepository repository = new GuideHistoryRepository(store);
+
+        CompletableFuture<Void> deleting = repository.delete(
+                GuideHistoryDeleteScope.partition(SCOPE));
+        assertTrue(store.entered.await(2, TimeUnit.SECONDS));
+
+        assertEquals(new GuideHistoryActivity(0, true), repository.activity());
+        assertFutureCode(repository.save(partition(1)), "history_delete_busy");
+        assertFutureCode(
+                repository.delete(GuideHistoryDeleteScope.actor(SCOPE.actorId())),
+                "history_delete_busy");
+        assertFutureCode(repository.resetDatabase(), "history_delete_busy");
+        assertTrue(store.savedGenerations.isEmpty());
+
+        store.release.countDown();
+        deleting.join();
+        assertTrue(repository.activity().idleForDeletion());
+        repository.save(partition(2)).join();
+        assertEquals(List.of(2L), store.savedGenerations);
+        repository.closeAsync().join();
+    }
+
+    @Test
+    void resetUsesTheSameReservationAndCloseDrainsIt() throws Exception {
+        DeletingStore store = new DeletingStore(true);
+        GuideHistoryRepository repository = new GuideHistoryRepository(store);
+        CompletableFuture<Void> resetting = repository.resetDatabase();
+        assertTrue(store.entered.await(2, TimeUnit.SECONDS));
+
+        CompletableFuture<Void> close = repository.closeAsync();
+        assertFutureCode(repository.load(SCOPE), "history_repository_closed");
+        assertFalse(close.isDone());
+
+        store.release.countDown();
+        resetting.join();
+        close.join();
+        assertEquals(1, store.resetCalls);
+        assertTrue(store.closed);
+    }
+
+    @Test
+    void cancellingReturnedSaveFutureDoesNotReleaseReservationOrFlushEarly() throws Exception {
+        BlockingStore store = new BlockingStore();
+        GuideHistoryRepository repository = new GuideHistoryRepository(store);
+        CompletableFuture<Void> save = repository.save(partition(1));
+        assertTrue(store.entered.await(2, TimeUnit.SECONDS));
+
+        assertTrue(save.cancel(false));
+        assertEquals(new GuideHistoryActivity(1, false), repository.activity());
+        assertFalse(repository.flush().isDone());
+        assertFutureCode(
+                repository.delete(GuideHistoryDeleteScope.actor(SCOPE.actorId())),
+                "history_delete_busy");
+
+        store.release.countDown();
+        repository.flush().join();
+        assertTrue(repository.activity().idleForDeletion());
+        repository.closeAsync().join();
+    }
+
+    @Test
+    void cancellingReturnedDeleteFutureDoesNotAllowAResurrectionSave() throws Exception {
+        DeletingStore store = new DeletingStore(false);
+        GuideHistoryRepository repository = new GuideHistoryRepository(store);
+        CompletableFuture<Void> deleting = repository.delete(
+                GuideHistoryDeleteScope.partition(SCOPE));
+        assertTrue(store.entered.await(2, TimeUnit.SECONDS));
+
+        assertTrue(deleting.cancel(false));
+        assertEquals(new GuideHistoryActivity(0, true), repository.activity());
+        assertFalse(repository.flush().isDone());
+        assertFutureCode(repository.save(partition(1)), "history_delete_busy");
+
+        store.release.countDown();
+        repository.flush().join();
+        assertTrue(repository.activity().idleForDeletion());
+        assertTrue(store.savedGenerations.isEmpty());
         repository.closeAsync().join();
     }
 
@@ -91,12 +199,19 @@ final class GuideHistoryRepositoryTest {
                 Instant.ofEpochMilli(generation));
     }
 
+    private static void assertFutureCode(CompletableFuture<?> future, String code) {
+        CompletionException failure = assertThrows(CompletionException.class, future::join);
+        assertEquals(code, ((GuideHistoryException) failure.getCause()).code());
+    }
+
     private static final class BlockingStore implements GuideHistoryStore {
         private final CountDownLatch entered = new CountDownLatch(1);
         private final CountDownLatch release = new CountDownLatch(1);
         private final List<Long> savedGenerations = new ArrayList<>();
         private final List<Long> threadIds = new ArrayList<>();
         private final List<String> threadNames = new ArrayList<>();
+        private int deleteCalls;
+        private int resetCalls;
         private volatile boolean closed;
 
         @Override
@@ -121,12 +236,12 @@ final class GuideHistoryRepositoryTest {
 
         @Override
         public void delete(GuideHistoryDeleteScope scope) {
-            throw new UnsupportedOperationException();
+            deleteCalls++;
         }
 
         @Override
         public void resetDatabase() {
-            throw new UnsupportedOperationException();
+            resetCalls++;
         }
 
         @Override
@@ -144,6 +259,7 @@ final class GuideHistoryRepositoryTest {
     private static final class FailingStore implements GuideHistoryStore {
         private final List<Long> savedGenerations = new ArrayList<>();
         private boolean first = true;
+        private int deleteCalls;
 
         @Override
         public GuideHistoryLoad load(GuideHistoryScope scope) {
@@ -162,12 +278,70 @@ final class GuideHistoryRepositoryTest {
 
         @Override
         public void delete(GuideHistoryDeleteScope scope) {
-            throw new UnsupportedOperationException();
+            deleteCalls++;
         }
 
         @Override
         public void resetDatabase() {
             throw new UnsupportedOperationException();
+        }
+    }
+
+    private static final class DeletingStore implements GuideHistoryStore {
+        private final boolean reset;
+        private final CountDownLatch entered = new CountDownLatch(1);
+        private final CountDownLatch release = new CountDownLatch(1);
+        private final List<Long> savedGenerations = new ArrayList<>();
+        private int deleteCalls;
+        private int resetCalls;
+        private volatile boolean closed;
+
+        private DeletingStore(boolean reset) {
+            this.reset = reset;
+        }
+
+        @Override
+        public GuideHistoryLoad load(GuideHistoryScope scope) {
+            return GuideHistoryLoad.empty();
+        }
+
+        @Override
+        public void save(GuideHistoryPartition partition) {
+            savedGenerations.add(partition.updatedAt().toEpochMilli());
+        }
+
+        @Override
+        public void delete(GuideHistoryDeleteScope scope) {
+            if (reset) {
+                throw new AssertionError("delete was called instead of reset");
+            }
+            deleteCalls++;
+            block();
+        }
+
+        @Override
+        public void resetDatabase() {
+            if (!reset) {
+                throw new AssertionError("reset was called instead of delete");
+            }
+            resetCalls++;
+            block();
+        }
+
+        @Override
+        public void close() {
+            closed = true;
+        }
+
+        private void block() {
+            entered.countDown();
+            try {
+                release.await();
+            } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+                throw new GuideHistoryException(
+                        "history_delete_failed", "History worker was interrupted", interrupted);
+            }
         }
     }
 }

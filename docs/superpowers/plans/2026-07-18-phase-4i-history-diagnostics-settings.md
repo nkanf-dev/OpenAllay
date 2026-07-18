@@ -105,7 +105,7 @@ git commit -m "feat: transactionally administer guide history"
 - Modify: `common/src/main/java/dev/tomewisp/guide/history/GuideHistoryRepository.java`
 - Modify: `common/src/test/java/dev/tomewisp/guide/history/GuideHistoryRepositoryTest.java`
 
-- [ ] **Step 1: Write pending-write, concurrent delete, close, and resurrection tests**
+- [x] **Step 1: Write pending-write, concurrent delete, close, and resurrection tests**
 
 ```java
 @Test
@@ -133,13 +133,13 @@ void reservedDeleteBlocksNewSaveAndCannotBeResurrected() {
 }
 ```
 
-- [ ] **Step 2: Run repository tests and observe current unconditional queueing**
+- [x] **Step 2: Run repository tests and observe current unconditional queueing**
 
 ```bash
 ./gradlew :common:test --tests 'dev.tomewisp.guide.history.GuideHistoryRepositoryTest'
 ```
 
-- [ ] **Step 3: Implement atomic reservation separate from the ordered future**
+- [x] **Step 3: Implement atomic reservation separate from the ordered future**
 
 ```java
 public interface GuideHistoryAccess {
@@ -162,7 +162,7 @@ Inside one synchronized block, `save` rejects while `deleting`, increments
 before submission, and clear it in completion. A second operation never queues.
 Load/close retain existing ordering and structured repository-closed behavior.
 
-- [ ] **Step 4: Run history repository/store tests and commit**
+- [x] **Step 4: Run history repository/store tests and commit**
 
 ```bash
 ./gradlew :common:test --tests 'dev.tomewisp.guide.history.*'

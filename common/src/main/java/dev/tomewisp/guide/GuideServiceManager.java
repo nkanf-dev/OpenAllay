@@ -105,8 +105,26 @@ public final class GuideServiceManager {
             }
 
             @Override
+            public CompletableFuture<Void> delete(
+                    dev.tomewisp.guide.history.GuideHistoryDeleteScope scope) {
+                return disconnected.thenCompose(ignored -> history.delete(scope));
+            }
+
+            @Override
+            public CompletableFuture<Void> resetDatabase() {
+                return disconnected.thenCompose(ignored -> history.resetDatabase());
+            }
+
+            @Override
             public CompletableFuture<Void> flush() {
                 return disconnected.thenCompose(ignored -> history.flush());
+            }
+
+            @Override
+            public dev.tomewisp.guide.history.GuideHistoryActivity activity() {
+                return disconnected.isDone()
+                        ? history.activity()
+                        : new dev.tomewisp.guide.history.GuideHistoryActivity(1, false);
             }
         };
     }

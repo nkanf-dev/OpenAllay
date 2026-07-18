@@ -12,6 +12,8 @@ public final class GuideHistoryRepository implements GuideHistoryAccess {
     private final ExecutorService worker;
     private CompletableFuture<Void> latest = CompletableFuture.completedFuture(null);
     private CompletableFuture<Void> closeFuture;
+    private int pendingWrites;
+    private boolean deleting;
     private boolean closing;
 
     public GuideHistoryRepository(GuideHistoryStore store) {
@@ -29,24 +31,134 @@ public final class GuideHistoryRepository implements GuideHistoryAccess {
     }
 
     @Override
-    public CompletableFuture<GuideHistoryLoad> load(GuideHistoryScope scope) {
+    public synchronized CompletableFuture<GuideHistoryLoad> load(GuideHistoryScope scope) {
         Objects.requireNonNull(scope, "scope");
-        return submit(
+        return submitLocked(
                 "history_load_failed",
                 "Unable to load durable guide history",
                 () -> store.load(scope));
     }
 
     @Override
-    public CompletableFuture<Void> save(GuideHistoryPartition partition) {
+    public synchronized CompletableFuture<Void> save(GuideHistoryPartition partition) {
         Objects.requireNonNull(partition, "partition");
-        return submit(
-                "history_write_failed",
-                "Unable to save durable guide history",
-                () -> {
-                    store.save(partition);
-                    return null;
-                });
+        if (closing) {
+            return closedFailure();
+        }
+        if (deleting) {
+            return busyFailure();
+        }
+        pendingWrites++;
+        CompletableFuture<Void> scheduled;
+        try {
+            scheduled = CompletableFuture.supplyAsync(() -> guarded(
+                    "history_write_failed",
+                    "Unable to save durable guide history",
+                    () -> {
+                        store.save(partition);
+                        return null;
+                    }), worker);
+        } catch (RuntimeException failure) {
+            pendingWrites--;
+            throw failure;
+        }
+        ReservationFutures tracked = trackReservation(scheduled, this::completeWrite);
+        latest = tracked.internal().handle((ignored, failure) -> null);
+        return tracked.outward();
+    }
+
+    @Override
+    public synchronized CompletableFuture<Void> delete(GuideHistoryDeleteScope scope) {
+        Objects.requireNonNull(scope, "scope");
+        return reserveDeletion(() -> store.delete(scope));
+    }
+
+    @Override
+    public synchronized CompletableFuture<Void> resetDatabase() {
+        return reserveDeletion(store::resetDatabase);
+    }
+
+    @Override
+    public synchronized GuideHistoryActivity activity() {
+        return new GuideHistoryActivity(pendingWrites, deleting);
+    }
+
+    private CompletableFuture<Void> reserveDeletion(Runnable operation) {
+        if (closing) {
+            return closedFailure();
+        }
+        if (pendingWrites != 0 || deleting) {
+            return busyFailure();
+        }
+        deleting = true;
+        CompletableFuture<Void> scheduled;
+        try {
+            scheduled = CompletableFuture.supplyAsync(() -> guarded(
+                    "history_delete_failed",
+                    "Unable to delete durable guide history",
+                    () -> {
+                        operation.run();
+                        return null;
+                    }), worker);
+        } catch (RuntimeException failure) {
+            deleting = false;
+            throw failure;
+        }
+        ReservationFutures tracked = trackReservation(scheduled, this::completeDeletion);
+        latest = tracked.internal().handle((ignored, failure) -> null);
+        return tracked.outward();
+    }
+
+    private synchronized void completeWrite() {
+        pendingWrites--;
+    }
+
+    private synchronized void completeDeletion() {
+        deleting = false;
+    }
+
+    private static ReservationFutures trackReservation(
+            CompletableFuture<Void> scheduled, Runnable release) {
+        CompletableFuture<Void> internal = new CompletableFuture<>();
+        CompletableFuture<Void> outward = new CompletableFuture<>();
+        scheduled.whenComplete((ignored, failure) -> {
+            release.run();
+            if (failure == null) {
+                internal.complete(null);
+                outward.complete(null);
+            } else {
+                internal.completeExceptionally(failure);
+                outward.completeExceptionally(failure);
+            }
+        });
+        return new ReservationFutures(internal, outward);
+    }
+
+    private record ReservationFutures(
+            CompletableFuture<Void> internal,
+            CompletableFuture<Void> outward) {}
+
+    private static CompletableFuture<Void> busyFailure() {
+        return CompletableFuture.failedFuture(new GuideHistoryException(
+                "history_delete_busy", "Guide history is busy"));
+    }
+
+    private static <T> CompletableFuture<T> closedFailure() {
+        return CompletableFuture.failedFuture(new GuideHistoryException(
+                "history_repository_closed", "Guide history repository is closed"));
+    }
+
+    private synchronized <T> CompletableFuture<T> submitLocked(
+            String failureCode,
+            String failureMessage,
+            Supplier<T> operation) {
+        if (closing) {
+            return closedFailure();
+        }
+        CompletableFuture<T> future = CompletableFuture.supplyAsync(
+                () -> guarded(failureCode, failureMessage, operation), worker);
+        latest = future.handle((ignored, failure) -> null);
+        return future;
     }
 
     @Override
@@ -63,20 +175,6 @@ public final class GuideHistoryRepository implements GuideHistoryAccess {
         latest = closingTask.handle((ignored, failure) -> null);
         closeFuture = closingTask.whenComplete((ignored, failure) -> worker.shutdown());
         return closeFuture;
-    }
-
-    private synchronized <T> CompletableFuture<T> submit(
-            String failureCode,
-            String failureMessage,
-            Supplier<T> operation) {
-        if (closing) {
-            return CompletableFuture.failedFuture(new GuideHistoryException(
-                    "history_repository_closed", "Guide history repository is closed"));
-        }
-        CompletableFuture<T> future = CompletableFuture.supplyAsync(
-                () -> guarded(failureCode, failureMessage, operation), worker);
-        latest = future.handle((ignored, failure) -> null);
-        return future;
     }
 
     private static <T> T guarded(

@@ -254,8 +254,24 @@ final class GuideClientE2EControllerTest {
         }
 
         @Override
+        public CompletableFuture<Void> delete(
+                dev.tomewisp.guide.history.GuideHistoryDeleteScope scope) {
+            return CompletableFuture.failedFuture(new UnsupportedOperationException());
+        }
+
+        @Override
+        public CompletableFuture<Void> resetDatabase() {
+            return CompletableFuture.failedFuture(new UnsupportedOperationException());
+        }
+
+        @Override
         public CompletableFuture<Void> flush() {
             return CompletableFuture.completedFuture(null);
+        }
+
+        @Override
+        public dev.tomewisp.guide.history.GuideHistoryActivity activity() {
+            return dev.tomewisp.guide.history.GuideHistoryActivity.idle();
         }
     }
 }

@@ -7,5 +7,11 @@ public interface GuideHistoryAccess {
 
     CompletableFuture<Void> save(GuideHistoryPartition partition);
 
+    CompletableFuture<Void> delete(GuideHistoryDeleteScope scope);
+
+    CompletableFuture<Void> resetDatabase();
+
     CompletableFuture<Void> flush();
+
+    GuideHistoryActivity activity();
 }
