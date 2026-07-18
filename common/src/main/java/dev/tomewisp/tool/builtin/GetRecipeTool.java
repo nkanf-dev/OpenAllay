@@ -8,6 +8,7 @@ import dev.tomewisp.context.RecipeReference;
 import dev.tomewisp.context.RecipeSnapshot;
 import dev.tomewisp.context.ToolInvocationContext;
 import dev.tomewisp.recipe.RecipeCatalog;
+import dev.tomewisp.recipe.RecipeCatalogStatus;
 import dev.tomewisp.tool.Tool;
 import dev.tomewisp.tool.ToolAccess;
 import dev.tomewisp.tool.ToolDescriptor;
@@ -18,7 +19,10 @@ import java.util.Set;
 public final class GetRecipeTool implements Tool<GetRecipeTool.Input, GetRecipeTool.Output> {
     public record Input(String sourceId, String generation, String recipeId) {}
 
-    public record Output(RecipeEntrySnapshot recipe, List<EvidenceMetadata> evidence)
+    public record Output(
+            RecipeEntrySnapshot recipe,
+            RecipeCatalogStatus catalog,
+            List<EvidenceMetadata> evidence)
             implements EvidenceBearing {
         public Output {
             evidence = List.copyOf(evidence);
@@ -54,7 +58,9 @@ public final class GetRecipeTool implements Tool<GetRecipeTool.Input, GetRecipeT
         return new RecipeCatalog(snapshot)
                 .get(new RecipeReference(input.sourceId(), input.generation(), input.recipeId()))
                 .<ToolResult<Output>>map(recipe -> new ToolResult.Success<>(new Output(
-                        recipe, List.of(snapshot.evidence(), recipe.evidence()))))
+                        recipe,
+                        RecipeCatalogStatus.from(snapshot),
+                        List.of(snapshot.evidence(), recipe.evidence()))))
                 .orElseGet(() -> new ToolResult.Failure<>(
                         "stale_reference", "the requested recipe reference is stale"));
     }

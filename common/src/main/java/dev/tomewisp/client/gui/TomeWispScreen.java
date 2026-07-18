@@ -13,6 +13,10 @@ import dev.tomewisp.guide.ui.GuideUiRow;
 import dev.tomewisp.guide.ui.GuideUiSession;
 import dev.tomewisp.guide.ui.GuideUiView;
 import dev.tomewisp.guide.ui.GuideToolPresenter;
+import dev.tomewisp.guide.ui.GuideRecipeCard;
+import dev.tomewisp.guide.ui.GuideRecipePresenter;
+import dev.tomewisp.recipe.RecipeNavigationResult;
+import dev.tomewisp.recipe.config.RecipeClientRuntime;
 import dev.tomewisp.tool.ToolResult;
 import java.util.ArrayList;
 import java.util.List;
@@ -26,6 +30,9 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.Mth;
 
@@ -38,6 +45,7 @@ public final class TomeWispScreen extends Screen {
     private static final int MUTED = 0xFFA9B3BE;
     private static final int ERROR = 0xFFFF7D7D;
     private final GuideService service;
+    private final RecipeClientRuntime recipeClient;
     private volatile GuideUiView view;
     private GuideSubscription subscription;
     private GuideUiLayout layout;
@@ -56,9 +64,16 @@ public final class TomeWispScreen extends Screen {
     private final List<Hit> hits = new ArrayList<>();
 
     public TomeWispScreen(GuideService service) {
+        this(service, RecipeClientRuntime.defaults());
+    }
+
+    public TomeWispScreen(GuideService service, RecipeClientRuntime recipeClient) {
         super(Component.translatable("screen.tomewisp.guide"));
         this.service = java.util.Objects.requireNonNull(service, "service");
+        this.recipeClient = java.util.Objects.requireNonNull(recipeClient, "recipeClient");
         this.view = GuideUiView.from(service.snapshot());
+        recipeClient.failure().ifPresent(failure -> notice = Component.translatable(
+                "screen.tomewisp.recipe.invalid_config", failure.code()).getString());
     }
 
     @Override
@@ -188,7 +203,7 @@ public final class TomeWispScreen extends Screen {
         renderTop(graphics);
         renderSessions(graphics);
         renderTranscript(graphics);
-        renderDetail(graphics);
+        renderDetail(graphics, mouseX, mouseY);
         super.extractRenderState(graphics, mouseX, mouseY, a);
     }
 
@@ -326,7 +341,7 @@ public final class TomeWispScreen extends Screen {
         return y;
     }
 
-    private void renderDetail(GuiGraphicsExtractor graphics) {
+    private void renderDetail(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         if (!detailOpen()) return;
         GuideUiLayout.Rect detail = layout.detail();
         graphics.fill(detail.x(), detail.y(), detail.x() + detail.width(), detail.y() + detail.height(), 0xF02A303A);
@@ -343,12 +358,133 @@ public final class TomeWispScreen extends Screen {
             for (String line : presentation) {
                 y = detailLine(graphics, line, detail, y);
             }
+            for (GuideRecipeCard card : GuideRecipePresenter.cards(
+                    selectedTool.toolId(), selectedTool.normalized())) {
+                y = recipeCard(graphics, card, detail, y, mouseX, mouseY);
+            }
             for (GuideSource source : selectedTool.sources()) {
                 y = evidence(graphics, source, detail, y);
             }
         } else if (selectedSource != null) {
             y = evidence(graphics, selectedSource, detail, y);
         }
+    }
+
+    private int recipeCard(
+            GuiGraphicsExtractor graphics,
+            GuideRecipeCard card,
+            GuideUiLayout.Rect detail,
+            int y,
+            int mouseX,
+            int mouseY) {
+        boolean canBrowse = recipeClient.canBrowse();
+        int height = canBrowse ? 62 : 74;
+        if (y + height <= detail.y() + detail.height()) {
+            int left = detail.x() + 6;
+            int right = detail.x() + detail.width() - 6;
+            graphics.fill(left, y, right, y + height, PANEL_ALT);
+            graphics.outline(left, y, right - left, height, 0xFF46515F);
+            GuideRecipeCard.Output output = card.outputs().getFirst();
+            ItemStack stack = itemStack(output);
+            if (!stack.isEmpty()) {
+                graphics.item(stack, left + 7, y + 7);
+                graphics.itemDecorations(font, stack, left + 7, y + 7);
+                if (mouseX >= left + 7 && mouseX < left + 23
+                        && mouseY >= y + 7 && mouseY < y + 23) {
+                    graphics.setTooltipForNextFrame(font, stack, mouseX, mouseY);
+                }
+            }
+            graphics.text(font, output.displayName(), left + 29, y + 7, TEXT, false);
+            graphics.text(font, card.type(), left + 29, y + 18, MUTED, false);
+            String station = card.workstation().isBlank() ? card.id() : card.workstation();
+            graphics.text(font, station, left + 29, y + 29, MUTED, false);
+            int actionY = y + 44;
+            int actionX = left + 7;
+            actionX = recipeAction(
+                    graphics,
+                    Component.translatable("screen.tomewisp.recipe.recipes"),
+                    actionX,
+                    actionY,
+                    canBrowse,
+                    () -> navigate(recipeClient.openRecipes(output.itemId())));
+            actionX = recipeAction(
+                    graphics,
+                    Component.translatable("screen.tomewisp.recipe.usages"),
+                    actionX + 7,
+                    actionY,
+                    canBrowse,
+                    () -> navigate(recipeClient.openUsages(output.itemId())));
+            var exact = card.references().stream().filter(recipeClient::supportsExact).findFirst();
+            recipeAction(
+                    graphics,
+                    Component.translatable(exact.isPresent()
+                            ? "screen.tomewisp.recipe.open_exact"
+                            : "screen.tomewisp.recipe.open_exact_unavailable"),
+                    actionX + 7,
+                    actionY,
+                    exact.isPresent(),
+                    () -> navigate(recipeClient.openExact(exact.orElseThrow())));
+            if (!canBrowse) {
+                graphics.text(
+                        font,
+                        Component.translatable("screen.tomewisp.recipe.viewer_unavailable"),
+                        left + 7,
+                        y + 58,
+                        0xFFFFD479,
+                        false);
+            }
+        }
+        return y + height + 5;
+    }
+
+    private int recipeAction(
+            GuiGraphicsExtractor graphics,
+            Component label,
+            int x,
+            int y,
+            boolean enabled,
+            Runnable action) {
+        int width = font.width(label) + 8;
+        int color = enabled ? ACCENT : 0xFF6E7782;
+        graphics.fill(x, y - 2, x + width, y + 10, enabled ? 0xFF29443F : 0xFF30343A);
+        graphics.text(font, label, x + 4, y, color, false);
+        if (enabled) {
+            hits.add(new Hit(
+                    new GuideUiLayout.Rect(x, y - 2, width, 12),
+                    HitKind.CONTENT,
+                    action));
+        }
+        return x + width;
+    }
+
+    private static ItemStack itemStack(GuideRecipeCard.Output output) {
+        Identifier id = Identifier.tryParse(output.itemId());
+        if (id == null || !BuiltInRegistries.ITEM.containsKey(id)) {
+            return ItemStack.EMPTY;
+        }
+        return new ItemStack(BuiltInRegistries.ITEM.getValue(id), output.count());
+    }
+
+    private void navigate(RecipeNavigationResult result) {
+        notice = result.opened()
+                ? Component.translatable("screen.tomewisp.recipe.viewer_opened").getString()
+                : navigationFailure(result);
+    }
+
+    private static String navigationFailure(RecipeNavigationResult result) {
+        String key = switch (result.code()) {
+            case "exact_unsupported" -> "screen.tomewisp.recipe.exact_unsupported";
+            case "preferred_viewer_unavailable" ->
+                    "screen.tomewisp.recipe.preferred_viewer_unavailable";
+            case "viewer_unavailable" -> "screen.tomewisp.recipe.viewer_unavailable";
+            case "unknown_item" -> "screen.tomewisp.recipe.unknown_item";
+            case "wrong_thread" -> "screen.tomewisp.recipe.wrong_thread";
+            case "viewer_failure" -> "screen.tomewisp.recipe.viewer_failure";
+            default -> null;
+        };
+        return key == null
+                ? result.code() + ": " + result.message()
+                : Component.translatable(key).getString();
     }
 
     private int evidence(GuiGraphicsExtractor graphics, GuideSource source, GuideUiLayout.Rect detail, int y) {

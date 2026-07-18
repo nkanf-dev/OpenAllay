@@ -55,6 +55,30 @@ in an environment variable:
 accepted only for loopback development. The API key is redacted from model
 configuration diagnostics and live traces.
 
+Client recipe visibility and optional viewer preference live separately at
+`config/tomewisp/recipes.json`. A missing file uses the same defaults shown
+below: every known enabled source is queried, and recipe-book unlock state is
+not an access boundary.
+
+```json
+{
+  "schemaVersion": 1,
+  "visibility": "all_known",
+  "preferredViewer": "auto",
+  "sources": {
+    "vanilla": true,
+    "jei": true,
+    "rei": true
+  }
+}
+```
+
+`visibility` may be `all_known` or `unlocked_only`; the latter deliberately
+excludes viewer records whose vanilla unlock state is unknown. A preferred
+viewer may be `auto`, `jei`, or `rei`. Invalid edits retain the last valid
+in-memory settings and surface an explicit screen diagnostic. Configuration
+reload and editing controls are part of the later Phase 4 settings flow.
+
 For an optional server-hosted model, use
 `config/tomewisp/server-model.json` on the server. The capability is advertised
 only when that configuration is valid. Client packets never contain the key.

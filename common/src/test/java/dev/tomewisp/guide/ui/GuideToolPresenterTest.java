@@ -32,4 +32,22 @@ final class GuideToolPresenterTest {
         assertEquals("失败: stale_reference", lines.getFirst());
         assertEquals("reload", lines.get(1));
     }
+
+    @Test
+    void recipePresentationExposesProviderGenerationAndDiagnostics() {
+        var normalized = JsonParser.parseString("""
+                {"status":"success","value":{"recipes":[],"catalog":{
+                  "completeness":"PARTIAL","recipeCount":0,"semanticGroupCount":0,
+                  "providers":[{"sourceId":"viewer:rei","generation":"%s",
+                    "state":"UNAVAILABLE","completeness":"UNKNOWN","recipeCount":0,
+                    "diagnostics":[{"sourceId":"viewer:rei","code":"mod_not_loaded","message":"REI is not installed"}]}],
+                  "conflicts":[]},"evidence":[]}}
+                """.formatted("0".repeat(64))).getAsJsonObject();
+
+        var lines = GuideToolPresenter.lines("tomewisp:search_recipes", normalized);
+
+        assertTrue(lines.stream().anyMatch(value -> value.contains("viewer:rei · UNAVAILABLE/UNKNOWN")));
+        assertTrue(lines.stream().anyMatch(value -> value.contains("mod_not_loaded")));
+        assertTrue(lines.stream().anyMatch(value -> value.contains("generation=" + "0".repeat(64))));
+    }
 }

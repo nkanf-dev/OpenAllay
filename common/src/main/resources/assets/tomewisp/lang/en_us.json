@@ -5,5 +5,17 @@
   "screen.tomewisp.history.loading": "Loading conversation history...",
   "screen.tomewisp.history.saving": "Saving conversation history...",
   "screen.tomewisp.history.unavailable": "History is unavailable; new messages are currently kept only in memory.",
-  "screen.tomewisp.history.interrupted": "This request was interrupted when the game closed. Retry it manually to continue."
+  "screen.tomewisp.history.interrupted": "This request was interrupted when the game closed. Retry it manually to continue.",
+  "screen.tomewisp.recipe.recipes": "Recipes",
+  "screen.tomewisp.recipe.usages": "Usages",
+  "screen.tomewisp.recipe.open_exact": "Open exact",
+  "screen.tomewisp.recipe.open_exact_unavailable": "Exact unavailable",
+  "screen.tomewisp.recipe.viewer_opened": "Recipe viewer opened.",
+  "screen.tomewisp.recipe.exact_unsupported": "This recipe viewer cannot open the exact recipe.",
+  "screen.tomewisp.recipe.preferred_viewer_unavailable": "The preferred recipe viewer is unavailable.",
+  "screen.tomewisp.recipe.viewer_unavailable": "No enabled recipe viewer is available.",
+  "screen.tomewisp.recipe.unknown_item": "The recipe card references an unknown item.",
+  "screen.tomewisp.recipe.wrong_thread": "Recipe navigation is not available from this thread.",
+  "screen.tomewisp.recipe.viewer_failure": "The recipe viewer could not open this view.",
+  "screen.tomewisp.recipe.invalid_config": "Recipe configuration is invalid (%s); the last valid settings remain active."
 }

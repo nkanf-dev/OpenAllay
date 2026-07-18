@@ -5,5 +5,17 @@
   "screen.tomewisp.history.loading": "正在加载对话历史...",
   "screen.tomewisp.history.saving": "正在保存对话历史...",
   "screen.tomewisp.history.unavailable": "历史记录当前不可用；新消息暂时只保留在内存中。",
-  "screen.tomewisp.history.interrupted": "游戏关闭时中断了这个请求；请手动重试以继续。"
+  "screen.tomewisp.history.interrupted": "游戏关闭时中断了这个请求；请手动重试以继续。",
+  "screen.tomewisp.recipe.recipes": "查看配方",
+  "screen.tomewisp.recipe.usages": "查看用途",
+  "screen.tomewisp.recipe.open_exact": "打开此配方",
+  "screen.tomewisp.recipe.open_exact_unavailable": "无法精确打开",
+  "screen.tomewisp.recipe.viewer_opened": "已打开配方查看器。",
+  "screen.tomewisp.recipe.exact_unsupported": "当前配方查看器不能精确打开这条配方。",
+  "screen.tomewisp.recipe.preferred_viewer_unavailable": "首选配方查看器当前不可用。",
+  "screen.tomewisp.recipe.viewer_unavailable": "没有可用且已启用的配方查看器。",
+  "screen.tomewisp.recipe.unknown_item": "配方卡片引用了未知物品。",
+  "screen.tomewisp.recipe.wrong_thread": "当前线程不能执行配方跳转。",
+  "screen.tomewisp.recipe.viewer_failure": "配方查看器未能打开这个页面。",
+  "screen.tomewisp.recipe.invalid_config": "配方配置无效（%s）；仍在使用上一次有效设置。"
 }

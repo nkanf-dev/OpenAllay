@@ -6,21 +6,39 @@ import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 
-STEPS = (
-    ("tomewisp__search_recipes", {"outputItem": "minecraft:iron_block"}),
-    ("tomewisp__get_recipe", {
-        "sourceId": "minecraft:recipe_manager",
-        "generation": "0" * 64,
-        "recipeId": "minecraft:iron_block",
-    }),
-    ("tomewisp__inspect_inventory", {}),
-    ("tomewisp__calculate_craftability", {
-        "sourceId": "minecraft:recipe_manager",
-        "generation": "0" * 64,
-        "recipeId": "minecraft:iron_block",
-        "crafts": 1,
-    }),
+STEP_NAMES = (
+    "tomewisp__search_recipes",
+    "tomewisp__get_recipe",
+    "tomewisp__inspect_inventory",
+    "tomewisp__calculate_craftability",
 )
+
+
+def recipe_reference(request):
+    for message in reversed(request.get("messages", [])):
+        if message.get("role") != "tool":
+            continue
+        try:
+            normalized = json.loads(message.get("content", ""))
+            recipes = normalized["value"]["recipes"]
+            reference = recipes[0]["reference"]
+            return {key: reference[key]
+                    for key in ("sourceId", "generation", "recipeId")}
+        except (KeyError, IndexError, TypeError, json.JSONDecodeError):
+            continue
+    raise ValueError("search result did not contain a recipe reference")
+
+
+def step(request, completed):
+    if completed == 0:
+        return STEP_NAMES[completed], {"outputItem": "minecraft:iron_block"}
+    if completed == 1:
+        return STEP_NAMES[completed], recipe_reference(request)
+    if completed == 2:
+        return STEP_NAMES[completed], {}
+    reference = recipe_reference(request)
+    reference["crafts"] = 1
+    return STEP_NAMES[completed], reference
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -34,8 +52,12 @@ class Handler(BaseHTTPRequestHandler):
         request = json.loads(self.rfile.read(length))
         completed = sum(1 for message in request.get("messages", [])
                         if message.get("role") == "tool")
-        if completed < len(STEPS):
-            name, arguments = STEPS[completed]
+        if completed < len(STEP_NAMES):
+            try:
+                name, arguments = step(request, completed)
+            except ValueError as failure:
+                self.send_error(422, str(failure))
+                return
             available = {tool["function"]["name"]
                          for tool in request.get("tools", [])}
             if name not in available:

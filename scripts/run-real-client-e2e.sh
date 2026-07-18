@@ -20,9 +20,10 @@ path.write_text(json.dumps({
     "protocol": "openai_chat",
     "baseUrl": f"http://127.0.0.1:{sys.argv[2]}/v1/",
     "model": "tomewisp-e2e-fixture",
-    "apiKey": "loopback-fixture-not-a-secret",
+    "apiKeyEnv": "TOMEWISP_E2E_FIXTURE_KEY",
 }), encoding="utf-8")
 PY
+export TOMEWISP_E2E_FIXTURE_KEY="$(python3 -c 'import secrets; print(secrets.token_hex(16))')"
 
 python3 scripts/e2e-model-fixture.py --port "$fixture_port" &
 fixture_pid=$!

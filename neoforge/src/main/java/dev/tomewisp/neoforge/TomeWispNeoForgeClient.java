@@ -17,6 +17,7 @@ import dev.tomewisp.guide.e2e.GuideClientE2EController;
 import dev.tomewisp.client.gui.TomeWispKeyMappings;
 import dev.tomewisp.client.gui.TomeWispScreen;
 import dev.tomewisp.tool.ToolResult;
+import dev.tomewisp.recipe.config.RecipeClientRuntime;
 import net.minecraft.client.Minecraft;
 import net.neoforged.fml.ModList;
 import net.neoforged.fml.loading.FMLPaths;
@@ -46,8 +47,14 @@ public final class TomeWispNeoForgeClient {
         GuideLocalEndpoint local = guide instanceof ToolResult.Success<ClientGuideRuntime> success
                 ? success.value()
                 : null;
+        RecipeClientRuntime recipeClient = new RecipeClientRuntime(
+                FMLPaths.CONFIGDIR.get().resolve("tomewisp/recipes.json"));
         MinecraftGuideContextProvider contexts = new MinecraftGuideContextProvider(
-                runtime, Minecraft.getInstance(), gson, TomeWispNeoForgeClient.class.getClassLoader());
+                runtime,
+                Minecraft.getInstance(),
+                gson,
+                TomeWispNeoForgeClient.class.getClassLoader(),
+                recipeClient);
         PayloadGuideRemoteEndpoint remote = new PayloadGuideRemoteEndpoint(
                 new PayloadGuideRemoteEndpoint.Port() {
                     @Override public dev.tomewisp.bridge.protocol.CapabilityPayload capabilities() {
@@ -87,7 +94,7 @@ public final class TomeWispNeoForgeClient {
             if (current != null) current.refreshCapabilities();
         });
         dev.tomewisp.guide.GuideScreenOpener screens = service -> {
-            Minecraft.getInstance().gui.setScreen(new TomeWispScreen(service));
+            Minecraft.getInstance().gui.setScreen(new TomeWispScreen(service, recipeClient));
             return new ToolResult.Success<>(true);
         };
         NeoForgeGuideCommands.register(new GuideCommandFacade(

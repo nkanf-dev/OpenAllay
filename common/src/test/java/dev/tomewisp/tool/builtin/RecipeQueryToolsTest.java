@@ -21,6 +21,8 @@ final class RecipeQueryToolsTest {
                                 null, "minecraft:iron_block", null, null)));
 
         assertEquals(1, search.value().recipes().size());
+        assertEquals(1, search.value().catalog().recipeCount());
+        assertEquals(0, search.value().catalog().semanticGroupCount());
         assertTrue(search.value() instanceof EvidenceBearing);
         assertEquals(
                 "minecraft:iron_block",
@@ -35,6 +37,7 @@ final class RecipeQueryToolsTest {
                                 GroundedTestFixtures.RECIPE_GENERATION,
                                 "minecraft:iron_block")));
         assertEquals(9, details.value().recipe().ingredients().getFirst().count());
+        assertEquals(1, details.value().catalog().recipeCount());
         assertTrue(!details.value().evidence().isEmpty());
     }
 
@@ -68,6 +71,7 @@ final class RecipeQueryToolsTest {
         assertEquals(
                 RecipeCatalog.UsageRole.INPUT,
                 usages.value().usages().getFirst().role());
+        assertEquals(1, usages.value().catalog().recipeCount());
 
         ToolResult.Failure<SearchRecipesTool.Output> invalid = assertInstanceOf(
                 ToolResult.Failure.class,

@@ -64,9 +64,12 @@ A server mod is not required for the main client model mode. Phase 4 now has a
 versioned SQLite history foundation: normal-mode conversation projections are
 partitioned by player and world/server, interrupted work restores without an
 automatic provider retry, and persistence health is visible in the screen.
-All-known recipe sources and viewer integration, context compaction,
-history management, developer diagnostics, and Minecraft-native rich messages
-remain Phase 4 work. Dynamic
+All-known recipe capture now merges vanilla, server, JEI, and REI provider
+snapshots with generation-bearing references, persisted visibility/source
+preferences, source diagnostics, native item cards, and typed viewer actions.
+EMI has no verified 26.2 artifact, and retained graphical viewer acceptance is
+still pending. Context compaction, history management, developer diagnostics,
+and the complete Minecraft-native rich-message layer remain Phase 4 work. Dynamic
 Ponder generation is deferred beyond Phase 4 because Ponder/Ponderer do not yet
 provide a verified 26.2 runtime target. Phase 3C now provides the native player
 GUI; graphical E2E remains explicit opt-in and is never inferred from

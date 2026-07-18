@@ -19,12 +19,51 @@ public final class GuideToolPresentation {
         if (value == null) return List.of(normalized.toString());
         String name = toolId.substring(toolId.indexOf(':') + 1);
         return switch (name) {
-            case "search_recipes" -> recipes(value);
-            case "get_recipe" -> recipe(object(value, "recipe"));
+            case "search_recipes" -> withCatalog(recipes(value), object(value, "catalog"));
+            case "get_recipe" -> withCatalog(recipe(object(value, "recipe")), object(value, "catalog"));
+            case "find_item_usages" -> withCatalog(usages(value), object(value, "catalog"));
             case "inspect_inventory" -> inventory(value);
             case "calculate_craftability" -> craftability(object(value, "result"));
             default -> List.of(value.toString());
         };
+    }
+
+    private static List<String> usages(JsonObject value) {
+        List<String> lines = new ArrayList<>();
+        lines.add("物品用途: " + string(value, "itemId"));
+        for (JsonElement element : array(value, "usages")) {
+            JsonObject usage = element.getAsJsonObject();
+            JsonObject reference = object(usage, "reference");
+            lines.add("• " + string(usage, "role") + " · "
+                    + string(reference, "sourceId") + " · "
+                    + string(reference, "recipeId"));
+        }
+        return List.copyOf(lines);
+    }
+
+    private static List<String> withCatalog(List<String> content, JsonObject catalog) {
+        if (catalog == null) return content;
+        List<String> lines = new ArrayList<>(content);
+        lines.add("目录完整性: " + string(catalog, "completeness")
+                + "；记录 " + number(catalog, "recipeCount")
+                + "；语义组 " + number(catalog, "semanticGroupCount"));
+        for (JsonElement element : array(catalog, "providers")) {
+            JsonObject provider = element.getAsJsonObject();
+            lines.add("来源 " + string(provider, "sourceId")
+                    + " · " + string(provider, "state")
+                    + "/" + string(provider, "completeness")
+                    + " · " + number(provider, "recipeCount")
+                    + " · generation=" + string(provider, "generation"));
+            for (JsonElement diagnostic : array(provider, "diagnostics")) {
+                JsonObject value = diagnostic.getAsJsonObject();
+                lines.add("  ! " + string(value, "code") + ": " + string(value, "message"));
+            }
+        }
+        for (JsonElement conflict : array(catalog, "conflicts")) {
+            JsonObject value = conflict.getAsJsonObject();
+            lines.add("冲突 " + string(value, "recipeId") + ": " + string(value, "message"));
+        }
+        return List.copyOf(lines);
     }
 
     private static List<String> recipes(JsonObject value) {

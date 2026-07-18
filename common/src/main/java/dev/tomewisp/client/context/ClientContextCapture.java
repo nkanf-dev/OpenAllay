@@ -30,8 +30,9 @@ import dev.tomewisp.recipe.RecipeKnowledgeProvider;
 import dev.tomewisp.recipe.RecipeKnowledgeService;
 import dev.tomewisp.recipe.RecipeProviderSnapshot;
 import dev.tomewisp.recipe.RecipeUnlockState;
-import dev.tomewisp.recipe.RecipeVisibilityPolicy;
 import dev.tomewisp.recipe.RecipeViewerProviderRegistry;
+import dev.tomewisp.recipe.config.RecipeClientConfig;
+import dev.tomewisp.recipe.config.RecipeClientRuntime;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -57,15 +58,22 @@ public final class ClientContextCapture {
     private static final String CAPTURE_GENERATION_PLACEHOLDER = "0".repeat(64);
     private final Gson gson;
     private final PlatformService platform;
+    private final RecipeClientRuntime recipeClient;
     private final RecipeKnowledgeService recipeKnowledge = new RecipeKnowledgeService();
 
     public ClientContextCapture(Gson gson) {
-        this(gson, PlatformServices.load());
+        this(gson, PlatformServices.load(), RecipeClientRuntime.defaults());
     }
 
     public ClientContextCapture(Gson gson, PlatformService platform) {
+        this(gson, platform, RecipeClientRuntime.defaults());
+    }
+
+    public ClientContextCapture(
+            Gson gson, PlatformService platform, RecipeClientRuntime recipeClient) {
         this.gson = gson;
         this.platform = platform;
+        this.recipeClient = java.util.Objects.requireNonNull(recipeClient, "recipeClient");
     }
 
     public ToolInvocationContext capture(
@@ -166,6 +174,7 @@ public final class ClientContextCapture {
     }
 
     private RecipeSnapshot recipes(LocalPlayer player, Minecraft client, Instant capturedAt) {
+        RecipeClientConfig config = recipeClient.config();
         RecipeKnowledgeProvider vanilla = new RecipeKnowledgeProvider() {
             @Override
             public String sourceId() {
@@ -178,26 +187,71 @@ public final class ClientContextCapture {
             }
         };
         List<RecipeKnowledgeProvider> providers = new ArrayList<>();
-        providers.add(vanilla);
-        providers.addAll(RecipeViewerProviderRegistry.providers(capturedAt, platform));
-        if (platform.isModLoaded("jei") && providers.stream()
-                .noneMatch(provider -> provider.sourceId().equals("viewer:jei"))) {
-            providers.add(inactiveViewer(
-                    "viewer:jei", "plugin_unavailable", "JEI plugin has not initialized"));
-        }
-        if (platform.isModLoaded("roughlyenoughitems") && providers.stream()
-                .noneMatch(provider -> provider.sourceId().equals("viewer:rei"))) {
-            providers.add(inactiveViewer(
-                    "viewer:rei", "plugin_unavailable", "REI plugin has not initialized"));
-        }
+        providers.add(config.vanillaEnabled()
+                ? vanilla
+                : inactiveViewer(
+                        "minecraft:client_recipe_book",
+                        "disabled_by_config",
+                        "Vanilla recipe-book capture is disabled"));
+        List<RecipeKnowledgeProvider> registered = RecipeViewerProviderRegistry.providers(
+                capturedAt, platform);
+        addViewerProvider(
+                providers,
+                registered,
+                "viewer:jei",
+                "jei",
+                config.jeiEnabled(),
+                "JEI");
+        addViewerProvider(
+                providers,
+                registered,
+                "viewer:rei",
+                "roughlyenoughitems",
+                config.reiEnabled(),
+                "REI");
+        registered.stream()
+                .filter(provider -> providers.stream().noneMatch(existing ->
+                        existing.sourceId().equals(provider.sourceId())))
+                .filter(provider -> recipeClient.sourceEnabled(provider.sourceId()))
+                .forEach(providers::add);
         return recipeKnowledge.capture(
                 evidence(
                         DataCompleteness.UNKNOWN,
                         capturedAt,
                         "tomewisp:recipe_catalog",
                         "tomewisp:recipe_catalog"),
-                RecipeVisibilityPolicy.ALL_KNOWN,
+                config.visibility(),
                 providers);
+    }
+
+    private void addViewerProvider(
+            List<RecipeKnowledgeProvider> providers,
+            List<RecipeKnowledgeProvider> registered,
+            String sourceId,
+            String modId,
+            boolean enabled,
+            String displayName) {
+        if (!enabled) {
+            providers.add(inactiveViewer(
+                    sourceId,
+                    "disabled_by_config",
+                    displayName + " recipe capture is disabled"));
+            return;
+        }
+        RecipeKnowledgeProvider provider = registered.stream()
+                .filter(value -> value.sourceId().equals(sourceId))
+                .findFirst()
+                .orElse(null);
+        if (provider != null) {
+            providers.add(provider);
+            return;
+        }
+        providers.add(inactiveViewer(
+                sourceId,
+                platform.isModLoaded(modId) ? "plugin_unavailable" : "mod_not_loaded",
+                platform.isModLoaded(modId)
+                        ? displayName + " plugin has not initialized"
+                        : displayName + " is not installed"));
     }
 
     private static RecipeKnowledgeProvider inactiveViewer(

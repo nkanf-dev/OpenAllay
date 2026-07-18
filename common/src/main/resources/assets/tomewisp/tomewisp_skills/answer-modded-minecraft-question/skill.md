@@ -7,7 +7,7 @@ references: []
 ---
 Use this Skill for general questions about items, blocks, recipes, mechanics, or progression.
 
-For exact recipe details or craftability, pass sourceId, generation, and recipeId unchanged from the current recipe search result. A stale_reference requires a new search; never invent a generation.
+For exact recipe details or craftability, pass sourceId, generation, and recipeId unchanged from the current recipe search result. A stale_reference requires a new search; never invent a generation. Recipe tool results include a catalog summary with source state, generation, completeness, counts, diagnostics, and conflicts; use it to state limitations directly instead of inferring source health from an empty result.
 
 1. Resolve ambiguous names before making factual claims.
 2. Search indexed knowledge and fetch the full relevant documents.

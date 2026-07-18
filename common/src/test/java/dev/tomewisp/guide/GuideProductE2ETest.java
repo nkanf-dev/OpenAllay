@@ -12,6 +12,7 @@ import dev.tomewisp.agent.session.AgentSessionStore;
 import dev.tomewisp.client.ClientGuideRuntime;
 import dev.tomewisp.devmode.DevelopmentToolInspector;
 import dev.tomewisp.integration.patchouli.PatchouliMultiblockStore;
+import dev.tomewisp.guide.ui.GuideRecipePresenter;
 import dev.tomewisp.knowledge.KnowledgeRegistry;
 import dev.tomewisp.model.CancellationSignal;
 import dev.tomewisp.model.ModelClient;
@@ -107,6 +108,10 @@ final class GuideProductE2ETest {
                 completed.timeline().stream().map(Object::getClass).toList());
         assertTrue(completed.tools().stream().allMatch(
                 value -> value.status() == GuideToolStatus.SUCCEEDED));
+        JsonObject recipeSearch = completed.tools().getFirst().normalized();
+        assertTrue(recipeSearch.getAsJsonObject("value").has("catalog"));
+        assertEquals(1, GuideRecipePresenter.cards(
+                completed.tools().getFirst().toolId(), recipeSearch).size());
         assertFalse(completed.sources().isEmpty());
         assertEquals("你有 4 个铁锭；制作 1 个铁块还缺 5 个。", completed.assistantText());
         assertEquals(5, model.requests.size());

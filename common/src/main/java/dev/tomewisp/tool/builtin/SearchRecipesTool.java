@@ -7,6 +7,7 @@ import dev.tomewisp.context.EvidenceMetadata;
 import dev.tomewisp.context.RecipeSnapshot;
 import dev.tomewisp.context.ToolInvocationContext;
 import dev.tomewisp.recipe.RecipeCatalog;
+import dev.tomewisp.recipe.RecipeCatalogStatus;
 import dev.tomewisp.tool.Tool;
 import dev.tomewisp.tool.ToolAccess;
 import dev.tomewisp.tool.ToolDescriptor;
@@ -25,6 +26,7 @@ public final class SearchRecipesTool
     public record Output(
             RecipeCatalog.Query query,
             List<RecipeCatalog.Summary> recipes,
+            RecipeCatalogStatus catalog,
             List<EvidenceMetadata> evidence)
             implements EvidenceBearing {
         public Output {
@@ -67,7 +69,10 @@ public final class SearchRecipesTool
         }
         RecipeSnapshot snapshot = context.recipes().orElseThrow();
         return new ToolResult.Success<>(new Output(
-                query, new RecipeCatalog(snapshot).search(query), List.of(snapshot.evidence())));
+                query,
+                new RecipeCatalog(snapshot).search(query),
+                RecipeCatalogStatus.from(snapshot),
+                List.of(snapshot.evidence())));
     }
 
     private static boolean validOptionalId(String value) {

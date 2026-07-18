@@ -123,15 +123,25 @@ classes or nested viewer artifacts.
 
 ## Task 7: Connect Context, Tools, and Native Recipe Actions
 
-- [ ] Inject the combined recipe knowledge service into client context capture.
-- [ ] Expose source states, generations, completeness, conflicts, and diagnostics
+- [x] Inject the combined recipe knowledge service into client context capture.
+- [x] Expose source states, generations, completeness, conflicts, and diagnostics
   in tool evidence without asking the model to infer them.
-- [ ] Add recipe output item icons and in-game recipes/usages/open-viewer actions.
-- [ ] Disable unavailable actions with localized diagnostics; never open a browser.
-- [ ] Add prompt/Skill guidance for generation-bearing exact lookup and semantic
+- [x] Add recipe output item icons and in-game recipes/usages/open-viewer actions.
+- [x] Disable unavailable actions with localized diagnostics; never open a browser.
+- [x] Add prompt/Skill guidance for generation-bearing exact lookup and semantic
   item references.
-- [ ] Add English/Simplified Chinese text and deterministic UI/tool E2E coverage.
-- [ ] Commit `feat: expose all-known recipe actions`.
+- [x] Add English/Simplified Chinese text and deterministic UI/tool E2E coverage.
+- [x] Commit `feat: expose all-known recipe actions`.
+
+Verification on 2026-07-18 passed 176 common tests (175 passed and one opt-in
+skip), including persisted recipe preference/reload behavior, preferred-viewer
+selection, exact-reference ownership, catalog-status tool output, safe recipe
+card projection, malformed-card fallback, and the chronological grounded Agent
+E2E. Fabric and NeoForge production builds passed. The loopback real-client
+fixture now reuses the generation-bearing reference returned by search and its
+model configuration names an environment variable instead of embedding a key.
+Python syntax, shell syntax, and both language JSON files were validated. No
+graphical client was launched at this checkpoint.
 
 ## Task 8: Verify and Retain Recipe Smoke Evidence
 

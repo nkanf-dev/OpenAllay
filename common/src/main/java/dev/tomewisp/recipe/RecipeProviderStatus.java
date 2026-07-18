@@ -1,0 +1,36 @@
+package dev.tomewisp.recipe;
+
+import dev.tomewisp.context.DataCompleteness;
+import java.util.List;
+
+/** Lightweight tool-facing state for one captured recipe source. */
+public record RecipeProviderStatus(
+        String sourceId,
+        String generation,
+        RecipeProviderState state,
+        DataCompleteness completeness,
+        int recipeCount,
+        List<RecipeProviderDiagnostic> diagnostics) {
+    public RecipeProviderStatus {
+        sourceId = dev.tomewisp.context.RecipeReference.requireSourceId(sourceId);
+        if (generation == null || !generation.matches("[0-9a-f]{64}")) {
+            throw new IllegalArgumentException("provider status generation is invalid");
+        }
+        java.util.Objects.requireNonNull(state, "state");
+        java.util.Objects.requireNonNull(completeness, "completeness");
+        if (recipeCount < 0) {
+            throw new IllegalArgumentException("provider recipe count must not be negative");
+        }
+        diagnostics = List.copyOf(diagnostics);
+    }
+
+    public static RecipeProviderStatus from(RecipeProviderSnapshot snapshot) {
+        return new RecipeProviderStatus(
+                snapshot.sourceId(),
+                snapshot.generation(),
+                snapshot.state(),
+                snapshot.completeness(),
+                snapshot.recipes().size(),
+                snapshot.diagnostics());
+    }
+}

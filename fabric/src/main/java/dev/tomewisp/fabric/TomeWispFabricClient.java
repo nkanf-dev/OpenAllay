@@ -18,6 +18,7 @@ import dev.tomewisp.guide.e2e.GuideClientE2EController;
 import dev.tomewisp.client.gui.TomeWispKeyMappings;
 import dev.tomewisp.client.gui.TomeWispScreen;
 import dev.tomewisp.tool.ToolResult;
+import dev.tomewisp.recipe.config.RecipeClientRuntime;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
@@ -47,8 +48,14 @@ public final class TomeWispFabricClient implements ClientModInitializer {
         GuideLocalEndpoint local = guide instanceof ToolResult.Success<ClientGuideRuntime> success
                 ? success.value()
                 : null;
+        RecipeClientRuntime recipeClient = new RecipeClientRuntime(
+                FabricLoader.getInstance().getConfigDir().resolve("tomewisp/recipes.json"));
         MinecraftGuideContextProvider contexts = new MinecraftGuideContextProvider(
-                runtime, Minecraft.getInstance(), gson, TomeWispFabricClient.class.getClassLoader());
+                runtime,
+                Minecraft.getInstance(),
+                gson,
+                TomeWispFabricClient.class.getClassLoader(),
+                recipeClient);
         PayloadGuideRemoteEndpoint remote = new PayloadGuideRemoteEndpoint(
                 new PayloadGuideRemoteEndpoint.Port() {
                     @Override public dev.tomewisp.bridge.protocol.CapabilityPayload capabilities() {
@@ -88,7 +95,7 @@ public final class TomeWispFabricClient implements ClientModInitializer {
             if (current != null) current.refreshCapabilities();
         });
         dev.tomewisp.guide.GuideScreenOpener screens = service -> {
-            Minecraft.getInstance().gui.setScreen(new TomeWispScreen(service));
+            Minecraft.getInstance().gui.setScreen(new TomeWispScreen(service, recipeClient));
             return new ToolResult.Success<>(true);
         };
         FabricGuideCommands.register(new GuideCommandFacade(
