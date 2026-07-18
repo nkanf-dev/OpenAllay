@@ -13,11 +13,13 @@ public record RecipeProviderStatus(
         List<RecipeProviderDiagnostic> diagnostics) {
     public RecipeProviderStatus {
         sourceId = dev.tomewisp.context.RecipeReference.requireSourceId(sourceId);
-        if (generation == null || !generation.matches("[0-9a-f]{64}")) {
-            throw new IllegalArgumentException("provider status generation is invalid");
-        }
         java.util.Objects.requireNonNull(state, "state");
         java.util.Objects.requireNonNull(completeness, "completeness");
+        if (state == RecipeProviderState.AVAILABLE) {
+            dev.tomewisp.context.RecipeReference.requireGeneration(generation);
+        } else if (generation != null) {
+            throw new IllegalArgumentException("unavailable provider status has a generation");
+        }
         if (recipeCount < 0) {
             throw new IllegalArgumentException("provider recipe count must not be negative");
         }

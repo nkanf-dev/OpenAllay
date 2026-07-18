@@ -38,6 +38,8 @@ import net.minecraft.world.item.ItemStack;
 
 final class ReiRecipeProvider implements RecipeKnowledgeProvider {
     private static final String SOURCE_ID = "viewer:rei";
+    private static final Identifier TAG_CATEGORY =
+            Identifier.fromNamespaceAndPath("minecraft", "plugins/tag");
     private static final String CAPTURE_GENERATION_PLACEHOLDER = "0".repeat(64);
 
     private final Instant capturedAt;
@@ -89,6 +91,11 @@ final class ReiRecipeProvider implements RecipeKnowledgeProvider {
             List<Display> displays,
             Map<String, RecipeEntrySnapshot> recipes,
             List<RecipeProviderDiagnostic> diagnostics) {
+        if (TAG_CATEGORY.equals(category.getIdentifier())) {
+            // REI publishes tag membership as multi-output displays. They are useful viewer
+            // metadata, but they are not recipes and must not become recipe search candidates.
+            return;
+        }
         for (Display display : List.copyOf(displays)) {
             try {
                 RecipeEntrySnapshot detached = detach(category, display);

@@ -29,6 +29,8 @@ import dev.tomewisp.platform.PlatformServices;
 import dev.tomewisp.recipe.RecipeKnowledgeProvider;
 import dev.tomewisp.recipe.RecipeKnowledgeService;
 import dev.tomewisp.recipe.RecipeProviderSnapshot;
+import dev.tomewisp.recipe.RecipeProviderReadiness;
+import dev.tomewisp.recipe.RecipeProviderReadinessGate;
 import dev.tomewisp.recipe.RecipeUnlockState;
 import dev.tomewisp.recipe.RecipeViewerProviderRegistry;
 import dev.tomewisp.recipe.config.RecipeClientConfig;
@@ -115,6 +117,24 @@ public final class ClientContextCapture {
                         playerSnapshot.map(value -> (long) value.inventory().slots().size()).orElse(0L),
                         bytes,
                         System.nanoTime() - started));
+    }
+
+    public RecipeProviderReadiness recipeProviderReadiness(
+            Minecraft client, RecipeProviderReadinessGate gate) {
+        if (!client.isSameThread()) {
+            throw new IllegalStateException("Recipe readiness must be sampled on the Minecraft client thread");
+        }
+        RecipeClientConfig config = recipeClient.config();
+        List<String> required = new ArrayList<>();
+        if (config.jeiEnabled() && platform.isModLoaded("jei")) {
+            required.add("viewer:jei");
+        }
+        if (config.reiEnabled() && platform.isModLoaded("roughlyenoughitems")) {
+            required.add("viewer:rei");
+        }
+        return gate.evaluate(
+                required,
+                RecipeViewerProviderRegistry.providers(Instant.now(), platform));
     }
 
     private PlayerSnapshot player(LocalPlayer player, Minecraft client, Instant capturedAt) {

@@ -46,7 +46,7 @@ final class JeiRecipeNavigator implements RecipeViewerNavigator {
             return RecipeNavigationResult.failed(
                     "invalid_reference", "Recipe reference does not belong to JEI");
         }
-        IJeiRuntime runtime = TomeWispJeiPlugin.runtime();
+        IJeiRuntime runtime = TomeWispJeiBridge.runtime();
         try {
             JeiRecipeProvider provider = new JeiRecipeProvider(
                     runtime,
@@ -75,7 +75,7 @@ final class JeiRecipeNavigator implements RecipeViewerNavigator {
         if (id == null || !BuiltInRegistries.ITEM.containsKey(id)) {
             return RecipeNavigationResult.failed("unknown_item", "Item is not registered");
         }
-        IJeiRuntime runtime = TomeWispJeiPlugin.runtime();
+        IJeiRuntime runtime = TomeWispJeiBridge.runtime();
         ItemStack stack = new ItemStack(BuiltInRegistries.ITEM.getValue(id));
         try {
             runtime.getRecipesGui().show(runtime.getJeiHelpers()
@@ -99,7 +99,9 @@ final class JeiRecipeNavigator implements RecipeViewerNavigator {
                 .get()
                 .toList();
         for (T recipe : recipes) {
-            if (provider.referenceId(category, recipe).equals(recipeId)) {
+            if (provider.referenceIdIfSupported(category, recipe)
+                    .filter(recipeId::equals)
+                    .isPresent()) {
                 runtime.getRecipesGui().showRecipes(category, List.of(recipe), List.of());
                 return RecipeNavigationResult.success();
             }
@@ -128,7 +130,7 @@ final class JeiRecipeNavigator implements RecipeViewerNavigator {
             return RecipeNavigationResult.failed(
                     "wrong_thread", "Recipe viewer navigation requires the client thread");
         }
-        if (TomeWispJeiPlugin.runtime() == null) {
+        if (TomeWispJeiBridge.runtime() == null) {
             return RecipeNavigationResult.failed(
                     "viewer_unavailable", "JEI runtime is not available");
         }

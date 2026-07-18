@@ -34,13 +34,28 @@ trap cleanup EXIT INT TERM
 
 echo "The harness is opt-in and will open a graphical Minecraft client."
 echo "Connect it to a test world/server; the probe starts after a player exists."
+client_args=()
+if [[ -n "${TOMEWISP_E2E_QUICK_PLAY_WORLD:-}" ]]; then
+  client_args=("--args=--quickPlaySingleplayer $TOMEWISP_E2E_QUICK_PLAY_WORLD")
+fi
 ./gradlew-curl ":$loader:runClient" --max-workers=1 \
+  "${client_args[@]}" \
   -Dtomewisp.e2e.enabled=true \
-  -Dtomewisp.e2e.question="我能制作一个铁块吗？请查询配方和库存后计算。" \
+  -Dtomewisp.e2e.question="我能制作一个铁块吗？请查询配方和库存后计算；再确认农夫乐事苹果酒的自定义烹饪配方。" \
   -Dtomewisp.e2e.report="$report" \
-  -Dtomewisp.e2e.scenario="real-client-grounded-craftability" \
+  -Dtomewisp.e2e.scenario="real-client-all-known-recipes" \
   -Dtomewisp.e2e.modelMode=client \
-  -Dtomewisp.e2e.shutdown=true
+  -Dtomewisp.e2e.shutdown="${TOMEWISP_E2E_SHUTDOWN:-true}"
 
 test -s "$report"
+python3 - "$report" <<'PY'
+import json, pathlib, sys
+report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+if report.get("outcome") != "COMPLETED":
+    raise SystemExit("E2E did not complete: " + json.dumps({
+        "outcome": report.get("outcome"),
+        "failureCode": report.get("failureCode"),
+        "failureMessage": report.get("failureMessage"),
+    }, ensure_ascii=False))
+PY
 echo "E2E report: $report"

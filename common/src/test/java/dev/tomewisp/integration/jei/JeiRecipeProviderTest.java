@@ -96,14 +96,58 @@ final class JeiRecipeProviderTest {
         assertTrue(snapshot.recipes().isEmpty());
         assertEquals("item_components_unsupported",
                 snapshot.diagnostics().getFirst().code());
+
+        IRecipeCategory<?> category = runtime.getRecipeManager()
+                .createRecipeCategoryLookup()
+                .includeHidden()
+                .get()
+                .findFirst()
+                .orElseThrow();
+        assertTrue(referenceIfSupported(
+                new JeiRecipeProvider(runtime, Instant.EPOCH, platform()), category).isEmpty());
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private static Optional<String> referenceIfSupported(
+            JeiRecipeProvider provider, IRecipeCategory<?> category) {
+        return provider.referenceIdIfSupported((IRecipeCategory) category, "fixture");
+    }
+
+    @Test
+    void omitsJeiTagMembershipCategoriesWithoutDegradingRecipeCompleteness() {
+        IJeiRuntime runtime = runtime(
+                List.of(slot(RecipeIngredientRole.INPUT, new ItemStack(Items.IRON_INGOT)),
+                        slot(RecipeIngredientRole.OUTPUT, new ItemStack(Items.IRON_BLOCK))),
+                new AtomicBoolean(),
+                new AtomicBoolean(),
+                Identifier.fromNamespaceAndPath("minecraft", "tag_recipes/item"));
+
+        RecipeProviderSnapshot snapshot = new JeiRecipeProvider(
+                runtime, Instant.EPOCH, platform()).capture();
+
+        assertEquals(DataCompleteness.COMPLETE, snapshot.completeness());
+        assertTrue(snapshot.recipes().isEmpty());
+        assertTrue(snapshot.diagnostics().isEmpty());
     }
 
     private static IJeiRuntime runtime(
             List<IRecipeSlotView> slots,
             AtomicBoolean hiddenCategories,
             AtomicBoolean hiddenRecipes) {
+        return runtime(
+                slots,
+                hiddenCategories,
+                hiddenRecipes,
+                Identifier.fromNamespaceAndPath("test", "crafting"));
+    }
+
+    private static IJeiRuntime runtime(
+            List<IRecipeSlotView> slots,
+            AtomicBoolean hiddenCategories,
+            AtomicBoolean hiddenRecipes,
+            Identifier categoryId) {
         IRecipeType<String> type = proxy(IRecipeType.class, (self, method, args) -> switch (method.getName()) {
-            case "getUid" -> Identifier.fromNamespaceAndPath("test", "crafting");
+            case "getUid" -> categoryId;
             case "getRecipeClass" -> String.class;
             default -> defaultValue(method.getReturnType());
         });

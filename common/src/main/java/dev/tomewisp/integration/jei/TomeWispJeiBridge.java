@@ -1,14 +1,11 @@
 package dev.tomewisp.integration.jei;
 
-import dev.tomewisp.recipe.RecipeViewerProviderRegistry;
 import dev.tomewisp.recipe.RecipeViewerNavigatorRegistry;
-import mezz.jei.api.IModPlugin;
-import mezz.jei.api.JeiPlugin;
+import dev.tomewisp.recipe.RecipeViewerProviderRegistry;
 import mezz.jei.api.runtime.IJeiRuntime;
-import net.minecraft.resources.Identifier;
 
-@JeiPlugin
-public final class TomeWispJeiPlugin implements IModPlugin {
+/** Loader JEI plugins delegate lifecycle state into this common integration boundary. */
+public final class TomeWispJeiBridge {
     private static volatile IJeiRuntime runtime;
 
     static {
@@ -18,18 +15,13 @@ public final class TomeWispJeiPlugin implements IModPlugin {
         RecipeViewerNavigatorRegistry.register(new JeiRecipeNavigator());
     }
 
-    @Override
-    public Identifier getPluginUid() {
-        return Identifier.fromNamespaceAndPath("tomewisp", "jei_plugin");
+    private TomeWispJeiBridge() {}
+
+    public static void runtimeAvailable(IJeiRuntime value) {
+        runtime = java.util.Objects.requireNonNull(value, "value");
     }
 
-    @Override
-    public void onRuntimeAvailable(IJeiRuntime value) {
-        runtime = value;
-    }
-
-    @Override
-    public void onRuntimeUnavailable() {
+    public static void runtimeUnavailable() {
         runtime = null;
     }
 

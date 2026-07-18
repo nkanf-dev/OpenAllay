@@ -38,6 +38,8 @@ final class ReiRecipeProviderTest {
     private static final Identifier CATEGORY_ID =
             Identifier.fromNamespaceAndPath("test", "crafting");
     private static final CategoryIdentifier<Display> CATEGORY = category(CATEGORY_ID);
+    private static final CategoryIdentifier<Display> TAG_CATEGORY = category(
+            Identifier.fromNamespaceAndPath("minecraft", "plugins/tag"));
 
     static {
         SharedConstants.tryDetectVersion();
@@ -85,6 +87,22 @@ final class ReiRecipeProviderTest {
         assertEquals(DataCompleteness.PARTIAL, snapshot.completeness());
         assertTrue(snapshot.recipes().isEmpty());
         assertEquals("item_components_unsupported", snapshot.diagnostics().getFirst().code());
+    }
+
+    @Test
+    void omitsReiTagMembershipDisplaysWithoutDegradingRecipeCompleteness() {
+        Display tagDisplay = display(
+                Identifier.fromNamespaceAndPath("minecraft", "storage_blocks/iron"),
+                ingredient(new ItemStack(Items.GOLD_INGOT)),
+                ingredient(new ItemStack(Items.GOLD_BLOCK)));
+
+        RecipeProviderSnapshot snapshot = provider(registry(Map.of(
+                        TAG_CATEGORY, List.of(tagDisplay))))
+                .capture();
+
+        assertEquals(DataCompleteness.COMPLETE, snapshot.completeness());
+        assertTrue(snapshot.recipes().isEmpty());
+        assertTrue(snapshot.diagnostics().isEmpty());
     }
 
     @Test

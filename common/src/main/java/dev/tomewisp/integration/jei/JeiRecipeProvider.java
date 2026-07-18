@@ -25,6 +25,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.TreeMap;
 import mezz.jei.api.gui.IRecipeLayoutDrawable;
 import mezz.jei.api.gui.ingredient.IRecipeSlotView;
@@ -40,6 +41,7 @@ import net.minecraft.world.item.ItemStack;
 
 final class JeiRecipeProvider implements RecipeKnowledgeProvider {
     private static final String SOURCE_ID = "viewer:jei";
+    private static final String TAG_CATEGORY_PREFIX = "minecraft:tag_recipes/";
     private static final String CAPTURE_GENERATION_PLACEHOLDER = "0".repeat(64);
 
     private final IJeiRuntime runtime;
@@ -74,6 +76,11 @@ final class JeiRecipeProvider implements RecipeKnowledgeProvider {
                         category.getRecipeType().getUid().toString()))
                 .toList();
         for (IRecipeCategory<?> category : categories) {
+            if (category.getRecipeType().getUid().toString().startsWith(TAG_CATEGORY_PREFIX)) {
+                // JEI exposes item and block tag membership through recipe-shaped layouts. These
+                // are viewer metadata, not crafting or processing recipes.
+                continue;
+            }
             try {
                 captureCategory(category, recipes, diagnostics);
             } catch (RuntimeException failure) {
@@ -148,6 +155,17 @@ final class JeiRecipeProvider implements RecipeKnowledgeProvider {
     <T> String referenceId(IRecipeCategory<T> category, T recipe) {
         RecipeEntrySnapshot detached = detach(category, recipe);
         return detached.reference().recipeId();
+    }
+
+    <T> Optional<String> referenceIdIfSupported(IRecipeCategory<T> category, T recipe) {
+        try {
+            return Optional.of(referenceId(category, recipe));
+        } catch (RuntimeException unsupported) {
+            // A partial JEI catalog can contain layouts that TomeWisp intentionally cannot
+            // detach. Exact navigation must skip those candidates instead of aborting before
+            // reaching the validated reference selected by the player.
+            return Optional.empty();
+        }
     }
 
     private CapturedSlots captureSlots(List<IRecipeSlotView> slots) {

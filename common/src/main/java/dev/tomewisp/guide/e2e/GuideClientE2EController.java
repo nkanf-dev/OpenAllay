@@ -8,6 +8,7 @@ import dev.tomewisp.guide.GuideServiceManager;
 import dev.tomewisp.guide.GuideSnapshot;
 import dev.tomewisp.guide.GuideSubscription;
 import dev.tomewisp.tool.ToolResult;
+import dev.tomewisp.recipe.RecipeProviderReadiness;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -19,6 +20,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Supplier;
 
 /**
  * Development-only real-client probe. Loader tick adapters call {@link #tick(UUID)};
@@ -33,10 +35,12 @@ public final class GuideClientE2EController {
     private final Gson gson;
     private final Runnable shutdown;
     private final Set<String> secrets;
+    private final Supplier<RecipeProviderReadiness> recipeReadiness;
     private final List<GuideRequestStatus> transitions = new ArrayList<>();
     private Instant startedAt;
     private UUID requestId;
     private GuideSubscription subscription;
+    private RecipeProviderReadiness lastRecipeReadiness;
     private boolean started;
     private boolean finished;
 
@@ -49,6 +53,20 @@ public final class GuideClientE2EController {
             Gson gson,
             Runnable shutdown,
             Set<String> secrets) {
+        this(config, loader, gameVersion, modVersion, services, gson, shutdown, secrets,
+                RecipeProviderReadiness::ready);
+    }
+
+    public GuideClientE2EController(
+            GuideClientE2EConfig config,
+            String loader,
+            String gameVersion,
+            String modVersion,
+            GuideServiceManager services,
+            Gson gson,
+            Runnable shutdown,
+            Set<String> secrets,
+            Supplier<RecipeProviderReadiness> recipeReadiness) {
         this.config = java.util.Objects.requireNonNull(config, "config");
         this.loader = require(loader, "loader");
         this.gameVersion = require(gameVersion, "gameVersion");
@@ -57,14 +75,32 @@ public final class GuideClientE2EController {
         this.gson = java.util.Objects.requireNonNull(gson, "gson");
         this.shutdown = java.util.Objects.requireNonNull(shutdown, "shutdown");
         this.secrets = Set.copyOf(secrets);
+        this.recipeReadiness = java.util.Objects.requireNonNull(recipeReadiness, "recipeReadiness");
     }
 
     /** Starts exactly once after a real client player exists. */
     public void tick(UUID actor) {
         if (started || finished || actor == null) return;
+        GuideService service = services.forActor(actor);
+        if (service.snapshot().persistence().state()
+                == dev.tomewisp.guide.GuidePersistenceSnapshot.State.LOADING) {
+            return;
+        }
+        RecipeProviderReadiness readiness = recipeReadiness.get();
+        if (!readiness.equals(lastRecipeReadiness)) {
+            lastRecipeReadiness = readiness;
+            System.out.println("TomeWisp E2E recipe readiness: "
+                    + readiness.state() + " " + readiness.code() + " " + readiness.message());
+        }
+        if (readiness.state() == RecipeProviderReadiness.State.WAITING) {
+            return;
+        }
+        if (readiness.state() == RecipeProviderReadiness.State.FAILED) {
+            failWithoutRequest(readiness.code(), readiness.message());
+            return;
+        }
         started = true;
         startedAt = Instant.now();
-        GuideService service = services.forActor(actor);
         subscription = service.subscribe(this::observe);
         service.selectSession(config.sessionId()).thenAccept(selected -> {
             if (selected instanceof ToolResult.Failure<String> failure) {

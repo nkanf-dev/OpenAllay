@@ -125,7 +125,8 @@ public final class TomeWispNeoForgeClient {
                     services,
                     gson,
                     () -> Minecraft.getInstance().stop(),
-                    secret == null || secret.isBlank() ? java.util.Set.of() : java.util.Set.of(secret));
+                    secret == null || secret.isBlank() ? java.util.Set.of() : java.util.Set.of(secret),
+                    contexts::recipeProviderReadiness);
             NeoForge.EVENT_BUS.addListener((ClientTickEvent.Post event) -> {
                 Minecraft client = Minecraft.getInstance();
                 if (client.player != null) controller.tick(client.player.getUUID());

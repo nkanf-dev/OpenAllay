@@ -12,6 +12,8 @@ import dev.tomewisp.integration.ftb.quests.ReflectiveFtbQuestsBridge;
 import dev.tomewisp.integration.patchouli.PatchouliKnowledgeProvider;
 import dev.tomewisp.knowledge.KnowledgeSourceProvider;
 import dev.tomewisp.recipe.config.RecipeClientRuntime;
+import dev.tomewisp.recipe.RecipeProviderReadiness;
+import dev.tomewisp.recipe.RecipeProviderReadinessGate;
 import dev.tomewisp.tool.ToolResult;
 import java.util.ArrayList;
 import java.util.List;
@@ -24,6 +26,7 @@ public final class MinecraftGuideContextProvider implements GuideContextProvider
     private final Gson gson;
     private final ClassLoader integrationLoader;
     private final RecipeClientRuntime recipeClient;
+    private final RecipeProviderReadinessGate recipeReadiness = new RecipeProviderReadinessGate();
 
     public MinecraftGuideContextProvider(
             TomeWispRuntime runtime,
@@ -66,6 +69,16 @@ public final class MinecraftGuideContextProvider implements GuideContextProvider
                     failure.getMessage() == null
                             ? failure.getClass().getSimpleName()
                             : failure.getMessage());
+        }
+    }
+
+    public RecipeProviderReadiness recipeProviderReadiness() {
+        try {
+            return new ClientContextCapture(gson, runtime.platform(), recipeClient)
+                    .recipeProviderReadiness(client, recipeReadiness);
+        } catch (RuntimeException failure) {
+            return RecipeProviderReadiness.failed(
+                    "recipe_readiness_failed", "Recipe provider readiness check failed");
         }
     }
 

@@ -15,6 +15,7 @@ import dev.tomewisp.guide.ui.GuideUiView;
 import dev.tomewisp.guide.ui.GuideToolPresenter;
 import dev.tomewisp.guide.ui.GuideRecipeCard;
 import dev.tomewisp.guide.ui.GuideRecipePresenter;
+import dev.tomewisp.guide.ui.GuideUiClickRoute;
 import dev.tomewisp.recipe.RecipeNavigationResult;
 import dev.tomewisp.recipe.config.RecipeClientRuntime;
 import dev.tomewisp.tool.ToolResult;
@@ -173,11 +174,25 @@ public final class TomeWispScreen extends Screen {
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
         if (event.button() == 0) {
-            if (detailOpen() && layout.detail().contains(event.x(), event.y())) {
-                selectedTool = null;
-                selectedSource = null;
-                rebuildForDetail();
-                return true;
+            if (detailOpen()) {
+                List<Hit> detailHits = hits.stream()
+                        .filter(hit -> hit.kind() == HitKind.DETAIL)
+                        .toList();
+                GuideUiClickRoute route = GuideUiClickRoute.resolveDetail(
+                        layout.detail(),
+                        detailHits.stream().map(Hit::rect).toList(),
+                        event.x(),
+                        event.y());
+                if (route.kind() == GuideUiClickRoute.Kind.ACTION) {
+                    detailHits.get(route.actionIndex()).action().run();
+                    return true;
+                }
+                if (route.kind() == GuideUiClickRoute.Kind.DISMISS_DETAIL) {
+                    selectedTool = null;
+                    selectedSource = null;
+                    rebuildForDetail();
+                    return true;
+                }
             }
             if (sessionOverlay) {
                 for (Hit hit : List.copyOf(hits)) {
@@ -351,16 +366,18 @@ public final class TomeWispScreen extends Screen {
         if (selectedTool != null) {
             y = detailLine(graphics, "工具: " + selectedTool.toolId(), detail, y);
             y = detailLine(graphics, "状态: " + selectedTool.status(), detail, y);
+            // Keep validated, actionable recipe references reachable even when the diagnostic
+            // presentation is longer than the panel. The diagnostics remain unbounded below it.
+            for (GuideRecipeCard card : GuideRecipePresenter.cards(
+                    selectedTool.toolId(), selectedTool.normalized())) {
+                y = recipeCard(graphics, card, detail, y, mouseX, mouseY);
+            }
             List<String> presentation = selectedTool.presentationLines().isEmpty()
                     && selectedTool.normalized() != null
                     ? GuideToolPresenter.lines(selectedTool.toolId(), selectedTool.normalized())
                     : selectedTool.presentationLines();
             for (String line : presentation) {
                 y = detailLine(graphics, line, detail, y);
-            }
-            for (GuideRecipeCard card : GuideRecipePresenter.cards(
-                    selectedTool.toolId(), selectedTool.normalized())) {
-                y = recipeCard(graphics, card, detail, y, mouseX, mouseY);
             }
             for (GuideSource source : selectedTool.sources()) {
                 y = evidence(graphics, source, detail, y);
@@ -451,7 +468,7 @@ public final class TomeWispScreen extends Screen {
         if (enabled) {
             hits.add(new Hit(
                     new GuideUiLayout.Rect(x, y - 2, width, 12),
-                    HitKind.CONTENT,
+                    HitKind.DETAIL,
                     action));
         }
         return x + width;
@@ -656,6 +673,6 @@ public final class TomeWispScreen extends Screen {
         };
     }
 
-    private enum HitKind { SESSION, CONTENT }
+    private enum HitKind { SESSION, CONTENT, DETAIL }
     private record Hit(GuideUiLayout.Rect rect, HitKind kind, Runnable action) {}
 }
