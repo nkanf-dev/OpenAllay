@@ -1,5 +1,6 @@
 package dev.tomewisp.settings;
 
+import dev.tomewisp.capability.CapabilityPolicy;
 import dev.tomewisp.client.ClientEventDispatcher;
 import dev.tomewisp.guide.GuideFailure;
 import dev.tomewisp.guide.ui.GuideDisplayConfig;
@@ -11,6 +12,9 @@ import dev.tomewisp.model.metadata.ModelMetadata;
 import dev.tomewisp.model.metadata.ModelMetadataUpdate;
 import dev.tomewisp.settings.model.ModelConnectionResult;
 import dev.tomewisp.settings.model.ModelProfileSettingsView;
+import dev.tomewisp.settings.capability.CapabilitySettingsView;
+import dev.tomewisp.settings.capability.RecipeSettingsView;
+import dev.tomewisp.recipe.config.RecipeClientConfig;
 import dev.tomewisp.tool.ToolResult;
 import java.util.Collections;
 import java.util.List;
@@ -52,6 +56,18 @@ public final class ClientSettingsService implements AutoCloseable {
         CompletableFuture<Void> closeAsync();
     }
 
+    public interface CapabilityActions {
+        ToolResult<CapabilitySettingsView> saveCapabilities(CapabilityPolicy candidate);
+
+        ToolResult<CapabilitySettingsView> reloadCapabilities();
+    }
+
+    public interface RecipeActions {
+        ToolResult<RecipeSettingsView> saveRecipes(RecipeClientConfig candidate);
+
+        ToolResult<RecipeSettingsView> reloadRecipes();
+    }
+
     public record ModelState(
             ModelProfilesConfig config,
             List<ModelProfileSettingsView.Resolution> profiles) {
@@ -81,6 +97,8 @@ public final class ClientSettingsService implements AutoCloseable {
     private final Set<String> presentEnvironmentNames;
     private final ModelActions models;
     private final MetadataActions metadataActions;
+    private final CapabilityActions capabilityActions;
+    private final RecipeActions recipeActions;
     private final ClientEventDispatcher dispatcher;
     private final Executor worker;
     private final CopyOnWriteArrayList<Consumer<ClientSettingsSnapshot>> listeners =
@@ -88,6 +106,8 @@ public final class ClientSettingsService implements AutoCloseable {
     private final AtomicLong operationIds = new AtomicLong();
 
     private ModelState modelState;
+    private CapabilitySettingsView capabilityState;
+    private RecipeSettingsView recipeState;
     private long modelGeneration;
     private long metadataGeneration;
     private Map<ModelMetadata.Key, ModelMetadata> metadata = Map.of();
@@ -113,6 +133,10 @@ public final class ClientSettingsService implements AutoCloseable {
                 presentEnvironmentNames,
                 models,
                 metadataActions,
+                CapabilitySettingsView.defaults(),
+                defaultCapabilityActions(),
+                RecipeSettingsView.defaults(),
+                defaultRecipeActions(),
                 dispatcher,
                 worker,
                 null);
@@ -127,12 +151,44 @@ public final class ClientSettingsService implements AutoCloseable {
             ClientEventDispatcher dispatcher,
             Executor worker,
             SettingsNotice initialNotice) {
+        this(
+                display,
+                initialModels,
+                presentEnvironmentNames,
+                models,
+                metadataActions,
+                CapabilitySettingsView.defaults(),
+                defaultCapabilityActions(),
+                RecipeSettingsView.defaults(),
+                defaultRecipeActions(),
+                dispatcher,
+                worker,
+                initialNotice);
+    }
+
+    public ClientSettingsService(
+            GuideDisplayConfig display,
+            ModelState initialModels,
+            Set<String> presentEnvironmentNames,
+            ModelActions models,
+            MetadataActions metadataActions,
+            CapabilitySettingsView initialCapabilities,
+            CapabilityActions capabilityActions,
+            RecipeSettingsView initialRecipes,
+            RecipeActions recipeActions,
+            ClientEventDispatcher dispatcher,
+            Executor worker,
+            SettingsNotice initialNotice) {
         this.display = Objects.requireNonNull(display, "display");
         this.modelState = Objects.requireNonNull(initialModels, "initialModels");
         this.presentEnvironmentNames = Collections.unmodifiableSet(
                 new TreeSet<>(presentEnvironmentNames));
         this.models = Objects.requireNonNull(models, "models");
         this.metadataActions = Objects.requireNonNull(metadataActions, "metadataActions");
+        this.capabilityState = Objects.requireNonNull(initialCapabilities, "initialCapabilities");
+        this.capabilityActions = Objects.requireNonNull(capabilityActions, "capabilityActions");
+        this.recipeState = Objects.requireNonNull(initialRecipes, "initialRecipes");
+        this.recipeActions = Objects.requireNonNull(recipeActions, "recipeActions");
         this.dispatcher = Objects.requireNonNull(dispatcher, "dispatcher");
         this.worker = Objects.requireNonNull(worker, "worker");
         this.notice = initialNotice;
@@ -196,6 +252,89 @@ public final class ClientSettingsService implements AutoCloseable {
                     "Unable to reload model settings");
             dispatcher.execute(() -> finishModels(
                     reservation.id(), loaded, result, "models_reloaded"));
+        });
+        return result;
+    }
+
+    public CompletableFuture<ToolResult<Boolean>> saveCapabilities(CapabilityPolicy candidate) {
+        Objects.requireNonNull(candidate, "candidate");
+        Reservation reservation = reserve(SettingsOperation.domain(
+                SettingsOperation.Kind.SAVING_CAPABILITIES));
+        if (!reservation.accepted()) {
+            return CompletableFuture.completedFuture(failed(reservation.failureCode()));
+        }
+        CompletableFuture<ToolResult<Boolean>> result = new CompletableFuture<>();
+        worker.execute(() -> {
+            ToolResult<CapabilitySettingsView> saved = safely(
+                    () -> capabilityActions.saveCapabilities(candidate),
+                    "settings_save_failed",
+                    "Unable to save capability settings");
+            dispatcher.execute(() -> finishCapabilities(
+                    reservation.id(), saved, result, "capabilities_saved"));
+        });
+        return result;
+    }
+
+    public CompletableFuture<ToolResult<Boolean>> reloadCapabilities(
+            boolean discardDirtyConfirmed) {
+        if (!discardDirtyConfirmed) {
+            return discardConfirmation();
+        }
+        Reservation reservation = reserve(SettingsOperation.domain(
+                SettingsOperation.Kind.RELOADING_CAPABILITIES));
+        if (!reservation.accepted()) {
+            return CompletableFuture.completedFuture(failed(reservation.failureCode()));
+        }
+        CompletableFuture<ToolResult<Boolean>> result = new CompletableFuture<>();
+        worker.execute(() -> {
+            ToolResult<CapabilitySettingsView> loaded = safely(
+                    capabilityActions::reloadCapabilities,
+                    "settings_reload_failed",
+                    "Unable to reload capability settings");
+            dispatcher.execute(() -> finishCapabilities(
+                    reservation.id(), loaded, result, "capabilities_reloaded"));
+        });
+        return result;
+    }
+
+    public CompletableFuture<ToolResult<Boolean>> saveRecipeSettings(
+            RecipeClientConfig candidate) {
+        Objects.requireNonNull(candidate, "candidate");
+        Reservation reservation = reserve(SettingsOperation.domain(
+                SettingsOperation.Kind.SAVING_RECIPES));
+        if (!reservation.accepted()) {
+            return CompletableFuture.completedFuture(failed(reservation.failureCode()));
+        }
+        CompletableFuture<ToolResult<Boolean>> result = new CompletableFuture<>();
+        worker.execute(() -> {
+            ToolResult<RecipeSettingsView> saved = safely(
+                    () -> recipeActions.saveRecipes(candidate),
+                    "settings_save_failed",
+                    "Unable to save recipe settings");
+            dispatcher.execute(() -> finishRecipes(
+                    reservation.id(), saved, result, "recipes_saved"));
+        });
+        return result;
+    }
+
+    public CompletableFuture<ToolResult<Boolean>> reloadRecipeSettings(
+            boolean discardDirtyConfirmed) {
+        if (!discardDirtyConfirmed) {
+            return discardConfirmation();
+        }
+        Reservation reservation = reserve(SettingsOperation.domain(
+                SettingsOperation.Kind.RELOADING_RECIPES));
+        if (!reservation.accepted()) {
+            return CompletableFuture.completedFuture(failed(reservation.failureCode()));
+        }
+        CompletableFuture<ToolResult<Boolean>> result = new CompletableFuture<>();
+        worker.execute(() -> {
+            ToolResult<RecipeSettingsView> loaded = safely(
+                    recipeActions::reloadRecipes,
+                    "settings_reload_failed",
+                    "Unable to reload recipe settings");
+            dispatcher.execute(() -> finishRecipes(
+                    reservation.id(), loaded, result, "recipes_reloaded"));
         });
         return result;
     }
@@ -410,6 +549,66 @@ public final class ClientSettingsService implements AutoCloseable {
         outward.complete(result);
     }
 
+    private void finishCapabilities(
+            long operationId,
+            ToolResult<CapabilitySettingsView> completed,
+            CompletableFuture<ToolResult<Boolean>> outward,
+            String successCode) {
+        ToolResult<Boolean> result;
+        synchronized (lock) {
+            if (!isCurrentLocked(operationId)) {
+                return;
+            }
+            operation = SettingsOperation.idle();
+            if (completed instanceof ToolResult.Success<CapabilitySettingsView> success) {
+                capabilityState = success.value();
+                notice = SettingsNotice.success(
+                        successCode,
+                        successCode.equals("capabilities_reloaded")
+                                ? "Capability settings reloaded"
+                                : "Capability settings saved");
+                result = new ToolResult.Success<>(Boolean.TRUE);
+            } else {
+                ToolResult.Failure<CapabilitySettingsView> failure =
+                        (ToolResult.Failure<CapabilitySettingsView>) completed;
+                notice = SettingsNotice.failure(failure.code(), failure.message());
+                result = new ToolResult.Failure<>(failure.code(), failure.message());
+            }
+            publishLocked();
+        }
+        outward.complete(result);
+    }
+
+    private void finishRecipes(
+            long operationId,
+            ToolResult<RecipeSettingsView> completed,
+            CompletableFuture<ToolResult<Boolean>> outward,
+            String successCode) {
+        ToolResult<Boolean> result;
+        synchronized (lock) {
+            if (!isCurrentLocked(operationId)) {
+                return;
+            }
+            operation = SettingsOperation.idle();
+            if (completed instanceof ToolResult.Success<RecipeSettingsView> success) {
+                recipeState = success.value();
+                notice = SettingsNotice.success(
+                        successCode,
+                        successCode.equals("recipes_reloaded")
+                                ? "Recipe settings reloaded"
+                                : "Recipe settings saved");
+                result = new ToolResult.Success<>(Boolean.TRUE);
+            } else {
+                ToolResult.Failure<RecipeSettingsView> failure =
+                        (ToolResult.Failure<RecipeSettingsView>) completed;
+                notice = SettingsNotice.failure(failure.code(), failure.message());
+                result = new ToolResult.Failure<>(failure.code(), failure.message());
+            }
+            publishLocked();
+        }
+        outward.complete(result);
+    }
+
     private void reconcileMetadata(
             long expectedGeneration,
             long expectedMetadataGeneration,
@@ -518,8 +717,16 @@ public final class ClientSettingsService implements AutoCloseable {
                         presentEnvironmentNames,
                         metadataFailure,
                         connectionResult),
+                capabilityState,
+                recipeState,
                 operation,
                 notice);
+    }
+
+    private static CompletableFuture<ToolResult<Boolean>> discardConfirmation() {
+        return CompletableFuture.completedFuture(new ToolResult.Failure<>(
+                "settings_discard_confirmation_required",
+                "Reload requires confirmation to discard unsaved changes"));
     }
 
     private static ToolResult<Boolean> failed(String code) {
@@ -551,6 +758,39 @@ public final class ClientSettingsService implements AutoCloseable {
         } catch (RuntimeException failure) {
             return new ToolResult.Failure<>(code, message);
         }
+    }
+
+    private static CapabilityActions defaultCapabilityActions() {
+        return new CapabilityActions() {
+            @Override
+            public ToolResult<CapabilitySettingsView> saveCapabilities(
+                    CapabilityPolicy candidate) {
+                return new ToolResult.Failure<>(
+                        "settings_unavailable", "Capability settings are unavailable");
+            }
+
+            @Override
+            public ToolResult<CapabilitySettingsView> reloadCapabilities() {
+                return new ToolResult.Failure<>(
+                        "settings_unavailable", "Capability settings are unavailable");
+            }
+        };
+    }
+
+    private static RecipeActions defaultRecipeActions() {
+        return new RecipeActions() {
+            @Override
+            public ToolResult<RecipeSettingsView> saveRecipes(RecipeClientConfig candidate) {
+                return new ToolResult.Failure<>(
+                        "settings_unavailable", "Recipe settings are unavailable");
+            }
+
+            @Override
+            public ToolResult<RecipeSettingsView> reloadRecipes() {
+                return new ToolResult.Failure<>(
+                        "settings_unavailable", "Recipe settings are unavailable");
+            }
+        };
     }
 
     private record Reservation(long id, String failureCode) {

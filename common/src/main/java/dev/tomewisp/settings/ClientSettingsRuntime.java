@@ -19,6 +19,11 @@ import dev.tomewisp.model.metadata.ModelMetadataUpdate;
 import dev.tomewisp.settings.model.ModelConnectionProbe;
 import dev.tomewisp.settings.model.ModelProfileSettingsView;
 import dev.tomewisp.settings.model.ModelSettingsBackend;
+import dev.tomewisp.recipe.config.RecipeClientRuntime;
+import dev.tomewisp.settings.capability.CapabilitySettingsBackend;
+import dev.tomewisp.settings.capability.CapabilitySettingsView;
+import dev.tomewisp.settings.capability.RecipeSettingsBackend;
+import dev.tomewisp.settings.capability.RecipeSettingsView;
 import dev.tomewisp.tool.ToolResult;
 import java.net.URI;
 import java.nio.file.Path;
@@ -49,11 +54,48 @@ public record ClientSettingsRuntime(
             AgentToolExecutor extension,
             Clock clock,
             GuideDisplayConfig display) {
+        Path configDirectory = profilesPath.toAbsolutePath().normalize().getParent();
+        if (configDirectory == null) {
+            return new ToolResult.Failure<>(
+                    "settings_unavailable", "Native settings are unavailable");
+        }
+        Path recipesPath = configDirectory.resolve("recipes.json");
+        return create(
+                product,
+                profilesPath,
+                legacyPath,
+                metadataCachePath,
+                configDirectory.resolve("capabilities.json"),
+                recipesPath,
+                new RecipeClientRuntime(recipesPath),
+                environment,
+                dispatcher,
+                extension,
+                clock,
+                display);
+    }
+
+    public static ToolResult<ClientSettingsRuntime> create(
+            TomeWispRuntime product,
+            Path profilesPath,
+            Path legacyPath,
+            Path metadataCachePath,
+            Path capabilitiesPath,
+            Path recipesPath,
+            RecipeClientRuntime recipeRuntime,
+            Map<String, String> environment,
+            ClientEventDispatcher dispatcher,
+            AgentToolExecutor extension,
+            Clock clock,
+            GuideDisplayConfig display) {
         Objects.requireNonNull(product, "product");
         Objects.requireNonNull(environment, "environment");
         Objects.requireNonNull(dispatcher, "dispatcher");
         Objects.requireNonNull(clock, "clock");
         Objects.requireNonNull(display, "display");
+        Objects.requireNonNull(capabilitiesPath, "capabilitiesPath");
+        Objects.requireNonNull(recipesPath, "recipesPath");
+        Objects.requireNonNull(recipeRuntime, "recipeRuntime");
 
         Map<String, String> environmentSnapshot = Map.copyOf(environment);
         ToolResult<ModelProfilesConfigLoader.Load> loaded = new ModelProfilesConfigLoader()
@@ -73,6 +115,23 @@ public record ClientSettingsRuntime(
             Gson gson = new Gson();
             ClientModelRuntimeRegistry registry = ClientModelRuntimeRegistry.create(
                     product, initial, gson, dispatcher, extension);
+            CapabilitySettingsBackend capabilities = new CapabilitySettingsBackend(
+                    capabilitiesPath, product, registry);
+            ToolResult<CapabilitySettingsView> loadedCapabilities =
+                    capabilities.reloadCapabilities();
+            CapabilitySettingsView initialCapabilities;
+            if (loadedCapabilities instanceof ToolResult.Success<CapabilitySettingsView> success) {
+                initialCapabilities = success.value();
+            } else {
+                ToolResult.Failure<CapabilitySettingsView> failure =
+                        (ToolResult.Failure<CapabilitySettingsView>) loadedCapabilities;
+                initialCapabilities = capabilities.currentView();
+                if (startupNotice == null) {
+                    startupNotice = SettingsNotice.failure(failure.code(), failure.message());
+                }
+            }
+            RecipeSettingsBackend recipes = new RecipeSettingsBackend(recipesPath, recipeRuntime);
+            RecipeSettingsView initialRecipes = recipes.currentView();
             ModelConnectionProbe probe = new ModelConnectionProbe(
                     config -> ProviderModelClients.create(config, gson),
                     clock,
@@ -122,6 +181,10 @@ public record ClientSettingsRuntime(
                     backend.presentEnvironmentNames(),
                     backend,
                     metadataActions,
+                    initialCapabilities,
+                    capabilities,
+                    initialRecipes,
+                    recipes,
                     dispatcher,
                     command -> Thread.startVirtualThread(command),
                     startupNotice);

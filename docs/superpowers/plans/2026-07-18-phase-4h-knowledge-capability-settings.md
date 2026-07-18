@@ -438,7 +438,7 @@ git commit -m "feat: catalog knowledge and Agent capabilities"
 - Create: `common/src/main/java/dev/tomewisp/settings/capability/RecipeSettingsView.java`
 - Modify: `common/src/test/java/dev/tomewisp/settings/ClientSettingsServiceTest.java`
 
-- [ ] **Step 1: Add failing save/reload/independence tests**
+- [x] **Step 1: Add failing save/reload/independence tests**
 
 Cover capability dependency rejection, atomic future-request publication,
 recipe child save, source disappearance/reappearance, unavailable preferred
@@ -454,13 +454,13 @@ void recipeChildSaveWritesOnlyRecipesDomain() {
 }
 ```
 
-- [ ] **Step 2: Run settings tests and observe missing actions/views**
+- [x] **Step 2: Run settings tests and observe missing actions/views**
 
 ```bash
 ./gradlew :common:test --tests 'dev.tomewisp.settings.*'
 ```
 
-- [ ] **Step 3: Implement typed actions and snapshot projections**
+- [x] **Step 3: Implement typed actions and snapshot projections**
 
 ```java
 public CompletableFuture<ToolResult<Boolean>> saveCapabilities(CapabilityPolicy candidate);
@@ -474,7 +474,7 @@ write, then publish it through registry and settings snapshot. Prepare recipe
 runtime config before writing, then replace `RecipeClientRuntime` only after the
 move. Domain failure updates only its own diagnostic.
 
-- [ ] **Step 4: Run settings/capability/recipe tests and commit**
+- [x] **Step 4: Run settings/capability/recipe tests and commit**
 
 ```bash
 ./gradlew :common:test --tests 'dev.tomewisp.settings.*' \

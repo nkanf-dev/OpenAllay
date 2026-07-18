@@ -33,4 +33,8 @@ public final class RecipeViewerProviderRegistry {
         FACTORIES.values().forEach(factory -> providers.add(factory.create(capturedAt, platform)));
         return List.copyOf(providers);
     }
+
+    public static synchronized List<String> sourceIds() {
+        return List.copyOf(FACTORIES.keySet());
+    }
 }

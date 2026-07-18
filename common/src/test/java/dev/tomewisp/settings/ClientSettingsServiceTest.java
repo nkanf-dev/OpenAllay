@@ -7,6 +7,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.tomewisp.guide.GuideFailure;
 import dev.tomewisp.guide.ui.GuideDisplayConfig;
+import dev.tomewisp.capability.CapabilityCatalogSnapshot;
+import dev.tomewisp.capability.CapabilityPolicy;
+import dev.tomewisp.recipe.config.RecipeClientConfig;
+import dev.tomewisp.recipe.RecipeVisibilityPolicy;
 import dev.tomewisp.model.CancellationSignal;
 import dev.tomewisp.model.config.ModelConfig;
 import dev.tomewisp.model.config.ModelProfileDefinition;
@@ -18,6 +22,8 @@ import dev.tomewisp.model.metadata.ModelMetadata;
 import dev.tomewisp.model.metadata.ModelMetadataUpdate;
 import dev.tomewisp.settings.model.ModelConnectionResult;
 import dev.tomewisp.settings.model.ModelProfileSettingsView;
+import dev.tomewisp.settings.capability.CapabilitySettingsView;
+import dev.tomewisp.settings.capability.RecipeSettingsView;
 import dev.tomewisp.tool.ToolResult;
 import java.net.URI;
 import java.time.Duration;
@@ -187,6 +193,76 @@ final class ClientSettingsServiceTest {
         assertEquals("beta", service.snapshot().models().config().defaultProfileId());
     }
 
+    @Test
+    void recipeChildSaveWritesOnlyRecipeDomain() {
+        FakeModels models = new FakeModels(state(config("alpha")));
+        FakeDomains domains = new FakeDomains();
+        ClientSettingsService service = service(models, domains, Runnable::run);
+        RecipeClientConfig candidate = new RecipeClientConfig(
+                RecipeClientConfig.SCHEMA_VERSION,
+                RecipeVisibilityPolicy.ALL_KNOWN,
+                "viewer:rei",
+                Set.of("viewer:jei"));
+
+        assertSuccess(service.saveRecipeSettings(candidate).join());
+
+        assertEquals(1, domains.recipeSaves);
+        assertEquals(0, domains.capabilitySaves);
+        assertEquals(0, models.saveCalls);
+        assertEquals(candidate, service.snapshot().recipes().config());
+    }
+
+    @Test
+    void capabilityDependencyFailureRetainsPriorProjection() {
+        FakeModels models = new FakeModels(state(config("alpha")));
+        FakeDomains domains = new FakeDomains();
+        domains.capabilityFailure = new ToolResult.Failure<>(
+                "capability_dependency_conflict", "Skill requires a disabled Tool");
+        ClientSettingsService service = service(models, domains, Runnable::run);
+        CapabilitySettingsView prior = service.snapshot().capabilities();
+
+        ToolResult<Boolean> result = service.saveCapabilities(new CapabilityPolicy(
+                CapabilityPolicy.SCHEMA_VERSION, Set.of("test:fact"), Set.of())).join();
+
+        assertFailure(result, "capability_dependency_conflict");
+        assertEquals(prior, service.snapshot().capabilities());
+        assertEquals(0, domains.recipeSaves);
+    }
+
+    @Test
+    void capabilityAndRecipeActionsShareForegroundSlot() {
+        ManualExecutor worker = new ManualExecutor();
+        FakeModels models = new FakeModels(state(config("alpha")));
+        FakeDomains domains = new FakeDomains();
+        ClientSettingsService service = service(models, domains, worker);
+
+        CompletableFuture<ToolResult<Boolean>> pending = service.saveCapabilities(
+                CapabilityPolicy.defaults());
+
+        assertFailure(
+                service.saveRecipeSettings(RecipeClientConfig.defaults()).join(),
+                "settings_busy");
+        worker.runAll();
+        assertSuccess(pending.join());
+        assertEquals(1, domains.capabilitySaves);
+        assertEquals(0, domains.recipeSaves);
+    }
+
+    @Test
+    void domainReloadRequiresDiscardConfirmationAndUpdatesOnlyThatView() {
+        FakeModels models = new FakeModels(state(config("alpha")));
+        FakeDomains domains = new FakeDomains();
+        ClientSettingsService service = service(models, domains, Runnable::run);
+
+        assertFailure(service.reloadCapabilities(false).join(),
+                "settings_discard_confirmation_required");
+        assertSuccess(service.reloadRecipeSettings(true).join());
+
+        assertEquals(0, domains.capabilityReloads);
+        assertEquals(1, domains.recipeReloads);
+        assertEquals("recipes_reloaded", service.snapshot().notice().code());
+    }
+
     private static ClientSettingsService service(FakeModels models, Set<String> environment) {
         return service(models, environment, Runnable::run);
     }
@@ -201,6 +277,23 @@ final class ClientSettingsServiceTest {
                 models,
                 Runnable::run,
                 worker);
+    }
+
+    private static ClientSettingsService service(
+            FakeModels models, FakeDomains domains, Executor worker) {
+        return new ClientSettingsService(
+                GuideDisplayConfig.defaults(),
+                models.current,
+                Set.of("ALPHA_KEY"),
+                models,
+                models,
+                domains.capabilities,
+                domains,
+                domains.recipes,
+                domains,
+                Runnable::run,
+                worker,
+                null);
     }
 
     private static ModelProfilesConfig config(String... ids) {
@@ -282,6 +375,7 @@ final class ClientSettingsServiceTest {
         private final AtomicBoolean probeCancelled = new AtomicBoolean();
         private final AtomicBoolean closed = new AtomicBoolean();
         private String publishedDefault;
+        private int saveCalls;
         private boolean saved;
         private final List<String> publishedDefaultsAfterSave = new ArrayList<>();
         private final List<Integer> publishedMetadataWindows = new ArrayList<>();
@@ -295,6 +389,7 @@ final class ClientSettingsServiceTest {
         public ToolResult<ClientSettingsService.ModelState> save(
                 ModelProfilesConfig candidate,
                 Map<ModelMetadata.Key, ModelMetadata> metadata) {
+            saveCalls++;
             if (saveFailure != null) {
                 return saveFailure;
             }
@@ -355,6 +450,52 @@ final class ClientSettingsServiceTest {
         public CompletableFuture<Void> closeAsync() {
             closed.set(true);
             return CompletableFuture.completedFuture(null);
+        }
+    }
+
+    private static final class FakeDomains
+            implements ClientSettingsService.CapabilityActions,
+                    ClientSettingsService.RecipeActions {
+        private CapabilitySettingsView capabilities = new CapabilitySettingsView(
+                CapabilityPolicy.defaults(),
+                new CapabilityCatalogSnapshot(List.of()),
+                Set.of(),
+                Set.of());
+        private RecipeSettingsView recipes = RecipeSettingsView.defaults();
+        private ToolResult.Failure<CapabilitySettingsView> capabilityFailure;
+        private int capabilitySaves;
+        private int capabilityReloads;
+        private int recipeSaves;
+        private int recipeReloads;
+
+        @Override
+        public ToolResult<CapabilitySettingsView> saveCapabilities(CapabilityPolicy candidate) {
+            capabilitySaves++;
+            if (capabilityFailure != null) {
+                return capabilityFailure;
+            }
+            capabilities = new CapabilitySettingsView(
+                    candidate, capabilities.catalog(), Set.of(), Set.of());
+            return new ToolResult.Success<>(capabilities);
+        }
+
+        @Override
+        public ToolResult<CapabilitySettingsView> reloadCapabilities() {
+            capabilityReloads++;
+            return new ToolResult.Success<>(capabilities);
+        }
+
+        @Override
+        public ToolResult<RecipeSettingsView> saveRecipes(RecipeClientConfig candidate) {
+            recipeSaves++;
+            recipes = new RecipeSettingsView(candidate, List.of(), Set.of(), false);
+            return new ToolResult.Success<>(recipes);
+        }
+
+        @Override
+        public ToolResult<RecipeSettingsView> reloadRecipes() {
+            recipeReloads++;
+            return new ToolResult.Success<>(recipes);
         }
     }
 

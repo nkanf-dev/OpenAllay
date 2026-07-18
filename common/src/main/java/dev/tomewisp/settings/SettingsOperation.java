@@ -8,6 +8,10 @@ public record SettingsOperation(Kind kind, String targetId, boolean cancellable)
         IDLE,
         SAVING_MODELS,
         RELOADING_MODELS,
+        SAVING_CAPABILITIES,
+        RELOADING_CAPABILITIES,
+        SAVING_RECIPES,
+        RELOADING_RECIPES,
         REFRESHING_METADATA,
         TESTING_CONNECTION
     }
@@ -35,5 +39,12 @@ public record SettingsOperation(Kind kind, String targetId, boolean cancellable)
 
     public static SettingsOperation probe(String profileId) {
         return new SettingsOperation(Kind.TESTING_CONNECTION, profileId, true);
+    }
+
+    public static SettingsOperation domain(Kind kind) {
+        if (kind == Kind.IDLE || kind == Kind.TESTING_CONNECTION) {
+            throw new IllegalArgumentException("domain operation must be a non-cancellable mutation");
+        }
+        return new SettingsOperation(kind, null, false);
     }
 }

@@ -61,6 +61,12 @@ public final class RecipeClientRuntime {
         return Optional.ofNullable(failure);
     }
 
+    /** Publishes an already validated persisted candidate for future captures/navigation. */
+    public synchronized void replace(RecipeClientConfig replacement) {
+        config = Objects.requireNonNull(replacement, "replacement");
+        failure = null;
+    }
+
     public synchronized ToolResult<RecipeClientConfig> reload() {
         if (path == null) {
             return new ToolResult.Success<>(config);
