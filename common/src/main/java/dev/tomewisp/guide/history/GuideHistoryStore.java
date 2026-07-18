@@ -5,6 +5,10 @@ public interface GuideHistoryStore extends AutoCloseable {
 
     void save(GuideHistoryPartition partition);
 
+    void delete(GuideHistoryDeleteScope scope);
+
+    void resetDatabase();
+
     @Override
     default void close() {}
 }

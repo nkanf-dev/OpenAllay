@@ -37,11 +37,21 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
     private final Path database;
     private final Clock clock;
     private final GuideHistoryCodec codec;
+    private final FailureInjector failureInjector;
 
     public SqliteGuideHistoryStore(Path database, Clock clock, GuideHistoryCodec codec) {
+        this(database, clock, codec, ignored -> {});
+    }
+
+    SqliteGuideHistoryStore(
+            Path database,
+            Clock clock,
+            GuideHistoryCodec codec,
+            FailureInjector failureInjector) {
         this.database = Objects.requireNonNull(database, "database").toAbsolutePath().normalize();
         this.clock = Objects.requireNonNull(clock, "clock");
         this.codec = Objects.requireNonNull(codec, "codec");
+        this.failureInjector = Objects.requireNonNull(failureInjector, "failureInjector");
     }
 
     @Override
@@ -95,7 +105,86 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
         }
     }
 
+    @Override
+    public void delete(GuideHistoryDeleteScope scope) {
+        Objects.requireNonNull(scope, "scope");
+        try (Connection connection = open()) {
+            connection.setAutoCommit(false);
+            try {
+                switch (scope) {
+                    case GuideHistoryDeleteScope.Partition partition ->
+                        deletePartition(connection, partition.scope());
+                    case GuideHistoryDeleteScope.Actor actor ->
+                        deleteActor(connection, actor.actorId());
+                }
+                failureInjector.beforeCommit(Mutation.DELETE);
+                connection.commit();
+            } catch (SQLException | RuntimeException failure) {
+                rollback(connection, failure);
+                throw deleteFailure(failure);
+            }
+        } catch (SQLException | RuntimeException failure) {
+            if (failure instanceof GuideHistoryException historyFailure
+                    && historyFailure.code().equals("history_delete_failed")) {
+                throw historyFailure;
+            }
+            throw deleteFailure(failure);
+        }
+    }
+
+    @Override
+    public void resetDatabase() {
+        try (Connection connection = openRaw()) {
+            try (Statement statement = connection.createStatement()) {
+                statement.execute("pragma foreign_keys=off");
+            }
+            connection.setAutoCommit(false);
+            try {
+                for (String table : applicationTables(connection)) {
+                    try (Statement statement = connection.createStatement()) {
+                        statement.execute("drop table " + quoteIdentifier(table));
+                    }
+                }
+                createSchemaObjects(connection);
+                failureInjector.beforeCommit(Mutation.RESET);
+                connection.commit();
+            } catch (SQLException | RuntimeException failure) {
+                rollback(connection, failure);
+                throw deleteFailure(failure);
+            }
+        } catch (SQLException | RuntimeException failure) {
+            if (failure instanceof GuideHistoryException historyFailure
+                    && historyFailure.code().equals("history_delete_failed")) {
+                throw historyFailure;
+            }
+            throw deleteFailure(failure);
+        }
+    }
+
     private Connection open() {
+        Connection connection = openRaw();
+        try {
+            ensureSchema(connection);
+            return connection;
+        } catch (SQLException failure) {
+            try {
+                connection.close();
+            } catch (SQLException closeFailure) {
+                failure.addSuppressed(closeFailure);
+            }
+            throw new GuideHistoryException(
+                    "history_open_failed", "Unable to open the guide history database", failure);
+        } catch (RuntimeException failure) {
+            try {
+                connection.close();
+            } catch (SQLException closeFailure) {
+                failure.addSuppressed(closeFailure);
+            }
+            throw failure;
+        }
+    }
+
+    private Connection openRaw() {
         try {
             Path parent = database.getParent();
             if (parent != null) {
@@ -104,7 +193,6 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
             Connection connection = DriverManager.getConnection("jdbc:sqlite:" + database);
             try {
                 configure(connection);
-                ensureSchema(connection);
                 return connection;
             } catch (SQLException | RuntimeException failure) {
                 connection.close();
@@ -159,6 +247,18 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
     private static void createSchema(Connection connection) throws SQLException {
         boolean autoCommit = connection.getAutoCommit();
         connection.setAutoCommit(false);
+        try {
+            createSchemaObjects(connection);
+            connection.commit();
+        } catch (SQLException failure) {
+            rollback(connection, failure);
+            throw failure;
+        } finally {
+            connection.setAutoCommit(autoCommit);
+        }
+    }
+
+    private static void createSchemaObjects(Connection connection) throws SQLException {
         try (Statement statement = connection.createStatement()) {
             statement.execute("""
                     create table schema_metadata(
@@ -254,13 +354,8 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
             statement.execute("create index requests_order_lookup on requests(scope_id, session_id, ordinal)");
             statement.execute("create index timeline_order_lookup on timeline_entries(scope_id, request_id, ordinal)");
             createCheckpointTable(statement);
-            statement.execute("insert into schema_metadata(singleton, schema_version) values (1, 3)");
-            connection.commit();
-        } catch (SQLException failure) {
-            rollback(connection, failure);
-            throw failure;
-        } finally {
-            connection.setAutoCommit(autoCommit);
+            statement.execute("insert into schema_metadata(singleton, schema_version) values (1, "
+                    + SCHEMA_VERSION + ")");
         }
     }
 
@@ -290,6 +385,48 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
             delete.setString(1, scopeId);
             delete.executeUpdate();
         }
+    }
+
+    private static void deletePartition(Connection connection, GuideHistoryScope scope)
+            throws SQLException {
+        try (PreparedStatement delete = connection.prepareStatement(
+                "delete from partitions where scope_id = ? and actor_id = ?")) {
+            delete.setString(1, scope.scopeId());
+            delete.setString(2, scope.actorId().toString());
+            delete.executeUpdate();
+        }
+    }
+
+    private static void deleteActor(Connection connection, UUID actorId) throws SQLException {
+        try (PreparedStatement delete = connection.prepareStatement(
+                "delete from partitions where actor_id = ?")) {
+            delete.setString(1, actorId.toString());
+            delete.executeUpdate();
+        }
+    }
+
+    private static List<String> applicationTables(Connection connection) throws SQLException {
+        List<String> tables = new ArrayList<>();
+        try (Statement statement = connection.createStatement();
+                ResultSet result = statement.executeQuery("""
+                        select name from sqlite_master
+                        where type = 'table' and name not glob 'sqlite_*'
+                        order by name
+                        """)) {
+            while (result.next()) {
+                tables.add(result.getString(1));
+            }
+        }
+        return List.copyOf(tables);
+    }
+
+    private static String quoteIdentifier(String identifier) {
+        return "\"" + identifier.replace("\"", "\"\"") + "\"";
+    }
+
+    private static GuideHistoryException deleteFailure(Throwable failure) {
+        return new GuideHistoryException(
+                "history_delete_failed", "Unable to delete durable guide history", failure);
     }
 
     private void insertPartition(Connection connection, GuideHistoryPartition partition)
@@ -784,6 +921,16 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
     private record PartitionHeader(
             String selectedSession,
             Instant updatedAt) {}
+
+    enum Mutation {
+        DELETE,
+        RESET
+    }
+
+    @FunctionalInterface
+    interface FailureInjector {
+        void beforeCommit(Mutation mutation) throws SQLException;
+    }
 
     private static final class SessionBuilder {
         private final String id;

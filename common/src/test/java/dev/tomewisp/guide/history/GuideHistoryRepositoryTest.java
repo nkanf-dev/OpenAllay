@@ -120,6 +120,16 @@ final class GuideHistoryRepositoryTest {
         }
 
         @Override
+        public void delete(GuideHistoryDeleteScope scope) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void resetDatabase() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
         public void close() {
             recordThread();
             closed = true;
@@ -148,6 +158,16 @@ final class GuideHistoryRepositoryTest {
                         "history_write_failed", "injected history failure");
             }
             savedGenerations.add(partition.updatedAt().toEpochMilli());
+        }
+
+        @Override
+        public void delete(GuideHistoryDeleteScope scope) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void resetDatabase() {
+            throw new UnsupportedOperationException();
         }
     }
 }

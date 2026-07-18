@@ -16,6 +16,7 @@ import dev.tomewisp.guide.GuideSessionSnapshot;
 import dev.tomewisp.guide.GuideTimelineEntry;
 import dev.tomewisp.guide.GuideTopology;
 import dev.tomewisp.model.ModelUsage;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.DriverManager;
 import java.time.Clock;
@@ -29,6 +30,8 @@ import org.junit.jupiter.api.io.TempDir;
 final class SqliteGuideHistoryStoreTest {
     private static final UUID ACTOR =
             UUID.fromString("028407d5-d694-4189-97dd-62e6cc137164");
+    private static final UUID OTHER_ACTOR =
+            UUID.fromString("efb0aa19-0378-442c-81dd-eb05468dfcad");
     private static final Instant RECOVERY_TIME = Instant.parse("2026-07-18T06:00:00Z");
 
     @TempDir Path temporary;
@@ -241,6 +244,147 @@ final class SqliteGuideHistoryStoreTest {
         }
     }
 
+    @Test
+    void partitionDeleteRemovesOnlyTheExactActorPartition() {
+        SqliteGuideHistoryStore store = store();
+        GuideHistoryPartition current = partition(
+                ACTOR, "current.example", "main", completed("main", "current"));
+        GuideHistoryPartition sameActorOtherScope = partition(
+                ACTOR, "other.example", "main", completed("main", "same actor"));
+        GuideHistoryPartition otherActor = partition(
+                OTHER_ACTOR, "current.example", "main", completed("main", "other actor"));
+        store.save(current);
+        store.save(sameActorOtherScope);
+        store.save(otherActor);
+
+        store.delete(GuideHistoryDeleteScope.partition(current.scope()));
+
+        assertTrue(store.load(current.scope()).partition().isEmpty());
+        assertEquals(
+                sameActorOtherScope,
+                store.load(sameActorOtherScope.scope()).partition().orElseThrow());
+        assertEquals(otherActor, store.load(otherActor.scope()).partition().orElseThrow());
+    }
+
+    @Test
+    void actorDeleteRemovesEveryMatchingPartitionAndNoOtherActor() {
+        SqliteGuideHistoryStore store = store();
+        GuideHistoryPartition first = partition(
+                ACTOR, "first.example", "main", completed("main", "first"));
+        GuideHistoryPartition second = partition(
+                ACTOR, "second.example", "main", completed("main", "second"));
+        GuideHistoryPartition retained = partition(
+                OTHER_ACTOR, "first.example", "main", completed("main", "retained"));
+        store.save(first);
+        store.save(second);
+        store.save(retained);
+
+        store.delete(GuideHistoryDeleteScope.actor(ACTOR));
+
+        assertTrue(store.load(first.scope()).partition().isEmpty());
+        assertTrue(store.load(second.scope()).partition().isEmpty());
+        assertEquals(retained, store.load(retained.scope()).partition().orElseThrow());
+    }
+
+    @Test
+    void deleteScopesRejectMissingActorAndPartitionIdentity() {
+        assertThrows(NullPointerException.class, () -> GuideHistoryDeleteScope.actor(null));
+        assertThrows(NullPointerException.class, () -> GuideHistoryDeleteScope.partition(null));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> new GuideHistoryScope(ACTOR, GuideHistoryScope.Kind.MULTIPLAYER, "not-a-scope"));
+    }
+
+    @Test
+    void injectedDeleteFailureRollsBackEveryMatchingPartition() {
+        SqliteGuideHistoryStore store = store();
+        GuideHistoryPartition first = partition(
+                ACTOR, "rollback-first.example", "main", completed("main", "first"));
+        GuideHistoryPartition second = partition(
+                ACTOR, "rollback-second.example", "main", completed("main", "second"));
+        store.save(first);
+        store.save(second);
+        SqliteGuideHistoryStore failing = new SqliteGuideHistoryStore(
+                database(),
+                Clock.fixed(RECOVERY_TIME, ZoneOffset.UTC),
+                new GuideHistoryCodec(),
+                mutation -> {
+                    if (mutation == SqliteGuideHistoryStore.Mutation.DELETE) {
+                        throw new java.sql.SQLException("injected after delete");
+                    }
+                });
+
+        GuideHistoryException failure = assertThrows(
+                GuideHistoryException.class,
+                () -> failing.delete(GuideHistoryDeleteScope.actor(ACTOR)));
+
+        assertEquals("history_delete_failed", failure.code());
+        assertEquals(first, store.load(first.scope()).partition().orElseThrow());
+        assertEquals(second, store.load(second.scope()).partition().orElseThrow());
+    }
+
+    @Test
+    void explicitResetReplacesUnsupportedSchemaWithoutDeletingSiblingFiles() throws Exception {
+        SqliteGuideHistoryStore store = store();
+        GuideHistoryPartition original = partition(
+                ACTOR, "reset.example", "main", completed("main", "saved"));
+        store.save(original);
+        Path retainedTrace = temporary.resolve("developer-trace.json");
+        Files.writeString(retainedTrace, "retained");
+        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database());
+                var statement = connection.createStatement()) {
+            statement.executeUpdate(
+                    "update schema_metadata set schema_version = 999 where singleton = 1");
+        }
+
+        store.resetDatabase();
+
+        assertTrue(store.load(original.scope()).partition().isEmpty());
+        assertEquals("retained", Files.readString(retainedTrace));
+        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database());
+                var statement = connection.createStatement()) {
+            assertEquals(GuideHistoryPartition.SCHEMA_VERSION, queryInt(
+                    statement,
+                    "select schema_version from schema_metadata where singleton = 1"));
+            assertEquals(0, queryInt(statement, "select count(*) from partitions"));
+        }
+    }
+
+    @Test
+    void injectedResetFailureRestoresUnsupportedSchemaAndEveryPriorRow() throws Exception {
+        SqliteGuideHistoryStore store = store();
+        GuideHistoryPartition original = partition(
+                ACTOR, "reset-rollback.example", "main", completed("main", "saved"));
+        store.save(original);
+        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database());
+                var statement = connection.createStatement()) {
+            statement.executeUpdate(
+                    "update schema_metadata set schema_version = 999 where singleton = 1");
+        }
+        SqliteGuideHistoryStore failing = new SqliteGuideHistoryStore(
+                database(),
+                Clock.fixed(RECOVERY_TIME, ZoneOffset.UTC),
+                new GuideHistoryCodec(),
+                mutation -> {
+                    if (mutation == SqliteGuideHistoryStore.Mutation.RESET) {
+                        throw new java.sql.SQLException("injected after schema recreation");
+                    }
+                });
+
+        GuideHistoryException failure = assertThrows(
+                GuideHistoryException.class, failing::resetDatabase);
+
+        assertEquals("history_delete_failed", failure.code());
+        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database());
+                var statement = connection.createStatement()) {
+            assertEquals(999, queryInt(
+                    statement,
+                    "select schema_version from schema_metadata where singleton = 1"));
+            assertEquals(1, queryInt(statement, "select count(*) from partitions"));
+            assertEquals(2, queryInt(statement, "select count(*) from messages"));
+        }
+    }
+
     private SqliteGuideHistoryStore store() {
         return new SqliteGuideHistoryStore(
                 database(),
@@ -261,8 +405,16 @@ final class SqliteGuideHistoryStoreTest {
 
     private static GuideHistoryPartition partition(
             String server, String sessionId, GuideRequestSnapshot request) {
+        return partition(ACTOR, server, sessionId, request);
+    }
+
+    private static GuideHistoryPartition partition(
+            UUID actor,
+            String server,
+            String sessionId,
+            GuideRequestSnapshot request) {
         GuideHistoryScope scope = GuideHistoryScope.derive(
-                ACTOR, GuideHistoryScope.Kind.MULTIPLAYER, server);
+                actor, GuideHistoryScope.Kind.MULTIPLAYER, server);
         List<GuideMessage> messages = request.status() == GuideRequestStatus.COMPLETED
                 ? List.of(
                         new GuideMessage(request.requestId(), GuideMessage.Role.USER,

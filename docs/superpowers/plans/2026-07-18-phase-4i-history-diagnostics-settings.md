@@ -27,7 +27,7 @@
 - Modify: `common/src/main/java/dev/tomewisp/guide/history/SqliteGuideHistoryStore.java`
 - Modify: `common/src/test/java/dev/tomewisp/guide/history/SqliteGuideHistoryStoreTest.java`
 
-- [ ] **Step 1: Write isolation, rollback, and unsupported-schema reset tests**
+- [x] **Step 1: Write isolation, rollback, and unsupported-schema reset tests**
 
 ```java
 @Test
@@ -57,13 +57,13 @@ Also inject SQL failure after deletion/drop but before commit and prove every
 prior row/table remains. Cover current partition, actor-all, reset all actors,
 malformed actor/scope rejection, and no deletion of external files/traces.
 
-- [ ] **Step 2: Run the SQLite tests and verify missing operations**
+- [x] **Step 2: Run the SQLite tests and verify missing operations**
 
 ```bash
 ./gradlew :common:test --tests 'dev.tomewisp.guide.history.SqliteGuideHistoryStoreTest'
 ```
 
-- [ ] **Step 3: Implement typed transactional deletion and reset**
+- [x] **Step 3: Implement typed transactional deletion and reset**
 
 ```java
 public sealed interface GuideHistoryDeleteScope {
@@ -88,7 +88,7 @@ and safely quotes every non-`sqlite_%` table from `sqlite_master`, drops them,
 creates the one current schema, and commits. On any failure rollback and throw
 `history_delete_failed`. Never delete the database/WAL files piecemeal.
 
-- [ ] **Step 4: Run store/runtime compatibility tests and commit**
+- [x] **Step 4: Run store/runtime compatibility tests and commit**
 
 ```bash
 ./gradlew :common:test --tests 'dev.tomewisp.guide.history.SqliteGuideHistoryStoreTest' \
