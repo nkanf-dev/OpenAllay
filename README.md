@@ -55,7 +55,7 @@ loaders through one shared GuideService and an opt-in real-client probe:
 - a long recipe-to-inventory craftability replay, while `find_recipes` remains
   only as a deprecated compatibility projection.
 - immutable shared command/GUI request state with cancellation, retry,
-  multi-session isolation, strict protocol-v4 server context/events, and disconnect
+  multi-session isolation, strict protocol-v5 server context/events, and disconnect
   cleanup;
 - a default-off Fabric/NeoForge real-client E2E controller plus deterministic
   loopback model fixture and redacted report contract.
@@ -95,8 +95,11 @@ administration, live Debug Mode editing, and friendly normal/debug diagnostics
 are now wired through the same common settings service on both loaders. The
 History page owns current-partition/current-player deletion and the separately
 confirmed Debug Mode database reset; it never performs SQL directly.
-Model-authored rich messages, controlled dynamic components, and long-history
-paging remain Phase 4 work. Dynamic
+Model-authored safe Markdown, validated Minecraft references, controlled
+dynamic components, metadata-only history startup, independently budgeted
+model context, viewport paging, variable-height virtualization, stable scroll
+anchors, and optional presentation animation are now implemented in the common
+runtime and shared by both loaders. Dynamic
 Ponder generation is deferred beyond Phase 4 because Ponder/Ponderer do not yet
 provide a verified 26.2 runtime target. Phase 3C now provides the native player
 GUI; graphical E2E remains explicit opt-in and is never inferred from

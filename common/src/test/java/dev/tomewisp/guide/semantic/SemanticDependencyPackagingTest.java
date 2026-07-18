@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 
 final class SemanticDependencyPackagingTest {
     @Test
-    void bothLoadersBundleTheSamePinnedCommonMarkModules() throws Exception {
+    void bothLoadersBundleTheSamePinnedHistoryAndSemanticModules() throws Exception {
         Path root = repositoryRoot();
         String properties = Files.readString(root.resolve("gradle.properties"));
         assertTrue(properties.contains("commonmark_version=0.28.0"));
@@ -23,6 +23,8 @@ final class SemanticDependencyPackagingTest {
             assertEquals(expected, occurrences(
                     source,
                     "org.commonmark:commonmark-ext-gfm-tables:${commonmark_version}"));
+            assertEquals(expected, occurrences(
+                    source, "org.xerial:sqlite-jdbc:${sqlite_jdbc_version}"));
         }
     }
 

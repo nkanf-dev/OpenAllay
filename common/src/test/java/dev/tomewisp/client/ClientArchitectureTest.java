@@ -87,6 +87,10 @@ final class ClientArchitectureTest {
             assertTrue(source.contains("services.shutdown()"), entrypoint::toString);
             assertTrue(source.contains("history.closeAsync()"), entrypoint::toString);
             assertTrue(source.contains("settings.closeAsync()"), entrypoint::toString);
+            assertTrue(source.indexOf("services.shutdown()")
+                    < source.indexOf("history.closeAsync()"), entrypoint::toString);
+            assertTrue(source.indexOf("history.closeAsync()")
+                    < source.indexOf("settings.closeAsync()"), entrypoint::toString);
         }
 
         List<Path> commands = List.of(
@@ -96,6 +100,18 @@ final class ClientArchitectureTest {
             String source = Files.readString(command);
             assertTrue(source.contains("literal(\"profile\")"), command::toString);
             assertTrue(source.contains("guide.modelProfile("), command::toString);
+        }
+
+        String protocol = Files.readString(root.resolve(
+                "common/src/main/java/dev/tomewisp/bridge/protocol/BridgeProtocol.java"));
+        assertTrue(protocol.contains("VERSION = 5"));
+        for (Path bridge : List.of(
+                root.resolve("fabric/src/main/java/dev/tomewisp/fabric/network/FabricServerBridge.java"),
+                root.resolve("neoforge/src/main/java/dev/tomewisp/neoforge/network/NeoForgeServerBridge.java"))) {
+            String source = Files.readString(bridge);
+            assertTrue(source.contains("spec.budget().contextWindowTokens()"), bridge::toString);
+            assertTrue(source.contains("spec.budget().maxOutputTokens()"), bridge::toString);
+            assertTrue(source.contains("spec.canonicalModelId()"), bridge::toString);
         }
 
         try (var files = Files.walk(root.resolve("common/src/main/java"))) {

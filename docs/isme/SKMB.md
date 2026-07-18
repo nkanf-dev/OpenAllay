@@ -17,7 +17,7 @@ accepted and contains explicit approval evidence.
 | SKMB-2026-07-18-007 | reviewable_default | Phase 4 recipe provider execution | A, B, D, E, F | decisions/2026-07-18-007-recipe-provider-execution.md | 7e89bed |
 | SKMB-2026-07-18-008 | reviewable_default | Phase 4 context compaction execution | A, B, C, D, E, F | decisions/2026-07-18-008-context-compaction-execution.md | pending |
 | SKMB-2026-07-18-009 | accepted | per-session model selection and metadata discovery | B, C, D, E, F | decisions/2026-07-18-009-session-model-selection.md | 98a40bf, e63ecb4, 558ba67, fc20505, 7e2a735, 555ed3c |
-| SKMB-2026-07-18-010 | accepted | normal/debug UI projection | B, E, F | decisions/2026-07-18-010-debug-ui-projection.md | pending |
+| SKMB-2026-07-18-010 | accepted | normal/debug UI projection | B, E, F | decisions/2026-07-18-010-debug-ui-projection.md | 11a6ace |
 | SKMB-2026-07-18-011 | accepted | pre-release durable schema policy | B, F, G | decisions/2026-07-18-011-pre-release-durable-schema.md | pending |
 | SKMB-2026-07-18-012 | accepted | model metadata cache and refresh | A, B, D, F | decisions/2026-07-18-012-model-metadata-cache.md | 7e2a735 |
 | SKMB-2026-07-18-013 | accepted | shared outbound HTTP authority boundaries | D, E, F | decisions/2026-07-18-013-outbound-http-boundaries.md | 7e2a735 |
@@ -25,7 +25,7 @@ accepted and contains explicit approval evidence.
 | SKMB-2026-07-18-015 | accepted | settings model administration and live connection testing | A, B, C, D, E, F, G | decisions/2026-07-18-015-settings-model-administration.md | f1ba74b; implemented through 6498516 |
 | SKMB-2026-07-18-016 | accepted | native settings coordination and domain config writes | A, B, C, E, F | decisions/2026-07-18-016-native-settings-coordination.md | e7acf43, 507d628; implemented through a3ae197 |
 | SKMB-2026-07-18-017 | accepted | knowledge/capability catalog and local Tool/Skill policy | B, C, D, E, F | decisions/2026-07-18-017-capability-settings-policy.md | e7acf43, 507d628; implemented through 771cc94 |
-| SKMB-2026-07-18-018 | accepted | semantic messages, controlled components, and windowed history | A, B, C, D, E, F | decisions/2026-07-18-018-semantic-history-windowing.md | 9655dd2 |
+| SKMB-2026-07-18-018 | accepted | semantic messages, controlled components, and windowed history | A, B, C, D, E, F | decisions/2026-07-18-018-semantic-history-windowing.md | 9655dd2; implemented through 11a6ace |
 
 SKMB-2026-07-18-006 is implemented by `a0eaeff`, `19ab90f`, and `c6ca6bc`.
 Its deterministic clean-build and packaged-driver evidence is recorded in the
@@ -60,8 +60,9 @@ of the consolidated Phase 4 audit.
 SKMB-2026-07-18-010/016/018 now use display schema 2 with Debug Mode off and
 presentation animation on by default. Animation is presentation-only, while
 normal history diagnostics expose friendly on-demand/page state and Debug Mode
-adds only redacted performance counts. The final implementation commit is
-recorded after the Task 7 verification gate.
+adds only redacted performance counts. The final presentation implementation
+is recorded in `11a6ace`; deterministic scale/package evidence is retained in
+the Phase 4J verification report.
 
 ## Named States
 

@@ -422,13 +422,13 @@ git commit -m "feat: configure semantic guide presentation"
 - Modify: README, development guide, decisions, SKMB, this plan
 - Create: `docs/verification/phase-4j-semantic-history/README.md`
 
-- [ ] **Step 1: Assert common ownership and both-loader parity**
+- [x] **Step 1: Assert common ownership and both-loader parity**
 
 Both loaders must supply the same display/settings/history/semantic runtime,
 context-budget protocol, lifecycle close order, and bundled CommonMark modules.
 Common imports no loader APIs. Viewer availability differences remain explicit.
 
-- [ ] **Step 2: Run deterministic scale/performance tests**
+- [x] **Step 2: Run deterministic scale/performance tests**
 
 Create a retained generated fixture with at least tens of thousands of timeline
 rows and mixed semantic blocks. Assert metadata-only startup materializes zero
@@ -438,7 +438,7 @@ virtualization measures/renders only the neighborhood, and anchor/auto-scroll
 semantics hold. Record elapsed time and object/query counts as evidence, not as
 new hard product caps.
 
-- [ ] **Step 3: Run the clean product/security/package gate**
+- [x] **Step 3: Run the clean product/security/package gate**
 
 ```bash
 ./gradlew clean :common:test :fabric:build :neoforge:build
@@ -451,7 +451,7 @@ Validate JSON, schema-4 absence of migration code, SQLite and CommonMark
 packaging on both JARs, native targets, generic credential patterns, test
 totals, and artifact SHA-256 values.
 
-- [ ] **Step 4: Update deterministic evidence and commit**
+- [x] **Step 4: Update deterministic evidence and commit**
 
 ```bash
 git commit -m "docs: verify semantic windowed history"

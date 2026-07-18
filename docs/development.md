@@ -267,12 +267,13 @@ tool location are independent.
 Commands, the Phase 3C screen, and development probes consume one
 connection-scoped `GuideService`. It owns immutable request/session snapshots,
 model mode, topology, cancellation, retry, sources, and disconnect cleanup.
-The server Agent protocol is version 4 and is decoded once in common
+The server Agent protocol is version 5 and is decoded once in common
 code. Unknown or malformed events fail only their correlated request; there is
 no silent client/server fallback. Server-model requests carry only the
 partition's visible user/completed-assistant history; they never carry restored
 capabilities, live evidence, reasoning, credentials, or full normalized tool
-results. Protocol v4 splits the encoded request into independently strict,
+results. Protocol v5 also carries the selected server model's actual context
+budget and canonical model identity, and splits the encoded request into independently strict,
 SHA-256-checked 24 KiB transport chunks so long histories do not depend on one
 Minecraft custom-payload string.
 
@@ -300,8 +301,12 @@ model ID is provenance, not a reuse lock: changing provider or model keeps the
 session transcript and a valid checkpoint, then re-estimates the projection
 against the newly selected model's own budget. Player history administration
 and redacted normal/debug diagnostics are available in native settings.
-Long-history paging and semantic rich-message rendering remain later Phase 4
-work.
+Startup restores partition/session metadata without materializing request
+bodies. The screen requests viewport-sized history pages independently from
+provider-neutral context reads, which use the selected model's actual budget.
+Safe Markdown, validated Minecraft references, registered controlled
+components, semantic fallback text, variable-height virtualization, stable
+anchors, and presentation-only animation are implemented in common code.
 
 The real-client probe is disabled unless `tomewisp.e2e.enabled=true`. When
 enabled, it waits for a real client player, submits through the same
