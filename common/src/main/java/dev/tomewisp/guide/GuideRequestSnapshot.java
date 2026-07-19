@@ -19,7 +19,8 @@ public record GuideRequestSnapshot(
         Instant createdAt,
         Instant updatedAt,
         Instant terminalAt,
-        GuideModelSelection modelSelection) {
+        GuideModelSelection modelSelection,
+        GuideRequestProgress progress) {
     public GuideRequestSnapshot {
         java.util.Objects.requireNonNull(requestId, "requestId");
         if (sessionId == null || !sessionId.matches("[a-zA-Z0-9_.-]+")) {
@@ -44,6 +45,10 @@ public record GuideRequestSnapshot(
         java.util.Objects.requireNonNull(createdAt, "createdAt");
         java.util.Objects.requireNonNull(updatedAt, "updatedAt");
         java.util.Objects.requireNonNull(modelSelection, "modelSelection");
+        java.util.Objects.requireNonNull(progress, "progress");
+        if (!progress.requestStartedAt().equals(createdAt)) {
+            throw new IllegalArgumentException("request progress must share createdAt");
+        }
         if (modelSelection.modelMode() == GuideModelMode.SERVER
                 && topology != GuideTopology.SERVER) {
             throw new IllegalArgumentException("server model selection requires server topology");
@@ -52,6 +57,39 @@ public record GuideRequestSnapshot(
                 && topology == GuideTopology.SERVER) {
             throw new IllegalArgumentException("client model selection cannot use server topology");
         }
+    }
+
+    public GuideRequestSnapshot(
+            UUID requestId,
+            String sessionId,
+            GuideTopology topology,
+            String userMessage,
+            List<GuideTimelineEntry> timeline,
+            GuideRequestStatus status,
+            List<GuideSource> sources,
+            ModelUsage usage,
+            Long retryAfterMillis,
+            GuideFailure failure,
+            Instant createdAt,
+            Instant updatedAt,
+            Instant terminalAt,
+            GuideModelSelection modelSelection) {
+        this(
+                requestId,
+                sessionId,
+                topology,
+                userMessage,
+                timeline,
+                status,
+                sources,
+                usage,
+                retryAfterMillis,
+                failure,
+                createdAt,
+                updatedAt,
+                terminalAt,
+                modelSelection,
+                legacyProgress(status, retryAfterMillis, createdAt, updatedAt));
     }
 
     public GuideRequestSnapshot(
@@ -84,7 +122,8 @@ public record GuideRequestSnapshot(
                 terminalAt,
                 topology == GuideTopology.SERVER
                         ? GuideModelSelection.server()
-                        : GuideModelSelection.client("default"));
+                        : GuideModelSelection.client("default"),
+                legacyProgress(status, retryAfterMillis, createdAt, updatedAt));
     }
 
     public static GuideRequestSnapshot start(
@@ -125,7 +164,8 @@ public record GuideRequestSnapshot(
                 now,
                 now,
                 null,
-                modelSelection);
+                modelSelection,
+                GuideRequestProgress.start(now));
     }
 
     public boolean terminal() {
@@ -147,5 +187,34 @@ public record GuideRequestSnapshot(
                 .map(GuideTimelineEntry.Tool.class::cast)
                 .map(GuideTimelineEntry.Tool::activity)
                 .toList();
+    }
+
+    private static GuideRequestProgress legacyProgress(
+            GuideRequestStatus status,
+            Long retryAfterMillis,
+            Instant createdAt,
+            Instant updatedAt) {
+        GuideRequestPhase phase = switch (status) {
+            case PREPARING -> GuideRequestPhase.PREPARING;
+            case CONTEXT_LOADING -> GuideRequestPhase.CONTEXT_LOADING;
+            case COMPACTING -> GuideRequestPhase.COMPACTING;
+            case RATE_LIMITED -> GuideRequestPhase.ENDPOINT_WAIT;
+            case MODEL_WAIT -> GuideRequestPhase.MODEL_WAIT;
+            case TOOL_WAIT -> GuideRequestPhase.TOOL_WAIT;
+            case COMPLETING, COMPLETED, FAILED, CANCELLED, INTERRUPTED ->
+                    GuideRequestPhase.COMPLETING;
+        };
+        Instant monotonicUpdated = updatedAt.isBefore(createdAt) ? createdAt : updatedAt;
+        Instant retryAt = retryAfterMillis == null
+                ? null
+                : monotonicUpdated.plusMillis(retryAfterMillis);
+        return new GuideRequestProgress(
+                phase,
+                createdAt,
+                monotonicUpdated,
+                monotonicUpdated,
+                0,
+                retryAt,
+                null);
     }
 }

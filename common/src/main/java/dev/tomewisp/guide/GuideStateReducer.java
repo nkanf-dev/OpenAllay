@@ -45,10 +45,21 @@ public final class GuideStateReducer {
         Long retryAfter = current.retryAfterMillis();
         GuideFailure failure = current.failure();
         Instant terminalAt = null;
+        GuideRequestProgress progress = current.progress();
 
         switch (event) {
-            case AgentEvent.StateChanged changed -> status = state(changed.state());
-            case AgentEvent.ContextCompacted ignored -> {}
+            case AgentEvent.StateChanged changed -> {
+                status = state(changed.state());
+                progress = progress.advance(
+                        phase(changed.state()), now, progress.attempt(), null, null);
+            }
+            case AgentEvent.ContextCompacted ignored ->
+                    progress = progress.advance(
+                            GuideRequestPhase.COMPACTING,
+                            now,
+                            progress.attempt(),
+                            null,
+                            null);
             case AgentEvent.ToolStarted started -> {
                 if (toolMatches(timeline, started.invocationId()) != 0) {
                     return protocolFailure(
@@ -60,6 +71,12 @@ public final class GuideStateReducer {
                 timeline = closeAssistant(current.requestId(), timeline);
                 timeline = startTool(timeline, started);
                 status = GuideRequestStatus.TOOL_WAIT;
+                progress = progress.advance(
+                        GuideRequestPhase.TOOL_WAIT,
+                        now,
+                        progress.attempt(),
+                        null,
+                        null);
             }
             case AgentEvent.ToolCompleted completed -> {
                 int match = runningTool(timeline, completed.invocationId());
@@ -88,7 +105,10 @@ public final class GuideStateReducer {
                         completed.toolId(),
                         completed.failure() ? GuideToolStatus.FAILED : GuideToolStatus.SUCCEEDED,
                         completed.normalized(),
-                        GuideToolPresentation.lines(completed.toolId(), completed.normalized()),
+                        mergePresentationMessages(
+                                running.activity().presentationMessages(),
+                                GuideToolPresentation.messages(
+                                        completed.toolId(), completed.normalized())),
                         toolSources);
                 ArrayList<GuideTimelineEntry> next = new ArrayList<>(timeline);
                 next.set(match, new GuideTimelineEntry.Tool(running.ordinal(), replacement));
@@ -104,27 +124,80 @@ public final class GuideStateReducer {
                         .thenComparing(value -> value.evidence().provenance())
                         .thenComparing(GuideSource::toolId));
                 sources = List.copyOf(merged);
+                progress = progress.advance(GuideRequestPhase.TOOL_WAIT, now);
             }
-            case AgentEvent.ModelProgress progress -> {
-                switch (progress.event()) {
+            case AgentEvent.ModelProgress modelProgress -> {
+                switch (modelProgress.event()) {
+                    case ModelEvent.AttemptStarted started -> {
+                        Instant observed = now.isBefore(progress.lastProgressAt())
+                                ? progress.lastProgressAt()
+                                : now;
+                        Instant deadline = started.attemptTimeoutMillis() != null
+                                ? observed.plusMillis(started.attemptTimeoutMillis())
+                                : started.attempt() == progress.attempt()
+                                        ? progress.deadlineAt()
+                                        : null;
+                        status = GuideRequestStatus.MODEL_WAIT;
+                        retryAfter = null;
+                        progress = progress.advance(
+                                GuideRequestPhase.MODEL_WAIT,
+                                observed,
+                                started.attempt(),
+                                null,
+                                deadline);
+                    }
+                    case ModelEvent.ResponseStarted ignored -> {
+                        status = GuideRequestStatus.MODEL_WAIT;
+                        retryAfter = null;
+                        progress = progress.advance(
+                                GuideRequestPhase.RESPONSE_STREAMING,
+                                now,
+                                progress.attempt(),
+                                null,
+                                progress.deadlineAt());
+                    }
                     case ModelEvent.TextDelta delta -> {
                         if (!delta.text().isEmpty()) {
                             timeline = appendText(current.requestId(), timeline, delta.text());
                         }
                         status = GuideRequestStatus.MODEL_WAIT;
                         retryAfter = null;
+                        progress = progress.advance(
+                                GuideRequestPhase.RESPONSE_STREAMING,
+                                now,
+                                progress.attempt(),
+                                null,
+                                progress.deadlineAt());
                     }
-                    case ModelEvent.UsageUpdate update -> usage = update.usage();
+                    case ModelEvent.UsageUpdate update -> {
+                        usage = update.usage();
+                        progress = progress.advance(
+                                GuideRequestPhase.RESPONSE_STREAMING, now);
+                    }
                     case ModelEvent.RateLimited limited -> {
                         status = GuideRequestStatus.RATE_LIMITED;
                         retryAfter = limited.retryAfterMillis();
+                        Instant observed = now.isBefore(progress.lastProgressAt())
+                                ? progress.lastProgressAt()
+                                : now;
+                        progress = progress.advance(
+                                GuideRequestPhase.ENDPOINT_WAIT,
+                                observed,
+                                limited.attempt(),
+                                observed.plusMillis(limited.retryAfterMillis()),
+                                null);
                     }
-                    case ModelEvent.ReasoningDelta ignored -> {
-                        return current;
-                    }
-                    case ModelEvent.ToolUseComplete ignored -> {}
-                    case ModelEvent.MessageComplete ignored -> {}
-                    case ModelFailure ignored -> {}
+                    case ModelEvent.ReasoningDelta ignored -> progress = progress.advance(
+                            GuideRequestPhase.RESPONSE_STREAMING, now);
+                    case ModelEvent.ToolUseComplete ignored -> progress = progress.advance(
+                            GuideRequestPhase.RESPONSE_STREAMING, now);
+                    case ModelEvent.MessageComplete ignored -> progress = progress.advance(
+                            GuideRequestPhase.COMPLETING,
+                            now,
+                            progress.attempt(),
+                            null,
+                            null);
+                    case ModelFailure ignored -> progress = progress.advance(progress.phase(), now);
                 }
             }
             case AgentEvent.FinalText completed -> {
@@ -132,7 +205,13 @@ public final class GuideStateReducer {
                 clearSemanticStates(current.requestId());
                 status = GuideRequestStatus.COMPLETED;
                 retryAfter = null;
-                terminalAt = now;
+                progress = progress.advance(
+                        GuideRequestPhase.COMPLETING,
+                        now,
+                        progress.attempt(),
+                        null,
+                        null);
+                terminalAt = progress.lastProgressAt();
             }
             case AgentEvent.Failed failed -> {
                 timeline = closeAssistant(current.requestId(), timeline);
@@ -142,7 +221,13 @@ public final class GuideStateReducer {
                         ? GuideRequestStatus.CANCELLED
                         : GuideRequestStatus.FAILED;
                 retryAfter = null;
-                terminalAt = now;
+                progress = progress.advance(
+                        GuideRequestPhase.COMPLETING,
+                        now,
+                        progress.attempt(),
+                        null,
+                        null);
+                terminalAt = progress.lastProgressAt();
             }
         }
         return new GuideRequestSnapshot(
@@ -157,9 +242,10 @@ public final class GuideStateReducer {
                 retryAfter,
                 failure,
                 current.createdAt(),
-                now,
+                progress.lastProgressAt(),
                 terminalAt,
-                current.modelSelection());
+                current.modelSelection(),
+                progress);
     }
 
     private List<GuideTimelineEntry> appendText(
@@ -212,9 +298,25 @@ public final class GuideStateReducer {
                 started.toolId(),
                 GuideToolStatus.RUNNING,
                 null,
-                List.of(),
+                started.presentationMessages(),
                 List.of())));
         return List.copyOf(next);
+    }
+
+    private static List<GuideToolMessage> mergePresentationMessages(
+            List<GuideToolMessage> invocation, List<GuideToolMessage> result) {
+        ArrayList<GuideToolMessage> messages = new ArrayList<>(invocation.size() + result.size());
+        for (GuideToolMessage message : invocation) {
+            if (!messages.contains(message)) {
+                messages.add(message);
+            }
+        }
+        for (GuideToolMessage message : result) {
+            if (!messages.contains(message)) {
+                messages.add(message);
+            }
+        }
+        return List.copyOf(messages);
     }
 
     private List<GuideTimelineEntry> closeAssistant(
@@ -304,6 +406,12 @@ public final class GuideStateReducer {
             String message,
             Instant now) {
         clearSemanticStates(current.requestId());
+        GuideRequestProgress failedProgress = current.progress().advance(
+                GuideRequestPhase.COMPLETING,
+                now,
+                current.progress().attempt(),
+                null,
+                null);
         return new GuideRequestSnapshot(
                 current.requestId(),
                 current.sessionId(),
@@ -316,9 +424,10 @@ public final class GuideStateReducer {
                 null,
                 new GuideFailure("timeline_protocol_error", message),
                 current.createdAt(),
-                now,
-                now,
-                current.modelSelection());
+                failedProgress.lastProgressAt(),
+                failedProgress.lastProgressAt(),
+                current.modelSelection(),
+                failedProgress);
     }
 
     private static GuideRequestStatus state(AgentState state) {
@@ -330,6 +439,16 @@ public final class GuideStateReducer {
             case COMPLETED -> GuideRequestStatus.COMPLETING;
             case FAILED -> GuideRequestStatus.FAILED;
             case CANCELLED -> GuideRequestStatus.CANCELLED;
+        };
+    }
+
+    private static GuideRequestPhase phase(AgentState state) {
+        return switch (state) {
+            case IDLE, PREPARING -> GuideRequestPhase.PREPARING;
+            case COMPACTING -> GuideRequestPhase.COMPACTING;
+            case MODEL_WAIT -> GuideRequestPhase.MODEL_WAIT;
+            case TOOL_WAIT -> GuideRequestPhase.TOOL_WAIT;
+            case COMPLETED, FAILED, CANCELLED -> GuideRequestPhase.COMPLETING;
         };
     }
 

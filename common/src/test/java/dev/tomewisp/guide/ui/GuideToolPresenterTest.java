@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.JsonParser;
+import dev.tomewisp.guide.GuideToolMessage;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 final class GuideToolPresenterTest {
@@ -16,11 +18,15 @@ final class GuideToolPresenterTest {
                 "missing":[{"requirementKey":"iron","missing":5}]}}}
                 """).getAsJsonObject();
 
-        var lines = GuideToolPresenter.lines("tomewisp:calculate_craftability", normalized);
+        var messages = GuideToolPresenter.messages("tomewisp:calculate_craftability", normalized);
 
-        assertEquals("材料还没有备齐。", lines.getFirst());
-        assertTrue(lines.stream().anyMatch(value -> value.contains("iron_ingot × 4")));
-        assertTrue(lines.stream().anyMatch(value -> value.contains("缺少 iron × 5")));
+        assertEquals(GuideToolMessage.Key.CRAFTABILITY_NOT_READY, messages.getFirst().key());
+        assertTrue(messages.stream().anyMatch(message ->
+                message.key() == GuideToolMessage.Key.CRAFTABILITY_ALLOCATION
+                        && message.arguments().equals(List.of("minecraft:iron_ingot", "4", "iron"))));
+        assertTrue(messages.stream().anyMatch(message ->
+                message.key() == GuideToolMessage.Key.CRAFTABILITY_MISSING
+                        && message.arguments().equals(List.of("iron", "5"))));
     }
 
     @Test
@@ -28,9 +34,9 @@ final class GuideToolPresenterTest {
         var normalized = JsonParser.parseString(
                 "{\"status\":\"failure\",\"code\":\"stale_reference\",\"message\":\"reload\"}")
                 .getAsJsonObject();
-        var lines = GuideToolPresenter.lines("tomewisp:get_recipe", normalized);
-        assertEquals("这个结果已经过期，请重新查询。", lines.getFirst());
-        assertEquals(1, lines.size());
+        var messages = GuideToolPresenter.messages("tomewisp:get_recipe", normalized);
+        assertEquals(List.of(GuideToolMessage.of(
+                GuideToolMessage.Key.FAILURE_STALE_REFERENCE)), messages);
     }
 
     @Test
@@ -44,11 +50,13 @@ final class GuideToolPresenterTest {
                   "conflicts":[]},"evidence":[]}}
                 """.formatted("0".repeat(64))).getAsJsonObject();
 
-        var lines = GuideToolPresenter.lines("tomewisp:search_recipes", normalized);
+        var messages = GuideToolPresenter.messages("tomewisp:search_recipes", normalized);
 
-        String visible = String.join("\n", lines);
-        assertTrue(visible.contains("没有找到匹配的配方"));
-        assertTrue(visible.contains("部分配方来源当前不可用"));
+        assertTrue(messages.stream().anyMatch(message ->
+                message.key() == GuideToolMessage.Key.RECIPES_NONE));
+        assertTrue(messages.stream().anyMatch(message ->
+                message.key() == GuideToolMessage.Key.CATALOG_PARTIAL));
+        String visible = messages.toString();
         assertTrue(!visible.contains("UNAVAILABLE"));
         assertTrue(!visible.contains("mod_not_loaded"));
         assertTrue(!visible.contains("0".repeat(64)));

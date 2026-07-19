@@ -142,20 +142,45 @@ final class GameGuideAgentTest {
     }
 
     @Test
-    void failsAnIdenticalConsecutiveToolCallWithoutInvokingAgain() {
+    void givesModelOneNoNewInformationResultBeforeRequiringFinalText() {
         QueueModelClient model = new QueueModelClient();
         model.enqueue(CompletableFuture.completedFuture(toolTurn("call_1", 42)));
         model.enqueue(CompletableFuture.completedFuture(toolTurn("call_2", 42)));
+        model.enqueue(CompletableFuture.completedFuture(textTurn("I already checked; the result is unchanged.")));
         FakeTools tools = new FakeTools();
+        List<AgentEvent> events = new ArrayList<>();
         AgentResult result = new GameGuideAgent(
                         model, tools, new AgentSessionStore(), new Gson())
-                .ask(request(UUID.randomUUID()), event -> {})
+                .ask(request(UUID.randomUUID()), events::add)
+                .join();
+
+        assertEquals(AgentState.COMPLETED, result.state());
+        assertEquals("I already checked; the result is unchanged.", result.text());
+        assertEquals(1, tools.invocations.get());
+        assertEquals(1, events.stream().filter(AgentEvent.ToolStarted.class::isInstance).count());
+        ModelContent.ToolResult repeated = (ModelContent.ToolResult) model.requests.get(2)
+                .messages().getLast().content().getFirst();
+        assertEquals("no_new_information", repeated.value().getAsJsonObject().get("code").getAsString());
+        assertTrue(repeated.error());
+        assertNotNull(result.trace());
+    }
+
+    @Test
+    void failsIfModelIgnoresNoNewInformationAndRepeatsAgain() {
+        QueueModelClient model = new QueueModelClient();
+        model.enqueue(CompletableFuture.completedFuture(toolTurn("call_1", 42)));
+        model.enqueue(CompletableFuture.completedFuture(toolTurn("call_2", 42)));
+        model.enqueue(CompletableFuture.completedFuture(toolTurn("call_3", 42)));
+        FakeTools tools = new FakeTools();
+
+        AgentResult result = new GameGuideAgent(
+                        model, tools, new AgentSessionStore(), new Gson())
+                .ask(request(UUID.randomUUID()), ignored -> {})
                 .join();
 
         assertEquals(AgentState.FAILED, result.state());
         assertEquals("repeated_tool_call", result.errorCode());
         assertEquals(1, tools.invocations.get());
-        assertNotNull(result.trace());
     }
 
     @Test

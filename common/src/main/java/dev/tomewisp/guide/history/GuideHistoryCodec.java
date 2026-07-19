@@ -13,6 +13,7 @@ import dev.tomewisp.guide.GuideSource;
 import dev.tomewisp.guide.GuideModelSelection;
 import dev.tomewisp.guide.GuideTimelineEntry;
 import dev.tomewisp.guide.GuideToolActivity;
+import dev.tomewisp.guide.GuideToolMessageCodec;
 import dev.tomewisp.guide.GuideToolStatus;
 import dev.tomewisp.guide.semantic.SemanticDocumentCodec;
 import java.time.Instant;
@@ -30,7 +31,7 @@ public final class GuideHistoryCodec {
             Set.of("type", "ordinal", "text", "semantic", "streaming", "sources");
     private static final Set<String> TOOL_FIELDS = Set.of(
             "type", "ordinal", "invocationId", "index", "toolId", "status",
-            "presentationLines", "sources");
+            "presentationMessages", "sources");
     private static final Set<String> SOURCE_FIELDS = Set.of("toolId", "evidence");
     private static final Set<String> EVIDENCE_FIELDS = Set.of(
             "authority", "completeness", "capturedAt", "sourceId", "provenance",
@@ -143,9 +144,8 @@ public final class GuideHistoryCodec {
         object.addProperty("index", activity.index());
         object.addProperty("toolId", activity.toolId());
         object.addProperty("status", activity.status().name());
-        JsonArray lines = new JsonArray();
-        activity.presentationLines().forEach(lines::add);
-        object.add("presentationLines", lines);
+        object.add("presentationMessages", GuideToolMessageCodec.encode(
+                activity.presentationMessages()));
         object.add("sources", encodeSourcesArray(activity.sources()));
         return object;
     }
@@ -162,20 +162,13 @@ public final class GuideHistoryCodec {
 
     private static GuideTimelineEntry.Tool decodeTool(JsonObject object) {
         requireFields(object, TOOL_FIELDS, "tool timeline entry");
-        List<String> lines = new ArrayList<>();
-        for (JsonElement line : array(object, "presentationLines")) {
-            if (!line.isJsonPrimitive() || !line.getAsJsonPrimitive().isString()) {
-                throw new IllegalArgumentException("durable presentation line must be text");
-            }
-            lines.add(line.getAsString());
-        }
         GuideToolActivity activity = new GuideToolActivity(
                 string(object, "invocationId"),
                 integer(object, "index"),
                 string(object, "toolId"),
                 enumValue(GuideToolStatus.class, string(object, "status"), "tool status"),
                 null,
-                lines,
+                GuideToolMessageCodec.decode(object.get("presentationMessages")),
                 decodeSourcesArray(array(object, "sources")));
         return new GuideTimelineEntry.Tool(integer(object, "ordinal"), activity);
     }

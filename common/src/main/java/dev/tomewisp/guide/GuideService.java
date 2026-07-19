@@ -619,7 +619,7 @@ public final class GuideService implements GuideHistoryAdministration {
         int index = indexOf(session, requestId);
         if (index < 0) return;
         session.requests.set(index, withStatus(
-                session.requests.get(index), GuideRequestStatus.CONTEXT_LOADING));
+                session.requests.get(index), GuideRequestStatus.CONTEXT_LOADING, clock.instant()));
         long generation = ++session.contextGeneration;
         session.preparingContextRequest = requestId;
         publish();
@@ -652,7 +652,7 @@ public final class GuideService implements GuideHistoryAdministration {
         int index = indexOf(session, requestId);
         if (index < 0) return;
         session.requests.set(index, withStatus(
-                session.requests.get(index), GuideRequestStatus.CONTEXT_LOADING));
+                session.requests.get(index), GuideRequestStatus.CONTEXT_LOADING, clock.instant()));
         long generation = ++session.contextGeneration;
         session.preparingContextRequest = requestId;
         publish();
@@ -785,12 +785,17 @@ public final class GuideService implements GuideHistoryAdministration {
     }
 
     private static GuideRequestSnapshot withStatus(
-            GuideRequestSnapshot request, GuideRequestStatus status) {
+            GuideRequestSnapshot request, GuideRequestStatus status, Instant now) {
+        GuideRequestProgress progress = request.progress().advance(
+                status == GuideRequestStatus.CONTEXT_LOADING
+                        ? GuideRequestPhase.CONTEXT_LOADING
+                        : request.progress().phase(),
+                now);
         return new GuideRequestSnapshot(
                 request.requestId(), request.sessionId(), request.topology(), request.userMessage(),
                 request.timeline(), status, request.sources(), request.usage(),
                 request.retryAfterMillis(), request.failure(), request.createdAt(),
-                request.updatedAt(), request.terminalAt(), request.modelSelection());
+                progress.lastProgressAt(), request.terminalAt(), request.modelSelection(), progress);
     }
 
     private void apply(UUID requestId, AgentEvent event) {
@@ -1385,7 +1390,7 @@ public final class GuideService implements GuideHistoryAdministration {
                                         tool.activity().toolId(),
                                         tool.activity().status(),
                                         null,
-                                        tool.activity().presentationLines(),
+                                        tool.activity().presentationMessages(),
                                         tool.activity().sources()))
                         : entry)
                 .toList();

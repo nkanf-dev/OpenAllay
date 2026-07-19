@@ -49,10 +49,8 @@ public record ServerGuideRuntime(
                 scheduled, gson, new Utf8ContextTokenEstimator(), new ToolResultContextReducer(),
                 config.contextBudget(), config.model(), Clock.systemUTC());
         GameGuideAgent agent = new GameGuideAgent(scheduled, tools, sessions, gson, compactor);
-        String prompt = "You are TomeWisp's server-hosted Minecraft guide. Use only authorized "
-                + "read tools and visible evidence. Never expose credentials.\n\n"
-                + dev.tomewisp.guide.semantic.SemanticPromptGuidance.text() + "\n\n"
-                + runtime.skills().metadataPrompt();
+        String prompt = dev.tomewisp.agent.AgentSystemPrompt.compose(
+                runtime.skills().metadataPrompt());
         int promptAndTools = new Utf8ContextTokenEstimator().estimate(
                 prompt, java.util.List.of(), tools.definitions());
         dev.tomewisp.guide.GuideContextSpec contextSpec =

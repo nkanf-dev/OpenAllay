@@ -40,15 +40,24 @@ public final class OpenAiChatClient implements ModelClient {
                 .header("content-type", "application/json")
                 .postJson(codec.requestBody(config, request))
                 .build();
-        return transport.execute(httpRequest, cancellation, (status, headers, body) -> {
+        return transport.execute(httpRequest, cancellation, events, (status, headers, body, safeEvents) -> {
             ModelHttpErrors.requireSuccess(status, headers, body);
             return request.stream()
                             || headers.firstValue("content-type")
                                     .orElse("")
                                     .contains("text/event-stream")
-                    ? decodeStream(body, events, cancellation)
-                    : codec.parseTurn(new String(body.readAllBytes(), StandardCharsets.UTF_8), events);
+                    ? decodeStream(body, safeEvents, cancellation)
+                    : parseBody(body, safeEvents, cancellation);
         });
+    }
+
+    private ModelTurn parseBody(
+            InputStream body,
+            Consumer<ModelEvent> events,
+            CancellationSignal cancellation) throws java.io.IOException {
+        byte[] encoded = body.readAllBytes();
+        cancellation.throwIfCancelled();
+        return codec.parseTurn(new String(encoded, StandardCharsets.UTF_8), events);
     }
 
     private static ModelTurn decodeStream(

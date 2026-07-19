@@ -45,6 +45,11 @@ waiting, response streaming, Tool waiting, and completion. Provider content,
 URLs, credentials, prompts, arguments, and raw exception text are never part of
 this projection.
 
+Server model events transport the attempt's relative timeout budget, not the
+server's absolute wall-clock deadline. The client derives a local
+display-only deadline at receipt; the server transport watchdog remains the
+sole owner of actual timeout enforcement.
+
 The Guide screen renders progress in one fixed-height region outside the
 virtual transcript. Elapsed time and retry/deadline countdowns are computed
 from the immutable snapshot at render/tick time; clocks do not create durable
@@ -78,6 +83,11 @@ Collapsed Tool cards render a closed, localized invocation summary and two or
 three player-friendly result lines where available. Raw arguments, normalized
 JSON, internal IDs, and technical evidence remain Debug Mode-only. The friendly
 projection is persisted so recovered history matches the live timeline.
+The durable and bridge projection stores only a closed semantic message enum
+plus control-character-free literal arguments; arbitrary translation keys are
+unrepresentable. The client resolves those messages in its current locale.
+This breaking pre-release durable shape is schema 5, so recognized schema 4
+databases follow the accepted rebuild-without-migration policy.
 
 ### One player-observable game-state Tool
 
@@ -87,7 +97,8 @@ and an optional section-specific query. It never returns an unbounded dump.
 Initial registered sections cover, without defining the future ceiling:
 
 - overview and current connection/runtime identity;
-- installed mods and exact mod metadata;
+- a complete lightweight installed-mod index followed by exact-ID public mod
+  metadata on demand;
 - every client option exposed through game UI, grouped by its native settings
   domains, including video, sound, controls/key mappings, accessibility,
   language/chat, resource packs, data packs where visible, shaders and public
@@ -97,7 +108,7 @@ Initial registered sections cover, without defining the future ceiling:
 - player-owned UI state such as inventory where already available;
 - closed read-only query equivalents for information normally obtained through
   non-mutating commands, subject to actual client/server authority and player
-  permission.
+  permission, rechecked independently before each operation is captured.
 
 This is an extensible registry of typed section handlers behind one Tool ID,
 not a raw reflection surface or a list of arbitrary field paths. Capture of
@@ -183,6 +194,22 @@ separate accepted authority boundary rather than adding a write section here.
 - Repeated invalid or unchanged empty Tool searches: the prompt requires one
   corrected attempt and then a grounded explanation; no alternating retry
   loop without new information.
+
+## Implementation Evidence
+
+The current Phase 4 worktree implements the redacted progress lifecycle and
+complete-response watchdog, stable tick-coalesced native projection and input,
+streaming/list/card corrections, shared Tool guidance, and the sectioned
+read-only `inspect_game_state` capability plus Skill. Focused deterministic
+suites for those contracts have passed. Fabric and NeoForge graphical
+controllers have each completed the native semantic/UI correction scenario
+with six screenshots; both reports record all eight controlled component types
+and 32 semantic blocks. Both loaders also completed the real-client game-state
+scenario with all eight sections, exact successful section probes, and exact
+Agent/tool chronology. The latest clean common/Fabric/NeoForge gate passed with
+525 tests, package and SQLite verification passed, and the final
+credential/diff/report/hash/manifest and screenshot audits passed. The retained
+closing evidence is under `docs/verification/phase-4-final-corrections/`.
 
 ## Applies To
 

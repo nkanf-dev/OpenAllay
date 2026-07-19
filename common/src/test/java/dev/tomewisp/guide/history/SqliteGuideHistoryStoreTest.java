@@ -54,8 +54,9 @@ final class SqliteGuideHistoryStoreTest {
 
     @Test
     void rebuildsRecognizedPreReleaseSchemasWithoutTouchingSiblingFiles() throws Exception {
-        for (int oldVersion : List.of(1, 2, 3)) {
+        for (int oldVersion : List.of(1, 2, 3, 4)) {
             Path versionDatabase = temporary.resolve("history-v" + oldVersion + ".sqlite3");
+            LegacyGuideHistorySchemaFixtures.create(versionDatabase, oldVersion);
             SqliteGuideHistoryStore store = new SqliteGuideHistoryStore(
                     versionDatabase,
                     Clock.fixed(RECOVERY_TIME, ZoneOffset.UTC),
@@ -64,15 +65,8 @@ final class SqliteGuideHistoryStoreTest {
                     "old-schema-" + oldVersion + ".example",
                     "main",
                     completed("main", "saved"));
-            store.save(original);
             Path retained = temporary.resolve("retained-v" + oldVersion + ".txt");
             Files.writeString(retained, "retained");
-            try (var connection = DriverManager.getConnection(
-                            "jdbc:sqlite:" + versionDatabase);
-                    var statement = connection.createStatement()) {
-                statement.executeUpdate("update schema_metadata set schema_version = "
-                        + oldVersion + " where singleton = 1");
-            }
 
             assertTrue(store.load(original.scope()).partition().isEmpty());
 
@@ -97,7 +91,7 @@ final class SqliteGuideHistoryStoreTest {
         try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database());
                 var statement = connection.createStatement()) {
             statement.executeUpdate(
-                    "update schema_metadata set schema_version = 1 where singleton = 1");
+                    "update schema_metadata set schema_version = 4 where singleton = 1");
         }
         SqliteGuideHistoryStore failing = new SqliteGuideHistoryStore(
                 database(),
@@ -115,7 +109,7 @@ final class SqliteGuideHistoryStoreTest {
         assertEquals("history_schema_rebuild_failed", failure.code());
         try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database());
                 var statement = connection.createStatement()) {
-            assertEquals(1, queryInt(
+            assertEquals(4, queryInt(
                     statement,
                     "select schema_version from schema_metadata where singleton = 1"));
             assertEquals(1, queryInt(statement, "select count(*) from partitions"));
@@ -299,7 +293,7 @@ final class SqliteGuideHistoryStoreTest {
             statement.execute("create table unrelated_data(value text)");
             statement.execute("insert into unrelated_data(value) values ('retained')");
             statement.executeUpdate(
-                    "update schema_metadata set schema_version = 1 where singleton = 1");
+                    "update schema_metadata set schema_version = 4 where singleton = 1");
         }
 
         GuideHistoryException failure = assertThrows(
@@ -308,11 +302,174 @@ final class SqliteGuideHistoryStoreTest {
         assertEquals("history_schema_unsupported", failure.code());
         try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database());
                 var statement = connection.createStatement()) {
-            assertEquals(1, queryInt(
+            assertEquals(4, queryInt(
                     statement,
                     "select schema_version from schema_metadata where singleton = 1"));
             assertEquals(1, queryInt(statement, "select count(*) from unrelated_data"));
             assertEquals(1, queryInt(statement, "select count(*) from partitions"));
+        }
+    }
+
+    @Test
+    void olderVersionMissingTableFailsClosedWithoutMutation() throws Exception {
+        Path database = temporary.resolve("missing-table.sqlite3");
+        LegacyGuideHistorySchemaFixtures.create(database, 4);
+        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
+                var statement = connection.createStatement()) {
+            statement.execute("drop table request_sources");
+        }
+
+        GuideHistoryException failure = assertThrows(
+                GuideHistoryException.class,
+                () -> store(database).load(scope("missing-table.example")));
+
+        assertEquals("history_schema_unsupported", failure.code());
+        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
+                var statement = connection.createStatement()) {
+            assertEquals(4, queryInt(statement,
+                    "select schema_version from schema_metadata where singleton = 1"));
+            assertEquals(0, queryInt(statement,
+                    "select count(*) from sqlite_master where type = 'table' and name = 'request_sources'"));
+        }
+    }
+
+    @Test
+    void olderVersionMissingColumnFailsClosedWithoutMutation() throws Exception {
+        Path database = temporary.resolve("missing-column.sqlite3");
+        LegacyGuideHistorySchemaFixtures.create(database, 4);
+        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
+                var statement = connection.createStatement()) {
+            statement.execute("alter table requests drop column terminal_at");
+        }
+
+        GuideHistoryException failure = assertThrows(
+                GuideHistoryException.class,
+                () -> store(database).load(scope("missing-column.example")));
+
+        assertEquals("history_schema_unsupported", failure.code());
+        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
+                var statement = connection.createStatement()) {
+            assertEquals(4, queryInt(statement,
+                    "select schema_version from schema_metadata where singleton = 1"));
+            assertEquals(0, queryInt(statement,
+                    "select count(*) from pragma_table_info('requests') where name = 'terminal_at'"));
+        }
+    }
+
+    @Test
+    void olderVersionExtraColumnFailsClosedWithoutMutation() throws Exception {
+        Path database = temporary.resolve("extra-column.sqlite3");
+        LegacyGuideHistorySchemaFixtures.create(database, 4);
+        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
+                var statement = connection.createStatement()) {
+            statement.execute("alter table request_sources add column unexpected text");
+        }
+
+        GuideHistoryException failure = assertThrows(
+                GuideHistoryException.class,
+                () -> store(database).load(scope("extra-column.example")));
+
+        assertEquals("history_schema_unsupported", failure.code());
+        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
+                var statement = connection.createStatement()) {
+            assertEquals(4, queryInt(statement,
+                    "select schema_version from schema_metadata where singleton = 1"));
+            assertEquals(1, queryInt(statement,
+                    "select count(*) from pragma_table_info('request_sources') where name = 'unexpected'"));
+        }
+    }
+
+    @Test
+    void olderVersionDamagedColumnSignatureFailsClosedWithoutMutation() throws Exception {
+        Path database = temporary.resolve("damaged-column.sqlite3");
+        LegacyGuideHistorySchemaFixtures.create(database, 4);
+        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
+                var statement = connection.createStatement()) {
+            statement.execute("pragma foreign_keys=off");
+            statement.execute("alter table messages rename to original_messages");
+            statement.execute("""
+                    create table messages(
+                        scope_id text not null,
+                        session_id text not null,
+                        ordinal integer not null check(ordinal >= 0),
+                        request_id text not null,
+                        role integer not null,
+                        message_text text not null,
+                        created_at text not null,
+                        primary key(scope_id, session_id, ordinal),
+                        foreign key(scope_id, session_id)
+                            references sessions(scope_id, session_id) on delete cascade,
+                        foreign key(scope_id, request_id)
+                            references requests(scope_id, request_id) on delete cascade
+                    )
+                    """);
+            statement.execute("drop table original_messages");
+        }
+
+        GuideHistoryException failure = assertThrows(
+                GuideHistoryException.class,
+                () -> store(database).load(scope("damaged-column.example")));
+
+        assertEquals("history_schema_unsupported", failure.code());
+        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
+                var statement = connection.createStatement()) {
+            assertEquals(4, queryInt(statement,
+                    "select schema_version from schema_metadata where singleton = 1"));
+            assertEquals(1, queryInt(statement,
+                    "select count(*) from pragma_table_info('messages') "
+                            + "where name = 'role' and type = 'INTEGER'"));
+        }
+    }
+
+    @Test
+    void foreignDatabaseWithoutMetadataFailsClosedWithoutMutation() throws Exception {
+        Path database = temporary.resolve("foreign-without-metadata.sqlite3");
+        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
+                var statement = connection.createStatement()) {
+            statement.execute("create table unrelated_data(value text)");
+            statement.execute("insert into unrelated_data(value) values ('retained')");
+        }
+
+        GuideHistoryException failure = assertThrows(
+                GuideHistoryException.class,
+                () -> store(database).load(scope("foreign-without-metadata.example")));
+
+        assertEquals("history_schema_unsupported", failure.code());
+        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
+                var statement = connection.createStatement()) {
+            assertEquals(1, queryInt(statement, "select count(*) from unrelated_data"));
+            assertEquals(0, queryInt(statement,
+                    "select count(*) from sqlite_master where type = 'table' and name = 'schema_metadata'"));
+        }
+    }
+
+    @Test
+    void inconsistentMetadataRowsFailClosedWithoutMutation() throws Exception {
+        Path database = temporary.resolve("inconsistent-metadata.sqlite3");
+        LegacyGuideHistorySchemaFixtures.create(database, 4);
+        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
+                var statement = connection.createStatement()) {
+            statement.execute("alter table schema_metadata rename to original_schema_metadata");
+            statement.execute("""
+                    create table schema_metadata(
+                        singleton integer primary key,
+                        schema_version integer not null
+                    )
+                    """);
+            statement.execute("insert into schema_metadata values (1, 4), (2, 4)");
+            statement.execute("drop table original_schema_metadata");
+        }
+
+        GuideHistoryException failure = assertThrows(
+                GuideHistoryException.class,
+                () -> store(database).load(scope("inconsistent-metadata.example")));
+
+        assertEquals("history_schema_unsupported", failure.code());
+        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
+                var statement = connection.createStatement()) {
+            assertEquals(2, queryInt(statement, "select count(*) from schema_metadata"));
+            assertEquals(4, queryInt(statement,
+                    "select schema_version from schema_metadata where singleton = 1"));
         }
     }
 
@@ -458,10 +615,18 @@ final class SqliteGuideHistoryStoreTest {
     }
 
     private SqliteGuideHistoryStore store() {
+        return store(database());
+    }
+
+    private SqliteGuideHistoryStore store(Path database) {
         return new SqliteGuideHistoryStore(
-                database(),
+                database,
                 Clock.fixed(RECOVERY_TIME, ZoneOffset.UTC),
                 new GuideHistoryCodec());
+    }
+
+    private static GuideHistoryScope scope(String server) {
+        return GuideHistoryScope.derive(ACTOR, GuideHistoryScope.Kind.MULTIPLAYER, server);
     }
 
     private Path database() {

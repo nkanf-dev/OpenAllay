@@ -10,6 +10,27 @@
 
 ---
 
+## Execution status — 2026-07-19
+
+- Tasks 1 through 8 are implemented in the current worktree and their focused
+  deterministic suites have passed.
+- Task 9's native semantic/dynamic-UI fixture and both graphical controllers
+  are complete: Fabric and NeoForge each produced six native screenshots, and
+  both reports completed with all eight controlled component types and 32
+  semantic blocks. The unified game-state Tool completed a separate real-client
+  eight-section walkthrough on both loaders, with exact ordered successful
+  section probes retained in each report.
+- The latest clean `:common:test` plus both-loader production build passed with
+  525 tests, 0 failures and 2 skipped. Package/SQLite verification, script
+  syntax, report/JSON validation, screenshot review, credential scan, diff
+  check, and evidence manifest/hash validation also passed.
+- Implementation and acceptance are complete. Repository commit/merge
+  bookkeeping is the only remaining execution step.
+- The detailed checkboxes below are the original execution recipe. The status
+  above and retained evidence are authoritative for completion.
+
+---
+
 ### Task 1: Record the accepted state and establish progress contracts
 
 **Files:**

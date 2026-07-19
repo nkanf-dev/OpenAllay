@@ -23,6 +23,8 @@ import dev.tomewisp.context.RecipeSnapshot;
 import dev.tomewisp.context.RegistryEntrySnapshot;
 import dev.tomewisp.context.RegistrySnapshot;
 import dev.tomewisp.context.ToolInvocationContext;
+import dev.tomewisp.context.game.ObservableGameStateSnapshot;
+import dev.tomewisp.platform.InstalledModMetadata;
 import java.time.Instant;
 import java.util.List;
 import java.util.ArrayList;
@@ -195,7 +197,10 @@ public final class GroundedTestFixtures {
                 new RegistryEntrySnapshot(
                         "minecraft:stone", "block", "Stone", "minecraft", "minecraft:registry"),
                 new RegistryEntrySnapshot(
-                        "minecraft:stone", "item", "Stone", "minecraft", "minecraft:registry")));
+                        "minecraft:stone", "item", "Stone", "minecraft", "minecraft:registry"),
+                new RegistryEntrySnapshot(
+                        "minecraft:iron_block", "item", "Block of Iron", "minecraft",
+                        "minecraft:registry")));
     }
 
     public static ToolInvocationContext fullContext() {
@@ -206,6 +211,37 @@ public final class GroundedTestFixtures {
                 Optional.of(player()),
                 Optional.of(registries()),
                 Optional.of(recipeSnapshot()),
-                new ContextMetrics(2, 1, 2, 0, 0));
+                Optional.of(observableGameState()),
+                new ContextMetrics(3, 1, 2, 0, 0));
+    }
+
+    public static ObservableGameStateSnapshot observableGameState() {
+        EvidenceMetadata evidence = playerEvidence();
+        return new ObservableGameStateSnapshot(
+                Instant.EPOCH,
+                new ObservableGameStateSnapshot.RuntimeState(
+                        "test", "common-test", true, "singleplayer", evidence, List.of()),
+                new ObservableGameStateSnapshot.ModsState(
+                        List.of(new InstalledModMetadata(
+                                "tomewisp", "TomeWisp", "test", "fixture", List.of(),
+                                List.of(), Map.of(), "client", List.of())),
+                        evidence,
+                        List.of()),
+                new ObservableGameStateSnapshot.OptionsState(List.of(), evidence, List.of()),
+                new ObservableGameStateSnapshot.PacksState(List.of(), List.of(), evidence, List.of()),
+                new ObservableGameStateSnapshot.ShaderState(
+                        false, "none", "", Map.of(), evidence, List.of()),
+                new ObservableGameStateSnapshot.DiagnosticsState(
+                        List.of(new ObservableGameStateSnapshot.DiagnosticValue(
+                                "position", "coordinates", "1 64 2")),
+                        evidence,
+                        List.of()),
+                new ObservableGameStateSnapshot.PlayerUiState(
+                        player(), "gameplay", "", evidence, List.of()),
+                new ObservableGameStateSnapshot.WorldQueriesState(
+                        Map.of("time", new ObservableGameStateSnapshot.QueryValue(
+                                "time", "0", true, "server_authoritative")),
+                        evidence,
+                        List.of()));
     }
 }

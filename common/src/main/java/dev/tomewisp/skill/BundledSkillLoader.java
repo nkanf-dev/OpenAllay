@@ -14,6 +14,7 @@ public final class BundledSkillLoader {
             "explain-machine-usage",
             "diagnose-missing-recipe",
             "guide-ftb-progression",
+            "inspect-game-state",
             "search-guide-books");
 
     public List<SkillSource> load() {

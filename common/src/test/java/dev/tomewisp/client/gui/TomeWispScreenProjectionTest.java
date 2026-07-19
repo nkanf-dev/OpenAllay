@@ -1,6 +1,9 @@
 package dev.tomewisp.client.gui;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -17,12 +20,16 @@ import dev.tomewisp.guide.GuideSnapshot;
 import dev.tomewisp.guide.GuideSource;
 import dev.tomewisp.guide.GuideTimelineEntry;
 import dev.tomewisp.guide.GuideToolActivity;
+import dev.tomewisp.guide.GuideToolMessage;
 import dev.tomewisp.guide.GuideToolStatus;
 import dev.tomewisp.guide.GuideTopology;
 import dev.tomewisp.guide.ui.GuideDisplayConfig;
 import dev.tomewisp.guide.ui.GuideUiRow;
 import dev.tomewisp.model.ModelUsage;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.contents.TranslatableContents;
 import java.time.Instant;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -30,6 +37,68 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 
 final class TomeWispScreenProjectionTest {
+    @Test
+    void composerEnterPolicyMatchesNativeChatExpectations() {
+        assertEquals(TomeWispScreen.ComposerKeyAction.SUBMIT,
+                TomeWispScreen.composerKeyAction(true, true, false, false));
+        assertEquals(TomeWispScreen.ComposerKeyAction.NEWLINE,
+                TomeWispScreen.composerKeyAction(true, true, true, false));
+        assertEquals(TomeWispScreen.ComposerKeyAction.SUBMIT,
+                TomeWispScreen.composerKeyAction(true, true, true, true));
+        assertEquals(TomeWispScreen.ComposerKeyAction.DELEGATE,
+                TomeWispScreen.composerKeyAction(false, true, false, false));
+        assertEquals(TomeWispScreen.ComposerKeyAction.DELEGATE,
+                TomeWispScreen.composerKeyAction(true, false, false, false));
+    }
+
+    @Test
+    void tickCoalescerAppliesOnlyNewestPendingProjection() {
+        TomeWispScreen.TickCoalescer<String> pending = new TomeWispScreen.TickCoalescer<>();
+        pending.offer("first");
+        pending.offer("second");
+        pending.offer("latest");
+
+        assertEquals("latest", pending.drain());
+        assertNull(pending.drain());
+    }
+
+    @Test
+    void progressDurationsAreStableAndNeverGoNegative() {
+        assertEquals("0:00", TomeWispScreen.formatDuration(Duration.ofSeconds(-4)));
+        assertEquals("1:42", TomeWispScreen.formatDuration(Duration.ofSeconds(102)));
+        assertEquals("2:03:04", TomeWispScreen.formatDuration(Duration.ofSeconds(7384)));
+    }
+
+    @Test
+    void collapsedToolSummaryKeepsAtMostThreeSemanticMessages() {
+        GuideToolMessage first = GuideToolMessage.of(GuideToolMessage.Key.RESULT_PENDING);
+        GuideToolMessage second = GuideToolMessage.of(GuideToolMessage.Key.RESULT_COMPLETED);
+        GuideToolMessage third = GuideToolMessage.of(GuideToolMessage.Key.RECIPES_NONE);
+        GuideToolMessage fourth = GuideToolMessage.of(GuideToolMessage.Key.CATALOG_PARTIAL);
+        assertEquals(
+                List.of(first, second, third),
+                TomeWispScreen.visibleToolSummaryMessages(
+                        List.of(first, second, third, fourth)));
+        assertEquals(51, TomeWispScreen.toolCardHeight(3));
+        assertEquals(21, TomeWispScreen.toolCardHeight(0));
+    }
+
+    @Test
+    void toolMessagesUseClosedTranslationKeysAndLiteralArguments() {
+        GuideToolMessage message = GuideToolMessage.of(
+                GuideToolMessage.Key.RECIPE_DETAIL,
+                "minecraft:iron_block");
+
+        Component rendered = TomeWispScreen.toolMessage(message);
+        TranslatableContents translation = assertInstanceOf(
+                TranslatableContents.class, rendered.getContents());
+
+        assertEquals(message.key().translationKey(), translation.getKey());
+        Component argument = assertInstanceOf(Component.class, translation.getArgs()[0]);
+        assertEquals("minecraft:iron_block", argument.getString());
+        assertFalse(argument.getContents() instanceof TranslatableContents);
+    }
+
     @Test
     void normalSourceLabelIsFriendlyAndDebugLabelIsTechnical() {
         GuideSource source = new GuideSource(
@@ -65,7 +134,10 @@ final class TomeWispScreenProjectionTest {
                 JsonParser.parseString("""
                         {"status":"success","value":{"counts":{"minecraft:apple":3}}}
                         """).getAsJsonObject(),
-                List.of("3 apples"),
+                List.of(GuideToolMessage.of(
+                        GuideToolMessage.Key.INVENTORY_ITEM,
+                        "minecraft:apple",
+                        "3")),
                 List.of());
         GuideRequestSnapshot request = new GuideRequestSnapshot(
                 UUID.fromString("d43b1f0c-c527-4284-902e-fab09b799fe0"),

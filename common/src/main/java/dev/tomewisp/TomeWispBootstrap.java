@@ -25,8 +25,7 @@ import dev.tomewisp.tool.builtin.GetKnowledgeDocumentTool;
 import dev.tomewisp.tool.builtin.GetPatchouliMultiblockTool;
 import dev.tomewisp.tool.builtin.ListKnowledgeSourcesTool;
 import dev.tomewisp.tool.builtin.InspectInventoryTool;
-import dev.tomewisp.tool.builtin.PlatformInfoTool;
-import dev.tomewisp.tool.builtin.PlayerContextTool;
+import dev.tomewisp.tool.builtin.InspectGameStateTool;
 import dev.tomewisp.tool.builtin.ResolveResourceTool;
 import dev.tomewisp.tool.builtin.SearchKnowledgeTool;
 import dev.tomewisp.tool.builtin.SearchRecipesTool;
@@ -130,14 +129,13 @@ public final class TomeWispBootstrap {
 
     static List<Tool<?, ?>> builtinTools(PlatformService platform) {
         return List.of(
-                new PlatformInfoTool(platform),
+                new InspectGameStateTool(),
                 new ResolveResourceTool(),
                 new SearchRecipesTool(),
                 new GetRecipeTool(),
                 new FindItemUsagesTool(),
                 new InspectInventoryTool(),
                 new CalculateCraftabilityTool(),
-                new FindRecipesTool(),
-                new PlayerContextTool());
+                new FindRecipesTool());
     }
 }

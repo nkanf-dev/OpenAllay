@@ -9,12 +9,14 @@ import dev.tomewisp.guide.GuideSource;
 import dev.tomewisp.guide.GuideSubscription;
 import dev.tomewisp.guide.GuideSnapshot;
 import dev.tomewisp.guide.GuideToolActivity;
+import dev.tomewisp.guide.GuideToolMessage;
 import dev.tomewisp.guide.GuideToolStatus;
 import dev.tomewisp.guide.GuideSessionSnapshot;
 import dev.tomewisp.guide.GuideHistoryPageState;
 import dev.tomewisp.guide.history.GuideHistoryPageRequest;
 import dev.tomewisp.guide.ui.GuideUiLayout;
 import dev.tomewisp.guide.ui.GuideUiModelChoice;
+import dev.tomewisp.guide.ui.GuideUiProgress;
 import dev.tomewisp.guide.ui.GuideUiRow;
 import dev.tomewisp.guide.ui.GuideUiSession;
 import dev.tomewisp.guide.ui.GuideUiView;
@@ -39,6 +41,8 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import net.minecraft.ChatFormatting;
@@ -49,6 +53,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
@@ -68,6 +73,7 @@ public final class TomeWispScreen extends Screen {
     private final RecipeClientRuntime recipeClient;
     private final Supplier<GuideDisplayConfig> display;
     private final Runnable settingsOpener;
+    private final TickCoalescer<GuideSnapshot> pendingSnapshots = new TickCoalescer<>();
     private volatile GuideUiView view;
     private GuideSubscription subscription;
     private GuideUiLayout layout;
@@ -79,9 +85,9 @@ public final class TomeWispScreen extends Screen {
     private String draft = "";
     private String notice = "";
     private int scroll;
-    private int contentHeight;
     private int detailScroll;
     private int detailContentHeight;
+    private int activeProgressRenderFrames;
     private boolean sessionOverlay;
     private GuideUiRow.Tool selectedTool;
     private GuideSource selectedSource;
@@ -168,7 +174,7 @@ public final class TomeWispScreen extends Screen {
     protected void init() {
         layout = GuideUiLayout.calculate(width, height, detailOpen());
         GuideUiLayout.Rect top = layout.topBar();
-        int x = top.x() + top.width() - (settingsOpener == null ? 176 : 200);
+        int x = top.x() + top.width() - (settingsOpener == null ? 252 : 276);
         addRenderableWidget(Button.builder(Component.literal("会话"), button -> sessionOverlay = !sessionOverlay)
                 .bounds(x, top.y() + 2, 32, 20).build());
         addRenderableWidget(Button.builder(Component.literal("+"), button -> createSession())
@@ -176,14 +182,14 @@ public final class TomeWispScreen extends Screen {
         addRenderableWidget(Button.builder(Component.literal("×"), button -> closeSession())
                 .bounds(x + 64, top.y() + 2, 32, 20).build());
         model = addRenderableWidget(Button.builder(modelLabel(), button -> cycleModel())
-                .bounds(x + 100, top.y() + 2, 52, 20).build());
+                .bounds(x + 100, top.y() + 2, 128, 20).build());
         addRenderableWidget(Button.builder(Component.literal("刷新"), button -> service.refreshCapabilities())
-                .bounds(x + 156, top.y() + 2, 20, 20).build());
+                .bounds(x + 232, top.y() + 2, 20, 20).build());
         if (settingsOpener != null) {
             addRenderableWidget(Button.builder(
                             Component.translatable("screen.tomewisp.settings.short"),
                             button -> settingsOpener.run())
-                    .bounds(x + 180, top.y() + 2, 20, 20)
+                    .bounds(x + 256, top.y() + 2, 20, 20)
                     .build());
         }
 
@@ -191,49 +197,33 @@ public final class TomeWispScreen extends Screen {
         int actionWidth = 54;
         composer = MultiLineEditBox.builder()
                 .setX(area.x()).setY(area.y())
-                .setPlaceholder(Component.literal("询问整合包、配方或机器；Ctrl+Enter 发送"))
+                .setPlaceholder(Component.translatable("screen.tomewisp.composer.placeholder"))
                 .build(font, Math.max(80, area.width() - actionWidth - 6), area.height(),
-                        Component.literal("TomeWisp 提问输入框"));
+                        Component.translatable("screen.tomewisp.composer.narration"));
         composer.setValue(draft, true);
         composer.setValueListener(value -> draft = value);
         addRenderableWidget(composer);
         int actionsX = area.x() + area.width() - actionWidth;
-        send = addRenderableWidget(Button.builder(Component.literal("发送"), button -> submit())
+        send = addRenderableWidget(Button.builder(
+                        Component.translatable("screen.tomewisp.action.send"), button -> submit())
                 .bounds(actionsX, area.y(), actionWidth, 20).build());
-        stop = addRenderableWidget(Button.builder(Component.literal("停止"), button -> cancel())
+        stop = addRenderableWidget(Button.builder(
+                        Component.translatable("screen.tomewisp.action.stop"), button -> cancel())
                 .bounds(actionsX, area.y() + 24, actionWidth, 20).build());
-        retry = addRenderableWidget(Button.builder(Component.literal("重试"), button -> retry())
+        retry = addRenderableWidget(Button.builder(
+                        Component.translatable("screen.tomewisp.action.retry"), button -> retry())
                 .bounds(actionsX, area.y() + 48, actionWidth, 20).build());
+        updateVirtualRows(Math.max(40, layout.transcript().width() - 18));
+        scroll = followBottom
+                ? virtualizer.maximumScroll(transcriptViewportHeight())
+                : virtualizer.clampScroll(scroll, transcriptViewportHeight());
         updateControls();
         setInitialFocus(composer);
     }
 
     @Override
     public void added() {
-        subscription = service.subscribe(snapshot -> {
-            GuideDisplayConfig displayConfig = currentDisplay();
-            GuideUiView next = GuideUiView.from(snapshot, displayConfig);
-            boolean changedSession = !view.selectedSession().equals(next.selectedSession());
-            int viewportHeight = layout == null ? 0 : layout.transcript().height() - 14;
-            GuideViewportAnchor anchor = layout == null ? null : virtualizer.anchorAt(scroll);
-            boolean shouldFollow = followBottom;
-            boolean closedDetail = refreshDetail(next);
-            projectedDisplay = displayConfig;
-            view = next;
-            if (changedSession) {
-                scroll = 0;
-                followBottom = true;
-                semanticLayouts.clear();
-                semanticHashes.clear();
-            } else if (layout != null) {
-                updateVirtualRows(Math.max(40, layout.transcript().width() - 18));
-                scroll = shouldFollow
-                        ? virtualizer.maximumScroll(viewportHeight)
-                        : virtualizer.restore(anchor, scroll, viewportHeight);
-            }
-            if ((changedSession || closedDetail) && composer != null) rebuildForDetail();
-            updateControls();
-        });
+        subscription = service.subscribe(pendingSnapshots::offer);
     }
 
     @Override
@@ -247,8 +237,11 @@ public final class TomeWispScreen extends Screen {
 
     @Override
     protected void repositionElements() {
+        GuideViewportAnchor anchor = layout == null ? null : virtualizer.anchorAt(scroll);
+        boolean shouldFollow = followBottom;
         draft = composer == null ? draft : composer.getValue();
         rebuildWidgets();
+        restoreTranscript(anchor, shouldFollow);
     }
 
     @Override
@@ -259,14 +252,24 @@ public final class TomeWispScreen extends Screen {
     @Override
     public void tick() {
         presentationTicks++;
+        applyPendingProjection();
+        if (layout != null) requestViewportHistory(layout.transcript());
         updateControls();
     }
 
     @Override
     public boolean keyPressed(KeyEvent event) {
-        if (event.isConfirmation() && event.hasControlDownWithQuirk()) {
+        ComposerKeyAction composerAction = composerKeyAction(
+                composer != null && getFocused() == composer,
+                event.isConfirmation(),
+                event.hasShiftDown(),
+                event.hasControlDownWithQuirk());
+        if (composerAction == ComposerKeyAction.SUBMIT) {
             submit();
             return true;
+        }
+        if (composerAction == ComposerKeyAction.NEWLINE) {
+            return super.keyPressed(event);
         }
         if (event.key() == GLFW.GLFW_KEY_F6) {
             List<Hit> focusable = hits.stream()
@@ -279,13 +282,14 @@ public final class TomeWispScreen extends Screen {
                 }
                 Hit next = focusable.get((current + 1) % focusable.size());
                 focusedContentId = next.focusId();
+                clearFocus();
                 if (minecraft != null && minecraft.getNarrator().isActive()) {
                     minecraft.getNarrator().saySystemNow(next.narration());
                 }
                 return true;
             }
         }
-        if (event.isConfirmation() && focusedContentId != null) {
+        if (event.isConfirmation() && getFocused() != composer && focusedContentId != null) {
             Hit focused = hits.stream()
                     .filter(hit -> focusedContentId.equals(hit.focusId()))
                     .findFirst().orElse(null);
@@ -329,6 +333,7 @@ public final class TomeWispScreen extends Screen {
                 if (route.kind() == GuideUiClickRoute.Kind.ACTION) {
                     Hit selected = detailHits.get(route.actionIndex());
                     focusedContentId = selected.focusId();
+                    clearFocus();
                     selected.action().run();
                     return true;
                 }
@@ -343,6 +348,7 @@ public final class TomeWispScreen extends Screen {
             if (sessionOverlay) {
                 for (Hit hit : List.copyOf(hits)) {
                     if (hit.kind() == HitKind.SESSION && hit.rect().contains(event.x(), event.y())) {
+                        clearFocus();
                         hit.action().run();
                         return true;
                     }
@@ -351,6 +357,7 @@ public final class TomeWispScreen extends Screen {
             for (Hit hit : List.copyOf(hits)) {
                 if (hit.rect().contains(event.x(), event.y())) {
                     focusedContentId = hit.focusId();
+                    clearFocus();
                     hit.action().run();
                     return true;
                 }
@@ -361,11 +368,11 @@ public final class TomeWispScreen extends Screen {
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
-        refreshDisplayProjection();
         graphics.fill(0, 0, width, height, 0xC00B0D12);
         renderTop(graphics);
         renderSessions(graphics);
         renderTranscript(graphics, mouseX, mouseY);
+        renderProgress(graphics);
         renderDetail(graphics, mouseX, mouseY);
         super.extractRenderState(graphics, mouseX, mouseY, a);
     }
@@ -407,17 +414,78 @@ public final class TomeWispScreen extends Screen {
         }
     }
 
+    private void renderProgress(GuiGraphicsExtractor graphics) {
+        GuideUiProgress progress = view.progress();
+        if (progress == null) {
+            activeProgressRenderFrames = 0;
+            return;
+        }
+        activeProgressRenderFrames++;
+        GuideUiLayout.Rect area = layout.progress();
+        graphics.fill(area.x(), area.y(), area.x() + area.width(), area.y() + area.height(), PANEL_ALT);
+        graphics.enableScissor(area.x(), area.y(), area.x() + area.width(), area.y() + area.height());
+        List<FormattedCharSequence> lines = font.split(
+                progressMessage(progress, Instant.now(), projectedDisplay.debugMode()),
+                Math.max(1, area.width() - 12));
+        for (int index = 0; index < Math.min(2, lines.size()); index++) {
+            graphics.text(font, lines.get(index), area.x() + 6, area.y() + 2 + index * 10,
+                    progress.phase() == dev.tomewisp.guide.GuideRequestPhase.ENDPOINT_WAIT
+                            ? 0xFFFFD479 : ACCENT,
+                    false);
+        }
+        graphics.disableScissor();
+    }
+
+    static Component progressMessage(
+            GuideUiProgress progress, Instant now, boolean debugMode) {
+        Objects.requireNonNull(progress, "progress");
+        Objects.requireNonNull(now, "now");
+        MutableComponent message = Component.translatable(progress.activityTranslationKey());
+        message.append(" · ").append(Component.translatable(
+                "screen.tomewisp.progress.elapsed",
+                formatDuration(Duration.between(progress.requestStartedAt(), now))));
+        if (progress.retryAt() != null) {
+            message.append(" · ").append(Component.translatable(
+                    "screen.tomewisp.progress.retry_in",
+                    formatDuration(Duration.between(now, progress.retryAt()))));
+            if (progress.attempt() > 0) {
+                message.append(" · ").append(Component.translatable(
+                        "screen.tomewisp.progress.attempt", progress.attempt()));
+            }
+        } else if (progress.deadlineAt() != null) {
+            message.append(" · ").append(Component.translatable(
+                    "screen.tomewisp.progress.remaining",
+                    formatDuration(Duration.between(now, progress.deadlineAt()))));
+        } else if (progress.phase()
+                == dev.tomewisp.guide.GuideRequestPhase.RESPONSE_STREAMING) {
+            message.append(" · ").append(Component.translatable(
+                    "screen.tomewisp.progress.last_update",
+                    formatDuration(Duration.between(progress.lastProgressAt(), now))));
+        }
+        if (debugMode && progress.retryAt() == null && progress.attempt() > 0) {
+            message.append(" · ").append(Component.translatable(
+                    "screen.tomewisp.progress.attempt", progress.attempt()));
+        }
+        return message;
+    }
+
+    static String formatDuration(Duration duration) {
+        long seconds = Math.max(0, duration.getSeconds());
+        long hours = seconds / 3600;
+        long minutes = seconds % 3600 / 60;
+        long remainder = seconds % 60;
+        return hours > 0
+                ? "%d:%02d:%02d".formatted(hours, minutes, remainder)
+                : "%d:%02d".formatted(minutes, remainder);
+    }
+
     private void renderTranscript(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         hits.removeIf(hit -> hit.kind() == HitKind.CONTENT);
         GuideUiLayout.Rect area = layout.transcript();
         graphics.fill(area.x(), area.y(), area.x() + area.width(), area.y() + area.height(), PANEL);
         graphics.enableScissor(area.x(), area.y(), area.x() + area.width(), area.y() + area.height());
         int textWidth = Math.max(40, area.width() - 18);
-        updateVirtualRows(textWidth);
-        requestViewportHistory(area);
         int viewportHeight = Math.max(0, area.height() - 14);
-        if (followBottom) scroll = virtualizer.maximumScroll(viewportHeight);
-        else scroll = virtualizer.clampScroll(scroll, viewportHeight);
         GuideTranscriptVirtualizer.Window window = virtualizer.visible(scroll, viewportHeight, 30);
         int contentTop = area.y() + 7;
         if (view.rows().isEmpty()) {
@@ -428,7 +496,6 @@ public final class TomeWispScreen extends Screen {
             int y = contentTop - scroll + virtualizer.offset(index);
             renderRow(graphics, view.rows().get(index), area.x() + 9, y, textWidth, mouseX, mouseY);
         }
-        contentHeight = virtualizer.totalHeight() + 14;
         hits.removeIf(hit -> hit.kind() == HitKind.CONTENT && !intersects(hit.rect(), area));
         hits.stream()
                 .filter(hit -> hit.kind() == HitKind.CONTENT
@@ -487,17 +554,26 @@ public final class TomeWispScreen extends Screen {
         }
         if (row instanceof GuideUiRow.Tool tool) {
             GuideToolActivity activity = tool.activity();
+            List<FormattedCharSequence> summaries = toolSummaryLines(activity, width - 14);
+            int rowHeight = toolCardHeight(summaries.size());
             int color = activity.status() == GuideToolStatus.FAILED ? ERROR : 0xFF7FC8A9;
             String icon = switch (activity.status()) {
                 case RUNNING -> "◌";
                 case SUCCEEDED -> "✓";
                 case FAILED -> "!";
             };
-            graphics.fill(x + 2, y - 2, x + width - 2, y + 15, PANEL_ALT);
-            graphics.text(font, icon + " " + friendlyTool(activity.toolId()), x + 7, y + 2, color, false);
-            hits.add(new Hit(new GuideUiLayout.Rect(x + 2, y - 2, width - 4, 17),
+            graphics.fill(x + 2, y - 2, x + width - 2, y + rowHeight - 6, PANEL_ALT);
+            graphics.text(font, Component.literal(icon + " ").append(friendlyTool(activity.toolId())),
+                    x + 7, y + 2, color, false);
+            int summaryY = y + 14;
+            for (FormattedCharSequence summary : summaries) {
+                graphics.text(font, summary, x + 9, summaryY, MUTED, false);
+                summaryY += 10;
+            }
+            hits.add(new Hit(new GuideUiLayout.Rect(
+                            x + 2, y - 2, width - 4, rowHeight - 4),
                     HitKind.CONTENT, () -> open(tool)));
-            return y + 21;
+            return y + rowHeight;
         }
         if (row instanceof GuideUiRow.Persistence persistence) {
             int color = persistence.state()
@@ -548,8 +624,45 @@ public final class TomeWispScreen extends Screen {
                     ? 10 : semanticLayout(assistant, width - 6).height();
             return 11 + body + assistant.sources().size() * 12 + 8;
         }
-        if (row instanceof GuideUiRow.Tool) return 21;
+        if (row instanceof GuideUiRow.Tool tool) {
+            return toolCardHeight(toolSummaryLines(tool.activity(), width - 14).size());
+        }
         return 18;
+    }
+
+    private List<FormattedCharSequence> toolSummaryLines(
+            GuideToolActivity activity, int width) {
+        ArrayList<FormattedCharSequence> result = new ArrayList<>();
+        for (GuideToolMessage message : visibleToolSummaryMessages(
+                activity.presentationMessages())) {
+            for (FormattedCharSequence wrapped : font.split(
+                    toolMessage(message), Math.max(1, width))) {
+                result.add(wrapped);
+                if (result.size() == 3) return List.copyOf(result);
+            }
+        }
+        return List.copyOf(result);
+    }
+
+    static List<GuideToolMessage> visibleToolSummaryMessages(
+            List<GuideToolMessage> messages) {
+        return messages.stream()
+                .limit(3)
+                .toList();
+    }
+
+    static Component toolMessage(GuideToolMessage message) {
+        Object[] arguments = message.arguments().stream()
+                .map(Component::literal)
+                .toArray();
+        return Component.translatable(message.key().translationKey(), arguments);
+    }
+
+    static int toolCardHeight(int visibleSummaryLines) {
+        if (visibleSummaryLines < 0 || visibleSummaryLines > 3) {
+            throw new IllegalArgumentException("visible Tool summary line count must be 0..3");
+        }
+        return 21 + visibleSummaryLines * 10;
     }
 
     private int wrappedHeight(List<Component> paragraphs, int width) {
@@ -704,8 +817,8 @@ public final class TomeWispScreen extends Screen {
                 y = detailCard(graphics, card, detail, y, mouseX, mouseY);
             }
             if (toolDetail.cards().isEmpty()) {
-                for (String line : toolDetail.narration()) {
-                    y = detailLine(graphics, line, detail, y);
+                for (GuideToolMessage message : toolDetail.narration()) {
+                    y = detailLine(graphics, toolMessage(message), detail, y);
                 }
             }
             if (toolDetail.debug().isPresent()) {
@@ -1046,7 +1159,12 @@ public final class TomeWispScreen extends Screen {
     }
 
     private int detailLine(GuiGraphicsExtractor graphics, String text, GuideUiLayout.Rect detail, int y) {
-        for (FormattedCharSequence line : font.split(Component.literal(text), detail.width() - 16)) {
+        return detailLine(graphics, Component.literal(text), detail, y);
+    }
+
+    private int detailLine(
+            GuiGraphicsExtractor graphics, Component text, GuideUiLayout.Rect detail, int y) {
+        for (FormattedCharSequence line : font.split(text, detail.width() - 16)) {
             if (y >= detail.y() + 21 && y < detail.y() + detail.height() - 10) {
                 graphics.text(font, line, detail.x() + 8, y, TEXT, false);
             }
@@ -1070,8 +1188,11 @@ public final class TomeWispScreen extends Screen {
     }
 
     private void rebuildForDetail() {
+        GuideViewportAnchor anchor = layout == null ? null : virtualizer.anchorAt(scroll);
+        boolean shouldFollow = followBottom;
         draft = composer == null ? draft : composer.getValue();
         rebuildWidgets();
+        restoreTranscript(anchor, shouldFollow);
     }
 
     private boolean detailOpen() {
@@ -1108,14 +1229,47 @@ public final class TomeWispScreen extends Screen {
         return false;
     }
 
-    private void refreshDisplayProjection() {
+    private void applyPendingProjection() {
+        GuideSnapshot pending = pendingSnapshots.drain();
         GuideDisplayConfig nextDisplay = currentDisplay();
-        if (nextDisplay.equals(projectedDisplay)) return;
-        GuideUiView next = GuideUiView.from(service.snapshot(), nextDisplay);
-        refreshDetail(next);
+        if (pending == null && nextDisplay.equals(projectedDisplay)) return;
+        GuideSnapshot snapshot = pending == null ? service.snapshot() : pending;
+        applyProjection(GuideUiView.from(snapshot, nextDisplay), nextDisplay);
+    }
+
+    private void applyProjection(GuideUiView next, GuideDisplayConfig nextDisplay) {
+        boolean changedSession = !view.selectedSession().equals(next.selectedSession());
+        GuideViewportAnchor anchor = layout == null ? null : virtualizer.anchorAt(scroll);
+        boolean shouldFollow = followBottom;
+        boolean closedDetail = refreshDetail(next);
         projectedDisplay = nextDisplay;
         view = next;
+        if (changedSession) {
+            scroll = 0;
+            followBottom = true;
+            semanticLayouts.clear();
+            semanticHashes.clear();
+        }
+        if ((changedSession || closedDetail) && composer != null) {
+            draft = composer.getValue();
+            rebuildWidgets();
+        } else if (layout != null) {
+            updateVirtualRows(Math.max(40, layout.transcript().width() - 18));
+        }
+        restoreTranscript(changedSession ? null : anchor, changedSession || shouldFollow);
         updateControls();
+    }
+
+    private void restoreTranscript(GuideViewportAnchor anchor, boolean shouldFollow) {
+        if (layout == null) return;
+        int viewportHeight = transcriptViewportHeight();
+        scroll = shouldFollow
+                ? virtualizer.maximumScroll(viewportHeight)
+                : virtualizer.restore(anchor, scroll, viewportHeight);
+    }
+
+    private int transcriptViewportHeight() {
+        return layout == null ? 0 : Math.max(0, layout.transcript().height() - 14);
     }
 
     private GuideDisplayConfig currentDisplay() {
@@ -1254,20 +1408,89 @@ public final class TomeWispScreen extends Screen {
                 + source.evidence().authority() + "/" + source.evidence().completeness();
     }
 
-    private static String friendlyTool(String id) {
+    private static Component friendlyTool(String id) {
         int separator = id.indexOf(':');
         String name = separator >= 0 ? id.substring(separator + 1) : id;
         return switch (name) {
-            case "search_recipes" -> "搜索配方";
-            case "get_recipe" -> "读取完整配方";
-            case "find_item_usages" -> "查询物品用途";
-            case "inspect_inventory" -> "检查库存";
-            case "calculate_craftability" -> "计算可合成性";
-            case "search_knowledge" -> "搜索指南";
-            case "load_knowledge" -> "读取指南";
-            case "load_skill" -> "加载 Skill";
-            default -> name;
+            case "search_recipes" -> Component.translatable("screen.tomewisp.tool.search_recipes");
+            case "get_recipe" -> Component.translatable("screen.tomewisp.tool.get_recipe");
+            case "find_item_usages" -> Component.translatable("screen.tomewisp.tool.find_item_usages");
+            case "inspect_inventory" -> Component.translatable("screen.tomewisp.tool.inspect_inventory");
+            case "calculate_craftability" -> Component.translatable(
+                    "screen.tomewisp.tool.calculate_craftability");
+            case "resolve_resource" -> Component.translatable("screen.tomewisp.tool.resolve_resource");
+            case "search_knowledge" -> Component.translatable("screen.tomewisp.tool.search_knowledge");
+            case "load_knowledge", "get_knowledge_document" ->
+                    Component.translatable("screen.tomewisp.tool.load_knowledge");
+            case "list_knowledge_sources" ->
+                    Component.translatable("screen.tomewisp.tool.list_knowledge_sources");
+            case "get_patchouli_multiblock" ->
+                    Component.translatable("screen.tomewisp.tool.get_patchouli_multiblock");
+            case "load_skill" -> Component.translatable("screen.tomewisp.tool.load_skill");
+            case "platform_info" -> Component.translatable("screen.tomewisp.tool.platform_info");
+            case "player_context" -> Component.translatable("screen.tomewisp.tool.player_context");
+            case "inspect_game_state" -> Component.translatable(
+                    "screen.tomewisp.tool.inspect_game_state");
+            default -> Component.literal(name);
         };
+    }
+
+    enum ComposerKeyAction { SUBMIT, NEWLINE, DELEGATE }
+
+    static ComposerKeyAction composerKeyAction(
+            boolean composerFocused,
+            boolean confirmation,
+            boolean shiftDown,
+            boolean controlDown) {
+        if (!composerFocused || !confirmation) return ComposerKeyAction.DELEGATE;
+        if (controlDown) return ComposerKeyAction.SUBMIT;
+        return shiftDown ? ComposerKeyAction.NEWLINE : ComposerKeyAction.SUBMIT;
+    }
+
+    static final class TickCoalescer<T> {
+        private final java.util.concurrent.atomic.AtomicReference<T> pending =
+                new java.util.concurrent.atomic.AtomicReference<>();
+
+        void offer(T value) {
+            pending.set(Objects.requireNonNull(value, "value"));
+        }
+
+        T drain() {
+            return pending.getAndSet(null);
+        }
+    }
+
+    /** Development-only positioning used by the retained real-client screenshot probe. */
+    public void positionForDevelopmentProbe(double fraction) {
+        if (!Boolean.getBoolean("tomewisp.e2e.enabled")) {
+            throw new IllegalStateException("development probe is disabled");
+        }
+        if (!Double.isFinite(fraction) || fraction < 0.0D || fraction > 1.0D) {
+            throw new IllegalArgumentException("scroll fraction must be 0..1");
+        }
+        int maximum = virtualizer.maximumScroll(transcriptViewportHeight());
+        scroll = (int) Math.round(maximum * fraction);
+        followBottom = fraction == 1.0D;
+    }
+
+    /** Development-only Tool detail selection used by screenshot acceptance. */
+    public void selectToolForDevelopmentProbe(int index) {
+        if (!Boolean.getBoolean("tomewisp.e2e.enabled")) {
+            throw new IllegalStateException("development probe is disabled");
+        }
+        List<GuideUiRow.Tool> tools = view.rows().stream()
+                .filter(GuideUiRow.Tool.class::isInstance)
+                .map(GuideUiRow.Tool.class::cast)
+                .toList();
+        if (index < 0 || index >= tools.size()) {
+            throw new IllegalArgumentException("tool index is unavailable");
+        }
+        open(tools.get(index));
+    }
+
+    /** Development-only readiness check so retained screenshots prove the active strip rendered. */
+    public boolean hasRenderedActiveProgressForDevelopmentProbe() {
+        return activeProgressRenderFrames >= 2;
     }
 
     private enum HitKind { SESSION, CONTENT, DETAIL }

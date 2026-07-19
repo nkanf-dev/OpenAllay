@@ -5,6 +5,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import dev.tomewisp.agent.AgentEvent;
 import dev.tomewisp.agent.context.ContextCheckpointCodec;
+import dev.tomewisp.guide.GuideToolMessageCodec;
 import dev.tomewisp.model.ModelEvent;
 import dev.tomewisp.model.ModelFailure;
 import java.util.Objects;
@@ -28,6 +29,8 @@ public final class ServerAgentEventCodec {
         String eventJson;
         if (event instanceof AgentEvent.ContextCompacted compacted) {
             eventJson = checkpoints.encode(compacted.checkpoint());
+        } else if (event instanceof AgentEvent.ToolStarted started) {
+            eventJson = encodeToolStarted(started).toString();
         } else {
             Object body = event instanceof AgentEvent.ModelProgress progress ? progress.event() : event;
             eventJson = gson.toJson(body);
@@ -64,15 +67,16 @@ public final class ServerAgentEventCodec {
                     read(body, Set.of("id", "name", "input"), ModelEvent.ToolUseComplete.class));
             case "usage" -> new AgentEvent.ModelProgress(
                     read(body, Set.of("usage"), ModelEvent.UsageUpdate.class));
+            case "model_attempt_started" -> new AgentEvent.ModelProgress(
+                    readAttemptStarted(body));
+            case "model_response_started" -> new AgentEvent.ModelProgress(
+                    read(body, Set.of(), ModelEvent.ResponseStarted.class));
             case "rate_limited" -> new AgentEvent.ModelProgress(
                     read(body, Set.of("retryAfterMillis", "attempt"), ModelEvent.RateLimited.class));
             case "model_complete" -> new AgentEvent.ModelProgress(
                     read(body, Set.of("stopReason"), ModelEvent.MessageComplete.class));
             case "model_failure" -> new AgentEvent.ModelProgress(readModelFailure(body));
-            case "tool_started" -> read(
-                    body,
-                    Set.of("invocationId", "toolId"),
-                    AgentEvent.ToolStarted.class);
+            case "tool_started" -> readToolStarted(body);
             case "tool_completed" -> read(
                     body,
                     Set.of("invocationId", "toolId", "failure", "normalized"),
@@ -110,6 +114,41 @@ public final class ServerAgentEventCodec {
         return gson.fromJson(body, ModelFailure.class);
     }
 
+    private ModelEvent.AttemptStarted readAttemptStarted(JsonObject body) {
+        if (!body.keySet().equals(Set.of("attempt"))
+                && !body.keySet().equals(Set.of("attempt", "attemptTimeoutMillis"))) {
+            throw new IllegalArgumentException(
+                    "Server Agent event schema mismatch for AttemptStarted");
+        }
+        return gson.fromJson(body, ModelEvent.AttemptStarted.class);
+    }
+
+    private static JsonObject encodeToolStarted(AgentEvent.ToolStarted started) {
+        JsonObject body = new JsonObject();
+        body.addProperty("invocationId", started.invocationId());
+        body.addProperty("toolId", started.toolId());
+        body.add("presentationMessages", GuideToolMessageCodec.encode(
+                started.presentationMessages()));
+        return body;
+    }
+
+    private static AgentEvent.ToolStarted readToolStarted(JsonObject body) {
+        if (!body.keySet().equals(Set.of(
+                "invocationId", "toolId", "presentationMessages"))) {
+            throw new IllegalArgumentException("Server Tool start schema mismatch");
+        }
+        if (!body.get("invocationId").isJsonPrimitive()
+                || !body.getAsJsonPrimitive("invocationId").isString()
+                || !body.get("toolId").isJsonPrimitive()
+                || !body.getAsJsonPrimitive("toolId").isString()) {
+            throw new IllegalArgumentException("Server Tool start identity types are invalid");
+        }
+        return new AgentEvent.ToolStarted(
+                body.get("invocationId").getAsString(),
+                body.get("toolId").getAsString(),
+                GuideToolMessageCodec.decode(body.get("presentationMessages")));
+    }
+
     private static String type(AgentEvent event) {
         return switch (event) {
             case AgentEvent.StateChanged ignored -> "state";
@@ -123,6 +162,8 @@ public final class ServerAgentEventCodec {
                 case ModelEvent.ReasoningDelta ignored -> "reasoning_delta";
                 case ModelEvent.ToolUseComplete ignored -> "tool_use_complete";
                 case ModelEvent.UsageUpdate ignored -> "usage";
+                case ModelEvent.AttemptStarted ignored -> "model_attempt_started";
+                case ModelEvent.ResponseStarted ignored -> "model_response_started";
                 case ModelEvent.RateLimited ignored -> "rate_limited";
                 case ModelEvent.MessageComplete ignored -> "model_complete";
                 case ModelFailure ignored -> "model_failure";

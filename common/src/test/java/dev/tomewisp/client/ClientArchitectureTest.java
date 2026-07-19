@@ -50,7 +50,8 @@ final class ClientArchitectureTest {
                 dev.tomewisp.context.ToolInvocationContext.developmentConsole("test"), delivered::add).join();
         assertEquals(0, delivered.size());
         queued.forEach(Runnable::run);
-        assertEquals(4, delivered.size());
+        assertEquals(5, delivered.size());
+        assertTrue(delivered.stream().anyMatch(event -> event instanceof AgentEvent.ModelProgress));
     }
 
     @Test

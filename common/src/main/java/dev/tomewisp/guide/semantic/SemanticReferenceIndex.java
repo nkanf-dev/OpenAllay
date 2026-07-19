@@ -18,6 +18,7 @@ import java.util.UUID;
 public final class SemanticReferenceIndex {
     private static final java.util.Set<String> ITEM_FIELDS = java.util.Set.of(
             "itemId", "resolvedItems", "counts", "alternatives");
+    private static final java.util.Set<String> SOURCE_FIELDS = java.util.Set.of("sourceId");
 
     private final UUID requestId;
     private final Map<SemanticReferenceKind, Map<String, String>> origins;
@@ -83,6 +84,12 @@ public final class SemanticReferenceIndex {
                     SemanticReferenceKind.RECIPE,
                     RecipeSemanticHandle.encode(reference),
                     origin));
+            if ("sources".equals(field)) {
+                String sourceId = string(object, "id");
+                if (!sourceId.isBlank()) {
+                    put(values, SemanticReferenceKind.SOURCE, sourceId, origin);
+                }
+            }
             if ("counts".equals(field)) {
                 object.keySet().forEach(item -> putResource(
                         values, SemanticReferenceKind.ITEM, item, origin));
@@ -102,6 +109,9 @@ public final class SemanticReferenceIndex {
         if (element.isJsonPrimitive() && element.getAsJsonPrimitive().isString()
                 && ITEM_FIELDS.contains(field)) {
             putResource(values, SemanticReferenceKind.ITEM, element.getAsString(), origin);
+        } else if (element.isJsonPrimitive() && element.getAsJsonPrimitive().isString()
+                && SOURCE_FIELDS.contains(field)) {
+            put(values, SemanticReferenceKind.SOURCE, element.getAsString(), origin);
         }
     }
 

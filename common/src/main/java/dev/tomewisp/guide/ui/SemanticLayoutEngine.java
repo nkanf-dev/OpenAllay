@@ -66,14 +66,35 @@ public final class SemanticLayoutEngine {
                 int itemIndex = 0;
                 for (List<SemanticBlock> item : value.items()) {
                     String marker = value.ordered() ? number++ + ". " : "• ";
-                    output.add(new SemanticLayout.Line(
-                            value.nodeId() + "-marker-" + itemIndex++,
-                            SemanticLayout.Kind.TEXT,
-                            indent,
-                            measurer.lineHeight(SemanticLayout.Kind.TEXT),
-                            List.of(new SemanticLayout.Run(marker, SemanticLayout.Style.STRONG, null)),
-                            null));
-                    item.forEach(child -> flatten(child, indent + 10, width, measurer, output));
+                    int contentIndent = indent + Math.max(
+                            1, measurer.width(marker, SemanticLayout.Style.STRONG));
+                    int firstParagraph = firstParagraph(item);
+                    if (firstParagraph < 0) {
+                        output.add(new SemanticLayout.Line(
+                                value.nodeId() + "-marker-" + itemIndex,
+                                SemanticLayout.Kind.TEXT,
+                                indent,
+                                measurer.lineHeight(SemanticLayout.Kind.TEXT),
+                                List.of(new SemanticLayout.Run(
+                                        marker, SemanticLayout.Style.STRONG, null)),
+                                null));
+                    }
+                    for (int childIndex = 0; childIndex < item.size(); childIndex++) {
+                        SemanticBlock child = item.get(childIndex);
+                        if (childIndex == firstParagraph) {
+                            SemanticBlock.Paragraph paragraph = (SemanticBlock.Paragraph) child;
+                            ArrayList<SemanticLayout.Run> marked = new ArrayList<>();
+                            marked.add(new SemanticLayout.Run(
+                                    marker, SemanticLayout.Style.STRONG, null));
+                            marked.addAll(runs(paragraph.content(), SemanticLayout.Style.NORMAL));
+                            addWrapped(
+                                    paragraph.nodeId(), SemanticLayout.Kind.TEXT,
+                                    indent, contentIndent, marked, width, measurer, output);
+                        } else {
+                            flatten(child, contentIndent, width, measurer, output);
+                        }
+                    }
+                    itemIndex++;
                 }
             }
             case SemanticBlock.Table value -> {
@@ -116,6 +137,19 @@ public final class SemanticLayoutEngine {
             int width,
             Measurer measurer,
             List<SemanticLayout.Line> output) {
+        addWrapped(nodeId, kind, indent, indent, runs, width, measurer, output);
+    }
+
+    private void addWrapped(
+            String nodeId,
+            SemanticLayout.Kind kind,
+            int firstIndent,
+            int continuationIndent,
+            List<SemanticLayout.Run> runs,
+            int width,
+            Measurer measurer,
+            List<SemanticLayout.Line> output) {
+        int indent = firstIndent;
         int available = Math.max(1, width - indent);
         int initialOutputSize = output.size();
         ArrayList<SemanticLayout.Run> line = new ArrayList<>();
@@ -135,11 +169,13 @@ public final class SemanticLayoutEngine {
                     output.add(line(nodeId, lineIndex++, kind, indent, measurer, line));
                     line = new ArrayList<>();
                     used = 0;
+                    indent = continuationIndent;
+                    available = Math.max(1, width - indent);
                     offset += Character.charCount(codePoint);
                     continue;
                 }
                 int valueWidth = Math.max(1, measurer.width(value, run.style()));
-                if (used + valueWidth > available && !line.isEmpty()) {
+                if (used + valueWidth > available && (!line.isEmpty() || !chunk.isEmpty())) {
                     if (!chunk.isEmpty()) {
                         line.add(new SemanticLayout.Run(
                                 chunk.toString(), run.style(), run.reference()));
@@ -148,6 +184,8 @@ public final class SemanticLayoutEngine {
                     output.add(line(nodeId, lineIndex++, kind, indent, measurer, line));
                     line = new ArrayList<>();
                     used = 0;
+                    indent = continuationIndent;
+                    available = Math.max(1, width - indent);
                 }
                 chunk.append(value);
                 used += valueWidth;
@@ -159,6 +197,13 @@ public final class SemanticLayoutEngine {
         if (!line.isEmpty() || output.size() == initialOutputSize) {
             output.add(line(nodeId, lineIndex, kind, indent, measurer, line));
         }
+    }
+
+    private static int firstParagraph(List<SemanticBlock> item) {
+        for (int index = 0; index < item.size(); index++) {
+            if (item.get(index) instanceof SemanticBlock.Paragraph) return index;
+        }
+        return -1;
     }
 
     private static SemanticLayout.Line line(

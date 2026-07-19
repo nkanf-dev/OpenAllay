@@ -2,7 +2,9 @@ package dev.tomewisp.agent;
 
 import com.google.gson.JsonObject;
 import dev.tomewisp.agent.context.ContextCheckpoint;
+import dev.tomewisp.guide.GuideToolMessage;
 import dev.tomewisp.model.ModelEvent;
+import java.util.List;
 import java.util.Objects;
 
 public sealed interface AgentEvent
@@ -21,11 +23,24 @@ public sealed interface AgentEvent
         }
     }
 
-    record ModelProgress(ModelEvent event) implements AgentEvent {}
+    record ModelProgress(ModelEvent event) implements AgentEvent {
+        public ModelProgress {
+            Objects.requireNonNull(event, "event");
+        }
+    }
 
-    record ToolStarted(String invocationId, String toolId) implements AgentEvent {
+    record ToolStarted(
+            String invocationId,
+            String toolId,
+            List<GuideToolMessage> presentationMessages)
+            implements AgentEvent {
         public ToolStarted {
             requireIdentity(invocationId, toolId);
+            presentationMessages = List.copyOf(presentationMessages);
+        }
+
+        public ToolStarted(String invocationId, String toolId) {
+            this(invocationId, toolId, List.of());
         }
     }
 

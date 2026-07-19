@@ -20,6 +20,7 @@ public record GuideUiView(
         boolean canSend,
         boolean canCancel,
         boolean canRetry,
+        GuideUiProgress progress,
         List<GuideUiSession> sessions,
         List<GuideUiRow> rows,
         List<GuideUiModelChoice> modelChoices,
@@ -117,13 +118,7 @@ public record GuideUiView(
                                             tool.activity(), displayConfig.debugMode())));
                 }
             }
-            if (request.status() == GuideRequestStatus.RATE_LIMITED) {
-                rows.add(new GuideUiRow.Status(
-                        request.requestId(),
-                        request.status(),
-                        "模型限流，等待 " + request.retryAfterMillis() + "ms",
-                        null));
-            } else if (request.status() == GuideRequestStatus.FAILED
+            if (request.status() == GuideRequestStatus.FAILED
                     || request.status() == GuideRequestStatus.CANCELLED
                     || request.status() == GuideRequestStatus.INTERRUPTED) {
                 rows.add(new GuideUiRow.Status(
@@ -153,6 +148,7 @@ public record GuideUiView(
                                 != dev.tomewisp.guide.GuidePersistenceSnapshot.State.LOADING,
                 active != null,
                 retry != null && active == null,
+                active == null ? null : GuideUiProgress.from(active.progress()),
                 sessions,
                 rows,
                 modelChoices,

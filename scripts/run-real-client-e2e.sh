@@ -71,11 +71,13 @@ fi
 ./gradlew-curl ":$loader:runClient" --max-workers=1 \
   "${client_args[@]}" \
   -Dtomewisp.e2e.enabled=true \
-  -Dtomewisp.e2e.question="请查询铁块的配方，精确读取后检查库存并计算是否可制作，最后列出当前知识来源。" \
+  -Dtomewisp.e2e.question="${TOMEWISP_E2E_QUESTION:-请查询铁块的配方，精确读取后检查库存并计算是否可制作，最后列出当前知识来源。}" \
   -Dtomewisp.e2e.report="$report" \
-  -Dtomewisp.e2e.scenario="phase-4-semantic-history" \
+  -Dtomewisp.e2e.scenario="${TOMEWISP_E2E_SCENARIO:-phase-4-semantic-history}" \
   -Dtomewisp.e2e.modelMode=client \
   -Dtomewisp.e2e.historySeedRequests="${TOMEWISP_E2E_HISTORY_SEED_REQUESTS:-0}" \
+  -Dtomewisp.e2e.screenshotRoot="${TOMEWISP_E2E_SCREENSHOT_ROOT:-}" \
+  -Dtomewisp.e2e.shutdownAfterScreenshots="${TOMEWISP_E2E_SHUTDOWN_AFTER_SCREENSHOTS:-false}" \
   -Dtomewisp.e2e.shutdown="${TOMEWISP_E2E_SHUTDOWN:-true}"
 
 test -s "$report"
@@ -89,10 +91,40 @@ if report.get("outcome") != "COMPLETED":
         "failureMessage": report.get("failureMessage"),
     }, ensure_ascii=False))
 metrics = report.get("semanticMetrics", {})
+scenario = report.get("scenario")
+if scenario == "phase-4-game-state":
+    tool_ids = report.get("toolIds", [])
+    expected_sections = [
+        "OVERVIEW", "MODS", "OPTIONS", "PACKS", "SHADERS",
+        "DIAGNOSTICS", "PLAYER", "WORLD_QUERY",
+    ]
+    probes = report.get("toolProbes", [])
+    if tool_ids != ["tomewisp:inspect_game_state"] * len(expected_sections):
+        raise SystemExit("E2E did not inspect every registered outer game-state section")
+    if len(probes) != len(expected_sections):
+        raise SystemExit("E2E game-state probe count is incomplete")
+    for expected, probe in zip(expected_sections, probes):
+        if (probe.get("toolId") != "tomewisp:inspect_game_state"
+                or probe.get("status") != "SUCCEEDED"
+                or probe.get("section") != expected
+                or probe.get("failureCode") is not None):
+            raise SystemExit("E2E game-state section did not complete successfully: "
+                             + repr({"expected": expected, "probe": probe}))
+    if metrics.get("assistantSegments", 0) < 9:
+        raise SystemExit("E2E did not preserve game-state tool chronology")
+    raise SystemExit(0)
 if metrics.get("assistantSegments", 0) < 6:
     raise SystemExit("E2E did not preserve assistant/tool chronology")
-if metrics.get("controlledComponents", 0) < 3:
-    raise SystemExit("E2E did not retain controlled components")
+required_components = {
+    "item_row", "recipe_grid", "ingredient_check", "craftability_summary",
+    "progress_steps", "source_summary", "status_badge", "choice_group",
+}
+observed_components = set(report.get("controlledComponentTypes", []))
+if not required_components.issubset(observed_components):
+    raise SystemExit("E2E did not retain the complete controlled component catalog: "
+                     + repr(sorted(required_components - observed_components)))
+if metrics.get("controlledComponents", 0) < len(required_components):
+    raise SystemExit("E2E controlled component count is incomplete")
 if metrics.get("semanticFallbacks", 0) < 1:
     raise SystemExit("E2E did not retain malformed-component fallback")
 if "semantic_component_unsupported" not in report.get("semanticDiagnosticCodes", []):

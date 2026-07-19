@@ -171,7 +171,9 @@ public final class MinecraftSemanticRenderer {
                                 ? Component.translatable("screen.tomewisp.semantic.recipe")
                                 : Component.literal(value.label()),
                         x + 4, y + 4, ACCENT, false);
-                graphics.text(font, value.recipe().recipeId(), x + 4, y + 18, TEXT, false);
+                graphics.text(font, Component.translatable(
+                                "screen.tomewisp.semantic.recipe_verified"),
+                        x + 4, y + 18, MUTED, false);
                 action(graphics, font, Component.translatable(
                                 "screen.tomewisp.semantic.action.open_recipe"), x + 4, y + 34,
                         new Intent.ExactRecipe(value.recipe()), hits);

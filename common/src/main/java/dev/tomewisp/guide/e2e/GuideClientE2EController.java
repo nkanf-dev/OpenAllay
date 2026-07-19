@@ -12,6 +12,7 @@ import dev.tomewisp.guide.GuideTimelineEntry;
 import dev.tomewisp.guide.semantic.RichComponent;
 import dev.tomewisp.guide.semantic.SemanticBlock;
 import dev.tomewisp.guide.ui.SemanticLayoutCache;
+import dev.tomewisp.client.gui.TomeWispScreen;
 import dev.tomewisp.tool.ToolResult;
 import dev.tomewisp.recipe.RecipeProviderReadiness;
 import java.io.IOException;
@@ -52,6 +53,13 @@ public final class GuideClientE2EController {
     private boolean seedingHistory;
     private boolean started;
     private boolean finished;
+    private int screenshotStage = -1;
+    private int screenshotTicks;
+    private int originalWindowWidth;
+    private int originalWindowHeight;
+    private int activeScreenshotTicks;
+    private int activeProgressVisibleTicks;
+    private boolean activeScreenshotCaptured;
 
     public GuideClientE2EController(
             GuideClientE2EConfig config,
@@ -89,7 +97,19 @@ public final class GuideClientE2EController {
 
     /** Starts exactly once after a real client player exists. */
     public void tick(UUID actor) {
-        if (started || finished || actor == null) return;
+        if (finished) {
+            tickScreenshotProbe();
+            return;
+        }
+        if (started) {
+            tickActiveScreenshotProbe();
+            return;
+        }
+        if (actor == null) return;
+        if (!System.getProperty("tomewisp.e2e.screenshotRoot", "").isBlank()) {
+            var client = net.minecraft.client.Minecraft.getInstance();
+            if (client.gui.overlay() != null || client.gui.screen() != null) return;
+        }
         GuideService service = services.forActor(actor);
         if (service.snapshot().persistence().state()
                 == dev.tomewisp.guide.GuidePersistenceSnapshot.State.LOADING) {
@@ -152,6 +172,7 @@ public final class GuideClientE2EController {
     }
 
     private void ask(GuideService service) {
+        openScreenForScreenshotProbe(service);
         service.ask(config.question()).thenAccept(asked -> {
             if (asked instanceof ToolResult.Failure<UUID> failure) {
                 failWithoutRequest(failure.code(), failure.message());
@@ -213,6 +234,7 @@ public final class GuideClientE2EController {
                 request.sessionId(),
                 transitions,
                 request.tools().stream().map(value -> value.toolId()).toList(),
+                request.tools().stream().map(GuideClientE2EController::toolProbe).toList(),
                 request.sources().stream().map(value -> value.evidence()).toList(),
                 request.timeline().stream().map(value -> switch (value) {
                     case GuideTimelineEntry.Assistant ignored -> "assistant";
@@ -224,9 +246,106 @@ public final class GuideClientE2EController {
                 session.historyWindow().state().name(),
                 historyMetrics,
                 request.status(),
+                request.failure() == null ? null : request.failure().code(),
+                request.failure() == null ? null : request.failure().message(),
                 timings,
                 hashes);
+        if (!config.shutdownAfterReport()) {
+            net.minecraft.client.Minecraft.getInstance().execute(() -> {
+                var client = net.minecraft.client.Minecraft.getInstance();
+                originalWindowWidth = client.getWindow().getWidth();
+                originalWindowHeight = client.getWindow().getHeight();
+                client.gui.setScreen(new TomeWispScreen(services.forActor(snapshot.actorId())));
+                if (!System.getProperty("tomewisp.e2e.screenshotRoot", "").isBlank()) {
+                    screenshotStage = 0;
+                    screenshotTicks = 0;
+                }
+            });
+        }
         finish(new GuideE2EReportJson(gson).encode(report, secrets));
+    }
+
+    private void tickScreenshotProbe() {
+        if (screenshotStage < 0 || ++screenshotTicks < 8) return;
+        screenshotTicks = 0;
+        var client = net.minecraft.client.Minecraft.getInstance();
+        if (!(client.gui.screen() instanceof TomeWispScreen screen)) return;
+        switch (screenshotStage++) {
+            case 0 -> screen.positionForDevelopmentProbe(0.0D);
+            case 1 -> {
+                screenshot(client, "01-wide-top.png");
+                screen.positionForDevelopmentProbe(0.5D);
+            }
+            case 2 -> {
+                screenshot(client, "02-wide-middle.png");
+                screen.positionForDevelopmentProbe(1.0D);
+            }
+            case 3 -> {
+                screenshot(client, "03-wide-final.png");
+                screen.selectToolForDevelopmentProbe(1);
+            }
+            case 4 -> {
+                screenshot(client, "04-wide-tool-detail.png");
+                client.getWindow().setWindowed(640, 480);
+            }
+            case 5 -> screenshot(client, "05-narrow-tool-detail.png");
+            case 6 -> {
+                client.getWindow().setWindowed(originalWindowWidth, originalWindowHeight);
+                screenshotStage = -1;
+                if (Boolean.getBoolean("tomewisp.e2e.shutdownAfterScreenshots")) {
+                    shutdown.run();
+                }
+            }
+            default -> screenshotStage = -1;
+        }
+    }
+
+    private void tickActiveScreenshotProbe() {
+        if (activeScreenshotCaptured
+                || requestId == null
+                || System.getProperty("tomewisp.e2e.screenshotRoot", "").isBlank()
+                || ++activeScreenshotTicks < 4) {
+            return;
+        }
+        var client = net.minecraft.client.Minecraft.getInstance();
+        if (client.gui.overlay() == null
+                && client.gui.screen() instanceof TomeWispScreen screen
+                && screen.hasRenderedActiveProgressForDevelopmentProbe()) {
+            // A tick projection becomes visible in the framebuffer only after a later render.
+            // Retained evidence must show the strip, not the frame immediately before it.
+            if (++activeProgressVisibleTicks >= 3) {
+                activeScreenshotCaptured = true;
+                screenshot(client, "00-active-progress.png");
+            }
+        } else {
+            activeProgressVisibleTicks = 0;
+        }
+    }
+
+    private void openScreenForScreenshotProbe(GuideService service) {
+        if (config.shutdownAfterReport()
+                || System.getProperty("tomewisp.e2e.screenshotRoot", "").isBlank()) {
+            return;
+        }
+        net.minecraft.client.Minecraft.getInstance().execute(() -> {
+            var client = net.minecraft.client.Minecraft.getInstance();
+            originalWindowWidth = client.getWindow().getWidth();
+            originalWindowHeight = client.getWindow().getHeight();
+            client.gui.setScreen(new TomeWispScreen(service));
+        });
+    }
+
+    private static void screenshot(net.minecraft.client.Minecraft client, String name) {
+        java.io.File root = new java.io.File(
+                System.getProperty("tomewisp.e2e.screenshotRoot"));
+        root.mkdirs();
+        net.minecraft.client.Screenshot.grab(
+                root,
+                name,
+                client.gameRenderer.mainRenderTarget(),
+                1,
+                component -> System.out.println("TomeWisp E2E screenshot: "
+                        + component.getString()));
     }
 
     private static SemanticSummary summarize(GuideRequestSnapshot request) {
@@ -256,6 +375,25 @@ public final class GuideClientE2EController {
         metrics.put("semanticFallbacks", fallbacks);
         return new SemanticSummary(
                 metrics, List.copyOf(diagnostics), List.copyOf(componentTypes));
+    }
+
+    private static GuideE2EReport.ToolProbe toolProbe(dev.tomewisp.guide.GuideToolActivity activity) {
+        var normalized = activity.normalized();
+        String section = null;
+        String failureCode = null;
+        if (normalized != null) {
+            if (normalized.has("value") && normalized.get("value").isJsonObject()) {
+                var value = normalized.getAsJsonObject("value");
+                if (value.has("section") && value.get("section").isJsonPrimitive()) {
+                    section = value.get("section").getAsString();
+                }
+            }
+            if (normalized.has("code") && normalized.get("code").isJsonPrimitive()) {
+                failureCode = normalized.get("code").getAsString();
+            }
+        }
+        return new GuideE2EReport.ToolProbe(
+                activity.toolId(), activity.status(), section, failureCode);
     }
 
     private static void collect(

@@ -35,7 +35,7 @@ unzip -p "$fabric_jar" fabric.mod.json | python3 -c \
 python3 -c \
   'import json; [json.load(open(path, encoding="utf-8")) for path in ("common/src/main/resources/assets/tomewisp/lang/en_us.json", "common/src/main/resources/assets/tomewisp/lang/zh_cn.json")]'
 
-grep -Fq 'SCHEMA_VERSION = 4' \
+grep -Fq 'SCHEMA_VERSION = 5' \
   common/src/main/java/dev/tomewisp/guide/history/GuideHistoryPartition.java
 if rg -n -i 'migrate|migration|upgradeSchema' \
   common/src/main/java/dev/tomewisp/guide/history >/dev/null; then

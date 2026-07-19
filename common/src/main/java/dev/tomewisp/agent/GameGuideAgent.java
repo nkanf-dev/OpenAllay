@@ -16,16 +16,19 @@ import dev.tomewisp.model.ModelMessage;
 import dev.tomewisp.model.ModelRequest;
 import dev.tomewisp.model.ModelRole;
 import dev.tomewisp.model.ModelTurn;
+import dev.tomewisp.guide.GuideToolInvocationPresentation;
 import dev.tomewisp.tool.ToolResult;
 import dev.tomewisp.trace.replay.ToolResultNormalizer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.function.Consumer;
 
 public final class GameGuideAgent {
+    private static final String REPEATED_CALL_SENTINEL = "\u0000no_new_information";
     private final ModelClient model;
     private final AgentToolExecutor tools;
     private final AgentSessionStore sessions;
@@ -106,7 +109,7 @@ public final class GameGuideAgent {
                                     lease,
                                     reused.orElseThrow().messages(),
                                     completeMessages,
-                                    null,
+                                    Map.of(),
                                     trace,
                                     events)
                             .exceptionally(throwable ->
@@ -141,14 +144,14 @@ public final class GameGuideAgent {
                                 lease,
                                 result.projection().messages(),
                                 completeMessages,
-                                null,
+                                Map.of(),
                                 trace,
                                 events);
                     })
                     .exceptionally(throwable -> fail(request, lease, trace, events, throwable));
         }
         transition(AgentState.MODEL_WAIT, trace, events);
-        return loop(request, lease, messages, completeMessages, null, trace, events)
+        return loop(request, lease, messages, completeMessages, Map.of(), trace, events)
                 .exceptionally(throwable -> fail(request, lease, trace, events, throwable));
     }
 
@@ -157,7 +160,7 @@ public final class GameGuideAgent {
             AgentSessionStore.Lease lease,
             List<ModelMessage> messages,
             List<ModelMessage> completeMessages,
-            String previousCallKey,
+            Map<String, String> previousCallOutcomes,
             LiveAgentTraceRecorder trace,
             Consumer<AgentEvent> events) {
         lease.cancellation().throwIfCancelled();
@@ -205,7 +208,7 @@ public final class GameGuideAgent {
                                     turn.toolUses(),
                                     nextMessages,
                                     nextCompleteMessages,
-                                    previousCallKey,
+                                    previousCallOutcomes,
                                     trace,
                                     events)
                             .thenCompose(outcome -> {
@@ -215,7 +218,7 @@ public final class GameGuideAgent {
                                         lease,
                                         outcome.messages(),
                                         outcome.completeMessages(),
-                                        outcome.lastCallKey(),
+                                        outcome.callOutcomes(),
                                         trace,
                                         events);
                             });
@@ -228,27 +231,47 @@ public final class GameGuideAgent {
             List<ModelContent.ToolUse> calls,
             List<ModelMessage> messages,
             List<ModelMessage> completeMessages,
-            String previousCallKey,
+            Map<String, String> previousCallOutcomes,
             LiveAgentTraceRecorder trace,
             Consumer<AgentEvent> events) {
         CompletableFuture<ToolOutcome> chain = CompletableFuture.completedFuture(
                 new ToolOutcome(
                         new ArrayList<>(messages),
                         new ArrayList<>(completeMessages),
-                        previousCallKey,
+                        Map.copyOf(previousCallOutcomes),
                         new ArrayList<>()));
         for (ModelContent.ToolUse call : calls) {
             chain = chain.thenCompose(outcome -> {
                 lease.cancellation().throwIfCancelled();
                 String callKey = call.name() + ":" + canonical(call.input());
-                if (callKey.equals(outcome.lastCallKey())) {
-                    throw new ModelClientException(new dev.tomewisp.model.ModelFailure(
-                            "repeated_tool_call",
-                            "Model repeated the same tool call without new information",
-                            null));
-                }
                 String exposedId = call.name();
-                events.accept(new AgentEvent.ToolStarted(call.id(), exposedId));
+                String previousOutcome = outcome.callOutcomes().get(callKey);
+                if (previousOutcome != null) {
+                    if (REPEATED_CALL_SENTINEL.equals(previousOutcome)) {
+                        throw new ModelClientException(new dev.tomewisp.model.ModelFailure(
+                                "repeated_tool_call",
+                                "Model ignored a no-new-information result and repeated the same tool call again",
+                                null));
+                    }
+                    AgentToolResult repeated = noNewInformation(exposedId);
+                    trace.toolCall(exposedId, call.input());
+                    trace.toolResult(repeated);
+                    List<ModelContent> results = new ArrayList<>(outcome.results());
+                    results.add(new ModelContent.ToolResult(
+                            call.id(), repeated.normalized(), true));
+                    Map<String, String> updatedCallOutcomes =
+                            new java.util.HashMap<>(outcome.callOutcomes());
+                    updatedCallOutcomes.put(callKey, REPEATED_CALL_SENTINEL);
+                    return CompletableFuture.completedFuture(new ToolOutcome(
+                            outcome.messages(),
+                            outcome.completeMessages(),
+                            Map.copyOf(updatedCallOutcomes),
+                            results));
+                }
+                events.accept(new AgentEvent.ToolStarted(
+                        call.id(),
+                        exposedId,
+                        GuideToolInvocationPresentation.messages(exposedId, call.input())));
                 trace.toolCall(exposedId, call.input());
                 return tools.execute(call.name(), call.input(), request.context(), lease.cancellation())
                         .thenApply(result -> {
@@ -261,8 +284,15 @@ public final class GameGuideAgent {
                             List<ModelContent> results = new ArrayList<>(outcome.results());
                             results.add(new ModelContent.ToolResult(
                                     call.id(), result.normalized(), result.failure()));
+                            String canonicalOutcome = canonical(result.normalized());
+                            Map<String, String> updatedCallOutcomes =
+                                    new java.util.HashMap<>(outcome.callOutcomes());
+                            updatedCallOutcomes.put(callKey, canonicalOutcome);
                             return new ToolOutcome(
-                                    outcome.messages(), outcome.completeMessages(), callKey, results);
+                                    outcome.messages(),
+                                    outcome.completeMessages(),
+                                    Map.copyOf(updatedCallOutcomes),
+                                    results);
                         });
             });
         }
@@ -271,7 +301,8 @@ public final class GameGuideAgent {
             updated.add(new ModelMessage(ModelRole.USER, outcome.results()));
             List<ModelMessage> updatedComplete = new ArrayList<>(outcome.completeMessages());
             updatedComplete.add(new ModelMessage(ModelRole.USER, outcome.results()));
-            return new ToolOutcome(updated, updatedComplete, outcome.lastCallKey(), List.of());
+            return new ToolOutcome(
+                    updated, updatedComplete, outcome.callOutcomes(), List.of());
         });
     }
 
@@ -310,6 +341,19 @@ public final class GameGuideAgent {
         return gson.toJson(canonicalizer.canonicalize(value));
     }
 
+    private JsonObject normalizedFailure(String code, String message) {
+        return canonicalizer.normalize(new ToolResult.Failure<>(code, message), Object.class);
+    }
+
+    private AgentToolResult noNewInformation(String toolId) {
+        return new AgentToolResult(
+                toolId,
+                normalizedFailure(
+                        "no_new_information",
+                        "This exact read-only call already completed against the same request snapshot; stop calling tools and answer from the existing evidence."),
+                true);
+    }
+
     private static void transition(
             AgentState state,
             LiveAgentTraceRecorder trace,
@@ -329,6 +373,6 @@ public final class GameGuideAgent {
     private record ToolOutcome(
             List<ModelMessage> messages,
             List<ModelMessage> completeMessages,
-            String lastCallKey,
+            Map<String, String> callOutcomes,
             List<ModelContent> results) {}
 }

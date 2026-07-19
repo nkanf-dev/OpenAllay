@@ -23,6 +23,7 @@ import dev.tomewisp.guide.GuideSessionSnapshot;
 import dev.tomewisp.guide.GuideSnapshot;
 import dev.tomewisp.guide.GuideTimelineEntry;
 import dev.tomewisp.guide.GuideToolActivity;
+import dev.tomewisp.guide.GuideToolMessage;
 import dev.tomewisp.guide.GuideToolStatus;
 import dev.tomewisp.guide.GuideTopology;
 import dev.tomewisp.guide.history.GuideHistoryActivity;
@@ -311,7 +312,7 @@ final class SettingsDiagnosticsAggregatorTest {
                 JsonParser.parseString("""
                         {"authorization":"secret-value"}
                         """).getAsJsonObject(),
-                List.of("reasoning secret-value"),
+                List.of(GuideToolMessage.of(GuideToolMessage.Key.RESULT_COMPLETED)),
                 List.of());
         GuideRequestSnapshot request = new GuideRequestSnapshot(
                 REQUEST,

@@ -332,17 +332,8 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
     }
 
     private String systemPrompt() {
-        return """
-                You are TomeWisp, an in-game modded Minecraft guide. Use tools for pack-specific facts.
-                Never claim unavailable data exists. Cite source IDs and provenance in factual answers.
-                Load a Skill when its metadata matches the request, then follow its workflow.
-
-                %s
-
-                %s
-                """.formatted(
-                        dev.tomewisp.guide.semantic.SemanticPromptGuidance.text(),
-                        capabilities.skills().metadataPrompt());
+        return dev.tomewisp.agent.AgentSystemPrompt.compose(
+                capabilities.skills().metadataPrompt());
     }
 
     private static EndpointRuntime endpoint(

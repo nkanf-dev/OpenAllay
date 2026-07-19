@@ -10,7 +10,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
-/** Closed set of minimum durable changes accepted by schema 4. */
+/** Closed set of minimum durable changes accepted by schema 5. */
 public sealed interface GuideHistoryMutation permits
         GuideHistoryMutation.UpsertPartition,
         GuideHistoryMutation.UpsertSession,

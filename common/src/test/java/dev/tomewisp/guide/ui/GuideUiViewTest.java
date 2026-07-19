@@ -12,12 +12,15 @@ import dev.tomewisp.guide.GuideModelMode;
 import dev.tomewisp.guide.GuideModelSelection;
 import dev.tomewisp.guide.GuidePersistenceSnapshot;
 import dev.tomewisp.guide.GuideRequestSnapshot;
+import dev.tomewisp.guide.GuideRequestPhase;
+import dev.tomewisp.guide.GuideRequestProgress;
 import dev.tomewisp.guide.GuideRequestStatus;
 import dev.tomewisp.guide.GuideSessionSnapshot;
 import dev.tomewisp.guide.GuideSnapshot;
 import dev.tomewisp.guide.GuideTopology;
 import dev.tomewisp.guide.GuideTimelineEntry;
 import dev.tomewisp.guide.GuideToolActivity;
+import dev.tomewisp.guide.GuideToolMessage;
 import dev.tomewisp.guide.GuideToolStatus;
 import dev.tomewisp.model.ModelUsage;
 import java.time.Instant;
@@ -37,6 +40,9 @@ final class GuideUiViewTest {
         assertTrue(((GuideUiRow.Assistant) streaming.rows().get(1)).streaming());
         assertTrue(streaming.canCancel());
         assertFalse(streaming.canSend());
+        assertEquals(GuideRequestPhase.MODEL_WAIT, streaming.progress().phase());
+        assertEquals("screen.tomewisp.progress.model_wait",
+                streaming.progress().activityTranslationKey());
 
         GuideUiView completed = GuideUiView.from(snapshot(request(
                 GuideRequestStatus.COMPLETED, "complete", Instant.EPOCH.plusSeconds(2), null)));
@@ -45,6 +51,79 @@ final class GuideUiViewTest {
         assertEquals("complete", ((GuideUiRow.Assistant) completed.rows().get(1))
                 .semantic().fallbackText());
         assertFalse(((GuideUiRow.Assistant) completed.rows().get(1)).streaming());
+        assertTrue(completed.progress() == null);
+    }
+
+    @Test
+    void activeProgressProjectionKeepsOnlyRedactedTimingAndAttemptState() {
+        Instant started = Instant.parse("2026-07-19T00:00:00Z");
+        GuideRequestProgress progress = new GuideRequestProgress(
+                GuideRequestPhase.RESPONSE_STREAMING,
+                started,
+                started.plusSeconds(3),
+                started.plusSeconds(9),
+                2,
+                null,
+                started.plusSeconds(300));
+        GuideRequestSnapshot active = new GuideRequestSnapshot(
+                REQUEST,
+                "main",
+                GuideTopology.CLIENT_LOCAL,
+                "private player text",
+                List.of(),
+                GuideRequestStatus.MODEL_WAIT,
+                List.of(),
+                ModelUsage.empty(),
+                null,
+                null,
+                started,
+                started.plusSeconds(9),
+                null,
+                GuideModelSelection.client("default"),
+                progress);
+
+        GuideUiProgress projected = GuideUiView.from(snapshot(active)).progress();
+
+        assertEquals(GuideRequestPhase.RESPONSE_STREAMING, projected.phase());
+        assertEquals(2, projected.attempt());
+        assertEquals(started.plusSeconds(9), projected.lastProgressAt());
+        assertEquals(started.plusSeconds(300), projected.deadlineAt());
+        assertFalse(projected.toString().contains("private player text"));
+    }
+
+    @Test
+    void rateLimitUsesFixedProgressSurfaceInsteadOfMovingTranscriptRow() {
+        Instant started = Instant.parse("2026-07-19T00:00:00Z");
+        GuideRequestProgress progress = new GuideRequestProgress(
+                GuideRequestPhase.ENDPOINT_WAIT,
+                started,
+                started.plusSeconds(1),
+                started.plusSeconds(1),
+                2,
+                started.plusSeconds(29),
+                null);
+        GuideRequestSnapshot limited = new GuideRequestSnapshot(
+                REQUEST,
+                "main",
+                GuideTopology.CLIENT_LOCAL,
+                "question",
+                List.of(),
+                GuideRequestStatus.RATE_LIMITED,
+                List.of(),
+                ModelUsage.empty(),
+                28_000L,
+                null,
+                started,
+                started.plusSeconds(1),
+                null,
+                GuideModelSelection.client("default"),
+                progress);
+
+        GuideUiView view = GuideUiView.from(snapshot(limited));
+
+        assertEquals(GuideRequestPhase.ENDPOINT_WAIT, view.progress().phase());
+        assertEquals(started.plusSeconds(29), view.progress().retryAt());
+        assertFalse(view.rows().stream().anyMatch(GuideUiRow.Status.class::isInstance));
     }
 
     @Test
@@ -127,7 +206,10 @@ final class GuideUiViewTest {
                 JsonParser.parseString("""
                         {"status":"success","value":{"counts":{"minecraft:apple":3}}}
                         """).getAsJsonObject(),
-                List.of("3 apples"),
+                List.of(GuideToolMessage.of(
+                        GuideToolMessage.Key.INVENTORY_ITEM,
+                        "minecraft:apple",
+                        "3")),
                 List.of());
         GuideRequestSnapshot request = new GuideRequestSnapshot(
                 REQUEST,

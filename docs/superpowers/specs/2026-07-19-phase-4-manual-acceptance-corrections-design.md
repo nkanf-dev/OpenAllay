@@ -54,7 +54,7 @@ with external file overrides.
 - This design does not add arbitrary Web Fetch, Wiki HTTP, MC Wiki, or MC
   encyclopedia network authority. Future source kinds must receive their own
   endpoint, permission, cache, and evidence decisions.
-- No migration path is retained for schema 1, 2, or 3 history test data.
+- No migration path is retained for schema 1, 2, 3, or 4 history test data.
 - This does not claim encryption against another local account/process that can
   read the Minecraft configuration directory. The credential file receives
   restrictive permissions and is never exposed through product state, but an
@@ -276,14 +276,14 @@ shape is intentionally ready for a later narrowly authorized write Tool.
 
 ## 5. Pre-release History Rebuild
 
-The current history schema is 4. On startup, `SqliteGuideHistoryStore` applies
+The current history schema is 5. On startup, `SqliteGuideHistoryStore` applies
 an explicit pre-release schema policy:
 
-- fresh database: create schema 4 transactionally;
-- recognized TomeWisp schema 1, 2, or 3: transactionally drop only TomeWisp
-  application tables and create schema 4;
-- schema 4: open normally;
-- future schema greater than 4, missing/inconsistent metadata, unrecognized
+- fresh database: create schema 5 transactionally;
+- recognized TomeWisp schema 1, 2, 3, or 4: transactionally drop only TomeWisp
+  application tables and create schema 5;
+- schema 5: open normally;
+- future schema greater than 5, missing/inconsistent metadata, unrecognized
   tables, corrupt database, or wrong file: fail closed without deletion.
 
 The existing database-reset transaction and rollback behavior are reused. A
@@ -343,7 +343,7 @@ Deterministic coverage must include:
 - official Agent Skills naming/frontmatter limits, external discovery,
   bundled/local precedence, atomic override, invalid-override isolation,
   reference confinement, and scripts rejection;
-- recognized history 1/2/3 rebuild, schema 4 preservation, future/corrupt
+- recognized history 1/2/3/4 rebuild, schema 5 preservation, future/corrupt
   rejection, reset rollback, and sibling-file preservation;
 - responsive Tools/Skills master-detail layouts, keyboard focus/narration, and
   Simplified Chinese/English localization.

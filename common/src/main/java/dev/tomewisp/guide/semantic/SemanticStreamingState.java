@@ -71,10 +71,13 @@ public final class SemanticStreamingState {
         List<SemanticBlock> allBlocks = new ArrayList<>(nextCompleted);
         List<SemanticDiagnostic> allDiagnostics = new ArrayList<>(nextDiagnostics);
         if (!tail.isBlank()) {
-            SemanticDocument parsedTail = parser.parseFragment(
-                    tail, allBlocks.size(), references);
-            allBlocks.addAll(parsedTail.blocks());
-            allDiagnostics.addAll(parsedTail.diagnostics());
+            // A partial CommonMark block can change type and measured height on every byte.
+            // Keep the mutable tail literal until completedBoundary validates a whole block.
+            String path = "streaming-tail-" + allBlocks.size();
+            SemanticInline.Text literal = new SemanticInline.Text(
+                    SemanticIds.create(path + ".s0", "text", "literal"), tail);
+            allBlocks.add(new SemanticBlock.Paragraph(
+                    SemanticIds.create(path, "paragraph", "literal"), List.of(literal)));
         }
         return new SemanticStreamingState(
                 replacement,

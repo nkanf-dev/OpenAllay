@@ -11,6 +11,7 @@ import dev.tomewisp.guide.GuideRequestStatus;
 import dev.tomewisp.guide.GuideSessionSnapshot;
 import dev.tomewisp.guide.GuideTimelineEntry;
 import dev.tomewisp.guide.GuideToolActivity;
+import dev.tomewisp.guide.GuideToolMessage;
 import dev.tomewisp.guide.GuideToolStatus;
 import dev.tomewisp.guide.GuideTopology;
 import dev.tomewisp.guide.semantic.SemanticDocument;
@@ -131,7 +132,9 @@ final class Phase4SemanticHistoryScaleTest {
             SemanticDocument last = documents.get((index + 1) % documents.size());
             GuideToolActivity tool = new GuideToolActivity(
                     "call-" + index, 0, "tomewisp:get_recipe", GuideToolStatus.SUCCEEDED,
-                    new JsonObject(), List.of("Recipe evidence " + index), List.of());
+                    new JsonObject(), List.of(GuideToolMessage.of(
+                            GuideToolMessage.Key.RECIPE_DETAIL,
+                            "minecraft:recipe_" + index)), List.of());
             List<GuideTimelineEntry> timeline = List.of(
                     new GuideTimelineEntry.Assistant(
                             0, first.fallbackText(), first, false, List.of()),

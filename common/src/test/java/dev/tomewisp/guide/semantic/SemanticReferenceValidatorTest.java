@@ -75,6 +75,35 @@ final class SemanticReferenceValidatorTest {
     }
 
     @Test
+    void knowledgeSourceListIdsBecomeSameRequestSourceReferences() {
+        JsonObject source = new JsonObject();
+        source.addProperty("id", "patchouli:resources");
+        com.google.gson.JsonArray sources = new com.google.gson.JsonArray();
+        sources.add(source);
+        JsonObject value = new JsonObject();
+        value.add("sources", sources);
+        JsonObject normalized = new JsonObject();
+        normalized.addProperty("status", "success");
+        normalized.add("value", value);
+        GuideToolActivity activity = new GuideToolActivity(
+                "tool-sources",
+                0,
+                "tomewisp:list_knowledge_sources",
+                GuideToolStatus.SUCCEEDED,
+                normalized,
+                List.of(),
+                List.of());
+
+        SemanticReferenceIndex index = SemanticReferenceIndex.from(
+                REQUEST, List.of(new GuideTimelineEntry.Tool(0, activity)));
+        SemanticReference reference = new SemanticReferenceValidator().validate(
+                "[[tw:source|patchouli:resources|Patchouli resources]]", index).reference();
+
+        assertTrue(reference.grounded());
+        assertEquals("tool-sources", reference.originInvocationId());
+    }
+
+    @Test
     void allRegisteredInlineKindsHaveExplicitGroundingSemantics() {
         SemanticReferenceValidator validator = new SemanticReferenceValidator();
         SemanticReferenceIndex index = index();

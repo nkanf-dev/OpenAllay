@@ -13,6 +13,7 @@ import dev.tomewisp.guide.GuideModelSelection;
 import dev.tomewisp.guide.GuideSource;
 import dev.tomewisp.guide.GuideTimelineEntry;
 import dev.tomewisp.guide.GuideToolActivity;
+import dev.tomewisp.guide.GuideToolMessage;
 import dev.tomewisp.guide.GuideToolStatus;
 import dev.tomewisp.testing.GroundedTestFixtures;
 import java.util.List;
@@ -78,7 +79,14 @@ final class GuideHistoryCodecTest {
                         "tomewisp:get_recipe",
                         GuideToolStatus.SUCCEEDED,
                         normalized,
-                        List.of("配方: minecraft:iron_block", "产出 minecraft:iron_block × 1"),
+                        List.of(
+                                GuideToolMessage.of(
+                                        GuideToolMessage.Key.RECIPE_DETAIL,
+                                        "minecraft:iron_block"),
+                                GuideToolMessage.of(
+                                        GuideToolMessage.Key.RECIPE_OUTPUT,
+                                        "minecraft:iron_block",
+                                        "1")),
                         List.of(source))),
                 new GuideTimelineEntry.Assistant(2, "It needs nine ingots.", false, List.of()));
 
@@ -90,8 +98,15 @@ final class GuideHistoryCodecTest {
                 .map(GuideTimelineEntry::ordinal).toList());
         GuideToolActivity tool = ((GuideTimelineEntry.Tool) restored.get(1)).activity();
         assertNull(tool.normalized());
-        assertEquals(List.of("配方: minecraft:iron_block", "产出 minecraft:iron_block × 1"),
-                tool.presentationLines());
+        assertEquals(List.of(
+                        GuideToolMessage.of(
+                                GuideToolMessage.Key.RECIPE_DETAIL,
+                                "minecraft:iron_block"),
+                        GuideToolMessage.of(
+                                GuideToolMessage.Key.RECIPE_OUTPUT,
+                                "minecraft:iron_block",
+                                "1")),
+                tool.presentationMessages());
         assertEquals(List.of(source), tool.sources());
         assertFalse(encoded.contains("secretRawField"));
         assertFalse(encoded.contains("must-not-persist"));
@@ -119,5 +134,28 @@ final class GuideHistoryCodecTest {
                 () -> codec.decodeTimeline(fractional.toString()));
         assertThrows(IllegalArgumentException.class,
                 () -> codec.decodeTimeline("{}"));
+    }
+
+    @Test
+    void rejectsUnknownTranslationMessagesInsideDurableToolProjection() {
+        GuideHistoryCodec codec = new GuideHistoryCodec();
+        String encoded = codec.encodeTimeline(List.of(new GuideTimelineEntry.Tool(
+                0,
+                new GuideToolActivity(
+                        "call-1",
+                        0,
+                        "tomewisp:get_recipe",
+                        GuideToolStatus.SUCCEEDED,
+                        null,
+                        List.of(GuideToolMessage.of(GuideToolMessage.Key.RESULT_COMPLETED)),
+                        List.of()))));
+        JsonArray unknownKey = JsonParser.parseString(encoded).getAsJsonArray();
+        unknownKey.get(0).getAsJsonObject()
+                .getAsJsonArray("presentationMessages")
+                .get(0).getAsJsonObject()
+                .addProperty("key", "ARBITRARY_TRANSLATION_KEY");
+
+        assertThrows(IllegalArgumentException.class,
+                () -> codec.decodeTimeline(unknownKey.toString()));
     }
 }

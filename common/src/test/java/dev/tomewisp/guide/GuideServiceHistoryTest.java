@@ -103,7 +103,7 @@ final class GuideServiceHistoryTest {
         GuideToolActivity persistedTool = latest.sessions().getFirst().requests().getFirst()
                 .tools().getFirst();
         assertNull(persistedTool.normalized());
-        assertFalse(persistedTool.presentationLines().isEmpty());
+        assertFalse(persistedTool.presentationMessages().isEmpty());
         assertEquals(List.of(checkpoint()), latest.sessions().getFirst().checkpoints());
 
         int latestIndex = history.saveCompletions.size() - 1;

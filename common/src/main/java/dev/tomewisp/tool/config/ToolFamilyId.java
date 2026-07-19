@@ -28,8 +28,7 @@ public enum ToolFamilyId {
     GAME_CONTEXT(
             "tomewisp:game_context",
             "game_context.json",
-            "tomewisp:platform_info",
-            "tomewisp:player_context"),
+            "tomewisp:inspect_game_state"),
     RESOURCE_RESOLUTION(
             "tomewisp:resource_resolution",
             "resource_resolution.json",

@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.JsonParser;
 import dev.tomewisp.guide.GuideToolActivity;
+import dev.tomewisp.guide.GuideToolMessage;
 import dev.tomewisp.guide.GuideToolStatus;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -52,13 +53,16 @@ final class GuideToolDetailPresenterTest {
                 """.formatted("0".repeat(64)));
 
         GuideToolDetailView normal = GuideToolDetailPresenter.project(activity, false);
-        String visible = normal.cards() + " " + normal.narration();
+        String visibleArguments = normal.narration().stream()
+                .flatMap(message -> message.arguments().stream())
+                .reduce("", (left, right) -> left + " " + right);
         assertTrue(normal.debug().isEmpty());
-        assertFalse(visible.contains("PARTIAL"));
-        assertFalse(visible.contains("UNAVAILABLE"));
-        assertFalse(visible.contains("mod_not_loaded"));
-        assertFalse(visible.contains("0".repeat(64)));
-        assertFalse(visible.contains("call-secret"));
+        assertTrue(normal.narration().stream().anyMatch(message ->
+                message.key() == GuideToolMessage.Key.CATALOG_PARTIAL));
+        assertFalse(visibleArguments.contains("UNAVAILABLE"));
+        assertFalse(visibleArguments.contains("mod_not_loaded"));
+        assertFalse(visibleArguments.contains("0".repeat(64)));
+        assertFalse(visibleArguments.contains("call-secret"));
 
         GuideToolDetailView debug = GuideToolDetailPresenter.project(activity, true);
         assertEquals("tomewisp:search_recipes", debug.debug().orElseThrow().toolId());
@@ -73,10 +77,9 @@ final class GuideToolDetailPresenterTest {
                 "tomewisp:get_recipe",
                 "{\"status\":\"failure\",\"code\":\"stale_reference\",\"message\":\"generation deadbeef\"}"),
                 false);
-        GuideDetailCard.Error error = assertInstanceOf(
-                GuideDetailCard.Error.class, failure.cards().getFirst());
-        assertFalse(error.message().contains("stale_reference"));
-        assertFalse(error.message().contains("deadbeef"));
+        assertTrue(failure.cards().isEmpty());
+        assertEquals(List.of(GuideToolMessage.of(
+                GuideToolMessage.Key.FAILURE_STALE_REFERENCE)), failure.narration());
 
         GuideToolDetailView unknown = GuideToolDetailPresenter.project(activity(
                 "tomewisp:future_tool",
@@ -86,6 +89,24 @@ final class GuideToolDetailPresenterTest {
         assertFalse(visible.contains("abc"));
     }
 
+    @Test
+    void knownTextToolsExposeUsefulFriendlyDetails() {
+        GuideToolDetailView resolved = GuideToolDetailPresenter.project(activity(
+                "tomewisp:resolve_resource",
+                """
+                {"status":"success","value":{"requestedQuery":"apple cider","exists":true,
+                  "matches":[{"id":"farmersdelight:apple_cider","kind":"item",
+                    "displayName":"Apple Cider","namespace":"farmersdelight",
+                    "provenance":"minecraft:item_registry"}]}}
+                """), false);
+
+        assertTrue(resolved.cards().isEmpty());
+        assertEquals(GuideToolMessage.Key.RESOLVE_ONE, resolved.narration().getFirst().key());
+        assertEquals(
+                List.of("Apple Cider", "farmersdelight:apple_cider", "item"),
+                resolved.narration().get(1).arguments());
+    }
+
     private static GuideToolActivity activity(String toolId, String json) {
         return new GuideToolActivity(
                 "call-secret",
@@ -93,7 +114,7 @@ final class GuideToolDetailPresenterTest {
                 toolId,
                 GuideToolStatus.SUCCEEDED,
                 JsonParser.parseString(json).getAsJsonObject(),
-                List.of("保留的友好说明"),
+                List.of(GuideToolMessage.of(GuideToolMessage.Key.RESULT_COMPLETED)),
                 List.of());
     }
 }

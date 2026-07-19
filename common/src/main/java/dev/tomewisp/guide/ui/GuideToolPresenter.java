@@ -1,6 +1,7 @@
 package dev.tomewisp.guide.ui;
 
 import com.google.gson.JsonObject;
+import dev.tomewisp.guide.GuideToolMessage;
 import dev.tomewisp.guide.GuideToolPresentation;
 import java.util.List;
 
@@ -8,7 +9,7 @@ import java.util.List;
 public final class GuideToolPresenter {
     private GuideToolPresenter() {}
 
-    public static List<String> lines(String toolId, JsonObject normalized) {
-        return GuideToolPresentation.lines(toolId, normalized);
+    public static List<GuideToolMessage> messages(String toolId, JsonObject normalized) {
+        return GuideToolPresentation.messages(toolId, normalized);
     }
 }

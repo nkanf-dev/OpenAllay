@@ -49,8 +49,8 @@ Markdown packages rather than hard-coded option cards.
 5. Bundled Skills use uppercase `SKILL.md` and are read-only. Local Agent Skills
    live under `config/tomewisp/skills/`; editing a bundled Skill creates a local
    override. Scripts and Skill-granted permissions remain unsupported.
-6. During the unshipped period, recognized TomeWisp history schemas 1, 2, and 3
-   are transactionally rebuilt to the single current schema 4. Future, corrupt,
+6. During the unshipped period, recognized TomeWisp history schemas 1, 2, 3,
+   and 4 are transactionally rebuilt to the single current schema 5. Future, corrupt,
    missing/inconsistent-metadata, foreign, or otherwise unrecognized databases
    still fail closed without mutation. No migration branch is added.
 

@@ -11,6 +11,7 @@ import dev.tomewisp.guide.GuideSessionSnapshot;
 import dev.tomewisp.guide.GuideSource;
 import dev.tomewisp.guide.GuideTimelineEntry;
 import dev.tomewisp.guide.GuideTopology;
+import dev.tomewisp.guide.GuideToolMessageCodec;
 import dev.tomewisp.model.ModelUsage;
 import dev.tomewisp.model.ModelContent;
 import dev.tomewisp.model.ModelMessage;
@@ -42,15 +43,8 @@ import java.util.UUID;
 /** JDBC store used only behind the asynchronous history repository. */
 public final class SqliteGuideHistoryStore implements GuideHistoryStore {
     private static final int SCHEMA_VERSION = GuideHistoryPartition.SCHEMA_VERSION;
-    private static final Set<String> RECOGNIZED_HISTORY_TABLES = Set.of(
-            "schema_metadata",
-            "partitions",
-            "sessions",
-            "requests",
-            "messages",
-            "timeline_entries",
-            "request_sources",
-            "compaction_checkpoints");
+    private static final Map<Integer, Map<String, List<ColumnSignature>>>
+            HISTORY_SCHEMA_SIGNATURES = historySchemaSignatures();
 
     private final Path database;
     private final Clock clock;
@@ -401,38 +395,43 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
     }
 
     private void ensureSchema(Connection connection) throws SQLException {
-        if (!tableExists(connection, "schema_metadata")) {
+        List<String> tables = applicationTables(connection);
+        if (!tables.contains("schema_metadata")) {
+            if (!tables.isEmpty()) {
+                throw unsupportedSchema("Guide history schema metadata is missing");
+            }
             createSchema(connection);
             return;
+        }
+        if (!tableSignature(connection, "schema_metadata")
+                .equals(HISTORY_SCHEMA_SIGNATURES.get(1).get("schema_metadata"))) {
+            throw unsupportedSchema("Guide history schema metadata is inconsistent");
         }
         int version;
         try (Statement statement = connection.createStatement();
                 ResultSet result = statement.executeQuery(
-                        "select schema_version from schema_metadata where singleton = 1")) {
-            if (!result.next()) {
-                throw new GuideHistoryException(
-                        "history_schema_unsupported", "Guide history schema metadata is missing");
+                        "select singleton, schema_version from schema_metadata")) {
+            if (!result.next() || result.getInt("singleton") != 1) {
+                throw unsupportedSchema("Guide history schema metadata is missing");
             }
-            version = result.getInt(1);
+            version = result.getInt("schema_version");
+            if (result.wasNull() || result.next()) {
+                throw unsupportedSchema("Guide history schema metadata is inconsistent");
+            }
         }
+        requireRecognizedSignature(connection, version, tables);
         if (version > 0 && version < SCHEMA_VERSION) {
-            rebuildRecognizedSchema(connection);
+            rebuildRecognizedSchema(connection, version, tables);
             return;
         }
         if (version != SCHEMA_VERSION) {
-            throw new GuideHistoryException(
-                    "history_schema_unsupported",
-                    "Unsupported guide history schema version " + version);
+            throw unsupportedSchema("Unsupported guide history schema version " + version);
         }
     }
 
-    private void rebuildRecognizedSchema(Connection connection) throws SQLException {
-        List<String> tables = applicationTables(connection);
-        if (!RECOGNIZED_HISTORY_TABLES.containsAll(tables)) {
-            throw new GuideHistoryException(
-                    "history_schema_unsupported",
-                    "Guide history database contains unrecognized tables");
-        }
+    private void rebuildRecognizedSchema(
+            Connection connection, int version, List<String> tables) throws SQLException {
+        requireRecognizedSignature(connection, version, tables);
         boolean autoCommit = connection.getAutoCommit();
         try (Statement statement = connection.createStatement()) {
             statement.execute("pragma foreign_keys=off");
@@ -461,14 +460,139 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
         }
     }
 
-    private static boolean tableExists(Connection connection, String table) throws SQLException {
-        try (PreparedStatement query = connection.prepareStatement(
-                "select 1 from sqlite_master where type = 'table' and name = ?")) {
-            query.setString(1, table);
-            try (ResultSet result = query.executeQuery()) {
-                return result.next();
+    private static void requireRecognizedSignature(
+            Connection connection, int version, List<String> tables) throws SQLException {
+        Map<String, List<ColumnSignature>> expected = HISTORY_SCHEMA_SIGNATURES.get(version);
+        if (expected == null || !Set.copyOf(tables).equals(expected.keySet())) {
+            throw unsupportedSchema("Guide history database has an unrecognized table set");
+        }
+        for (Map.Entry<String, List<ColumnSignature>> table : expected.entrySet()) {
+            if (!tableSignature(connection, table.getKey()).equals(table.getValue())) {
+                throw unsupportedSchema(
+                        "Guide history table " + table.getKey() + " has an unrecognized structure");
             }
         }
+    }
+
+    private static List<ColumnSignature> tableSignature(Connection connection, String table)
+            throws SQLException {
+        List<ColumnSignature> columns = new ArrayList<>();
+        try (Statement statement = connection.createStatement();
+                ResultSet result = statement.executeQuery(
+                        "pragma table_xinfo(" + quoteIdentifier(table) + ")")) {
+            while (result.next()) {
+                columns.add(new ColumnSignature(
+                        result.getString("name"),
+                        result.getString("type"),
+                        result.getInt("notnull") != 0,
+                        result.getInt("pk"),
+                        result.getInt("hidden")));
+            }
+        }
+        return List.copyOf(columns);
+    }
+
+    private static Map<Integer, Map<String, List<ColumnSignature>>> historySchemaSignatures() {
+        Map<Integer, Map<String, List<ColumnSignature>>> versions = new LinkedHashMap<>();
+        versions.put(1, historySchemaSignature(1));
+        versions.put(2, historySchemaSignature(2));
+        versions.put(3, historySchemaSignature(3));
+        versions.put(4, historySchemaSignature(4));
+        // Schema 5 changes the persisted payload contract, not the normalized SQLite columns.
+        versions.put(5, historySchemaSignature(4));
+        return Map.copyOf(versions);
+    }
+
+    private static Map<String, List<ColumnSignature>> historySchemaSignature(int version) {
+        Map<String, List<ColumnSignature>> tables = new LinkedHashMap<>();
+        tables.put("schema_metadata", columns(
+                column("singleton", "INTEGER", false, 1),
+                column("schema_version", "INTEGER", true, 0)));
+
+        List<ColumnSignature> partitions = new ArrayList<>(List.of(
+                column("scope_id", "TEXT", false, 1),
+                column("actor_id", "TEXT", true, 0),
+                column("connection_kind", "TEXT", true, 0),
+                column("selected_session", "TEXT", true, 0)));
+        if (version <= 2) {
+            partitions.add(column("model_mode", "TEXT", true, 0));
+        }
+        partitions.add(column("capture_mode", "TEXT", true, 0));
+        partitions.add(column("updated_at", "TEXT", true, 0));
+        tables.put("partitions", List.copyOf(partitions));
+
+        List<ColumnSignature> sessions = new ArrayList<>(List.of(
+                column("scope_id", "TEXT", true, 1),
+                column("session_id", "TEXT", true, 2),
+                column("ordinal", "INTEGER", true, 0)));
+        if (version >= 3) {
+            sessions.add(column("model_selection_json", "TEXT", true, 0));
+        }
+        tables.put("sessions", List.copyOf(sessions));
+
+        List<ColumnSignature> requests = new ArrayList<>(List.of(
+                column("scope_id", "TEXT", true, 1),
+                column("session_id", "TEXT", true, 0),
+                column("request_id", "TEXT", true, 2),
+                column(version >= 4 ? "sequence" : "ordinal", "INTEGER", true, 0),
+                column("topology", "TEXT", true, 0)));
+        if (version >= 3) {
+            requests.add(column("model_selection_json", "TEXT", true, 0));
+        }
+        requests.addAll(List.of(
+                column("user_message", "TEXT", true, 0),
+                column("status", "TEXT", true, 0),
+                column("input_tokens", "INTEGER", true, 0),
+                column("output_tokens", "INTEGER", true, 0),
+                column("cache_read_tokens", "INTEGER", true, 0),
+                column("retry_after_millis", "INTEGER", false, 0),
+                column("failure_code", "TEXT", false, 0),
+                column("failure_message", "TEXT", false, 0),
+                column("created_at", "TEXT", true, 0),
+                column("updated_at", "TEXT", true, 0),
+                column("terminal_at", "TEXT", false, 0)));
+        tables.put("requests", List.copyOf(requests));
+
+        tables.put("messages", columns(
+                column("scope_id", "TEXT", true, 1),
+                column("session_id", "TEXT", true, 2),
+                column("ordinal", "INTEGER", true, 3),
+                column("request_id", "TEXT", true, 0),
+                column("role", "TEXT", true, 0),
+                column("message_text", "TEXT", true, 0),
+                column("created_at", "TEXT", true, 0)));
+        tables.put("timeline_entries", payloadTableSignature());
+        tables.put("request_sources", payloadTableSignature());
+        if (version >= 2) {
+            tables.put("compaction_checkpoints", columns(
+                    column("scope_id", "TEXT", true, 1),
+                    column("session_id", "TEXT", true, 2),
+                    column("ordinal", "INTEGER", true, 3),
+                    column("checkpoint_id", "TEXT", true, 0),
+                    column("payload_json", "TEXT", true, 0)));
+        }
+        return Map.copyOf(tables);
+    }
+
+    private static List<ColumnSignature> payloadTableSignature() {
+        return columns(
+                column("scope_id", "TEXT", true, 1),
+                column("request_id", "TEXT", true, 2),
+                column("ordinal", "INTEGER", true, 3),
+                column("payload_json", "TEXT", true, 0));
+    }
+
+    private static List<ColumnSignature> columns(ColumnSignature... columns) {
+        return List.of(columns);
+    }
+
+    private static ColumnSignature column(
+            String name, String type, boolean notNull, int primaryKeyPosition) {
+        return new ColumnSignature(name, type, notNull, primaryKeyPosition, 0);
+    }
+
+    private static GuideHistoryException unsupportedSchema(String message) {
+        return new GuideHistoryException("history_schema_unsupported", message);
     }
 
     private static void createSchema(Connection connection) throws SQLException {
@@ -1216,9 +1340,8 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
                                     input))));
                     JsonObject result = new JsonObject();
                     result.addProperty("status", tool.activity().status().name());
-                    JsonArray lines = new JsonArray();
-                    tool.activity().presentationLines().forEach(lines::add);
-                    result.add("presentationLines", lines);
+                    result.add("presentationMessages", GuideToolMessageCodec.encode(
+                            tool.activity().presentationMessages()));
                     JsonArray sources = new JsonArray();
                     for (GuideSource source : tool.activity().sources()) {
                         JsonObject encoded = new JsonObject();
@@ -1670,6 +1793,13 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
     private record SequencedRequest(
             GuideHistoryCursor cursor,
             GuideRequestSnapshot request) {}
+
+    private record ColumnSignature(
+            String name,
+            String type,
+            boolean notNull,
+            int primaryKeyPosition,
+            int hidden) {}
 
     enum Mutation {
         COMMIT,

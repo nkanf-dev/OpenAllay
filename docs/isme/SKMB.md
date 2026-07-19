@@ -83,6 +83,16 @@ behavior, aligned Tool guidance/cards, and one sectioned read-only Tool for all
 player-observable outer game state. Deep Recipes/Guides remain independent and
 interactive/spatial world inspection remains deferred.
 
+Its implementation and focused deterministic suites are complete in the
+current Phase 4 worktree. Fabric and NeoForge graphical controllers each
+completed the native semantic/UI correction scenario with six screenshots,
+all eight controlled component types, and 32 semantic blocks. Both loaders also
+completed the eight-section real-client game-state scenario. The SKMB
+index intentionally keeps its commit as `pending` until the implementation
+commit exists. The latest clean production gate (525 tests), both-loader
+package/SQLite checks, final credential/diff/report/hash/manifest audit, and
+graphical evidence review all passed. Only commit/merge bookkeeping remains.
+
 ## Named States
 
 | state | meaning | owner | notes | source |
@@ -109,7 +119,7 @@ interactive/spatial world inspection remains deferred.
 | profile_referenced | A credential-free schema-2 model profile atomically references a resolvable local or external credential | ModelProfileSettingsStore | Raw secret remains outside model JSON and observable settings state | SKMB-2026-07-19-019 |
 | tool_config_saving | One complete logical Tool/source candidate is being validated and persisted | Tool settings service | Prior Tool snapshot remains active until atomic replacement succeeds | SKMB-2026-07-19-019 |
 | skill_reloading | A bundled/local Agent Skills package candidate is being validated | SkillRepository | Invalid override retains the previous valid or bundled package | SKMB-2026-07-19-019 |
-| history_schema_rebuilding | A recognized pre-release schema 1, 2, or 3 is being transactionally recreated as the current schema | GuideHistoryStore | Rollback preserves the older database if rebuild fails | SKMB-2026-07-19-019 |
+| history_schema_rebuilding | A recognized pre-release schema 1, 2, 3, or 4 is being transactionally recreated as the current schema | GuideHistoryStore | Rollback preserves the older database if rebuild fails | SKMB-2026-07-19-019 |
 | response_streaming | A model response body is actively producing validated deltas under its dispatch deadline | ModelClient | Cancellable; last-progress is observable and late bytes are generation-fenced | SKMB-2026-07-19-020 |
 | observable_snapshot_ready | Player-observable game state has been detached into immutable registered sections | ClientContextCapture | Contains no live Minecraft objects, secrets, raw command strings, or spatial scans | SKMB-2026-07-19-020 |
 
@@ -147,7 +157,7 @@ interactive/spatial world inspection remains deferred.
 | T28 | preparing | deterministic context estimate exceeds configured input budget | compacting | Protect the current request and structural tool pairs, then reduce old tool results | SKMB-2026-07-18-008 |
 | T29 | compacting | deterministic projection still exceeds budget | compacting | Use the same selected model topology to create a source-hashed structured summary checkpoint | SKMB-2026-07-18-008 |
 | T30 | compacting | cancel arrives | cancelled | Cancel summary work, store no successful checkpoint, and suppress primary dispatch | SKMB-2026-07-18-008 |
-| T31 | history_loading | recognized TomeWisp schema 1, 2, or 3 opens | history_schema_rebuilding | Transactionally drop only TomeWisp application tables and recreate the single current schema without migration | SKMB-2026-07-19-019 |
+| T31 | history_loading | recognized TomeWisp schema 1, 2, 3, or 4 opens | history_schema_rebuilding | Transactionally drop only TomeWisp application tables and recreate the single current schema without migration | SKMB-2026-07-19-019 |
 | T32 | any non-active session state | selected model/provider changes | unchanged | Keep the provider-neutral transcript/checkpoints; assemble the next request with the new model and its budget | SKMB-2026-07-18-008 |
 | T33 | any session state | session model selection changes | unchanged | Store the preference for that session's future requests; an active request retains its captured runtime | SKMB-2026-07-18-009 |
 | T34 | any UI state | debug mode changes | unchanged | Rebuild only the local normal/debug projection; do not rewrite history or change active work | SKMB-2026-07-18-010 |
@@ -221,7 +231,7 @@ interactive/spatial world inspection remains deferred.
 | I42 | Before the first formal release, durable storage has one current schema and no migration-only compatibility surface | SKMB-2026-07-18-011 |
 | I43 | Metadata cache/load/refresh is asynchronous, credential-free, source/model keyed, and subordinate to explicit limits | SKMB-2026-07-18-012 |
 | I44 | Shared HTTP transport grants no model tool, endpoint, credential, or evidence authority; each domain adapter must provide its own | SKMB-2026-07-18-013 |
-| I45 | Player-initiated normal history management is actor-scoped and whole-database reset is Debug Mode-only and separately confirmed; the only automatic destructive policy is SKMB-019's transactionally scoped rebuild of recognized unshipped schemas 1 through 3 | SKMB-2026-07-18-014, SKMB-2026-07-19-019 |
+| I45 | Player-initiated normal history management is actor-scoped and whole-database reset is Debug Mode-only and separately confirmed; the only automatic destructive policy is the transactionally scoped rebuild of recognized unshipped schemas 1 through 4 | SKMB-2026-07-18-014, SKMB-2026-07-19-019, SKMB-2026-07-19-020 |
 | I46 | Profile replacement is candidate-validated, atomically persisted, and published as one prepared runtime state; failure retains the prior file/runtime | SKMB-2026-07-18-015 |
 | I47 | Connection testing is an explicit isolated real request with no Guide context/tools/history, no retry/fallback, and no retained secret/body/output | SKMB-2026-07-18-015 |
 | I48 | Native settings use one common operation/snapshot service while model/credential, Tool/source, Skill, display, metadata, and history persistence remain independently versioned | SKMB-2026-07-18-016, SKMB-2026-07-19-019 |
@@ -237,7 +247,7 @@ interactive/spatial world inspection remains deferred.
 | I58 | Client model schema 2 and all observable settings state retain only qualified credential references/presence; raw API keys exist only in the transient masked input, SecretValue, provider header boundary, and local `credentials.sqlite3`, while `env:<name>` remains external/headless-only | SKMB-2026-07-19-019 |
 | I59 | Every source is owned and strictly validated by one logical Tool; built-in sources cannot be deleted, while registered user source kinds may support full CRUD | SKMB-2026-07-19-019 |
 | I60 | Bundled Skills are read-only Agent Skills packages with uppercase `SKILL.md`; local edits are external overrides and never grant scripts, paths, tools, or Agent write authority | SKMB-2026-07-19-019 |
-| I61 | Only recognized unshipped TomeWisp history schemas 1 through 3 rebuild automatically; future, corrupt, foreign, missing/inconsistent-metadata, or otherwise unrecognized databases remain untouched | SKMB-2026-07-19-019 |
+| I61 | Only recognized unshipped TomeWisp history schemas 1 through 4 rebuild automatically; future, corrupt, foreign, missing/inconsistent-metadata, or otherwise unrecognized databases remain untouched | SKMB-2026-07-19-019, SKMB-2026-07-19-020 |
 | I62 | Every active request has a redacted observable phase, elapsed basis, last-progress time and optional retry/deadline; clocks never create transcript or persistence writes | SKMB-2026-07-19-020 |
 | I63 | The configured model request timeout covers complete response-body consumption, and cancel/timeout/disconnect suppress every late stream event | SKMB-2026-07-19-020 |
 | I64 | Rendering never owns scroll mutation; streaming keeps a stable literal tail and preserves manual viewport anchors | SKMB-2026-07-19-020 |

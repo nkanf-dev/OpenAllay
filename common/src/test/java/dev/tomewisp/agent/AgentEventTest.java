@@ -2,6 +2,7 @@ package dev.tomewisp.agent;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.google.gson.JsonObject;
 import org.junit.jupiter.api.Test;
@@ -25,5 +26,10 @@ final class AgentEventTest {
         assertEquals("success", completed.normalized().get("status").getAsString());
         assertEquals(1, completed.normalized().size());
         assertFalse(completed.normalized().has("mutated"));
+    }
+
+    @Test
+    void modelProgressRequiresAClosedLifecycleOrContentEvent() {
+        assertThrows(NullPointerException.class, () -> new AgentEvent.ModelProgress(null));
     }
 }

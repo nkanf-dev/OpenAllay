@@ -55,7 +55,7 @@ if (version != SCHEMA_VERSION) {
 }
 ```
 
-The helper disables foreign keys before the transaction, drops only names returned by `applicationTables`, recreates schema 4, injects `Mutation.RESET`, commits, and maps rollback failure to `history_schema_rebuild_failed`. Missing/inconsistent metadata, foreign tables, corruption, and future versions remain untouched.
+The helper disables foreign keys before the transaction, drops only names returned by `applicationTables`, recreates schema 5, injects `Mutation.RESET`, commits, and maps rollback failure to `history_schema_rebuild_failed`. Missing/inconsistent metadata, foreign tables, corruption, and future versions remain untouched.
 
 - [x] **Step 4: Upgrade the accepted optional dependency and add the loader conflict**
 

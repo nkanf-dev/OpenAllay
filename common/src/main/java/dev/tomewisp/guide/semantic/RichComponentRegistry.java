@@ -43,6 +43,10 @@ public final class RichComponentRegistry {
         return new RichComponentRegistry(BuiltinRichComponents.decoders());
     }
 
+    Set<String> registeredTypes() {
+        return decoders.keySet();
+    }
+
     public Decode decode(String encoded, String nodeId, SemanticReferenceIndex references) {
         Objects.requireNonNull(references, "references");
         String fallback = encoded == null || encoded.isBlank()

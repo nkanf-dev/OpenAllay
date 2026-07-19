@@ -101,7 +101,7 @@ final class ToolFamilyConfigCodecTest {
     void everyOrdinaryCallableHasOneLogicalFamilyAndSkillLoadingIsExcluded() {
         assertEquals(
                 ToolFamilyId.GAME_CONTEXT,
-                ToolFamilyId.forCallableTool("tomewisp:player_context").orElseThrow());
+                ToolFamilyId.forCallableTool("tomewisp:inspect_game_state").orElseThrow());
         assertEquals(
                 ToolFamilyId.RESOURCE_RESOLUTION,
                 ToolFamilyId.forCallableTool("tomewisp:resolve_resource").orElseThrow());

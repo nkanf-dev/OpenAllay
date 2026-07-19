@@ -7,6 +7,20 @@
 - Decision basis: SKMB-2026-07-19-020
 - Target: Minecraft 26.2, Java 25, Fabric and NeoForge
 
+## Implementation and acceptance status
+
+The design is implemented in the current Phase 4 worktree. Focused
+deterministic coverage has passed for request progress and total-response
+timeout, native input/layout/semantic streaming, Tool cards and schemas, prompt
+guidance, and the unified observable game-state Tool. The Fabric and NeoForge
+real-client controllers each completed the native semantic/UI correction
+scenario and produced six native screenshots; each report records all eight
+controlled component types and 32 semantic blocks. Both loaders also completed
+the real-client eight-section game-state scenario. Final Phase
+4 acceptance remains open until the latest clean common/Fabric/NeoForge
+production gate and the final credential, diff, report, hash, and
+evidence-manifest audit pass.
+
 ## Context
 
 The corrected normal Fabric client can accept text and persist history, but
@@ -79,6 +93,10 @@ cancels it only after the response decoder finishes or the attempt terminates.
 Timeout closes the input stream, completes the decoder exceptionally as the
 stable `model_timeout`, cancels scheduled work, and releases the endpoint
 scheduler slot. Existing request identity/generation checks discard late data.
+When progress crosses a dedicated-server bridge, the protocol carries the
+relative attempt budget. The client creates its display-only deadline from its
+own receipt clock; server/client clock skew therefore cannot alter the
+server-owned watchdog or produce an invalid countdown.
 
 ## 2. Stable Streaming, Lists, Scroll, and Input
 
@@ -190,10 +208,11 @@ list of examples:
 
 - **overview/runtime**: Minecraft/version/loader, development state, current
   connection and runtime capabilities safe for player display;
-- **mods**: complete installed-mod index and exact public metadata such as ID,
-  name, version, description, authors, license/contact links represented as
-  inert text, environment and dependency declarations where loader APIs expose
-  them;
+- **mods**: complete installed-mod index with only ID, name, version, and
+  environment, followed by exact-ID public metadata such as description,
+  authors, license/contact links represented as inert text, and dependency
+  declarations where loader APIs expose them. The index does not embed every
+  detail record;
 - **options**: all values represented in Minecraft's option screens, grouped
   by the native domains. It includes video, sound, music, language, chat,
   controls/key mappings, mouse, accessibility, telemetry/privacy choices,

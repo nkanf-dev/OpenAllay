@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.JsonObject;
+import dev.tomewisp.guide.GuideToolMessage;
 import dev.tomewisp.guide.GuideToolStatus;
 import java.util.ArrayList;
 import java.util.List;
@@ -20,7 +21,11 @@ final class GuideToolDetailViewTest {
                 new GuideItemView("minecraft:iron_ingot", "Iron Ingot", 4)));
         List<GuideDetailCard> cards = new ArrayList<>(List.of(
                 new GuideDetailCard.ItemGrid("screen.tomewisp.detail.inventory", items)));
-        List<String> narration = new ArrayList<>(List.of("4 Iron Ingots"));
+        GuideToolMessage inventoryItem = GuideToolMessage.of(
+                GuideToolMessage.Key.INVENTORY_ITEM,
+                "minecraft:iron_ingot",
+                "4");
+        List<GuideToolMessage> narration = new ArrayList<>(List.of(inventoryItem));
 
         GuideToolDetailView view = new GuideToolDetailView(
                 "screen.tomewisp.tool.inventory",
@@ -33,7 +38,7 @@ final class GuideToolDetailViewTest {
         narration.clear();
 
         assertEquals(1, view.cards().size());
-        assertEquals(List.of("4 Iron Ingots"), view.narration());
+        assertEquals(List.of(inventoryItem), view.narration());
         assertTrue(view.debug().isEmpty());
     }
 
@@ -47,7 +52,7 @@ final class GuideToolDetailViewTest {
                 "screen.tomewisp.tool.inventory",
                 GuideToolStatus.SUCCEEDED,
                 List.of(new GuideDetailCard.Text("screen.tomewisp.detail.result", List.of("ok"))),
-                List.of("ok"),
+                List.of(GuideToolMessage.of(GuideToolMessage.Key.RESULT_COMPLETED)),
                 Optional.of(debug));
         normalized.addProperty("late", "mutation");
 

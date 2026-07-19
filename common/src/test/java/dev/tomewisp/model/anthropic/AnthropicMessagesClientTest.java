@@ -123,6 +123,8 @@ final class AnthropicMessagesClientTest {
             assertEquals("铁锭", turn.text());
             assertTrue(events.stream().anyMatch(event -> event instanceof ModelEvent.TextDelta delta
                     && delta.text().equals("铁锭")));
+            assertTrue(events.stream().anyMatch(ModelEvent.AttemptStarted.class::isInstance));
+            assertTrue(events.stream().anyMatch(ModelEvent.ResponseStarted.class::isInstance));
             assertEquals(2, turn.usage().outputTokens());
         }
     }

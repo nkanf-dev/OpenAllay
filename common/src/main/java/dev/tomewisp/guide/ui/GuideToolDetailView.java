@@ -2,6 +2,7 @@ package dev.tomewisp.guide.ui;
 
 import com.google.gson.JsonObject;
 import dev.tomewisp.guide.GuideSource;
+import dev.tomewisp.guide.GuideToolMessage;
 import dev.tomewisp.guide.GuideToolStatus;
 import java.util.List;
 import java.util.Objects;
@@ -12,7 +13,7 @@ public record GuideToolDetailView(
         String titleKey,
         GuideToolStatus status,
         List<GuideDetailCard> cards,
-        List<String> narration,
+        List<GuideToolMessage> narration,
         Optional<Debug> debug) {
     public GuideToolDetailView {
         if (titleKey == null || titleKey.isBlank()) {
@@ -21,9 +22,6 @@ public record GuideToolDetailView(
         Objects.requireNonNull(status, "status");
         cards = List.copyOf(cards);
         narration = List.copyOf(narration);
-        if (narration.stream().anyMatch(line -> line == null || line.isBlank())) {
-            throw new IllegalArgumentException("narration must not contain blank lines");
-        }
         debug = Objects.requireNonNull(debug, "debug");
     }
 

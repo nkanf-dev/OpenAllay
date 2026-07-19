@@ -60,13 +60,19 @@ loaders through one shared GuideService and an opt-in real-client probe:
 - a default-off Fabric/NeoForge real-client E2E controller plus deterministic
   loopback model fixture and redacted report contract.
 
-A server mod is not required for the main client model mode. Phase 4 remains
-the active pre-release phase. Durable partitioned history, all-known recipe
+A server mod is not required for the main client model mode. Phase 4 is
+feature-complete on the pre-release main line. Durable partitioned history, all-known recipe
 capture, JEI/REI integration, context compaction, semantic rich messages,
 long-history virtualization, model switching, settings, and diagnostics have
-deterministic coverage, but a normal full-mod Fabric walkthrough exposed
-manual-acceptance corrections that must be completed before Phase 4 can be
-called accepted.
+deterministic coverage. The final correction worktree also adds bounded and
+visible model requests, stable streamed Markdown/list layout, normal chat input,
+friendlier Tool activity, and one read-only outer game-state Tool. Fabric and
+NeoForge graphical controllers completed both the native semantic/UI correction
+scenario and the eight-section game-state scenario. The latest clean
+common/Fabric/NeoForge gate, package/SQLite verification, report validation,
+screenshot review, and credential/diff audit all passed; retained evidence is
+under
+[`docs/verification/phase-4-final-corrections/`](docs/verification/phase-4-final-corrections/).
 
 The approved correction contract gives the settings screen six sections:
 General, Models, Tools, Skills, History, and Diagnostics. Ordinary players enter
@@ -84,7 +90,7 @@ Tools and Skills are separate master-detail pages. Skills follow TomeWisp's
 non-executable Agent Skills subset: packages use uppercase `SKILL.md`, bundled
 packages are read-only, and player edits create local filesystem overrides.
 Skills cannot grant tools, scripts, arbitrary paths, network access, or Agent
-write authority. Recognized pre-release history schemas 1 through 3 are rebuilt
+write authority. Recognized pre-release history schemas 1 through 4 are rebuilt
 transactionally into the single current schema; future, corrupt, foreign, or
 otherwise unrecognized databases still fail closed without mutation.
 
@@ -104,7 +110,25 @@ segments, inline tool calls/results, later continuations, and the final answer.
 Running tool cards update in place. The screen also supports cancel, retry,
 sessions and explicit client/server model selection. Escape closes only the
 screen, not the request. The gear button opens native settings; returning keeps
-the same GuideService conversation and active request state.
+the same GuideService conversation and active request state. Enter sends from
+the composer, Shift+Enter inserts a line break, and Ctrl+Enter remains a
+compatibility send shortcut. A fixed status strip reports the active phase,
+elapsed time, most recent progress, retry attempt, and deadline without moving
+the transcript.
+
+`tomewisp:inspect_game_state` is the single sectioned Tool for directly
+player-observable outer state: runtime overview, installed mods, options, packs,
+shaders, F3-style diagnostics, the player's own UI-visible state, and a closed
+set of read-only world queries. Client capture reports client-visible facts;
+server capture can add only server-authoritative facts and does not invent
+client settings, packs, or shader state. Values unavailable through verified
+public APIs are omitted with explicit partial/unavailable evidence. The Tool
+returns a lightweight complete mod index first and full public metadata only
+for an exact requested mod. Server-authoritative world-query operations are
+permission-checked individually before capture. The Tool
+cannot execute command strings, write settings or world state, scan nearby
+blocks, inspect external containers, use unrestricted reflection, or absorb the
+independent Recipe and Guide domains.
 
 ## License
 

@@ -2,6 +2,7 @@ package dev.tomewisp.guide;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -23,6 +24,34 @@ final class GuideStateReducerTest {
     private final GuideStateReducer reducer = new GuideStateReducer(new Gson());
 
     @Test
+    void rejectsMalformedProgressClocksAndAttempts() {
+        assertThrows(IllegalArgumentException.class, () -> new GuideRequestProgress(
+                GuideRequestPhase.MODEL_WAIT,
+                at(2),
+                at(1),
+                at(3),
+                1,
+                null,
+                null));
+        assertThrows(IllegalArgumentException.class, () -> new GuideRequestProgress(
+                GuideRequestPhase.ENDPOINT_WAIT,
+                Instant.EPOCH,
+                at(1),
+                at(2),
+                -1,
+                at(3),
+                null));
+        assertThrows(IllegalArgumentException.class, () -> new GuideRequestProgress(
+                GuideRequestPhase.ENDPOINT_WAIT,
+                Instant.EPOCH,
+                at(1),
+                at(2),
+                1,
+                at(1),
+                null));
+    }
+
+    @Test
     void exposesCompactingStateWithoutAddingPlayerContent() {
         GuideRequestSnapshot request = GuideRequestSnapshot.start(
                 UUID.randomUUID(), "main", GuideTopology.CLIENT_LOCAL, "How?", Instant.EPOCH);
@@ -32,6 +61,60 @@ final class GuideStateReducerTest {
 
         assertEquals(GuideRequestStatus.COMPACTING, request.status());
         assertEquals(List.of(), request.timeline());
+        assertEquals(GuideRequestPhase.COMPACTING, request.progress().phase());
+        assertEquals(at(1), request.progress().phaseStartedAt());
+        assertEquals(at(1), request.progress().lastProgressAt());
+    }
+
+    @Test
+    void tracksRedactedModelLifecycleAndMonotonicProgress() {
+        GuideRequestSnapshot request = GuideRequestSnapshot.start(
+                UUID.randomUUID(), "main", GuideTopology.CLIENT_LOCAL, "How?", Instant.EPOCH);
+        assertEquals(GuideRequestPhase.PREPARING, request.progress().phase());
+        assertEquals(Instant.EPOCH, request.progress().requestStartedAt());
+        assertEquals(Instant.EPOCH, request.progress().phaseStartedAt());
+        assertEquals(Instant.EPOCH, request.progress().lastProgressAt());
+
+        request = reducer.apply(request, new AgentEvent.ModelProgress(
+                new ModelEvent.AttemptStarted(1, 10_000L)), at(1));
+        assertEquals(GuideRequestPhase.MODEL_WAIT, request.progress().phase());
+        assertEquals(1, request.progress().attempt());
+        assertEquals(at(1).plusMillis(10_000), request.progress().deadlineAt());
+
+        request = reducer.apply(request, new AgentEvent.ModelProgress(
+                new ModelEvent.ResponseStarted()), at(2));
+        assertEquals(GuideRequestPhase.RESPONSE_STREAMING, request.progress().phase());
+        assertEquals(at(2), request.progress().phaseStartedAt());
+
+        request = reducer.apply(request, text("one"), at(4));
+        request = reducer.apply(request, new AgentEvent.ModelProgress(
+                new ModelEvent.ReasoningDelta("redacted")), at(3));
+        assertEquals(at(4), request.progress().lastProgressAt());
+        assertEquals("one", request.assistantText());
+
+        request = reducer.apply(request, new AgentEvent.ToolStarted(
+                "call-1", "tomewisp:get_recipe"), at(5));
+        assertEquals(GuideRequestPhase.TOOL_WAIT, request.progress().phase());
+        request = reducer.apply(request, new AgentEvent.FinalText("done"), at(6));
+        assertEquals(GuideRequestPhase.COMPLETING, request.progress().phase());
+        assertEquals(at(6), request.progress().lastProgressAt());
+        assertTrue(request.terminal());
+    }
+
+    @Test
+    void rateLimitPublishesRetryTimeAndClearsTheAttemptDeadline() {
+        GuideRequestSnapshot request = GuideRequestSnapshot.start(
+                UUID.randomUUID(), "main", GuideTopology.CLIENT_LOCAL, "How?", Instant.EPOCH);
+        request = reducer.apply(request, new AgentEvent.ModelProgress(
+                new ModelEvent.AttemptStarted(2, 10_000L)), at(1));
+
+        request = reducer.apply(request, new AgentEvent.ModelProgress(
+                new ModelEvent.RateLimited(1500, 2)), at(2));
+
+        assertEquals(GuideRequestPhase.ENDPOINT_WAIT, request.progress().phase());
+        assertEquals(2, request.progress().attempt());
+        assertEquals(at(2).plusMillis(1500), request.progress().retryAt());
+        assertEquals(null, request.progress().deadlineAt());
     }
 
     @Test
@@ -43,7 +126,7 @@ final class GuideStateReducerTest {
                 "tomewisp:get_recipe",
                 GuideToolStatus.SUCCEEDED,
                 groundedResult(),
-                List.of("配方详情不可用"),
+                List.of(GuideToolMessage.of(GuideToolMessage.Key.RECIPE_UNAVAILABLE)),
                 List.of());
         GuideRequestSnapshot request = new GuideRequestSnapshot(
                 requestId,
@@ -117,8 +200,8 @@ final class GuideStateReducerTest {
         assertEquals("You are missing five ingots.", request.assistantText());
         assertEquals(GuideRequestStatus.COMPLETED, request.status());
         assertEquals(GuideToolStatus.SUCCEEDED, request.tools().getFirst().status());
-        assertEquals(List.of("配方详情不可用"),
-                request.tools().getFirst().presentationLines());
+        assertEquals(List.of(GuideToolMessage.of(GuideToolMessage.Key.RECIPE_UNAVAILABLE)),
+                request.tools().getFirst().presentationMessages());
         assertEquals(List.of("call-1", "call-2"), request.tools().stream()
                 .map(GuideToolActivity::invocationId)
                 .toList());
@@ -219,12 +302,15 @@ final class GuideStateReducerTest {
         assertEquals(GuideRequestStatus.RATE_LIMITED, request.status());
         assertEquals(1500, request.retryAfterMillis());
 
-        request = reducer.apply(request, new AgentEvent.Failed("agent_cancelled", "cancelled"), at(2));
+        request = reducer.apply(
+                request, new AgentEvent.StateChanged(AgentState.CANCELLED), at(3));
+        request = reducer.apply(request, new AgentEvent.Failed("agent_cancelled", "cancelled"), at(3));
         GuideRequestSnapshot terminal = request;
         GuideRequestSnapshot late = reducer.apply(
-                terminal, new AgentEvent.FinalText("late"), at(3));
+                terminal, new AgentEvent.FinalText("late"), at(4));
 
         assertEquals(GuideRequestStatus.CANCELLED, terminal.status());
+        assertEquals(null, terminal.progress().retryAt());
         assertSame(terminal, late);
     }
 

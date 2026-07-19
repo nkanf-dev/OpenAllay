@@ -4,6 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import dev.tomewisp.guide.GuideToolActivity;
+import dev.tomewisp.guide.GuideToolMessage;
 import dev.tomewisp.guide.GuideToolPresentation;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -18,7 +19,8 @@ public final class GuideToolDetailPresenter {
     public static GuideToolDetailView project(GuideToolActivity activity, boolean debugMode) {
         JsonObject normalized = activity.normalized();
         Projection projection = projectCards(activity.toolId(), normalized);
-        List<String> narration = GuideToolPresentation.lines(activity.toolId(), normalized);
+        List<GuideToolMessage> narration = GuideToolPresentation.messages(
+                activity.toolId(), normalized);
         Optional<GuideToolDetailView.Debug> debug = debugMode
                 ? Optional.of(new GuideToolDetailView.Debug(
                         activity.invocationId(),
@@ -37,16 +39,14 @@ public final class GuideToolDetailPresenter {
 
     private static Projection projectCards(String toolId, JsonObject normalized) {
         if (normalized == null) {
-            return text("screen.tomewisp.detail.status", "正在获取结果……", "result unavailable");
+            return new Projection(List.of(), "result unavailable");
         }
         if (!"success".equals(string(normalized, "status"))) {
-            return new Projection(
-                    List.of(new GuideDetailCard.Error(friendlyFailure(string(normalized, "code")))),
-                    "tool returned a normalized failure");
+            return new Projection(List.of(), "tool returned a normalized failure");
         }
         JsonObject value = object(normalized, "value");
         if (value == null) {
-            return text("screen.tomewisp.detail.result", "结果暂时无法显示。", "value is missing");
+            return new Projection(List.of(), "value is missing");
         }
         String name = toolName(toolId);
         try {
@@ -55,11 +55,10 @@ public final class GuideToolDetailPresenter {
                 case "find_item_usages" -> usageCards(value);
                 case "inspect_inventory" -> inventoryCards(value);
                 case "calculate_craftability" -> craftabilityCards(value);
-                default -> text("screen.tomewisp.detail.result", "这个工具已经完成。", "unknown tool projection");
+                default -> new Projection(List.of(), "text-only registered tool projection");
             };
         } catch (RuntimeException exception) {
-            return text("screen.tomewisp.detail.result", "结果已返回，但其中一部分暂时无法显示。",
-                    "malformed semantic result");
+            return new Projection(List.of(), "malformed semantic result");
         }
     }
 
@@ -74,16 +73,14 @@ public final class GuideToolDetailPresenter {
         boolean hasRecipeData = "search_recipes".equals(toolName(toolId))
                 ? !array(value, "recipes").isEmpty()
                 : object(value, "recipe") != null;
-        return text(
-                "screen.tomewisp.detail.recipes",
-                hasRecipeData ? "配方结果暂时无法显示。" : "没有找到匹配的配方。",
-                hasRecipeData ? "invalid recipe card data" : "");
+        return new Projection(
+                List.of(), hasRecipeData ? "invalid recipe card data" : "");
     }
 
     private static Projection inventoryCards(JsonObject value) {
         JsonObject counts = object(value, "counts");
         if (counts == null || counts.isEmpty()) {
-            return text("screen.tomewisp.detail.inventory", "背包里没有可显示的物品。", "");
+            return new Projection(List.of(), "");
         }
         List<GuideItemView> items = counts.entrySet().stream()
                 .sorted(Map.Entry.comparingByKey())
@@ -91,7 +88,7 @@ public final class GuideToolDetailPresenter {
                 .filter(item -> item.count() > 0)
                 .toList();
         return items.isEmpty()
-                ? text("screen.tomewisp.detail.inventory", "背包里没有可显示的物品。", "")
+                ? new Projection(List.of(), "")
                 : new Projection(List.of(new GuideDetailCard.ItemGrid(
                         "screen.tomewisp.detail.inventory", items)), "");
     }
@@ -99,7 +96,7 @@ public final class GuideToolDetailPresenter {
     private static Projection usageCards(JsonObject value) {
         JsonArray usages = array(value, "usages");
         if (usages.isEmpty()) {
-            return text("screen.tomewisp.detail.usages", "没有找到相关用途。", "");
+            return new Projection(List.of(), "");
         }
         List<String> lines = new ArrayList<>();
         for (JsonElement element : usages) {
@@ -157,10 +154,6 @@ public final class GuideToolDetailPresenter {
                 rows)), "");
     }
 
-    private static Projection text(String titleKey, String line, String diagnostic) {
-        return new Projection(List.of(new GuideDetailCard.Text(titleKey, List.of(line))), diagnostic);
-    }
-
     private static String titleKey(String toolId) {
         return switch (toolName(toolId)) {
             case "search_recipes" -> "screen.tomewisp.tool.search_recipes";
@@ -169,17 +162,6 @@ public final class GuideToolDetailPresenter {
             case "inspect_inventory" -> "screen.tomewisp.tool.inspect_inventory";
             case "calculate_craftability" -> "screen.tomewisp.tool.calculate_craftability";
             default -> "screen.tomewisp.tool.result";
-        };
-    }
-
-    private static String friendlyFailure(String code) {
-        return switch (code) {
-            case "stale_reference" -> "这个结果已经过期，请重新查询。";
-            case "capability_unavailable", "tool_unavailable" -> "当前环境暂时无法提供这项信息。";
-            case "player_required" -> "需要进入游戏世界后才能查看这项信息。";
-            case "invalid_arguments" -> "查询条件不完整，请换一种说法再试。";
-            case "unauthorized", "forbidden" -> "当前服务器不允许查看这项信息。";
-            default -> "这次查询没有成功，请稍后重试。";
         };
     }
 

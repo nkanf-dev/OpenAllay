@@ -16,6 +16,7 @@ import dev.tomewisp.guide.GuideRequestStatus;
 import dev.tomewisp.guide.GuideSessionSnapshot;
 import dev.tomewisp.guide.GuideTimelineEntry;
 import dev.tomewisp.guide.GuideToolActivity;
+import dev.tomewisp.guide.GuideToolMessage;
 import dev.tomewisp.guide.GuideToolStatus;
 import dev.tomewisp.guide.GuideTopology;
 import dev.tomewisp.model.ModelUsage;
@@ -69,7 +70,7 @@ final class SqliteGuideHistoryWindowTest {
                 .map(GuideRequestSnapshot::userMessage).toList());
 
         GuideHistoryContextRequest contextRequest = new GuideHistoryContextRequest(
-                SCOPE, "main", new ContextBudget(700, 100), 50, "same-model");
+                SCOPE, "main", new ContextBudget(1_200, 100), 50, "same-model");
         GuideHistoryContextSeed context = store.context(contextRequest);
         assertFalse(context.messages().isEmpty());
         assertTrue(context.estimatedTokens() <= contextRequest.availableHistoryTokens());
@@ -120,7 +121,9 @@ final class SqliteGuideHistoryWindowTest {
                         previousTool.activity().toolId(),
                         previousTool.activity().status(),
                         previousTool.activity().normalized(),
-                        List.of("Updated recipe card"),
+                        List.of(GuideToolMessage.of(
+                                GuideToolMessage.Key.RECIPE_DETAIL,
+                                "minecraft:updated_recipe")),
                         previousTool.activity().sources()));
 
         store.commit(new GuideHistoryCommit(SCOPE, List.of(
@@ -135,9 +138,11 @@ final class SqliteGuideHistoryWindowTest {
                 SCOPE, "main", GuideHistoryPageRequest.Direction.NEWEST, null, 2));
         assertEquals(ModelUsage.empty(), page.requests().getFirst().usage());
         assertEquals(new ModelUsage(21, 8, 3), page.requests().getLast().usage());
-        assertEquals(List.of("Updated recipe card"),
+        assertEquals(List.of(GuideToolMessage.of(
+                        GuideToolMessage.Key.RECIPE_DETAIL,
+                        "minecraft:updated_recipe")),
                 ((GuideTimelineEntry.Tool) page.requests().getLast().timeline().get(1))
-                        .activity().presentationLines());
+                        .activity().presentationMessages());
     }
 
     @Test
@@ -217,17 +222,12 @@ final class SqliteGuideHistoryWindowTest {
     }
 
     @Test
-    void schemaFourRebuildsRecognizedDevelopmentSchemasRejectsFutureAndUsesPagingIndex()
+    void currentSchemaRebuildsRecognizedDevelopmentSchemasRejectsFutureAndUsesPagingIndex()
             throws Exception {
-        for (int version : List.of(1, 2, 3)) {
+        for (int version : List.of(1, 2, 3, 4)) {
             Path database = temporary.resolve("schema-" + version + ".db");
+            LegacyGuideHistorySchemaFixtures.create(database, version);
             SqliteGuideHistoryStore store = store(database);
-            store.save(partition(3, false, false));
-            try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
-                    var statement = connection.createStatement()) {
-                statement.executeUpdate(
-                        "update schema_metadata set schema_version = " + version);
-            }
 
             assertTrue(store.metadata(SCOPE).isEmpty());
             try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
@@ -335,7 +335,9 @@ final class SqliteGuideHistoryWindowTest {
     private static List<GuideTimelineEntry> toolTimeline(int index, boolean active) {
         GuideToolActivity activity = new GuideToolActivity(
                 "call-1", 0, "tomewisp:get_recipe", GuideToolStatus.SUCCEEDED,
-                new JsonObject(), List.of("Recipe " + index), List.of());
+                new JsonObject(), List.of(GuideToolMessage.of(
+                        GuideToolMessage.Key.RECIPE_DETAIL,
+                        "minecraft:recipe_" + index)), List.of());
         return List.of(
                 new GuideTimelineEntry.Assistant(0, "checking", false, List.of()),
                 new GuideTimelineEntry.Tool(1, activity),
