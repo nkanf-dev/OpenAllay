@@ -29,6 +29,7 @@ accepted and contains explicit approval evidence.
 | SKMB-2026-07-19-019 | accepted | manual-acceptance input, credential, Tool/source, Skill, and pre-release history corrections | B, C, D, E, F, G | decisions/2026-07-19-019-manual-acceptance-corrections.md | 78c2122 |
 | SKMB-2026-07-19-020 | accepted | request observability, stable native interaction, Tool guidance, and unified player-observable game state | A, B, C, D, E, F | decisions/2026-07-19-020-observable-game-state-and-request-visibility.md | 78c2122 |
 | SKMB-2026-07-19-021 | accepted | model ownership, authenticated model listing, Tool alias recovery, and player client Tool bridge | A, B, C, D, E, F | decisions/2026-07-19-021-model-ownership-and-player-tool-bridge.md | 48ed4c1 |
+| SKMB-2026-07-19-022 | accepted | embedded native domain views, local retrieval, stable presentation, and future player-memory boundary | A, B, C, D, E, F | decisions/2026-07-19-022-native-domain-views-retrieval-memory.md | pending |
 
 SKMB-2026-07-18-006 is implemented by `a0eaeff`, `19ab90f`, and `c6ca6bc`.
 Its deterministic clean-build and packaged-driver evidence is recorded in the
@@ -124,6 +125,11 @@ graphical evidence review all passed. Phase 4 is closed.
 | observable_snapshot_ready | Player-observable game state has been detached into immutable registered sections | ClientContextCapture | Contains no live Minecraft objects, secrets, raw command strings, or spatial scans | SKMB-2026-07-19-020 |
 | model_catalog_loading | One authenticated non-inference provider model-list request is active | ClientSettingsService | Cancellable; publishes only model IDs or a stable redacted failure | SKMB-2026-07-19-021 |
 | client_tool_wait | A server-hosted Agent is waiting for one correlated Tool result from the requesting player's client | ServerAgentService | Actor/request/invocation scoped; cancel and disconnect suppress late results | SKMB-2026-07-19-021 |
+| native_view_resolving | A visible validated component is resolving an exact optional or generic native presentation | NativeDomainViewRegistry | Client-thread-only; no live view enters semantic/history state | SKMB-2026-07-19-022 |
+| native_view_ready | One exact optional provider owns the visible component view | NativeDomainViewRegistry | Released when the row leaves the visible lifecycle | SKMB-2026-07-19-022 |
+| native_view_fallback | The component uses a detached TomeWisp generic canvas or readable fallback | NativeDomainViewRegistry | Never imitates an optional mod GUI | SKMB-2026-07-19-022 |
+| knowledge_index_building | One detached knowledge generation is being indexed off the Minecraft thread | KnowledgeRegistry | Prior valid generation remains readable | SKMB-2026-07-19-022 |
+| knowledge_index_degraded | The newest knowledge index failed and the prior valid/local lexical path remains active | KnowledgeRegistry | Source-scoped diagnostic; never fabricated empty knowledge | SKMB-2026-07-19-022 |
 
 ## Transition Decisions
 
@@ -190,6 +196,10 @@ graphical evidence review all passed. Phase 4 is closed.
 | T60 | client_tool_wait | normalized success or Tool failure returns | server model_wait | Append the complete Tool result and continue; do not terminate the Agent for ordinary Tool failure | SKMB-2026-07-19-021 |
 | T61 | client_tool_wait | request cancel, disconnect, or shutdown | cancelled | Cancel the correlation and suppress late client result chunks | SKMB-2026-07-19-021 |
 | T62 | remote Tool/chunk wait | normalized result, ordinary bridge failure, deadline, or enclosing request terminal | model_wait, released, or cancelled | Continue with a structured Tool failure for ordinary failure/deadline; release incomplete assemblies and suppress every late chunk on terminal state | SKMB-2026-07-19-021 |
+| T63 | visible validated component | enter viewport | native_view_resolving | Resolve its exact reference through registered client-thread providers | SKMB-2026-07-19-022 |
+| T64 | native_view_resolving | exact provider succeeds or providers exhaust/fail | native_view_ready or native_view_fallback | Publish the provider view, generic detached canvas, or readable fallback without changing Agent state | SKMB-2026-07-19-022 |
+| T65 | native_view_ready or native_view_fallback | row leaves viewport, screen closes, or generation changes | released | Release all live provider objects and hit regions on the client thread | SKMB-2026-07-19-022 |
+| T66 | knowledge_index_building | detached generation succeeds or fails | knowledge_index_ready or knowledge_index_degraded | Atomically publish the new index or retain the prior valid/local lexical path | SKMB-2026-07-19-022 |
 
 ## Invariants
 
@@ -263,6 +273,13 @@ graphical evidence review all passed. Phase 4 is closed.
 | I66 | Recipes and Guides remain independent narrow high-volume deep-content Tool families, while future map/block/container interaction requires a separate decision and authority boundary | SKMB-2026-07-19-020 |
 | I67 | Player-observable state is captured on the owning Minecraft thread into immutable evidence-bearing records; missing sections degrade independently and never become fabricated empty facts | SKMB-2026-07-19-020 |
 | I68 | Remote Tool failures in either direction are complete model-visible Tool results unless the enclosing request is cancelled/disconnected; partial bridge assemblies are sparse, active-request scoped, and bounded by the five-minute bridge deadline | SKMB-2026-07-19-021 |
+| I69 | Model-authored semantic data cannot name native widget classes, textures, slots, coordinates, callbacks, commands, URLs, or arbitrary view trees | SKMB-2026-07-19-022 |
+| I70 | Exact JEI/REI/mod views are embedded only through verified public APIs; the generic fallback is neutral TomeWisp UI and never imitates a mod screen | SKMB-2026-07-19-022 |
+| I71 | Live native-view objects exist only for visible rows on the Minecraft client thread and never enter history, bridge payloads, model context, or workers | SKMB-2026-07-19-022 |
+| I72 | Table structure, focus identity, viewport ownership, and streaming row identity survive incremental rendering; a missing focus ID is never selected | SKMB-2026-07-19-022 |
+| I73 | Knowledge retrieval remains useful offline, preserves stable provenance/evidence, and never requires an embedding provider | SKMB-2026-07-19-022 |
+| I74 | Conversation history, derived summaries, player memory, and live game facts remain distinct; neither summary nor player memory satisfies factual evidence requirements | SKMB-2026-07-19-022 |
+| I75 | Durable player-memory writes require explicit player confirmation and remain disabled until their management UI and persistence contract are implemented | SKMB-2026-07-19-022 |
 
 ## Fail Semantics
 
@@ -312,6 +329,10 @@ graphical evidence review all passed. Phase 4 is closed.
 | F42 | A player-observable section/query is unknown, malformed, unsupported, partial, or not authoritative in the current topology | Return strict invalid/unavailable/partial evidence for that section and keep every unrelated section usable; never guess or broaden access | SKMB-2026-07-19-020 |
 | F43 | Resource resolution is ambiguous or a corrected Tool search remains unchanged and empty/partial | Return every deterministic exact match for disambiguation, or stop after one corrected call and explain the missing evidence; never loop or choose arbitrarily | SKMB-2026-07-19-020 |
 | F44 | A remote Tool bridge is unavailable, times out, returns malformed data, or leaves an incomplete chunk assembly | Return the matching structured Tool failure and continue the Agent; expire/release partial state and never publish truncated data | SKMB-2026-07-19-021 |
+| F45 | An exact native-view provider is absent, stale, unsupported, or throws | Release/isolate it and fall through to the next provider, neutral generic canvas, or readable fallback; never fail the Agent request | SKMB-2026-07-19-022 |
+| F46 | Table geometry is invalid or cannot preserve readable columns | Use the structural narrow key/value projection, then narration fallback if validation itself failed | SKMB-2026-07-19-022 |
+| F47 | A streaming semantic replacement measures shorter than its mutable row reservation | Preserve the reservation and viewport anchor until terminal reflow can occur without moving player-owned scroll | SKMB-2026-07-19-022 |
+| F48 | Knowledge indexing/reranking fails or embeddings are unavailable | Retain the last valid index or deterministic local lexical path and expose a source-scoped diagnostic; never fabricate empty results | SKMB-2026-07-19-022 |
 
 ## Reviewed Statistical Defaults
 
