@@ -28,6 +28,7 @@ accepted and contains explicit approval evidence.
 | SKMB-2026-07-18-018 | accepted | semantic messages, controlled components, and windowed history | A, B, C, D, E, F | decisions/2026-07-18-018-semantic-history-windowing.md | 9655dd2; implemented through 11a6ace |
 | SKMB-2026-07-19-019 | accepted | manual-acceptance input, credential, Tool/source, Skill, and pre-release history corrections | B, C, D, E, F, G | decisions/2026-07-19-019-manual-acceptance-corrections.md | 78c2122 |
 | SKMB-2026-07-19-020 | accepted | request observability, stable native interaction, Tool guidance, and unified player-observable game state | A, B, C, D, E, F | decisions/2026-07-19-020-observable-game-state-and-request-visibility.md | 78c2122 |
+| SKMB-2026-07-19-021 | accepted | model ownership, authenticated model listing, Tool alias recovery, and player client Tool bridge | A, B, C, D, E, F | decisions/2026-07-19-021-model-ownership-and-player-tool-bridge.md | pending |
 
 SKMB-2026-07-18-006 is implemented by `a0eaeff`, `19ab90f`, and `c6ca6bc`.
 Its deterministic clean-build and packaged-driver evidence is recorded in the
@@ -121,6 +122,8 @@ graphical evidence review all passed. Phase 4 is closed.
 | history_schema_rebuilding | A recognized pre-release schema 1, 2, 3, or 4 is being transactionally recreated as the current schema | GuideHistoryStore | Rollback preserves the older database if rebuild fails | SKMB-2026-07-19-019 |
 | response_streaming | A model response body is actively producing validated deltas under its dispatch deadline | ModelClient | Cancellable; last-progress is observable and late bytes are generation-fenced | SKMB-2026-07-19-020 |
 | observable_snapshot_ready | Player-observable game state has been detached into immutable registered sections | ClientContextCapture | Contains no live Minecraft objects, secrets, raw command strings, or spatial scans | SKMB-2026-07-19-020 |
+| model_catalog_loading | One authenticated non-inference provider model-list request is active | ClientSettingsService | Cancellable; publishes only model IDs or a stable redacted failure | SKMB-2026-07-19-021 |
+| client_tool_wait | A server-hosted Agent is waiting for one correlated Tool result from the requesting player's client | ServerAgentService | Actor/request/invocation scoped; cancel and disconnect suppress late results | SKMB-2026-07-19-021 |
 
 ## Transition Decisions
 
@@ -181,6 +184,11 @@ graphical evidence review all passed. Phase 4 is closed.
 | T54 | response_streaming | tool call, final response, cancellation, protocol failure, or total timeout | tool_wait, completing, cancelled, or failed | Close the stream/watchdog, publish the correlated terminal/next phase, and suppress every late delta | SKMB-2026-07-19-020 |
 | T55 | client context capture | registered observable sections detach successfully | observable_snapshot_ready | Release live game objects and publish the immutable evidence-bearing snapshot to the request context | SKMB-2026-07-19-020 |
 | T56 | observable_snapshot_ready | one valid section query executes | tool_wait then model_wait | Return only the requested typed player-observable data with explicit authority/completeness | SKMB-2026-07-19-020 |
+| T57 | settings idle | player fetches provider models for a valid draft | model_catalog_loading | Use the transient key or resolve the saved reference and send one cancellable configuration-layer GET | SKMB-2026-07-19-021 |
+| T58 | model_catalog_loading | valid catalog, redacted failure, cancel, or stale generation | settings idle | Publish only current validated IDs/failure; ignore stale completion and retain typed model ID | SKMB-2026-07-19-021 |
+| T59 | server model_wait | trusted placement selects an enabled player-client Tool | client_tool_wait | Bind actor/request/invocation and send one strict reverse Tool call to that same client | SKMB-2026-07-19-021 |
+| T60 | client_tool_wait | normalized success or Tool failure returns | server model_wait | Append the complete Tool result and continue; do not terminate the Agent for ordinary Tool failure | SKMB-2026-07-19-021 |
+| T61 | client_tool_wait | request cancel, disconnect, or shutdown | cancelled | Cancel the correlation and suppress late client result chunks | SKMB-2026-07-19-021 |
 
 ## Invariants
 
