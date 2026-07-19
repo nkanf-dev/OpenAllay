@@ -4,7 +4,7 @@
 - decided_by: designer
 - approval_source: the designer required that all player-observable game/client information be queryable through one elegant Tool, explicitly separated it from deep recipe/guide content and future map/block/container interaction, required read-only query-command support with future write approval reserved, and delegated Phase 4 decisions to the agent's best judgment
 - date: 2026-07-19
-- commit: pending
+- commit: 78c2122
 - patterns:
   - A_async_wait
   - B_state_persistence

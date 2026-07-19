@@ -4,7 +4,7 @@
 - decided_by: designer
 - approval_source: the designer required an API-key password field persisted to a database, separate Tool and Skill master-detail pages, Tool-owned typed source schemas, bundled read-only Agent Skills with external Markdown overrides, confirmed built-in sources are disable-only while user sources support full CRUD, and then stated “我已经确认了……就按你说的来吧”
 - date: 2026-07-19
-- commit: pending
+- commit: 78c2122
 - patterns:
   - B_state_persistence
   - C_concurrent_operations

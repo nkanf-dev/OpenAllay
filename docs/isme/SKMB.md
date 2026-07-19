@@ -26,8 +26,8 @@ accepted and contains explicit approval evidence.
 | SKMB-2026-07-18-016 | accepted | native settings coordination and domain config writes | A, B, C, E, F | decisions/2026-07-18-016-native-settings-coordination.md | e7acf43, 507d628; implemented through a3ae197 |
 | SKMB-2026-07-18-017 | accepted | knowledge/capability catalog and local Tool/Skill policy | B, C, D, E, F | decisions/2026-07-18-017-capability-settings-policy.md | e7acf43, 507d628; implemented through 771cc94 |
 | SKMB-2026-07-18-018 | accepted | semantic messages, controlled components, and windowed history | A, B, C, D, E, F | decisions/2026-07-18-018-semantic-history-windowing.md | 9655dd2; implemented through 11a6ace |
-| SKMB-2026-07-19-019 | accepted | manual-acceptance input, credential, Tool/source, Skill, and pre-release history corrections | B, C, D, E, F, G | decisions/2026-07-19-019-manual-acceptance-corrections.md | pending |
-| SKMB-2026-07-19-020 | accepted | request observability, stable native interaction, Tool guidance, and unified player-observable game state | A, B, C, D, E, F | decisions/2026-07-19-020-observable-game-state-and-request-visibility.md | pending |
+| SKMB-2026-07-19-019 | accepted | manual-acceptance input, credential, Tool/source, Skill, and pre-release history corrections | B, C, D, E, F, G | decisions/2026-07-19-019-manual-acceptance-corrections.md | 78c2122 |
+| SKMB-2026-07-19-020 | accepted | request observability, stable native interaction, Tool guidance, and unified player-observable game state | A, B, C, D, E, F | decisions/2026-07-19-020-observable-game-state-and-request-visibility.md | 78c2122 |
 
 SKMB-2026-07-18-006 is implemented by `a0eaeff`, `19ab90f`, and `c6ca6bc`.
 Its deterministic clean-build and packaged-driver evidence is recorded in the
@@ -87,11 +87,10 @@ Its implementation and focused deterministic suites are complete in the
 current Phase 4 worktree. Fabric and NeoForge graphical controllers each
 completed the native semantic/UI correction scenario with six screenshots,
 all eight controlled component types, and 32 semantic blocks. Both loaders also
-completed the eight-section real-client game-state scenario. The SKMB
-index intentionally keeps its commit as `pending` until the implementation
-commit exists. The latest clean production gate (525 tests), both-loader
+completed the eight-section real-client game-state scenario. The implementation
+is recorded in `78c2122`. The latest clean production gate (525 tests), both-loader
 package/SQLite checks, final credential/diff/report/hash/manifest audit, and
-graphical evidence review all passed. Only commit/merge bookkeeping remains.
+graphical evidence review all passed. Phase 4 is closed.
 
 ## Named States
 

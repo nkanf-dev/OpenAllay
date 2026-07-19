@@ -24,8 +24,7 @@
   525 tests, 0 failures and 2 skipped. Package/SQLite verification, script
   syntax, report/JSON validation, screenshot review, credential scan, diff
   check, and evidence manifest/hash validation also passed.
-- Implementation and acceptance are complete. Repository commit/merge
-  bookkeeping is the only remaining execution step.
+- Implementation and acceptance are complete in `78c2122`; this plan is closed.
 - The detailed checkboxes below are the original execution recipe. The status
   above and retained evidence are authoritative for completion.
 
