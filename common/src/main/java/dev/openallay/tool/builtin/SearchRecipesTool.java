@@ -103,6 +103,7 @@ public final class SearchRecipesTool
         RecipeCatalog catalog = new RecipeCatalog(snapshot);
         if (hasBatch) {
             List<QueryResult> batches = new ArrayList<>();
+            List<RecipeCatalog.Summary> flattened = new ArrayList<>();
             for (int index = 0; index < input.queries().size(); index++) {
                 Query item = input.queries().get(index);
                 RecipeCatalog.Query itemQuery = new RecipeCatalog.Query(
@@ -113,10 +114,11 @@ public final class SearchRecipesTool
                 }
                 List<RecipeCatalog.Summary> matches = catalog.search(itemQuery);
                 batches.add(new QueryResult(index, itemQuery, matches));
+                flattened.addAll(matches);
             }
             return new ToolResult.Success<>(new Output(
                     query.isEmpty() ? null : query,
-                    List.of(),
+                    List.copyOf(flattened),
                     batches,
                     RecipeCatalogStatus.from(snapshot),
                     List.of(snapshot.evidence())));

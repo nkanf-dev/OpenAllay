@@ -33,7 +33,6 @@ import dev.openallay.tool.builtin.InspectInventoryTool;
 import dev.openallay.tool.builtin.InspectGameStateTool;
 import dev.openallay.tool.builtin.ResolveResourceTool;
 import dev.openallay.tool.builtin.SearchKnowledgeTool;
-import dev.openallay.tool.builtin.ReadOnlineKnowledgeTool;
 import dev.openallay.tool.builtin.SearchRecipesTool;
 import dev.openallay.trace.json.TraceParser;
 import dev.openallay.trace.minecraft.TraceReplayService;
@@ -68,7 +67,6 @@ public final class OpenAllayBootstrap {
                 List.of(
                         new ListKnowledgeSourcesTool(knowledge),
                         new SearchKnowledgeTool(knowledge, onlineKnowledge),
-                        new ReadOnlineKnowledgeTool(onlineKnowledge),
                         new GetKnowledgeDocumentTool(knowledge),
                         new GetPatchouliMultiblockTool(patchouliMultiblocks)));
         SkillRepository skills = new SkillRepository(

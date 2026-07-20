@@ -229,6 +229,9 @@ public final class ModelProfilesConfigLoader {
     private static ModelMetadata trustedMetadata(
             ModelProfileDefinition definition,
             Map<ModelMetadata.Key, ModelMetadata> metadata) {
+        if (!OpenRouterMetadataResolver.supports(definition.baseUri())) {
+            return null;
+        }
         return metadata.get(new ModelMetadata.Key(
                 OpenRouterMetadataResolver.SOURCE, definition.model()));
     }

@@ -118,8 +118,7 @@ final class GuideProductE2ETest {
         assertTrue(model.requests.get(4).messages().getLast().content().stream()
                 .filter(ModelContent.ToolResult.class::isInstance)
                 .map(ModelContent.ToolResult.class::cast)
-                .anyMatch(result -> result.value().getAsJsonObject()
-                        .get("content").getAsString().contains("missing = 5")));
+                .anyMatch(result -> result.value().toString().contains("\"missing\":5")));
     }
 
     private static OpenAllayRuntime runtime(ToolRegistry tools) {

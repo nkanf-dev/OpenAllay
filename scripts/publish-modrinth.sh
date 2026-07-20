@@ -42,39 +42,6 @@ api_status() {
     "$url"
 }
 
-api_failure_detail() {
-  local response=$1
-  python3 - "$response" <<'PY'
-import json
-import pathlib
-import re
-import sys
-
-path = pathlib.Path(sys.argv[1])
-try:
-    payload = json.loads(path.read_text(encoding="utf-8"))
-except (OSError, UnicodeError, json.JSONDecodeError):
-    raise SystemExit(0)
-parts = [payload.get("error"), payload.get("description")]
-detail = ": ".join(str(value) for value in parts if value)
-detail = re.sub(r"\s+", " ", detail).strip()
-if detail:
-    print(detail[:400])
-PY
-}
-
-fail_api() {
-  local operation=$1
-  local status=$2
-  local response=$3
-  local detail
-  detail=$(api_failure_detail "$response")
-  if [[ -n "$detail" ]]; then
-    fail "$operation returned HTTP $status ($detail)"
-  fi
-  fail "$operation returned HTTP $status"
-}
-
 project_response="$work/project-response.json"
 project_status=$(api_status GET "$api/project/$slug" "$project_response")
 case "$project_status" in
@@ -108,15 +75,13 @@ payload = {
     "description": "A modern Minecraft Agent for modded play.",
     "body": body,
     "categories": ["utility"],
+    "additional_categories": ["fabric", "neoforge"],
     "client_side": "required",
     "server_side": "optional",
     "license_id": "MIT",
     "source_url": "https://github.com/nkanf-dev/OpenAllay",
     "issues_url": "https://github.com/nkanf-dev/OpenAllay/issues",
     "is_draft": True,
-    # The v2 API still requires this deprecated field to be present even
-    # though versions are uploaded separately after project creation.
-    "initial_versions": [],
 }
 output.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
 PY
@@ -124,7 +89,7 @@ PY
       --form "data=<$work/project.json;type=application/json" \
       --form "icon=@common/src/main/resources/assets/openallay/icon.png;type=image/png")
     [[ "$project_status" == 200 ]] \
-      || fail_api 'project creation' "$project_status" "$project_response"
+      || fail "project creation returned HTTP $project_status"
     ;;
   *) fail "project lookup returned HTTP $project_status" ;;
 esac
@@ -139,12 +104,12 @@ print(value)
 PY
 ) || fail 'project response did not contain an ID'
 
-project_state=$(python3 - "$project_response" <<'PY'
-import json
-import sys
-print(json.load(open(sys.argv[1], encoding="utf-8")).get("status", "unknown"))
-PY
-) || fail 'project response did not contain a status'
+# A newly created project is submitted for moderation after its version files
+# exist. Existing approved/processing projects ignore this step below.
+project_was_created=false
+if [[ "$project_status" == 200 ]] && [[ -f "$work/project.json" ]]; then
+  project_was_created=true
+fi
 
 release_type=release
 if [[ "$version" == *-* ]]; then
@@ -163,8 +128,7 @@ publish_loader() {
   status=$(api_status GET \
     "$api/project/$project_id/version?loaders=$encoded_loaders&game_versions=$encoded_versions&include_changelog=false" \
     "$versions_response")
-  [[ "$status" == 200 ]] \
-    || fail_api "$loader version lookup" "$status" "$versions_response"
+  [[ "$status" == 200 ]] || fail "$loader version lookup returned HTTP $status"
 
   if python3 - "$versions_response" "$version" <<'PY'
 import json
@@ -208,8 +172,7 @@ PY
   status=$(api_status POST "$api/version" "$work/$loader-response.json" \
     --form "data=<$work/$loader-version.json;type=application/json" \
     --form "file=@$artifact;type=application/java-archive")
-  [[ "$status" == 200 ]] \
-    || fail_api "$loader version creation" "$status" "$work/$loader-response.json"
+  [[ "$status" == 200 ]] || fail "$loader version creation returned HTTP $status"
   printf 'modrinth_loader=%s status=published version=%s\n' "$loader" "$version"
 }
 
@@ -219,24 +182,14 @@ publish_loader fabric \
 publish_loader neoforge \
   "neoforge/build/libs/openallay-neoforge-${minecraft_version}-${version}.jar"
 
-python3 - "$work/submit.json" "$project_state" <<'PY'
-import json
-import pathlib
-import sys
-
-payload = {
-    "client_side": "required",
-    "server_side": "optional",
-}
-if sys.argv[2] == "draft":
-    payload["requested_status"] = "approved"
-pathlib.Path(sys.argv[1]).write_text(json.dumps(payload), encoding="utf-8")
-PY
-submit_status=$(api_status PATCH "$api/project/$project_id" "$work/submit-response.json" \
-  --header 'Content-Type: application/json' \
-  --data-binary "@$work/submit.json")
-[[ "$submit_status" == 204 ]] \
-  || fail_api 'project metadata update' "$submit_status" "$work/submit-response.json"
+if [[ "$project_was_created" == true ]]; then
+  printf '{"requested_status":"approved"}' > "$work/submit.json"
+  submit_status=$(api_status PATCH "$api/project/$project_id" "$work/submit-response.json" \
+    --header 'Content-Type: application/json' \
+    --data-binary "@$work/submit.json")
+  [[ "$submit_status" == 204 ]] \
+    || fail "project moderation submission returned HTTP $submit_status"
+fi
 
 printf 'modrinth_project_id=%s\n' "$project_id"
 printf 'modrinth_version=%s\n' "$version"

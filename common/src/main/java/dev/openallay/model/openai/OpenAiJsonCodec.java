@@ -12,7 +12,6 @@ import dev.openallay.model.ModelRequest;
 import dev.openallay.model.ModelRole;
 import dev.openallay.model.ModelToolDefinition;
 import dev.openallay.model.ModelTurn;
-import dev.openallay.model.ModelToolResultText;
 import dev.openallay.model.ModelUsage;
 import dev.openallay.model.config.ModelConfig;
 import java.util.ArrayList;
@@ -81,7 +80,7 @@ public final class OpenAiJsonCodec {
                 JsonObject encoded = new JsonObject();
                 encoded.addProperty("role", "tool");
                 encoded.addProperty("tool_call_id", result.toolUseId());
-                encoded.addProperty("content", toolResultContent(result.value()));
+                encoded.addProperty("content", gson.toJson(result.value()));
                 output.add(encoded);
             }
             return;
@@ -108,18 +107,6 @@ public final class OpenAiJsonCodec {
             encoded.add("tool_calls", toolCalls);
         }
         output.add(encoded);
-    }
-
-    private String toolResultContent(JsonElement value) {
-        if (value != null && value.isJsonObject()
-                && value.getAsJsonObject().has("content")
-                && value.getAsJsonObject().get("content").isJsonPrimitive()
-                && value.getAsJsonObject().get("content").getAsJsonPrimitive().isString()) {
-            return ModelToolResultText.fitUtf8(
-                    value.getAsJsonObject().get("content").getAsString(),
-                    ModelToolResultText.MAX_PROVIDER_BYTES);
-        }
-        return ModelToolResultText.render(value);
     }
 
     private JsonObject encodeToolCall(ModelContent.ToolUse tool) {
