@@ -12,6 +12,14 @@ case "$mode" in
     export OPENALLAY_MODEL_PROTOCOL="${OPENALLAY_MODEL_PROTOCOL:-ANTHROPIC_MESSAGES}"
     test_class=dev.openallay.model.live.LiveModelAcceptanceTest
     ;;
+  javascript-agent)
+    : "${OPENALLAY_MODEL_BASE_URL:?Set OPENALLAY_MODEL_BASE_URL, including the API version path}"
+    : "${OPENALLAY_MODEL:?Set OPENALLAY_MODEL}"
+    : "${OPENALLAY_API_KEY:?Set OPENALLAY_API_KEY in the environment; never put it in a repository file}"
+    export OPENALLAY_LIVE_JAVASCRIPT_AGENT=true
+    export OPENALLAY_MODEL_PROTOCOL="${OPENALLAY_MODEL_PROTOCOL:-OPENAI_CHAT}"
+    test_class=dev.openallay.model.live.LiveJavascriptAgentAcceptanceTest
+    ;;
   settings-probe)
     : "${OPENALLAY_SETTINGS_PROBE_CONFIG:?Set OPENALLAY_SETTINGS_PROBE_CONFIG to an ignored models JSON file}"
     if [[ ! -f "$OPENALLAY_SETTINGS_PROBE_CONFIG" ]]; then
@@ -42,7 +50,7 @@ case "$mode" in
     test_class=dev.openallay.model.live.LiveConfiguredPhaseFourAcceptanceTest
     ;;
   *)
-    echo "Usage: $0 [agent|settings-probe|configured-agent|phase-four]" >&2
+    echo "Usage: $0 [agent|javascript-agent|settings-probe|configured-agent|phase-four]" >&2
     exit 2
     ;;
 esac

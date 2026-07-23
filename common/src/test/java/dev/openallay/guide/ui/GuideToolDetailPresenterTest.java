@@ -107,6 +107,40 @@ final class GuideToolDetailPresenterTest {
                 resolved.narration().get(1).arguments());
     }
 
+    @Test
+    void javascriptResultsUseBoundedStructuredPlayerPreview() {
+        GuideToolDetailView view = GuideToolDetailPresenter.project(activity(
+                "openallay:run_javascript",
+                """
+                {"status":"success","value":{
+                  "handle":"r_secret","resultType":"array","cardinality":9,
+                  "fields":["damage","itemId"],
+                  "preview":[
+                    {"itemId":"example:obsidian_sword","damage":14},
+                    {"itemId":"minecraft:diamond_sword","damage":7}
+                  ],
+                  "modelText":"internal projection","complete":false,
+                  "omittedRows":7,"omittedFields":0,"elapsedMillis":12,
+                  "evidence":[{"authority":"CLIENT_VISIBLE"}]}}
+                """), false);
+
+        GuideDetailCard.DataPreview preview = assertInstanceOf(
+                GuideDetailCard.DataPreview.class, view.cards().getFirst());
+        assertEquals(9, preview.cardinality());
+        assertEquals(2, preview.rows().size());
+        assertEquals("example:obsidian_sword", preview.rows().getFirst()
+                .cells().stream()
+                .filter(cell -> cell.key().equals("itemId"))
+                .findFirst()
+                .orElseThrow()
+                .value());
+        assertFalse(view.toString().contains("r_secret"));
+        assertFalse(view.toString().contains("internal projection"));
+        assertEquals(
+                GuideToolMessage.Key.ANALYSIS_PREVIEW,
+                view.narration().getFirst().key());
+    }
+
     private static GuideToolActivity activity(String toolId, String json) {
         return new GuideToolActivity(
                 "call-secret",

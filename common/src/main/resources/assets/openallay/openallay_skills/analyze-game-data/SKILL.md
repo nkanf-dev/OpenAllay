@@ -1,42 +1,49 @@
 ---
 name: analyze-game-data
-description: Analyze, rank, group, aggregate, and batch-query captured Minecraft content without one Tool call per row.
-allowed-tools: "openallay:resolve_resource openallay:search_recipes"
+description: Analyze, rank, group, aggregate, join, or batch-query captured Minecraft data with one JavaScript program instead of one Tool call per row.
+allowed-tools: "openallay:run_javascript"
 ---
 Use this Skill when the player asks about a set rather than one known object:
-highest/lowest values, comparisons, counts, groups, all matches under a mod
-namespace, or recipes for several already-resolved targets.
+highest/lowest values, comparisons, counts, groups, relationships, all matches
+under a mod namespace, or recipes for several targets.
 
-1. Choose the smallest virtual dataset that contains the facts.
-2. If the exact field paths are not already present in a successful schema
-   result retained in context, call `resolve_resource` once with
-   `describe:true`, the dataset, and optional namespace. Never guess a path.
-3. Use only the returned RFC 6901 JSON Pointers and their declared operations.
-4. FILTER early, especially by `/namespace`, `/kind`, component, tag, or a
-   discovered `/data/...` path.
-5. For a ranking, FILTER the numeric field with `EXISTS`, SORT it, SELECT only
-   answer fields, then TAKE the requested rows.
-6. For counts or statistics, use GROUP or AGGREGATE instead of returning every
-   row for the model to count.
-7. Put multiple exact recipe criteria into one `queries` batch. Do not call
-   `search_recipes` once per target.
-8. If a result says `result_too_large`, add a stronger FILTER, SELECT,
-   AGGREGATE, or TAKE stage. Never repeat the unchanged query.
+1. Use `mc.capabilities` and the root names documented in
+   `references/datasets.md` to choose the smallest dataset.
+2. `mc.items` and `mc.recipes` are stable arrays. Do not call
+   `Object.keys(mc)`, prove that these roots are arrays, enumerate every row's
+   keys, or separately fetch a field that a loaded reference already documents.
+3. For an unfamiliar mod-added shape, run one short discovery program using
+   `Object.keys`, `helpers.schema`, or representative samples. Do not guess
+   arbitrary property paths.
+4. Run one complete JavaScript program. Filter early, then map, join, aggregate,
+   and sort inside that program.
+5. Pass the smallest required top-level `roots` to `run_javascript`. Ranking
+   swords needs `["items"]`; recipe comparison needs `["items", "recipes"]`.
+   Omit `roots` only for one schema-discovery call.
+6. Return only answer-sized rows and fields. Do not return a registry, recipe
+   catalog, guide corpus, or full nested property tree.
+7. When the returned model text says rows were omitted, preserve its exact
+   handle. Pass that handle in the next `run_javascript` call's `handles`
+   argument and use `workspace.open(handle)` to continue filtering.
+8. Never call once per candidate. Arrays and maps are the batch interface.
 
-One unfamiliar set-level question means one schema-discovery call followed by
-one complete pipeline call. Do not search individual candidates, translate
-names one at a time, or call the Tool again to read fields already returned.
-When an array contains the values to compare, EXPAND its discovered parent
-array path before filtering or sorting its child paths.
+One familiar set-level question should normally be one `run_javascript` call.
+One unfamiliar question should normally be one schema/sample call followed by
+one analysis call. A third call is justified only to reopen an intentionally
+externalized result, not to repeat the same search.
 
 Load only the reference required by the task:
 
 - `references/datasets.md` when choosing a dataset or field name.
-- `references/pipelines.md` when selecting an operation, operator, sort, group,
-  or aggregate contract.
-- `references/examples.md` when composing a ranking, namespace summary, or
-  multi-recipe batch and the schema alone is insufficient.
+- `references/pipelines.md` for join, ranking, grouping, and workspace patterns.
+- `references/examples.md` when composing one of the accepted analysis tasks.
 
-The pipeline is JSON data, not shell syntax: never invent pipes, scripts,
-regular expressions, paths, or callbacks. If a required dataset or field is
-unavailable, report that limitation instead of approximating it from names.
+For highest-damage sword, strongest poison item and production path, or
+least-material container recipe, `references/examples.md` directly matches the
+task. Load it, then issue the complete analysis as the first JavaScript call.
+Do not perform schema discovery for these three familiar workflows.
+
+The runtime is ordinary modern JavaScript, but it is isolated data analysis:
+there is no Java/JVM access, reflection, network, shell, real filesystem, live
+game object, or mutation. If required captured data is unavailable, report the
+limitation instead of approximating it from names.

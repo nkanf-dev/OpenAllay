@@ -8,14 +8,9 @@ import dev.openallay.capability.CapabilitySettingsDescriptor;
 import dev.openallay.context.minecraft.MinecraftContextCapture;
 import dev.openallay.devmode.DevelopmentToolInspector;
 import dev.openallay.knowledge.KnowledgeRegistry;
-import dev.openallay.knowledge.online.McModKnowledgeSource;
-import dev.openallay.knowledge.online.MinecraftWikiKnowledgeSource;
-import dev.openallay.knowledge.online.OnlineKnowledgeSearchService;
 import dev.openallay.integration.patchouli.PatchouliMultiblockStore;
 import dev.openallay.platform.PlatformService;
 import dev.openallay.platform.PlatformServices;
-import dev.openallay.net.HttpTransportPolicy;
-import dev.openallay.net.JdkHttpTransport;
 import dev.openallay.skill.BundledSkillLoader;
 import dev.openallay.skill.LoadSkillTool;
 import dev.openallay.skill.SkillParser;
@@ -23,22 +18,12 @@ import dev.openallay.skill.SkillRepository;
 import dev.openallay.tool.ToolRegistry;
 import dev.openallay.tool.Tool;
 import dev.openallay.tool.builtin.CalculateCraftabilityTool;
-import dev.openallay.tool.builtin.FindRecipesTool;
-import dev.openallay.tool.builtin.FindItemUsagesTool;
-import dev.openallay.tool.builtin.GetRecipeTool;
-import dev.openallay.tool.builtin.GetKnowledgeDocumentTool;
-import dev.openallay.tool.builtin.GetPatchouliMultiblockTool;
-import dev.openallay.tool.builtin.ListKnowledgeSourcesTool;
-import dev.openallay.tool.builtin.InspectInventoryTool;
-import dev.openallay.tool.builtin.InspectGameStateTool;
-import dev.openallay.tool.builtin.ResolveResourceTool;
-import dev.openallay.tool.builtin.SearchKnowledgeTool;
-import dev.openallay.tool.builtin.SearchRecipesTool;
 import dev.openallay.tool.builtin.RunJavascriptTool;
 import dev.openallay.script.RhinoJavascriptRuntime;
 import dev.openallay.script.data.MinecraftAgentDataProjector;
 import dev.openallay.script.workspace.AgentResultWorkspaceRegistry;
 import dev.openallay.script.workspace.JavascriptResultPresenter;
+import dev.openallay.script.extension.JavascriptDataModuleRegistry;
 import dev.openallay.trace.json.TraceParser;
 import dev.openallay.trace.minecraft.TraceReplayService;
 import dev.openallay.trace.minecraft.TraceRepository;
@@ -60,24 +45,15 @@ public final class OpenAllayBootstrap {
         Gson gson = new Gson();
         AgentResultWorkspaceRegistry javascriptWorkspaces =
                 new AgentResultWorkspaceRegistry();
+        KnowledgeRegistry knowledge = new KnowledgeRegistry();
+        JavascriptDataModuleRegistry javascriptModules =
+                new JavascriptDataModuleRegistry();
         ToolRegistry tools = new ToolRegistry();
         tools.register(
                 "openallay:builtins",
-                builtinTools(platform, gson, javascriptWorkspaces));
-        KnowledgeRegistry knowledge = new KnowledgeRegistry();
-        JdkHttpTransport knowledgeHttp = new JdkHttpTransport(
-                new HttpTransportPolicy(java.time.Duration.ofSeconds(10), "openallay-knowledge"));
-        OnlineKnowledgeSearchService onlineKnowledge = new OnlineKnowledgeSearchService(List.of(
-                new MinecraftWikiKnowledgeSource(knowledgeHttp, gson),
-                new McModKnowledgeSource(knowledgeHttp)));
+                builtinTools(
+                        platform, gson, javascriptWorkspaces, knowledge, javascriptModules));
         PatchouliMultiblockStore patchouliMultiblocks = new PatchouliMultiblockStore();
-        tools.register(
-                "openallay:knowledge",
-                List.of(
-                        new ListKnowledgeSourcesTool(knowledge),
-                        new SearchKnowledgeTool(knowledge, onlineKnowledge),
-                        new GetKnowledgeDocumentTool(knowledge),
-                        new GetPatchouliMultiblockTool(patchouliMultiblocks)));
         SkillRepository skills = new SkillRepository(
                 new SkillParser(),
                 tools.descriptors().stream().map(descriptor -> descriptor.id()).toList());
@@ -99,6 +75,7 @@ public final class OpenAllayBootstrap {
                 tools,
                 knowledge,
                 patchouliMultiblocks,
+                javascriptModules,
                 skills,
                 new DevelopmentToolInspector(tools),
                 traceReplay,
@@ -154,19 +131,36 @@ public final class OpenAllayBootstrap {
             PlatformService platform,
             Gson gson,
             AgentResultWorkspaceRegistry javascriptWorkspaces) {
+        return builtinTools(
+                platform, gson, javascriptWorkspaces, new KnowledgeRegistry());
+    }
+
+    static List<Tool<?, ?>> builtinTools(
+            PlatformService platform,
+            Gson gson,
+            AgentResultWorkspaceRegistry javascriptWorkspaces,
+            KnowledgeRegistry knowledge) {
+        return builtinTools(
+                platform,
+                gson,
+                javascriptWorkspaces,
+                knowledge,
+                new JavascriptDataModuleRegistry());
+    }
+
+    static List<Tool<?, ?>> builtinTools(
+            PlatformService platform,
+            Gson gson,
+            AgentResultWorkspaceRegistry javascriptWorkspaces,
+            KnowledgeRegistry knowledge,
+            JavascriptDataModuleRegistry javascriptModules) {
         return List.of(
                 new RunJavascriptTool(
                         new RhinoJavascriptRuntime(gson),
-                        new MinecraftAgentDataProjector(gson),
+                        new MinecraftAgentDataProjector(
+                                gson, knowledge::snapshot, javascriptModules),
                         javascriptWorkspaces,
                         new JavascriptResultPresenter()),
-                new InspectGameStateTool(),
-                new ResolveResourceTool(),
-                new SearchRecipesTool(),
-                new GetRecipeTool(),
-                new FindItemUsagesTool(),
-                new InspectInventoryTool(),
-                new CalculateCraftabilityTool(),
-                new FindRecipesTool());
+                new CalculateCraftabilityTool());
     }
 }

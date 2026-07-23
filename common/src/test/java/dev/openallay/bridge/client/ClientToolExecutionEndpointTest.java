@@ -19,6 +19,7 @@ import dev.openallay.tool.ToolAccess;
 import dev.openallay.tool.ToolDescriptor;
 import dev.openallay.tool.ToolRegistry;
 import dev.openallay.tool.ToolResult;
+import dev.openallay.tool.RequestScopeParticipant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -28,6 +29,42 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 
 final class ClientToolExecutionEndpointTest {
+    @Test
+    void sharesOneRequestCorrelationAcrossCallsAndClosesRequestScopedTools() {
+        ScopeTool tool = new ScopeTool();
+        ToolRegistry registry = new ToolRegistry();
+        registry.register("test", List.of(tool));
+        List<String> captured = new ArrayList<>();
+        ClientToolExecutionEndpoint endpoint = new ClientToolExecutionEndpoint(
+                (capabilities, correlation) -> {
+                    captured.add(correlation);
+                    return CompletableFuture.completedFuture(
+                            ToolInvocationContext.developmentConsole(correlation));
+                },
+                chunk -> {},
+                new Gson(),
+                128,
+                Runnable::run);
+        UUID requestId = UUID.randomUUID();
+        endpoint.open(
+                requestId, "main",
+                ToolRuntimeCatalog.from(registry.registrations(), java.util.Set.of()));
+
+        for (int index = 0; index < 2; index++) {
+            endpoint.handle(new ClientToolCallPayload(
+                    BridgeProtocol.VERSION,
+                    requestId,
+                    UUID.randomUUID(),
+                    "main",
+                    "test:scope",
+                    "{}"));
+        }
+        endpoint.close(requestId);
+
+        assertEquals(List.of(requestId.toString(), requestId.toString()), captured);
+        assertEquals(List.of(requestId.toString()), tool.closed);
+    }
+
     @Test
     void freezesOneRequestCatalogAndReturnsACompleteNormalizedResult() {
         ToolRegistry registry = registry();
@@ -197,6 +234,31 @@ final class ClientToolExecutionEndpointTest {
         @Override
         public ToolResult<Output> invoke(ToolInvocationContext context, Input input) {
             return new ToolResult.Success<>(new Output(input.value()));
+        }
+    }
+
+    private static final class ScopeTool
+            implements Tool<ScopeTool.Input, ScopeTool.Output>, RequestScopeParticipant {
+        record Input() {}
+        record Output(String correlationId) {}
+
+        private static final ToolDescriptor<Input, Output> DESCRIPTOR = new ToolDescriptor<>(
+                "test:scope", "Test request scope", Input.class, Output.class, ToolAccess.READ_ONLY);
+        private final List<String> closed = new ArrayList<>();
+
+        @Override
+        public ToolDescriptor<Input, Output> descriptor() {
+            return DESCRIPTOR;
+        }
+
+        @Override
+        public ToolResult<Output> invoke(ToolInvocationContext context, Input input) {
+            return new ToolResult.Success<>(new Output(context.correlationId()));
+        }
+
+        @Override
+        public void closeRequestScope(String correlationId) {
+            closed.add(correlationId);
         }
     }
 }

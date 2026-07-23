@@ -1,6 +1,7 @@
 package dev.openallay.agent;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import dev.openallay.agent.session.AgentSessionStore;
 import dev.openallay.agent.context.ContextCompactor;
@@ -109,6 +110,7 @@ public final class GameGuideAgent {
                                     lease,
                                     reused.orElseThrow().messages(),
                                     completeMessages,
+                                    Math.max(0, reused.orElseThrow().messages().size() - 1),
                                     Map.of(),
                                     trace,
                                     events)
@@ -144,6 +146,7 @@ public final class GameGuideAgent {
                                 lease,
                                 result.projection().messages(),
                                 completeMessages,
+                                Math.max(0, result.projection().messages().size() - 1),
                                 Map.of(),
                                 trace,
                                 events);
@@ -151,7 +154,15 @@ public final class GameGuideAgent {
                     .exceptionally(throwable -> fail(request, lease, trace, events, throwable));
         }
         transition(AgentState.MODEL_WAIT, trace, events);
-        return loop(request, lease, messages, completeMessages, Map.of(), trace, events)
+        return loop(
+                        request,
+                        lease,
+                        messages,
+                        completeMessages,
+                        protectedFromIndex,
+                        Map.of(),
+                        trace,
+                        events)
                 .exceptionally(throwable -> fail(request, lease, trace, events, throwable));
     }
 
@@ -160,10 +171,49 @@ public final class GameGuideAgent {
             AgentSessionStore.Lease lease,
             List<ModelMessage> messages,
             List<ModelMessage> completeMessages,
+            int protectedFromIndex,
             Map<String, String> previousCallOutcomes,
             LiveAgentTraceRecorder trace,
             Consumer<AgentEvent> events) {
         lease.cancellation().throwIfCancelled();
+        if (compactor != null
+                && compactor.requiresCompaction(
+                        request.systemPrompt(), messages, tools.definitions())) {
+            int protectedMessageCount = messages.size() - protectedFromIndex;
+            transition(AgentState.COMPACTING, trace, events);
+            return compactor.compact(
+                            request.systemPrompt(),
+                            messages,
+                            protectedFromIndex,
+                            tools.definitions(),
+                            request.stream(),
+                            request.sessionKey().schedulingKey(),
+                            lease.cancellation())
+                    .thenCompose(result -> {
+                        if (result.checkpoint() != null) {
+                            sessions.recordCheckpoint(lease, result.checkpoint());
+                            events.accept(new AgentEvent.ContextCompacted(result.checkpoint()));
+                        }
+                        if (!result.successful()) {
+                            throw new ModelClientException(new dev.openallay.model.ModelFailure(
+                                    result.failureCode(), result.failureMessage(), null));
+                        }
+                        int nextProtectedFrom = Math.max(
+                                0,
+                                result.projection().messages().size()
+                                        - protectedMessageCount);
+                        transition(AgentState.MODEL_WAIT, trace, events);
+                        return loop(
+                                request,
+                                lease,
+                                result.projection().messages(),
+                                completeMessages,
+                                nextProtectedFrom,
+                                previousCallOutcomes,
+                                trace,
+                                events);
+                    });
+        }
         ModelRequest modelRequest = new ModelRequest(
                 request.systemPrompt(),
                 messages,
@@ -219,6 +269,7 @@ public final class GameGuideAgent {
                                         lease,
                                         outcome.messages(),
                                         outcome.completeMessages(),
+                                        protectedFromIndex,
                                         outcome.callOutcomes(),
                                         trace,
                                         events);
@@ -295,12 +346,12 @@ public final class GameGuideAgent {
                             result.normalized()));
                 }
                 results.add(new ModelContent.ToolResult(
-                        item.call().id(), result.normalized(), result.failure()));
+                        item.call().id(), result.modelValue(), result.failure()));
                 updatedCallOutcomes.put(
                         item.callKey(),
                         duplicatedThisTurn.contains(item.callKey())
                                 ? REPEATED_CALL_SENTINEL
-                                : canonical(result.normalized()));
+                                : canonical(result.modelValue()));
             }
             List<ModelMessage> updated = new ArrayList<>(messages);
             updated.add(new ModelMessage(ModelRole.USER, results));
@@ -343,7 +394,7 @@ public final class GameGuideAgent {
         return new AgentResult(state, null, code, message, completed);
     }
 
-    private String canonical(JsonObject value) {
+    private String canonical(JsonElement value) {
         return gson.toJson(canonicalizer.canonicalize(value));
     }
 

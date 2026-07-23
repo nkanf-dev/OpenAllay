@@ -33,8 +33,33 @@ public final class GuideToolPresentation {
             case "player_context" -> player(object(value, "player"));
             case "get_patchouli_multiblock" -> multiblock(object(value, "multiblock"));
             case "inspect_game_state" -> inspectedGameState(value);
+            case "run_javascript" -> javascriptAnalysis(value);
             default -> one(GuideToolMessage.Key.RESULT_COMPLETED);
         };
+    }
+
+    private static List<GuideToolMessage> javascriptAnalysis(JsonObject value) {
+        long cardinality = value.has("cardinality") && value.get("cardinality").isJsonPrimitive()
+                ? Math.max(0, value.get("cardinality").getAsLong())
+                : 0;
+        if (cardinality == 0) {
+            return one(GuideToolMessage.Key.ANALYSIS_EMPTY);
+        }
+        boolean complete = value.has("complete")
+                && value.get("complete").isJsonPrimitive()
+                && value.get("complete").getAsBoolean();
+        if (complete) {
+            return List.of(message(
+                    GuideToolMessage.Key.ANALYSIS_COMPLETE, Long.toString(cardinality)));
+        }
+        JsonElement preview = value.get("preview");
+        long shown = preview != null && preview.isJsonArray()
+                ? preview.getAsJsonArray().size()
+                : 1;
+        return List.of(message(
+                GuideToolMessage.Key.ANALYSIS_PREVIEW,
+                Long.toString(shown),
+                Long.toString(cardinality)));
     }
 
     private static List<GuideToolMessage> resolvedResources(JsonObject value) {

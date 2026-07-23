@@ -1,14 +1,40 @@
-# Virtual datasets
+# JavaScript data graph
 
-The `resolve_resource` analytical input accepts `all`, `items`, `blocks`,
-`effects`, `potions`, `entities`, or `attributes`.
+`mc` is an immutable snapshot captured for the current request. Start with:
 
-Every row has identity paths such as `/id`, `/kind`, `/displayName`,
-`/namespace`, `/provenance`, `/aliases`, `/tags`, and `/components`. Everything
-else is runtime data under `/data`. Component IDs and nested field names are
-not fixed by OpenAllay: discover them with `describe:true`.
+- `mc.capabilities`: names of captured data areas.
+- `mc.items`, `mc.blocks`, `mc.fluids`, `mc.effects`, `mc.enchantments`,
+  `mc.entities`: convenient registry arrays when those kinds exist.
+- `mc.registries.entries`: every captured registry entry.
+- `mc.recipes`: recipe rows; `mc.recipeCatalog` also exposes providers, groups,
+  diagnostics, and evidence.
+- `mc.player`: the caller's detached inventory and visible player state.
+- `mc.game`: installed mods, settings, packs, shaders, diagnostics, location,
+  and closed world-query results.
+- `mc.knowledge`: currently indexed guide and documentation records.
+- `mc.extensions`: trusted extension-provided detached data modules.
 
-Schema discovery recursively reports JSON Pointer paths, types, row coverage,
-a representative encoded value, and allowed operations. Paths containing `/*`
-refer to array elements. EXPAND the parent array path before comparing sibling
-fields from each element.
+Registry rows always include `id`, `kind`, `displayName`, `namespace`,
+`provenance`, `aliases`, `tags`, `components`, and `properties`. The
+`properties` object is intentionally open-ended: vanilla, loader, and mod
+adapters may add arbitrary nested keys such as attributes, food components,
+potion effects, durability, enchantment levels, or extension-specific values.
+
+Recipe rows always include `id`, `type`, `layout`, `workstation`,
+`ingredients`, `catalysts`, `fluids`, `outputs`, `byproducts`, `processing`,
+`conditions`, `extensions`, `unlockState`, and `evidence`. Ingredient rows
+include `count`, `consumed`, and `alternatives`; output item IDs are at
+`output.stack.itemId`. Use `recipe.id`, never an invented `recipeId` field.
+
+Discover shapes from data instead of memorizing a closed schema:
+
+```js
+return {
+  roots: Object.keys(mc).sort(),
+  itemSchema: helpers.schema(mc.items?.slice(0, 8) ?? [], 4),
+  recipeSchema: helpers.schema(mc.recipes?.slice(0, 4) ?? [], 4)
+};
+```
+
+Filter by a stable discriminator (namespace, kind, tag, component, recipe
+type) before examining large nested property trees.

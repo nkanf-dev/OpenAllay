@@ -55,11 +55,72 @@ public final class GuideToolDetailPresenter {
                 case "find_item_usages" -> usageCards(value);
                 case "inspect_inventory" -> inventoryCards(value);
                 case "calculate_craftability" -> craftabilityCards(value);
+                case "run_javascript" -> javascriptCards(value);
                 default -> new Projection(List.of(), "text-only registered tool projection");
             };
         } catch (RuntimeException exception) {
             return new Projection(List.of(), "malformed semantic result");
         }
+    }
+
+    private static Projection javascriptCards(JsonObject value) {
+        JsonElement preview = value.get("preview");
+        if (preview == null || preview.isJsonNull()) {
+            return new Projection(List.of(), "analysis preview is missing");
+        }
+        List<GuideDetailCard.DataRow> rows = new ArrayList<>();
+        if (preview.isJsonArray()) {
+            int index = 0;
+            for (JsonElement element : preview.getAsJsonArray()) {
+                rows.add(dataRow(element, Integer.toString(++index)));
+            }
+        } else {
+            rows.add(dataRow(preview, "value"));
+        }
+        if (rows.isEmpty()) {
+            rows.add(new GuideDetailCard.DataRow(List.of(
+                    new GuideDetailCard.DataCell("result", "(empty)"))));
+        }
+        return new Projection(List.of(new GuideDetailCard.DataPreview(
+                "screen.openallay.detail.analysis",
+                requiredString(value, "resultType"),
+                nonnegativeLong(value.get("cardinality")),
+                rows,
+                bool(value, "complete"),
+                optionalNonnegativeInt(value, "omittedRows"),
+                optionalNonnegativeInt(value, "omittedFields"))), "");
+    }
+
+    private static GuideDetailCard.DataRow dataRow(JsonElement value, String fallbackKey) {
+        List<GuideDetailCard.DataCell> cells = new ArrayList<>();
+        if (value != null && value.isJsonObject()) {
+            for (Map.Entry<String, JsonElement> entry : value.getAsJsonObject().entrySet()) {
+                cells.add(new GuideDetailCard.DataCell(
+                        clip(entry.getKey(), 80), displayValue(entry.getValue())));
+                if (cells.size() == 16) {
+                    break;
+                }
+            }
+        } else {
+            cells.add(new GuideDetailCard.DataCell(fallbackKey, displayValue(value)));
+        }
+        if (cells.isEmpty()) {
+            cells.add(new GuideDetailCard.DataCell(fallbackKey, "(empty)"));
+        }
+        return new GuideDetailCard.DataRow(cells);
+    }
+
+    private static String displayValue(JsonElement value) {
+        if (value == null || value.isJsonNull()) {
+            return "null";
+        }
+        if (value.isJsonPrimitive()) {
+            return clip(value.getAsString().replaceAll("\\p{Cntrl}", " "), 260);
+        }
+        if (value.isJsonArray()) {
+            return "[" + value.getAsJsonArray().size() + " values]";
+        }
+        return "{" + value.getAsJsonObject().size() + " fields}";
     }
 
     private static Projection recipeCards(String toolId, JsonObject normalized) {
@@ -161,6 +222,7 @@ public final class GuideToolDetailPresenter {
             case "find_item_usages" -> "screen.openallay.tool.find_item_usages";
             case "inspect_inventory" -> "screen.openallay.tool.inspect_inventory";
             case "calculate_craftability" -> "screen.openallay.tool.calculate_craftability";
+            case "run_javascript" -> "screen.openallay.tool.run_javascript";
             default -> "screen.openallay.tool.result";
         };
     }
@@ -231,6 +293,27 @@ public final class GuideToolDetailPresenter {
         long result = value.getAsLong();
         if (result < 0) throw new IllegalArgumentException("count must not be negative");
         return result;
+    }
+
+    private static int optionalNonnegativeInt(JsonObject value, String field) {
+        JsonElement element = value.get(field);
+        if (element == null || !element.isJsonPrimitive()) {
+            return 0;
+        }
+        int result = element.getAsInt();
+        return Math.max(0, result);
+    }
+
+    private static String clip(String value, int maximum) {
+        if (value.length() <= maximum) {
+            return value;
+        }
+        int end = maximum;
+        if (Character.isHighSurrogate(value.charAt(end - 1))
+                && Character.isLowSurrogate(value.charAt(end))) {
+            end--;
+        }
+        return value.substring(0, end) + "…";
     }
 
     private record Projection(List<GuideDetailCard> cards, String diagnostic) {

@@ -1,6 +1,15 @@
 ---
 name: search-guide-books
 description: Find and synthesize relevant entries from Patchouli and other indexed in-game guide books.
-allowed-tools: "openallay:resolve_resource openallay:list_knowledge_sources openallay:search_knowledge openallay:get_knowledge_document openallay:get_patchouli_multiblock"
+allowed-tools: "openallay:run_javascript"
 ---
-List sources when the likely guide is unclear. If the player asks which books or entries discuss a mechanic, first resolve the mechanic's exact effect, item, block, or other catalog ID when useful, then perform one indexed-knowledge search using that ID, localized name, and mechanic terms. Enumerate only matches within the returned indexed evidence scope; do not describe them as every book in the installation when sources are partial, unavailable, or lexically unmatched. Use the result's section title and excerpt to choose a hit, then pass its sourceId and documentId unchanged to load the complete document before answering; sectionReference is a stable location hint, not a replacement document identity. Preserve source and provenance in the response. Treat missing, malformed, config-gated, and unsupported entries as unavailable; never reconstruct their contents from guesses. For multiblocks, call the multiblock tool with the indexed structure reference and report its verified block coordinates.
+Use one JavaScript program to resolve useful exact item/block/effect IDs from
+registry arrays, then search `mc.knowledge` by those IDs, localized names, title,
+body, namespace, and mechanic terms. Rank compact candidate records before
+returning complete bodies; do not return the entire guide corpus.
+
+Enumerate only matches within the captured evidence scope. Preserve sourceId,
+documentId, structureRef, provenance, and evidence. Treat missing, malformed,
+config-gated, and unsupported entries as unavailable; never reconstruct their
+contents from guesses. Trusted structure data may be present under
+`mc.extensions`; use it only when its explicit reference matches the document.

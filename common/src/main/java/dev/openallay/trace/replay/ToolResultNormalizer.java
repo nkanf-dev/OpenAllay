@@ -5,6 +5,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import dev.openallay.tool.ToolResult;
+import dev.openallay.tool.ModelFacingToolOutput;
 import dev.openallay.context.EvidenceBearing;
 import java.util.Objects;
 import java.util.TreeSet;
@@ -29,6 +30,13 @@ public final class ToolResultNormalizer {
             normalized.addProperty("status", "success");
             normalized.addProperty("outputType", outputType.getName());
             normalized.add("value", canonicalize(gson.toJsonTree(success.value())));
+            if (success.value() instanceof ModelFacingToolOutput projection) {
+                String text = projection.modelText();
+                if (text == null || text.isBlank()) {
+                    throw new IllegalArgumentException("Model-facing tool text must not be blank");
+                }
+                normalized.addProperty("modelText", text);
+            }
         } else if (result instanceof ToolResult.Failure<?> failure) {
             normalized.addProperty("status", "failure");
             normalized.addProperty("code", failure.code());

@@ -10,21 +10,17 @@ import org.junit.jupiter.api.Test;
 
 final class BuiltinToolRegistrationTest {
     @Test
-    void registersTheGroundedRecipeWorkflowAndCompatibilityAlias() {
+    void exposesJavascriptAnalysisAndOnlyTheNarrowDeterministicAction() {
         Set<String> toolIds = OpenAllayBootstrap.builtinTools(testPlatform()).stream()
                 .map(tool -> tool.descriptor().id())
                 .collect(Collectors.toSet());
 
-        assertTrue(toolIds.containsAll(Set.of(
-                "openallay:search_recipes",
-                "openallay:get_recipe",
-                "openallay:find_item_usages",
-                "openallay:inspect_inventory",
-                "openallay:calculate_craftability",
-                "openallay:find_recipes")));
-        assertTrue(toolIds.contains("openallay:inspect_game_state"));
-        assertFalse(toolIds.contains("openallay:platform_info"));
-        assertFalse(toolIds.contains("openallay:player_context"));
+        assertTrue(toolIds.contains("openallay:run_javascript"));
+        assertTrue(toolIds.contains("openallay:calculate_craftability"));
+        assertFalse(toolIds.contains("openallay:search_recipes"));
+        assertFalse(toolIds.contains("openallay:inspect_game_state"));
+        assertFalse(toolIds.contains("openallay:resolve_resource"));
+        assertTrue(toolIds.size() == 2);
     }
 
     private static PlatformService testPlatform() {

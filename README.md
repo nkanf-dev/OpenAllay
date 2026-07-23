@@ -22,6 +22,9 @@ OpenAllay does more than generate Minecraft-flavoured text. It can inspect the
 mods and settings in your current instance, search recipes and guide books, and
 compare recipe requirements with the items you actually have. For more involved
 questions, it can work through several steps before giving you an answer.
+It can also compare whole sets of installed content at once—for example,
+ranking every sword by damage or finding the simplest recipe—rather than
+checking candidates one by one.
 
 ### A native in-game experience
 
@@ -48,6 +51,8 @@ you can view or manage them in-game.
 
 - Find recipes and item uses, then check whether your inventory contains the
   required ingredients.
+- Compare, rank, group, and connect information across all captured items,
+  effects, recipes, settings, and guides in one request.
 - Inspect installed mods, video settings, resource packs, coordinates, and
   F3-style information.
 - Search supported guide-book content and local notes.
@@ -84,6 +89,8 @@ OpenAllay screen. Upgrade to **21.0.4 or newer**, or remove Architectury.
 - “Which resource packs are active?”
 - “Show my current coordinates and F3 information.”
 - “Search my installed guide books for magical crops.”
+- “Which sword in this pack has the highest damage?”
+- “Which container needs the fewest materials to craft?”
 
 ## Using the in-game screen
 

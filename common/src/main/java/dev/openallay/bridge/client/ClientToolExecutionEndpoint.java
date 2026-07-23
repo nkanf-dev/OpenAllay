@@ -12,6 +12,7 @@ import dev.openallay.context.ToolInvocationContext;
 import dev.openallay.model.CancellationSignal;
 import dev.openallay.tool.Tool;
 import dev.openallay.tool.ToolAccess;
+import dev.openallay.tool.RequestScopeParticipant;
 import dev.openallay.tool.ToolResult;
 import dev.openallay.trace.replay.ToolArgumentCodec;
 import dev.openallay.trace.replay.ToolResultNormalizer;
@@ -136,7 +137,7 @@ public final class ClientToolExecutionEndpoint {
         CompletableFuture<ToolInvocationContext> capture;
         try {
             capture = contexts.capture(
-                    tool.descriptor().requiredContext(), payload.invocationId().toString());
+                    tool.descriptor().requiredContext(), payload.requestId().toString());
         } catch (RuntimeException failure) {
             finish(payload, request, tool, new ToolResult.Failure<>(
                     "client_tool_context_failed", "Client Tool context capture failed"));
@@ -147,8 +148,9 @@ public final class ClientToolExecutionEndpoint {
                     "client_tool_context_failed", "Client Tool context capture failed"));
             return new ToolResult.Success<>(new VoidResult());
         }
-        capture.thenApplyAsync(
-                        context -> invoke(tool, context, payload.argumentsJson(), cancellation),
+        capture.thenComposeAsync(
+                        context -> invokeAsync(
+                                tool, context, payload.argumentsJson(), cancellation),
                         worker)
                 .exceptionally(ignored -> new ToolResult.Failure<>(
                         "client_tool_context_failed", "Client Tool context capture failed"))
@@ -171,6 +173,11 @@ public final class ClientToolExecutionEndpoint {
             return false;
         }
         request.close();
+        request.tools.registrations().stream()
+                .map(registration -> registration.tool())
+                .filter(RequestScopeParticipant.class::isInstance)
+                .map(RequestScopeParticipant.class::cast)
+                .forEach(participant -> participant.closeRequestScope(requestId.toString()));
         return true;
     }
 
@@ -184,7 +191,7 @@ public final class ClientToolExecutionEndpoint {
         return requests.size();
     }
 
-    private ToolResult<?> invoke(
+    private CompletableFuture<ToolResult<?>> invokeAsync(
             Tool<?, ?> tool,
             ToolInvocationContext context,
             String argumentsJson,
@@ -194,23 +201,25 @@ public final class ClientToolExecutionEndpoint {
         try {
             parsed = com.google.gson.JsonParser.parseString(argumentsJson);
         } catch (RuntimeException failure) {
-            return new ToolResult.Failure<>(
-                    "invalid_arguments", "Client Tool arguments are not valid JSON");
+            return CompletableFuture.completedFuture(new ToolResult.Failure<>(
+                    "invalid_arguments", "Client Tool arguments are not valid JSON"));
         }
         if (!parsed.isJsonObject()) {
-            return new ToolResult.Failure<>(
-                    "invalid_arguments", "Client Tool arguments must be an object");
+            return CompletableFuture.completedFuture(new ToolResult.Failure<>(
+                    "invalid_arguments", "Client Tool arguments must be an object"));
         }
         ToolResult<?> decoded = arguments.decode(
                 parsed.getAsJsonObject(), tool.descriptor().inputType());
         if (decoded instanceof ToolResult.Failure<?> failure) {
-            return failure;
+            return CompletableFuture.completedFuture(failure);
         }
         cancellation.throwIfCancelled();
         try {
-            return invokeTyped(tool, context, ((ToolResult.Success<?>) decoded).value());
+            return invokeTypedAsync(
+                    tool, context, ((ToolResult.Success<?>) decoded).value(), cancellation);
         } catch (RuntimeException failure) {
-            return new ToolResult.Failure<>("tool_failure", "Client Tool execution failed");
+            return CompletableFuture.completedFuture(new ToolResult.Failure<>(
+                    "tool_failure", "Client Tool execution failed"));
         }
     }
 
@@ -251,9 +260,14 @@ public final class ClientToolExecutionEndpoint {
     }
 
     @SuppressWarnings("unchecked")
-    private static <I, O> ToolResult<O> invokeTyped(
-            Tool<?, ?> raw, ToolInvocationContext context, Object input) {
-        return ((Tool<I, O>) raw).invoke(context, (I) input);
+    private static <I, O> CompletableFuture<ToolResult<?>> invokeTypedAsync(
+            Tool<?, ?> raw,
+            ToolInvocationContext context,
+            Object input,
+            CancellationSignal cancellation) {
+        return ((Tool<I, O>) raw)
+                .invokeAsync(context, (I) input, cancellation)
+                .thenApply(result -> result);
     }
 
     public record OpenedRequest(UUID requestId, String sessionId, List<String> clientToolIds) {

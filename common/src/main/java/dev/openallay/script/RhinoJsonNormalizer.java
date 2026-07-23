@@ -17,17 +17,25 @@ import java.util.IdentityHashMap;
 import java.util.Map;
 
 final class RhinoJsonNormalizer {
-    private static final int MAX_DEPTH = 128;
+    private final JavascriptRuntimeLimits limits;
+
+    RhinoJsonNormalizer(JavascriptRuntimeLimits limits) {
+        this.limits = java.util.Objects.requireNonNull(limits, "limits");
+    }
 
     JsonElement normalize(Object value) {
-        return normalize(value, new IdentityHashMap<>(), 0);
+        return normalize(value, new IdentityHashMap<>(), 0, new Budget());
     }
 
     private JsonElement normalize(
-            Object value, IdentityHashMap<Object, Boolean> ancestors, int depth) {
-        if (depth > MAX_DEPTH) {
-            throw invalid("JavaScript result is nested too deeply");
+            Object value,
+            IdentityHashMap<Object, Boolean> ancestors,
+            int depth,
+            Budget budget) {
+        if (depth > limits.maxResultDepth()) {
+            throw exceeded("JavaScript result exceeds the nesting-depth budget");
         }
+        budget.node();
         if (value == null) {
             return JsonNull.INSTANCE;
         }
@@ -38,7 +46,9 @@ final class RhinoJsonNormalizer {
             return new JsonPrimitive(booleanValue);
         }
         if (value instanceof CharSequence sequence) {
-            return new JsonPrimitive(sequence.toString());
+            String text = sequence.toString();
+            budget.string(text.length());
+            return new JsonPrimitive(text);
         }
         if (value instanceof Number number) {
             double numeric = number.doubleValue();
@@ -54,13 +64,17 @@ final class RhinoJsonNormalizer {
             throw invalid("JavaScript result contains an unsupported host or executable value");
         }
         if (value instanceof NativeArray array) {
+            long length = array.getLength();
+            if (length > limits.maxArrayLength()) {
+                throw exceeded("JavaScript result exceeds the array-length budget");
+            }
             enter(value, ancestors);
             try {
                 JsonArray result = new JsonArray();
                 for (Object item : array) {
                     result.add(item == Undefined.INSTANCE
                             ? JsonNull.INSTANCE
-                            : normalize(item, ancestors, depth + 1));
+                            : normalize(item, ancestors, depth + 1, budget));
                 }
                 return result;
             } finally {
@@ -68,16 +82,21 @@ final class RhinoJsonNormalizer {
             }
         }
         if (value instanceof NativeObject object) {
+            if (object.entrySet().size() > limits.maxObjectFields()) {
+                throw exceeded("JavaScript result exceeds the object-field budget");
+            }
             enter(value, ancestors);
             try {
                 JsonObject result = new JsonObject();
                 for (Object rawEntry : object.entrySet()) {
                     Map.Entry<?, ?> entry = (Map.Entry<?, ?>) rawEntry;
+                    String key = String.valueOf(entry.getKey());
+                    budget.string(key.length());
                     Object child = entry.getValue();
                     if (child != Undefined.INSTANCE) {
                         result.add(
-                                String.valueOf(entry.getKey()),
-                                normalize(child, ancestors, depth + 1));
+                                key,
+                                normalize(child, ancestors, depth + 1, budget));
                     }
                 }
                 return result;
@@ -100,5 +119,33 @@ final class RhinoJsonNormalizer {
     private static JavascriptExecutionException invalid(String message) {
         return new JavascriptExecutionException("javascript_result_invalid", message);
     }
-}
 
+    private static JavascriptExecutionException exceeded(String message) {
+        return new JavascriptExecutionException("javascript_result_budget_exceeded", message);
+    }
+
+    private final class Budget {
+        private long nodes;
+        private long stringCharacters;
+
+        private void node() {
+            if (++nodes > limits.maxResultNodes()) {
+                throw exceeded("JavaScript result exceeds the node budget");
+            }
+        }
+
+        private void string(int characters) {
+            if (characters > limits.maxStringCharacters()) {
+                throw exceeded("JavaScript result contains an oversized string");
+            }
+            stringCharacters = saturatedAdd(stringCharacters, characters);
+            if (stringCharacters > limits.maxResultNodes() * 8L) {
+                throw exceeded("JavaScript result exceeds the aggregate text budget");
+            }
+        }
+    }
+
+    private static long saturatedAdd(long left, long right) {
+        return left > Long.MAX_VALUE - right ? Long.MAX_VALUE : left + right;
+    }
+}

@@ -30,6 +30,10 @@ import dev.openallay.settings.capability.CapabilitySettingsView;
 import dev.openallay.settings.capability.RecipeSettingsBackend;
 import dev.openallay.settings.capability.RecipeSettingsView;
 import dev.openallay.settings.skill.SkillSettingsBackend;
+import dev.openallay.skill.AgentSkillManager;
+import dev.openallay.skill.BundledSkillLoader;
+import dev.openallay.skill.ManageSkillTool;
+import dev.openallay.skill.SkillParser;
 import dev.openallay.settings.tool.ToolSettingsBackend;
 import dev.openallay.tool.config.ToolConfigException;
 import dev.openallay.tool.config.ToolFamilyConfig;
@@ -238,6 +242,20 @@ public record ClientSettingsRuntime(
                     : Set.of();
             SkillSettingsBackend skills = new SkillSettingsBackend(
                     configDirectory.resolve("skills"), product.skills(), installedSkillMods);
+            if (product.tools().find("openallay:manage_skill").isEmpty()) {
+                Set<String> availableTools = product.tools().descriptors().stream()
+                        .map(descriptor -> descriptor.id())
+                        .collect(java.util.stream.Collectors.toUnmodifiableSet());
+                product.tools().register(
+                        "openallay:managed-skills",
+                        List.of(new ManageSkillTool(new AgentSkillManager(
+                                configDirectory.resolve("skills"),
+                                product.skills(),
+                                new SkillParser(),
+                                new BundledSkillLoader().load(),
+                                installedSkillMods,
+                                availableTools))));
+            }
             ClientModelRuntimeRegistry registry = ClientModelRuntimeRegistry.create(
                     product, initial, gson, dispatcher, extension);
             CapabilitySettingsBackend capabilities = new CapabilitySettingsBackend(

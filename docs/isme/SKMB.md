@@ -32,7 +32,7 @@ accepted and contains explicit approval evidence.
 | SKMB-2026-07-19-022 | accepted | embedded native domain views, local retrieval, stable presentation, and future player-memory boundary | A, B, C, D, E, F | decisions/2026-07-19-022-native-domain-views-retrieval-memory.md | pending |
 | SKMB-2026-07-19-023 | accepted | double-confirmed session deletion, managed conversation export, and visible chat copying | B, C, E, F, G | decisions/2026-07-19-023-session-actions-and-safe-export.md | pending |
 | SKMB-2026-07-19-024 | accepted | ordered parallel Tool turns, typed batch/query surfaces, fixed online knowledge, provider recovery, and client-visible location routing | A, B, C, D, E, F | decisions/2026-07-19-024-batch-query-and-provider-recovery.md | pending |
-| SKMB-2026-07-24-025 | accepted | isolated Rhino Agent runtime, request result workspace, extension adapters, and managed Skill writes | A, B, C, D, E, F, G | decisions/2026-07-24-025-rhino-agent-runtime.md | pending |
+| SKMB-2026-07-24-025 | accepted | isolated Rhino Agent runtime, request result workspace, extension adapters, and managed Skill writes | A, B, C, D, E, F, G | decisions/2026-07-24-025-rhino-agent-runtime.md | verified |
 
 SKMB-2026-07-18-006 is implemented by `a0eaeff`, `19ab90f`, and `c6ca6bc`.
 Its deterministic clean-build and packaged-driver evidence is recorded in the
@@ -313,6 +313,7 @@ graphical evidence review all passed. Phase 4 is closed.
 | I86 | A Rhino scope and workspace are never shared across request correlation IDs and are closed on every terminal, disconnect, and shutdown path | SKMB-2026-07-24-025 |
 | I87 | Bundled Skills remain immutable; Agent Skill writes are confined to one managed local root, validate a complete package, publish atomically, and affect future request snapshots only | SKMB-2026-07-24-025 |
 | I88 | Extension adapters may use trusted implementation techniques during owning-thread capture, but ordinary Agent JavaScript receives only their detached evidence-bearing contribution and pure helper facade | SKMB-2026-07-24-025 |
+| I89 | Every model-authored script, normalized result, workspace admission/selection, Skill read, UI preview, and provider continuation is bounded before publication; failure never creates a partial handle or sends a known-over-budget request | SKMB-2026-07-24-025 |
 
 ## Fail Semantics
 
@@ -376,6 +377,7 @@ graphical evidence review all passed. Phase 4 is closed.
 | F56 | JavaScript is malformed, exceeds its execution deadline, is cancelled, escapes the sandbox, or returns a cyclic/unsupported value | Fail with a stable `javascript_*` result, store no successful workspace value, discard the Context, and preserve the Agent request for a corrected call unless cancellation owns termination | SKMB-2026-07-24-025 |
 | F57 | A workspace handle is missing, closed, or belongs to another request | Fail `workspace_handle_unavailable`; never guess, reopen another request, or copy hidden canonical data into context | SKMB-2026-07-24-025 |
 | F58 | A managed Skill candidate is malformed, escapes its root, conflicts, or cannot publish atomically | Fail `skill_invalid` or `skill_write_failed`, retain the previous package/catalog, and leave unrelated Skills unchanged | SKMB-2026-07-24-025 |
+| F59 | JavaScript source/result, workspace admission/selection, Skill cursor, or post-Tool provider context exceeds its accepted budget | Fail with the matching stable `javascript_*`, `workspace_*`, `skill_cursor_invalid`, or `context_compaction_failed` code; publish no partial result and do not dispatch an oversized provider request | SKMB-2026-07-24-025 |
 
 ## Reviewed Statistical Defaults
 

@@ -6,6 +6,7 @@ import dev.openallay.knowledge.KnowledgeRegistry;
 import dev.openallay.integration.patchouli.PatchouliMultiblockStore;
 import dev.openallay.platform.PlatformService;
 import dev.openallay.skill.SkillRepository;
+import dev.openallay.script.extension.JavascriptDataModuleRegistry;
 import dev.openallay.tool.ToolRegistry;
 import dev.openallay.trace.minecraft.TraceReplayService;
 import java.util.Objects;
@@ -15,12 +16,35 @@ public record OpenAllayRuntime(
         ToolRegistry tools,
         KnowledgeRegistry knowledge,
         PatchouliMultiblockStore patchouliMultiblocks,
+        JavascriptDataModuleRegistry javascriptModules,
         SkillRepository skills,
         DevelopmentToolInspector developmentTools,
         TraceReplayService traceReplay,
         CapabilitySettingsCatalog capabilitySettings) {
     public OpenAllayRuntime {
         Objects.requireNonNull(capabilitySettings, "capabilitySettings");
+        Objects.requireNonNull(javascriptModules, "javascriptModules");
+    }
+
+    public OpenAllayRuntime(
+            PlatformService platform,
+            ToolRegistry tools,
+            KnowledgeRegistry knowledge,
+            PatchouliMultiblockStore patchouliMultiblocks,
+            SkillRepository skills,
+            DevelopmentToolInspector developmentTools,
+            TraceReplayService traceReplay,
+            CapabilitySettingsCatalog capabilitySettings) {
+        this(
+                platform,
+                tools,
+                knowledge,
+                patchouliMultiblocks,
+                new JavascriptDataModuleRegistry(),
+                skills,
+                developmentTools,
+                traceReplay,
+                capabilitySettings);
     }
 
     public OpenAllayRuntime(
@@ -36,6 +60,7 @@ public record OpenAllayRuntime(
                 tools,
                 knowledge,
                 patchouliMultiblocks,
+                new JavascriptDataModuleRegistry(),
                 skills,
                 developmentTools,
                 traceReplay,

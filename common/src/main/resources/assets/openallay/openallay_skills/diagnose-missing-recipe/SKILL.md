@@ -1,6 +1,18 @@
 ---
 name: diagnose-missing-recipe
 description: Diagnose why an expected crafting or processing recipe is absent in the active pack.
-allowed-tools: "openallay:resolve_resource openallay:search_recipes openallay:get_recipe openallay:find_item_usages openallay:search_knowledge openallay:get_knowledge_document"
+allowed-tools: "openallay:run_javascript"
 ---
-Resolve the natural/localized expected output name first, then copy one returned exact ID unchanged into recipe search. If resolution is ambiguous, do not pick a match without new context. Fetch exact details using the complete sourceId, generation, and recipeId returned by search. If exact lookup returns stale_reference, search once again instead of changing or guessing the generation. After a successful exact lookup, a `recipe_grid` may copy that complete handle unchanged; never author slots, coordinates, textures, GUI classes, or layouts because OpenAllay binds trusted native recipe data. Inspect the returned catalog source states, generations, completeness, diagnostics, and conflicts before concluding that a recipe is absent. Query usages when a replacement input or output may explain the change. Search pack documentation for changed progression, disabled recipes, alternate machines, quest gates, or replacement items. Report the observed recipe list and its completeness exactly. Do not infer that a recipe exists from upstream mod documentation when the active recipe source does not contain it. If a materially corrected search is still empty/unchanged, or evidence is partial or unavailable, stop calling equivalent tools, label the limitation, and suggest checking scripts or server-only configuration with an operator.
+Use one JavaScript program to resolve the natural/localized name against
+registry IDs, aliases, and display names, then filter `mc.recipes` by exact
+inputs and outputs. Correlate `mc.recipeCatalog.providers`, diagnostics, and
+groups before concluding absence. Search `mc.knowledge` in the same program for
+progression changes, disabled recipes, alternate machines, quest gates, or
+replacement items.
+
+Return the observed matching recipes, relevant diagnostics, and exact
+sourceId/generation/recipeId handles. A `recipe_grid` may copy a complete recipe
+handle unchanged; never invent slots or layouts. Do not infer that a recipe
+exists from documentation when the active recipe catalog does not contain it.
+If one materially corrected analysis remains empty or partial, report the
+limitation and stop.

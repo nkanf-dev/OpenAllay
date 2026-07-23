@@ -8,6 +8,7 @@ public sealed interface GuideDetailCard permits
         GuideDetailCard.Recipe,
         GuideDetailCard.ItemGrid,
         GuideDetailCard.Requirements,
+        GuideDetailCard.DataPreview,
         GuideDetailCard.Text,
         GuideDetailCard.Error {
 
@@ -64,6 +65,47 @@ public sealed interface GuideDetailCard permits
             lines = List.copyOf(lines);
             if (lines.isEmpty() || lines.stream().anyMatch(line -> line == null || line.isBlank())) {
                 throw new IllegalArgumentException("text card lines must not be blank");
+            }
+        }
+    }
+
+    record DataPreview(
+            String titleKey,
+            String resultType,
+            long cardinality,
+            List<DataRow> rows,
+            boolean complete,
+            int omittedRows,
+            int omittedFields)
+            implements GuideDetailCard {
+        public DataPreview {
+            titleKey = requireText(titleKey, "titleKey");
+            resultType = requireText(resultType, "resultType");
+            if (cardinality < 0 || omittedRows < 0 || omittedFields < 0) {
+                throw new IllegalArgumentException("preview counts must not be negative");
+            }
+            rows = List.copyOf(rows);
+            if (rows.size() > 6) {
+                throw new IllegalArgumentException("preview must contain at most six rows");
+            }
+        }
+    }
+
+    record DataRow(List<DataCell> cells) {
+        public DataRow {
+            cells = List.copyOf(cells);
+            if (cells.isEmpty() || cells.size() > 16) {
+                throw new IllegalArgumentException("preview row must contain 1..16 cells");
+            }
+        }
+    }
+
+    record DataCell(String key, String value) {
+        public DataCell {
+            key = requireText(key, "key");
+            value = requireText(value, "value");
+            if (key.length() > 80 || value.length() > 260) {
+                throw new IllegalArgumentException("preview cell is too large");
             }
         }
     }

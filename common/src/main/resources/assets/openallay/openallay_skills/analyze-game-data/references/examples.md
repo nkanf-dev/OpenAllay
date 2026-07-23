@@ -1,44 +1,77 @@
 # Worked examples
 
-## Highest-saturation Farmer's Delight foods
+These paths are examples, not a closed schema. Discover the actual captured
+shape when it differs.
 
-```json
-First discover the actual paths; suppose the returned schema contains
-`/data/minecraft:food/saturation` and `/data/minecraft:food/nutrition`:
+For the three workflows below, the documented fixture and normal captured data
+use these exact stable roots and fields. Execute the matching program directly.
+Do not precede it with root, array, key, sample, or per-row discovery calls.
 
-```json
-{"dataset":"items","namespace":"farmersdelight","pipeline":[
-  {"op":"FILTER","field":"/data/minecraft:food/saturation","operator":"EXISTS"},
-  {"op":"SORT","field":"/data/minecraft:food/saturation","direction":"DESC"},
-  {"op":"SELECT","fields":["/id","/displayName","/data/minecraft:food/nutrition","/data/minecraft:food/saturation"]},
-  {"op":"TAKE","count":10}
-]}
+## Highest-damage sword
+
+Call `run_javascript` with `roots: ["items"]`.
+
+```js
+const damage = item =>
+  item.properties["minecraft:attack_damage"]
+  ?? item.properties.attributes?.attack_damage
+  ?? item.properties["minecraft:attribute_modifiers"]?.attack_damage;
+return mc.items
+  .filter(item => item.tags.includes("minecraft:swords"))
+  .map(item => ({id: item.id, name: item.displayName, damage: Number(damage(item))}))
+  .filter(item => Number.isFinite(item.damage))
+  .sort((a, b) => b.damage - a.damage)
+  .slice(0, 5);
 ```
 
-## Count captured items by mod namespace
+## Least-material container recipe
 
-```json
-{"dataset":"items","pipeline":[
-  {"op":"GROUP","field":"/namespace"},
-  {"op":"SORT","field":"count","direction":"DESC"}
-]}
+Call `run_javascript` with `roots: ["items", "recipes"]`.
+
+```js
+const items = new Map(mc.items.map(item => [item.id, item]));
+const ingredientUnits = recipe =>
+  (recipe.ingredients ?? [])
+  .filter(ingredient => ingredient.consumed)
+  .reduce((sum, ingredient) =>
+    sum + Number(ingredient.count ?? 1), 0);
+return mc.recipes
+  .filter(recipe => {
+    const outputId = recipe.outputs?.[0]?.stack?.itemId;
+    const output = items.get(outputId);
+    return output?.tags?.some(tag => tag.includes("container"));
+  })
+  .map(recipe => ({
+    recipeId: recipe.id,
+    output: recipe.outputs?.[0]?.stack?.itemId,
+    materialUnits: ingredientUnits(recipe)
+  }))
+  .sort((a, b) => a.materialUnits - b.materialUnits)
+  .slice(0, 10);
 ```
 
-## Find poison-related content without one query per kind
+## Strongest poison effect and its production path
 
-```json
-{"dataset":"all","pipeline":[
-  {"op":"SEARCH","value":"poison"},
-  {"op":"SELECT","fields":["/id","/kind","/displayName","/namespace"]}
-]}
+Call `run_javascript` with `roots: ["items", "recipes"]`.
+
+```js
+const poison = mc.items.flatMap(item =>
+  (item.properties["minecraft:effects"] ?? [])
+    .filter(effect => String(effect.id).includes("poison"))
+    .map(effect => ({
+      itemId: item.id,
+      duration: Number(effect.duration ?? 0),
+      amplifier: Number(effect.amplifier ?? 0)
+    })))
+  .sort((a, b) => (b.amplifier - a.amplifier) || (b.duration - a.duration));
+const best = poison[0];
+return {
+  best,
+  recipes: mc.recipes.filter(recipe =>
+    recipe.outputs?.some(output => output.stack?.itemId === best?.itemId))
+};
 ```
 
-## Search recipes for several exact outputs in one call
-
-```json
-{"queries":[
-  {"outputItem":"minecraft:spider_eye"},
-  {"outputItem":"minecraft:poisonous_potato"},
-  {"outputItem":"minecraft:pufferfish"}
-]}
-```
+If effects are stored under components or NBT-like nested data instead, inspect
+`helpers.schema` once and adapt the property traversal; do not issue one Tool
+call per item.

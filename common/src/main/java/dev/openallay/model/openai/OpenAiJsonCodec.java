@@ -80,7 +80,7 @@ public final class OpenAiJsonCodec {
                 JsonObject encoded = new JsonObject();
                 encoded.addProperty("role", "tool");
                 encoded.addProperty("tool_call_id", result.toolUseId());
-                encoded.addProperty("content", gson.toJson(result.value()));
+                encoded.addProperty("content", providerToolResult(result.value()));
                 output.add(encoded);
             }
             return;
@@ -118,6 +118,12 @@ public final class OpenAiJsonCodec {
         result.addProperty("type", "function");
         result.add("function", function);
         return result;
+    }
+
+    private String providerToolResult(JsonElement value) {
+        return value.isJsonPrimitive() && value.getAsJsonPrimitive().isString()
+                ? value.getAsString()
+                : gson.toJson(value);
     }
 
     private List<ModelContent> decodeAssistant(JsonObject message, Consumer<ModelEvent> events) {

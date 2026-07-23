@@ -1,5 +1,6 @@
 package dev.openallay.client.gui;
 
+import com.google.gson.JsonObject;
 import dev.openallay.guide.GuideModelSelection;
 import dev.openallay.guide.GuideFailure;
 import dev.openallay.guide.GuideRequestSnapshot;
@@ -1005,7 +1006,27 @@ public final class OpenAllayScreen extends Screen {
                     y = evidence(graphics, source, detail, y);
                 }
                 if (debug.normalized() != null) {
-                    y = detailLine(graphics, "normalized: " + debug.normalized(), detail, y);
+                    JsonObject normalized = debug.normalized();
+                    JsonObject value = normalized.has("value") && normalized.get("value").isJsonObject()
+                            ? normalized.getAsJsonObject("value") : null;
+                    if (value != null) {
+                        for (String field : List.of(
+                                "handle",
+                                "resultType",
+                                "cardinality",
+                                "complete",
+                                "omittedRows",
+                                "omittedFields",
+                                "elapsedMillis")) {
+                            if (value.has(field) && value.get(field).isJsonPrimitive()) {
+                                y = detailLine(
+                                        graphics,
+                                        field + ": " + value.get(field).getAsString(),
+                                        detail,
+                                        y);
+                            }
+                        }
+                    }
                 }
             }
         } else if (selectedSource != null) {
@@ -1036,9 +1057,48 @@ public final class OpenAllayScreen extends Screen {
                     itemGridCard(graphics, grid, detail, y, mouseX, mouseY);
             case GuideDetailCard.Requirements requirements ->
                     requirementsCard(graphics, requirements, detail, y, mouseX, mouseY);
+            case GuideDetailCard.DataPreview preview ->
+                    dataPreviewCard(graphics, preview, detail, y);
             case GuideDetailCard.Text text -> textCard(graphics, text, detail, y);
             case GuideDetailCard.Error error -> errorCard(graphics, error, detail, y);
         };
+    }
+
+    private int dataPreviewCard(
+            GuiGraphicsExtractor graphics,
+            GuideDetailCard.DataPreview card,
+            GuideUiLayout.Rect detail,
+            int y) {
+        int start = y;
+        y = detailLine(graphics, Component.translatable(card.titleKey()).getString(), detail, y);
+        y = detailLine(
+                graphics,
+                Component.translatable(
+                                card.complete()
+                                        ? "screen.openallay.detail.analysis.complete"
+                                        : "screen.openallay.detail.analysis.preview",
+                                card.cardinality())
+                        .getString(),
+                detail,
+                y);
+        for (GuideDetailCard.DataRow row : card.rows()) {
+            String line = row.cells().stream()
+                    .map(cell -> cell.key() + ": " + cell.value())
+                    .collect(java.util.stream.Collectors.joining(" · "));
+            y = detailLine(graphics, line, detail, y);
+        }
+        if (!card.complete()) {
+            y = detailLine(
+                    graphics,
+                    Component.translatable(
+                                    "screen.openallay.detail.analysis.more",
+                                    card.omittedRows(),
+                                    card.omittedFields())
+                            .getString(),
+                    detail,
+                    y);
+        }
+        return Math.max(y, start + 25);
     }
 
     private int itemGridCard(
@@ -1862,6 +1922,7 @@ public final class OpenAllayScreen extends Screen {
             case "player_context" -> Component.translatable("screen.openallay.tool.player_context");
             case "inspect_game_state" -> Component.translatable(
                     "screen.openallay.tool.inspect_game_state");
+            case "run_javascript" -> Component.translatable("screen.openallay.tool.run_javascript");
             default -> Component.literal(name);
         };
     }

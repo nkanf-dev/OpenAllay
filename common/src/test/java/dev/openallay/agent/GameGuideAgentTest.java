@@ -129,9 +129,7 @@ final class GameGuideAgentTest {
         ModelContent.ToolResult toolResult = (ModelContent.ToolResult) model.requests.get(1)
                 .messages().getLast().content().getFirst();
         assertTrue(toolResult.error());
-        assertEquals(
-                "tool_unavailable",
-                toolResult.value().getAsJsonObject().get("code").getAsString());
+        assertTrue(toolResult.value().getAsString().contains("code: tool_unavailable"));
         assertTrue(events.stream()
                 .filter(AgentEvent.ToolStarted.class::isInstance)
                 .map(AgentEvent.ToolStarted.class::cast)
@@ -153,9 +151,7 @@ final class GameGuideAgentTest {
         ModelContent.ToolResult toolResult = (ModelContent.ToolResult) model.requests.get(1)
                 .messages().getLast().content().getFirst();
         assertTrue(toolResult.error());
-        assertEquals(
-                "tool_failure",
-                toolResult.value().getAsJsonObject().get("code").getAsString());
+        assertTrue(toolResult.value().getAsString().contains("code: tool_failure"));
     }
 
     @Test
@@ -183,10 +179,8 @@ final class GameGuideAgentTest {
                 .toList();
         assertEquals(List.of("call_first", "call_second"),
                 results.stream().map(ModelContent.ToolResult::toolUseId).toList());
-        assertEquals(List.of(1, 2), results.stream()
-                .map(value -> value.value().getAsJsonObject().getAsJsonObject("value")
-                        .get("fact").getAsInt())
-                .toList());
+        assertTrue(results.get(0).value().getAsString().contains("fact: 1"));
+        assertTrue(results.get(1).value().getAsString().contains("fact: 2"));
     }
 
     @Test
@@ -272,7 +266,7 @@ final class GameGuideAgentTest {
         assertEquals(1, events.stream().filter(AgentEvent.ToolStarted.class::isInstance).count());
         ModelContent.ToolResult repeated = (ModelContent.ToolResult) model.requests.get(2)
                 .messages().getLast().content().getFirst();
-        assertEquals("no_new_information", repeated.value().getAsJsonObject().get("code").getAsString());
+        assertTrue(repeated.value().getAsString().contains("code: no_new_information"));
         assertTrue(repeated.error());
         assertNotNull(result.trace());
     }
@@ -360,6 +354,33 @@ final class GameGuideAgentTest {
         assertEquals(AgentState.CANCELLED, running.join().state());
         assertEquals(1, pendingModel.requests.size());
         assertEquals(4, cancelledSessions.status(key).historyMessages());
+    }
+
+    @Test
+    void reestimatesAfterToolResultsAndFailsLocallyBeforeAnOversizedContinuation() {
+        QueueModelClient model = new QueueModelClient();
+        model.enqueue(CompletableFuture.completedFuture(toolTurn("call_large", 42)));
+        ContextCompactor smallBudget = new ContextCompactor(
+                model,
+                new Gson(),
+                new Utf8ContextTokenEstimator(),
+                new ToolResultContextReducer(),
+                new ContextBudget(600, 100),
+                "test-model",
+                Clock.systemUTC());
+
+        AgentResult result = new GameGuideAgent(
+                        model,
+                        new LargeResultTools(),
+                        new AgentSessionStore(),
+                        new Gson(),
+                        smallBudget)
+                .ask(request(UUID.randomUUID()), ignored -> {})
+                .join();
+
+        assertEquals("context_compaction_failed", result.errorCode());
+        assertEquals(1, model.requests.size(),
+                "the oversized continuation must not be sent to the provider");
     }
 
     private static ContextCompactor compactor(ModelClient model) {
@@ -519,6 +540,38 @@ final class GameGuideAgentTest {
             normalized.addProperty("status", "success");
             normalized.addProperty("outputType", "test.Output");
             normalized.add("value", value);
+            return CompletableFuture.completedFuture(
+                    new AgentToolResult("test:fact", normalized, false));
+        }
+    }
+
+    private static final class LargeResultTools implements AgentToolExecutor {
+        @Override
+        public List<ModelToolDefinition> definitions() {
+            return new FakeTools().definitions();
+        }
+
+        @Override
+        public Set<ContextCapability> requiredContext() {
+            return Set.of();
+        }
+
+        @Override
+        public Optional<String> canonicalToolId(String modelToolName) {
+            return Optional.of("test:fact");
+        }
+
+        @Override
+        public CompletableFuture<AgentToolResult> execute(
+                String modelToolName,
+                JsonObject arguments,
+                ToolInvocationContext context,
+                CancellationSignal cancellation) {
+            JsonObject normalized = new JsonObject();
+            normalized.addProperty("status", "success");
+            normalized.addProperty("outputType", "test.Output");
+            normalized.add("value", new JsonObject());
+            normalized.addProperty("modelText", "x".repeat(4_000));
             return CompletableFuture.completedFuture(
                     new AgentToolResult("test:fact", normalized, false));
         }

@@ -91,6 +91,12 @@ final class GuideToolPresentationTest {
                         "MODS")),
                 GuideToolInvocationPresentation.messages(
                         "openallay:inspect_game_state", input));
+
+        assertEquals(
+                List.of(GuideToolMessage.of(
+                        GuideToolMessage.Key.INVOCATION_RUN_JAVASCRIPT)),
+                GuideToolInvocationPresentation.messages(
+                        "openallay:run_javascript", new JsonObject()));
     }
 
     @Test

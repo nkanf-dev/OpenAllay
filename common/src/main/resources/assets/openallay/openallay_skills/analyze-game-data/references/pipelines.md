@@ -1,17 +1,48 @@
-# Pipeline operations
+# Programmatic analysis patterns
 
-Stages run in array order and report input/output row counts.
+## Rank
 
-- `SEARCH`: `value` is required; optional JSON Pointer `field` restricts literal substring matching.
-- `FILTER`: requires a schema-returned JSON Pointer `field` and `operator`. Operators are `EQ`, `NE`,
-  `CONTAINS`, `EXISTS`, `GT`, `GTE`, `LT`, and `LTE`. Ordering operators require numeric values.
-- `SORT`: requires `field`; `direction` is `ASC` or `DESC`.
-- `SELECT`: requires non-empty `fields` and removes every other column.
-- `GROUP`: requires `field` and returns the field plus `count`.
-- `AGGREGATE`: uses `COUNT`, `MIN`, `MAX`, `SUM`, or `AVG`; all except `COUNT`
-  require `field`. Optional `groupBy` computes one value per group.
-- `EXPAND`: requires an array field path and emits one row per array element.
-- `TAKE`: requires positive `count` and keeps the first rows.
+```js
+return rows
+  .filter(row => Number.isFinite(row.score))
+  .sort((a, b) => b.score - a.score)
+  .slice(0, 10)
+  .map(({id, score}) => ({id, score}));
+```
 
-Use registered field names exactly. An unknown field returns the available
-fields; correct it once rather than guessing repeatedly.
+## Group and aggregate
+
+```js
+const groups = helpers.groupBy(rows, row => row.namespace);
+return Object.entries(groups)
+  .map(([namespace, values]) => ({namespace, count: values.length}))
+  .sort((a, b) => b.count - a.count);
+```
+
+## Join
+
+```js
+const items = new Map(mc.items.map(item => [item.id, item]));
+return mc.recipes
+  .map(recipe => ({recipe, output: items.get(recipe.outputs?.[0]?.stack?.itemId)}))
+  .filter(row => row.output?.namespace === "example")
+  .map(row => ({recipeId: row.recipe.id, output: row.output.displayName}));
+```
+
+## Flatten nested arrays
+
+```js
+return mc.items.flatMap(item =>
+  (item.properties.effects ?? []).map(effect => ({itemId: item.id, ...effect})));
+```
+
+## Continue from a large result
+
+Pass `["r_exact_handle"]` in the Tool's `handles` field:
+
+```js
+const previous = workspace.open("r_exact_handle");
+return previous.filter(row => row.score > 0).slice(0, 20);
+```
+
+Never copy or invent a handle. Never return the whole reopened value unchanged.

@@ -110,7 +110,7 @@ public final class AnthropicJsonCodec {
             case ModelContent.ToolResult result -> {
                 encoded.addProperty("type", "tool_result");
                 encoded.addProperty("tool_use_id", result.toolUseId());
-                encoded.addProperty("content", gson.toJson(result.value()));
+                encoded.addProperty("content", providerToolResult(result.value()));
                 encoded.addProperty("is_error", result.error());
             }
         }
@@ -130,6 +130,12 @@ public final class AnthropicJsonCodec {
             default -> throw new IllegalArgumentException(
                     "Unsupported Anthropic content type: " + requiredString(object, "type"));
         };
+    }
+
+    private String providerToolResult(JsonElement value) {
+        return value.isJsonPrimitive() && value.getAsJsonPrimitive().isString()
+                ? value.getAsString()
+                : gson.toJson(value);
     }
 
     private static void emitCompleteBlock(ModelContent block, Consumer<ModelEvent> events) {

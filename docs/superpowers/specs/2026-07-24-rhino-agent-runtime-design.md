@@ -1,7 +1,7 @@
 # OpenAllay Rhino Agent Runtime Design
 
 **Date:** 2026-07-24  
-**Status:** Approved for implementation  
+**Status:** Implemented and verified
 **Decision:** SKMB-2026-07-24-025  
 **Baseline:** `v0.1.0-SNAPSHOT` (`a6b738b`)  
 **Branch:** `codex/js-agent-runtime`
@@ -46,7 +46,8 @@ reusable functions, and domain-neutral data handling.
 
 ### `openallay:run_javascript`
 
-Input contains one `source` string. Available globals are:
+Input contains one `source` string, optional request-workspace `handles`, and
+the smallest required top-level `roots`. Available globals are:
 
 - `mc`: current detached Minecraft data graph;
 - `workspace.open(handle)`: prior results from this request;
@@ -58,6 +59,8 @@ Example:
 ```javascript
 return mc.items
   .filter(x => x.tags.includes("minecraft:swords"))
+  .map(x => ({id: x.id, damage: Number(x.properties["minecraft:attack_damage"])}))
+  .filter(x => Number.isFinite(x.damage))
   .sort((a, b) => b.damage - a.damage)[0]
 ```
 
@@ -65,11 +68,15 @@ The canonical result remains internal JSON. The model receives a compact
 evidence-preserving projection with type, cardinality, discovered fields,
 preview, omission state, and an opaque continuation handle.
 
+This follows the useful part of KubeJS's Rhino integration: stable
+JavaScript-native host views and explicit scope construction. It does not
+expose KubeJS events, arbitrary Java objects, or a general Java bridge.
+
 ### `openallay:load_skill`
 
-The existing progressively disclosed Skill reader remains. Its catalog is
-rewritten around analytical tasks and runtime techniques rather than old domain
-Tool names.
+The Skill reader returns bounded Markdown chunks with opaque,
+snapshot-bound continuation cursors. Its catalog is rewritten around
+analytical tasks and runtime techniques rather than old domain Tool names.
 
 ### `openallay:manage_skill`
 
@@ -116,7 +123,7 @@ traces, and subsequent scripts.
 
 ## Minecraft data graph
 
-`MinecraftAgentDataGraph` projects `ToolInvocationContext` into stable roots:
+`MinecraftAgentDataProjector` projects `ToolInvocationContext` into stable roots:
 
 ```text
 mc
@@ -166,14 +173,29 @@ truncation.
 
 ## Extensions
 
-`AgentDataAdapter` is the integration seam. It runs during Minecraft-owned
-capture, converts public API values into detached evidence-bearing records, and
-mounts them under `mc.extensions.<namespace>`. Adapter failures are isolated.
+`JavascriptDataModule` is the worker-side integration seam. It only projects
+immutable records already captured in `ToolInvocationContext`, and mounts them
+under `mc.extensions.<namespace>`. Live mod API access and any narrowly
+reviewed reflection belong to a loader capture adapter running on the owning
+Minecraft thread, never to this module. Adapter failures are isolated.
 
-`AgentJavascriptModule` may contribute pure helper functions over detached
-values. A trusted extension can use reflection inside its own optional capture
-adapter when necessary, but ordinary model JavaScript never receives reflection
-or a general Java bridge.
+Ordinary model JavaScript never receives reflection or a general Java bridge.
+Shared pure operations are implemented as audited `helpers`; module-specific
+operations work over detached values under `mc.extensions`.
+
+## Resource and context budgets
+
+Rhino is embedded in the Minecraft JVM, not isolated by a process heap. The
+runtime therefore validates source size, normalizes with depth/node/array/
+object/string budgets, atomically accounts workspace results and selections,
+and guards high-risk string allocation helpers. Failed executions publish no
+handle.
+
+The six-row structured preview is the sole bounded projection shared by model
+text and player details. Full canonical JSON remains request-local in the
+workspace. Every provider dispatch is re-estimated after Tool results; history
+may be compacted again, while an oversized protected current request fails
+locally as `context_compaction_failed`.
 
 ## Skills
 
@@ -188,10 +210,11 @@ Bundled Skills teach:
 - stopping after a conclusive aggregate.
 
 The broad runtime Skill teaches technique. Specific Skills cover production
-paths and modded-content comparison. A simple count or lookup remains one
-direct script and does not require a Skill.
+paths and modded-content comparison. An exact known-object lookup may remain
+one direct script. Collection-wide ranking, comparison, aggregation, grouping,
+or joining must load the matching analytical Skill first.
 
-Bundled Skills are immutable. Managed local Skills use the existing strict
+Bundled Skills are immutable. `AgentSkillManager` uses the existing strict
 Agent Skills subset, validate a complete package, publish atomically, and affect
 future requests only.
 
@@ -200,7 +223,8 @@ future requests only.
 1. Keep capture records, recipe providers, knowledge sources, GuideService,
    history, bridge chronology, and rich UI.
 2. Add Rhino, workspace, data graph, result presenter, and runtime Tool.
-3. Re-express deterministic actions such as craftability as helper modules.
+3. Retain craftability as the one narrow deterministic allocation Tool; do not
+   ask JavaScript or the model to reproduce its global allocation algorithm.
 4. Stop advertising legacy domain retrieval Tools.
 5. Retain compatibility code for trace replay while it remains needed.
 6. Rewrite capability settings and bundled Skills around the new surface.
@@ -220,4 +244,3 @@ Deterministic fixtures must demonstrate:
 
 Live-provider testing remains explicit and opt-in. Credentials come only from
 the environment and retained evidence is redacted.
-

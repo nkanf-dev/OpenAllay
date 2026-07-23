@@ -16,6 +16,29 @@ efficient evidence-preserving projection to the model.
 **Tech stack:** Java 25, KubeJS-Mods Rhino 2101.2.8-build.91, Gson, JUnit 5,
 Fabric 26.2, NeoForge 26.2.
 
+## Implementation result
+
+Completed on `codex/js-agent-runtime`:
+
+- Rhino is packaged into both loader artifacts and runs in a denied-host,
+  cancellable, time-bounded context.
+- `run_javascript`, the request workspace, compact model projection, detached
+  extension modules, and managed Skill CRUD are wired through production
+  bootstrap and client/server execution paths.
+- Bootstrap advertises the general JavaScript surface plus the narrow
+  deterministic craftability operation; legacy retrieval Tools are not
+  model-facing.
+- Bundled Skills and the system prompt enforce Skill-first batch analysis for
+  rankings, comparisons, aggregates, joins, and batch recipes.
+- Deterministic highest-sword, poison-production, and minimum-container
+  scenarios pass. The opt-in real-provider test solved the requested sword and
+  container tasks with at most two JavaScript programs per task and no per-row
+  Tool loop.
+- `:common:test`, `:fabric:build`, and `:neoforge:build` pass.
+- Resource hardening adds bounded source/result normalization, atomic workspace
+  budgets, request-root selection, structured UI previews, progressive Skill
+  cursors, and context estimation before every provider dispatch.
+
 ## Task 1: Pin and package Rhino
 
 **Files:** `gradle.properties`, root/common/Fabric/NeoForge Gradle files.
@@ -35,9 +58,10 @@ Fabric 26.2, NeoForge 26.2.
 2. Test denial of packages, adapters, class loading, reflection, filesystem,
    network, processes, and host-object leakage.
 3. Test cancellation, deadline, syntax error, and cyclic output.
-4. Implement dedicated ContextFactory/Context, safe standard objects,
+4. Test source, node, array, object, string, and workspace budgets.
+5. Implement dedicated ContextFactory/Context, safe standard objects,
    interpreted mode, instruction observation, and explicit bindings.
-5. Normalize output to Gson and discard every scope.
+6. Normalize output to Gson and discard every scope.
 
 ## Task 3: Project the Minecraft data graph
 
@@ -69,8 +93,8 @@ Fabric 26.2, NeoForge 26.2.
 2. Project captured data and current workspace.
 3. Execute asynchronously; retain canonical output and return the projection.
 4. Register the Tool for client and server-capable common paths.
-5. Stop advertising legacy domain retrieval Tools; retain narrow deterministic
-   operations as JS helpers.
+5. Stop advertising legacy domain retrieval Tools; retain craftability as a
+   narrow deterministic operation because global allocation must remain Java-owned.
 
 ## Task 6: Rewrite prompt and bundled Skills
 
@@ -81,11 +105,12 @@ Fabric 26.2, NeoForge 26.2.
 2. Remove old domain Tool names from bundled instructions.
 3. Add progressive examples for ranking, grouping, nested components, joins,
    and recipe graphs.
-4. Keep simple one-script requests Skill-optional.
+4. Keep exact known-object reads Skill-optional; require the analytical Skill
+   for collection-wide ranking, aggregation, comparison, grouping, and joins.
 
 ## Task 7: Implement managed Skill writes
 
-**Files:** `ManagedSkillStore`, `ManageSkillTool`, wiring, and tests.
+**Files:** `AgentSkillManager`, `ManageSkillTool`, wiring, and tests.
 
 1. Accept exact Skill names and package-relative files only.
 2. Stage and validate complete packages with the existing parser.
@@ -121,4 +146,3 @@ Fabric 26.2, NeoForge 26.2.
 5. Run `./gradlew clean :common:test :fabric:build :neoforge:build`.
 6. Run live-provider scenarios only with environment credentials.
 7. Audit artifacts, diff, credentials, loader parity, and remaining risks.
-

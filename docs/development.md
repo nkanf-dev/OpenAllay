@@ -526,106 +526,85 @@ configuration/capability state. Client profiles remain at
 key but never displays a stored secret. Model-mode changes affect future
 requests only and never trigger silent fallback.
 
-## Grounded built-in tools
+## Rhino Agent runtime
 
 Every factual success carries immutable evidence: authority, completeness,
 capture time, source, provenance, game version, loader, and optional scoped
-details. Client recipe-display facts are `CLIENT_VISIBLE`; server RecipeManager
-facts are `SERVER_AUTHORITATIVE`. An unloaded knowledge snapshot is `UNKNOWN`,
-not proof that no documents exist. The result normalizer rejects any
-`EvidenceBearing` success whose evidence list is empty.
-
-`openallay:resolve_resource` is the unified player-visible game-content catalog,
-not only an item-name converter. Its optional kind filter covers `item`,
-`block`, `effect`, `potion`, `entity`, and `attribute`. It searches active-locale
-display text, exact IDs and paths, translation-key aliases, bound public tags,
-default item component IDs, and a small detached map of public static metadata.
-Exact identity/name/path matches remain ahead of token and bounded edit-distance
-matches; all ties are deterministic and results are not silently truncated.
-An empty catalog match is an evidenced successful observation, while a missing
-registry capture is an explicit `missing_context` failure.
-
-The catalog's `COMPLETE` claim is scoped to registered entry types and the
-listed detached fields. It does not enumerate creative-tab/viewer item-stack
-variants or inspect component values such as written-book contents. Questions
-such as “which books discuss poison” resolve the mechanic when useful and then
-search the indexed knowledge corpus; answers say “all indexed matches” rather
-than claiming every possible book or item variant in the installation.
-
-Both client and server capture use the same common catalog projection. The
-capture helper re-checks owning-thread access, copies registry values into
-immutable records immediately, and the Tool searches only those records. A
-server-hosted model can request the player's client catalog through the existing
-client Tool bridge. This catalog never scans world blocks, nearby entities,
-containers, inventories, arbitrary paths, private fields, or component values.
-A registered book may therefore match as an `item`; its pages or guide text are
-not catalog metadata and remain exclusively under `search_knowledge`.
-
-The Phase 3A recipe workflow is:
+details. The general model-facing analysis operation is:
 
 ```text
-openallay:resolve_resource
-openallay:search_recipes
-openallay:get_recipe
-openallay:find_item_usages
-openallay:inspect_inventory
+openallay:run_javascript
 openallay:calculate_craftability
 ```
+
+OpenAllay embeds the KubeJS-Mods Rhino fork directly; KubeJS itself is not a
+runtime dependency. Every invocation gets a fresh safe Rhino context over an
+immutable detached `mc` graph. Normal JavaScript `filter`, `map`, `reduce`,
+`sort`, grouping, joins, optional chaining, and pure helper functions replace
+repeated per-row domain Tool calls.
+
+`run_javascript` accepts `roots`; normal analysis should select only the
+required host views, for example `["items"]` or `["items", "recipes"]`.
+Registry and recipe rows are exposed once in those JavaScript-native views,
+while `mc.registries` and `mc.recipeCatalog` carry catalog metadata.
+
+The graph exposes captured capabilities such as:
+
+```text
+mc.capabilities
+mc.items / blocks / fluids / effects / enchantments / entities
+mc.registries
+mc.recipes / recipeCatalog
+mc.player
+mc.game
+mc.knowledge
+mc.extensions
+```
+
+Registry `properties` and extension objects are open-ended. Runtime code should
+inspect `Object.keys` or `helpers.schema` rather than relying on a core whitelist
+for fields such as damage, nutrition, effect duration, or mod-added metadata.
+All capture still occurs on the Minecraft-owned thread and detaches immediately
+before Rhino runs on a virtual worker.
+
+Canonical results remain internal Gson JSON for evidence validation, UI cards,
+traces, and subsequent programs. The provider receives a compact CLI-like text
+projection without JSON wrappers or evidence payload duplication. Large results
+stay in a request workspace under an opaque handle; a later program can pass
+that handle explicitly and call `workspace.open(handle)`. Client-executed Tools
+for a server-hosted model share the same request correlation and close their
+workspace at the terminal request event.
+
+The runtime rejects source and result graphs that exceed the accepted
+depth/node/array/object/string budgets before workspace publication. A request
+workspace atomically admits at most 16 canonical results and 32 MiB of
+estimated content; one execution may reopen at most four handles totaling
+8 MiB. The model and player UI share the same bounded structured preview, while
+debug UI renders bounded metadata rather than raw normalized JSON. Provider
+input is re-estimated before every continuation turn.
+
+The Rhino scope exposes no Java packages, arbitrary host wrappers, reflection,
+class loading, network, process, real filesystem, command execution, live game
+object, or mutation. Instruction observation enforces cancellation and a
+monotonic deadline. Functions, promises, cycles, unsupported wrappers, excessive
+nesting, and non-finite results fail with stable `javascript_*` codes.
+
+Trusted optional integrations first capture and detach public mod API state on
+the owning Minecraft thread. Java-side `JavascriptDataModule` implementations
+run later on the Agent worker and may only project immutable
+`ToolInvocationContext` records into evidence-bearing JSON under
+`mc.extensions`; they cannot call live APIs or use reflection. Adapter failures
+are isolated and ordinary model JavaScript never receives Java or reflection
+authority.
 
 `calculate_craftability` uses deterministic global capacity allocation, so
 overlapping item/tag alternatives are not assigned greedily. It reports the
 observed allocation, missing requirements, maximum crafts, and whether the
 evidence is conclusive. It does not recursively craft intermediate items.
 Incomplete recipe or inventory evidence may show an observed positive result,
-but `conclusive` remains false. `openallay:find_recipes` is retained only as a
-deprecated compatibility projection over the same recipe catalog.
-
-### Player-observable outer game state
-
-Outer client/game context is exposed through one Tool ID rather than dozens of
-small Tools:
-
-```text
-openallay:inspect_game_state
-```
-
-Its strict `section` enum is `OVERVIEW`, `MODS`, `OPTIONS`, `PACKS`, `SHADERS`,
-`DIAGNOSTICS`, `PLAYER`, or `WORLD_QUERY`. The optional `query` is parsed only
-by the selected section. `WORLD_QUERY` accepts only the registered read-only
-operations `time`, `weather`, `difficulty`, `world_border`, and `spawn`; it is
-not a Minecraft command string or expression language. Recipes and Guides stay
-in their own high-volume Tool families.
-
-`MODS` with no exact ID returns the complete lightweight installed index (ID,
-name, version, environment). Supplying an exact mod ID returns its public
-description, authors, licenses, contacts, and dependency metadata; the list
-path never implicitly dumps those large detail records into model context.
-Each server-authoritative `WORLD_QUERY` operation is permission-checked before
-lookup. An unauthorized operation returns `permission_denied` and no fact.
-
-Client-local capture runs on the Minecraft client thread and detaches immutable
-client-visible values before Tool/model work. It covers public loader metadata,
-Minecraft options exposed through verified APIs, resource-pack state,
-F3/HUD-style diagnostics including coordinates where available, and the
-player's own UI-visible state. A server-side capture or enhancement can return
-only the state the server can authoritatively observe. It cannot read the
-client's options, resource packs, or shader configuration unless a future
-accepted, authorized bridge explicitly transports a detached allowed snapshot.
-
-Completeness is deliberately honest. An option not exposed through a verified
-public API is omitted and makes only its section partial. Shader information is
-unavailable when no shader mod is loaded; if a shader mod such as Iris is
-present without a verified compatible public adapter, the result reports the
-scoped `public_shader_adapter_unavailable` diagnostic instead of guessing a
-selected pack or options. Resource/data-pack visibility likewise reflects the
-current topology and API surface rather than an assumed complete catalog.
-
-The Tool is read-only and cannot execute raw commands, modify settings/world or
-inventory state, use arbitrary paths/classes/reflection, scan maps/nearby
-blocks/entities/structures, or inspect external containers such as nearby
-chests. The player's own inventory is allowed because it is already
-player-owned UI-visible state. Future write commands and spatial interaction
-require separate accepted authority and approval designs.
+but `conclusive` remains false. Legacy domain retrieval implementations remain
+only for compatibility tests and internal projections; bootstrap does not
+advertise them to the model.
 
 ## Knowledge and Skills
 
@@ -673,16 +652,26 @@ validated. `allowed-tools` expresses a dependency only and never grants a
 permission. Scripts, URL references, root escape, unsafe symlinks, arbitrary
 paths, and unsupported files are rejected.
 
-Bundled packages under the mod resources are read-only and use uppercase
+Bundled packages under the mod resources are immutable and use uppercase
 `SKILL.md`. Local packages live under `config/openallay/skills/`; a valid local
-package with the same name overrides its bundled package. Editing a bundled
-Skill first creates an atomic local copy. An invalid override leaves the prior
-valid or bundled Skill active and reports only a source-scoped diagnostic. The
-Skills settings page shows installed documents, provenance, instructions,
-references, and explicit override/edit actions; it has no generic Tool-style
-enable toggle. Player editing does not authorize the Agent to create or modify
-Skills, and Skills cannot execute scripts, fetch URLs, register tools, or grant
-permissions.
+package with the same name overrides its bundled package. The settings UI and
+`openallay:manage_skill` share the confined package contract. Agent create,
+update, and delete accept only an exact Skill name, complete `SKILL.md`, and
+optional Markdown references below `references/`; they never accept a path.
+Candidates are staged, parsed, dependency-checked, and published atomically.
+Changes affect future request snapshots only. Deleting a bundled override
+reveals the immutable bundled package.
+
+`openallay:load_skill` returns at most 8192 characters at a time. When
+`complete` is false, the model continues the same exact document with the
+returned opaque cursor. The cursor is bound to the Skill name, reference path,
+and content fingerprint; malformed, cross-document, and stale cursors fail
+closed instead of falling back to a full read.
+
+Skills are instructions and references, not executable Rhino modules. They
+cannot fetch URLs, register Tools, grant permissions, or expand the JavaScript
+sandbox. A Skill teaches the model how to use the registered runtime; it does
+not itself execute.
 
 ## Live provider acceptance
 
@@ -699,6 +688,21 @@ OPENALLAY_MODEL_PROTOCOL=ANTHROPIC_MESSAGES \
 ```
 
 Never commit a model JSON containing `apiKey`.
+
+To exercise the production Rhino prompt, bundled analytical Skill, JavaScript
+Tool, compact model projection, and the two requested batch scenarios, use:
+
+```bash
+OPENALLAY_MODEL_BASE_URL=https://provider.example/v1/ \
+OPENALLAY_MODEL=model-id \
+OPENALLAY_API_KEY=... \
+OPENALLAY_MODEL_PROTOCOL=OPENAI_CHAT \
+./scripts/live-model-smoke.sh javascript-agent
+```
+
+The live test accepts `OPENALLAY_LIVE_STREAM=false` when isolating provider
+stream transport from Agent/tool behavior. It records only redacted task,
+Tool-ID, script, result-summary, and invocation-count diagnostics.
 
 To exercise exactly the native settings connection-probe contract from a
 headless script, place a strict schema-2 `models.json`-format file in an ignored

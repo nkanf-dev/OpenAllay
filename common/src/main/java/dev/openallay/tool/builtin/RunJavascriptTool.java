@@ -1,6 +1,7 @@
 package dev.openallay.tool.builtin;
 
 import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import dev.openallay.agent.tool.ToolDescription;
 import dev.openallay.agent.tool.ToolOptional;
 import dev.openallay.context.ContextCapability;
@@ -22,10 +23,12 @@ import dev.openallay.tool.ToolAccess;
 import dev.openallay.tool.ToolDescriptor;
 import dev.openallay.tool.ToolResult;
 import dev.openallay.tool.RequestScopeParticipant;
-import java.time.Duration;
+import dev.openallay.tool.ModelFacingToolOutput;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 public final class RunJavascriptTool
         implements Tool<RunJavascriptTool.Input, RunJavascriptTool.Output>, RequestScopeParticipant {
@@ -33,9 +36,18 @@ public final class RunJavascriptTool
     public record Input(
             String source,
             @ToolDescription("Opaque result handles this script needs to reopen.")
-                    @ToolOptional List<String> handles) {
+                    @ToolOptional List<String> handles,
+            @ToolDescription(
+                            "Top-level Minecraft data roots required by this program, for example items or recipes. "
+                                    + "Omit only for schema discovery.")
+                    @ToolOptional List<String> roots) {
+        public Input(String source, List<String> handles) {
+            this(source, handles, List.of());
+        }
+
         public Input {
             handles = handles == null ? List.of() : List.copyOf(handles);
+            roots = roots == null ? List.of() : List.copyOf(roots);
         }
     }
 
@@ -44,22 +56,33 @@ public final class RunJavascriptTool
             String resultType,
             long cardinality,
             List<String> fields,
+            JsonElement preview,
             String modelText,
             boolean complete,
             int omittedRows,
+            int omittedFields,
             long elapsedMillis,
             List<EvidenceMetadata> evidence)
-            implements EvidenceBearing {
+            implements EvidenceBearing, ModelFacingToolOutput {
         public Output {
             fields = List.copyOf(fields);
+            preview = preview.deepCopy();
             evidence = List.copyOf(evidence);
+        }
+
+        @Override
+        public JsonElement preview() {
+            return preview.deepCopy();
         }
     }
 
     private static final ToolDescriptor<Input, Output> DESCRIPTOR = new ToolDescriptor<>(
             "openallay:run_javascript",
-            "Analyze the current detached Minecraft data with isolated JavaScript. "
-                    + "Use mc arrays with filter/map/reduce/sort/grouping; large results stay in a request workspace "
+            "Analyze the current detached Minecraft data with isolated JavaScript. Every source must end with an explicit return. "
+                    + "Before collection-wide ranking, highest/lowest, comparison, grouping, aggregation, joins, or batch recipes, "
+                    + "load the analyze-game-data Skill and its directly matching reference. "
+                    + "Use stable mc.items and mc.recipes arrays with one filter/map/reduce/sort/join program; do not rediscover roots. "
+                    + "Large results stay in a request workspace "
                     + "and can be reopened by an opaque handle. This runtime cannot access Java, files, network, "
                     + "commands, live game objects, or perform writes.",
             Input.class,
@@ -75,6 +98,8 @@ public final class RunJavascriptTool
     private final MinecraftAgentDataProjector projector;
     private final AgentResultWorkspaceRegistry workspaces;
     private final JavascriptResultPresenter presenter;
+    private final ConcurrentMap<String, MinecraftAgentDataProjector.Projection> projections =
+            new ConcurrentHashMap<>();
 
     public RunJavascriptTool(
             RhinoJavascriptRuntime runtime,
@@ -119,30 +144,35 @@ public final class RunJavascriptTool
             CompletableFuture<ToolResult<Output>> future) {
         try {
             cancellation.throwIfCancelled();
-            var projection = projector.project(context);
-            AgentResultWorkspace workspace = workspaces.open(context.correlationId());
-            JavascriptExecution execution = runtime.execute(
-                    input.source(),
-                    projection.data(),
-                    workspace.select(input.handles()),
-                    cancellation);
-            JsonElement canonical = execution.value();
-            String handle = workspace.store(canonical);
-            var presentation = presenter.present(handle, canonical);
+            var projection = projections.computeIfAbsent(
+                    context.correlationId(), ignored -> projector.project(context));
             if (projection.evidence().isEmpty()) {
                 future.complete(new ToolResult.Failure<>(
                         "context_evidence_unavailable",
                         "No evidence-bearing Minecraft data was captured for this request"));
                 return;
             }
+            AgentResultWorkspace workspace = workspaces.open(context.correlationId());
+            JavascriptExecution execution = runtime.execute(
+                    input.source(),
+                    selectedRoots(projection.data(), input.roots()),
+                    workspace.select(input.handles()),
+                    cancellation);
+            JsonElement canonical = execution.value();
+            String handle = workspace.store(canonical);
+            var presentation = presenter.present(handle, canonical);
+            String modelText = presentation.modelText()
+                    + evidenceSummary(projection.evidence());
             future.complete(new ToolResult.Success<>(new Output(
                     handle,
                     presentation.type(),
                     presentation.cardinality(),
                     presentation.fields(),
-                    presentation.modelText(),
+                    presentation.preview(),
+                    modelText,
                     presentation.complete(),
                     presentation.omittedRows(),
+                    presentation.omittedFields(),
                     execution.elapsed().toMillis(),
                     projection.evidence())));
         } catch (ModelClientException cancelled) {
@@ -163,6 +193,56 @@ public final class RunJavascriptTool
 
     @Override
     public void closeRequestScope(String correlationId) {
+        projections.remove(correlationId);
         workspaces.close(correlationId);
+    }
+
+    private static String evidenceSummary(List<EvidenceMetadata> evidence) {
+        StringBuilder result = new StringBuilder("\nevidence:");
+        int count = Math.min(6, evidence.size());
+        for (int index = 0; index < count; index++) {
+            EvidenceMetadata item = evidence.get(index);
+            result.append("\n- authority=")
+                    .append(item.authority())
+                    .append(" completeness=")
+                    .append(item.completeness())
+                    .append(" source=")
+                    .append(clip(item.sourceId(), 96))
+                    .append(" provenance=")
+                    .append(clip(item.provenance(), 160));
+        }
+        if (evidence.size() > count) {
+            result.append("\n- ").append(evidence.size() - count).append(" more evidence record(s)");
+        }
+        return result.toString();
+    }
+
+    private static JsonElement selectedRoots(JsonElement projection, List<String> requested) {
+        if (requested == null || requested.isEmpty()) {
+            return projection;
+        }
+        JsonObject source = projection.getAsJsonObject();
+        JsonObject selected = new JsonObject();
+        for (String root : requested) {
+            if (root == null || !root.matches("[a-zA-Z][a-zA-Z0-9]*") || !source.has(root)) {
+                throw new JavascriptExecutionException(
+                        "javascript_root_unavailable",
+                        "Requested Minecraft data root is unavailable: " + root);
+            }
+            selected.add(root, source.get(root));
+        }
+        for (String metadata : List.of("capturedAt", "capabilities")) {
+            if (source.has(metadata)) {
+                selected.add(metadata, source.get(metadata));
+            }
+        }
+        return selected;
+    }
+
+    private static String clip(String value, int maximum) {
+        if (value == null) {
+            return "";
+        }
+        return value.length() <= maximum ? value : value.substring(0, maximum) + "…";
     }
 }

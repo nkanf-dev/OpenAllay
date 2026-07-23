@@ -44,6 +44,7 @@ public final class GuideToolInvocationPresentation {
                     GuideToolMessage.Key.INVOCATION_INSPECT_GAME_STATE,
                     GuideToolMessage.Key.INVOCATION_INSPECT_GAME_STATE_SECTION,
                     safeName(input, "section"));
+            case "run_javascript" -> one(GuideToolMessage.Key.INVOCATION_RUN_JAVASCRIPT);
             default -> List.of();
         };
     }

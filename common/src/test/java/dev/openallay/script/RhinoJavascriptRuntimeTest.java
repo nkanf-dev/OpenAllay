@@ -141,5 +141,43 @@ final class RhinoJavascriptRuntimeTest {
 
         assertEquals("javascript_timeout", timeout.code());
     }
-}
 
+    @Test
+    void rejectsOversizedSourceAndResultsBeforeTheyEnterAWorkspace() {
+        JavascriptRuntimeLimits limits =
+                new JavascriptRuntimeLimits(32, 4, 12, 8, 4, 16);
+        RhinoJavascriptRuntime runtime =
+                new RhinoJavascriptRuntime(gson, Duration.ofSeconds(1), limits);
+
+        assertEquals(
+                "javascript_source_too_large",
+                assertThrows(
+                                JavascriptExecutionException.class,
+                                () -> runtime.execute(
+                                        "return '" + "x".repeat(40) + "';",
+                                        new JsonObject(),
+                                        new JsonObject(),
+                                        new CancellationSignal()))
+                        .code());
+        assertEquals(
+                "javascript_result_budget_exceeded",
+                assertThrows(
+                                JavascriptExecutionException.class,
+                                () -> runtime.execute(
+                                        "return [1,2,3,4,5,6,7,8,9];",
+                                        new JsonObject(),
+                                        new JsonObject(),
+                                        new CancellationSignal()))
+                        .code());
+        assertEquals(
+                "javascript_result_budget_exceeded",
+                assertThrows(
+                                JavascriptExecutionException.class,
+                                () -> runtime.execute(
+                                        "return 'abcdefghijklmnopq';",
+                                        new JsonObject(),
+                                        new JsonObject(),
+                                        new CancellationSignal()))
+                        .code());
+    }
+}
