@@ -10,6 +10,10 @@ import dev.openallay.agent.AgentRequest;
 import dev.openallay.agent.AgentResult;
 import dev.openallay.agent.AgentSystemPrompt;
 import dev.openallay.agent.GameGuideAgent;
+import dev.openallay.agent.context.ContextBudget;
+import dev.openallay.agent.context.ContextCompactor;
+import dev.openallay.agent.context.ToolResultContextReducer;
+import dev.openallay.agent.context.Utf8ContextTokenEstimator;
 import dev.openallay.agent.session.AgentSessionStore;
 import dev.openallay.agent.tool.LocalAgentToolExecutor;
 import dev.openallay.agent.trace.LiveTraceJson;
@@ -43,6 +47,7 @@ import dev.openallay.resource.runtime.ResourceRequestRegistry;
 import dev.openallay.testing.GroundedTestFixtures;
 import dev.openallay.tool.ToolRegistry;
 import java.net.URI;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -84,20 +89,32 @@ final class LiveResourceVfsAcceptanceTest {
                 Duration.ofSeconds(30),
                 Duration.ofMinutes(5));
         ModelClient client = ProviderModelClients.create(config, GSON);
+        ContextBudget contextBudget = new ContextBudget(contextWindow, maxOutput);
+        ModelRequestScheduler scheduler = new ModelRequestScheduler(client);
+        ContextCompactor compactor = new ContextCompactor(
+                scheduler,
+                GSON,
+                new Utf8ContextTokenEstimator(),
+                new ToolResultContextReducer(),
+                contextBudget,
+                modelId,
+                Clock.systemUTC());
 
         try (LiveRuntime runtime = LiveRuntime.open(contextWindow, maxOutput)) {
             GameGuideAgent agent = new GameGuideAgent(
-                    new ModelRequestScheduler(client),
+                    scheduler,
                     runtime.executor(),
                     new AgentSessionStore(),
-                    GSON);
+                    GSON,
+                    compactor);
             String prompt = AgentSystemPrompt.compose("") + """
 
                     For this acceptance run:
                     - Prefer Resource VFS Tools only.
                     - Discover fields via /@schema before sorting unknown numeric properties.
                     - For swords, inspect item properties such as attack damage and compare them.
-                    - For containers, inspect recipe mounts and prefer the container whose craft path needs the fewest recipes.
+                    - For containers, inspect recipe mounts, sum each direct recipe's required
+                      ingredient counts, and compare the totals.
                     - Do not invent numeric values that tools already return.
                     - Answer in Chinese with the concrete item name and the decisive evidence value.
                     """;
@@ -105,13 +122,29 @@ final class LiveResourceVfsAcceptanceTest {
             List<AgentEvent> swordEvents = new ArrayList<>();
             AgentResult sword = runtime.ask(
                     agent,
+                    "vfs-live-sword",
                     "当前游戏数据里伤害最高的剑是哪一把？请用 Resource VFS 查询后用中文回答剑名和伤害值。",
                     prompt,
                     swordEvents);
 
+            List<AgentEvent> containerEvents = new ArrayList<>();
+            AgentResult container = runtime.ask(
+                    agent,
+                    "vfs-live-container",
+                    "找到最少材料能合成的容器。请使用 Resource VFS 查询当前游戏数据，"
+                            + "比较候选容器直接配方的输入材料总件数，并用中文回答容器名和数量依据。",
+                    prompt,
+                    containerEvents);
+
+            System.out.println("OPENALLAY_LIVE_VFS_SWORD " + outcome(sword));
+            System.out.println("OPENALLAY_LIVE_VFS_SWORD_CALLS " + traceCalls(sword));
+            System.out.println("OPENALLAY_LIVE_VFS_CONTAINER " + outcome(container));
+            System.out.println("OPENALLAY_LIVE_VFS_CONTAINER_CALLS " + traceCalls(container));
+
             assertTrue(sword.successful(), () -> "sword task failed: code=" + sword.errorCode()
                     + " message=" + sword.errorMessage()
                     + " events=" + summarize(swordEvents)
+                    + " calls=" + traceCalls(sword)
                     + " answer=" + sword.text());
             Set<String> swordTools = toolIds(swordEvents);
             assertTrue(swordTools.stream().anyMatch(id -> id.contains("resource_")),
@@ -129,16 +162,10 @@ final class LiveResourceVfsAcceptanceTest {
                             || swordAnswer.contains("伤害"),
                     () -> "answer missing damage evidence: " + sword.text());
 
-            List<AgentEvent> containerEvents = new ArrayList<>();
-            AgentResult container = runtime.ask(
-                    agent,
-                    "当前游戏数据里，所需配方最少的容器是哪个？请比较箱子、木桶、漏斗的配方依赖，用 Resource VFS 后用中文回答容器名和配方数量依据。",
-                    prompt,
-                    containerEvents);
-
             assertTrue(container.successful(), () -> "container task failed: code=" + container.errorCode()
                     + " message=" + container.errorMessage()
                     + " events=" + summarize(containerEvents)
+                    + " calls=" + traceCalls(container)
                     + " answer=" + container.text());
             Set<String> containerTools = toolIds(containerEvents);
             assertTrue(containerTools.stream().anyMatch(id -> id.contains("resource_")),
@@ -146,11 +173,15 @@ final class LiveResourceVfsAcceptanceTest {
                             + " answer=" + container.text());
             String containerAnswer = container.text().toLowerCase(Locale.ROOT);
             assertTrue(
-                    containerAnswer.contains("chest")
-                            || containerAnswer.contains("箱子")
-                            || containerAnswer.contains("minecraft:chest"),
-                    () -> "answer missing chest as fewest-recipe container: " + container.text()
+                    containerAnswer.contains("hopper")
+                            || containerAnswer.contains("漏斗")
+                            || containerAnswer.contains("minecraft:hopper"),
+                    () -> "answer missing hopper as lowest direct-material container: " + container.text()
                             + " tools=" + containerTools);
+            assertTrue(
+                    containerAnswer.contains("6")
+                            || containerAnswer.contains("六"),
+                    () -> "answer missing six-item material evidence: " + container.text());
 
             String swordTrace = new LiveTraceJson().encode(sword.trace(), Set.of(apiKey));
             String containerTrace = new LiveTraceJson().encode(container.trace(), Set.of(apiKey));
@@ -179,6 +210,23 @@ final class LiveResourceVfsAcceptanceTest {
         return events.stream()
                 .map(event -> event.getClass().getSimpleName())
                 .collect(Collectors.joining(","));
+    }
+
+    private static String traceCalls(AgentResult result) {
+        if (result.trace() == null) {
+            return "<none>";
+        }
+        return result.trace().events().stream()
+                .filter(event -> event.type().equals("tool_call"))
+                .map(event -> event.payload().toString())
+                .collect(Collectors.joining(" | "));
+    }
+
+    private static String outcome(AgentResult result) {
+        return "state=" + result.state()
+                + " code=" + result.errorCode()
+                + " message=" + result.errorMessage()
+                + " answer=" + (result.text() == null ? "<none>" : result.text().replace('\n', ' '));
     }
 
     private static String required(Map<String, String> env, String name) {
@@ -228,6 +276,7 @@ final class LiveResourceVfsAcceptanceTest {
 
         AgentResult ask(
                 GameGuideAgent agent,
+                String sessionId,
                 String question,
                 String prompt,
                 List<AgentEvent> events) throws Exception {
@@ -235,7 +284,7 @@ final class LiveResourceVfsAcceptanceTest {
             AgentRequest request = new AgentRequest(
                     requestId,
                     GroundedTestFixtures.PLAYER_ID,
-                    "vfs-live",
+                    sessionId,
                     question,
                     prompt,
                     context,

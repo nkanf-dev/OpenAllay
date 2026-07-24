@@ -41,6 +41,25 @@ import org.junit.jupiter.api.Test;
 
 final class ResourceToolsTest {
     @Test
+    void listsTheVirtualRootWithoutRequiringTheModelToGuessMountNames() {
+        try (Fixture fixture = fixture()) {
+            ResourceListTool list = new ResourceListTool(fixture.resources());
+
+            var listed = (dev.openallay.tool.ToolResult.Success<ResourceToolOutput>) list.invoke(
+                    ToolInvocationContext.developmentConsole("root-list"),
+                    new ResourceListTool.Input(List.of("/"), true));
+
+            JsonArray children = listed.value().items().getFirst().value()
+                    .getAsJsonObject().getAsJsonArray("children");
+            assertEquals(1, children.size());
+            assertEquals("/item", children.get(0).getAsJsonObject().get("path").getAsString());
+            assertEquals("directory", children.get(0).getAsJsonObject().get("kind").getAsString());
+            assertTrue(listed.value().modelView().text().contains("path: /item"));
+            assertFalse(listed.value().failure());
+        }
+    }
+
+    @Test
     void exposesProviderSafeAliasesAndPublishesBatchTruthBeforeProjection() {
         try (Fixture fixture = fixture()) {
             ToolRegistry registry = new ToolRegistry();

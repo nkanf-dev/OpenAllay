@@ -18,7 +18,8 @@ import java.util.List;
 public final class ResourceListTool extends ResourceToolSupport<ResourceListTool.Input> {
     @ToolDescription("Batch direct-child listings; never recursively dumps a resource tree")
     public record Input(
-            @ToolDescription("Absolute virtual paths to list in one call") List<String> paths,
+            @ToolDescription("Absolute virtual paths to list in one call; use / to discover available mounts")
+                    List<String> paths,
             @ToolDescription("Include child kind and label metadata") @ToolOptional Boolean includeMetadata,
             @ToolDescription("Semantic continuation cursor from a previous result") @ToolOptional String cursor) {
         public Input(List<String> paths, Boolean includeMetadata) {
@@ -55,19 +56,29 @@ public final class ResourceListTool extends ResourceToolSupport<ResourceListTool
         if (input == null || input.paths() == null || input.paths().isEmpty()) {
             return new ToolResult.Failure<>("invalid_arguments", "paths must contain at least one virtual path");
         }
-        List<ResourcePath> paths;
-        try {
-            paths = input.paths().stream().map(ResourcePath::parse).toList();
-        } catch (RuntimeException failure) {
-            return new ToolResult.Failure<>("invalid_resource_path", failure.getMessage());
-        }
         boolean metadata = !Boolean.FALSE.equals(input.includeMetadata());
-        List<ResourceFileSystem.OperationResult<ResourceDirectoryPage>> results = fileSystem.list(session.view(), paths);
         ArrayList<ResourceToolOutput.Item> items = new ArrayList<>();
-        for (ResourceFileSystem.OperationResult<ResourceDirectoryPage> result : results) {
-            String source = input.paths().get(result.inputIndex());
+        ArrayList<ResourcePath> parsedPaths = new ArrayList<>();
+        for (int inputIndex = 0; inputIndex < input.paths().size(); inputIndex++) {
+            String source = input.paths().get(inputIndex);
+            if ("/".equals(source)) {
+                items.add(success(inputIndex, source, root(session, metadata)));
+                continue;
+            }
+            ResourcePath path;
+            try {
+                path = ResourcePath.parse(source);
+            } catch (RuntimeException invalidPath) {
+                items.add(failure(inputIndex, source,
+                        new dev.openallay.resource.vfs.ResourceOperationFailure(
+                                "invalid_resource_path", null, null, invalidPath.getMessage())));
+                continue;
+            }
+            parsedPaths.add(path);
+            ResourceFileSystem.OperationResult<ResourceDirectoryPage> result =
+                    fileSystem.list(session.view(), List.of(path)).getFirst();
             if (!result.succeeded()) {
-                items.add(failure(result.inputIndex(), source, result.failure()));
+                items.add(failure(inputIndex, source, result.failure()));
                 continue;
             }
             ResourceDirectoryPage page = result.value();
@@ -87,10 +98,33 @@ public final class ResourceListTool extends ResourceToolSupport<ResourceListTool
                 }
             });
             value.add("children", children);
-            items.add(success(result.inputIndex(), source, value));
+            items.add(success(inputIndex, source, value));
         }
-        List<ResourcePath> existing = existingInputs(session, paths);
+        List<ResourcePath> existing = existingInputs(session, parsedPaths);
         return publish(session, context, "resource_list", GSON.toJson(input), items, existing, existing,
                 ResourcePresentation.Kind.TABLE);
+    }
+
+    private static JsonObject root(RequestResourceContext.Session session, boolean metadata) {
+        JsonObject value = new JsonObject();
+        value.addProperty("path", "/");
+        JsonArray children = new JsonArray();
+        session.view().generationIds().entrySet().stream()
+                .sorted(java.util.Map.Entry.comparingByKey())
+                .forEach(entry -> {
+                    String path = "/" + entry.getKey();
+                    if (!metadata) {
+                        children.add(path);
+                        return;
+                    }
+                    JsonObject child = new JsonObject();
+                    child.addProperty("path", path);
+                    child.addProperty("kind", "directory");
+                    child.addProperty("label", entry.getKey());
+                    child.addProperty("generation", entry.getValue());
+                    children.add(child);
+                });
+        value.add("children", children);
+        return value;
     }
 }

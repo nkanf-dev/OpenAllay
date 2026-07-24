@@ -38,6 +38,7 @@ public final class OpenAiChatClient implements ModelClient {
                 .timeout(config.requestTimeout())
                 .header("authorization", "Bearer " + config.apiKey().reveal())
                 .header("content-type", "application/json")
+                .header("user-agent", "OpenAllay/0.1.0-SNAPSHOT")
                 .postJson(codec.requestBody(config, request))
                 .build();
         return transport.execute(httpRequest, cancellation, events, (status, headers, body, safeEvents) -> {
