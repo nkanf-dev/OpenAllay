@@ -32,6 +32,35 @@ final class GuideToolPresentationTest {
     }
 
     @Test
+    void distinguishesSkillInstructionLoadFromExactReferenceReads() {
+        JsonObject instructions = JsonParser.parseString(
+                "{\"name\":\"analyze-game-data\"}").getAsJsonObject();
+        assertEquals(
+                List.of(GuideToolMessage.of(
+                        GuideToolMessage.Key.INVOCATION_LOAD_SKILL_EXACT,
+                        "analyze-game-data")),
+                GuideToolInvocationPresentation.messages("openallay:load_skill", instructions));
+
+        JsonObject reference = JsonParser.parseString("""
+                {"name":"analyze-game-data","reference":"references/recipes.md"}
+                """).getAsJsonObject();
+        assertEquals(
+                List.of(GuideToolMessage.of(
+                        GuideToolMessage.Key.INVOCATION_LOAD_SKILL_REFERENCE,
+                        "analyze-game-data",
+                        "references/recipes.md")),
+                GuideToolInvocationPresentation.messages("openallay:load_skill", reference));
+
+        assertTrue(GuideToolInvocationPresentation.messages(
+                        "openallay:run_javascript", reference)
+                .stream()
+                .noneMatch(message -> message.key()
+                        == GuideToolMessage.Key.INVOCATION_LOAD_SKILL_REFERENCE));
+        assertTrue(GuideToolInvocationPresentation.messages(
+                        "openallay:future_tool", reference).isEmpty());
+    }
+
+    @Test
     void projectsJavascriptAndSkillResultsWithoutLegacyDomainNarration() {
         JsonObject javascript = JsonParser.parseString("""
                 {"status":"success","value":{"cardinality":9,"complete":false,

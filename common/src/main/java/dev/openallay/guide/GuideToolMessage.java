@@ -8,6 +8,7 @@ public record GuideToolMessage(Key key, List<String> arguments) {
     public enum Key {
         INVOCATION_LOAD_SKILL("screen.openallay.tool.message.invocation.load_skill"),
         INVOCATION_LOAD_SKILL_EXACT("screen.openallay.tool.message.invocation.load_skill_exact"),
+        INVOCATION_LOAD_SKILL_REFERENCE("screen.openallay.tool.message.invocation.load_skill_reference"),
         INVOCATION_RUN_JAVASCRIPT("screen.openallay.tool.message.invocation.run_javascript"),
 
         RESULT_PENDING("screen.openallay.tool.message.result.pending"),

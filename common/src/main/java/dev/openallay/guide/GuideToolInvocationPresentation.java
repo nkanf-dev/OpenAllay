@@ -13,18 +13,38 @@ public final class GuideToolInvocationPresentation {
     public static List<GuideToolMessage> messages(String toolId, JsonObject input) {
         String name = toolName(toolId);
         return switch (name) {
-            case "load_skill" -> optional(
-                    GuideToolMessage.Key.INVOCATION_LOAD_SKILL,
-                    GuideToolMessage.Key.INVOCATION_LOAD_SKILL_EXACT,
-                    safeName(input, "name"));
+            case "load_skill" -> loadSkill(input);
             case "run_javascript" -> one(GuideToolMessage.Key.INVOCATION_RUN_JAVASCRIPT);
             default -> List.of();
         };
     }
 
+    private static List<GuideToolMessage> loadSkill(JsonObject input) {
+        String name = safeName(input, "name");
+        String reference = safeReference(primitive(input, "reference"));
+        if (!reference.isEmpty()) {
+            return List.of(GuideToolMessage.of(
+                    GuideToolMessage.Key.INVOCATION_LOAD_SKILL_REFERENCE,
+                    name,
+                    reference));
+        }
+        return optional(
+                GuideToolMessage.Key.INVOCATION_LOAD_SKILL,
+                GuideToolMessage.Key.INVOCATION_LOAD_SKILL_EXACT,
+                name);
+    }
+
     private static String safeName(JsonObject input, String field) {
         String value = primitive(input, field);
         return SAFE_NAME.matcher(value).matches() ? value : "";
+    }
+
+    private static String safeReference(String value) {
+        return value.matches("references/[a-zA-Z0-9][a-zA-Z0-9._/-]*\\.md")
+                        && !value.contains("/../")
+                        && !value.contains("//")
+                ? value
+                : "";
     }
 
     private static String primitive(JsonObject input, String field) {
