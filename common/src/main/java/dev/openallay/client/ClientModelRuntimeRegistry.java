@@ -51,6 +51,8 @@ public final class ClientModelRuntimeRegistry implements GuideLocalEndpoint {
     private final AgentSessionStore sessions = new AgentSessionStore();
     private final AtomicReference<State> state = new AtomicReference<>();
     private final AtomicReference<ClientCapabilitySnapshot> capabilities;
+    private final Path traceDirectory;
+    private final java.util.function.BooleanSupplier tracePersistenceEnabled;
 
     ClientModelRuntimeRegistry(
             OpenAllayRuntime productRuntime,
@@ -59,11 +61,28 @@ public final class ClientModelRuntimeRegistry implements GuideLocalEndpoint {
             ClientEventDispatcher dispatcher,
             AgentToolExecutor extension,
             Function<ResolvedModelProfile, ModelClient> modelFactory) {
+        this(productRuntime, initial, gson, dispatcher, extension, modelFactory,
+                null, () -> false);
+    }
+
+    ClientModelRuntimeRegistry(
+            OpenAllayRuntime productRuntime,
+            ModelProfilesConfigLoader.Load initial,
+            Gson gson,
+            ClientEventDispatcher dispatcher,
+            AgentToolExecutor extension,
+            Function<ResolvedModelProfile, ModelClient> modelFactory,
+            Path traceDirectory,
+            java.util.function.BooleanSupplier tracePersistenceEnabled) {
         Objects.requireNonNull(productRuntime, "productRuntime");
         this.gson = Objects.requireNonNull(gson, "gson");
         this.dispatcher = Objects.requireNonNull(dispatcher, "dispatcher");
         this.extension = extension;
         this.modelFactory = Objects.requireNonNull(modelFactory, "modelFactory");
+        this.traceDirectory = traceDirectory == null
+                ? null : traceDirectory.toAbsolutePath().normalize();
+        this.tracePersistenceEnabled = Objects.requireNonNull(
+                tracePersistenceEnabled, "tracePersistenceEnabled");
         capabilities = new AtomicReference<>(resolveDefaultCapabilities(productRuntime));
         replace(initial, modelFactory);
     }
@@ -92,10 +111,22 @@ public final class ClientModelRuntimeRegistry implements GuideLocalEndpoint {
             Gson gson,
             ClientEventDispatcher dispatcher,
             AgentToolExecutor extension) {
+        return create(runtime, initial, gson, dispatcher, extension, null, () -> false);
+    }
+
+    public static ClientModelRuntimeRegistry create(
+            OpenAllayRuntime runtime,
+            ModelProfilesConfigLoader.Load initial,
+            Gson gson,
+            ClientEventDispatcher dispatcher,
+            AgentToolExecutor extension,
+            Path traceDirectory,
+            java.util.function.BooleanSupplier tracePersistenceEnabled) {
         Function<ResolvedModelProfile, ModelClient> factory = profile ->
                 ProviderModelClients.create(profile.runtimeConfig(), gson);
         return new ClientModelRuntimeRegistry(
-                runtime, initial, gson, dispatcher, extension, factory);
+                runtime, initial, gson, dispatcher, extension, factory,
+                traceDirectory, tracePersistenceEnabled);
     }
 
     public synchronized void replace(
@@ -248,6 +279,11 @@ public final class ClientModelRuntimeRegistry implements GuideLocalEndpoint {
         Objects.requireNonNull(load, "load");
         List<GuideClientModelProfile> summaries = new ArrayList<>();
         Map<String, ClientGuideRuntime> runtimes = new LinkedHashMap<>();
+        Set<String> configuredSecrets = load.profiles().stream()
+                .filter(ResolvedModelProfile::available)
+                .map(profile -> profile.runtimeConfig().apiKey().reveal())
+                .filter(secret -> secret != null && !secret.isBlank())
+                .collect(java.util.stream.Collectors.toUnmodifiableSet());
         for (ResolvedModelProfile profile : load.profiles()) {
             GuideFailure failure = profile.failure();
             summaries.add(new GuideClientModelProfile(
@@ -267,8 +303,9 @@ public final class ClientModelRuntimeRegistry implements GuideLocalEndpoint {
                         dispatcher,
                         extension,
                         new LiveTraceStore(
-                                null,
-                                Set.of(profile.runtimeConfig().apiKey().reveal())),
+                                traceDirectory,
+                                configuredSecrets,
+                                tracePersistenceEnabled),
                         profile.runtimeConfig().contextBudget(),
                         profile.canonicalModelId(),
                         capabilities.get()));

@@ -17,16 +17,27 @@ public final class LiveTraceStore {
     private final Map<UUID, LiveAgentTrace> traces = new ConcurrentHashMap<>();
     private final Path persistenceDirectory;
     private final Set<String> secrets;
+    private final java.util.function.BooleanSupplier persistenceEnabled;
     private final LiveTraceJson json = new LiveTraceJson();
 
     public LiveTraceStore(Path persistenceDirectory, Set<String> secrets) {
+        this(persistenceDirectory, secrets, () -> true);
+    }
+
+    /** Persistence can follow the live Debug Mode setting without replacing the store. */
+    public LiveTraceStore(
+            Path persistenceDirectory,
+            Set<String> secrets,
+            java.util.function.BooleanSupplier persistenceEnabled) {
         this.persistenceDirectory = persistenceDirectory;
         this.secrets = Set.copyOf(secrets);
+        this.persistenceEnabled = java.util.Objects.requireNonNull(
+                persistenceEnabled, "persistenceEnabled");
     }
 
     public void record(LiveAgentTrace trace) {
         traces.put(trace.requestId(), trace);
-        if (persistenceDirectory != null) {
+        if (persistenceDirectory != null && persistenceEnabled.getAsBoolean()) {
             persist(trace);
         }
     }

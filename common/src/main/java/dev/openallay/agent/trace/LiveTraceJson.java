@@ -15,8 +15,8 @@ public final class LiveTraceJson {
             }
         }
         json = json.replaceAll(
-                "(?i)(authorization|x-api-key)(\\\\?\"?\\s*[:=]\\s*\\\\?\"?)[^\\\"\\s,}]+",
-                "$1$2[REDACTED]");
+                "(?i)(\"[^\"\\r\\n]*(?:authorization|x-api-key|api[-_]?key|cookie|set-cookie)[^\"\\r\\n]*\"\\s*:\\s*\")[^\"]*(\")",
+                "$1[REDACTED]$2");
         return json;
     }
 }

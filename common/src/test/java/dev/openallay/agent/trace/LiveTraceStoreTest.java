@@ -34,6 +34,37 @@ final class LiveTraceStoreTest {
     }
 
     @Test
+    void persistenceFollowsDebugModeAndRedactsConfiguredSecrets() throws Exception {
+        String secret = "configured-profile-secret";
+        java.util.concurrent.atomic.AtomicBoolean debug = new java.util.concurrent.atomic.AtomicBoolean();
+        LiveTraceStore store = new LiveTraceStore(temporary, Set.of(secret), debug::get);
+        LiveAgentTrace offTrace = trace(new JsonObject());
+        store.record(offTrace);
+        assertFalse(Files.exists(temporary.resolve(offTrace.requestId() + ".json")));
+
+        debug.set(true);
+        JsonObject payload = new JsonObject();
+        payload.addProperty("provider", "cookie=" + secret);
+        payload.addProperty("authorization", "Bearer header-only-secret");
+        payload.addProperty("cookieHeader", "session=header-only-cookie");
+        payload.addProperty("source", "return 'full javascript source';");
+        LiveAgentTrace onTrace = trace(payload);
+        store.record(onTrace);
+        var path = temporary.resolve(onTrace.requestId() + ".json");
+        assertTrue(Files.exists(path));
+        String persisted = Files.readString(path);
+        assertTrue(persisted.contains("full javascript source"));
+        assertFalse(persisted.contains(secret));
+        assertFalse(persisted.contains("header-only-secret"));
+        assertFalse(persisted.contains("session=header-only-cookie"));
+
+        debug.set(false);
+        LiveAgentTrace toggledOff = trace(new JsonObject());
+        store.record(toggledOff);
+        assertFalse(Files.exists(temporary.resolve(toggledOff.requestId() + ".json")));
+    }
+
+    @Test
     void disabledPersistenceWritesNothingAndDoesNotApplyRetention() throws Exception {
         LiveTraceStore store = new LiveTraceStore(null, Set.of());
         LiveAgentTrace first = trace(new JsonObject());

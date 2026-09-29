@@ -258,8 +258,40 @@ public record ClientSettingsRuntime(
                                 installedSkillMods,
                                 availableTools))));
             }
+            java.util.concurrent.atomic.AtomicReference<GuideDisplayConfig> activeDisplay =
+                    new java.util.concurrent.atomic.AtomicReference<>(display);
+            ClientSettingsService.DisplayActions traceDisplayActions = displayActions;
+            ClientSettingsService.DisplayActions wiredDisplayActions =
+                    new ClientSettingsService.DisplayActions() {
+                        @Override
+                        public ToolResult<GuideDisplayConfig> saveDisplay(
+                                GuideDisplayConfig candidate) {
+                            ToolResult<GuideDisplayConfig> result =
+                                    traceDisplayActions.saveDisplay(candidate);
+                            if (result instanceof ToolResult.Success<GuideDisplayConfig> success) {
+                                activeDisplay.set(success.value());
+                            }
+                            return result;
+                        }
+
+                        @Override
+                        public ToolResult<GuideDisplayConfig> reloadDisplay() {
+                            ToolResult<GuideDisplayConfig> result =
+                                    traceDisplayActions.reloadDisplay();
+                            if (result instanceof ToolResult.Success<GuideDisplayConfig> success) {
+                                activeDisplay.set(success.value());
+                            }
+                            return result;
+                        }
+                    };
             ClientModelRuntimeRegistry registry = ClientModelRuntimeRegistry.create(
-                    product, initial, gson, dispatcher, extension);
+                    product,
+                    initial,
+                    gson,
+                    dispatcher,
+                    extension,
+                    configDirectory.resolve("traces"),
+                    () -> activeDisplay.get().debugMode());
             CapabilitySettingsBackend capabilities = new CapabilitySettingsBackend(
                     capabilitiesPath, product, registry);
             ClientSettingsService.CommandActions commandActions =
@@ -329,7 +361,7 @@ public record ClientSettingsRuntime(
             ClientSettingsService.ModelState initialState = backend.state(initial);
             ClientSettingsService service = new ClientSettingsService(
                     display,
-                    displayActions,
+                    wiredDisplayActions,
                     initialState,
                     backend.presentEnvironmentNames(),
                     backend,
