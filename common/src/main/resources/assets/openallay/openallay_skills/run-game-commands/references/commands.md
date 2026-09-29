@@ -1,7 +1,4 @@
-# Complete command bridge
-
-Use `roots: ["commands"]` in the `run_javascript` Tool input for every example
-below. Call the binding as `commands`; do not write `mc.commands`.
+# Command bridge details
 
 If the command text contains JSON, component text, or both quote styles, use a
 JavaScript template literal instead of manually escaping nested quote layers:
@@ -37,9 +34,9 @@ items and components. Do not copy a benchmark artifact or prewritten answer.
 Do not use the removed legacy `{tag:...}` form.
 
 If Minecraft returns an unknown-item, unknown-component, malformed-component,
-or command-context message, inspect that exact feedback together with the
-described `<item>` node, change only the rejected part, and retry at most once.
-Permission feedback is terminal; changing spelling cannot grant permission.
+or command-context message, use that feedback together with the described
+`<item>` node to understand the rejected syntax. Permission feedback is
+terminal; changing spelling cannot grant permission.
 
 ## Discover the active registry
 
@@ -73,10 +70,6 @@ return commands.describe("time set <time>");
 Use the exact `path` returned by `commands.list()`. `describe` does not parse a
 concrete command line and does not guess aliases.
 
-Do not call `commands.list()` for an exact command the player already supplied
-or for a known unambiguous vanilla syntax. Never return its complete `nodes`
-array to the model; filter to the relevant literal or mod prefix in JavaScript.
-
 ## Run in order and read the feedback
 
 ```javascript
@@ -104,12 +97,7 @@ Each result has:
 - `feedbackObserved`: whether at least one feedback line was captured;
 - `durationMillis`: elapsed submission and feedback time.
 
-`commands.run` is synchronous from JavaScript's point of view, but command
-submission and feedback happen asynchronously with respect to the Minecraft
-render thread. OpenAllay waits on its worker thread, so the script can use the
-returned result immediately without promises or polling. Do not poll, call
-`commands` as a function, or issue a later JavaScript call to collect the first
-call's result.
+`commands.run` is synchronous from JavaScript's point of view. Command submission and feedback happen asynchronously with respect to the Minecraft render thread, and OpenAllay waits on its worker thread. The returned object is available to the current script. Call methods on `commands`; it is not itself a function.
 
 `commands.run` adds no OpenAllay allowlist, argument filter, or call-count cap.
 Minecraft's command parser, connection state, registered command tree, and

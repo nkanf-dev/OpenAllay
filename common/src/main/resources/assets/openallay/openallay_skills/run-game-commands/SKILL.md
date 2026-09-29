@@ -18,8 +18,11 @@ command capability for this request:
   detached tree.
 - `commands.run(command)` submits the exact command as the requesting player,
   waits off the render thread for the associated client-visible feedback window,
-  and returns the messages that Minecraft produced. A single optional leading
-  `/` is removed; the remaining string is unchanged.
+  and returns the messages that Minecraft produced. Input whitespace is stripped
+  and a single optional leading `/` is removed before submission.
+
+Select the `commands` root for `run_javascript`; the binding is `commands`, not
+`mc.commands`.
 
 The canonical execution form is:
 
@@ -28,41 +31,20 @@ var command = "time set day";
 return commands.run(command);
 ```
 
-`commands.run(...)` is synchronous from JavaScript's point of view: the returned
-object already contains `state`, `messages`, and timing. Never call `commands` as a function.
-Never poll for a later result, and never run a second script only to retrieve
-feedback from the first.
+`commands.run(...)` is synchronous from JavaScript's point of view. Its returned
+object contains `state`, `messages`, and timing. Call its methods on `commands`;
+it is not itself a function.
 
-For a command-only `run_javascript` call, set the Tool input `roots` to
-`["commands"]`. The binding is named `commands` directly; there is no
-`mc.commands`.
+Use `references/commands.md` for detailed syntax or examples when they are
+relevant. When exploring an unknown command, focus the returned command-tree
+data on the player's request.
 
-If the player supplied an exact command, or the required vanilla command and
-syntax are already unambiguous, this main document is enough: call
-`commands.run` directly. Do not list the whole command tree and do not load the
-reference merely to confirm a known command.
-
-Load `references/commands.md` before writing the program only when the syntax
-is unknown, the command contains a modern item/text component, or the task
-needs several ordered commands. For unknown syntax, filter
-`commands.list().nodes` inside the same program by the relevant literal/mod
-prefix, use `commands.describe(path)` on the exact candidate, and return only
-the focused candidates; never return the unfiltered catalog.
-
-Always inspect and return the `commands.run` result. `state: "feedback"` means
-Minecraft emitted one or more messages in the command feedback window;
-`state: "no_feedback"` means the command produced no observable message before
-that window closed. Do not describe a command as successful merely because it
-was submitted. Report only the outcome actually stated by the feedback. A
-structure, inventory, or attribute is independently verified only when the
-feedback says so or a separate world/data observation sees the resulting state.
+Use the returned `commands.run` result to report observable feedback accurately. `feedback` contains Minecraft messages; `no_feedback` means no message was observed during the feedback window, not that the command failed. Do not claim an outcome beyond what the feedback states. A resulting structure, inventory, or attribute is independently verified only when the feedback says so or a separate world/data observation observes it.
 
 Minecraft remains authoritative for parsing and permissions. Submissions are
 not transactional: if a later statement fails or the Agent is cancelled,
 commands already submitted stay submitted and are never rolled back.
 
-Treat parser errors and permission errors in `messages` as rejection, not
-success. Correct a parser error at most once after inspecting its actual
-message and the matching described path; never make blind variants. If an
-exact player-visible path cannot be found, report that it is unavailable
-instead of trying similarly named mutations.
+Treat parser and permission errors in `messages` as rejection, not success.
+Use actual feedback and the described path to understand syntax errors. If the
+requested player-visible path cannot be found, report that it is unavailable.

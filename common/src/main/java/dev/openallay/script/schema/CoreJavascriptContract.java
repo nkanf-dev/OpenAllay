@@ -25,23 +25,9 @@ public final class CoreJavascriptContract {
                 - helpers.schema(value): inspect one genuinely dynamic JSON or Extension value.
                 - require(id): load one exact bundled JavaScript module documented by the current contract or a vertical Skill.
                 - world (optional top-level request root): select it with roots ["world"]; call world directly, never mc.world.
-                  world.inspect({from:{x,y,z},to:{x,y,z}}, {includeAir:false}) returns loaded blocks, state properties, relative/absolute positions, coverage, and evidence.
-                  world.entities({from:{x,y,z},to:{x,y,z}}, {type:"namespace:id"}) returns entity summaries with request-scoped observationId values.
-                  world.entity(observationId) returns the detached detail for one entity from that same request.
-
-                For a focused region relative to the current player, select Tool roots: ["player", "world"] and use this exact shape:
-                var origin = mc.player.position;
-                var observed = world.inspect(
-                  {from:{x:origin.x-8,y:origin.y+1,z:origin.z-8},
-                   to:{x:origin.x+8,y:origin.y+16,z:origin.z+8}},
-                  {includeAir:false});
-                return {
-                  blocks: observed.blocks.filter(function (block) {
-                    return block.id !== "minecraft:air";
-                  }),
-                  coverage: observed.coverage
-                };
-                Change only the task-focused offsets and filtering. Do not invent mc.world, getBlock, or live client objects.
+                  world.inspect({from:{x,y,z},to:{x,y,z}}, {includeAir:false}) returns blocks, coverage, and evidence.
+                  world.entities({from:{x,y,z},to:{x,y,z}}, {type:"namespace:id"}) returns entity summaries with request-scoped observationId values, coverage, and evidence.
+                  world.entity(observationId) returns detached detail for one entity observed in the same request.
 
                 Host arrays support non-mutating filter, map, flatMap, slice, reduce, some, and includes.
                 Copy a host array before sort, reverse, splice, push, or index assignment.
@@ -74,7 +60,7 @@ public final class CoreJavascriptContract {
         text.append("""
 
                 Request-scoped means availability is decided by the captured request, not that the root failed.
-                Dynamic JSON/map children are discovered with one focused schema/sample call only when the task needs them.
+                Dynamic JSON/map children can be inspected with schema.describe(path) or helpers.schema(value) when needed.
                 """);
         return text.toString().strip();
     }

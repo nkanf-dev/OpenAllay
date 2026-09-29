@@ -26,6 +26,8 @@ final class BundledSkillsTest {
             assertTrue(metadata.allowedTools().stream()
                     .allMatch(tool -> tool.equals("openallay:run_javascript")));
             assertFalse(repository.metadataPrompt().contains(document.instructions()));
+            assertFalse(dev.openallay.agent.AgentSystemPrompt.compose(repository.metadataPrompt())
+                    .contains(document.instructions()));
             assertFalse(document.instructions().contains("one JavaScript program"));
         }
 
@@ -43,16 +45,17 @@ final class BundledSkillsTest {
         assertEquals(Set.of("references/commands.md"), commands.references().keySet());
         assertTrue(commands.instructions().contains("`commands.list()`"));
         assertTrue(commands.instructions().contains("never rolled back"));
-        assertTrue(commands.instructions().contains("this main document is enough"));
-        assertTrue(commands.instructions().contains("modern item/text component"));
         assertTrue(commands.instructions().contains("`commands.run(...)` is synchronous"));
-        assertTrue(commands.instructions().contains("Never call `commands` as a function"));
         assertTrue(commands.instructions().contains("return commands.run(command);"));
         String commandReference = commands.references().get("references/commands.md");
         assertTrue(commandReference.contains("<component-id>=<SNBT value>"));
         assertTrue(commandReference.contains("commands.describe(\"give <targets> <item>\")"));
-        assertTrue(commandReference.contains("retry at most once"));
-        assertTrue(commandReference.contains("Do not poll"));
+        assertTrue(commandReference.contains("call-count cap"));
+        assertTrue(commandReference.contains("player permission"));
+        assertTrue(commandReference.contains("no universal command-result packet"));
+        assertTrue(commandReference.contains("no_feedback"));
+        assertTrue(commandReference.contains("sequence"));
+        assertTrue(commandReference.contains("messages"));
         assertFalse(commandReference.contains("enchanted-item-created"));
     }
 
