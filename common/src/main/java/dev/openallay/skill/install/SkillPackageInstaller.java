@@ -92,8 +92,31 @@ public final class SkillPackageInstaller {
     }
 
     public CompletableFuture<ToolResult<InstallResult>> install(
-            CommunityCatalogManifest.PackageEntry entry,
-            CancellationSignal cancellation) {
+            CommunityCatalogManifest.PackageEntry entry, CancellationSignal cancellation) {
+        return prepare(entry, cancellation).thenApply(result -> commitPrepared(result));
+    }
+
+    public ToolResult<InstallResult> importLocal(Path source) {
+        return commitPrepared(prepareLocal(source));
+    }
+
+    private ToolResult<InstallResult> commitPrepared(ToolResult<PreparedSkillInstall> result) {
+        if (result instanceof ToolResult.Failure<PreparedSkillInstall> failure) {
+            return new ToolResult.Failure<>(failure.code(), failure.message());
+        }
+        try (PreparedSkillInstall prepared =
+                ((ToolResult.Success<PreparedSkillInstall>) result).value()) {
+            ToolResult<Boolean> committed = prepared.commit();
+            if (committed instanceof ToolResult.Failure<Boolean> failure) {
+                return new ToolResult.Failure<>(failure.code(), failure.message());
+            }
+            return new ToolResult.Success<>(new InstallResult(prepared.id(), prepared.provenance()));
+        }
+    }
+
+    /** Downloads and validates without creating a discoverable package. */
+    public CompletableFuture<ToolResult<PreparedSkillInstall>> prepare(
+            CommunityCatalogManifest.PackageEntry entry, CancellationSignal cancellation) {
         Objects.requireNonNull(entry, "entry");
         Objects.requireNonNull(cancellation, "cancellation");
         if (!entry.compatibility().minecraft().equals(minecraftVersion)
@@ -103,8 +126,7 @@ public final class SkillPackageInstaller {
                     "The Skill package is not compatible with this OpenAllay game runtime"));
         }
         if (cancellation.isCancelled()) {
-            return CompletableFuture.completedFuture(new ToolResult.Failure<>(
-                    "skill_install_cancelled", "Skill installation was cancelled"));
+            return CompletableFuture.completedFuture(cancelled());
         }
         CompletableFuture<ArchiveResponse> response;
         try {
@@ -112,8 +134,7 @@ public final class SkillPackageInstaller {
                     HttpExchangeRequest.newBuilder(entry.archive())
                             .timeout(java.time.Duration.ofSeconds(60))
                             .header("accept", "application/zip, application/octet-stream")
-                            .get()
-                            .build(),
+                            .get().build(),
                     cancellation,
                     (status, headers, body) -> new ArchiveResponse(status, body.readAllBytes()));
         } catch (RuntimeException failure) {
@@ -121,8 +142,7 @@ public final class SkillPackageInstaller {
         }
         return response.handle((archive, failure) -> {
             if (cancellation.isCancelled()) {
-                return new ToolResult.Failure<InstallResult>(
-                        "skill_install_cancelled", "Skill installation was cancelled");
+                return cancelled();
             }
             if (failure != null || archive == null || archive.status() != 200
                     || !sha256(archive.bytes()).equals(entry.sha256())) {
@@ -133,12 +153,24 @@ public final class SkillPackageInstaller {
                 Files.createDirectories(managedRoot);
                 temporary = Files.createTempFile(managedRoot, ".download-", ".zip");
                 Files.write(temporary, archive.bytes());
-                ToolResult<InstallResult> imported = importLocal(temporary);
-                if (imported instanceof ToolResult.Success<InstallResult> success) {
-                    return new ToolResult.Success<>(
-                            new InstallResult(success.value().skillName(), entry.source().toString()));
+                ToolResult<PreparedSkillInstall> result = prepareLocal(temporary,
+                        entry.version(), entry.source().toString(), cancellation);
+                if (result instanceof ToolResult.Success<PreparedSkillInstall> success) {
+                    PreparedSkillInstall candidate = success.value();
+                    if (!candidate.id().equals(entry.id())
+                            || !candidate.metadata().attributes()
+                                    .getOrDefault("openallay/version", entry.version())
+                                    .equals(entry.version())) {
+                        candidate.close();
+                        return installFailure();
+                    }
+                    cancellation.onCancel(candidate::close);
+                    if (cancellation.isCancelled()) {
+                        candidate.close();
+                        return cancelled();
+                    }
                 }
-                return installFailure();
+                return result;
             } catch (IOException | RuntimeException invalid) {
                 return installFailure();
             } finally {
@@ -153,10 +185,16 @@ public final class SkillPackageInstaller {
         });
     }
 
-    public synchronized ToolResult<InstallResult> importLocal(Path source) {
+    public ToolResult<PreparedSkillInstall> prepareLocal(Path source) {
+        return prepareLocal(source, null, null, new CancellationSignal());
+    }
+
+    private ToolResult<PreparedSkillInstall> prepareLocal(
+            Path source, String version, String provenance, CancellationSignal cancellation) {
         Objects.requireNonNull(source, "source");
         Path normalized = source.toAbsolutePath().normalize();
         Path operation = managedRoot.resolve(".install-" + UUID.randomUUID()).normalize();
+        boolean retained = false;
         try {
             if (managedRoot.startsWith(normalized)) {
                 throw new IllegalArgumentException(
@@ -183,19 +221,109 @@ public final class SkillPackageInstaller {
             } else {
                 throw new IllegalArgumentException("Skill import must be a directory or ZIP archive");
             }
-
             Candidate candidate = candidate(extracted);
-            publish(candidate.packageRoot(), candidate.document().metadata().name(), operation);
-            return new ToolResult.Success<>(new InstallResult(
-                    candidate.document().metadata().name(),
-                    candidate.document().metadata().provenance()));
+            String digest = candidate.sha256();
+            var metadata = candidate.document().metadata();
+            PreparedSkillInstall prepared = new PreparedSkillInstall(metadata, digest,
+                    version == null ? metadata.attributes().getOrDefault("openallay/version", "") : version,
+                    provenance == null ? metadata.provenance() : provenance,
+                    () -> commit(candidate, operation, digest, cancellation),
+                    () -> deleteTree(operation));
+            retained = true;
+            return new ToolResult.Success<>(prepared);
         } catch (RuntimeException | IOException failure) {
-            return new ToolResult.Failure<>(
-                    "skill_install_failed",
-                    "The Skill package could not be validated and installed");
+            return installFailure();
         } finally {
-            deleteTree(operation);
+            if (!retained) {
+                deleteTree(operation);
+            }
         }
+    }
+
+    private synchronized ToolResult<Boolean> commit(
+            Candidate candidate, Path operation, String digest, CancellationSignal cancellation) {
+        try {
+            if (cancellation.isCancelled()) {
+                return cancelled();
+            }
+            for (Path path = candidate.packageRoot(); !path.equals(managedRoot); path = path.getParent()) {
+                if (Files.isSymbolicLink(path)) {
+                    return changed();
+                }
+            }
+            // Read once and publish this verified snapshot, not files read after checksum validation.
+            CapturedTree captured = capture(candidate.packageRoot());
+            if (!captured.sha256().equals(digest)) {
+                return changed();
+            }
+            Path verified = operation.resolve("verified");
+            Files.createDirectory(verified);
+            for (String directory : captured.directories()) {
+                Files.createDirectories(verified.resolve(directory));
+            }
+            for (var file : captured.files().entrySet()) {
+                Path target = verified.resolve(file.getKey());
+                Files.createDirectories(target.getParent());
+                Files.write(target, file.getValue());
+            }
+            if (cancellation.isCancelled()) {
+                return cancelled();
+            }
+            publish(verified, candidate.document().metadata().name(), operation);
+            return new ToolResult.Success<>(true);
+        } catch (IOException | RuntimeException failure) {
+            return installFailure();
+        }
+    }
+
+    private static CapturedTree capture(Path root) throws IOException {
+        if (Files.isSymbolicLink(root) || !Files.isDirectory(root, LinkOption.NOFOLLOW_LINKS)) {
+            throw new IOException("Prepared Skill directory is unavailable");
+        }
+        Map<String, byte[]> files = new java.util.TreeMap<>();
+        Set<String> directories = new java.util.TreeSet<>();
+        try (var paths = Files.walk(root)) {
+            for (Path path : paths.sorted().toList()) {
+                if (path.equals(root)) {
+                    continue;
+                }
+                String relative = root.relativize(path).toString().replace(java.io.File.separatorChar, '/');
+                if (Files.isSymbolicLink(path)) {
+                    throw new IOException("Prepared Skill contains a symbolic link");
+                }
+                if (Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS)) {
+                    directories.add(relative);
+                } else if (Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS)) {
+                    files.put(relative, Files.readAllBytes(path));
+                } else {
+                    throw new IOException("Prepared Skill contains an unsupported file");
+                }
+            }
+        }
+        try {
+            var digest = java.security.MessageDigest.getInstance("SHA-256");
+            for (String directory : directories) {
+                digest.update(("D" + directory + "\0").getBytes(StandardCharsets.UTF_8));
+            }
+            for (var file : files.entrySet()) {
+                digest.update(("F" + file.getKey() + "\0" + file.getValue().length + "\0")
+                        .getBytes(StandardCharsets.UTF_8));
+                digest.update(file.getValue());
+            }
+            return new CapturedTree(files, directories, java.util.HexFormat.of().formatHex(digest.digest()));
+        } catch (java.security.NoSuchAlgorithmException impossible) {
+            throw new IllegalStateException("SHA-256 unavailable", impossible);
+        }
+    }
+
+    private record CapturedTree(Map<String, byte[]> files, Set<String> directories, String sha256) {}
+
+    private static <T> ToolResult.Failure<T> cancelled() {
+        return new ToolResult.Failure<>("skill_install_cancelled", "Skill installation was cancelled");
+    }
+
+    private static <T> ToolResult.Failure<T> changed() {
+        return new ToolResult.Failure<>("prepared_install_changed", "The prepared Skill changed; review it again");
     }
 
     private Candidate candidate(Path extracted) throws IOException {
@@ -214,22 +342,11 @@ public final class SkillPackageInstaller {
         if (relativeRoot.getNameCount() > 1) {
             throw new IllegalArgumentException("Skill package has unsupported wrapper directories");
         }
+        CapturedTree captured = capture(packageRoot);
         Map<String, String> encoded = new LinkedHashMap<>();
-        try (var stream = Files.walk(packageRoot)) {
-            for (Path path : stream.sorted().toList()) {
-                if (path.equals(packageRoot)) {
-                    continue;
-                }
-                if (Files.isSymbolicLink(path)) {
-                    throw new IllegalArgumentException("Skill packages cannot contain symbolic links");
-                }
-                if (Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS)) {
-                    continue;
-                }
-                String relative = packageRoot.relativize(path).toString()
-                        .replace(java.io.File.separatorChar, '/');
-                encoded.put(relative, Files.readString(path));
-            }
+        for (var file : captured.files().entrySet()) {
+            encoded.put(file.getKey(), StandardCharsets.UTF_8.newDecoder()
+                    .decode(java.nio.ByteBuffer.wrap(file.getValue())).toString());
         }
         SkillDocument document = parser.parsePackage(
                 "local-import:" + packageRoot.getFileName(),
@@ -241,7 +358,7 @@ public final class SkillPackageInstaller {
         if (!installedMods.containsAll(document.metadata().requiredMods())) {
             throw new IllegalArgumentException("Skill requires unavailable mods");
         }
-        return new Candidate(packageRoot, document);
+        return new Candidate(packageRoot, document, captured.sha256());
     }
 
     private void publish(Path source, String name, Path operation) throws IOException {
@@ -339,7 +456,7 @@ public final class SkillPackageInstaller {
         }
     }
 
-    private static ToolResult.Failure<InstallResult> installFailure() {
+    private static <T> ToolResult.Failure<T> installFailure() {
         return new ToolResult.Failure<>(
                 "skill_install_failed",
                 "The Skill package could not be validated and installed");
@@ -361,7 +478,7 @@ public final class SkillPackageInstaller {
         }
     }
 
-    private record Candidate(Path packageRoot, SkillDocument document) {}
+    private record Candidate(Path packageRoot, SkillDocument document, String sha256) {}
 
     private record ArchiveResponse(int status, byte[] bytes) {
         private ArchiveResponse {

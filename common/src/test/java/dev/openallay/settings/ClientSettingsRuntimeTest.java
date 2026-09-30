@@ -275,6 +275,93 @@ final class ClientSettingsRuntimeTest {
         }
     }
 
+    @Test
+    void commandEnablePreservesIndependentSkillDenyPolicyAndCapturedAuthority(@TempDir Path directory) {
+        ToolRegistry tools = new ToolRegistry();
+        tools.register("test:tools", List.of(new dev.openallay.tool.Tool<String, String>() {
+            public dev.openallay.tool.ToolDescriptor<String, String> descriptor() {
+                return new dev.openallay.tool.ToolDescriptor<>("openallay:run_javascript",
+                        "Test JavaScript", String.class, String.class, dev.openallay.tool.ToolAccess.READ_ONLY);
+            }
+            public ToolResult<String> invoke(dev.openallay.context.ToolInvocationContext context, String value) {
+                return new ToolResult.Success<>(value);
+            }
+        }));
+        SkillRepository skills = new SkillRepository(new SkillParser(), List.of("openallay:run_javascript"));
+        tools.register("test:skills", List.of(new dev.openallay.skill.LoadSkillTool(skills)));
+        OpenAllayRuntime product = new OpenAllayRuntime(new FakePlatform(), tools, new KnowledgeRegistry(),
+                new dev.openallay.integration.patchouli.PatchouliMultiblockStore(), skills,
+                new DevelopmentToolInspector(tools), null);
+        ClientSettingsRuntime settings = success(ClientSettingsRuntime.create(product,
+                directory.resolve("models.json"), directory.resolve("model-metadata.json"),
+                Map.of(), Runnable::run, null, Clock.systemUTC(), GuideDisplayConfig.defaults()));
+        try {
+            assertTrue(skills.find("inspect-game-state").isPresent());
+            var policy = new dev.openallay.capability.CapabilityPolicy(1,
+                    java.util.Set.of(), java.util.Set.of("inspect-game-state"));
+            assertInstanceOf(ToolResult.Success.class, settings.settings().saveCapabilities(policy).join());
+            var frozen = settings.models().capabilities();
+            assertFalse(frozen.skills().find("inspect-game-state").isPresent());
+
+            assertInstanceOf(ToolResult.Success.class, settings.settings().saveExperimentalCommands(true).join());
+
+            assertEquals(policy, settings.settings().snapshot().capabilities().policy());
+            assertEquals(policy, settings.models().capabilities().policy());
+            assertFalse(settings.models().capabilities().skills().find("inspect-game-state").isPresent());
+            assertFalse(frozen.skills().find("inspect-game-state").isPresent());
+            assertFalse(frozen.skills().find("run-game-commands").isPresent());
+            assertTrue(settings.models().capabilities().skills().find("run-game-commands").isPresent());
+        } finally {
+            settings.closeAsync().join();
+        }
+    }
+
+    @Test
+    void settingsStartupKeepsExtensionSkillsWithOtherInstalledLegacyMods(@TempDir Path directory) {
+        ToolRegistry tools = new ToolRegistry();
+        SkillRepository skills = new SkillRepository(new SkillParser(), List.of());
+        var source = new dev.openallay.skill.SkillSource("example:extension", "extension-guide/SKILL.md",
+                Map.of("extension-guide/SKILL.md", """
+                        ---
+                        name: extension-guide
+                        description: Extension guide
+                        metadata:
+                          openallay/required-mods: example_loaded_mod
+                        ---
+                        Read [details](references/details.md).
+                        """, "extension-guide/references/details.md", "Original extension reference"),
+                dev.openallay.skill.SkillSource.Origin.EXTERNAL);
+        skills.registerExternal(List.of(source), java.util.Set.of("example_loaded_mod"));
+        tools.register("test:skills", List.of(new dev.openallay.skill.LoadSkillTool(skills)));
+        PlatformService platform = new PlatformService() {
+            public String platformName() { return "test"; }
+            public String gameVersion() { return "test"; }
+            public boolean isModLoaded(String id) { return id.equals("example_loaded_mod"); }
+            public boolean isDevelopmentEnvironment() { return true; }
+            public List<dev.openallay.platform.InstalledModMetadata> installedMods() {
+                return List.of(new dev.openallay.platform.InstalledModMetadata("example_loaded_mod",
+                        "Example", "1.0", "", List.of(), List.of(), Map.of(), "client", List.of()));
+            }
+        };
+        OpenAllayRuntime product = new OpenAllayRuntime(platform, tools, new KnowledgeRegistry(),
+                new dev.openallay.integration.patchouli.PatchouliMultiblockStore(), skills,
+                new DevelopmentToolInspector(tools), null);
+        ClientSettingsRuntime settings = success(ClientSettingsRuntime.create(product,
+                directory.resolve("models.json"), directory.resolve("model-metadata.json"),
+                Map.of(), Runnable::run, null, Clock.systemUTC(), GuideDisplayConfig.defaults()));
+        try {
+            assertTrue(settings.settings().snapshot().skills().find("extension-guide").isPresent());
+            assertEquals("Original extension reference", skills.find("extension-guide").orElseThrow()
+                    .references().get("references/details.md"));
+            assertInstanceOf(ToolResult.Success.class, settings.settings().reloadSkills(true).join());
+            assertTrue(settings.settings().snapshot().skills().find("extension-guide").isPresent());
+            assertEquals("Original extension reference", skills.find("extension-guide").orElseThrow()
+                    .references().get("references/details.md"));
+        } finally {
+            settings.closeAsync().join();
+        }
+    }
+
     @SuppressWarnings("unchecked")
     private static ClientSettingsRuntime success(ToolResult<ClientSettingsRuntime> result) {
         return ((ToolResult.Success<ClientSettingsRuntime>)

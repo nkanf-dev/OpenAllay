@@ -246,8 +246,9 @@ public final class GameGuideAgent {
                         transition(AgentState.COMPLETED, trace, events);
                         // Runtime memory keeps the successfully projected context. Durable guide
                         // history independently retains the original request/timeline projection.
-                        sessions.finish(lease, nextMessages);
+                        lease.cancellation().cancel();
                         tools.closeRequestScope(request.context().correlationId());
+                        sessions.finish(lease, nextMessages);
                         LiveAgentTrace completed = trace.finish(AgentState.COMPLETED, turn.text(), null);
                         events.accept(new AgentEvent.FinalText(turn.text()));
                         return CompletableFuture.completedFuture(new AgentResult(
@@ -389,8 +390,9 @@ public final class GameGuideAgent {
         }
         trace.failure(code, message);
         transition(state, trace, events);
-        sessions.finish(lease, lease.history());
+        lease.cancellation().cancel();
         tools.closeRequestScope(request.context().correlationId());
+        sessions.finish(lease, lease.history());
         LiveAgentTrace completed = trace.finish(state, null, code);
         events.accept(new AgentEvent.Failed(code, message));
         return new AgentResult(state, null, code, message, completed);

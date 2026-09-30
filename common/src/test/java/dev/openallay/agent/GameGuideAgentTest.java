@@ -3,6 +3,7 @@ package dev.openallay.agent;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.Gson;
@@ -77,6 +78,89 @@ final class GameGuideAgentTest {
                 .orElseThrow();
         assertEquals("call_1", started.invocationId());
         assertEquals("call_1", completed.invocationId());
+    }
+
+    @Test
+    void successfulRequestRevokesCancellationBeforeClosingToolsWithoutChangingCompletion() {
+        QueueModelClient model = new QueueModelClient();
+        model.enqueue(CompletableFuture.completedFuture(toolTurn("call_scope", 42)));
+        CompletableFuture<ModelTurn> finalTurn = new CompletableFuture<>();
+        model.enqueue(finalTurn);
+        AgentSessionStore sessions = new AgentSessionStore();
+        AgentRequest request = request(UUID.randomUUID());
+        RequestLifetimeTools tools = new RequestLifetimeTools(sessions, request.sessionKey());
+        List<AgentEvent> events = new ArrayList<>();
+
+        CompletableFuture<AgentResult> pending = new GameGuideAgent(
+                        model, tools, sessions, new Gson())
+                .ask(request, events::add);
+
+        assertNotNull(tools.cancellation);
+        assertFalse(tools.cancellation.isCancelled());
+        assertTrue(tools.lifecycle.isEmpty());
+        assertTrue(finalTurn.complete(textTurn("final answer")));
+        AgentResult result = pending.join();
+
+        assertTrue(tools.cancellation.isCancelled());
+        assertEquals(List.of("cancel", "close"), tools.lifecycle);
+        assertEquals(List.of(request.context().correlationId()), tools.closed);
+        assertTrue(tools.cancelledAtClose);
+        assertNotNull(tools.sessionAtClose);
+        assertTrue(tools.sessionAtClose.active(), "the lease must stay owned until tools close");
+        assertEquals(request.requestId(), tools.sessionAtClose.requestId());
+        assertFalse(sessions.status(request.sessionKey()).active());
+        assertTrue(result.successful());
+        assertEquals(AgentState.COMPLETED, result.state());
+        assertEquals(AgentState.COMPLETED, result.trace().finalState());
+        assertEquals("final answer", result.text());
+        assertEquals("final answer", result.trace().finalText());
+        assertNull(result.errorCode());
+        assertNull(result.trace().errorCode());
+        assertTrue(events.contains(new AgentEvent.FinalText("final answer")));
+        assertFalse(events.stream().anyMatch(AgentEvent.Failed.class::isInstance));
+        assertFalse(events.contains(new AgentEvent.StateChanged(AgentState.CANCELLED)));
+    }
+
+    @Test
+    void failedRequestRevokesCancellationBeforeClosingToolsWithoutReplacingOriginalFailure() {
+        QueueModelClient model = new QueueModelClient();
+        model.enqueue(CompletableFuture.completedFuture(toolTurn("call_scope", 42)));
+        CompletableFuture<ModelTurn> finalTurn = new CompletableFuture<>();
+        model.enqueue(finalTurn);
+        AgentSessionStore sessions = new AgentSessionStore();
+        AgentRequest request = request(UUID.randomUUID());
+        RequestLifetimeTools tools = new RequestLifetimeTools(sessions, request.sessionKey());
+        List<AgentEvent> events = new ArrayList<>();
+
+        CompletableFuture<AgentResult> pending = new GameGuideAgent(
+                        model, tools, sessions, new Gson())
+                .ask(request, events::add);
+
+        assertNotNull(tools.cancellation);
+        assertFalse(tools.cancellation.isCancelled());
+        assertTrue(tools.lifecycle.isEmpty());
+        assertTrue(finalTurn.completeExceptionally(new ModelClientException(
+                new ModelFailure("provider_unavailable", "Provider is unavailable", null))));
+        AgentResult result = pending.join();
+
+        assertTrue(tools.cancellation.isCancelled());
+        assertEquals(List.of("cancel", "close"), tools.lifecycle);
+        assertEquals(List.of(request.context().correlationId()), tools.closed);
+        assertTrue(tools.cancelledAtClose);
+        assertNotNull(tools.sessionAtClose);
+        assertTrue(tools.sessionAtClose.active(), "the lease must stay owned until tools close");
+        assertEquals(request.requestId(), tools.sessionAtClose.requestId());
+        assertFalse(sessions.status(request.sessionKey()).active());
+        assertFalse(result.successful());
+        assertEquals(AgentState.FAILED, result.state());
+        assertEquals(AgentState.FAILED, result.trace().finalState());
+        assertEquals("provider_unavailable", result.errorCode());
+        assertEquals("provider_unavailable", result.trace().errorCode());
+        assertEquals("Provider is unavailable", result.errorMessage());
+        assertTrue(events.contains(new AgentEvent.Failed(
+                "provider_unavailable", "Provider is unavailable")));
+        assertFalse(events.stream().anyMatch(AgentEvent.FinalText.class::isInstance));
+        assertFalse(events.contains(new AgentEvent.StateChanged(AgentState.CANCELLED)));
     }
 
     @Test
@@ -542,6 +626,56 @@ final class GameGuideAgentTest {
             normalized.add("value", value);
             return CompletableFuture.completedFuture(
                     new AgentToolResult("test:fact", normalized, false));
+        }
+    }
+
+    private static final class RequestLifetimeTools implements AgentToolExecutor {
+        private final FakeTools delegate = new FakeTools();
+        private final AgentSessionStore sessions;
+        private final AgentSessionKey sessionKey;
+        private final List<String> lifecycle = new ArrayList<>();
+        private final List<String> closed = new ArrayList<>();
+        private CancellationSignal cancellation;
+        private boolean cancelledAtClose;
+        private AgentSessionStore.Status sessionAtClose;
+
+        private RequestLifetimeTools(AgentSessionStore sessions, AgentSessionKey sessionKey) {
+            this.sessions = sessions;
+            this.sessionKey = sessionKey;
+        }
+
+        @Override
+        public List<ModelToolDefinition> definitions() {
+            return delegate.definitions();
+        }
+
+        @Override
+        public Set<ContextCapability> requiredContext() {
+            return delegate.requiredContext();
+        }
+
+        @Override
+        public Optional<String> canonicalToolId(String modelToolName) {
+            return delegate.canonicalToolId(modelToolName);
+        }
+
+        @Override
+        public CompletableFuture<AgentToolResult> execute(
+                String modelToolName,
+                JsonObject arguments,
+                ToolInvocationContext context,
+                CancellationSignal cancellation) {
+            this.cancellation = cancellation;
+            cancellation.onCancel(() -> lifecycle.add("cancel"));
+            return delegate.execute(modelToolName, arguments, context, cancellation);
+        }
+
+        @Override
+        public void closeRequestScope(String correlationId) {
+            cancelledAtClose = cancellation.isCancelled();
+            sessionAtClose = sessions.status(sessionKey);
+            lifecycle.add("close");
+            closed.add(correlationId);
         }
     }
 

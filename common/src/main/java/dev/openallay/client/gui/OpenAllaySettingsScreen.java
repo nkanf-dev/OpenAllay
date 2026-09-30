@@ -7,6 +7,8 @@ import dev.openallay.client.gui.settings.HistorySettingsProjection;
 import dev.openallay.client.gui.settings.ModelProfileDraft;
 import dev.openallay.client.gui.settings.ModelSettingsProjection;
 import dev.openallay.client.gui.settings.RecipeSettingsProjection;
+import dev.openallay.client.gui.settings.RequirementSettingsProjection;
+import dev.openallay.settings.requirement.RequirementSettingsEnvironment;
 import dev.openallay.client.gui.settings.SettingsLayout;
 import dev.openallay.client.gui.settings.SettingsSection;
 import dev.openallay.client.gui.settings.SkillSettingsProjection;
@@ -39,6 +41,7 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.MultiLineEditBox;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.ConfirmScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 
@@ -85,6 +88,9 @@ public final class OpenAllaySettingsScreen extends Screen {
     private boolean narrowExtensionDetail;
     private String extensionImportPathDraft = "";
     private EditBox extensionImportPath;
+    private boolean openingRequirementReview;
+    private int skillDetailScroll;
+    private int skillDetailContentHeight;
     private int pageScroll;
     private int pageContentHeight;
     private ClientSettingsService.HistoryConfirmationToken historyConfirmation;
@@ -217,6 +223,10 @@ public final class OpenAllaySettingsScreen extends Screen {
 
     @Override
     public void removed() {
+        if (!openingRequirementReview) {
+            service.cancelPackagePreparation();
+            snapshot.requirementReview().ifPresent(review -> service.cancelPackageInstall(review.token()));
+        }
         service.cancelConnectionTest();
         service.cancelModelCatalog();
         historyConfirmation = null;
@@ -248,6 +258,15 @@ public final class OpenAllaySettingsScreen extends Screen {
     public void tick() {
         super.tick();
         service.refreshRuntimeState();
+        service.snapshot().requirementReview().ifPresent(review -> {
+            captureDraft();
+            openingRequirementReview = true;
+            try {
+                minecraft.setScreenAndShow(new RequirementReviewScreen(service, this, review));
+            } finally {
+                openingRequirementReview = false;
+            }
+        });
     }
 
     @Override
@@ -276,6 +295,16 @@ public final class OpenAllaySettingsScreen extends Screen {
             editorScroll = net.minecraft.util.Mth.clamp(
                     editorScroll - (int) Math.round(scrollY * 22), 0, maximum);
             rebuildWidgets();
+            return true;
+        }
+        if (section == SettingsSection.SKILLS && !skillEditing
+                && (layout.wide() || narrowSkillDetail)
+                && layout.editor().contains(mouseX, mouseY)) {
+            int inset = skillTab == SkillTab.COMMUNITY ? 90 : 94;
+            int viewport = Math.max(1, layout.editor().height() - inset);
+            skillDetailScroll = net.minecraft.util.Mth.clamp(
+                    skillDetailScroll - (int) Math.round(scrollY * 24),
+                    0, Math.max(0, skillDetailContentHeight - viewport));
             return true;
         }
         boolean skillList = section == SettingsSection.SKILLS
@@ -560,7 +589,7 @@ public final class OpenAllaySettingsScreen extends Screen {
                         .selected(extension.id().equals(selectedExtensionId))
                         .bounds(x, y, width, 22)
                         .build());
-                button.active = !extension.id().equals(selectedExtensionId);
+                button.active = !layout.wide() || !extension.id().equals(selectedExtensionId);
                 int bottomInset = !layout.wide() && extensionTab == ExtensionTab.COMMUNITY
                         ? 80
                         : 4;
@@ -591,7 +620,7 @@ public final class OpenAllaySettingsScreen extends Screen {
                             extension,
                             Math.max(80, detail.width() - 20),
                             projection.debugMode())));
-            int actionY = detail.bottom() - 76;
+            int actionY = detail.bottom() - 106;
             if (extensionTab == ExtensionTab.COMMUNITY
                     || selectedExtension().map(
                                     ExtensionSettingsProjection.ExtensionCard::installable)
@@ -602,7 +631,7 @@ public final class OpenAllaySettingsScreen extends Screen {
             addExperimentalCommandAction(
                     projection,
                     actionX,
-                    detail.bottom() - 68,
+                    detail.bottom() - 54,
                     actionWidth);
         }
     }
@@ -720,12 +749,33 @@ public final class OpenAllaySettingsScreen extends Screen {
                         Component.translatable(projection.unrestrictedJavascript()
                                 ? "screen.openallay.settings.extensions.unrestricted.disable"
                                 : "screen.openallay.settings.extensions.unrestricted.enable"),
-                        ignored -> accept(service.saveUnrestrictedJavascript(!projection.unrestrictedJavascript())))
+                        ignored -> {
+                            if (projection.unrestrictedJavascript()) {
+                                accept(service.saveUnrestrictedJavascript(false));
+                            } else {
+                                confirmUnrestrictedJavascript();
+                            }
+                        })
                 .bounds(x, y + 25, width, 20).build();
         unrestricted.active = snapshot.operation().kind() == SettingsOperation.Kind.IDLE;
         unrestricted.setTooltip(Tooltip.create(Component.translatable(
                 "screen.openallay.settings.extensions.unrestricted.warning")));
         addRenderableWidget(unrestricted);
+    }
+
+    private void confirmUnrestrictedJavascript() {
+        minecraft.setScreenAndShow(new ConfirmScreen(
+                confirmed -> {
+                    minecraft.setScreenAndShow(this);
+                    if (confirmed) accept(service.saveUnrestrictedJavascript(true));
+                },
+                Component.translatable(RequirementSettingsProjection.PREFIX + "confirm_enable"),
+                Component.translatable("screen.openallay.settings.extensions.unrestricted.warning")
+                        .append("\n\n")
+                        .append(Component.translatable(
+                                RequirementSettingsProjection.PREFIX + "unrestricted_confirm")),
+                Component.translatable(RequirementSettingsProjection.PREFIX + "confirm_enable"),
+                Component.translatable(RequirementSettingsProjection.PREFIX + "cancel")));
     }
 
     private void addSkillsPage() {
@@ -764,6 +814,7 @@ public final class OpenAllaySettingsScreen extends Screen {
                                 : "screen.openallay.settings.skills.bundled"));
                 Button button = addRenderableWidget(OpenAllayButton.create(label, ignored -> {
                             selectedSkillName = skill.name();
+                            skillDetailScroll = 0;
                             narrowSkillDetail = true;
                             skillEditing = false;
                             skillDraftMarkdown = "";
@@ -772,7 +823,7 @@ public final class OpenAllaySettingsScreen extends Screen {
                         .selected(skill.name().equals(selectedSkillName))
                         .bounds(x, y, width, 22)
                         .build());
-                button.active = !skill.name().equals(selectedSkillName);
+                button.active = !layout.wide() || !skill.name().equals(selectedSkillName);
                 button.visible = y >= listArea.y() + 31 && y + 22 <= listArea.bottom() - 4;
                 y += 26;
             }
@@ -784,13 +835,14 @@ public final class OpenAllaySettingsScreen extends Screen {
                         .append(Component.translatable(skillStateKey(skill.state())));
                 Button button = addRenderableWidget(OpenAllayButton.create(label, ignored -> {
                             selectedCommunitySkillId = skill.id();
+                            skillDetailScroll = 0;
                             narrowSkillDetail = true;
                             rebuildWidgets();
                         })
                         .selected(skill.id().equals(selectedCommunitySkillId))
                         .bounds(x, y, width, 22)
                         .build());
-                button.active = !skill.id().equals(selectedCommunitySkillId);
+                button.active = !layout.wide() || !skill.id().equals(selectedCommunitySkillId);
                 int listBottomInset = layout.wide() ? 4 : 60;
                 button.visible = y >= listArea.y() + 31
                         && y + 22 <= listArea.bottom() - listBottomInset;
@@ -1558,9 +1610,6 @@ public final class OpenAllaySettingsScreen extends Screen {
                 area.y() + 12,
                 ACCENT,
                 false);
-        renderWrapped(graphics, Component.translatable(
-                "screen.openallay.settings.extensions.unrestricted.warning"),
-                area.x() + 10, area.y() + 28, Math.max(80, area.width() - 20), 0xFFFF6666, 9);
         ExtensionSettingsProjection.ExtensionCard extension =
                 selectedExtension().orElse(null);
         if (extension == null) {
@@ -1585,8 +1634,8 @@ public final class OpenAllaySettingsScreen extends Screen {
         int width = Math.max(80, area.width() - 20);
         int bottomInset = extensionTab == ExtensionTab.COMMUNITY
                         || extension.installable()
-                ? 82
-                : 34;
+                ? 114
+                : 62;
         graphics.enableScissor(
                 area.x(), area.y() + 28, area.right(), area.bottom() - bottomInset);
         int y = area.y() + 32 - pageScroll;
@@ -1663,6 +1712,17 @@ public final class OpenAllaySettingsScreen extends Screen {
                 y,
                 width);
 
+        boolean catalogDeclaration = extension.state()
+                        == dev.openallay.settings.extension.ExtensionSettingsView.State.COMMUNITY
+                || extension.state()
+                        == dev.openallay.settings.extension.ExtensionSettingsView.State.INCOMPATIBLE;
+        y = renderRequirements(graphics, extension.requirements(), x, y + 8, width,
+                catalogDeclaration);
+        if (extension.updateAvailable()) {
+            y = renderWrapped(graphics, Component.translatable(
+                    RequirementSettingsProjection.PREFIX + "package_check"),
+                    x, y + 4, width, MUTED, 10);
+        }
         y += 8;
         y = renderExtensionContributions(
                 graphics, extension.contributions(), x, y, width);
@@ -1695,7 +1755,7 @@ public final class OpenAllaySettingsScreen extends Screen {
         }
         if (projection.debugMode() && !extension.sha256().isBlank()) {
             y += 7;
-            extensionDetailLine(
+            y = extensionDetailLine(
                     graphics,
                     "screen.openallay.settings.extensions.detail.sha256",
                     extension.sha256(),
@@ -1714,15 +1774,9 @@ public final class OpenAllaySettingsScreen extends Screen {
                     ERROR,
                     10);
         }
+        pageContentHeight = Math.max(pageContentHeight,
+                y + pageScroll - area.y() + bottomInset + 8);
         graphics.disableScissor();
-        graphics.text(
-                font,
-                Component.translatable(
-                        "screen.openallay.settings.extensions.experimental.title"),
-                x,
-                area.bottom() - 38,
-                MUTED,
-                false);
     }
 
     private int extensionDetailLine(
@@ -2154,31 +2208,46 @@ public final class OpenAllaySettingsScreen extends Screen {
         if (skillEditing) {
             return;
         }
-        int y = area.y() + 60;
         int width = Math.max(80, area.width() - 20);
-        for (net.minecraft.util.FormattedCharSequence line : font.split(
-                Component.literal(skill.description()), width)) {
-            graphics.text(font, line, area.x() + 10, y, MUTED, false);
-            y += 10;
-        }
-        y += 7;
-        for (net.minecraft.util.FormattedCharSequence line : font.split(
-                Component.literal(skill.body()), width)) {
-            if (y > area.bottom() - 36) {
-                break;
-            }
-            graphics.text(font, line, area.x() + 10, y, TEXT, false);
-            y += 10;
-        }
+        graphics.enableScissor(area.x(), area.y() + 58, area.right(), area.bottom() - 34);
+        int start = area.y() + 60 - skillDetailScroll;
+        int y = renderWrapped(graphics, Component.literal(skill.description()),
+                area.x() + 10, start, width, MUTED, 10);
+        y = renderRequirements(graphics, skill.requirements(), area.x() + 10, y + 8, width, false);
+        y = renderWrapped(graphics, Component.literal(skill.body()),
+                area.x() + 10, y + 8, width, TEXT, 10);
         if (snapshot.display().debugMode()) {
-            graphics.text(
-                    font,
-                    Component.literal(skill.provenance()),
-                    area.x() + 10,
-                    Math.min(y + 6, area.bottom() - 38),
-                    MUTED,
-                    false);
+            y = renderWrapped(graphics, Component.literal(skill.provenance()),
+                    area.x() + 10, y + 6, width, MUTED, 10);
         }
+        skillDetailContentHeight = y - start + 8;
+        graphics.disableScissor();
+    }
+
+    private int renderRequirements(
+            GuiGraphicsExtractor graphics,
+            RequirementSettingsProjection requirements,
+            int x, int y, int width, boolean catalogPreview) {
+        y = renderWrapped(graphics, Component.translatable(
+                RequirementSettingsProjection.PREFIX + "title"), x, y, width, ACCENT, 11);
+        if (catalogPreview) {
+            y = renderWrapped(graphics, Component.translatable(
+                    RequirementSettingsProjection.PREFIX + "catalog_preview"),
+                    x, y + 4, width, MUTED, 10);
+        }
+        if (requirements.rows().isEmpty()) {
+            return renderWrapped(graphics, Component.translatable(RequirementSettingsProjection.PREFIX
+                    + (catalogPreview ? "package_check" : "none")), x, y + 4, width, MUTED, 10);
+        }
+        for (RequirementSettingsProjection.Row row : requirements.rows()) {
+            y = renderWrapped(graphics, RequirementReviewScreen.rowLabel(row),
+                    x, y + 4, width, TEXT, 10);
+            if (!row.detail().isBlank()) {
+                y = renderWrapped(graphics, Component.literal(row.detail()),
+                        x, y + 2, width, MUTED, 10);
+            }
+        }
+        return y;
     }
 
     private void renderCommunitySkills(
@@ -2217,7 +2286,9 @@ public final class OpenAllaySettingsScreen extends Screen {
         }
         int x = area.x() + 10;
         int width = Math.max(80, area.width() - 20);
-        int y = area.y() + 31;
+        graphics.enableScissor(area.x(), area.y() + 28, area.right(), area.bottom() - 62);
+        int start = area.y() + 31 - skillDetailScroll;
+        int y = start;
         graphics.text(font, skill.displayName(), x, y, TEXT, false);
         y += 14;
         y = renderWrapped(
@@ -2255,6 +2326,8 @@ public final class OpenAllaySettingsScreen extends Screen {
                 y,
                 skill.installable() ? ACCENT : MUTED,
                 false);
+        y = renderRequirements(graphics, new RequirementSettingsProjection(List.of()),
+                x, y + 12, width, true);
         y += 18;
         y = renderWrapped(
                 graphics,
@@ -2287,7 +2360,7 @@ public final class OpenAllaySettingsScreen extends Screen {
                     width,
                     MUTED,
                     10);
-            renderWrapped(
+            y = renderWrapped(
                     graphics,
                     Component.translatable(
                             "screen.openallay.settings.skills.community.sha256",
@@ -2298,15 +2371,12 @@ public final class OpenAllaySettingsScreen extends Screen {
                     MUTED,
                     10);
         }
-        int noticeY = Math.min(y + 18, area.bottom() - 72);
-        community.notice().ifPresent(value -> renderWrapped(
-                graphics,
-                Component.literal(value.message()),
-                x,
-                noticeY,
-                width,
-                ERROR,
-                10));
+        if (community.notice().isPresent()) {
+            y = renderWrapped(graphics, Component.literal(community.notice().orElseThrow().message()),
+                    x, y + 18, width, ERROR, 10);
+        }
+        skillDetailContentHeight = y - start + 8;
+        graphics.disableScissor();
     }
 
     private void renderNotice(GuiGraphicsExtractor graphics) {
@@ -2459,6 +2529,7 @@ public final class OpenAllaySettingsScreen extends Screen {
                 snapshot.extensions(),
                 snapshot.experimentalCommands(),
                 snapshot.unrestrictedJavascript(),
+                RequirementSettingsEnvironment.from(snapshot),
                 snapshot.display().debugMode());
     }
 
@@ -2466,6 +2537,7 @@ public final class OpenAllaySettingsScreen extends Screen {
         return SkillSettingsProjection.from(
                 snapshot.skills(),
                 snapshot.skillCommunity(),
+                RequirementSettingsEnvironment.from(snapshot),
                 snapshot.display().debugMode());
     }
 
@@ -3131,11 +3203,13 @@ public final class OpenAllaySettingsScreen extends Screen {
                 SkillSettingsProjection.from(
                         snapshot.skills(),
                         snapshot.skillCommunity(),
+                        RequirementSettingsEnvironment.from(snapshot),
                         snapshot.display().debugMode()),
                 ExtensionSettingsProjection.from(
                         snapshot.extensions(),
                         snapshot.experimentalCommands(),
                         snapshot.unrestrictedJavascript(),
+                        RequirementSettingsEnvironment.from(snapshot),
                         snapshot.display().debugMode()),
                 HistorySettingsProjection.from(
                         snapshot.history(),

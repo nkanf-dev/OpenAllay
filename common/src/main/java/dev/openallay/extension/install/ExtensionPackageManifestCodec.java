@@ -1,9 +1,12 @@
 package dev.openallay.extension.install;
 
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import dev.openallay.extension.OpenAllayExtensionDescriptor;
+import dev.openallay.requirement.RequirementCodec;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.TreeSet;
@@ -31,7 +34,9 @@ public final class ExtensionPackageManifestCodec {
                         "Extension package manifest must be an object");
             }
             JsonObject root = parsed.getAsJsonObject();
-            if (!new HashSet<>(root.keySet()).equals(FIELDS)) {
+            Set<String> fields = new HashSet<>(root.keySet());
+            fields.remove("requirements");
+            if (!fields.equals(FIELDS)) {
                 throw new IllegalArgumentException(
                         "Extension package manifest fields do not match schema");
             }
@@ -46,7 +51,8 @@ public final class ExtensionPackageManifestCodec {
                             strings(root, "loaders"),
                             string(root, "minecraftVersionRange"),
                             string(root, "openAllayApiVersionRange"),
-                            string(root, "source")),
+                            string(root, "source"),
+                            RequirementCodec.decode(root.get("requirements"))),
                     strings(root, "modIds"));
         } catch (RuntimeException failure) {
             if (failure instanceof IllegalArgumentException) {
@@ -54,6 +60,33 @@ public final class ExtensionPackageManifestCodec {
             }
             throw new IllegalArgumentException("Invalid Extension package manifest", failure);
         }
+    }
+
+    /** Writes schema 1 with the explicitly supported optional advisory expansion. */
+    public String encode(ExtensionPackageManifest manifest) {
+        JsonObject root = new JsonObject();
+        OpenAllayExtensionDescriptor descriptor = manifest.descriptor();
+        root.addProperty("schemaVersion", manifest.schemaVersion());
+        root.addProperty("id", descriptor.id());
+        root.addProperty("name", descriptor.name());
+        root.addProperty("version", descriptor.version());
+        root.addProperty("provider", descriptor.provider());
+        root.addProperty("summary", descriptor.summary());
+        root.add("loaders", strings(descriptor.loaders()));
+        root.addProperty("minecraftVersionRange", descriptor.minecraftVersionRange());
+        root.addProperty("openAllayApiVersionRange", descriptor.openAllayApiVersionRange());
+        root.add("modIds", strings(manifest.modIds()));
+        root.addProperty("source", descriptor.source());
+        if (!descriptor.requirements().isEmpty()) {
+            root.add("requirements", RequirementCodec.encode(descriptor.requirements()));
+        }
+        return new GsonBuilder().setPrettyPrinting().create().toJson(root) + "\n";
+    }
+
+    private static JsonArray strings(Set<String> values) {
+        JsonArray encoded = new JsonArray();
+        values.stream().sorted().forEach(encoded::add);
+        return encoded;
     }
 
     private static String string(JsonObject object, String field) {

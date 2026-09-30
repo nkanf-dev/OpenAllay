@@ -102,6 +102,135 @@ final class SkillPackageInstallerTest {
         assertTrue(Files.readString(root.resolve("demo/SKILL.md")).endsWith("remote\n"));
     }
 
+    @Test
+    void preparedDirectoryIsHiddenAndCommitsCapturedBytesDespiteSourceChanges() throws Exception {
+        Path root = temporaryDirectory.resolve("managed");
+        SkillPackageInstaller installer = new SkillPackageInstaller(root, new SkillParser());
+        Path source = temporaryDirectory.resolve("source");
+        Files.createDirectories(source.resolve("references"));
+        String reviewed = skill("demo", "reviewed").replace(
+                "  openallay/version:",
+                "  openallay/requires-capabilities: \"missing:capability\"\n"
+                        + "  openallay/requires-extensions: \"missing:extension\"\n"
+                        + "  openallay/requires-skills: \"missing-skill\"\n"
+                        + "  openallay/version:");
+        Files.writeString(source.resolve("SKILL.md"), reviewed);
+        Files.writeString(source.resolve("references/facts.md"), "original facts");
+
+        PreparedSkillInstall candidate = prepared(installer.prepareLocal(source));
+        assertEquals(64, candidate.sha256().length());
+        assertEquals(java.util.Set.of("missing:capability"), candidate.requirements().capabilities());
+        assertFalse(Files.exists(root.resolve("demo")));
+        assertTrue(new dev.openallay.skill.FilesystemSkillLoader().load(root).sources().isEmpty());
+        Files.writeString(source.resolve("SKILL.md"), skill("demo", "unreviewed"));
+        Files.writeString(source.resolve("references/facts.md"), "changed facts");
+
+        assertInstanceOf(ToolResult.Success.class, candidate.commit());
+        assertEquals(reviewed, Files.readString(root.resolve("demo/SKILL.md")));
+        assertEquals("original facts", Files.readString(root.resolve("demo/references/facts.md")));
+        assertEquals("prepared_install_consumed",
+                assertInstanceOf(ToolResult.Failure.class, candidate.commit()).code());
+        candidate.close();
+        assertEquals(java.util.List.of("demo"), children(root));
+    }
+
+    @Test
+    void discardedAndTamperedCandidatesRetainPriorPackageAndCleanStaging() throws Exception {
+        Path root = temporaryDirectory.resolve("managed");
+        SkillPackageInstaller installer = new SkillPackageInstaller(root, new SkillParser());
+        Path archive = temporaryDirectory.resolve("demo.zip");
+        zip(archive, "SKILL.md", skill("demo", "prior"));
+        success(installer.importLocal(archive));
+        String prior = Files.readString(root.resolve("demo/SKILL.md"));
+        zip(archive, "SKILL.md", skill("demo", "replacement"));
+        PreparedSkillInstall discarded = prepared(installer.prepareLocal(archive));
+        discarded.close();
+        discarded.close();
+        assertInstanceOf(ToolResult.Failure.class, discarded.commit());
+        assertEquals(prior, Files.readString(root.resolve("demo/SKILL.md")));
+
+        PreparedSkillInstall tampered = prepared(installer.prepareLocal(archive));
+        Path stagedEntry;
+        try (var paths = Files.walk(root)) {
+            stagedEntry = paths.filter(path -> path.getFileName().toString().equals("SKILL.md"))
+                    .filter(path -> !path.equals(root.resolve("demo/SKILL.md")))
+                    .findFirst().orElseThrow();
+        }
+        Files.writeString(stagedEntry, skill("demo", "tampered"));
+        assertEquals("prepared_install_changed",
+                assertInstanceOf(ToolResult.Failure.class, tampered.commit()).code());
+        assertEquals(prior, Files.readString(root.resolve("demo/SKILL.md")));
+        assertEquals(java.util.List.of("demo"), children(root));
+    }
+
+    @Test
+    void cancellationBeforeOrAfterDownloadDiscardsEveryCandidate() throws Exception {
+        byte[] archive = zipBytes("SKILL.md", skill("demo", "remote"));
+        CompletableFuture<byte[]> response = new CompletableFuture<>();
+        Path root = temporaryDirectory.resolve("managed");
+        SkillPackageInstaller installer = new SkillPackageInstaller(
+                root, new SkillParser(), transport(response), "26.2", "0.2");
+        CancellationSignal early = new CancellationSignal();
+        var future = installer.prepare(entry(sha256(archive), "26.2"), early);
+        early.cancel();
+        response.complete(archive);
+        assertInstanceOf(ToolResult.Failure.class, future.join());
+        assertFalse(Files.exists(root.resolve("demo")));
+
+        CancellationSignal late = new CancellationSignal();
+        PreparedSkillInstall candidate = prepared(installer.prepare(
+                entry(sha256(archive), "26.2"), late).join());
+        assertTrue(new dev.openallay.skill.FilesystemSkillLoader().load(root).sources().isEmpty());
+        late.cancel();
+        assertInstanceOf(ToolResult.Failure.class, candidate.commit());
+        assertTrue(children(root).isEmpty());
+    }
+
+    @Test
+    void preparationPreservesExecutableAndLegacyDependencyRejections() throws Exception {
+        Path root = temporaryDirectory.resolve("managed");
+        SkillPackageInstaller installer = new SkillPackageInstaller(root, new SkillParser());
+        Path source = temporaryDirectory.resolve("source");
+        Files.createDirectories(source.resolve("assets"));
+        Files.writeString(source.resolve("SKILL.md"), skill("demo", "valid"));
+        Files.writeString(source.resolve("assets/run.js"), "execute()");
+        assertInstanceOf(ToolResult.Failure.class, installer.prepareLocal(source));
+        Files.delete(source.resolve("assets/run.js"));
+        Files.writeString(source.resolve("SKILL.md"), skill("demo", "valid")
+                .replace("allowed-tools: \"\"", "allowed-tools: \"missing:tool\""));
+        assertInstanceOf(ToolResult.Failure.class, installer.prepareLocal(source));
+        assertTrue(children(root).isEmpty());
+    }
+
+    private static java.util.List<String> children(Path root) throws IOException {
+        try (var paths = Files.list(root)) {
+            return paths.map(path -> path.getFileName().toString()).sorted().toList();
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static PreparedSkillInstall prepared(ToolResult<PreparedSkillInstall> result) {
+        return ((ToolResult.Success<PreparedSkillInstall>)
+                assertInstanceOf(ToolResult.Success.class, result)).value();
+    }
+
+    private static HttpTransport transport(CompletableFuture<byte[]> bytes) {
+        return new HttpTransport() {
+            @Override
+            public <T> CompletableFuture<T> execute(HttpExchangeRequest request,
+                    dev.openallay.net.HttpCancellation cancellation, ResponseDecoder<T> decoder) {
+                return bytes.thenApply(value -> {
+                    try {
+                        return decoder.decode(200, new HttpResponseHeaders(Map.of()),
+                                new java.io.ByteArrayInputStream(value));
+                    } catch (IOException failure) {
+                        throw new java.util.concurrent.CompletionException(failure);
+                    }
+                });
+            }
+        };
+    }
+
     private static SkillPackageInstaller.InstallResult success(
             ToolResult<SkillPackageInstaller.InstallResult> result) {
         return ((ToolResult.Success<SkillPackageInstaller.InstallResult>)

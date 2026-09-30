@@ -160,4 +160,29 @@ final class ExtensionSettingsProjectionTest {
         assertEquals("", card.sha256());
         assertFalse(card.installable());
     }
+    @Test
+    void unmetRequirementsNeverChangeActiveStateOrInstallableUpdate() {
+        var requirements = new dev.openallay.requirement.RequirementSet(
+                java.util.Set.of("example:unknown"), java.util.Set.of("example:missing"),
+                java.util.Set.of("missing-skill"));
+        var extension = new ExtensionSettingsView.Extension(
+                "example:active", "Active package", "1.0.0", "Example", "Still available",
+                ExtensionSettingsView.State.ACTIVE, List.of("fabric"), "[26.2,26.3)",
+                "[0.2,0.3)", "local", new ExtensionSettingsView.Contributions(
+                        List.of(), List.of(), List.of(), List.of(), List.of()), "",
+                new ExtensionSettingsView.PackageInfo(true, "1.1.0", "https://example.test/update.jar",
+                        "b".repeat(64), true, true), requirements);
+        var view = new ExtensionSettingsView(List.of(), List.of(), List.of(), List.of(extension),
+                ExtensionSettingsView.Catalog.unavailable());
+        var card = ExtensionSettingsProjection.from(view, CommandCapabilityConfig.defaults(), false)
+                .findInstalled("example:active").orElseThrow();
+
+        assertEquals(ExtensionSettingsView.State.ACTIVE, card.state());
+        assertTrue(card.installable());
+        assertTrue(card.updateAvailable());
+        assertEquals(3, card.requirements().rows().size());
+        assertEquals(dev.openallay.requirement.RequirementStatus.UNKNOWN,
+                card.requirements().rows().getFirst().status());
+        assertTrue(card.requirements().continueEnabled());
+    }
 }

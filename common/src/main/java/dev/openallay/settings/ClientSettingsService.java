@@ -1,6 +1,12 @@
 package dev.openallay.settings;
 
 import dev.openallay.capability.CapabilityPolicy;
+import dev.openallay.requirement.RequirementEvaluator;
+import dev.openallay.requirement.RequirementKind;
+import dev.openallay.settings.requirement.PreparedPackageInstall;
+import dev.openallay.settings.requirement.RequirementChange;
+import dev.openallay.settings.requirement.RequirementReview;
+import dev.openallay.settings.requirement.RequirementSettingsEnvironment;
 import dev.openallay.client.ClientEventDispatcher;
 import dev.openallay.guide.GuideFailure;
 import dev.openallay.guide.GuidePersistenceSnapshot;
@@ -120,6 +126,17 @@ public final class ClientSettingsService implements AutoCloseable {
     }
 
     public interface SkillActions {
+        default CompletableFuture<ToolResult<PreparedPackageInstall>> prepareCommunity(
+                String id, CancellationSignal cancellation) {
+            return CompletableFuture.completedFuture(new ToolResult.Failure<>(
+                    "package_preview_unavailable", "Package preview is unavailable"));
+        }
+
+        default ToolResult<PreparedPackageInstall> prepareLocalPackage(java.nio.file.Path source) {
+            return new ToolResult.Failure<>(
+                    "package_preview_unavailable", "Local package preview is unavailable");
+        }
+
         ToolResult<SkillSettingsView> saveOverride(String name, String markdown);
 
         ToolResult<SkillSettingsView> deleteOverride(String name);
@@ -151,6 +168,22 @@ public final class ClientSettingsService implements AutoCloseable {
     }
 
     public interface ExtensionActions {
+        default CompletableFuture<ToolResult<PreparedPackageInstall>> prepareCommunity(
+                String id, CancellationSignal cancellation) {
+            return CompletableFuture.completedFuture(new ToolResult.Failure<>(
+                    "package_preview_unavailable", "Package preview is unavailable"));
+        }
+
+        default ToolResult<PreparedPackageInstall> prepareLocalPackage(java.nio.file.Path source) {
+            return new ToolResult.Failure<>(
+                    "package_preview_unavailable", "Local package preview is unavailable");
+        }
+
+        default ToolResult<PreparedPackageInstall> prepareLocalPackage(
+                String id, java.nio.file.Path source) {
+            return prepareLocalPackage(source);
+        }
+
         ExtensionSettingsView currentView();
 
         default CompletableFuture<ToolResult<ExtensionSettingsView>> refreshCommunity(
@@ -349,6 +382,9 @@ public final class ClientSettingsService implements AutoCloseable {
     private ClientSettingsSnapshot snapshot;
     private ActiveProbe activeProbe;
     private ActiveCatalog activeCatalog;
+    private ActivePackagePreparation activePackagePreparation;
+    private PreparedPackageInstall preparedPackage;
+    private RequirementReview.Token packageReviewToken;
     private boolean closed;
 
     public ClientSettingsService(
@@ -854,55 +890,20 @@ public final class ClientSettingsService implements AutoCloseable {
         return result;
     }
 
+    /** Prepares and validates a candidate. Publication requires Continue in its review. */
     public CompletableFuture<ToolResult<Boolean>> installCommunitySkill(String id) {
         Objects.requireNonNull(id, "id");
-        Reservation reservation = reserve(new SettingsOperation(
-                SettingsOperation.Kind.INSTALLING_COMMUNITY_SKILL, id, false));
-        if (!reservation.accepted()) {
-            return CompletableFuture.completedFuture(failed(reservation.failureCode()));
-        }
-        CompletableFuture<ToolResult<Boolean>> result = new CompletableFuture<>();
-        CompletableFuture<ToolResult<SkillCommunityView>> install;
-        try {
-            install = Objects.requireNonNull(
-                    skillActions.installCommunity(id, new CancellationSignal()),
-                    "Skill package install future");
-        } catch (RuntimeException failure) {
-            install = CompletableFuture.completedFuture(new ToolResult.Failure<>(
-                    "skill_install_failed", "Unable to install the selected Skill"));
-        }
-        install.whenComplete((completed, thrown) -> dispatcher.execute(() ->
-                finishSkillCommunity(
-                        reservation.id(),
-                        completed,
-                        thrown,
-                        result,
-                        "community_skill_installed")));
-        return result;
+        return preparePackage(new SettingsOperation(
+                SettingsOperation.Kind.INSTALLING_COMMUNITY_SKILL, id, false),
+                cancellation -> skillActions.prepareCommunity(id, cancellation));
     }
 
     public CompletableFuture<ToolResult<Boolean>> importLocalSkillPackage(
             java.nio.file.Path source) {
         Objects.requireNonNull(source, "source");
-        Reservation reservation = reserve(SettingsOperation.domain(
-                SettingsOperation.Kind.IMPORTING_SKILL_PACKAGE));
-        if (!reservation.accepted()) {
-            return CompletableFuture.completedFuture(failed(reservation.failureCode()));
-        }
-        CompletableFuture<ToolResult<Boolean>> result = new CompletableFuture<>();
-        worker.execute(() -> {
-            ToolResult<SkillCommunityView> imported = safely(
-                    () -> skillActions.importLocalPackage(source),
-                    "skill_import_failed",
-                    "Unable to import the selected Skill package");
-            dispatcher.execute(() -> finishSkillCommunity(
-                    reservation.id(),
-                    imported,
-                    null,
-                    result,
-                    "skill_package_imported"));
-        });
-        return result;
+        return preparePackage(SettingsOperation.domain(SettingsOperation.Kind.IMPORTING_SKILL_PACKAGE),
+                cancellation -> CompletableFuture.completedFuture(
+                        skillActions.prepareLocalPackage(source)));
     }
 
     public CompletableFuture<ToolResult<Boolean>> refreshExtensionCommunity() {
@@ -934,82 +935,251 @@ public final class ClientSettingsService implements AutoCloseable {
 
     public CompletableFuture<ToolResult<Boolean>> installCommunityExtension(String id) {
         Objects.requireNonNull(id, "id");
-        Reservation reservation = reserve(new SettingsOperation(
-                SettingsOperation.Kind.INSTALLING_COMMUNITY_EXTENSION, id, false));
-        if (!reservation.accepted()) {
-            return CompletableFuture.completedFuture(failed(reservation.failureCode()));
-        }
-        CompletableFuture<ToolResult<Boolean>> result = new CompletableFuture<>();
-        CompletableFuture<ToolResult<ExtensionSettingsView>> install;
-        try {
-            install = Objects.requireNonNull(
-                    extensionActions.installCommunity(id, new CancellationSignal()),
-                    "Extension package install future");
-        } catch (RuntimeException failure) {
-            install = CompletableFuture.completedFuture(new ToolResult.Failure<>(
-                    "extension_install_failed",
-                    "Unable to install the selected Extension"));
-        }
-        install.whenComplete((completed, thrown) -> dispatcher.execute(() ->
-                finishExtensionCommunity(
-                        reservation.id(),
-                        completed,
-                        thrown,
-                        result,
-                        "community_extension_staged")));
-        return result;
+        return preparePackage(new SettingsOperation(
+                SettingsOperation.Kind.INSTALLING_COMMUNITY_EXTENSION, id, false),
+                cancellation -> extensionActions.prepareCommunity(id, cancellation));
     }
 
     public CompletableFuture<ToolResult<Boolean>> importLocalExtensionPackage(
             String id, java.nio.file.Path source) {
         Objects.requireNonNull(id, "id");
         Objects.requireNonNull(source, "source");
-        Reservation reservation = reserve(new SettingsOperation(
-                SettingsOperation.Kind.IMPORTING_EXTENSION_PACKAGE, id, false));
-        if (!reservation.accepted()) {
-            return CompletableFuture.completedFuture(failed(reservation.failureCode()));
-        }
-        CompletableFuture<ToolResult<Boolean>> result = new CompletableFuture<>();
-        worker.execute(() -> {
-            ToolResult<ExtensionSettingsView> imported = safely(
-                    () -> extensionActions.importLocalPackage(id, source),
-                    "extension_import_failed",
-                    "Unable to import the selected Extension package");
-            dispatcher.execute(() -> finishExtensionCommunity(
-                    reservation.id(),
-                    imported,
-                    null,
-                    result,
-                    "extension_package_imported"));
-        });
-        return result;
+        return preparePackage(new SettingsOperation(
+                SettingsOperation.Kind.IMPORTING_EXTENSION_PACKAGE, id, false),
+                cancellation -> CompletableFuture.completedFuture(
+                        extensionActions.prepareLocalPackage(id, source)));
     }
 
     public CompletableFuture<ToolResult<Boolean>> importLocalExtensionPackage(
             java.nio.file.Path source) {
         Objects.requireNonNull(source, "source");
-        Reservation reservation = reserve(new SettingsOperation(
-                SettingsOperation.Kind.IMPORTING_EXTENSION_PACKAGE,
-                "local-extension",
-                false));
-        if (!reservation.accepted()) {
-            return CompletableFuture.completedFuture(failed(reservation.failureCode()));
-        }
-        CompletableFuture<ToolResult<Boolean>> result = new CompletableFuture<>();
-        worker.execute(() -> {
-            ToolResult<ExtensionSettingsView> imported = safely(
-                    () -> extensionActions.importLocalPackage(source),
-                    "extension_import_failed",
-                    "Unable to import the Extension package");
-            dispatcher.execute(() -> finishExtensionCommunity(
-                    reservation.id(),
-                    imported,
-                    null,
-                    result,
-                    "extension_package_imported"));
-        });
-        return result;
+        return preparePackage(SettingsOperation.domain(SettingsOperation.Kind.IMPORTING_EXTENSION_PACKAGE),
+                cancellation -> CompletableFuture.completedFuture(
+                        extensionActions.prepareLocalPackage(source)));
     }
+
+    private CompletableFuture<ToolResult<Boolean>> preparePackage(
+            SettingsOperation requested,
+            java.util.function.Function<CancellationSignal,
+                    CompletableFuture<ToolResult<PreparedPackageInstall>>> prepare) {
+        ActivePackagePreparation active;
+        synchronized (lock) {
+            if (closed) return CompletableFuture.completedFuture(failed("settings_closed"));
+            if (operation.kind() != SettingsOperation.Kind.IDLE) {
+                return CompletableFuture.completedFuture(failed("settings_busy"));
+            }
+            discardPreparedPackageLocked();
+            Reservation reservation = reserveLocked(requested);
+            active = new ActivePackagePreparation(reservation.id(), new CancellationSignal(),
+                    new CompletableFuture<>());
+            activePackagePreparation = active;
+        }
+        worker.execute(() -> {
+            synchronized (lock) {
+                if (activePackagePreparation != active) return;
+            }
+            CompletableFuture<ToolResult<PreparedPackageInstall>> pending;
+            try {
+                pending = Objects.requireNonNull(prepare.apply(active.cancellation()), "package preview future");
+            } catch (RuntimeException failure) {
+                pending = CompletableFuture.completedFuture(new ToolResult.Failure<>(
+                        "package_preview_failed", "Unable to prepare the package preview"));
+            }
+            pending.whenComplete((completed, thrown) -> dispatcher.execute(() ->
+                    finishPackagePreparation(active, completed, thrown)));
+        });
+        return active.outward();
+    }
+
+    private void finishPackagePreparation(ActivePackagePreparation active,
+            ToolResult<PreparedPackageInstall> completed, Throwable thrown) {
+        synchronized (lock) {
+            if (activePackagePreparation != active || closed) {
+                if (completed instanceof ToolResult.Success<PreparedPackageInstall> success) {
+                    closePreparedPackage(success.value());
+                }
+                active.outward().complete(new ToolResult.Failure<>(
+                        "package_preview_cancelled", "Package preview cancelled"));
+                return;
+            }
+            activePackagePreparation = null;
+            operation = SettingsOperation.idle();
+            if (thrown == null && completed instanceof ToolResult.Success<PreparedPackageInstall> success) {
+                preparedPackage = success.value();
+                packageReviewToken = new RequirementReview.Token();
+                notice = SettingsNotice.success("package_preview_ready", "Package ready for review");
+                publishLocked();
+                active.outward().complete(new ToolResult.Success<>(true));
+            } else {
+                ToolResult.Failure<PreparedPackageInstall> failure =
+                        thrown == null && completed instanceof ToolResult.Failure<PreparedPackageInstall> value
+                                ? value : new ToolResult.Failure<>(
+                                        "package_preview_failed", "Unable to prepare the package preview");
+                notice = SettingsNotice.failure(failure.code(), failure.message());
+                publishLocked();
+                active.outward().complete(new ToolResult.Failure<>(failure.code(), failure.message()));
+            }
+        }
+    }
+
+    /** Cancel an in-flight download/copy. A late result is discarded, never published. */
+    public boolean cancelPackagePreparation() {
+        synchronized (lock) {
+            if (activePackagePreparation == null) return false;
+            ActivePackagePreparation active = activePackagePreparation;
+            activePackagePreparation = null;
+            active.cancellation().cancel();
+            operation = SettingsOperation.idle();
+            notice = SettingsNotice.success("package_preview_cancelled", "Package preview cancelled");
+            publishLocked();
+            active.outward().complete(new ToolResult.Failure<>(
+                    "package_preview_cancelled", "Package preview cancelled"));
+            return true;
+        }
+    }
+
+    public boolean cancelPackageInstall(RequirementReview.Token token) {
+        synchronized (lock) {
+            if (token == null || token != packageReviewToken || preparedPackage == null) return false;
+            discardPreparedPackageLocked();
+            notice = SettingsNotice.success("package_preview_cancelled", "Package preview cancelled");
+            publishLocked();
+            return true;
+        }
+    }
+
+    /** Publishes only the captured candidate. No capability or deny-policy writes occur here. */
+    public CompletableFuture<ToolResult<Boolean>> continuePackageInstall(RequirementReview.Token token) {
+        PreparedPackageInstall candidate;
+        Reservation reservation;
+        synchronized (lock) {
+            if (closed) return CompletableFuture.completedFuture(failed("settings_closed"));
+            if (operation.kind() != SettingsOperation.Kind.IDLE) {
+                return CompletableFuture.completedFuture(failed("settings_busy"));
+            }
+            if (token == null || token != packageReviewToken || preparedPackage == null) {
+                return CompletableFuture.completedFuture(new ToolResult.Failure<>(
+                        "package_preview_stale", "Prepare a fresh package preview"));
+            }
+            candidate = preparedPackage;
+            preparedPackage = null;
+            packageReviewToken = null;
+            reservation = reserveLocked(SettingsOperation.domain(
+                    candidate.kind() == RequirementKind.SKILL
+                            ? SettingsOperation.Kind.INSTALLING_COMMUNITY_SKILL
+                            : SettingsOperation.Kind.INSTALLING_COMMUNITY_EXTENSION));
+        }
+        CompletableFuture<ToolResult<Boolean>> outward = new CompletableFuture<>();
+        worker.execute(() -> {
+            ToolResult<Boolean> committed;
+            try {
+                committed = safely(candidate::commit, "package_install_failed", "Unable to install the package");
+            } finally {
+                closePreparedPackage(candidate);
+            }
+            ToolResult<Boolean> completed = committed;
+            dispatcher.execute(() -> {
+                synchronized (lock) {
+                    if (!isCurrentLocked(reservation.id())) {
+                        outward.complete(new ToolResult.Failure<>(
+                                "package_install_stale", "The package operation is no longer current"));
+                        return;
+                    }
+                    operation = SettingsOperation.idle();
+                    if (completed instanceof ToolResult.Success<Boolean>) {
+                        try {
+                            if (candidate.kind() == RequirementKind.SKILL) {
+                                skillState = Objects.requireNonNull(skillActions.currentView());
+                                skillCommunityState = Objects.requireNonNull(skillActions.communityView());
+                            } else {
+                                extensionState = Objects.requireNonNull(extensionActions.currentView());
+                            }
+                            notice = SettingsNotice.success("package_installed", "Package installed");
+                        } catch (RuntimeException failure) {
+                            notice = SettingsNotice.failure("package_projection_failed",
+                                    "Package published, but its settings view could not be refreshed");
+                            publishLocked();
+                            outward.complete(new ToolResult.Failure<>(notice.code(), notice.message()));
+                            return;
+                        }
+                    } else {
+                        var failure = (ToolResult.Failure<Boolean>) completed;
+                        notice = SettingsNotice.failure(failure.code(), failure.message());
+                    }
+                    publishLocked();
+                    outward.complete(completed);
+                }
+            });
+        });
+        return outward;
+    }
+
+    /** Applies exactly one displayed change through its normal settings owner. */
+    public CompletableFuture<ToolResult<Boolean>> enablePackageRequirement(
+            RequirementReview.Token token, RequirementKind kind, String id,
+            boolean unrestrictedConfirmed) {
+        synchronized (lock) {
+            if (closed) return CompletableFuture.completedFuture(failed("settings_closed"));
+            if (operation.kind() != SettingsOperation.Kind.IDLE) {
+                return CompletableFuture.completedFuture(failed("settings_busy"));
+            }
+            if (token == null || token != packageReviewToken || preparedPackage == null) {
+                return CompletableFuture.completedFuture(new ToolResult.Failure<>(
+                        "package_preview_stale", "Prepare a fresh package preview"));
+            }
+            RequirementChange change = requirementReviewLocked().orElseThrow().changes().stream()
+                    .filter(value -> value.kind() == kind && value.id().equals(id)).findFirst().orElse(null);
+            if (change == null) return CompletableFuture.completedFuture(new ToolResult.Failure<>(
+                    "requirement_not_enableable", "This requirement has no available settings change"));
+            if (change.unrestrictedConsentRequired() && !unrestrictedConfirmed) {
+                return CompletableFuture.completedFuture(new ToolResult.Failure<>(
+                        "unrestricted_confirmation_required", "Confirm unrestricted JVM access before enabling it"));
+            }
+            if (kind == RequirementKind.CAPABILITY
+                    && id.equals(RequirementSettingsEnvironment.UNRESTRICTED_JAVASCRIPT)) {
+                return saveUnrestrictedJavascript(true);
+            }
+            if (kind == RequirementKind.CAPABILITY
+                    && id.equals(RequirementSettingsEnvironment.EXPERIMENTAL_COMMANDS)) {
+                return saveExperimentalCommands(true);
+            }
+            Set<String> tools = new TreeSet<>(capabilityState.policy().disabledTools());
+            Set<String> skills = new TreeSet<>(capabilityState.policy().disabledSkills());
+            if (kind == RequirementKind.CAPABILITY) tools.remove(id);
+            else if (kind == RequirementKind.SKILL) skills.remove(id);
+            return saveCapabilities(new CapabilityPolicy(CapabilityPolicy.SCHEMA_VERSION, tools, skills));
+        }
+    }
+
+    private Optional<RequirementReview> requirementReviewLocked() {
+        if (preparedPackage == null || packageReviewToken == null) return Optional.empty();
+        var report = RequirementEvaluator.evaluate(preparedPackage.requirements(),
+                RequirementSettingsEnvironment.from(capabilityState, skillState, extensionState,
+                        commandState, unrestrictedState));
+        return Optional.of(new RequirementReview(packageReviewToken, preparedPackage.kind(),
+                preparedPackage.id(), preparedPackage.name(), preparedPackage.version(),
+                preparedPackage.sha256(), report,
+                RequirementSettingsEnvironment.changes(report, capabilityState),
+                preparedPackage.catalogRequirementsDiffer()));
+    }
+
+    private void discardPreparedPackageLocked() {
+        PreparedPackageInstall previous = preparedPackage;
+        preparedPackage = null;
+        packageReviewToken = null;
+        if (previous != null) closePreparedPackage(previous);
+    }
+
+    private static void closePreparedPackage(PreparedPackageInstall candidate) {
+        try {
+            candidate.close();
+        } catch (RuntimeException ignored) {
+            // Cleanup never retries or publishes a candidate.
+        }
+    }
+
+    private record ActivePackagePreparation(long operationId, CancellationSignal cancellation,
+            CompletableFuture<ToolResult<Boolean>> outward) {}
 
     public CompletableFuture<ToolResult<Boolean>> saveDisplay(GuideDisplayConfig candidate) {
         Objects.requireNonNull(candidate, "candidate");
@@ -1103,8 +1273,12 @@ public final class ClientSettingsService implements AutoCloseable {
 
     private static UnrestrictedJavascriptActions defaultUnrestrictedJavascriptActions() {
         return new UnrestrictedJavascriptActions() {
-            public ToolResult<UnrestrictedJavascriptConfig> save(UnrestrictedJavascriptConfig c) { return new ToolResult.Success<>(c); }
-            public ToolResult<UnrestrictedJavascriptConfig> reload() { return new ToolResult.Success<>(UnrestrictedJavascriptConfig.defaults()); }
+            public ToolResult<UnrestrictedJavascriptConfig> save(UnrestrictedJavascriptConfig c) {
+                return new ToolResult.Failure<>("settings_unavailable", "Unrestricted JavaScript settings are unavailable");
+            }
+            public ToolResult<UnrestrictedJavascriptConfig> reload() {
+                return new ToolResult.Failure<>("settings_unavailable", "Unrestricted JavaScript settings are unavailable");
+            }
         };
     }
 
@@ -1337,6 +1511,11 @@ public final class ClientSettingsService implements AutoCloseable {
     public CompletableFuture<Void> closeAsync() {
         synchronized (lock) {
             closed = true;
+            cancelPackagePreparation();
+            if (preparedPackage != null) {
+                discardPreparedPackageLocked();
+                publishLocked();
+            }
         }
         cancelConnectionTest();
         cancelModelCatalog();
@@ -1979,7 +2158,8 @@ public final class ClientSettingsService implements AutoCloseable {
                                 GuideHistoryPartition.SCHEMA_VERSION,
                                 List.of())),
                 operation,
-                notice);
+                notice,
+                requirementReviewLocked());
     }
 
     private GuideFailure confirmationFailureLocked(HistoryAction action) {

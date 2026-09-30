@@ -218,6 +218,125 @@ final class ExtensionSettingsBackendTest {
         assertEquals(64, staged.packageInfo().sha256().length());
     }
 
+    @Test
+    void preparedPackageExposesActualRequirementsWithoutMutatingViewsUntilCommit() throws Exception {
+        JavascriptDataModuleRegistry dataModules = new JavascriptDataModuleRegistry();
+        OpenAllayExtensionEnvironment environment =
+                new OpenAllayExtensionEnvironment("fabric", "26.2", "0.2.0");
+        OpenAllayExtensionRegistry registry = new OpenAllayExtensionRegistry(
+                environment, dataModules, new JavascriptModuleCatalog(Map.of()),
+                new SkillRepository(new SkillParser(), List.of()), Set.of());
+        ExtensionSettingsBackend backend = new ExtensionSettingsBackend(registry, dataModules,
+                new ExtensionCatalogCodec(), new ExtensionPackageInstaller(environment, temporary.resolve("mods")));
+        Path source = temporary.resolve("sample.jar");
+        byte[] jar = fabricJar("sample_extension", true);
+        Files.write(source, jar);
+        String catalog = catalog("2.0.0", sha256(jar)).replace("\"source\": \"community\"", """
+                "source": "community",
+                "requirements": {"skills": ["catalog-skill"]}
+                """);
+        assertInstanceOf(ToolResult.Success.class, backend.replaceCatalog(catalog));
+        assertEquals(Set.of("catalog-skill"), extension(backend.currentView(), "sample:extension")
+                .requirements().skills());
+        var cancelled = prepared(backend.prepareLocalPackage("sample:extension", source));
+        assertEquals(ExtensionSettingsView.State.COMMUNITY,
+                extension(backend.currentView(), "sample:extension").state());
+        cancelled.close();
+        assertInstanceOf(ToolResult.Failure.class, cancelled.commit());
+
+        var candidate = prepared(backend.prepareLocalPackage("sample:extension", source));
+        assertTrue(candidate.catalogRequirementsDiffer());
+        assertEquals(Set.of("package-skill"), candidate.requirements().skills());
+        assertInstanceOf(ToolResult.Success.class, candidate.commit());
+        ExtensionSettingsView.Extension staged = extension(backend.currentView(), "sample:extension");
+        assertEquals(ExtensionSettingsView.State.RESTART_REQUIRED, staged.state());
+        assertEquals(Set.of("package-skill"), staged.requirements().skills());
+        assertTrue(registry.snapshot().extensions().isEmpty());
+        assertInstanceOf(ToolResult.Failure.class, candidate.commit());
+    }
+
+    @Test
+    void installedRequirementsSurviveCatalogPreviewAndLocalPendingReplacement() throws Exception {
+        JavascriptDataModuleRegistry dataModules = new JavascriptDataModuleRegistry();
+        OpenAllayExtensionEnvironment environment =
+                new OpenAllayExtensionEnvironment("fabric", "26.2", "0.2.0");
+        OpenAllayExtensionRegistry registry = new OpenAllayExtensionRegistry(
+                environment, dataModules, new JavascriptModuleCatalog(Map.of()),
+                new SkillRepository(new SkillParser(), List.of()), Set.of());
+        registry.register(new OpenAllayExtension() {
+            @Override public OpenAllayExtensionDescriptor descriptor() {
+                return new OpenAllayExtensionDescriptor("sample:extension", "Sample", "1.0.0",
+                        "Provider", "Sample Extension", Set.of("fabric"), "[26.2,26.3)", "[0.2,0.3)",
+                        "community", new dev.openallay.requirement.RequirementSet(
+                                Set.of(), Set.of(), Set.of("installed-skill")));
+            }
+            @Override public OpenAllayExtensionContribution contribution() {
+                return OpenAllayExtensionContribution.empty();
+            }
+        });
+        ExtensionSettingsBackend backend = new ExtensionSettingsBackend(registry, dataModules,
+                new ExtensionCatalogCodec(), new ExtensionPackageInstaller(environment, temporary.resolve("mods")));
+        assertEquals(Set.of("installed-skill"), extension(backend.currentView(), "sample:extension")
+                .requirements().skills());
+        Path source = temporary.resolve("sample.jar");
+        byte[] jar = fabricJar("sample_extension", true);
+        Files.write(source, jar);
+        assertInstanceOf(ToolResult.Success.class, backend.importLocalPackage(source));
+        ExtensionSettingsView.Extension pending = extension(backend.currentView(), "sample:extension");
+        assertEquals(ExtensionSettingsView.State.RESTART_REQUIRED, pending.state());
+        assertEquals(Set.of("package-skill"), pending.requirements().skills());
+        assertEquals("1.0.0", pending.version());
+        assertEquals(Set.of("installed-skill"), registry.snapshot().extensions().getFirst()
+                .descriptor().requirements().skills());
+    }
+
+    @Test
+    void communityPreparationDoesNotMarkArtifactStagedUntilCommit() throws Exception {
+        JavascriptDataModuleRegistry dataModules = new JavascriptDataModuleRegistry();
+        OpenAllayExtensionEnvironment environment =
+                new OpenAllayExtensionEnvironment("fabric", "26.2", "0.2.0");
+        OpenAllayExtensionRegistry registry = new OpenAllayExtensionRegistry(
+                environment, dataModules, new JavascriptModuleCatalog(Map.of()),
+                new SkillRepository(new SkillParser(), List.of()), Set.of());
+        byte[] jar = fabricJar("sample_extension", true);
+        dev.openallay.net.HttpTransport transport = new dev.openallay.net.HttpTransport() {
+            @Override
+            public <T> java.util.concurrent.CompletableFuture<T> execute(
+                    dev.openallay.net.HttpExchangeRequest request,
+                    dev.openallay.net.HttpCancellation cancellation, ResponseDecoder<T> decoder) {
+                try {
+                    return java.util.concurrent.CompletableFuture.completedFuture(decoder.decode(200,
+                            new dev.openallay.net.HttpResponseHeaders(Map.of()),
+                            new java.io.ByteArrayInputStream(jar)));
+                } catch (java.io.IOException failure) {
+                    return java.util.concurrent.CompletableFuture.failedFuture(failure);
+                }
+            }
+        };
+        Path mods = temporary.resolve("mods");
+        ExtensionSettingsBackend backend = new ExtensionSettingsBackend(registry, dataModules,
+                new ExtensionCatalogCodec(), new ExtensionPackageInstaller(environment, mods, transport));
+        assertInstanceOf(ToolResult.Success.class, backend.replaceCatalog(catalog("2.0.0", sha256(jar))));
+        var candidate = prepared(backend.prepareCommunity("sample:extension",
+                new dev.openallay.model.CancellationSignal()).join());
+        assertEquals(Set.of("package-skill"), candidate.requirements().skills());
+        assertEquals(ExtensionSettingsView.State.COMMUNITY,
+                extension(backend.currentView(), "sample:extension").state());
+        assertTrue(Files.notExists(mods.resolve("openallay-extension-sample_extension.jar")));
+        assertInstanceOf(ToolResult.Success.class, candidate.commit());
+        assertEquals(ExtensionSettingsView.State.RESTART_REQUIRED,
+                extension(backend.currentView(), "sample:extension").state());
+        assertEquals(Set.of("package-skill"), extension(backend.currentView(), "sample:extension")
+                .requirements().skills());
+    }
+
+    @SuppressWarnings("unchecked")
+    private static dev.openallay.settings.requirement.PreparedPackageInstall prepared(
+            ToolResult<dev.openallay.settings.requirement.PreparedPackageInstall> result) {
+        return ((ToolResult.Success<dev.openallay.settings.requirement.PreparedPackageInstall>)
+                assertInstanceOf(ToolResult.Success.class, result)).value();
+    }
+
     private static ExtensionSettingsView.Extension extension(
             ExtensionSettingsView view, String id) {
         return view.extensions().stream()
@@ -253,10 +372,14 @@ final class ExtensionSettingsBackendTest {
     }
 
     private static byte[] fabricJar(String modId) throws Exception {
+        return fabricJar(modId, false);
+    }
+
+    private static byte[] fabricJar(String modId, boolean requirements) throws Exception {
         ByteArrayOutputStream output = new ByteArrayOutputStream();
         try (JarOutputStream jar = new JarOutputStream(output)) {
             jar.putNextEntry(new JarEntry(ExtensionPackageManifest.JAR_PATH));
-            jar.write(("""
+            String manifest = ("""
                             {
                               "schemaVersion": 1,
                               "id": "sample:extension",
@@ -271,8 +394,14 @@ final class ExtensionSettingsBackendTest {
                               "source": "community"
                             }
                             """)
-                    .formatted(modId)
-                    .getBytes(StandardCharsets.UTF_8));
+                    .formatted(modId);
+            if (requirements) {
+                manifest = manifest.replace("\"source\": \"community\"", """
+                        "source": "community",
+                        "requirements": {"skills": ["package-skill"]}
+                        """);
+            }
+            jar.write(manifest.getBytes(StandardCharsets.UTF_8));
             jar.closeEntry();
             jar.putNextEntry(new JarEntry("fabric.mod.json"));
             jar.write(("{\"schemaVersion\":1,\"id\":\"" + modId

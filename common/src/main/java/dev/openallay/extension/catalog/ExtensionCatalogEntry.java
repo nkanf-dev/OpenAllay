@@ -1,6 +1,7 @@
 package dev.openallay.extension.catalog;
 
 import dev.openallay.extension.OpenAllayExtensionDescriptor;
+import dev.openallay.requirement.RequirementSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -16,7 +17,16 @@ public record ExtensionCatalogEntry(
         String minecraftVersionRange,
         String openAllayApiVersionRange,
         List<ExtensionCatalogArtifact> artifacts,
-        String source) {
+        String source,
+        RequirementSet requirements) {
+
+    public ExtensionCatalogEntry(
+            String id, String name, String version, String provider, String summary,
+            String minecraftVersionRange, String openAllayApiVersionRange,
+            List<ExtensionCatalogArtifact> artifacts, String source) {
+        this(id, name, version, provider, summary, minecraftVersionRange,
+                openAllayApiVersionRange, artifacts, source, RequirementSet.EMPTY);
+    }
 
     public ExtensionCatalogEntry {
         TreeMap<String, ExtensionCatalogArtifact> byLoader = new TreeMap<>();
@@ -41,7 +51,7 @@ public record ExtensionCatalogEntry(
                 byLoader.keySet(),
                 minecraftVersionRange,
                 openAllayApiVersionRange,
-                source);
+                source, requirements);
         id = descriptor.id();
         name = descriptor.name();
         version = descriptor.version();
@@ -50,6 +60,7 @@ public record ExtensionCatalogEntry(
         minecraftVersionRange = descriptor.minecraftVersionRange();
         openAllayApiVersionRange = descriptor.openAllayApiVersionRange();
         source = descriptor.source();
+        requirements = descriptor.requirements();
     }
 
     public Set<String> loaders() {
@@ -78,7 +89,7 @@ public record ExtensionCatalogEntry(
                 loaders(),
                 minecraftVersionRange,
                 openAllayApiVersionRange,
-                source);
+                source, requirements);
     }
 
     public OpenAllayExtensionDescriptor descriptorFor(String loader) {
@@ -94,6 +105,6 @@ public record ExtensionCatalogEntry(
                 Set.of(selected.loader()),
                 minecraftVersionRange,
                 openAllayApiVersionRange,
-                source);
+                source, requirements);
     }
 }

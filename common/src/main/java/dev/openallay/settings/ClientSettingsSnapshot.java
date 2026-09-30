@@ -32,7 +32,8 @@ public record ClientSettingsSnapshot(
         HistorySettingsView history,
         SettingsDiagnosticsSnapshot diagnostics,
         SettingsOperation operation,
-        SettingsNotice notice) {
+        SettingsNotice notice,
+        Optional<dev.openallay.settings.requirement.RequirementReview> requirementReview) {
     public ClientSettingsSnapshot {
         if (generation < 0) {
             throw new IllegalArgumentException("settings generation must not be negative");
@@ -50,6 +51,19 @@ public record ClientSettingsSnapshot(
         Objects.requireNonNull(history, "history");
         Objects.requireNonNull(diagnostics, "diagnostics");
         Objects.requireNonNull(operation, "operation");
+        requirementReview = Objects.requireNonNull(requirementReview, "requirementReview");
+    }
+
+    public ClientSettingsSnapshot(
+            long generation, GuideDisplayConfig display, ModelProfileSettingsView models,
+            ServerModelSettingsView serverModel, CapabilitySettingsView capabilities,
+            RecipeSettingsView recipes, SkillSettingsView skills, SkillCommunityView skillCommunity,
+            ExtensionSettingsView extensions, CommandCapabilityConfig experimentalCommands,
+            UnrestrictedJavascriptConfig unrestrictedJavascript, HistorySettingsView history,
+            SettingsDiagnosticsSnapshot diagnostics, SettingsOperation operation, SettingsNotice notice) {
+        this(generation, display, models, serverModel, capabilities, recipes, skills,
+                skillCommunity, extensions, experimentalCommands, unrestrictedJavascript,
+                history, diagnostics, operation, notice, Optional.empty());
     }
 
     public ClientSettingsSnapshot(

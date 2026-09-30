@@ -3,6 +3,8 @@ package dev.openallay.client.gui.settings;
 import dev.openallay.settings.skill.SkillSettingsView;
 import dev.openallay.settings.skill.SkillCommunityView;
 import dev.openallay.skill.SkillSource;
+import dev.openallay.requirement.RequirementEnvironment;
+import java.util.Map;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
@@ -30,10 +32,18 @@ public record SkillSettingsProjection(
             SkillSettingsView view,
             SkillCommunityView community,
             boolean debugMode) {
+        return from(view, community, new RequirementEnvironment(Map.of(), Map.of(), Map.of()), debugMode);
+    }
+
+    public static SkillSettingsProjection from(
+            SkillSettingsView view,
+            SkillCommunityView community,
+            RequirementEnvironment environment,
+            boolean debugMode) {
         Objects.requireNonNull(view, "view");
         Objects.requireNonNull(community, "community");
         return new SkillSettingsProjection(
-                view.skills().stream().map(Skill::from).toList(),
+                view.skills().stream().map(skill -> Skill.from(skill, environment)).toList(),
                 Community.from(community),
                 view.diagnostics().size(),
                 debugMode);
@@ -51,8 +61,9 @@ public record SkillSettingsProjection(
             SkillSource.Origin origin,
             boolean createsOverrideOnSave,
             boolean canDeleteOverride,
-            String provenance) {
-        static Skill from(SkillSettingsView.Skill skill) {
+            String provenance,
+            RequirementSettingsProjection requirements) {
+        static Skill from(SkillSettingsView.Skill skill, RequirementEnvironment environment) {
             return new Skill(
                     skill.metadata().name(),
                     skill.metadata().description(),
@@ -61,7 +72,8 @@ public record SkillSettingsProjection(
                     skill.origin(),
                     skill.createsOverrideOnSave(),
                     skill.canDeleteOverride(),
-                    skill.metadata().provenance());
+                    skill.metadata().provenance(),
+                    RequirementSettingsProjection.evaluate(skill.metadata().requirements(), environment));
         }
 
         public boolean localOverride() {

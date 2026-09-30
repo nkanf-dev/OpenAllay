@@ -4,6 +4,15 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+
+import dev.openallay.tool.ToolResult;
+import dev.openallay.model.CancellationSignal;
+import dev.openallay.net.HttpTransport;
+import dev.openallay.net.HttpExchangeRequest;
+import dev.openallay.net.HttpResponseHeaders;
+import java.util.concurrent.CompletableFuture;
+import java.util.Map;
 
 import dev.openallay.extension.OpenAllayExtensionEnvironment;
 import dev.openallay.extension.catalog.ExtensionCatalogArtifact;
@@ -155,6 +164,126 @@ final class ExtensionPackageInstallerTest {
         assertFalse(Files.exists(staging));
     }
 
+    @Test
+    void prepareIsLoaderInvisibleAndCommitUsesExactReviewedBytes() throws Exception {
+        byte[] jar = fabricJar("sample_extension", "sample_extension", true);
+        Path source = temporary.resolve("sample.jar");
+        Files.write(source, jar);
+        Path staging = temporary.resolve("mods");
+        ExtensionPackageInstaller installer = new ExtensionPackageInstaller(
+                new OpenAllayExtensionEnvironment("fabric", "26.2", "0.2.0"), staging);
+        PreparedExtensionInstall candidate = prepared(installer.prepareLocal(entry(sha256(jar)), source));
+        assertEquals(Set.of("missing:capability"), candidate.requirements().capabilities());
+        assertEquals(Set.of("missing:extension"), candidate.requirements().extensions());
+        assertEquals(Set.of("missing-skill"), candidate.requirements().skills());
+        assertTrue(candidate.catalogRequirementsDiffer());
+        assertEquals(sha256(jar), candidate.sha256());
+        assertTrue(children(staging).stream().noneMatch(path -> path.endsWith(".jar")));
+        Files.writeString(source, "changed after review");
+
+        ExtensionInstallResult result = candidate.commitInstall();
+        assertEquals(ExtensionInstallState.RESTART_REQUIRED, result.state());
+        assertArrayEquals(jar, Files.readAllBytes(result.stagedArtifact().orElseThrow()));
+        assertInstanceOf(ToolResult.Failure.class, candidate.commit());
+        candidate.close();
+        assertEquals(java.util.List.of("openallay-extension-sample_extension.jar"), children(staging));
+    }
+
+    @Test
+    void closedAndTamperedCandidatesRetainPriorArtifactAndCleanStaging() throws Exception {
+        byte[] jar = fabricJar("sample_extension");
+        Path source = temporary.resolve("sample.jar");
+        Files.write(source, jar);
+        Path staging = temporary.resolve("mods");
+        ExtensionPackageInstaller installer = new ExtensionPackageInstaller(
+                new OpenAllayExtensionEnvironment("fabric", "26.2", "0.2.0"), staging);
+        Path prior = installer.stageLocal(source).stagedArtifact().orElseThrow();
+        PreparedExtensionInstall discarded = prepared(installer.prepareLocal(source));
+        discarded.close();
+        discarded.close();
+        assertInstanceOf(ToolResult.Failure.class, discarded.commit());
+        assertArrayEquals(jar, Files.readAllBytes(prior));
+
+        PreparedExtensionInstall tampered = prepared(installer.prepareLocal(source));
+        Path captured;
+        try (var paths = Files.list(staging)) {
+            captured = paths.filter(path -> path.getFileName().toString().endsWith(".candidate"))
+                    .findFirst().orElseThrow();
+        }
+        Files.writeString(captured, "changed candidate");
+        assertEquals("prepared_install_changed",
+                assertInstanceOf(ToolResult.Failure.class, tampered.commit()).code());
+        assertArrayEquals(jar, Files.readAllBytes(prior));
+        assertEquals(java.util.List.of("openallay-extension-sample_extension.jar"), children(staging));
+    }
+
+    @Test
+    void downloadsCannotPublishAfterCancellationAndLateCandidatesAreClosed() throws Exception {
+        byte[] jar = fabricJar("sample_extension");
+        CompletableFuture<byte[]> response = new CompletableFuture<>();
+        Path staging = temporary.resolve("mods");
+        ExtensionPackageInstaller installer = new ExtensionPackageInstaller(
+                new OpenAllayExtensionEnvironment("fabric", "26.2", "0.2.0"), staging,
+                transport(response));
+        CancellationSignal early = new CancellationSignal();
+        var future = installer.prepareDownload(entry(sha256(jar)), early);
+        early.cancel();
+        response.complete(jar);
+        assertInstanceOf(ToolResult.Failure.class, future.join());
+        assertFalse(Files.exists(staging));
+
+        CancellationSignal late = new CancellationSignal();
+        PreparedExtensionInstall candidate = prepared(installer.prepareDownload(entry(sha256(jar)), late).join());
+        late.cancel();
+        assertInstanceOf(ToolResult.Failure.class, candidate.commit());
+        assertTrue(children(staging).isEmpty());
+    }
+
+    @Test
+    void advisoryDifferenceDoesNotWeakenOriginalDescriptorIdentityChecks() throws Exception {
+        byte[] jar = fabricJar("sample_extension", "sample_extension", true);
+        Path source = temporary.resolve("sample.jar");
+        Files.write(source, jar);
+        ExtensionCatalogEntry actual = entry(sha256(jar));
+        ExtensionCatalogEntry wrongSource = new ExtensionCatalogEntry(
+                actual.id(), actual.name(), actual.version(), actual.provider(), actual.summary(),
+                actual.minecraftVersionRange(), actual.openAllayApiVersionRange(), actual.artifacts(),
+                "different source");
+        ExtensionPackageInstaller installer = new ExtensionPackageInstaller(
+                new OpenAllayExtensionEnvironment("fabric", "26.2", "0.2.0"), temporary.resolve("mods"));
+        assertEquals("extension_manifest_mismatch",
+                assertInstanceOf(ToolResult.Failure.class, installer.prepareLocal(wrongSource, source)).code());
+    }
+
+    @SuppressWarnings("unchecked")
+    private static PreparedExtensionInstall prepared(ToolResult<PreparedExtensionInstall> result) {
+        return ((ToolResult.Success<PreparedExtensionInstall>)
+                assertInstanceOf(ToolResult.Success.class, result)).value();
+    }
+
+    private static java.util.List<String> children(Path root) throws java.io.IOException {
+        try (var paths = Files.list(root)) {
+            return paths.map(path -> path.getFileName().toString()).sorted().toList();
+        }
+    }
+
+    private static HttpTransport transport(CompletableFuture<byte[]> bytes) {
+        return new HttpTransport() {
+            @Override
+            public <T> CompletableFuture<T> execute(HttpExchangeRequest request,
+                    dev.openallay.net.HttpCancellation cancellation, ResponseDecoder<T> decoder) {
+                return bytes.thenApply(value -> {
+                    try {
+                        return decoder.decode(200, new HttpResponseHeaders(Map.of()),
+                                new java.io.ByteArrayInputStream(value));
+                    } catch (java.io.IOException failure) {
+                        throw new java.util.concurrent.CompletionException(failure);
+                    }
+                });
+            }
+        };
+    }
+
     private static ExtensionCatalogEntry entry(String checksum) {
         return new ExtensionCatalogEntry(
                 "sample:extension",
@@ -178,10 +307,26 @@ final class ExtensionPackageInstallerTest {
 
     private static byte[] fabricJar(String loaderModId, String manifestModId)
             throws Exception {
+        return fabricJar(loaderModId, manifestModId, false);
+    }
+
+    private static byte[] fabricJar(String loaderModId, String manifestModId, boolean requirements)
+            throws Exception {
         ByteArrayOutputStream output = new ByteArrayOutputStream();
         try (JarOutputStream jar = new JarOutputStream(output)) {
             jar.putNextEntry(new JarEntry(ExtensionPackageManifest.JAR_PATH));
-            jar.write(packageManifest(manifestModId).getBytes(StandardCharsets.UTF_8));
+            String manifest = packageManifest(manifestModId);
+            if (requirements) {
+                manifest = manifest.replace("\"source\": \"community\"", """
+                        "source": "community",
+                        "requirements": {
+                          "capabilities": ["missing:capability"],
+                          "extensions": ["missing:extension"],
+                          "skills": ["missing-skill"]
+                        }
+                        """);
+            }
+            jar.write(manifest.getBytes(StandardCharsets.UTF_8));
             jar.closeEntry();
             jar.putNextEntry(new JarEntry("fabric.mod.json"));
             jar.write(("{\"schemaVersion\":1,\"id\":\"" + loaderModId

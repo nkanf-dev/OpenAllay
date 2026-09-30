@@ -10,12 +10,23 @@ public record OpenAllayExtensionContribution(
         List<JavascriptDataModule> dataModules,
         List<JavascriptModuleSource> javascriptModules,
         List<SkillSource> skills,
-        List<JavascriptResultViewProvider> resultViews) {
+        List<JavascriptResultViewProvider> resultViews,
+        List<JavascriptInvocationParticipant> javascriptInvocationParticipants) {
     public OpenAllayExtensionContribution {
         dataModules = List.copyOf(dataModules);
         javascriptModules = List.copyOf(javascriptModules);
         skills = List.copyOf(skills);
         resultViews = List.copyOf(resultViews);
+        javascriptInvocationParticipants = List.copyOf(javascriptInvocationParticipants);
+    }
+
+    /** Keeps the original Extension API constructor binary- and source-compatible. */
+    public OpenAllayExtensionContribution(
+            List<JavascriptDataModule> dataModules,
+            List<JavascriptModuleSource> javascriptModules,
+            List<SkillSource> skills,
+            List<JavascriptResultViewProvider> resultViews) {
+        this(dataModules, javascriptModules, skills, resultViews, List.of());
     }
 
     public static OpenAllayExtensionContribution empty() {

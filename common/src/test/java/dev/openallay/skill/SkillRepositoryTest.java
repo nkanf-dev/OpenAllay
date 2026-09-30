@@ -3,6 +3,9 @@ package dev.openallay.skill;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
+import java.util.List;
 
 import java.util.Map;
 import java.util.Set;
@@ -82,6 +85,96 @@ final class SkillRepositoryTest {
         assertTrue(snapshot.find("replacement-skill").isEmpty());
         assertFalse(snapshot.metadataPrompt().contains("disabled-skill"));
         assertTrue(repository.find("replacement-skill").isPresent());
+    }
+
+    @Test
+    void bothReloadPathsRetainRegisteredExternalSourcesReferencesAndDenyState() {
+        SkillRepository repository = repository();
+        SkillSource external = valid("extension-guide", "extension body");
+        repository.registerExternal(List.of(external), Set.of());
+        SkillCatalogSnapshot original = repository.snapshot(Set.of());
+        SkillCatalogSnapshot denied = repository.snapshot(Set.of("extension-guide"));
+        repository.setRuntimeDisabledSkills(Set.of("extension-guide"));
+
+        for (int generation = 0; generation < 3; generation++) {
+            assertTrue(repository.reload(List.of(valid("bundled-guide", "bundled body")), Set.of()));
+            assertEquals(2, repository.metadata().size());
+            assertTrue(repository.reload(List.of(valid("bundled-guide", "bundled body")),
+                    new FilesystemSkillLoader.LoadResult(List.of(), List.of()), Set.of()));
+            assertEquals(2, repository.metadata().size());
+            assertEquals("extension body", repository.find("extension-guide").orElseThrow().instructions());
+            assertEquals("Ground every claim.", repository.find("extension-guide").orElseThrow()
+                    .references().get("references/policy.md"));
+            assertTrue(repository.snapshot(Set.of()).find("extension-guide").isEmpty());
+            assertTrue(repository.snapshotIncludingRuntimeDisabled(Set.of("extension-guide"))
+                    .find("extension-guide").isEmpty());
+        }
+        assertEquals(List.of(external), repository.externalSources());
+        assertThrows(UnsupportedOperationException.class, () -> repository.externalSources().clear());
+        assertTrue(original.find("extension-guide").isPresent());
+        assertTrue(denied.find("extension-guide").isEmpty());
+    }
+
+    @Test
+    void localOverridesExternalAndRemovalRestoresRegisteredOriginalWithReferences() {
+        SkillRepository repository = repository();
+        SkillSource external = valid("extension-guide", "extension body");
+        repository.registerExternal(List.of(external), Set.of());
+        SkillSource local = withOrigin(valid("extension-guide", "local body"), SkillSource.Origin.LOCAL);
+        assertTrue(repository.reload(List.of(),
+                new FilesystemSkillLoader.LoadResult(List.of(local), List.of()), Set.of()));
+        assertEquals("local body", repository.find("extension-guide").orElseThrow().instructions());
+        assertEquals(1, repository.metadata().size());
+        assertEquals(List.of(external), repository.externalSources());
+
+        assertTrue(repository.reload(List.of(), new FilesystemSkillLoader.LoadResult(List.of(), List.of()), Set.of()));
+        assertEquals("extension body", repository.find("extension-guide").orElseThrow().instructions());
+        assertEquals(external.origin(), repository.find("extension-guide").orElseThrow().metadata().origin());
+        assertEquals("Ground every claim.", repository.find("extension-guide").orElseThrow()
+                .references().get("references/policy.md"));
+        assertEquals(1, repository.metadata().size());
+    }
+
+    @Test
+    void registrationAfterLocalLoadingPreservesOverrideAndStillReservesExternalIdentity() {
+        SkillRepository repository = repository();
+        SkillSource local = withOrigin(valid("extension-guide", "local body"), SkillSource.Origin.LOCAL);
+        assertTrue(repository.reload(List.of(),
+                new FilesystemSkillLoader.LoadResult(List.of(local), List.of()), Set.of()));
+        SkillSource external = valid("extension-guide", "extension body");
+        repository.registerExternal(List.of(external), Set.of());
+
+        assertEquals("local body", repository.find("extension-guide").orElseThrow().instructions());
+        assertEquals(List.of(external), repository.externalSources());
+        assertThrows(IllegalArgumentException.class,
+                () -> repository.registerExternal(List.of(external), Set.of()));
+        assertTrue(repository.reload(List.of(), Set.of()));
+        assertEquals("extension body", repository.find("extension-guide").orElseThrow().instructions());
+        assertEquals(1, repository.metadata().size());
+    }
+
+    @Test
+    void duplicateExternalOrBundledIdentityRejectsAtomicallyEvenBehindLocalOverride() {
+        SkillRepository repository = repository();
+        SkillSource bundled = withOrigin(valid("bundled-guide", "bundled"), SkillSource.Origin.BUNDLED);
+        SkillSource local = withOrigin(valid("bundled-guide", "local"), SkillSource.Origin.LOCAL);
+        assertTrue(repository.reload(List.of(bundled),
+                new FilesystemSkillLoader.LoadResult(List.of(local), List.of()), Set.of()));
+        assertThrows(IllegalArgumentException.class,
+                () -> repository.registerExternal(List.of(valid("bundled-guide", "external")), Set.of()));
+        SkillSource external = valid("extension-guide", "extension");
+        assertThrows(IllegalArgumentException.class,
+                () -> repository.registerExternal(List.of(external, external), Set.of()));
+        assertTrue(repository.externalSources().isEmpty());
+        assertEquals("local", repository.find("bundled-guide").orElseThrow().instructions());
+        repository.registerExternal(List.of(external), Set.of());
+        assertFalse(repository.reload(List.of(valid("extension-guide", "collision")), Set.of()));
+        assertEquals("extension", repository.find("extension-guide").orElseThrow().instructions());
+        assertEquals(List.of(external), repository.externalSources());
+    }
+
+    private static SkillSource withOrigin(SkillSource source, SkillSource.Origin origin) {
+        return new SkillSource(source.provenance(), source.entryPath(), source.files(), origin);
     }
 
     private static SkillRepository repository() {

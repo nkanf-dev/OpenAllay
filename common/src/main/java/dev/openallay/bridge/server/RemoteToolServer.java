@@ -12,7 +12,6 @@ import dev.openallay.context.ToolInvocationContext;
 import dev.openallay.model.CancellationSignal;
 import dev.openallay.tool.Tool;
 import dev.openallay.tool.ToolResult;
-import dev.openallay.tool.RequestScopeParticipant;
 import dev.openallay.tool.builtin.RunJavascriptTool;
 import dev.openallay.trace.replay.ToolArgumentCodec;
 import dev.openallay.trace.replay.ToolResultNormalizer;
@@ -43,8 +42,8 @@ public final class RemoteToolServer {
     private final ToolResultNormalizer normalizer;
     private final Gson gson;
     private final int transportChunkBytes;
-    private final java.util.concurrent.ConcurrentMap<UUID, java.util.Set<String>> requestScopes =
-            new java.util.concurrent.ConcurrentHashMap<>();
+    private final java.util.Map<UUID, java.util.Map<String, RequestState>> requestScopes =
+            new java.util.HashMap<>();
 
     public RemoteToolServer(
             ExportedToolPolicy policy,
@@ -76,10 +75,7 @@ public final class RemoteToolServer {
             return new ToolResult.Failure<>("duplicate_correlation", "Correlation ID is already active");
         }
         String requestScope = requestScope(sender, payload.sessionId());
-        if (tool instanceof RequestScopeParticipant) {
-            requestScopes.computeIfAbsent(sender, ignored ->
-                    java.util.concurrent.ConcurrentHashMap.newKeySet()).add(requestScope);
-        }
+        RequestState request = registerRequest(sender, requestScope, cancellation);
         contexts.capture(
                         sender,
                         tool.descriptor().requiredContext(),
@@ -89,7 +85,10 @@ public final class RemoteToolServer {
                         invoke(tool, context, payload.argumentsJson(), cancellation))
                 .exceptionally(throwable -> new ToolResult.Failure<>(
                         failureCode(throwable), safeMessage(throwable)))
-                .thenAccept(result -> finish(sender, payload.correlationId(), tool, result));
+                .thenAccept(result -> {
+                    request.complete(cancellation);
+                    finish(sender, payload.correlationId(), tool, result);
+                });
         return new ToolResult.Success<>(new VoidResult());
     }
 
@@ -99,23 +98,64 @@ public final class RemoteToolServer {
 
     public void closeRequest(UUID sender, RemoteToolRequestClosePayload payload) {
         String scope = requestScope(sender, payload.requestId());
-        java.util.Set<String> scopes = requestScopes.get(sender);
-        if (scopes == null || !scopes.remove(scope)) {
-            return;
+        RequestState request;
+        synchronized (requestScopes) {
+            java.util.Map<String, RequestState> scopes = requestScopes.get(sender);
+            if (scopes == null) return;
+            request = scopes.remove(scope);
+            if (scopes.isEmpty()) requestScopes.remove(sender);
         }
+        if (request == null) return;
+        request.close();
         policy.closeRequestScope(scope);
-        if (scopes.isEmpty()) {
-            requestScopes.remove(sender, scopes);
-        }
     }
 
     public int disconnect(UUID sender) {
         int cancelled = correlations.cancelActor(sender);
-        java.util.Set<String> scopes = requestScopes.remove(sender);
+        java.util.Map<String, RequestState> scopes;
+        synchronized (requestScopes) {
+            scopes = requestScopes.remove(sender);
+        }
         if (scopes != null) {
-            scopes.forEach(policy::closeRequestScope);
+            scopes.forEach((scope, request) -> {
+                request.close();
+                policy.closeRequestScope(scope);
+            });
         }
         return cancelled;
+    }
+
+    private RequestState registerRequest(UUID actor, String scope, CancellationSignal cancellation) {
+        synchronized (requestScopes) {
+            RequestState request = requestScopes.computeIfAbsent(actor, ignored -> new java.util.HashMap<>())
+                    .computeIfAbsent(scope, ignored -> new RequestState());
+            request.register(cancellation);
+            return request;
+        }
+    }
+
+    private static final class RequestState {
+        private final java.util.Set<CancellationSignal> pending = new java.util.HashSet<>();
+        private boolean closed;
+
+        synchronized void register(CancellationSignal cancellation) {
+            if (closed) cancellation.cancel();
+            else pending.add(cancellation);
+        }
+
+        synchronized void complete(CancellationSignal cancellation) {
+            pending.remove(cancellation);
+        }
+
+        void close() {
+            java.util.List<CancellationSignal> snapshot;
+            synchronized (this) {
+                closed = true;
+                snapshot = java.util.List.copyOf(pending);
+                pending.clear();
+            }
+            snapshot.forEach(CancellationSignal::cancel);
+        }
     }
 
     private void finish(UUID actor, UUID correlation, Tool<?, ?> tool, ToolResult<?> result) {

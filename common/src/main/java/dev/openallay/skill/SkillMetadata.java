@@ -1,5 +1,7 @@
 package dev.openallay.skill;
 
+import dev.openallay.requirement.RequirementCodec;
+import dev.openallay.requirement.RequirementSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -38,6 +40,7 @@ public record SkillMetadata(
             }
         });
         attributes = Map.copyOf(attributes);
+        RequirementCodec.fromMetadata(attributes);
         requiredMods = Set.copyOf(requiredMods);
         allowedTools = Set.copyOf(allowedTools);
         references = List.copyOf(references);
@@ -45,5 +48,10 @@ public record SkillMetadata(
             throw new IllegalArgumentException("Skill provenance must not be blank");
         }
         origin = java.util.Objects.requireNonNull(origin, "origin");
+    }
+
+    /** Optional advisory declarations. Existing requiredMods and allowedTools remain unchanged. */
+    public RequirementSet requirements() {
+        return RequirementCodec.fromMetadata(attributes);
     }
 }

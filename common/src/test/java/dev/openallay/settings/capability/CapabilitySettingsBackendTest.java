@@ -114,6 +114,26 @@ final class CapabilitySettingsBackendTest {
         assertFalse(Files.exists(path));
     }
 
+    @Test
+    void runtimeAvailabilityRefreshPreservesIndependentDeniedSkillsAndTools() {
+        Fixture fixture = fixture();
+        Path path = temporary.resolve("capabilities.json");
+        AtomicReference<ClientCapabilitySnapshot> published = new AtomicReference<>(fixture.initial());
+        CapabilitySettingsBackend backend = new CapabilitySettingsBackend(
+                path, fixture.runtime(), fixture.initial(), published::set);
+        CapabilityPolicy denied = new CapabilityPolicy(CapabilityPolicy.SCHEMA_VERSION,
+                Set.of("future:tool"), Set.of("fact-guide", "future-skill"));
+        success(backend.saveCapabilities(denied));
+
+        CapabilitySettingsView refreshed = success(backend.refreshCapabilities());
+
+        assertEquals(denied, refreshed.policy());
+        assertEquals(denied, published.get().policy());
+        assertTrue(published.get().skills().metadata().isEmpty());
+        assertEquals(Set.of("future:tool"), refreshed.unknownDisabledTools());
+        assertEquals(Set.of("future-skill"), refreshed.unknownDisabledSkills());
+    }
+
     private static Fixture fixture() {
         ToolRegistry tools = new ToolRegistry();
         tools.register("test:provider", List.of(tool()));

@@ -5,6 +5,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import dev.openallay.requirement.RequirementCodec;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -40,7 +41,11 @@ public final class ExtensionCatalogCodec {
             }
             for (JsonElement value : encoded.getAsJsonArray()) {
                 JsonObject entry = object(value, "extension");
-                exactFields(entry, ENTRY_FIELDS, "extension");
+                Set<String> fields = new java.util.HashSet<>(entry.keySet());
+                fields.remove("requirements");
+                if (!fields.equals(ENTRY_FIELDS)) {
+                    throw new IllegalArgumentException("extension fields do not match schema");
+                }
                 entries.add(new ExtensionCatalogEntry(
                         string(entry, "id"),
                         string(entry, "name"),
@@ -50,7 +55,8 @@ public final class ExtensionCatalogCodec {
                         string(entry, "minecraftVersionRange"),
                         string(entry, "openAllayApiVersionRange"),
                         artifacts(entry),
-                        string(entry, "source")));
+                        string(entry, "source"),
+                        RequirementCodec.decode(entry.get("requirements"))));
             }
             return new ExtensionCatalogManifest(
                     integer(root, "schemaVersion"),
@@ -91,6 +97,9 @@ public final class ExtensionCatalogCodec {
             }
             encoded.add("artifacts", artifacts);
             encoded.addProperty("source", entry.source());
+            if (!entry.requirements().isEmpty()) {
+                encoded.add("requirements", RequirementCodec.encode(entry.requirements()));
+            }
             entries.add(encoded);
         }
         root.add("extensions", entries);

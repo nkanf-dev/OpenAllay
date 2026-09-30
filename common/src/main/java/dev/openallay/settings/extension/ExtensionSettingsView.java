@@ -1,6 +1,7 @@
 package dev.openallay.settings.extension;
 
 import dev.openallay.script.JavascriptModuleCatalog;
+import dev.openallay.requirement.RequirementSet;
 import dev.openallay.script.data.MinecraftAgentHostGraph;
 import dev.openallay.extension.OpenAllayExtensionRegistry;
 import dev.openallay.script.extension.JavascriptDataModuleRegistry;
@@ -253,7 +254,8 @@ public record ExtensionSettingsView(
             String source,
             Contributions contributions,
             String diagnostic,
-            PackageInfo packageInfo) {
+            PackageInfo packageInfo,
+            RequirementSet requirements) {
         public Extension {
             id = require(id, "id");
             name = require(name, "name");
@@ -269,6 +271,17 @@ public record ExtensionSettingsView(
             Objects.requireNonNull(contributions, "contributions");
             diagnostic = diagnostic == null ? "" : diagnostic;
             Objects.requireNonNull(packageInfo, "packageInfo");
+            Objects.requireNonNull(requirements, "requirements");
+        }
+
+        public Extension(
+                String id, String name, String version, String provider, String summary,
+                State state, List<String> loaders, String minecraftVersionRange,
+                String openAllayApiVersionRange, String source, Contributions contributions,
+                String diagnostic, PackageInfo packageInfo) {
+            this(id, name, version, provider, summary, state, loaders, minecraftVersionRange,
+                    openAllayApiVersionRange, source, contributions, diagnostic, packageInfo,
+                    RequirementSet.EMPTY);
         }
 
         public Extension(
@@ -320,7 +333,8 @@ public record ExtensionSettingsView(
                             extension.skills(),
                             extension.resultViews()),
                     extension.diagnostic(),
-                    PackageInfo.none());
+                    PackageInfo.none(),
+                    descriptor.requirements());
         }
     }
 

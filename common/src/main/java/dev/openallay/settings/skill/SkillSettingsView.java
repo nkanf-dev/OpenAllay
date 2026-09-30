@@ -43,9 +43,10 @@ public record SkillSettingsView(List<Skill> skills, List<SkillDiagnostic> diagno
             return metadata.origin();
         }
 
-        /** Bundled documents are edited only by creating an external local override. */
+        /** Immutable bundled and Extension documents are edited through local overrides. */
         public boolean createsOverrideOnSave() {
-            return metadata.origin() == SkillSource.Origin.BUNDLED && !overridePresent;
+            return (metadata.origin() == SkillSource.Origin.BUNDLED
+                    || metadata.origin() == SkillSource.Origin.EXTERNAL) && !overridePresent;
         }
 
         public boolean canDeleteOverride() {

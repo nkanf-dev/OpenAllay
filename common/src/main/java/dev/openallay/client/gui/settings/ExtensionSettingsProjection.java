@@ -4,6 +4,7 @@ import dev.openallay.script.command.CommandCapabilityConfig;
 import dev.openallay.script.UnrestrictedJavascriptConfig;
 import dev.openallay.script.schema.HostSchema;
 import dev.openallay.settings.extension.ExtensionSettingsView;
+import dev.openallay.requirement.RequirementEnvironment;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -37,6 +38,16 @@ public record ExtensionSettingsProjection(
             ExtensionSettingsView view,
             CommandCapabilityConfig commands,
             UnrestrictedJavascriptConfig unrestricted,
+            boolean debugMode) {
+        return from(view, commands, unrestricted,
+                new RequirementEnvironment(Map.of(), Map.of(), Map.of()), debugMode);
+    }
+
+    public static ExtensionSettingsProjection from(
+            ExtensionSettingsView view,
+            CommandCapabilityConfig commands,
+            UnrestrictedJavascriptConfig unrestricted,
+            RequirementEnvironment environment,
             boolean debugMode) {
         Objects.requireNonNull(view, "view");
         Objects.requireNonNull(commands, "commands");
@@ -91,7 +102,8 @@ public record ExtensionSettingsProjection(
                                 extension.packageInfo().artifact(),
                                 extension.packageInfo().sha256(),
                                 extension.packageInfo().updateAvailable(),
-                                extension.packageInfo().installable()))
+                                extension.packageInfo().installable(),
+                                RequirementSettingsProjection.evaluate(extension.requirements(), environment)))
                         .toList(),
                 new CatalogCard(
                         view.catalog().configured(),
@@ -199,7 +211,8 @@ public record ExtensionSettingsProjection(
             String artifact,
             String sha256,
             boolean updateAvailable,
-            boolean installable) {
+            boolean installable,
+            RequirementSettingsProjection requirements) {
         public ExtensionCard {
             loaders = List.copyOf(loaders);
             Objects.requireNonNull(state, "state");

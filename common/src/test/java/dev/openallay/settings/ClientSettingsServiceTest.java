@@ -42,6 +42,12 @@ import dev.openallay.skill.SkillMetadata;
 import dev.openallay.skill.SkillSource;
 import dev.openallay.script.command.CommandCapabilityConfig;
 import dev.openallay.tool.ToolResult;
+import dev.openallay.requirement.RequirementKind;
+import dev.openallay.requirement.RequirementSet;
+import dev.openallay.requirement.RequirementStatus;
+import dev.openallay.settings.requirement.PreparedPackageInstall;
+import dev.openallay.settings.requirement.RequirementReview;
+import dev.openallay.settings.requirement.RequirementSettingsEnvironment;
 import java.net.URI;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -377,8 +383,11 @@ final class ClientSettingsServiceTest {
         ToolResult<Boolean> installed = service.installCommunitySkill("demo").join();
 
         assertSuccess(installed);
+        assertTrue(service.snapshot().skills().skills().isEmpty());
+        RequirementReview preview = service.snapshot().requirementReview().orElseThrow();
+        assertSuccess(service.continuePackageInstall(preview.token()).join());
         assertEquals("demo", service.snapshot().skills().skills().getFirst().metadata().name());
-        assertEquals("community_skill_installed", service.snapshot().notice().code());
+        assertEquals("package_installed", service.snapshot().notice().code());
         assertEquals(SettingsOperation.Kind.IDLE, service.snapshot().operation().kind());
         assertTrue(service.snapshot().skillCommunity().packages().getFirst().installed());
     }
@@ -402,6 +411,8 @@ final class ClientSettingsServiceTest {
                 service.installCommunityExtension("community:demo").join();
 
         assertSuccess(staged);
+        assertSuccess(service.continuePackageInstall(
+                service.snapshot().requirementReview().orElseThrow().token()).join());
         assertEquals(
                 ExtensionSettingsView.State.RESTART_REQUIRED,
                 service.snapshot().extensions().extensions().stream()
@@ -409,8 +420,7 @@ final class ClientSettingsServiceTest {
                         .findFirst()
                         .orElseThrow()
                         .state());
-        assertEquals(
-                "community_extension_staged", service.snapshot().notice().code());
+        assertEquals("package_installed", service.snapshot().notice().code());
         assertEquals(SettingsOperation.Kind.IDLE, service.snapshot().operation().kind());
     }
 
@@ -432,8 +442,219 @@ final class ClientSettingsServiceTest {
                 service.importLocalExtensionPackage(Path.of("local-extension.jar")).join();
 
         assertSuccess(staged);
-        assertEquals("extension_package_imported", service.snapshot().notice().code());
+        assertTrue(service.snapshot().requirementReview().isPresent());
+        assertSuccess(service.continuePackageInstall(
+                service.snapshot().requirementReview().orElseThrow().token()).join());
+        assertEquals("package_installed", service.snapshot().notice().code());
         assertEquals(SettingsOperation.Kind.IDLE, service.snapshot().operation().kind());
+    }
+
+    @Test
+    void unmetRequirementsContinuePublishesOnlyCandidateWithoutGrants() {
+        FakeDomains domains = new FakeDomains();
+        FakeSkills skills = new FakeSkills();
+        skills.requirements = new RequirementSet(
+                Set.of(RequirementSettingsEnvironment.UNRESTRICTED_JAVASCRIPT, "other:unknown"),
+                Set.of("missing:extension"), Set.of("missing-skill"));
+        ClientSettingsService service = requirementService(domains, skills, Runnable::run);
+
+        assertSuccess(service.importLocalSkillPackage(Path.of("demo.zip")).join());
+        var review = service.snapshot().requirementReview().orElseThrow();
+        assertEquals(List.of(RequirementStatus.DISABLED, RequirementStatus.UNKNOWN,
+                        RequirementStatus.MISSING, RequirementStatus.MISSING),
+                review.report().entries().stream().map(entry -> entry.status()).toList());
+        assertEquals(0, skills.prepared.commits);
+        assertFalse(service.snapshot().unrestrictedJavascript().enabled());
+        assertSuccess(service.continuePackageInstall(review.token()).join());
+        assertEquals(1, skills.prepared.commits);
+        assertEquals(1, skills.prepared.closes);
+        assertEquals(0, domains.capabilitySaves);
+        assertFalse(service.snapshot().unrestrictedJavascript().enabled());
+        assertFalse(service.snapshot().experimentalCommands().enabled());
+        assertTrue(service.snapshot().requirementReview().isEmpty());
+        assertFailure(service.continuePackageInstall(review.token()).join(), "package_preview_stale");
+    }
+
+    @Test
+    void cancelAndReplacementInvalidateExactCandidateTokens() {
+        FakeSkills skills = new FakeSkills();
+        ClientSettingsService service = requirementService(new FakeDomains(), skills, Runnable::run);
+        assertSuccess(service.installCommunitySkill("first").join());
+        var first = service.snapshot().requirementReview().orElseThrow();
+        FakePreparedPackage discarded = skills.prepared;
+        assertSuccess(service.installCommunitySkill("second").join());
+        var second = service.snapshot().requirementReview().orElseThrow();
+        assertEquals(1, discarded.closes);
+        assertEquals(0, discarded.commits);
+        assertFailure(service.continuePackageInstall(first.token()).join(), "package_preview_stale");
+        assertFalse(service.cancelPackageInstall(first.token()));
+        assertTrue(service.cancelPackageInstall(second.token()));
+        assertEquals(0, skills.prepared.commits);
+        assertEquals(1, skills.prepared.closes);
+        assertTrue(service.snapshot().skills().skills().isEmpty());
+    }
+
+    @Test
+    void cancelledPreparationDiscardsLateResultWithoutReplacingNewPreview() {
+        FakeSkills skills = new FakeSkills();
+        skills.pendingPreparation = new CompletableFuture<>();
+        ClientSettingsService service = requirementService(new FakeDomains(), skills, Runnable::run);
+        var pending = service.installCommunitySkill("late");
+        FakePreparedPackage late = skills.prepared;
+        var lateFuture = skills.pendingPreparation;
+        assertTrue(service.cancelPackagePreparation());
+        assertTrue(skills.preparationCancellation.isCancelled());
+        assertFailure(pending.join(), "package_preview_cancelled");
+        skills.pendingPreparation = null;
+        assertSuccess(service.installCommunitySkill("new").join());
+        var current = service.snapshot().requirementReview().orElseThrow();
+        lateFuture.complete(new ToolResult.Success<>(late));
+        assertEquals(1, late.closes);
+        assertEquals(0, late.commits);
+        assertEquals(current.token(), service.snapshot().requirementReview().orElseThrow().token());
+        assertEquals("new", service.snapshot().requirementReview().orElseThrow().id());
+    }
+
+    @Test
+    void closeCancelsPreparationAndReleasesReadyCandidate() {
+        FakeSkills skills = new FakeSkills();
+        ClientSettingsService service = requirementService(new FakeDomains(), skills, Runnable::run);
+        assertSuccess(service.installCommunitySkill("ready").join());
+        var token = service.snapshot().requirementReview().orElseThrow().token();
+        service.close();
+        assertEquals(1, skills.prepared.closes);
+        assertEquals(0, skills.prepared.commits);
+        assertFailure(service.continuePackageInstall(token).join(), "settings_closed");
+
+        FakeSkills pendingSkills = new FakeSkills();
+        pendingSkills.pendingPreparation = new CompletableFuture<>();
+        ClientSettingsService pendingService = requirementService(new FakeDomains(), pendingSkills, Runnable::run);
+        var pending = pendingService.installCommunitySkill("late");
+        pendingService.close();
+        pendingSkills.pendingPreparation.complete(new ToolResult.Success<>(pendingSkills.prepared));
+        assertFailure(pending.join(), "package_preview_cancelled");
+        assertEquals(1, pendingSkills.prepared.closes);
+        assertEquals(0, pendingSkills.prepared.commits);
+    }
+
+    @Test
+    void unrestrictedEnableRequiresSeparateConsentAndDoesNotInstall() {
+        FakeSkills skills = new FakeSkills();
+        skills.requirements = new RequirementSet(
+                Set.of(RequirementSettingsEnvironment.UNRESTRICTED_JAVASCRIPT), Set.of(), Set.of());
+        ClientSettingsService service = requirementService(new FakeDomains(), skills, Runnable::run);
+        assertSuccess(service.installCommunitySkill("demo").join());
+        var preview = service.snapshot().requirementReview().orElseThrow();
+        assertEquals(1, preview.changes().size());
+        assertTrue(preview.changes().getFirst().unrestrictedConsentRequired());
+        assertFailure(service.enablePackageRequirement(preview.token(), RequirementKind.CAPABILITY,
+                RequirementSettingsEnvironment.UNRESTRICTED_JAVASCRIPT, false).join(),
+                "unrestricted_confirmation_required");
+        assertFalse(service.snapshot().unrestrictedJavascript().enabled());
+        assertSuccess(service.enablePackageRequirement(preview.token(), RequirementKind.CAPABILITY,
+                RequirementSettingsEnvironment.UNRESTRICTED_JAVASCRIPT, true).join());
+        var refreshed = service.snapshot().requirementReview().orElseThrow();
+        assertEquals(preview.token(), refreshed.token());
+        assertTrue(refreshed.report().allSatisfied());
+        assertTrue(refreshed.changes().isEmpty());
+        assertEquals(0, skills.prepared.commits);
+        assertTrue(service.cancelPackageInstall(preview.token()));
+        assertTrue(service.snapshot().unrestrictedJavascript().enabled());
+    }
+
+    @Test
+    void failedExactEnableRetainsSettingsAndContinueRemainsAvailable() {
+        FakeDomains domains = new FakeDomains();
+        domains.capabilities = new CapabilitySettingsView(
+                new CapabilityPolicy(CapabilityPolicy.SCHEMA_VERSION, Set.of("test:tool"), Set.of()),
+                new CapabilityCatalogSnapshot(List.of(new dev.openallay.capability.CapabilitySettingsEntry(
+                        "test:owner", "test:tool", dev.openallay.capability.CapabilityKind.TOOL,
+                        "settings.test.title", "settings.test.description", null, true, false))), Set.of(), Set.of());
+        domains.capabilityFailure = new ToolResult.Failure<>("settings_write_failed", "Disk unavailable");
+        FakeSkills skills = new FakeSkills();
+        skills.requirements = new RequirementSet(Set.of("test:tool", "unknown:tool"), Set.of(), Set.of());
+        ClientSettingsService service = requirementService(domains, skills, Runnable::run);
+        assertSuccess(service.installCommunitySkill("demo").join());
+        var preview = service.snapshot().requirementReview().orElseThrow();
+        assertEquals(List.of("test:tool"), preview.changes().stream().map(change -> change.id()).toList());
+        assertFailure(service.enablePackageRequirement(preview.token(), RequirementKind.CAPABILITY,
+                "unknown:tool", true).join(), "requirement_not_enableable");
+        assertFailure(service.enablePackageRequirement(preview.token(), RequirementKind.CAPABILITY,
+                "test:tool", false).join(), "settings_write_failed");
+        assertTrue(service.snapshot().capabilities().policy().disabledTools().contains("test:tool"));
+        assertEquals(preview.token(), service.snapshot().requirementReview().orElseThrow().token());
+        assertEquals("settings_write_failed", service.snapshot().notice().code());
+        assertSuccess(service.continuePackageInstall(preview.token()).join());
+        assertEquals(1, skills.prepared.commits);
+    }
+
+    @Test
+    void absentUnrestrictedSettingsOwnerCannotPretendEnableSucceeded() {
+        FakeModels models = new FakeModels(state(config("alpha")));
+        ClientSettingsService service = service(models, Set.of("ALPHA_KEY"));
+        assertFailure(service.saveUnrestrictedJavascript(true).join(), "settings_unavailable");
+        assertFalse(service.snapshot().unrestrictedJavascript().enabled());
+    }
+
+    @Test
+    void cancellingReviewDoesNotUndoAnAlreadyConfirmedRequirementChange() {
+        ManualExecutor worker = new ManualExecutor();
+        FakeSkills skills = new FakeSkills();
+        skills.requirements = new RequirementSet(
+                Set.of(RequirementSettingsEnvironment.UNRESTRICTED_JAVASCRIPT), Set.of(), Set.of());
+        ClientSettingsService service = requirementService(new FakeDomains(), skills, worker);
+        var preparing = service.installCommunitySkill("demo");
+        worker.runAll();
+        assertSuccess(preparing.join());
+        var review = service.snapshot().requirementReview().orElseThrow();
+        var enabled = service.enablePackageRequirement(review.token(), RequirementKind.CAPABILITY,
+                RequirementSettingsEnvironment.UNRESTRICTED_JAVASCRIPT, true);
+        assertTrue(service.cancelPackageInstall(review.token()));
+        assertFalse(service.snapshot().unrestrictedJavascript().enabled());
+        worker.runAll();
+        assertSuccess(enabled.join());
+        assertTrue(service.snapshot().unrestrictedJavascript().enabled());
+        assertTrue(service.snapshot().requirementReview().isEmpty());
+        assertEquals(0, skills.prepared.commits);
+        assertEquals(1, skills.prepared.closes);
+    }
+
+    @Test
+    void failedPublishConsumesTokenAndDisposesCandidate() {
+        FakeSkills skills = new FakeSkills();
+        skills.commitFailure = new ToolResult.Failure<>("publish_failed", "Unable to replace package");
+        ClientSettingsService service = requirementService(new FakeDomains(), skills, Runnable::run);
+        assertSuccess(service.installCommunitySkill("demo").join());
+        var preview = service.snapshot().requirementReview().orElseThrow();
+        assertFailure(service.continuePackageInstall(preview.token()).join(), "publish_failed");
+        assertEquals(1, skills.prepared.closes);
+        assertTrue(service.snapshot().skills().skills().isEmpty());
+        assertTrue(service.snapshot().requirementReview().isEmpty());
+        assertFailure(service.continuePackageInstall(preview.token()).join(), "package_preview_stale");
+    }
+
+    @Test
+    void confirmedPublishSurvivesScreenDetachButCannotBeConfirmedTwice() {
+        ManualExecutor worker = new ManualExecutor();
+        FakeSkills skills = new FakeSkills();
+        ClientSettingsService service = requirementService(new FakeDomains(), skills, worker);
+        var preparing = service.installCommunitySkill("demo");
+        worker.runAll();
+        assertSuccess(preparing.join());
+        var preview = service.snapshot().requirementReview().orElseThrow();
+        var publishing = service.continuePackageInstall(preview.token());
+        assertFalse(service.cancelPackageInstall(preview.token()));
+        assertFailure(service.continuePackageInstall(preview.token()).join(), "settings_busy");
+        service.close();
+        worker.runAll();
+        assertSuccess(publishing.join());
+        assertEquals(1, skills.prepared.commits);
+    }
+
+    private static ClientSettingsService requirementService(
+            FakeDomains domains, FakeSkills skills, Executor worker) {
+        return service(new FakeModels(state(config("alpha"))), domains,
+                new FakeDisplay(GuideDisplayConfig.defaults()), skills, new FakeHistory(), worker);
     }
 
     @Test
@@ -732,8 +953,19 @@ final class ClientSettingsServiceTest {
                 SkillSettingsView.empty(),
                 skills,
                 ExtensionSettingsView.defaults(),
+                new FakeExtensions(),
                 CommandCapabilityConfig.defaults(),
                 commands,
+                new ClientSettingsService.UnrestrictedJavascriptActions() {
+                    public ToolResult<dev.openallay.script.UnrestrictedJavascriptConfig> save(
+                            dev.openallay.script.UnrestrictedJavascriptConfig candidate) {
+                        return new ToolResult.Success<>(candidate);
+                    }
+                    public ToolResult<dev.openallay.script.UnrestrictedJavascriptConfig> reload() {
+                        return new ToolResult.Success<>(dev.openallay.script.UnrestrictedJavascriptConfig.defaults());
+                    }
+                },
+                dev.openallay.script.UnrestrictedJavascriptConfig.defaults(),
                 history,
                 Runnable::run,
                 worker,
@@ -999,6 +1231,30 @@ final class ClientSettingsServiceTest {
 
     private static final class FakeSkills implements ClientSettingsService.SkillActions {
         private SkillSettingsView current = SkillSettingsView.empty();
+        private RequirementSet requirements = RequirementSet.EMPTY;
+        private CompletableFuture<ToolResult<PreparedPackageInstall>> pendingPreparation;
+        private CancellationSignal preparationCancellation;
+        private FakePreparedPackage prepared;
+        private ToolResult.Failure<Boolean> commitFailure;
+
+        @Override
+        public CompletableFuture<ToolResult<PreparedPackageInstall>> prepareCommunity(
+                String id, CancellationSignal cancellation) {
+            preparationCancellation = cancellation;
+            prepared = new FakePreparedPackage(RequirementKind.SKILL, id, requirements, () -> {
+                if (commitFailure != null) return commitFailure;
+                installCommunity(id, new CancellationSignal());
+                return new ToolResult.Success<>(true);
+            });
+            return pendingPreparation != null ? pendingPreparation
+                    : CompletableFuture.completedFuture(new ToolResult.Success<>(prepared));
+        }
+
+        @Override
+        public ToolResult<PreparedPackageInstall> prepareLocalPackage(Path source) {
+            return prepareCommunity("demo", new CancellationSignal()).join();
+        }
+
         private SkillCommunityView community = new SkillCommunityView(
                 true,
                 Optional.of(Instant.EPOCH),
@@ -1091,6 +1347,21 @@ final class ClientSettingsServiceTest {
             implements ClientSettingsService.ExtensionActions {
         private ExtensionSettingsView current;
 
+        @Override
+        public CompletableFuture<ToolResult<PreparedPackageInstall>> prepareCommunity(
+                String id, CancellationSignal cancellation) {
+            return CompletableFuture.completedFuture(prepareLocalPackage(Path.of("demo.jar")));
+        }
+
+        @Override
+        public ToolResult<PreparedPackageInstall> prepareLocalPackage(Path source) {
+            return new ToolResult.Success<>(new FakePreparedPackage(
+                    RequirementKind.EXTENSION, "community:demo", RequirementSet.EMPTY, () -> {
+                        stage();
+                        return new ToolResult.Success<>(true);
+                    }));
+        }
+
         private FakeExtensions() {
             ExtensionSettingsView base = ExtensionSettingsView.defaults();
             ExtensionSettingsView.Extension community = extension(
@@ -1162,6 +1433,31 @@ final class ClientSettingsServiceTest {
                             false,
                             installable));
         }
+    }
+
+    private static final class FakePreparedPackage implements PreparedPackageInstall {
+        private final RequirementKind kind;
+        private final String id;
+        private final RequirementSet requirements;
+        private final java.util.function.Supplier<ToolResult<Boolean>> publisher;
+        private int commits;
+        private int closes;
+
+        private FakePreparedPackage(RequirementKind kind, String id, RequirementSet requirements,
+                java.util.function.Supplier<ToolResult<Boolean>> publisher) {
+            this.kind = kind;
+            this.id = id;
+            this.requirements = requirements;
+            this.publisher = publisher;
+        }
+        public RequirementKind kind() { return kind; }
+        public String id() { return id; }
+        public String name() { return id; }
+        public String version() { return "1.0.0"; }
+        public String sha256() { return "a".repeat(64); }
+        public RequirementSet requirements() { return requirements; }
+        public ToolResult<Boolean> commit() { commits++; return publisher.get(); }
+        public void close() { closes++; }
     }
 
     private static final class FakeHistory implements ClientSettingsService.HistoryActions {

@@ -13,6 +13,34 @@ import org.junit.jupiter.api.Test;
 final class SettingsLocalizationTest {
     private static final Set<String> REQUIRED = Set.of(
             "screen.openallay.settings.title",
+            "screen.openallay.settings.requirements.title",
+            "screen.openallay.settings.requirements.advisory",
+            "screen.openallay.settings.requirements.scope_local",
+            "screen.openallay.settings.requirements.none",
+            "screen.openallay.settings.requirements.package_check",
+            "screen.openallay.settings.requirements.catalog_preview",
+            "screen.openallay.settings.requirements.package_changed",
+            "screen.openallay.settings.requirements.kind.capability",
+            "screen.openallay.settings.requirements.kind.extension",
+            "screen.openallay.settings.requirements.kind.skill",
+            "screen.openallay.settings.requirements.state.satisfied",
+            "screen.openallay.settings.requirements.state.missing",
+            "screen.openallay.settings.requirements.state.disabled",
+            "screen.openallay.settings.requirements.state.restart_required",
+            "screen.openallay.settings.requirements.state.unavailable",
+            "screen.openallay.settings.requirements.state.unknown",
+            "screen.openallay.settings.requirements.row",
+            "screen.openallay.settings.requirements.enable",
+            "screen.openallay.settings.requirements.enable_change",
+            "screen.openallay.settings.requirements.confirm_enable",
+            "screen.openallay.settings.requirements.unrestricted_confirm",
+            "screen.openallay.settings.requirements.continue_anyway",
+            "screen.openallay.settings.requirements.continue_notice",
+            "screen.openallay.settings.requirements.cancel",
+            "screen.openallay.settings.requirements.saved_settings",
+            "screen.openallay.settings.requirements.server_restricted",
+            "screen.openallay.settings.requirements.working",
+            "screen.openallay.settings.requirements.expired",
             "screen.openallay.model.client",
             "screen.openallay.model.server",
             "screen.openallay.settings.short",
@@ -96,6 +124,25 @@ final class SettingsLocalizationTest {
         assertEquals(
                 "模型配置",
                 chinese.get("screen.openallay.settings.models.profiles").getAsString());
+    }
+
+    @Test
+    void requirementPlaceholdersAndJvmWarningAreCompleteInBothLanguages() throws Exception {
+        JsonObject english = read("en_us.json");
+        JsonObject chinese = read("zh_cn.json");
+        for (String key : english.keySet()) {
+            if (key.startsWith("screen.openallay.settings.requirements.")) {
+                assertEquals(english.get(key).getAsString().split("%s", -1).length,
+                        chinese.get(key).getAsString().split("%s", -1).length, key);
+            }
+        }
+        String warningKey = "screen.openallay.settings.extensions.unrestricted.warning";
+        String warning = english.get(warningKey).getAsString();
+        for (String part : Set.of("JVM", "File", "Network", "Process", "no rollback", "credentials")) {
+            assertTrue(warning.contains(part), part);
+        }
+        assertTrue(chinese.get(warningKey).getAsString().contains("JVM"));
+        assertTrue(english.has("screen.openallay.settings.requirements.unrestricted_confirm"));
     }
 
     private static JsonObject read(String file) throws Exception {

@@ -14,6 +14,9 @@ public final class SkillRepository implements SkillCatalog {
     private volatile Map<String, SkillDocument> skills = Map.of();
     private volatile List<SkillDiagnostic> diagnostics = List.of();
     private volatile Set<String> runtimeDisabledSkills = Set.of();
+    // Originals are retained independently of local overrides and settings reload generations.
+    private Map<String, SkillSource> externalSources = Map.of();
+    private Set<String> baseSkillNames = Set.of();
 
     public SkillRepository(SkillParser parser, Collection<String> availableTools) {
         this.parser = parser;
@@ -22,31 +25,25 @@ public final class SkillRepository implements SkillCatalog {
 
     public synchronized boolean reload(Collection<SkillSource> sources, Set<String> installedMods) {
         Map<String, SkillDocument> candidate = new TreeMap<>();
+        Set<String> nextBaseNames = new java.util.HashSet<>();
         List<SkillDiagnostic> nextDiagnostics = new ArrayList<>();
         try {
             for (SkillSource source : List.copyOf(sources)) {
-                SkillDocument document = parser.parse(source);
-                if (!installedMods.containsAll(document.metadata().requiredMods())) {
-                    Set<String> missing = new java.util.TreeSet<>(document.metadata().requiredMods());
-                    missing.removeAll(installedMods);
-                    nextDiagnostics.add(new SkillDiagnostic(
-                            "required_mod_unavailable",
-                            "Skill " + document.metadata().name() + " requires " + missing,
-                            document.metadata().provenance()));
+                SkillDocument document = validated(source, installedMods, nextDiagnostics);
+                if (document == null) {
                     continue;
                 }
-                if (!availableTools.containsAll(document.metadata().allowedTools())) {
-                    Set<String> missing = new java.util.TreeSet<>(document.metadata().allowedTools());
-                    missing.removeAll(availableTools);
-                    throw new IllegalArgumentException("Skill declares unavailable tools: " + missing);
-                }
-                SkillDocument previous = candidate.put(document.metadata().name(), document);
-                if (previous != null) {
+                if (candidate.putIfAbsent(document.metadata().name(), document) != null) {
                     throw new IllegalArgumentException(
                             "Duplicate Skill name: " + document.metadata().name());
                 }
+                if (document.metadata().origin() != SkillSource.Origin.LOCAL) {
+                    nextBaseNames.add(document.metadata().name());
+                }
             }
+            mergeExternal(candidate, installedMods, nextDiagnostics);
             skills = Map.copyOf(candidate);
+            baseSkillNames = Set.copyOf(nextBaseNames);
             diagnostics = List.copyOf(nextDiagnostics);
             return true;
         } catch (RuntimeException failure) {
@@ -63,7 +60,13 @@ public final class SkillRepository implements SkillCatalog {
      */
     public synchronized void validateExternal(
             Collection<SkillSource> sources, Set<String> installedMods) {
-        Map<String, SkillDocument> candidate = new TreeMap<>(skills);
+        Set<String> names = new java.util.HashSet<>(externalSources.keySet());
+        names.addAll(baseSkillNames);
+        skills.forEach((name, document) -> {
+            if (document.metadata().origin() != SkillSource.Origin.LOCAL) {
+                names.add(name);
+            }
+        });
         List<SkillDiagnostic> ignoredDiagnostics = new ArrayList<>();
         for (SkillSource source : List.copyOf(sources)) {
             SkillDocument document = validated(source, installedMods, ignoredDiagnostics);
@@ -71,7 +74,7 @@ public final class SkillRepository implements SkillCatalog {
                 throw new IllegalArgumentException(
                         "Extension Skill requires unavailable mod: " + source.entryPath());
             }
-            if (candidate.putIfAbsent(document.metadata().name(), document) != null) {
+            if (!names.add(document.metadata().name())) {
                 throw new IllegalArgumentException(
                         "Duplicate Skill name: " + document.metadata().name());
             }
@@ -84,19 +87,30 @@ public final class SkillRepository implements SkillCatalog {
      */
     public synchronized void registerExternal(
             Collection<SkillSource> sources, Set<String> installedMods) {
-        validateExternal(sources, installedMods);
+        List<SkillSource> batch = List.copyOf(sources);
+        validateExternal(batch, installedMods);
         Map<String, SkillDocument> candidate = new TreeMap<>(skills);
+        Map<String, SkillSource> nextExternal = new TreeMap<>(externalSources);
         List<SkillDiagnostic> nextDiagnostics = new ArrayList<>(diagnostics);
-        for (SkillSource source : List.copyOf(sources)) {
+        for (SkillSource source : batch) {
             SkillDocument document = validated(source, installedMods, nextDiagnostics);
             if (document == null) {
                 throw new IllegalStateException(
                         "Validated Extension Skill became unavailable: " + source.entryPath());
             }
-            candidate.put(document.metadata().name(), document);
+            // A preloaded local override still wins when loader registration follows local loading.
+            candidate.putIfAbsent(document.metadata().name(), document);
+            nextExternal.put(document.metadata().name(), source);
         }
         skills = Map.copyOf(candidate);
+        externalSources = Map.copyOf(nextExternal);
         diagnostics = List.copyOf(nextDiagnostics);
+    }
+
+    /** Immutable registered originals, including references, for settings display and overrides. */
+    public synchronized List<SkillSource> externalSources() {
+        return externalSources.entrySet().stream().sorted(Map.Entry.comparingByKey())
+                .map(Map.Entry::getValue).toList();
     }
 
     /**
@@ -109,6 +123,7 @@ public final class SkillRepository implements SkillCatalog {
             Set<String> installedMods) {
         java.util.Objects.requireNonNull(localSkills, "localSkills");
         Map<String, SkillDocument> candidate = new TreeMap<>();
+        Set<String> nextBaseNames = new java.util.HashSet<>();
         List<SkillDiagnostic> nextDiagnostics = new ArrayList<>();
         try {
             for (SkillSource source : List.copyOf(bundledSources)) {
@@ -120,7 +135,9 @@ public final class SkillRepository implements SkillCatalog {
                     throw new IllegalArgumentException(
                             "Duplicate bundled Skill name: " + document.metadata().name());
                 }
+                nextBaseNames.add(document.metadata().name());
             }
+            mergeExternal(candidate, installedMods, nextDiagnostics);
         } catch (RuntimeException failure) {
             String provenance = bundledSources.isEmpty()
                     ? "openallay:bundled"
@@ -149,8 +166,23 @@ public final class SkillRepository implements SkillCatalog {
             nextDiagnostics.add(rejected.diagnostic());
         }
         skills = Map.copyOf(candidate);
+        baseSkillNames = Set.copyOf(nextBaseNames);
         diagnostics = List.copyOf(nextDiagnostics);
         return true;
+    }
+
+    private void mergeExternal(Map<String, SkillDocument> candidate, Set<String> installedMods,
+            List<SkillDiagnostic> nextDiagnostics) {
+        for (SkillSource source : externalSources()) {
+            SkillDocument document = validated(source, installedMods, nextDiagnostics);
+            if (document == null) {
+                continue;
+            }
+            SkillDocument previous = candidate.putIfAbsent(document.metadata().name(), document);
+            if (previous != null && previous.metadata().origin() != SkillSource.Origin.LOCAL) {
+                throw new IllegalArgumentException("Duplicate Skill name: " + document.metadata().name());
+            }
+        }
     }
 
     private SkillDocument validated(

@@ -41,7 +41,15 @@ public final class CancellationSignal implements dev.openallay.net.HttpCancellat
             snapshot = List.copyOf(listeners);
             listeners.clear();
         }
-        snapshot.forEach(Runnable::run);
+        // One failing listener must not prevent later revocations or terminal request cleanup.
+        // Never expose foreign callback messages, which can contain credentials.
+        for (Runnable listener : snapshot) {
+            try {
+                listener.run();
+            } catch (RuntimeException ignored) {
+                // Cancellation is already committed; continue notifying the remaining listeners.
+            }
+        }
         return true;
     }
 }

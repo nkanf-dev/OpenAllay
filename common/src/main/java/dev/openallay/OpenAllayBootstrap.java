@@ -80,30 +80,9 @@ public final class OpenAllayBootstrap {
         CommandCapabilityRuntime commands = new CommandCapabilityRuntime();
         WorldObservationRuntime worldObservations = new WorldObservationRuntime();
         ToolRegistry tools = new ToolRegistry();
-        tools.register(
-                "openallay:builtins",
-                builtinTools(
-                        platform,
-                        gson,
-                        javascriptWorkspaces,
-                        knowledge,
-                        javascriptModules,
-                        commands,
-                        worldObservations,
-                        javascriptModuleCatalog));
         PatchouliMultiblockStore patchouliMultiblocks = new PatchouliMultiblockStore();
         SkillRepository skills = new SkillRepository(
-                new SkillParser(),
-                tools.descriptors().stream().map(descriptor -> descriptor.id()).toList());
-        java.util.Set<String> installedSkillMods = new java.util.HashSet<>();
-        if (platform.isModLoaded("ftbquests")) {
-            installedSkillMods.add("ftbquests");
-        }
-        if (!skills.reload(new BundledSkillLoader().load(), installedSkillMods)) {
-            OpenAllayConstants.LOGGER.warn("Bundled Skill validation failed: {}", skills.diagnostics());
-        }
-        skills.setRuntimeDisabledSkills(Set.of("run-game-commands"));
-        tools.register("openallay:skills", List.of(new LoadSkillTool(skills)));
+                new SkillParser(), List.of(RunJavascriptTool.ID));
         Set<String> installedMods = installedMods(platform);
         OpenAllayExtensionRegistry extensions = new OpenAllayExtensionRegistry(
                 new OpenAllayExtensionEnvironment(
@@ -114,6 +93,27 @@ public final class OpenAllayBootstrap {
                 javascriptModuleCatalog,
                 skills,
                 installedMods);
+        tools.register(
+                "openallay:builtins",
+                builtinTools(
+                        platform,
+                        gson,
+                        javascriptWorkspaces,
+                        knowledge,
+                        javascriptModules,
+                        commands,
+                        worldObservations,
+                        javascriptModuleCatalog,
+                        extensions));
+        java.util.Set<String> installedSkillMods = new java.util.HashSet<>();
+        if (platform.isModLoaded("ftbquests")) {
+            installedSkillMods.add("ftbquests");
+        }
+        if (!skills.reload(new BundledSkillLoader().load(), installedSkillMods)) {
+            OpenAllayConstants.LOGGER.warn("Bundled Skill validation failed: {}", skills.diagnostics());
+        }
+        skills.setRuntimeDisabledSkills(Set.of("run-game-commands"));
+        tools.register("openallay:skills", List.of(new LoadSkillTool(skills)));
         for (OpenAllayExtension extension : List.copyOf(pendingExtensions)) {
             OpenAllayExtensionRegistry.Registration registration = extensions.register(extension);
             if (registration.state() != dev.openallay.extension.OpenAllayExtensionState.ACTIVE) {
@@ -287,6 +287,20 @@ public final class OpenAllayBootstrap {
             CommandCapabilityRuntime commands,
             WorldObservationRuntime worldObservations,
             JavascriptModuleCatalog javascriptModuleCatalog) {
+        return builtinTools(platform, gson, javascriptWorkspaces, knowledge, javascriptModules,
+                commands, worldObservations, javascriptModuleCatalog, null);
+    }
+
+    static List<Tool<?, ?>> builtinTools(
+            PlatformService platform,
+            Gson gson,
+            AgentResultWorkspaceRegistry javascriptWorkspaces,
+            KnowledgeRegistry knowledge,
+            JavascriptDataModuleRegistry javascriptModules,
+            CommandCapabilityRuntime commands,
+            WorldObservationRuntime worldObservations,
+            JavascriptModuleCatalog javascriptModuleCatalog,
+            OpenAllayExtensionRegistry extensions) {
         return List.of(new RunJavascriptTool(
                 new RhinoJavascriptRuntime(
                         RhinoJavascriptRuntime.DEFAULT_TIMEOUT,
@@ -297,7 +311,8 @@ public final class OpenAllayBootstrap {
                 javascriptWorkspaces,
                 new JavascriptResultPresenter(),
                 commands,
-                worldObservations));
+                worldObservations,
+                extensions));
     }
 
     private static Set<String> installedMods(PlatformService platform) {

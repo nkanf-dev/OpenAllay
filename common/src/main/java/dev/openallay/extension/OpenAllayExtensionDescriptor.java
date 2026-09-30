@@ -1,5 +1,6 @@
 package dev.openallay.extension;
 
+import dev.openallay.requirement.RequirementSet;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.regex.Pattern;
@@ -14,8 +15,18 @@ public record OpenAllayExtensionDescriptor(
         Set<String> loaders,
         String minecraftVersionRange,
         String openAllayApiVersionRange,
-        String source) {
+        String source,
+        RequirementSet requirements) {
     private static final Pattern ID = Pattern.compile("[a-z0-9_.-]+:[a-z0-9_./-]+");
+
+    /** Retained source and binary constructor for Extensions compiled before advisory metadata. */
+    public OpenAllayExtensionDescriptor(
+            String id, String name, String version, String provider, String summary,
+            Set<String> loaders, String minecraftVersionRange, String openAllayApiVersionRange,
+            String source) {
+        this(id, name, version, provider, summary, loaders, minecraftVersionRange,
+                openAllayApiVersionRange, source, RequirementSet.EMPTY);
+    }
 
     public OpenAllayExtensionDescriptor {
         id = require(id, "id");
@@ -39,6 +50,7 @@ public record OpenAllayExtensionDescriptor(
         openAllayApiVersionRange = ExtensionCompatibility.requireRange(
                 openAllayApiVersionRange, "openAllayApiVersionRange");
         source = require(source, "source");
+        requirements = java.util.Objects.requireNonNull(requirements, "requirements");
     }
 
     private static String require(String value, String name) {

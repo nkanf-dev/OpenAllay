@@ -13,6 +13,9 @@ import dev.openallay.skill.SkillSettingsStore;
 import dev.openallay.skill.SkillSource;
 import dev.openallay.skill.install.SkillPackageInstaller;
 import dev.openallay.settings.ClientSettingsService;
+import dev.openallay.settings.requirement.PreparedPackageInstall;
+import dev.openallay.settings.requirement.RefreshingPreparedPackageInstall;
+import dev.openallay.skill.install.PreparedSkillInstall;
 import dev.openallay.tool.ToolResult;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -152,7 +155,7 @@ public final class SkillSettingsBackend implements ClientSettingsService.SkillAc
     }
 
     @Override
-    public CompletableFuture<ToolResult<SkillCommunityView>> installCommunity(
+    public CompletableFuture<ToolResult<PreparedPackageInstall>> prepareCommunity(
             String id, CancellationSignal cancellation) {
         if (communityCatalog == null) {
             return CompletableFuture.completedFuture(new ToolResult.Failure<>(
@@ -164,32 +167,53 @@ public final class SkillSettingsBackend implements ClientSettingsService.SkillAc
                         .filter(candidate -> candidate.compatibility().minecraft().equals("26.2")
                                 && candidate.compatibility().openallayApi().equals(
                                         OpenAllayConstants.SKILL_API_VERSION))
-                        .max((left, right) -> compareVersions(
-                                left.version(), right.version())))
+                        .max((left, right) -> compareVersions(left.version(), right.version())))
                 .orElse(null);
         if (entry == null) {
             return CompletableFuture.completedFuture(new ToolResult.Failure<>(
                     "skill_package_not_found", "The selected community Skill is unavailable"));
         }
-        return installer.install(entry, cancellation).thenApply(result -> {
-            if (result instanceof ToolResult.Failure<SkillPackageInstaller.InstallResult> failure) {
-                return new ToolResult.Failure<SkillCommunityView>(failure.code(), failure.message());
-            }
-            reloadInternal();
-            community = buildCommunity(Optional.empty());
-            return new ToolResult.Success<>(community);
-        });
+        return installer.prepare(entry, cancellation).thenApply(this::refreshing);
     }
 
     @Override
-    public synchronized ToolResult<SkillCommunityView> importLocalPackage(Path source) {
-        ToolResult<SkillPackageInstaller.InstallResult> result = installer.importLocal(source);
-        if (result instanceof ToolResult.Failure<SkillPackageInstaller.InstallResult> failure) {
+    public ToolResult<PreparedPackageInstall> prepareLocalPackage(Path source) {
+        return refreshing(installer.prepareLocal(source));
+    }
+
+    private ToolResult<PreparedPackageInstall> refreshing(ToolResult<PreparedSkillInstall> result) {
+        if (result instanceof ToolResult.Failure<PreparedSkillInstall> failure) {
             return new ToolResult.Failure<>(failure.code(), failure.message());
         }
-        reloadInternal();
-        community = buildCommunity(Optional.empty());
-        return new ToolResult.Success<>(community);
+        PreparedSkillInstall candidate = ((ToolResult.Success<PreparedSkillInstall>) result).value();
+        return new ToolResult.Success<>(new RefreshingPreparedPackageInstall(candidate, this, () -> {
+            reloadInternal();
+            community = buildCommunity(Optional.empty());
+        }));
+    }
+
+    @Override
+    public CompletableFuture<ToolResult<SkillCommunityView>> installCommunity(
+            String id, CancellationSignal cancellation) {
+        return prepareCommunity(id, cancellation).thenApply(this::commitPrepared);
+    }
+
+    @Override
+    public ToolResult<SkillCommunityView> importLocalPackage(Path source) {
+        return commitPrepared(prepareLocalPackage(source));
+    }
+
+    private ToolResult<SkillCommunityView> commitPrepared(ToolResult<PreparedPackageInstall> result) {
+        if (result instanceof ToolResult.Failure<PreparedPackageInstall> failure) {
+            return new ToolResult.Failure<>(failure.code(), failure.message());
+        }
+        try (PreparedPackageInstall candidate = ((ToolResult.Success<PreparedPackageInstall>) result).value()) {
+            ToolResult<Boolean> committed = candidate.commit();
+            if (committed instanceof ToolResult.Failure<Boolean> failure) {
+                return new ToolResult.Failure<>(failure.code(), failure.message());
+            }
+            return new ToolResult.Success<>(community);
+        }
     }
 
     @Override
@@ -243,7 +267,13 @@ public final class SkillSettingsBackend implements ClientSettingsService.SkillAc
                     return new ToolResult.Failure<>(
                             "skill_override_unavailable", "The selected Skill cannot be overridden");
                 }
-                store.createOverride(bundled);
+                // The existing copy writer accepts bundled-origin immutable packages. Extension
+                // sources receive that copy-only label; their registered source is never changed.
+                SkillSource copySource = bundled.origin() == SkillSource.Origin.EXTERNAL
+                        ? new SkillSource(bundled.provenance(), bundled.entryPath(), bundled.files(),
+                                SkillSource.Origin.BUNDLED)
+                        : bundled;
+                store.createOverride(copySource);
                 created = true;
             }
             store.editOverride(name, markdown);
@@ -345,8 +375,11 @@ public final class SkillSettingsBackend implements ClientSettingsService.SkillAc
     }
 
     private SkillSettingsView buildView(FilesystemSkillLoader.LoadResult local) {
-        Map<String, ParsedSource> parsedSources = new LinkedHashMap<>();
+        Map<String, List<ParsedSource>> parsedSources = new LinkedHashMap<>();
         for (SkillSource source : bundledSources) {
+            addParsed(parsedSources, source);
+        }
+        for (SkillSource source : repository.externalSources()) {
             addParsed(parsedSources, source);
         }
         for (SkillSource source : local.sources()) {
@@ -356,13 +389,11 @@ public final class SkillSettingsBackend implements ClientSettingsService.SkillAc
         List<SkillSettingsView.Skill> skills = new ArrayList<>();
         for (var metadata : repository.metadata()) {
             SkillDocument document = repository.find(metadata.name()).orElseThrow();
-            ParsedSource parsed = parsedSources.get(metadata.name());
-            String markdown = null;
-            if (parsed != null
-                    && parsed.document().metadata().origin() == metadata.origin()
-                    && sameContent(parsed.document(), document)) {
-                markdown = entryMarkdown(parsed.source());
-            }
+            String markdown = parsedSources.getOrDefault(metadata.name(), List.of()).stream()
+                    .filter(parsed -> parsed.document().metadata().origin() == metadata.origin())
+                    .filter(parsed -> sameContent(parsed.document(), document))
+                    .map(parsed -> entryMarkdown(parsed.source()))
+                    .findFirst().orElse(null);
             if (markdown == null) {
                 SkillSettingsView.Skill previous = current.find(metadata.name()).orElse(null);
                 if (previous != null
@@ -383,17 +414,19 @@ public final class SkillSettingsBackend implements ClientSettingsService.SkillAc
         return new SkillSettingsView(skills, repository.diagnostics());
     }
 
-    private void addParsed(Map<String, ParsedSource> parsedSources, SkillSource source) {
+    private void addParsed(Map<String, List<ParsedSource>> parsedSources, SkillSource source) {
         try {
             SkillDocument document = parser.parse(source);
-            parsedSources.put(document.metadata().name(), new ParsedSource(source, document));
+            parsedSources.computeIfAbsent(document.metadata().name(), ignored -> new ArrayList<>())
+                    .add(new ParsedSource(source, document));
         } catch (RuntimeException ignored) {
             // Repository diagnostics own invalid-package reporting and last-valid retention.
         }
     }
 
     private SkillSource bundledNamed(String name) {
-        return sourceNamed(bundledSources, name);
+        SkillSource bundled = sourceNamed(bundledSources, name);
+        return bundled == null ? sourceNamed(repository.externalSources(), name) : bundled;
     }
 
     private SkillSource sourceNamed(Collection<SkillSource> sources, String name) {

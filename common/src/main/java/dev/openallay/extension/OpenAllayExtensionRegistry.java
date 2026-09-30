@@ -28,6 +28,8 @@ public final class OpenAllayExtensionRegistry {
     private final Set<String> installedMods;
     private final Map<String, RegisteredExtension> active = new TreeMap<>();
     private final Map<String, String> contributionOwners = new TreeMap<>();
+    private final Map<String, Set<JavascriptInvocationScope>> invocations = new java.util.HashMap<>();
+    private List<JavascriptInvocationParticipant> javascriptInvocationParticipants = List.of();
     private long generation;
 
     public OpenAllayExtensionRegistry(
@@ -49,7 +51,15 @@ public final class OpenAllayExtensionRegistry {
         OpenAllayExtensionContribution contribution;
         try {
             descriptor = Objects.requireNonNull(extension.descriptor(), "descriptor");
-            contribution = Objects.requireNonNull(extension.contribution(), "contribution");
+            OpenAllayExtensionContribution declared =
+                    Objects.requireNonNull(extension.contribution(), "contribution");
+            // Capture foreign IDs exactly once before any registry mutation.
+            contribution = new OpenAllayExtensionContribution(
+                    declared.dataModules(), declared.javascriptModules(), declared.skills(),
+                    declared.resultViews(), declared.javascriptInvocationParticipants().stream()
+                            .map(participant -> (JavascriptInvocationParticipant)
+                                    new RegisteredParticipant(participant.id(), participant))
+                            .toList());
         } catch (RuntimeException failure) {
             return rejected("", OpenAllayExtensionState.UNAVAILABLE, "extension_registration_failed");
         }
@@ -88,8 +98,53 @@ public final class OpenAllayExtensionRegistry {
                         .toList());
     }
 
+    public synchronized List<JavascriptInvocationParticipant> javascriptInvocationParticipants() {
+        return javascriptInvocationParticipants;
+    }
+
     public OpenAllayExtensionEnvironment environment() {
         return environment;
+    }
+
+    /**
+     * Admits work synchronously before its worker is launched. The caller owns the request
+     * cancellation signal and must revoke it before terminal request cleanup. A queued callback
+     * retains that revoked signal as its tombstone; no closed IDs are retained by this registry.
+     */
+    public synchronized JavascriptInvocationScope prepareJavascriptInvocation(
+            dev.openallay.context.ToolInvocationContext invocation,
+            dev.openallay.model.CancellationSignal cancellation) {
+        cancellation.throwIfCancelled();
+        String requestId = invocation.correlationId();
+        Set<JavascriptInvocationScope> scopes =
+                invocations.computeIfAbsent(requestId, ignored -> new HashSet<>());
+        JavascriptInvocationScope[] reference = new JavascriptInvocationScope[1];
+        JavascriptInvocationScope scope = new JavascriptInvocationScope(
+                invocation, cancellation, javascriptInvocationParticipants,
+                () -> releaseInvocation(requestId, reference[0]));
+        reference[0] = scope;
+        scopes.add(scope);
+        return scope;
+    }
+
+    /** Revokes native activity now; worker-local scopes still unwind on their own workers. */
+    public void closeJavascriptRequest(String correlationId) {
+        Set<JavascriptInvocationScope> scopes;
+        synchronized (this) {
+            scopes = invocations.remove(correlationId);
+        }
+        if (scopes != null) scopes.forEach(JavascriptInvocationScope::revoke);
+    }
+
+    public synchronized int activeJavascriptInvocations() {
+        return invocations.values().stream().mapToInt(Set::size).sum();
+    }
+
+    private synchronized void releaseInvocation(String requestId, JavascriptInvocationScope scope) {
+        Set<JavascriptInvocationScope> scopes = invocations.get(requestId);
+        if (scopes == null) return;
+        scopes.remove(scope);
+        if (scopes.isEmpty()) invocations.remove(requestId);
     }
 
     private void validateContribution(
@@ -113,6 +168,14 @@ public final class OpenAllayExtensionRegistry {
             if (view.summary() == null || view.summary().isBlank()) {
                 throw new IllegalArgumentException("Result view summary is required");
             }
+        }
+        for (JavascriptInvocationParticipant participant : contribution.javascriptInvocationParticipants()) {
+            Objects.requireNonNull(participant, "javascriptInvocationParticipant");
+            String id = participant.id();
+            if (id == null || !id.matches("[a-z0-9_.-]+:[a-z0-9_./-]+")) {
+                throw new IllegalArgumentException("Invalid invocation participant ID");
+            }
+            claim(extensionId, id, batch);
         }
         dataModules.validateRegistration(extensionId, contribution.dataModules());
         javascriptModules.validateRegistration(extensionId, moduleSources);
@@ -148,7 +211,12 @@ public final class OpenAllayExtensionRegistry {
         contribution.resultViews().forEach(view ->
                 contributionOwners.put(view.id(), descriptor.id()));
         RegisteredExtension registered = new RegisteredExtension(descriptor, contribution);
+        contribution.javascriptInvocationParticipants().forEach(participant ->
+                contributionOwners.put(participant.id(), descriptor.id()));
         active.put(descriptor.id(), registered);
+        javascriptInvocationParticipants = active.values().stream()
+                .flatMap(value -> value.contribution().javascriptInvocationParticipants().stream())
+                .toList();
     }
 
     private Registration rejected(
@@ -206,6 +274,14 @@ public final class OpenAllayExtensionRegistry {
                             .sorted()
                             .toList(),
                     "");
+        }
+    }
+
+    private record RegisteredParticipant(String id, JavascriptInvocationParticipant delegate)
+            implements JavascriptInvocationParticipant {
+        @Override
+        public AutoCloseable open(JavascriptInvocationContext context) throws Exception {
+            return delegate.open(context);
         }
     }
 

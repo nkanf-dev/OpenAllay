@@ -6,13 +6,13 @@ import dev.openallay.extension.catalog.ExtensionCatalogClient;
 import dev.openallay.extension.catalog.ExtensionCatalogCodec;
 import dev.openallay.extension.catalog.ExtensionCatalogEntry;
 import dev.openallay.extension.catalog.ExtensionCatalogManifest;
-import dev.openallay.extension.install.ExtensionInstallResult;
-import dev.openallay.extension.install.ExtensionInstallState;
-import dev.openallay.extension.install.ExtensionPackageManifest;
 import dev.openallay.extension.install.ExtensionPackageInstaller;
 import dev.openallay.model.CancellationSignal;
 import dev.openallay.script.extension.JavascriptDataModuleRegistry;
 import dev.openallay.settings.ClientSettingsService;
+import dev.openallay.settings.requirement.PreparedPackageInstall;
+import dev.openallay.settings.requirement.RefreshingPreparedPackageInstall;
+import dev.openallay.extension.install.PreparedExtensionInstall;
 import dev.openallay.tool.ToolResult;
 import java.net.URI;
 import java.nio.file.Path;
@@ -112,8 +112,8 @@ public final class ExtensionSettingsBackend implements ClientSettingsService.Ext
                 extensions.put(id, community(entry));
             }
         });
-        staged.forEach((id, stagedPackage) -> extensions.computeIfAbsent(
-                id, ignored -> staged(null, stagedPackage)));
+        staged.forEach((id, stagedPackage) -> extensions.put(
+                id, staged(extensions.get(id), stagedPackage)));
 
         ExtensionSettingsView.Catalog catalogView = new ExtensionSettingsView.Catalog(
                 catalogClient != null || hasCatalog(),
@@ -169,55 +169,75 @@ public final class ExtensionSettingsBackend implements ClientSettingsService.Ext
     }
 
     @Override
-    public synchronized ToolResult<ExtensionSettingsView> importLocalPackage(
-            String extensionId, Path source) {
-        ExtensionCatalogEntry entry = entry(extensionId);
-        if (entry == null) {
-            return importLocalPackage(source);
+    public ToolResult<PreparedPackageInstall> prepareLocalPackage(String extensionId, Path source) {
+        ExtensionCatalogEntry entry;
+        synchronized (this) {
+            entry = entry(extensionId);
         }
-        return accept(Optional.of(entry), installer.stageLocal(entry, source));
+        return entry == null ? prepareLocalPackage(source)
+                : refreshing(Optional.of(entry), installer.prepareLocal(entry, source));
     }
 
     @Override
-    public synchronized ToolResult<ExtensionSettingsView> importLocalPackage(Path source) {
-        return accept(Optional.empty(), installer.stageLocal(source));
+    public ToolResult<PreparedPackageInstall> prepareLocalPackage(Path source) {
+        return refreshing(Optional.empty(), installer.prepareLocal(source));
     }
 
     @Override
-    public CompletableFuture<ToolResult<ExtensionSettingsView>> installCommunity(
+    public CompletableFuture<ToolResult<PreparedPackageInstall>> prepareCommunity(
             String extensionId, CancellationSignal cancellation) {
         ExtensionCatalogEntry entry;
         synchronized (this) {
             entry = entry(extensionId);
         }
         if (entry == null) {
-            return CompletableFuture.completedFuture(unavailable());
+            return CompletableFuture.completedFuture(new ToolResult.Failure<>(
+                    "extension_package_not_found", "The selected community Extension is unavailable"));
         }
-        return installer.stageDownload(entry, cancellation).thenApply(result -> {
-            synchronized (this) {
-                return accept(Optional.of(entry), result);
-            }
-        });
+        return installer.prepareDownload(entry, cancellation)
+                .thenApply(result -> refreshing(Optional.of(entry), result));
     }
 
-    private ToolResult<ExtensionSettingsView> accept(
-            Optional<ExtensionCatalogEntry> catalogEntry, ExtensionInstallResult result) {
-        if (result.state() != ExtensionInstallState.RESTART_REQUIRED) {
-            notice = Optional.of(new ExtensionSettingsView.Notice(
-                    result.diagnostic().isBlank()
-                            ? "extension_install_failed"
-                            : result.diagnostic(),
-                    "The Extension package could not be validated and staged"));
-            return new ToolResult.Failure<>(
-                    "extension_install_failed",
-                    "The Extension package could not be validated and staged");
+    private ToolResult<PreparedPackageInstall> refreshing(
+            Optional<ExtensionCatalogEntry> entry, ToolResult<PreparedExtensionInstall> result) {
+        if (result instanceof ToolResult.Failure<PreparedExtensionInstall> failure) {
+            return new ToolResult.Failure<>(failure.code(), failure.message());
         }
-        ExtensionPackageManifest manifest = result.manifest().orElseThrow();
-        staged.put(
-                manifest.descriptor().id(),
-                new StagedPackage(manifest.descriptor(), catalogEntry, result.sha256()));
-        notice = Optional.empty();
-        return new ToolResult.Success<>(currentView());
+        PreparedExtensionInstall candidate = ((ToolResult.Success<PreparedExtensionInstall>) result).value();
+        return new ToolResult.Success<>(new RefreshingPreparedPackageInstall(candidate, this, () -> {
+            var descriptor = candidate.manifest().descriptor();
+            staged.put(descriptor.id(), new StagedPackage(descriptor, entry, candidate.sha256()));
+            notice = Optional.empty();
+        }));
+    }
+
+    @Override
+    public ToolResult<ExtensionSettingsView> importLocalPackage(String extensionId, Path source) {
+        return commitPrepared(prepareLocalPackage(extensionId, source));
+    }
+
+    @Override
+    public ToolResult<ExtensionSettingsView> importLocalPackage(Path source) {
+        return commitPrepared(prepareLocalPackage(source));
+    }
+
+    @Override
+    public CompletableFuture<ToolResult<ExtensionSettingsView>> installCommunity(
+            String extensionId, CancellationSignal cancellation) {
+        return prepareCommunity(extensionId, cancellation).thenApply(this::commitPrepared);
+    }
+
+    private ToolResult<ExtensionSettingsView> commitPrepared(ToolResult<PreparedPackageInstall> result) {
+        if (result instanceof ToolResult.Failure<PreparedPackageInstall> failure) {
+            return new ToolResult.Failure<>(failure.code(), failure.message());
+        }
+        try (PreparedPackageInstall candidate = ((ToolResult.Success<PreparedPackageInstall>) result).value()) {
+            ToolResult<Boolean> committed = candidate.commit();
+            if (committed instanceof ToolResult.Failure<Boolean> failure) {
+                return new ToolResult.Failure<>(failure.code(), failure.message());
+            }
+            return new ToolResult.Success<>(currentView());
+        }
     }
 
     private Map<String, ExtensionCatalogEntry> latestEntries() {
@@ -268,7 +288,8 @@ public final class ExtensionSettingsBackend implements ClientSettingsService.Ext
                 installed.source(),
                 installed.contributions(),
                 installed.diagnostic(),
-                packageInfo(available, update, update));
+                packageInfo(available, update, update),
+                installed.requirements());
     }
 
     private ExtensionSettingsView.Extension staged(
@@ -295,7 +316,8 @@ public final class ExtensionSettingsBackend implements ClientSettingsService.Ext
                 staged.catalogEntry()
                         .map(entry -> packageInfo(entry, false, false))
                         .orElseGet(() -> ExtensionSettingsView.PackageInfo.local(
-                                descriptor.version(), staged.sha256())));
+                                descriptor.version(), staged.sha256())),
+                descriptor.requirements());
     }
 
     private ExtensionSettingsView.Extension extension(
@@ -321,7 +343,8 @@ public final class ExtensionSettingsBackend implements ClientSettingsService.Ext
                 entry.source(),
                 contributions,
                 diagnostic,
-                packageInfo(entry, updateAvailable, installable));
+                packageInfo(entry, updateAvailable, installable),
+                entry.requirements());
     }
 
     private ExtensionSettingsView.PackageInfo packageInfo(
@@ -378,11 +401,6 @@ public final class ExtensionSettingsBackend implements ClientSettingsService.Ext
             }
         }
         return 0;
-    }
-
-    private static ToolResult<ExtensionSettingsView> unavailable() {
-        return new ToolResult.Failure<>(
-                "extension_install_failed", "The Extension package is unavailable");
     }
 
     private record StagedPackage(

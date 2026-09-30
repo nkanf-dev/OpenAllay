@@ -2,6 +2,8 @@ package dev.openallay.extension.install;
 
 import com.google.gson.JsonParser;
 import dev.openallay.extension.OpenAllayExtensionEnvironment;
+import dev.openallay.extension.OpenAllayExtensionDescriptor;
+import dev.openallay.tool.ToolResult;
 import dev.openallay.extension.catalog.ExtensionCatalogArtifact;
 import dev.openallay.extension.catalog.ExtensionCatalogEntry;
 import dev.openallay.model.CancellationSignal;
@@ -53,121 +55,210 @@ public final class ExtensionPackageInstaller {
         this.transport = Objects.requireNonNull(transport, "transport");
     }
 
-    public synchronized ExtensionInstallResult stageLocal(
-            ExtensionCatalogEntry entry, Path source) {
-        Objects.requireNonNull(entry, "entry");
-        Objects.requireNonNull(source, "source");
-        Path normalized = source.toAbsolutePath().normalize();
-        try {
-            if (Files.isSymbolicLink(normalized)
-                    || !Files.isRegularFile(normalized, LinkOption.NOFOLLOW_LINKS)) {
-                return failed(entry.id(), "extension_install_failed");
-            }
-            return stage(entry, Files.readAllBytes(normalized));
-        } catch (IOException | RuntimeException failure) {
-            return failed(entry.id(), "extension_install_failed");
-        }
+    public ExtensionInstallResult stageLocal(ExtensionCatalogEntry entry, Path source) {
+        return commitPrepared(entry.id(), prepareLocal(entry, source));
     }
 
     /** Stages a local package using only its embedded Extension manifest. */
-    public synchronized ExtensionInstallResult stageLocal(Path source) {
-        Objects.requireNonNull(source, "source");
-        Path normalized = source.toAbsolutePath().normalize();
-        try {
-            if (Files.isSymbolicLink(normalized)
-                    || !Files.isRegularFile(normalized, LinkOption.NOFOLLOW_LINKS)) {
-                return failed("", "extension_install_failed");
-            }
-            return stageLocal(Files.readAllBytes(normalized));
-        } catch (IOException | RuntimeException failure) {
-            return failed("", "extension_install_failed");
-        }
+    public ExtensionInstallResult stageLocal(Path source) {
+        return commitPrepared("", prepareLocal(source));
     }
 
     public CompletableFuture<ExtensionInstallResult> stageDownload(
             ExtensionCatalogEntry entry, CancellationSignal cancellation) {
+        return prepareDownload(entry, cancellation)
+                .thenApply(result -> commitPrepared(entry.id(), result));
+    }
+
+    private ExtensionInstallResult commitPrepared(
+            String id, ToolResult<PreparedExtensionInstall> result) {
+        if (result instanceof ToolResult.Failure<PreparedExtensionInstall> failure) {
+            return failed(id, failure.code());
+        }
+        try (PreparedExtensionInstall prepared =
+                ((ToolResult.Success<PreparedExtensionInstall>) result).value()) {
+            return prepared.commitInstall();
+        }
+    }
+
+    public ToolResult<PreparedExtensionInstall> prepareLocal(
+            ExtensionCatalogEntry entry, Path source) {
+        Objects.requireNonNull(entry, "entry");
+        return prepareLocal(Optional.of(entry), source);
+    }
+
+    public ToolResult<PreparedExtensionInstall> prepareLocal(Path source) {
+        return prepareLocal(Optional.empty(), source);
+    }
+
+    private ToolResult<PreparedExtensionInstall> prepareLocal(
+            Optional<ExtensionCatalogEntry> entry, Path source) {
+        Objects.requireNonNull(source, "source");
+        Path normalized = source.toAbsolutePath().normalize();
+        try {
+            if (Files.isSymbolicLink(normalized)
+                    || !Files.isRegularFile(normalized, LinkOption.NOFOLLOW_LINKS)) {
+                return preparationFailure("extension_install_failed");
+            }
+            return prepare(entry, Files.readAllBytes(normalized), new CancellationSignal());
+        } catch (IOException | RuntimeException failure) {
+            return preparationFailure("extension_install_failed");
+        }
+    }
+
+    /** Selects and verifies the loader artifact before returning an unpublished candidate. */
+    public CompletableFuture<ToolResult<PreparedExtensionInstall>> prepareDownload(
+            ExtensionCatalogEntry entry, CancellationSignal cancellation) {
         Objects.requireNonNull(entry, "entry");
         Objects.requireNonNull(cancellation, "cancellation");
-        Optional<ExtensionCatalogArtifact> selected =
-                entry.artifactFor(environment.loader());
+        Optional<ExtensionCatalogArtifact> selected = entry.artifactFor(environment.loader());
         if (selected.isEmpty()) {
-            return CompletableFuture.completedFuture(
-                    failed(entry.id(), "incompatible_loader"));
+            return CompletableFuture.completedFuture(preparationFailure("incompatible_loader"));
         }
-        String incompatibility =
-                environment.incompatibility(entry.descriptorFor(environment.loader()));
+        String incompatibility = environment.incompatibility(entry.descriptorFor(environment.loader()));
         if (!incompatibility.isEmpty()) {
-            return CompletableFuture.completedFuture(failed(entry.id(), incompatibility));
+            return CompletableFuture.completedFuture(preparationFailure(incompatibility));
         }
-        ExtensionCatalogArtifact artifact = selected.orElseThrow();
-        return transport.execute(
-                        HttpExchangeRequest.newBuilder(artifact.artifact())
-                                .timeout(java.time.Duration.ofSeconds(60))
-                                .header("accept", "application/java-archive, application/octet-stream")
-                                .get()
-                                .build(),
-                        cancellation,
-                        (status, headers, body) ->
-                                new Download(status, body.readAllBytes()))
-                .handle((download, failure) -> {
-                    if (failure != null || download == null || download.status() != 200) {
-                        return failed(entry.id(), "extension_install_failed");
-                    }
-                    synchronized (this) {
-                        return stage(entry, download.bytes());
-                    }
-                });
+        if (cancellation.isCancelled()) {
+            return CompletableFuture.completedFuture(preparationFailure("extension_install_cancelled"));
+        }
+        CompletableFuture<Download> response;
+        try {
+            response = transport.execute(
+                    HttpExchangeRequest.newBuilder(selected.orElseThrow().artifact())
+                            .timeout(java.time.Duration.ofSeconds(60))
+                            .header("accept", "application/java-archive, application/octet-stream")
+                            .get().build(),
+                    cancellation,
+                    (status, headers, body) -> new Download(status, body.readAllBytes()));
+        } catch (RuntimeException failure) {
+            return CompletableFuture.completedFuture(preparationFailure("extension_install_failed"));
+        }
+        return response.handle((download, failure) -> {
+            if (cancellation.isCancelled()) {
+                return preparationFailure("extension_install_cancelled");
+            }
+            if (failure != null || download == null || download.status() != 200) {
+                return preparationFailure("extension_install_failed");
+            }
+            ToolResult<PreparedExtensionInstall> result = prepare(Optional.of(entry), download.bytes(), cancellation);
+            if (result instanceof ToolResult.Success<PreparedExtensionInstall> success) {
+                cancellation.onCancel(success.value()::close);
+                if (cancellation.isCancelled()) {
+                    success.value().close();
+                    return preparationFailure("extension_install_cancelled");
+                }
+            }
+            return result;
+        });
     }
 
-    private ExtensionInstallResult stage(ExtensionCatalogEntry entry, byte[] bytes) {
-        Optional<ExtensionCatalogArtifact> selected =
-                entry.artifactFor(environment.loader());
-        if (selected.isEmpty()) {
-            return failed(entry.id(), "incompatible_loader");
-        }
-        String incompatibility =
-                environment.incompatibility(entry.descriptorFor(environment.loader()));
-        if (!incompatibility.isEmpty()) {
-            return failed(entry.id(), incompatibility);
-        }
-        ExtensionCatalogArtifact artifact = selected.orElseThrow();
-        if (!sha256(bytes).equals(artifact.sha256())) {
-            return failed(entry.id(), "checksum_mismatch");
+    private ToolResult<PreparedExtensionInstall> prepare(
+            Optional<ExtensionCatalogEntry> catalog, byte[] bytes, CancellationSignal cancellation) {
+        String checksum = sha256(bytes);
+        ExtensionCatalogArtifact artifact = null;
+        if (catalog.isPresent()) {
+            ExtensionCatalogEntry entry = catalog.orElseThrow();
+            artifact = entry.artifactFor(environment.loader()).orElse(null);
+            if (artifact == null) {
+                return preparationFailure("incompatible_loader");
+            }
+            String incompatibility = environment.incompatibility(entry.descriptorFor(environment.loader()));
+            if (!incompatibility.isEmpty()) {
+                return preparationFailure(incompatibility);
+            }
+            if (!checksum.equals(artifact.sha256())) {
+                return preparationFailure("checksum_mismatch");
+            }
         }
         InspectedPackage inspected;
         try {
             inspected = inspect(bytes);
         } catch (RuntimeException failure) {
-            return failed(entry.id(), "extension_manifest_invalid");
-        }
-        if (!inspected.manifest()
-                        .descriptor()
-                        .equals(entry.descriptorFor(environment.loader()))
-                || !inspected.manifest().modIds().equals(artifact.modIds())) {
-            return failed(entry.id(), "extension_manifest_mismatch");
-        }
-        if (!inspected.declaredModIds().containsAll(inspected.manifest().modIds())) {
-            return failed(entry.id(), "mod_metadata_mismatch");
-        }
-        return publish(inspected.manifest(), bytes, artifact.sha256());
-    }
-
-    private ExtensionInstallResult stageLocal(byte[] bytes) {
-        InspectedPackage inspected;
-        try {
-            inspected = inspect(bytes);
-        } catch (RuntimeException failure) {
-            return failed("", "extension_manifest_invalid");
+            return preparationFailure("extension_manifest_invalid");
         }
         ExtensionPackageManifest manifest = inspected.manifest();
+        if (catalog.isPresent()
+                && (!sameIdentity(manifest.descriptor(), catalog.orElseThrow().descriptorFor(environment.loader()))
+                        || !manifest.modIds().equals(artifact.modIds()))) {
+            return preparationFailure("extension_manifest_mismatch");
+        }
         String incompatibility = environment.incompatibility(manifest.descriptor());
         if (!incompatibility.isEmpty()) {
-            return failed(manifest.descriptor().id(), incompatibility);
+            return preparationFailure(incompatibility);
         }
         if (!inspected.declaredModIds().containsAll(manifest.modIds())) {
-            return failed(manifest.descriptor().id(), "mod_metadata_mismatch");
+            return preparationFailure("mod_metadata_mismatch");
         }
-        return publish(manifest, bytes, sha256(bytes));
+        Path temporary = null;
+        try {
+            Files.createDirectories(stagingRoot);
+            // No .jar suffix: this file is not a loader-visible installed artifact.
+            temporary = Files.createTempFile(stagingRoot, ".extension-review-", ".candidate");
+            Files.write(temporary, bytes);
+            Path captured = temporary;
+            boolean differs = catalog.isPresent()
+                    && !catalog.orElseThrow().requirements().equals(manifest.descriptor().requirements());
+            PreparedExtensionInstall prepared = new PreparedExtensionInstall(manifest, checksum, differs,
+                    () -> commit(manifest, captured, checksum, cancellation), () -> discard(captured));
+            temporary = null;
+            return new ToolResult.Success<>(prepared);
+        } catch (IOException | RuntimeException failure) {
+            return preparationFailure("extension_install_failed");
+        } finally {
+            discard(temporary);
+        }
+    }
+
+    private synchronized ExtensionInstallResult commit(
+            ExtensionPackageManifest manifest, Path captured, String checksum, CancellationSignal cancellation) {
+        try {
+            if (cancellation.isCancelled()) {
+                return failed(manifest.descriptor().id(), "extension_install_cancelled");
+            }
+            if (Files.isSymbolicLink(captured)
+                    || !Files.isRegularFile(captured, LinkOption.NOFOLLOW_LINKS)) {
+                return failed(manifest.descriptor().id(), "prepared_install_changed");
+            }
+            byte[] bytes = Files.readAllBytes(captured);
+            if (!sha256(bytes).equals(checksum)) {
+                return failed(manifest.descriptor().id(), "prepared_install_changed");
+            }
+            if (cancellation.isCancelled()) {
+                return failed(manifest.descriptor().id(), "extension_install_cancelled");
+            }
+            return publish(manifest, bytes, checksum);
+        } catch (IOException | RuntimeException failure) {
+            return failed(manifest.descriptor().id(), "extension_install_failed");
+        }
+    }
+
+    /** Advisory requirements never become a new artifact identity check. */
+    private static boolean sameIdentity(
+            OpenAllayExtensionDescriptor left, OpenAllayExtensionDescriptor right) {
+        return left.id().equals(right.id())
+                && left.name().equals(right.name())
+                && left.version().equals(right.version())
+                && left.provider().equals(right.provider())
+                && left.summary().equals(right.summary())
+                && left.loaders().equals(right.loaders())
+                && left.minecraftVersionRange().equals(right.minecraftVersionRange())
+                && left.openAllayApiVersionRange().equals(right.openAllayApiVersionRange())
+                && left.source().equals(right.source());
+    }
+
+    private static ToolResult.Failure<PreparedExtensionInstall> preparationFailure(String diagnostic) {
+        return new ToolResult.Failure<>(diagnostic, "The Extension package could not be validated and staged");
+    }
+
+    private static void discard(Path captured) {
+        if (captured != null) {
+            try {
+                Files.deleteIfExists(captured);
+            } catch (IOException ignored) {
+                // An unpublished candidate remains hidden if best-effort cleanup fails.
+            }
+        }
     }
 
     private ExtensionInstallResult publish(

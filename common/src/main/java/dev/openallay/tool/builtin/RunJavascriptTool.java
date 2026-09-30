@@ -9,6 +9,8 @@ import dev.openallay.context.DataCompleteness;
 import dev.openallay.context.EvidenceBearing;
 import dev.openallay.context.EvidenceMetadata;
 import dev.openallay.context.ToolInvocationContext;
+import dev.openallay.extension.OpenAllayExtensionRegistry;
+import dev.openallay.extension.JavascriptInvocationScope;
 import dev.openallay.model.CancellationSignal;
 import dev.openallay.model.ModelClientException;
 import dev.openallay.script.JavascriptExecution;
@@ -116,6 +118,8 @@ public final class RunJavascriptTool
     private final JavascriptResultPresenter presenter;
     private final CommandCapabilityRuntime commands;
     private final WorldObservationRuntime worldObservations;
+    private final OpenAllayExtensionRegistry extensions;
+    private final Object requestResources = new Object();
     private final ConcurrentMap<String, MinecraftAgentHostGraph> graphs =
             new ConcurrentHashMap<>();
 
@@ -155,6 +159,17 @@ public final class RunJavascriptTool
             JavascriptResultPresenter presenter,
             CommandCapabilityRuntime commands,
             WorldObservationRuntime worldObservations) {
+        this(runtime, graphFactory, workspaces, presenter, commands, worldObservations, null);
+    }
+
+    public RunJavascriptTool(
+            RhinoJavascriptRuntime runtime,
+            Function<ToolInvocationContext, MinecraftAgentHostGraph> graphFactory,
+            AgentResultWorkspaceRegistry workspaces,
+            JavascriptResultPresenter presenter,
+            CommandCapabilityRuntime commands,
+            WorldObservationRuntime worldObservations,
+            OpenAllayExtensionRegistry extensions) {
         this.runtime = runtime;
         this.graphFactory = graphFactory;
         this.workspaces = workspaces;
@@ -162,6 +177,7 @@ public final class RunJavascriptTool
         this.commands = java.util.Objects.requireNonNull(commands, "commands");
         this.worldObservations =
                 java.util.Objects.requireNonNull(worldObservations, "worldObservations");
+        this.extensions = extensions;
     }
 
     @Override
@@ -178,6 +194,11 @@ public final class RunJavascriptTool
         throw new UnsupportedOperationException("run_javascript is asynchronous");
     }
 
+    /**
+     * The caller must reuse the request's cancellation lifetime for queued invocations and
+     * cancel it before closing the request. A terminated request must not be resurrected with
+     * a fresh signal. Admission happens before launching the worker, so close can revoke it.
+     */
     @Override
     public CompletableFuture<ToolResult<Output>> invokeAsync(
             ToolInvocationContext context, Input input, CancellationSignal cancellation) {
@@ -185,11 +206,28 @@ public final class RunJavascriptTool
             return CompletableFuture.completedFuture(
                     new ToolResult.Failure<>("invalid_tool_arguments", "source must not be blank"));
         }
+        JavascriptInvocationScope scope;
+        try {
+            cancellation.throwIfCancelled();
+            scope = extensions == null ? null
+                    : extensions.prepareJavascriptInvocation(context, cancellation);
+        } catch (RuntimeException failure) {
+            return CompletableFuture.failedFuture(failure);
+        }
         CompletableFuture<ToolResult<Output>> future = new CompletableFuture<>();
-        Thread worker = Thread.ofVirtual()
-                .name("openallay-javascript-" + context.correlationId())
-                .start(() -> execute(context, input, cancellation, future));
-        cancellation.onCancel(worker::interrupt);
+        try {
+            Thread worker = Thread.ofVirtual()
+                    .name("openallay-javascript-" + context.correlationId())
+                    .start(() -> execute(context, input, cancellation, scope, future));
+            java.lang.ref.WeakReference<Thread> reference = new java.lang.ref.WeakReference<>(worker);
+            cancellation.onCancel(() -> {
+                Thread current = reference.get();
+                if (current != null) current.interrupt();
+            });
+        } catch (RuntimeException failure) {
+            if (scope != null) scope.close();
+            future.completeExceptionally(failure);
+        }
         return future;
     }
 
@@ -197,87 +235,14 @@ public final class RunJavascriptTool
             ToolInvocationContext context,
             Input input,
             CancellationSignal cancellation,
+            JavascriptInvocationScope scope,
             CompletableFuture<ToolResult<Output>> future) {
         try {
-            cancellation.throwIfCancelled();
-            MinecraftAgentHostGraph graph = graphs.computeIfAbsent(
-                    context.correlationId(), ignored -> graphFactory.apply(context));
-            boolean commandsRequested = input.roots().contains(COMMANDS_BINDING);
-            boolean worldRequested = input.roots().contains(WORLD_BINDING);
-            List<String> minecraftRoots = input.roots().stream()
-                    .filter(root -> !COMMANDS_BINDING.equals(root)
-                            && !WORLD_BINDING.equals(root))
-                    .toList();
-            var selectedRoots = graph.select(minecraftRoots, input.roots().isEmpty());
-            var commandBridge = commands.bridge(
-                    context.correlationId(), cancellation,
-                    (kind, capturedAt) -> new EvidenceMetadata(
-                            DataAuthority.CLIENT_VISIBLE,
-                            DataCompleteness.PARTIAL,
-                            capturedAt,
-                            "catalog".equals(kind)
-                                    ? "minecraft:command_catalog"
-                                    : "minecraft:command_feedback",
-                            "catalog".equals(kind)
-                                    ? "minecraft:active_command_tree"
-                                    : "minecraft:observed_command_feedback",
-                            context.player().map(value -> value.evidence().gameVersion()).orElse("unknown"),
-                            context.player().map(value -> value.evidence().loader()).orElse("unknown"),
-                            Map.of("openallay:scope", kind)),
-                    selectedRoots::recordEvidence);
-            var worldBridge = worldObservations.bridge(
-                    context.correlationId(), cancellation, selectedRoots::recordEvidence);
-            if (commandsRequested && commandBridge.isEmpty()) {
-                throw new JavascriptExecutionException(
-                        "javascript_root_unavailable",
-                        "Requested JavaScript binding is unavailable: commands");
+            ToolResult<Output> result;
+            try (scope) {
+                result = executeActive(context, input, cancellation, scope);
             }
-            if (worldRequested && worldBridge.isEmpty()) {
-                throw new JavascriptExecutionException(
-                        "javascript_root_unavailable",
-                        "Requested JavaScript binding is unavailable: world");
-            }
-            AgentResultWorkspace workspace = workspaces.open(context.correlationId());
-            JavascriptExecution execution = runtime.execute(
-                    input.source(),
-                    selectedRoots,
-                    workspace.select(input.handles(), context.unrestrictedJavascript()),
-                    workspace.selectShapes(input.handles()),
-                    workspace.selectEvidence(input.handles()),
-                    selectedRoots::recordEvidence,
-                    selectedRoots::recordSchemaAccess,
-                    cancellation,
-                    commandBridge.orElse(null),
-                    worldBridge.orElse(null),
-                    context.unrestrictedJavascript());
-            JsonElement canonical = execution.value();
-            List<EvidenceMetadata> evidence = selectedRoots.evidence();
-            if (evidence.isEmpty()) {
-                future.complete(new ToolResult.Failure<>(
-                        "context_evidence_unavailable",
-                        "The script did not access evidence-bearing Minecraft data"));
-                return;
-            }
-            String handle = workspace.store(
-                    canonical, execution.shape(), context.unrestrictedJavascript(), evidence);
-            var presentation = context.unrestrictedJavascript()
-                    ? presenter.presentUnrestricted(handle, canonical, execution.shape(), evidenceSummary(evidence))
-                    : presenter.present(handle, canonical, execution.shape(), evidenceSummary(evidence));
-            String modelText = presentation.modelText();
-            future.complete(new ToolResult.Success<>(new Output(
-                    handle,
-                    presentation.type(),
-                    presentation.cardinality(),
-                    presentation.fields(),
-                    presentation.preview(),
-                    modelText,
-                    presentation.viewKind(),
-                    presentation.complete(),
-                    presentation.omittedRows(),
-                    presentation.omittedFields(),
-                    execution.elapsed().toMillis(),
-                    execution.modules(),
-                    evidence)));
+            future.complete(result);
         } catch (ModelClientException cancelled) {
             future.completeExceptionally(cancelled);
         } catch (JavascriptExecutionException failure) {
@@ -291,13 +256,119 @@ public final class RunJavascriptTool
                     message == null || message.isBlank()
                             ? "JavaScript execution failed"
                             : message));
+        } catch (Throwable failure) {
+            // This worker owns a manually completed future. Even a native/host Error must
+            // settle it after the try-with-resources cleanup, without exposing foreign text.
+            future.complete(new ToolResult.Failure<>(
+                    "javascript_failure", "JavaScript execution failed"));
         }
+    }
+
+    private ToolResult<Output> executeActive(
+            ToolInvocationContext context,
+            Input input,
+            CancellationSignal requestCancellation,
+            JavascriptInvocationScope scope) {
+        requestCancellation.throwIfCancelled();
+        if (scope != null) scope.requireActive();
+        CancellationSignal cancellation = scope == null ? requestCancellation : scope.cancellation();
+        MinecraftAgentHostGraph graph;
+        AgentResultWorkspace workspace;
+        synchronized (requestResources) {
+            requestCancellation.throwIfCancelled();
+            if (scope != null) scope.requireActive();
+            graph = graphs.computeIfAbsent(
+                    context.correlationId(), ignored -> graphFactory.apply(context));
+            workspace = workspaces.open(context.correlationId());
+        }
+        boolean commandsRequested = input.roots().contains(COMMANDS_BINDING);
+        boolean worldRequested = input.roots().contains(WORLD_BINDING);
+        List<String> minecraftRoots = input.roots().stream()
+                .filter(root -> !COMMANDS_BINDING.equals(root)
+                        && !WORLD_BINDING.equals(root))
+                .toList();
+        var selectedRoots = graph.select(minecraftRoots, input.roots().isEmpty());
+        var commandBridge = commands.bridge(
+                context.correlationId(), cancellation,
+                (kind, capturedAt) -> new EvidenceMetadata(
+                        DataAuthority.CLIENT_VISIBLE,
+                        DataCompleteness.PARTIAL,
+                        capturedAt,
+                        "catalog".equals(kind)
+                                ? "minecraft:command_catalog"
+                                : "minecraft:command_feedback",
+                        "catalog".equals(kind)
+                                ? "minecraft:active_command_tree"
+                                : "minecraft:observed_command_feedback",
+                        context.player().map(value -> value.evidence().gameVersion()).orElse("unknown"),
+                        context.player().map(value -> value.evidence().loader()).orElse("unknown"),
+                        Map.of("openallay:scope", kind)),
+                selectedRoots::recordEvidence);
+        var worldBridge = worldObservations.bridge(
+                context.correlationId(), cancellation, selectedRoots::recordEvidence);
+        if (commandsRequested && commandBridge.isEmpty()) {
+            throw new JavascriptExecutionException(
+                    "javascript_root_unavailable",
+                    "Requested JavaScript binding is unavailable: commands");
+        }
+        if (worldRequested && worldBridge.isEmpty()) {
+            throw new JavascriptExecutionException(
+                    "javascript_root_unavailable",
+                    "Requested JavaScript binding is unavailable: world");
+        }
+        if (scope != null) scope.open(selectedRoots::recordEvidence);
+        JavascriptExecution execution = runtime.execute(
+                input.source(),
+                selectedRoots,
+                workspace.select(input.handles(), context.unrestrictedJavascript()),
+                workspace.selectShapes(input.handles()),
+                workspace.selectEvidence(input.handles()),
+                selectedRoots::recordEvidence,
+                selectedRoots::recordSchemaAccess,
+                cancellation,
+                commandBridge.orElse(null),
+                worldBridge.orElse(null),
+                context.unrestrictedJavascript());
+        if (scope != null) {
+            scope.complete();
+            scope.close();
+        }
+        JsonElement canonical = execution.value();
+        List<EvidenceMetadata> evidence = selectedRoots.evidence();
+        if (evidence.isEmpty()) {
+            return new ToolResult.Failure<>(
+                    "context_evidence_unavailable",
+                    "The script did not access evidence-bearing Minecraft data");
+        }
+        String handle = workspace.store(
+                canonical, execution.shape(), context.unrestrictedJavascript(), evidence);
+        var presentation = context.unrestrictedJavascript()
+                ? presenter.presentUnrestricted(handle, canonical, execution.shape(), evidenceSummary(evidence))
+                : presenter.present(handle, canonical, execution.shape(), evidenceSummary(evidence));
+        String modelText = presentation.modelText();
+        return new ToolResult.Success<>(new Output(
+                handle,
+                presentation.type(),
+                presentation.cardinality(),
+                presentation.fields(),
+                presentation.preview(),
+                modelText,
+                presentation.viewKind(),
+                presentation.complete(),
+                presentation.omittedRows(),
+                presentation.omittedFields(),
+                execution.elapsed().toMillis(),
+                execution.modules(),
+                evidence));
     }
 
     @Override
     public void closeRequestScope(String correlationId) {
-        graphs.remove(correlationId);
-        workspaces.close(correlationId);
+        if (extensions != null) extensions.closeJavascriptRequest(correlationId);
+        synchronized (requestResources) {
+            graphs.remove(correlationId);
+            workspaces.close(correlationId);
+        }
         commands.closeRequest(correlationId);
         worldObservations.closeRequest(correlationId);
         // Request authority is immutable in ToolInvocationContext and scoped to this request.

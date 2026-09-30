@@ -249,9 +249,7 @@ public record ClientSettingsRuntime(
             product.skills().setRuntimeDisabledSkills(initialCommands.enabled()
                     ? Set.of()
                     : Set.of("run-game-commands"));
-            Set<String> installedSkillMods = product.platform().isModLoaded("ftbquests")
-                    ? Set.of("ftbquests")
-                    : Set.of();
+            Set<String> installedSkillMods = installedSkillMods(product);
             SkillSettingsBackend skills = new SkillSettingsBackend(
                     configDirectory.resolve("skills"), product.skills(), installedSkillMods);
             ExtensionSettingsBackend extensions = new ExtensionSettingsBackend(
@@ -442,15 +440,14 @@ public record ClientSettingsRuntime(
         product.skills().setRuntimeDisabledSkills(candidate.enabled()
                 ? Set.of()
                 : Set.of("run-game-commands"));
-        ToolResult<CapabilitySettingsView> published =
-                capabilities.publishCapabilities(capabilities.currentView().policy());
+        ToolResult<CapabilitySettingsView> published = capabilities.refreshCapabilities();
         if (published instanceof ToolResult.Failure<CapabilitySettingsView> failure) {
             product.commands().replace(prior);
             product.skills().setRuntimeDisabledSkills(prior.enabled()
                     ? Set.of()
                     : Set.of("run-game-commands"));
             store.save(prior);
-            capabilities.publishCapabilities(capabilities.currentView().policy());
+            capabilities.refreshCapabilities();
             return new ToolResult.Failure<>(failure.code(), failure.message());
         }
         return new ToolResult.Success<>(candidate);
@@ -496,6 +493,22 @@ public record ClientSettingsRuntime(
                 new GuideFailure("model_disabled", "This model profile is disabled"));
         return new ModelProfilesConfigLoader.Load(
                 config, List.of(resolved));
+    }
+
+    private static Set<String> installedSkillMods(OpenAllayRuntime product) {
+        java.util.TreeSet<String> installed = new java.util.TreeSet<>();
+        try {
+            product.platform().installedMods().stream()
+                    .map(dev.openallay.platform.InstalledModMetadata::id).forEach(installed::add);
+        } catch (UnsupportedOperationException unavailable) {
+            // Minimal/headless platform implementations can still answer known dependency IDs.
+        }
+        if (product.platform().isModLoaded("ftbquests")) installed.add("ftbquests");
+        SkillParser parser = new SkillParser();
+        product.skills().externalSources().stream()
+                .flatMap(source -> parser.parse(source).metadata().requiredMods().stream())
+                .filter(product.platform()::isModLoaded).forEach(installed::add);
+        return Set.copyOf(installed);
     }
 
     private static Path managedModsRoot(Path configDirectory) {

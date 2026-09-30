@@ -41,6 +41,8 @@ accepted and contains explicit approval evidence.
 | SKMB-2026-07-25-031 | accepted | strict schema-2 client profiles and removal of unused compatibility APIs | B, E, F | decisions/2026-07-25-031-remove-unused-client-compatibility.md | pending |
 | SKMB-2026-07-29-032 | accepted | preserve released guide-history schemas and fail closed on old layouts | B, F, G | decisions/2026-07-29-032-preserve-released-history-schemas.md | pending |
 | SKMB-2026-09-29-033 | accepted | client-local unrestricted JavaScript/JVM interop opt-in | A, B, C, D, E, F, G | decisions/2026-09-29-033-unrestricted-javascript-mode.md | pending |
+| SKMB-2026-09-30-034 | accepted | independent full online construction Extension and generic invocation lifecycle | A, B, C, D, E, F, G | decisions/2026-09-30-034-extension-online-construction.md | pending |
+| SKMB-2026-09-30-035 | accepted | advisory capability/dependency metadata and player requirement choices | A, B, C, D, E, F, G | decisions/2026-09-30-035-advisory-extension-skill-requirements.md | pending |
 
 SKMB-2026-07-18-006 is implemented by `a0eaeff`, `19ab90f`, and `c6ca6bc`.
 Its deterministic clean-build and packaged-driver evidence is recorded in the
@@ -179,6 +181,10 @@ available to the JVM. See `decisions/2026-09-29-033-unrestricted-javascript-mode
 | extension_catalog_v2_ready | One strict schema-2 Extension catalog generation is available | ExtensionCatalogClient | One logical version contains independently verified loader artifacts | SKMB-2026-07-25-030 |
 | extension_artifact_selected | One catalog entry resolved the exact current-loader artifact | ExtensionPackageInstaller | URL, checksum, and mod IDs belong only to the selected loader | SKMB-2026-07-25-030 |
 
+| extension_invocation_active | A trusted Extension participant scope exists for one script call | Generic invocation registry and Extension-owned scope | Closing the call/request revokes further callbacks and evidence | SKMB-2026-09-30-034 |
+| online_edit_running | An authorized online edit has durable intent and may have partial applied changes | Independently packaged Builder Extension | Cancellation does not undo applied writes | SKMB-2026-09-30-034 |
+| requirements_review_ready | A checked package or installed Skill has advisory requirements ready for player review | Settings service | No install or permission mutation occurred merely by previewing | SKMB-2026-09-30-035 |
+
 ## Transition Decisions
 
 | id | from_state | event | to_state | actions | source |
@@ -268,6 +274,10 @@ available to the JVM. See `decisions/2026-09-29-033-unrestricted-javascript-mode
 | T84 | extension_artifact_selected | selected JAR checksum, embedded identity, compatibility, mod IDs, and loader metadata validate | extension_restart_required | Atomically stage the selected loader JAR under its stable managed name | SKMB-2026-07-25-030 |
 | T85 | skill_published with unknown or older package version | player installs the compatible catalog package | package_staging then skill_published with catalog version | Validate and atomically publish the complete versioned Markdown package; retain the prior package/version on failure | SKMB-2026-07-25-029 |
 | T86 | client model settings load | schema-2 `models.json` is absent, schema 1 is present, or a legacy `model.json` is present | guide_unconfigured or unchanged valid runtime | Do not import, rewrite, or delete older configuration; publish an actionable redacted notice and await explicit schema-2 save | SKMB-2026-07-25-031 |
+
+| T87 | extension_invocation_active | execution finishes, fails, cancels or request closes | closed | Revoke active context, close participant scopes in reverse order, preserve partial external effects | SKMB-2026-09-30-034 |
+| T88 | requirements_review_ready | player selects Continue anyway | publishing or unchanged enabled Skill | Proceed only with the selected package/use; grant no requirements | SKMB-2026-09-30-035 |
+| T89 | requirements_review_ready | player explicitly enables available requirements | applying then re-evaluated review | Use existing setting writes; retain failures and do not install dependencies implicitly | SKMB-2026-09-30-035 |
 
 ## Invariants
 
@@ -378,6 +388,10 @@ available to the JVM. See `decisions/2026-09-29-033-unrestricted-javascript-mode
 | I104 | Community Skill update state compares catalog version with durable `metadata.openallay/version`; missing metadata is unknown and offers a tracked update rather than proving the package current | SKMB-2026-07-25-029 |
 | I105 | Client model configuration supports only `models.json` schema 2; old or invalid files are preserved and never auto-imported, while server `server-model.json` remains independent | SKMB-2026-07-25-031 |
 
+| I106 | Construction algorithms, native domain APIs, persistence and Skill names belong to the independent Extension repository; core has only generic invocation/distribution contracts | SKMB-2026-09-30-034 |
+| I107 | Trusted Extension evidence is execution-local and is recorded only for actual operations; an active scope or module declaration is not factual evidence | SKMB-2026-09-30-034 |
+| I108 | Advisory requirements neither block install/use nor grant authority; Continue anyway does not mutate authorizations or frozen requests | SKMB-2026-09-30-035 |
+
 ## Fail Semantics
 
 | id | context | behavior | source |
@@ -446,6 +460,10 @@ available to the JVM. See `decisions/2026-09-29-033-unrestricted-javascript-mode
 | F62 | A terminal real-client request has no complete local trace or trace persistence fails | Fail E2E acceptance and publish no unredacted or partial trace artifact | SKMB-2026-07-24-027 |
 | F63 | An Extension catalog uses schema 1/unknown fields/duplicate loader artifacts, or an entry lacks the current-loader artifact | Reject the candidate generation as `catalog_refresh_failed` while retaining the last valid schema-2 cache, or fail install as `incompatible_loader` before HTTP and stage nothing | SKMB-2026-07-25-030 |
 | F64 | Client model profiles use schema 1 or legacy `model.json`, or current `models.json` is malformed | Return `invalid_model_config` or `model_not_configured`, preserve the file, and do not import, delete, or rewrite it | SKMB-2026-07-25-031 |
+
+| F65 | Extension invocation setup fails or its context is revoked | Close opened scopes and return a structured failure; no late operations/evidence may publish | SKMB-2026-09-30-034 |
+| F66 | Online construction is cancelled, loses its bound world, or fails after writes | Stop further work, preserve the partial journal and report incomplete outcome; do not undo automatically | SKMB-2026-09-30-034 |
+| F67 | Requirements are missing, disabled or unknown | Show advisory status and enable/cancel/Continue anyway choices; actual invocation still fails if its real capability is unavailable | SKMB-2026-09-30-035 |
 
 ## Reviewed Statistical Defaults
 

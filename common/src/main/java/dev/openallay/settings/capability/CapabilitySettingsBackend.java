@@ -80,6 +80,20 @@ public final class CapabilitySettingsBackend implements ClientSettingsService.Ca
         return new ToolResult.Success<>(view(normalized));
     }
 
+    /** Re-captures runtime-controlled availability without changing any explicit deny choices. */
+    public ToolResult<CapabilitySettingsView> refreshCapabilities() {
+        CapabilityPolicy policy = current.policy();
+        ToolResult<ClientCapabilitySnapshot> resolved = resolve(policy);
+        if (resolved instanceof ToolResult.Failure<ClientCapabilitySnapshot> failure) {
+            return new ToolResult.Failure<>(failure.code(), failure.message());
+        }
+        ClientCapabilitySnapshot prepared =
+                ((ToolResult.Success<ClientCapabilitySnapshot>) resolved).value();
+        publish.accept(prepared);
+        current = prepared;
+        return new ToolResult.Success<>(view(policy));
+    }
+
     private CapabilityPolicy toolOwnedPolicy(CapabilityPolicy candidate) {
         Set<String> knownSkills = product.skills().metadata().stream()
                 .map(metadata -> metadata.name())

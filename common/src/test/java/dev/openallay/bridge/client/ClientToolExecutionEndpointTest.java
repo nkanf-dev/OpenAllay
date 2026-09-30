@@ -3,6 +3,7 @@ package dev.openallay.bridge.client;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.Gson;
@@ -14,6 +15,7 @@ import dev.openallay.bridge.protocol.ClientToolCancelPayload;
 import dev.openallay.bridge.protocol.ClientToolResultChunkPayload;
 import dev.openallay.bridge.protocol.ResultChunker;
 import dev.openallay.context.ToolInvocationContext;
+import dev.openallay.model.CancellationSignal;
 import dev.openallay.script.RhinoJavascriptRuntime;
 import dev.openallay.script.command.CommandCapabilityConfig;
 import dev.openallay.script.command.CommandCapabilityRuntime;
@@ -150,7 +152,9 @@ final class ClientToolExecutionEndpointTest {
 
     @Test
     void cancellationSuppressesLateContextCompletion() {
-        ToolRegistry registry = registry();
+        FactTool tool = new FactTool();
+        ToolRegistry registry = new ToolRegistry();
+        registry.register("test", List.of(tool));
         CompletableFuture<ToolInvocationContext> context = new CompletableFuture<>();
         List<ClientToolResultChunkPayload> sent = new ArrayList<>();
         ClientToolExecutionEndpoint endpoint = new ClientToolExecutionEndpoint(
@@ -173,10 +177,36 @@ final class ClientToolExecutionEndpointTest {
 
         assertTrue(endpoint.cancel(new ClientToolCancelPayload(
                 BridgeProtocol.VERSION, requestId, invocationId)));
-        context.complete(ToolInvocationContext.developmentConsole(invocationId.toString()));
+        assertTrue(context.complete(ToolInvocationContext.developmentConsole(invocationId.toString())));
+        assertEquals(0, tool.asyncInvocations);
+        assertEquals(0, tool.invocations);
         assertTrue(sent.isEmpty());
         assertFalse(endpoint.cancel(new ClientToolCancelPayload(
                 BridgeProtocol.VERSION, requestId, invocationId)));
+    }
+
+    @Test
+    void requestCloseCancelsPendingContextBeforeClosingToolsAndBlocksLateInvocation() {
+        PendingScopeRequest request = new PendingScopeRequest();
+        request.start();
+
+        assertTrue(request.endpoint.close(request.requestId));
+
+        request.assertClosedBeforeLateCapture();
+        assertFalse(request.endpoint.close(request.requestId));
+        assertEquals(List.of(request.requestId.toString()), request.tool.closed);
+    }
+
+    @Test
+    void disconnectCancelsPendingContextBeforeClosingToolsAndBlocksLateInvocation() {
+        PendingScopeRequest request = new PendingScopeRequest();
+        request.start();
+
+        assertEquals(1, request.endpoint.disconnect());
+
+        request.assertClosedBeforeLateCapture();
+        assertEquals(0, request.endpoint.disconnect());
+        assertEquals(List.of(request.requestId.toString()), request.tool.closed);
     }
 
     @Test
@@ -270,12 +300,62 @@ final class ClientToolExecutionEndpointTest {
         return complete.orElseThrow();
     }
 
+    private static final class PendingScopeRequest {
+        private final UUID requestId = UUID.randomUUID();
+        private final CompletableFuture<ToolInvocationContext> context = new CompletableFuture<>();
+        private final ScopeTool tool = new ScopeTool();
+        private final List<ClientToolResultChunkPayload> sent = new ArrayList<>();
+        private final ClientToolExecutionEndpoint endpoint;
+        private CancellationSignal cancellation;
+
+        private PendingScopeRequest() {
+            ToolRegistry registry = new ToolRegistry();
+            registry.register("test", List.of(tool));
+            endpoint = new ClientToolExecutionEndpoint(
+                    (capabilities, correlation, signal) -> {
+                        cancellation = signal;
+                        signal.onCancel(() -> tool.lifecycle.add("cancel"));
+                        return context;
+                    },
+                    sent::add,
+                    new Gson(),
+                    128,
+                    Runnable::run);
+            endpoint.open(requestId, "main", ToolRuntimeCatalog.from(
+                    registry.registrations(), java.util.Set.of()));
+        }
+
+        private void start() {
+            assertInstanceOf(ToolResult.Success.class, endpoint.handle(new ClientToolCallPayload(
+                    BridgeProtocol.VERSION, requestId, UUID.randomUUID(),
+                    "main", "test:scope", "{}")));
+            assertNotNull(cancellation);
+            assertFalse(cancellation.isCancelled());
+            assertTrue(tool.lifecycle.isEmpty());
+            assertTrue(sent.isEmpty());
+        }
+
+        private void assertClosedBeforeLateCapture() {
+            assertTrue(cancellation.isCancelled());
+            assertEquals(List.of("cancel", "close"), tool.lifecycle);
+            assertEquals(List.of(requestId.toString()), tool.closed);
+            assertEquals(0, endpoint.activeRequests());
+            assertTrue(context.complete(ToolInvocationContext.developmentConsole(requestId.toString())));
+            assertEquals(0, tool.asyncInvocations,
+                    "a late context must not reach even a Tool that ignores cancellation");
+            assertEquals(0, tool.invocations);
+            assertTrue(sent.isEmpty());
+        }
+    }
+
     private static final class FactTool implements Tool<FactTool.Input, FactTool.Output> {
         record Input(int value) {}
         record Output(int value) {}
 
         private static final ToolDescriptor<Input, Output> DESCRIPTOR = new ToolDescriptor<>(
                 "test:fact", "Return a fact", Input.class, Output.class, ToolAccess.READ_ONLY);
+        private int asyncInvocations;
+        private int invocations;
 
         @Override
         public ToolDescriptor<Input, Output> descriptor() {
@@ -284,7 +364,16 @@ final class ClientToolExecutionEndpointTest {
 
         @Override
         public ToolResult<Output> invoke(ToolInvocationContext context, Input input) {
+            invocations++;
             return new ToolResult.Success<>(new Output(input.value()));
+        }
+
+        @Override
+        public CompletableFuture<ToolResult<Output>> invokeAsync(
+                ToolInvocationContext context, Input input, CancellationSignal cancellation) {
+            // Deliberately ignore cancellation to verify that the endpoint blocks dispatch itself.
+            asyncInvocations++;
+            return CompletableFuture.completedFuture(invoke(context, input));
         }
     }
 
@@ -295,7 +384,10 @@ final class ClientToolExecutionEndpointTest {
 
         private static final ToolDescriptor<Input, Output> DESCRIPTOR = new ToolDescriptor<>(
                 "test:scope", "Test request scope", Input.class, Output.class, ToolAccess.READ_ONLY);
+        private final List<String> lifecycle = new ArrayList<>();
         private final List<String> closed = new ArrayList<>();
+        private int asyncInvocations;
+        private int invocations;
 
         @Override
         public ToolDescriptor<Input, Output> descriptor() {
@@ -304,11 +396,21 @@ final class ClientToolExecutionEndpointTest {
 
         @Override
         public ToolResult<Output> invoke(ToolInvocationContext context, Input input) {
+            invocations++;
             return new ToolResult.Success<>(new Output(context.correlationId()));
         }
 
         @Override
+        public CompletableFuture<ToolResult<Output>> invokeAsync(
+                ToolInvocationContext context, Input input, CancellationSignal cancellation) {
+            // Deliberately ignore cancellation to verify that the endpoint blocks dispatch itself.
+            asyncInvocations++;
+            return CompletableFuture.completedFuture(invoke(context, input));
+        }
+
+        @Override
         public void closeRequestScope(String correlationId) {
+            lifecycle.add("close");
             closed.add(correlationId);
         }
     }
