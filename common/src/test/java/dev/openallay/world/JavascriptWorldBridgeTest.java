@@ -60,6 +60,22 @@ final class JavascriptWorldBridgeTest {
     }
 
     @Test
+    void bridgeReportsEvidenceOnlyForWorldCallsActuallyMade() {
+        RecordingCoordinator coordinator = new RecordingCoordinator();
+        WorldObservationRuntime observations = new WorldObservationRuntime();
+        observations.capture("request", coordinator);
+        List<EvidenceMetadata> captured = new java.util.ArrayList<>();
+        var bridge = observations.bridge("request", new CancellationSignal(), captured::add)
+                .orElseThrow();
+
+        new RhinoJavascriptRuntime().execute(
+                "return world.inspect({from:{x:0,y:0,z:0},to:{x:0,y:0,z:0}}).blocks.length;",
+                Map.of(), Map.of(), Map.of(), new CancellationSignal(), null, bridge);
+
+        assertEquals(List.of(evidence()), captured);
+    }
+
+    @Test
     void runtimeDropsRequestScopedCoordinator() {
         WorldObservationRuntime observations = new WorldObservationRuntime();
         observations.capture("request", new RecordingCoordinator());

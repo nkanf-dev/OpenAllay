@@ -4,6 +4,8 @@ import com.google.gson.JsonElement;
 import dev.openallay.agent.tool.ToolDescription;
 import dev.openallay.agent.tool.ToolOptional;
 import dev.openallay.context.ContextCapability;
+import dev.openallay.context.DataAuthority;
+import dev.openallay.context.DataCompleteness;
 import dev.openallay.context.EvidenceBearing;
 import dev.openallay.context.EvidenceMetadata;
 import dev.openallay.context.ToolInvocationContext;
@@ -26,7 +28,9 @@ import dev.openallay.tool.ToolResult;
 import dev.openallay.tool.RequestScopeParticipant;
 import dev.openallay.tool.ModelFacingToolOutput;
 import dev.openallay.world.WorldObservationRuntime;
+import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -198,31 +202,40 @@ public final class RunJavascriptTool
             cancellation.throwIfCancelled();
             MinecraftAgentHostGraph graph = graphs.computeIfAbsent(
                     context.correlationId(), ignored -> graphFactory.apply(context));
-            var commandBridge = commands.bridge(context.correlationId(), cancellation);
-            var worldBridge =
-                    worldObservations.bridge(context.correlationId(), cancellation);
             boolean commandsRequested = input.roots().contains(COMMANDS_BINDING);
+            boolean worldRequested = input.roots().contains(WORLD_BINDING);
+            List<String> minecraftRoots = input.roots().stream()
+                    .filter(root -> !COMMANDS_BINDING.equals(root)
+                            && !WORLD_BINDING.equals(root))
+                    .toList();
+            var selectedRoots = graph.select(minecraftRoots, input.roots().isEmpty());
+            var commandBridge = commands.bridge(
+                    context.correlationId(), cancellation,
+                    (kind, capturedAt) -> new EvidenceMetadata(
+                            DataAuthority.CLIENT_VISIBLE,
+                            DataCompleteness.PARTIAL,
+                            capturedAt,
+                            "catalog".equals(kind)
+                                    ? "minecraft:command_catalog"
+                                    : "minecraft:command_feedback",
+                            "catalog".equals(kind)
+                                    ? "minecraft:active_command_tree"
+                                    : "minecraft:observed_command_feedback",
+                            context.player().map(value -> value.evidence().gameVersion()).orElse("unknown"),
+                            context.player().map(value -> value.evidence().loader()).orElse("unknown"),
+                            Map.of("openallay:scope", kind)),
+                    selectedRoots::recordEvidence);
+            var worldBridge = worldObservations.bridge(
+                    context.correlationId(), cancellation, selectedRoots::recordEvidence);
             if (commandsRequested && commandBridge.isEmpty()) {
                 throw new JavascriptExecutionException(
                         "javascript_root_unavailable",
                         "Requested JavaScript binding is unavailable: commands");
             }
-            boolean worldRequested = input.roots().contains(WORLD_BINDING);
             if (worldRequested && worldBridge.isEmpty()) {
                 throw new JavascriptExecutionException(
                         "javascript_root_unavailable",
                         "Requested JavaScript binding is unavailable: world");
-            }
-            List<String> minecraftRoots = input.roots().stream()
-                    .filter(root -> !COMMANDS_BINDING.equals(root)
-                            && !WORLD_BINDING.equals(root))
-                    .toList();
-            var selectedRoots = graph.select(minecraftRoots);
-            if (graph.evidence().isEmpty()) {
-                future.complete(new ToolResult.Failure<>(
-                        "context_evidence_unavailable",
-                        "No evidence-bearing Minecraft data was captured for this request"));
-                return;
             }
             AgentResultWorkspace workspace = workspaces.open(context.correlationId());
             JavascriptExecution execution = runtime.execute(
@@ -230,13 +243,23 @@ public final class RunJavascriptTool
                     selectedRoots,
                     workspace.select(input.handles(), context.unrestrictedJavascript()),
                     workspace.selectShapes(input.handles()),
+                    workspace.selectEvidence(input.handles()),
+                    selectedRoots::recordEvidence,
+                    selectedRoots::recordSchemaAccess,
                     cancellation,
                     commandBridge.orElse(null),
                     worldBridge.orElse(null),
                     context.unrestrictedJavascript());
             JsonElement canonical = execution.value();
-            String handle = workspace.store(canonical, execution.shape(), context.unrestrictedJavascript());
-            List<EvidenceMetadata> evidence = graph.evidence();
+            List<EvidenceMetadata> evidence = selectedRoots.evidence();
+            if (evidence.isEmpty()) {
+                future.complete(new ToolResult.Failure<>(
+                        "context_evidence_unavailable",
+                        "The script did not access evidence-bearing Minecraft data"));
+                return;
+            }
+            String handle = workspace.store(
+                    canonical, execution.shape(), context.unrestrictedJavascript(), evidence);
             var presentation = context.unrestrictedJavascript()
                     ? presenter.presentUnrestricted(handle, canonical, execution.shape(), evidenceSummary(evidence))
                     : presenter.present(handle, canonical, execution.shape(), evidenceSummary(evidence));

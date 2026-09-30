@@ -1,10 +1,12 @@
 package dev.openallay.tool.builtin;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.openallay.context.ToolInvocationContext;
+import dev.openallay.context.EvidenceMetadata;
 import dev.openallay.model.CancellationSignal;
 import dev.openallay.script.RhinoJavascriptRuntime;
 import dev.openallay.script.command.CommandCapabilityConfig;
@@ -16,11 +18,25 @@ import dev.openallay.script.extension.JavascriptDataModuleRegistry;
 import dev.openallay.script.workspace.AgentResultWorkspaceRegistry;
 import dev.openallay.script.workspace.JavascriptResultPresenter;
 import dev.openallay.testing.JavascriptAgentTestFixtures;
+import dev.openallay.world.WorldEntitySnapshot;
+import dev.openallay.world.WorldEntitySummary;
+import dev.openallay.world.EntityObservation;
+import dev.openallay.world.WorldBlockSnapshot;
+import dev.openallay.world.WorldObservationCoverage;
+import dev.openallay.world.WorldPosition;
+import dev.openallay.world.WorldBounds;
+import dev.openallay.world.BlockObservation;
+import dev.openallay.world.WorldObservationRequest;
+import dev.openallay.world.WorldObservationCoordinator;
+import dev.openallay.world.WorldObservationRuntime;
 import dev.openallay.tool.ToolResult;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.CompletionStage;
+import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.Test;
 
 /** Deterministic acceptance for the three product-level JavaScript analysis tasks. */
@@ -251,6 +267,123 @@ final class RunJavascriptAcceptanceTest {
     }
 
     @Test
+    void reportsOnlyEvidenceForRootsActuallyReadByThisInvocation() {
+        ToolResult.Success<RunJavascriptTool.Output> items = assertInstanceOf(
+                ToolResult.Success.class,
+                tool.invokeAsync(
+                                context,
+                                new RunJavascriptTool.Input(
+                                        "return mc.items.length;", List.of(), List.of("items")),
+                                new CancellationSignal())
+                        .join());
+        assertEquals(
+                List.of(context.registries().orElseThrow().evidence()),
+                items.value().evidence());
+        assertTrue(items.value().modelText().contains(
+                "source=" + context.registries().orElseThrow().evidence().sourceId()));
+        assertFalse(items.value().modelText().contains(
+                "source=" + context.player().orElseThrow().evidence().sourceId()));
+
+        ToolResult.Failure<RunJavascriptTool.Output> noRead = assertInstanceOf(
+                ToolResult.Failure.class,
+                tool.invokeAsync(
+                                context,
+                                new RunJavascriptTool.Input("return 1;", List.of(), List.of("items")),
+                                new CancellationSignal())
+                        .join());
+        assertEquals("context_evidence_unavailable", noRead.code());
+    }
+
+    @Test
+    void schemaDiscoveryIsACompleteEvidenceBearingMetadataResult() {
+        ToolResult.Success<RunJavascriptTool.Output> listed = assertInstanceOf(
+                ToolResult.Success.class,
+                tool.invokeAsync(
+                                context,
+                                new RunJavascriptTool.Input("return schema.list();", List.of()),
+                                new CancellationSignal())
+                        .join());
+        assertEquals(List.of("openallay:javascript_host_catalog"),
+                listed.value().evidence().stream().map(EvidenceMetadata::sourceId).toList());
+        assertTrue(listed.value().modelText().contains("openallay:javascript_host_catalog"));
+
+        ToolResult.Failure<RunJavascriptTool.Output> noFact = assertInstanceOf(
+                ToolResult.Failure.class,
+                tool.invokeAsync(
+                                context,
+                                new RunJavascriptTool.Input("return 1;", List.of()),
+                                new CancellationSignal())
+                        .join());
+        assertEquals("context_evidence_unavailable", noFact.code());
+    }
+
+    @Test
+    void workspaceHandleCarriesOnlyThePriorResultSourcesWhenReopened() {
+        ToolResult.Success<RunJavascriptTool.Output> first = assertInstanceOf(
+                ToolResult.Success.class,
+                tool.invokeAsync(
+                                context,
+                                new RunJavascriptTool.Input(
+                                        "return mc.items.length;", List.of(), List.of("items")),
+                                new CancellationSignal())
+                        .join());
+        ToolResult.Success<RunJavascriptTool.Output> second = assertInstanceOf(
+                ToolResult.Success.class,
+                tool.invokeAsync(
+                                context,
+                                new RunJavascriptTool.Input(
+                                        "return workspace.open(\"" + first.value().handle() + "\");",
+                                        List.of(first.value().handle()), List.of("recipes")),
+                                new CancellationSignal())
+                        .join());
+        assertEquals(first.value().evidence(), second.value().evidence());
+    }
+
+    @Test
+    void worldObservationEvidenceIsIncludedOnlyForCallsThatActuallyRun() {
+        WorldObservationRuntime world = new WorldObservationRuntime();
+        EvidenceMetadata worldEvidence = new EvidenceMetadata(
+                dev.openallay.context.DataAuthority.CLIENT_VISIBLE,
+                dev.openallay.context.DataCompleteness.PARTIAL,
+                Instant.EPOCH,
+                "minecraft:client_blocks",
+                "minecraft:client_world_observation",
+                "26.2",
+                "fabric",
+                Map.of());
+        world.capture(context.correlationId(), new WorldObservationCoordinator() {
+            @Override public CompletionStage<BlockObservation> inspect(
+                    WorldObservationRequest request, CancellationSignal cancellation) {
+                return CompletableFuture.completedFuture(new BlockObservation(
+                        request.bounds(), List.of(),
+                        new WorldObservationCoverage(request.bounds().volume(), 0, false, List.of()),
+                        worldEvidence));
+            }
+            @Override public CompletionStage<EntityObservation> entities(
+                    WorldObservationRequest request, CancellationSignal cancellation) {
+                return CompletableFuture.completedFuture(new EntityObservation(
+                        request.bounds(), List.of(),
+                        new WorldObservationCoverage(request.bounds().volume(), 0, false, List.of()),
+                        worldEvidence));
+            }
+            @Override public CompletionStage<WorldEntitySnapshot> entity(
+                    String observationId, CancellationSignal cancellation) {
+                throw new AssertionError("unexpected entity lookup");
+            }
+        });
+        RunJavascriptTool observed = new RunJavascriptTool(
+                new RhinoJavascriptRuntime(), MinecraftAgentHostGraph::new,
+                new AgentResultWorkspaceRegistry(), new JavascriptResultPresenter(),
+                new CommandCapabilityRuntime(), world);
+        ToolResult.Success<RunJavascriptTool.Output> success = assertInstanceOf(
+                ToolResult.Success.class,
+                observed.invokeAsync(context, new RunJavascriptTool.Input(
+                        "return world.inspect({from:{x:0,y:0,z:0},to:{x:0,y:0,z:0}}).coverage.complete;",
+                        List.of(), List.of("world")), new CancellationSignal()).join());
+        assertEquals(List.of(worldEvidence), success.value().evidence());
+    }
+
+    @Test
     void acceptsCommandsAsAnExplicitScriptBindingRatherThanAnMcRoot() {
         CommandCapabilityRuntime commands = new CommandCapabilityRuntime();
         commands.replace(new CommandCapabilityConfig(
@@ -271,16 +404,17 @@ final class RunJavascriptAcceptanceTest {
                 new JavascriptResultPresenter(),
                 commands);
 
-        ToolResult.Success<RunJavascriptTool.Output> success = assertInstanceOf(
-                ToolResult.Success.class,
-                commandTool.invokeAsync(
-                                context,
-                                new RunJavascriptTool.Input(
-                                        "return commands.run('/version');",
-                                        List.of(),
-                                        List.of("commands")),
-                                new CancellationSignal())
-                        .join());
+        ToolResult<RunJavascriptTool.Output> commandResult = commandTool.invokeAsync(
+                        context,
+                        new RunJavascriptTool.Input(
+                                "return commands.run('/version');", List.of(), List.of("commands")),
+                        new CancellationSignal())
+                .join();
+        if (commandResult instanceof ToolResult.Failure<RunJavascriptTool.Output> failure) {
+            throw new AssertionError(failure.code() + ": " + failure.message());
+        }
+        ToolResult.Success<RunJavascriptTool.Output> success =
+                assertInstanceOf(ToolResult.Success.class, commandResult);
 
         assertEquals(
                 "feedback",
@@ -317,7 +451,7 @@ final class RunJavascriptAcceptanceTest {
                 .join();
         ToolResult.Success<RunJavascriptTool.Output> success =
                 assertInstanceOf(ToolResult.Success.class, raw);
-        assertTrue(success.value().evidence().size() >= 2);
+        assertFalse(success.value().evidence().isEmpty());
         return workspaces.open(context.correlationId()).open(success.value().handle());
     }
 

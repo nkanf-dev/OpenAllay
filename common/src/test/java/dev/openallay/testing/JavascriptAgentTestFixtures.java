@@ -32,7 +32,15 @@ public final class JavascriptAgentTestFixtures {
     public static ToolInvocationContext context(String correlationId) {
         ToolInvocationContext base = GroundedTestFixtures.fullContext();
         RegistrySnapshot registries = new RegistrySnapshot(
-                GroundedTestFixtures.serverEvidence(),
+                new dev.openallay.context.EvidenceMetadata(
+                        dev.openallay.context.DataAuthority.CLIENT_VISIBLE,
+                        dev.openallay.context.DataCompleteness.COMPLETE,
+                        base.capturedAt(),
+                        "minecraft:client_registry",
+                        "minecraft:registry_fixture",
+                        "26.2",
+                        "fabric",
+                        Map.of()),
                 List.of(
                         item("minecraft:iron_sword", Set.of("minecraft:swords"),
                                 Map.of("minecraft:attack_damage", JsonParser.parseString("6"))),

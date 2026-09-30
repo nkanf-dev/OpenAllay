@@ -5,8 +5,10 @@ import dev.latvian.mods.rhino.Context;
 import dev.latvian.mods.rhino.Scriptable;
 import dev.latvian.mods.rhino.ScriptableObject;
 import dev.openallay.model.CancellationSignal;
+import dev.openallay.context.EvidenceMetadata;
 import dev.openallay.script.JavascriptExecutionException;
 import dev.openallay.script.host.RhinoHostAdapter;
+import java.time.Instant;
 import java.util.Objects;
 import java.util.function.Function;
 
@@ -14,29 +16,43 @@ import java.util.function.Function;
 public final class JavascriptCommandBridge {
     private final CommandCapabilityRuntime.RequestCapability capability;
     private final CancellationSignal cancellation;
+    private final java.util.function.BiFunction<String, Instant, EvidenceMetadata> evidence;
+    private final java.util.function.Consumer<EvidenceMetadata> recordEvidence;
 
     JavascriptCommandBridge(
             CommandCapabilityRuntime.RequestCapability capability,
             CancellationSignal cancellation) {
+        this(capability, cancellation, (kind, capturedAt) -> null, ignored -> {});
+    }
+
+    JavascriptCommandBridge(
+            CommandCapabilityRuntime.RequestCapability capability,
+            CancellationSignal cancellation,
+            java.util.function.BiFunction<String, Instant, EvidenceMetadata> evidence,
+            java.util.function.Consumer<EvidenceMetadata> recordEvidence) {
         this.capability = Objects.requireNonNull(capability, "capability");
         this.cancellation = Objects.requireNonNull(cancellation, "cancellation");
+        this.evidence = Objects.requireNonNull(evidence, "evidence");
+        this.recordEvidence = Objects.requireNonNull(recordEvidence, "recordEvidence");
     }
 
     public Scriptable bind(
             Context context, ScriptableObject scope, RhinoHostAdapter adapter) {
         Scriptable commands = context.newObject(scope);
-        define(context, scope, commands, "list", 0, ignored -> capability.catalog(), adapter);
+        define(context, scope, commands, "list", 0,
+                ignored -> observed(capability.catalog(), "catalog", capability.catalog().capturedAt()), adapter);
         define(
                 context,
                 scope,
                 commands,
                 "describe",
                 1,
-                arguments -> capability.catalog()
-                        .describe(string(arguments[0], "commands.describe"))
-                        .orElseThrow(() -> new JavascriptExecutionException(
-                                "command_path_unavailable",
-                                "Command path is unavailable in this request")),
+                arguments -> observed(
+                        capability.catalog().describe(string(arguments[0], "commands.describe"))
+                                .orElseThrow(() -> new JavascriptExecutionException(
+                                        "command_path_unavailable",
+                                        "Command path is unavailable in this request")),
+                        "catalog", capability.catalog().capturedAt()),
                 adapter);
         define(
                 context,
@@ -44,13 +60,20 @@ public final class JavascriptCommandBridge {
                 commands,
                 "run",
                 1,
-                arguments -> capability.submit(
-                        string(arguments[0], "commands.run"), cancellation),
+                arguments -> observed(
+                        capability.submit(string(arguments[0], "commands.run"), cancellation),
+                        "feedback", Instant.now()),
                 adapter);
         if (commands instanceof ScriptableObject object) {
             object.preventExtensions();
         }
         return commands;
+    }
+
+    private Object observed(Object value, String kind, Instant capturedAt) {
+        EvidenceMetadata metadata = evidence.apply(kind, capturedAt);
+        if (metadata != null) recordEvidence.accept(metadata);
+        return value;
     }
 
     private static void define(

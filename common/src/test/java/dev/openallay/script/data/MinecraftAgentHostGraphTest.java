@@ -45,7 +45,8 @@ final class MinecraftAgentHostGraphTest {
                 },
                 extensions);
 
-        Map<String, Object> selected = graph.select(Set.of("items"));
+        var selected = graph.select(Set.of("items"));
+        assertEquals(List.of(), selected.evidence());
         assertEquals(0, knowledgeCaptures.get());
         assertEquals(0, extensionCaptures.get());
         @SuppressWarnings("unchecked")
@@ -55,25 +56,44 @@ final class MinecraftAgentHostGraphTest {
                 .filter(entry -> entry.kind().equals("item"))
                 .findFirst().orElseThrow();
         assertSame(expected, items.getFirst());
+        assertEquals(List.of(context.registries().orElseThrow().evidence()), selected.evidence());
         assertEquals(0, knowledgeCaptures.get());
         assertEquals(0, extensionCaptures.get());
 
-        Map<String, Object> all = graph.select(Set.of());
+        var next = graph.select(Set.of("recipes"));
+        assertEquals(List.of(), next.evidence());
+        next.get("recipes");
+        assertTrue(next.evidence().contains(context.recipes().orElseThrow().evidence()));
+        assertEquals(List.of(context.recipes().orElseThrow().evidence()), next.evidence());
+
+        var all = graph.select(Set.of());
         int entries = 0;
-        for (Map.Entry<String, Object> entry : all.entrySet()) {
-            assertTrue(!entry.getKey().isBlank());
+        for (String root : all.keySet()) {
+            assertTrue(!root.isBlank());
             entries++;
         }
         assertTrue(entries > 0);
-        assertEquals(0, knowledgeCaptures.get());
-        assertEquals(0, extensionCaptures.get());
+        assertEquals(List.of(), all.evidence());
         all.get("knowledge");
         all.get("knowledge");
-        all.get("extensions");
-        all.get("extensions");
         assertEquals(1, knowledgeCaptures.get());
+        assertTrue(all.evidence().stream().anyMatch(value -> value.sourceId().equals("openallay:knowledge_registry")));
+        all.get("extensions");
+        all.get("extensions");
         assertEquals(1, extensionCaptures.get());
-        assertTrue(graph.evidence().contains(context.registries().orElseThrow().evidence()));
+        assertTrue(all.evidence().contains(context.registries().orElseThrow().evidence()));
+    }
+
+    @Test
+    void metadataAndCapabilityRootsDoNotCreateEvidence() {
+        var context = JavascriptAgentTestFixtures.context("metadata-roots");
+        MinecraftAgentHostGraph graph = new MinecraftAgentHostGraph(context);
+        var selection = graph.select(Set.of("capabilities", "extensionCatalog"));
+        selection.get("capabilities");
+        selection.get("extensionCatalog");
+        assertEquals(
+                List.of("openallay:javascript_host_catalog", "openallay:javascript_extensions"),
+                selection.evidence().stream().map(value -> value.sourceId()).toList());
     }
 
     @Test

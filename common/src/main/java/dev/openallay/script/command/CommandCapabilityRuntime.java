@@ -1,6 +1,7 @@
 package dev.openallay.script.command;
 
 import dev.openallay.model.CancellationSignal;
+import dev.openallay.context.EvidenceMetadata;
 import dev.openallay.script.JavascriptExecutionException;
 import java.util.ArrayList;
 import java.util.List;
@@ -82,6 +83,19 @@ public final class CommandCapabilityRuntime {
         return capability == null
                 ? Optional.empty()
                 : Optional.of(new JavascriptCommandBridge(capability, cancellation));
+    }
+
+    public Optional<JavascriptCommandBridge> bridge(
+            String correlationId,
+            CancellationSignal cancellation,
+            java.util.function.BiFunction<String, java.time.Instant, EvidenceMetadata> evidence,
+            java.util.function.Consumer<EvidenceMetadata> recordEvidence) {
+        requireCorrelation(correlationId);
+        RequestCapability capability = requests.get(correlationId);
+        return capability == null
+                ? Optional.empty()
+                : Optional.of(new JavascriptCommandBridge(
+                        capability, cancellation, evidence, recordEvidence));
     }
 
     /** Freezes the current toggle once for a future request. */

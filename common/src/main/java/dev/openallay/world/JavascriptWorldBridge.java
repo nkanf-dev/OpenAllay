@@ -6,6 +6,7 @@ import dev.latvian.mods.rhino.Scriptable;
 import dev.latvian.mods.rhino.ScriptableObject;
 import dev.latvian.mods.rhino.Undefined;
 import dev.openallay.model.CancellationSignal;
+import dev.openallay.context.EvidenceMetadata;
 import dev.openallay.model.ModelClientException;
 import dev.openallay.script.JavascriptExecutionException;
 import dev.openallay.script.host.RhinoHostAdapter;
@@ -16,16 +17,21 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
+import java.util.function.Consumer;
 
 /** Closed Rhino surface for request-scoped, owning-thread world observations. */
 public final class JavascriptWorldBridge {
     private final WorldObservationCoordinator coordinator;
     private final CancellationSignal cancellation;
+    private final Consumer<EvidenceMetadata> evidence;
 
     JavascriptWorldBridge(
-            WorldObservationCoordinator coordinator, CancellationSignal cancellation) {
+            WorldObservationCoordinator coordinator,
+            CancellationSignal cancellation,
+            Consumer<EvidenceMetadata> evidence) {
         this.coordinator = Objects.requireNonNull(coordinator, "coordinator");
         this.cancellation = Objects.requireNonNull(cancellation, "cancellation");
+        this.evidence = Objects.requireNonNull(evidence, "evidence");
     }
 
     public Scriptable bind(Context context, ScriptableObject scope, RhinoHostAdapter adapter) {
@@ -37,8 +43,8 @@ public final class JavascriptWorldBridge {
                 "inspect",
                 1,
                 2,
-                arguments -> await(coordinator.inspect(
-                        blocksRequest(context, arguments), cancellation)),
+                arguments -> observed(await(coordinator.inspect(
+                        blocksRequest(context, arguments), cancellation))),
                 adapter);
         define(
                 context,
@@ -47,8 +53,8 @@ public final class JavascriptWorldBridge {
                 "entities",
                 1,
                 2,
-                arguments -> await(coordinator.entities(
-                        entitiesRequest(context, arguments), cancellation)),
+                arguments -> observed(await(coordinator.entities(
+                        entitiesRequest(context, arguments), cancellation))),
                 adapter);
         define(
                 context,
@@ -57,8 +63,8 @@ public final class JavascriptWorldBridge {
                 "entity",
                 1,
                 1,
-                arguments -> await(coordinator.entity(
-                        string(arguments[0], "world.entity"), cancellation)),
+                arguments -> observed(await(coordinator.entity(
+                        string(arguments[0], "world.entity"), cancellation))),
                 adapter);
         if (world instanceof ScriptableObject object) {
             object.preventExtensions();
@@ -157,6 +163,13 @@ public final class JavascriptWorldBridge {
             throw invalid(operation + " requires a non-blank string");
         }
         return text.toString();
+    }
+
+    private Object observed(Object value) {
+        if (value instanceof BlockObservation blocks) evidence.accept(blocks.evidence());
+        else if (value instanceof EntityObservation entities) evidence.accept(entities.evidence());
+        else if (value instanceof WorldEntitySnapshot entity) evidence.accept(entity.evidence());
+        return value;
     }
 
     private Object await(CompletionStage<?> stage) {

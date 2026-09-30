@@ -1,7 +1,9 @@
 package dev.openallay.world;
 
 import dev.openallay.model.CancellationSignal;
+import dev.openallay.context.EvidenceMetadata;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -24,10 +26,17 @@ public final class WorldObservationRuntime {
 
     public Optional<JavascriptWorldBridge> bridge(
             String correlationId, CancellationSignal cancellation) {
+        return bridge(correlationId, cancellation, ignored -> {});
+    }
+
+    public Optional<JavascriptWorldBridge> bridge(
+            String correlationId,
+            CancellationSignal cancellation,
+            Consumer<EvidenceMetadata> evidence) {
         WorldObservationCoordinator coordinator = requests.get(correlationId);
         return coordinator == null
                 ? Optional.empty()
-                : Optional.of(new JavascriptWorldBridge(coordinator, cancellation));
+                : Optional.of(new JavascriptWorldBridge(coordinator, cancellation, evidence));
     }
 
     public void closeRequest(String correlationId) {

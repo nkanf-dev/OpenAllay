@@ -7,6 +7,7 @@ import dev.latvian.mods.rhino.RhinoException;
 import dev.latvian.mods.rhino.Scriptable;
 import dev.latvian.mods.rhino.ScriptableObject;
 import dev.openallay.model.CancellationSignal;
+import dev.openallay.context.EvidenceMetadata;
 import dev.openallay.model.ModelClientException;
 import dev.openallay.script.host.RhinoHostAdapter;
 import dev.openallay.script.schema.DeclaredHostRoots;
@@ -20,6 +21,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Consumer;
 import java.util.Set;
 
 public final class RhinoJavascriptRuntime {
@@ -185,6 +187,22 @@ public final class RhinoJavascriptRuntime {
             String source, Map<String, Object> minecraftRoots, Map<String, JsonElement> workspaceValues,
             Map<String, JavascriptResultShape> workspaceShapes, CancellationSignal cancellation,
             JavascriptCommandBridge commands, JavascriptWorldBridge world, boolean unrestricted) {
+        return execute(source, minecraftRoots, workspaceValues, workspaceShapes, Map.of(),
+                ignored -> {}, () -> {}, cancellation, commands, world, unrestricted);
+    }
+
+    public JavascriptExecution execute(
+            String source,
+            Map<String, Object> minecraftRoots,
+            Map<String, JsonElement> workspaceValues,
+            Map<String, JavascriptResultShape> workspaceShapes,
+            Map<String, List<EvidenceMetadata>> workspaceEvidence,
+            Consumer<EvidenceMetadata> workspaceEvidenceRecorder,
+            Runnable schemaEvidenceRecorder,
+            CancellationSignal cancellation,
+            JavascriptCommandBridge commands,
+            JavascriptWorldBridge world,
+            boolean unrestricted) {
         if (source == null || source.isBlank()) {
             throw new JavascriptExecutionException(
                     "javascript_invalid", "JavaScript source must not be blank");
@@ -197,6 +215,9 @@ public final class RhinoJavascriptRuntime {
         Objects.requireNonNull(minecraftRoots, "minecraftRoots");
         Objects.requireNonNull(workspaceValues, "workspaceValues");
         Objects.requireNonNull(workspaceShapes, "workspaceShapes");
+        Objects.requireNonNull(workspaceEvidence, "workspaceEvidence");
+        Objects.requireNonNull(workspaceEvidenceRecorder, "workspaceEvidenceRecorder");
+        Objects.requireNonNull(schemaEvidenceRecorder, "schemaEvidenceRecorder");
         Objects.requireNonNull(cancellation, "cancellation").throwIfCancelled();
 
         long started = System.nanoTime();
@@ -220,12 +241,14 @@ public final class RhinoJavascriptRuntime {
                             adapter,
                             minecraftRoots instanceof DeclaredHostRoots declared
                                     ? declared.schemaCatalog()
-                                    : new HostSchemaCatalog(List.of())));
+                                    : new HostSchemaCatalog(List.of()),
+                            schemaEvidenceRecorder));
             defineGlobal(
                     context,
                     scope,
                     "workspace",
-                    workspace(context, scope, adapter, workspaceValues, workspaceShapes));
+                    workspace(context, scope, adapter, workspaceValues, workspaceShapes,
+                            workspaceEvidence, workspaceEvidenceRecorder));
             if (commands != null) {
                 defineGlobal(context, scope, "commands", commands.bind(context, scope, adapter));
             }
@@ -307,7 +330,9 @@ public final class RhinoJavascriptRuntime {
             ScriptableObject scope,
             RhinoHostAdapter adapter,
             Map<String, JsonElement> values,
-            Map<String, JavascriptResultShape> shapes) {
+            Map<String, JavascriptResultShape> shapes,
+            Map<String, List<EvidenceMetadata>> evidence,
+            Consumer<EvidenceMetadata> evidenceRecorder) {
         Scriptable workspace = context.newObject(scope);
         BaseFunction open = new BaseFunction(
                 scope, ScriptableObject.getFunctionPrototype(scope, context)) {
@@ -333,6 +358,7 @@ public final class RhinoJavascriptRuntime {
                             "workspace_handle_unavailable",
                             "Result handle is unavailable in this execution");
                 }
+                evidence.getOrDefault(handle.toString(), List.of()).forEach(evidenceRecorder);
                 JavascriptResultShape shape = shapes.get(handle.toString());
                 return shape == null
                         ? adapter.adapt(value)
@@ -363,7 +389,8 @@ public final class RhinoJavascriptRuntime {
             Context context,
             ScriptableObject scope,
             RhinoHostAdapter adapter,
-            HostSchemaCatalog catalog) {
+            HostSchemaCatalog catalog,
+            Runnable evidenceRecorder) {
         Scriptable api = context.newObject(scope);
         BaseFunction list = new BaseFunction(
                 scope, ScriptableObject.getFunctionPrototype(scope, context)) {
@@ -383,6 +410,7 @@ public final class RhinoJavascriptRuntime {
                             "javascript_schema_invalid",
                             "schema.list does not accept arguments");
                 }
+                evidenceRecorder.run();
                 return adapter.adapt(catalog.list());
             }
         };
@@ -404,10 +432,12 @@ public final class RhinoJavascriptRuntime {
                             "javascript_schema_invalid",
                             "schema.describe requires one exact declared path");
                 }
-                return adapter.adapt(catalog.describe(path.toString())
+                Object described = catalog.describe(path.toString())
                         .orElseThrow(() -> new JavascriptExecutionException(
                                 "javascript_schema_unavailable",
-                                "Declared JavaScript schema path is unavailable: " + path)));
+                                "Declared JavaScript schema path is unavailable: " + path));
+                evidenceRecorder.run();
+                return adapter.adapt(described);
             }
         };
         ScriptableObject.defineProperty(

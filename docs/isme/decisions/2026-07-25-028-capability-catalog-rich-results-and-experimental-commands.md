@@ -78,6 +78,29 @@ adapter contract. In particular, recipe provider/group/diagnostic metadata,
 knowledge catalog metadata, registry-wide search data, extension descriptors,
 and stable evidence are not discarded behind abbreviated count-only records.
 
+## Evidence collection and attribution
+
+A successful `run_javascript` result reports evidence gathered for that execution,
+not every snapshot present in its request context. A detached data root contributes
+its evidence only when the script dereferences that root. Merely selecting a root,
+enumerating root names, or discovering schemas does not claim that the root data
+was used. Successful `schema.list()` and `schema.describe(...)` calls carry the
+separate evidence record for the declared host catalog.
+
+The evidence list is scoped to one script execution. Opening a prior result from
+`workspace.open(handle)` also carries the evidence retained with that handle.
+`world` observations carry the evidence returned by each completed observation.
+The optional `commands` bridge records evidence for an observed command catalog
+lookup or the feedback window; it does not claim a command's world effect was
+verified. A later world/data observation is required to verify such effects.
+
+This is root- or operation-level lineage, not field-level dataflow or proof that
+every returned claim depends on every listed source. A composite root such as
+`mc.game` can expose several source records. OpenAllay does not provide a separate
+`mc.evidence` root; evidence is attached to the normalized Tool result so it cannot
+accumulate across earlier calls or be reported before the corresponding access.
+A factual success with no data or metadata source still fails closed.
+
 ## Typed results and player presentation
 
 Canonical Gson remains the only factual Tool-result representation. During
