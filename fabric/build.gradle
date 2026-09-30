@@ -8,7 +8,7 @@ dependencies {
     implementation("net.fabricmc.fabric-api:fabric-command-api-v2:3.1.0+00cb03469c")
     implementation("net.fabricmc.fabric-api:fabric-resource-loader-v1:2.0.13+9edec1269c")
     implementation("net.fabricmc.fabric-api:fabric-networking-api-v1:6.3.3+72073ef033")
-    implementation("net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.3+4575b05f9c")
+    implementation("net.fabricmc.fabric-api:fabric-lifecycle-events-v1:4.1.5+")
     implementation("net.fabricmc.fabric-api:fabric-key-mapping-api-v1:2.0.5+e2bdee789c")
     implementation(include("org.xerial:sqlite-jdbc:${sqlite_jdbc_version}"))
     implementation(include("org.commonmark:commonmark:${commonmark_version}"))
