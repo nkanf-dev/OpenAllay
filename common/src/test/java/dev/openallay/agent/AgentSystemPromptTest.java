@@ -31,12 +31,28 @@ final class AgentSystemPromptTest {
     }
 
     @Test
-    void unrestrictedClientRequestPromptDescribesJavaAuthorityAndSideEffects() {
+    void unrestrictedClientRequestPromptDescribesJavaAuthorityWithoutSandboxRestrictions() {
         String prompt = AgentSystemPrompt.compose(" ",
                 CoreJavascriptContract.render(MinecraftAgentHostGraph.declaredOnlyCatalog()), true);
         assertTrue(prompt.contains("Java.type(...)` gives scripts Java/JVM access"));
-        assertTrue(prompt.contains("irreversible side effects"));
-        assertTrue(prompt.contains("credentials available to the JVM"));
+        assertTrue(prompt.contains("including files, network, processes, and live Minecraft objects"));
+        assertTrue(prompt.contains("Use Java APIs as needed for the player's task"));
+        assertTrue(prompt.contains("Do not disclose credentials or secret-bearing payloads"));
+    }
+
+    @Test
+    void enabledPromptIncludesCoreGuidanceWithoutContradictingJavaAuthority() {
+        String contract = CoreJavascriptContract.render(MinecraftAgentHostGraph.declaredOnlyCatalog());
+        String enabled = AgentSystemPrompt.compose("", contract, true, "Use Java.type and new StringBuilder.");
+        assertTrue(enabled.contains("## UNRESTRICTED JAVASCRIPT GUIDANCE"));
+        assertTrue(enabled.contains("Use Java.type and new StringBuilder."));
+        assertTrue(enabled.contains("mc host views are read-only"));
+        assertFalse(enabled.contains("never invent arbitrary URLs or paths"));
+        assertFalse(enabled.contains("run_javascript analyzes detached Minecraft data."));
+        String disabled = AgentSystemPrompt.compose("", contract, false, "Use Java.type and new StringBuilder.");
+        assertFalse(disabled.contains("UNRESTRICTED JAVASCRIPT GUIDANCE"));
+        assertFalse(disabled.contains("Use Java.type and new StringBuilder."));
+        assertTrue(disabled.contains("never invent arbitrary URLs or paths"));
     }
 
     @Test

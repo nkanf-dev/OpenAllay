@@ -15,9 +15,11 @@ public final class BundledSkillLoader {
             "guide-ftb-progression",
             "inspect-game-state",
             "search-guide-books",
-            "run-game-commands");
+            "run-game-commands",
+            "unrestricted-javascript");
     private static final Map<String, List<String>> SUPPORT_FILES = Map.of(
-            "run-game-commands", List.of("references/commands.md"));
+            "run-game-commands", List.of("references/commands.md"),
+            "unrestricted-javascript", List.of("references/java-jvm.md"));
 
     public List<SkillSource> load() {
         List<SkillSource> sources = new ArrayList<>();

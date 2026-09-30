@@ -94,6 +94,49 @@ final class ClientCapabilityResolverTest {
         assertEquals("capability_dependency_conflict", failure.code());
     }
 
+    @Test
+    void unrestrictedGuidanceStillRequiresItsAllowedToolBeforeRequestSelection() {
+        Fixture fixture = unrestrictedFixture();
+        assertEquals("capability_dependency_conflict", failure(resolver.resolve(
+                policy(Set.of("test:fact"), Set.of()),
+                fixture.tools().registrations(), fixture.skills())).code());
+
+        ClientCapabilitySnapshot denied = success(resolver.resolve(
+                policy(Set.of("test:fact"), Set.of("unrestricted-javascript")),
+                fixture.tools().registrations(), fixture.skills())).value().forRequest(true);
+        assertTrue(denied.skills().metadata().isEmpty());
+        assertTrue(denied.localTools().find("test:fact").isEmpty());
+        assertTrue(denied.localTools().find(ClientCapabilityResolver.LOAD_SKILL_ID).isEmpty());
+    }
+
+    @Test
+    void loadSkillAvailabilityMatchesTheFrozenRequestCatalog() {
+        Fixture fixture = unrestrictedFixture();
+        ClientCapabilitySnapshot captured = success(resolver.resolve(
+                CapabilityPolicy.defaults(), fixture.tools().registrations(), fixture.skills())).value();
+
+        ClientCapabilitySnapshot disabled = captured.forRequest(false);
+        assertTrue(disabled.skills().metadata().isEmpty());
+        assertTrue(disabled.localTools().find(ClientCapabilityResolver.LOAD_SKILL_ID).isEmpty());
+        ClientCapabilitySnapshot enabled = captured.forRequest(true);
+        assertTrue(enabled.skills().find("unrestricted-javascript").isPresent());
+        assertTrue(enabled.localTools().find(ClientCapabilityResolver.LOAD_SKILL_ID).isPresent());
+    }
+
+    private static Fixture unrestrictedFixture() {
+        Fixture fixture = fixture(true);
+        assertTrue(fixture.skills().reload(List.of(new SkillSource(
+                "test-pack", "unrestricted-javascript/SKILL.md", Map.of("unrestricted-javascript/SKILL.md", """
+                ---
+                name: unrestricted-javascript
+                description: Use when unrestricted Java is enabled
+                allowed-tools: "test:fact"
+                ---
+                Use Java.type for the player's task.
+                """))), Set.of()));
+        return fixture;
+    }
+
     private static Fixture fixture(boolean registerLoadSkill) {
         ToolRegistry tools = new ToolRegistry();
         tools.register("test-provider", List.of(factTool()));

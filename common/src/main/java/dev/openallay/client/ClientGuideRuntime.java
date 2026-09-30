@@ -169,8 +169,12 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
         if (endpoint.contextBudget() == null || endpoint.modelIdentifier() == null) {
             return Optional.empty();
         }
-        int promptAndTools = new Utf8ContextTokenEstimator().estimate(
-                systemPrompt(), List.of(), toolExecutor.definitions());
+        // Reserve enough room for either captured mode without advertising the enabled view.
+        ClientGuideRuntime enabled = withCapabilities(capabilities.forRequest(true));
+        var estimator = new Utf8ContextTokenEstimator();
+        int promptAndTools = Math.max(
+                estimator.estimate(systemPrompt(), List.of(), toolExecutor.definitions()),
+                estimator.estimate(enabled.systemPrompt(true), List.of(), enabled.toolExecutor.definitions()));
         if (promptAndTools >= endpoint.contextBudget().inputTokens()) {
             return Optional.empty();
         }
@@ -209,15 +213,17 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
             String question,
             ToolInvocationContext context,
             Consumer<AgentEvent> events) {
+        ClientCapabilitySnapshot requestCapabilities = capabilities.forRequest(context.unrestrictedJavascript());
+        ClientGuideRuntime requestRuntime = withCapabilities(requestCapabilities);
         AgentRequest request = new AgentRequest(
                 requestId,
                 actor,
                 session,
                 question,
-                systemPrompt(context.unrestrictedJavascript()),
+                requestRuntime.systemPrompt(context.unrestrictedJavascript()),
                 context,
                 true);
-        return agent.ask(request, event -> dispatcher.execute(() -> events.accept(event)))
+        return requestRuntime.agent.ask(request, event -> dispatcher.execute(() -> events.accept(event)))
                 .thenApply(result -> {
                     if (result.trace() != null) {
                         traces.record(result.trace());
@@ -300,7 +306,9 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
                 capabilities.skills().metadataPrompt(),
                 dev.openallay.script.schema.CoreJavascriptContract.render(
                         dev.openallay.script.data.MinecraftAgentHostGraph.declaredOnlyCatalog()),
-                unrestrictedJavascript);
+                unrestrictedJavascript,
+                capabilities.skills().find(dev.openallay.skill.SkillCatalogSnapshot.UNRESTRICTED_JAVASCRIPT)
+                        .map(dev.openallay.skill.SkillDocument::instructions).orElse(""));
     }
 
     private static EndpointRuntime endpoint(

@@ -127,7 +127,7 @@ public record ServerGuideRuntime(
             dev.openallay.skill.SkillRepository skills, boolean experimentalCommands) {
         java.util.Objects.requireNonNull(skills, "skills");
         dev.openallay.skill.SkillCatalogSnapshot snapshot = experimentalCommands
-                ? skills.snapshotIncludingRuntimeDisabled(java.util.Set.of())
+                ? skills.snapshotWithRuntimeEnabled(java.util.Set.of(), java.util.Set.of("run-game-commands"))
                 : skills.snapshot(java.util.Set.of());
         return dev.openallay.agent.AgentSystemPrompt.compose(snapshot.metadataPrompt());
     }

@@ -205,6 +205,12 @@ public final class SkillRepository implements SkillCatalog {
         return snapshot(disabledSkills, false);
     }
 
+    public SkillCatalogSnapshot snapshotWithRuntimeEnabled(Set<String> disabledSkills, Set<String> enabledSkills) {
+        java.util.HashSet<String> disabled = new java.util.HashSet<>(disabledSkills);
+        runtimeDisabledSkills.stream().filter(name -> !enabledSkills.contains(name)).forEach(disabled::add);
+        return snapshot(disabled, false);
+    }
+
     private SkillCatalogSnapshot snapshot(
             Set<String> disabledSkills, boolean includeRuntimeDisabled) {
         java.util.HashSet<String> disabled = new java.util.HashSet<>(disabledSkills);

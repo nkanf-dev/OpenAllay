@@ -187,6 +187,64 @@ final class ClientModelRuntimeRegistryTest {
         assertEquals(List.of("first question", "tool-complete", "second question"), text);
     }
 
+    @Test
+    void javaGuidanceUsesFrozenRequestModeAndDoesNotLeakIntoLaterRequests() {
+        OpenAllayRuntime product = runtime();
+        assertTrue(product.skills().reload(List.of(new dev.openallay.skill.SkillSource(
+                "test", "unrestricted-javascript/SKILL.md", Map.of("unrestricted-javascript/SKILL.md", """
+                ---
+                name: unrestricted-javascript
+                description: Use when unrestricted Java is enabled
+                ---
+                Request Java guidance sentinel: use Java.type.
+                """, "unrestricted-javascript/references/java-jvm.md", "Captured Java reference sentinel."))), Set.of()));
+        product.tools().register("test-skills", List.of(new dev.openallay.skill.LoadSkillTool(product.skills())));
+        CompletableFuture<ModelTurn> pending = new CompletableFuture<>();
+        ToolSequenceModel model = new ToolSequenceModel(pending);
+        ClientModelRuntimeRegistry registry = registry(product, load("a", "a"), Map.of("a", model));
+        var disabled = ToolInvocationContext.developmentConsole("java-disabled");
+        var authorization = new dev.openallay.script.UnrestrictedJavascriptRuntime();
+        authorization.replace(new dev.openallay.script.UnrestrictedJavascriptConfig(1, true));
+        var enabled = new ToolInvocationContext("java-enabled", disabled.capturedAt(), disabled.caller(),
+                disabled.player(), disabled.registries(), disabled.recipes(), disabled.observableGameState(),
+                disabled.metrics(), authorization.freeze("java-enabled"));
+        UUID actor = UUID.randomUUID();
+        int reserved = registry.contextSpec("a").orElseThrow().promptAndToolTokens();
+        var active = registry.ask("a", actor, "main", UUID.randomUUID(), "first", enabled, ignored -> {});
+        authorization.replace(dev.openallay.script.UnrestrictedJavascriptConfig.defaults());
+        assertTrue(authorization.freeze("java-enabled"));
+        assertFalse(authorization.freeze("java-disabled"));
+        assertTrue(product.skills().reload(List.of(), Set.of()));
+        registry.replaceCapabilities(success(new ClientCapabilityResolver().resolve(
+                CapabilityPolicy.defaults(), product.tools().registrations(), product.skills())));
+        var input = new com.google.gson.JsonObject();
+        input.addProperty("name", "unrestricted-javascript");
+        input.addProperty("reference", "references/java-jvm.md");
+        pending.complete(new ModelTurn("test", "model-a",
+                List.of(new ModelContent.ToolUse("load-java-reference", "openallay__load_skill", input)),
+                "tool_use", ModelUsage.empty()));
+        assertTrue(active.join().successful());
+        ModelRequest first = model.requests.getFirst();
+        assertTrue(first.systemPrompt().contains("Request Java guidance sentinel"));
+        assertTrue(first.systemPrompt().contains("<name>unrestricted-javascript</name>"));
+        assertFalse(first.systemPrompt().contains("Captured Java reference sentinel"));
+        assertTrue(reserved >= new dev.openallay.agent.context.Utf8ContextTokenEstimator()
+                .estimate(first.systemPrompt(), List.of(), first.tools()));
+        assertTrue(model.requests.get(1).messages().stream()
+                .flatMap(message -> message.content().stream())
+                .filter(ModelContent.ToolResult.class::isInstance)
+                .map(ModelContent.ToolResult.class::cast)
+                .anyMatch(result -> !result.error()
+                        && result.value().toString().contains("Captured Java reference sentinel")));
+        registry.ask("a", actor, "main", UUID.randomUUID(), "second", disabled, ignored -> {}).join();
+        String next = model.requests.get(2).systemPrompt();
+        assertFalse(next.contains("Request Java guidance sentinel"));
+        assertFalse(next.contains("<name>unrestricted-javascript</name>"));
+        assertTrue(next.contains("JavaScript uses the default isolated mode"));
+        registry.ask("a", actor, "main", UUID.randomUUID(), "third", enabled, ignored -> {}).join();
+        assertFalse(model.requests.get(3).systemPrompt().contains("Request Java guidance sentinel"));
+    }
+
     private static ClientModelRuntimeRegistry registry(
             ModelProfilesConfigLoader.Load load,
             Map<String, ModelClient> clients) {

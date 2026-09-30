@@ -125,6 +125,10 @@ public final class LoadSkillTool
         if (input == null || input.name() == null || input.name().isBlank()) {
             return new ToolResult.Failure<>("invalid_skill_name", "Skill name must not be blank");
         }
+        if (SkillCatalogSnapshot.UNRESTRICTED_JAVASCRIPT.equals(input.name())
+                && !context.unrestrictedJavascript()) {
+            return new ToolResult.Failure<>("skill_not_found", "No available Skill named " + input.name());
+        }
         SkillDocument document = catalog.find(input.name()).orElse(null);
         if (document == null) {
             return new ToolResult.Failure<>(

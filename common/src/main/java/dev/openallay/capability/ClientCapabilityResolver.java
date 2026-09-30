@@ -34,6 +34,7 @@ public final class ClientCapabilityResolver {
 
         try {
             SkillCatalogSnapshot skillSnapshot = skills.snapshot(policy.disabledSkills());
+            SkillCatalogSnapshot eligibleSkills = skillSnapshot.forRequest(true);
             List<RegisteredTool> candidate = new ArrayList<>();
             RegisteredTool loadSkillRegistration = null;
             for (RegisteredTool registration : List.copyOf(registrations)) {
@@ -45,7 +46,7 @@ public final class ClientCapabilityResolver {
             }
 
             Set<String> disabled = new HashSet<>(policy.disabledTools());
-            if (skillSnapshot.metadata().isEmpty()) {
+            if (eligibleSkills.metadata().isEmpty()) {
                 if (loadSkillRegistration != null) {
                     candidate.add(loadSkillRegistration);
                     disabled.add(LOAD_SKILL_ID);
@@ -61,7 +62,7 @@ public final class ClientCapabilityResolver {
             }
 
             ToolRuntimeCatalog localTools = ToolRuntimeCatalog.from(candidate, disabled);
-            for (SkillMetadata metadata : skillSnapshot.metadata()) {
+            for (SkillMetadata metadata : eligibleSkills.metadata()) {
                 Set<String> missing = metadata.allowedTools().stream()
                         .filter(toolId -> localTools.find(toolId).isEmpty())
                         .collect(Collectors.toCollection(java.util.TreeSet::new));

@@ -791,6 +791,31 @@ success bit. A command already submitted is not rolled back if a later
 statement fails or the request is cancelled. When the setting is off, the
 `commands` object and matching Skill are absent from the request.
 
+## Unrestricted JavaScript and automatic JVM guidance
+
+The Extensions page has a separate default-off unrestricted JavaScript setting.
+Only a client-local model request can capture this permission. Server-model
+requests and server-originated client Tool callbacks remain isolated, even if the
+local toggle is enabled. A setting change affects future requests only.
+
+Authorized requests automatically receive the bundled `unrestricted-javascript`
+Skill instructions in their system prompt and can load its declared Java interop
+reference through `load_skill`. The Skill explains the actual Rhino `Java.type`
+bridge, static and instance method calls, Java collections, and safe owning-thread
+scheduling for Minecraft access. It explains capability use; it does not grant
+permission. Tool and Skill deny policies still apply. The prompt and `load_skill`
+use the same frozen request catalog, including after a repository or policy change.
+The context budget reserves room for the larger of the isolated and authorized
+prompts. Ordinary requests and server command prompts do not advertise this Skill.
+
+In this mode the Agent may use JVM file, network, process, and live-object APIs
+for the player's task, rather than pretending execution is confined to detached
+`mc` roots. The `mc` roots themselves remain immutable. Cancellation is not
+rollback and cannot guarantee interruption of blocking native/Java operations.
+Java values alone are not grounding evidence. Never include JVM credentials in
+model context, tool results, traces, logs, or player answers. See
+SKMB-2026-09-29-033 for the authority and lifetime contract.
+
 ## Knowledge and Skills
 
 Patchouli is read directly from active client resource packs, without a binary

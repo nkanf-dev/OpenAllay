@@ -40,6 +40,34 @@ final class RhinoJavascriptRuntimeTest {
     }
 
     @Test
+    void bundledJavaExamplesRunWithStaticInstanceAndCollectionCalls() throws IOException {
+        String root = "assets/openallay/openallay_skills/unrestricted-javascript/";
+        int examples = 0;
+        for (String file : List.of("SKILL.md", "references/java-jvm.md")) {
+            String document;
+            try (var input = getClass().getClassLoader().getResourceAsStream(root + file)) {
+                document = new String(java.util.Objects.requireNonNull(input).readAllBytes(), StandardCharsets.UTF_8);
+            }
+            int offset = 0;
+            while ((offset = document.indexOf("```javascript\n", offset)) >= 0) {
+                examples++;
+                int start = offset + "```javascript\n".length();
+                int end = document.indexOf("\n```", start);
+                assertTrue(end >= start, "JavaScript example must have a closing fence");
+                var result = new RhinoJavascriptRuntime().execute(document.substring(start, end),
+                        Map.of(), Map.of(), Map.of(), new CancellationSignal(), null, null, true).value();
+                if (result.isJsonPrimitive()) assertTrue(result.getAsString().startsWith("Java "));
+                else if (result.getAsJsonObject().has("values")) {
+                    assertEquals(2, result.getAsJsonObject().get("size").getAsInt());
+                    assertEquals(JsonParser.parseString("[\"stone\",\"dirt\"]"), result.getAsJsonObject().get("values"));
+                } else assertEquals("config", result.getAsJsonObject().get("name").getAsString());
+                offset = end + 4;
+            }
+        }
+        assertEquals(4, examples);
+    }
+
+    @Test
     void progressivelyDescribesDeclaredMinecraftPathsWithoutSelectingTheirValues() {
         MinecraftAgentHostGraph graph = new MinecraftAgentHostGraph(
                 JavascriptAgentTestFixtures.context("schema-discovery"));

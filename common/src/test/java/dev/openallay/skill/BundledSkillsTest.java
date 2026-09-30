@@ -57,6 +57,42 @@ final class BundledSkillsTest {
         assertTrue(commandReference.contains("sequence"));
         assertTrue(commandReference.contains("messages"));
         assertFalse(commandReference.contains("enchanted-item-created"));
+        assertFalse(commandReference.contains("benchmark artifact"));
+        assertFalse(repository.find("diagnose-missing-recipe").orElseThrow().instructions()
+                .contains("one materially corrected analysis"));
+    }
+
+    @Test
+    void unrestrictedGuidanceIsCapturedPerRequestAndDeniedForServerCallbacks() {
+        SkillRepository repository = new SkillRepository(new SkillParser(), Set.of("openallay:run_javascript"));
+        assertTrue(repository.reload(new BundledSkillLoader().load(), Set.of("ftbquests")));
+        SkillCatalogSnapshot captured = repository.snapshot(Set.of());
+        assertTrue(captured.find("unrestricted-javascript").isEmpty());
+        assertFalse(captured.metadataPrompt().contains("unrestricted-javascript"));
+        SkillCatalogSnapshot enabled = captured.forRequest(true);
+        assertTrue(enabled.find("unrestricted-javascript").isPresent());
+        assertEquals(Set.of("references/java-jvm.md"),
+                enabled.find("unrestricted-javascript").orElseThrow().references().keySet());
+        repository.setRuntimeDisabledSkills(Set.of("unrestricted-javascript"));
+        assertTrue(enabled.find("unrestricted-javascript").isPresent());
+        assertTrue(repository.snapshot(Set.of()).forRequest(true).find("unrestricted-javascript").isEmpty());
+        assertTrue(captured.forRequest(false).find("unrestricted-javascript").isEmpty());
+        repository.setRuntimeDisabledSkills(Set.of());
+        assertTrue(repository.snapshot(Set.of("unrestricted-javascript")).forRequest(true)
+                .find("unrestricted-javascript").isEmpty());
+        var disabled = dev.openallay.context.ToolInvocationContext.developmentConsole("server-callback");
+        var authorized = new dev.openallay.context.ToolInvocationContext("local-enabled", disabled.capturedAt(),
+                disabled.caller(), disabled.player(), disabled.registries(), disabled.recipes(),
+                disabled.observableGameState(), disabled.metrics(), true);
+        LoadSkillTool tool = new LoadSkillTool(enabled);
+        assertTrue(tool.invoke(disabled, new LoadSkillTool.Input("unrestricted-javascript"))
+                instanceof dev.openallay.tool.ToolResult.Failure<?>);
+        assertTrue(tool.invoke(disabled, new LoadSkillTool.Input("unrestricted-javascript", "references/java-jvm.md"))
+                instanceof dev.openallay.tool.ToolResult.Failure<?>);
+        assertTrue(tool.invoke(authorized, new LoadSkillTool.Input("unrestricted-javascript"))
+                instanceof dev.openallay.tool.ToolResult.Success<?>);
+        assertTrue(tool.invoke(authorized, new LoadSkillTool.Input("unrestricted-javascript", "references/java-jvm.md"))
+                instanceof dev.openallay.tool.ToolResult.Success<?>);
     }
 
     @Test

@@ -30,7 +30,7 @@ return {
 
 The item ID, component IDs, values, and count must come from the player's
 request and current game, not from this sample. Mods may register their own
-items and components. Do not copy a benchmark artifact or prewritten answer.
+items and components.
 Do not use the removed legacy `{tag:...}` form.
 
 If Minecraft returns an unknown-item, unknown-component, malformed-component,

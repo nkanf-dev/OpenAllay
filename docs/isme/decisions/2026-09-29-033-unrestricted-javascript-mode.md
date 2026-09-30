@@ -24,6 +24,25 @@ handle-selection, and model-preview budgets. Cancellation and request-scoped
 lifetime cleanup remain active. Disabled execution retains safe-standard
 objects, denied Java wrappers, and existing limits.
 
+## Automatic capability guidance
+
+Requests with frozen client-local unrestricted authorization automatically receive
+bundled `unrestricted-javascript` guidance. The system prompt identifies Java/JVM
+interop as available and explains how to use it for the player's task, rather
+than applying the default detached-data-only restriction. The core instructions
+are provided immediately; detailed examples are declared Skill references.
+
+The request Skill catalog and prompt follow the same captured authorization as
+execution. A Skill cannot enable Java access, override the local toggle, or grant
+server-model/callback authority. Default and server requests do not advertise this
+Skill. Enabling experimental Minecraft commands does not unhide unrelated
+optional capabilities. Tool and Skill deny policies still apply.
+
+The guidance must describe the actual Rhino API and live-object threading rules.
+It must not imply `mc` views become mutable, that Java results automatically carry
+grounding evidence, that cancellation rolls back side effects, or that JVM
+credentials can be disclosed in prompts, results, logs, or player answers.
+
 ## State and failure semantics
 
 - `disabled` is the only implicit state, including missing, malformed, or

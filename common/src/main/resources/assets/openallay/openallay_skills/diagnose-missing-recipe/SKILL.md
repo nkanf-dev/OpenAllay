@@ -15,5 +15,4 @@ replacement items.
 Return the observed matching recipes, relevant diagnostics, and exact
 sourceId/generation/recipeId handles. Do not infer that a recipe exists from
 documentation when the active recipe catalog does not contain it.
-If one materially corrected analysis remains empty or partial, report the
-limitation and stop.
+If the available evidence remains empty or partial, report that limitation.
