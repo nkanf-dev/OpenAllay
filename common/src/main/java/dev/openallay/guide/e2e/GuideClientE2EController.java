@@ -88,6 +88,9 @@ public final class GuideClientE2EController {
     private int screenshotWaitTicks;
     private String screenshotReviewFailure;
     private boolean screenshotSourceAvailable;
+    private boolean cancelOnToolStartRequested;
+    private boolean cancelOnToolStartPending;
+    private boolean cancelOnToolStartAccepted;
 
     public GuideClientE2EController(
             GuideClientE2EConfig config,
@@ -431,7 +434,22 @@ public final class GuideClientE2EController {
         if (transitions.isEmpty() || transitions.getLast() != request.status()) {
             transitions.add(request.status());
         }
-        if (!request.terminal() || nativeProbePending || pendingReport != null) return;
+        if (Boolean.getBoolean("openallay.e2e.cancelOnToolStart") && !cancelOnToolStartRequested
+                && !request.terminal() && request.tools().stream().anyMatch(value ->
+                        value.toolId().equals("openallay:run_javascript")
+                                && value.status() == dev.openallay.guide.GuideToolStatus.RUNNING)) {
+            cancelOnToolStartRequested = true;
+            cancelOnToolStartPending = true;
+            GuideService service = services.forActor(snapshot.actorId());
+            service.cancel().thenAccept(cancelled -> {
+                cancelOnToolStartPending = false;
+                cancelOnToolStartAccepted = cancelled instanceof ToolResult.Success<Boolean> success && success.value();
+                if (!cancelOnToolStartAccepted) {
+                    failWithoutRequest("stop_request_failed", "The actual guide cancellation was not accepted");
+                } else observe(service.snapshot());
+            });
+        }
+        if (!request.terminal() || nativeProbePending || pendingReport != null || cancelOnToolStartPending) return;
         if (revocationStarted && !revocationCompleted) return;
         if (seedingHistory) {
             requestId = null;
@@ -505,6 +523,19 @@ public final class GuideClientE2EController {
             });
         }
         pendingReport = new GuideE2EReportJson(gson).encode(report, secrets);
+        if (Boolean.getBoolean("openallay.e2e.cancelOnToolStart")) {
+            var stop = new com.google.gson.JsonObject();
+            stop.addProperty("requested", cancelOnToolStartRequested);
+            stop.addProperty("accepted", cancelOnToolStartAccepted);
+            stop.addProperty("terminalCancelled", request.status() == GuideRequestStatus.CANCELLED);
+            stop.addProperty("pendingToolHasNoNormalizedResult", request.tools().stream().anyMatch(value ->
+                    value.toolId().equals("openallay:run_javascript")
+                            && value.status() == dev.openallay.guide.GuideToolStatus.RUNNING
+                            && value.normalized() == null));
+            var retained = com.google.gson.JsonParser.parseString(pendingReport).getAsJsonObject();
+            retained.add("actualStop", stop);
+            pendingReport = gson.toJson(retained);
+        }
         pendingTraceProfile = request.modelSelection().profileId();
         if (GuideBuilderE2EProbe.enabled(config.scenario())) {
             nativeProbePending = true;

@@ -131,6 +131,17 @@ class BuilderFixtureTests(unittest.TestCase):
         self.assertIn("independent controller readback", content)
         self.assertIn("pre-authored", content)
 
+    def test_ui_stop_runs_actual_cancellable_read_only_rhino_not_a_fake_result(self):
+        arguments = fixture.ui_stop_arguments()
+        self.assertEqual(["player"], arguments["roots"])
+        self.assertIn("mc.player.uuid", arguments["source"])
+        self.assertIn("while(true)", arguments["source"])
+        for denied in ("Java", "commands", "building", "setBlock", "fetch", "Thread.sleep"):
+            self.assertNotIn(denied, arguments["source"])
+        self.assertTrue(arguments["title"])
+        self.assertTrue(arguments["description"])
+        self.assertNotIn("success", arguments["description"])
+
     def test_ui_transport_failure_starts_with_actual_read_only_javascript(self):
         arguments = fixture.ui_provider_failure_arguments()
         self.assertEqual(["player"], arguments["roots"])

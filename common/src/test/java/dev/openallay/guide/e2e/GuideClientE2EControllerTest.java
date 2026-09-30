@@ -224,6 +224,57 @@ final class GuideClientE2EControllerTest {
         assertEquals("COMPLETED", json.get("outcome").getAsString());
     }
 
+    @Test
+    void optInStopCancelsTheActualRequestOnceAndRetainsPendingToolWithoutResult() throws Exception {
+        String property = "openallay.e2e.cancelOnToolStart";
+        String previous = System.getProperty(property);
+        try {
+            System.setProperty(property, "true");
+            Path report = temporary.resolve("actual-stop/report.json");
+            ArrayDeque<Runnable> tasks = new ArrayDeque<>();
+            PendingJavascriptLocal local = new PendingJavascriptLocal();
+            GuideServiceManager services = services(local, tasks);
+            AtomicBoolean shutdown = new AtomicBoolean();
+            GuideClientE2EController controller = new GuideClientE2EController(
+                    config(report), "fabric", "26.2", "test", services, new Gson(),
+                    () -> shutdown.set(true), Set.of());
+            UUID actor = UUID.fromString("30ab22ed-23fb-46f2-82ca-d4a656698eec");
+            controller.tick(actor);
+            while (!tasks.isEmpty()) tasks.removeFirst().run();
+            controller.tick(actor);
+            assertTrue(controller.finished());
+            assertTrue(shutdown.get());
+            assertEquals(1, local.cancelCalls.get());
+            var request = services.forActor(actor).snapshot().sessions().stream()
+                    .flatMap(value -> value.requests().stream()).findFirst().orElseThrow();
+            assertEquals(local.requestId, request.requestId());
+            assertEquals(dev.openallay.guide.GuideRequestStatus.CANCELLED, request.status());
+            assertEquals(dev.openallay.guide.GuideToolStatus.RUNNING, request.tools().getFirst().status());
+            assertEquals(null, request.tools().getFirst().normalized());
+            var encoded = JsonParser.parseString(Files.readString(report)).getAsJsonObject();
+            assertEquals("CANCELLED", encoded.get("outcome").getAsString());
+            assertTrue(encoded.getAsJsonObject("actualStop").get("accepted").getAsBoolean());
+            assertTrue(encoded.getAsJsonObject("actualStop").get("pendingToolHasNoNormalizedResult").getAsBoolean());
+        } finally {
+            if (previous == null) System.clearProperty(property); else System.setProperty(property, previous);
+        }
+    }
+
+    private static final class PendingJavascriptLocal implements GuideLocalEndpoint {
+        private final AtomicInteger cancelCalls = new AtomicInteger();
+        private UUID requestId;
+        @Override public Set<ContextCapability> requiredContext() { return Set.of(); }
+        @Override public CompletableFuture<AgentResult> ask(UUID actor, String sessionId, UUID requestId,
+                String question, ToolInvocationContext context, Consumer<AgentEvent> events) {
+            this.requestId = requestId;
+            events.accept(new AgentEvent.ToolStarted("actual-pending-js", "openallay:run_javascript"));
+            return new CompletableFuture<>();
+        }
+        @Override public boolean cancel(UUID actor, String sessionId) { cancelCalls.incrementAndGet(); return true; }
+        @Override public void clearSession(UUID actor, String sessionId) {}
+        @Override public void clearActor(UUID actor) {}
+    }
+
     private static GuideClientE2EConfig config(Path report) {
         return new GuideClientE2EConfig(
                 "fixture", "e2e", "question", GuideModelMode.CLIENT, report, true);

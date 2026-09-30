@@ -280,6 +280,13 @@ def builder_scenario(user_text):
     return scenario
 
 
+def ui_stop_arguments():
+    """Cancellable Rhino work; no Java, I/O, commands, or native world writes."""
+    return {"source": "var observed=mc.player.uuid; while(true){} return observed;",
+            "roots": ["player"], "title": "读取状态并等待明确停止",
+            "description": "读取脱离游戏对象的玩家状态，然后等待真实请求取消；不会宣称有返回结果或修改世界。"}
+
+
 def ui_provider_failure_arguments():
     return {"source": "return {player:mc.player};", "roots": ["player"],
             "title": "读取当前玩家状态", "description": "读取实际捕获的玩家状态；随后由明确标记的 loopback 验收端点返回受控传输失败。"}
@@ -458,6 +465,10 @@ class Handler(BaseHTTPRequestHandler):
         completed = sum(1 for message in turn_messages
                         if message.get("role") == "tool")
         ui_provider_failure = user_text.startswith("OpenAllay E2E UI provider failure")
+        ui_stop = user_text.startswith("OpenAllay E2E UI stop")
+        if ui_stop and completed >= 1:
+            self.send_error(422, "The actual Stop fixture unexpectedly continued after a Tool result")
+            return
         if ui_provider_failure and completed >= 1:
             # Actual controlled loopback transport failure after a real read-only JS result.
             self.send_error(503, "Deterministic E2E continuation transport failure")
@@ -471,9 +482,10 @@ class Handler(BaseHTTPRequestHandler):
         try:
             builder = builder_scenario(user_text)
             builder_step, builder_content = builder_turn(builder, turn_messages, user_text) if builder else (None, None)
-            if ui_provider_failure:
-                builder_step = (JAVASCRIPT_TOOL, ui_provider_failure_arguments())
-                builder_content = "# Deterministic UI transport fixture\n\nReading actual detached player state before a controlled loopback continuation failure. Not a live model."
+            if ui_provider_failure or ui_stop:
+                builder_step = (JAVASCRIPT_TOOL, ui_stop_arguments() if ui_stop else ui_provider_failure_arguments())
+                builder_content = ("# Deterministic UI Stop fixture\n\nStarting real cancellable read-only Rhino work for an explicit Stop action. No result is pre-authored."
+                                   if ui_stop else "# Deterministic UI transport fixture\n\nReading actual detached player state before a controlled loopback continuation failure. Not a live model.")
         except ValueError as failure:
             self.send_error(422, str(failure))
             return
@@ -487,7 +499,7 @@ class Handler(BaseHTTPRequestHandler):
                 return
         try:
             content = (
-                builder_content if ui_provider_failure
+                builder_content if ui_provider_failure or ui_stop
                 else (builder_content or "# Deterministic Builder real-client fixture\n\nPre-authored loopback provider. Calling the real bundled Extension through the production Tool; no live-model claim.") if builder
                 else "历史分页种子已记录。" if history_seed
                 else "服务端模型已完成客户端状态读取；无权限的只读世界查询作为工具失败返回后，Agent 仍正常完成。"
@@ -502,7 +514,7 @@ class Handler(BaseHTTPRequestHandler):
         steps = GAME_STATE_STEPS if game_state else (JAVASCRIPT_TOOL,)
         if builder_step is not None or (not builder and not history_seed and completed < len(steps)):
             try:
-                name, arguments = (builder_step if builder or ui_provider_failure
+                name, arguments = (builder_step if builder or ui_provider_failure or ui_stop
                                    else steps[completed] if game_state
                                    else (JAVASCRIPT_TOOL, javascript_arguments()))
             except ValueError as failure:
