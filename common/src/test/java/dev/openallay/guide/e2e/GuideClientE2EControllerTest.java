@@ -41,6 +41,26 @@ final class GuideClientE2EControllerTest {
     @TempDir Path temporary;
 
     @Test
+    void professionalScreenshotMatrixRequiresBothExplicitOptInProperties() {
+        String enabled = GuideClientE2EConfig.ENABLED;
+        String matrix = "openallay.e2e.screenshotMatrix";
+        String previousEnabled = System.getProperty(enabled);
+        String previousMatrix = System.getProperty(matrix);
+        try {
+            System.clearProperty(enabled);
+            System.setProperty(matrix, "professional");
+            assertFalse(GuideClientE2EController.professionalScreenshots());
+            System.setProperty(enabled, "true");
+            assertTrue(GuideClientE2EController.professionalScreenshots());
+            System.setProperty(matrix, "other");
+            assertFalse(GuideClientE2EController.professionalScreenshots());
+        } finally {
+            if (previousEnabled == null) System.clearProperty(enabled); else System.setProperty(enabled, previousEnabled);
+            if (previousMatrix == null) System.clearProperty(matrix); else System.setProperty(matrix, previousMatrix);
+        }
+    }
+
+    @Test
     void redactsOnlyExplicitlyReferencedProfileEnvironmentCredentials() {
         var definition = new dev.openallay.model.config.ModelProfileDefinition(
                 "primary", "Primary", true,

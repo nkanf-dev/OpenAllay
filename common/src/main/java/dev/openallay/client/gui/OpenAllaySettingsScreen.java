@@ -3217,6 +3217,41 @@ public final class OpenAllaySettingsScreen extends Screen {
         rebuildWidgets();
     }
 
+    /** Screenshot-harness selection of an existing configured profile; no settings write. */
+    public void e2eOpenModels(String profileId) {
+        requireE2eControls();
+        captureDraft();
+        select(Objects.requireNonNull(profileId, "profileId"));
+        section = SettingsSection.MODELS;
+        editorScroll = 0;
+        pageScroll = 0;
+        rebuildWidgets();
+    }
+
+    /** Selects actual installed metadata, never a synthetic Extension card. */
+    public void e2eSelectExtension(String extensionId) {
+        requireE2eControls();
+        if (extensionProjection().installed().stream().noneMatch(value -> value.id().equals(extensionId)))
+            throw new IllegalArgumentException("E2E Extension is not installed");
+        e2eOpenExtensions();
+        extensionTab = ExtensionTab.INSTALLED;
+        selectedExtensionId = extensionId;
+        narrowExtensionDetail = true;
+        rebuildWidgets();
+    }
+
+    /** Moves an existing settings page to its real measured bottom. */
+    public void e2eScrollPageBottom() {
+        requireE2eControls();
+        if (layout == null) throw new IllegalStateException("E2E settings layout is not ready");
+        if (section == SettingsSection.MODELS) {
+            editorScroll = Math.max(0, modelEditorContentHeight - layout.editor().height() + 16);
+        } else {
+            pageScroll = Math.max(0, pageContentHeight - layout.content().height() + 18);
+        }
+        rebuildWidgets();
+    }
+
     /** Screenshot-harness navigation that exercises the real display-settings save path. */
     public void e2eOpenGeneral(String assistantDisplayName) {
         requireE2eControls();

@@ -131,6 +131,26 @@ class BuilderFixtureTests(unittest.TestCase):
         self.assertIn("independent controller readback", content)
         self.assertIn("pre-authored", content)
 
+    def test_ui_transport_failure_starts_with_actual_read_only_javascript(self):
+        arguments = fixture.ui_provider_failure_arguments()
+        self.assertEqual(["player"], arguments["roots"])
+        self.assertEqual("return {player:mc.player};", arguments["source"])
+        self.assertNotIn("Java", arguments["source"])
+        self.assertNotIn("building", arguments["source"])
+        self.assertTrue(arguments["title"])
+        self.assertTrue(arguments["description"])
+
+    def test_fixture_javascript_intents_describe_work_not_preclaimed_results(self):
+        for scenario in fixture.BUILDER_SCENARIOS:
+            arguments = fixture.builder_arguments(scenario, (-1, -61, 4) if scenario == "reload" else None)
+            self.assertTrue(arguments["title"])
+            self.assertTrue(arguments["description"])
+            self.assertNotIn("85", arguments["description"])
+            self.assertNotIn("PASSED", arguments["description"])
+        recipe = fixture.javascript_arguments()
+        self.assertTrue(recipe["title"])
+        self.assertTrue(recipe["description"])
+
     def test_reload_uses_recorded_origin_not_moved_player_and_rejects_missing_origin(self):
         question = "OpenAllay E2E Builder reload\nE2E retained native anchor: x=-1,y=-61,z=4"
         anchor = fixture.builder_retained_anchor(question)

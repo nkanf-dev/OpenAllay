@@ -2289,6 +2289,40 @@ public final class OpenAllayScreen extends Screen {
         open(tools.get(index));
     }
 
+    /** Opens the latest actual JavaScript activity, including real failure or interruption. */
+    public boolean selectLatestJavascriptForDevelopmentProbe() {
+        requireDevelopmentProbe();
+        List<GuideUiRow.Tool> tools = view.rows().stream().filter(GuideUiRow.Tool.class::isInstance)
+                .map(GuideUiRow.Tool.class::cast)
+                .filter(value -> value.activity().toolId().endsWith(":run_javascript")).toList();
+        if (tools.isEmpty()) return false;
+        open(tools.getLast());
+        return true;
+    }
+
+    /** Opens only an actually retained source from the latest evidenced JavaScript call. */
+    public boolean selectLatestSourceForDevelopmentProbe() {
+        requireDevelopmentProbe();
+        List<GuideUiRow.Tool> tools = view.rows().stream().filter(GuideUiRow.Tool.class::isInstance)
+                .map(GuideUiRow.Tool.class::cast)
+                .filter(value -> value.activity().toolId().endsWith(":run_javascript")
+                        && !value.activity().sources().isEmpty()).toList();
+        if (tools.isEmpty()) return false;
+        open(tools.getLast().activity().sources().getFirst());
+        return true;
+    }
+
+    public void scrollDetailToBottomForDevelopmentProbe() {
+        requireDevelopmentProbe();
+        if (layout == null || !detailOpen()) throw new IllegalStateException("E2E detail is not open");
+        detailScroll = Math.max(0, detailContentHeight - layout.detail().height() + 34);
+    }
+
+    private static void requireDevelopmentProbe() {
+        if (!Boolean.getBoolean("openallay.e2e.enabled"))
+            throw new IllegalStateException("development probe is disabled");
+    }
+
     /** Development-only count used to keep failed-report screenshots non-crashing. */
     public int toolCountForDevelopmentProbe() {
         if (!Boolean.getBoolean("openallay.e2e.enabled")) {

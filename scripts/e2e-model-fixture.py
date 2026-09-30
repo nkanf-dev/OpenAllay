@@ -100,6 +100,8 @@ return {{
     return {
         "source": source,
         "roots": ["recipes", "player", "knowledge"],
+        "title": "读取当前配方与背包",
+        "description": "用本次捕获的配方、背包和知识来源计算材料对照与制作能力。",
     }
 
 
@@ -278,6 +280,11 @@ def builder_scenario(user_text):
     return scenario
 
 
+def ui_provider_failure_arguments():
+    return {"source": "return {player:mc.player};", "roots": ["player"],
+            "title": "读取当前玩家状态", "description": "读取实际捕获的玩家状态；随后由明确标记的 loopback 验收端点返回受控传输失败。"}
+
+
 def builder_retained_anchor(user_text):
     """Recorded native coordinates supplied by the controller, never an answer."""
     import re
@@ -350,7 +357,17 @@ var readback={house:b.get_block(x,y,z),dock:b.get_block(x+14,y,z+18),
 return {scenario:"builder_reload",template:{name:"openallay_e2e_builder_native",size:template.size},
   listed:listed,operations:operations,operationCount:operations.length,readback:readback,status:b.finish()};
 '''
-    return {"source": source, "roots": ["player"]}
+    intents = {
+        "acceptance": ("建造与读取在线验收站点", "调用六个小型预设、几何、地形路径和模板变换，并保留失败、取消及撤销结果供独立原生检查。"),
+        "disabled": ("检查未授权时的 Builder 访问", "尝试打开实际在线 Builder；未启用的 Java 权限应返回工具失败，不宣称世界写入成功。"),
+        "reload": ("读取保留的原生站点", "按先前原生记录的坐标读取现存方块、模板及操作日志，不移动玩家或重放写入。"),
+        "partial": ("保留部分写入的失败结果", "先写入一个标记，再请求无效方块，读取实际部分失败状态。"),
+        "cancel": ("检查明确取消后的写入", "写入标记后取消该在线会话，并检查后续写入是否被拒绝。"),
+        "undo": ("检查撤销与冲突", "保留一次外部改动并明确撤销先前操作，读取还原数与冲突。"),
+        "server-denied": ("检查服务端模型的 Java 隔离", "尝试实际 Java 桥访问并保留结构化权限失败，不获取额外权限。"),
+    }
+    title, description = intents[scenario]
+    return {"source": source, "roots": ["player"], "title": title, "description": description}
 
 
 def builder_turn(scenario, turn_messages, user_text=""):
@@ -440,6 +457,11 @@ class Handler(BaseHTTPRequestHandler):
         user_text, turn_messages = current_user_turn(request)
         completed = sum(1 for message in turn_messages
                         if message.get("role") == "tool")
+        ui_provider_failure = user_text.startswith("OpenAllay E2E UI provider failure")
+        if ui_provider_failure and completed >= 1:
+            # Actual controlled loopback transport failure after a real read-only JS result.
+            self.send_error(503, "Deterministic E2E continuation transport failure")
+            return
         history_seed = user_text.startswith("OpenAllay E2E 历史分页种子 ")
         server_client_tools = user_text.startswith(
             "OpenAllay E2E 服务端模型反向工具验收")
@@ -449,6 +471,9 @@ class Handler(BaseHTTPRequestHandler):
         try:
             builder = builder_scenario(user_text)
             builder_step, builder_content = builder_turn(builder, turn_messages, user_text) if builder else (None, None)
+            if ui_provider_failure:
+                builder_step = (JAVASCRIPT_TOOL, ui_provider_failure_arguments())
+                builder_content = "# Deterministic UI transport fixture\n\nReading actual detached player state before a controlled loopback continuation failure. Not a live model."
         except ValueError as failure:
             self.send_error(422, str(failure))
             return
@@ -462,7 +487,8 @@ class Handler(BaseHTTPRequestHandler):
                 return
         try:
             content = (
-                (builder_content or "# Deterministic Builder real-client fixture\n\nPre-authored loopback provider. Calling the real bundled Extension through the production Tool; no live-model claim.") if builder
+                builder_content if ui_provider_failure
+                else (builder_content or "# Deterministic Builder real-client fixture\n\nPre-authored loopback provider. Calling the real bundled Extension through the production Tool; no live-model claim.") if builder
                 else "历史分页种子已记录。" if history_seed
                 else "服务端模型已完成客户端状态读取；无权限的只读世界查询作为工具失败返回后，Agent 仍正常完成。"
                 if server_client_tools and completed == len(GAME_STATE_STEPS)
@@ -476,7 +502,7 @@ class Handler(BaseHTTPRequestHandler):
         steps = GAME_STATE_STEPS if game_state else (JAVASCRIPT_TOOL,)
         if builder_step is not None or (not builder and not history_seed and completed < len(steps)):
             try:
-                name, arguments = (builder_step if builder
+                name, arguments = (builder_step if builder or ui_provider_failure
                                    else steps[completed] if game_state
                                    else (JAVASCRIPT_TOOL, javascript_arguments()))
             except ValueError as failure:

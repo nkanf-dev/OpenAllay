@@ -82,6 +82,12 @@ public final class GuideClientE2EController {
     private Instant revocationCompletedAt;
     private Instant firstJavascriptObservedAt;
     private boolean javascriptObservedBeforeRevocation;
+    private UUID screenshotActor;
+    private dev.openallay.guide.ui.GuideDisplayConfig screenshotOriginalDisplay;
+    private boolean screenshotActionPending;
+    private int screenshotWaitTicks;
+    private String screenshotReviewFailure;
+    private boolean screenshotSourceAvailable;
 
     public GuideClientE2EController(
             GuideClientE2EConfig config,
@@ -163,7 +169,13 @@ public final class GuideClientE2EController {
     /** Runs opt-in startup lifecycle and starts the request once a real client player exists. */
     public void tick(UUID actor) {
         if (finished) {
-            tickScreenshotProbe();
+            if (!screenshotActionPending) {
+                try { tickScreenshotProbe(); }
+                catch (RuntimeException failure) {
+                    System.err.println("OpenAllay E2E screenshot failed: " + failure.getClass().getSimpleName());
+                    finishScreenshotProbe();
+                }
+            }
             return;
         }
         if (started) {
@@ -478,11 +490,14 @@ public final class GuideClientE2EController {
                 timings,
                 hashes);
         if (!config.shutdownAfterReport()) {
+            screenshotActor = snapshot.actorId();
+            if (professionalScreenshots() && clientSettings != null)
+                screenshotOriginalDisplay = clientSettings.snapshot().display();
             net.minecraft.client.Minecraft.getInstance().execute(() -> {
                 var client = net.minecraft.client.Minecraft.getInstance();
                 originalWindowWidth = client.getWindow().getWidth();
                 originalWindowHeight = client.getWindow().getHeight();
-                client.gui.setScreen(new OpenAllayScreen(services.forActor(snapshot.actorId())));
+                client.gui.setScreen(screenshotGuide(services.forActor(snapshot.actorId())));
                 if (!System.getProperty("openallay.e2e.screenshotRoot", "").isBlank()) {
                     screenshotStage = 0;
                     screenshotTicks = 0;
@@ -576,7 +591,9 @@ public final class GuideClientE2EController {
             case 3 -> {
                 screenshot(client, "03-wide-final.png");
                 int tools = screen.toolCountForDevelopmentProbe();
-                if (tools > 0) {
+                if (professionalScreenshots()) {
+                    screen.selectLatestJavascriptForDevelopmentProbe();
+                } else if (tools > 0) {
                     // Durable E2E history may contain older interrupted requests. Select a
                     // terminal card near the end of the current chronology so the retained
                     // screenshot demonstrates a populated result rather than stale progress.
@@ -602,18 +619,20 @@ public final class GuideClientE2EController {
                 OpenAllaySettingsScreen settings = new OpenAllaySettingsScreen(
                         clientSettings, () -> {});
                 client.gui.setScreen(settings);
-                settings.e2eOpenExtensions();
+                if (professionalScreenshots()) settings.e2eSelectExtension("openallay:builder");
+                else settings.e2eOpenExtensions();
             }
             case 8 -> {
-                screenshot(client, "07-wide-tool-settings.png");
+                screenshot(client, professionalScreenshots() ? "07-wide-builder-extension.png" : "07-wide-tool-settings.png");
                 if (client.gui.screen() instanceof OpenAllaySettingsScreen settings) {
                     settings.e2eScrollExtensionDetails(320);
                 }
             }
             case 9 -> {
-                screenshot(client, "08-wide-tool-settings-lower.png");
+                screenshot(client, professionalScreenshots() ? "08-wide-builder-extension-lower.png" : "08-wide-tool-settings-lower.png");
                 if (client.gui.screen() instanceof OpenAllaySettingsScreen settings) {
-                    settings.e2eOpenGeneral("小羽");
+                    settings.e2eOpenGeneral(professionalScreenshots()
+                            ? clientSettings.snapshot().display().assistantName() : "小羽");
                 }
             }
             case 10 -> {
@@ -624,7 +643,9 @@ public final class GuideClientE2EController {
             }
             case 11 -> {
                 screenshot(client, "10-wide-about.png");
-                if (!GuideBuilderE2EProbe.enabled(config.scenario())) {
+                if (professionalScreenshots()) {
+                    if (client.gui.screen() instanceof OpenAllaySettingsScreen settings) settings.e2eScrollPageBottom();
+                } else if (!GuideBuilderE2EProbe.enabled(config.scenario())) {
                     finishScreenshotProbe();
                 } else {
                     client.gui.setScreen(null);
@@ -635,18 +656,197 @@ public final class GuideClientE2EController {
                 }
             }
             case 12 -> {
-                screenshot(client, "11-native-world-builds.png");
+                if (!professionalScreenshots()) {
+                    screenshot(client, "11-native-world-builds.png");
+                    finishScreenshotProbe();
+                } else {
+                    screenshot(client, "11-about-bottom.png");
+                    OpenAllaySettingsScreen settings = screenshotSettings(client);
+                    String profile = requiredScreenshotProperty("openallay.e2e.screenshotManualProfile");
+                    requireScreenshotProfile(profile, false);
+                    settings.e2eOpenModels(profile);
+                }
+            }
+            case 13 -> {
+                screenshot(client, "12-models-manual-context.png");
+                String profile = requiredScreenshotProperty("openallay.e2e.screenshotAutomaticProfile");
+                requireScreenshotProfile(profile, true);
+                ((OpenAllaySettingsScreen) client.gui.screen()).e2eOpenModels(profile);
+            }
+            case 14 -> {
+                screenshot(client, "13-models-automatic-reference.png");
+                ((OpenAllaySettingsScreen) client.gui.screen()).e2eScrollPageBottom();
+            }
+            case 15 -> {
+                screenshot(client, "14-models-automatic-reference-bottom.png");
+                var settings = (OpenAllaySettingsScreen) client.gui.screen();
+                settings.e2eOpenGeneral(clientSettings.snapshot().display().assistantName());
+            }
+            case 16 -> {
+                ((OpenAllaySettingsScreen) client.gui.screen()).e2eScrollPageBottom();
+            }
+            case 17 -> {
+                screenshot(client, "15-general-bottom.png");
+                ((OpenAllaySettingsScreen) client.gui.screen()).e2eOpenAbout();
+            }
+            case 18 -> ((OpenAllaySettingsScreen) client.gui.screen()).e2eScrollPageBottom();
+            case 19 -> {
+                screenshot(client, "16-about-bottom.png");
+                screenshotDebug(false, () -> {
+                    var guide = screenshotGuide(services.forActor(screenshotActor));
+                    client.gui.setScreen(guide);
+                    guide.selectLatestJavascriptForDevelopmentProbe();
+                });
+            }
+            case 20 -> {
+                screenshot(client, "17-normal-javascript-intent-detail.png");
+                screenshotSourceAvailable = client.gui.screen() instanceof OpenAllayScreen guide
+                        && guide.selectLatestSourceForDevelopmentProbe();
+                if (!screenshotSourceAvailable)
+                    System.out.println("OpenAllay E2E source detail: no actual source in this request");
+            }
+            case 21 -> {
+                if (!screenshotSourceAvailable) {
+                    System.out.println("OpenAllay E2E normal source screenshot skipped: no actual source");
+                } else screenshot(client, "18-normal-source-detail.png");
+                screenshotDebug(true, () -> {
+                    var guide = screenshotGuide(services.forActor(screenshotActor));
+                    client.gui.setScreen(guide);
+                    guide.selectLatestJavascriptForDevelopmentProbe();
+                });
+            }
+            case 22 -> {
+                screenshot(client, "19-debug-javascript-detail.png");
+                ((OpenAllayScreen) client.gui.screen()).scrollDetailToBottomForDevelopmentProbe();
+            }
+            case 23 -> {
+                screenshot(client, "20-debug-javascript-detail-bottom.png");
+                screenshotSourceAvailable = ((OpenAllayScreen) client.gui.screen()).selectLatestSourceForDevelopmentProbe();
+                if (!screenshotSourceAvailable)
+                    System.out.println("OpenAllay E2E debug source screenshot skipped: no actual source");
+            }
+            case 24 -> {
+                if (screenshotSourceAvailable)
+                    screenshot(client, "21-debug-source-detail.png");
+                screenshotSettings(client).e2eSelectExtension("openallay:builder");
+            }
+            case 25 -> {
+                screenshot(client, "22-builder-installed-detail.png");
+                String jar = System.getProperty("openallay.e2e.reviewPackage", "");
+                if (jar.isBlank()) { screenshotStage = 28; break; }
+                screenshotActionPending = true;
+                clientSettings.importLocalExtensionPackage(java.nio.file.Path.of(jar)).thenAccept(prepared -> {
+                    screenshotActionPending = false;
+                    if (prepared instanceof ToolResult.Failure<Boolean> failure)
+                        screenshotReviewFailure = failure.code();
+                });
+            }
+            case 26 -> {
+                if (screenshotReviewFailure != null) {
+                    System.out.println("OpenAllay E2E package review failed: " + screenshotReviewFailure);
+                    screenshot(client, "23-builder-review-failed.png");
+                    screenshotStage = 28;
+                } else if (client.gui.screen() instanceof dev.openallay.client.gui.RequirementReviewScreen) {
+                    screenshot(client, "23-builder-advisory-review.png");
+                    screenshotWaitTicks = 0;
+                } else if (++screenshotWaitTicks > 100) {
+                    throw new IllegalStateException("Actual validated package review did not open");
+                } else screenshotStage = 26;
+            }
+            case 27 -> {
+                if (client.gui.screen() instanceof dev.openallay.client.gui.RequirementReviewScreen review) review.onClose();
+                else throw new IllegalStateException("Actual package review is unavailable for cancellation");
+            }
+            case 28 -> {
+                screenshot(client, "24-builder-review-cancelled.png");
+                client.gui.setScreen(null);
+                if (client.player != null) {
+                    client.player.setYRot(-45.0F);
+                    client.player.setXRot(-12.0F);
+                }
+            }
+            case 29 -> {
+                screenshot(client, "25-native-world-final.png");
                 finishScreenshotProbe();
             }
-            default -> screenshotStage = -1;
+            default -> finishScreenshotProbe();
         }
+    }
+
+    static boolean professionalScreenshots() {
+        return Boolean.getBoolean(GuideClientE2EConfig.ENABLED)
+                && "professional".equals(System.getProperty("openallay.e2e.screenshotMatrix", ""));
+    }
+
+    private static String requiredScreenshotProperty(String key) {
+        String value = System.getProperty(key, "");
+        if (value.isBlank()) throw new IllegalStateException("An explicit screenshot profile is required");
+        return value;
+    }
+
+    private void requireScreenshotProfile(String id, boolean automatic) {
+        var profile = clientSettings.snapshot().models().config().profiles().stream()
+                .filter(value -> value.id().equals(id)).findFirst().orElseThrow();
+        if (automatic) {
+            if (profile.enabled() || profile.contextWindowTokens() != null
+                    || dev.openallay.model.metadata.BuiltinModelCatalog.bundled().catalog().match(profile.model()).isEmpty())
+                throw new IllegalStateException("Automatic screenshot profile must be a disabled known public model without a manual context value");
+        } else if (!Integer.valueOf(1_000_000).equals(profile.contextWindowTokens())) {
+            throw new IllegalStateException("Manual screenshot profile must retain the user's explicit one-million-token context");
+        }
+    }
+
+    private OpenAllayScreen screenshotGuide(GuideService service) {
+        return clientSettings == null ? new OpenAllayScreen(service)
+                : new OpenAllayScreen(service, dev.openallay.recipe.config.RecipeClientRuntime.defaults(),
+                        clientSettings.snapshot().display());
+    }
+
+    private OpenAllaySettingsScreen screenshotSettings(net.minecraft.client.Minecraft client) {
+        OpenAllaySettingsScreen settings = new OpenAllaySettingsScreen(clientSettings, () -> {});
+        client.gui.setScreen(settings);
+        return settings;
+    }
+
+    private void screenshotDebug(boolean enabled, Runnable afterSave) {
+        if (screenshotOriginalDisplay == null || clientSettings == null)
+            throw new IllegalStateException("Actual display settings are unavailable");
+        screenshotActionPending = true;
+        var current = clientSettings.snapshot().display();
+        var replacement = new dev.openallay.guide.ui.GuideDisplayConfig(current.schemaVersion(), enabled,
+                current.animationsEnabled(), current.assistantName());
+        clientSettings.saveDisplay(replacement).thenAccept(saved -> net.minecraft.client.Minecraft.getInstance().execute(() -> {
+            screenshotActionPending = false;
+            if (saved instanceof ToolResult.Failure<Boolean>) {
+                System.err.println("OpenAllay E2E screenshot display save failed");
+                finishScreenshotProbe();
+            } else {
+                try { afterSave.run(); }
+                catch (RuntimeException failure) {
+                    System.err.println("OpenAllay E2E screenshot navigation failed");
+                    finishScreenshotProbe();
+                }
+            }
+        }));
     }
 
     private void finishScreenshotProbe() {
         screenshotStage = -1;
-        if (Boolean.getBoolean("openallay.e2e.shutdownAfterScreenshots")) {
-            shutdown.run();
+        if (clientSettings != null && screenshotOriginalDisplay != null
+                && !clientSettings.snapshot().display().equals(screenshotOriginalDisplay)) {
+            screenshotActionPending = true;
+            clientSettings.saveDisplay(screenshotOriginalDisplay).thenAccept(saved ->
+                    net.minecraft.client.Minecraft.getInstance().execute(() -> {
+                        screenshotActionPending = false;
+                        if (saved instanceof ToolResult.Failure<Boolean>)
+                            System.err.println("OpenAllay E2E original display restoration failed");
+                        else System.out.println("OpenAllay E2E original display restored");
+                        screenshotOriginalDisplay = null;
+                        if (Boolean.getBoolean("openallay.e2e.shutdownAfterScreenshots")) shutdown.run();
+                    }));
+            return;
         }
+        if (Boolean.getBoolean("openallay.e2e.shutdownAfterScreenshots")) shutdown.run();
     }
 
     private void tickActiveScreenshotProbe() {
@@ -680,7 +880,7 @@ public final class GuideClientE2EController {
             var client = net.minecraft.client.Minecraft.getInstance();
             originalWindowWidth = client.getWindow().getWidth();
             originalWindowHeight = client.getWindow().getHeight();
-            client.gui.setScreen(new OpenAllayScreen(service));
+            client.gui.setScreen(screenshotGuide(service));
         });
     }
 
