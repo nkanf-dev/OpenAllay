@@ -19,24 +19,27 @@ final class OpenAllayRhinoContext extends Context {
     private static final int OBSERVER_THRESHOLD = 2_000;
 
     private final CancellationSignal cancellation;
+    private final boolean unrestricted;
     private final long deadlineNanos;
 
     OpenAllayRhinoContext(
-            ContextFactory factory, CancellationSignal cancellation, Duration timeout) {
+            ContextFactory factory, CancellationSignal cancellation, Duration timeout, boolean unrestricted) {
         super(factory);
         this.cancellation = cancellation;
+        this.unrestricted = unrestricted;
         this.deadlineNanos = System.nanoTime() + timeout.toNanos();
         setInstructionObserverThreshold(OBSERVER_THRESHOLD);
     }
 
     @Override
     public boolean visibleToScripts(String fullClassName, ClassVisibilityContext type) {
-        return false;
+        return unrestricted;
     }
 
     @Override
     public Scriptable wrapAsJavaObject(
             Scriptable scope, Object javaObject, TypeInfo target) {
+        if (unrestricted) return super.wrapAsJavaObject(scope, javaObject, target);
         if (javaObject instanceof Class<?>
                 || javaObject instanceof AccessibleObject
                 || javaObject instanceof ClassLoader
@@ -63,7 +66,7 @@ final class OpenAllayRhinoContext extends Context {
             throw new JavascriptExecutionException(
                     "javascript_cancelled", "JavaScript execution was interrupted");
         }
-        if (System.nanoTime() >= deadlineNanos) {
+        if (!unrestricted && System.nanoTime() >= deadlineNanos) {
             throw new JavascriptExecutionException(
                     "javascript_timeout", "JavaScript execution exceeded its time budget");
         }

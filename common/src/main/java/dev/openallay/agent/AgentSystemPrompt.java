@@ -17,6 +17,11 @@ public final class AgentSystemPrompt {
     }
 
     public static String compose(String skillMetadata, String coreJavascriptContract) {
+        return compose(skillMetadata, coreJavascriptContract, false);
+    }
+
+    public static String compose(
+            String skillMetadata, String coreJavascriptContract, boolean unrestrictedJavascript) {
         String skills = skillMetadata == null ? "" : skillMetadata.strip();
         String coreContract = java.util.Objects.requireNonNull(
                         coreJavascriptContract, "coreJavascriptContract")
@@ -55,8 +60,11 @@ public final class AgentSystemPrompt {
                 - Use documented JavaScript modules for their stated domain operations. The crafting module is used inside the same run_javascript program; it is not a separate Tool.
                 - Use programmatic results for counts, allocation, ordering, and craftability; do not redo their arithmetic in prose.
                 """));
-        sections.add(new Section("AUTHORITY AND RESPONSE", """
-                - JavaScript is isolated data analysis, not a shell. It cannot access Java/JVM classes, reflection, network, real files, or live game objects. The only mutation exception is the default-off experimental `commands` capability when the player enables it for the request and its matching Skill is present; commands use that player's Minecraft route, where parsing and permissions remain authoritative.
+        String javaAuthority = unrestrictedJavascript
+                ? "- Unrestricted JavaScript is enabled for this client-local request. `Java.type(...)` gives scripts Java/JVM access, including files, network, processes, and live Minecraft objects. Scripts can cause irreversible side effects and read credentials available to the JVM.\n"
+                : "- JavaScript uses the default isolated mode for this request. Java/JVM classes, files, network, processes, and live game objects are not exposed.\n";
+        sections.add(new Section("AUTHORITY AND RESPONSE", javaAuthority + """
+                - The command binding is separately controlled by its setting. When available, it submits through the player's Minecraft route, where Minecraft parses the command and checks permissions.
                 - Only registered operations are authorized. Skill management, when present, is confined to the managed Skill store; never invent arbitrary URLs or paths, command functions, spatial scans, or external-container inspection.
                 - Do not expose reasoning, credentials, endpoints, raw payloads, private identifiers, or internal failure codes in a normal player answer.
                 - Lead with the answer. Cite important current-game facts with readable provenance and explain meaningful evidence limitations in player-friendly language.

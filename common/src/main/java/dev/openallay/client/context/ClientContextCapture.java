@@ -88,6 +88,11 @@ public final class ClientContextCapture {
 
     public ToolInvocationContext capture(
             Minecraft client, Set<ContextCapability> capabilities, String correlationId) {
+        return capture(client, capabilities, correlationId, false);
+    }
+
+    public ToolInvocationContext capture(
+            Minecraft client, Set<ContextCapability> capabilities, String correlationId, boolean unrestrictedJavascript) {
         if (!client.isSameThread()) {
             throw new IllegalStateException("Client context must be captured on the Minecraft client thread");
         }
@@ -134,7 +139,7 @@ public final class ClientContextCapture {
                                         .map(value -> (long) value.player().player().inventory().slots().size())
                                         .orElse(0L)),
                         bytes,
-                        System.nanoTime() - started));
+                        System.nanoTime() - started), unrestrictedJavascript);
     }
 
     private ObservableGameStateSnapshot observableGameState(

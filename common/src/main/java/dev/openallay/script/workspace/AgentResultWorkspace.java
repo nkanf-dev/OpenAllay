@@ -31,15 +31,19 @@ public final class AgentResultWorkspace implements AutoCloseable {
     }
 
     public synchronized String store(JsonElement value, JavascriptResultShape shape) {
+        return store(value, shape, false);
+    }
+
+    public synchronized String store(JsonElement value, JavascriptResultShape shape, boolean unrestricted) {
         requireOpen();
         java.util.Objects.requireNonNull(shape, "shape");
         long units = measure(value);
-        if (units > MAX_RESULT_UNITS) {
+        if (!unrestricted && units > MAX_RESULT_UNITS) {
             throw new WorkspaceException(
                     "workspace_result_too_large",
                     "JavaScript result exceeds the per-result workspace budget");
         }
-        if (values.size() >= MAX_RESULTS || saturatedAdd(storedUnits, units) > MAX_WORKSPACE_UNITS) {
+        if (!unrestricted && (values.size() >= MAX_RESULTS || saturatedAdd(storedUnits, units) > MAX_WORKSPACE_UNITS)) {
             throw new WorkspaceException(
                     "workspace_budget_exceeded",
                     "JavaScript request workspace is full; reuse existing handles or return a smaller result");
@@ -64,10 +68,14 @@ public final class AgentResultWorkspace implements AutoCloseable {
     }
 
     public synchronized Map<String, JsonElement> select(Collection<String> handles) {
+        return select(handles, false);
+    }
+
+    public synchronized Map<String, JsonElement> select(Collection<String> handles, boolean unrestricted) {
         requireOpen();
         Collection<String> requested =
                 handles == null ? java.util.List.<String>of() : handles;
-        if (requested.size() > MAX_SELECTED_HANDLES) {
+        if (!unrestricted && requested.size() > MAX_SELECTED_HANDLES) {
             throw new WorkspaceException(
                     "workspace_selection_too_large",
                     "A JavaScript execution may reopen at most four result handles");
@@ -81,7 +89,7 @@ public final class AgentResultWorkspace implements AutoCloseable {
                         "Result handle is unavailable in this request");
             }
             selectedUnits = saturatedAdd(selectedUnits, units);
-            if (selectedUnits > MAX_SELECTED_UNITS) {
+            if (!unrestricted && selectedUnits > MAX_SELECTED_UNITS) {
                 throw new WorkspaceException(
                         "workspace_selection_too_large",
                         "Selected result handles exceed the execution budget");

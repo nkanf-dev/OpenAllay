@@ -602,7 +602,7 @@ public final class OpenAllaySettingsScreen extends Screen {
             addExperimentalCommandAction(
                     projection,
                     actionX,
-                    detail.bottom() - 24,
+                    detail.bottom() - 68,
                     actionWidth);
         }
     }
@@ -716,6 +716,16 @@ public final class OpenAllaySettingsScreen extends Screen {
         commands.setTooltip(Tooltip.create(Component.translatable(
                 "screen.openallay.settings.extensions.commands.description")));
         addRenderableWidget(commands);
+        Button unrestricted = OpenAllayButton.create(
+                        Component.translatable(projection.unrestrictedJavascript()
+                                ? "screen.openallay.settings.extensions.unrestricted.disable"
+                                : "screen.openallay.settings.extensions.unrestricted.enable"),
+                        ignored -> accept(service.saveUnrestrictedJavascript(!projection.unrestrictedJavascript())))
+                .bounds(x, y + 25, width, 20).build();
+        unrestricted.active = snapshot.operation().kind() == SettingsOperation.Kind.IDLE;
+        unrestricted.setTooltip(Tooltip.create(Component.translatable(
+                "screen.openallay.settings.extensions.unrestricted.warning")));
+        addRenderableWidget(unrestricted);
     }
 
     private void addSkillsPage() {
@@ -1548,6 +1558,9 @@ public final class OpenAllaySettingsScreen extends Screen {
                 area.y() + 12,
                 ACCENT,
                 false);
+        renderWrapped(graphics, Component.translatable(
+                "screen.openallay.settings.extensions.unrestricted.warning"),
+                area.x() + 10, area.y() + 28, Math.max(80, area.width() - 20), 0xFFFF6666, 9);
         ExtensionSettingsProjection.ExtensionCard extension =
                 selectedExtension().orElse(null);
         if (extension == null) {
@@ -2445,6 +2458,7 @@ public final class OpenAllaySettingsScreen extends Screen {
         return ExtensionSettingsProjection.from(
                 snapshot.extensions(),
                 snapshot.experimentalCommands(),
+                snapshot.unrestrictedJavascript(),
                 snapshot.display().debugMode());
     }
 
@@ -3121,6 +3135,7 @@ public final class OpenAllaySettingsScreen extends Screen {
                 ExtensionSettingsProjection.from(
                         snapshot.extensions(),
                         snapshot.experimentalCommands(),
+                        snapshot.unrestrictedJavascript(),
                         snapshot.display().debugMode()),
                 HistorySettingsProjection.from(
                         snapshot.history(),

@@ -28,6 +28,7 @@ public final class MinecraftGuideContextProvider implements GuideContextProvider
     private final Gson gson;
     private final ClassLoader integrationLoader;
     private final RecipeClientRuntime recipeClient;
+    private volatile dev.openallay.script.UnrestrictedJavascriptRuntime unrestrictedJavascript;
     private final RecipeProviderReadinessGate recipeReadiness = new RecipeProviderReadinessGate();
 
     public MinecraftGuideContextProvider(
@@ -51,9 +52,36 @@ public final class MinecraftGuideContextProvider implements GuideContextProvider
         this.recipeClient = java.util.Objects.requireNonNull(recipeClient, "recipeClient");
     }
 
+    public void setUnrestrictedJavascriptRuntime(dev.openallay.script.UnrestrictedJavascriptRuntime runtime) {
+        this.unrestrictedJavascript = java.util.Objects.requireNonNull(runtime, "runtime");
+    }
+
+    @Override
+    public void freezeRequest(String correlationId, boolean clientLocalModel) {
+        var runtime = unrestrictedJavascript;
+        if (runtime == null || !clientLocalModel) return;
+        runtime.freeze(correlationId);
+    }
+
+    @Override
+    public void closeRequest(String correlationId) {
+        var runtime = unrestrictedJavascript;
+        if (runtime != null) runtime.close(correlationId);
+    }
+
     @Override
     public ToolResult<ToolInvocationContext> capture(
             Set<ContextCapability> capabilities, String correlationId) {
+        return capture(capabilities, correlationId, true);
+    }
+
+    public ToolResult<ToolInvocationContext> captureServerToolContext(
+            Set<ContextCapability> capabilities, String correlationId) {
+        return capture(capabilities, correlationId, false);
+    }
+
+    private ToolResult<ToolInvocationContext> capture(
+            Set<ContextCapability> capabilities, String correlationId, boolean allowUnrestricted) {
         if (client.player == null) {
             return new ToolResult.Failure<>(
                     "player_required", "No client player is connected");
@@ -63,9 +91,11 @@ public final class MinecraftGuideContextProvider implements GuideContextProvider
             if (refreshed instanceof ToolResult.Failure<Integer> failure) {
                 return new ToolResult.Failure<>(failure.code(), failure.message());
             }
+            boolean unrestricted = allowUnrestricted && unrestrictedJavascript != null
+                    && unrestrictedJavascript.freeze(correlationId);
             ToolInvocationContext context =
                     new ClientContextCapture(gson, runtime.platform(), recipeClient)
-                            .capture(client, capabilities, correlationId);
+                            .capture(client, capabilities, correlationId, unrestricted);
             MinecraftCommandCapture.capture(
                     client, runtime.commands(), correlationId, context.capturedAt());
             context.player().ifPresent(player -> runtime.worldObservations().capture(

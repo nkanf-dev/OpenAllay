@@ -1,6 +1,7 @@
 package dev.openallay.client.gui.settings;
 
 import dev.openallay.script.command.CommandCapabilityConfig;
+import dev.openallay.script.UnrestrictedJavascriptConfig;
 import dev.openallay.script.schema.HostSchema;
 import dev.openallay.settings.extension.ExtensionSettingsView;
 import java.util.ArrayList;
@@ -17,6 +18,7 @@ public record ExtensionSettingsProjection(
         List<ExtensionCard> extensions,
         CatalogCard catalog,
         boolean experimentalCommands,
+        boolean unrestrictedJavascript,
         boolean debugMode) {
     public ExtensionSettingsProjection {
         Objects.requireNonNull(runtime, "runtime");
@@ -27,9 +29,14 @@ public record ExtensionSettingsProjection(
         Objects.requireNonNull(catalog, "catalog");
     }
 
+    public static ExtensionSettingsProjection from(ExtensionSettingsView view, CommandCapabilityConfig commands, boolean debugMode) {
+        return from(view, commands, UnrestrictedJavascriptConfig.defaults(), debugMode);
+    }
+
     public static ExtensionSettingsProjection from(
             ExtensionSettingsView view,
             CommandCapabilityConfig commands,
+            UnrestrictedJavascriptConfig unrestricted,
             boolean debugMode) {
         Objects.requireNonNull(view, "view");
         Objects.requireNonNull(commands, "commands");
@@ -93,6 +100,7 @@ public record ExtensionSettingsProjection(
                         view.catalog().notice().map(ExtensionSettingsView.Notice::code).orElse(""),
                         view.catalog().notice().map(ExtensionSettingsView.Notice::message).orElse("")),
                 commands.enabled(),
+                unrestricted.enabled(),
                 debugMode);
     }
 
@@ -105,6 +113,7 @@ public record ExtensionSettingsProjection(
                 extensions,
                 catalog,
                 !experimentalCommands,
+                unrestrictedJavascript,
                 debugMode);
     }
 

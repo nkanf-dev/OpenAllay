@@ -84,6 +84,7 @@ public final class OpenAllayFabricClient implements ClientModInitializer {
                 gson,
                 OpenAllayFabricClient.class.getClassLoader(),
                 recipeClient);
+        if (settings != null) contexts.setUnrestrictedJavascriptRuntime(settings.unrestrictedJavascript());
         bridge.configureClientTools(
                 () -> modelRegistry == null
                         ? dev.openallay.agent.tool.ToolRuntimeCatalog.empty()
@@ -103,7 +104,7 @@ public final class OpenAllayFabricClient implements ClientModInitializer {
                             return;
                         }
                         ToolResult<dev.openallay.context.ToolInvocationContext> result =
-                                contexts.capture(required, correlation);
+                                contexts.captureServerToolContext(required, correlation);
                         if (result instanceof ToolResult.Success<
                                 dev.openallay.context.ToolInvocationContext> success) {
                             captured.complete(success.value());

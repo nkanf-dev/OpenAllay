@@ -32,6 +32,14 @@ final class RhinoJsonNormalizer {
         return normalize(value, context, new IdentityHashMap<>(), 0, new Budget());
     }
 
+    Result normalizeUnrestricted(Object value, Context context) {
+        RhinoJsonNormalizer unlimited = new RhinoJsonNormalizer(new JavascriptRuntimeLimits(
+                Integer.MAX_VALUE, Integer.MAX_VALUE,
+                Long.MAX_VALUE, Long.MAX_VALUE, Integer.MAX_VALUE, Integer.MAX_VALUE));
+        return unlimited.normalize(value, context, new IdentityHashMap<>(), 0,
+                unlimited.new Budget(true));
+    }
+
     private Result normalize(
             Object value,
             Context context,
@@ -63,10 +71,15 @@ final class RhinoJsonNormalizer {
             }
             return ordinary(new JsonPrimitive(number), JavascriptSemanticKind.SCALAR);
         }
-        if (value instanceof BaseFunction
-                || value instanceof NativePromise
-                || value instanceof Symbol
-                || value instanceof Wrapper) {
+        if (value instanceof Wrapper wrapper) {
+            Object unwrapped = wrapper.unwrap();
+            if (unwrapped instanceof CharSequence text) return ordinary(new JsonPrimitive(text.toString()), JavascriptSemanticKind.SCALAR);
+            if (unwrapped instanceof Number number && Double.isFinite(number.doubleValue())) return ordinary(new JsonPrimitive(number), JavascriptSemanticKind.SCALAR);
+            if (unwrapped instanceof Boolean bool) return ordinary(new JsonPrimitive(bool), JavascriptSemanticKind.SCALAR);
+            if (unwrapped == null) return ordinary(JsonNull.INSTANCE, JavascriptSemanticKind.SCALAR);
+            return ordinary(new JsonPrimitive(String.valueOf(unwrapped)), JavascriptSemanticKind.SCALAR);
+        }
+        if (value instanceof BaseFunction || value instanceof NativePromise || value instanceof Symbol) {
             throw invalid("JavaScript result contains an unsupported host or executable value");
         }
         if (value instanceof NativeArray array) {
@@ -203,19 +216,24 @@ final class RhinoJsonNormalizer {
     }
 
     private final class Budget {
+        private final boolean unrestricted;
         private long nodes;
         private long stringCharacters;
 
+        private Budget() { this(false); }
+        private Budget(boolean unrestricted) { this.unrestricted = unrestricted; }
+
         private void node() {
-            if (++nodes > limits.maxResultNodes()) {
+            if (!unrestricted && ++nodes > limits.maxResultNodes()) {
                 throw exceeded("JavaScript result exceeds the node budget");
             }
         }
 
         private void string(int characters) {
-            if (characters > limits.maxStringCharacters()) {
+            if (!unrestricted && characters > limits.maxStringCharacters()) {
                 throw exceeded("JavaScript result contains an oversized string");
             }
+            if (unrestricted) return;
             stringCharacters = saturatedAdd(stringCharacters, characters);
             if (stringCharacters > limits.maxResultNodes() * 8L) {
                 throw exceeded("JavaScript result exceeds the aggregate text budget");

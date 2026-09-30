@@ -25,7 +25,7 @@ import java.util.Set;
 public final class RhinoJavascriptRuntime {
     public static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(2);
 
-    private static final String HELPERS = """
+    private static final String SAFE_RUNTIME_GUARDS = """
             const __openallayGuardedStringSize = value => {
               const size = Number(value);
               if (!Number.isFinite(size) || size < 0 || size > 524288) {
@@ -36,12 +36,6 @@ public final class RhinoJavascriptRuntime {
             const __nativeRepeat = String.prototype.repeat;
             const __nativePadStart = String.prototype.padStart;
             const __nativePadEnd = String.prototype.padEnd;
-            const __openallayArrayView = value =>
-              Array.isArray(value)
-              || (value !== null
-                && typeof value === "object"
-                && Object.getPrototypeOf(value) === Array.prototype
-                && Number.isSafeInteger(Number(value.length)));
             Object.defineProperty(String.prototype, "repeat", {
               value(count) { return __nativeRepeat.call(this, __openallayGuardedStringSize(count)); }
             });
@@ -51,6 +45,15 @@ public final class RhinoJavascriptRuntime {
             Object.defineProperty(String.prototype, "padEnd", {
               value(length, fill) { return __nativePadEnd.call(this, __openallayGuardedStringSize(length), fill); }
             });
+            """;
+
+    private static final String HELPERS = """
+            const __openallayArrayView = value =>
+              Array.isArray(value)
+              || (value !== null
+                && typeof value === "object"
+                && Object.getPrototypeOf(value) === Array.prototype
+                && Number.isSafeInteger(Number(value.length)));
             const helpers = Object.freeze({
               groupBy(values, key) {
                 return values.reduce((groups, value) => {
@@ -175,11 +178,18 @@ public final class RhinoJavascriptRuntime {
             CancellationSignal cancellation,
             JavascriptCommandBridge commands,
             JavascriptWorldBridge world) {
+        return execute(source, minecraftRoots, workspaceValues, workspaceShapes, cancellation, commands, world, false);
+    }
+
+    public JavascriptExecution execute(
+            String source, Map<String, Object> minecraftRoots, Map<String, JsonElement> workspaceValues,
+            Map<String, JavascriptResultShape> workspaceShapes, CancellationSignal cancellation,
+            JavascriptCommandBridge commands, JavascriptWorldBridge world, boolean unrestricted) {
         if (source == null || source.isBlank()) {
             throw new JavascriptExecutionException(
                     "javascript_invalid", "JavaScript source must not be blank");
         }
-        if (source.length() > limits.maxSourceCharacters()) {
+        if (!unrestricted && source.length() > limits.maxSourceCharacters()) {
             throw new JavascriptExecutionException(
                     "javascript_source_too_large",
                     "JavaScript source exceeds the execution budget");
@@ -191,10 +201,13 @@ public final class RhinoJavascriptRuntime {
 
         long started = System.nanoTime();
         OpenAllayRhinoContextFactory factory =
-                new OpenAllayRhinoContextFactory(cancellation, timeout);
+                new OpenAllayRhinoContextFactory(cancellation, timeout, unrestricted);
         Context context = factory.enter();
         try {
-            ScriptableObject scope = context.initSafeStandardObjects(null, false);
+            ScriptableObject scope = unrestricted
+                    ? context.initStandardObjects(null, false)
+                    : context.initSafeStandardObjects(null, false);
+            if (unrestricted) installJavaBridge(context, scope);
             RhinoHostAdapter adapter = new RhinoHostAdapter(context, scope);
             defineGlobal(context, scope, "mc", adapter.adapt(minecraftRoots));
             defineGlobal(
@@ -225,9 +238,11 @@ public final class RhinoJavascriptRuntime {
                     scope,
                     "require",
                     moduleLoader(context, scope, usedModules));
-            String program = buildProgram(source);
+            String program = buildProgram(source, unrestricted);
             Object value = context.evaluateString(scope, program, "openallay-agent.js", 1, null);
-            RhinoJsonNormalizer.Result normalized = normalizer.normalize(value, context);
+            RhinoJsonNormalizer.Result normalized = unrestricted
+                    ? normalizer.normalizeUnrestricted(value, context)
+                    : normalizer.normalize(value, context);
             return new JavascriptExecution(
                     normalized.value(),
                     normalized.shape(),
@@ -246,7 +261,23 @@ public final class RhinoJavascriptRuntime {
         }
     }
 
-    private static String buildProgram(String source) {
+    private static void installJavaBridge(Context context, ScriptableObject scope) {
+        BaseFunction type = new BaseFunction(scope, ScriptableObject.getFunctionPrototype(scope, context)) {
+            @Override public Object call(Context cx, Scriptable callScope, Scriptable thisObject, Object[] args) {
+                if (args.length != 1) throw new JavascriptExecutionException("javascript_class_invalid", "Java.type requires one class name");
+                String name = cx.toString(args[0]);
+                try { return context.wrapJavaClass(scope, Class.forName(name, true, cx.getApplicationClassLoader())); }
+                catch (ClassNotFoundException e) { throw new JavascriptExecutionException("javascript_class_unavailable", "Java class is unavailable: " + name); }
+            }
+            @Override public String getFunctionName() { return "type"; }
+        };
+        ScriptableObject java = (ScriptableObject) context.newObject(scope);
+        ScriptableObject.defineProperty(java, "type", type, ScriptableObject.READONLY | ScriptableObject.PERMANENT, context);
+        defineGlobal(context, scope, "Java", java);
+    }
+
+    private static String buildProgram(String source, boolean unrestricted) {
+        String helpers = unrestricted ? HELPERS : SAFE_RUNTIME_GUARDS + HELPERS;
         return """
                 (function() {
                   "use strict";
@@ -256,7 +287,7 @@ public final class RhinoJavascriptRuntime {
                     %s
                   })();
                 })()
-                """.formatted(HELPERS, source);
+                """.formatted(helpers, source);
     }
 
     private static void defineGlobal(

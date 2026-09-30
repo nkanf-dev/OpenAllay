@@ -40,6 +40,7 @@ accepted and contains explicit approval evidence.
 | SKMB-2026-07-25-030 | accepted | loader-specific Extension catalog artifacts and package selection | B, D, F | decisions/2026-07-25-030-loader-specific-extension-artifacts.md | 5a1520f; implemented through 897bced |
 | SKMB-2026-07-25-031 | accepted | strict schema-2 client profiles and removal of unused compatibility APIs | B, E, F | decisions/2026-07-25-031-remove-unused-client-compatibility.md | pending |
 | SKMB-2026-07-29-032 | accepted | preserve released guide-history schemas and fail closed on old layouts | B, F, G | decisions/2026-07-29-032-preserve-released-history-schemas.md | pending |
+| SKMB-2026-09-29-033 | accepted | client-local unrestricted JavaScript/JVM interop opt-in | A, B, C, D, E, F, G | decisions/2026-09-29-033-unrestricted-javascript-mode.md | pending |
 
 SKMB-2026-07-18-006 is implemented by `a0eaeff`, `19ab90f`, and `c6ca6bc`.
 Its deterministic clean-build and packaged-driver evidence is recorded in the
@@ -115,6 +116,22 @@ completed the eight-section real-client game-state scenario. The implementation
 is recorded in `78c2122`. The latest clean production gate (525 tests), both-loader
 package/SQLite checks, final credential/diff/report/hash/manifest audit, and
 graphical evidence review all passed. Phase 4 is closed.
+
+### SKMB-2026-09-29-033 (accepted)
+
+The player may explicitly persist a strict-schema, default-off local setting that
+unlocks unrestricted Java interop for JavaScript evaluated by a selected
+client-local model. Its immutable authority is captured when a local request
+starts and applies only to that request; prompt text cannot grant it. Server
+models and server-originated client Tool callbacks always capture the safe mode,
+regardless of the setting. In enabled local execution, Rhino uses standard
+objects, exposes `Java.type`, and removes OpenAllay source/result/time/workspace/
+preview budgets. Cancellation still stops execution and request workspaces still
+close at termination. Disabled mode retains the existing safe Rhino context and
+budgets. The settings UI displays the risk warning in both states. Unrestricted
+scripts can execute arbitrary JVM code and cause file, network, process, or other
+side effects; OpenAllay offers no rollback and cannot protect credentials
+available to the JVM. See `decisions/2026-09-29-033-unrestricted-javascript-mode.md`.
 
 ## Named States
 

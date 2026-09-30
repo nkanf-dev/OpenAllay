@@ -602,6 +602,7 @@ public final class GuideService implements GuideHistoryAdministration {
         }
 
         UUID requestId = UUID.randomUUID();
+        contexts.freezeRequest(requestId.toString(), topology != GuideTopology.SERVER);
         Instant now = clock.instant();
         GuideRequestSnapshot request = GuideRequestSnapshot.start(
                 requestId, sessionId, topology, question, now, capturedSelection);
@@ -865,6 +866,7 @@ public final class GuideService implements GuideHistoryAdministration {
             return;
         }
         session.requests.set(index, after);
+        if (after.terminal()) contexts.closeRequest(requestId.toString());
         if (after.status() == GuideRequestStatus.COMPLETED
                 && !after.assistantText().isBlank()) {
             session.messages.add(new GuideMessage(

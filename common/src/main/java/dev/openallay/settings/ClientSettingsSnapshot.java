@@ -11,6 +11,7 @@ import dev.openallay.settings.history.HistorySettingsView;
 import dev.openallay.settings.skill.SkillCommunityView;
 import dev.openallay.settings.skill.SkillSettingsView;
 import dev.openallay.script.command.CommandCapabilityConfig;
+import dev.openallay.script.UnrestrictedJavascriptConfig;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -27,6 +28,7 @@ public record ClientSettingsSnapshot(
         SkillCommunityView skillCommunity,
         ExtensionSettingsView extensions,
         CommandCapabilityConfig experimentalCommands,
+        UnrestrictedJavascriptConfig unrestrictedJavascript,
         HistorySettingsView history,
         SettingsDiagnosticsSnapshot diagnostics,
         SettingsOperation operation,
@@ -44,6 +46,7 @@ public record ClientSettingsSnapshot(
         Objects.requireNonNull(skillCommunity, "skillCommunity");
         Objects.requireNonNull(extensions, "extensions");
         Objects.requireNonNull(experimentalCommands, "experimentalCommands");
+        Objects.requireNonNull(unrestrictedJavascript, "unrestrictedJavascript");
         Objects.requireNonNull(history, "history");
         Objects.requireNonNull(diagnostics, "diagnostics");
         Objects.requireNonNull(operation, "operation");
@@ -58,6 +61,7 @@ public record ClientSettingsSnapshot(
             SkillSettingsView skills,
             ExtensionSettingsView extensions,
             CommandCapabilityConfig experimentalCommands,
+        UnrestrictedJavascriptConfig unrestrictedJavascript,
             HistorySettingsView history,
             SettingsDiagnosticsSnapshot diagnostics,
             SettingsOperation operation,
@@ -73,6 +77,7 @@ public record ClientSettingsSnapshot(
                 SkillCommunityView.unavailable(),
                 extensions,
                 experimentalCommands,
+                unrestrictedJavascript,
                 history,
                 diagnostics,
                 operation,
@@ -98,6 +103,7 @@ public record ClientSettingsSnapshot(
                 SkillCommunityView.unavailable(),
                 ExtensionSettingsView.defaults(),
                 CommandCapabilityConfig.defaults(),
+                UnrestrictedJavascriptConfig.defaults(),
                 HistorySettingsView.disconnected(),
                 new SettingsDiagnosticsSnapshot(List.of(), Optional.empty()),
                 operation,
@@ -121,6 +127,7 @@ public record ClientSettingsSnapshot(
                 SkillCommunityView.unavailable(),
                 ExtensionSettingsView.defaults(),
                 CommandCapabilityConfig.defaults(),
+                UnrestrictedJavascriptConfig.defaults(),
                 HistorySettingsView.disconnected(),
                 new SettingsDiagnosticsSnapshot(List.of(), Optional.empty()),
                 operation,

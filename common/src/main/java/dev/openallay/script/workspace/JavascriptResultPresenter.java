@@ -31,6 +31,16 @@ public final class JavascriptResultPresenter {
                 suffix);
     }
 
+    public Presentation presentUnrestricted(String handle, JsonElement value, JavascriptResultShape shape, String suffix) {
+        String type = type(value);
+        long cardinality = cardinality(value);
+        List<String> fields = fields(value);
+        String text = metadata(handle, type, cardinality, fields) + "scope: complete\npreview:\n" + value;
+        if (suffix != null && !suffix.isBlank()) text += "\n" + suffix.strip();
+        return new Presentation(handle, type, cardinality, fields, value.deepCopy(), text,
+                JavascriptResultViewRegistry.classify(value, shape), true, 0, 0);
+    }
+
     public Presentation present(
             String handle,
             JsonElement value,

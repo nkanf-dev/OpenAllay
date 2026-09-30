@@ -13,7 +13,8 @@ public record ToolInvocationContext(
         Optional<RegistrySnapshot> registries,
         Optional<RecipeSnapshot> recipes,
         Optional<ObservableGameStateSnapshot> observableGameState,
-        ContextMetrics metrics) {
+        ContextMetrics metrics,
+        boolean unrestrictedJavascript) {
     public ToolInvocationContext {
         correlationId = ContextValidation.nonBlank(correlationId, "correlationId");
         Objects.requireNonNull(capturedAt, "capturedAt");
@@ -29,6 +30,15 @@ public record ToolInvocationContext(
         }
     }
 
+
+    public ToolInvocationContext(
+            String correlationId, Instant capturedAt, CallerSnapshot caller,
+            Optional<PlayerSnapshot> player, Optional<RegistrySnapshot> registries,
+            Optional<RecipeSnapshot> recipes, Optional<ObservableGameStateSnapshot> observableGameState,
+            ContextMetrics metrics) {
+        this(correlationId, capturedAt, caller, player, registries, recipes, observableGameState, metrics, false);
+    }
+
     public ToolInvocationContext(
             String correlationId,
             Instant capturedAt,
@@ -37,15 +47,7 @@ public record ToolInvocationContext(
             Optional<RegistrySnapshot> registries,
             Optional<RecipeSnapshot> recipes,
             ContextMetrics metrics) {
-        this(
-                correlationId,
-                capturedAt,
-                caller,
-                player,
-                registries,
-                recipes,
-                Optional.empty(),
-                metrics);
+        this(correlationId, capturedAt, caller, player, registries, recipes, Optional.empty(), metrics, false);
     }
 
     public static ToolInvocationContext developmentConsole(String correlationId) {

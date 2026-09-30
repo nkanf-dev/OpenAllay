@@ -92,9 +92,9 @@ public final class RunJavascriptTool
                     + "program over repeated calls; do not rediscover documented roots. "
                     + "Load a Skill only when a matching domain-specific or optional workflow requires it. "
                     + "Large results stay in a request workspace "
-                    + "and can be reopened by an opaque handle. This runtime cannot access Java, files, network, "
-                    + "or live game objects. A default-off experimental setting may add the complete commands "
-                    + "object for the current player; when absent, command execution is unavailable.",
+                    + "and can be reopened by an opaque handle. Default mode uses detached read-only game data. "
+                    + "An explicit player setting may enable unrestricted Java/JVM access for future client-local requests. "
+                    + "A separate default-off setting may add the complete commands object through the current player's Minecraft route.",
             Input.class,
             Output.class,
             ToolAccess.EXPERIMENTAL_ACTION,
@@ -228,16 +228,18 @@ public final class RunJavascriptTool
             JavascriptExecution execution = runtime.execute(
                     input.source(),
                     selectedRoots,
-                    workspace.select(input.handles()),
+                    workspace.select(input.handles(), context.unrestrictedJavascript()),
                     workspace.selectShapes(input.handles()),
                     cancellation,
                     commandBridge.orElse(null),
-                    worldBridge.orElse(null));
+                    worldBridge.orElse(null),
+                    context.unrestrictedJavascript());
             JsonElement canonical = execution.value();
-            String handle = workspace.store(canonical, execution.shape());
+            String handle = workspace.store(canonical, execution.shape(), context.unrestrictedJavascript());
             List<EvidenceMetadata> evidence = graph.evidence();
-            var presentation = presenter.present(
-                    handle, canonical, execution.shape(), evidenceSummary(evidence));
+            var presentation = context.unrestrictedJavascript()
+                    ? presenter.presentUnrestricted(handle, canonical, execution.shape(), evidenceSummary(evidence))
+                    : presenter.present(handle, canonical, execution.shape(), evidenceSummary(evidence));
             String modelText = presentation.modelText();
             future.complete(new ToolResult.Success<>(new Output(
                     handle,
@@ -275,6 +277,7 @@ public final class RunJavascriptTool
         workspaces.close(correlationId);
         commands.closeRequest(correlationId);
         worldObservations.closeRequest(correlationId);
+        // Request authority is immutable in ToolInvocationContext and scoped to this request.
     }
 
     private static String evidenceSummary(List<EvidenceMetadata> evidence) {

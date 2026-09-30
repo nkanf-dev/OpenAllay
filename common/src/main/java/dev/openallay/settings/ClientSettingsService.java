@@ -29,6 +29,7 @@ import dev.openallay.settings.history.HistorySettingsView;
 import dev.openallay.settings.skill.SkillSettingsView;
 import dev.openallay.settings.skill.SkillCommunityView;
 import dev.openallay.script.command.CommandCapabilityConfig;
+import dev.openallay.script.UnrestrictedJavascriptConfig;
 import dev.openallay.recipe.config.RecipeClientConfig;
 import dev.openallay.tool.ToolResult;
 import java.util.Collections;
@@ -184,8 +185,11 @@ public final class ClientSettingsService implements AutoCloseable {
 
     public interface CommandActions {
         ToolResult<CommandCapabilityConfig> save(CommandCapabilityConfig candidate);
-
         ToolResult<CommandCapabilityConfig> reload();
+    }
+    public interface UnrestrictedJavascriptActions {
+        ToolResult<UnrestrictedJavascriptConfig> save(UnrestrictedJavascriptConfig candidate);
+        ToolResult<UnrestrictedJavascriptConfig> reload();
     }
 
     public interface HistoryActions {
@@ -314,6 +318,7 @@ public final class ClientSettingsService implements AutoCloseable {
     private final RecipeActions recipeActions;
     private final SkillActions skillActions;
     private final CommandActions commandActions;
+    private final UnrestrictedJavascriptActions unrestrictedActions;
     private final ExtensionActions extensionActions;
     private final HistoryActions historyActions;
     private final ClientEventDispatcher dispatcher;
@@ -332,6 +337,7 @@ public final class ClientSettingsService implements AutoCloseable {
     private SkillCommunityView skillCommunityState;
     private ExtensionSettingsView extensionState;
     private CommandCapabilityConfig commandState;
+    private UnrestrictedJavascriptConfig unrestrictedState = UnrestrictedJavascriptConfig.defaults();
     private HistoryRuntimeState historyState;
     private long modelGeneration;
     private long metadataGeneration;
@@ -523,6 +529,23 @@ public final class ClientSettingsService implements AutoCloseable {
             ClientEventDispatcher dispatcher,
             Executor worker,
             SettingsNotice initialNotice) {
+        this(display, displayActions, initialModels, presentEnvironmentNames, models, metadataActions,
+                initialCapabilities, capabilityActions, initialRecipes, recipeActions, initialSkills,
+                skillActions, initialExtensions, extensionActions, initialCommands, commandActions,
+                defaultUnrestrictedJavascriptActions(), UnrestrictedJavascriptConfig.defaults(), historyActions,
+                dispatcher, worker, initialNotice);
+    }
+
+    public ClientSettingsService(
+            GuideDisplayConfig display, DisplayActions displayActions, ModelState initialModels,
+            Set<String> presentEnvironmentNames, ModelActions models, MetadataActions metadataActions,
+            CapabilitySettingsView initialCapabilities, CapabilityActions capabilityActions,
+            RecipeSettingsView initialRecipes, RecipeActions recipeActions, SkillSettingsView initialSkills,
+            SkillActions skillActions, ExtensionSettingsView initialExtensions, ExtensionActions extensionActions,
+            CommandCapabilityConfig initialCommands, CommandActions commandActions,
+            UnrestrictedJavascriptActions unrestrictedActions, UnrestrictedJavascriptConfig initialUnrestricted,
+            HistoryActions historyActions, ClientEventDispatcher dispatcher, Executor worker,
+            SettingsNotice initialNotice) {
         this.display = Objects.requireNonNull(display, "display");
         this.displayActions = Objects.requireNonNull(displayActions, "displayActions");
         this.modelState = Objects.requireNonNull(initialModels, "initialModels");
@@ -542,6 +565,8 @@ public final class ClientSettingsService implements AutoCloseable {
         this.extensionActions = Objects.requireNonNull(extensionActions, "extensionActions");
         this.commandState = Objects.requireNonNull(initialCommands, "initialCommands");
         this.commandActions = Objects.requireNonNull(commandActions, "commandActions");
+        this.unrestrictedActions = Objects.requireNonNull(unrestrictedActions, "unrestrictedActions");
+        this.unrestrictedState = Objects.requireNonNull(initialUnrestricted, "initialUnrestricted");
         this.historyActions = Objects.requireNonNull(historyActions, "historyActions");
         this.historyState = safeHistoryState(historyActions);
         this.dispatcher = Objects.requireNonNull(dispatcher, "dispatcher");
@@ -1041,6 +1066,46 @@ public final class ClientSettingsService implements AutoCloseable {
                     reservation.id(), saved, result, "experimental_commands_saved"));
         });
         return result;
+    }
+
+    public CompletableFuture<ToolResult<Boolean>> saveUnrestrictedJavascript(boolean enabled) {
+        var candidate = new UnrestrictedJavascriptConfig(UnrestrictedJavascriptConfig.SCHEMA_VERSION, enabled);
+        Reservation reservation = reserve(SettingsOperation.domain(SettingsOperation.Kind.SAVING_UNRESTRICTED_JAVASCRIPT));
+        if (!reservation.accepted()) return CompletableFuture.completedFuture(failed(reservation.failureCode()));
+        CompletableFuture<ToolResult<Boolean>> result = new CompletableFuture<>();
+        worker.execute(() -> {
+            ToolResult<UnrestrictedJavascriptConfig> saved = safely(() -> unrestrictedActions.save(candidate),
+                    "settings_save_failed", "Unable to save unrestricted JavaScript settings");
+            dispatcher.execute(() -> finishUnrestricted(reservation.id(), saved, result));
+        });
+        return result;
+    }
+
+    private void finishUnrestricted(long operationId, ToolResult<UnrestrictedJavascriptConfig> completed,
+            CompletableFuture<ToolResult<Boolean>> outward) {
+        ToolResult<Boolean> result;
+        synchronized (lock) {
+            if (!isCurrentLocked(operationId)) return;
+            operation = SettingsOperation.idle();
+            if (completed instanceof ToolResult.Success<UnrestrictedJavascriptConfig> success) {
+                unrestrictedState = success.value();
+                notice = SettingsNotice.success("unrestricted_javascript_saved", "Unrestricted JavaScript settings saved");
+                result = new ToolResult.Success<>(true);
+            } else {
+                var failure = (ToolResult.Failure<UnrestrictedJavascriptConfig>) completed;
+                notice = SettingsNotice.failure(failure.code(), failure.message());
+                result = new ToolResult.Failure<>(failure.code(), failure.message());
+            }
+            publishLocked();
+        }
+        outward.complete(result);
+    }
+
+    private static UnrestrictedJavascriptActions defaultUnrestrictedJavascriptActions() {
+        return new UnrestrictedJavascriptActions() {
+            public ToolResult<UnrestrictedJavascriptConfig> save(UnrestrictedJavascriptConfig c) { return new ToolResult.Success<>(c); }
+            public ToolResult<UnrestrictedJavascriptConfig> reload() { return new ToolResult.Success<>(UnrestrictedJavascriptConfig.defaults()); }
+        };
     }
 
     public CompletableFuture<ToolResult<Boolean>> reloadExperimentalCommands() {
@@ -1899,6 +1964,7 @@ public final class ClientSettingsService implements AutoCloseable {
                 skillCommunityState,
                 extensionState,
                 commandState,
+                unrestrictedState,
                 historyView,
                 diagnostics.snapshot(
                         display.debugMode(),

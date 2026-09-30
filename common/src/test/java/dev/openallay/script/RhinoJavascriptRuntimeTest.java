@@ -17,6 +17,29 @@ import org.junit.jupiter.api.Test;
 
 final class RhinoJavascriptRuntimeTest {
     @Test
+    void unrestrictedModeProvidesJavaTypeAndArbitrarySystemAccessWhileDefaultModeDeniesIt() {
+        var runtime = new RhinoJavascriptRuntime();
+        assertThrows(RuntimeException.class, () -> runtime.execute(
+                "return Java.type('java.lang.System').getProperty('java.version');",
+                Map.of(), Map.of(), new CancellationSignal()));
+        JavascriptExecution execution = runtime.execute(
+                "return Java.type('java.lang.System').getProperty('java.version');",
+                Map.of(), Map.of(), Map.of(), new CancellationSignal(), null, null, true);
+        assertTrue(execution.value().getAsString().length() > 0);
+        String largeSource = "return '" + "x".repeat(40) + "';";
+        assertEquals("javascript_source_too_large", assertThrows(
+                JavascriptExecutionException.class,
+                () -> new RhinoJavascriptRuntime(Duration.ofSeconds(1),
+                        new JavascriptRuntimeLimits(32, 4, 12, 8, 4, 16))
+                        .execute(largeSource, Map.of(), Map.of(), new CancellationSignal())).code());
+        var unrestricted = new RhinoJavascriptRuntime(Duration.ofSeconds(1),
+                new JavascriptRuntimeLimits(32, 4, 12, 8, 4, 16));
+        assertEquals("x".repeat(40), unrestricted.execute(
+                largeSource, Map.of(), Map.of(), Map.of(), new CancellationSignal(),
+                null, null, true).value().getAsString());
+    }
+
+    @Test
     void progressivelyDescribesDeclaredMinecraftPathsWithoutSelectingTheirValues() {
         MinecraftAgentHostGraph graph = new MinecraftAgentHostGraph(
                 JavascriptAgentTestFixtures.context("schema-discovery"));

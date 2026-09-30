@@ -102,6 +102,7 @@ public final class OpenAllayNeoForgeClient {
                 gson,
                 OpenAllayNeoForgeClient.class.getClassLoader(),
                 recipeClient);
+        if (settings != null) contexts.setUnrestrictedJavascriptRuntime(settings.unrestrictedJavascript());
         bridge.configureClientTools(
                 () -> modelRegistry == null
                         ? dev.openallay.agent.tool.ToolRuntimeCatalog.empty()
@@ -121,7 +122,7 @@ public final class OpenAllayNeoForgeClient {
                             return;
                         }
                         ToolResult<dev.openallay.context.ToolInvocationContext> result =
-                                contexts.capture(required, correlation);
+                                contexts.captureServerToolContext(required, correlation);
                         if (result instanceof ToolResult.Success<
                                 dev.openallay.context.ToolInvocationContext> success) {
                             captured.complete(success.value());

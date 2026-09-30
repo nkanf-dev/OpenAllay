@@ -31,6 +31,15 @@ final class AgentSystemPromptTest {
     }
 
     @Test
+    void unrestrictedClientRequestPromptDescribesJavaAuthorityAndSideEffects() {
+        String prompt = AgentSystemPrompt.compose(" ",
+                CoreJavascriptContract.render(MinecraftAgentHostGraph.declaredOnlyCatalog()), true);
+        assertTrue(prompt.contains("Java.type(...)` gives scripts Java/JVM access"));
+        assertTrue(prompt.contains("irreversible side effects"));
+        assertTrue(prompt.contains("credentials available to the JVM"));
+    }
+
+    @Test
     void acceptsTheDescriptorDerivedCoreContractExplicitly() {
         String contract = CoreJavascriptContract.render(
                 MinecraftAgentHostGraph.declaredOnlyCatalog());
@@ -46,6 +55,6 @@ final class AgentSystemPromptTest {
         String prompt = AgentSystemPrompt.compose("  ");
         assertTrue(prompt.contains("<none/>"));
         assertTrue(prompt.contains("Only registered operations are authorized"));
-        assertTrue(prompt.contains("JavaScript is isolated data analysis, not a shell"));
+        assertTrue(prompt.contains("JavaScript uses the default isolated mode"));
     }
 }

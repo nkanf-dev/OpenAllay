@@ -36,6 +36,9 @@ import dev.openallay.skill.SkillParser;
 import dev.openallay.tool.ToolResult;
 import dev.openallay.script.command.CommandCapabilityConfig;
 import dev.openallay.script.command.CommandCapabilityConfigStore;
+import dev.openallay.script.UnrestrictedJavascriptConfig;
+import dev.openallay.script.UnrestrictedJavascriptConfigStore;
+import dev.openallay.script.UnrestrictedJavascriptRuntime;
 import java.net.URI;
 import java.nio.file.Path;
 import java.time.Clock;
@@ -50,10 +53,12 @@ import java.util.concurrent.atomic.AtomicReference;
 /** Loader-neutral lifecycle bundle for the model registry and native settings owner. */
 public record ClientSettingsRuntime(
         ClientModelRuntimeRegistry models,
-        ClientSettingsService settings) {
+        ClientSettingsService settings,
+        UnrestrictedJavascriptRuntime unrestrictedJavascript) {
     public ClientSettingsRuntime {
         Objects.requireNonNull(models, "models");
         Objects.requireNonNull(settings, "settings");
+        Objects.requireNonNull(unrestrictedJavascript, "unrestrictedJavascript");
     }
 
     public static ToolResult<ClientSettingsRuntime> create(
@@ -231,6 +236,16 @@ public record ClientSettingsRuntime(
                 }
             }
             product.commands().replace(initialCommands);
+            UnrestrictedJavascriptConfigStore unrestrictedStore = new UnrestrictedJavascriptConfigStore(
+                    configDirectory.resolve("unrestricted-javascript.json"));
+            ToolResult<UnrestrictedJavascriptConfig> loadedUnrestricted = unrestrictedStore.reload();
+            UnrestrictedJavascriptConfig initialUnrestricted = loadedUnrestricted instanceof ToolResult.Success<UnrestrictedJavascriptConfig> s
+                    ? s.value() : UnrestrictedJavascriptConfig.defaults();
+            UnrestrictedJavascriptRuntime unrestrictedRuntime = new UnrestrictedJavascriptRuntime();
+            unrestrictedRuntime.replace(initialUnrestricted);
+            if (loadedUnrestricted instanceof ToolResult.Failure<UnrestrictedJavascriptConfig> f && startupNotice == null) {
+                startupNotice = SettingsNotice.failure(f.code(), f.message());
+            }
             product.skills().setRuntimeDisabledSkills(initialCommands.enabled()
                     ? Set.of()
                     : Set.of("run-game-commands"));
@@ -376,6 +391,19 @@ public record ClientSettingsRuntime(
                     extensions,
                     initialCommands,
                     commandActions,
+                    new ClientSettingsService.UnrestrictedJavascriptActions() {
+                        public ToolResult<UnrestrictedJavascriptConfig> save(UnrestrictedJavascriptConfig c) {
+                            var result = unrestrictedStore.save(c);
+                            if (result instanceof ToolResult.Success<UnrestrictedJavascriptConfig> s) unrestrictedRuntime.replace(s.value());
+                            return result;
+                        }
+                        public ToolResult<UnrestrictedJavascriptConfig> reload() {
+                            var result = unrestrictedStore.reload();
+                            if (result instanceof ToolResult.Success<UnrestrictedJavascriptConfig> s) unrestrictedRuntime.replace(s.value());
+                            return result;
+                        }
+                    },
+                    initialUnrestricted,
                     historyActions,
                     dispatcher,
                     command -> Thread.startVirtualThread(command),
@@ -386,7 +414,7 @@ public record ClientSettingsRuntime(
                 service.acceptMetadataUpdate(early);
             }
             metadata.start();
-            return new ToolResult.Success<>(new ClientSettingsRuntime(registry, service));
+            return new ToolResult.Success<>(new ClientSettingsRuntime(registry, service, unrestrictedRuntime));
         } catch (RuntimeException failure) {
             credentialStore.close();
             return new ToolResult.Failure<>(

@@ -214,7 +214,7 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
                 actor,
                 session,
                 question,
-                systemPrompt(),
+                systemPrompt(context.unrestrictedJavascript()),
                 context,
                 true);
         return agent.ask(request, event -> dispatcher.execute(() -> events.accept(event)))
@@ -292,8 +292,15 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
     }
 
     private String systemPrompt() {
+        return systemPrompt(false);
+    }
+
+    private String systemPrompt(boolean unrestrictedJavascript) {
         return dev.openallay.agent.AgentSystemPrompt.compose(
-                capabilities.skills().metadataPrompt());
+                capabilities.skills().metadataPrompt(),
+                dev.openallay.script.schema.CoreJavascriptContract.render(
+                        dev.openallay.script.data.MinecraftAgentHostGraph.declaredOnlyCatalog()),
+                unrestrictedJavascript);
     }
 
     private static EndpointRuntime endpoint(
