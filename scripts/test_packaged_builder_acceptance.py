@@ -62,6 +62,7 @@ class PackagedBuilderLauncherTests(unittest.TestCase):
     def artifact(self, repo, loader="fabric", bootstrap=True):
         path = repo / loader / "build/libs" / f"openallay-{loader}-26.2-0.2.3.jar"
         path.parent.mkdir(parents=True)
+        (repo / "gradle.properties").write_text("version=0.2.3\n", encoding="utf-8")
         nested_path = "META-INF/jars/openallay-builder-fabric-26.2-0.1.0.jar"
         embedded = io.BytesIO()
         with zipfile.ZipFile(embedded, "w") as builder:
@@ -141,7 +142,7 @@ class PackagedBuilderLauncherTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "explicit --enable-unrestricted"):
                 launcher.prepare(args, Path(directory))
             args = launcher.parser().parse_args(["fabric", "--enable-unrestricted"])
-            with self.assertRaisesRegex(ValueError, "Disabled scenario"):
+            with self.assertRaisesRegex(ValueError, "Disabled and UI scenarios"):
                 launcher.prepare(args, Path(directory))
 
     def test_launch_refuses_prebootstrap_production_jar_without_exec(self):
@@ -458,6 +459,143 @@ class PackagedBuilderLauncherTests(unittest.TestCase):
                 _, manifest = launcher.prepare_resume(args, repo)
                 self.assertTrue(manifest["modelDiagnostics"])
                 self.assertEqual(1, manifest["command"].count(prop))
+
+    def test_ui_scenarios_keep_unrestricted_off_and_map_only_explicit_flags(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory) / "repo"
+            artifact = self.artifact(repo)
+            mcroot, cache, java = self.environment(repo)
+            common = ["fabric", "--minecraft-root", str(mcroot), "--gradle-cache", str(cache), "--java", str(java)]
+            args = launcher.parser().parse_args(common + ["--run-id", "ui-stop", "--scenario", "ui-stop",
+                                                         "--cancel-on-tool-start", "--professional-screenshots",
+                                                         "--screenshot-manual-profile", "manual-public-luna",
+                                                         "--screenshot-automatic-profile", "automatic-public-reference",
+                                                         "--review-package", str(artifact)])
+            output, manifest = launcher.prepare(args, repo)
+            self.assertTrue(manifest["uiCapture"])
+            self.assertEqual("CANCELLED", manifest["expectedTerminalOutcome"])
+            self.assertFalse(manifest["unrestrictedOptIn"])
+            self.assertFalse(json.loads((output / "game/config/openallay/unrestricted-javascript.json").read_text())["enabled"])
+            for prop in ("-Dopenallay.e2e.cancelOnToolStart=true", "-Dopenallay.e2e.screenshotMatrix=professional",
+                         "-Dopenallay.e2e.screenshotManualProfile=manual-public-luna",
+                         "-Dopenallay.e2e.screenshotAutomaticProfile=automatic-public-reference",
+                         "-Dopenallay.e2e.reviewPackage=" + str(artifact.resolve())):
+                self.assertIn(prop, manifest["command"])
+            self.assertNotIn("-Dopenallay.e2e.revokeUnrestrictedAfterCapture=true", manifest["command"])
+
+    def test_ui_stop_requires_explicit_cancel_and_rejects_unrestricted(self):
+        with tempfile.TemporaryDirectory() as directory:
+            for options, message in ((["--scenario", "ui-stop"], "explicit --cancel-on-tool-start"),
+                                     (["--scenario", "ui-stop", "--cancel-on-tool-start", "--enable-unrestricted"], "cannot enable"),
+                                     (["--scenario", "ui-provider-failure", "--cancel-on-tool-start"], "only for ui-stop")):
+                args = launcher.parser().parse_args(["fabric"] + options)
+                with self.assertRaisesRegex(ValueError, message):
+                    launcher.prepare(args, Path(directory))
+
+    def test_professional_capture_requires_explicit_profiles(self):
+        args = launcher.parser().parse_args(["fabric", "--scenario", "ui-provider-failure", "--professional-screenshots"])
+        with tempfile.TemporaryDirectory() as directory:
+            with self.assertRaisesRegex(ValueError, "explicit manual and automatic"):
+                launcher.prepare(args, Path(directory))
+
+    def test_ui_provider_failure_accepts_failed_capture_not_builder_pass(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            report = root / "report.json"
+            screenshots = root / "screenshots/screenshots"
+            screenshots.mkdir(parents=True)
+            manifest = {"report": str(report), "screenshots": str(root / "screenshots"),
+                        "scenario": "ui-provider-failure", "professionalScreenshots": True}
+            launcher.write_json(report, {"outcome": "FAILED", "failureCode": "provider_unavailable"})
+            (screenshots / "25-native-world-final.png").write_bytes(b"\x89PNG\r\n\x1a\nretained capture")
+            actual = launcher.validate_ui_capture(manifest)
+            self.assertEqual("FAILED", actual["outcome"])
+            self.assertNotIn("nativeAcceptance", actual)
+            with self.assertRaises(ValueError):
+                launcher.validate_report(report)
+
+    def test_ui_capture_requires_final_png_and_exact_terminal_outcome(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            report = root / "report.json"
+            manifest = {"report": str(report), "screenshots": str(root / "screenshots"),
+                        "scenario": "ui-provider-failure", "professionalScreenshots": True}
+            launcher.write_json(report, {"outcome": "FAILED"})
+            with self.assertRaisesRegex(ValueError, "final PNG"):
+                launcher.validate_ui_capture(manifest)
+            (root / "screenshots").mkdir()
+            (root / "screenshots/25-native-world-final.png").write_bytes(b"not png")
+            with self.assertRaisesRegex(ValueError, "final PNG"):
+                launcher.validate_ui_capture(manifest)
+            launcher.write_json(report, {"outcome": "COMPLETED"})
+            with self.assertRaisesRegex(ValueError, "terminal outcome"):
+                launcher.validate_ui_capture(manifest)
+
+    def test_ui_stop_requires_actual_accepted_cancellation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "screenshots").mkdir()
+            (root / "screenshots/11-native-world-builds.png").write_bytes(b"\x89PNG\r\n\x1a\nretained capture")
+            report = root / "report.json"
+            manifest = {"report": str(report), "screenshots": str(root / "screenshots"), "scenario": "ui-stop"}
+            launcher.write_json(report, {"outcome": "CANCELLED"})
+            with self.assertRaisesRegex(ValueError, "accepted real cancellation"):
+                launcher.validate_ui_capture(manifest)
+            actual = {"outcome": "CANCELLED", "actualStop": {"requested": True, "accepted": True, "terminalCancelled": True,
+                                                               "pendingToolHasNoNormalizedResult": True}}
+            launcher.write_json(report, actual)
+            self.assertEqual(actual, launcher.validate_ui_capture(manifest))
+
+    def test_fresh_version_defaults_to_checked_gradle_metadata_and_verifies_024_artifact(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory) / "repo"
+            old_artifact = self.artifact(repo)
+            mcroot, cache, java = self.environment(repo)
+            new_artifact = old_artifact.with_name("openallay-fabric-26.2-0.2.4.jar")
+            with zipfile.ZipFile(old_artifact) as old, zipfile.ZipFile(new_artifact, "w") as new:
+                for name in old.namelist():
+                    content = old.read(name)
+                    if name == "fabric.mod.json":
+                        metadata = json.loads(content)
+                        metadata["version"] = "0.2.4"
+                        content = json.dumps(metadata).encode()
+                    new.writestr(name, content)
+            (repo / "gradle.properties").write_text("version=0.2.4\n", encoding="utf-8")
+            args = launcher.parser().parse_args(["fabric", "--run-id", "new-release", "--scenario", "ui-provider-failure",
+                                                 "--minecraft-root", str(mcroot), "--gradle-cache", str(cache), "--java", str(java)])
+            _, manifest = launcher.prepare(args, repo)
+            self.assertEqual("0.2.4", manifest["packagedArtifact"]["modVersion"])
+            self.assertEqual(new_artifact.name, manifest["packagedArtifact"]["name"])
+            self.assertEqual("0.2.3", launcher.packaged_artifact(old_artifact, "fabric", "0.2.3")["modVersion"])
+            with self.assertRaises(ValueError):
+                launcher.packaged_artifact(new_artifact, "fabric", "0.2.3")
+
+    def test_resume_uses_prior_manifest_version_not_current_gradle_release(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory) / "repo"
+            previous, prior, original = self.accepted_original(repo)
+            (repo / "gradle.properties").write_text("version=0.2.4\n", encoding="utf-8")
+            replacement = self.replacement_artifact(original, Path(directory) / "replacement")
+            args = launcher.parser().parse_args(["--resume-prepared", str(previous), "--run-id", "retained-old-version",
+                                                 "--scenario", "builder-reload", "--enable-unrestricted", "--jar", str(replacement)])
+            _, manifest = launcher.prepare_resume(args, repo)
+            self.assertEqual("0.2.3", manifest["packagedArtifact"]["modVersion"])
+
+    def test_ui_stop_rejects_missing_or_false_pending_tool_fact(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "screenshots").mkdir()
+            (root / "screenshots/25-native-world-final.png").write_bytes(b"\x89PNG\r\n\x1a\nretained capture")
+            report = root / "report.json"
+            manifest = {"report": str(report), "screenshots": str(root / "screenshots"),
+                        "scenario": "ui-stop", "professionalScreenshots": True}
+            for pending in (None, False):
+                stop = {"requested": True, "accepted": True, "terminalCancelled": True}
+                if pending is not None:
+                    stop["pendingToolHasNoNormalizedResult"] = pending
+                launcher.write_json(report, {"outcome": "CANCELLED", "actualStop": stop})
+                with self.assertRaisesRegex(ValueError, "accepted real cancellation"):
+                    launcher.validate_ui_capture(manifest)
 
 if __name__ == "__main__":
     unittest.main()

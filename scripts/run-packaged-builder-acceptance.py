@@ -31,7 +31,9 @@ NEOFORGE_VERSION = "26.2.0.25-beta"
 MOD_VERSION = "0.2.3"
 WORLD_PREFIX = "openallay-builder-"
 SCENARIOS = ("builder-disabled", "builder-acceptance", "builder-reload",
-             "builder-partial", "builder-cancel", "builder-live", "builder-live-copy", "builder-live-undo")
+             "builder-partial", "builder-cancel", "builder-live", "builder-live-copy", "builder-live-undo",
+             "ui-stop", "ui-provider-failure")
+UI_OUTCOMES = {"ui-stop": "CANCELLED", "ui-provider-failure": "FAILED"}
 REPO = Path(__file__).resolve().parents[1]
 
 
@@ -222,22 +224,22 @@ def prepare_assets(minecraft_root, destination, repo=REPO):
     return destination
 
 
-def packaged_artifact(path, loader):
+def packaged_artifact(path, loader, mod_version=MOD_VERSION):
     path = path.resolve()
-    expected_name = f"openallay-{loader}-{MC_VERSION}-{MOD_VERSION}.jar"
+    expected_name = f"openallay-{loader}-{MC_VERSION}-{mod_version}.jar"
     if path.name != expected_name or not path.is_file():
         raise ValueError("Use the default built OpenAllay production artifact: " + expected_name)
     with zipfile.ZipFile(path) as archive:
         names = archive.namelist()
         if loader == "fabric":
             metadata = json.loads(archive.read("fabric.mod.json"))
-            if metadata["id"] != "openallay" or metadata["version"] != MOD_VERSION:
+            if metadata["id"] != "openallay" or metadata["version"] != mod_version:
                 raise ValueError("Unexpected packaged OpenAllay identity")
             nested = [item["file"] for item in metadata.get("jars", []) if "openallay-builder-" in item["file"]]
         else:
             mod_metadata = archive.read("META-INF/neoforge.mods.toml").decode("utf-8")
             if (re.search(r'^modId\s*=\s*"openallay"', mod_metadata, re.MULTILINE) is None
-                    or re.search(r'^version\s*=\s*"' + re.escape(MOD_VERSION) + r'"', mod_metadata, re.MULTILINE) is None):
+                    or re.search(r'^version\s*=\s*"' + re.escape(mod_version) + r'"', mod_metadata, re.MULTILINE) is None):
                 raise ValueError("Unexpected packaged OpenAllay identity")
             metadata = json.loads(archive.read("META-INF/jarjar/metadata.json"))
             nested = [item["path"] for item in metadata.get("jars", []) if "openallay-builder-" in item["path"]]
@@ -255,7 +257,7 @@ def packaged_artifact(path, loader):
         instrumented = b"openallay.e2e.createWorld" in archive.read(bootstrap)
     return {"name": path.name, "sha256": digest(path), "nestedBuilder": nested[0],
             "nestedBuilderSha256": nested_sha256, "loader": loader, "minecraft": MC_VERSION,
-            "modVersion": MOD_VERSION, "kind": "acceptance-instrumented" if instrumented else "production-before-bootstrap",
+            "modVersion": mod_version, "kind": "acceptance-instrumented" if instrumented else "production-before-bootstrap",
             "nativeWorldBootstrapPresent": instrumented}
 
 
@@ -309,12 +311,29 @@ def prepare(args, repo=REPO):
         raise ValueError("Harness timeout must be a positive number of seconds")
     if args.scenario == "builder-live-undo":
         raise ValueError("Live undo must resume a reviewed prior builder-live-copy disposable world")
-    if args.scenario == "builder-disabled" and args.enable_unrestricted:
-        raise ValueError("Disabled scenario cannot enable unrestricted JavaScript")
-    if args.scenario != "builder-disabled" and not args.enable_unrestricted:
+    ui_scenario = args.scenario in UI_OUTCOMES
+    if (args.scenario == "builder-disabled" or ui_scenario) and args.enable_unrestricted:
+        raise ValueError("Disabled and UI scenarios cannot enable unrestricted JavaScript")
+    if args.scenario != "builder-disabled" and not ui_scenario and not args.enable_unrestricted:
         raise ValueError("Enabled scenarios require explicit --enable-unrestricted for this disposable game directory")
+    if args.cancel_on_tool_start and args.scenario != "ui-stop":
+        raise ValueError("--cancel-on-tool-start is allowed only for ui-stop")
+    if args.scenario == "ui-stop" and not args.cancel_on_tool_start:
+        raise ValueError("ui-stop requires explicit --cancel-on-tool-start")
     if args.scenario.startswith("builder-live") and (not args.question or not args.model_config):
         raise ValueError("Live acceptance requires an explicit ordinary provider question and environment-reference model config")
+    if args.professional_screenshots and (not args.screenshot_manual_profile or not args.screenshot_automatic_profile):
+        raise ValueError("Professional screenshots require explicit manual and automatic profile IDs")
+    if args.mod_version is None:
+        properties = (repo / "gradle.properties").read_text(encoding="utf-8")
+        versions = re.findall(r"^version=([^\r\n]+)$", properties, re.MULTILINE)
+        if len(versions) != 1:
+            raise ValueError("Checked-in Gradle release version is missing or ambiguous")
+        args.mod_version = versions[0]
+    if not re.fullmatch(r"[0-9]+(?:[.][0-9]+){2}", args.mod_version):
+        raise ValueError("mod-version must be an explicit three-part release version")
+    if args.review_package and not args.review_package.is_file():
+        raise ValueError("An explicit local review package JAR is required")
     if args.revoke_unrestricted_after_capture and args.scenario != "builder-acceptance":
         raise ValueError("Frozen-authority probe applies only to builder-acceptance")
     output = safe_output(repo / "build/e2e/packaged-builder" / loader / run_id, repo)
@@ -325,8 +344,8 @@ def prepare(args, repo=REPO):
     vanilla = read_version(mcroot, MC_VERSION)
     if vanilla.get("javaVersion", {}).get("majorVersion") != 25:
         raise ValueError("Minecraft26.2 runtime metadata must require Java25")
-    artifact = args.jar or repo / loader / "build/libs" / f"openallay-{loader}-{MC_VERSION}-{MOD_VERSION}.jar"
-    identity = packaged_artifact(artifact, loader)
+    artifact = args.jar or repo / loader / "build/libs" / f"openallay-{loader}-{MC_VERSION}-{args.mod_version}.jar"
+    identity = packaged_artifact(artifact, loader, args.mod_version)
     models = validate_model_config(args.model_config) if args.model_config else fixture_model_config(args.fixture_port)
     libraries = version_libraries(vanilla, mcroot, gradle_cache)
     extra_jvm, extra_game, loader_files = [], [], []
@@ -416,13 +435,24 @@ def prepare(args, repo=REPO):
     jvm = expand_arguments(vanilla["arguments"]["jvm"] + extra_jvm, values)
     game_args = expand_arguments(vanilla["arguments"]["game"] + extra_game, values, {"has_custom_resolution": True})
     properties = {"enabled": "true", "createWorld": world, "scenario": args.scenario,
-                  "question": args.question or "OpenAllay E2E Builder " + args.scenario.removeprefix("builder-"),
+                  "question": args.question or ("OpenAllay E2E UI " + args.scenario.removeprefix("ui-")
+                                               if ui_scenario else "OpenAllay E2E Builder " + args.scenario.removeprefix("builder-")),
                   "report": str(output / "report.json"), "trace": str(output / "trace.json"),
                   "session": run_id, "modelMode": "client", "screenshotRoot": str(output / "screenshots"),
                   "shutdown": "false", "shutdownAfterScreenshots": "true",
                   "timeoutSeconds": str(args.timeout_seconds)}
     if args.revoke_unrestricted_after_capture:
         properties["revokeUnrestrictedAfterCapture"] = "true"
+    if args.professional_screenshots:
+        properties["screenshotMatrix"] = "professional"
+    if args.screenshot_manual_profile:
+        properties["screenshotManualProfile"] = args.screenshot_manual_profile
+    if args.screenshot_automatic_profile:
+        properties["screenshotAutomaticProfile"] = args.screenshot_automatic_profile
+    if args.review_package:
+        properties["reviewPackage"] = str(args.review_package.resolve())
+    if args.cancel_on_tool_start:
+        properties["cancelOnToolStart"] = "true"
     heap = ["-Xms256M", "-Xmx1536M"] if args.low_impact else ["-Xms512M", "-Xmx3G"]
     command = [str(java)] + heap + jvm + proxy_arguments(args.http_proxy_from_env)
     if args.model_diagnostics:
@@ -441,6 +471,8 @@ def prepare(args, repo=REPO):
                 "preparedFiles": {str(p.relative_to(output)): digest(p) for p in files},
                 "report": str(output / "report.json"), "trace": str(output / "trace.json"),
                 "screenshots": str(output / "screenshots"),
+                "uiCapture": ui_scenario, "expectedTerminalOutcome": UI_OUTCOMES.get(args.scenario),
+                "professionalScreenshots": args.professional_screenshots,
                 "credentials": "environment references only; no account credentials used",
                 "worldBootstrap": "native WorldOpenFlows.createFreshLevel; survival, commands off, superflat",
                 "noGameLaunched": True}
@@ -486,11 +518,11 @@ def prepare_resume(args, repo=REPO):
     replacement = None
     if args.jar:
         original = game / "mods" / previous_identity["name"]
-        original_identity = packaged_artifact(original, prior["loader"])
+        original_identity = packaged_artifact(original, prior["loader"], previous_identity.get("modVersion", MOD_VERSION))
         if original_identity["sha256"] != previous_identity["sha256"]:
             raise ValueError("Original packaged artifact hash does not match the accepted manifest")
         replacement = args.jar.resolve()
-        new_identity = packaged_artifact(replacement, prior["loader"])
+        new_identity = packaged_artifact(replacement, prior["loader"], previous_identity.get("modVersion", MOD_VERSION))
         identity_fields = ("loader", "minecraft", "modVersion", "nestedBuilder", "nestedBuilderSha256")
         if any(original_identity[field] != new_identity[field] for field in identity_fields):
             raise ValueError("Harness upgrade must preserve loader, Minecraft, OpenAllay version, and exact nested Builder bytes")
@@ -578,6 +610,29 @@ def validate_report(path):
     return report
 
 
+def validate_ui_capture(manifest):
+    report_path = Path(manifest["report"])
+    if not report_path.is_file():
+        raise ValueError("Client closed without a UI evidence report")
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    expected = UI_OUTCOMES.get(manifest["scenario"])
+    if not expected or report.get("outcome") != expected:
+        raise ValueError("UI evidence terminal outcome does not match its explicit scenario")
+    if manifest["scenario"] == "ui-stop":
+        stop = report.get("actualStop", {})
+        if not all(stop.get(field) is True for field in ("requested", "accepted", "terminalCancelled", "pendingToolHasNoNormalizedResult")):
+            raise ValueError("UI stop evidence did not retain an accepted real cancellation")
+    validate_final_screenshot(manifest)
+    return report
+
+
+def validate_final_screenshot(manifest):
+    final_name = "25-native-world-final.png" if manifest.get("professionalScreenshots") else "11-native-world-builds.png"
+    screenshots = list(Path(manifest["screenshots"]).rglob(final_name))
+    if len(screenshots) != 1 or screenshots[0].read_bytes()[:8] != b"\x89PNG\r\n\x1a\n":
+        raise ValueError("Screenshot matrix did not retain its final PNG capture")
+
+
 def launch_prepared(path, repo=REPO):
     output = safe_output(path, repo)
     manifest = json.loads((output / "launch.json").read_text(encoding="utf-8"))
@@ -643,8 +698,14 @@ def launch_prepared(path, repo=REPO):
     write_json(output / "launch.json", manifest)
     if exit_code != 0:
         raise ValueError("Packaged acceptance client exited unsuccessfully (" + str(exit_code) + ")")
-    validate_report(manifest["report"])
-    print("Packaged Builder native acceptance PASSED: " + manifest["report"], flush=True)
+    if manifest.get("uiCapture"):
+        report = validate_ui_capture(manifest)
+        print("UI evidence capture completed; actual terminal outcome " + report["outcome"] + ": " + manifest["report"], flush=True)
+    else:
+        validate_report(manifest["report"])
+        if manifest.get("professionalScreenshots"):
+            validate_final_screenshot(manifest)
+        print("Packaged Builder native acceptance PASSED: " + manifest["report"], flush=True)
 
 
 def parser():
@@ -655,6 +716,12 @@ def parser():
     result.add_argument("--enable-unrestricted", action="store_true", help="Explicit disposable-directory opt-in; never changes ordinary profiles")
     result.add_argument("--revoke-unrestricted-after-capture", action="store_true")
     result.add_argument("--question")
+    result.add_argument("--mod-version", help="Explicit packaged release version; fresh runs default to checked-in gradle.properties")
+    result.add_argument("--professional-screenshots", action="store_true")
+    result.add_argument("--screenshot-manual-profile", help="Explicit configured profile ID for manual-context screenshots")
+    result.add_argument("--screenshot-automatic-profile", help="Explicit configured disabled public-model profile ID")
+    result.add_argument("--review-package", type=Path, help="Explicit local JAR for advisory review screenshots")
+    result.add_argument("--cancel-on-tool-start", action="store_true", help="UI-stop only: request actual cancellation when the Tool starts")
     result.add_argument("--model-diagnostics", action="store_true",
                         help="Opt in to prepared-JVM model diagnostics; default off, retained on resumed phases")
     result.add_argument("--timeout-seconds", type=int, default=300,

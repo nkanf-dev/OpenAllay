@@ -1,6 +1,6 @@
 # Packaged Builder real-client acceptance
 
-This is a development harness. It does not use Gradle `runClient` or project source classes. It launches the built default OpenAllay `0.2.3` JAR, including its nested Builder Extension, with Minecraft `26.2` on Java `25`.
+This is a development harness. It does not use Gradle `runClient` or project source classes. It launches the built default OpenAllay JAR, including its nested Builder Extension, with Minecraft `26.2` on Java `25`. Fresh runs use the version in checked-in `gradle.properties`; `--mod-version` selects an explicit matching packaged version. Retained Builder acceptance below used `0.2.3`.
 
 ## Runtime prerequisites
 
@@ -127,7 +127,7 @@ NeoForge's upgrade marker preserves nested Builder SHA-256
 The real Luna Fabric phases record nested Builder SHA-256
 `46c1ad2d4e65ddc1ab263b40a99381cbd34b8f19e4c791c04a62607bab659aeb`.
 
-The only real provider used was `gpt-kanglives` / `gpt-6-luna`, with an explicitly
+The passing live copy and undo used `gpt-kanglives` / `gpt-6-luna`, with an explicitly
 configured 1,000,000-token context. Its ordinary copy task and linked undo were
 separate retained requests. The strict copy validator also passed; its receipt is
 `build/e2e/builder-acceptance-2026-09-30/luna-copy-proof.json`. It corroborates 75
@@ -148,3 +148,7 @@ passing evidence.
 This checkpoint does not claim a final combined release gate, GUI acceptance of
 new intent/catalog features, server-hosted model isolation, or runtime acceptance
 of a later OpenAllay version. Those are separate checks.
+
+## Final UI evidence CLI
+
+`--professional-screenshots` enables the existing development-only screenshot matrix. Pass explicit `--screenshot-manual-profile`, `--screenshot-automatic-profile`, and optionally `--review-package <local-JAR>`; the launcher does not infer providers or change profile budgets. This also works with `builder-disabled` while unrestricted JavaScript remains off, and the final matrix PNG is required in addition to its native Builder report. The `ui-provider-failure` scenario preserves actual `FAILED` and `ui-stop --cancel-on-tool-start` preserves actual `CANCELLED`. Both UI scenarios require unrestricted JavaScript off. A UI capture returns success only when the exact expected terminal state and final PNG are retained; Stop also requires all four actual-cancellation facts from the controller. UI capture completion is not labeled Builder native `PASSED` and does not rewrite the report outcome. Fresh `--mod-version 0.2.4` runs verify the actual `0.2.4` JAR metadata, while controlled resumes continue to verify their original manifest version.
