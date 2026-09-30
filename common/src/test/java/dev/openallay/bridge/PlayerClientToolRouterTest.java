@@ -17,7 +17,9 @@ import dev.openallay.bridge.protocol.ResultChunker;
 import dev.openallay.bridge.server.PlayerClientToolRouter;
 import dev.openallay.context.ToolInvocationContext;
 import dev.openallay.model.CancellationSignal;
+import dev.openallay.tool.ModelFacingToolOutput;
 import dev.openallay.tool.Tool;
+import dev.openallay.trace.replay.ToolResultNormalizer;
 import dev.openallay.tool.ToolAccess;
 import dev.openallay.tool.ToolDescriptor;
 import dev.openallay.tool.ToolRegistry;
@@ -265,6 +267,85 @@ final class PlayerClientToolRouterTest {
                 result.normalized().getAsJsonObject("value").get("route").getAsString());
     }
 
+    @Test
+    void acceptsModelFacingOutputAndRebuildsProjectionFromStructuredValue() {
+        Gson gson = new Gson();
+        JsonObject normalized = new ToolResultNormalizer(gson).normalize(
+                new ToolResult.Success<>(new ModelTextTool.Output(99)),
+                ModelTextTool.Output.class);
+        assertEquals("Fact: 99", normalized.get("modelText").getAsString());
+        AgentToolResult completed = receiveResult(new ModelTextTool(), normalized, true);
+        assertFalse(completed.failure());
+        assertEquals(normalized, completed.normalized());
+
+        normalized.addProperty("modelText", "untrusted envelope projection");
+        completed = receiveResult(new ModelTextTool(), normalized, true);
+        assertFalse(completed.failure());
+        assertEquals("Fact: 99", completed.normalized().get("modelText").getAsString());
+
+        normalized.remove("modelText");
+        completed = receiveResult(new ModelTextTool(), normalized, true);
+        assertFalse(completed.failure());
+        assertEquals("Fact: 99", completed.normalized().get("modelText").getAsString());
+    }
+
+    @Test
+    void rejectsMalformedModelTextAndUnknownEnvelopeFields() {
+        Gson gson = new Gson();
+        JsonObject valid = new ToolResultNormalizer(gson).normalize(
+                new ToolResult.Success<>(new ModelTextTool.Output(99)),
+                ModelTextTool.Output.class);
+        List<com.google.gson.JsonElement> invalidTexts = List.of(
+                com.google.gson.JsonNull.INSTANCE,
+                new com.google.gson.JsonPrimitive(42),
+                new com.google.gson.JsonPrimitive(" "),
+                new JsonObject());
+        for (var text : invalidTexts) {
+            JsonObject invalid = valid.deepCopy();
+            invalid.add("modelText", text);
+            AgentToolResult completed = receiveResult(new ModelTextTool(), invalid, false);
+            assertTrue(completed.failure());
+            assertEquals("client_tool_result_invalid", completed.normalized().get("code").getAsString());
+        }
+        JsonObject extra = valid.deepCopy();
+        extra.addProperty("unknown", "field");
+        assertTrue(receiveResult(new ModelTextTool(), extra, false).failure());
+
+        JsonObject ordinary = new ToolResultNormalizer(gson).normalize(
+                new ToolResult.Success<>(new FactTool.Output(99)), FactTool.Output.class);
+        ordinary.addProperty("modelText", "not supported by this output type");
+        assertTrue(receiveResult(new FactTool(), ordinary, false).failure());
+    }
+
+    private static AgentToolResult receiveResult(
+            Tool<?, ?> tool, JsonObject normalized, boolean accepted) {
+        ToolRegistry registry = new ToolRegistry();
+        registry.register("test", List.of(tool));
+        List<SentCall> calls = new ArrayList<>();
+        PlayerClientToolRouter router = new PlayerClientToolRouter(
+                registry, new Gson(), transport(calls, new ArrayList<>()));
+        UUID actor = UUID.fromString("00000000-0000-0000-0000-000000000001");
+        UUID requestId = UUID.fromString("00000000-0000-0000-0000-000000000002");
+        AgentToolExecutor tools = success(router.open(
+                actor, requestId, "main", List.of(tool.descriptor().id())));
+        try {
+            CompletableFuture<AgentToolResult> result = tools.execute(
+                    tool.descriptor().id(), arguments("value", 4),
+                    ToolInvocationContext.developmentConsole(requestId.toString()),
+                    new CancellationSignal());
+            var chunks = new ResultChunker().split(
+                    calls.getFirst().payload().invocationId(), normalized.toString(), 3);
+            for (int index = 0; index < chunks.size(); index++) {
+                assertEquals(index < chunks.size() - 1 || accepted, router.receive(
+                        actor, ClientToolResultChunkPayload.from(requestId, chunks.get(index))));
+            }
+            assertTrue(result.isDone());
+            return result.join();
+        } finally {
+            router.close(actor, requestId);
+        }
+    }
+
     private static PlayerClientToolRouter.Transport transport(
             List<SentCall> calls, List<SentCancel> cancels) {
         return new PlayerClientToolRouter.Transport() {
@@ -310,6 +391,28 @@ final class PlayerClientToolRouterTest {
 
         @Override
         public ToolResult<Output> invoke(ToolInvocationContext context, Input input) {
+            return new ToolResult.Success<>(new Output(input.value()));
+        }
+    }
+
+    private static final class ModelTextTool
+            implements Tool<FactTool.Input, ModelTextTool.Output> {
+        record Output(int value) implements ModelFacingToolOutput {
+            @Override
+            public String modelText() {
+                return "Fact: " + value;
+            }
+        }
+
+        @Override
+        public ToolDescriptor<FactTool.Input, Output> descriptor() {
+            return new ToolDescriptor<>(
+                    "test:model_text", "Return a model-facing fact",
+                    FactTool.Input.class, Output.class, ToolAccess.READ_ONLY);
+        }
+
+        @Override
+        public ToolResult<Output> invoke(ToolInvocationContext context, FactTool.Input input) {
             return new ToolResult.Success<>(new Output(input.value()));
         }
     }

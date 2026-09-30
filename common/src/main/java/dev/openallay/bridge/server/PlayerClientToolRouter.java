@@ -18,6 +18,7 @@ import dev.openallay.model.CancellationSignal;
 import dev.openallay.model.ModelClientException;
 import dev.openallay.model.ModelFailure;
 import dev.openallay.model.ModelToolDefinition;
+import dev.openallay.tool.ModelFacingToolOutput;
 import dev.openallay.tool.ToolAccess;
 import dev.openallay.tool.ToolRegistry;
 import dev.openallay.tool.ToolResult;
@@ -394,19 +395,35 @@ public final class PlayerClientToolRouter {
                 return null;
             }
         }
-        if (!status.equals("success")
-                || !normalized.keySet().equals(Set.of("status", "outputType", "value"))) {
+        if (!status.equals("success")) {
             return null;
         }
         dev.openallay.tool.Tool<?, ?> tool = trustedTools.find(toolId).orElse(null);
-        if (tool == null
-                || !normalized.get("outputType").isJsonPrimitive()
+        if (tool == null) {
+            return null;
+        }
+        boolean hasModelText = normalized.has("modelText");
+        Set<String> expectedKeys = hasModelText
+                ? Set.of("status", "outputType", "value", "modelText")
+                : Set.of("status", "outputType", "value");
+        if (!normalized.keySet().equals(expectedKeys)) {
+            return null;
+        }
+        if (hasModelText
+                && (!ModelFacingToolOutput.class.isAssignableFrom(tool.descriptor().outputType())
+                        || !normalized.get("modelText").isJsonPrimitive()
+                        || !normalized.get("modelText").getAsJsonPrimitive().isString()
+                        || normalized.get("modelText").getAsString().isBlank())) {
+            return null;
+        }
+        if (!normalized.get("outputType").isJsonPrimitive()
                 || !normalized.get("outputType").getAsString()
                         .equals(tool.descriptor().outputType().getName())) {
             return null;
         }
         try {
             Object value = gson.fromJson(normalized.get("value"), tool.descriptor().outputType());
+            // The structured value is authoritative; rebuild any model projection locally.
             return normalizer.normalize(
                     new ToolResult.Success<>(value), tool.descriptor().outputType());
         } catch (RuntimeException invalid) {
