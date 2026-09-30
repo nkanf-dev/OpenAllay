@@ -44,6 +44,12 @@ jobs:
           bash -n scripts/*.sh
           python3 -m py_compile scripts/*.py
 
+      - name: Test distribution automation
+        run: python3 -m unittest discover -s scripts -p 'test_distribution*.py'
+
+      - name: Prepare pinned Extension source
+        run: python3 scripts/prepare-distribution.py
+
       - name: Run clean test and loader build gate
         run: ./gradlew clean :common:test :fabric:build :neoforge:build
 

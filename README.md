@@ -46,6 +46,26 @@ restart. You can also import a compatible local Extension JAR without waiting
 for it to appear in the community catalog. This lets new mod integrations grow
 without turning every capability into another one-purpose Agent tool.
 
+### Online construction as an independent Extension
+
+The 0.2.3 source distribution includes the Minecraft Builder Extension from
+[OpenAllay-Extensions](https://github.com/nkanf-dev/OpenAllay-Extensions/tree/main/extensions/minecraft-builder).
+It supplies geometry, terrain tools, six building presets, structure templates,
+rotation/mirroring and conflict-aware block undo through a reviewed JavaScript
+module and Skill. Construction code stays outside OpenAllay core.
+
+The native backend operates online in the active integrated-server world. It
+requires explicitly enabled client-local unrestricted JavaScript, not creative
+mode or a separate OpenAllay command permission. It does not edit offline saves
+or claim remote-server write authority. Installing the default Extension does
+not enable its runtime authorization. Cancellation stops future work; it does
+not reverse changes already applied.
+
+Skill and Extension details show advisory capability/dependency requirements.
+During installation, enable available requirements explicitly, cancel, or choose
+**Continue anyway**. Continuing does not grant missing capabilities. Player
+control and Baritone integration remain research, not bundled functionality.
+
 ### Results made for Minecraft
 
 Answers can include item icons, ingredient slots, recipe layouts, tables,

@@ -5,6 +5,8 @@ plugins {
     id 'net.neoforged.moddev' version '2.0.141' apply false
 }
 
+apply from: 'gradle/distribution.gradle'
+
 allprojects {
     repositories {
         maven {

@@ -3,6 +3,9 @@ plugins {
     id 'net.fabricmc.fabric-loom'
 }
 dependencies {
+    if (rootProject.bundleExtensions) {
+        include(project(path: ':', configuration: 'bundledExtensionFabric'))
+    }
     minecraft("com.mojang:minecraft:${minecraft_version}")
     implementation("net.fabricmc:fabric-loader:${fabric_loader_version}")
     implementation("net.fabricmc.fabric-api:fabric-command-api-v2:3.1.0+00cb03469c")

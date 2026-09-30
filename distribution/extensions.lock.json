@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "repository": "https://github.com/nkanf-dev/OpenAllay-Extensions.git",
+    "revision": "53548537bb7db2b4c3cee09af60f0c7b098bbd79"
+  },
+  "project": "extensions/minecraft-builder",
+  "version": "0.1.0",
+  "minecraftVersion": "26.2",
+  "modId": "openallay_builder",
+  "artifacts": {
+    "fabric": "fabric/build/libs/openallay-builder-fabric-26.2-0.1.0.jar",
+    "neoforge": "neoforge/build/libs/openallay-builder-neoforge-26.2-0.1.0.jar"
+  },
+  "extensionId": "openallay:builder"
+}

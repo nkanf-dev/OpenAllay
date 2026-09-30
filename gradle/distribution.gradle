@@ -1,0 +1,104 @@
+import groovy.json.JsonSlurper
+
+// Domain implementation stays in the independently versioned Extensions repo.
+// The explicit preparation command is the only step that accesses Git remotes.
+def lockFile = file('distribution/extensions.lock.json')
+def extensionLock = new JsonSlurper().parse(lockFile)
+def booleanProperty = { String name, String defaultValue ->
+    def value = providers.gradleProperty(name).orElse(defaultValue).get()
+    if (!(value in ['true', 'false'])) {
+        throw new GradleException("${name} must be true or false")
+    }
+    value == 'true'
+}
+ext.bundleExtensions = booleanProperty('bundleExtensions', 'true')
+
+if (bundleExtensions) {
+    def sourceDirectory = providers.gradleProperty('openallayExtensionsDir')
+            .map { rootProject.file(it) }
+            .orElse(layout.projectDirectory.dir('.gradle/distribution-sources/openallay-extensions').asFile)
+    def extensionProject = new File(sourceDirectory.get(), extensionLock.project)
+    def allowUnpinned = booleanProperty('allowUnpinnedExtensions', 'false')
+    if (allowUnpinned && !providers.gradleProperty('openallayExtensionsDir').isPresent()) {
+        throw new GradleException('allowUnpinnedExtensions requires an explicit openallayExtensionsDir')
+    }
+    if (extensionLock.minecraftVersion != minecraft_version) {
+        throw new GradleException('Extension distribution lock targets a different Minecraft version')
+    }
+
+    def provenanceFile = layout.buildDirectory.file('distribution/META-INF/openallay/distribution.json')
+    def verificationOutput = new ByteArrayOutputStream()
+    def verifySource = tasks.register('verifyExtensionSource', Exec) {
+        group = 'verification'
+        description = 'Verify the prepared Extension checkout without network access.'
+        commandLine 'python3', file('scripts/prepare-distribution.py'), '--verify-only',
+                '--source-directory', sourceDirectory.get()
+        if (allowUnpinned) args '--allow-unpinned'
+        standardOutput = verificationOutput
+        doFirst { verificationOutput.reset() }
+        doLast {
+            def sourceEvidence = new JsonSlurper().parseText(verificationOutput.toString('UTF-8').trim())
+            def output = provenanceFile.get().asFile
+            output.parentFile.mkdirs()
+            output.text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson([
+                    schemaVersion: 1,
+                    source: extensionLock.source + sourceEvidence,
+                    project: extensionLock.project,
+                    version: extensionLock.version,
+                    modId: extensionLock.modId
+            ])) + '\n'
+        }
+    }
+
+    def buildExtensions = tasks.register('buildBundledExtensions', Exec) {
+        group = 'build'
+        description = 'Build and test pinned independent Extensions against the common API JAR.'
+        dependsOn verifySource, ':common:jar'
+        // Always delegate. The independent build owns its own incremental checks.
+        def wrapper = file(System.getProperty('os.name').toLowerCase().contains('windows') ? 'gradlew.bat' : 'gradlew')
+        doFirst {
+            def commonJar = project(':common').tasks.named('jar').get().archiveFile.get().asFile
+            commandLine wrapper, '--no-daemon', '--console=plain', '--gradle-user-home', gradle.gradleUserHomeDir,
+                    '-p', extensionProject,
+                    "-PopenallayCommonJar=${commonJar.absolutePath}",
+                    ':common:test', ':fabric:build', ':neoforge:build', ':verifyLoaderPackages'
+            if (gradle.startParameter.taskNames.any { it == 'clean' || it == ':clean' }) {
+                // These task names are prepended so clean precedes the independent checks.
+                def command = new ArrayList(commandLine)
+                command.add(command.indexOf(':common:test'), 'clean')
+                commandLine command
+            }
+            if (gradle.startParameter.offline) args '--offline'
+        }
+    }
+
+    ['fabric', 'neoforge'].each { loader ->
+        project(":${loader}") {
+            tasks.withType(Jar).configureEach {
+                if (name == 'jar') {
+                    dependsOn verifySource
+                    from(provenanceFile) { into 'META-INF/openallay' }
+                }
+            }
+        }
+        def artifactFile = new File(extensionProject, extensionLock.artifacts[loader])
+        def artifactName = "openallay-builder-${loader}-${extensionLock.minecraftVersion}"
+        def outgoing = configurations.create("bundledExtension${loader.capitalize()}") {
+            canBeResolved = false
+            canBeConsumed = true
+            attributes {
+                attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage, Usage.JAVA_RUNTIME))
+                attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category, Category.LIBRARY))
+                attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(LibraryElements, LibraryElements.JAR))
+                attribute(Attribute.of('io.github.mcgradleconventions.loader', String), loader)
+            }
+            // NeoForge JarJar requires a versioned module/capability, not raw files.
+            outgoing.capability("dev.openallay.builder:${artifactName}:${extensionLock.version}")
+        }
+        artifacts.add(outgoing.name, artifactFile) {
+            name = artifactName
+            type = 'jar'
+            builtBy buildExtensions
+        }
+    }
+}

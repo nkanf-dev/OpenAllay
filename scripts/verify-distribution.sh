@@ -85,6 +85,8 @@ assert values.get("displayName") == "OpenAllay", values
 assert values.get("version") == version, values
 PY
 
+python3 "$repository/scripts/verify-bundled-extensions.py" "$fabric_jar" "$neoforge_jar"
+
 printf 'fabric_artifact=%s\n' "$fabric_name"
 printf 'neoforge_artifact=%s\n' "$neoforge_name"
 printf 'distribution_verification=passed\n'

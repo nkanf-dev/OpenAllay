@@ -1051,3 +1051,73 @@ manual interaction claim.
 Production source under `common/` must not import Fabric or NeoForge APIs. Loader
 entrypoints, lifecycle hooks, and command registration remain in their respective
 loader modules. A unit test enforces this boundary.
+
+## Default Extension distribution build
+
+OpenAllay's default loader artifacts include a separately built online Builder
+Extension. Its source and commits live in `OpenAllay-Extensions`, not in core.
+Installation does not enable unrestricted JavaScript. Player automation and
+Baritone integration are research-only and are not included.
+
+Prepare the exact locked Extension source explicitly before a distribution build:
+
+```bash
+python3 scripts/prepare-distribution.py
+./gradlew clean :common:test :fabric:build :neoforge:build
+```
+
+Preparation checks out `distribution/extensions.lock.json` into ignored local
+build state. Gradle does not perform an implicit source download. A missing,
+wrong-revision or modified checkout fails the default distribution build.
+`./gradlew :common:jar` and `:common:test` can bootstrap without that checkout.
+`-PbundleExtensions=false` is an explicit core-only developer build, not a
+complete distribution; distribution verification rejects it.
+
+For coordinated changes across both repositories, use
+`-PopenallayExtensionsDir=../OpenAllay-Extensions -PallowUnpinnedExtensions=true`.
+This still builds the Extension, but marks its provenance as unpinned and is
+rejected by release distribution verification. Commit the Extension, update the
+source lock, prepare its exact revision and rerun the ordinary full gate before
+shipping. No Python process or source checkout runs inside Minecraft.
+
+## Trusted Extension invocation scopes and requirement metadata
+
+Extension API `0.2.1` adds an optional fifth contribution list of
+`JavascriptInvocationParticipant` values. Existing four-list constructors remain
+available. A participant opens on the JavaScript worker and returns an
+`AutoCloseable`; cleanup runs in reverse order on that same worker. The supplied
+`JavascriptInvocationContext` exposes the immutable invocation, cancellation,
+`requireActive()`, operation evidence recording, and `completedSuccessfully()`.
+No live game binding or domain Tool is added by this interface.
+
+`completedSuccessfully()` means the JavaScript body returned normally while its
+scope was active. It is not a claim that a domain action succeeded or that later
+Tool normalization/evidence validation passed. Closing any scope revokes its
+cancellation lifetime, even after a normal return. Extensions must not confuse
+that revocation with the domain operation's outcome. Queued owner-thread actions
+must recheck active scope and their own exact connection/world identity.
+
+Skill extra metadata can declare whitespace-separated advisory IDs under
+`openallay/requires-capabilities`, `openallay/requires-extensions`, and
+`openallay/requires-skills`. Extension descriptors, package manifests and catalog
+entries support an optional `requirements` object with the equivalent
+`capabilities`, `extensions`, and `skills` arrays. These fields grant nothing and
+never add an installation or runtime gate. Existing actual Tool policy and
+required-mods compatibility semantics remain separate.
+
+Settings displays declared requirements and their current status. Package
+installation first validates/stages a candidate for review. The player can
+explicitly enable an available requirement, cancel, or Continue anyway. Continuing
+publishes only the selected package; it does not change authorizations or install
+dependencies. An explicitly confirmed setting write may finish even if the
+review is then closed; closing is not rollback. Changes affect future requests,
+not captured authority in an active request.
+
+All construction source, JS modules, Skill, native scheduling, templates and
+journals are in the separate `OpenAllay-Extensions` repository. The core runtime
+has no construction function or construction Skill-name branch. The default
+Builder backend uses the active integrated server under client-local unrestricted
+JavaScript. It does not implement a remote server write protocol, edit a client
+world mirror, open offline saves, or silently switch to commands. Unsupported
+execution contexts fail explicitly. See decisions 034 and 035 for lifecycle,
+artifact, partial-failure and advisory-review semantics.

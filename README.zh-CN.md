@@ -39,6 +39,23 @@ Agent 使用的数据入口，还会列出
 你也可以直接导入兼容的本地 Extension JAR，不必等待它先进入社区目录。这样，
 新模组集成可以持续成长，也不必把每种能力都做成另一个用途单一的工具。
 
+### 独立 Extension 提供在线建造
+
+0.2.3 源码发行构建默认包含来自
+[OpenAllay-Extensions](https://github.com/nkanf-dev/OpenAllay-Extensions/tree/main/extensions/minecraft-builder)
+的 Minecraft Builder 扩展。它通过经过测试的 JavaScript 模块与 Skill 提供几何体、
+地形处理、六种预设建筑、结构模板、旋转／镜像和带冲突检查的方块撤销。
+建造代码不进入 OpenAllay 核心。
+
+原生后端在线操作当前单人／集成服务器世界，需要玩家显式开启客户端无限制
+JavaScript，不额外要求创造模式或 OpenAllay 命令权限。它不编辑离线存档，
+也不把客户端能力当成远程服务器写入权限。默认安装扩展不会自动开启授权。
+取消会停止后续工作，不会撤回已经发生的改动。
+
+Skill 与 Extension 详情会展示所需授权和依赖。安装时可以显式启用可用需求、
+取消，或选择 **Continue anyway（仍然继续）**；继续不会授予缺失的能力。
+玩家控制与 Baritone 接入仍处于调研阶段，不属于默认随包功能。
+
 ### 为 Minecraft 而生的结果
 
 回答可以包含物品图标、材料槽位、配方布局、表格、进度步骤和可展开详情。
