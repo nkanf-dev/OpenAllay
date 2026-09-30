@@ -143,6 +143,26 @@ final class OpenAllayScreenProjectionTest {
     }
 
     @Test
+    void detailsOwnEscapeAndKeyboardContentFocusBeforeTheComposer() {
+        assertTrue(OpenAllayScreen.closesDetailFirst(true, true));
+        assertFalse(OpenAllayScreen.closesDetailFirst(false, true));
+        assertFalse(OpenAllayScreen.closesDetailFirst(true, false));
+        assertTrue(OpenAllayScreen.isContentFocusTarget(true, true, false));
+        assertFalse(OpenAllayScreen.isContentFocusTarget(true, false, true));
+        assertTrue(OpenAllayScreen.isContentFocusTarget(false, false, true));
+        assertFalse(OpenAllayScreen.isContentFocusTarget(false, true, false));
+    }
+
+    @Test
+    void capturedTimeUsesTheRecordedInstantAndExplicitLocaleAndZone() {
+        Instant time = Instant.parse("2026-10-01T14:35:00Z");
+        String rendered = OpenAllayScreen.formatCapturedAt(time, java.util.Locale.UK, java.time.ZoneOffset.UTC);
+        assertTrue(rendered.contains("14:35"));
+        assertTrue(rendered.contains("2026"));
+        assertFalse(rendered.contains("2026-10-01T"));
+    }
+
+    @Test
     void tickCoalescerAppliesOnlyNewestPendingProjection() {
         OpenAllayScreen.TickCoalescer<String> pending = new OpenAllayScreen.TickCoalescer<>();
         pending.offer("first");
@@ -210,15 +230,69 @@ final class OpenAllayScreenProjectionTest {
         assertNull(titleComponent.getStyle().getClickEvent());
         assertNull(descriptionComponent.getStyle().getClickEvent());
         List<Component> summary = OpenAllayScreen.toolSummaryComponents(activity);
-        assertEquals(description, summary.getFirst().getString());
         assertEquals("screen.openallay.tool.message.analysis.complete",
-                assertInstanceOf(TranslatableContents.class, summary.get(1).getContents()).getKey());
+                assertInstanceOf(TranslatableContents.class, summary.getFirst().getContents()).getKey());
+        assertEquals(description, summary.get(1).getString());
         var legacy = new GuideToolActivity("legacy", 0, "openallay:run_javascript",
                 GuideToolStatus.RUNNING, null, List.of(), List.of());
         assertEquals("screen.openallay.tool.run_javascript", assertInstanceOf(TranslatableContents.class,
                 OpenAllayScreen.toolTitle(legacy).getContents()).getKey());
         assertEquals("screen.openallay.tool.intent.run_javascript.description", assertInstanceOf(TranslatableContents.class,
                 OpenAllayScreen.toolDescription(legacy.intent()).getContents()).getKey());
+    }
+
+    @Test
+    void codeOwnedStatusIsIndependentOfLongModelIntentAndFactsComeFirst() {
+        var input = new com.google.gson.JsonObject();
+        String title = "Model title ".repeat(200).trim();
+        String description = "Model description ".repeat(200).trim();
+        input.addProperty("title", title);
+        input.addProperty("description", description);
+        var activity = new GuideToolActivity("long-intent", 0, "openallay:run_javascript",
+                GuideToolStatus.FAILED, input, null, List.of(
+                        GuideToolMessage.of(GuideToolMessage.Key.INVOCATION_RUN_JAVASCRIPT, title, description),
+                        GuideToolMessage.of(GuideToolMessage.Key.FAILURE_GENERIC)), List.of());
+        Component status = OpenAllayScreen.toolCardStatus(
+                dev.openallay.guide.ui.GuideToolDisplayStatus.FAILED);
+        assertFalse(status.getString().contains(title));
+        Component translatedStatus = assertInstanceOf(Component.class, status.getSiblings().getFirst());
+        assertEquals("screen.openallay.detail.tool.status.failed",
+                assertInstanceOf(TranslatableContents.class, translatedStatus.getContents()).getKey());
+        assertTrue(OpenAllayScreen.toolCardTitle(activity).getString()
+                .endsWith(activity.intent().title()));
+        List<Component> summary = OpenAllayScreen.toolSummaryComponents(activity);
+        assertEquals("screen.openallay.tool.message.failure.generic",
+                assertInstanceOf(TranslatableContents.class, summary.getFirst().getContents()).getKey());
+        assertEquals(description, summary.getLast().getString());
+    }
+
+    @Test
+    void factualStatusRowsKeepCompleteFailureTextAndInterruptedRetryMeaning() {
+        UUID id = UUID.fromString("bd1ce41a-9c31-4868-9c50-3a8e0eabcc71");
+        String failure = "A complete provider failure reason ".repeat(20).trim();
+        assertEquals(failure, OpenAllayScreen.factualRowText(new GuideUiRow.Status(
+                id, GuideRequestStatus.FAILED, failure, null)).getString());
+        Component interrupted = OpenAllayScreen.factualRowText(new GuideUiRow.Status(
+                id, GuideRequestStatus.INTERRUPTED, "ignored raw message", null));
+        assertEquals("screen.openallay.history.interrupted",
+                assertInstanceOf(TranslatableContents.class, interrupted.getContents()).getKey());
+    }
+
+    @Test
+    void terminalNoResultHidesPendingNarrationButKeepsPlannedIntent() {
+        var input = new com.google.gson.JsonObject();
+        input.addProperty("title", "Build a platform");
+        input.addProperty("description", "Place blocks for the platform");
+        var activity = new GuideToolActivity("stopped-intent", 0, "openallay:run_javascript",
+                GuideToolStatus.RUNNING, input, null, List.of(
+                        GuideToolMessage.of(GuideToolMessage.Key.INVOCATION_RUN_JAVASCRIPT,
+                                "Build a platform", "Place blocks for the platform"),
+                        GuideToolMessage.of(GuideToolMessage.Key.RESULT_PENDING)), List.of());
+        List<Component> summary = OpenAllayScreen.toolSummaryComponents(activity,
+                dev.openallay.guide.ui.GuideToolDisplayStatus.NO_RESULT_RECORDED);
+        assertEquals(1, summary.size());
+        assertEquals("Place blocks for the platform", summary.getFirst().getString());
+        assertEquals(GuideToolStatus.RUNNING, activity.status());
     }
 
     @Test
@@ -238,7 +312,9 @@ final class OpenAllayScreenProjectionTest {
         String normal = OpenAllayScreen.sourceLabel(source, false);
         assertFalse(normal.contains("CLIENT_VISIBLE"));
         assertFalse(normal.contains("COMPLETE"));
-        assertFalse(normal.contains("inventory"));
+        assertFalse(normal.contains("openallay:inventory"));
+        assertTrue(normal.contains(Component.translatable(
+                "screen.openallay.evidence.source.player").getString()));
 
         String debug = OpenAllayScreen.sourceLabel(source, true);
         assertTrue(debug.contains(Component.translatable(

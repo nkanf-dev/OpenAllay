@@ -123,6 +123,19 @@ final class GuideToolPresentationTest {
     }
 
     @Test
+    void invalidInputCodeVariantsUseTheSameNeutralActionMessageWithoutRawReasons() {
+        for (String code : List.of("invalid_arguments", "invalid_tool_arguments")) {
+            JsonObject normalized = new JsonObject();
+            normalized.addProperty("status", "failure");
+            normalized.addProperty("code", code);
+            normalized.addProperty("message", "secret-value private-endpoint java.lang.RuntimeException");
+            List<GuideToolMessage> messages = GuideToolPresentation.messages("openallay:run_javascript", normalized);
+            assertEquals(List.of(GuideToolMessage.of(GuideToolMessage.Key.FAILURE_INVALID_ARGUMENTS)), messages);
+            assertTrue(messages.stream().allMatch(message -> message.arguments().isEmpty()));
+        }
+    }
+
+    @Test
     void strictCodecRoundTripsClosedMessagesAndRejectsSchemaDrift() {
         List<GuideToolMessage> expected = List.of(
                 GuideToolMessage.of(GuideToolMessage.Key.RESULT_COMPLETED),

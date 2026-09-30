@@ -18,11 +18,21 @@ class GuideUiClickRouteTest {
     }
 
     @Test
-    void dismissesOnlyWhenTheDetailBackgroundWasClicked() {
+    void detailBackgroundKeepsThePanelOpen() {
         GuideUiClickRoute route = GuideUiClickRoute.resolveDetail(DETAIL, List.of(ACTION), 300, 190);
 
+        assertEquals(GuideUiClickRoute.Kind.INSIDE_DETAIL, route.kind());
+        assertEquals(-1, route.actionIndex());
+    }
+
+    @Test
+    void onlyTheExplicitCloseTargetDismissesDetails() {
+        GuideUiLayout.Rect close = new GuideUiLayout.Rect(294, 54, 20, 16);
+        GuideUiClickRoute route = GuideUiClickRoute.resolveDetail(DETAIL, close, List.of(ACTION), 300, 60);
         assertEquals(GuideUiClickRoute.Kind.DISMISS_DETAIL, route.kind());
         assertEquals(-1, route.actionIndex());
+        assertEquals(GuideUiClickRoute.Kind.ACTION,
+                GuideUiClickRoute.resolveDetail(DETAIL, ACTION, List.of(ACTION), 130, 145).kind());
     }
 
     @Test

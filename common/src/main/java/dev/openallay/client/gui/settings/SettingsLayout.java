@@ -42,6 +42,19 @@ public record SettingsLayout(
                 true, false, header, content, navigation, list, editor, footer);
     }
 
+    /** Scroll calculations use only the editor viewport; the footer is never part of the page. */
+    public int maximumPageScroll(int contentHeight) {
+        return Math.max(0, contentHeight - editor.height() + 8);
+    }
+
+    public int pageOrigin(int scroll) {
+        return editor.y() - Math.max(0, scroll);
+    }
+
+    public boolean pageWidgetVisible(int y, int widgetHeight) {
+        return y >= editor.y() && y + widgetHeight <= editor.bottom();
+    }
+
     public record Rect(int x, int y, int width, int height) {
         public Rect {
             if (width < 0 || height < 0) {

@@ -45,6 +45,7 @@ accepted and contains explicit approval evidence.
 | SKMB-2026-09-30-035 | accepted | advisory capability/dependency metadata and player requirement choices | A, B, C, D, E, F, G | decisions/2026-09-30-035-advisory-extension-skill-requirements.md | pending |
 | SKMB-2026-10-01-036 | accepted | builtin model catalog, automatic BEST missing-context matching and published price estimates | B, C, D, F | decisions/2026-10-01-036-builtin-model-catalog.md | pending |
 | SKMB-2026-10-01-037 | accepted | model-written JavaScript invocation display intent | B, E, F | decisions/2026-10-01-037-javascript-tool-intent.md | pending |
+| SKMB-2026-10-01-038 | accepted | native UI fit, friendly recorded evidence, terminal pending-Tool display, and retry clarity | B, E, F | decisions/2026-10-01-038-native-ui-evidence-and-lifecycle-clarity.md | pending |
 
 SKMB-2026-07-18-006 is implemented by `a0eaeff`, `19ab90f`, and `c6ca6bc`.
 Its deterministic clean-build and packaged-driver evidence is recorded in the

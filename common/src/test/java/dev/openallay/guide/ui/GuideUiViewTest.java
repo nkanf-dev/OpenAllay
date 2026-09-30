@@ -238,6 +238,47 @@ final class GuideUiViewTest {
     }
 
     @Test
+    void terminalRequestsDoNotLeavePendingToolsLookingActive() {
+        for (GuideRequestStatus terminal : List.of(GuideRequestStatus.CANCELLED,
+                GuideRequestStatus.FAILED, GuideRequestStatus.INTERRUPTED, GuideRequestStatus.COMPLETED)) {
+            GuideToolActivity pending = new GuideToolActivity(
+                    "pending-operation", 0, "openallay:run_javascript", GuideToolStatus.RUNNING,
+                    null, List.of(GuideToolMessage.of(GuideToolMessage.Key.RESULT_PENDING)), List.of());
+            GuideRequestSnapshot request = new GuideRequestSnapshot(
+                    REQUEST, "main", GuideTopology.CLIENT_LOCAL, "build a structure",
+                    List.of(new GuideTimelineEntry.Tool(0, pending)), terminal, List.of(), ModelUsage.empty(),
+                    null, terminal == GuideRequestStatus.FAILED
+                            ? new GuideFailure("disconnected", "Disconnected") : null,
+                    Instant.EPOCH, Instant.EPOCH.plusSeconds(2), Instant.EPOCH.plusSeconds(2));
+            GuideUiRow.Tool normal = (GuideUiRow.Tool) GuideUiView.from(snapshot(request)).rows().get(1);
+            assertEquals(GuideToolDisplayStatus.NO_RESULT_RECORDED, normal.detail().displayStatus());
+            assertTrue(normal.detail().narration().isEmpty());
+            assertEquals(GuideToolStatus.RUNNING, normal.activity().status());
+            assertTrue(normal.activity().sources().isEmpty());
+            assertFalse(GuideUiView.from(snapshot(request)).canCancel());
+            assertEquals(null, GuideUiView.from(snapshot(request)).progress());
+            GuideUiRow.Tool debug = (GuideUiRow.Tool) GuideUiView.from(snapshot(request),
+                    new GuideDisplayConfig(GuideDisplayConfig.SCHEMA_VERSION, true, true,
+                            GuideDisplayConfig.DEFAULT_ASSISTANT_NAME)).rows().get(1);
+            assertEquals(GuideToolDisplayStatus.NO_RESULT_RECORDED, debug.detail().displayStatus());
+            assertEquals(GuideToolStatus.RUNNING, debug.detail().status());
+            assertEquals("pending-operation", debug.detail().debug().orElseThrow().invocationId());
+            assertEquals(GuideToolStatus.RUNNING, pending.status());
+        }
+    }
+
+    @Test
+    void derivedToolStatusPreservesActiveAndRecordedSuccessFailure() {
+        assertEquals(GuideToolDisplayStatus.RUNNING, GuideToolDisplayStatus.from(GuideToolStatus.RUNNING, false));
+        for (boolean terminal : new boolean[] {false, true}) {
+            assertEquals(GuideToolDisplayStatus.SUCCEEDED,
+                    GuideToolDisplayStatus.from(GuideToolStatus.SUCCEEDED, terminal));
+            assertEquals(GuideToolDisplayStatus.FAILED,
+                    GuideToolDisplayStatus.from(GuideToolStatus.FAILED, terminal));
+        }
+    }
+
+    @Test
     void persistenceHealthControlsSubmissionWithoutReorderingTimeline() {
         GuideRequestSnapshot completed = request(
                 GuideRequestStatus.COMPLETED,

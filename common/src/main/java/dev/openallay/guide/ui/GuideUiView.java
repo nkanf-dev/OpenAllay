@@ -111,7 +111,8 @@ public record GuideUiView(
                                     tool.ordinal(),
                                     tool.activity(),
                                     GuideToolDetailPresenter.project(
-                                            tool.activity(), displayConfig.debugMode())));
+                                            tool.activity(), displayConfig.debugMode())
+                                            .forRequest(request.terminal())));
                 }
             }
             if (request.status() == GuideRequestStatus.FAILED

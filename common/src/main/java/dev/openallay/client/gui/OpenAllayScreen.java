@@ -60,6 +60,9 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.MultiLineEditBox;
+import net.minecraft.client.gui.components.Tooltip;
+import dev.openallay.guide.ui.GuideEvidencePresentation;
+import dev.openallay.guide.ui.GuideToolDisplayStatus;
 import net.minecraft.client.gui.screens.ConfirmScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
@@ -198,63 +201,77 @@ public final class OpenAllayScreen extends Screen {
 
     @Override
     protected void init() {
-        layout = GuideUiLayout.calculate(width, height, detailOpen());
-        GuideUiLayout.Rect top = layout.topBar();
-        int modelWidth = top.width() < 400 ? 88 : 128;
-        int controlsWidth = modelWidth + (settingsOpener == null ? 164 : 188);
-        int x = top.x() + top.width() - controlsWidth;
-        addRenderableWidget(OpenAllayButton.create(Component.literal("会话"), button -> sessionOverlay = !sessionOverlay)
-                .bounds(x, top.y() + 2, 32, 20).build());
+        layout = GuideUiLayout.calculate(width, height, detailOpen(),
+                font.width(Component.translatable("screen.openallay.guide")),
+                font.width(Component.translatable("screen.openallay.action.sessions")) + 12,
+                font.width(Component.translatable("screen.openallay.action.export")) + 12,
+                font.width(Component.translatable("screen.openallay.action.refresh")) + 12,
+                settingsOpener != null);
+        GuideUiLayout.Header header = layout.header();
+        addRenderableWidget(OpenAllayButton.create(
+                        Component.translatable("screen.openallay.action.sessions"),
+                        button -> sessionOverlay = !sessionOverlay)
+                .bounds(header.sessions().x(), header.sessions().y(), header.sessions().width(), 20).build());
         addRenderableWidget(OpenAllayButton.create(Component.literal("+"), button -> createSession())
-                .bounds(x + 36, top.y() + 2, 24, 20).build());
+                .bounds(header.create().x(), header.create().y(), header.create().width(), 20).build());
         addRenderableWidget(OpenAllayButton.create(Component.literal("×"), button -> closeSession())
-                .bounds(x + 64, top.y() + 2, 32, 20).build());
+                .bounds(header.delete().x(), header.delete().y(), header.delete().width(), 20).build());
         export = addRenderableWidget(OpenAllayButton.create(
-                        Component.translatable("screen.openallay.action.export"),
-                        button -> exportSession())
-                .bounds(x + 100, top.y() + 2, 36, 20).build());
-        modelSelectorButton = new GuideUiLayout.Rect(x + 140, top.y() + 2, modelWidth, 20);
-        model = addRenderableWidget(OpenAllayButton.create(modelLabel(), button -> {
+                        Component.translatable("screen.openallay.action.export"), button -> exportSession())
+                .bounds(header.export().x(), header.export().y(), header.export().width(), 20).build());
+        modelSelectorButton = header.model();
+        model = addRenderableWidget(OpenAllayButton.create(modelButtonLabel(), button -> {
                     modelSelectorOpen = !modelSelectorOpen;
                     if (modelSelectorOpen) revealSelectedModel();
                 })
-                .bounds(x + 140, top.y() + 2, modelWidth, 20).build());
-        addRenderableWidget(OpenAllayButton.create(Component.literal("刷新"), button -> service.refreshCapabilities())
-                .bounds(x + 144 + modelWidth, top.y() + 2, 20, 20).build());
+                .bounds(header.model().x(), header.model().y(), header.model().width(), 20).build());
+        model.setTooltip(Tooltip.create(modelLabel()));
+        addRenderableWidget(OpenAllayButton.create(
+                        Component.translatable("screen.openallay.action.refresh"),
+                        button -> service.refreshCapabilities())
+                .bounds(header.refresh().x(), header.refresh().y(), header.refresh().width(), 20).build());
         if (settingsOpener != null) {
             addRenderableWidget(OpenAllayButton.create(
-                            Component.translatable("screen.openallay.settings.short"),
-                            button -> settingsOpener.run())
-                    .bounds(x + 168 + modelWidth, top.y() + 2, 20, 20)
-                    .build());
+                            Component.translatable("screen.openallay.settings.short"), button -> settingsOpener.run())
+                    .bounds(header.settings().x(), header.settings().y(), header.settings().width(), 20).build());
         }
 
-        GuideUiLayout.Rect area = layout.composer();
-        int actionWidth = 54;
+        GuideUiLayout.ComposerControls controls = layout.composerControls();
+        GuideUiLayout.Rect input = controls.input();
         composer = MultiLineEditBox.builder()
-                .setX(area.x()).setY(area.y())
+                .setX(input.x()).setY(input.y())
                 .setPlaceholder(Component.translatable("screen.openallay.composer.placeholder"))
-                .build(font, Math.max(80, area.width() - actionWidth - 6), area.height(),
+                .build(font, input.width(), input.height(),
                         Component.translatable("screen.openallay.composer.narration"));
         composer.setValue(draft, true);
         composer.setValueListener(value -> draft = value);
         addRenderableWidget(composer);
-        int actionsX = area.x() + area.width() - actionWidth;
         send = addRenderableWidget(OpenAllayButton.create(
                         Component.translatable("screen.openallay.action.send"), button -> submit())
-                .bounds(actionsX, area.y(), actionWidth, 20).build());
+                .bounds(controls.send().x(), controls.send().y(), controls.send().width(), 20).build());
         stop = addRenderableWidget(OpenAllayButton.create(
                         Component.translatable("screen.openallay.action.stop"), button -> cancel())
-                .bounds(actionsX, area.y() + 24, actionWidth, 20).build());
+                .bounds(controls.stop().x(), controls.stop().y(), controls.stop().width(), 20).build());
+        stop.setTooltip(Tooltip.create(Component.translatable("screen.openallay.action.stop.description")));
         retry = addRenderableWidget(OpenAllayButton.create(
                         Component.translatable("screen.openallay.action.retry"), button -> retry())
-                .bounds(actionsX, area.y() + 48, actionWidth, 20).build());
+                .bounds(controls.retry().x(), controls.retry().y(), controls.retry().width(), 20).build());
         updateVirtualRows(Math.max(40, layout.transcript().width() - 18));
         scroll = followBottom
                 ? virtualizer.maximumScroll(transcriptViewportHeight())
                 : virtualizer.clampScroll(scroll, transcriptViewportHeight());
         updateControls();
-        setInitialFocus(composer);
+        if (detailOpen()) focusDetail();
+        else setInitialFocus(composer);
+    }
+
+    @Override
+    public void resize(int width, int height) {
+        GuideViewportAnchor anchor = layout == null ? null : virtualizer.anchorAt(scroll);
+        boolean shouldFollow = followBottom;
+        draft = composer == null ? draft : composer.getValue();
+        super.resize(width, height);
+        restoreTranscript(anchor, shouldFollow);
     }
 
     @Override
@@ -322,6 +339,11 @@ public final class OpenAllayScreen extends Screen {
             }
             return true;
         }
+        if (closesDetailFirst(detailOpen(), event.key() == GLFW.GLFW_KEY_ESCAPE)) {
+            closeDetail();
+            return true;
+        }
+        if (detailOpen() && getFocused() != composer && scrollDetailKey(event.key())) return true;
         ComposerKeyAction composerAction = composerKeyAction(
                 composer != null && getFocused() == composer,
                 event.isConfirmation(),
@@ -336,7 +358,8 @@ public final class OpenAllayScreen extends Screen {
         }
         if (event.key() == GLFW.GLFW_KEY_F6) {
             List<Hit> focusable = hits.stream()
-                    .filter(hit -> hit.kind() == HitKind.CONTENT && hit.focusId() != null)
+                    .filter(hit -> isContentFocusTarget(detailOpen(), hit.kind() == HitKind.DETAIL,
+                            hit.kind() == HitKind.CONTENT) && hit.focusId() != null)
                     .toList();
             if (!focusable.isEmpty()) {
                 int current = -1;
@@ -352,8 +375,9 @@ public final class OpenAllayScreen extends Screen {
                 return true;
             }
         }
-        if (event.isConfirmation() && getFocused() != composer && focusedContentId != null) {
+        if (event.isConfirmation() && getFocused() == null && focusedContentId != null) {
             Hit focused = hits.stream()
+                    .filter(hit -> !detailOpen() || hit.kind() == HitKind.DETAIL)
                     .filter(hit -> focusedContentId.equals(hit.focusId()))
                     .findFirst().orElse(null);
             if (focused != null) {
@@ -362,6 +386,35 @@ public final class OpenAllayScreen extends Screen {
             }
         }
         return super.keyPressed(event);
+    }
+
+    static boolean closesDetailFirst(boolean detailOpen, boolean escape) {
+        return detailOpen && escape;
+    }
+
+    static boolean isContentFocusTarget(boolean detailOpen, boolean detailAction, boolean contentAction) {
+        return detailOpen ? detailAction : contentAction;
+    }
+
+    private boolean scrollDetailKey(int key) {
+        int maximum = maximumDetailScroll();
+        int page = Math.max(24, layout.detail().height() - 30);
+        int target = switch (key) {
+            case GLFW.GLFW_KEY_UP -> detailScroll - 24;
+            case GLFW.GLFW_KEY_DOWN -> detailScroll + 24;
+            case GLFW.GLFW_KEY_PAGE_UP -> detailScroll - page;
+            case GLFW.GLFW_KEY_PAGE_DOWN -> detailScroll + page;
+            case GLFW.GLFW_KEY_HOME -> 0;
+            case GLFW.GLFW_KEY_END -> maximum;
+            default -> Integer.MIN_VALUE;
+        };
+        if (target == Integer.MIN_VALUE) return false;
+        detailScroll = Mth.clamp(target, 0, maximum);
+        return true;
+    }
+
+    private int maximumDetailScroll() {
+        return Math.max(0, detailContentHeight - layout.detail().height() + 34);
     }
 
     @Override
@@ -379,10 +432,10 @@ public final class OpenAllayScreen extends Screen {
             return true;
         }
         if (detailOpen() && layout.detail().contains(x, y)) {
-            int maximum = Math.max(0, detailContentHeight - layout.detail().height() + 34);
-            detailScroll = Mth.clamp(detailScroll - (int) Math.round(scrollY * 24), 0, maximum);
+            detailScroll = Mth.clamp(detailScroll - (int) Math.round(scrollY * 24), 0, maximumDetailScroll());
             return true;
         }
+        if (detailOpen() && layout.detailOverlay()) return true;
         if (layout.transcript().contains(x, y)) {
             int maximum = virtualizer.maximumScroll(Math.max(0, layout.transcript().height() - 14));
             scroll = Mth.clamp(scroll - (int) Math.round(scrollY * 24), 0, maximum);
@@ -420,6 +473,7 @@ public final class OpenAllayScreen extends Screen {
                         .toList();
                 GuideUiClickRoute route = GuideUiClickRoute.resolveDetail(
                         layout.detail(),
+                        detailCloseBounds(),
                         detailHits.stream().map(Hit::rect).toList(),
                         event.x(),
                         event.y());
@@ -431,13 +485,11 @@ public final class OpenAllayScreen extends Screen {
                     return true;
                 }
                 if (route.kind() == GuideUiClickRoute.Kind.DISMISS_DETAIL) {
-                    selectedTool = null;
-                    selectedSource = null;
-                    selectedSourceFocusId = null;
-                    detailScroll = 0;
-                    rebuildForDetail();
+                    closeDetail();
                     return true;
                 }
+                if (route.kind() == GuideUiClickRoute.Kind.INSIDE_DETAIL) return true;
+                if (layout.detailOverlay() && !layout.composer().contains(event.x(), event.y())) return true;
             }
             if (sessionOverlay) {
                 for (Hit hit : List.copyOf(hits)) {
@@ -463,33 +515,45 @@ public final class OpenAllayScreen extends Screen {
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
         graphics.fill(0, 0, width, height, 0xC00B0D12);
-        renderTop(graphics);
+        renderTop(graphics, mouseX, mouseY);
         renderSessions(graphics);
         renderTranscript(graphics, mouseX, mouseY);
         renderProgress(graphics);
         renderDetail(graphics, mouseX, mouseY);
         super.extractRenderState(graphics, mouseX, mouseY, a);
-        renderModelSelector(graphics);
+        renderModelSelector(graphics, mouseX, mouseY);
     }
 
-    private void renderTop(GuiGraphicsExtractor graphics) {
+    private void renderTop(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         GuideUiLayout.Rect top = layout.topBar();
         graphics.fill(top.x(), top.y(), top.x() + top.width(), top.y() + top.height(), PANEL);
         graphics.fill(top.x(), top.y(), top.x() + 3, top.y() + top.height(), ACCENT);
         graphics.fill(top.x() + 3, top.y(), top.x() + 34, top.y() + 2, ACCENT);
-        graphics.text(font, Component.translatable("screen.openallay.guide").withStyle(ChatFormatting.BOLD),
-                top.x() + 10, top.y() + 6, TEXT);
-        graphics.text(font, modelStatus(), top.x() + 10, top.y() + 25, MUTED, false);
-        if (!notice.isBlank()) {
-            graphics.text(font, notice, top.x() + 122, top.y() + 25, ERROR, false);
+        boundedHeaderText(graphics,
+                Component.translatable("screen.openallay.guide").withStyle(ChatFormatting.BOLD),
+                layout.header().title(), TEXT);
+        if (layout.header().status().height() > 0) {
+            Component status = notice.isBlank() ? modelStatus() : Component.literal(notice);
+            boundedHeaderText(graphics, status, layout.header().status(), notice.isBlank() ? MUTED : ERROR);
+            if (layout.header().status().contains(mouseX, mouseY)) {
+                graphics.setTooltipForNextFrame(font, status, mouseX, mouseY);
+            }
         }
+    }
+
+    private void boundedHeaderText(
+            GuiGraphicsExtractor graphics, Component text, GuideUiLayout.Rect bounds, int color) {
+        graphics.enableScissor(bounds.x(), bounds.y(), bounds.right(), bounds.bottom());
+        graphics.text(font, text, bounds.x(), bounds.y(), color, false);
+        graphics.disableScissor();
     }
 
     private void renderSessions(GuiGraphicsExtractor graphics) {
         hits.removeIf(hit -> hit.kind() == HitKind.SESSION);
         GuideUiLayout.Rect rail = layout.sessionRail();
         if (rail.width() == 0 && !sessionOverlay) return;
-        if (rail.width() == 0) rail = new GuideUiLayout.Rect(12, 40, Math.min(180, width - 24), height - 92);
+        if (rail.width() == 0) rail = new GuideUiLayout.Rect(
+                12, layout.transcript().y(), Math.min(180, width - 24), layout.transcript().height());
         graphics.fill(rail.x(), rail.y(), rail.x() + rail.width(), rail.y() + rail.height(), PANEL_ALT);
         graphics.text(font, Component.translatable("screen.openallay.session.title"),
                 rail.x() + 8, rail.y() + 8, ACCENT, false);
@@ -688,11 +752,15 @@ public final class OpenAllayScreen extends Screen {
         }
         if (row instanceof GuideUiRow.Tool tool) {
             GuideToolActivity activity = tool.activity();
-            List<FormattedCharSequence> summaries = toolSummaryLines(activity, width - 14);
+            List<FormattedCharSequence> summaries = toolSummaryLines(tool, width - 14);
+            List<FormattedCharSequence> statusLines = font.split(
+                    toolCardStatus(tool.detail().displayStatus()), Math.max(1, width - 14));
             List<FormattedCharSequence> titleLines = font.split(
                     toolCardTitle(activity), Math.max(1, width - 14));
-            int rowHeight = toolCardHeight(summaries.size()) + Math.max(0, titleLines.size() - 1) * 10;
-            int color = activity.status() == GuideToolStatus.FAILED ? ERROR : 0xFF7FC8A9;
+            int rowHeight = toolCardHeight(summaries.size())
+                    + (statusLines.size() + titleLines.size() - 1) * 10;
+            int color = tool.detail().displayStatus() == GuideToolDisplayStatus.NO_RESULT_RECORDED ? MUTED
+                    : activity.status() == GuideToolStatus.FAILED ? ERROR : 0xFF7FC8A9;
             boolean selected = selectedTool != null
                     && toolFocusId(selectedTool).equals(toolFocusId(tool));
             graphics.fill(x + 2, y - 2, x + width - 2, y + rowHeight - 6,
@@ -701,8 +769,12 @@ public final class OpenAllayScreen extends Screen {
                 graphics.outline(x + 2, y - 2, width - 4, rowHeight - 4, ACCENT);
             }
             int titleY = y + 2;
+            for (FormattedCharSequence status : statusLines) {
+                graphics.text(font, status, x + 7, titleY, color, false);
+                titleY += 10;
+            }
             for (FormattedCharSequence title : titleLines) {
-                graphics.text(font, title, x + 7, titleY, color, false);
+                graphics.text(font, title, x + 7, titleY, TEXT, false);
                 titleY += 10;
             }
             int summaryY = titleY + 2;
@@ -716,25 +788,29 @@ public final class OpenAllayScreen extends Screen {
                     toolTitle(activity).getString()));
             return y + rowHeight;
         }
+        int color = row instanceof GuideUiRow.Persistence persistence
+                ? persistence.state() == dev.openallay.guide.GuidePersistenceSnapshot.State.UNAVAILABLE
+                        ? 0xFFFFD479 : MUTED
+                : ((GuideUiRow.Status) row).status() == GuideRequestStatus.RATE_LIMITED
+                        ? 0xFFFFD479 : ERROR;
+        List<FormattedCharSequence> lines = font.split(factualRowText(row), Math.max(1, width - 12));
+        for (FormattedCharSequence line : lines) {
+            graphics.text(font, line, x + 6, y, color, false);
+            y += 10;
+        }
+        return y + 8;
+    }
+
+    static Component factualRowText(GuideUiRow row) {
         if (row instanceof GuideUiRow.Persistence persistence) {
-            int color = persistence.state()
-                            == dev.openallay.guide.GuidePersistenceSnapshot.State.UNAVAILABLE
-                    ? 0xFFFFD479
-                    : MUTED;
             Component message = Component.translatable(persistence.translationKey());
-            if (persistence.failure() != null) {
-                message = message.copy().append(" (" + persistence.failure().code() + ")");
-            }
-            graphics.text(font, message, x + 6, y, color, false);
-            return y + 18;
+            return persistence.failure() == null ? message
+                    : message.copy().append(" (" + persistence.failure().code() + ")");
         }
         GuideUiRow.Status status = (GuideUiRow.Status) row;
-        int color = status.status() == GuideRequestStatus.RATE_LIMITED ? 0xFFFFD479 : ERROR;
-        Component message = status.status() == GuideRequestStatus.INTERRUPTED
+        return status.status() == GuideRequestStatus.INTERRUPTED
                 ? Component.translatable("screen.openallay.history.interrupted")
                 : Component.literal(status.text());
-        graphics.text(font, message, x + 6, y, color, false);
-        return y + 18;
     }
 
     private void updateVirtualRows(int width) {
@@ -773,19 +849,19 @@ public final class OpenAllayScreen extends Screen {
             return 11 + body + assistant.sources().size() * 12 + 8;
         }
         if (row instanceof GuideUiRow.Tool tool) {
+            int statusLines = font.split(toolCardStatus(tool.detail().displayStatus()),
+                    Math.max(1, width - 14)).size();
             int titleLines = font.split(toolCardTitle(tool.activity()), Math.max(1, width - 14)).size();
-            return toolCardHeight(toolSummaryLines(tool.activity(), width - 14).size())
-                    + Math.max(0, titleLines - 1) * 10;
+            return toolCardHeight(toolSummaryLines(tool, width - 14).size())
+                    + (statusLines + titleLines - 1) * 10;
         }
-        return 18;
+        return font.split(factualRowText(row), Math.max(1, width - 12)).size() * 10 + 8;
     }
 
-    private List<FormattedCharSequence> toolSummaryLines(
-            GuideToolActivity activity, int width) {
+    private List<FormattedCharSequence> toolSummaryLines(GuideUiRow.Tool tool, int width) {
         ArrayList<FormattedCharSequence> result = new ArrayList<>();
-        for (Component message : toolSummaryComponents(activity)) {
-            for (FormattedCharSequence wrapped : font.split(
-                    message, Math.max(1, width))) {
+        for (Component message : toolSummaryComponents(tool.activity(), tool.detail().displayStatus())) {
+            for (FormattedCharSequence wrapped : font.split(message, Math.max(1, width))) {
                 result.add(wrapped);
                 if (result.size() == 3) return List.copyOf(result);
             }
@@ -794,14 +870,20 @@ public final class OpenAllayScreen extends Screen {
     }
 
     static List<Component> toolSummaryComponents(GuideToolActivity activity) {
+        return toolSummaryComponents(activity, GuideToolDisplayStatus.from(activity.status(), false));
+    }
+
+    static List<Component> toolSummaryComponents(
+            GuideToolActivity activity, GuideToolDisplayStatus status) {
         ArrayList<Component> summary = new ArrayList<>();
         boolean javascript = activity.toolId().endsWith(":run_javascript");
-        if (javascript) summary.add(toolDescription(activity.intent()));
-        for (GuideToolMessage message : visibleToolSummaryMessages(activity.presentationMessages())) {
-            if (!javascript || message.key() != GuideToolMessage.Key.INVOCATION_RUN_JAVASCRIPT) {
-                summary.add(toolMessage(message));
-            }
+        for (GuideToolMessage message : activity.presentationMessages()) {
+            if (javascript && message.key() == GuideToolMessage.Key.INVOCATION_RUN_JAVASCRIPT) continue;
+            if (status == GuideToolDisplayStatus.NO_RESULT_RECORDED
+                    && message.key() == GuideToolMessage.Key.RESULT_PENDING) continue;
+            summary.add(toolMessage(message));
         }
+        if (javascript) summary.add(toolDescription(activity.intent()));
         return List.copyOf(summary);
     }
 
@@ -990,6 +1072,14 @@ public final class OpenAllayScreen extends Screen {
         graphics.outline(detail.x(), detail.y(), detail.width(), detail.height(), ACCENT);
         graphics.text(font, Component.translatable("screen.openallay.detail.title"),
                 detail.x() + 8, detail.y() + 8, ACCENT, false);
+        GuideUiLayout.Rect close = detailCloseBounds();
+        graphics.fill(close.x(), close.y(), close.right(), close.bottom(), PANEL_ALT);
+        graphics.text(font, "×", close.x() + 5, close.y() + 4, TEXT, false);
+        if (isFocused(focusedContentId, "detail:close")) {
+            graphics.outline(close.x(), close.y(), close.width(), close.height(), ACCENT);
+        }
+        hits.add(new Hit(close, HitKind.DETAIL, this::closeDetail, "detail:close",
+                Component.translatable("screen.openallay.detail.close").getString()));
         graphics.enableScissor(
                 detail.x() + 1,
                 detail.y() + 21,
@@ -998,6 +1088,11 @@ public final class OpenAllayScreen extends Screen {
         int y = detail.y() + 26 - detailScroll;
         if (selectedTool != null) {
             GuideToolDetailView toolDetail = selectedTool.detail();
+            y = detailLine(graphics,
+                    Component.translatable("screen.openallay.detail.tool.status").getString()
+                            + ": " + Component.translatable(toolDetail.displayStatus().translationKey()).getString(),
+                    detail, y);
+            y += 4;
             if (!toolDetail.intent().empty()) {
                 y = detailLine(graphics,
                         Component.translatable("screen.openallay.tool.intent.label").getString(), detail, y);
@@ -1008,10 +1103,16 @@ public final class OpenAllayScreen extends Screen {
                 y = detailLine(graphics, toolDescription(toolDetail.intent()).getString(), detail, y);
             }
             y += 4;
-            y = detailLine(graphics,
-                    Component.translatable("screen.openallay.detail.tool.status").getString()
-                            + ": " + toolStatusName(toolDetail.status()),
-                    detail, y);
+            if (selectedTool.activity().sources().isEmpty()) {
+                if ("openallay:run_javascript".equals(selectedTool.activity().toolId())
+                        && toolDetail.displayStatus() != GuideToolDisplayStatus.RUNNING) {
+                    y = detailLine(graphics, Component.translatable("screen.openallay.evidence.none"), detail, y);
+                }
+            } else {
+                for (GuideSource source : selectedTool.activity().sources()) {
+                    y = friendlyEvidence(graphics, source, detail, y);
+                }
+            }
             if (!toolDetail.invocation().empty()) {
                 y = detailLine(
                         graphics,
@@ -1046,7 +1147,8 @@ public final class OpenAllayScreen extends Screen {
             for (GuideDetailCard card : toolDetail.cards()) {
                 y = detailCard(graphics, card, detail, y, mouseX, mouseY);
             }
-            if (toolDetail.cards().isEmpty()) {
+            if (toolDetail.cards().isEmpty()
+                    && toolDetail.displayStatus() != GuideToolDisplayStatus.NO_RESULT_RECORDED) {
                 for (GuideToolMessage message : toolDetail.narration()) {
                     y = detailLine(graphics, toolMessage(message), detail, y);
                 }
@@ -1057,6 +1159,7 @@ public final class OpenAllayScreen extends Screen {
                         Component.translatable("screen.openallay.debug.section").getString(), detail, y + 4);
                 y = detailLine(graphics, "invocationId: " + debug.invocationId(), detail, y);
                 y = detailLine(graphics, "toolId: " + debug.toolId(), detail, y);
+                y = detailLine(graphics, "recordedToolStatus: " + toolDetail.status(), detail, y);
                 JsonObject invocation = debug.invocationArguments();
                 if (debug.toolId().endsWith(":run_javascript") && invocation != null) {
                     if (invocation.has("source") && invocation.get("source").isJsonPrimitive()) {
@@ -1141,13 +1244,10 @@ public final class OpenAllayScreen extends Screen {
                 }
             }
         } else if (selectedSource != null) {
+            y = friendlyEvidence(graphics, selectedSource, detail, y);
             if (projectedDisplay.debugMode()) {
+                y = detailLine(graphics, Component.translatable("screen.openallay.debug.section"), detail, y + 4);
                 y = evidence(graphics, selectedSource, detail, y);
-            } else {
-                y = detailLine(graphics,
-                        Component.translatable("screen.openallay.detail.source_friendly").getString(),
-                        detail,
-                        y);
             }
         }
         detailContentHeight = Math.max(0, y + detailScroll - detail.y());
@@ -1468,11 +1568,14 @@ public final class OpenAllayScreen extends Screen {
         int color = enabled ? ACCENT : 0xFF6E7782;
         graphics.fill(x, y - 2, x + width, y + 10, enabled ? 0xFF29443F : 0xFF30343A);
         graphics.text(font, label, x + 4, y, color, false);
-        if (enabled) {
-            hits.add(new Hit(
-                    new GuideUiLayout.Rect(x, y - 2, width, 12),
-                    HitKind.DETAIL,
-                    action));
+        GuideUiLayout.Rect detail = layout.detail();
+        if (enabled && y - 2 >= detail.y() + 21 && y + 10 <= detail.bottom()) {
+            GuideUiLayout.Rect bounds = new GuideUiLayout.Rect(x, y - 2, width, 12);
+            String focusId = "detail:action:" + label.getString() + ":" + x + ":" + (y + detailScroll);
+            if (isFocused(focusedContentId, focusId)) {
+                graphics.outline(bounds.x(), bounds.y(), bounds.width(), bounds.height(), ACCENT);
+            }
+            hits.add(new Hit(bounds, HitKind.DETAIL, action, focusId, label.getString()));
         }
         return x + width;
     }
@@ -1541,6 +1644,26 @@ public final class OpenAllayScreen extends Screen {
         return key == null
                 ? result.code() + ": " + result.message()
                 : Component.translatable(key).getString();
+    }
+
+    private int friendlyEvidence(
+            GuiGraphicsExtractor graphics, GuideSource source, GuideUiLayout.Rect detail, int y) {
+        GuideEvidencePresentation evidence = GuideEvidencePresentation.from(source);
+        y = detailLine(graphics, Component.translatable("screen.openallay.evidence.from",
+                Component.translatable(evidence.sourceKey())), detail, y);
+        y = detailLine(graphics, Component.translatable(evidence.authorityKey()), detail, y);
+        y = detailLine(graphics, Component.translatable("screen.openallay.evidence.coverage",
+                Component.translatable(evidence.coverageKey())), detail, y);
+        java.util.Locale locale = java.util.Locale.forLanguageTag(
+                minecraft.getLanguageManager().getSelected().replace('_', '-'));
+        y = detailLine(graphics, Component.translatable("screen.openallay.evidence.captured",
+                formatCapturedAt(evidence.capturedAt(), locale, java.time.ZoneId.systemDefault())), detail, y);
+        return y;
+    }
+
+    static String formatCapturedAt(Instant capturedAt, java.util.Locale locale, java.time.ZoneId zone) {
+        return java.time.format.DateTimeFormatter.ofLocalizedDateTime(java.time.format.FormatStyle.SHORT)
+                .withLocale(locale).withZone(zone).format(capturedAt);
     }
 
     private int evidence(GuiGraphicsExtractor graphics, GuideSource source, GuideUiLayout.Rect detail, int y) {
@@ -1657,6 +1780,26 @@ public final class OpenAllayScreen extends Screen {
                 y);
     }
 
+    private GuideUiLayout.Rect detailCloseBounds() {
+        GuideUiLayout.Rect detail = layout.detail();
+        return new GuideUiLayout.Rect(detail.right() - 24, detail.y() + 3, 20, 16);
+    }
+
+    private void closeDetail() {
+        selectedTool = null;
+        selectedSource = null;
+        selectedSourceFocusId = null;
+        detailScroll = 0;
+        focusedContentId = null;
+        detailCodeLayouts.clear();
+        rebuildForDetail();
+    }
+
+    private void focusDetail() {
+        focusedContentId = "detail:close";
+        clearFocus();
+    }
+
     private void open(GuideUiRow.Tool tool) {
         selectedTool = tool;
         selectedSource = null;
@@ -1664,6 +1807,7 @@ public final class OpenAllayScreen extends Screen {
         detailScroll = 0;
         detailCodeLayouts.clear();
         rebuildForDetail();
+        focusDetail();
     }
 
     private void open(GuideSource source) {
@@ -1677,6 +1821,7 @@ public final class OpenAllayScreen extends Screen {
         detailScroll = 0;
         detailCodeLayouts.clear();
         rebuildForDetail();
+        focusDetail();
     }
 
     private record CodeLayout(
@@ -1988,8 +2133,30 @@ public final class OpenAllayScreen extends Screen {
         stop.active = view.canCancel();
         retry.active = view.canRetry();
         export.active = !exportRunning;
-        model.setMessage(modelLabel());
+        model.setMessage(modelButtonLabel());
+        model.setTooltip(Tooltip.create(modelLabel()));
+        retry.setTooltip(Tooltip.create(Component.translatable("screen.openallay.action.retry.description",
+                retryQuestion(service.snapshot()))));
         model.active = !view.modelChoices().isEmpty();
+    }
+
+    static String retryQuestion(GuideSnapshot snapshot) {
+        return snapshot.sessions().stream()
+                .filter(session -> session.sessionId().equals(snapshot.selectedSession()))
+                .flatMap(session -> session.requests().stream())
+                .filter(request -> request.status() == GuideRequestStatus.FAILED
+                        || request.status() == GuideRequestStatus.CANCELLED
+                        || request.status() == GuideRequestStatus.INTERRUPTED)
+                .reduce((first, last) -> last).map(GuideRequestSnapshot::userMessage).orElse("");
+    }
+
+    private Component modelButtonLabel() {
+        Component full = modelLabel();
+        int available = layout.header().model().width() - 12;
+        if (font.width(full) <= available) return full;
+        String text = font.plainSubstrByWidth("▾ " + view.selectedModel().displayName(),
+                Math.max(1, available - font.width("…")));
+        return Component.literal(text + "…");
     }
 
     private Component modelLabel() {
@@ -2037,14 +2204,17 @@ public final class OpenAllayScreen extends Screen {
     private GuideUiLayout.Rect modelSelectorBounds() {
         if (!modelSelectorOpen || modelSelectorButton == null) return null;
         int visible = Math.min(visibleModelChoiceCount(), view.modelChoices().size());
+        int wantedWidth = view.modelChoices().stream().mapToInt(choice -> font.width(choiceLabel(choice)) + 36)
+                .max().orElse(modelSelectorButton.width());
+        int menuWidth = Math.min(width - 16, Math.max(modelSelectorButton.width(), wantedWidth));
         return new GuideUiLayout.Rect(
-                modelSelectorButton.x(),
+                Math.min(modelSelectorButton.x(), width - 8 - menuWidth),
                 modelSelectorButton.y() + modelSelectorButton.height() + 2,
-                modelSelectorButton.width(),
+                menuWidth,
                 Math.max(1, visible * 20));
     }
 
-    private void renderModelSelector(GuiGraphicsExtractor graphics) {
+    private void renderModelSelector(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         hits.removeIf(hit -> hit.kind() == HitKind.MODEL);
         GuideUiLayout.Rect menu = modelSelectorBounds();
         if (menu == null) return;
@@ -2073,6 +2243,9 @@ public final class OpenAllayScreen extends Screen {
             }
             graphics.text(font, label, menu.x() + 5, y + 6,
                     choice.available() ? TEXT : MUTED, false);
+            if (new GuideUiLayout.Rect(menu.x(), y, menu.width(), 20).contains(mouseX, mouseY)) {
+                graphics.setTooltipForNextFrame(font, label, mouseX, mouseY);
+            }
             String focusId = modelFocusId(choice);
             hits.add(new Hit(
                     new GuideUiLayout.Rect(menu.x() + 1, y + 1, menu.width() - 2, 18),
@@ -2155,7 +2328,9 @@ public final class OpenAllayScreen extends Screen {
 
     static String sourceLabel(GuideSource source, boolean debugMode) {
         if (!debugMode) {
-            return Component.translatable("screen.openallay.detail.source_link").getString();
+            GuideEvidencePresentation evidence = GuideEvidencePresentation.from(source);
+            return Component.translatable(evidence.sourceKey()).getString() + " · "
+                    + Component.translatable(evidence.coverageKey()).getString();
         }
         return Component.translatable("screen.openallay.detail.tool.source").getString()
                 + " · " + readableSource(source.evidence().sourceId()) + " · "
@@ -2213,17 +2388,23 @@ public final class OpenAllayScreen extends Screen {
                 : Component.literal(intent.description());
     }
 
-    private static Component toolCardTitle(GuideToolActivity activity) {
-        String icon = switch (activity.status()) {
+    static Component toolCardStatus(GuideToolDisplayStatus status) {
+        String icon = switch (status) {
             case RUNNING -> "◌";
             case SUCCEEDED -> "✓";
             case FAILED -> "!";
+            case NO_RESULT_RECORDED -> "—";
         };
-        Component title = Component.literal(icon + " ");
+        return Component.literal(icon + " ")
+                .append(Component.translatable(status.translationKey()));
+    }
+
+    static Component toolCardTitle(GuideToolActivity activity) {
+        var title = Component.empty();
         if (!activity.intent().empty()) {
-            title = title.copy().append(Component.translatable("screen.openallay.tool.intent.label")).append(": ");
+            title.append(Component.translatable("screen.openallay.tool.intent.label")).append(": ");
         }
-        return title.copy().append(toolTitle(activity)).append(" · ").append(toolStatus(activity.status()));
+        return title.append(toolTitle(activity));
     }
 
     private static Component friendlyTool(String id) {

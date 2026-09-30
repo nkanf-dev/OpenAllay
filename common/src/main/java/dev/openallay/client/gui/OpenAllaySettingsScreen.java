@@ -313,6 +313,18 @@ public final class OpenAllaySettingsScreen extends Screen {
                     0, Math.max(0, skillDetailContentHeight - viewport));
             return true;
         }
+        if ((section == SettingsSection.GENERAL || section == SettingsSection.ABOUT)
+                && layout.editor().contains(mouseX, mouseY)) {
+            captureDraft();
+            int replacement = net.minecraft.util.Mth.clamp(
+                    pageScroll - (int) Math.round(scrollY * 24),
+                    0, layout.maximumPageScroll(pageContentHeight));
+            if (replacement != pageScroll) {
+                pageScroll = replacement;
+                rebuildWidgets();
+            }
+            return true;
+        }
         boolean skillList = section == SettingsSection.SKILLS
                 && (layout.wide() ? layout.list() : layout.content()).contains(mouseX, mouseY)
                 && (layout.wide() || !narrowSkillDetail);
@@ -424,7 +436,7 @@ public final class OpenAllaySettingsScreen extends Screen {
         GeneralSettingsProjection general = project(snapshot).general();
         SettingsLayout.Rect area = layout.editor();
         int x = area.x() + 10;
-        int y = area.y() + 44;
+        int y = layout.pageOrigin(pageScroll) + 44;
         int width = Math.min(280, Math.max(120, area.width() - 20));
         int saveWidth = Math.min(72, Math.max(50, width / 4));
         assistantName = new EditBox(
@@ -437,6 +449,7 @@ public final class OpenAllaySettingsScreen extends Screen {
         assistantName.setValue(assistantNameDraft);
         assistantName.setMaxLength(Integer.MAX_VALUE);
         assistantName.setResponder(value -> assistantNameDraft = value);
+        assistantName.setVisible(layout.pageWidgetVisible(y, 20));
         addRenderableWidget(assistantName);
         Button saveName = addRenderableWidget(OpenAllayButton.create(
                         Component.translatable(
@@ -445,6 +458,7 @@ public final class OpenAllaySettingsScreen extends Screen {
                 .bounds(x + width - saveWidth, y, saveWidth, 20)
                 .build());
         saveName.active = snapshot.operation().kind() == SettingsOperation.Kind.IDLE;
+        saveName.visible = layout.pageWidgetVisible(y, 20);
         Button debug = addRenderableWidget(OpenAllayButton.create(
                         Component.translatable(
                                 general.debugLabelKey()).copy().append(" · ")
@@ -455,6 +469,7 @@ public final class OpenAllaySettingsScreen extends Screen {
         debug.setTooltip(Tooltip.create(
                 Component.translatable(general.debugDescriptionKey())));
         debug.active = snapshot.operation().kind() == SettingsOperation.Kind.IDLE;
+        debug.visible = layout.pageWidgetVisible(y + 34, 22);
         Button animations = addRenderableWidget(OpenAllayButton.create(
                         Component.translatable(
                                 general.animationsLabelKey()).copy().append(" · ")
@@ -465,16 +480,34 @@ public final class OpenAllaySettingsScreen extends Screen {
         animations.setTooltip(Tooltip.create(
                 Component.translatable(general.animationsDescriptionKey())));
         animations.active = snapshot.operation().kind() == SettingsOperation.Kind.IDLE;
+        animations.visible = layout.pageWidgetVisible(y + 64, 22);
     }
 
     private void addAboutPage() {
         SettingsLayout.Rect area = layout.editor();
         int width = Math.min(240, Math.max(120, area.width() - 20));
-        addRenderableWidget(OpenAllayButton.create(
+        int y = layout.pageOrigin(pageScroll) + aboutCopyOffset();
+        Button copy = addRenderableWidget(OpenAllayButton.create(
                         Component.translatable("screen.openallay.settings.about.copy_repository"),
                         ignored -> copyRepositoryUrl())
-                .bounds(area.x() + 10, area.bottom() - 30, width, 20)
+                .bounds(area.x() + 10, y, width, 20)
                 .build());
+        copy.visible = layout.pageWidgetVisible(y, 20);
+    }
+
+    private int aboutRepositoryOffset() {
+        int contentWidth = Math.max(100, layout.editor().width() - 20);
+        int bannerWidth = Math.min(contentWidth, 512);
+        int bannerHeight = Math.max(54, bannerWidth * 9 / 16);
+        int descriptionHeight = font.split(
+                Component.translatable("screen.openallay.settings.about.description"), contentWidth).size() * 10;
+        return 31 + bannerHeight + 12 + descriptionHeight + 8;
+    }
+
+    private int aboutCopyOffset() {
+        int contentWidth = Math.max(100, layout.editor().width() - 20);
+        return aboutRepositoryOffset() + 12 + font.split(
+                Component.literal(REPOSITORY_URL), contentWidth).size() * 10 + 6;
     }
 
     private void saveAssistantName(GeneralSettingsProjection general) {
@@ -1057,7 +1090,7 @@ public final class OpenAllaySettingsScreen extends Screen {
                 "screen.openallay.settings.models.context_window",
                 draft.contextWindowTokens());
         contextWindow.setTooltip(Tooltip.create(Component.translatable(
-                "screen.openallay.settings.models.builtin.reset_auto")));
+                "screen.openallay.settings.models.context_window.description")));
         contextWindow.setResponder(value -> {
             confirmation = Confirmation.NONE;
             if (!updatingAutomaticContext) {
@@ -1069,6 +1102,8 @@ public final class OpenAllaySettingsScreen extends Screen {
         y += 22;
         maxOutput = field(
                 inputX, y, inputWidth, "screen.openallay.settings.models.max_output", draft.maxOutputTokens());
+        maxOutput.setTooltip(Tooltip.create(Component.translatable(
+                "screen.openallay.settings.models.max_output.description")));
         y += 22;
         connectTimeout = field(
                 inputX,
@@ -1333,90 +1368,62 @@ public final class OpenAllaySettingsScreen extends Screen {
     private void renderGeneral(GuiGraphicsExtractor graphics) {
         GeneralSettingsProjection general = project(snapshot).general();
         SettingsLayout.Rect area = layout.editor();
-        graphics.text(
-                font,
-                Component.translatable(general.titleKey()),
-                area.x() + 10,
-                area.y() + 12,
-                ACCENT,
-                false);
-        graphics.text(
-                font,
-                Component.translatable(general.assistantNameLabelKey()),
-                area.x() + 10,
-                area.y() + 31,
-                MUTED,
-                false);
-        List<net.minecraft.util.FormattedCharSequence> lines = font.split(
-                Component.translatable(general.assistantNameDescriptionKey()),
-                Math.max(80, area.width() - 20));
-        int y = area.y() + 136;
-        for (net.minecraft.util.FormattedCharSequence line : lines) {
-            graphics.text(font, line, area.x() + 10, y, MUTED, false);
-            y += 10;
+        int origin = layout.pageOrigin(pageScroll);
+        graphics.enableScissor(area.x(), area.y(), area.right(), area.bottom());
+        graphics.text(font, Component.translatable(general.titleKey()),
+                area.x() + 10, origin + 12, ACCENT, false);
+        // Keep the label together with its fully visible input, not over another scrolled control.
+        if (layout.pageWidgetVisible(origin + 31, 33)) {
+            graphics.text(font, Component.translatable(general.assistantNameLabelKey()),
+                    area.x() + 10, origin + 31, MUTED, false);
         }
-        y += 5;
-        for (net.minecraft.util.FormattedCharSequence line : font.split(
-                Component.translatable(general.debugDescriptionKey()),
-                Math.max(80, area.width() - 20))) {
-            graphics.text(font, line, area.x() + 10, y, MUTED, false);
-            y += 10;
+        int y = origin + 136;
+        for (String key : List.of(general.assistantNameDescriptionKey(),
+                general.debugDescriptionKey(), general.animationsDescriptionKey())) {
+            for (net.minecraft.util.FormattedCharSequence line : font.split(
+                    Component.translatable(key), Math.max(80, area.width() - 20))) {
+                graphics.text(font, line, area.x() + 10, y, MUTED, false);
+                y += 10;
+            }
+            y += 5;
         }
-        y += 5;
-        for (net.minecraft.util.FormattedCharSequence line : font.split(
-                Component.translatable(general.animationsDescriptionKey()),
-                Math.max(80, area.width() - 20))) {
-            graphics.text(font, line, area.x() + 10, y, MUTED, false);
-            y += 10;
-        }
-        pageContentHeight = y - area.y();
+        pageContentHeight = y - origin;
+        graphics.disableScissor();
     }
 
     private void renderAbout(GuiGraphicsExtractor graphics) {
         SettingsLayout.Rect area = layout.editor();
+        int origin = layout.pageOrigin(pageScroll);
         int x = area.x() + 10;
         int contentWidth = Math.max(100, area.width() - 20);
-        graphics.text(
-                font,
-                Component.translatable("screen.openallay.settings.about.title"),
-                x,
-                area.y() + 12,
-                ACCENT,
-                false);
+        graphics.enableScissor(area.x(), area.y(), area.right(), area.bottom());
+        graphics.text(font, Component.translatable("screen.openallay.settings.about.title"),
+                x, origin + 12, ACCENT, false);
         int bannerWidth = Math.min(contentWidth, 512);
         int bannerHeight = Math.max(54, bannerWidth * 9 / 16);
         int bannerX = x + Math.max(0, (contentWidth - bannerWidth) / 2);
-        int bannerY = area.y() + 31;
-        graphics.blit(
-                RenderPipelines.GUI_TEXTURED,
-                ABOUT_BANNER,
-                bannerX,
-                bannerY,
-                0.0F,
-                0.0F,
-                bannerWidth,
-                bannerHeight,
-                1024,
-                576,
-                1024,
-                576);
+        int bannerY = origin + 31;
+        graphics.blit(RenderPipelines.GUI_TEXTURED, ABOUT_BANNER,
+                bannerX, bannerY, 0.0F, 0.0F, bannerWidth, bannerHeight,
+                1024, 576, 1024, 576);
         int y = bannerY + bannerHeight + 12;
         for (net.minecraft.util.FormattedCharSequence line : font.split(
-                Component.translatable("screen.openallay.settings.about.description"),
-                contentWidth)) {
+                Component.translatable("screen.openallay.settings.about.description"), contentWidth)) {
             graphics.text(font, line, x, y, TEXT, false);
             y += 10;
         }
         y += 8;
-        graphics.text(
-                font,
-                Component.translatable("screen.openallay.settings.about.repository"),
-                x,
-                y,
-                MUTED,
-                false);
-        graphics.text(font, REPOSITORY_URL, x, y + 12, ACCENT, false);
-        pageContentHeight = y + 24 - area.y();
+        graphics.text(font, Component.translatable("screen.openallay.settings.about.repository"),
+                x, y, MUTED, false);
+        // Wrapping prevents a long URL from escaping the native content pane.
+        y += 12;
+        for (net.minecraft.util.FormattedCharSequence line : font.split(
+                Component.literal(REPOSITORY_URL), contentWidth)) {
+            graphics.text(font, line, x, y, ACCENT, false);
+            y += 10;
+        }
+        pageContentHeight = aboutCopyOffset() + 28;
+        graphics.disableScissor();
     }
 
     private void renderHistory(GuiGraphicsExtractor graphics) {

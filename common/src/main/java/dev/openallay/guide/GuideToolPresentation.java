@@ -74,7 +74,7 @@ public final class GuideToolPresentation {
             case "capability_unavailable", "tool_unavailable" ->
                     GuideToolMessage.Key.FAILURE_UNAVAILABLE;
             case "player_required" -> GuideToolMessage.Key.FAILURE_PLAYER_REQUIRED;
-            case "invalid_arguments" -> GuideToolMessage.Key.FAILURE_INVALID_ARGUMENTS;
+            case "invalid_arguments", "invalid_tool_arguments" -> GuideToolMessage.Key.FAILURE_INVALID_ARGUMENTS;
             case "unauthorized", "forbidden" -> GuideToolMessage.Key.FAILURE_FORBIDDEN;
             default -> GuideToolMessage.Key.FAILURE_GENERIC;
         };

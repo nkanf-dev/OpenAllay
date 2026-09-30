@@ -18,7 +18,8 @@ public record GuideToolDetailView(
         GuideToolIntent intent,
         List<GuideDetailCard> cards,
         List<GuideToolMessage> narration,
-        Optional<Debug> debug) {
+        Optional<Debug> debug,
+        GuideToolDisplayStatus displayStatus) {
     public GuideToolDetailView {
         if (titleKey == null || titleKey.isBlank()) {
             throw new IllegalArgumentException("titleKey must not be blank");
@@ -29,6 +30,19 @@ public record GuideToolDetailView(
         cards = List.copyOf(cards);
         narration = List.copyOf(narration);
         debug = Objects.requireNonNull(debug, "debug");
+        Objects.requireNonNull(displayStatus, "displayStatus");
+    }
+
+    public GuideToolDetailView(
+            String titleKey,
+            GuideToolStatus status,
+            GuideToolInvocationView invocation,
+            GuideToolIntent intent,
+            List<GuideDetailCard> cards,
+            List<GuideToolMessage> narration,
+            Optional<Debug> debug) {
+        this(titleKey, status, invocation, intent, cards, narration, debug,
+                GuideToolDisplayStatus.from(status, false));
     }
 
     public GuideToolDetailView(
@@ -41,19 +55,20 @@ public record GuideToolDetailView(
         this(titleKey, status, invocation, GuideToolIntent.none(), cards, narration, debug);
     }
 
+    public GuideToolDetailView forRequest(boolean terminal) {
+        GuideToolDisplayStatus projected = GuideToolDisplayStatus.from(status, terminal);
+        return new GuideToolDetailView(titleKey, status, invocation, intent, cards,
+                projected == GuideToolDisplayStatus.NO_RESULT_RECORDED ? List.of() : narration,
+                debug, projected);
+    }
+
     public GuideToolDetailView(
             String titleKey,
             GuideToolStatus status,
             List<GuideDetailCard> cards,
             List<GuideToolMessage> narration,
             Optional<Debug> debug) {
-        this(
-                titleKey,
-                status,
-                GuideToolInvocationView.none(),
-                cards,
-                narration,
-                debug);
+        this(titleKey, status, GuideToolInvocationView.none(), cards, narration, debug);
     }
 
     public record Debug(

@@ -24,6 +24,22 @@ final class SettingsLayoutTest {
     }
 
     @Test
+    void generalAndAboutScrollUseEditorExtentAndNeverTheFooter() {
+        for (int[] size : new int[][] {{427, 320}, {569, 320}, {900, 500}, {240, 180}}) {
+            SettingsLayout layout = SettingsLayout.calculate(size[0], size[1]);
+            int contentHeight = layout.editor().height() + 180;
+            int maximum = layout.maximumPageScroll(contentHeight);
+            assertEquals(188, maximum);
+            assertEquals(layout.editor().y() - maximum, layout.pageOrigin(maximum));
+            assertTrue(layout.pageOrigin(maximum) + contentHeight < layout.footer().y());
+            assertTrue(layout.pageWidgetVisible(layout.editor().y(), 20));
+            assertFalse(layout.pageWidgetVisible(layout.editor().y() - 1, 20));
+            assertFalse(layout.pageWidgetVisible(layout.editor().bottom() - 10, 20));
+            assertEquals(0, layout.maximumPageScroll(20));
+        }
+    }
+
+    @Test
     void wideLayoutHasRailListAndEditorWithoutOverlap() {
         SettingsLayout layout = SettingsLayout.calculate(960, 600);
 

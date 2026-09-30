@@ -65,6 +65,22 @@ final class GuideToolDetailViewTest {
     }
 
     @Test
+    void terminalProjectionRetainsIntentAndRawStatusAcrossCompatibleConstructors() {
+        var intent = new dev.openallay.guide.GuideToolIntent("Build a platform", "Place stone blocks");
+        GuideToolDetailView pending = new GuideToolDetailView(
+                "screen.openallay.tool.run_javascript", GuideToolStatus.RUNNING,
+                dev.openallay.guide.GuideToolInvocationView.none(), intent, List.of(),
+                List.of(GuideToolMessage.of(GuideToolMessage.Key.RESULT_PENDING)), Optional.empty());
+        GuideToolDetailView interrupted = pending.forRequest(true);
+        assertEquals(intent, interrupted.intent());
+        assertEquals(GuideToolStatus.RUNNING, interrupted.status());
+        assertEquals(GuideToolDisplayStatus.NO_RESULT_RECORDED, interrupted.displayStatus());
+        assertTrue(interrupted.narration().isEmpty());
+        assertEquals(GuideToolDisplayStatus.RUNNING, pending.displayStatus());
+        assertEquals(1, pending.narration().size());
+    }
+
+    @Test
     void rejectsInvalidCountsAndEmptyCardContent() {
         assertThrows(IllegalArgumentException.class, () ->
                 new GuideItemView("minecraft:iron_ingot", "Iron Ingot", -1));
