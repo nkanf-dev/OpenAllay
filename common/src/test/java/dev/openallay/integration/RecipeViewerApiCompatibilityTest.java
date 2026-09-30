@@ -70,10 +70,11 @@ final class RecipeViewerApiCompatibilityTest {
         assertEquals("<=21.0.2", metadata.getAsJsonObject("breaks")
                 .get("architectury").getAsString());
         assertTrue(properties.contains("architectury_version=21.0.4"));
-        assertTrue(readme.contains("21.0.3 has not been verified"));
-        assertTrue(readme.contains("metadata rejects only the known-broken versions through 21.0.2"));
+        assertTrue(readme.contains("use **21.0.4** for working text"));
+        assertTrue(readme.contains("**21.0.2 and earlier** prevent text input"));
         assertTrue(development.contains("Version 21.0.3 has not been verified"));
-        assertTrue(chineseReadme.contains("21.0.3 尚未验证"));
+        assertTrue(chineseReadme.contains("请使用 **21.0.4**"));
+        assertTrue(chineseReadme.contains("**21.0.2 及更早版本**会导致文字输入失效"));
     }
 
     private void assertSymbols(String className, String... symbols) throws IOException {

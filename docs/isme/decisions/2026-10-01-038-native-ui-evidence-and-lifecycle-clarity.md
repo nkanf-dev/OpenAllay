@@ -5,7 +5,7 @@
 - approval_source: current root task approval of independent Minecraft UI/UX findings under the user's request for adequate, honest, friendly information; not a claim that the user separately approved each evidence field
 - user_request: “另外最后也需要有一个 sub agent 去独立，以专业的 Minecraft UI UX 设计师的角度去评审 UI，包括它的文案方面，就是能不能用户友好，同时能不能给用户足够的信息，这是非常重要的。就是目前的话，感觉 UI 不是特别的好，很多地方都感觉有点混淆的意思在里面，我们不是要愚弄用户”
 - date: 2026-10-01
-- commit: pending
+- commit: f8c61e9, 7c56fac
 - patterns: B_state_persistence, E_security_boundary, F_fail_semantics
 - scope: common Guide layout, normal evidence presentation, terminal pending-Tool display, detail input, General/About viewport, and EN/zh copy
 

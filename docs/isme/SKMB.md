@@ -1,8 +1,9 @@
 # State Machine Knowledge Base
 
-This index records externally visible state and failure decisions for OpenAllay.
-Designer decisions are authoritative only when the referenced decision is
-accepted and contains explicit approval evidence.
+This index records externally visible state and failure contracts for OpenAllay.
+Accepted decisions require explicit approval evidence. Current implementation,
+tests and retained runtime receipts determine which behavior is delivered;
+historical checkpoints are not approval of a later release candidate.
 
 ## Decision Index
 
@@ -43,9 +44,9 @@ accepted and contains explicit approval evidence.
 | SKMB-2026-09-29-033 | accepted | client-local unrestricted JavaScript/JVM interop opt-in | A, B, C, D, E, F, G | decisions/2026-09-29-033-unrestricted-javascript-mode.md | pending |
 | SKMB-2026-09-30-034 | accepted | independent full online construction Extension and generic invocation lifecycle | A, B, C, D, E, F, G | decisions/2026-09-30-034-extension-online-construction.md | pending |
 | SKMB-2026-09-30-035 | accepted | advisory capability/dependency metadata and player requirement choices | A, B, C, D, E, F, G | decisions/2026-09-30-035-advisory-extension-skill-requirements.md | pending |
-| SKMB-2026-10-01-036 | accepted | builtin model catalog, automatic BEST missing-context matching and published price estimates | B, C, D, F | decisions/2026-10-01-036-builtin-model-catalog.md | pending |
-| SKMB-2026-10-01-037 | accepted | model-written JavaScript invocation display intent | B, E, F | decisions/2026-10-01-037-javascript-tool-intent.md | pending |
-| SKMB-2026-10-01-038 | accepted | native UI fit, friendly recorded evidence, terminal pending-Tool display, and retry clarity | B, E, F | decisions/2026-10-01-038-native-ui-evidence-and-lifecycle-clarity.md | pending |
+| SKMB-2026-10-01-036 | accepted | builtin model catalog, automatic BEST missing-context matching and published price estimates | B, C, D, F | decisions/2026-10-01-036-builtin-model-catalog.md | b9e415b |
+| SKMB-2026-10-01-037 | accepted | model-written JavaScript invocation display intent | B, E, F | decisions/2026-10-01-037-javascript-tool-intent.md | fef6f74 |
+| SKMB-2026-10-01-038 | accepted | native UI fit, friendly recorded evidence, terminal pending-Tool display, and retry clarity | B, E, F | decisions/2026-10-01-038-native-ui-evidence-and-lifecycle-clarity.md | f8c61e9 |
 
 SKMB-2026-07-18-006 is implemented by `a0eaeff`, `19ab90f`, and `c6ca6bc`.
 Its deterministic clean-build and packaged-driver evidence is recorded in the
@@ -113,14 +114,14 @@ SKMB-2026-07-25-029 supersedes only that spatial-observation deferral for the
 request scoped, detached on the owning client or server thread, and explicitly
 reports client-visible or server-authoritative evidence.
 
-Its implementation and focused deterministic suites are complete in the
-current Phase 4 worktree. Fabric and NeoForge graphical controllers each
-completed the native semantic/UI correction scenario with six screenshots,
-all eight controlled component types, and 32 semantic blocks. Both loaders also
-completed the eight-section real-client game-state scenario. The implementation
-is recorded in `78c2122`. The latest clean production gate (525 tests), both-loader
-package/SQLite checks, final credential/diff/report/hash/manifest audit, and
-graphical evidence review all passed. Phase 4 is closed.
+The earlier SKMB-019/020 correction checkpoint is recorded in `78c2122`.
+Fabric and NeoForge graphical controllers each completed the native semantic/UI
+scenario with six screenshots, all eight controlled component types, and 32
+semantic blocks. Both loaders also completed the eight-section game-state
+scenario. That checkpoint's clean gate (525 tests), both-loader package/SQLite
+checks and retained evidence review passed, closing that Phase 4 correction set.
+Later Builder, catalog, intent and UI changes have separate verification; this
+historical checkpoint does not approve the 0.2.4 release candidate.
 
 ### SKMB-2026-09-29-033 (accepted)
 
@@ -130,13 +131,36 @@ client-local model. Its immutable authority is captured when a local request
 starts and applies only to that request; prompt text cannot grant it. Server
 models and server-originated client Tool callbacks always capture the safe mode,
 regardless of the setting. In enabled local execution, Rhino uses standard
-objects, exposes `Java.type`, and removes OpenAllay source/result/time/workspace/
-preview budgets. Cancellation still stops execution and request workspaces still
-close at termination. Disabled mode retains the existing safe Rhino context and
+objects, exposes `Java.type`, and bypasses OpenAllay source/result/interpreter-time/
+workspace/handle-selection/preview budgets. Cancellation remains active, though
+blocking JVM/native calls may not stop immediately; workspaces close at request
+termination. Disabled mode retains the existing safe Rhino context and
 budgets. The settings UI displays the risk warning in both states. Unrestricted
 scripts can execute arbitrary JVM code and cause file, network, process, or other
 side effects; OpenAllay offers no rollback and cannot protect credentials
-available to the JVM. See `decisions/2026-09-29-033-unrestricted-javascript-mode.md`.
+available to the JVM. The safe-mode guarantees indexed below remain intact for
+default execution, server models and server-originated client callbacks. Their
+JVM/limit exclusions are superseded only for authorized local execution by 033.
+See `decisions/2026-09-29-033-unrestricted-javascript-mode.md`.
+
+### Current 0.2.4 contracts
+
+- **036:** Context precedence is explicit value, then exact trusted provider
+  metadata, then eligible builtin BEST match. Untouched automatic context stays
+  null/omitted on save; only an actual edit becomes manual. Matching never changes
+  profile, endpoint, model or protocol. Published USD-per-million-token tiers are
+  reference estimates, not gateway bills; output ceilings remain advisory.
+- **037:** Optional string title/description is literal model-written intent,
+  separately labelled from execution status and evidence. Valid labels do not
+  affect duplicate execution identity or actor permissions. Existing presentation
+  arguments retain zero-argument legacy and two-argument intent messages; history
+  schema 5 and protocol 5 stay unchanged.
+- **038:** Normal details show friendly recorded source, authority, coverage and
+  capture time. Only that presentation exclusion in 010 is superseded; its raw
+  technical-metadata/privacy boundary and historical approval remain intact.
+  A terminal pending Tool derives “Stopped before a result was recorded” for UI
+  only, preserving raw status. Retry sends the question again rather than resuming
+  a step. Integrated source still requires independent actual GUI review.
 
 ## Named States
 
@@ -176,7 +200,7 @@ available to the JVM. See `decisions/2026-09-29-033-unrestricted-javascript-mode
 | tool_group_wait | Independent calls from one model turn are settling into indexed correlated slots | GameGuideAgent | Provider continuation waits for the complete ordered group | SKMB-2026-07-19-024 |
 | model_transport_retry_wait | A no-progress transport failure is waiting for its bounded retry | ModelRequestScheduler | Cancellable; never entered after visible response progress | SKMB-2026-07-19-024 |
 | online_knowledge_degraded | One fixed public-documentation adapter failed while local/other sources remain usable | SearchKnowledgeTool | Source-scoped and partial; no arbitrary URL fallback | SKMB-2026-07-19-024 |
-| javascript_executing | One isolated Rhino Context is evaluating detached request data | RhinoJavascriptRuntime | Worker-thread-only, cancellable, time-bounded, and denied arbitrary host access | SKMB-2026-07-24-025 |
+| javascript_executing | One fresh Rhino Context is evaluating a request | RhinoJavascriptRuntime | Worker-thread-only and cancellable; safe mode has a deadline and denied host access, while captured unrestricted local execution follows 033 | SKMB-2026-07-24-025, SKMB-2026-09-29-033 |
 | result_workspace_open | Canonical JavaScript results are retained for the active request | AgentResultWorkspaceRegistry | Handles are opaque and request-scoped; model context receives projections only | SKMB-2026-07-24-025 |
 | javascript_host_graph_ready | One request owns immutable direct Java root descriptors and captured extension/knowledge snapshots | MinecraftAgentHostGraph | No input serialization, no live Minecraft objects, request-scoped lifetime | SKMB-2026-07-24-026 |
 | javascript_host_scope_open | One Rhino execution owns lazy read-only wrappers and an identity cache over the request host graph | RhinoHostAdapter | No wrapper or scope sharing across executions or requests | SKMB-2026-07-24-026 |
@@ -261,7 +285,7 @@ available to the JVM. See `decisions/2026-09-29-033-unrestricted-javascript-mode
 | T68 | deletion_confirming_first | player confirms | deletion_confirming_final | Show the irreversible/cancellation warning bound to the same captured session ID | SKMB-2026-07-19-023 |
 | T69 | deletion_confirming_final | player confirms or dismisses | session deleted or unchanged | Invoke the existing fenced close only after confirmation; either dismissal performs no action | SKMB-2026-07-19-023 |
 | T70 | export idle | player exports selected session | export_collecting then export_writing | Capture immutable live sequences, read every durable page, redact, and atomically publish under the managed export directory | SKMB-2026-07-19-023 |
-| T71 | tool_wait | validated JavaScript execution starts | javascript_executing | Create a fresh Rhino Context over the detached request graph and check cancellation/deadline by instruction observation | SKMB-2026-07-24-025 |
+| T71 | tool_wait | validated JavaScript execution starts | javascript_executing | Create a fresh Rhino Context with the frozen request mode; observe cancellation in both modes and the execution deadline in safe mode | SKMB-2026-07-24-025, SKMB-2026-09-29-033 |
 | T72 | javascript_executing | canonical result normalized | result_workspace_open | Store canonical JSON under an opaque request handle and publish only an evidence-preserving model projection | SKMB-2026-07-24-025 |
 | T73 | result_workspace_open | request completes, fails, cancels, disconnects, or shuts down | idle or terminal request state | Close the request workspace, invalidate handles, and discard Rhino state | SKMB-2026-07-24-025 |
 | T74 | any non-active request state | managed Skill create/update/delete requested | managed_skill_writing | Stage a confined complete package, validate it, and atomically publish or delete one exact local Skill | SKMB-2026-07-24-025 |
@@ -278,7 +302,7 @@ available to the JVM. See `decisions/2026-09-29-033-unrestricted-javascript-mode
 | T85 | skill_published with unknown or older package version | player installs the compatible catalog package | package_staging then skill_published with catalog version | Validate and atomically publish the complete versioned Markdown package; retain the prior package/version on failure | SKMB-2026-07-25-029 |
 | T86 | client model settings load | schema-2 `models.json` is absent, schema 1 is present, or a legacy `model.json` is present | guide_unconfigured or unchanged valid runtime | Do not import, rewrite, or delete older configuration; publish an actionable redacted notice and await explicit schema-2 save | SKMB-2026-07-25-031 |
 
-| T87 | extension_invocation_active | execution finishes, fails, cancels or request closes | closed | Revoke active context, close participant scopes in reverse order, preserve partial external effects | SKMB-2026-09-30-034 |
+| T90 | extension_invocation_active | execution finishes, fails, cancels or request closes | closed | Revoke active context, close participant scopes in reverse order, preserve partial external effects | SKMB-2026-09-30-034 |
 | T88 | requirements_review_ready | player selects Continue anyway | publishing or unchanged enabled Skill | Proceed only with the selected package/use; grant no requirements | SKMB-2026-09-30-035 |
 | T89 | requirements_review_ready | player explicitly enables available requirements | applying then re-evaluated review | Use existing setting writes; retain failures and do not install dependencies implicitly | SKMB-2026-09-30-035 |
 
@@ -326,7 +350,7 @@ available to the JVM. See `decisions/2026-09-29-033-unrestricted-javascript-mode
 | I38 | Sessions and valid derived checkpoints are provider/model-neutral; every request is re-estimated against its selected model budget | SKMB-2026-07-18-008 |
 | I39 | Model selection is per session and mutable; active requests retain their captured runtime and never reroute | SKMB-2026-07-18-009 |
 | I40 | Explicit model limits outrank discovered metadata, and credentials are unrepresentable in persisted multi-profile configuration | SKMB-2026-07-18-009 |
-| I41 | Normal UI exposes friendly cards and narration but cannot represent raw technical evidence/JSON; debug mode remains redacted | SKMB-2026-07-18-010 |
+| I41 | Normal UI exposes friendly cards, recorded source/authority/coverage/capture time and narration; raw technical evidence/JSON stays Debug-only and redacted | SKMB-2026-07-18-010, SKMB-2026-10-01-038 |
 | I42 | Durable history has one current writable schema; compatibility for released schemas requires an explicit accepted policy and tests | SKMB-2026-07-18-011, SKMB-2026-07-29-032 |
 | I43 | Metadata cache/load/refresh is asynchronous, credential-free, source/model keyed, and subordinate to explicit limits | SKMB-2026-07-18-012 |
 | I44 | Shared HTTP transport grants no model tool, endpoint, credential, or evidence authority; each domain adapter must provide its own | SKMB-2026-07-18-013 |
@@ -368,16 +392,16 @@ available to the JVM. See `decisions/2026-09-29-033-unrestricted-javascript-mode
 | I81 | Automatic model transport retry is allowed only before response progress and is bounded to two retries; HTTP 4xx, timeout, partial stream, cancel, and Tool execution are never replayed | SKMB-2026-07-19-024 |
 | I82 | Fixed online documentation sources fail independently, remain partial public evidence, and never replace current-game authoritative snapshots | SKMB-2026-07-19-024 |
 | I83 | Current biome, coordinates, dimension, and direction are client-visible diagnostics and never require server command permission | SKMB-2026-07-19-024 |
-| I84 | Model-authored JavaScript runs only over detached immutable request data in a fresh Rhino scope; arbitrary Java, reflection, class loading, network, process, real filesystem, and live Minecraft access are unrepresentable | SKMB-2026-07-24-025 |
-| I85 | Canonical JavaScript output remains internal JSON; the model receives a compact CLI-like projection bounded by one total conservative token estimate rather than a fixed row count, while large values remain request-scoped and reopenable only by opaque handle | SKMB-2026-07-24-025 |
+| I84 | Safe-mode JavaScript runs over detached immutable request data in a fresh Rhino scope and denies arbitrary Java, reflection, class loading, network, process, real filesystem and live Minecraft access; only frozen client-local unrestricted authority bypasses that sandbox under 033 | SKMB-2026-07-24-025, SKMB-2026-09-29-033 |
+| I85 | Canonical JavaScript output remains internal JSON with a compact CLI-like model projection; safe-mode previews have a total token-estimate budget, bypassed by authorized local unrestricted mode. Handles remain request-scoped and provider context retains the selected model budget in both modes | SKMB-2026-07-24-025, SKMB-2026-09-29-033 |
 | I86 | A Rhino scope and workspace are never shared across request correlation IDs and are closed on every terminal, disconnect, and shutdown path | SKMB-2026-07-24-025 |
 | I87 | Bundled Skills remain immutable; Agent Skill writes are confined to one managed local root, validate a complete package, publish atomically, and affect future request snapshots only | SKMB-2026-07-24-025 |
-| I88 | Extension adapters may use trusted implementation techniques during owning-thread capture, but ordinary Agent JavaScript receives only their detached evidence-bearing contribution and pure helper facade | SKMB-2026-07-24-025 |
-| I89 | Every model-authored script, normalized result, workspace admission/selection, Skill read, UI preview, and provider continuation is bounded before publication; failure never creates a partial handle or sends a known-over-budget request | SKMB-2026-07-24-025 |
+| I88 | Extension adapters may use trusted implementation techniques during owning-thread capture; their `mc` projection remains detached, evidence-bearing and read-only in both execution modes | SKMB-2026-07-24-025, SKMB-2026-09-29-033 |
+| I89 | Safe-mode source/result, workspace admission/selection and previews enforce their budgets before publication; 033 bypasses only those limits for authorized local unrestricted execution. Skill reads and selected-model provider context remain bounded in both modes; failures publish no partial handle or known-over-budget provider request | SKMB-2026-07-24-025, SKMB-2026-09-29-033 |
 | I90 | Rhino input is a lazy read-only view over the original detached Java request records; request roots and workspace values are never serialized into source, parsed with `JSON.parse`, or eagerly copied into a complete parallel script tree | SKMB-2026-07-24-026 |
-| I91 | Only record components and supported scalar/collection/JSON value shapes are script-visible; Java methods, fields, classes, constructors, reflection, bean accessors, and arbitrary host objects remain unrepresentable | SKMB-2026-07-24-026 |
+| I91 | Detached `mc` and workspace views expose only supported record/scalar/collection/JSON values, not methods, fields, classes, constructors or arbitrary host objects; separate `Java.type` interop exists only with captured unrestricted local authority | SKMB-2026-07-24-026, SKMB-2026-09-29-033 |
 | I92 | Each execution owns one wrapper identity cache, while each request owns one host graph and workspace; none may cross execution/request boundaries or outlive terminal cleanup | SKMB-2026-07-24-026 |
-| I93 | Reusable domain algorithms are exact-ID bundled JavaScript modules loaded inside the denied-host Rhino scope; they cannot read arbitrary files, fetch URLs, access Java, or grant Tool authority | SKMB-2026-07-24-027 |
+| I93 | Reusable domain algorithms resolve exact-ID bundled JavaScript modules within the current request mode; module loading grants no authority. Safe mode denies arbitrary files/network/Java; unrestricted modules use only the authority already captured under 033 | SKMB-2026-07-24-027, SKMB-2026-09-29-033 |
 | I94 | Successful pending history writes never allocate transcript rows; loading and durable failure remain visible, while pending counts remain diagnostic state | SKMB-2026-07-24-027 |
 | I95 | Real-client acceptance retains a complete, untruncated, credential-redacted provider-neutral Agent trace and fails rather than claiming success when that trace is unavailable | SKMB-2026-07-24-027 |
 | I96 | The declared Rhino schema, mounted root graph, Extensions settings, and Skill field references derive from one closed Java capability catalog; documentation cannot advertise an unavailable field as mounted | SKMB-2026-07-25-028 |
@@ -454,10 +478,10 @@ available to the JVM. See `decisions/2026-09-29-033-unrestricted-javascript-mode
 | F53 | A provider returns HTTP 400 or another non-retryable 4xx | Classify a bounded allowlisted error as request/context/protocol rejection, retain redacted diagnostics, and require a corrected request; never expose or automatically replay the body | SKMB-2026-07-19-024 |
 | F54 | A pre-progress model transport attempt fails | Retry at most twice with cancellable short backoff; after progress or exhaustion, retain chronology and end with a friendly retryable transport failure | SKMB-2026-07-19-024 |
 | F55 | One fixed online knowledge source times out, rejects, or changes format | Retain local and other source results, mark only that adapter degraded, and return partial evidence rather than fabricated absence | SKMB-2026-07-19-024 |
-| F56 | JavaScript is malformed, exceeds its execution deadline, is cancelled, escapes the sandbox, or returns a cyclic/unsupported value | Fail with a stable `javascript_*` result, store no successful workspace value, discard the Context, and preserve the Agent request for a corrected call unless cancellation owns termination | SKMB-2026-07-24-025 |
+| F56 | JavaScript is malformed, cancelled, returns an invalid/cyclic/unsupported result, or in safe mode exceeds its deadline/host boundary | Return the matching stable script failure, publish no successful workspace value, discard the Context, and preserve the request for a corrected call unless cancellation owns termination; authorized local JVM access is not a sandbox violation | SKMB-2026-07-24-025, SKMB-2026-09-29-033 |
 | F57 | A workspace handle is missing, closed, or belongs to another request | Fail `workspace_handle_unavailable`; never guess, reopen another request, or copy hidden canonical data into context | SKMB-2026-07-24-025 |
 | F58 | A managed Skill candidate is malformed, escapes its root, conflicts, or cannot publish atomically | Fail `skill_invalid` or `skill_write_failed`, retain the previous package/catalog, and leave unrelated Skills unchanged | SKMB-2026-07-24-025 |
-| F59 | JavaScript source/result, workspace admission/selection, Skill cursor, or post-Tool provider context exceeds its accepted budget | Fail with the matching stable `javascript_*`, `workspace_*`, `skill_cursor_invalid`, or `context_compaction_failed` code; publish no partial result and do not dispatch an oversized provider request | SKMB-2026-07-24-025 |
+| F59 | Safe-mode source/result, workspace admission/selection or previews exceed their budgets, or either mode has an invalid Skill cursor/over-budget provider context | Return the matching `javascript_*`, `workspace_*`, `skill_cursor_invalid` or `context_compaction_failed` failure without a partial handle or oversized provider request; 033 bypasses only the authorized local source/result/workspace/preview limits | SKMB-2026-07-24-025, SKMB-2026-09-29-033 |
 | F60 | A direct host value is unsupported, a map key is not a String, or script code attempts to mutate/delete a host property | Fail with `javascript_host_type_unsupported`, `javascript_host_map_key_unsupported`, or `javascript_host_read_only`; mutate no request data and publish no handle | SKMB-2026-07-24-026 |
 | F61 | A bundled JavaScript module is unknown, cyclic, or fails evaluation | Fail `javascript_module_unavailable` or `javascript_module_error`, publish no partial result, and retain the request for a corrected call | SKMB-2026-07-24-027 |
 | F62 | A terminal real-client request has no complete local trace or trace persistence fails | Fail E2E acceptance and publish no unredacted or partial trace artifact | SKMB-2026-07-24-027 |

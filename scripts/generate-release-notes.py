@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate deterministic OpenAllay release notes from an annotated SemVer tag."""
+"""Use curated OpenAllay release notes or generate them from annotated SemVer history."""
 
 from __future__ import annotations
 
@@ -28,10 +28,11 @@ class Commit:
     author_email: str
 
 
-def git(*args: str) -> str:
-    return subprocess.run(
+def git(*args: str, strip: bool = True) -> str:
+    output = subprocess.run(
         ["git", *args], check=True, text=True, stdout=subprocess.PIPE
-    ).stdout.strip()
+    ).stdout
+    return output.strip() if strip else output
 
 
 def annotated_semver_tags(commit: str) -> list[str]:
@@ -121,6 +122,16 @@ def category(subject: str) -> str:
 def render(tag: str, repository: str | None) -> str:
     current_commit = git("rev-parse", f"refs/tags/{tag}^{{commit}}")
     previous = previous_tag(tag, current_commit)
+    curated = f"docs/releases/{tag[1:]}.md"
+    if git("ls-tree", "--full-tree", "--name-only", current_commit, "--", curated) == curated:
+        body = git("show", f"{current_commit}:{curated}", strip=False).rstrip()
+        if repository and previous:
+            body += (
+                f"\n\n**Full changelog:** https://github.com/{repository}"
+                f"/compare/{previous}...{tag}"
+            )
+        return body + "\n"
+
     revision_range = f"{previous}..{current_commit}" if previous else current_commit
     history = commits(revision_range)
     grouped: dict[str, list[Commit]] = {}

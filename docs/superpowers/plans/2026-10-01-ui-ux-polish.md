@@ -98,3 +98,38 @@ header notices retain priority and full hover text.
 - Default Fabric and NeoForge builds with verified pinned Builder: **passed**.
 - Actual post-integration screenshots and independent visual review are the next
   retained acceptance step.
+
+## Integrated 0.2.4 verification — 2026-10-01
+
+The main-line integration is complete. Its final clean Java 25 gate passed
+907 common tests with zero failures/errors and 6 skips. Both default Fabric and
+NeoForge builds passed with the pinned Builder Extension `5354853`.
+
+The final packaged GUI captures are `fabric/20261001-ui-disabled-03`,
+`neoforge/20261001-ui-provider-failure-02`, and `fabric/20261001-ui-stop-01` under
+`build/e2e/packaged-builder`. They retain 24, 26, and 24 PNGs respectively,
+including the final native-world capture. The disabled scene passed its native
+no-write check. The failure scene retains a successful player read followed by
+an actual HTTP 503 and a failed request. Stop retains an accepted cancellation
+with no normalized Tool result. Original display configuration was restored in
+all three scenes.
+
+The independently reviewed GUI artifact SHA-256 values are:
+- Fabric: `ab75f3b80da321c0806b4d64c32d3ad9ee32a55f90511cf44773f19a92d8910e`.
+- NeoForge: `7b9eaf43b1271452427d2f4673553a7e7e28e3fa87a17eb1fe4ed8560bfe0daa`.
+
+The earlier isolated worktree results and source-freeze notes above are retained
+as chronological records. This integrated receipt supersedes their pending
+integration/commit statements. Independent visual review is recorded separately.
+
+Independent Minecraft UI/UX review on 2026-10-01 inspected all 74 final PNGs
+from the three packaged scenes above and approved the reviewed release scope.
+The review found no remaining release-blocking P0/P1. Its retained report is
+`/Users/nkanf/docs/openallay-ui-ux-review-2026-10-01.md`.
+
+A subsequent final clean gate passed the same 907-test and both-loader checks.
+NeoForge retained the same container SHA-256. Fabric's container SHA-256 became
+`321c773d4ad5f2b5a6ea8653869e9905cd75aa97e06030f0cc52d2538e5df11b`:
+all entry names, order and uncompressed entry SHA-256 values match the reviewed
+JAR; only six nested-library ZIP timestamps/UT fields changed. The original
+GUI manifest hash above is retained, not relabeled as this later build.

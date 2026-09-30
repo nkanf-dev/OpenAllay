@@ -5,7 +5,7 @@
 - approval_source: exact user request: “我们这个项目内部应该内置一个表，因为 models 它可能返回不了那个上下文的数量，我们应该预设一个表，我们可能有时候去更新一下那个表，就是我们到处抓取，我们去把默认，把目前就是比较广泛的一些模型，它们的定价，它们的上下文的东西，我们去给它拿下来，就是后续我们就去匹配，模糊匹配，这里可以走模糊匹配的路子，就是默认选最匹配的那一个，然后去给它自动填好它的上下文，这是一个产品体验的东西，我们单独给它作为一个提交去做”
 - additional_approval: “对于 GPT 6 Luna 来说，我们可以给到 1M 的预算”
 - date: 2026-10-01
-- commit: pending
+- commit: b9e415b, 6a544d0
 - patterns: A_async_wait, B_state_persistence, C_concurrent_operations, D_external_dependency, F_fail_semantics
 - scope: offline builtin model capability/price table, automatic missing-context resolution and editable settings estimates
 

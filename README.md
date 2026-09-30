@@ -48,30 +48,30 @@ without turning every capability into another one-purpose Agent tool.
 
 ### Online construction as an independent Extension
 
-The 0.2.3 source distribution includes the Minecraft Builder Extension from
-[OpenAllay-Extensions](https://github.com/nkanf-dev/OpenAllay-Extensions/tree/main/extensions/minecraft-builder).
-It supplies geometry, terrain tools, six building presets, structure templates,
-rotation/mirroring and conflict-aware block undo through a reviewed JavaScript
-module and Skill. Construction code stays outside OpenAllay core.
+OpenAllay 0.2.4 includes the Minecraft Builder Extension in both Fabric and
+NeoForge downloads. It comes from
+[OpenAllay-Extensions](https://github.com/nkanf-dev/OpenAllay-Extensions/tree/main/extensions/minecraft-builder)
+and supplies geometry, terrain tools, six building presets, saved structure
+templates, rotation, mirroring, and conflict-aware block undo through its
+JavaScript module and Skill.
 
-The native backend operates online in the active integrated-server world. It
-requires explicitly enabled client-local unrestricted JavaScript, not creative
-mode or a separate OpenAllay command permission. It does not edit offline saves
-or claim remote-server write authority. Installing the default Extension does
-not enable its runtime authorization. Cancellation stops future work; it does
-not reverse changes already applied.
+To build in your active single-player world, choose a local model and explicitly
+enable **unrestricted JavaScript** in **Settings → Extensions**. This setting is
+off by default and stays separate from Extension installation. Builder works in
+survival and creative worlds. Its undo checks for intervening block edits.
 
-Skill and Extension details show advisory capability/dependency requirements.
-During installation, enable available requirements explicitly, cancel, or choose
-**Continue anyway**. Continuing does not grant missing capabilities. Player
-control and Baritone integration remain research, not bundled functionality.
+Skill and Extension details list useful capabilities and dependencies. During
+installation, you can enable available requirements, cancel, or choose
+**Continue anyway** to install the package with your current permissions.
 
 ### Results made for Minecraft
 
 Answers can include item icons, ingredient slots, recipe layouts, tables,
 progress steps, and expandable details. Typed JavaScript results can become
-native recipe or item presentations automatically. In Debug mode, tool details
-also show the submitted JavaScript and the useful input and output behind the
+native recipe or item presentations automatically. JavaScript tool cards show
+a short planned-action title and description alongside execution status and
+results, and saved conversations keep those descriptions. In Debug mode, tool
+details also show the submitted JavaScript and the input and output behind the
 answer.
 
 ### Your model, your choice
@@ -83,6 +83,11 @@ requiring the server to install it. A server that does install OpenAllay may
 offer a shared model and additional server-side capabilities. Its shared model
 appears automatically in **Models** while connected, clearly marked as
 server-provided and separate from your local profiles.
+
+A built-in offline model table fills in the context window for matching models,
+including services whose model list contains only IDs. You can edit the value
+at any time. The Models page also shows published token-price estimates, price
+tiers, sources, and dates as a reference for choosing a model.
 
 ### Conversations that stay useful
 
@@ -120,7 +125,9 @@ an action.
 ## Quick start
 
 Download the latest OpenAllay **0.2.x** build for **Fabric** or **NeoForge**
-from Modrinth. The 0.2 line targets Minecraft **26.2** and requires Java **25**.
+from [Modrinth](https://modrinth.com/mod/openallay/versions) or
+[GitHub Releases](https://github.com/nkanf-dev/OpenAllay/releases).
+The 0.2 line targets Minecraft **26.2** and requires Java **25**.
 Fabric players also need the matching Fabric API.
 
 Place the downloaded JAR in your instance's `mods` folder, start Minecraft, and
@@ -130,14 +137,12 @@ connect a model:
 2. Select the gear button and open **Models**.
 3. Add an **OpenAI-compatible Chat Completions** or **Anthropic Messages**
    profile.
-4. Enter the provider URL, model ID, context window, and API key, then save.
-5. Select the profile from the conversation header and start asking questions.
+4. Enter the provider URL, model ID, and API key.
+5. Review the matched context window, or enter it manually, then save.
+6. Select the profile from the conversation header and start asking questions.
 
-On Fabric, Architectury **21.0.2 and earlier** is known to prevent text input
-on the OpenAllay screen. Architectury **21.0.4** is the version used by the
-accepted full-mod profile. **21.0.3 has not been verified**: it is not blocked
-by OpenAllay metadata, but its text-input compatibility is unknown. OpenAllay
-metadata rejects only the known-broken versions through 21.0.2.
+For Fabric modpacks that include Architectury, use **21.0.4** for working text
+input in the OpenAllay screen. Versions **21.0.2 and earlier** prevent text input.
 
 ## Try asking
 

@@ -41,27 +41,26 @@ Agent 使用的数据入口，还会列出
 
 ### 独立 Extension 提供在线建造
 
-0.2.3 源码发行构建默认包含来自
-[OpenAllay-Extensions](https://github.com/nkanf-dev/OpenAllay-Extensions/tree/main/extensions/minecraft-builder)
-的 Minecraft Builder 扩展。它通过经过测试的 JavaScript 模块与 Skill 提供几何体、
-地形处理、六种预设建筑、结构模板、旋转／镜像和带冲突检查的方块撤销。
-建造代码不进入 OpenAllay 核心。
+OpenAllay 0.2.4 的 Fabric 和 NeoForge 下载包均包含 Minecraft Builder 扩展。
+它来自
+[OpenAllay-Extensions](https://github.com/nkanf-dev/OpenAllay-Extensions/tree/main/extensions/minecraft-builder)，
+通过自己的 JavaScript 模块与 Skill 提供几何体、地形处理、六种预设建筑、
+可保存的结构模板、旋转、镜像和带冲突检查的方块撤销。
 
-原生后端在线操作当前单人／集成服务器世界，需要玩家显式开启客户端无限制
-JavaScript，不额外要求创造模式或 OpenAllay 命令权限。它不编辑离线存档，
-也不把客户端能力当成远程服务器写入权限。默认安装扩展不会自动开启授权。
-取消会停止后续工作，不会撤回已经发生的改动。
+在当前单人世界建造时，先选择本地模型，再在**设置 → 扩展**中显式开启
+**无限制 JavaScript**。此设置默认关闭，与扩展安装分开管理。Builder 支持
+生存与创造世界，撤销时会检查方块是否被后续操作改动。
 
-Skill 与 Extension 详情会展示所需授权和依赖。安装时可以显式启用可用需求、
-取消，或选择 **Continue anyway（仍然继续）**；继续不会授予缺失的能力。
-玩家控制与 Baritone 接入仍处于调研阶段，不属于默认随包功能。
+Skill 与 Extension 详情会列出有用的能力和依赖。安装时可以启用可用需求、
+取消，或选择 **Continue anyway（仍然继续）**，按当前权限安装该包。
 
 ### 为 Minecraft 而生的结果
 
 回答可以包含物品图标、材料槽位、配方布局、表格、进度步骤和可展开详情。
-类型化的 JavaScript 结果可以自动呈现为原生配方、物品或表格视图。打开调试
-模式后，工具详情还会显示 Agent 提交的 JavaScript，以及这次调用真正的输入与
-输出。
+类型化的 JavaScript 结果可以自动呈现为原生配方、物品或表格视图。JavaScript
+工具卡片用简短标题和说明展示计划执行的工作，并单独显示执行状态与结果；
+保存的会话也会保留这些说明。打开调试模式后，工具详情还会显示 Agent 提交的
+JavaScript，以及这次调用的输入与输出。
 
 ### 模型由你选择
 
@@ -70,6 +69,10 @@ Skill 与 Extension 详情会展示所需授权和依赖。安装时可以显式
 安装本模组的普通多人服务器上使用；安装了 OpenAllay 的服务器还可以为玩家
 提供共享模型和额外的服务端能力。连接后，共享模型会自动出现在**模型**页面，
 并明确标注为服务器提供，与本地配置分开显示。
+
+内置离线模型表可以为匹配的模型自动填写上下文窗口，也适用于模型列表仅提供
+ID 的服务。你可以随时修改这个数值。模型页面还会显示公开的 Token 参考价格、
+价格档位、来源和日期，方便比较和选择模型。
 
 ### 随时可以继续的对话
 
@@ -98,9 +101,11 @@ Skill 与 Extension 详情会展示所需授权和依赖。安装时可以显式
 
 ## 快速上手
 
-请从 Modrinth 下载最新的 OpenAllay **0.2.x** **Fabric** 或 **NeoForge**
-版本。0.2 系列面向 Minecraft **26.2**，需要 Java **25**；Fabric 玩家还需要
-安装对应版本的 Fabric API。
+请从 [Modrinth](https://modrinth.com/mod/openallay/versions) 或
+[GitHub Releases](https://github.com/nkanf-dev/OpenAllay/releases) 下载最新的
+OpenAllay **0.2.x** **Fabric** 或 **NeoForge** 版本。
+0.2 系列面向 Minecraft **26.2**，需要 Java **25**；Fabric 玩家还需要安装
+对应版本的 Fabric API。
 
 把下载的 JAR 放入游戏实例的 `mods` 文件夹，启动 Minecraft，然后连接模型：
 
@@ -108,13 +113,12 @@ Skill 与 Extension 详情会展示所需授权和依赖。安装时可以显式
 2. 点击齿轮按钮，打开**模型**页面。
 3. 添加一个 **OpenAI 兼容 Chat Completions** 或 **Anthropic Messages**
    配置。
-4. 填写服务地址、模型 ID、上下文窗口和 API 密钥，然后保存。
-5. 在对话页顶部选择刚刚添加的配置，开始提问。
+4. 填写服务地址、模型 ID 和 API 密钥。
+5. 检查自动匹配的上下文窗口，或手动填写，然后保存。
+6. 在对话页顶部选择刚刚添加的配置，开始提问。
 
-在 Fabric 上，已知 Architectury **21.0.2 及更早版本**会导致 OpenAllay 界面
-无法输入文字。**21.0.4** 是完整模组验收配置使用的版本。**21.0.3 尚未验证**：
-OpenAllay 元数据不会屏蔽它，但其文字输入兼容性仍未知。元数据只拒绝已知有问题的
-21.0.2 及更早版本。
+如果 Fabric 整合包包含 Architectury，请使用 **21.0.4**，以便在 OpenAllay
+界面正常输入文字。**21.0.2 及更早版本**会导致文字输入失效。
 
 ## 可以这样问
 

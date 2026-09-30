@@ -3,7 +3,7 @@
 - status: accepted by the user's explicit request below
 - decided_by: user/designer
 - date: 2026-10-01
-- commit: pending
+- commit: fef6f74
 - patterns: B_state_persistence, E_security_boundary, F_fail_semantics
 - scope: JavaScript invocation input guidance and player card presentation
 
