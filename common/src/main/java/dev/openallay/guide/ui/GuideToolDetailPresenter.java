@@ -6,6 +6,7 @@ import com.google.gson.JsonObject;
 import dev.openallay.guide.GuideToolActivity;
 import dev.openallay.guide.GuideToolMessage;
 import dev.openallay.guide.GuideToolPresentation;
+import dev.openallay.guide.GuideToolStatus;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -19,7 +20,7 @@ public final class GuideToolDetailPresenter {
         JsonObject normalized = activity.normalized();
         Projection projection = projectCards(activity.toolId(), normalized);
         List<GuideToolMessage> narration = GuideToolPresentation.messages(
-                activity.toolId(), normalized);
+                activity.toolId(), normalized, activity.status());
         Optional<GuideToolDetailView.Debug> debug = debugMode
                 ? Optional.of(new GuideToolDetailView.Debug(
                         activity.invocationId(),
@@ -27,7 +28,8 @@ public final class GuideToolDetailPresenter {
                         activity.sources(),
                         activity.invocationArguments(),
                         normalized,
-                        projection.diagnostic()))
+                        normalized == null && activity.status() == GuideToolStatus.RUNNING
+                                ? "tool is still running" : projection.diagnostic()))
                 : Optional.empty();
         return new GuideToolDetailView(
                 titleKey(activity.toolId()),
@@ -40,7 +42,7 @@ public final class GuideToolDetailPresenter {
 
     private static Projection projectCards(String toolId, JsonObject normalized) {
         if (normalized == null) {
-            return new Projection(List.of(), "result unavailable");
+            return new Projection(List.of(), "restored result detail is unavailable");
         }
         if (!"success".equals(string(normalized, "status"))) {
             return new Projection(List.of(), "tool returned a normalized failure");

@@ -12,6 +12,7 @@ public record GuideToolMessage(Key key, List<String> arguments) {
         INVOCATION_RUN_JAVASCRIPT("screen.openallay.tool.message.invocation.run_javascript"),
 
         RESULT_PENDING("screen.openallay.tool.message.result.pending"),
+        RESULT_DETAIL_NOT_STORED("screen.openallay.tool.message.result.detail_not_stored"),
         RESULT_VALUE_UNAVAILABLE("screen.openallay.tool.message.result.value_unavailable"),
         RESULT_COMPLETED("screen.openallay.tool.message.result.completed"),
         ANALYSIS_EMPTY("screen.openallay.tool.message.analysis.empty"),

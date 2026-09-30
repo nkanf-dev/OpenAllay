@@ -9,8 +9,19 @@ import java.util.List;
 public final class GuideToolPresentation {
     private GuideToolPresentation() {}
 
+    public static List<GuideToolMessage> messages(
+            String toolId, JsonObject normalized, GuideToolStatus status) {
+        if (normalized == null && status == GuideToolStatus.RUNNING) {
+            return one(GuideToolMessage.Key.RESULT_PENDING);
+        }
+        return messages(toolId, normalized);
+    }
+
+    /** Projects completed or restored results, which may lack persisted detail. */
     public static List<GuideToolMessage> messages(String toolId, JsonObject normalized) {
-        if (normalized == null) return one(GuideToolMessage.Key.RESULT_PENDING);
+        if (normalized == null) {
+            return one(GuideToolMessage.Key.RESULT_DETAIL_NOT_STORED);
+        }
         if (!"success".equals(string(normalized, "status"))) {
             return one(friendlyFailure(string(normalized, "code")));
         }

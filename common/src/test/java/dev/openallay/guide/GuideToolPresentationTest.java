@@ -92,6 +92,26 @@ final class GuideToolPresentationTest {
     }
 
     @Test
+    void restoredToolWithoutStoredResultIsNotPresentedAsStillRunning() {
+        assertEquals(
+                List.of(GuideToolMessage.of(GuideToolMessage.Key.RESULT_DETAIL_NOT_STORED)),
+                GuideToolPresentation.messages("openallay:run_javascript", null));
+    }
+
+    @Test
+    void detailProjectionSeparatesRunningFromRestoredMissingResults() {
+        for (GuideToolStatus status : GuideToolStatus.values()) {
+            GuideToolActivity activity = new GuideToolActivity(
+                    "call-1", 0, "openallay:run_javascript", status, null, List.of(), List.of());
+            var detail = dev.openallay.guide.ui.GuideToolDetailPresenter.project(activity, false);
+            assertEquals(status, detail.status());
+            assertEquals(List.of(GuideToolMessage.of(status == GuideToolStatus.RUNNING
+                    ? GuideToolMessage.Key.RESULT_PENDING
+                    : GuideToolMessage.Key.RESULT_DETAIL_NOT_STORED)), detail.narration());
+        }
+    }
+
+    @Test
     void failuresUseClosedFriendlyMessages() {
         JsonObject normalized = JsonParser.parseString(
                 "{\"status\":\"failure\",\"code\":\"stale_reference\",\"message\":\"reload\"}")
@@ -129,6 +149,17 @@ final class GuideToolPresentationTest {
         for (GuideToolMessage.Key key : GuideToolMessage.Key.values()) {
             assertTrue(english.has(key.translationKey()), "missing en_us: " + key.translationKey());
             assertTrue(chinese.has(key.translationKey()), "missing zh_cn: " + key.translationKey());
+        }
+        for (String suffix : List.of(
+                "status", "status.running", "status.succeeded", "status.failed",
+                "source", "authority", "provenance", "coverage", "coverage.complete",
+                "coverage.partial", "coverage.unknown", "captured_at",
+                "source.minecraft.client_player", "source.minecraft.client_registry",
+                "source.minecraft.recipe_manager", "source.minecraft.client_recipe_book",
+                "source.viewer.jei", "source.viewer.rei", "source.patchouli.resources")) {
+            String key = "screen.openallay.detail.tool." + suffix;
+            assertTrue(english.has(key), "missing en_us: " + key);
+            assertTrue(chinese.has(key), "missing zh_cn: " + key);
         }
     }
 

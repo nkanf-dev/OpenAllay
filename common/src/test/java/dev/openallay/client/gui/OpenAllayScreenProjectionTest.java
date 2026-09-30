@@ -191,7 +191,7 @@ final class OpenAllayScreenProjectionTest {
     }
 
     @Test
-    void normalSourceLabelIsFriendlyAndDebugLabelIsTechnical() {
+    void normalSourceLabelIsFriendlyAndDebugLabelUsesReadableCoverage() {
         GuideSource source = new GuideSource(
                 "openallay:inspect_inventory",
                 new EvidenceMetadata(
@@ -210,9 +210,25 @@ final class OpenAllayScreenProjectionTest {
         assertFalse(normal.contains("inventory"));
 
         String debug = OpenAllayScreen.sourceLabel(source, true);
-        assertTrue(debug.contains("CLIENT_VISIBLE"));
-        assertTrue(debug.contains("COMPLETE"));
-        assertTrue(debug.contains("inventory"));
+        assertTrue(debug.contains(Component.translatable(
+                "screen.openallay.detail.tool.coverage.complete").getString()));
+        assertFalse(debug.contains("CLIENT_VISIBLE"));
+        assertFalse(debug.contains("COMPLETE"));
+        assertFalse(debug.contains("authority"));
+        assertEquals(Component.translatable(
+                "screen.openallay.detail.tool.source.minecraft.client_registry").getString(),
+                OpenAllayScreen.readableSource("minecraft:client_registry"));
+        assertEquals("addon:new_source", OpenAllayScreen.readableSource("addon:new_source"));
+    }
+
+    @Test
+    void toolExecutionStatusUsesExplicitPlayerWords() {
+        for (GuideToolStatus status : GuideToolStatus.values()) {
+            TranslatableContents translation = assertInstanceOf(
+                    TranslatableContents.class, OpenAllayScreen.toolStatus(status).getContents());
+            assertEquals("screen.openallay.detail.tool.status." + status.name().toLowerCase(java.util.Locale.ROOT),
+                    translation.getKey());
+        }
     }
 
     @Test

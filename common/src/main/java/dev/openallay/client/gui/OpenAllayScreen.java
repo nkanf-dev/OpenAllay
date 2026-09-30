@@ -703,8 +703,9 @@ public final class OpenAllayScreen extends Screen {
             if (selected) {
                 graphics.outline(x + 2, y - 2, width - 4, rowHeight - 4, ACCENT);
             }
-            graphics.text(font, Component.literal(icon + " ").append(friendlyTool(activity.toolId())),
-                    x + 7, y + 2, color, false);
+            Component title = Component.literal(icon + " ").append(friendlyTool(activity.toolId()))
+                    .append(" · ").append(toolStatus(activity.status()));
+            graphics.text(font, title, x + 7, y + 2, color, false);
             int summaryY = y + 14;
             for (FormattedCharSequence summary : summaries) {
                 graphics.text(font, summary, x + 9, summaryY, MUTED, false);
@@ -987,7 +988,11 @@ public final class OpenAllayScreen extends Screen {
             GuideToolDetailView toolDetail = selectedTool.detail();
             graphics.text(font, Component.translatable(toolDetail.titleKey()),
                     detail.x() + 8, y, TEXT, false);
-            y += 16;
+            y += 15;
+            y = detailLine(graphics,
+                    Component.translatable("screen.openallay.detail.tool.status").getString()
+                            + ": " + toolStatusName(toolDetail.status()),
+                    detail, y);
             if (!toolDetail.invocation().empty()) {
                 y = detailLine(
                         graphics,
@@ -1521,11 +1526,22 @@ public final class OpenAllayScreen extends Screen {
 
     private int evidence(GuiGraphicsExtractor graphics, GuideSource source, GuideUiLayout.Rect detail, int y) {
         var value = source.evidence();
-        y = detailLine(graphics, "来源: " + value.sourceId(), detail, y);
-        y = detailLine(graphics, "权威: " + value.authority(), detail, y);
-        y = detailLine(graphics, "完整性: " + value.completeness(), detail, y);
-        y = detailLine(graphics, "采集: " + value.capturedAt(), detail, y);
-        y = detailLine(graphics, "Provenance: " + value.provenance(), detail, y);
+        y = detailLine(graphics,
+                Component.translatable("screen.openallay.detail.tool.source").getString()
+                        + ": " + readableSource(value.sourceId()), detail, y);
+        y = detailLine(graphics,
+                Component.translatable("screen.openallay.detail.tool.authority").getString()
+                        + ": " + value.authority(), detail, y);
+        y = detailLine(graphics,
+                Component.translatable("screen.openallay.detail.tool.provenance").getString()
+                        + ": " + value.provenance(), detail, y);
+        y = detailLine(graphics,
+                Component.translatable("screen.openallay.detail.tool.coverage").getString()
+                        + ": " + Component.translatable(coverageKey(value.completeness())).getString(),
+                detail, y);
+        y = detailLine(graphics,
+                Component.translatable("screen.openallay.detail.tool.captured_at").getString()
+                        + ": " + value.capturedAt().toString(), detail, y);
         return y;
     }
 
@@ -2122,8 +2138,43 @@ public final class OpenAllayScreen extends Screen {
         if (!debugMode) {
             return Component.translatable("screen.openallay.detail.source_link").getString();
         }
-        return "source · " + source.evidence().sourceId() + " · "
-                + source.evidence().authority() + "/" + source.evidence().completeness();
+        return Component.translatable("screen.openallay.detail.tool.source").getString()
+                + " · " + readableSource(source.evidence().sourceId()) + " · "
+                + Component.translatable(coverageKey(source.evidence().completeness())).getString();
+    }
+
+    static String readableSource(String sourceId) {
+        String translationKey = switch (sourceId) {
+            case "minecraft:client_player" -> "screen.openallay.detail.tool.source.minecraft.client_player";
+            case "minecraft:client_registry", "minecraft:registry" -> "screen.openallay.detail.tool.source.minecraft.client_registry";
+            case "minecraft:recipe_manager" -> "screen.openallay.detail.tool.source.minecraft.recipe_manager";
+            case "minecraft:client_recipe_book" -> "screen.openallay.detail.tool.source.minecraft.client_recipe_book";
+            case "viewer:jei" -> "screen.openallay.detail.tool.source.viewer.jei";
+            case "viewer:rei" -> "screen.openallay.detail.tool.source.viewer.rei";
+            case "patchouli:resources" -> "screen.openallay.detail.tool.source.patchouli.resources";
+            default -> null;
+        };
+        return translationKey == null ? sourceId : Component.translatable(translationKey).getString();
+    }
+
+    private static String coverageKey(dev.openallay.context.DataCompleteness completeness) {
+        return switch (completeness) {
+            case COMPLETE -> "screen.openallay.detail.tool.coverage.complete";
+            case PARTIAL -> "screen.openallay.detail.tool.coverage.partial";
+            case UNKNOWN -> "screen.openallay.detail.tool.coverage.unknown";
+        };
+    }
+
+    static String toolStatusName(GuideToolStatus status) {
+        return toolStatus(status).getString();
+    }
+
+    static Component toolStatus(GuideToolStatus status) {
+        return Component.translatable(switch (status) {
+            case RUNNING -> "screen.openallay.detail.tool.status.running";
+            case SUCCEEDED -> "screen.openallay.detail.tool.status.succeeded";
+            case FAILED -> "screen.openallay.detail.tool.status.failed";
+        });
     }
 
     private static Component friendlyTool(String id) {
