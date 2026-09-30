@@ -94,7 +94,7 @@ public record ModelProfileSettingsView(
                     credentialPresent,
                     profile.runtimeConfig() == null
                             ? profile.definition().contextWindowTokens()
-                            : profile.runtimeConfig().contextWindowTokens(),
+                            : Integer.valueOf(profile.runtimeConfig().contextWindowTokens()),
                     profile.failure());
         }
     }

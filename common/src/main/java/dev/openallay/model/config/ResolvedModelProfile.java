@@ -45,7 +45,7 @@ public record ResolvedModelProfile(
                 runtimeConfig != null,
                 runtimeConfig == null
                         ? definition.contextWindowTokens()
-                        : runtimeConfig.contextWindowTokens(),
+                        : Integer.valueOf(runtimeConfig.contextWindowTokens()),
                 definition.maxOutputTokens(),
                 failure);
     }

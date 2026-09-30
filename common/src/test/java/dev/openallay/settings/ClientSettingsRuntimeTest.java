@@ -94,6 +94,60 @@ final class ClientSettingsRuntimeTest {
     }
 
     @Test
+    void publicUiFixtureCreatesNativeRuntimeWithDisabledManualAndAutomaticProfiles(
+            @TempDir Path directory) throws Exception {
+        Path profiles = directory.resolve("models.json");
+        Files.writeString(profiles, """
+                {
+                  "schemaVersion":2,
+                  "defaultProfileId":"e2e-fixture",
+                  "profiles":[
+                    {"id":"e2e-fixture","displayName":"Offline UI fixture","enabled":true,
+                     "protocol":"openai_chat","baseUrl":"http://127.0.0.1:18765/v1/",
+                     "model":"openallay-e2e-fixture","credentialRef":"env:OPENALLAY_E2E_FIXTURE_KEY",
+                     "contextWindowTokens":256000,"maxOutputTokens":8192,
+                     "connectTimeoutSeconds":10,"requestTimeoutSeconds":120},
+                    {"id":"luna-manual","displayName":"Luna · manual 1M","enabled":false,
+                     "protocol":"openai_chat","baseUrl":"https://api.openai.com/v1/",
+                     "model":"gpt-6-luna","credentialRef":"env:OPENALLAY_UI_UNUSED_KEY",
+                     "contextWindowTokens":1000000,"maxOutputTokens":8192,
+                     "connectTimeoutSeconds":10,"requestTimeoutSeconds":120},
+                    {"id":"reference-auto","displayName":"Reference · automatic","enabled":false,
+                     "protocol":"openai_chat","baseUrl":"https://api.openai.com/v1/",
+                     "model":"gpt-4.1","credentialRef":"env:OPENALLAY_UI_UNUSED_KEY",
+                     "contextWindowTokens":null,"maxOutputTokens":8192,
+                     "connectTimeoutSeconds":10,"requestTimeoutSeconds":120}
+                  ]
+                }
+                """);
+        ToolResult<ClientSettingsRuntime> created = ClientSettingsRuntime.create(runtime(), profiles,
+                directory.resolve("model-metadata.json"),
+                Map.of("OPENALLAY_E2E_FIXTURE_KEY", "offline-fixture-stub"), Runnable::run, null,
+                Clock.systemUTC(), GuideDisplayConfig.defaults());
+        if (created instanceof ToolResult.Failure<ClientSettingsRuntime> failure) {
+            throw new AssertionError("public fixture native runtime failed: "
+                    + failure.code() + " / " + failure.message());
+        }
+        ClientSettingsRuntime settings = success(created);
+        try {
+            assertEquals("e2e-fixture", settings.models().defaultProfileId());
+            assertTrue(settings.models().contextSpec("e2e-fixture").isPresent());
+            assertEquals(256_000, settings.models().contextSpec("e2e-fixture").orElseThrow()
+                    .budget().contextWindowTokens());
+            var views = settings.settings().snapshot().models().profiles();
+            assertEquals(3, views.size());
+            assertTrue(views.get(0).available());
+            assertEquals("model_disabled", views.get(1).failure().code());
+            assertEquals("model_disabled", views.get(2).failure().code());
+            assertEquals(1_000_000, views.get(1).definition().contextWindowTokens());
+            assertEquals(null, views.get(2).definition().contextWindowTokens());
+            assertFalse(settings.settings().snapshot().toString().contains("offline-fixture-stub"));
+        } finally {
+            settings.closeAsync().join();
+        }
+    }
+
+    @Test
     void sharedDisplayRuntimePersistsDebugModeForSettingsAndGuide(@TempDir Path directory)
             throws Exception {
         Path displayPath = directory.resolve("display.json");

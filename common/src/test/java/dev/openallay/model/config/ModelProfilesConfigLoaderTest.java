@@ -56,6 +56,47 @@ final class ModelProfilesConfigLoaderTest {
     private final ModelProfilesConfigLoader loader = new ModelProfilesConfigLoader();
 
     @Test
+    void publicUiFixtureKeepsItsEnabledRuntimeWithDisabledManualAndAutomaticProfiles() {
+        String json = """
+                {"schemaVersion":2,"defaultProfileId":"e2e-fixture","profiles":[
+                  {"id":"e2e-fixture","displayName":"Offline UI fixture","enabled":true,
+                   "protocol":"openai_chat","baseUrl":"http://127.0.0.1:18765/v1/",
+                   "model":"openallay-e2e-fixture","credentialRef":"env:OPENALLAY_E2E_FIXTURE_KEY",
+                   "contextWindowTokens":256000,"maxOutputTokens":8192,
+                   "connectTimeoutSeconds":10,"requestTimeoutSeconds":120},
+                  {"id":"luna-manual","displayName":"Luna · manual 1M","enabled":false,
+                   "protocol":"openai_chat","baseUrl":"https://api.openai.com/v1/",
+                   "model":"gpt-6-luna","credentialRef":"env:OPENALLAY_UI_UNUSED_KEY",
+                   "contextWindowTokens":1000000,"maxOutputTokens":8192,
+                   "connectTimeoutSeconds":10,"requestTimeoutSeconds":120},
+                  {"id":"reference-auto","displayName":"Reference · automatic","enabled":false,
+                   "protocol":"openai_chat","baseUrl":"https://api.openai.com/v1/",
+                   "model":"gpt-4.1","credentialRef":"env:OPENALLAY_UI_UNUSED_KEY",
+                   "contextWindowTokens":null,"maxOutputTokens":8192,
+                   "connectTimeoutSeconds":10,"requestTimeoutSeconds":120}]}
+                """;
+        ModelProfilesConfigLoader.Load loaded = success(loader.load(new StringReader(json),
+                Map.of("OPENALLAY_E2E_FIXTURE_KEY", "local-fixture-value"))).value();
+        assertTrue(loaded.profiles().getFirst().available());
+        assertEquals(256000, loaded.profiles().getFirst().runtimeConfig().contextWindowTokens());
+        assertEquals("model_disabled", loaded.profiles().get(1).failure().code());
+        assertEquals("model_disabled", loaded.profiles().get(2).failure().code());
+        assertEquals(1000000, loaded.config().profiles().get(1).contextWindowTokens());
+        assertNull(loaded.config().profiles().get(2).contextWindowTokens());
+    }
+
+    @Test
+    void disabledAutomaticContextRemainsUnknownInDiagnosticAndSettingsViews() {
+        ModelProfilesConfigLoader.Load loaded = success(loader.load(new StringReader(PROFILES),
+                Map.of("OPENROUTER_KEY", "local-fixture-value"))).value();
+        ResolvedModelProfile disabled = loaded.profiles().get(1);
+        assertNull(disabled.definition().contextWindowTokens());
+        assertNull(disabled.diagnosticView().contextWindowTokens());
+        assertNull(dev.openallay.settings.model.ModelProfileSettingsView.Resolution
+                .from(disabled, false).effectiveContextWindowTokens());
+    }
+
+    @Test
     void loadsOrderedProfilesAndRetainsDisabledOrUnresolvedDefinitions() {
         ModelProfilesConfigLoader.Load loaded = success(loader.load(
                 new StringReader(PROFILES), Map.of("OPENROUTER_KEY", "super-secret"))).value();
