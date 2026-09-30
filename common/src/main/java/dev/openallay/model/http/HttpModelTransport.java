@@ -17,6 +17,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 public final class HttpModelTransport {
@@ -59,6 +60,8 @@ public final class HttpModelTransport {
             Consumer<ModelEvent> events,
             EventResponseDecoder<T> decoder) {
         CompletableFuture<T> result = new CompletableFuture<>();
+        long diagnosticExchange = ModelTransportDiagnostics.beginExchange();
+        AtomicInteger receivedStatus = new AtomicInteger(-1);
         Object eventGate = new Object();
         boolean[] terminal = {false};
         Consumer<ModelEvent> emit = event -> {
@@ -70,6 +73,7 @@ public final class HttpModelTransport {
         };
         emit.accept(new ModelEvent.AttemptStarted(1, request.timeout().toMillis()));
         transport.execute(request, cancellation, (status, headers, body) -> {
+            receivedStatus.set(status);
             emit.accept(new ModelEvent.ResponseStarted());
             return decoder.decode(status, headers, body, emit);
         }).whenComplete((value, failure) -> {
@@ -81,6 +85,7 @@ public final class HttpModelTransport {
                 return;
             }
             Throwable cause = unwrap(failure);
+            ModelTransportDiagnostics.failure(diagnosticExchange, receivedStatus.get(), cause);
             if (cause instanceof ModelClientException exception) {
                 result.completeExceptionally(exception);
             } else {

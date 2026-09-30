@@ -31,18 +31,27 @@ final class OpenAiStreamAccumulator {
         if (event.data().equals("[DONE]")) {
             return;
         }
-        JsonObject root = JsonParser.parseString(event.data()).getAsJsonObject();
+        try {
+            acceptChunk(event.data());
+        } catch (RuntimeException failure) {
+            dev.openallay.model.http.ModelTransportDiagnostics.openAiDecodeFailure(true, event.data(), failure);
+            throw failure;
+        }
+    }
+
+    private void acceptChunk(String json) {
+        JsonObject root = JsonParser.parseString(json).getAsJsonObject();
         if (root.has("model")) {
             model = root.get("model").getAsString();
         }
         if (root.has("usage") && !root.get("usage").isJsonNull()) {
             JsonObject value = root.getAsJsonObject("usage");
+            JsonElement details = value.get("prompt_tokens_details");
             usage = new ModelUsage(
                     number(value, "prompt_tokens"),
                     number(value, "completion_tokens"),
-                    value.has("prompt_tokens_details")
-                            ? number(value.getAsJsonObject("prompt_tokens_details"), "cached_tokens")
-                            : 0);
+                    details == null || details.isJsonNull()
+                            ? 0 : number(details.getAsJsonObject(), "cached_tokens"));
         }
         if (!root.has("choices") || root.getAsJsonArray("choices").isEmpty()) {
             return;
@@ -61,7 +70,7 @@ final class OpenAiStreamAccumulator {
                 "reasoning_content",
                 reasoning,
                 value -> events.accept(new ModelEvent.ReasoningDelta(value)));
-        if (delta.has("tool_calls")) {
+        if (delta.has("tool_calls") && !delta.get("tool_calls").isJsonNull()) {
             for (JsonElement element : delta.getAsJsonArray("tool_calls")) {
                 JsonObject call = element.getAsJsonObject();
                 int index = call.get("index").getAsInt();
@@ -83,6 +92,18 @@ final class OpenAiStreamAccumulator {
     }
 
     ModelTurn finish() {
+        try {
+            return finishTurn();
+        } catch (RuntimeException failure) {
+            int incompleteTools = (int) tools.values().stream().filter(tool ->
+                    tool.id == null || tool.name.isEmpty() || tool.arguments.isEmpty()).count();
+            dev.openallay.model.http.ModelTransportDiagnostics.openAiStreamFinish(
+                    failure, model != null, stopReason != null, tools.size(), incompleteTools);
+            throw failure;
+        }
+    }
+
+    private ModelTurn finishTurn() {
         if (model == null || stopReason == null) {
             throw new IllegalArgumentException("Incomplete OpenAI SSE message");
         }
@@ -119,7 +140,8 @@ final class OpenAiStreamAccumulator {
     }
 
     private static long number(JsonObject object, String field) {
-        return object != null && object.has(field) ? object.get(field).getAsLong() : 0;
+        return object != null && object.has(field) && !object.get(field).isJsonNull()
+                ? object.get(field).getAsLong() : 0;
     }
 
     private static final class Tool {

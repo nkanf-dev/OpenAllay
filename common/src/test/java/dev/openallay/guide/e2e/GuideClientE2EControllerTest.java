@@ -41,6 +41,23 @@ final class GuideClientE2EControllerTest {
     @TempDir Path temporary;
 
     @Test
+    void redactsOnlyExplicitlyReferencedProfileEnvironmentCredentials() {
+        var definition = new dev.openallay.model.config.ModelProfileDefinition(
+                "primary", "Primary", true,
+                dev.openallay.model.config.ModelProtocol.OPENAI_CHAT,
+                java.net.URI.create("https://provider.example/v1/"), "model",
+                "env:ACCEPTANCE_PROFILE_KEY", 32768, 2048,
+                java.time.Duration.ofSeconds(10), java.time.Duration.ofSeconds(60), null);
+        var reads = new java.util.ArrayList<String>();
+        var values = GuideClientE2EController.referencedEnvironmentSecrets(
+                Set.of("original-secret"), java.util.List.of(definition), name -> {
+                    reads.add(name); return "configured-secret";
+                });
+        assertEquals(java.util.List.of("ACCEPTANCE_PROFILE_KEY"), reads);
+        assertEquals(Set.of("original-secret", "configured-secret"), values);
+    }
+
+    @Test
     void writesCanonicalReportAndRequestsCleanShutdown() throws Exception {
         Path report = temporary.resolve("nested/report.json");
         ArrayDeque<Runnable> clientTasks = new ArrayDeque<>();

@@ -234,7 +234,7 @@ public final class OpenAllayNeoForgeClient {
                     settings == null ? null : settings.settings(),
                     modelRegistry == null ? null : modelRegistry::encodedTrace);
             NeoForge.EVENT_BUS.addListener((ClientTickEvent.Post event) -> {
-                if (client.player != null) controller.tick(client.player.getUUID());
+                controller.tick(client.player == null ? null : client.player.getUUID());
             });
         });
     }

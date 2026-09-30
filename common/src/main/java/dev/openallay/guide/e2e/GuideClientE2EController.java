@@ -70,6 +70,18 @@ public final class GuideClientE2EController {
     private String pendingReport;
     private String pendingTraceProfile;
     private int traceWaitTicks;
+    private Instant harnessStartedAt;
+    private boolean worldLaunchStarted;
+    private int builderWarmupTicks;
+    private GuideBuilderE2EProbe.Anchor builderAnchor;
+    private GuideBuilderE2EProbe.Anchor currentPlayerAnchor;
+    private boolean unrestrictedAtStart;
+    private boolean revocationStarted;
+    private boolean revocationCompleted;
+    private boolean nativeProbePending;
+    private Instant revocationCompletedAt;
+    private Instant firstJavascriptObservedAt;
+    private boolean javascriptObservedBeforeRevocation;
 
     public GuideClientE2EController(
             GuideClientE2EConfig config,
@@ -142,19 +154,25 @@ public final class GuideClientE2EController {
         this.services = java.util.Objects.requireNonNull(services, "services");
         this.gson = java.util.Objects.requireNonNull(gson, "gson");
         this.shutdown = java.util.Objects.requireNonNull(shutdown, "shutdown");
-        this.secrets = Set.copyOf(secrets);
+        this.secrets = configuredSecrets(secrets, clientSettings);
         this.recipeReadiness = java.util.Objects.requireNonNull(recipeReadiness, "recipeReadiness");
         this.clientSettings = clientSettings;
         this.traceLookup = traceLookup;
     }
 
-    /** Starts exactly once after a real client player exists. */
+    /** Runs opt-in startup lifecycle and starts the request once a real client player exists. */
     public void tick(UUID actor) {
         if (finished) {
             tickScreenshotProbe();
             return;
         }
         if (started) {
+            long timeoutSeconds = Long.getLong("openallay.e2e.timeoutSeconds", 300L);
+            if (Duration.between(startedAt, Instant.now()).toSeconds() > timeoutSeconds) {
+                failWithoutRequest("harness_timeout", "Real-client acceptance exceeded its elapsed timeout");
+                return;
+            }
+            if (nativeProbePending) return;
             if (pendingReport != null) {
                 finishWithTrace();
                 return;
@@ -162,7 +180,18 @@ public final class GuideClientE2EController {
             tickActiveScreenshotProbe();
             return;
         }
-        if (actor == null) return;
+        if (harnessStartedAt == null) harnessStartedAt = Instant.now();
+        long timeoutSeconds = Long.getLong("openallay.e2e.timeoutSeconds", 300L);
+        if (Duration.between(harnessStartedAt, Instant.now()).toSeconds() > timeoutSeconds) {
+            failWithoutRequest("harness_timeout", "Real-client acceptance exceeded its elapsed timeout");
+            return;
+        }
+        if (actor == null) {
+            try { tickWorldLaunch(); }
+            catch (RuntimeException failure) { failWithoutRequest("world_startup_failed", failure.toString()); }
+            return;
+        }
+        if (GuideBuilderE2EProbe.enabled(config.scenario()) && ++builderWarmupTicks < 40) return;
         if (!System.getProperty("openallay.e2e.screenshotRoot", "").isBlank()) {
             var client = net.minecraft.client.Minecraft.getInstance();
             if (client.gui.overlay() != null || client.gui.screen() != null) return;
@@ -188,6 +217,85 @@ public final class GuideClientE2EController {
         started = true;
         startedAt = Instant.now();
         subscription = service.subscribe(this::observe);
+        unrestrictedAtStart = clientSettings != null && clientSettings.snapshot().unrestrictedJavascript().enabled();
+        if (GuideBuilderE2EProbe.enabled(config.scenario())) {
+            GuideBuilderE2EProbe.captureAnchor(actor, anchor -> {
+                if (finished) return;
+                currentPlayerAnchor = anchor;
+                try {
+                    builderAnchor = selectBuilderAnchor(anchor);
+                } catch (IOException | RuntimeException failure) {
+                    failWithoutRequest("native_anchor_failed", failure.toString());
+                    return;
+                }
+                selectSession(service);
+            }, failure -> failWithoutRequest("native_capture_failed", failure));
+        } else {
+            selectSession(service);
+        }
+    }
+
+    private GuideBuilderE2EProbe.Anchor selectBuilderAnchor(GuideBuilderE2EProbe.Anchor anchor) throws IOException {
+        if (!List.of("builder-acceptance", "builder-reload", "builder-live-copy", "builder-live-undo").contains(config.scenario())) return anchor;
+        var client = net.minecraft.client.Minecraft.getInstance();
+        var server = client.getSingleplayerServer();
+        if (server == null) throw new IllegalStateException("Integrated server is unavailable");
+        String world = server.getWorldData().getLevelName();
+        if (!world.matches("openallay-builder-[a-zA-Z0-9_.-]+")) throw new IllegalStateException("Not a disposable acceptance world");
+        java.nio.file.Path retained = client.gameDirectory.toPath().resolve("config/openallay/e2e")
+                .resolve(world + ".anchor.json");
+        if (config.scenario().equals("builder-reload") || config.scenario().equals("builder-live-undo")) {
+            var persisted = gson.fromJson(Files.readString(retained), GuideBuilderE2EProbe.Anchor.class);
+            String suffix = config.scenario().equals("builder-reload") ? ".acceptance.json" : ".live-copy.json";
+            var proof = com.google.gson.JsonParser.parseString(Files.readString(retained.resolveSibling(world + suffix))).getAsJsonObject();
+            return GuideBuilderE2EProbe.retainedOrigin(anchor, persisted, proof, world);
+        }
+        writeAtomically(retained, gson.toJson(anchor));
+        return anchor;
+    }
+
+    private java.nio.file.Path builderProofPath(String suffix) {
+        var client = net.minecraft.client.Minecraft.getInstance();
+        String world = client.getSingleplayerServer().getWorldData().getLevelName();
+        return client.gameDirectory.toPath().resolve("config/openallay/e2e").resolve(world + suffix);
+    }
+
+    private static com.google.gson.JsonObject builderPreview(GuideRequestSnapshot request) {
+        var tool = request.tools().stream().filter(value -> value.toolId().equals("openallay:run_javascript")).toList().getLast();
+        return tool.normalized().getAsJsonObject("value").getAsJsonObject("preview");
+    }
+
+    private void retainAcceptancePersistence(GuideRequestSnapshot request, com.google.gson.JsonObject probe) throws IOException {
+        if (!config.scenario().equals("builder-acceptance") || !"PASSED".equals(probe.get("outcome").getAsString())) return;
+        var preview = builderPreview(request);
+        com.google.gson.JsonObject receipt = new com.google.gson.JsonObject();
+        receipt.addProperty("outcome", "PASSED");
+        receipt.addProperty("requestId", request.requestId().toString());
+        receipt.add("worldName", probe.get("worldName"));
+        receipt.add("nativeAnchor", probe.get("independentAnchor"));
+        receipt.add("operations", preview.get("operations"));
+        receipt.add("lifecycle", preview.get("lifecycle"));
+        receipt.add("templates", preview.get("templates"));
+        writeAtomically(builderProofPath(".acceptance.json"), gson.toJson(receipt));
+    }
+
+    private void verifyReloadPersistence(GuideRequestSnapshot request, com.google.gson.JsonObject probe) throws IOException {
+        var retained = com.google.gson.JsonParser.parseString(Files.readString(builderProofPath(".acceptance.json"))).getAsJsonObject();
+        if (!"PASSED".equals(retained.get("outcome").getAsString())) throw new IllegalStateException("Reload lacks prior independently passed acceptance receipt");
+        boolean matched = GuideBuilderE2EProbe.persistedOperationsMatch(retained, builderPreview(request));
+        probe.addProperty("exactPersistencePassed", matched);
+        if (!matched) probe.addProperty("outcome", "FAILED");
+    }
+
+    private void retainLiveCopyProof(com.google.gson.JsonObject probe) throws IOException {
+        if (!config.scenario().equals("builder-live-copy")) return;
+        var client = net.minecraft.client.Minecraft.getInstance();
+        String world = client.getSingleplayerServer().getWorldData().getLevelName();
+        var path = client.gameDirectory.toPath().resolve("config/openallay/e2e").resolve(world + ".live-copy.json");
+        writeAtomically(path, gson.toJson(probe));
+    }
+
+    private void selectSession(GuideService service) {
         service.selectSession(config.sessionId()).thenAccept(selected -> {
             if (selected instanceof ToolResult.Failure<String> failure) {
                 failWithoutRequest(failure.code(), failure.message());
@@ -195,6 +303,39 @@ public final class GuideClientE2EController {
                 selectMode(service);
             }
         });
+    }
+
+    private void tickWorldLaunch() {
+        String create = System.getProperty("openallay.e2e.createWorld", "");
+        String resume = System.getProperty("openallay.e2e.resumeWorld", "");
+        String name = create.isBlank() ? resume : create;
+        if (name.isBlank() || worldLaunchStarted) return;
+        var client = net.minecraft.client.Minecraft.getInstance();
+        if (client.gui.overlay() != null
+                || !(client.gui.screen() instanceof net.minecraft.client.gui.screens.TitleScreen)) return;
+        worldLaunchStarted = true;
+        boolean existing = Files.isDirectory(client.gameDirectory.toPath().resolve("saves").resolve(name));
+        if (!name.matches("openallay-builder-[a-zA-Z0-9_.-]+")
+                || (!create.isBlank() && (!resume.isBlank() || existing))
+                || (create.isBlank() && (!List.of("builder-reload", "builder-live-undo").contains(config.scenario()) || !existing))) {
+            failWithoutRequest("unsafe_world_name", "Acceptance requires a new disposable world or an explicitly resumed Builder reload world");
+            return;
+        }
+        if (create.isBlank()) {
+            client.createWorldOpenFlows().openWorld(name, () -> failWithoutRequest(
+                    "world_reload_cancelled", "The native world reload did not complete"));
+            return;
+        }
+        var settings = new net.minecraft.world.level.LevelSettings(name,
+                net.minecraft.world.level.GameType.SURVIVAL,
+                new net.minecraft.world.level.LevelSettings.DifficultySettings(
+                        net.minecraft.world.Difficulty.PEACEFUL, false, false),
+                false, net.minecraft.world.level.WorldDataConfiguration.DEFAULT);
+        client.createWorldOpenFlows().createFreshLevel(name, settings,
+                new net.minecraft.world.level.levelgen.WorldOptions(17L, false, false),
+                registries -> registries.lookupOrThrow(net.minecraft.core.registries.Registries.WORLD_PRESET)
+                        .getOrThrow(net.minecraft.world.level.levelgen.presets.WorldPresets.FLAT)
+                        .value().createWorldDimensions(), client.gui.screen());
     }
 
     public boolean finished() {
@@ -230,12 +371,34 @@ public final class GuideClientE2EController {
 
     private void ask(GuideService service) {
         openScreenForScreenshotProbe(service);
-        service.ask(config.question()).thenAccept(asked -> {
+        String question = config.question();
+        if (config.scenario().equals("builder-reload") || config.scenario().equals("builder-live-undo")) {
+            question += "\n" + GuideBuilderE2EProbe.retainedOriginLine(builderAnchor);
+        }
+        service.ask(question).thenAccept(asked -> {
             if (asked instanceof ToolResult.Failure<UUID> failure) {
                 failWithoutRequest(failure.code(), failure.message());
                 return;
             }
             requestId = ((ToolResult.Success<UUID>) asked).value();
+            if (GuideBuilderE2EProbe.enabled(config.scenario())
+                    && Boolean.getBoolean("openallay.e2e.revokeUnrestrictedAfterCapture")
+                    && !revocationStarted) {
+                revocationStarted = true;
+                if (clientSettings == null || !unrestrictedAtStart) {
+                    failWithoutRequest("revocation_precondition_failed", "Explicit enabled settings are required before the frozen-authority test");
+                    return;
+                }
+                clientSettings.saveUnrestrictedJavascript(false).thenAccept(saved -> {
+                    if (saved instanceof ToolResult.Failure<Boolean> failure) {
+                        failWithoutRequest(failure.code(), failure.message());
+                    } else {
+                        revocationCompleted = !clientSettings.snapshot().unrestrictedJavascript().enabled();
+                        revocationCompletedAt = Instant.now();
+                        observe(service.snapshot());
+                    }
+                });
+            }
             observe(service.snapshot());
         });
     }
@@ -247,10 +410,17 @@ public final class GuideClientE2EController {
                 .filter(value -> value.requestId().equals(requestId))
                 .findFirst().orElse(null);
         if (request == null) return;
+        if (firstJavascriptObservedAt == null && request.tools().stream()
+                .anyMatch(value -> value.toolId().equals("openallay:run_javascript"))) {
+            firstJavascriptObservedAt = Instant.now();
+            javascriptObservedBeforeRevocation = Boolean.getBoolean("openallay.e2e.revokeUnrestrictedAfterCapture")
+                    && !revocationCompleted;
+        }
         if (transitions.isEmpty() || transitions.getLast() != request.status()) {
             transitions.add(request.status());
         }
-        if (!request.terminal()) return;
+        if (!request.terminal() || nativeProbePending || pendingReport != null) return;
+        if (revocationStarted && !revocationCompleted) return;
         if (seedingHistory) {
             requestId = null;
             remainingHistorySeeds--;
@@ -321,7 +491,45 @@ public final class GuideClientE2EController {
         }
         pendingReport = new GuideE2EReportJson(gson).encode(report, secrets);
         pendingTraceProfile = request.modelSelection().profileId();
-        if (traceLookup == null || request.modelSelection().modelMode() != GuideModelMode.CLIENT) {
+        if (GuideBuilderE2EProbe.enabled(config.scenario())) {
+            nativeProbePending = true;
+            GuideBuilderE2EProbe.verify(config.scenario(), snapshot.actorId(), builderAnchor,
+                    request, clientSettings, unrestrictedAtStart, revocationCompleted, probe -> {
+                nativeProbePending = false;
+                if (currentPlayerAnchor != null) probe.add("currentPlayerAnchor", gson.toJsonTree(currentPlayerAnchor));
+                if (config.scenario().equals("builder-reload") || config.scenario().equals("builder-live-undo"))
+                    probe.addProperty("originSource", "prior-passed-independent-native-receipt");
+                if (Boolean.getBoolean("openallay.e2e.revokeUnrestrictedAfterCapture")) {
+                    Instant firstNative = request.tools().stream().flatMap(value -> value.sources().stream())
+                            .map(value -> value.evidence())
+                            .filter(value -> value.sourceId().startsWith("openallay_builder:")
+                                    && value.authority() == dev.openallay.context.DataAuthority.SERVER_AUTHORITATIVE)
+                            .map(value -> value.capturedAt()).min(Instant::compareTo).orElse(null);
+                    boolean ordered = GuideBuilderE2EProbe.frozenNativeTiming(
+                            revocationCompletedAt, firstNative, firstJavascriptObservedAt,
+                            javascriptObservedBeforeRevocation);
+                    probe.addProperty("frozenAuthorityTimingPassed", ordered);
+                    probe.addProperty("javascriptObservedBeforeRevocation", javascriptObservedBeforeRevocation);
+                    if (revocationCompletedAt != null) probe.addProperty("revocationCompletedAt", revocationCompletedAt.toString());
+                    if (firstJavascriptObservedAt != null) probe.addProperty("firstJavascriptObservedAt", firstJavascriptObservedAt.toString());
+                    if (firstNative != null) probe.addProperty("firstTrustedNativeEvidenceAt", firstNative.toString());
+                    if (!ordered) probe.addProperty("outcome", "FAILED");
+                }
+                if (config.scenario().equals("builder-reload")) {
+                    try { verifyReloadPersistence(request, probe); }
+                    catch (IOException | RuntimeException failure) { probe.addProperty("outcome", "FAILED"); probe.addProperty("persistenceFailure", failure.toString()); }
+                }
+                try { retainAcceptancePersistence(request, probe); retainLiveCopyProof(probe); }
+                catch (IOException | RuntimeException failure) { probe.addProperty("outcome", "FAILED"); probe.addProperty("proofFailure", failure.toString()); }
+                var encoded = com.google.gson.JsonParser.parseString(pendingReport).getAsJsonObject();
+                encoded.add("nativeAcceptance", probe);
+                pendingReport = gson.toJson(encoded);
+                for (String secret : secrets) {
+                    if (secret != null && !secret.isBlank()) pendingReport = pendingReport.replace(secret, "[REDACTED]");
+                }
+                if (traceLookup == null || request.modelSelection().modelMode() != GuideModelMode.CLIENT) finish(pendingReport);
+            });
+        } else if (traceLookup == null || request.modelSelection().modelMode() != GuideModelMode.CLIENT) {
             finish(pendingReport);
         }
     }
@@ -416,6 +624,18 @@ public final class GuideClientE2EController {
             }
             case 11 -> {
                 screenshot(client, "10-wide-about.png");
+                if (!GuideBuilderE2EProbe.enabled(config.scenario())) {
+                    finishScreenshotProbe();
+                } else {
+                    client.gui.setScreen(null);
+                    if (client.player != null) {
+                        client.player.setYRot(-45.0F);
+                        client.player.setXRot(-12.0F);
+                    }
+                }
+            }
+            case 12 -> {
+                screenshot(client, "11-native-world-builds.png");
                 finishScreenshotProbe();
             }
             default -> screenshotStage = -1;
@@ -566,6 +786,7 @@ public final class GuideClientE2EController {
 
     private void failWithoutRequest(String code, String message) {
         String encoded = gson.toJson(java.util.Map.of(
+                "elapsedMillis", harnessStartedAt == null ? 0L : Duration.between(harnessStartedAt, Instant.now()).toMillis(),
                 "loader", loader,
                 "gameVersion", gameVersion,
                 "modVersion", modVersion,
@@ -577,6 +798,8 @@ public final class GuideClientE2EController {
             if (secret != null && !secret.isBlank()) encoded = encoded.replace(secret, "[REDACTED]");
         }
         finish(encoded);
+        if (!config.shutdownAfterReport()
+                && Boolean.getBoolean("openallay.e2e.shutdownAfterScreenshots")) shutdown.run();
     }
 
     private void finish(String report) {
@@ -625,6 +848,26 @@ public final class GuideClientE2EController {
         } catch (java.security.NoSuchAlgorithmException impossible) {
             throw new IllegalStateException(impossible);
         }
+    }
+
+    static Set<String> referencedEnvironmentSecrets(
+            Set<String> initial,
+            List<dev.openallay.model.config.ModelProfileDefinition> profiles,
+            java.util.function.Function<String, String> environment) {
+        Set<String> values = new java.util.HashSet<>(initial);
+        for (var profile : profiles) {
+            var reference = dev.openallay.model.config.CredentialReference.parse(profile.credentialRef());
+            if (reference.kind() == dev.openallay.model.config.CredentialReference.Kind.ENVIRONMENT) {
+                String value = environment.apply(reference.value());
+                if (value != null && !value.isBlank()) values.add(value);
+            }
+        }
+        return Set.copyOf(values);
+    }
+
+    private static Set<String> configuredSecrets(Set<String> initial, ClientSettingsService settings) {
+        return settings == null ? Set.copyOf(initial) : referencedEnvironmentSecrets(initial,
+                settings.snapshot().models().config().profiles(), System::getenv);
     }
 
     private static String require(String value, String name) {

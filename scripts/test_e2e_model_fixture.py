@@ -58,5 +58,125 @@ class JavascriptFixtureTests(unittest.TestCase):
         self.assertIn("固定验收文本，不代表真实模型生成", content)
 
 
+class BuilderFixtureTests(unittest.TestCase):
+    def test_builder_is_explicit_and_unknown_phase_fails(self):
+        self.assertIsNone(fixture.builder_scenario("ordinary build request"))
+        self.assertEqual("acceptance", fixture.builder_scenario("OpenAllay E2E Builder acceptance"))
+        with self.assertRaises(ValueError):
+            fixture.builder_scenario("OpenAllay E2E Builder fabricated")
+
+    def test_acceptance_loads_real_module_and_not_injected_backend(self):
+        arguments = fixture.builder_arguments("acceptance")
+        source = arguments["source"]
+        self.assertEqual(["player"], arguments["roots"])
+        self.assertIn('require("openallay_builder:building").open(', source)
+        self.assertNotIn(".create(", source)
+        for preset in ("simple_house", "skyscraper", "cottage", "windmill", "farm", "dock"):
+            self.assertIn("b.build_" + preset + "(", source)
+        for method in ("scan_terrain", "scan_ground", "build_smart_path", "scan_structure",
+                       "save_template", "load_template", "paste_structure", "update_connections"):
+            self.assertIn("b." + method + "(", source)
+        self.assertIn('scenario:"builder_acceptance"', source)
+
+    def test_skill_load_precedes_native_execution(self):
+        call, content = fixture.builder_turn("acceptance", [])
+        self.assertEqual((fixture.BUILDER_SKILL_TOOL, {"name": "minecraft-builder"}), call)
+        self.assertIsNone(content)
+        call, content = fixture.builder_turn("acceptance", [{"role": "tool", "content":
+            "skill: minecraft-builder\nstate: complete\ncontent: actual extension Skill"}])
+        self.assertEqual(fixture.JAVASCRIPT_TOOL, call[0])
+        self.assertIn('require("openallay_builder:building")', call[1]["source"])
+
+    def test_native_failure_never_becomes_pre_authored_success(self):
+        skill = {"role": "tool", "content": "skill: minecraft-builder\nstate: complete"}
+        result = {"role": "tool", "content": json.dumps({"status": "failure", "code": "javascript_error"})}
+        with self.assertRaises(ValueError):
+            fixture.builder_turn("acceptance", [skill, result])
+        call, content = fixture.builder_turn("disabled", [skill, result])
+        self.assertIsNone(call)
+        self.assertIn("denied", content)
+        self.assertIn("not a live model", content)
+        wrong = {"role": "tool", "content": json.dumps({"status": "success", "value": {
+            "preview": {"scenario": "builder_disabled", "unexpectedAuthority": True}}})}
+        with self.assertRaises(ValueError):
+            fixture.builder_turn("disabled", [skill, wrong])
+
+    def test_disabled_continuation_accepts_actual_model_failure_projection_only(self):
+        skill = {"role": "tool", "content": "skill: minecraft-builder\nstate: complete"}
+        # Exact real 03-client ModelToolTextRenderer output. Not normalized JSON.
+        projection = ('status: failure\ncode: javascript_error\nmessage: '
+                      'ReferenceError: "Java" is not defined. '
+                      '(openallay-module-openallay_builder:building.js#197)')
+        result = {"role": "tool", "content": projection}
+        call, content = fixture.builder_turn("disabled", [skill, result])
+        self.assertIsNone(call)
+        self.assertIn("denied", content)
+        self.assertIn("No success is claimed", content)
+        for invalid in (projection.replace("javascript_error", "other_failure"),
+                        projection.replace("status: failure", "status: success"),
+                        projection.replace('ReferenceError: "Java" is not defined.', "Error: invalid block"),
+                        "noise\n" + projection):
+            with self.subTest(invalid=invalid), self.assertRaises(ValueError):
+                fixture.builder_turn("disabled", [skill, {"role": "tool", "content": invalid}])
+        call, content = fixture.builder_turn("server-denied", [result])
+        self.assertIsNone(call)
+        self.assertIn("denied", content)
+
+    def test_success_continuation_refers_to_controller_not_claimed_geometry(self):
+        skill = {"role": "tool", "content": "skill: minecraft-builder\nstate: complete"}
+        result = {"role": "tool", "content": 'result: handle\nscope: complete\npreview:\n'
+            + json.dumps({"scenario": "builder_acceptance", "status": {"state": "completed"}})}
+        call, content = fixture.builder_turn("acceptance", [skill, result])
+        self.assertIsNone(call)
+        self.assertIn("independent controller readback", content)
+        self.assertIn("pre-authored", content)
+
+    def test_reload_uses_recorded_origin_not_moved_player_and_rejects_missing_origin(self):
+        question = "OpenAllay E2E Builder reload\nE2E retained native anchor: x=-1,y=-61,z=4"
+        anchor = fixture.builder_retained_anchor(question)
+        self.assertEqual("reload", fixture.builder_scenario(question))
+        self.assertEqual((-1, -61, 4), anchor)
+        source = fixture.builder_arguments("reload", anchor)["source"]
+        self.assertIn("x=-1;y=-61;z=4;", source)
+        self.assertLess(source.index("x=-1;y=-61;z=4;"), source.index("var readback="))
+        skill = {"role": "tool", "content": "skill: minecraft-builder\nstate: complete"}
+        call, _ = fixture.builder_turn("reload", [skill], question)
+        self.assertIn("x=-1;y=-61;z=4;", call[1]["source"])
+        with self.assertRaises(ValueError):
+            fixture.builder_arguments("reload")
+        for invalid in ("OpenAllay E2E Builder reload", question + "\n" + question.splitlines()[1],
+                        question.replace("y=-61", "y=-61.5"), question.replace("z=4", "z=2147483648")):
+            with self.subTest(invalid=invalid), self.assertRaises(ValueError):
+                fixture.builder_retained_anchor(invalid)
+
+    def test_server_authority_probe_does_not_confuse_missing_module_with_java_denial(self):
+        call, content = fixture.builder_turn("server-denied", [])
+        self.assertEqual(fixture.JAVASCRIPT_TOOL, call[0])
+        self.assertIn('Java.type("java.lang.System")', call[1]["source"])
+        self.assertNotIn("BuilderRuntime", call[1]["source"])
+        result = {"role": "tool", "content": json.dumps({"status": "failure", "code": "javascript_error"})}
+        call, content = fixture.builder_turn("server-denied", [result])
+        self.assertIsNone(call)
+        self.assertIn("denied", content)
+
+    def test_both_loader_opt_in_ticks_include_native_startup(self):
+        root = MODULE_PATH.parent.parent
+        for path in ("fabric/src/main/java/dev/openallay/fabric/OpenAllayFabricClient.java",
+                     "neoforge/src/main/java/dev/openallay/neoforge/OpenAllayNeoForgeClient.java"):
+            source = (root / path).read_text()
+            self.assertIn("GuideClientE2EConfig.from(System.getProperties()).ifPresent", source)
+            self.assertIn("controller.tick(client.player == null ? null : client.player.getUUID())", source)
+
+    def test_lifecycle_programs_use_real_native_sessions(self):
+        for scenario in ("partial", "cancel", "undo", "reload"):
+            source = fixture.builder_arguments(scenario, (-1, -61, 4) if scenario == "reload" else None)["source"]
+            self.assertIn('require("openallay_builder:building")', source)
+            self.assertIn("building.open(", source)
+            self.assertIn('scenario:"builder_' + scenario + '"', source)
+        self.assertIn("b.cancel()", fixture.builder_arguments("cancel")["source"])
+        self.assertIn("b.undo(original.operationId)", fixture.builder_arguments("undo")["source"])
+        self.assertIn("b.load_template", fixture.builder_arguments("reload", (-1, -61, 4))["source"])
+
+
 if __name__ == "__main__":
     unittest.main()

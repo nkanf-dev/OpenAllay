@@ -58,13 +58,22 @@ public final class OpenAiJsonCodec {
     }
 
     public ModelTurn parseTurn(String json, Consumer<ModelEvent> events) {
+        try {
+            return decodeTurn(json, events);
+        } catch (RuntimeException failure) {
+            dev.openallay.model.http.ModelTransportDiagnostics.openAiDecodeFailure(false, json, failure);
+            throw failure;
+        }
+    }
+
+    private ModelTurn decodeTurn(String json, Consumer<ModelEvent> events) {
         JsonObject root = JsonParser.parseString(json).getAsJsonObject();
         String model = requiredString(root, "model");
         JsonObject choice = root.getAsJsonArray("choices").get(0).getAsJsonObject();
         String stopReason = requiredString(choice, "finish_reason");
         JsonObject message = choice.getAsJsonObject("message");
         List<ModelContent> content = decodeAssistant(message, events);
-        ModelUsage usage = parseUsage(root.getAsJsonObject("usage"));
+        ModelUsage usage = parseUsage(optionalObject(root, "usage"));
         events.accept(new ModelEvent.UsageUpdate(usage));
         events.accept(new ModelEvent.MessageComplete(stopReason));
         return new ModelTurn("openai_chat", model, content, stopReason, usage);
@@ -139,7 +148,7 @@ public final class OpenAiJsonCodec {
             content.add(reasoning);
             events.accept(new ModelEvent.ReasoningDelta(reasoning.text()));
         }
-        if (message.has("tool_calls")) {
+        if (message.has("tool_calls") && !message.get("tool_calls").isJsonNull()) {
             for (JsonElement element : message.getAsJsonArray("tool_calls")) {
                 JsonObject call = element.getAsJsonObject();
                 JsonObject function = call.getAsJsonObject("function");
@@ -160,12 +169,17 @@ public final class OpenAiJsonCodec {
             return ModelUsage.empty();
         }
         long cached = 0;
-        JsonObject details = object.getAsJsonObject("prompt_tokens_details");
-        if (details != null && details.has("cached_tokens")) {
-            cached = details.get("cached_tokens").getAsLong();
+        JsonObject details = optionalObject(object, "prompt_tokens_details");
+        if (details != null) {
+            cached = value(details, "cached_tokens");
         }
         return new ModelUsage(
                 value(object, "prompt_tokens"), value(object, "completion_tokens"), cached);
+    }
+
+    private static JsonObject optionalObject(JsonObject object, String field) {
+        JsonElement value = object.get(field);
+        return value == null || value.isJsonNull() ? null : value.getAsJsonObject();
     }
 
     private static long value(JsonObject object, String field) {

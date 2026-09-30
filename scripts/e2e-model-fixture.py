@@ -262,6 +262,155 @@ def validated_game_state_results(turn_messages, allow_world_query_permission_fai
     return observed, world_query_permission_denied
 
 
+
+
+BUILDER_PREFIX = "OpenAllay E2E Builder "
+BUILDER_SCENARIOS = ("disabled", "acceptance", "reload", "partial", "cancel", "undo", "server-denied")
+BUILDER_SKILL_TOOL = "openallay__load_skill"
+
+
+def builder_scenario(user_text):
+    if not user_text.startswith(BUILDER_PREFIX):
+        return None
+    scenario = user_text[len(BUILDER_PREFIX):].strip().split(None, 1)[0]
+    if scenario not in BUILDER_SCENARIOS:
+        raise ValueError("unknown deterministic Builder scenario: " + scenario)
+    return scenario
+
+
+def builder_retained_anchor(user_text):
+    """Recorded native coordinates supplied by the controller, never an answer."""
+    import re
+    lines = [line for line in user_text.splitlines()
+             if line.startswith("E2E retained native anchor:")]
+    if len(lines) != 1:
+        raise ValueError("reload requires one exact retained native anchor line")
+    match = re.fullmatch(r"E2E retained native anchor: x=(-?\d+),y=(-?\d+),z=(-?\d+)", lines[0])
+    if match is None:
+        raise ValueError("retained native anchor line is malformed")
+    anchor = tuple(int(value) for value in match.groups())
+    if any(value < -2147483648 or value > 2147483647 for value in anchor):
+        raise ValueError("retained native anchor coordinate is outside signed 32-bit bounds")
+    return anchor
+
+
+def builder_arguments(scenario, retained_anchor=None):
+    """Actual Extension/native programs, not fixture backends or claimed geometry."""
+    if scenario == "acceptance":
+        from pathlib import Path
+        source = Path(__file__).with_name("e2e-builder-fixture.js").read_text(encoding="utf-8")
+    elif scenario == "server-denied":
+        source = ('var System = Java.type("java.lang.System");\n'
+                  'return {unexpectedJavaAuthority:true,version:String(System.getProperty("java.version"))};')
+    elif scenario == "disabled":
+        source = ('var building = require("openallay_builder:building");\n'
+                  'var b = building.open({seed:17,label:"OpenAllay E2E denied"});\n'
+                  'var p = b.get_player_pos();\n'
+                  'b.place_block(Math.floor(p.x)+8,Math.floor(p.y),Math.floor(p.z)+8,"gold_block");\n'
+                  'return {unexpectedAuthority:true,status:b.finish()};')
+    else:
+        source = '''var building = require("openallay_builder:building");
+var b = building.open({seed:17,label:"OpenAllay E2E SCENARIO"});
+var p = b.get_player_pos();
+var x=Math.floor(p.x)+8,y=Math.floor(p.y)-1,z=Math.floor(p.z)+8;
+'''.replace("SCENARIO", scenario)
+        if scenario == "partial":
+            source += '''b.place_block(x,y+1,z,"gold_block");
+var caught=null;
+try { b.place_block(x+1,y+1,z,"openallay_e2e:missing_native_block"); }
+catch (error) { caught=String(error); }
+return {scenario:"builder_partial",failure:caught,status:b.status(),operations:b.list_operations()};
+'''
+        elif scenario == "cancel":
+            source += '''b.place_block(x,y+1,z,"diamond_block");
+var cancelled=b.cancel(),caught=null;
+try { b.place_block(x+1,y+1,z,"gold_block"); }
+catch (error) { caught=String(error); }
+return {scenario:"builder_cancel",deniedAfterCancel:caught,status:cancelled};
+'''
+        elif scenario == "undo":
+            source += '''b.place_block(x,y+1,z,"gold_block");
+b.place_block(x+1,y+1,z,"gold_block");
+var original=b.finish();
+var changed=building.open({seed:17,label:"OpenAllay E2E intervening edit"});
+changed.place_block(x+1,y+1,z,"diamond_block");
+changed.finish();
+var undo=b.undo(original.operationId);
+return {scenario:"builder_undo",undo:undo,status:b.finish()};
+'''
+        elif scenario == "reload":
+            if retained_anchor is None or len(retained_anchor) != 3:
+                raise ValueError("reload requires the independently retained native origin")
+            source += "x=%d;y=%d;z=%d;\n" % tuple(retained_anchor)
+            source += '''var template=b.load_template("openallay_e2e_builder_native");
+var listed=b.list_templates();
+var operations=b.list_operations();
+var readback={house:b.get_block(x,y,z),dock:b.get_block(x+14,y,z+18),
+  rotatedStair:b.get_block_full(x+21,y+1,z+32),mirroredChest:b.get_block_full(x+24,y+1,z+33)};
+return {scenario:"builder_reload",template:{name:"openallay_e2e_builder_native",size:template.size},
+  listed:listed,operations:operations,operationCount:operations.length,readback:readback,status:b.finish()};
+'''
+    return {"source": source, "roots": ["player"]}
+
+
+def builder_turn(scenario, turn_messages, user_text=""):
+    """Validate the real current Tool results; never manufacture acceptance."""
+    results = [message for message in turn_messages if message.get("role") == "tool"]
+    if not results:
+        if scenario == "server-denied":
+            return (JAVASCRIPT_TOOL, builder_arguments(scenario)), None
+        return (BUILDER_SKILL_TOOL, {"name": "minecraft-builder"}), None
+    # load_skill has a compact text model projection, not always JSON.
+    if scenario != "server-denied":
+        skill_text = str(results[0].get("content", ""))
+        if "minecraft-builder" not in skill_text or "failure" in skill_text[:100]:
+            raise ValueError("bundled Builder Skill was not loaded")
+        if len(results) == 1:
+            anchor = builder_retained_anchor(user_text) if scenario == "reload" else None
+            return (JAVASCRIPT_TOOL, builder_arguments(scenario, anchor)), None
+    if len(results) != (1 if scenario == "server-denied" else 2):
+        raise ValueError("unexpected extra Builder fixture Tool result")
+    text = results[-1].get("content", "")
+    parsed = None
+    try:
+        parsed = json.loads(text)
+    except (TypeError, json.JSONDecodeError):
+        pass
+    denied = scenario in ("disabled", "server-denied")
+    if isinstance(parsed, dict):
+        if denied:
+            if parsed.get("status") != "failure" or parsed.get("code") != "javascript_error":
+                raise ValueError("native Builder denial did not return actual JavaScript failure")
+            summary = "Native Builder access was denied by the real JavaScript Tool. No success is claimed."
+        else:
+            if parsed.get("status") != "success":
+                raise ValueError("native Builder fixture failed: " + str(parsed.get("code")))
+            output = parsed.get("value", {})
+            preview = output.get("preview", output) if isinstance(output, dict) else {}
+            if not isinstance(preview, dict) or preview.get("scenario") != "builder_" + scenario.replace("-", "_"):
+                raise ValueError("native Builder result did not identify the requested scenario")
+            summary = "Native Tool returned the requested " + scenario + " result. The independent controller readback determines acceptance."
+    else:
+        # ModelToolTextRenderer renders failures as exact named text fields. The
+        # canonical normalized failure remains independently checked by the controller.
+        if denied:
+            prefix = "status: failure\ncode: javascript_error\nmessage: "
+            if not isinstance(text, str) or not text.startswith(prefix):
+                raise ValueError("native Builder denial projection lacked exact failure status/code")
+            message = text[len(prefix):]
+            if not message.startswith('ReferenceError: "Java" is not defined.'):
+                raise ValueError("native Builder denial did not show unavailable Java authority")
+            summary = "Native Builder access was denied by the real JavaScript Tool. No success is claimed."
+        else:
+            # Complete unrestricted results contain the actual JSON after preview.
+            if "scope: complete" not in text or '"scenario":"builder_' + scenario.replace("-", "_") + '"' not in text.replace(" ", ""):
+                raise ValueError("native Builder projection was incomplete or malformed")
+            summary = "Native Tool returned the requested " + scenario + " result. The independent controller readback determines acceptance."
+    return None, ("# Deterministic Builder real-client fixture\n\n" + summary +
+                  "\n\nThis loopback response is explicitly pre-authored test content, not a live model. "
+                  "It invokes the actual bundled Extension. It does not certify its own geometry or visual quality.")
+
+
 def content_events(content):
     # Fixed small chunks deliberately split Markdown and component tokens.
     chunks = [content[index:index + 17] for index in range(0, len(content), 17)]
@@ -297,6 +446,12 @@ class Handler(BaseHTTPRequestHandler):
         game_state = (user_text.startswith("OpenAllay E2E 游戏外层状态验收")
                       or server_client_tools)
         world_query_permission_denied = False
+        try:
+            builder = builder_scenario(user_text)
+            builder_step, builder_content = builder_turn(builder, turn_messages, user_text) if builder else (None, None)
+        except ValueError as failure:
+            self.send_error(422, str(failure))
+            return
         if game_state:
             try:
                 observed, world_query_permission_denied = validated_game_state_results(
@@ -307,7 +462,8 @@ class Handler(BaseHTTPRequestHandler):
                 return
         try:
             content = (
-                "历史分页种子已记录。" if history_seed
+                (builder_content or "# Deterministic Builder real-client fixture\n\nPre-authored loopback provider. Calling the real bundled Extension through the production Tool; no live-model claim.") if builder
+                else "历史分页种子已记录。" if history_seed
                 else "服务端模型已完成客户端状态读取；无权限的只读世界查询作为工具失败返回后，Agent 仍正常完成。"
                 if server_client_tools and completed == len(GAME_STATE_STEPS)
                 else game_state_assistant_content(
@@ -318,9 +474,10 @@ class Handler(BaseHTTPRequestHandler):
             return
         deltas = content_events(content)
         steps = GAME_STATE_STEPS if game_state else (JAVASCRIPT_TOOL,)
-        if not history_seed and completed < len(steps):
+        if builder_step is not None or (not builder and not history_seed and completed < len(steps)):
             try:
-                name, arguments = (steps[completed] if game_state
+                name, arguments = (builder_step if builder
+                                   else steps[completed] if game_state
                                    else (JAVASCRIPT_TOOL, javascript_arguments()))
             except ValueError as failure:
                 self.send_error(422, str(failure))

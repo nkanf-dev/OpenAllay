@@ -1121,3 +1121,31 @@ JavaScript. It does not implement a remote server write protocol, edit a client
 world mirror, open offline saves, or silently switch to commands. Unsupported
 execution contexts fail explicitly. See decisions 034 and 035 for lifecycle,
 artifact, partial-failure and advisory-review semantics.
+
+### Packaged Builder acceptance harness
+
+`scripts/run-packaged-builder-acceptance.py` prepares an isolated instance and
+requires an explicit reviewed launch. It uses the default production-named JAR
+and nested Builder, not Gradle source classes. See
+[the packaged acceptance guide](verification/packaged-builder-acceptance.md).
+This is opt-in graphical testing. Its native oracle reads actual integrated-server
+blocks on the owning server thread. Java exit success or a final model answer is
+not acceptance. Every selected native check must pass.
+
+The controller can create a new survival, commands-off superflat world or reopen
+only a prior manifest-owned acceptance world. Normal sessions never use these
+hooks. The launcher validates the previous native report before reload and live
+undo. The two live-model phases retain actual copied state before undo, then
+verify source preservation and target restoration. Retained Tool results and
+journals must also prove the copy operation and linked undo; model narration is
+not proof.
+
+The disposable synthetic username must fit Minecraft's 16-character login field.
+Simulation distance is 5, within the Minecraft26.2 range. `--low-impact` reduces
+only the generated client's window, FPS, and heap; render distance remains 4 for
+fixture coverage. It does not change ordinary game options.
+
+OpenAI-compatible optional `tool_calls`, usage, and usage-detail fields may be
+missing or JSON null. Both response codecs treat those forms as absent. Invalid
+non-null shapes and malformed tool arguments remain failures. Live connection
+probes and graphical acceptance remain separate from deterministic tests.
