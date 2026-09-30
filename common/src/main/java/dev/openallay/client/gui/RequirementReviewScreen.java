@@ -60,7 +60,9 @@ public final class RequirementReviewScreen extends Screen {
             } else if (!actionPending && !finished) {
                 failure = Component.translatable(PREFIX + "expired").getString();
             }
-            if (minecraft != null) rebuildWidgets();
+            // Minecraft 26.2 calls added() before init(width, height). A local dispatcher
+            // may deliver this snapshot inline; retain it, but do not create widgets yet.
+            if (minecraft != null && attachment.canRebuild(epoch)) rebuildWidgets();
         });
     }
 
@@ -72,14 +74,25 @@ public final class RequirementReviewScreen extends Screen {
     static final class AttachmentState {
         private long epoch;
         private boolean attached;
+        private boolean layoutReady;
 
         long attach() {
             attached = true;
+            layoutReady = false;
             return ++epoch;
         }
 
         void detach() {
             attached = false;
+            layoutReady = false;
+        }
+
+        void layoutInitialized() {
+            layoutReady = attached;
+        }
+
+        boolean canRebuild(long capturedEpoch) {
+            return layoutReady && isCurrent(capturedEpoch);
         }
 
         long epoch() {
@@ -123,6 +136,7 @@ public final class RequirementReviewScreen extends Screen {
                 .bounds(x + half + 6, height - 29, w - half - 6, 20).build());
         proceed.active = ready();
         layoutContents(null, true);
+        attachment.layoutInitialized();
     }
 
     private int left() { return Math.max(10, (width - 640) / 2); }
@@ -197,8 +211,13 @@ public final class RequirementReviewScreen extends Screen {
     }
 
     public static Component rowLabel(Row row) {
-        Component identity = Component.literal(row.name().equals(row.id())
-                ? row.id() : row.name() + " (" + row.id() + ")");
+        Component identity = row.kind() == dev.openallay.requirement.RequirementKind.CAPABILITY
+                        && dev.openallay.settings.requirement.RequirementSettingsEnvironment
+                                .isUnrestrictedJavascript(row.id())
+                ? Component.translatable(PREFIX + "name.unrestricted_javascript")
+                        .append(Component.literal(" (" + row.id() + ")"))
+                : Component.literal(row.name().equals(row.id())
+                        ? row.id() : row.name() + " (" + row.id() + ")");
         return Component.translatable(PREFIX + "row",
                 Component.translatable(row.kindKey()), identity,
                 Component.translatable(row.statusKey()));

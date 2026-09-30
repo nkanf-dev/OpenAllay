@@ -563,6 +563,52 @@ final class ClientSettingsServiceTest {
     }
 
     @Test
+    void publishedBuilderAliasRequiresConsentAndEnablesOnlyTheExistingUnrestrictedOwner() {
+        FakeDomains domains = new FakeDomains();
+        var priorPolicy = domains.capabilities.policy();
+        FakeSkills skills = new FakeSkills();
+        skills.requirements = new RequirementSet(
+                Set.of(RequirementSettingsEnvironment.UNRESTRICTED_JAVASCRIPT_ALIAS,
+                        "thirdparty:unrestricted-javascript"), Set.of("missing:extension"), Set.of());
+        ClientSettingsService service = requirementService(domains, skills, Runnable::run);
+        assertSuccess(service.installCommunitySkill("demo").join());
+        var preview = service.snapshot().requirementReview().orElseThrow();
+        assertEquals(1, preview.changes().size());
+        assertEquals(RequirementSettingsEnvironment.UNRESTRICTED_JAVASCRIPT_ALIAS,
+                preview.changes().getFirst().id());
+        assertTrue(preview.changes().getFirst().unrestrictedConsentRequired());
+        assertFailure(service.enablePackageRequirement(preview.token(), RequirementKind.CAPABILITY,
+                RequirementSettingsEnvironment.UNRESTRICTED_JAVASCRIPT_ALIAS, false).join(),
+                "unrestricted_confirmation_required");
+        assertFalse(service.snapshot().unrestrictedJavascript().enabled());
+        assertEquals(0, domains.unrestrictedSaves);
+        assertEquals(0, domains.capabilitySaves);
+        assertEquals(priorPolicy, service.snapshot().capabilities().policy());
+        assertFailure(service.enablePackageRequirement(preview.token(), RequirementKind.CAPABILITY,
+                "thirdparty:unrestricted-javascript", true).join(), "requirement_not_enableable");
+        assertSuccess(service.enablePackageRequirement(preview.token(), RequirementKind.CAPABILITY,
+                RequirementSettingsEnvironment.UNRESTRICTED_JAVASCRIPT_ALIAS, true).join());
+        assertTrue(service.snapshot().unrestrictedJavascript().enabled());
+        assertEquals(1, domains.unrestrictedSaves);
+        assertEquals(0, domains.capabilitySaves);
+        assertFalse(service.snapshot().experimentalCommands().enabled());
+        assertEquals(priorPolicy, service.snapshot().capabilities().policy());
+        var refreshed = service.snapshot().requirementReview().orElseThrow();
+        assertEquals(preview.token(), refreshed.token());
+        assertTrue(refreshed.changes().isEmpty());
+        var statuses = refreshed.report().entries().stream().collect(java.util.stream.Collectors.toMap(
+                entry -> entry.id(), entry -> entry.status()));
+        assertEquals(dev.openallay.requirement.RequirementStatus.SATISFIED, statuses.get(
+                RequirementSettingsEnvironment.UNRESTRICTED_JAVASCRIPT_ALIAS));
+        assertEquals(dev.openallay.requirement.RequirementStatus.UNKNOWN,
+                statuses.get("thirdparty:unrestricted-javascript"));
+        assertEquals(dev.openallay.requirement.RequirementStatus.MISSING,
+                statuses.get("missing:extension"));
+        assertEquals(0, skills.prepared.commits);
+        service.close();
+    }
+
+    @Test
     void failedExactEnableRetainsSettingsAndContinueRemainsAvailable() {
         FakeDomains domains = new FakeDomains();
         domains.capabilities = new CapabilitySettingsView(
@@ -959,6 +1005,7 @@ final class ClientSettingsServiceTest {
                 new ClientSettingsService.UnrestrictedJavascriptActions() {
                     public ToolResult<dev.openallay.script.UnrestrictedJavascriptConfig> save(
                             dev.openallay.script.UnrestrictedJavascriptConfig candidate) {
+                        domains.unrestrictedSaves++;
                         return new ToolResult.Success<>(candidate);
                     }
                     public ToolResult<dev.openallay.script.UnrestrictedJavascriptConfig> reload() {
@@ -1169,6 +1216,7 @@ final class ClientSettingsServiceTest {
         private RecipeSettingsView recipes = RecipeSettingsView.defaults();
         private ToolResult.Failure<CapabilitySettingsView> capabilityFailure;
         private int capabilitySaves;
+        private int unrestrictedSaves;
         private int capabilityReloads;
         private int recipeSaves;
         private int recipeReloads;

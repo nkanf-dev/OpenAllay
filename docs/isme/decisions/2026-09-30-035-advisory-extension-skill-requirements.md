@@ -46,7 +46,13 @@ visible even if unknown. Local and community package paths receive equivalent
 preview behavior. Capability/Extension absence cannot fabricate success.
 
 Enable is an explicit player action listing the exact changes. Reuse existing
-setting validators and persistence. Enabling unrestricted JavaScript must show
+setting validators and persistence. The published Builder capability ID
+`unrestricted-javascript` is an explicit compatibility alias for
+`openallay:unrestricted_javascript`. Both evaluate the same persistent setting;
+reports and changes preserve the declared ID. Both require the same explicit JVM
+consent and route to the existing unrestricted setting owner. No other ID spelling
+is normalized or granted, and unrelated unknown IDs remain unknown.
+Enabling unrestricted JavaScript must show
 its actual JVM authority warning, not grant it as a hidden transitive step.
 Dependencies not installed/unsupported cannot be enabled; show that fact and
 leave Continue anyway available. No automatic recursive downloads, transitive

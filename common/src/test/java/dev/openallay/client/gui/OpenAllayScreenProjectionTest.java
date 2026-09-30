@@ -261,9 +261,39 @@ final class OpenAllayScreenProjectionTest {
         assertTrue(OpenAllayScreen.toolCardTitle(activity).getString()
                 .endsWith(activity.intent().title()));
         List<Component> summary = OpenAllayScreen.toolSummaryComponents(activity);
-        assertEquals("screen.openallay.tool.message.failure.generic",
+        assertEquals("screen.openallay.tool.failure.javascript",
                 assertInstanceOf(TranslatableContents.class, summary.getFirst().getContents()).getKey());
         assertEquals(description, summary.getLast().getString());
+    }
+
+    @Test
+    void failureReasonComesFromClosedNarrationAndCannotClaimJavaPermission() {
+        var normalized = new com.google.gson.JsonObject();
+        normalized.addProperty("status", "failure");
+        normalized.addProperty("code", "javascript_error");
+        normalized.addProperty("message", "private endpoint / raw exception / Java is not defined");
+        var input = new com.google.gson.JsonObject();
+        input.addProperty("title", "Succeeded by enabling Java");
+        input.addProperty("description", "Untrusted planned claim");
+        var activity = new GuideToolActivity("failed", 0, "openallay:run_javascript",
+                GuideToolStatus.FAILED, input, normalized, List.of(), List.of());
+        var detail = dev.openallay.guide.ui.GuideToolDetailPresenter.project(activity, false);
+        List<Component> reasons = OpenAllayScreen.toolFailureComponents(detail, activity.toolId());
+        assertEquals(1, reasons.size());
+        assertEquals("screen.openallay.tool.failure.javascript",
+                assertInstanceOf(TranslatableContents.class, reasons.getFirst().getContents()).getKey());
+        assertFalse(reasons.getFirst().getString().contains("private endpoint"));
+        assertFalse(reasons.getFirst().getString().contains("Succeeded"));
+        assertTrue(detail.debug().isEmpty());
+
+        var stopped = new GuideToolActivity("stopped", 0, "openallay:run_javascript",
+                GuideToolStatus.RUNNING, input, null, List.of(), List.of());
+        assertTrue(OpenAllayScreen.toolFailureComponents(
+                dev.openallay.guide.ui.GuideToolDetailPresenter.project(stopped, false).forRequest(true),
+                stopped.toolId()).isEmpty());
+        assertEquals("screen.openallay.tool.message.failure.generic",
+                assertInstanceOf(TranslatableContents.class, OpenAllayScreen.toolFailureComponents(
+                        detail, "other:unknown").getFirst().getContents()).getKey());
     }
 
     @Test

@@ -86,6 +86,47 @@ final class RequirementSettingsEnvironmentTest {
                 .allMatch(change -> change.id().equals(RequirementSettingsEnvironment.UNRESTRICTED_JAVASCRIPT)));
     }
 
+    @Test
+    void publishedBuilderCapabilityAliasUsesTheSameDisabledAndSatisfiedSettingFacts() {
+        var capabilities = CapabilitySettingsView.defaults();
+        var requirements = new RequirementSet(Set.of(RequirementSettingsEnvironment.UNRESTRICTED_JAVASCRIPT,
+                RequirementSettingsEnvironment.UNRESTRICTED_JAVASCRIPT_ALIAS,
+                "unrestricted_javascript", "thirdparty:unrestricted-javascript"),
+                Set.of("missing:extension"), Set.of());
+        var disabled = RequirementSettingsEnvironment.from(capabilities, SkillSettingsView.empty(),
+                ExtensionSettingsView.defaults(), CommandCapabilityConfig.defaults(),
+                UnrestrictedJavascriptConfig.defaults());
+        var disabledReport = RequirementEvaluator.evaluate(requirements, disabled);
+        var statuses = disabledReport.entries().stream().collect(java.util.stream.Collectors.toMap(
+                entry -> entry.id(), entry -> entry.status()));
+        assertEquals(RequirementStatus.DISABLED, statuses.get(
+                RequirementSettingsEnvironment.UNRESTRICTED_JAVASCRIPT));
+        assertEquals(RequirementStatus.DISABLED, statuses.get(
+                RequirementSettingsEnvironment.UNRESTRICTED_JAVASCRIPT_ALIAS));
+        assertEquals(RequirementStatus.UNKNOWN, statuses.get("unrestricted_javascript"));
+        assertEquals(RequirementStatus.UNKNOWN, statuses.get("thirdparty:unrestricted-javascript"));
+        assertEquals(RequirementStatus.MISSING, statuses.get("missing:extension"));
+        var changes = RequirementSettingsEnvironment.changes(disabledReport, capabilities);
+        assertEquals(Set.of(RequirementSettingsEnvironment.UNRESTRICTED_JAVASCRIPT,
+                RequirementSettingsEnvironment.UNRESTRICTED_JAVASCRIPT_ALIAS), changes.stream()
+                .map(RequirementChange::id).collect(java.util.stream.Collectors.toSet()));
+        assertTrue(changes.stream().allMatch(RequirementChange::unrestrictedConsentRequired));
+        assertTrue(changes.stream().allMatch(change -> change.kind() == RequirementKind.CAPABILITY));
+        var enabled = RequirementSettingsEnvironment.from(capabilities, SkillSettingsView.empty(),
+                ExtensionSettingsView.defaults(), CommandCapabilityConfig.defaults(),
+                new UnrestrictedJavascriptConfig(UnrestrictedJavascriptConfig.SCHEMA_VERSION, true));
+        var enabledReport = RequirementEvaluator.evaluate(requirements, enabled);
+        assertEquals(RequirementStatus.SATISFIED, enabled.capabilities().get(
+                RequirementSettingsEnvironment.UNRESTRICTED_JAVASCRIPT_ALIAS).status());
+        assertEquals(RequirementStatus.SATISFIED, enabled.capabilities().get(
+                RequirementSettingsEnvironment.UNRESTRICTED_JAVASCRIPT).status());
+        assertTrue(RequirementSettingsEnvironment.changes(enabledReport, capabilities).isEmpty());
+        assertTrue(enabledReport.entries().stream().anyMatch(entry -> entry.id().equals(
+                RequirementSettingsEnvironment.UNRESTRICTED_JAVASCRIPT_ALIAS)));
+        assertFalse(RequirementSettingsEnvironment.isUnrestrictedJavascript("unrestricted_javascript"));
+        assertFalse(RequirementSettingsEnvironment.isUnrestrictedJavascript("thirdparty:unrestricted-javascript"));
+    }
+
     private static CapabilitySettingsEntry capability(String id, boolean available, boolean enabled) {
         return new CapabilitySettingsEntry("test:owner", id, CapabilityKind.TOOL,
                 "settings.test.title", "settings.test.description", null, available, enabled);

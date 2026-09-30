@@ -1138,7 +1138,7 @@ public final class ClientSettingsService implements AutoCloseable {
                         "unrestricted_confirmation_required", "Confirm unrestricted JVM access before enabling it"));
             }
             if (kind == RequirementKind.CAPABILITY
-                    && id.equals(RequirementSettingsEnvironment.UNRESTRICTED_JAVASCRIPT)) {
+                    && RequirementSettingsEnvironment.isUnrestrictedJavascript(id)) {
                 return saveUnrestrictedJavascript(true);
             }
             if (kind == RequirementKind.CAPABILITY

@@ -881,10 +881,23 @@ public final class OpenAllayScreen extends Screen {
             if (javascript && message.key() == GuideToolMessage.Key.INVOCATION_RUN_JAVASCRIPT) continue;
             if (status == GuideToolDisplayStatus.NO_RESULT_RECORDED
                     && message.key() == GuideToolMessage.Key.RESULT_PENDING) continue;
-            summary.add(toolMessage(message));
+            summary.add(friendlyToolMessage(activity.toolId(), message));
         }
         if (javascript) summary.add(toolDescription(activity.intent()));
         return List.copyOf(summary);
+    }
+
+    static List<Component> toolFailureComponents(GuideToolDetailView detail, String toolId) {
+        if (detail.displayStatus() != GuideToolDisplayStatus.FAILED) return List.of();
+        return detail.narration().stream().map(message -> friendlyToolMessage(toolId, message)).toList();
+    }
+
+    private static Component friendlyToolMessage(String toolId, GuideToolMessage message) {
+        if ("openallay:run_javascript".equals(toolId)
+                && message.key() == GuideToolMessage.Key.FAILURE_GENERIC) {
+            return Component.translatable("screen.openallay.tool.failure.javascript");
+        }
+        return toolMessage(message);
     }
 
     static List<GuideToolMessage> visibleToolSummaryMessages(
@@ -1093,6 +1106,9 @@ public final class OpenAllayScreen extends Screen {
                             + ": " + Component.translatable(toolDetail.displayStatus().translationKey()).getString(),
                     detail, y);
             y += 4;
+            for (Component reason : toolFailureComponents(toolDetail, selectedTool.activity().toolId())) {
+                y = detailLine(graphics, reason, detail, y);
+            }
             if (!toolDetail.intent().empty()) {
                 y = detailLine(graphics,
                         Component.translatable("screen.openallay.tool.intent.label").getString(), detail, y);
@@ -1148,7 +1164,8 @@ public final class OpenAllayScreen extends Screen {
                 y = detailCard(graphics, card, detail, y, mouseX, mouseY);
             }
             if (toolDetail.cards().isEmpty()
-                    && toolDetail.displayStatus() != GuideToolDisplayStatus.NO_RESULT_RECORDED) {
+                    && toolDetail.displayStatus() != GuideToolDisplayStatus.NO_RESULT_RECORDED
+                    && toolDetail.displayStatus() != GuideToolDisplayStatus.FAILED) {
                 for (GuideToolMessage message : toolDetail.narration()) {
                     y = detailLine(graphics, toolMessage(message), detail, y);
                 }

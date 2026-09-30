@@ -72,7 +72,15 @@ scrolling and clipping, preserve drafts, and never paint helpers over the footer
 Failure copy refers to actions rather than read-only queries, treats both
 invalid_arguments and invalid_tool_arguments consistently, and does not blame
 the player. Unclassified failures stay concise. Unreviewed raw failure reasons
-remain unrepresented in normal UI.
+remain unrepresented in normal UI. Recorded failures show their closed mapped
+reason directly below execution status, before model-authored intent and input.
+A generic JavaScript failure gives the diagnostic action to turn on Debug Mode;
+it does not infer a permission denial from an exception string or current setting.
+
+Installation review retains an initial settings snapshot delivered during native
+`added()`, but creates its widgets only after native `init(width, height)`. Later
+updates may rebuild the attached, initialized layout; detached or stale callbacks
+cannot do so. This preserves review actions without out-of-screen native widgets.
 
 ## Supersedes
 

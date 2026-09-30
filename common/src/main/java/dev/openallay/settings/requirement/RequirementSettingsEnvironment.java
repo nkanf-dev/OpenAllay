@@ -19,6 +19,8 @@ import java.util.TreeMap;
 /** Local configuration facts only. Runtime request authority remains owned by runtime code. */
 public final class RequirementSettingsEnvironment {
     public static final String UNRESTRICTED_JAVASCRIPT = "openallay:unrestricted_javascript";
+    /** Public Builder manifests and Skill metadata use this exact capability ID. */
+    public static final String UNRESTRICTED_JAVASCRIPT_ALIAS = "unrestricted-javascript";
     public static final String EXPERIMENTAL_COMMANDS = "openallay:experimental_commands";
 
     private RequirementSettingsEnvironment() {}
@@ -40,8 +42,11 @@ public final class RequirementSettingsEnvironment {
                     : !entry.enabled() || capabilities.policy().disabledTools().contains(entry.id())
                             ? RequirementStatus.DISABLED : RequirementStatus.SATISFIED));
         }
-        capabilityFacts.put(UNRESTRICTED_JAVASCRIPT, fact(UNRESTRICTED_JAVASCRIPT,
-                unrestricted.enabled() ? RequirementStatus.SATISFIED : RequirementStatus.DISABLED));
+        RequirementStatus unrestrictedStatus = unrestricted.enabled()
+                ? RequirementStatus.SATISFIED : RequirementStatus.DISABLED;
+        capabilityFacts.put(UNRESTRICTED_JAVASCRIPT, fact(UNRESTRICTED_JAVASCRIPT, unrestrictedStatus));
+        capabilityFacts.put(UNRESTRICTED_JAVASCRIPT_ALIAS,
+                fact(UNRESTRICTED_JAVASCRIPT_ALIAS, unrestrictedStatus));
         capabilityFacts.put(EXPERIMENTAL_COMMANDS, fact(EXPERIMENTAL_COMMANDS,
                 commands.enabled() ? RequirementStatus.SATISFIED : RequirementStatus.DISABLED));
 
@@ -74,12 +79,17 @@ public final class RequirementSettingsEnvironment {
                 .filter(entry -> entry.kind() == RequirementKind.SKILL
                         ? capabilities.policy().disabledSkills().contains(entry.id())
                         : entry.kind() == RequirementKind.CAPABILITY
-                                && (entry.id().equals(UNRESTRICTED_JAVASCRIPT)
+                                && (isUnrestrictedJavascript(entry.id())
                                     || entry.id().equals(EXPERIMENTAL_COMMANDS)
                                     || capabilities.policy().disabledTools().contains(entry.id())))
                 .map(entry -> new RequirementChange(entry.kind(), entry.id(),
-                        entry.id().equals(UNRESTRICTED_JAVASCRIPT)))
+                        isUnrestrictedJavascript(entry.id())))
                 .toList();
+    }
+
+    /** Two reviewed declarations, one persistent setting owner; no generic ID normalization. */
+    public static boolean isUnrestrictedJavascript(String id) {
+        return UNRESTRICTED_JAVASCRIPT.equals(id) || UNRESTRICTED_JAVASCRIPT_ALIAS.equals(id);
     }
 
     private static RequirementAvailability fact(String name, RequirementStatus status) {
