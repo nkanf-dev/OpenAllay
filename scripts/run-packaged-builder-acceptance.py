@@ -435,7 +435,7 @@ def prepare(args, repo=REPO):
     jvm = expand_arguments(vanilla["arguments"]["jvm"] + extra_jvm, values)
     game_args = expand_arguments(vanilla["arguments"]["game"] + extra_game, values, {"has_custom_resolution": True})
     properties = {"enabled": "true", "createWorld": world, "scenario": args.scenario,
-                  "question": args.question or ("OpenAllay E2E UI " + args.scenario.removeprefix("ui-")
+                  "question": args.question or ("OpenAllay E2E UI " + args.scenario.removeprefix("ui-").replace("-", " ")
                                                if ui_scenario else "OpenAllay E2E Builder " + args.scenario.removeprefix("builder-")),
                   "report": str(output / "report.json"), "trace": str(output / "trace.json"),
                   "session": run_id, "modelMode": "client", "screenshotRoot": str(output / "screenshots"),

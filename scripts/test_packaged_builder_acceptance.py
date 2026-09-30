@@ -498,6 +498,19 @@ class PackagedBuilderLauncherTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "explicit manual and automatic"):
                 launcher.prepare(args, Path(directory))
 
+    def test_ui_failure_default_question_matches_the_provider_fixture(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory) / "repo"
+            self.artifact(repo)
+            mcroot, cache, java = self.environment(repo)
+            args = launcher.parser().parse_args(["fabric", "--run-id", "ui-failure-question",
+                                                 "--scenario", "ui-provider-failure",
+                                                 "--minecraft-root", str(mcroot), "--gradle-cache", str(cache),
+                                                 "--java", str(java)])
+            _, manifest = launcher.prepare(args, repo)
+            self.assertIn("-Dopenallay.e2e.question=OpenAllay E2E UI provider failure", manifest["command"])
+            self.assertNotIn("-Dopenallay.e2e.question=OpenAllay E2E UI provider-failure", manifest["command"])
+
     def test_ui_provider_failure_accepts_failed_capture_not_builder_pass(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

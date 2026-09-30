@@ -142,6 +142,22 @@ class BuilderFixtureTests(unittest.TestCase):
         self.assertTrue(arguments["description"])
         self.assertNotIn("success", arguments["description"])
 
+    def test_ui_failure_continuation_returns_actual_http_503(self):
+        request = {"messages": [
+            {"role": "user", "content": "OpenAllay E2E UI provider failure"},
+            {"role": "tool", "content": "actual detached result"}]}
+        class CaptureHandler:
+            path = "/v1/chat/completions"
+            body = json.dumps(request).encode()
+            headers = {"content-length": str(len(body))}
+            rfile = __import__("io").BytesIO(body)
+            errors = []
+            def send_error(self, code, message):
+                self.errors.append((code, message))
+        handler = CaptureHandler()
+        fixture.Handler.do_POST(handler)
+        self.assertEqual([(503, "Deterministic E2E continuation transport failure")], handler.errors)
+
     def test_ui_transport_failure_starts_with_actual_read_only_javascript(self):
         arguments = fixture.ui_provider_failure_arguments()
         self.assertEqual(["player"], arguments["roots"])
