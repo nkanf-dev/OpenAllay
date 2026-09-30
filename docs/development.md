@@ -184,8 +184,42 @@ environment reference. This form is not requested by the normal player UI:
 
 `anthropic_messages` is the other protocol. Remote endpoints require HTTPS;
 HTTP is accepted only for loopback development. Inline `apiKey` and `apiKeyEnv`
-are not valid in schema 2. `contextWindowTokens` is required unless trusted provider metadata or its local
-cache resolves it; an explicit value always wins. The `256000` value above is an example, not a fallback.
+are not valid in schema 2. `contextWindowTokens` is required unless exact trusted provider metadata/cache
+or the bundled model table resolves it. Explicit values always win, including a
+1,000,000-token user budget. There is no 32K fallback or arbitrary context cap.
+The `256000` value above is an example, not a fallback.
+
+The builtin model table works offline at arbitrary OpenAI-compatible endpoints,
+even when authenticated `/models` returns IDs without limits. Missing context
+uses an eligible deterministic BEST match: canonical/upstream ID and published
+alias first, provider-wrapper normalization next, then family/version-aware
+similarity. Unknown unrelated names still require manual context. Models settings
+shows the chosen model, published context/output, source/capture time, and every
+published USD-per-million-token price tier. These are reference estimates, not
+claims about the configured gateway's actual bill. Model ID, endpoint, protocol,
+profile selection and explicit output setting are never changed.
+
+An untouched automatic context display remains omitted in `models.json` on save;
+only an actual context edit makes it explicit. Later exact trusted metadata can
+therefore replace a builtin estimate, and edits affect only future requests.
+Published output ceilings are advisory, not new request output defaults.
+
+The separate strict resource
+`data/openallay/models/builtin-model-catalog.json` contains reviewed capability
+and pricing provenance. The provider metadata cache remains schema 1 and contains
+no prices or builtin matches. Developers can update the table explicitly:
+
+```bash
+python3 -m unittest discover -s scripts -p test_update_builtin_model_catalog.py -v
+python3 scripts/update-builtin-model-catalog.py --fetch-public --output /tmp/builtin-model-catalog.proposal.json
+```
+
+The updater pulls only the fixed unauthenticated public sources into a proposal.
+Review identities, aliases, limits, decimal price units/tiers and source changes
+before replacing the committed resource. Runtime does not fetch these URLs.
+Keep the shipped `data/openallay/models/LICENSE.models.dev` attribution. See
+[the source evidence and reproducible offline refresh procedure](verification/builtin-model-catalog/README.md)
+and SKMB-2026-10-01-036 for the full precedence and matching contract.
 
 `connectTimeoutSeconds` covers establishment of the provider connection.
 `requestTimeoutSeconds` is the total budget for one dispatched model attempt,

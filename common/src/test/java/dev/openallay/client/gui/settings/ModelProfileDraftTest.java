@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import dev.openallay.model.config.ModelProfileDefinition;
 import dev.openallay.model.config.ModelProtocol;
@@ -63,6 +64,40 @@ final class ModelProfileDraftTest {
 
         assertEquals("https://provider.example/v1/", request.value().baseUri().toString());
         assertEquals("new-profile", request.value().profileId());
+    }
+
+    @Test
+    void automaticContextRemainsOmittedAcrossSaveAndReopenUntilActuallyEdited() {
+        ModelProfileDraft automatic = ModelProfileDraft.create("main").withModel("gpt-6-luna");
+        automatic = new ModelProfileDraft(automatic.id(), automatic.displayName(), automatic.enabled(),
+                automatic.protocol(), "https://arbitrary.example/v1/", automatic.model(),
+                automatic.credentialRef(), automatic.contextWindowTokens(), automatic.maxOutputTokens(),
+                automatic.connectTimeoutSeconds(), automatic.requestTimeoutSeconds(), automatic.metadata(),
+                automatic.automaticContextWindowTokens());
+        assertEquals("1050000", automatic.contextWindowTokens());
+        var saved = success(automatic.validate());
+        assertNull(saved.contextWindowTokens());
+        assertEquals("1050000", ModelProfileDraft.from(saved).contextWindowTokens());
+        assertFalse(automatic.dirtyComparedTo(saved));
+        var trustedDisplay = automatic.withAutomaticContext(600_000);
+        assertEquals("600000", trustedDisplay.contextWindowTokens());
+        assertNull(success(trustedDisplay.validate()).contextWindowTokens());
+        var manual = automatic.withContextWindow("1000000");
+        assertEquals(1_000_000, success(manual.validate()).contextWindowTokens());
+        assertEquals("1000000", manual.withAutomaticContext(2_000_000).contextWindowTokens());
+        assertEquals("1000000", manual.withModel("unknown-new-model").contextWindowTokens());
+    }
+
+    @Test
+    void modelEditReplacesOnlyAutomaticContextAndUnknownClearsIt() {
+        var automatic = ModelProfileDraft.create("main").withModel("gpt-6-luna");
+        assertEquals("1050000", automatic.contextWindowTokens());
+        var unknown = automatic.withModel("unpublished-unrelated");
+        assertEquals("", unknown.contextWindowTokens());
+        assertNull(unknown.automaticContextWindowTokens());
+        var other = automatic.withModel("claude-sonnet-4-5");
+        assertFalse(other.contextWindowTokens().isBlank());
+        assertEquals(other.contextWindowTokens(), other.automaticContextWindowTokens());
     }
 
     private static ModelProfileDefinition definition() {

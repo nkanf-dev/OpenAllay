@@ -5,6 +5,7 @@ import dev.openallay.client.gui.settings.ExtensionSettingsProjection;
 import dev.openallay.client.gui.settings.GeneralSettingsProjection;
 import dev.openallay.client.gui.settings.HistorySettingsProjection;
 import dev.openallay.client.gui.settings.ModelProfileDraft;
+import dev.openallay.client.gui.settings.BuiltinModelSettingsProjection;
 import dev.openallay.client.gui.settings.ModelSettingsProjection;
 import dev.openallay.client.gui.settings.RecipeSettingsProjection;
 import dev.openallay.client.gui.settings.RequirementSettingsProjection;
@@ -72,6 +73,10 @@ public final class OpenAllaySettingsScreen extends Screen {
     private boolean draftEnabled;
     private ModelProtocol draftProtocol;
     private int editorScroll;
+    private int modelEditorContentHeight = 240;
+    private boolean updatingAutomaticContext;
+    private final BuiltinModelSettingsProjection.EventCache modelEstimateCache =
+            new BuiltinModelSettingsProjection.EventCache();
     private String selectedSkillName;
     private String selectedCommunitySkillId;
     private SkillTab skillTab = SkillTab.INSTALLED;
@@ -162,6 +167,7 @@ public final class OpenAllaySettingsScreen extends Screen {
             }
             ClientSettingsSnapshot previous = snapshot;
             snapshot = next;
+            refreshAutomaticContext();
             if (previous.generation() != next.generation()) {
                 historyConfirmation = null;
             }
@@ -291,7 +297,7 @@ public final class OpenAllaySettingsScreen extends Screen {
             }
             captureDraft();
             int viewport = Math.max(1, layout.editor().height() - 38);
-            int maximum = Math.max(0, 206 - viewport);
+            int maximum = Math.max(0, modelEditorContentHeight - viewport);
             editorScroll = net.minecraft.util.Mth.clamp(
                     editorScroll - (int) Math.round(scrollY * 22), 0, maximum);
             rebuildWidgets();
@@ -982,6 +988,7 @@ public final class OpenAllaySettingsScreen extends Screen {
     }
 
     private void addEditor() {
+        refreshAutomaticContext();
         SettingsLayout.Rect area = layout.editor();
         int x = area.x() + 8;
         int y = area.y() + 8;
@@ -1005,6 +1012,9 @@ public final class OpenAllaySettingsScreen extends Screen {
         baseUrl.setResponder(value -> {
             confirmation = Confirmation.NONE;
             invalidateModelCatalog();
+            captureDraft();
+            refreshAutomaticContext();
+            updateAutomaticContextWidget();
         });
         y += 22;
         int fetchWidth = inputWidth >= 130 ? 46 : 30;
@@ -1012,6 +1022,12 @@ public final class OpenAllaySettingsScreen extends Screen {
         int modelWidth = Math.max(20, inputWidth - fetchWidth - chooseWidth - 6);
         model = field(
                 inputX, y, modelWidth, "screen.openallay.settings.models.model_id", draft.model());
+        model.setResponder(value -> {
+            confirmation = Confirmation.NONE;
+            draft = draft.withModel(value);
+            refreshAutomaticContext();
+            updateAutomaticContextWidget();
+        });
         Button fetch = addRenderableWidget(OpenAllayButton.create(
                         Component.translatable("screen.openallay.settings.models.fetch"),
                         ignored -> fetchModelCatalog())
@@ -1040,6 +1056,16 @@ public final class OpenAllaySettingsScreen extends Screen {
                 inputWidth,
                 "screen.openallay.settings.models.context_window",
                 draft.contextWindowTokens());
+        contextWindow.setTooltip(Tooltip.create(Component.translatable(
+                "screen.openallay.settings.models.builtin.reset_auto")));
+        contextWindow.setResponder(value -> {
+            confirmation = Confirmation.NONE;
+            if (!updatingAutomaticContext) {
+                draft = draft.withContextWindow(value);
+                refreshAutomaticContext();
+                updateAutomaticContextWidget();
+            }
+        });
         y += 22;
         maxOutput = field(
                 inputX, y, inputWidth, "screen.openallay.settings.models.max_output", draft.maxOutputTokens());
@@ -1221,7 +1247,8 @@ public final class OpenAllaySettingsScreen extends Screen {
             }
             y += 22;
         }
-        int statusY = Math.min(area.bottom() - 13, y + 3);
+        int statusY = y + 3;
+        graphics.enableScissor(area.x(), area.y() + 30, area.right(), area.bottom());
         selectedView().ifPresent(profile -> {
             int color = profile.available() ? 0xFF7FC8A9 : 0xFFFFD479;
             Component status = Component.translatable(
@@ -1238,6 +1265,17 @@ public final class OpenAllaySettingsScreen extends Screen {
                             : "screen.openallay.settings.models.api_key_replace"));
             graphics.text(font, status, x, statusY, color, false);
         });
+        int estimateY = statusY + 18;
+        for (BuiltinModelSettingsProjection.Line line : modelEstimates().lines()) {
+            Component text = Component.translatable(line.key(), line.arguments().toArray());
+            for (var wrapped : font.split(text, Math.max(20, area.width() - 16))) {
+                graphics.text(font, wrapped, x, estimateY, MUTED, false);
+                estimateY += 11;
+            }
+            estimateY += 3;
+        }
+        modelEditorContentHeight = estimateY + editorScroll - area.y() - 30;
+        graphics.disableScissor();
     }
 
     private void renderServerModel(
@@ -2873,6 +2911,7 @@ public final class OpenAllaySettingsScreen extends Screen {
             String modelId = catalogModelIds.get(index);
             addRenderableWidget(OpenAllayButton.create(Component.literal(modelId), ignored -> {
                         draft = draft.withModel(modelId);
+                        refreshAutomaticContext();
                         modelCatalogOpen = false;
                         localNotice = "";
                         rebuildWidgets();
@@ -3005,10 +3044,42 @@ public final class OpenAllaySettingsScreen extends Screen {
         selectedProfileId = definition.id();
         selectedServerModel = false;
         draft = ModelProfileDraft.from(definition);
+        refreshAutomaticContext();
         draftEnabled = definition.enabled();
         draftProtocol = definition.protocol();
         pendingApiKey = "";
         invalidateModelCatalog();
+    }
+
+    private BuiltinModelSettingsProjection modelEstimates() {
+        return modelEstimateCache.projection();
+    }
+
+    /** Event-owned projection. Rendering never invokes metadata resolution or matching. */
+    private void refreshAutomaticContext() {
+        if (draft == null || selectedServerModel) return;
+        draft = modelEstimateCache.refresh(draft,
+                dev.openallay.model.metadata.BuiltinModelCatalog.bundled(),
+                this::draftContextResolution);
+    }
+
+    private dev.openallay.model.metadata.ModelContextResolution draftContextResolution() {
+        try {
+            Integer manual = draft.automaticContextWindowTokens() != null
+                    || draft.contextWindowTokens() == null || draft.contextWindowTokens().isBlank()
+                    ? null : Integer.valueOf(draft.contextWindowTokens().trim());
+            return service.modelContext(java.net.URI.create(draft.baseUrl()), draft.model(), manual);
+        } catch (RuntimeException invalidDraft) {
+            return new dev.openallay.model.metadata.ModelContextResolution(null,
+                    dev.openallay.model.metadata.ModelContextResolution.Origin.REQUIRED);
+        }
+    }
+
+    private void updateAutomaticContextWidget() {
+        if (contextWindow == null) return;
+        updatingAutomaticContext = true;
+        try { contextWindow.setValue(draft.contextWindowTokens()); }
+        finally { updatingAutomaticContext = false; }
     }
 
     private void createProfile() {
@@ -3048,7 +3119,9 @@ public final class OpenAllaySettingsScreen extends Screen {
                     maxOutput.getValue(),
                     connectTimeout.getValue(),
                     requestTimeout.getValue(),
-                    draft.metadata());
+                    draft.metadata(),
+                    Objects.equals(contextWindow.getValue(), draft.automaticContextWindowTokens())
+                            ? draft.automaticContextWindowTokens() : null);
         }
         if (section == SettingsSection.GENERAL && assistantName != null) {
             assistantNameDraft = assistantName.getValue();

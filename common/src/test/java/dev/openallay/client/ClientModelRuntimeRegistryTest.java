@@ -121,6 +121,37 @@ final class ClientModelRuntimeRegistryTest {
     }
 
     @Test
+    void builtinThenTrustedContextReplacementLeavesCapturedRequestRuntimeFrozen() {
+        var definition = new ModelProfileDefinition("a", "A", true, ModelProtocol.OPENAI_CHAT,
+                URI.create("https://openrouter.ai/api/v1/"), "openai/gpt-6-luna", "env:KEY",
+                null, 8192, Duration.ofSeconds(30), Duration.ofSeconds(300), null);
+        var config = new ModelProfilesConfig(2, "a", List.of(definition));
+        String json = new dev.openallay.model.config.ModelProfilesConfigWriter().encode(config);
+        var loader = new ModelProfilesConfigLoader();
+        var initial = ((ToolResult.Success<ModelProfilesConfigLoader.Load>) loader.load(
+                new java.io.StringReader(json), Map.of("KEY", "private-sentinel"))).value();
+        CompletableFuture<ModelTurn> pending = new CompletableFuture<>();
+        RecordingModel old = new RecordingModel("old", pending);
+        RecordingModel replacement = new RecordingModel("replacement");
+        ClientModelRuntimeRegistry registry = registry(initial, Map.of("a", old));
+        var captured = registry.contextSpec("a").orElseThrow();
+        assertEquals(1_050_000, captured.budget().contextWindowTokens());
+        var active = registry.ask("a", UUID.randomUUID(), "main", UUID.randomUUID(), "question",
+                ToolInvocationContext.developmentConsole("frozen-context"), ignored -> {});
+        var metadata = new dev.openallay.model.metadata.ModelMetadata("openrouter", definition.model(),
+                definition.model(), 2_000_000, 256_000, java.time.Instant.EPOCH);
+        var updated = ((ToolResult.Success<ModelProfilesConfigLoader.Load>) loader.load(
+                new java.io.StringReader(json), Map.of("KEY", "private-sentinel"),
+                Map.of(metadata.key(), metadata))).value();
+        registry.replace(updated, profile -> replacement);
+        assertEquals(2_000_000, registry.contextSpec("a").orElseThrow().budget().contextWindowTokens());
+        assertEquals(1_050_000, captured.budget().contextWindowTokens());
+        pending.complete(turn("old"));
+        assertEquals("answer-old", active.join().text());
+        assertTrue(replacement.requests.isEmpty());
+    }
+
+    @Test
     void preparedReplacementDoesNotPublishUntilExplicitOneTimeCommit() {
         RecordingModel modelA = new RecordingModel("model-a");
         RecordingModel modelB = new RecordingModel("model-b");

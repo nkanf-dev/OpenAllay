@@ -68,6 +68,32 @@ final class ClientSettingsRuntimeTest {
     }
 
     @Test
+    void offlineBuiltinContextWorksThroughNativeSettingsStartupAndUntouchedSave(@TempDir Path directory)
+            throws Exception {
+        Path profiles = directory.resolve("models.json");
+        var definition = new ModelProfileDefinition("main", "Main", true, ModelProtocol.OPENAI_CHAT,
+                URI.create("https://arbitrary.example/v1/"), "gpt-6-luna", "env:KEY", null, 8192,
+                Duration.ofSeconds(30), Duration.ofSeconds(300), null);
+        var config = new ModelProfilesConfig(2, "main", List.of(definition));
+        Files.writeString(profiles, new dev.openallay.model.config.ModelProfilesConfigWriter().encode(config));
+        ClientSettingsRuntime settings = success(ClientSettingsRuntime.create(runtime(), profiles,
+                directory.resolve("model-metadata.json"), Map.of("KEY", "private-sentinel"),
+                Runnable::run, null, Clock.systemUTC(), GuideDisplayConfig.defaults()));
+        try {
+            var view = settings.settings().snapshot().models().profiles().getFirst();
+            assertTrue(view.available());
+            assertEquals(1_050_000, view.effectiveContextWindowTokens());
+            assertEquals(null, view.definition().contextWindowTokens());
+            assertEquals(1_050_000, settings.models().contextSpec("main").orElseThrow()
+                    .budget().contextWindowTokens());
+            assertInstanceOf(ToolResult.Success.class, settings.settings().saveModels(config).join());
+            assertFalse(Files.readString(profiles).contains("contextWindowTokens"));
+            assertFalse(settings.settings().snapshot().toString().contains("private-sentinel"));
+            assertFalse(Files.exists(directory.resolve("model-metadata.json")));
+        } finally { settings.closeAsync().join(); }
+    }
+
+    @Test
     void sharedDisplayRuntimePersistsDebugModeForSettingsAndGuide(@TempDir Path directory)
             throws Exception {
         Path displayPath = directory.resolve("display.json");

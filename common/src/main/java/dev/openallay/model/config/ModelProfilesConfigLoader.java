@@ -6,6 +6,8 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import dev.openallay.guide.GuideFailure;
 import dev.openallay.model.metadata.ModelMetadata;
+import dev.openallay.model.metadata.BuiltinModelCatalog;
+import dev.openallay.model.metadata.ModelContextResolution;
 import dev.openallay.model.metadata.OpenRouterMetadataResolver;
 import dev.openallay.tool.ToolResult;
 import java.io.IOException;
@@ -23,6 +25,16 @@ import java.util.Set;
 
 /** Strict schema-2 named-profile loader for client model settings. */
 public final class ModelProfilesConfigLoader {
+    private final BuiltinModelCatalog catalog;
+
+    public ModelProfilesConfigLoader() {
+        this(BuiltinModelCatalog.bundled().catalog());
+    }
+
+    public ModelProfilesConfigLoader(BuiltinModelCatalog catalog) {
+        this.catalog = Objects.requireNonNull(catalog, "catalog");
+    }
+
     private static final Set<String> ROOT_FIELDS =
             Set.of("schemaVersion", "defaultProfileId", "profiles");
     private static final Set<String> REQUIRED_PROFILE_FIELDS = Set.of(
@@ -147,7 +159,7 @@ public final class ModelProfilesConfigLoader {
                 metadata);
     }
 
-    private static ResolvedModelProfile resolve(
+    private ResolvedModelProfile resolve(
             ModelProfileDefinition definition,
             CredentialResolver credentials,
             Map<ModelMetadata.Key, ModelMetadata> metadata) {
@@ -155,14 +167,13 @@ public final class ModelProfilesConfigLoader {
             return failed(definition, "model_disabled", "This model profile is disabled");
         }
         ModelMetadata discovered = trustedMetadata(definition, metadata);
-        Integer contextWindow = definition.contextWindowTokens() != null
-                ? definition.contextWindowTokens()
-                : discovered == null ? null : discovered.contextWindowTokens();
+        Integer contextWindow = ModelContextResolution.resolve(definition.baseUri(), definition.model(),
+                definition.contextWindowTokens(), metadata, catalog).contextWindowTokens();
         if (contextWindow == null) {
             return failed(
                     definition,
                     "invalid_model_config",
-                    "contextWindowTokens is required unless trusted model metadata resolves it");
+                    "contextWindowTokens is required unless trusted or builtin model metadata resolves it");
         }
         ToolResult<SecretValue> resolvedCredential;
         try {

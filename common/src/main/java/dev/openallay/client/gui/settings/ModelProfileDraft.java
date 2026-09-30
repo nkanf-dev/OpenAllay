@@ -1,6 +1,7 @@
 package dev.openallay.client.gui.settings;
 
 import dev.openallay.model.config.ModelProfileDefinition;
+import dev.openallay.model.metadata.BuiltinModelCatalog;
 import dev.openallay.model.config.ModelProtocol;
 import dev.openallay.model.catalog.ModelCatalogRequest;
 import dev.openallay.tool.ToolResult;
@@ -21,9 +22,20 @@ public record ModelProfileDraft(
         String maxOutputTokens,
         String connectTimeoutSeconds,
         String requestTimeoutSeconds,
-        ModelProfileDefinition.MetadataProvenance metadata) {
+        ModelProfileDefinition.MetadataProvenance metadata,
+        String automaticContextWindowTokens) {
     public ModelProfileDraft {
         Objects.requireNonNull(protocol, "protocol");
+    }
+
+    public ModelProfileDraft(
+            String id, String displayName, boolean enabled, ModelProtocol protocol,
+            String baseUrl, String model, String credentialRef, String contextWindowTokens,
+            String maxOutputTokens, String connectTimeoutSeconds, String requestTimeoutSeconds,
+            ModelProfileDefinition.MetadataProvenance metadata) {
+        this(id, displayName, enabled, protocol, baseUrl, model, credentialRef,
+                contextWindowTokens, maxOutputTokens, connectTimeoutSeconds, requestTimeoutSeconds,
+                metadata, null);
     }
 
     public ModelProfileDraft(
@@ -69,7 +81,7 @@ public record ModelProfileDraft(
                 Integer.toString(definition.maxOutputTokens()),
                 Long.toString(definition.connectTimeout().toSeconds()),
                 Long.toString(definition.requestTimeout().toSeconds()),
-                definition.metadata());
+                definition.metadata()).autoFill(BuiltinModelCatalog.bundled().catalog());
     }
 
     public static ModelProfileDraft create(String id) {
@@ -89,19 +101,42 @@ public record ModelProfileDraft(
     }
 
     public ModelProfileDraft withModel(String replacement) {
+        return withModel(replacement, BuiltinModelCatalog.bundled().catalog());
+    }
+
+    public ModelProfileDraft withModel(String replacement, BuiltinModelCatalog catalog) {
+        boolean changed = !Objects.equals(model, replacement);
         return new ModelProfileDraft(
-                id,
-                displayName,
-                enabled,
-                protocol,
-                baseUrl,
-                replacement,
-                credentialRef,
-                contextWindowTokens,
-                maxOutputTokens,
-                connectTimeoutSeconds,
-                requestTimeoutSeconds,
-                Objects.equals(model, replacement) ? metadata : null);
+                id, displayName, enabled, protocol, baseUrl, replacement, credentialRef,
+                changed && automaticContextWindowTokens != null ? "" : contextWindowTokens,
+                maxOutputTokens, connectTimeoutSeconds, requestTimeoutSeconds,
+                changed ? null : metadata,
+                changed ? null : automaticContextWindowTokens).autoFill(catalog);
+    }
+
+    /** An actual player edit adopts a manual value; save alone does not. */
+    public ModelProfileDraft withContextWindow(String value) {
+        return new ModelProfileDraft(id, displayName, enabled, protocol, baseUrl, model,
+                credentialRef, value, maxOutputTokens, connectTimeoutSeconds,
+                requestTimeoutSeconds, metadata, null);
+    }
+
+    public ModelProfileDraft autoFill(BuiltinModelCatalog catalog) {
+        if (contextWindowTokens != null && !contextWindowTokens.isBlank()
+                && automaticContextWindowTokens == null) return this;
+        Integer context = catalog.match(model).map(match -> match.entry().contextWindowTokens())
+                .orElse(null);
+        return withAutomaticContext(context);
+    }
+
+    /** Trusted effective metadata can replace an automatic display value, never a manual edit. */
+    public ModelProfileDraft withAutomaticContext(Integer value) {
+        if (contextWindowTokens != null && !contextWindowTokens.isBlank()
+                && automaticContextWindowTokens == null) return this;
+        String text = value == null ? "" : Integer.toString(value);
+        return new ModelProfileDraft(id, displayName, enabled, protocol, baseUrl, model,
+                credentialRef, text, maxOutputTokens, connectTimeoutSeconds,
+                requestTimeoutSeconds, metadata, value == null ? null : text);
     }
 
     public boolean dirtyComparedTo(ModelProfileDefinition definition) {
@@ -113,6 +148,7 @@ public record ModelProfileDraft(
     public ToolResult<ModelProfileDefinition> validate() {
         try {
             Integer contextWindow = contextWindowTokens == null || contextWindowTokens.isBlank()
+                    || Objects.equals(contextWindowTokens, automaticContextWindowTokens)
                     ? null
                     : Integer.valueOf(contextWindowTokens.trim());
             ModelProfileDefinition definition = new ModelProfileDefinition(

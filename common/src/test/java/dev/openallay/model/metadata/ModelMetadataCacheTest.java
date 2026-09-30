@@ -93,6 +93,23 @@ final class ModelMetadataCacheTest {
         unknown.closeAsync().join();
     }
 
+    @Test
+    void duplicateJsonFieldsPricingAndUnversionedCacheAreRejectedWithoutMigration() throws Exception {
+        Path path = temporary.resolve("strict-cache.json");
+        for (String malformed : java.util.List.of(
+                "{\"schemaVersion\":1,\"schemaVersion\":1,\"entries\":[]}",
+                "{\"entries\":[]}",
+                "{\"schemaVersion\":1,\"entries\":[],\"pricing\":{}}")) {
+            Files.writeString(path, malformed);
+            ModelMetadataCache cache = new ModelMetadataCache(path);
+            assertEquals("metadata_cache_invalid", cache.load().join().failure().code());
+            assertEquals("metadata_cache_invalid", cache.put(metadata(1_000_000, Instant.EPOCH))
+                    .join().failure().code());
+            cache.closeAsync().join();
+            assertEquals(malformed, Files.readString(path));
+        }
+    }
+
     private static ModelMetadata metadata(int context, Instant capturedAt) {
         return new ModelMetadata(
                 "openrouter",

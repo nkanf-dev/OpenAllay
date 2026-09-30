@@ -3,7 +3,6 @@ package dev.openallay.model.metadata;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import dev.openallay.guide.GuideFailure;
 import java.io.IOException;
 import java.nio.file.AtomicMoveNotSupportedException;
@@ -168,8 +167,8 @@ public final class ModelMetadataCache {
         return root.toString();
     }
 
-    private static Map<ModelMetadata.Key, ModelMetadata> decode(String json) {
-        JsonElement parsed = JsonParser.parseString(json);
+    private static Map<ModelMetadata.Key, ModelMetadata> decode(String json) throws IOException {
+        JsonElement parsed = BuiltinModelCatalog.readStrict(new java.io.StringReader(json));
         JsonObject root = object(parsed, "metadata cache");
         requireFields(root, ROOT_FIELDS, "metadata cache");
         if (integer(root.get("schemaVersion")) != SCHEMA_VERSION) {

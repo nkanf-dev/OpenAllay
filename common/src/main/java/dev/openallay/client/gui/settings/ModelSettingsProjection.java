@@ -75,7 +75,7 @@ public record ModelSettingsProjection(List<ModelCard> models) {
             boolean available,
             boolean defaultProfile,
             String failureCode,
-            int contextWindowTokens,
+            Integer contextWindowTokens,
             int maxOutputTokens) {
         public ModelCard {
             Objects.requireNonNull(selectionId, "selectionId");

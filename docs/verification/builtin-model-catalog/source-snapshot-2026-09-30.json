@@ -1,0 +1,128 @@
+{
+  "snapshot": "2026-09-30",
+  "normalizer": "scripts/update-builtin-model-catalog.py",
+  "sources": [
+    {
+      "id": "models-dev",
+      "label": "Models.dev provider catalog",
+      "url": "https://models.dev/api.json",
+      "capturedAt": "2026-09-30T16:22:43Z",
+      "rawSha256": "979f529e001b05566197b46146e2e8130d4596eacf26fb624a8c347e2f1252da",
+      "rawByteCount": 5265254,
+      "httpStatus": 200
+    },
+    {
+      "id": "models-dev-canonical",
+      "label": "Models.dev canonical capabilities",
+      "url": "https://models.dev/models.json",
+      "capturedAt": "2026-09-30T16:26:28Z",
+      "rawSha256": "2c13c8a4f4036cc1b424b57ea885a12620256a6e23071bc8732503e61e33c6f1",
+      "rawByteCount": 402067,
+      "httpStatus": 200
+    },
+    {
+      "id": "openrouter",
+      "label": "OpenRouter public model catalog",
+      "url": "https://openrouter.ai/api/v1/models",
+      "capturedAt": "2026-09-30T16:22:42Z",
+      "rawSha256": "3c44ef10aa09e7aa5d1e179f30938e4ca9b941a34836264717ef4f3814bff8ec",
+      "rawByteCount": 762181,
+      "httpStatus": 200
+    }
+  ],
+  "normalized": {
+    "sha256": "311cab5ed5313e5fe90aa5b16b64da25be9395abd3ad55e815bf312d5a7f5501",
+    "modelCount": 1121,
+    "modelsByCapabilitySource": {
+      "models-dev": 465,
+      "models-dev-canonical": 194,
+      "openrouter": 462
+    },
+    "nullPricingCount": 200,
+    "nullMaxOutputCount": 16,
+    "contextTieredPricingCount": 132,
+    "excludedOpenRouterSpecializedModels": [
+      "google/lyria-3-pro-preview",
+      "google/lyria-3-clip-preview"
+    ],
+    "nonemptyPricingNoteCount": 20,
+    "noteOnlyRevision": {
+      "changes": "Remove generic pricing prose; preserve only material published rate conditions.",
+      "changedPricingNoteCount": 921,
+      "otherNormalizedFieldsUnchanged": true
+    }
+  },
+  "corroboration": [
+    {
+      "url": "https://platform.claude.com/docs/en/about-claude/models/overview",
+      "capturedAt": "2026-09-30T16:24:44Z",
+      "httpStatus": 200,
+      "claim": "Latest Claude Fable 5.1, Opus 5.5, Sonnet 5.5: 1M context and 128K max output; base USD/MTok input-output 10/50, 4/20, 2/10. Haiku4.5:200K/64K and1/5.",
+      "rawSha256": "ac84ff8f01dd825f7370509b71e5610285a34fe73b0db432273e5676e249064a"
+    },
+    {
+      "url": "https://api-docs.deepseek.com/quick_start/pricing",
+      "capturedAt": "2026-09-30T16:24:39Z",
+      "httpStatus": 200,
+      "claim": "deepseek-flash and deepseek-v4-pro:1M context,384K max output; offpeak USD/MTok input/output/cache-hit0.15/0.6/0.003 and0.66/1.98/0.022; peak rates double. Peak UTC weekdays01:00-04:00,06:00-10:00 excluding Chinese public holidays. Legacy IDs alias Flash.",
+      "rawSha256": "210f102275ccf1a6542f08a3bc9e4b4c7c83278cb74b35217bffa112df6363b2"
+    },
+    {
+      "url": "https://docs.x.ai/docs/models",
+      "capturedAt": "2026-09-30T16:24:40Z",
+      "httpStatus": 200,
+      "claim": "Grok4.7:500K context,USD/1M input2 andoutput6; Sep21 2026 page update.",
+      "rawSha256": "6d01044fa84bf81b152de3a6c5569d97d7a2d421359dbbd8f7a7f9562609eee1"
+    },
+    {
+      "url": "https://ai.google.dev/gemini-api/docs/models",
+      "capturedAt": "2026-09-30T16:24:42Z",
+      "httpStatus": 200,
+      "claim": "Current Gemini lineup published on official provider models page; limits and rates in bundled rows remain models.dev/OpenRouter sourced.",
+      "rawSha256": "3902db681163249ee5de1f8dd16e166a0edf8d11505ba461317ccd30bf7c6215"
+    },
+    {
+      "url": "https://www.alibabacloud.com/help/en/model-studio/models",
+      "capturedAt": "2026-09-30T16:24:41Z",
+      "httpStatus": 200,
+      "claim": "Qwen3.8Max/Qwen3.7Plus/Qwen3.8Flash lineup on official Sep28 2026 Recommended models page; bundled limits/rates remain models.dev sourced.",
+      "rawSha256": "ce5b464c9a4b23e0b93d5eab7c106d6e43e9490be83b4ee32b22f5eb06aadeb7"
+    },
+    {
+      "url": "https://models.dev",
+      "capturedAt": "2026-09-30T16:24:41Z",
+      "httpStatus": 200,
+      "claim": "Documents provider api.json and provider-agnostic models.json, no hosting-rate guarantee for canonical capabilities.",
+      "rawSha256": "7e2c67932475a511ce0d1b8ec6e5be6822c090a0eff6231834066c555f237cfb"
+    },
+    {
+      "url": "https://openrouter.ai/docs/api-reference/models/get-models",
+      "capturedAt": "2026-09-30T16:24:42Z",
+      "httpStatus": 200,
+      "claim": "USD/token prompt/completion/cache-read/cache-write; query omits offset+limit to return full list. Cache-write defaults to5minute TTL if multipleTTL options.",
+      "rawSha256": "7480779d199a5f023bdb5bbc614114340e5982f7e6c63e0ff1f883766693a000"
+    }
+  ],
+  "unavailableOfficialOpenAI": [
+    {
+      "url": "https://developers.openai.com/api/docs/models/gpt-6-luna",
+      "httpStatus": 403
+    },
+    {
+      "url": "https://developers.openai.com/api/docs/pricing",
+      "httpStatus": 403
+    },
+    {
+      "url": "https://platform.openai.com/docs/models/gpt-6-luna",
+      "httpStatus": 403
+    },
+    {
+      "url": "https://openai.com/api/pricing/",
+      "httpStatus": 403
+    },
+    {
+      "url": "https://openai.com/index/introducing-gpt-6-sol-and-luna/",
+      "httpStatus": 403
+    }
+  ]
+}

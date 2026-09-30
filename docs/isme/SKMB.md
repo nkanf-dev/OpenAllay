@@ -43,6 +43,7 @@ accepted and contains explicit approval evidence.
 | SKMB-2026-09-29-033 | accepted | client-local unrestricted JavaScript/JVM interop opt-in | A, B, C, D, E, F, G | decisions/2026-09-29-033-unrestricted-javascript-mode.md | pending |
 | SKMB-2026-09-30-034 | accepted | independent full online construction Extension and generic invocation lifecycle | A, B, C, D, E, F, G | decisions/2026-09-30-034-extension-online-construction.md | pending |
 | SKMB-2026-09-30-035 | accepted | advisory capability/dependency metadata and player requirement choices | A, B, C, D, E, F, G | decisions/2026-09-30-035-advisory-extension-skill-requirements.md | pending |
+| SKMB-2026-10-01-036 | accepted | builtin model catalog, automatic BEST missing-context matching and published price estimates | B, C, D, F | decisions/2026-10-01-036-builtin-model-catalog.md | pending |
 
 SKMB-2026-07-18-006 is implemented by `a0eaeff`, `19ab90f`, and `c6ca6bc`.
 Its deterministic clean-build and packaged-driver evidence is recorded in the

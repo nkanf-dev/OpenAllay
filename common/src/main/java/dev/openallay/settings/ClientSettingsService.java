@@ -22,6 +22,8 @@ import dev.openallay.model.config.ModelProfilesConfig;
 import dev.openallay.model.config.ResolvedModelProfile;
 import dev.openallay.model.config.SecretValue;
 import dev.openallay.model.metadata.ModelMetadata;
+import dev.openallay.model.metadata.ModelContextResolution;
+import dev.openallay.model.metadata.BuiltinModelCatalog;
 import dev.openallay.model.metadata.ModelMetadataUpdate;
 import dev.openallay.settings.model.ModelConnectionResult;
 import dev.openallay.settings.model.ModelProfileSettingsView;
@@ -2110,6 +2112,12 @@ public final class ClientSettingsService implements AutoCloseable {
 
     private boolean isCurrentLocked(long id) {
         return operationIds.get() == id && operation.kind() != SettingsOperation.Kind.IDLE;
+    }
+
+    /** Local non-inference projection for the currently typed endpoint and model name. */
+    public ModelContextResolution modelContext(java.net.URI endpoint, String model, Integer explicit) {
+        return ModelContextResolution.resolve(endpoint, model, explicit, metadataSnapshot(),
+                BuiltinModelCatalog.bundled().catalog());
     }
 
     private Map<ModelMetadata.Key, ModelMetadata> metadataSnapshot() {
