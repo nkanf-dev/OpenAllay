@@ -735,11 +735,12 @@ public final class GuideClientE2EController {
                 String jar = System.getProperty("openallay.e2e.reviewPackage", "");
                 if (jar.isBlank()) { screenshotStage = 28; break; }
                 screenshotActionPending = true;
-                clientSettings.importLocalExtensionPackage(java.nio.file.Path.of(jar)).thenAccept(prepared -> {
-                    screenshotActionPending = false;
-                    if (prepared instanceof ToolResult.Failure<Boolean> failure)
-                        screenshotReviewFailure = failure.code();
-                });
+                clientSettings.importLocalExtensionPackage(java.nio.file.Path.of(jar)).thenAccept(prepared ->
+                        client.execute(() -> {
+                            screenshotActionPending = false;
+                            if (prepared instanceof ToolResult.Failure<Boolean> failure)
+                                screenshotReviewFailure = failure.code();
+                        }));
             }
             case 26 -> {
                 if (screenshotReviewFailure != null) {
