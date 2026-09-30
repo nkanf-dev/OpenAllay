@@ -659,6 +659,16 @@ behave normally. For nested lookups inside a repeated callback, use an indexed
 declares block-scoped locals; Rhino 2101 otherwise reports a redeclaration
 failure. Bundled Skills and examples use the tested form.
 
+Each new `run_javascript` call includes a short `title` and `description` in the
+player's language explaining its intended work. These optional input properties
+are display-only; older calls use localized defaults. They do not change source,
+roots, handles, duplicate execution identity, permissions, status or evidence.
+Pending and completed cards keep the same per-invocation intent as literal text.
+History and server ToolStarted events retain the closed intent through the
+existing JavaScript invocation presentation-message arguments (zero for legacy,
+two for title/description), never by storing raw arguments or source. The strict
+history/bridge schemas remain unchanged. See decision 037.
+
 `run_javascript` accepts `roots`; normal analysis should select only the
 required host views, for example `["items"]` or `["items", "recipes"]`.
 Registry and recipe rows are exposed once in those JavaScript-native views.

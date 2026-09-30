@@ -124,6 +124,29 @@ final class ServerAgentEventCodecTest {
     }
 
     @Test
+    void serverPendingCardsReceiveIntentWithoutRawArgumentsOrNewWireFields() {
+        UUID request = UUID.randomUUID();
+        JsonObject input = new JsonObject();
+        input.addProperty("source", "private source must not cross ToolStarted");
+        input.addProperty("title", "比较武器");
+        input.addProperty("description", "按攻击伤害排列");
+        ServerAgentEventPayload encoded = codec.encode(request, new AgentEvent.ToolStarted(
+                "call-intent", "openallay:run_javascript", input,
+                dev.openallay.guide.GuideToolInvocationPresentation.messages("openallay:run_javascript", input)));
+        assertEquals(Set.of("invocationId", "toolId", "presentationMessages"),
+                JsonParser.parseString(encoded.eventJson()).getAsJsonObject().keySet());
+        org.junit.jupiter.api.Assertions.assertFalse(encoded.eventJson().contains("private source"));
+        AgentEvent.ToolStarted decoded = assertInstanceOf(AgentEvent.ToolStarted.class, codec.decode(encoded, request));
+        var snapshot = dev.openallay.guide.GuideRequestSnapshot.start(request, "main",
+                dev.openallay.guide.GuideTopology.SERVER, "Compare", Instant.EPOCH);
+        snapshot = new dev.openallay.guide.GuideStateReducer(new Gson()).apply(snapshot, decoded, Instant.EPOCH);
+        assertEquals("call-intent", snapshot.tools().getFirst().invocationId());
+        assertEquals(dev.openallay.guide.GuideToolStatus.RUNNING, snapshot.tools().getFirst().status());
+        assertEquals(new dev.openallay.guide.GuideToolIntent("比较武器", "按攻击伤害排列"),
+                snapshot.tools().getFirst().intent());
+    }
+
+    @Test
     void rejectsUnknownMismatchedAndInconsistentEvents() {
         UUID request = UUID.randomUUID();
         assertThrows(IllegalArgumentException.class, () -> codec.decode(

@@ -63,6 +63,7 @@ public final class AgentSystemPrompt {
                 ? "- run_javascript supports detached Minecraft analysis and unrestricted Java/JVM code for this request.\n"
                 : "- run_javascript analyzes detached Minecraft data. Use the core contract and any relevant Skill or reference to work with documented roots, fields, and modules.\n";
         sections.add(new Section("EXECUTION", executionMode + """
+                - Include title and description on every run_javascript call: a short title and description in the player's language explaining the intended work. These are display intent, not success claims, evidence, or permissions.
                 - Choose an approach that fits the question and the evidence already available. Gather more information when it can resolve a relevant gap; stop when the requested answer is supported.
                 - Prefer a clear batch or aggregate operation when it avoids unnecessary per-item work. Return an explicit value with only the answer-relevant data.
                 - The mc host views are read-only. Copy arrays before mutating operations such as sort, reverse, splice, push, or index assignment.

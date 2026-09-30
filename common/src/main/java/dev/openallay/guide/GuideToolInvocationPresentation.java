@@ -14,9 +14,18 @@ public final class GuideToolInvocationPresentation {
         String name = toolName(toolId);
         return switch (name) {
             case "load_skill" -> loadSkill(input);
-            case "run_javascript" -> one(GuideToolMessage.Key.INVOCATION_RUN_JAVASCRIPT);
+            case "run_javascript" -> javascriptIntent(input);
             default -> List.of();
         };
+    }
+
+    private static List<GuideToolMessage> javascriptIntent(JsonObject input) {
+        GuideToolIntent intent = GuideToolIntent.fromArguments(input);
+        return intent.empty()
+                ? one(GuideToolMessage.Key.INVOCATION_RUN_JAVASCRIPT)
+                : List.of(GuideToolMessage.of(
+                        GuideToolMessage.Key.INVOCATION_RUN_JAVASCRIPT,
+                        intent.title(), intent.description()));
     }
 
     private static List<GuideToolMessage> loadSkill(JsonObject input) {

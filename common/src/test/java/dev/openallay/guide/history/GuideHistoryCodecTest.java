@@ -131,6 +131,59 @@ final class GuideHistoryCodecTest {
     }
 
     @Test
+    void restoresPerCallIntentWithoutAddingFieldsOrPersistingRawArguments() {
+        GuideHistoryCodec codec = new GuideHistoryCodec();
+        var timeline = new java.util.ArrayList<GuideTimelineEntry>();
+        for (int index = 0; index < 2; index++) {
+            JsonObject input = new JsonObject();
+            input.addProperty("source", "private source must not persist");
+            input.addProperty("title", "Title " + index);
+            input.addProperty("description", "Description " + index);
+            timeline.add(new GuideTimelineEntry.Tool(index, new GuideToolActivity(
+                    "call-" + index, index, "openallay:run_javascript",
+                    index == 0 ? GuideToolStatus.SUCCEEDED : GuideToolStatus.FAILED,
+                    input, null, dev.openallay.guide.GuideToolInvocationPresentation.messages(
+                            "openallay:run_javascript", input), List.of())));
+        }
+        String encoded = codec.encodeTimeline(timeline);
+        List<GuideTimelineEntry> restored = codec.decodeTimeline(encoded);
+        for (int index = 0; index < 2; index++) {
+            GuideToolActivity original = ((GuideTimelineEntry.Tool) timeline.get(index)).activity();
+            GuideToolActivity activity = ((GuideTimelineEntry.Tool) restored.get(index)).activity();
+            assertEquals(original.intent(), activity.intent());
+            assertEquals(original.status(), activity.status());
+            assertEquals(original.invocationId(), activity.invocationId());
+            assertNull(activity.invocationArguments());
+            assertNull(activity.normalized());
+        }
+        assertFalse(encoded.contains("private source"));
+        JsonObject stored = JsonParser.parseString(encoded).getAsJsonArray().get(0).getAsJsonObject();
+        assertEquals(java.util.Set.of("roots", "handles", "modules"), stored.getAsJsonObject("invocation").keySet());
+        assertFalse(stored.has("title"));
+        assertFalse(stored.has("invocationArguments"));
+    }
+
+    @Test
+    void legacyAndWellTypedUnsupportedIntentArityFallBackButCorruptTypesStayStrict() {
+        GuideHistoryCodec codec = new GuideHistoryCodec();
+        for (List<String> arguments : List.of(List.<String>of(), List.of("unsupported"), List.of(" ", ""))) {
+            GuideTimelineEntry.Tool tool = new GuideTimelineEntry.Tool(0, new GuideToolActivity(
+                    "legacy", 0, "openallay:run_javascript", GuideToolStatus.SUCCEEDED, null,
+                    List.of(new GuideToolMessage(GuideToolMessage.Key.INVOCATION_RUN_JAVASCRIPT, arguments)), List.of()));
+            var restored = (GuideTimelineEntry.Tool) codec.decodeEntry(codec.encodeEntry(tool));
+            assertTrue(restored.activity().intent().empty());
+        }
+        GuideTimelineEntry.Tool tool = new GuideTimelineEntry.Tool(0, new GuideToolActivity(
+                "legacy", 0, "openallay:run_javascript", GuideToolStatus.SUCCEEDED, null,
+                List.of(GuideToolMessage.of(GuideToolMessage.Key.INVOCATION_RUN_JAVASCRIPT, "Title", "Description")),
+                List.of()));
+        JsonObject corrupt = JsonParser.parseString(codec.encodeEntry(tool)).getAsJsonObject();
+        corrupt.getAsJsonArray("presentationMessages").get(0).getAsJsonObject()
+                .getAsJsonArray("arguments").set(0, JsonParser.parseString("7"));
+        assertThrows(IllegalArgumentException.class, () -> codec.decodeEntry(corrupt.toString()));
+    }
+
+    @Test
     void rejectsUnknownAndMissingDurableFields() {
         GuideHistoryCodec codec = new GuideHistoryCodec();
         String encoded = codec.encodeTimeline(List.of(

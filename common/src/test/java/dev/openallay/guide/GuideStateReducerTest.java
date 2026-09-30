@@ -319,6 +319,60 @@ final class GuideStateReducerTest {
         assertSame(terminal, late);
     }
 
+    @Test
+    void javascriptIntentAppearsPendingAndSurvivesOutOfOrderResultsAndFinalText() {
+        GuideRequestSnapshot request = GuideRequestSnapshot.start(
+                UUID.randomUUID(), "main", GuideTopology.CLIENT_LOCAL, "Compare", Instant.EPOCH);
+        request = reducer.apply(request, text("I will compare."), at(1));
+        JsonObject first = javascriptArguments("Compare swords", "Rank attack damage");
+        JsonObject second = javascriptArguments("Check recipes", "Find ingredients");
+        request = reducer.apply(request, new AgentEvent.ToolStarted("call-1", "openallay:run_javascript",
+                first, GuideToolInvocationPresentation.messages("openallay:run_javascript", first)), at(2));
+        assertEquals(new GuideToolIntent("Compare swords", "Rank attack damage"), request.tools().getFirst().intent());
+        assertEquals(GuideToolStatus.RUNNING, request.tools().getFirst().status());
+        assertTrue(request.tools().getFirst().sources().isEmpty());
+        first.addProperty("title", "mutated after start");
+        request = reducer.apply(request, new AgentEvent.ToolStarted("call-2", "openallay:run_javascript",
+                second, GuideToolInvocationPresentation.messages("openallay:run_javascript", second)), at(3));
+        JsonObject failure = new JsonObject();
+        failure.addProperty("status", "failure");
+        failure.addProperty("code", "javascript_error");
+        failure.addProperty("title", "Overwrite by failure");
+        request = reducer.apply(request, new AgentEvent.ToolCompleted(
+                "call-2", "openallay:run_javascript", true, failure), at(4));
+        JsonObject success = groundedResult();
+        success.getAsJsonObject("value").addProperty("title", "Overwrite by result");
+        request = reducer.apply(request, new AgentEvent.ToolCompleted(
+                "call-1", "openallay:run_javascript", false, success), at(5));
+        request = reducer.apply(request, new AgentEvent.ModelProgress(
+                new ModelEvent.ReasoningDelta("hidden reasoning must not become intent")), at(6));
+        request = reducer.apply(request, text("The results differ."), at(7));
+        request = reducer.apply(request, new AgentEvent.FinalText("Final answer"), at(8));
+
+        assertEquals(List.of(GuideTimelineEntry.Assistant.class, GuideTimelineEntry.Tool.class,
+                GuideTimelineEntry.Tool.class, GuideTimelineEntry.Assistant.class),
+                request.timeline().stream().map(Object::getClass).toList());
+        assertEquals(List.of(0, 1, 2, 3), request.timeline().stream().map(GuideTimelineEntry::ordinal).toList());
+        assertEquals(List.of("call-1", "call-2"), request.tools().stream().map(GuideToolActivity::invocationId).toList());
+        assertEquals(List.of("Compare swords", "Check recipes"), request.tools().stream()
+                .map(activity -> activity.intent().title()).toList());
+        assertEquals(List.of(GuideToolStatus.SUCCEEDED, GuideToolStatus.FAILED), request.tools().stream()
+                .map(GuideToolActivity::status).toList());
+        assertEquals(List.of(new GuideSource("openallay:run_javascript", GroundedTestFixtures.serverEvidence())),
+                request.tools().getFirst().sources());
+        assertTrue(request.tools().get(1).sources().isEmpty());
+        assertFalse(request.timeline().toString().contains("hidden reasoning"));
+        assertEquals("Final answer", request.assistantText());
+    }
+
+    private static JsonObject javascriptArguments(String title, String description) {
+        JsonObject input = new JsonObject();
+        input.addProperty("source", "return mc.items.length;");
+        input.addProperty("title", title);
+        input.addProperty("description", description);
+        return input;
+    }
+
     private static JsonObject groundedResult() {
         JsonObject result = new JsonObject();
         result.addProperty("status", "success");

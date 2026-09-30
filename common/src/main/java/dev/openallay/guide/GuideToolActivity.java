@@ -68,6 +68,10 @@ public record GuideToolActivity(
                 sources);
     }
 
+    public GuideToolIntent intent() {
+        return GuideToolIntent.from(toolId, invocationArguments, presentationMessages);
+    }
+
     @Override
     public JsonObject invocationArguments() {
         return invocationArguments == null ? null : invocationArguments.deepCopy();

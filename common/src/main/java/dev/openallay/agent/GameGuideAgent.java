@@ -296,7 +296,10 @@ public final class GameGuideAgent {
             lease.cancellation().throwIfCancelled();
             String exposedId = tools.canonicalToolId(call.name())
                     .orElse(AgentToolExecutor.UNKNOWN_TOOL_ID);
-            String callKey = exposedId + ":" + canonical(call.input());
+            JsonObject executionArguments = dev.openallay.tool.builtin.RunJavascriptTool.ID.equals(exposedId)
+                    ? dev.openallay.tool.builtin.RunJavascriptTool.executionArguments(call.input())
+                    : call.input();
+            String callKey = exposedId + ":" + canonical(executionArguments);
             String previousOutcome = previousCallOutcomes.get(callKey);
             if (REPEATED_CALL_SENTINEL.equals(previousOutcome)) {
                 throw new ModelClientException(new dev.openallay.model.ModelFailure(

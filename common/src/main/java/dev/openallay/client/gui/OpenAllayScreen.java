@@ -689,13 +689,10 @@ public final class OpenAllayScreen extends Screen {
         if (row instanceof GuideUiRow.Tool tool) {
             GuideToolActivity activity = tool.activity();
             List<FormattedCharSequence> summaries = toolSummaryLines(activity, width - 14);
-            int rowHeight = toolCardHeight(summaries.size());
+            List<FormattedCharSequence> titleLines = font.split(
+                    toolCardTitle(activity), Math.max(1, width - 14));
+            int rowHeight = toolCardHeight(summaries.size()) + Math.max(0, titleLines.size() - 1) * 10;
             int color = activity.status() == GuideToolStatus.FAILED ? ERROR : 0xFF7FC8A9;
-            String icon = switch (activity.status()) {
-                case RUNNING -> "◌";
-                case SUCCEEDED -> "✓";
-                case FAILED -> "!";
-            };
             boolean selected = selectedTool != null
                     && toolFocusId(selectedTool).equals(toolFocusId(tool));
             graphics.fill(x + 2, y - 2, x + width - 2, y + rowHeight - 6,
@@ -703,10 +700,12 @@ public final class OpenAllayScreen extends Screen {
             if (selected) {
                 graphics.outline(x + 2, y - 2, width - 4, rowHeight - 4, ACCENT);
             }
-            Component title = Component.literal(icon + " ").append(friendlyTool(activity.toolId()))
-                    .append(" · ").append(toolStatus(activity.status()));
-            graphics.text(font, title, x + 7, y + 2, color, false);
-            int summaryY = y + 14;
+            int titleY = y + 2;
+            for (FormattedCharSequence title : titleLines) {
+                graphics.text(font, title, x + 7, titleY, color, false);
+                titleY += 10;
+            }
+            int summaryY = titleY + 2;
             for (FormattedCharSequence summary : summaries) {
                 graphics.text(font, summary, x + 9, summaryY, MUTED, false);
                 summaryY += 10;
@@ -714,7 +713,7 @@ public final class OpenAllayScreen extends Screen {
             hits.add(new Hit(new GuideUiLayout.Rect(
                             x + 2, y - 2, width - 4, rowHeight - 4),
                     HitKind.CONTENT, () -> open(tool), toolFocusId(tool),
-                    friendlyTool(activity.toolId()).getString()));
+                    toolTitle(activity).getString()));
             return y + rowHeight;
         }
         if (row instanceof GuideUiRow.Persistence persistence) {
@@ -774,7 +773,9 @@ public final class OpenAllayScreen extends Screen {
             return 11 + body + assistant.sources().size() * 12 + 8;
         }
         if (row instanceof GuideUiRow.Tool tool) {
-            return toolCardHeight(toolSummaryLines(tool.activity(), width - 14).size());
+            int titleLines = font.split(toolCardTitle(tool.activity()), Math.max(1, width - 14)).size();
+            return toolCardHeight(toolSummaryLines(tool.activity(), width - 14).size())
+                    + Math.max(0, titleLines - 1) * 10;
         }
         return 18;
     }
@@ -782,15 +783,26 @@ public final class OpenAllayScreen extends Screen {
     private List<FormattedCharSequence> toolSummaryLines(
             GuideToolActivity activity, int width) {
         ArrayList<FormattedCharSequence> result = new ArrayList<>();
-        for (GuideToolMessage message : visibleToolSummaryMessages(
-                activity.presentationMessages())) {
+        for (Component message : toolSummaryComponents(activity)) {
             for (FormattedCharSequence wrapped : font.split(
-                    toolMessage(message), Math.max(1, width))) {
+                    message, Math.max(1, width))) {
                 result.add(wrapped);
                 if (result.size() == 3) return List.copyOf(result);
             }
         }
         return List.copyOf(result);
+    }
+
+    static List<Component> toolSummaryComponents(GuideToolActivity activity) {
+        ArrayList<Component> summary = new ArrayList<>();
+        boolean javascript = activity.toolId().endsWith(":run_javascript");
+        if (javascript) summary.add(toolDescription(activity.intent()));
+        for (GuideToolMessage message : visibleToolSummaryMessages(activity.presentationMessages())) {
+            if (!javascript || message.key() != GuideToolMessage.Key.INVOCATION_RUN_JAVASCRIPT) {
+                summary.add(toolMessage(message));
+            }
+        }
+        return List.copyOf(summary);
     }
 
     static List<GuideToolMessage> visibleToolSummaryMessages(
@@ -986,9 +998,16 @@ public final class OpenAllayScreen extends Screen {
         int y = detail.y() + 26 - detailScroll;
         if (selectedTool != null) {
             GuideToolDetailView toolDetail = selectedTool.detail();
-            graphics.text(font, Component.translatable(toolDetail.titleKey()),
-                    detail.x() + 8, y, TEXT, false);
-            y += 15;
+            if (!toolDetail.intent().empty()) {
+                y = detailLine(graphics,
+                        Component.translatable("screen.openallay.tool.intent.label").getString(), detail, y);
+            }
+            y = detailLine(graphics,
+                    intentTitle(toolDetail.intent(), toolDetail.titleKey()).getString(), detail, y);
+            if (selectedTool.activity().toolId().endsWith(":run_javascript")) {
+                y = detailLine(graphics, toolDescription(toolDetail.intent()).getString(), detail, y);
+            }
+            y += 4;
             y = detailLine(graphics,
                     Component.translatable("screen.openallay.detail.tool.status").getString()
                             + ": " + toolStatusName(toolDetail.status()),
@@ -2175,6 +2194,36 @@ public final class OpenAllayScreen extends Screen {
             case SUCCEEDED -> "screen.openallay.detail.tool.status.succeeded";
             case FAILED -> "screen.openallay.detail.tool.status.failed";
         });
+    }
+
+    static Component toolTitle(GuideToolActivity activity) {
+        return activity.intent().title().isEmpty()
+                ? friendlyTool(activity.toolId())
+                : Component.literal(activity.intent().title());
+    }
+
+    private static Component intentTitle(dev.openallay.guide.GuideToolIntent intent, String titleKey) {
+        return intent.title().isEmpty()
+                ? Component.translatable(titleKey) : Component.literal(intent.title());
+    }
+
+    static Component toolDescription(dev.openallay.guide.GuideToolIntent intent) {
+        return intent.description().isEmpty()
+                ? Component.translatable("screen.openallay.tool.intent.run_javascript.description")
+                : Component.literal(intent.description());
+    }
+
+    private static Component toolCardTitle(GuideToolActivity activity) {
+        String icon = switch (activity.status()) {
+            case RUNNING -> "◌";
+            case SUCCEEDED -> "✓";
+            case FAILED -> "!";
+        };
+        Component title = Component.literal(icon + " ");
+        if (!activity.intent().empty()) {
+            title = title.copy().append(Component.translatable("screen.openallay.tool.intent.label")).append(": ");
+        }
+        return title.copy().append(toolTitle(activity)).append(" · ").append(toolStatus(activity.status()));
     }
 
     private static Component friendlyTool(String id) {

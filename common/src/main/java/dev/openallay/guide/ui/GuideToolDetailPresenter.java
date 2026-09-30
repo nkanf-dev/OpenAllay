@@ -35,6 +35,7 @@ public final class GuideToolDetailPresenter {
                 titleKey(activity.toolId()),
                 activity.status(),
                 activity.invocation(),
+                activity.intent(),
                 projection.cards(),
                 narration,
                 debug);

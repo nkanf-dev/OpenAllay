@@ -146,6 +146,17 @@ final class GuideToolPresentationTest {
     void everyClosedMessageHasEnglishAndSimplifiedChineseTranslations() {
         JsonObject english = language("en_us");
         JsonObject chinese = language("zh_cn");
+        assertEquals("Run JavaScript", english.get("screen.openallay.tool.run_javascript").getAsString());
+        assertEquals("执行 JavaScript", chinese.get("screen.openallay.tool.run_javascript").getAsString());
+        assertEquals("Run the JavaScript for this step.",
+                english.get("screen.openallay.tool.intent.run_javascript.description").getAsString());
+        assertEquals("执行这一步的 JavaScript。",
+                chinese.get("screen.openallay.tool.intent.run_javascript.description").getAsString());
+        for (String key : List.of("screen.openallay.tool.run_javascript",
+                "screen.openallay.tool.intent.label", "screen.openallay.tool.intent.run_javascript.description")) {
+            assertTrue(english.has(key), "missing en_us: " + key);
+            assertTrue(chinese.has(key), "missing zh_cn: " + key);
+        }
         for (GuideToolMessage.Key key : GuideToolMessage.Key.values()) {
             assertTrue(english.has(key.translationKey()), "missing en_us: " + key.translationKey());
             assertTrue(chinese.has(key.translationKey()), "missing zh_cn: " + key.translationKey());

@@ -1,6 +1,7 @@
 package dev.openallay.tool.builtin;
 
 import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import dev.openallay.agent.tool.ToolDescription;
 import dev.openallay.agent.tool.ToolOptional;
 import dev.openallay.context.ContextCapability;
@@ -51,9 +52,17 @@ public final class RunJavascriptTool
             @ToolDescription(
                             "Top-level bindings required by this program, for example items, recipes, or the "
                                     + "enabled experimental commands binding. Omit only for schema discovery.")
-                    @ToolOptional List<String> roots) {
+                    @ToolOptional List<String> roots,
+            @ToolDescription("Short title in the player's language describing the intended work. Include on every new call.")
+                    @ToolOptional String title,
+            @ToolDescription("Short description in the player's language of what this call intends to do, not a result or success claim. Include on every new call.")
+                    @ToolOptional String description) {
         public Input(String source, List<String> handles) {
             this(source, handles, List.of());
+        }
+
+        public Input(String source, List<String> handles, List<String> roots) {
+            this(source, handles, roots, null, null);
         }
 
         public Input {
@@ -93,7 +102,8 @@ public final class RunJavascriptTool
 
     private static final ToolDescriptor<Input, Output> DESCRIPTOR = new ToolDescriptor<>(
             ID,
-            "Analyze the current detached Minecraft data with isolated JavaScript. Every source must end with an explicit return. "
+            "Run JavaScript over the selected detached Minecraft data and enabled Extension bindings. Every source must end with an explicit return. "
+                    + "Include title and description on every new call to explain the intended work in the player's language. "
                     + "Use the core JavaScript contract in the system prompt and prefer one filter/map/reduce/sort/join "
                     + "program over repeated calls; do not rediscover documented roots. "
                     + "Load a Skill only when a matching domain-specific or optional workflow requires it. "
@@ -109,6 +119,22 @@ public final class RunJavascriptTool
                     ContextCapability.RECIPES,
                     ContextCapability.PLAYER,
                     ContextCapability.OBSERVABLE_GAME_STATE));
+    /** Display intent cannot make identical execution arguments appear to be a new operation. */
+    public static JsonObject executionArguments(JsonObject arguments) {
+        JsonObject execution = arguments.deepCopy();
+        for (String field : List.of("title", "description")) {
+            JsonElement value = execution.get(field);
+            if (value != null && !value.isJsonNull()
+                    && (!value.isJsonPrimitive() || !value.getAsJsonPrimitive().isString())) {
+                // Keep malformed inputs distinct so correcting an input failure can recover.
+                return execution;
+            }
+        }
+        execution.remove("title");
+        execution.remove("description");
+        return execution;
+    }
+
     private static final String COMMANDS_BINDING = "commands";
     private static final String WORLD_BINDING = "world";
 

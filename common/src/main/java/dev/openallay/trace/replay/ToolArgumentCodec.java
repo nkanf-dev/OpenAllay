@@ -15,6 +15,16 @@ public final class ToolArgumentCodec {
 
     public <I> ToolResult<I> decode(JsonObject arguments, Class<I> inputType) {
         try {
+            if (arguments != null && inputType.isRecord()) {
+                for (var component : inputType.getRecordComponents()) {
+                    var value = arguments.get(component.getName());
+                    if (component.getType() == String.class && value != null && !value.isJsonNull()
+                            && (!value.isJsonPrimitive() || !value.getAsJsonPrimitive().isString())) {
+                        return new ToolResult.Failure<>(
+                                "invalid_arguments", component.getName() + " must be text");
+                    }
+                }
+            }
             I input = gson.fromJson(arguments, inputType);
             if (input == null) {
                 return new ToolResult.Failure<>(

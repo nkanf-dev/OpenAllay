@@ -3,6 +3,7 @@ package dev.openallay.guide.ui;
 import com.google.gson.JsonObject;
 import dev.openallay.guide.GuideSource;
 import dev.openallay.guide.GuideToolInvocationView;
+import dev.openallay.guide.GuideToolIntent;
 import dev.openallay.guide.GuideToolMessage;
 import dev.openallay.guide.GuideToolStatus;
 import java.util.List;
@@ -14,6 +15,7 @@ public record GuideToolDetailView(
         String titleKey,
         GuideToolStatus status,
         GuideToolInvocationView invocation,
+        GuideToolIntent intent,
         List<GuideDetailCard> cards,
         List<GuideToolMessage> narration,
         Optional<Debug> debug) {
@@ -23,9 +25,20 @@ public record GuideToolDetailView(
         }
         Objects.requireNonNull(status, "status");
         Objects.requireNonNull(invocation, "invocation");
+        Objects.requireNonNull(intent, "intent");
         cards = List.copyOf(cards);
         narration = List.copyOf(narration);
         debug = Objects.requireNonNull(debug, "debug");
+    }
+
+    public GuideToolDetailView(
+            String titleKey,
+            GuideToolStatus status,
+            GuideToolInvocationView invocation,
+            List<GuideDetailCard> cards,
+            List<GuideToolMessage> narration,
+            Optional<Debug> debug) {
+        this(titleKey, status, invocation, GuideToolIntent.none(), cards, narration, debug);
     }
 
     public GuideToolDetailView(

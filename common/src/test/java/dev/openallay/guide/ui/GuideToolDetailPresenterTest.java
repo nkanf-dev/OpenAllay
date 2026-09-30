@@ -39,6 +39,8 @@ final class GuideToolDetailPresenterTest {
         var arguments = JsonParser.parseString("""
                 {
                   "source":"return mc.items.filter(item => item.id.includes('sword'));",
+                  "title":"比较武器",
+                  "description":"比较观察到的攻击伤害",
                   "roots":["items"],
                   "handles":[]
                 }
@@ -73,6 +75,8 @@ final class GuideToolDetailPresenterTest {
         assertEquals(
                 "example:obsidian_sword",
                 preview.rows().getFirst().get(preview.columns().indexOf("itemId")));
+        assertEquals("比较武器", view.intent().title());
+        assertEquals("比较观察到的攻击伤害", view.intent().description());
         assertEquals(List.of("items"), view.invocation().roots());
         assertEquals(List.of("openallay:crafting"), view.invocation().modules());
         assertFalse(view.toString().contains("r_secret"));

@@ -31,6 +31,17 @@ final class AgentSystemPromptTest {
     }
 
     @Test
+    void everyExecutionModeRequestsBothPlayerLanguageIntentFields() {
+        String contract = CoreJavascriptContract.render(MinecraftAgentHostGraph.declaredOnlyCatalog());
+        for (boolean unrestricted : new boolean[] {false, true}) {
+            String prompt = AgentSystemPrompt.compose("", contract, unrestricted);
+            assertTrue(prompt.contains("Include title and description on every run_javascript call"));
+            assertTrue(prompt.contains("player's language explaining the intended work"));
+            assertTrue(prompt.contains("display intent, not success claims, evidence, or permissions"));
+        }
+    }
+
+    @Test
     void unrestrictedClientRequestPromptDescribesJavaAuthorityWithoutSandboxRestrictions() {
         String prompt = AgentSystemPrompt.compose(" ",
                 CoreJavascriptContract.render(MinecraftAgentHostGraph.declaredOnlyCatalog()), true);

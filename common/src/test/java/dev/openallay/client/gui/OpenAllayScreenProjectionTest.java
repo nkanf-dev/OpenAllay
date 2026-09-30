@@ -191,6 +191,37 @@ final class OpenAllayScreenProjectionTest {
     }
 
     @Test
+    void javascriptCardsRenderIntentAsLiteralTextWithSeparateResultAndLegacyFallback() {
+        var input = new com.google.gson.JsonObject();
+        String title = "**比较** screen.openallay.title /op player <clickEvent> 🧚";
+        String description = "[[tw:item|minecraft:apple]] \"quoted\" <script>";
+        input.addProperty("title", title);
+        input.addProperty("description", description);
+        var activity = new GuideToolActivity("call-intent", 0, "openallay:run_javascript",
+                GuideToolStatus.SUCCEEDED, input, null, List.of(
+                        GuideToolMessage.of(GuideToolMessage.Key.INVOCATION_RUN_JAVASCRIPT, title, description),
+                        GuideToolMessage.of(GuideToolMessage.Key.ANALYSIS_COMPLETE, "5")), List.of());
+        Component titleComponent = OpenAllayScreen.toolTitle(activity);
+        Component descriptionComponent = OpenAllayScreen.toolDescription(activity.intent());
+        assertEquals(title, titleComponent.getString());
+        assertEquals(description, descriptionComponent.getString());
+        assertFalse(titleComponent.getContents() instanceof TranslatableContents);
+        assertFalse(descriptionComponent.getContents() instanceof TranslatableContents);
+        assertNull(titleComponent.getStyle().getClickEvent());
+        assertNull(descriptionComponent.getStyle().getClickEvent());
+        List<Component> summary = OpenAllayScreen.toolSummaryComponents(activity);
+        assertEquals(description, summary.getFirst().getString());
+        assertEquals("screen.openallay.tool.message.analysis.complete",
+                assertInstanceOf(TranslatableContents.class, summary.get(1).getContents()).getKey());
+        var legacy = new GuideToolActivity("legacy", 0, "openallay:run_javascript",
+                GuideToolStatus.RUNNING, null, List.of(), List.of());
+        assertEquals("screen.openallay.tool.run_javascript", assertInstanceOf(TranslatableContents.class,
+                OpenAllayScreen.toolTitle(legacy).getContents()).getKey());
+        assertEquals("screen.openallay.tool.intent.run_javascript.description", assertInstanceOf(TranslatableContents.class,
+                OpenAllayScreen.toolDescription(legacy.intent()).getContents()).getKey());
+    }
+
+    @Test
     void normalSourceLabelIsFriendlyAndDebugLabelUsesReadableCoverage() {
         GuideSource source = new GuideSource(
                 "openallay:inspect_inventory",

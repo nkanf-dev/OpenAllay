@@ -356,6 +356,109 @@ final class GameGuideAgentTest {
     }
 
     @Test
+    void changingJavascriptIntentCannotBypassRepeatedExecutionSuppression() {
+        QueueModelClient model = new QueueModelClient();
+        model.enqueue(CompletableFuture.completedFuture(javascriptTurn("call-1", "Compare swords")));
+        model.enqueue(CompletableFuture.completedFuture(javascriptTurn("call-2", "A different display title")));
+        model.enqueue(CompletableFuture.completedFuture(textTurn("done")));
+        AtomicInteger executions = new AtomicInteger();
+        var javascript = new dev.openallay.tool.builtin.RunJavascriptTool(
+                new dev.openallay.script.RhinoJavascriptRuntime(),
+                dev.openallay.script.data.MinecraftAgentHostGraph::new,
+                new dev.openallay.script.workspace.AgentResultWorkspaceRegistry(),
+                new dev.openallay.script.workspace.JavascriptResultPresenter());
+        dev.openallay.tool.Tool<dev.openallay.tool.builtin.RunJavascriptTool.Input,
+                dev.openallay.tool.builtin.RunJavascriptTool.Output> counted = new dev.openallay.tool.Tool<>() {
+            @Override
+            public dev.openallay.tool.ToolDescriptor<dev.openallay.tool.builtin.RunJavascriptTool.Input,
+                    dev.openallay.tool.builtin.RunJavascriptTool.Output> descriptor() {
+                return javascript.descriptor();
+            }
+
+            @Override
+            public dev.openallay.tool.ToolResult<dev.openallay.tool.builtin.RunJavascriptTool.Output> invoke(
+                    ToolInvocationContext context, dev.openallay.tool.builtin.RunJavascriptTool.Input input) {
+                throw new AssertionError("JavaScript must execute asynchronously");
+            }
+
+            @Override
+            public CompletableFuture<dev.openallay.tool.ToolResult<dev.openallay.tool.builtin.RunJavascriptTool.Output>> invokeAsync(
+                    ToolInvocationContext context, dev.openallay.tool.builtin.RunJavascriptTool.Input input,
+                    CancellationSignal cancellation) {
+                executions.incrementAndGet();
+                return javascript.invokeAsync(context, input, cancellation);
+            }
+        };
+        var registry = new dev.openallay.tool.ToolRegistry();
+        registry.register("test", List.of(counted));
+        List<AgentEvent> events = new ArrayList<>();
+        AgentResult result = new GameGuideAgent(model,
+                new dev.openallay.agent.tool.LocalAgentToolExecutor(registry, new Gson()),
+                new AgentSessionStore(), new Gson()).ask(request(UUID.randomUUID()), events::add).join();
+        assertTrue(result.successful());
+        assertEquals(1, executions.get());
+        assertEquals(1, events.stream().filter(AgentEvent.ToolStarted.class::isInstance).count());
+        ModelContent.ToolResult repeated = (ModelContent.ToolResult) model.requests.get(2)
+                .messages().getLast().content().getFirst();
+        assertTrue(repeated.error());
+        assertTrue(repeated.value().getAsString().contains("code: no_new_information"));
+        AgentEvent.ToolStarted started = (AgentEvent.ToolStarted) events.stream()
+                .filter(AgentEvent.ToolStarted.class::isInstance).findFirst().orElseThrow();
+        assertEquals("Compare swords", started.arguments().get("title").getAsString());
+        javascript.closeRequestScope("agent-test");
+    }
+
+    @Test
+    void malformedJavascriptIntentCanRecoverWithCorrectedMetadataAndExecuteOnlyOnce() {
+        QueueModelClient model = new QueueModelClient();
+        JsonObject malformed = new JsonObject();
+        malformed.addProperty("source", "return schema.list();");
+        malformed.addProperty("title", 7);
+        malformed.addProperty("description", "Read declared data");
+        model.enqueue(CompletableFuture.completedFuture(new ModelTurn("test", "test-model",
+                List.of(new ModelContent.ToolUse("call-invalid", "openallay__run_javascript", malformed)),
+                "tool_use", ModelUsage.empty())));
+        model.enqueue(CompletableFuture.completedFuture(javascriptTurn("call-corrected", "Inspect catalog")));
+        model.enqueue(CompletableFuture.completedFuture(textTurn("done")));
+        AtomicInteger captures = new AtomicInteger();
+        var javascript = new dev.openallay.tool.builtin.RunJavascriptTool(
+                new dev.openallay.script.RhinoJavascriptRuntime(), context -> {
+                    captures.incrementAndGet();
+                    return new dev.openallay.script.data.MinecraftAgentHostGraph(context);
+                }, new dev.openallay.script.workspace.AgentResultWorkspaceRegistry(),
+                new dev.openallay.script.workspace.JavascriptResultPresenter());
+        var registry = new dev.openallay.tool.ToolRegistry();
+        registry.register("test", List.of(javascript));
+        List<AgentEvent> events = new ArrayList<>();
+        AgentResult result = new GameGuideAgent(model,
+                new dev.openallay.agent.tool.LocalAgentToolExecutor(registry, new Gson()),
+                new AgentSessionStore(), new Gson()).ask(request(UUID.randomUUID()), events::add).join();
+        assertTrue(result.successful());
+        assertEquals(1, captures.get());
+        List<AgentEvent.ToolCompleted> completed = events.stream().filter(AgentEvent.ToolCompleted.class::isInstance)
+                .map(AgentEvent.ToolCompleted.class::cast).toList();
+        assertEquals(List.of("call-invalid", "call-corrected"), completed.stream()
+                .map(AgentEvent.ToolCompleted::invocationId).toList());
+        assertTrue(completed.getFirst().failure());
+        assertEquals("invalid_arguments", completed.getFirst().normalized().get("code").getAsString());
+        assertFalse(completed.get(1).failure());
+        ModelContent.ToolResult invalid = (ModelContent.ToolResult) model.requests.get(1)
+                .messages().getLast().content().getFirst();
+        assertTrue(invalid.error());
+        assertTrue(invalid.value().getAsString().contains("code: invalid_arguments"));
+        javascript.closeRequestScope("agent-test");
+    }
+
+    private static ModelTurn javascriptTurn(String invocationId, String title) {
+        JsonObject input = new JsonObject();
+        input.addProperty("source", "return schema.list();");
+        input.addProperty("title", title);
+        input.addProperty("description", "Read the available data catalog: " + title);
+        return new ModelTurn("test", "test-model", List.of(new ModelContent.ToolUse(
+                invocationId, "openallay__run_javascript", input)), "tool_use", ModelUsage.empty());
+    }
+
+    @Test
     void failsIfModelIgnoresNoNewInformationAndRepeatsAgain() {
         QueueModelClient model = new QueueModelClient();
         model.enqueue(CompletableFuture.completedFuture(toolTurn("call_1", 42)));
