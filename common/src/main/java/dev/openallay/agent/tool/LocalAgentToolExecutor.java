@@ -101,10 +101,13 @@ public final class LocalAgentToolExecutor implements AgentToolExecutor {
                             }
                             JsonObject normalized = normalizer.normalize(
                                     result, tool.descriptor().outputType());
+                            dev.openallay.tool.ModelResultSource source = result instanceof ToolResult.Success<?> succeeded
+                                    ? modelResultSource(tool, context, succeeded.value()).orElse(null) : null;
                             return new AgentToolResult(
                                     toolId,
                                     normalized,
-                                    result instanceof ToolResult.Failure<?>);
+                                    result instanceof ToolResult.Failure<?>,
+                                    source);
                         });
             }
             JsonObject normalized = normalizer.normalize(decoded, tool.descriptor().outputType());
@@ -115,6 +118,12 @@ public final class LocalAgentToolExecutor implements AgentToolExecutor {
         } catch (RuntimeException exception) {
             return CompletableFuture.failedFuture(exception);
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <I, O> java.util.Optional<dev.openallay.tool.ModelResultSource> modelResultSource(
+            Tool<?, ?> rawTool, ToolInvocationContext context, Object output) {
+        return ((Tool<I, O>) rawTool).modelResultSource(context, (O) output);
     }
 
     @SuppressWarnings("unchecked")

@@ -70,6 +70,59 @@ public final class AgentResultWorkspace implements AutoCloseable {
         return handle;
     }
 
+    /** Default artifact view: metadata, scalar findings, and explicitly representative array samples. */
+    public synchronized dev.openallay.tool.ModelResultSource modelSource(
+            dev.openallay.tool.ModelResultView view, String suffix) {
+        return source(view, suffix, false);
+    }
+
+    /** Producer-selected answer view. It is not selected automatically from capacity or field names. */
+    public synchronized dev.openallay.tool.ModelResultSource answerModelSource(
+            dev.openallay.tool.ModelResultView view, String suffix) {
+        return source(view, suffix, true);
+    }
+
+    private dev.openallay.tool.ModelResultSource source(
+            dev.openallay.tool.ModelResultView view, String suffix, boolean answer) {
+        requireOpen();
+        JsonElement original = values.get(view.handle());
+        if (original == null) throw new WorkspaceException(
+                "workspace_handle_unavailable", "Result handle is unavailable in this request");
+        var choice = answer ? new dev.openallay.tool.result.NaturalModelView.Choice(original, true, 0)
+                : dev.openallay.tool.result.NaturalModelView.artifact(original);
+        var chosen = new dev.openallay.tool.ModelResultView(view.handle(), view.type(), view.cardinality(),
+                view.canonicalUtf8Bytes(), choice.complete(), "current request only", view.inputCoverage());
+        String provenance = suffix + (choice.complete() ? "" : "\nrepresentative sample: "
+                + choice.omittedRows() + " canonical row(s) remain outside this chosen view");
+        long chosenBytes = dev.openallay.tool.result.JsonResultProjection.serializedBytes(choice.value());
+        int ceiling = dev.openallay.tool.result.JsonResultProjection.projectionSizeUpperBound(
+                new dev.openallay.tool.ModelResultView(view.handle(), view.type(), view.cardinality(),
+                        chosenBytes, choice.complete(), "current request only"));
+        return new dev.openallay.tool.ModelResultSource() {
+            private volatile Integer preferredBytes;
+            @Override public JsonElement project(int maximumUtf8Bytes) {
+                synchronized (AgentResultWorkspace.this) {
+                    requireOpen();
+                    if (!values.containsKey(chosen.handle())) throw new WorkspaceException(
+                            "workspace_handle_unavailable", "Result handle is unavailable in this request");
+                    return new com.google.gson.JsonPrimitive(dev.openallay.tool.result.JsonResultProjection
+                            .project(choice.value(), chosen, provenance, maximumUtf8Bytes, original).modelText());
+                }
+            }
+            @Override public int preferredSizeUtf8Bytes() {
+                Integer cached = preferredBytes;
+                if (cached != null) return cached;
+                synchronized (AgentResultWorkspace.this) {
+                    requireOpen();
+                    if (preferredBytes == null) preferredBytes = (int) Math.min(Integer.MAX_VALUE,
+                            dev.openallay.tool.result.JsonResultProjection.serializedBytes(project(ceiling)));
+                    return preferredBytes;
+                }
+            }
+            @Override public int projectionSizeUpperBound() { return ceiling; }
+        };
+    }
+
     public synchronized JsonElement open(String handle) {
         requireOpen();
         JsonElement value = values.get(handle);

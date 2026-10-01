@@ -28,7 +28,7 @@ import dev.openallay.tool.ToolAccess;
 import dev.openallay.tool.ToolDescriptor;
 import dev.openallay.tool.ToolResult;
 import dev.openallay.tool.RequestScopeParticipant;
-import dev.openallay.tool.ModelFacingToolOutput;
+import dev.openallay.tool.WorkspaceModelFacingToolOutput;
 import dev.openallay.world.WorldObservationRuntime;
 import java.util.List;
 import java.util.Map;
@@ -71,10 +71,11 @@ public final class RunJavascriptTool
             boolean complete,
             int omittedRows,
             int omittedFields,
+            dev.openallay.tool.ModelResultView modelView,
             long elapsedMillis,
             List<String> modules,
             List<dev.openallay.context.SourceObservation> sources)
-            implements ModelFacingToolOutput {
+            implements WorkspaceModelFacingToolOutput {
         public Output {
             fields = List.copyOf(fields);
             preview = preview.deepCopy();
@@ -333,9 +334,15 @@ public final class RunJavascriptTool
         String handle = workspace.store(
                 canonical, execution.shape(), context.unrestrictedJavascript(), sources);
         String coverage = inputCoverage(sources);
-        var presentation = context.unrestrictedJavascript()
-                ? presenter.presentUnrestricted(handle, canonical, execution.shape(), coverage)
-                : presenter.present(handle, canonical, execution.shape(), coverage);
+        // Canonical storage and execution authority stay mode-specific. Model transport does not.
+        var choice = dev.openallay.tool.result.NaturalModelView.artifact(canonical);
+        var naturalView = new dev.openallay.tool.ModelResultView(handle,
+                dev.openallay.tool.result.JsonResultProjection.type(canonical),
+                dev.openallay.tool.result.JsonResultProjection.cardinality(canonical),
+                dev.openallay.tool.result.JsonResultProjection.serializedBytes(canonical),
+                choice.complete(), "current request only", coverage);
+        var presentation = presenter.presentChosen(handle, choice.value(), canonical,
+                naturalView, execution.shape(), coverage);
         String modelText = presentation.modelText();
         return new ToolResult.Success<>(new Output(
                 handle,
@@ -348,9 +355,19 @@ public final class RunJavascriptTool
                 presentation.complete(),
                 presentation.omittedRows(),
                 presentation.omittedFields(),
+                new dev.openallay.tool.ModelResultView(handle, presentation.type(),
+                        presentation.cardinality(), presentation.canonicalUtf8Bytes(),
+                        presentation.complete(), "current request only", coverage),
                 execution.elapsed().toMillis(),
                 execution.modules(),
                 sources));
+    }
+
+    @Override
+    public java.util.Optional<dev.openallay.tool.ModelResultSource> modelResultSource(
+            ToolInvocationContext context, Output output) {
+        return workspaces.existing(context.correlationId()).map(workspace ->
+                workspace.modelSource(output.modelView(), inputCoverage(output.sources())));
     }
 
     @Override
@@ -371,8 +388,12 @@ public final class RunJavascriptTool
         boolean mixedAuthority = sources.stream().map(source -> source.evidence().authority())
                 .distinct().count() > 1;
         if (!incomplete && !mixedAuthority) return "";
-        return "input coverage: " + sources.stream().map(source ->
-                source.evidence().authority() + " " + source.evidence().completeness())
+        String completeness = sources.stream().map(source -> source.evidence().completeness().name())
+                .distinct().sorted().collect(java.util.stream.Collectors.joining(", "));
+        return "input completeness: " + completeness
+                + "; mixed authority: " + mixedAuthority
+                + "\ninput coverage: " + sources.stream().map(source ->
+                        source.evidence().authority() + " " + source.evidence().completeness())
                 .distinct().sorted().collect(java.util.stream.Collectors.joining("; "));
     }
 

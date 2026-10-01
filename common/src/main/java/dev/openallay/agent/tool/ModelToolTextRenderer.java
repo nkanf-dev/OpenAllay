@@ -18,10 +18,11 @@ final class ModelToolTextRenderer {
         if (custom != null && custom.isJsonPrimitive() && custom.getAsJsonPrimitive().isString()) {
             return custom.getAsString();
         }
-        String status = string(normalized.get("status"));
+        JsonElement statusValue = normalized.get("status");
+        String status = statusValue == null || statusValue.isJsonNull() ? "" : statusValue.getAsString();
         if ("failure".equals(status)) {
-            return "status: failure\ncode: " + string(normalized.get("code"))
-                    + "\nmessage: " + string(normalized.get("message"));
+            return "status: failure\ncode: " + normalized.get("code").getAsString()
+                    + "\nmessage: " + normalized.get("message").getAsString();
         }
         StringBuilder output = new StringBuilder("status: success\nresult:\n");
         append(output, normalized.get("value"), 2, null);
@@ -67,7 +68,7 @@ final class ModelToolTextRenderer {
                 output.append('\n');
             }
             output.append(" ".repeat(first && listPrefix == null ? indent : childIndent))
-                    .append(entry.getKey())
+                    .append(dev.openallay.tool.result.JsonResultProjection.fieldLabel(entry.getKey()))
                     .append(':');
             JsonElement child = entry.getValue();
             if (child == null || child.isJsonNull() || child.isJsonPrimitive()) {
@@ -109,8 +110,9 @@ final class ModelToolTextRenderer {
         if (value == null || value.isJsonNull()) {
             return "null";
         }
-        return value.isJsonPrimitive()
-                ? value.getAsJsonPrimitive().getAsString()
-                : value.toString();
+        if (value.isJsonPrimitive()) {
+            return dev.openallay.tool.result.JsonResultProjection.scalar(value);
+        }
+        return value.toString();
     }
 }

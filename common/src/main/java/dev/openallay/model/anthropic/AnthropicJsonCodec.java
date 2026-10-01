@@ -30,7 +30,7 @@ public final class AnthropicJsonCodec {
     public String requestBody(ModelConfig config, ModelRequest request) {
         JsonObject root = contextInput(request.systemPrompt(), request.messages(), request.tools());
         root.addProperty("model", config.model());
-        root.addProperty("max_tokens", config.maxOutputTokens());
+        root.addProperty("max_tokens", request.effectiveMaxOutputTokens(config.maxOutputTokens()));
         root.addProperty("stream", request.stream());
         if (config.reasoningEffort() != dev.openallay.model.config.ModelReasoningEffort.AUTO) {
             JsonObject outputConfig = new JsonObject();

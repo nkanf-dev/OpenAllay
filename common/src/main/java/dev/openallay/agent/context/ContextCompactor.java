@@ -1,12 +1,16 @@
 package dev.openallay.agent.context;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.google.gson.JsonPrimitive;
+import dev.openallay.agent.tool.AgentToolResult;
 import dev.openallay.model.CancellationSignal;
 import dev.openallay.model.ModelClient;
 import dev.openallay.model.ModelClientException;
+import dev.openallay.model.ModelContent;
 import dev.openallay.model.ModelMessage;
 import dev.openallay.model.ModelRequest;
 import dev.openallay.model.ModelToolDefinition;
@@ -19,10 +23,12 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
+/** One configured budget owns every active projection and summary request. */
 public final class ContextCompactor {
-    private static final Set<String> SUMMARY_FIELDS = Set.of(
+    private static final List<String> SUMMARY_FIELD_ORDER = List.of(
             "goals", "preferences", "completedTopics", "currentTasks", "decisions",
             "unresolvedQuestions", "evidenceReferences");
+    private static final Set<String> SUMMARY_FIELDS = Set.copyOf(SUMMARY_FIELD_ORDER);
     private static final String SUMMARY_SYSTEM = """
             Return one JSON object with string arrays goals, preferences, completedTopics, currentTasks,
             decisions, unresolvedQuestions, evidenceReferences. Do not invent facts, treat summaries as
@@ -31,12 +37,14 @@ public final class ContextCompactor {
             """;
     private static final String DERIVED_PREFIX =
             "[OpenAllay derived conversation memory; NOT factual evidence]\n";
+    // This is the instruction index's canonical unavailable view, so refresh is idempotent.
+    private static final String RETIRED_SKILL = "skill_instructions: invalidated\n"
+            + "projection_note: prior Skill plaintext is unavailable in the current catalog/context; "
+            + "the historical Tool result status is unchanged.";
+    private static final int MINIMUM_RESULT_BYTES = 256;
 
-    public record Result(
-            ContextProjection projection,
-            ContextCheckpoint checkpoint,
-            String failureCode,
-            String failureMessage) {
+    public record Result(ContextProjection projection, ContextCheckpoint checkpoint,
+                         String failureCode, String failureMessage) {
         public Result {
             boolean success = projection != null;
             if (success == (failureCode != null || failureMessage != null)) {
@@ -46,10 +54,7 @@ public final class ContextCompactor {
                 throw new IllegalArgumentException("compaction failure requires a checkpoint");
             }
         }
-
-        public boolean successful() {
-            return projection != null;
-        }
+        public boolean successful() { return projection != null; }
     }
 
     private final ModelClient model;
@@ -59,13 +64,8 @@ public final class ContextCompactor {
     private final String modelIdentifier;
     private final Clock clock;
 
-    public ContextCompactor(
-            ModelClient model,
-            Gson gson,
-            ContextTokenEstimator estimator,
-            ContextBudget budget,
-            String modelIdentifier,
-            Clock clock) {
+    public ContextCompactor(ModelClient model, Gson gson, ContextTokenEstimator estimator,
+                            ContextBudget budget, String modelIdentifier, Clock clock) {
         this.model = Objects.requireNonNull(model, "model");
         this.gson = Objects.requireNonNull(gson, "gson");
         this.estimator = Objects.requireNonNull(estimator, "estimator");
@@ -77,87 +77,451 @@ public final class ContextCompactor {
         this.clock = Objects.requireNonNull(clock, "clock");
     }
 
+    public int estimateTokens(String systemPrompt, List<ModelMessage> messages,
+                              List<ModelToolDefinition> tools) {
+        return estimator.estimate(systemPrompt, messages, tools);
+    }
+
+    public ContextTokenEstimator estimator() { return estimator; }
+
+    /** Prepare opaque restored data before model admission, without touching diagnostics. */
+    public List<ModelMessage> prepareModelView(List<ModelMessage> messages) {
+        ResultValues values = new ResultValues(messages);
+        List<ModelMessage> receipts = boundResults(messages, MINIMUM_RESULT_BYTES, false, List.of(), values);
+        configureResultPlan(values, messages, receipts, List.of());
+        if (withinResultPlan(messages, values)) return List.copyOf(messages);
+        ArrayList<ModelMessage> projected = new ArrayList<>();
+        for (int index = 0; index < messages.size(); index++) {
+            ModelMessage message = messages.get(index);
+            ArrayList<ModelContent> content = new ArrayList<>();
+            for (int item = 0; item < message.content().size(); item++) {
+                ModelContent original = message.content().get(item);
+                if (original instanceof ModelContent.ToolResult result
+                        && values.plannedTokens.containsKey(result.toolUseId())
+                        && estimator.estimateText(modelText(result.value()))
+                                > values.plannedTokens.get(result.toolUseId())) {
+                    content.add(receipts.get(index).content().get(item));
+                } else content.add(original);
+            }
+            projected.add(content.equals(message.content()) ? message : new ModelMessage(message.role(), content));
+        }
+        return List.copyOf(projected);
+    }
+
+    public int inputTokenBudget() { return budget.inputTokens(); }
+
+    public boolean requiresCompaction(String systemPrompt, List<ModelMessage> messages,
+                                      List<ModelToolDefinition> tools) {
+        ResultValues values = new ResultValues(messages);
+        configureResultPlan(values, messages,
+                boundResults(messages, MINIMUM_RESULT_BYTES, false, List.of(), values), List.of());
+        if (!withinResultPlan(messages, values)) return true;
+        return estimateTokens(systemPrompt, messages, tools) > inputTokenBudget();
+    }
+
+    /**
+     * Fit complete successful result values together. IDs, arguments, current questions and real
+     * error values stay exact. Encoded bytes are only a search parameter; the injected tokenizer
+     * measures each whole candidate request. No token-to-byte ratio is assumed.
+     */
+    public Optional<ContextProjection> fitResults(String systemPrompt, List<ModelMessage> messages,
+                                                  List<ModelToolDefinition> tools) {
+        return fitResults(systemPrompt, messages, tools, List.of());
+    }
+
+    /** Fresh results still have a structured normalized view; use it instead of re-clipping text. */
+    public Optional<ContextProjection> fitResults(String systemPrompt, List<ModelMessage> messages,
+            List<ModelToolDefinition> tools, List<AgentToolResult> freshResults) {
+        return fitResults(ignored -> systemPrompt, messages, tools, freshResults);
+    }
+
+    /** Derived metadata is recomputed from every candidate, not reserved under a stale loaded flag. */
+    public Optional<ContextProjection> fitResults(
+            java.util.function.Function<List<ModelMessage>, String> promptForProjection,
+            List<ModelMessage> messages, List<ModelToolDefinition> tools,
+            List<AgentToolResult> freshResults) {
+        ContextStructure.units(messages);
+        if (!freshResults.isEmpty() && (messages.isEmpty()
+                || messages.getLast().content().size() != freshResults.size())) {
+            throw new IllegalArgumentException("Fresh results do not match the completed exchange");
+        }
+        ResultValues values = new ResultValues(messages);
+        List<ModelMessage> receipts = boundResults(messages, MINIMUM_RESULT_BYTES, false, freshResults, values);
+        configureResultPlan(values, messages, receipts, freshResults);
+        if (freshResults.isEmpty() && withinResultPlan(messages, values)) {
+            List<ModelMessage> safe = ModelContextCodec.safe(messages);
+            int original = estimateProjection(promptForProjection, safe, tools);
+            if (original <= inputTokenBudget()) return Optional.of(
+                    new ContextProjection(safe, ContextProjection.Kind.ORIGINAL, original));
+        }
+        for (AgentToolResult result : freshResults) if (!result.failure()) {
+            values.maximumBytes = Math.max(values.maximumBytes, result.projectionSizeUpperBound());
+        }
+        // Token counts are not monotonic in encoded bytes. Probe a finite geometric set before
+        // refining a known fitting candidate, and never treat a failed minimum as a proof by itself.
+        for (boolean retireSkills : new boolean[] {false, true}) {
+            List<ModelMessage> best = null;
+            int bestEstimate = Integer.MAX_VALUE;
+            int fittingCap = -1;
+            int upperCap = values.maximumBytes;
+            int probeCap = upperCap;
+            while (true) {
+                List<ModelMessage> candidate = boundResults(messages, probeCap, retireSkills, freshResults, values);
+                boolean withinPlan = withinResultPlan(candidate, values);
+                int estimate = withinPlan ? estimateProjection(promptForProjection, candidate, tools) : Integer.MAX_VALUE;
+                if (estimate <= inputTokenBudget()) {
+                    best = candidate;
+                    bestEstimate = estimate;
+                    fittingCap = probeCap;
+                    break;
+                }
+                if (probeCap == MINIMUM_RESULT_BYTES) break;
+                upperCap = probeCap - 1;
+                probeCap = Math.max(MINIMUM_RESULT_BYTES, probeCap / 2);
+            }
+            if (best == null) continue;
+            int low = fittingCap;
+            int high = upperCap;
+            while (low < high) {
+                int candidateCap = low + (int) (((long) high - low + 1L) / 2L);
+                List<ModelMessage> candidate = boundResults(messages, candidateCap, retireSkills, freshResults, values);
+                boolean withinPlan = withinResultPlan(candidate, values);
+                int candidateEstimate = withinPlan ? estimateProjection(promptForProjection, candidate, tools) : Integer.MAX_VALUE;
+                if (candidateEstimate <= inputTokenBudget()) {
+                    low = candidateCap;
+                    best = candidate;
+                    bestEstimate = candidateEstimate;
+                } else high = candidateCap - 1;
+            }
+            // Preserve actual result text. Only provider-private reasoning is excluded.
+            best = ModelContextCodec.safe(best);
+            bestEstimate = estimateProjection(promptForProjection, best, tools);
+            if (bestEstimate <= inputTokenBudget() && withinResultPlan(best, values)) return Optional.of(
+                    new ContextProjection(best, ContextProjection.Kind.BOUNDED, bestEstimate));
+        }
+        return Optional.empty();
+    }
+
+    /**
+     * Capacity is an admission ceiling, not a target. Data views share the actual configured
+     * next-completion planning budget. Their irreducible status/schema/handle receipt is measured
+     * separately, so a small output setting never forces a fabricated empty success.
+     */
+    private void configureResultPlan(ResultValues values, List<ModelMessage> source,
+            List<ModelMessage> receipts, List<AgentToolResult> freshResults) {
+        int count = 0;
+        if (!freshResults.isEmpty()) {
+            for (ModelContent item : source.getLast().content()) {
+                if (item instanceof ModelContent.ToolResult result && !result.error()
+                        && !values.instructions.contains(result)) count++;
+            }
+        }
+        int currentShare = Math.max(1, budget.maxOutputTokens() / Math.max(1, count));
+        for (int index = 0; index < source.size(); index++) {
+            int share = !freshResults.isEmpty() && index == source.size() - 1
+                    ? currentShare : budget.maxOutputTokens();
+            List<ModelContent> originals = source.get(index).content();
+            List<ModelContent> minimums = receipts.get(index).content();
+            for (int item = 0; item < originals.size(); item++) {
+                if (originals.get(item) instanceof ModelContent.ToolResult result && !result.error()
+                        && !values.instructions.contains(result)) {
+                    ModelContent.ToolResult minimum = (ModelContent.ToolResult) minimums.get(item);
+                    int floor = estimator.estimateText(modelText(minimum.value()));
+                    values.plannedTokens.put(result.toolUseId(), (int) Math.min(Integer.MAX_VALUE,
+                            (long) floor + share));
+                }
+            }
+        }
+    }
+
+    private boolean withinResultPlan(List<ModelMessage> candidate, ResultValues values) {
+        for (ModelMessage message : candidate) for (ModelContent item : message.content()) {
+            if (item instanceof ModelContent.ToolResult result && values.plannedTokens.containsKey(result.toolUseId())
+                    && estimator.estimateText(modelText(result.value()))
+                            > values.plannedTokens.get(result.toolUseId())) return false;
+        }
+        return true;
+    }
+
+    private static String modelText(JsonElement value) {
+        return value.isJsonPrimitive() && value.getAsJsonPrimitive().isString()
+                ? value.getAsString() : value.toString();
+    }
+
+    private int estimateProjection(java.util.function.Function<List<ModelMessage>, String> prompt,
+            List<ModelMessage> messages, List<ModelToolDefinition> tools) {
+        List<ModelMessage> safe = ModelContextCodec.safe(messages);
+        return estimateTokens(prompt.apply(safe), safe, tools);
+    }
+
+    public CompletableFuture<Result> compact(String systemPrompt, List<ModelMessage> messages,
+            int protectedFromIndex, List<ModelToolDefinition> tools, boolean stream,
+            String schedulingKey, CancellationSignal cancellation) {
+        return compact(ignored -> systemPrompt, messages, protectedFromIndex, tools, stream,
+                schedulingKey, cancellation);
+    }
+
     public CompletableFuture<Result> compact(
-            String systemPrompt,
-            List<ModelMessage> messages,
-            int protectedFromIndex,
-            List<ModelToolDefinition> tools,
-            boolean stream,
-            String schedulingKey,
-            CancellationSignal cancellation) {
+            java.util.function.Function<List<ModelMessage>, String> promptForProjection,
+            List<ModelMessage> messages, int protectedFromIndex, List<ModelToolDefinition> tools,
+            boolean stream, String schedulingKey, CancellationSignal cancellation) {
         cancellation.throwIfCancelled();
-        List<ModelMessage> source = ModelContextCodec.safe(messages);
+        List<ModelMessage> source = List.copyOf(messages);
         List<ModelToolDefinition> requestTools = List.copyOf(tools);
         List<ContextStructure.Unit> units = ContextStructure.units(source);
         ContextStructure.requireBoundary(units, protectedFromIndex, source.size());
-        int originalEstimate = estimator.estimate(systemPrompt, source, requestTools);
-        if (originalEstimate <= budget.inputTokens()) {
-            return CompletableFuture.completedFuture(new Result(
-                    new ContextProjection(source, ContextProjection.Kind.ORIGINAL, originalEstimate),
-                    null, null, null));
+        Optional<ContextProjection> fitted = fitResults(promptForProjection, source, requestTools, List.of());
+        if (fitted.isPresent()) return CompletableFuture.completedFuture(
+                new Result(fitted.orElseThrow(), null, null, null));
+
+        List<ModelMessage> minimum = ModelContextCodec.safe(boundResults(source, MINIMUM_RESULT_BYTES, true));
+        int originalEstimate = estimateProjection(promptForProjection, minimum, requestTools);
+        JsonObject empty = emptySummary();
+        int prefixEnd = -1;
+        int summaryTarget = 0;
+        for (ContextStructure.Unit unit : units) {
+            if (unit.toIndexExclusive() > protectedFromIndex) break;
+            List<ModelMessage> candidate = summarized(empty,
+                    minimum.subList(unit.toIndexExclusive(), minimum.size()));
+            int estimate = estimateProjection(promptForProjection, candidate, requestTools);
+            if (estimate <= inputTokenBudget()) {
+                prefixEnd = unit.toIndexExclusive();
+                summaryTarget = Math.min(budget.maxOutputTokens(), Math.max(1,
+                        inputTokenBudget() - estimate + estimator.estimateText(empty.toString())));
+                // The shortest sufficient prefix preserves the most recent exact history.
+                break;
+            }
         }
-        Prefix prefix = summaryPrefix(source, protectedFromIndex, schedulingKey);
-        if (prefix == null) {
-            ContextCheckpoint failure = failedCheckpoint(
-                    source, 0, Math.max(1, protectedFromIndex),
-                    "summary_input_over_budget", "No structural summary prefix fits the model budget",
-                    originalEstimate);
-            return CompletableFuture.completedFuture(new Result(
-                    null, failure, "context_compaction_failed", failure.failureMessage()));
-        }
-        ModelRequest summaryRequest = new ModelRequest(
-                SUMMARY_SYSTEM,
-                List.of(ModelMessage.userText(prefix.serialized())),
-                List.of(),
-                false,
-                schedulingKey);
-        return cancellation.observe(model.complete(summaryRequest, ignored -> {}, cancellation))
-                .handle((turn, throwable) -> {
+        if (prefixEnd < 1) return CompletableFuture.completedFuture(failure(source,
+                Math.max(1, protectedFromIndex), "fixed_context_over_budget",
+                "Protected question, tool arguments, errors and minimum result projections exceed "
+                        + "the configured model input budget", originalEstimate));
+        final int end = prefixEnd;
+        final int target = summaryTarget;
+        List<ModelMessage> suffix = List.copyOf(minimum.subList(end, minimum.size()));
+        List<ContextStructure.Unit> historyUnits = ContextStructure.units(minimum.subList(0, end));
+        List<String> serializedUnits = historyUnits.stream().map(unit ->
+                gson.toJson(ContextStructure.summarySafe(unit.messages()))).toList();
+        return summarizeChunks(historyUnits, serializedUnits, 0, null, target, schedulingKey, cancellation,
+                        promptForProjection, suffix, requestTools)
+                .handle((summary, throwable) -> {
                     cancellation.throwIfCancelled();
                     if (throwable != null) {
                         Throwable cause = unwrap(throwable);
                         String code = cause instanceof ModelClientException modelFailure
                                 ? modelFailure.failure().code() : "summary_failure";
-                        ContextCheckpoint failure = failedCheckpoint(
-                                source, 0, prefix.toIndexExclusive(), code,
-                                safeMessage(cause), originalEstimate);
-                        return new Result(null, failure, "context_compaction_failed",
-                                "Context summary failed: " + code);
+                        return failure(source, end, code, safeMessage(cause), originalEstimate);
                     }
-                    JsonObject summary;
-                    try {
-                        summary = parseSummary(turn.text());
-                    } catch (RuntimeException malformed) {
-                        ContextCheckpoint failure = failedCheckpoint(
-                                source, 0, prefix.toIndexExclusive(),
-                                "summary_malformed", "Summary response did not match schema",
-                                originalEstimate);
-                        return new Result(null, failure, "context_compaction_failed",
-                                failure.failureMessage());
-                    }
-                    ArrayList<ModelMessage> projected = new ArrayList<>();
-                    projected.add(ModelMessage.userText(DERIVED_PREFIX + summary));
-                    projected.addAll(source.subList(prefix.toIndexExclusive(), source.size()));
-                    int estimate = estimator.estimate(systemPrompt, projected, requestTools);
-                    if (estimate > budget.inputTokens()) {
-                        ContextCheckpoint failure = failedCheckpoint(
-                                source, 0, prefix.toIndexExclusive(),
-                                "summary_projection_over_budget",
-                                "Summary projection still exceeds the model budget", estimate);
-                        return new Result(null, failure, "context_compaction_failed",
-                                failure.failureMessage());
-                    }
-                    String encoded = summary.toString();
-                    ContextCheckpoint checkpoint = new ContextCheckpoint(
-                            UUID.randomUUID(), 0, prefix.toIndexExclusive(),
-                            ContextSourceHash.compute(
-                                    gson, source.subList(0, prefix.toIndexExclusive())),
-                            modelIdentifier, clock.instant(),
-                            ContextCheckpoint.Status.SUCCEEDED, encoded, null, null, estimate);
-                    return new Result(new ContextProjection(
-                            projected, ContextProjection.Kind.SUMMARIZED, estimate),
-                            checkpoint, null, null);
+                    List<ModelMessage> projected = summarized(summary, suffix);
+                    int estimate = estimateProjection(promptForProjection, projected, requestTools);
+                    if (estimate > inputTokenBudget()) return failure(source, end,
+                            "summary_output_over_budget", "Summary did not fit its admitted target", estimate);
+                    cancellation.throwIfCancelled();
+                    ContextCheckpoint checkpoint = new ContextCheckpoint(UUID.randomUUID(), 0, end,
+                            ContextSourceHash.compute(gson, source.subList(0, end)), modelIdentifier,
+                            clock.instant(), ContextCheckpoint.Status.SUCCEEDED, summary.toString(),
+                            null, null, estimate);
+                    return new Result(new ContextProjection(projected,
+                            ContextProjection.Kind.SUMMARIZED, estimate), checkpoint, null, null);
                 });
+    }
+
+    /** Every iteration consumes complete units. Oversized output has one targeted retry only. */
+    private CompletableFuture<JsonObject> summarizeChunks(List<ContextStructure.Unit> units,
+            List<String> serialized, int from, JsonObject prior, int target, String schedulingKey,
+            CancellationSignal cancellation,
+            java.util.function.Function<List<ModelMessage>, String> finalPrompt,
+            List<ModelMessage> suffix, List<ModelToolDefinition> tools) {
+        cancellation.throwIfCancelled();
+        String summarySystem = SUMMARY_SYSTEM + "\nBudget: " + target + " output tokens.";
+        // Additive text costs are a planning hint, never admission proof. Native token merges and
+        // provider framing are measured on the selected full request below.
+        long planned = estimateTokens(summarySystem, prior == null
+                ? List.of(ModelMessage.userText("[]"))
+                : List.of(ModelMessage.userText(DERIVED_PREFIX + prior), ModelMessage.userText("[]")), List.of());
+        int next = from;
+        while (next < units.size()) {
+            int unitCost = estimator.estimateText(serialized.get(next));
+            if (next > from && planned + unitCost > inputTokenBudget()) break;
+            planned += unitCost;
+            next++;
+        }
+        ModelRequest selected = null;
+        while (next > from) {
+            String payload = joinUnits(serialized.subList(from, next));
+            List<ModelMessage> input = prior == null ? List.of(ModelMessage.userText(payload))
+                    : List.of(ModelMessage.userText(DERIVED_PREFIX + prior), ModelMessage.userText(payload));
+            ModelRequest request = new ModelRequest(summarySystem, input, List.of(),
+                    false, schedulingKey, target);
+            if (estimateTokens(request.systemPrompt(), request.messages(), request.tools()) <= inputTokenBudget()) {
+                selected = request;
+                break;
+            }
+            next--;
+        }
+        if (selected == null) return CompletableFuture.failedFuture(new ModelClientException(
+                new dev.openallay.model.ModelFailure("summary_source_unit_over_budget",
+                        "A complete historical structural unit cannot fit a summary request", null)));
+        final int following = next;
+        final String nextPayload = following < units.size() ? serialized.get(following) : null;
+        int carryTarget = target;
+        if (nextPayload != null) {
+            int minimumCarry = estimateTokens(summarySystem, List.of(
+                    ModelMessage.userText(DERIVED_PREFIX + emptySummary()),
+                    ModelMessage.userText(nextPayload)), List.of());
+            if (minimumCarry > inputTokenBudget()) return CompletableFuture.failedFuture(
+                    new ModelClientException(new dev.openallay.model.ModelFailure(
+                            "summary_carry_over_budget",
+                            "The next structural unit cannot fit with minimum conversation memory", null)));
+            carryTarget = Math.min(target, Math.max(1, inputTokenBudget() - minimumCarry
+                    + estimator.estimateText(emptySummary().toString())));
+        }
+        final ModelRequest admitted = new ModelRequest(
+                SUMMARY_SYSTEM + "\nBudget: " + carryTarget + " output tokens.", selected.messages(),
+                selected.tools(), selected.stream(), selected.sessionKey(), carryTarget);
+        java.util.function.Predicate<JsonObject> fits = summary -> {
+            if (estimateProjection(finalPrompt, summarized(summary, suffix), tools) > inputTokenBudget()) {
+                return false;
+            }
+            return nextPayload == null || estimateTokens(summarySystem, List.of(
+                    ModelMessage.userText(DERIVED_PREFIX + summary),
+                    ModelMessage.userText(nextPayload)), List.of()) <= inputTokenBudget();
+        };
+        return summarizeAdmitted(admitted, cancellation, fits, false).thenCompose(summary -> {
+            cancellation.throwIfCancelled();
+            if (following == units.size()) return CompletableFuture.completedFuture(summary);
+            return summarizeChunks(units, serialized, following, summary, target, schedulingKey, cancellation,
+                    finalPrompt, suffix, tools);
+        });
+    }
+
+    private static String joinUnits(List<String> serialized) {
+        StringBuilder payload = new StringBuilder("[");
+        for (String unit : serialized) {
+            String entries = unit.substring(1, unit.length() - 1);
+            if (!entries.isEmpty()) {
+                if (payload.length() > 1) payload.append(',');
+                payload.append(entries);
+            }
+        }
+        return payload.append(']').toString();
+    }
+
+    private CompletableFuture<JsonObject> summarizeAdmitted(ModelRequest admitted,
+            CancellationSignal cancellation, java.util.function.Predicate<JsonObject> fits,
+            boolean targetedRetry) {
+        cancellation.throwIfCancelled();
+        if (estimateTokens(admitted.systemPrompt(), admitted.messages(), admitted.tools())
+                > inputTokenBudget()) return CompletableFuture.failedFuture(new ModelClientException(
+                        new dev.openallay.model.ModelFailure("summary_input_over_budget",
+                                "Final summary request exceeds the configured input budget", null)));
+        return cancellation.observe(model.complete(admitted, ignored -> {}, cancellation))
+                .thenCompose(turn -> {
+                    cancellation.throwIfCancelled();
+                    JsonObject summary;
+                    try { summary = parseSummary(turn.text()); }
+                    catch (RuntimeException malformed) {
+                        return CompletableFuture.failedFuture(new ModelClientException(
+                                new dev.openallay.model.ModelFailure("summary_malformed",
+                                        "Summary response did not match schema", null)));
+                    }
+                    if (fits.test(summary)) return CompletableFuture.completedFuture(summary);
+                    if (targetedRetry) return CompletableFuture.failedFuture(new ModelClientException(
+                            new dev.openallay.model.ModelFailure("summary_output_over_budget",
+                                    "Summary exceeded its target after one bounded retry", null)));
+                    // Never feed an overlong response back into the model. Re-read only the already
+                    // admitted source with an explicit tighter instruction and the same output cap.
+                    String prompt = "Return the seven JSON string arrays goals, preferences, completedTopics, "
+                            + "currentTasks, decisions, unresolvedQuestions, evidenceReferences. "
+                            + "Your previous memory exceeded its target. Use fewer, shorter items. "
+                            + "Preserve unresolved work and actual errors; never invent evidence or "
+                            + "claim omitted Skill plaintext is loaded. Output budget: "
+                            + admitted.maxOutputTokens() + " tokens.";
+                    ModelRequest retry = new ModelRequest(prompt, admitted.messages(),
+                            List.of(), false, admitted.sessionKey(), admitted.maxOutputTokens());
+                    if (estimateTokens(retry.systemPrompt(), retry.messages(), retry.tools())
+                            > inputTokenBudget()) return CompletableFuture.failedFuture(
+                                    new ModelClientException(new dev.openallay.model.ModelFailure(
+                                            "summary_retry_input_over_budget",
+                                            "Targeted summary retry cannot fit the configured input budget", null)));
+                    return summarizeAdmitted(retry, cancellation, fits, true);
+                });
+    }
+
+    private static List<ModelMessage> summarized(JsonObject summary, List<ModelMessage> suffix) {
+        ArrayList<ModelMessage> projected = new ArrayList<>();
+        projected.add(ModelMessage.userText(DERIVED_PREFIX + summary));
+        projected.addAll(suffix);
+        return List.copyOf(projected);
+    }
+
+    private static List<ModelMessage> boundResults(List<ModelMessage> messages, int cap,
+                                                   boolean retireSkills) {
+        return boundResults(messages, cap, retireSkills, List.of(), new ResultValues(messages));
+    }
+
+    private static List<ModelMessage> boundResults(List<ModelMessage> messages, int cap,
+            boolean retireSkills, List<AgentToolResult> freshResults, ResultValues values) {
+        ArrayList<ModelMessage> projected = new ArrayList<>();
+        int messageIndex = 0;
+        for (ModelMessage message : messages) {
+            int resultIndex = 0;
+            ArrayList<ModelContent> content = new ArrayList<>();
+            for (ModelContent item : message.content()) {
+                if (item instanceof ModelContent.ToolResult result && !result.error()) {
+                    JsonElement value = values.values.get(result);
+                    int originalBytes = values.encodedSizes.get(result);
+                    boolean skill = values.instructions.contains(result);
+                    if (skill) {
+                        if (retireSkills && originalBytes > cap) value = new JsonPrimitive(RETIRED_SKILL);
+                    } else if (messageIndex == messages.size() - 1 && !freshResults.isEmpty()) {
+                        // A fresh result can expose a lazy canonical source. Its initial transport
+                        // preview must not become a permanent information ceiling for admission.
+                        value = freshResults.get(resultIndex).modelValue(cap);
+                    } else if (originalBytes > cap) {
+                        value = AgentToolResult.boundedModelValue(value, cap);
+                    }
+                    content.add(value == values.values.get(result) ? result
+                            : new ModelContent.ToolResult(result.toolUseId(), value, result.error()));
+                } else content.add(item);
+                if (item instanceof ModelContent.ToolResult) resultIndex++;
+            }
+            projected.add(content.equals(message.content()) ? message : new ModelMessage(message.role(), content));
+            messageIndex++;
+        }
+        return List.copyOf(projected);
+    }
+
+    /** Request-local immutable snapshots avoid repeated full result encoding/deep copies. */
+    private static final class ResultValues {
+        private final java.util.IdentityHashMap<ModelContent.ToolResult, JsonElement> values =
+                new java.util.IdentityHashMap<>();
+        private final java.util.IdentityHashMap<ModelContent.ToolResult, Integer> encodedSizes =
+                new java.util.IdentityHashMap<>();
+        private final java.util.Set<ModelContent.ToolResult> instructions =
+                java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
+        private final java.util.Map<String, Integer> plannedTokens = new java.util.HashMap<>();
+        private int maximumBytes = MINIMUM_RESULT_BYTES;
+
+        private ResultValues(List<ModelMessage> messages) {
+            java.util.Map<String, String> names = new java.util.HashMap<>();
+            for (ModelMessage message : messages) for (ModelContent item : message.content()) {
+                if (item instanceof ModelContent.ToolUse use) names.put(use.id(), use.name());
+                if (item instanceof ModelContent.ToolResult result && !result.error()) {
+                    JsonElement value = result.value();
+                    long measuredBytes = dev.openallay.tool.result.JsonResultProjection.serializedBytes(value);
+                    int size = measuredBytes >= Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) measuredBytes;
+                    values.put(result, value);
+                    encodedSizes.put(result, size);
+                    String name = names.getOrDefault(result.toolUseId(), "").toLowerCase(java.util.Locale.ROOT);
+                    boolean instructionTool = name.equals("load_skill") || name.endsWith(":load_skill")
+                            || name.endsWith("__load_skill");
+                    if (instructionTool && value.isJsonPrimitive() && value.getAsJsonPrimitive().isString()
+                            && value.getAsString().startsWith("skill_instructions\n")) instructions.add(result);
+                    maximumBytes = Math.max(maximumBytes, size);
+                }
+            }
+        }
     }
 
     public boolean matches(ContextCheckpoint checkpoint, List<ModelMessage> source) {
@@ -167,81 +531,44 @@ public final class ContextCompactor {
                 checkpoint.sourceFromIndex(), checkpoint.sourceToIndexExclusive())));
     }
 
-    public boolean requiresCompaction(
-            String systemPrompt,
-            List<ModelMessage> messages,
-            List<ModelToolDefinition> tools) {
-        return estimator.estimate(systemPrompt, messages, tools) > budget.inputTokens();
-    }
-
-    public Optional<ContextProjection> reuse(
-            ContextCheckpoint checkpoint,
-            String systemPrompt,
-            List<ModelMessage> messages,
-            int protectedFromIndex,
-            List<ModelToolDefinition> tools) {
+    public Optional<ContextProjection> reuse(ContextCheckpoint checkpoint, String systemPrompt,
+            List<ModelMessage> messages, int protectedFromIndex, List<ModelToolDefinition> tools) {
         Objects.requireNonNull(checkpoint, "checkpoint");
-        messages = ModelContextCodec.safe(messages);
+        messages = List.copyOf(messages);
         if (checkpoint.status() != ContextCheckpoint.Status.SUCCEEDED
                 || checkpoint.sourceFromIndex() != 0
                 || checkpoint.sourceToIndexExclusive() > protectedFromIndex
-                || !matches(checkpoint, messages.subList(0, protectedFromIndex))) {
-            return Optional.empty();
-        }
+                || !matches(checkpoint, messages.subList(0, protectedFromIndex))) return Optional.empty();
         JsonObject summary;
         try {
             List<ContextStructure.Unit> units = ContextStructure.units(messages);
             ContextStructure.requireBoundary(units, protectedFromIndex, messages.size());
-            ContextStructure.requireBoundary(
-                    units, checkpoint.sourceToIndexExclusive(), messages.size());
+            ContextStructure.requireBoundary(units, checkpoint.sourceToIndexExclusive(), messages.size());
             summary = parseSummary(checkpoint.summary());
-        } catch (RuntimeException invalid) {
-            return Optional.empty();
-        }
-        ArrayList<ModelMessage> projected = new ArrayList<>();
-        projected.add(ModelMessage.userText(DERIVED_PREFIX + summary));
-        projected.addAll(messages.subList(
-                checkpoint.sourceToIndexExclusive(), messages.size()));
-        int estimate = estimator.estimate(systemPrompt, projected, tools);
-        if (estimate > budget.inputTokens()) {
-            return Optional.empty();
-        }
-        return Optional.of(new ContextProjection(
-                projected, ContextProjection.Kind.SUMMARIZED, estimate));
+        } catch (RuntimeException invalid) { return Optional.empty(); }
+        List<ModelMessage> projected = summarized(summary,
+                messages.subList(checkpoint.sourceToIndexExclusive(), messages.size()));
+        Optional<ContextProjection> fitted = fitResults(systemPrompt, projected, tools);
+        return fitted.map(value -> new ContextProjection(value.messages(),
+                ContextProjection.Kind.SUMMARIZED, value.estimatedTokens()));
     }
 
-    private Prefix summaryPrefix(
-            List<ModelMessage> messages,
-            int protectedFromIndex,
-            String schedulingKey) {
-        List<ContextStructure.Unit> units = ContextStructure.units(messages);
-        int bestEnd = -1;
-        String best = null;
-        for (ContextStructure.Unit unit : units) {
-            if (unit.toIndexExclusive() > protectedFromIndex) break;
-            List<ModelMessage> safe = ContextStructure.summarySafe(
-                    messages.subList(0, unit.toIndexExclusive()));
-            String serialized = gson.toJson(safe);
-            ModelRequest request = new ModelRequest(
-                    SUMMARY_SYSTEM, List.of(ModelMessage.userText(serialized)), List.of(), false,
-                    schedulingKey);
-            int estimate = estimator.estimate(
-                    request.systemPrompt(), request.messages(), request.tools());
-            if (estimate > budget.inputTokens()) break;
-            bestEnd = unit.toIndexExclusive();
-            best = serialized;
-        }
-        return bestEnd < 1 ? null : new Prefix(bestEnd, best);
+    private Result failure(List<ModelMessage> source, int to, String code, String message, int estimate) {
+        int requestedEnd = Math.min(Math.max(1, to), source.size());
+        int end = ContextStructure.units(source).stream()
+                .mapToInt(ContextStructure.Unit::toIndexExclusive)
+                .filter(boundary -> boundary >= requestedEnd).findFirst().orElse(source.size());
+        ContextCheckpoint checkpoint = new ContextCheckpoint(UUID.randomUUID(), 0, end,
+                ContextSourceHash.compute(gson, source.subList(0, end)), modelIdentifier,
+                clock.instant(), ContextCheckpoint.Status.FAILED, null, code, message,
+                Math.max(0, estimate));
+        return new Result(null, checkpoint, "context_compaction_failed", message);
     }
 
-    private ContextCheckpoint failedCheckpoint(
-            List<ModelMessage> messages, int from, int to, String code, String message, int estimate) {
-        int safeTo = Math.min(Math.max(from + 1, to), messages.size());
-        return new ContextCheckpoint(
-                UUID.randomUUID(), from, safeTo,
-                ContextSourceHash.compute(gson, messages.subList(from, safeTo)),
-                modelIdentifier, clock.instant(),
-                ContextCheckpoint.Status.FAILED, null, code, message, Math.max(0, estimate));
+    private static JsonObject emptySummary() {
+        JsonObject summary = new JsonObject();
+        SUMMARY_FIELD_ORDER.forEach(field -> summary.add(field, new JsonArray()));
+        return summary;
     }
 
     private static JsonObject parseSummary(String text) {
@@ -264,7 +591,7 @@ public final class ContextCompactor {
     private static Throwable unwrap(Throwable throwable) {
         Throwable current = throwable;
         while ((current instanceof java.util.concurrent.CompletionException
-                        || current instanceof java.util.concurrent.ExecutionException)
+                || current instanceof java.util.concurrent.ExecutionException)
                 && current.getCause() != null) current = current.getCause();
         return current;
     }
@@ -273,6 +600,4 @@ public final class ContextCompactor {
         String message = throwable.getMessage();
         return message == null || message.isBlank() ? throwable.getClass().getSimpleName() : message;
     }
-
-    private record Prefix(int toIndexExclusive, String serialized) {}
 }

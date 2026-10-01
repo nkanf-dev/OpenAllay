@@ -9,6 +9,11 @@ public interface Tool<I, O> {
 
     ToolResult<O> invoke(ToolInvocationContext context, I input);
 
+    /** Optional request-lifetime model view of external canonical data; never part of serialized output. */
+    default java.util.Optional<ModelResultSource> modelResultSource(ToolInvocationContext context, O output) {
+        return java.util.Optional.empty();
+    }
+
     default CompletableFuture<ToolResult<O>> invokeAsync(
             ToolInvocationContext context, I input, CancellationSignal cancellation) {
         cancellation.throwIfCancelled();

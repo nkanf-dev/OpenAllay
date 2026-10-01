@@ -6,6 +6,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableMap;
+import java.util.TreeMap;
 
 /** Session-owned facts about actual retained plaintext. Never owns document text or model messages. */
 public final class RetainedSkillContext {
@@ -19,7 +21,7 @@ public final class RetainedSkillContext {
     }
 
     private List<Range> ranges = List.of();
-    private Map<Key, java.util.NavigableMap<Integer, Integer>> coverage = Map.of();
+    private Coverage coverage = new Coverage(List.of());
     private List<Range> systemRanges = List.of();
     synchronized List<Range> systemRanges() { return systemRanges; }
     synchronized void systemRanges(List<Range> actual) { systemRanges = List.copyOf(actual); }
@@ -31,9 +33,25 @@ public final class RetainedSkillContext {
 
     synchronized void reconcile(List<Range> actual) {
         ranges = List.copyOf(actual);
-        Map<Key, java.util.NavigableMap<Integer, Integer>> indexed = new HashMap<>();
-        for (Range range : actual) {
-            var intervals = indexed.computeIfAbsent(range.key(), ignored -> new java.util.TreeMap<>());
+        coverage = new Coverage(actual);
+        validations.values().forEach(entries -> entries.removeIf(Validation::expired));
+        validations.values().removeIf(List::isEmpty);
+    }
+
+    public synchronized boolean contains(Key key, int offset, int end) {
+        return coverage.contains(key, offset, end);
+    }
+
+    /** A union of validated plaintext ranges. Receipts alone must never enter this index. */
+    static final class Coverage {
+        private final Map<Key, NavigableMap<Integer, Integer>> byKey = new HashMap<>();
+
+        Coverage(List<Range> actual) { addAll(actual); }
+
+        void addAll(List<Range> actual) { actual.forEach(this::add); }
+
+        void add(Range range) {
+            var intervals = byKey.computeIfAbsent(range.key(), ignored -> new TreeMap<>());
             int start = range.offset();
             int end = range.end();
             var previous = intervals.floorEntry(start);
@@ -50,16 +68,17 @@ public final class RetainedSkillContext {
             }
             intervals.put(start, end);
         }
-        coverage = Map.copyOf(indexed);
-        validations.values().forEach(entries -> entries.removeIf(Validation::expired));
-        validations.values().removeIf(List::isEmpty);
-    }
 
-    public synchronized boolean contains(Key key, int offset, int end) {
-        var intervals = coverage.get(key);
-        if (intervals == null) return false;
-        var start = intervals.floorEntry(offset);
-        return start != null && start.getValue() >= end;
+        boolean contains(Range requested) {
+            return contains(requested.key(), requested.offset(), requested.end());
+        }
+
+        boolean contains(Key key, int offset, int end) {
+            var intervals = byKey.get(key);
+            if (intervals == null) return false;
+            var start = intervals.floorEntry(offset);
+            return start != null && start.getValue() >= end;
+        }
     }
 
     synchronized Range validated(ModelContent.ToolUse use, ModelContent.ToolResult result,

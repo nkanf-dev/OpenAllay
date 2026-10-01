@@ -625,7 +625,10 @@ final class GameGuideAgentTest {
         assertTrue(events.stream().anyMatch(event -> event.equals(
                 new AgentEvent.StateChanged(AgentState.COMPACTING))));
         assertTrue(events.stream().anyMatch(AgentEvent.ContextCompacted.class::isInstance));
-        assertEquals(1, sessions.checkpoints(key).size());
+        assertEquals(0, sessions.checkpoints(key).size(),
+                "The runtime reuse index must not retain a checkpoint for replaced source messages");
+        assertEquals(1, events.stream().filter(AgentEvent.ContextCompacted.class::isInstance).count(),
+                "The successful checkpoint still appears in diagnostic events");
         assertEquals(5, sessions.status(key).historyMessages());
         assertTrue(model.requests.get(1).messages().getFirst().content().stream()
                 .map(ModelContent.Text.class::cast)

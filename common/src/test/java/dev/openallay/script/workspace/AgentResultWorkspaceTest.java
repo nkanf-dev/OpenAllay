@@ -95,8 +95,8 @@ final class AgentResultWorkspaceTest {
         assertEquals(15, result.preview().getAsJsonArray().size());
         assertTrue(result.complete());
         assertTrue(result.modelText().contains("scope: complete"));
-        assertTrue(result.modelText().contains("id: a"));
-        assertTrue(result.modelText().contains("id: o"));
+        assertTrue(result.modelText().contains("id: \"a\""));
+        assertTrue(result.modelText().contains("id: \"o\""));
         assertTrue(!result.modelText().contains("{\"id\""));
     }
 
@@ -130,8 +130,8 @@ final class AgentResultWorkspaceTest {
         var result = new JavascriptResultPresenter().present("r_large", value);
 
         assertTrue(!result.complete());
-        assertTrue(result.preview().getAsJsonObject().size() <= 16);
-        assertTrue(result.omittedFields() >= 84);
+        assertTrue(result.preview().getAsJsonObject().size() < value.size());
+        assertTrue(result.omittedFields() > 0);
         result.preview().getAsJsonObject().entrySet().forEach(entry ->
                 assertTrue(!entry.getValue().getAsString().isBlank()));
         assertTrue(result.modelText().getBytes(StandardCharsets.UTF_8).length

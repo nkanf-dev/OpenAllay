@@ -106,10 +106,12 @@ public final class GameGuideAgent {
         LiveAgentTraceRecorder trace = new LiveAgentTraceRecorder(gson, request);
         try {
             transition(AgentState.PREPARING, trace, events);
-            List<ModelMessage> originalHistory = dev.openallay.agent.context.ModelContextCodec.safe(lease.history());
+            List<ModelMessage> originalHistory = List.copyOf(lease.history());
             tools.prepareSystem(request.systemPrompt(), lease.retainedSkills());
-            List<ModelMessage> messages = new ArrayList<>(dev.openallay.agent.context.ModelContextCodec.safe(
-                    tools.refreshContext(originalHistory, lease.retainedSkills())));
+            List<ModelMessage> restoredView = compactor == null ? originalHistory
+                    : compactor.prepareModelView(originalHistory);
+            List<ModelMessage> messages = new ArrayList<>(dev.openallay.agent.context.ModelContextCodec.safe(tools.refreshContext(
+                    restoredView, lease.retainedSkills())));
             int protectedFromIndex = messages.size();
             ModelMessage question = ModelMessage.userText(request.userMessage());
             messages.add(question);
@@ -144,40 +146,6 @@ public final class GameGuideAgent {
                     }
                 }
             }
-            if (compactor != null
-                    && compactor.requiresCompaction(
-                            preparedPrompt, messages, tools.definitions())) {
-                transition(AgentState.COMPACTING, trace, events);
-                return compactor.compact(
-                                preparedPrompt,
-                                messages,
-                                protectedFromIndex,
-                                tools.definitions(),
-                                request.stream(),
-                                request.sessionKey().schedulingKey(),
-                                lease.cancellation())
-                        .thenCompose(result -> {
-                            if (result.checkpoint() != null) {
-                                sessions.recordCheckpoint(lease, result.checkpoint());
-                                events.accept(new AgentEvent.ContextCompacted(result.checkpoint()));
-                            }
-                            if (!result.successful()) {
-                                throw new ModelClientException(new dev.openallay.model.ModelFailure(
-                                        result.failureCode(), result.failureMessage(), null));
-                            }
-                            transition(AgentState.MODEL_WAIT, trace, events);
-                            return loop(
-                                    request,
-                                    lease,
-                                    result.projection().messages(),
-                                    completeMessages,
-                                    Math.max(0, result.projection().messages().size() - 1),
-                                    Map.of(),
-                                    trace,
-                                    events);
-                        })
-                        .exceptionallyAsync(throwable -> fail(request, lease, trace, events, throwable));
-            }
             transition(AgentState.MODEL_WAIT, trace, events);
             return loop(
                             request,
@@ -205,8 +173,9 @@ public final class GameGuideAgent {
             Consumer<AgentEvent> events) {
         lease.cancellation().throwIfCancelled();
         tools.prepareSystem(request.systemPrompt(), lease.retainedSkills());
+        List<ModelMessage> modelView = compactor == null ? messages : compactor.prepareModelView(messages);
         List<ModelMessage> projectedMessages = dev.openallay.agent.context.ModelContextCodec.safe(tools.refreshContext(
-                dev.openallay.agent.context.ModelContextCodec.safe(messages), lease.retainedSkills()));
+                modelView, lease.retainedSkills()));
         tools.prepareContext(request.context().correlationId(), projectedMessages, lease.retainedSkills());
         String projectedPrompt = systemPrompt(request);
         if (compactor != null
@@ -215,7 +184,7 @@ public final class GameGuideAgent {
             int protectedMessageCount = projectedMessages.size() - protectedFromIndex;
             transition(AgentState.COMPACTING, trace, events);
             return compactor.compact(
-                            projectedPrompt,
+                            candidate -> promptForProjection(request, lease, candidate),
                             projectedMessages,
                             protectedFromIndex,
                             tools.definitions(),
@@ -230,6 +199,13 @@ public final class GameGuideAgent {
                         if (!result.successful()) {
                             throw new ModelClientException(new dev.openallay.model.ModelFailure(
                                     result.failureCode(), result.failureMessage(), null));
+                        }
+                        if (result.projection().messages().equals(projectedMessages)
+                                || result.projection().estimatedTokens() >= compactor.estimateTokens(
+                                        projectedPrompt, projectedMessages, tools.definitions())) {
+                            throw new ModelClientException(new dev.openallay.model.ModelFailure(
+                                    "context_compaction_no_progress",
+                                    "Context projection made no budget progress", null));
                         }
                         int nextProtectedFrom = Math.max(
                                 0,
@@ -247,8 +223,10 @@ public final class GameGuideAgent {
                                 events);
                     });
         }
+        List<ModelMessage> dispatchCompleteMessages = captureInitialResultProjection(
+                completeMessages, projectedMessages);
         boolean changedProjection = !lease.progress().projected().equals(projectedMessages);
-        if (sessions.recordContext(lease, projectedMessages, completeMessages) && changedProjection) {
+        if (sessions.recordContext(lease, projectedMessages, dispatchCompleteMessages) && changedProjection) {
             events.accept(new AgentEvent.ContextUpdated(projectedMessages, lease.progress().requestMessages()));
         }
         ModelRequest modelRequest = new ModelRequest(
@@ -258,8 +236,15 @@ public final class GameGuideAgent {
                 request.stream(),
                 request.sessionKey().schedulingKey());
         lease.cancellation().throwIfCancelled();
-        int estimatedTokens = dev.openallay.model.tokenizer.ModelContextTokenEstimator.conservative().estimate(
-                modelRequest.systemPrompt(), modelRequest.messages(), modelRequest.tools());
+        int estimatedTokens = compactor == null
+                ? dev.openallay.model.tokenizer.ModelContextTokenEstimator.conservative().estimate(
+                        modelRequest.systemPrompt(), modelRequest.messages(), modelRequest.tools())
+                : compactor.estimateTokens(
+                        modelRequest.systemPrompt(), modelRequest.messages(), modelRequest.tools());
+        if (compactor != null && estimatedTokens > compactor.inputTokenBudget()) {
+            throw new ModelClientException(new dev.openallay.model.ModelFailure(
+                    "context_budget_exceeded", "Final model request exceeds the configured input budget", null));
+        }
         try {
             contextEstimates.accept(request, estimatedTokens);
         } catch (RuntimeException ignored) {
@@ -283,7 +268,7 @@ public final class GameGuideAgent {
                     trace.modelTurn(turn);
                     List<ModelMessage> nextMessages = new ArrayList<>(projectedMessages);
                     nextMessages.add(new ModelMessage(ModelRole.ASSISTANT, turn.content()));
-                    List<ModelMessage> nextCompleteMessages = new ArrayList<>(completeMessages);
+                    List<ModelMessage> nextCompleteMessages = new ArrayList<>(dispatchCompleteMessages);
                     nextCompleteMessages.add(new ModelMessage(ModelRole.ASSISTANT, turn.content()));
                     if (turn.toolUses().isEmpty()) {
                         nextMessages = new ArrayList<>(dev.openallay.agent.context.ModelContextCodec.safe(nextMessages));
@@ -388,12 +373,15 @@ public final class GameGuideAgent {
                 new java.util.concurrent.atomic.AtomicBoolean();
         CompletableFuture<ToolOutcome> captured = CompletableFuture.allOf(futures).thenApply(ignored -> {
             List<ModelContent> results = new ArrayList<>();
+            List<AgentToolResult> freshResults = new ArrayList<>();
             Map<String, String> updatedCallOutcomes =
                     new java.util.HashMap<>(previousCallOutcomes);
             for (PendingToolCall item : pending) {
-                AgentToolResult result = item.result.join();
+                AgentToolResult raw = item.result.join();
+                AgentToolResult result = raw;
                 results.add(new ModelContent.ToolResult(
                         item.call.id(), result.modelValue(), result.failure()));
+                freshResults.add(result);
                 updatedCallOutcomes.put(
                         item.callKey,
                         duplicatedThisTurn.contains(item.callKey)
@@ -402,9 +390,19 @@ public final class GameGuideAgent {
             }
             List<ModelMessage> updated = new ArrayList<>(messages);
             updated.add(new ModelMessage(ModelRole.USER, results));
-            List<ModelMessage> updatedComplete = new ArrayList<>(completeMessages);
-            updatedComplete.add(new ModelMessage(ModelRole.USER, results));
             updated = new ArrayList<>(dev.openallay.agent.context.ModelContextCodec.safe(updated));
+            if (compactor != null) {
+                // Allocate all successful results against the same full request, not one per-tool
+                // token/byte guess. Keep completed errors exact and the original history untouched.
+                List<ModelMessage> actual = updated;
+                var fitted = compactor.fitResults(
+                        candidate -> promptForProjection(request, lease, candidate),
+                        actual, tools.definitions(), freshResults);
+                if (fitted.isPresent()) updated = new ArrayList<>(fitted.orElseThrow().messages());
+            }
+            List<ModelContent> initialResults = updated.getLast().content();
+            List<ModelMessage> updatedComplete = new ArrayList<>(completeMessages);
+            updatedComplete.add(new ModelMessage(ModelRole.USER, initialResults));
             updatedComplete = new ArrayList<>(dev.openallay.agent.context.ModelContextCodec.safe(updatedComplete));
             capturedContext.set(sessions.recordContext(lease, updated, updatedComplete));
             // Capture only safe progress here. Observers and terminal cleanup run later.
@@ -491,8 +489,7 @@ public final class GameGuideAgent {
         if (item.result.isDone()) return;
         try {
             if (executionFailure == null && rawResult != null) {
-                item.result.complete(new AgentToolResult(
-                        item.exposedId, rawResult.normalized(), rawResult.failure()));
+                item.result.complete(rawResult);
             } else {
                 item.result.complete(recoverToolFailure(item.exposedId, executionFailure));
             }
@@ -572,6 +569,34 @@ public final class GameGuideAgent {
         LiveAgentTrace completed = trace.finish(state, null, code);
         events.accept(new AgentEvent.Failed(code, message));
         return new AgentResult(state, null, code, message, completed);
+    }
+
+    /** The new exchange is captured with its first admitted provider view, not a raw dump. */
+    private static List<ModelMessage> captureInitialResultProjection(
+            List<ModelMessage> original, List<ModelMessage> projected) {
+        if (original.isEmpty() || projected.isEmpty()) return original;
+        ModelMessage originalLast = original.getLast();
+        ModelMessage projectedLast = projected.getLast();
+        if (originalLast.content().stream().allMatch(ModelContent.ToolResult.class::isInstance)
+                && projectedLast.content().stream().allMatch(ModelContent.ToolResult.class::isInstance)) {
+            List<String> originalIds = originalLast.content().stream()
+                    .map(ModelContent.ToolResult.class::cast).map(ModelContent.ToolResult::toolUseId).toList();
+            List<String> projectedIds = projectedLast.content().stream()
+                    .map(ModelContent.ToolResult.class::cast).map(ModelContent.ToolResult::toolUseId).toList();
+            if (originalIds.equals(projectedIds)) {
+                ArrayList<ModelMessage> captured = new ArrayList<>(original);
+                captured.set(captured.size() - 1, projectedLast);
+                return List.copyOf(captured);
+            }
+        }
+        return original;
+    }
+
+    private String promptForProjection(AgentRequest request, AgentSessionStore.Lease lease,
+            List<ModelMessage> messages) {
+        lease.cancellation().throwIfCancelled();
+        tools.prepareContext(request.context().correlationId(), messages, lease.retainedSkills());
+        return systemPrompt(request);
     }
 
     private String systemPrompt(AgentRequest request) {

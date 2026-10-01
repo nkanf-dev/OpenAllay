@@ -3,7 +3,7 @@ package dev.openallay.skill;
 import dev.openallay.context.ToolInvocationContext;
 import dev.openallay.model.ModelMessage;
 import dev.openallay.agent.tool.ToolOptional;
-import dev.openallay.tool.ModelFacingToolOutput;
+import dev.openallay.tool.InstructionModelFacingToolOutput;
 import dev.openallay.tool.RequestScopeParticipant;
 import dev.openallay.tool.Tool;
 import dev.openallay.tool.ToolAccess;
@@ -55,7 +55,7 @@ public final class LoadSkillTool
             List<String> availableReferences,
             List<String> allowedTools,
             String provenance)
-            implements ModelFacingToolOutput {
+            implements InstructionModelFacingToolOutput {
         public Output {
             java.util.Objects.requireNonNull(state, "state");
             availableReferences = List.copyOf(availableReferences);
@@ -100,10 +100,10 @@ public final class LoadSkillTool
 
     private static final ToolDescriptor<Input, Output> DESCRIPTOR = new ToolDescriptor<>(
             "openallay:load_skill",
-            "Progressively load one available Skill's instructions, or one exact declared reference after the Skill is loaded. "
-                    + "When complete is false, continue with the returned opaque cursor and the same name/reference. "
-                    + "Use Skills for matching vertical workflows, not for core JavaScript host syntax. "
-                    + "Document ranges already present in the current model context return compact reuse receipts.",
+            "Progressively load missing instructions for a matching Skill, or one exact declared reference. "
+                    + "Reuse Skill text already in the current model context, including system-delivered instructions. "
+                    + "Continue a needed incomplete document with its returned opaque cursor and the same name/reference. "
+                    + "Core JavaScript host syntax is in the system contract. Already-present document ranges return compact reuse receipts.",
             Input.class,
             Output.class,
             ToolAccess.READ_ONLY);

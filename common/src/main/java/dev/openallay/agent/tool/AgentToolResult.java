@@ -2,19 +2,63 @@ package dev.openallay.agent.tool;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import java.util.Objects;
 
-public record AgentToolResult(String toolId, JsonObject normalized, boolean failure) {
-    public AgentToolResult {
-        normalized = normalized.deepCopy();
+/** Authoritative normalized result with a reusable, permission-independent model projection. */
+public final class AgentToolResult {
+    private final String toolId;
+    private final JsonObject normalized;
+    private final boolean failure;
+    private final transient ModelToolResultProjection.Prepared prepared;
+    private final transient dev.openallay.tool.ModelResultSource source;
+
+    public AgentToolResult(String toolId, JsonObject normalized, boolean failure) {
+        this(toolId, normalized, failure, null);
     }
 
-    @Override
-    public JsonObject normalized() {
-        return normalized.deepCopy();
+    public AgentToolResult(String toolId, JsonObject normalized, boolean failure,
+            dev.openallay.tool.ModelResultSource source) {
+        this.toolId = toolId;
+        this.normalized = Objects.requireNonNull(normalized, "normalized").deepCopy();
+        this.failure = failure;
+        this.prepared = ModelToolResultProjection.prepare(this.normalized);
+        this.source = failure ? null : source;
     }
 
-    /** Compact provider-facing value; full normalized JSON remains available to UI and traces. */
+    public String toolId() { return toolId; }
+    public JsonObject normalized() { return normalized.deepCopy(); }
+    public boolean failure() { return failure; }
+
+    /** Initial transport view, not proof that a provider request fits its token budget. */
     public JsonElement modelValue() {
-        return new com.google.gson.JsonPrimitive(ModelToolTextRenderer.render(normalized));
+        return modelValue(dev.openallay.tool.result.JsonResultProjection.DEFAULT_MAXIMUM_UTF8_BYTES);
+    }
+
+    /** Actual request fit is decided by the agent's model tokenizer, not by this byte envelope. */
+    public JsonElement modelValue(int maximumUtf8Bytes) {
+        return source == null ? prepared.project(maximumUtf8Bytes) : source.project(maximumUtf8Bytes);
+    }
+
+    /** Search ceiling of the producer's chosen view, not canonical storage capacity. */
+    public int projectionSizeUpperBound() {
+        return source == null ? prepared.projectionSizeUpperBound() : source.projectionSizeUpperBound();
+    }
+
+    public int preferredSizeUtf8Bytes() {
+        return source == null ? prepared.projectionSizeUpperBound() : source.preferredSizeUtf8Bytes();
+    }
+
+    /** Active-context view only. The original successful transcript remains unchanged. */
+    public static JsonElement boundedModelValue(JsonElement value, int maximumUtf8Bytes) {
+        return ModelToolResultProjection.boundedValue(value, maximumUtf8Bytes);
+    }
+
+    @Override public boolean equals(Object other) {
+        return other instanceof AgentToolResult result && Objects.equals(toolId, result.toolId)
+                && normalized.equals(result.normalized) && failure == result.failure;
+    }
+    @Override public int hashCode() { return Objects.hash(toolId, normalized, failure); }
+    @Override public String toString() {
+        return "AgentToolResult[toolId=" + toolId + ", normalized=" + normalized + ", failure=" + failure + "]";
     }
 }

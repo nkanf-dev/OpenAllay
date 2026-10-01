@@ -41,14 +41,13 @@ final class ModelToolResultProjectionTest {
         assertEquals("""
                 status: success
                 result:
-                  name: analyze-game-data
-                  instructions:
-                    filter first
-                    return a compact result
+                  name: "analyze-game-data"
+                  instructions: "filter first\\nreturn a compact result"
                   allowedTools:
-                    - openallay:run_javascript""", text);
+                    - "openallay:run_javascript"
+                """.stripTrailing(), text);
         assertFalse(text.contains("{"));
-        assertFalse(text.contains("\""));
+        org.junit.jupiter.api.Assertions.assertTrue(text.contains("\"analyze-game-data\""));
     }
 
     @Test

@@ -11,6 +11,11 @@ public final class AgentResultWorkspaceRegistry {
         return workspaces.computeIfAbsent(requireId(correlationId), ignored -> new AgentResultWorkspace());
     }
 
+    /** Looks up an existing request only; model projection must never reopen a closed request. */
+    public java.util.Optional<AgentResultWorkspace> existing(String correlationId) {
+        return java.util.Optional.ofNullable(workspaces.get(requireId(correlationId)));
+    }
+
     public void close(String correlationId) {
         AgentResultWorkspace workspace = workspaces.remove(requireId(correlationId));
         if (workspace != null) {

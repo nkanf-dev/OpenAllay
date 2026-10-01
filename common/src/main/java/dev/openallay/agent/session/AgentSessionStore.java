@@ -107,6 +107,7 @@ public final class AgentSessionStore {
         }
         session.history = List.copyOf(history);
         session.active = null;
+        pruneCheckpointIndex(session);
         return true;
     }
 
@@ -115,7 +116,19 @@ public final class AgentSessionStore {
         Session session = sessions.get(lease.key());
         if (session == null || session.latest != lease || session.active != null) return false;
         session.history = List.copyOf(history);
+        pruneCheckpointIndex(session);
         return true;
+    }
+
+    /** Runtime reuse index only; durable ContextCompacted events keep every diagnostic record. */
+    private static void pruneCheckpointIndex(Session session) {
+        com.google.gson.Gson gson = new com.google.gson.Gson();
+        session.checkpoints = session.checkpoints.stream().filter(checkpoint ->
+                checkpoint.status() == ContextCheckpoint.Status.SUCCEEDED
+                        && checkpoint.sourceToIndexExclusive() <= session.history.size()
+                        && checkpoint.sourceHash().equals(dev.openallay.agent.context.ContextSourceHash.compute(
+                                gson, session.history.subList(checkpoint.sourceFromIndex(),
+                                        checkpoint.sourceToIndexExclusive())))).toList();
     }
 
     public synchronized boolean recordCheckpoint(Lease lease, ContextCheckpoint checkpoint) {
@@ -123,7 +136,11 @@ public final class AgentSessionStore {
         if (session == null || session.active != lease) {
             return false;
         }
+        if (checkpoint.status() != ContextCheckpoint.Status.SUCCEEDED) return true;
         java.util.ArrayList<ContextCheckpoint> updated = new java.util.ArrayList<>(session.checkpoints);
+        updated.removeIf(existing -> existing.sourceFromIndex() == checkpoint.sourceFromIndex()
+                && existing.sourceToIndexExclusive() == checkpoint.sourceToIndexExclusive()
+                && existing.sourceHash().equals(checkpoint.sourceHash()));
         updated.add(checkpoint);
         session.checkpoints = List.copyOf(updated);
         return true;

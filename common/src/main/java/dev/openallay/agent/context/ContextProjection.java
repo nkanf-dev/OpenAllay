@@ -7,6 +7,7 @@ import java.util.Objects;
 public record ContextProjection(List<ModelMessage> messages, Kind kind, int estimatedTokens) {
     public enum Kind {
         ORIGINAL,
+        BOUNDED,
         SUMMARIZED
     }
 

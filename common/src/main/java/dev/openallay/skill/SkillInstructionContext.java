@@ -51,9 +51,10 @@ public final class SkillInstructionContext {
     /** Projection changes never rewrite the original transcript or a real success/error flag. */
     public List<ModelMessage> refresh(List<ModelMessage> messages, RetainedSkillContext retained) {
         Scan scan = scan(messages, retained);
-        List<RetainedSkillContext.Range> present = new ArrayList<>(retained.systemRanges());
+        List<RetainedSkillContext.Range> system = retained.systemRanges();
+        RetainedSkillContext.Coverage present = new RetainedSkillContext.Coverage(system);
         present.addAll(scan.ranges());
-        List<RetainedSkillContext.Range> owned = new ArrayList<>(retained.systemRanges());
+        RetainedSkillContext.Coverage owned = new RetainedSkillContext.Coverage(system);
         List<ModelMessage> refreshed = new ArrayList<>(messages.size());
         for (ModelMessage message : messages) {
             List<ModelContent> content = new ArrayList<>(message.content().size());
@@ -63,10 +64,10 @@ public final class SkillInstructionContext {
                 if (item instanceof ModelContent.ToolResult result && scan.loads().containsKey(result)) {
                     String replacement = null;
                     if (parsed == null || (parsed.state() == LoadSkillTool.LoadState.ALREADY_LOADED
-                            && !covers(present, parsed.range()))) {
+                            && !present.contains(parsed.range()))) {
                         replacement = INVALIDATED;
                     } else if (parsed.state() != LoadSkillTool.LoadState.ALREADY_LOADED) {
-                        if (covers(owned, parsed.range())) {
+                        if (owned.contains(parsed.range())) {
                             replacement = receipt(parsed.document(), parsed.range().offset()).modelText();
                         } else {
                             owned.add(parsed.range());
@@ -320,16 +321,6 @@ public final class SkillInstructionContext {
         return new LoadSkillTool.Output(document.name(), document.document(), document.source(), document.fingerprint(),
                 LoadSkillTool.LoadState.ALREADY_LOADED, "", offset, chunk.end(), chunk.end() == document.length(),
                 cursor(document, chunk.end()), document.availableReferences(), List.of(), "");
-    }
-    private static boolean covers(List<RetainedSkillContext.Range> ranges, RetainedSkillContext.Range requested) {
-        int covered = requested.offset();
-        for (var range : ranges.stream().filter(range -> range.key().equals(requested.key()))
-                .sorted(java.util.Comparator.comparingInt(RetainedSkillContext.Range::offset)).toList()) {
-            if (range.offset() > covered) break;
-            if (range.end() >= covered) covered = range.end();
-            if (covered >= requested.end()) return true;
-        }
-        return false;
     }
     private static boolean isLoadSkill(String name) {
         String normalized = name.toLowerCase(Locale.ROOT);
