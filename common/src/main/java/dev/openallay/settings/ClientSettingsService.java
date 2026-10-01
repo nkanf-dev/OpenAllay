@@ -53,6 +53,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import java.util.function.BooleanSupplier;
 
 /** Common owner for native settings actions and immutable UI snapshots. */
 public final class ClientSettingsService implements AutoCloseable {
@@ -341,7 +342,7 @@ public final class ClientSettingsService implements AutoCloseable {
         }
     }
 
-    public record PreparedModels(ModelState state, Runnable publish) {
+    public record PreparedModels(ModelState state, BooleanSupplier publish) {
         public PreparedModels {
             Objects.requireNonNull(state, "state");
             Objects.requireNonNull(publish, "publish");
@@ -386,6 +387,7 @@ public final class ClientSettingsService implements AutoCloseable {
     private boolean knowledgeSourcesBound;
     private long modelGeneration;
     private long metadataGeneration;
+    private boolean metadataReconciliationPending;
     private Map<ModelMetadata.Key, ModelMetadata> metadata = Map.of();
     private GuideFailure metadataFailure;
     private ModelConnectionResult connectionResult;
@@ -1698,6 +1700,7 @@ public final class ClientSettingsService implements AutoCloseable {
             CompletableFuture<ToolResult<Boolean>> outward,
             String successCode) {
         ToolResult<Boolean> result;
+        boolean reconcile;
         synchronized (lock) {
             if (!isCurrentLocked(operationId)) {
                 return;
@@ -1705,7 +1708,6 @@ public final class ClientSettingsService implements AutoCloseable {
             operation = SettingsOperation.idle();
             if (completed instanceof ToolResult.Success<ModelState> success) {
                 modelState = success.value();
-                modelGeneration++;
                 connectionResult = null;
                 notice = SettingsNotice.success(successCode, switch (successCode) {
                     case "models_reloaded" -> "Model settings reloaded";
@@ -1718,7 +1720,12 @@ public final class ClientSettingsService implements AutoCloseable {
                 notice = SettingsNotice.failure(failure.code(), failure.message());
                 result = new ToolResult.Failure<>(failure.code(), failure.message());
             }
+            reconcile = metadataReconciliationPending;
+            metadataReconciliationPending = false;
             publishLocked();
+        }
+        if (reconcile) {
+            reconcileCurrentMetadata();
         }
         outward.complete(result);
     }
@@ -2078,26 +2085,34 @@ public final class ClientSettingsService implements AutoCloseable {
             long expectedMetadataGeneration,
             ModelProfilesConfig preparedConfig,
             ToolResult<PreparedModels> prepared) {
-        ModelProfilesConfig retryConfig = null;
-        long retryGeneration = -1;
+        boolean retry = false;
         synchronized (lock) {
             if (closed) {
+                return;
+            }
+            if (modelOperationPendingLocked()) {
+                // The worker may already have committed while the UI still shows the old config.
+                metadataReconciliationPending = true;
                 return;
             }
             if (modelGeneration != expectedGeneration
                     || metadataGeneration != expectedMetadataGeneration
                     || modelState.config() != preparedConfig) {
-                retryConfig = modelState.config();
-                retryGeneration = modelGeneration;
+                retry = true;
             } else if (prepared instanceof ToolResult.Success<PreparedModels> success) {
                 try {
-                    success.value().publish().run();
-                    modelState = success.value().state();
+                    if (success.value().publish().getAsBoolean()) {
+                        modelState = success.value().state();
+                        publishLocked();
+                    } else {
+                        // Registry publication, including capabilities, advanced before this callback.
+                        retry = true;
+                    }
                 } catch (RuntimeException failure) {
                     metadataFailure = new GuideFailure(
                             "metadata_unavailable", "Model metadata reconciliation is unavailable");
+                    publishLocked();
                 }
-                publishLocked();
             } else {
                 ToolResult.Failure<PreparedModels> failure =
                         (ToolResult.Failure<PreparedModels>) prepared;
@@ -2105,17 +2120,30 @@ public final class ClientSettingsService implements AutoCloseable {
                 publishLocked();
             }
         }
-        if (retryConfig != null) {
-            long currentMetadataGeneration;
-            synchronized (lock) {
-                currentMetadataGeneration = metadataGeneration;
-            }
-            reconcileMetadata(
-                    retryGeneration,
-                    currentMetadataGeneration,
-                    retryConfig,
-                    metadataSnapshot());
+        if (retry) {
+            reconcileCurrentMetadata();
         }
+    }
+
+    private void reconcileCurrentMetadata() {
+        long expectedGeneration;
+        long expectedMetadataGeneration;
+        ModelProfilesConfig config;
+        Map<ModelMetadata.Key, ModelMetadata> entries;
+        synchronized (lock) {
+            if (closed) {
+                return;
+            }
+            if (modelOperationPendingLocked()) {
+                metadataReconciliationPending = true;
+                return;
+            }
+            expectedGeneration = modelGeneration;
+            expectedMetadataGeneration = metadataGeneration;
+            config = modelState.config();
+            entries = metadata;
+        }
+        reconcileMetadata(expectedGeneration, expectedMetadataGeneration, config, entries);
     }
 
     private Reservation reserve(SettingsOperation requested) {
@@ -2133,9 +2161,18 @@ public final class ClientSettingsService implements AutoCloseable {
     private Reservation reserveLocked(SettingsOperation requested) {
         long id = operationIds.incrementAndGet();
         operation = Objects.requireNonNull(requested, "requested");
+        if (modelOperationPendingLocked()) {
+            // Invalidate background work before a worker can commit the new model settings.
+            modelGeneration++;
+        }
         notice = null;
         publishLocked();
         return Reservation.accepted(id);
+    }
+
+    private boolean modelOperationPendingLocked() {
+        return operation.kind() == SettingsOperation.Kind.SAVING_MODELS
+                || operation.kind() == SettingsOperation.Kind.RELOADING_MODELS;
     }
 
     private boolean isCurrent(long id) {

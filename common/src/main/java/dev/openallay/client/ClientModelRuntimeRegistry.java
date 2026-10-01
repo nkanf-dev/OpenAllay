@@ -20,6 +20,7 @@ import dev.openallay.guide.GuideLocalEndpoint;
 import dev.openallay.guide.GuideModelProfileException;
 import dev.openallay.model.ModelClient;
 import dev.openallay.model.ModelMessage;
+import dev.openallay.model.config.ModelProfilesConfig;
 import dev.openallay.model.config.ModelProfilesConfigLoader;
 import dev.openallay.model.config.ResolvedModelProfile;
 import dev.openallay.model.ProviderModelClients;
@@ -47,7 +48,6 @@ public final class ClientModelRuntimeRegistry implements GuideLocalEndpoint {
     private final Function<ResolvedModelProfile, ModelClient> modelFactory;
     private final AgentSessionStore sessions = new AgentSessionStore();
     private final AtomicReference<State> state = new AtomicReference<>();
-    private final AtomicReference<ClientCapabilitySnapshot> capabilities;
     private final Path traceDirectory;
     private final java.util.function.BooleanSupplier tracePersistenceEnabled;
 
@@ -80,8 +80,7 @@ public final class ClientModelRuntimeRegistry implements GuideLocalEndpoint {
                 ? null : traceDirectory.toAbsolutePath().normalize();
         this.tracePersistenceEnabled = Objects.requireNonNull(
                 tracePersistenceEnabled, "tracePersistenceEnabled");
-        capabilities = new AtomicReference<>(resolveDefaultCapabilities(productRuntime));
-        replace(initial, modelFactory);
+        state.set(build(initial, modelFactory, resolveDefaultCapabilities(productRuntime)));
     }
 
     public static ToolResult<ClientModelRuntimeRegistry> create(
@@ -126,35 +125,35 @@ public final class ClientModelRuntimeRegistry implements GuideLocalEndpoint {
                 traceDirectory, tracePersistenceEnabled);
     }
 
-    public synchronized void replace(
+    public void replace(
             ModelProfilesConfigLoader.Load replacement,
             Function<ResolvedModelProfile, ModelClient> replacementFactory) {
         Objects.requireNonNull(replacementFactory, "replacementFactory");
-        state.set(build(replacement, replacementFactory));
+        State expected = state.get();
+        new PreparedReplacement(this, expected,
+                build(replacement, replacementFactory, expected.capabilities())).publishCommitted();
     }
 
-    public synchronized void replace(ModelProfilesConfigLoader.Load replacement) {
-        prepare(replacement).publish();
+    public void replace(ModelProfilesConfigLoader.Load replacement) {
+        prepare(replacement).publishCommitted();
     }
 
-    public synchronized PreparedReplacement prepare(
+    public PreparedReplacement prepare(
             ModelProfilesConfigLoader.Load replacement) {
-        return new PreparedReplacement(this, build(replacement, modelFactory));
+        State expected = state.get();
+        return new PreparedReplacement(this, expected,
+                build(replacement, modelFactory, expected.capabilities()));
     }
 
     /** Publishes a prepared capability view for future requests without replacing endpoints. */
     public synchronized void replaceCapabilities(ClientCapabilitySnapshot replacement) {
         Objects.requireNonNull(replacement, "replacement");
         State current = state.get();
-        Map<String, ClientGuideRuntime> runtimes = new LinkedHashMap<>();
-        current.runtimes().forEach((id, runtime) ->
-                runtimes.put(id, runtime.withCapabilities(replacement)));
-        capabilities.set(replacement);
-        state.set(new State(current.defaultProfileId(), current.profiles(), runtimes));
+        state.set(current.withCapabilities(replacement));
     }
 
     public ClientCapabilitySnapshot capabilities() {
-        return capabilities.get();
+        return state.get().capabilities();
     }
 
     /** Returns one complete recorded local Agent trace. Model credentials are not trace inputs. */
@@ -281,7 +280,8 @@ public final class ClientModelRuntimeRegistry implements GuideLocalEndpoint {
 
     private State build(
             ModelProfilesConfigLoader.Load load,
-            Function<ResolvedModelProfile, ModelClient> factory) {
+            Function<ResolvedModelProfile, ModelClient> factory,
+            ClientCapabilitySnapshot capturedCapabilities) {
         Objects.requireNonNull(load, "load");
         List<GuideClientModelProfile> summaries = new ArrayList<>();
         Map<String, ClientGuideRuntime> runtimes = new LinkedHashMap<>();
@@ -308,13 +308,13 @@ public final class ClientModelRuntimeRegistry implements GuideLocalEndpoint {
                                 tracePersistenceEnabled),
                         profile.runtimeConfig().contextBudget(),
                         profile.canonicalModelId(),
-                        capabilities.get(),
+                        capturedCapabilities,
                         dev.openallay.model.tokenizer.ModelContextTokenEstimator.create(
                                 profile.runtimeConfig().protocol(), profile.canonicalModelId(),
                                 profile.runtimeConfig().tokenEncoding())));
             }
         }
-        return new State(load.config().defaultProfileId(), summaries, runtimes);
+        return new State(load.config(), summaries, runtimes, capturedCapabilities);
     }
 
     private static ClientCapabilitySnapshot resolveDefaultCapabilities(OpenAllayRuntime runtime) {
@@ -346,36 +346,74 @@ public final class ClientModelRuntimeRegistry implements GuideLocalEndpoint {
     }
 
     private record State(
-            String defaultProfileId,
+            ModelProfilesConfig config,
             List<GuideClientModelProfile> profiles,
-            Map<String, ClientGuideRuntime> runtimes) {
+            Map<String, ClientGuideRuntime> runtimes,
+            ClientCapabilitySnapshot capabilities) {
         private State {
-            if (defaultProfileId == null || defaultProfileId.isBlank()) {
-                throw new IllegalArgumentException("defaultProfileId must not be blank");
-            }
+            Objects.requireNonNull(config, "config");
             profiles = List.copyOf(profiles);
             runtimes = java.util.Collections.unmodifiableMap(new LinkedHashMap<>(runtimes));
+            Objects.requireNonNull(capabilities, "capabilities");
+        }
+
+        private String defaultProfileId() {
+            return config.defaultProfileId();
+        }
+
+        private State withCapabilities(ClientCapabilitySnapshot replacement) {
+            Map<String, ClientGuideRuntime> updated = new LinkedHashMap<>();
+            runtimes.forEach((id, runtime) -> updated.put(id, runtime.withCapabilities(replacement)));
+            return new State(config, profiles, updated, replacement);
         }
     }
 
-    /** Fully built replacement whose publication is one non-failing atomic state swap. */
+    /** Fully built replacement bound to the exact model and capability state it captured. */
     public static final class PreparedReplacement {
         private final ClientModelRuntimeRegistry owner;
+        private final State expected;
         private final State replacement;
         private final AtomicBoolean published = new AtomicBoolean();
 
         private PreparedReplacement(
                 ClientModelRuntimeRegistry owner,
+                State expected,
                 State replacement) {
             this.owner = owner;
+            this.expected = expected;
             this.replacement = replacement;
         }
 
-        public void publish() {
+        /** Background reconciliation must match both the captured settings and registry revision. */
+        public boolean publish() {
+            synchronized (owner) {
+                claimPublication();
+                return expected.config().equals(replacement.config())
+                        && owner.state.compareAndSet(expected, replacement);
+            }
+        }
+
+        /**
+         * Commits already-persisted settings, preserving the latest capability snapshot.
+         * Preparation and file I/O occur before this short publication critical section.
+         */
+        public void publishCommitted() {
+            synchronized (owner) {
+                claimPublication();
+                State current;
+                State rebased;
+                do {
+                    current = owner.state.get();
+                    rebased = current.capabilities() == replacement.capabilities()
+                            ? replacement : replacement.withCapabilities(current.capabilities());
+                } while (!owner.state.compareAndSet(current, rebased));
+            }
+        }
+
+        private void claimPublication() {
             if (!published.compareAndSet(false, true)) {
                 throw new IllegalStateException("Prepared model replacement was already published");
             }
-            owner.state.set(replacement);
         }
     }
 }

@@ -1,5 +1,6 @@
 package dev.openallay.settings;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -235,6 +236,131 @@ final class ClientSettingsServiceTest {
         assertEquals("beta", service.snapshot().models().config().defaultProfileId());
         assertEquals("beta", models.publishedDefault);
         assertFalse(models.publishedDefaultsAfterSave.contains("alpha"));
+    }
+
+    @Test
+    void ordinaryFifoMetadataCompletionCannotRollBackAlreadySavedRuntime() {
+        ManualExecutor worker = new ManualExecutor();
+        ManualExecutor dispatcher = new ManualExecutor();
+        FakeModels models = new FakeModels(state(config("alpha")));
+        ClientSettingsService service = new ClientSettingsService(
+                GuideDisplayConfig.defaults(),
+                models.current,
+                Set.of(),
+                models,
+                models,
+                dispatcher::execute,
+                worker);
+        List<String> publicationTrace = new ArrayList<>();
+        publicationTrace.add("initial: " + List.copyOf(models.publishedDefaults));
+
+        service.acceptMetadataUpdate(new ModelMetadataUpdate(Map.of(), null));
+        publicationTrace.add("metadata accepted: " + List.copyOf(models.publishedDefaults));
+        worker.runNext(); // Prepare alpha without publishing; queue its completion first.
+        publicationTrace.add("metadata prepared: " + List.copyOf(models.publishedDefaults));
+        assertEquals(List.of("alpha"), models.publishedDefaults);
+
+        CompletableFuture<ToolResult<Boolean>> save = service.saveModels(config("beta"));
+        publicationTrace.add("save accepted: " + List.copyOf(models.publishedDefaults));
+        worker.runNext(); // The real backend writes and publishes beta before queueing finishModels.
+        publicationTrace.add("save worker completed: " + List.copyOf(models.publishedDefaults));
+        assertEquals(List.of("alpha", "beta"), models.publishedDefaults);
+        assertEquals("beta", models.current.config().defaultProfileId());
+        assertEquals("alpha", service.snapshot().models().config().defaultProfileId());
+        assertFalse(save.isDone());
+
+        dispatcher.runAll(); // Ordinary FIFO: alpha metadata completion, then beta save completion.
+        publicationTrace.add("FIFO dispatched: " + List.copyOf(models.publishedDefaults));
+        worker.runAll();
+        dispatcher.runAll();
+        publicationTrace.add("queues drained: " + List.copyOf(models.publishedDefaults));
+        assertTrue(save.isDone());
+        assertSuccess(save.join());
+
+        // current changes only on save (disk proxy); publishedDefault is the runtime registry proxy.
+        assertAll(
+                () -> assertEquals("beta", models.current.config().defaultProfileId(),
+                        "The synthetic saved configuration must remain beta"),
+                () -> assertEquals("beta", service.snapshot().models().config().defaultProfileId(),
+                        "The final settings/UI projection must show beta"),
+                () -> assertEquals("beta", models.publishedDefault,
+                        "Runtime publication must match the saved configuration: " + publicationTrace),
+                () -> assertFalse(models.publishedDefaultsAfterSave.contains("alpha"),
+                        "Prepared alpha must never publish after beta was saved: " + publicationTrace));
+    }
+
+    @Test
+    void ordinaryFifoMetadataCompletionCannotRollBackAlreadyReloadedRuntime() {
+        ManualExecutor worker = new ManualExecutor();
+        ManualExecutor dispatcher = new ManualExecutor();
+        FakeModels models = new FakeModels(state(config("alpha")));
+        ClientSettingsService service = new ClientSettingsService(
+                GuideDisplayConfig.defaults(), models.current, Set.of(), models, models,
+                dispatcher::execute, worker);
+        service.acceptMetadataUpdate(new ModelMetadataUpdate(Map.of(), null));
+        worker.runNext();
+        models.current = state(config("beta")); // Simulate a changed settings file before reload.
+
+        var reload = service.reloadModels(true);
+        worker.runNext();
+        assertEquals("beta", models.publishedDefault);
+        assertEquals("alpha", service.snapshot().models().config().defaultProfileId());
+        dispatcher.runAll();
+        worker.runAll();
+        dispatcher.runAll();
+
+        assertSuccess(reload.join());
+        assertEquals("beta", service.snapshot().models().config().defaultProfileId());
+        assertEquals("beta", models.publishedDefault);
+        assertFalse(models.publishedDefaultsAfterSave.contains("alpha"));
+    }
+
+    @Test
+    void metadataArrivingDuringSaveReconcilesOnlyAfterCommittedConfigIsReady() {
+        ManualExecutor worker = new ManualExecutor();
+        ManualExecutor dispatcher = new ManualExecutor();
+        FakeModels models = new FakeModels(state(config("alpha")));
+        ClientSettingsService service = new ClientSettingsService(
+                GuideDisplayConfig.defaults(), models.current, Set.of(), models, models,
+                dispatcher::execute, worker);
+        var save = service.saveModels(config("beta"));
+        service.acceptMetadataUpdate(metadata(200_000));
+        worker.runLast(); // Prepare from the still-displayed alpha while save is pending.
+        worker.runNext(); // Commit beta, but leave its owner completion queued.
+        dispatcher.runAll();
+        assertTrue(models.publishedMetadataWindows.isEmpty());
+        worker.runAll();
+        dispatcher.runAll();
+
+        assertSuccess(save.join());
+        assertEquals("beta", models.publishedDefault);
+        assertFalse(models.publishedDefaultsAfterSave.contains("alpha"));
+        assertTrue(models.publishedMetadataWindows.contains(200_000),
+                "The newest metadata must be retried, not disabled by the pending save");
+    }
+
+    @Test
+    void metadataDeferredByFailedSaveStillReconcilesTheLastValidConfig() {
+        ManualExecutor worker = new ManualExecutor();
+        ManualExecutor dispatcher = new ManualExecutor();
+        FakeModels models = new FakeModels(state(config("alpha")));
+        models.saveFailure = new ToolResult.Failure<>("settings_write_failed", "Unable to save settings");
+        ClientSettingsService service = new ClientSettingsService(
+                GuideDisplayConfig.defaults(), models.current, Set.of(), models, models,
+                dispatcher::execute, worker);
+        service.acceptMetadataUpdate(metadata(200_000));
+        worker.runNext();
+        var save = service.saveModels(config("beta"));
+        dispatcher.runAll(); // Metadata callback arrives while the save worker is still pending.
+        assertTrue(models.publishedMetadataWindows.isEmpty());
+        worker.runAll();
+        dispatcher.runAll();
+        worker.runAll();
+        dispatcher.runAll();
+
+        assertFailure(save.join(), "settings_write_failed");
+        assertEquals("alpha", models.publishedDefault);
+        assertTrue(models.publishedMetadataWindows.contains(200_000));
     }
 
     @Test
@@ -1114,6 +1240,7 @@ final class ClientSettingsServiceTest {
         private final AtomicBoolean catalogCancelled = new AtomicBoolean();
         private final AtomicBoolean closed = new AtomicBoolean();
         private String publishedDefault;
+        private final List<String> publishedDefaults = new ArrayList<>();
         private int saveCalls;
         private boolean saved;
         private final List<String> publishedDefaultsAfterSave = new ArrayList<>();
@@ -1122,6 +1249,7 @@ final class ClientSettingsServiceTest {
         private FakeModels(ClientSettingsService.ModelState current) {
             this.current = current;
             this.publishedDefault = current.config().defaultProfileId();
+            this.publishedDefaults.add(publishedDefault);
         }
 
         @Override
@@ -1134,6 +1262,7 @@ final class ClientSettingsServiceTest {
             }
             current = state(candidate);
             publishedDefault = candidate.defaultProfileId();
+            publishedDefaults.add(publishedDefault);
             saved = true;
             return new ToolResult.Success<>(current);
         }
@@ -1141,6 +1270,9 @@ final class ClientSettingsServiceTest {
         @Override
         public ToolResult<ClientSettingsService.ModelState> reload(
                 Map<ModelMetadata.Key, ModelMetadata> metadata) {
+            publishedDefault = current.config().defaultProfileId();
+            publishedDefaults.add(publishedDefault);
+            saved = true;
             return new ToolResult.Success<>(current);
         }
 
@@ -1164,12 +1296,14 @@ final class ClientSettingsServiceTest {
                     prepared,
                     () -> {
                         publishedDefault = candidate.defaultProfileId();
+                        publishedDefaults.add(publishedDefault);
                         if (saved) {
                             publishedDefaultsAfterSave.add(publishedDefault);
                         }
                         if (metadataWindow != null) {
                             publishedMetadataWindows.add(metadataWindow);
                         }
+                        return true;
                     }));
         }
 

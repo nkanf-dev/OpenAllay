@@ -76,7 +76,7 @@ public final class ModelProfileSettingsStore {
                 candidate,
                 credentials,
                 metadata,
-                load -> registry.prepare(load)::publish);
+                load -> registry.prepare(load)::publishCommitted);
     }
 
     ToolResult<Saved> save(

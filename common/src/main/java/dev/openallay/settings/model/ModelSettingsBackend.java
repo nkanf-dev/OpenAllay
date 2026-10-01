@@ -175,7 +175,7 @@ public final class ModelSettingsBackend implements ClientSettingsService.ModelAc
         ModelProfilesConfigLoader.Load value =
                 ((ToolResult.Success<ModelProfilesConfigLoader.Load>) loaded).value();
         ClientModelRuntimeRegistry.PreparedReplacement prepared = registry.prepare(value);
-        prepared.publish();
+        prepared.publishCommitted();
         return new ToolResult.Success<>(state(value));
     }
 
