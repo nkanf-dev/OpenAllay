@@ -80,6 +80,32 @@ final class ModelConnectionProbeTest {
     }
 
     @Test
+    void connectionProbeRetainsTheSelectedEffortRatherThanTestingAuto() {
+        List<ModelConfig> configs = new ArrayList<>();
+        ModelConnectionProbe probe = probe(config -> {
+            configs.add(config);
+            return completed("OK");
+        });
+        var source = profile(8192);
+        var definition = source.definition();
+        var selectedDefinition = new ModelProfileDefinition(definition.id(), definition.displayName(),
+                definition.enabled(), definition.protocol(), definition.baseUri(), definition.model(),
+                definition.credentialRef(), definition.contextWindowTokens(), definition.maxOutputTokens(),
+                definition.connectTimeout(), definition.requestTimeout(), definition.metadata(),
+                dev.openallay.model.config.ModelReasoningEffort.XHIGH);
+        var config = source.runtimeConfig();
+        var selected = new ModelConfig(config.enabled(), config.protocol(), config.baseUri(),
+                config.model(), config.apiKey(), config.contextWindowTokens(), config.maxOutputTokens(),
+                config.connectTimeout(), config.requestTimeout(),
+                dev.openallay.model.config.ModelReasoningEffort.XHIGH);
+        assertInstanceOf(ModelConnectionResult.Success.class, probe.test(new ResolvedModelProfile(
+                selectedDefinition, selected, null), new CancellationSignal()).join());
+        assertEquals(dev.openallay.model.config.ModelReasoningEffort.XHIGH,
+                configs.getFirst().reasoningEffort());
+        assertEquals(64, configs.getFirst().maxOutputTokens());
+    }
+
+    @Test
     void unavailableProfileSendsNothing() {
         AtomicLong calls = new AtomicLong();
         ModelConnectionProbe probe = probe(config -> {

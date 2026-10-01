@@ -15,9 +15,11 @@ public record ModelConfig(
         int contextWindowTokens,
         int maxOutputTokens,
         Duration connectTimeout,
-        Duration requestTimeout) {
+        Duration requestTimeout,
+        ModelReasoningEffort reasoningEffort) {
     public ModelConfig {
         Objects.requireNonNull(protocol, "protocol");
+        Objects.requireNonNull(reasoningEffort, "reasoningEffort").requireSupported(protocol);
         Objects.requireNonNull(baseUri, "baseUri");
         if (model == null || model.isBlank()) {
             throw new IllegalArgumentException("Model ID must not be blank");
@@ -37,6 +39,14 @@ public record ModelConfig(
         baseUri = URI.create(raw.endsWith("/") ? raw : raw + "/");
     }
 
+    public ModelConfig(
+            boolean enabled, ModelProtocol protocol, URI baseUri, String model,
+            SecretValue apiKey, int contextWindowTokens, int maxOutputTokens,
+            Duration connectTimeout, Duration requestTimeout) {
+        this(enabled, protocol, baseUri, model, apiKey, contextWindowTokens,
+                maxOutputTokens, connectTimeout, requestTimeout, ModelReasoningEffort.AUTO);
+    }
+
     public DiagnosticView diagnosticView() {
         return new DiagnosticView(
                 enabled,
@@ -47,7 +57,8 @@ public record ModelConfig(
                 contextWindowTokens,
                 maxOutputTokens,
                 connectTimeout.toMillis(),
-                requestTimeout.toMillis());
+                requestTimeout.toMillis(),
+                reasoningEffort);
     }
 
     public ContextBudget contextBudget() {
@@ -78,5 +89,6 @@ public record ModelConfig(
             int contextWindowTokens,
             int maxOutputTokens,
             long connectTimeoutMillis,
-            long requestTimeoutMillis) {}
+            long requestTimeoutMillis,
+            ModelReasoningEffort reasoningEffort) {}
 }

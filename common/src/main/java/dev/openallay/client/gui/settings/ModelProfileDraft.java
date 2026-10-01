@@ -3,6 +3,7 @@ package dev.openallay.client.gui.settings;
 import dev.openallay.model.config.ModelProfileDefinition;
 import dev.openallay.model.metadata.BuiltinModelCatalog;
 import dev.openallay.model.config.ModelProtocol;
+import dev.openallay.model.config.ModelReasoningEffort;
 import dev.openallay.model.catalog.ModelCatalogRequest;
 import dev.openallay.tool.ToolResult;
 import java.net.URI;
@@ -24,9 +25,23 @@ public record ModelProfileDraft(
         String requestTimeoutSeconds,
         ModelProfileDefinition.MetadataProvenance metadata,
         String automaticContextWindowTokens,
-        String automaticMaxOutputTokens) {
+        String automaticMaxOutputTokens,
+        ModelReasoningEffort reasoningEffort) {
     public ModelProfileDraft {
         Objects.requireNonNull(protocol, "protocol");
+        Objects.requireNonNull(reasoningEffort, "reasoningEffort");
+    }
+
+    public ModelProfileDraft(
+            String id, String displayName, boolean enabled, ModelProtocol protocol,
+            String baseUrl, String model, String credentialRef, String contextWindowTokens,
+            String maxOutputTokens, String connectTimeoutSeconds, String requestTimeoutSeconds,
+            ModelProfileDefinition.MetadataProvenance metadata, String automaticContextWindowTokens,
+            String automaticMaxOutputTokens) {
+        this(id, displayName, enabled, protocol, baseUrl, model, credentialRef,
+                contextWindowTokens, maxOutputTokens, connectTimeoutSeconds, requestTimeoutSeconds,
+                metadata, automaticContextWindowTokens, automaticMaxOutputTokens,
+                ModelReasoningEffort.AUTO);
     }
 
     public ModelProfileDraft(
@@ -94,7 +109,8 @@ public record ModelProfileDraft(
                         : Integer.toString(definition.maxOutputTokens()),
                 Long.toString(definition.connectTimeout().toSeconds()),
                 Long.toString(definition.requestTimeout().toSeconds()),
-                definition.metadata()).autoFill(BuiltinModelCatalog.bundled().catalog());
+                definition.metadata(), null, null, definition.reasoningEffort())
+                .autoFill(BuiltinModelCatalog.bundled().catalog());
     }
 
     public static ModelProfileDraft create(String id) {
@@ -126,21 +142,21 @@ public record ModelProfileDraft(
                 connectTimeoutSeconds, requestTimeoutSeconds,
                 changed ? null : metadata,
                 changed ? null : automaticContextWindowTokens,
-                changed ? null : automaticMaxOutputTokens).autoFill(catalog);
+                changed ? null : automaticMaxOutputTokens, reasoningEffort).autoFill(catalog);
     }
 
     /** An actual player edit adopts a manual value; save alone does not. */
     public ModelProfileDraft withContextWindow(String value) {
         return new ModelProfileDraft(id, displayName, enabled, protocol, baseUrl, model,
                 credentialRef, value, maxOutputTokens, connectTimeoutSeconds,
-                requestTimeoutSeconds, metadata, null, automaticMaxOutputTokens);
+                requestTimeoutSeconds, metadata, null, automaticMaxOutputTokens, reasoningEffort);
     }
 
     /** An actual output edit adopts a manual value. Clearing returns ownership to automatic. */
     public ModelProfileDraft withMaxOutput(String value) {
         return new ModelProfileDraft(id, displayName, enabled, protocol, baseUrl, model,
                 credentialRef, contextWindowTokens, value, connectTimeoutSeconds,
-                requestTimeoutSeconds, metadata, automaticContextWindowTokens, null);
+                requestTimeoutSeconds, metadata, automaticContextWindowTokens, null, reasoningEffort);
     }
 
     public ModelProfileDraft autoFill(BuiltinModelCatalog catalog) {
@@ -157,7 +173,8 @@ public record ModelProfileDraft(
         String text = value == null ? "" : Integer.toString(value);
         return new ModelProfileDraft(id, displayName, enabled, protocol, baseUrl, model,
                 credentialRef, text, maxOutputTokens, connectTimeoutSeconds,
-                requestTimeoutSeconds, metadata, value == null ? null : text, automaticMaxOutputTokens);
+                requestTimeoutSeconds, metadata, value == null ? null : text,
+                automaticMaxOutputTokens, reasoningEffort);
     }
 
     /** Metadata refresh can replace an automatic display value, never an explicit player edit. */
@@ -168,7 +185,14 @@ public record ModelProfileDraft(
         return new ModelProfileDraft(id, displayName, enabled, protocol, baseUrl, model,
                 credentialRef, contextWindowTokens, text, connectTimeoutSeconds,
                 requestTimeoutSeconds, metadata, automaticContextWindowTokens,
-                value == null ? null : text);
+                value == null ? null : text, reasoningEffort);
+    }
+
+    public ModelProfileDraft withReasoningEffort(ModelReasoningEffort value) {
+        return new ModelProfileDraft(id, displayName, enabled, protocol, baseUrl, model,
+                credentialRef, contextWindowTokens, maxOutputTokens, connectTimeoutSeconds,
+                requestTimeoutSeconds, metadata, automaticContextWindowTokens,
+                automaticMaxOutputTokens, value);
     }
 
     public boolean dirtyComparedTo(ModelProfileDefinition definition) {
@@ -199,7 +223,8 @@ public record ModelProfileDraft(
                             connectTimeoutSeconds == null ? "" : connectTimeoutSeconds.trim())),
                     Duration.ofSeconds(Long.parseLong(
                             requestTimeoutSeconds == null ? "" : requestTimeoutSeconds.trim())),
-                    metadata);
+                    metadata,
+                    reasoningEffort);
             return new ToolResult.Success<>(definition);
         } catch (RuntimeException failure) {
             return new ToolResult.Failure<>(

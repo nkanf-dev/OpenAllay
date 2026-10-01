@@ -42,7 +42,7 @@ public final class ModelProfilesConfigLoader {
             "id", "displayName", "enabled", "protocol", "baseUrl", "model",
             "credentialRef", "connectTimeoutSeconds", "requestTimeoutSeconds");
     private static final Set<String> OPTIONAL_PROFILE_FIELDS =
-            Set.of("contextWindowTokens", "maxOutputTokens", "metadata");
+            Set.of("contextWindowTokens", "maxOutputTokens", "metadata", "reasoningEffort");
     private static final Set<String> METADATA_FIELDS =
             Set.of("source", "upstreamModelId", "capturedAt");
 
@@ -149,7 +149,10 @@ public final class ModelProfilesConfigLoader {
                 optionalInteger(object, "maxOutputTokens"),
                 Duration.ofSeconds(integer(object, "connectTimeoutSeconds")),
                 Duration.ofSeconds(integer(object, "requestTimeoutSeconds")),
-                metadata);
+                metadata,
+                object.has("reasoningEffort")
+                        ? ModelReasoningEffort.parse(string(object, "reasoningEffort"))
+                        : ModelReasoningEffort.AUTO);
     }
 
     private ResolvedModelProfile resolve(
@@ -199,7 +202,8 @@ public final class ModelProfilesConfigLoader {
                             contextWindow,
                             maxOutput,
                             definition.connectTimeout(),
-                            definition.requestTimeout()),
+                            definition.requestTimeout(),
+                            definition.reasoningEffort()),
                     null,
                     discovered == null
                             ? definition.model()

@@ -20,7 +20,8 @@ public record ModelProfileDefinition(
         Integer maxOutputTokens,
         Duration connectTimeout,
         Duration requestTimeout,
-        MetadataProvenance metadata) {
+        MetadataProvenance metadata,
+        ModelReasoningEffort reasoningEffort) {
     public ModelProfileDefinition {
         if (id == null || !id.matches("[a-zA-Z0-9_.-]+")) {
             throw new IllegalArgumentException("invalid model profile id");
@@ -29,6 +30,7 @@ public record ModelProfileDefinition(
             throw new IllegalArgumentException("displayName must not be blank");
         }
         Objects.requireNonNull(protocol, "protocol");
+        Objects.requireNonNull(reasoningEffort, "reasoningEffort").requireSupported(protocol);
         Objects.requireNonNull(baseUri, "baseUri");
         validateUri(baseUri);
         String raw = baseUri.toString();
@@ -57,6 +59,17 @@ public record ModelProfileDefinition(
                 || requestTimeout.isZero() || requestTimeout.isNegative()) {
             throw new IllegalArgumentException("model timeouts must be positive");
         }
+    }
+
+    /** Callers without an explicit choice leave effort to the provider. */
+    public ModelProfileDefinition(
+            String id, String displayName, boolean enabled, ModelProtocol protocol,
+            URI baseUri, String model, String credentialRef, Integer contextWindowTokens,
+            Integer maxOutputTokens, Duration connectTimeout, Duration requestTimeout,
+            MetadataProvenance metadata) {
+        this(id, displayName, enabled, protocol, baseUri, model, credentialRef,
+                contextWindowTokens, maxOutputTokens, connectTimeout, requestTimeout,
+                metadata, ModelReasoningEffort.AUTO);
     }
 
     private static void validateUri(URI uri) {

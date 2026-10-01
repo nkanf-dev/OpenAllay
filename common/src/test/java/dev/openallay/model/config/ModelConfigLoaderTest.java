@@ -158,6 +158,39 @@ final class ModelConfigLoaderTest {
         }
     }
 
+    @Test
+    void serverBootstrapEffortDefaultsToAutoAndEnvironmentOverrideIsExplicit() {
+        String json = """
+                {"protocol":"openai_chat","baseUrl":"https://example.test/v1",
+                 "model":"gateway/luna","apiKey":"fixture-key","contextWindowTokens":1000000,
+                 "maxOutputTokens":8192}
+                """;
+        assertEquals(ModelReasoningEffort.AUTO,
+                success(loader.load(new StringReader(json), Map.of())).value().reasoningEffort());
+        for (var effort : ModelReasoningEffort.values()) {
+            String selected = json.replace("8192}", "8192,\"reasoningEffort\":\""
+                    + effort.encoded() + "\"}");
+            assertEquals(effort, success(loader.load(new StringReader(selected), Map.of()))
+                    .value().reasoningEffort());
+            assertEquals(effort, success(loader.load(new StringReader(json),
+                    Map.of("OPENALLAY_REASONING_EFFORT", effort.encoded())))
+                    .value().reasoningEffort());
+        }
+        String fileLow = json.replace("8192}", "8192,\"reasoningEffort\":\"low\"}");
+        assertEquals(ModelReasoningEffort.HIGH, success(loader.load(new StringReader(fileLow),
+                Map.of("OPENALLAY_REASONING_EFFORT", "high"))).value().reasoningEffort());
+        for (String invalid : java.util.List.of("true", "1", "null", "\"\"", "\"default\"")) {
+            assertEquals("invalid_model_config", failure(loader.load(new StringReader(
+                    json.replace("8192}", "8192,\"reasoningEffort\":" + invalid + "}")),
+                    Map.of())).code());
+        }
+        assertEquals("invalid_model_config", failure(loader.load(new StringReader(json),
+                Map.of("OPENALLAY_REASONING_EFFORT", ""))).code());
+        assertEquals("invalid_model_config", failure(loader.load(new StringReader(
+                json.replace("openai_chat", "anthropic_messages")),
+                Map.of("OPENALLAY_REASONING_EFFORT", "none"))).code());
+    }
+
     private ToolResult<ModelConfig> config(String url) {
         return loader.load(
                 new StringReader(("""

@@ -49,6 +49,7 @@ public record ResolvedModelProfile(
                 runtimeConfig == null
                         ? definition.maxOutputTokens()
                         : Integer.valueOf(runtimeConfig.maxOutputTokens()),
+                definition.reasoningEffort(),
                 failure);
     }
 
@@ -64,5 +65,6 @@ public record ResolvedModelProfile(
             boolean apiKeyPresent,
             Integer contextWindowTokens,
             Integer maxOutputTokens,
+            ModelReasoningEffort reasoningEffort,
             GuideFailure failure) {}
 }

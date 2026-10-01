@@ -532,5 +532,17 @@
   "screen.openallay.settings.models.builtin.output_source.trusted": "Output budget: trusted provider maximum.",
   "screen.openallay.settings.models.builtin.output_source.builtin": "Output budget: matched published model maximum.",
   "screen.openallay.settings.models.builtin.output_source.required": "Output budget: enter a value; no model maximum was found.",
-  "screen.openallay.settings.models.builtin.output_reset_auto": "Clear the output field to use the model maximum automatically."
+  "screen.openallay.settings.models.builtin.output_reset_auto": "Clear the output field to use the model maximum automatically.",
+  "screen.openallay.settings.models.reasoning_effort": "Reasoning effort",
+  "screen.openallay.settings.models.reasoning.auto": "Auto · provider default",
+  "screen.openallay.settings.models.reasoning.none": "None",
+  "screen.openallay.settings.models.reasoning.minimal": "Minimal",
+  "screen.openallay.settings.models.reasoning.low": "Low",
+  "screen.openallay.settings.models.reasoning.medium": "Medium",
+  "screen.openallay.settings.models.reasoning.high": "High",
+  "screen.openallay.settings.models.reasoning.xhigh": "Extra high",
+  "screen.openallay.settings.models.reasoning.max": "Maximum",
+  "screen.openallay.settings.models.reasoning.auto_description": "Request setting: Auto. %1$s is omitted. The provider/model default and actual effort are unknown to OpenAllay.",
+  "screen.openallay.settings.models.reasoning.explicit_description": "Request setting: %1$s=%2$s. Model and gateway support varies; the provider may reject this value. This does not enable thinking or set a thinking token budget.",
+  "screen.openallay.settings.models.reasoning.unsupported_description": "This protocol does not support the selected effort (%2$s). Select a supported value before saving; OpenAllay will not silently omit it."
 }

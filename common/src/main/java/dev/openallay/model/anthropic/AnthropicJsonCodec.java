@@ -33,6 +33,11 @@ public final class AnthropicJsonCodec {
         root.addProperty("max_tokens", config.maxOutputTokens());
         root.addProperty("system", request.systemPrompt());
         root.addProperty("stream", request.stream());
+        if (config.reasoningEffort() != dev.openallay.model.config.ModelReasoningEffort.AUTO) {
+            JsonObject outputConfig = new JsonObject();
+            outputConfig.addProperty("effort", config.reasoningEffort().encoded());
+            root.add("output_config", outputConfig);
+        }
         JsonArray messages = new JsonArray();
         ProviderToolIds toolIds = ProviderToolIds.forAnthropicMessages(request.messages());
         for (ModelMessage message : request.messages()) {

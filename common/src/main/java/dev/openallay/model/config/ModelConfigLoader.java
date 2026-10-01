@@ -27,7 +27,8 @@ public final class ModelConfigLoader {
             "contextWindowTokens",
             "maxOutputTokens",
             "connectTimeoutSeconds",
-            "requestTimeoutSeconds");
+            "requestTimeoutSeconds",
+            "reasoningEffort");
 
     public ToolResult<ModelConfig> load(Path path, Map<String, String> environment) {
         Objects.requireNonNull(path, "path");
@@ -99,12 +100,22 @@ public final class ModelConfigLoader {
                     contextWindowTokens,
                     maxOutputTokens,
                     Duration.ofSeconds(connectSeconds),
-                    Duration.ofSeconds(requestSeconds)));
+                    Duration.ofSeconds(requestSeconds),
+                    reasoningEffort(environment, object)));
         } catch (RuntimeException exception) {
             return new ToolResult.Failure<>(
                     "invalid_model_config",
                     exception.getMessage() == null ? "Invalid model configuration" : exception.getMessage());
         }
+    }
+
+    private static ModelReasoningEffort reasoningEffort(
+            Map<String, String> environment, JsonObject object) {
+        String fromEnvironment = environment.get("OPENALLAY_REASONING_EFFORT");
+        if (fromEnvironment != null) return ModelReasoningEffort.parse(fromEnvironment);
+        if (!object.has("reasoningEffort")) return ModelReasoningEffort.AUTO;
+        String encoded = optionalString(object, "reasoningEffort");
+        return ModelReasoningEffort.parse(encoded);
     }
 
     private static String string(

@@ -152,6 +152,53 @@ final class ClientModelRuntimeRegistryTest {
     }
 
     @Test
+    void effortReplacementAffectsOnlyFutureRequestsIncludingToolContinuation() {
+        java.util.function.Function<dev.openallay.model.config.ModelReasoningEffort,
+                ModelProfilesConfigLoader.Load> configured = effort -> {
+            var definition = new ModelProfileDefinition("a", "A", true, ModelProtocol.OPENAI_CHAT,
+                    URI.create("https://gateway.example/v1/"), "gateway/luna", "env:KEY",
+                    1_000_000, 8192, Duration.ofSeconds(30), Duration.ofSeconds(300), null, effort);
+            String json = new dev.openallay.model.config.ModelProfilesConfigWriter().encode(
+                    new ModelProfilesConfig("a", List.of(definition)));
+            return ((ToolResult.Success<ModelProfilesConfigLoader.Load>) new ModelProfilesConfigLoader()
+                    .load(new java.io.StringReader(json), Map.of("KEY", "fixture-key"))).value();
+        };
+        CompletableFuture<ModelTurn> pending = new CompletableFuture<>();
+        List<com.google.gson.JsonObject> oldBodies = new ArrayList<>();
+        List<com.google.gson.JsonObject> newBodies = new ArrayList<>();
+        var codec = new dev.openallay.model.openai.OpenAiJsonCodec(new Gson());
+        ClientModelRuntimeRegistry registry = new ClientModelRuntimeRegistry(runtimeWithFactTool(),
+                configured.apply(dev.openallay.model.config.ModelReasoningEffort.HIGH), new Gson(),
+                Runnable::run, null, profile -> {
+                    ModelConfig capturedConfig = profile.runtimeConfig();
+                    return (request, events, cancellation) -> {
+                        boolean old = capturedConfig.reasoningEffort()
+                                == dev.openallay.model.config.ModelReasoningEffort.HIGH;
+                        List<com.google.gson.JsonObject> bodies = old ? oldBodies : newBodies;
+                        bodies.add(com.google.gson.JsonParser.parseString(
+                                codec.requestBody(capturedConfig, request)).getAsJsonObject());
+                        return old && bodies.size() == 1 ? pending
+                                : CompletableFuture.completedFuture(turn(old ? "old" : "new"));
+                    };
+                });
+        UUID actor = UUID.randomUUID();
+        var active = registry.ask("a", actor, "main", UUID.randomUUID(), "first question",
+                ToolInvocationContext.developmentConsole("frozen-effort"), ignored -> {});
+        registry.replace(configured.apply(dev.openallay.model.config.ModelReasoningEffort.LOW));
+        pending.complete(toolTurn("effort-call", "test__fact", 42));
+        assertEquals("answer-old", active.join().text());
+        assertEquals(2, oldBodies.size());
+        assertTrue(newBodies.isEmpty());
+        for (var body : oldBodies) assertEquals("high", body.get("reasoning_effort").getAsString());
+        assertEquals("answer-new", registry.ask("a", actor, "main", UUID.randomUUID(), "next question",
+                ToolInvocationContext.developmentConsole("future-effort"), ignored -> {}).join().text());
+        assertEquals(1, newBodies.size());
+        assertEquals("low", newBodies.getFirst().get("reasoning_effort").getAsString());
+        assertTrue(newBodies.getFirst().getAsJsonArray("messages").size() > 2,
+                "replacing the effort keeps provider-neutral session context");
+    }
+
+    @Test
     void preparedReplacementDoesNotPublishUntilExplicitOneTimeCommit() {
         RecordingModel modelA = new RecordingModel("model-a");
         RecordingModel modelB = new RecordingModel("model-b");

@@ -5,6 +5,7 @@ import dev.openallay.client.gui.settings.ExtensionSettingsProjection;
 import dev.openallay.client.gui.settings.GeneralSettingsProjection;
 import dev.openallay.client.gui.settings.HistorySettingsProjection;
 import dev.openallay.client.gui.settings.ModelProfileDraft;
+import dev.openallay.client.gui.settings.ModelReasoningSettingsProjection;
 import dev.openallay.client.gui.settings.BuiltinModelSettingsProjection;
 import dev.openallay.client.gui.settings.ModelSettingsProjection;
 import dev.openallay.client.gui.settings.RecipeSettingsProjection;
@@ -1116,6 +1117,18 @@ public final class OpenAllaySettingsScreen extends Screen {
             }
         });
         y += 22;
+        ModelReasoningSettingsProjection reasoning = reasoningSettings();
+        Button effort = addRenderableWidget(OpenAllayButton.create(
+                        Component.translatable(reasoning.selectedLabelKey()), ignored -> {
+                            captureDraft();
+                            draft = draft.withReasoningEffort(reasoningSettings().next());
+                            confirmation = Confirmation.NONE;
+                            rebuildWidgets();
+                        })
+                .bounds(inputX, y, inputWidth, 18).build());
+        effort.setTooltip(Tooltip.create(reasoningExplanation(reasoning)));
+        effort.visible = y >= area.y() + 30 && y + 18 <= area.bottom();
+        y += 22;
         connectTimeout = field(
                 inputX,
                 y,
@@ -1284,6 +1297,7 @@ public final class OpenAllaySettingsScreen extends Screen {
             "screen.openallay.settings.models.api_key",
             "screen.openallay.settings.models.context_window",
             "screen.openallay.settings.models.max_output",
+            "screen.openallay.settings.models.reasoning_effort",
             "screen.openallay.settings.models.connect_timeout",
             "screen.openallay.settings.models.request_timeout"
         };
@@ -1312,6 +1326,12 @@ public final class OpenAllaySettingsScreen extends Screen {
             graphics.text(font, status, x, statusY, color, false);
         });
         int estimateY = statusY + 18;
+        for (var wrapped : font.split(reasoningExplanation(reasoningSettings()),
+                Math.max(20, area.width() - 16))) {
+            graphics.text(font, wrapped, x, estimateY, MUTED, false);
+            estimateY += 11;
+        }
+        estimateY += 3;
         for (BuiltinModelSettingsProjection.Line line : modelEstimates().lines()) {
             Component text = Component.translatable(line.key(), line.arguments().toArray());
             for (var wrapped : font.split(text, Math.max(20, area.width() - 16))) {
@@ -3169,7 +3189,8 @@ public final class OpenAllaySettingsScreen extends Screen {
                     Objects.equals(contextWindow.getValue(), draft.automaticContextWindowTokens())
                             ? draft.automaticContextWindowTokens() : null,
                     Objects.equals(maxOutput.getValue(), draft.automaticMaxOutputTokens())
-                            ? draft.automaticMaxOutputTokens() : null);
+                            ? draft.automaticMaxOutputTokens() : null,
+                    draft.reasoningEffort());
         }
         if (section == SettingsSection.GENERAL && assistantName != null) {
             assistantNameDraft = assistantName.getValue();
@@ -3180,6 +3201,15 @@ public final class OpenAllaySettingsScreen extends Screen {
         if (section == SettingsSection.EXTENSIONS && extensionImportPath != null) {
             extensionImportPathDraft = extensionImportPath.getValue();
         }
+    }
+
+    private ModelReasoningSettingsProjection reasoningSettings() {
+        return ModelReasoningSettingsProjection.from(draftProtocol, draft.reasoningEffort());
+    }
+
+    private Component reasoningExplanation(ModelReasoningSettingsProjection reasoning) {
+        return Component.translatable(reasoning.explanationKey(),
+                reasoning.wireField(), reasoning.selected().encoded());
     }
 
     private void cycleProtocol() {

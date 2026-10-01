@@ -93,6 +93,32 @@ final class ModelProfilesConfigWriterTest {
         assertEquals(encoded, new ModelProfilesConfigWriter().encode(loaded.config()));
     }
 
+    @Test
+    void explicitEffortsRoundTripCanonicallyWhileAutoIsOmitted() {
+        ModelProfileDefinition source = config().profiles().getFirst();
+        for (var effort : ModelReasoningEffort.values()) {
+            ModelProfileDefinition profile = new ModelProfileDefinition(source.id(),
+                    source.displayName(), source.enabled(), source.protocol(), source.baseUri(),
+                    source.model(), source.credentialRef(), source.contextWindowTokens(),
+                    source.maxOutputTokens(), source.connectTimeout(), source.requestTimeout(),
+                    source.metadata(), effort);
+            var configured = new ModelProfilesConfig(profile.id(), List.of(profile));
+            String encoded = new ModelProfilesConfigWriter().encode(configured);
+            var json = JsonParser.parseString(encoded).getAsJsonObject()
+                    .getAsJsonArray("profiles").get(0).getAsJsonObject();
+            assertEquals(effort != ModelReasoningEffort.AUTO, json.has("reasoningEffort"));
+            if (effort != ModelReasoningEffort.AUTO) {
+                assertEquals(effort.encoded(), json.get("reasoningEffort").getAsString());
+            }
+            var loaded = success(new ModelProfilesConfigLoader().load(new StringReader(encoded),
+                    Map.of("MODEL_KEY", "fixture-key"))).value();
+            assertEquals(configured, loaded.config());
+            assertEquals(effort, loaded.profiles().getFirst().runtimeConfig().reasoningEffort());
+            assertEquals(encoded, new ModelProfilesConfigWriter().encode(loaded.config()));
+            assertFalse(encoded.contains("schemaVersion"));
+        }
+    }
+
     private static ModelProfilesConfig config() {
         ModelProfileDefinition definition = new ModelProfileDefinition(
                 "main",

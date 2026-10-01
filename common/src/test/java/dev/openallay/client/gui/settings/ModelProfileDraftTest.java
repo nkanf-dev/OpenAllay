@@ -166,6 +166,30 @@ final class ModelProfileDraftTest {
         }
     }
 
+    @Test
+    void reasoningSelectionRoundTripsAndSurvivesAllDraftFieldCopies() {
+        assertEquals(dev.openallay.model.config.ModelReasoningEffort.AUTO,
+                ModelProfileDraft.create("main").reasoningEffort());
+        for (var effort : dev.openallay.model.config.ModelReasoningEffort.values()) {
+            var selected = validAutomaticDraft().withReasoningEffort(effort);
+            var saved = success(selected.validate());
+            assertEquals(effort, saved.reasoningEffort());
+            assertEquals(effort, ModelProfileDraft.from(saved).reasoningEffort());
+            assertFalse(ModelProfileDraft.from(saved).dirtyComparedTo(saved));
+            assertEquals(effort, selected.withModel("unpublished-model").reasoningEffort());
+            assertEquals(effort, selected.withContextWindow("1000000").reasoningEffort());
+            assertEquals(effort, selected.withMaxOutput("8192").reasoningEffort());
+            assertEquals(effort, selected.withAutomaticContext(2_000_000).reasoningEffort());
+            assertEquals(effort, selected.withAutomaticOutput(64_000).reasoningEffort());
+            assertEquals(effort, selected.autoFill(
+                    dev.openallay.model.metadata.BuiltinModelCatalog.bundled().catalog())
+                    .reasoningEffort());
+        }
+        var original = success(validAutomaticDraft().validate());
+        assertTrue(ModelProfileDraft.from(original).withReasoningEffort(
+                dev.openallay.model.config.ModelReasoningEffort.HIGH).dirtyComparedTo(original));
+    }
+
     private static ModelProfileDraft validAutomaticDraft() {
         var automatic = ModelProfileDraft.create("main").withModel("gpt-6-luna");
         return new ModelProfileDraft(automatic.id(), automatic.displayName(), automatic.enabled(),

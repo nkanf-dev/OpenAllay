@@ -175,6 +175,31 @@ final class OpenAiJsonCodecTest {
         }
     }
 
+    @Test
+    void sendsEveryExplicitEffortAndOmitsAutoForBothCompleteAndStreamRequests() {
+        for (boolean stream : List.of(false, true)) {
+            ModelRequest request = new ModelRequest("Use tools.",
+                    List.of(ModelMessage.userText("question")), List.of(), stream);
+            for (var effort : dev.openallay.model.config.ModelReasoningEffort.values()) {
+                ModelConfig source = config();
+                ModelConfig selected = new ModelConfig(source.enabled(), source.protocol(),
+                        source.baseUri(), source.model(), source.apiKey(), source.contextWindowTokens(),
+                        source.maxOutputTokens(), source.connectTimeout(), source.requestTimeout(), effort);
+                JsonObject body = JsonParser.parseString(codec.requestBody(selected, request))
+                        .getAsJsonObject();
+                assertEquals(effort != dev.openallay.model.config.ModelReasoningEffort.AUTO,
+                        body.has("reasoning_effort"));
+                if (body.has("reasoning_effort")) {
+                    assertEquals(effort.encoded(), body.get("reasoning_effort").getAsString());
+                }
+                assertEquals(stream, body.get("stream").getAsBoolean());
+                assertFalse(body.has("output_config"));
+                assertFalse(body.has("thinking"));
+                assertEquals(request.messages(), List.of(ModelMessage.userText("question")));
+            }
+        }
+    }
+
     private ModelTurn currentToolTurn(String id, boolean stream) {
         if (!stream) {
             JsonObject response = textResponse();

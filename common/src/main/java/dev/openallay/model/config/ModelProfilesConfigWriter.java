@@ -43,6 +43,9 @@ public final class ModelProfilesConfigWriter {
         }
         encoded.addProperty("connectTimeoutSeconds", exactSeconds(profile.connectTimeout()));
         encoded.addProperty("requestTimeoutSeconds", exactSeconds(profile.requestTimeout()));
+        if (profile.reasoningEffort() != ModelReasoningEffort.AUTO) {
+            encoded.addProperty("reasoningEffort", profile.reasoningEffort().encoded());
+        }
         if (profile.metadata() != null) {
             JsonObject metadata = new JsonObject();
             metadata.addProperty("source", profile.metadata().source());

@@ -532,5 +532,17 @@
   "screen.openallay.settings.models.builtin.output_source.trusted": "输出预算：使用可信服务元数据的最大值。",
   "screen.openallay.settings.models.builtin.output_source.builtin": "输出预算：使用匹配模型公开的最大值。",
   "screen.openallay.settings.models.builtin.output_source.required": "输出预算：未找到模型最大值，请手动填写。",
-  "screen.openallay.settings.models.builtin.output_reset_auto": "清空输出字段可自动使用模型最大值。"
+  "screen.openallay.settings.models.builtin.output_reset_auto": "清空输出字段可自动使用模型最大值。",
+  "screen.openallay.settings.models.reasoning_effort": "推理强度",
+  "screen.openallay.settings.models.reasoning.auto": "自动 · 服务商默认",
+  "screen.openallay.settings.models.reasoning.none": "无",
+  "screen.openallay.settings.models.reasoning.minimal": "最小",
+  "screen.openallay.settings.models.reasoning.low": "低",
+  "screen.openallay.settings.models.reasoning.medium": "中",
+  "screen.openallay.settings.models.reasoning.high": "高",
+  "screen.openallay.settings.models.reasoning.xhigh": "极高",
+  "screen.openallay.settings.models.reasoning.max": "最大",
+  "screen.openallay.settings.models.reasoning.auto_description": "请求设置：自动，不发送 %1$s。服务商/模型的默认值及实际推理强度对 OpenAllay 均未知。",
+  "screen.openallay.settings.models.reasoning.explicit_description": "请求设置：%1$s=%2$s。模型和网关支持范围不同，服务商可能拒绝该值。此设置不会启用思考，也不是思考 token 预算。",
+  "screen.openallay.settings.models.reasoning.unsupported_description": "此协议不支持所选强度（%2$s）。保存前请选择受支持的值；OpenAllay 不会悄悄省略该设置。"
 }

@@ -331,7 +331,8 @@ public final class ModelSettingsBackend implements ClientSettingsService.ModelAc
                     definition.maxOutputTokens(),
                     definition.connectTimeout(),
                     definition.requestTimeout(),
-                    definition.metadata()));
+                    definition.metadata(),
+                    definition.reasoningEffort()));
         }
         if (!found) {
             throw new IllegalArgumentException("replacement profile is unavailable");

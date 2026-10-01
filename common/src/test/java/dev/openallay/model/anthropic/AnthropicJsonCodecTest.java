@@ -77,6 +77,33 @@ final class AnthropicJsonCodecTest {
         }
     }
 
+    @Test
+    void sendsEffortInOutputConfigWithoutEnablingThinkingForBothRequestModes() {
+        for (boolean stream : List.of(false, true)) {
+            ModelRequest request = new ModelRequest("Use tools.",
+                    List.of(ModelMessage.userText("question")), List.of(), stream);
+            for (var effort : dev.openallay.model.config.ModelReasoningEffort.choices(
+                    ModelProtocol.ANTHROPIC_MESSAGES)) {
+                ModelConfig source = config();
+                ModelConfig selected = new ModelConfig(source.enabled(), source.protocol(),
+                        source.baseUri(), source.model(), source.apiKey(), source.contextWindowTokens(),
+                        source.maxOutputTokens(), source.connectTimeout(), source.requestTimeout(), effort);
+                JsonObject body = JsonParser.parseString(codec.requestBody(selected, request))
+                        .getAsJsonObject();
+                assertEquals(effort != dev.openallay.model.config.ModelReasoningEffort.AUTO,
+                        body.has("output_config"));
+                if (body.has("output_config")) {
+                    assertEquals(effort.encoded(), body.getAsJsonObject("output_config")
+                            .get("effort").getAsString());
+                }
+                assertEquals(stream, body.get("stream").getAsBoolean());
+                assertFalse(body.has("reasoning_effort"));
+                assertFalse(body.has("thinking"));
+                assertFalse(body.has("budget_tokens"));
+            }
+        }
+    }
+
     private static void appendExchange(List<ModelMessage> messages, String id) {
         JsonObject input = new JsonObject();
         input.addProperty("durableProjection", true);

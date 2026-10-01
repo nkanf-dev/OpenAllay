@@ -287,6 +287,46 @@ final class ModelProfilesConfigLoaderTest {
         assertInvalid(json.replace("256000", "0"));
     }
 
+    @Test
+    void reasoningEffortIsCapturedExactlyAndOmissionLeavesProviderInControl() {
+        assertEquals(ModelReasoningEffort.AUTO, success(loader.load(new StringReader(PROFILES),
+                Map.of("OPENROUTER_KEY", "fixture-key"))).value().profiles().getFirst()
+                .runtimeConfig().reasoningEffort());
+        for (var effort : ModelReasoningEffort.values()) {
+            String json = PROFILES.replace("\"maxOutputTokens\": 8192,",
+                    "\"maxOutputTokens\": 8192, \"reasoningEffort\": \""
+                            + effort.encoded() + "\",");
+            var profile = success(loader.load(new StringReader(json),
+                    Map.of("OPENROUTER_KEY", "fixture-key"))).value().profiles().getFirst();
+            assertEquals(effort, profile.definition().reasoningEffort());
+            assertEquals(effort, profile.runtimeConfig().reasoningEffort());
+            assertEquals(effort, profile.diagnosticView().reasoningEffort());
+        }
+    }
+
+    @Test
+    void reasoningEffortRejectsMalformedNamesAndUnsupportedProtocolValues() {
+        for (String value : List.of("true", "1", "null", "[]", "{}",
+                "\"\"", "\"MEDIUM\"", "\"default\"", "\"maximum\"")) {
+            assertInvalid(PROFILES.replace("\"maxOutputTokens\": 8192,",
+                    "\"maxOutputTokens\": 8192, \"reasoningEffort\": " + value + ","));
+        }
+        for (String value : List.of("none", "minimal")) {
+            assertInvalid(PROFILES.replace("openai_chat", "anthropic_messages")
+                    .replace("\"maxOutputTokens\": 8192,",
+                            "\"maxOutputTokens\": 8192, \"reasoningEffort\": \"" + value + "\","));
+        }
+        for (String value : List.of("low", "medium", "high", "xhigh", "max")) {
+            var profile = success(loader.load(new StringReader(PROFILES
+                    .replace("openai_chat", "anthropic_messages")
+                    .replace("\"maxOutputTokens\": 8192,",
+                            "\"maxOutputTokens\": 8192, \"reasoningEffort\": \"" + value + "\",")),
+                    Map.of("OPENROUTER_KEY", "fixture-key"))).value().profiles().getFirst();
+            assertTrue(profile.available());
+            assertEquals(ModelReasoningEffort.parse(value), profile.runtimeConfig().reasoningEffort());
+        }
+    }
+
     private void assertInvalid(String json) {
         assertEquals("invalid_model_config", failure(loader.load(
                 new StringReader(json), Map.of("OPENROUTER_KEY", "key"))).code());

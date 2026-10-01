@@ -32,6 +32,9 @@ public final class OpenAiJsonCodec {
         root.addProperty("model", config.model());
         root.addProperty("max_completion_tokens", config.maxOutputTokens());
         root.addProperty("stream", request.stream());
+        if (config.reasoningEffort() != dev.openallay.model.config.ModelReasoningEffort.AUTO) {
+            root.addProperty("reasoning_effort", config.reasoningEffort().encoded());
+        }
         JsonArray messages = new JsonArray();
         JsonObject system = new JsonObject();
         system.addProperty("role", "system");
