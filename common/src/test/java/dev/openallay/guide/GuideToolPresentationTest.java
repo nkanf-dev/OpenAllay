@@ -63,7 +63,7 @@ final class GuideToolPresentationTest {
     @Test
     void projectsJavascriptAndSkillResultsWithoutLegacyDomainNarration() {
         JsonObject javascript = JsonParser.parseString("""
-                {"status":"success","value":{"cardinality":9,"complete":false,
+                {"status":"success","value":{"resultType":"array","cardinality":9,"complete":false,
                   "preview":[{},{}]}}
                 """).getAsJsonObject();
         assertEquals(
@@ -89,6 +89,110 @@ final class GuideToolPresentationTest {
         assertEquals(
                 List.of(GuideToolMessage.of(GuideToolMessage.Key.RESULT_COMPLETED)),
                 GuideToolPresentation.messages("openallay:future_tool", generic));
+    }
+
+    @Test
+    void completedArrayCalculationsCountPreviewItemsWithoutInventingProgress() {
+        for (String preview : List.of("[1]", "[null,true]", "[[1,2]]", "[{\"id\":\"a\"}]")) {
+            JsonObject normalized = JsonParser.parseString("""
+                    {"status":"success","value":{"resultType":"array","cardinality":5,
+                     "complete":false,"preview":%s}}
+                    """.formatted(preview)).getAsJsonObject();
+            String shown = Integer.toString(JsonParser.parseString(preview).getAsJsonArray().size());
+            assertEquals(List.of(GuideToolMessage.of(GuideToolMessage.Key.ANALYSIS_PREVIEW,
+                    shown, "5")), GuideToolPresentation.messages("openallay:run_javascript", normalized));
+        }
+    }
+
+    @Test
+    void objectCountsMeanTopLevelFieldsEvenWhenOnlyNestedValuesAreSampled() {
+        JsonObject normalized = JsonParser.parseString("""
+                {"status":"success","value":{"resultType":"object","cardinality":5,
+                 "complete":false,"preview":{"rows":[{"id":"a"}],"count":9,
+                   "ids":["a","b"],"nested":{"kept":true},"ready":true}}}
+                """).getAsJsonObject();
+        assertEquals(List.of(GuideToolMessage.of(GuideToolMessage.Key.ANALYSIS_FIELDS_PREVIEW,
+                "5", "5")), GuideToolPresentation.messages("openallay:run_javascript", normalized));
+        normalized.getAsJsonObject("value").addProperty("complete", true);
+        assertEquals(List.of(GuideToolMessage.of(GuideToolMessage.Key.ANALYSIS_FIELDS_COMPLETE,
+                "5")), GuideToolPresentation.messages("openallay:run_javascript", normalized));
+        normalized.getAsJsonObject("value").addProperty("complete", false);
+        normalized.getAsJsonObject("value").add("preview", JsonParser.parseString("{\"count\":9}"));
+        assertEquals(List.of(GuideToolMessage.of(GuideToolMessage.Key.ANALYSIS_FIELDS_PREVIEW,
+                "1", "5")), GuideToolPresentation.messages("openallay:run_javascript", normalized));
+    }
+
+    @Test
+    void completePrimitiveArrayReportsCalculationSizeNotFullRenderedText() {
+        JsonObject normalized = JsonParser.parseString("""
+                {"status":"success","value":{"resultType":"array","cardinality":5,
+                 "complete":true,"preview":[null,true,"id",42,"%s"]}}
+                """.formatted("x".repeat(400))).getAsJsonObject();
+        String original = normalized.toString();
+        assertEquals(List.of(GuideToolMessage.of(GuideToolMessage.Key.ANALYSIS_COMPLETE, "5")),
+                GuideToolPresentation.messages("openallay:run_javascript", normalized));
+        assertEquals(original, normalized.toString());
+    }
+
+    @Test
+    void unavailableContainerPreviewDoesNotCountTheOmissionMarkerAsOneResult() {
+        for (String type : List.of("array", "object")) {
+            JsonObject normalized = JsonParser.parseString("""
+                    {"status":"success","value":{"resultType":"%s","cardinality":5,
+                     "complete":false,"preview":"…"}}
+                    """.formatted(type)).getAsJsonObject();
+            GuideToolMessage.Key key = type.equals("array")
+                    ? GuideToolMessage.Key.ANALYSIS_PREVIEW
+                    : GuideToolMessage.Key.ANALYSIS_FIELDS_PREVIEW;
+            assertEquals(List.of(GuideToolMessage.of(key, "0", "5")),
+                    GuideToolPresentation.messages("openallay:run_javascript", normalized));
+        }
+    }
+
+    @Test
+    void scalarAndEmptyResultsDoNotInventMatchingRowsOrFullDisplayClaims() {
+        for (String encoded : List.of("null", "42", "true", "\"answer\"")) {
+            String type = encoded.equals("null") ? "null" : encoded.equals("true") ? "boolean"
+                    : encoded.equals("42") ? "number" : "string";
+            JsonObject normalized = JsonParser.parseString("""
+                    {"status":"success","value":{"resultType":"%s","complete":true,"preview":%s}}
+                    """.formatted(type, encoded)).getAsJsonObject();
+            assertEquals(List.of(GuideToolMessage.of(GuideToolMessage.Key.ANALYSIS_VALUE_COMPLETE)),
+                    GuideToolPresentation.messages("openallay:run_javascript", normalized));
+        }
+        for (String encoded : List.of("[]", "{}")) {
+            String type = encoded.equals("[]") ? "array" : "object";
+            JsonObject normalized = JsonParser.parseString("""
+                    {"status":"success","value":{"resultType":"%s","cardinality":0,
+                     "complete":true,"preview":%s}}
+                    """.formatted(type, encoded)).getAsJsonObject();
+            GuideToolMessage.Key key = encoded.equals("[]")
+                    ? GuideToolMessage.Key.ANALYSIS_EMPTY : GuideToolMessage.Key.ANALYSIS_FIELDS_COMPLETE;
+            assertEquals(encoded.equals("[]") ? List.of(GuideToolMessage.of(key))
+                    : List.of(GuideToolMessage.of(key, "0")),
+                    GuideToolPresentation.messages("openallay:run_javascript", normalized));
+        }
+        JsonObject partial = JsonParser.parseString("""
+                {"status":"success","value":{"resultType":"string","cardinality":1,
+                 "complete":false,"preview":"partial…"}}
+                """).getAsJsonObject();
+        assertEquals(List.of(GuideToolMessage.of(GuideToolMessage.Key.ANALYSIS_VALUE_PREVIEW)),
+                GuideToolPresentation.messages("openallay:run_javascript", partial));
+    }
+
+    @Test
+    void workspaceReceiptRequiresARealHandleAndDoesNotChangeExecutionStatus() {
+        JsonObject normalized = JsonParser.parseString("""
+                {"status":"success","value":{"handle":"r_current","resultType":"array",
+                 "cardinality":5,"complete":false,"preview":[1]}}
+                """).getAsJsonObject();
+        assertEquals(List.of(
+                        GuideToolMessage.of(GuideToolMessage.Key.ANALYSIS_PREVIEW, "1", "5"),
+                        GuideToolMessage.of(GuideToolMessage.Key.ANALYSIS_WORKSPACE)),
+                GuideToolPresentation.messages("openallay:run_javascript", normalized));
+        normalized.addProperty("status", "failure");
+        assertEquals(List.of(GuideToolMessage.of(GuideToolMessage.Key.FAILURE_GENERIC)),
+                GuideToolPresentation.messages("openallay:run_javascript", normalized));
     }
 
     @Test
@@ -153,6 +257,31 @@ final class GuideToolPresentationTest {
                 JsonParser.parseString("[{\"key\":\"RESULT_COMPLETED\",\"arguments\":[1]}]")));
         assertThrows(IllegalArgumentException.class, () -> GuideToolMessageCodec.decode(
                 JsonParser.parseString("[{\"key\":\"RESULT_COMPLETED\",\"arguments\":[\"bad\\nvalue\"]}]")));
+    }
+
+    @Test
+    void resultLabelsSeparateCompletedCalculationFromPreviewWithoutProgressFractions() {
+        JsonObject english = language("en_us");
+        JsonObject chinese = language("zh_cn");
+        String previewKey = GuideToolMessage.Key.ANALYSIS_PREVIEW.translationKey();
+        assertEquals("Calculation complete · total items: 5 · preview items: 1 (sample only)",
+                english.get(previewKey).getAsString().formatted("1", "5"));
+        assertEquals("计算完成 · 总结果 5 项 · 预览 1 项（仅展示样本）",
+                chinese.get(previewKey).getAsString().formatted("1", "5"));
+        String fieldsKey = GuideToolMessage.Key.ANALYSIS_FIELDS_PREVIEW.translationKey();
+        assertEquals("Calculation complete · total: 5 top-level fields · preview: 5 fields (sampled values)",
+                english.get(fieldsKey).getAsString().formatted("5", "5"));
+        assertEquals("计算完成 · 结果共 5 个顶层字段 · 预览 5 个字段（字段值仅展示样本）",
+                chinese.get(fieldsKey).getAsString().formatted("5", "5"));
+        for (JsonObject locale : List.of(english, chinese)) {
+            assertTrue(!locale.get(previewKey).getAsString().contains("/"));
+            assertTrue(!locale.get(GuideToolMessage.Key.ANALYSIS_COMPLETE.translationKey())
+                    .getAsString().contains("shown"));
+        }
+        assertTrue(english.get(GuideToolMessage.Key.ANALYSIS_WORKSPACE.translationKey())
+                .getAsString().contains("only while the request is running"));
+        assertTrue(chinese.get(GuideToolMessage.Key.ANALYSIS_WORKSPACE.translationKey())
+                .getAsString().contains("仅在请求运行期间可用"));
     }
 
     @Test

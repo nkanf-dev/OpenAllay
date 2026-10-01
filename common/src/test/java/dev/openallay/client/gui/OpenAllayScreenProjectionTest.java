@@ -317,6 +317,55 @@ final class OpenAllayScreenProjectionTest {
     }
 
     @Test
+    void completedSampleNarrationIsVisibleAboveNativeCardsAndRefreshesStoredSummary() {
+        var normalized = JsonParser.parseString("""
+                {"status":"success","value":{"resultType":"array","cardinality":5,
+                 "handle":"r_request","viewKind":"ITEM","complete":false,
+                 "preview":[{"id":"minecraft:apple","displayName":"Apple"}]}}
+                """).getAsJsonObject();
+        var activity = new GuideToolActivity("sample", 0, "openallay:run_javascript",
+                GuideToolStatus.SUCCEEDED, normalized,
+                List.of(GuideToolMessage.of(GuideToolMessage.Key.RESULT_COMPLETED)), List.of());
+        var detail = dev.openallay.guide.ui.GuideToolDetailPresenter.project(activity, false);
+        assertFalse(detail.cards().isEmpty());
+        assertEquals(GuideToolStatus.SUCCEEDED, detail.status());
+        assertEquals(List.of(
+                GuideToolMessage.of(GuideToolMessage.Key.ANALYSIS_PREVIEW, "1", "5"),
+                GuideToolMessage.of(GuideToolMessage.Key.ANALYSIS_WORKSPACE)),
+                OpenAllayScreen.toolResultMessages(detail));
+        TranslatableContents summary = assertInstanceOf(TranslatableContents.class,
+                OpenAllayScreen.toolSummaryComponents(activity).getFirst().getContents());
+        assertEquals(GuideToolMessage.Key.ANALYSIS_PREVIEW.translationKey(), summary.getKey());
+        assertEquals("1", assertInstanceOf(Component.class, summary.getArgs()[0]).getString());
+        assertEquals("5", assertInstanceOf(Component.class, summary.getArgs()[1]).getString());
+    }
+
+    @Test
+    void failureAndStoppedToolsNeverShowACompletedPreviewSummary() {
+        var normalized = JsonParser.parseString("""
+                {"status":"failure","code":"javascript_error","message":"actual failure"}
+                """).getAsJsonObject();
+        var activity = new GuideToolActivity("failed", 0, "openallay:run_javascript",
+                GuideToolStatus.FAILED, normalized,
+                List.of(GuideToolMessage.of(GuideToolMessage.Key.FAILURE_GENERIC),
+                        GuideToolMessage.of(GuideToolMessage.Key.ANALYSIS_PREVIEW, "1", "5")), List.of());
+        var detail = dev.openallay.guide.ui.GuideToolDetailPresenter.project(activity, false);
+        assertTrue(OpenAllayScreen.toolResultMessages(detail).isEmpty());
+        assertTrue(OpenAllayScreen.toolSummaryComponents(activity).stream().noneMatch(component ->
+                component.getContents() instanceof TranslatableContents translation
+                        && translation.getKey().startsWith("screen.openallay.tool.message.analysis.")));
+        assertEquals(List.of("javascript_error", "actual failure"),
+                OpenAllayScreen.toolFailureComponents(detail, activity.toolId()).stream()
+                        .map(Component::getString).toList());
+        assertEquals(GuideToolStatus.FAILED, detail.status());
+        var stopped = new GuideToolActivity("stopped", 0, "openallay:run_javascript",
+                GuideToolStatus.RUNNING, null, List.of(), List.of());
+        assertTrue(OpenAllayScreen.toolResultMessages(
+                dev.openallay.guide.ui.GuideToolDetailPresenter.project(stopped, false)
+                        .forRequest(true)).isEmpty());
+    }
+
+    @Test
     void groupedSourceLabelUsesSourceIdentityWithoutInventingReadCounts() {
         GuideSource source = new GuideSource("openallay:run_javascript", new EvidenceMetadata(
                 DataAuthority.CLIENT_VISIBLE, DataCompleteness.PARTIAL, Instant.EPOCH,

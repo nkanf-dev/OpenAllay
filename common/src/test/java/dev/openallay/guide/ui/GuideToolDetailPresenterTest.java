@@ -142,6 +142,9 @@ final class GuideToolDetailPresenterTest {
                   "complete":true,"omittedRows":0,"omittedFields":0}}
                 """.formatted("0".repeat(64))), false);
         assertInstanceOf(GuideDetailCard.Recipe.class, recipe.cards().getFirst());
+        assertEquals(List.of(GuideToolMessage.of(GuideToolMessage.Key.ANALYSIS_COMPLETE, "1")),
+                recipe.narration());
+        assertEquals(GuideToolStatus.SUCCEEDED, recipe.status());
 
         GuideToolDetailView items = GuideToolDetailPresenter.project(activity(
                 "openallay:run_javascript", """
@@ -165,7 +168,7 @@ final class GuideToolDetailPresenterTest {
         GuideToolDetailView view = GuideToolDetailPresenter.project(activity(
                 "openallay:run_javascript", """
                 {"status":"success","value":{
-                  "resultType":"object","cardinality":1,"viewKind":"KEY_VALUE",
+                  "resultType":"object","cardinality":2,"viewKind":"KEY_VALUE",
                   "preview":{"state":"completed","messages":[
                     "Set own game mode to Creative Mode",
                     "Made OpenAllay ride a Minecart"]},
@@ -175,8 +178,41 @@ final class GuideToolDetailPresenterTest {
         GuideDetailCard.KeyValue card = assertInstanceOf(
                 GuideDetailCard.KeyValue.class, view.cards().getFirst());
         assertEquals("completed", value(card, "state"));
+        assertEquals(List.of(GuideToolMessage.of(GuideToolMessage.Key.ANALYSIS_FIELDS_COMPLETE, "2")),
+                view.narration());
         assertTrue(value(card, "messages").contains("Creative Mode"));
         assertTrue(value(card, "messages").contains("Minecart"));
+    }
+
+    @Test
+    void everyPreviewShapeKeepsSucceededStatusAndTypeAccurateNarration() {
+        record Case(String type, String kind, String preview, GuideToolMessage.Key key,
+                String shown, Class<? extends GuideDetailCard> cardType) {}
+        List<Case> cases = List.of(
+                new Case("array", "TABLE", "[{\"id\":\"a\"}]",
+                        GuideToolMessage.Key.ANALYSIS_PREVIEW, "1", GuideDetailCard.Table.class),
+                new Case("array", "ITEM", "[{\"id\":\"minecraft:apple\"}]",
+                        GuideToolMessage.Key.ANALYSIS_PREVIEW, "1", GuideDetailCard.ItemGrid.class),
+                new Case("array", "UNKNOWN", "[1,true,null]",
+                        GuideToolMessage.Key.ANALYSIS_PREVIEW, "3", GuideDetailCard.DataPreview.class),
+                new Case("array", "UNKNOWN", "[[1,2]]",
+                        GuideToolMessage.Key.ANALYSIS_PREVIEW, "1", GuideDetailCard.DataPreview.class),
+                new Case("object", "KEY_VALUE", "{\"rows\":[{\"id\":\"a\"}],\"count\":5}",
+                        GuideToolMessage.Key.ANALYSIS_FIELDS_PREVIEW, "2", GuideDetailCard.KeyValue.class),
+                new Case("object", "UNKNOWN", "{\"rows\":[[1,2]],\"count\":5}",
+                        GuideToolMessage.Key.ANALYSIS_FIELDS_PREVIEW, "2", GuideDetailCard.DataPreview.class));
+        for (Case test : cases) {
+            GuideToolDetailView view = GuideToolDetailPresenter.project(activity(
+                    "openallay:run_javascript", """
+                    {"status":"success","value":{"resultType":"%s","viewKind":"%s",
+                     "cardinality":5,"complete":false,"preview":%s}}
+                    """.formatted(test.type(), test.kind(), test.preview())), false);
+            assertInstanceOf(test.cardType(), view.cards().getFirst());
+            assertEquals(GuideToolStatus.SUCCEEDED, view.status());
+            assertEquals(GuideToolDisplayStatus.SUCCEEDED, view.displayStatus());
+            assertTrue(view.failure().isEmpty());
+            assertEquals(List.of(GuideToolMessage.of(test.key(), test.shown(), "5")), view.narration());
+        }
     }
 
     private static String value(GuideDetailCard.KeyValue card, String key) {

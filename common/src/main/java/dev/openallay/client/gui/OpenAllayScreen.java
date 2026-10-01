@@ -890,8 +890,13 @@ public final class OpenAllayScreen extends Screen {
         boolean actualFailure = detail.failure().isPresent();
         if (actualFailure) summary.addAll(toolFailureComponents(detail, activity.toolId()));
         boolean javascript = activity.toolId().endsWith(":run_javascript");
-        for (GuideToolMessage message : activity.presentationMessages()) {
+        List<GuideToolMessage> messages = javascript && status == GuideToolDisplayStatus.SUCCEEDED
+                && !actualFailure && activity.normalized() != null
+                ? detail.narration() : activity.presentationMessages();
+        for (GuideToolMessage message : messages) {
             if (actualFailure && message.key().name().startsWith("FAILURE_")) continue;
+            if ((actualFailure || status == GuideToolDisplayStatus.FAILED)
+                    && message.key().name().startsWith("ANALYSIS_")) continue;
             if (javascript && message.key() == GuideToolMessage.Key.INVOCATION_RUN_JAVASCRIPT) continue;
             if (status == GuideToolDisplayStatus.NO_RESULT_RECORDED
                     && message.key() == GuideToolMessage.Key.RESULT_PENDING) continue;
@@ -919,6 +924,14 @@ public final class OpenAllayScreen extends Screen {
             return Component.translatable("screen.openallay.tool.failure.javascript");
         }
         return toolMessage(message);
+    }
+
+    /** Preview scope must stay visible above every native result card, not only text fallbacks. */
+    static List<GuideToolMessage> toolResultMessages(GuideToolDetailView detail) {
+        return detail.failure().isPresent()
+                || detail.displayStatus() == GuideToolDisplayStatus.FAILED
+                || detail.displayStatus() == GuideToolDisplayStatus.NO_RESULT_RECORDED
+                ? List.of() : detail.narration();
     }
 
     static List<GuideToolMessage> visibleToolSummaryMessages(
@@ -1135,16 +1148,11 @@ public final class OpenAllayScreen extends Screen {
                         if (toolDetail.failure().isEmpty()) {
                             y = detailLine(graphics, Component.translatable("screen.openallay.detail.output"), detail, y + 4);
                         }
+                        for (GuideToolMessage message : toolResultMessages(toolDetail)) {
+                            y = detailLine(graphics, toolMessage(message), detail, y);
+                        }
                         for (GuideDetailCard card : toolDetail.cards()) {
                             y = detailCard(graphics, card, detail, y, mouseX, mouseY);
-                        }
-                        if (toolDetail.cards().isEmpty()
-                                && toolDetail.failure().isEmpty()
-                                && toolDetail.displayStatus() != GuideToolDisplayStatus.NO_RESULT_RECORDED
-                                && toolDetail.displayStatus() != GuideToolDisplayStatus.FAILED) {
-                            for (GuideToolMessage message : toolDetail.narration()) {
-                                y = detailLine(graphics, toolMessage(message), detail, y);
-                            }
                         }
                     }
                     case PROGRAM -> {
@@ -1279,17 +1287,6 @@ public final class OpenAllayScreen extends Screen {
         for (List<String> row : card.rows()) {
             y = detailLine(graphics, String.join("  │  ", row), detail, y);
         }
-        if (!card.complete()) {
-            y = detailLine(
-                    graphics,
-                    Component.translatable(
-                                    "screen.openallay.detail.analysis.more",
-                                    card.omittedRows(),
-                                    card.omittedFields())
-                            .getString(),
-                    detail,
-                    y);
-        }
         return Math.max(y, start + 25);
     }
 
@@ -1303,17 +1300,6 @@ public final class OpenAllayScreen extends Screen {
         for (GuideDetailCard.DataCell entry : card.entries()) {
             y = detailLine(graphics, entry.key() + ": " + entry.value(), detail, y);
         }
-        if (!card.complete()) {
-            y = detailLine(
-                    graphics,
-                    Component.translatable(
-                                    "screen.openallay.detail.analysis.more",
-                                    0,
-                                    card.omittedFields())
-                            .getString(),
-                    detail,
-                    y);
-        }
         return Math.max(y, start + 25);
     }
 
@@ -1324,32 +1310,11 @@ public final class OpenAllayScreen extends Screen {
             int y) {
         int start = y;
         y = detailLine(graphics, Component.translatable(card.titleKey()).getString(), detail, y);
-        y = detailLine(
-                graphics,
-                Component.translatable(
-                                card.complete()
-                                        ? "screen.openallay.detail.analysis.complete"
-                                        : "screen.openallay.detail.analysis.preview",
-                                card.cardinality())
-                        .getString(),
-                detail,
-                y);
         for (GuideDetailCard.DataRow row : card.rows()) {
             String line = row.cells().stream()
                     .map(cell -> cell.key() + ": " + cell.value())
                     .collect(java.util.stream.Collectors.joining(" · "));
             y = detailLine(graphics, line, detail, y);
-        }
-        if (!card.complete()) {
-            y = detailLine(
-                    graphics,
-                    Component.translatable(
-                                    "screen.openallay.detail.analysis.more",
-                                    card.omittedRows(),
-                                    card.omittedFields())
-                            .getString(),
-                    detail,
-                    y);
         }
         return Math.max(y, start + 25);
     }

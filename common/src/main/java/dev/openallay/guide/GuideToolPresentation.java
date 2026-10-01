@@ -35,27 +35,38 @@ public final class GuideToolPresentation {
     }
 
     private static List<GuideToolMessage> javascriptAnalysis(JsonObject value) {
+        JsonElement preview = value.get("preview");
+        String type = string(value, "resultType");
         long cardinality = value.has("cardinality") && value.get("cardinality").isJsonPrimitive()
                 ? Math.max(0, value.get("cardinality").getAsLong())
                 : 0;
-        if (cardinality == 0) {
-            return one(GuideToolMessage.Key.ANALYSIS_EMPTY);
-        }
         boolean complete = value.has("complete")
                 && value.get("complete").isJsonPrimitive()
                 && value.get("complete").getAsBoolean();
-        if (complete) {
-            return List.of(message(
-                    GuideToolMessage.Key.ANALYSIS_COMPLETE, Long.toString(cardinality)));
-        }
-        JsonElement preview = value.get("preview");
-        long shown = preview != null && preview.isJsonArray()
-                ? preview.getAsJsonArray().size()
-                : 1;
-        return List.of(message(
-                GuideToolMessage.Key.ANALYSIS_PREVIEW,
-                Long.toString(shown),
-                Long.toString(cardinality)));
+        // Completeness describes the preview, never whether the calculation succeeded.
+        // Object cardinality counts top-level fields, not nested rows or result records.
+        GuideToolMessage summary = switch (type) {
+            case "array" -> cardinality == 0
+                    ? message(GuideToolMessage.Key.ANALYSIS_EMPTY)
+                    : complete
+                            ? message(GuideToolMessage.Key.ANALYSIS_COMPLETE, Long.toString(cardinality))
+                            : message(GuideToolMessage.Key.ANALYSIS_PREVIEW,
+                                    Integer.toString(preview != null && preview.isJsonArray()
+                                            ? preview.getAsJsonArray().size() : 0),
+                                    Long.toString(cardinality));
+            case "object" -> complete
+                    ? message(GuideToolMessage.Key.ANALYSIS_FIELDS_COMPLETE, Long.toString(cardinality))
+                    : message(GuideToolMessage.Key.ANALYSIS_FIELDS_PREVIEW,
+                            Integer.toString(preview != null && preview.isJsonObject()
+                                    ? preview.getAsJsonObject().size() : 0),
+                            Long.toString(cardinality));
+            default -> message(complete ? GuideToolMessage.Key.ANALYSIS_VALUE_COMPLETE
+                    : GuideToolMessage.Key.ANALYSIS_VALUE_PREVIEW);
+        };
+        // This historical receipt does not imply that an old request's handle is still live.
+        return !complete && !string(value, "handle").isBlank()
+                ? List.of(summary, message(GuideToolMessage.Key.ANALYSIS_WORKSPACE))
+                : List.of(summary);
     }
 
     private static List<GuideToolMessage> loadedSkill(JsonObject value) {
