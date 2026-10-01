@@ -1,6 +1,7 @@
 package dev.openallay.guide.ui;
 
 import dev.openallay.guide.GuideSource;
+import dev.openallay.context.SourceObservation;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.ArrayList;
@@ -47,7 +48,8 @@ public record GuideEvidencePresentation(
 
         private Group(Identity identity, List<GuideSource> records) {
             this(identity, records,
-                    records.stream().map(source -> source.evidence().capturedAt())
+                    records.stream().map(source -> new SourceObservation(
+                                    source.evidence(), source.lastCapturedAt()).firstCapturedAt())
                             .min(Instant::compareTo).orElseThrow(),
                     records.stream().map(GuideSource::lastCapturedAt)
                             .max(Instant::compareTo).orElseThrow());
@@ -66,14 +68,15 @@ public record GuideEvidencePresentation(
 
         public static Identity from(GuideSource source) {
             var evidence = source.evidence();
-            Map<String, String> scope = new java.util.TreeMap<>(evidence.details());
-            // Position, operation size, and capture ranges describe observations, not origins.
+            Map<String, String> scope = new java.util.TreeMap<>(new SourceObservation(
+                    evidence, source.lastCapturedAt()).identityDetails());
+            // Position and operation size are retained in the individual UI records below.
+            // Capture ranges use the same validated extent rule as core source aggregation.
             // Unknown detail keys remain in identity, so unrelated scopes cannot silently merge.
             scope.keySet().removeIf(key -> switch (key) {
                 case "minecraft:position", "minecraft:x", "minecraft:y", "minecraft:z",
                         "openallay_builder:position", "openallay_builder:x", "openallay_builder:y",
-                        "openallay_builder:z", "openallay_builder:count",
-                        "openallay_builder:capture_start", "openallay_builder:capture_end" -> true;
+                        "openallay_builder:z", "openallay_builder:count" -> true;
                 default -> false;
             });
             return new Identity(source.toolId(), evidence.authority(), evidence.completeness(),

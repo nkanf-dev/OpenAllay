@@ -30,7 +30,9 @@ public final class SourceObservationCollector {
     }
 
     private static SourceObservation merge(SourceObservation left, SourceObservation right) {
-        EvidenceMetadata first = right.evidence().capturedAt().isBefore(left.evidence().capturedAt())
+        int startOrder = right.firstCapturedAt().compareTo(left.firstCapturedAt());
+        EvidenceMetadata first = startOrder < 0
+                || (startOrder == 0 && right.evidence().capturedAt().isBefore(left.evidence().capturedAt()))
                 ? right.evidence()
                 : left.evidence();
         Instant last = right.lastCapturedAt().isAfter(left.lastCapturedAt())
@@ -55,7 +57,7 @@ public final class SourceObservationCollector {
                     evidence.provenance(),
                     evidence.gameVersion(),
                     evidence.loader(),
-                    evidence.details());
+                    SourceObservation.identityDetails(evidence));
         }
     }
 }

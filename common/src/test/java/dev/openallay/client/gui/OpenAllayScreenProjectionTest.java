@@ -335,6 +335,34 @@ final class OpenAllayScreenProjectionTest {
     }
 
     @Test
+    void expandedCompactBuilderSourceUsesTheRealStartForGroupAndRecordRanges() {
+        Instant start = Instant.EPOCH;
+        Instant completed = Instant.EPOCH.plusSeconds(2);
+        Instant last = Instant.EPOCH.plusSeconds(10_001);
+        EvidenceMetadata evidence = new EvidenceMetadata(
+                DataAuthority.SERVER_AUTHORITATIVE, DataCompleteness.COMPLETE, completed,
+                "openallay_builder:read-region", "openallay:builder", "26.2", "fabric",
+                Map.of("openallay_builder:capture_start", start.toString(),
+                        "openallay_builder:capture_end", completed.toString(),
+                        "openallay_builder:dimension", "minecraft:overworld"));
+        GuideSource source = new GuideSource("openallay:run_javascript", evidence, last);
+        var group = dev.openallay.guide.ui.GuideEvidencePresentation.groups(List.of(source)).getFirst();
+
+        List<TranslatableContents> ranges = OpenAllayScreen.sourceDetailComponents(group).stream()
+                .map(Component::getContents)
+                .filter(TranslatableContents.class::isInstance)
+                .map(TranslatableContents.class::cast)
+                .filter(contents -> contents.getKey().equals("screen.openallay.evidence.capture_range"))
+                .toList();
+        assertEquals(2, ranges.size());
+        for (TranslatableContents range : ranges) {
+            assertEquals(List.of(start.toString(), last.toString()), List.of(range.getArgs()));
+        }
+        assertEquals(completed, source.evidence().capturedAt());
+        assertEquals(completed.toString(), source.evidence().details().get("openallay_builder:capture_end"));
+    }
+
+    @Test
     void expandedSourceTextRetainsEverySpecificRecordAndLongValueWithoutCaps() {
         List<GuideSource> sources = new java.util.ArrayList<>();
         String exactLongValue = "retained detail ".repeat(400);

@@ -56,6 +56,51 @@ final class GuideEvidencePresentationTest {
     }
 
     @Test
+    void compactBuilderSummaryShowsTheTrueCaptureStartWithoutChangingItsEvidence() {
+        Instant start = Instant.EPOCH;
+        Instant completed = Instant.EPOCH.plusSeconds(2);
+        Instant lastCompleted = Instant.EPOCH.plusSeconds(10_001);
+        EvidenceMetadata evidence = new EvidenceMetadata(
+                DataAuthority.SERVER_AUTHORITATIVE, DataCompleteness.COMPLETE, completed,
+                "openallay_builder:read-region", "openallay:builder", "26.2", "fabric",
+                Map.of("openallay_builder:capture_start", start.toString(),
+                        "openallay_builder:capture_end", completed.toString(),
+                        "openallay_builder:dimension", "minecraft:overworld",
+                        "openallay_builder:consistency", "multi-slice-non-atomic"));
+        GuideSource summary = new GuideSource("openallay:run_javascript", evidence, lastCompleted);
+
+        var group = GuideEvidencePresentation.groups(List.of(summary)).getFirst();
+        assertEquals(start, group.firstCapturedAt());
+        assertEquals(lastCompleted, group.lastCapturedAt());
+        assertEquals(List.of(summary), group.records());
+        assertEquals(completed, group.records().getFirst().evidence().capturedAt());
+        assertEquals(evidence.details(), group.records().getFirst().evidence().details());
+        assertEquals(Map.of("openallay_builder:dimension", "minecraft:overworld",
+                "openallay_builder:consistency", "multi-slice-non-atomic"), group.identity().scope());
+    }
+
+    @Test
+    void invalidBuilderCaptureDetailsDoNotInventAnEarlierUiRange() {
+        Instant completed = Instant.EPOCH.plusSeconds(2);
+        EvidenceMetadata evidence = new EvidenceMetadata(
+                DataAuthority.SERVER_AUTHORITATIVE, DataCompleteness.COMPLETE, completed,
+                "openallay_builder:read-region", "openallay:builder", "26.2", "fabric",
+                Map.of("openallay_builder:capture_start", Instant.EPOCH.toString(),
+                        "openallay_builder:capture_end", "not-an-instant"));
+        GuideSource source = new GuideSource("openallay:run_javascript", evidence);
+
+        var group = GuideEvidencePresentation.groups(List.of(source)).getFirst();
+        assertEquals(completed, group.firstCapturedAt());
+        assertEquals(completed, group.lastCapturedAt());
+        assertEquals(evidence.details(), group.records().getFirst().evidence().details());
+        assertEquals(evidence.details(), group.identity().scope());
+        GuideSource withoutRange = new GuideSource("openallay:run_javascript", new EvidenceMetadata(
+                evidence.authority(), evidence.completeness(), completed, evidence.sourceId(),
+                evidence.provenance(), evidence.gameVersion(), evidence.loader(), Map.of()));
+        assertEquals(2, GuideEvidencePresentation.groups(List.of(source, withoutRange)).size());
+    }
+
+    @Test
     void groupingPreservesAuthorityCoverageProvenanceVersionLoaderAndScopeDifferences() {
         EvidenceMetadata base = new EvidenceMetadata(DataAuthority.CLIENT_VISIBLE, DataCompleteness.COMPLETE,
                 Instant.EPOCH, "minecraft:client_blocks", "minecraft:captured", "26.2", "fabric",

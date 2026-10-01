@@ -1697,7 +1697,9 @@ public final class OpenAllayScreen extends Screen {
         // Shared scope is already above. Every retained observation-specific value stays available.
         for (GuideSource record : group.records()) {
             lines.add(Component.translatable("screen.openallay.evidence.capture_range",
-                    record.evidence().capturedAt().toString(), record.lastCapturedAt().toString()));
+                    new dev.openallay.context.SourceObservation(
+                            record.evidence(), record.lastCapturedAt()).firstCapturedAt().toString(),
+                    record.lastCapturedAt().toString()));
             for (var entry : record.evidence().details().entrySet()) {
                 if (!identity.scope().containsKey(entry.getKey())) {
                     lines.add(Component.literal(entry.getKey() + ": " + entry.getValue()));
