@@ -66,6 +66,14 @@ jobs:
       - name: Verify SQLite packaging
         run: ./scripts/verify-sqlite-packaging.sh
 
+      - name: Verify tokenizer packaging
+        run: |
+          minecraft_version=$(sed -n 's/^minecraft_version=//p' gradle.properties)
+          version=$(sed -n 's/^version=//p' gradle.properties)
+          python3 scripts/verify-tokenizer-packaging.py \
+            --fabric "fabric/build/libs/openallay-fabric-${minecraft_version}-${version}.jar" \
+            --neoforge "neoforge/build/libs/openallay-neoforge-${minecraft_version}-${version}.jar"
+
       - name: Verify built distribution
         run: ./scripts/verify-distribution.sh
 

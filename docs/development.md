@@ -1,13 +1,15 @@
 # Development
 
-OpenAllay targets Minecraft 26.2 and Java 25 and implements Extension API 0.2.1.
+OpenAllay 0.3.0 targets Minecraft 26.2 and Java 25 and implements public
+Extension API 0.2.2. Product and public API versions are independent.
 Use the checked-in Gradle wrapper; a system Gradle installation is not needed.
 
-This guide includes the subsequent Builder performance, request-control and Skill
-context changes. See the [current verification record](verification/2026-10-01-builder-performance-runtime-controls.md).
+See the [0.3.0 release notes](releases/0.3.0.md) for the current product changes.
+Earlier Builder performance, request-control and Skill context evidence remains in
+its [verification record](verification/2026-10-01-builder-performance-runtime-controls.md).
 Historical execution/context receipts remain in the [041 verification record](verification/execution-context-simplification.md).
-These are source builds, not replacements for already distributed 0.2.4 artifacts
-or a claim of measured in-game latency.
+Those records describe their own source builds. They neither replace published
+0.2.4 artifacts nor establish current in-game latency.
 
 Before formal 1.0, internal formats are **Latest Only**: keep the current shape
 and exact validation, without internal version numbers, versioned filenames,
@@ -598,21 +600,31 @@ a managed name in `mods`. Local imports need no catalog entry. Status stays
 `restart_required` until startup registers the Extension.
 
 The public authoring repository's `examples/hello-extension` builds both loaders.
-External projects need product 0.2.1 or later compatible 0.2.x; 0.2.0 predates the
-public SPI. Current core implements API 0.2.1. Existing API 0.2.0 contributions
-and four-list constructors remain compatible.
+Current product 0.3.0 implements public Extension API 0.2.2. Loader product
+ranges and `openAllayApiVersionRange` are separate compatibility contracts:
+`[0.2,0.3)` still accepts API 0.2.2, but a loader product range excluding
+0.3.0 rejects this release. Existing four-list and five-list contribution
+constructors remain supported. Match each independent Extension's declared
+requirements rather than copying the product version into its API range.
 
 ### Invocation scopes, requirements, and Builder
 
-API 0.2.1 adds optional `JavascriptInvocationParticipant` contributions.
+API 0.2.1 introduced optional `JavascriptInvocationParticipant` contributions.
 Participants open on the JavaScript worker and close in reverse order on that
 worker. `JavascriptInvocationContext` supplies immutable invocation state,
 cancellation, `requireActive()`, evidence recording, and
 `completedSuccessfully()`. The latter means the body returned normally in an
 active scope, not that a domain action, normalization, or evidence validation
 succeeded. Closing revokes scope lifetime. Queued owner-thread actions must
-recheck scope and exact connection/world identity. This adds no live host binding
-or domain Tool.
+recheck scope and exact connection/world identity. Participants alone add no live
+host binding or domain Tool.
+
+API 0.2.2 adds namespaced `JavascriptHostBinding` methods and independently
+declared `ExtensionCapability` scopes. Trusted Extensions expose explicit methods
+with controlled argument/return types, not arbitrary Java reflection. World-action
+grants are separate per Extension, default off, and frozen when a request starts.
+Installation, read access, and server-origin callbacks do not inherit a local
+world-write grant. These grants do not enable unrestricted Agent Java/JVM access.
 
 Skills use advisory `openallay/requires-capabilities`,
 `openallay/requires-extensions`, and `openallay/requires-skills` metadata;
@@ -624,9 +636,12 @@ authorization. Required-mods compatibility and actual Tool policy remain separat
 See [decision 035](isme/decisions/2026-09-30-035-advisory-extension-skill-requirements.md).
 
 Builder code, Skill, modules, native scheduling, templates, and journals belong
-to `OpenAllay-Extensions`, not core. Its backend uses the active integrated server
-under client-local unrestricted authority. It does not edit client world mirrors,
-open offline saves, add a remote write protocol, or fall back to commands.
+to `OpenAllay-Extensions`, not core. Builder 0.2.0 requires product
+`[0.3.0,0.4)` and public Extension API `[0.2.2,0.3)`. Its backend uses the active
+integrated server through invocation-scoped native bindings. World mutation
+requires the client-local `openallay_builder:world_write` grant for
+`openallay:builder`, not unrestricted JavaScript. It does not edit client world
+mirrors, open offline saves, add a remote write protocol, or fall back to commands.
 Unsupported contexts fail explicitly. Native scans, geometry, paste, and undo
 batch owner-thread work; a cooperative quantum is scheduling, not a volume cap.
 
