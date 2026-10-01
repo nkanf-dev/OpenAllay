@@ -16,7 +16,7 @@ public final class ModelContextCodec {
     public String encode(List<ModelMessage> messages) {
         JsonObject envelope = new JsonObject();
         JsonArray encoded = new JsonArray();
-        for (ModelMessage message : redacted(messages, Set.of())) {
+        for (ModelMessage message : safe(messages)) {
             JsonObject object = new JsonObject();
             object.addProperty("role", message.role().name());
             JsonArray content = new JsonArray();
@@ -95,36 +95,6 @@ public final class ModelContextCodec {
         List<ModelMessage> safe = ContextStructure.summarySafe(messages);
         ContextStructure.units(safe);
         return safe;
-    }
-
-    /** Durable/wire boundary: preserve message structure and scrub only sensitive values. */
-    public static List<ModelMessage> redacted(List<ModelMessage> messages, Set<String> secrets) {
-        return redacted(messages, new dev.openallay.agent.trace.LiveTraceJson.SecretPlan(secrets));
-    }
-
-    public static List<ModelMessage> redacted(List<ModelMessage> messages,
-            dev.openallay.agent.trace.LiveTraceJson.SecretPlan secrets) {
-        ArrayList<ModelMessage> redacted = new ArrayList<>();
-        for (ModelMessage message : safe(messages)) {
-            ArrayList<ModelContent> content = new ArrayList<>();
-            for (ModelContent item : message.content()) {
-                ModelContent replacement = switch (item) {
-                    case ModelContent.Text text -> new ModelContent.Text(
-                            dev.openallay.agent.trace.LiveTraceJson.redact(text.text(), secrets));
-                    case ModelContent.ToolUse use -> new ModelContent.ToolUse(
-                            dev.openallay.agent.trace.LiveTraceJson.redactIdentity(use.id(), secrets),
-                            dev.openallay.agent.trace.LiveTraceJson.redact(use.name(), secrets),
-                            dev.openallay.agent.trace.LiveTraceJson.redact(use.input(), secrets).getAsJsonObject());
-                    case ModelContent.ToolResult result -> new ModelContent.ToolResult(
-                            dev.openallay.agent.trace.LiveTraceJson.redactIdentity(result.toolUseId(), secrets),
-                            dev.openallay.agent.trace.LiveTraceJson.redact(result.value(), secrets), result.error());
-                    case ModelContent.Reasoning ignored -> throw new IllegalStateException("private reasoning");
-                };
-                content.add(replacement.equals(item) ? item : replacement);
-            }
-            redacted.add(content.equals(message.content()) ? message : new ModelMessage(message.role(), content));
-        }
-        return List.copyOf(redacted);
     }
 
     private static void fields(JsonObject value, Set<String> expected) {

@@ -85,8 +85,7 @@ public final class FabricClientBridge {
     public void configureClientTools(
             Supplier<ToolRuntimeCatalog> localToolCatalog,
             ClientToolExecutionEndpoint.ContextProvider contexts,
-            Gson gson,
-            java.util.function.UnaryOperator<String> skillTextTransform) {
+            Gson gson) {
         this.localToolCatalog = java.util.Objects.requireNonNull(
                 localToolCatalog, "localToolCatalog");
         this.clientTools = new ClientToolExecutionEndpoint(
@@ -99,8 +98,7 @@ public final class FabricClientBridge {
                     });
                 },
                 gson,
-                dev.openallay.bridge.protocol.BridgeProtocol.TRANSPORT_CHUNK_BYTES,
-                skillTextTransform);
+                dev.openallay.bridge.protocol.BridgeProtocol.TRANSPORT_CHUNK_BYTES);
     }
 
     public void onDisconnect(Runnable listener) { disconnectListeners.add(listener); }

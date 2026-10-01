@@ -47,7 +47,6 @@ public final class GuideClientE2EController {
     private final GuideServiceManager services;
     private final Gson gson;
     private final Runnable shutdown;
-    private final Set<String> secrets;
     private final Supplier<RecipeProviderReadiness> recipeReadiness;
     private final ClientSettingsService clientSettings;
     private final BiFunction<String, UUID, java.util.Optional<String>> traceLookup;
@@ -99,9 +98,8 @@ public final class GuideClientE2EController {
             String modVersion,
             GuideServiceManager services,
             Gson gson,
-            Runnable shutdown,
-            Set<String> secrets) {
-        this(config, loader, gameVersion, modVersion, services, gson, shutdown, secrets,
+            Runnable shutdown) {
+        this(config, loader, gameVersion, modVersion, services, gson, shutdown,
                 RecipeProviderReadiness::ready, null, null);
     }
 
@@ -113,9 +111,8 @@ public final class GuideClientE2EController {
             GuideServiceManager services,
             Gson gson,
             Runnable shutdown,
-            Set<String> secrets,
             Supplier<RecipeProviderReadiness> recipeReadiness) {
-        this(config, loader, gameVersion, modVersion, services, gson, shutdown, secrets,
+        this(config, loader, gameVersion, modVersion, services, gson, shutdown,
                 recipeReadiness, null, null);
     }
 
@@ -127,7 +124,6 @@ public final class GuideClientE2EController {
             GuideServiceManager services,
             Gson gson,
             Runnable shutdown,
-            Set<String> secrets,
             Supplier<RecipeProviderReadiness> recipeReadiness,
             ClientSettingsService clientSettings) {
         this(
@@ -138,7 +134,6 @@ public final class GuideClientE2EController {
                 services,
                 gson,
                 shutdown,
-                secrets,
                 recipeReadiness,
                 clientSettings,
                 null);
@@ -152,7 +147,6 @@ public final class GuideClientE2EController {
             GuideServiceManager services,
             Gson gson,
             Runnable shutdown,
-            Set<String> secrets,
             Supplier<RecipeProviderReadiness> recipeReadiness,
             ClientSettingsService clientSettings,
             BiFunction<String, UUID, java.util.Optional<String>> traceLookup) {
@@ -163,7 +157,6 @@ public final class GuideClientE2EController {
         this.services = java.util.Objects.requireNonNull(services, "services");
         this.gson = java.util.Objects.requireNonNull(gson, "gson");
         this.shutdown = java.util.Objects.requireNonNull(shutdown, "shutdown");
-        this.secrets = configuredSecrets(secrets, clientSettings);
         this.recipeReadiness = java.util.Objects.requireNonNull(recipeReadiness, "recipeReadiness");
         this.clientSettings = clientSettings;
         this.traceLookup = traceLookup;
@@ -522,7 +515,7 @@ public final class GuideClientE2EController {
                 }
             });
         }
-        pendingReport = new GuideE2EReportJson(gson).encode(report, secrets);
+        pendingReport = new GuideE2EReportJson(gson).encode(report);
         if (Boolean.getBoolean("openallay.e2e.cancelOnToolStart")) {
             var stop = new com.google.gson.JsonObject();
             stop.addProperty("requested", cancelOnToolStartRequested);
@@ -570,9 +563,6 @@ public final class GuideClientE2EController {
                 var encoded = com.google.gson.JsonParser.parseString(pendingReport).getAsJsonObject();
                 encoded.add("nativeAcceptance", probe);
                 pendingReport = gson.toJson(encoded);
-                for (String secret : secrets) {
-                    if (secret != null && !secret.isBlank()) pendingReport = pendingReport.replace(secret, "[REDACTED]");
-                }
                 if (traceLookup == null || request.modelSelection().modelMode() != GuideModelMode.CLIENT) finish(pendingReport);
             });
         } else if (traceLookup == null || request.modelSelection().modelMode() != GuideModelMode.CLIENT) {
@@ -1026,9 +1016,6 @@ public final class GuideClientE2EController {
                 "outcome", "HARNESS_FAILED",
                 "failureCode", code,
                 "failureMessage", message));
-        for (String secret : secrets) {
-            if (secret != null && !secret.isBlank()) encoded = encoded.replace(secret, "[REDACTED]");
-        }
         finish(encoded);
         if (!config.shutdownAfterReport()
                 && Boolean.getBoolean("openallay.e2e.shutdownAfterScreenshots")) shutdown.run();
@@ -1080,26 +1067,6 @@ public final class GuideClientE2EController {
         } catch (java.security.NoSuchAlgorithmException impossible) {
             throw new IllegalStateException(impossible);
         }
-    }
-
-    static Set<String> referencedEnvironmentSecrets(
-            Set<String> initial,
-            List<dev.openallay.model.config.ModelProfileDefinition> profiles,
-            java.util.function.Function<String, String> environment) {
-        Set<String> values = new java.util.HashSet<>(initial);
-        for (var profile : profiles) {
-            var reference = dev.openallay.model.config.CredentialReference.parse(profile.credentialRef());
-            if (reference.kind() == dev.openallay.model.config.CredentialReference.Kind.ENVIRONMENT) {
-                String value = environment.apply(reference.value());
-                if (value != null && !value.isBlank()) values.add(value);
-            }
-        }
-        return Set.copyOf(values);
-    }
-
-    private static Set<String> configuredSecrets(Set<String> initial, ClientSettingsService settings) {
-        return settings == null ? Set.copyOf(initial) : referencedEnvironmentSecrets(initial,
-                settings.snapshot().models().config().profiles(), System::getenv);
     }
 
     private static String require(String value, String name) {

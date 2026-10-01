@@ -263,11 +263,9 @@ public final class RunJavascriptTool
         } catch (ModelClientException cancelled) {
             future.completeExceptionally(cancelled);
         } catch (JavascriptExecutionException failure) {
-            future.complete(new ToolResult.Failure<>(failure.code(),
-                    dev.openallay.script.JavascriptFailureFormatter.sanitizeMessage(failure.getMessage())));
+            future.complete(new ToolResult.Failure<>(failure.code(), failure.getMessage()));
         } catch (WorkspaceException failure) {
-            future.complete(new ToolResult.Failure<>(failure.code(),
-                    dev.openallay.script.JavascriptFailureFormatter.sanitizeMessage(failure.getMessage())));
+            future.complete(new ToolResult.Failure<>(failure.code(), failure.getMessage()));
         } catch (Throwable failure) {
             // Settle even native errors after scope cleanup. Never forward a native stack or
             // an unchecked exception's arbitrary message to the model.

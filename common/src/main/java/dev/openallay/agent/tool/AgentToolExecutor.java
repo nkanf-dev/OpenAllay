@@ -65,11 +65,6 @@ public interface AgentToolExecutor {
     /** Assemble inline guidance from the same captured safe document view as load_skill. */
     default String skillSystemPrompt(String prompt) { return prompt; }
 
-    /** Trusted catalog projection, before Skill fingerprints and plaintext delivery. */
-    default AgentToolExecutor safeSkillView(java.util.function.UnaryOperator<String> transform) {
-        return this;
-    }
-
     /** Discards an ephemeral Skill context binding without closing unrelated request resources. */
     default void closeSkillContext(String correlationId) {}
 

@@ -204,7 +204,7 @@ final class ModelContextCodecTest {
     }
 
     @Test
-    void redactsExactKnownSecretsAndCredentialShapesInNestedSourceModelTextAndTextOnly() {
+    void preservesPlayerTextAndCredentialNamedFieldsInNestedToolSourceAndResults() {
         String known = "opaque-known-value";
         String longerKnown = known + "/suffix";
         String source = "var key = \"" + known + "\";\n"
@@ -224,6 +224,8 @@ final class ModelContextCodecTest {
         nested.addProperty("secret", "SecretPrivate987654321");
         nested.addProperty("Cookie", "session=CookiePrivate987654321");
         nested.addProperty("Set-Cookie", "session=SetCookiePrivate987654321");
+        nested.addProperty("reasoning", "player-provided reasoning is ordinary tool data");
+        nested.addProperty("signature", "player-provided signature is ordinary tool data");
         nested.addProperty("recipeId", "test:token_recipe");
         nested.addProperty("count", 2);
         nested.addProperty("complete", false);
@@ -234,22 +236,24 @@ final class ModelContextCodecTest {
         input.add("nested", rows.deepCopy());
         JsonObject output = new JsonObject();
         output.add("nested", rows.deepCopy());
+        String question = "Keep " + known + " private. token=QuestionPrivateValue";
         List<ModelMessage> messages = List.of(
-                ModelMessage.userText("Keep " + known + " private. token=QuestionPrivateValue"),
+                ModelMessage.userText(question),
                 new ModelMessage(ModelRole.ASSISTANT, List.of(
                         new ModelContent.ToolUse("original_call", "openallay__run_javascript", input))),
                 new ModelMessage(ModelRole.USER, List.of(
                         new ModelContent.ToolResult("original_call", output, true))));
         String originalEncoded = codec.encode(messages);
 
-        List<ModelMessage> redacted = ModelContextCodec.redacted(messages, Set.of(known, longerKnown));
+        List<ModelMessage> safe = ModelContextCodec.safe(messages);
 
-        assertEquals("Keep [REDACTED] private. token=[REDACTED]",
-                assertInstanceOf(ModelContent.Text.class, redacted.getFirst().content().getFirst()).text());
+        assertEquals(messages, safe);
+        assertEquals(question,
+                assertInstanceOf(ModelContent.Text.class, safe.getFirst().content().getFirst()).text());
         ModelContent.ToolUse use = assertInstanceOf(ModelContent.ToolUse.class,
-                redacted.get(1).content().getFirst());
+                safe.get(1).content().getFirst());
         ModelContent.ToolResult result = assertInstanceOf(ModelContent.ToolResult.class,
-                redacted.get(2).content().getFirst());
+                safe.get(2).content().getFirst());
         assertEquals("original_call", use.id());
         assertEquals("openallay__run_javascript", use.name());
         assertEquals("original_call", result.toolUseId());
@@ -257,29 +261,28 @@ final class ModelContextCodecTest {
         JsonObject safeInput = use.input().getAsJsonArray("nested").get(0).getAsJsonObject();
         JsonObject safeOutput = result.value().getAsJsonObject()
                 .getAsJsonArray("nested").get(0).getAsJsonObject();
-        assertEquals(safeInput, safeOutput);
-        assertEquals("var key = \"[REDACTED]\";\nvar authorization = \"[REDACTED]\";\nreturn {count: 2};",
-                safeInput.get("source").getAsString());
-        assertEquals("api-key=[REDACTED]\ncookie: [REDACTED]\nBearer [REDACTED]\n"
-                        + "[REDACTED]\n[REDACTED]\nobserved [REDACTED]",
-                safeInput.get("modelText").getAsString());
+        assertEquals(nested, safeInput);
+        assertEquals(nested, safeOutput);
+        assertEquals(source, safeInput.get("source").getAsString());
+        assertEquals(modelText, safeInput.get("modelText").getAsString());
         for (String key : List.of("Authorization", "x-api-key", "api_key", "access-token", "token",
-                "password", "secret", "Cookie", "Set-Cookie")) {
-            assertEquals("[REDACTED]", safeInput.get(key).getAsString(), key);
+                "password", "secret", "Cookie", "Set-Cookie", "reasoning", "signature")) {
+            assertEquals(nested.get(key), safeInput.get(key), key);
         }
         assertEquals("test:token_recipe", safeInput.get("recipeId").getAsString());
         assertEquals(new JsonPrimitive(2), safeInput.get("count"));
         assertEquals(new JsonPrimitive(false), safeInput.get("complete"));
         assertEquals("preserve-unrelated-text", use.input().getAsJsonArray("nested").get(1).getAsString());
-        String encoded = codec.encode(redacted);
-        for (String secret : List.of(known, "HeaderPrivate987654321", "InlinePrivateValue", "SessionPrivateValue",
-                "BearerPrivate987654321", "sk-privateabc123456789", "pk-privateabc123456789", "QuestionPrivateValue")) {
-            assertFalse(encoded.contains(secret), secret);
+        String encoded = codec.encode(safe);
+        for (String value : List.of(known, longerKnown, "HeaderPrivate987654321", "InlinePrivateValue",
+                "SessionPrivateValue", "BearerPrivate987654321", "sk-privateabc123456789",
+                "pk-privateabc123456789", "QuestionPrivateValue")) {
+            assertTrue(encoded.contains(value), value);
         }
-        assertEquals(redacted, codec.decode(encoded));
-        assertEquals(redacted, ModelContextCodec.redacted(redacted, Set.of(known, longerKnown)));
+        assertEquals(safe, codec.decode(encoded));
+        assertEquals(safe, ModelContextCodec.safe(safe));
         assertEquals(originalEncoded, codec.encode(messages),
-                "boundary redaction must not mutate live model messages");
+                "the context boundary must not mutate live model messages");
         assertEquals(source, input.getAsJsonArray("nested").get(0).getAsJsonObject().get("source").getAsString());
         assertEquals(source, assertInstanceOf(ModelContent.ToolUse.class,
                 messages.get(1).content().getFirst()).input()
@@ -290,27 +293,27 @@ final class ModelContextCodecTest {
     }
 
     @Test
-    void automaticCredentialRedactionDoesNotNeedKnownSecretSetAndPreservesPlainModelText() {
-        List<ModelMessage> actual = List.of(ModelMessage.userText(
-                "Authorization: Bearer " + "HeaderPrivate987654321\nx-api-key: HeaderPrivateValue\n"
-                        + "password=PasswordPrivateValue\naccess_token='AccessPrivateValue'\n"
-                        + "cookie=SessionPrivateValue\nBearer " + "BearerPrivate987654321\n"
-                        + "sk-privateabc123456789\nordinary-source-id"));
+    void preservesCredentialLikePlayerTextWithoutContentClassification() {
+        String playerText = "Authorization: Bearer " + "HeaderPrivate987654321\nx-api-key: HeaderPrivateValue\n"
+                + "password=PasswordPrivateValue\naccess_token='AccessPrivateValue'\n"
+                + "cookie=SessionPrivateValue\nBearer " + "BearerPrivate987654321\n"
+                + "sk-privateabc123456789\nordinary-source-id";
+        List<ModelMessage> actual = List.of(ModelMessage.userText(playerText));
 
-        List<ModelMessage> redacted = ModelContextCodec.redacted(actual, Set.of());
+        List<ModelMessage> safe = ModelContextCodec.safe(actual);
 
-        assertEquals(redacted, codec.decode(codec.encode(actual)),
-                "encoding itself is a durable redaction boundary");
-        assertEquals("Authorization: [REDACTED]\nx-api-key: [REDACTED]\n"
-                        + "password=[REDACTED]\naccess_token='[REDACTED]'\ncookie=[REDACTED]\n"
-                        + "Bearer [REDACTED]\n[REDACTED]\nordinary-source-id",
-                assertInstanceOf(ModelContent.Text.class, redacted.getFirst().content().getFirst()).text());
-        assertEquals(transcript(), ModelContextCodec.redacted(transcript(), Set.of()),
+        assertEquals(actual, safe);
+        assertEquals(actual, codec.decode(codec.encode(actual)),
+                "encoding must preserve the actual player message");
+        assertEquals(playerText,
+                assertInstanceOf(ModelContent.Text.class, safe.getFirst().content().getFirst()).text());
+        assertEquals(safe, ModelContextCodec.safe(safe));
+        assertEquals(transcript(), ModelContextCodec.safe(transcript()),
                 "the exact .filter failure, source code, ordinary evidence, and flags must survive");
     }
 
     @Test
-    void scrubsBasicAndWholeCookieHeadersRefreshTokensAndOnlyUrlUserinfoIdempotently() {
+    void preservesBasicAndCookieHeadersRefreshTokensAndCompleteUrlsIdempotently() {
         String basic = "dXNlcjpwYXNz";
         String privateUrl = "https://user:pass@example.invalid/guide/path?view=guide#entry";
         String ordinaryUrl = "https://example.invalid/guide/path?view=guide#entry";
@@ -343,57 +346,51 @@ final class ModelContextCodecTest {
                 new ModelMessage(ModelRole.USER, List.of(new ModelContent.ToolResult(
                         "credential_shapes", output, false))));
 
-        List<ModelMessage> redacted = ModelContextCodec.redacted(actual, Set.of());
+        List<ModelMessage> safe = ModelContextCodec.safe(actual);
 
-        String expectedHeaders = "Authorization: [REDACTED]\nCookie:[REDACTED]\n"
-                + "Set-Cookie: [REDACTED]\nrefresh_token=[REDACTED]\n"
-                + "Endpoint: https://[REDACTED]@example.invalid/guide/path?view=guide#entry\n"
-                + "Public endpoint: " + ordinaryUrl;
-        assertEquals(expectedHeaders,
-                assertInstanceOf(ModelContent.Text.class, redacted.getFirst().content().getFirst()).text());
+        assertEquals(actual, safe);
+        assertEquals(headerText,
+                assertInstanceOf(ModelContent.Text.class, safe.getFirst().content().getFirst()).text());
         ModelContent.ToolUse use = assertInstanceOf(ModelContent.ToolUse.class,
-                redacted.get(1).content().getFirst());
+                safe.get(1).content().getFirst());
         ModelContent.ToolResult result = assertInstanceOf(ModelContent.ToolResult.class,
-                redacted.get(2).content().getFirst());
+                safe.get(2).content().getFirst());
         assertEquals("credential_shapes", use.id());
         assertEquals(use.id(), result.toolUseId());
         assertFalse(result.error());
-        JsonObject safe = use.input().getAsJsonObject("nested");
-        assertEquals(safe, result.value().getAsJsonObject().getAsJsonObject("nested"));
-        assertEquals("var cookie = \"[REDACTED]\";\n"
-                        + "var refresh_token = '[REDACTED]';\n"
-                        + "var endpoint = \"https://[REDACTED]@example.invalid/guide/path?view=guide#entry\";\n"
-                        + "return {endpoint: endpoint, count: 2};",
-                safe.get("source").getAsString());
-        assertEquals(expectedHeaders, safe.get("modelText").getAsString());
-        assertEquals("[REDACTED]", safe.get("refresh_token").getAsString());
-        assertEquals("[REDACTED]", safe.get("Authorization").getAsString());
-        assertEquals("[REDACTED]", safe.get("Cookie").getAsString());
-        assertEquals("[REDACTED]", safe.get("Set-Cookie").getAsString());
-        assertEquals("https://[REDACTED]@example.invalid/guide/path?view=guide#entry",
-                safe.get("endpoint").getAsString());
-        assertEquals(ordinaryUrl, safe.get("publicEndpoint").getAsString());
-        assertEquals(new JsonPrimitive(2), safe.get("count"));
-        assertEquals(redacted, ModelContextCodec.redacted(redacted, Set.of()),
-                "a second scrub cannot remove quote, semicolon, URL, or following statement syntax");
-        assertEquals(redacted, codec.decode(codec.encode(actual)));
-        String encoded = codec.encode(redacted);
-        for (String secret : List.of(basic, "a=private", "b=hidden", "c=private", "RefreshPrivateValue",
-                "NestedRefreshPrivateValue", "user:pass")) {
-            assertFalse(encoded.contains(secret), secret);
+        JsonObject safeInput = use.input().getAsJsonObject("nested");
+        assertEquals(nested, safeInput);
+        assertEquals(nested, result.value().getAsJsonObject().getAsJsonObject("nested"));
+        assertEquals(source, safeInput.get("source").getAsString());
+        assertEquals(headerText, safeInput.get("modelText").getAsString());
+        assertEquals("NestedRefreshPrivateValue", safeInput.get("refresh_token").getAsString());
+        assertEquals("Basic " + basic, safeInput.get("Authorization").getAsString());
+        assertEquals("a=private; b=hidden", safeInput.get("Cookie").getAsString());
+        assertEquals("c=private; HttpOnly; Secure", safeInput.get("Set-Cookie").getAsString());
+        assertEquals(privateUrl, safeInput.get("endpoint").getAsString());
+        assertEquals(ordinaryUrl, safeInput.get("publicEndpoint").getAsString());
+        assertEquals(new JsonPrimitive(2), safeInput.get("count"));
+        assertEquals(safe, ModelContextCodec.safe(safe),
+                "the context boundary cannot alter quote, semicolon, URL, or following statement syntax");
+        assertEquals(actual, codec.decode(codec.encode(actual)));
+        String encoded = codec.encode(safe);
+        for (String value : List.of(basic, "a=private", "b=hidden", "c=private", "RefreshPrivateValue",
+                "NestedRefreshPrivateValue", "user:pass", privateUrl, ordinaryUrl)) {
+            assertTrue(encoded.contains(value), value);
         }
-        assertTrue(encoded.contains("example.invalid/guide/path?view=guide#entry"));
         assertEquals(source, assertInstanceOf(ModelContent.ToolUse.class,
                 actual.get(1).content().getFirst()).input().getAsJsonObject("nested")
                 .get("source").getAsString());
     }
 
     @Test
-    void scrubsCredentialHeadersAfterNativeExceptionPrefixInNestedResults() {
+    void preservesCredentialLikeHeadersAfterNativeExceptionPrefixInNestedResults() {
+        String errorText = "IllegalArgumentException: Cookie: first=private; second=hidden\n"
+                + "at guide.js:8: filter is undefined";
+        String authorizationError = "TypeError: Authorization: Digest secret=private, nonce=hidden";
         JsonObject nested = new JsonObject();
-        nested.addProperty("errorText", "IllegalArgumentException: Cookie: first=private; second=hidden\n"
-                + "at guide.js:8: filter is undefined");
-        nested.addProperty("authorizationError", "TypeError: Authorization: Digest secret=private, nonce=hidden");
+        nested.addProperty("errorText", errorText);
+        nested.addProperty("authorizationError", authorizationError);
         JsonObject result = new JsonObject();
         result.add("nested", nested);
         JsonObject input = new JsonObject();
@@ -403,19 +400,24 @@ final class ModelContextCodecTest {
                         "prefixed_error", "openallay__run_javascript", input))),
                 new ModelMessage(ModelRole.USER, List.of(new ModelContent.ToolResult(
                         "prefixed_error", result, true))));
-        List<ModelMessage> safe = ModelContextCodec.redacted(actual, Set.of());
+
+        List<ModelMessage> safe = ModelContextCodec.safe(actual);
+
+        assertEquals(actual, safe);
         ModelContent.ToolResult error = assertInstanceOf(ModelContent.ToolResult.class,
                 safe.getLast().content().getFirst());
         assertTrue(error.error());
         assertEquals("prefixed_error", error.toolUseId());
         JsonObject details = error.value().getAsJsonObject().getAsJsonObject("nested");
-        assertEquals("IllegalArgumentException: Cookie: [REDACTED]\n"
-                + "at guide.js:8: filter is undefined", details.get("errorText").getAsString());
-        assertEquals("TypeError: Authorization: [REDACTED]", details.get("authorizationError").getAsString());
-        assertEquals(safe, ModelContextCodec.redacted(safe, Set.of()));
-        assertEquals(safe, codec.decode(codec.encode(actual)));
+        assertEquals(nested, details);
+        assertEquals(errorText, details.get("errorText").getAsString());
+        assertEquals(authorizationError, details.get("authorizationError").getAsString());
+        assertEquals(safe, ModelContextCodec.safe(safe));
+        assertEquals(actual, codec.decode(codec.encode(actual)));
         assertEquals(input, assertInstanceOf(ModelContent.ToolUse.class,
                 safe.getFirst().content().getFirst()).input());
+        assertEquals(result, assertInstanceOf(ModelContent.ToolResult.class,
+                actual.getLast().content().getFirst()).value());
     }
 
     private static String envelope(String message) {

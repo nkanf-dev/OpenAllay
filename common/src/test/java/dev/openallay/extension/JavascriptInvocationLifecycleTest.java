@@ -134,8 +134,8 @@ public final class JavascriptInvocationLifecycleTest {
         var failure = assertInstanceOf(ToolResult.Failure.class, result.get(5, TimeUnit.SECONDS));
         assertEquals("javascript_failure", failure.code());
         assertTrue(failure.message().startsWith("AssertionError:"));
-        assertTrue(failure.message().contains("Native capture failed: token=[REDACTED]"));
-        assertFalse(failure.message().contains("secret-token"));
+        assertTrue(failure.message().contains("Native capture failed: token=secret-token"));
+        assertFalse(failure.message().contains("[REDACTED]"));
         assertFalse(failure.message().contains("JavascriptInvocationLifecycleTest.java"));
         assertEquals(0, fixture.registry.activeJavascriptInvocations());
     }

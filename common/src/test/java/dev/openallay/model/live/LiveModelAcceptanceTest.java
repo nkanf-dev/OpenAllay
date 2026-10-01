@@ -1,5 +1,6 @@
 package dev.openallay.model.live;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -38,7 +39,7 @@ import org.junit.jupiter.api.Test;
 
 final class LiveModelAcceptanceTest {
     @Test
-    void realProviderStreamsCallsToolContinuesAndKeepsSecretOutOfTrace() throws Exception {
+    void realProviderStreamsCallsToolContinuesAndKeepsProviderConfigOutOfTrace() throws Exception {
         Map<String, String> env = System.getenv();
         Assumptions.assumeTrue(Boolean.parseBoolean(env.get("OPENALLAY_LIVE_MODEL")));
         String baseUrl = required(env, "OPENALLAY_MODEL_BASE_URL");
@@ -80,9 +81,20 @@ final class LiveModelAcceptanceTest {
         assertTrue(result.successful(), result.errorMessage());
         assertTrue(invocations.get() >= 1, "provider did not call the required tool");
         assertTrue(result.text().contains("玄铁事实-7429"), result.text());
-        String trace = new LiveTraceJson().encode(result.trace(), Set.of(apiKey));
+        String trace = new LiveTraceJson().encode(result.trace());
         assertTrue(trace.contains("玄铁事实-7429"));
-        assertFalse(trace.contains(apiKey));
+        JsonObject toolResult = result.trace().events().stream()
+                .filter(event -> event.type().equals("tool_result"))
+                .map(event -> event.payload().getAsJsonObject().getAsJsonObject("result"))
+                .findFirst().orElseThrow();
+        assertEquals("success", toolResult.get("status").getAsString());
+        assertEquals("player-token", toolResult.get("token").getAsString());
+        assertEquals("player-password", toolResult.get("password").getAsString());
+        assertEquals("player-api-value", toolResult.get("APIkey").getAsString());
+        assertTrue(trace.contains("player-token"));
+        assertTrue(trace.contains("player-password"));
+        assertTrue(trace.contains("player-api-value"));
+        assertFalse(trace.contains(apiKey), "Provider configuration must not enter the conversation trace");
     }
 
     private static String required(Map<String, String> env, String name) {
@@ -116,6 +128,9 @@ final class LiveModelAcceptanceTest {
             JsonObject value = new JsonObject();
             value.addProperty("status", "success");
             value.addProperty("fact", "玄铁事实-7429");
+            value.addProperty("token", "player-token");
+            value.addProperty("password", "player-password");
+            value.addProperty("APIkey", "player-api-value");
             return CompletableFuture.completedFuture(
                     new AgentToolResult("openallay:test_fact", value, false));
         }

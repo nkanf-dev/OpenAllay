@@ -74,10 +74,9 @@ public record ServerGuideRuntime(
         ModelRequestScheduler scheduled = new ModelRequestScheduler(raw);
         LocalAgentToolExecutor tools = new LocalAgentToolExecutor(runtime.tools(), gson);
         AgentSessionStore sessions = new AgentSessionStore();
-        var redactor = new dev.openallay.agent.KnownSecretRedactor(java.util.Set.of(config.apiKey().reveal()));
         ContextCompactor compactor = new ContextCompactor(
                 scheduled, gson, new Utf8ContextTokenEstimator(),
-                config.contextBudget(), config.model(), Clock.systemUTC(), redactor);
+                config.contextBudget(), config.model(), Clock.systemUTC());
         PlayerClientToolRouter clientTools = new PlayerClientToolRouter(
                 runtime.tools(), gson, clientToolTransport, config.requestTimeout());
         String prompt = systemPrompt(runtime.skills(), false);
@@ -108,7 +107,7 @@ public record ServerGuideRuntime(
                             ((ToolResult.Success<dev.openallay.agent.tool.AgentToolExecutor>) opened)
                                     .value();
                     GameGuideAgent agent = new GameGuideAgent(
-                            scheduled, requestTools, sessions, gson, compactor, (request, tokens) -> {}, redactor);
+                            scheduled, requestTools, sessions, gson, compactor, (request, tokens) -> {});
                     return new ToolResult.Success<>(new ServerAgentService.RequestRuntime(
                             agent,
                             requestTools,
@@ -119,12 +118,7 @@ public record ServerGuideRuntime(
                 },
                 sessions,
                 contexts,
-                (actor, payload) -> {
-                    var eventCodec = new dev.openallay.bridge.protocol.ServerAgentEventCodec(gson);
-                    var event = eventCodec.decode(payload, payload.requestId());
-                    event = redactor.event(event);
-                    events.send(actor, eventCodec.encode(payload.requestId(), event));
-                },
+                events,
                 gson,
                 prompt,
                 scheduled::awaitReady);

@@ -76,8 +76,7 @@ public final class NeoForgeClientBridge {
     public void configureClientTools(
             Supplier<ToolRuntimeCatalog> localToolCatalog,
             ClientToolExecutionEndpoint.ContextProvider contexts,
-            Gson gson,
-            java.util.function.UnaryOperator<String> skillTextTransform) {
+            Gson gson) {
         this.localToolCatalog = java.util.Objects.requireNonNull(
                 localToolCatalog, "localToolCatalog");
         this.clientTools = new ClientToolExecutionEndpoint(
@@ -85,8 +84,7 @@ public final class NeoForgeClientBridge {
                 chunk -> net.minecraft.client.Minecraft.getInstance().execute(
                         () -> send("client_tool_result", chunk)),
                 gson,
-                dev.openallay.bridge.protocol.BridgeProtocol.TRANSPORT_CHUNK_BYTES,
-                skillTextTransform);
+                dev.openallay.bridge.protocol.BridgeProtocol.TRANSPORT_CHUNK_BYTES);
     }
     public void onDisconnect(Runnable listener) { disconnectListeners.add(listener); }
     public void onCapabilitiesChanged(Runnable listener) { capabilityListeners.add(listener); }

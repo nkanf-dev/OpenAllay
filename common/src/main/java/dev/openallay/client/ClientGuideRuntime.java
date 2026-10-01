@@ -57,7 +57,7 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
             AgentSessionStore sessions,
             Gson gson,
             ClientEventDispatcher dispatcher) {
-        this(runtime, model, sessions, gson, dispatcher, null, new LiveTraceStore(null, Set.of()), null, null);
+        this(runtime, model, sessions, gson, dispatcher, null, new LiveTraceStore(null), null, null);
     }
 
     public ClientGuideRuntime(
@@ -67,7 +67,7 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
             Gson gson,
             ClientEventDispatcher dispatcher,
             AgentToolExecutor extension) {
-        this(runtime, model, sessions, gson, dispatcher, extension, new LiveTraceStore(null, Set.of()), null, null);
+        this(runtime, model, sessions, gson, dispatcher, extension, new LiveTraceStore(null), null, null);
     }
 
     ClientGuideRuntime(
@@ -103,7 +103,7 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
             String modelIdentifier,
             ClientCapabilitySnapshot capabilities) {
         this(
-                endpoint(model, gson, contextBudget, modelIdentifier, traces.redactor()),
+                endpoint(model, gson, contextBudget, modelIdentifier),
                 sessions,
                 gson,
                 dispatcher,
@@ -146,7 +146,7 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
                                     new dev.openallay.guide.GuideContextEstimate(request.requestId(), tokens));
                         }
                     }
-                }, traces.redactor());
+                });
     }
 
     ClientGuideRuntime withCapabilities(ClientCapabilitySnapshot replacement) {
@@ -208,15 +208,15 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
 
     private String budgetSystemPrompt(String prompt) {
         // Match the Agent's initial actual system delivery, including inline Skill range facts.
-        AgentToolExecutor captured = toolExecutor.safeSkillView(traces.redactor()::text);
-        String safe = traces.redactor().text(captured.skillSystemPrompt(prompt));
+        AgentToolExecutor captured = toolExecutor;
+        String system = captured.skillSystemPrompt(prompt);
         var retained = new dev.openallay.skill.RetainedSkillContext();
         String correlation = "context-budget-" + UUID.randomUUID();
-        captured.prepareSystem(safe, retained);
+        captured.prepareSystem(system, retained);
         captured.prepareContext(correlation, List.of(), retained);
         try {
             String facts = captured.skillManifest(correlation);
-            return traces.redactor().text(facts.isBlank() ? safe : safe + "\n" + facts);
+            return facts.isBlank() ? system : system + "\n" + facts;
         } finally {
             captured.closeSkillContext(correlation);
         }
@@ -269,10 +269,8 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
                         requestCapabilities.commandCapabilityAvailable(context.correlationId())),
                 context,
                 true);
-        return requestRuntime.agent.ask(request, event -> {
-                    AgentEvent exposed = traces.safeEvent(event);
-                    dispatcher.execute(() -> events.accept(exposed));
-                })
+        return requestRuntime.agent.ask(request, event ->
+                    dispatcher.execute(() -> events.accept(event)))
                 .thenApply(result -> {
                     if (result.trace() != null) {
                         traces.record(result.trace());
@@ -363,8 +361,7 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
             ModelClient model,
             Gson gson,
             ContextBudget contextBudget,
-            String modelIdentifier,
-            dev.openallay.agent.KnownSecretRedactor redactor) {
+            String modelIdentifier) {
         ModelRequestScheduler scheduler = new ModelRequestScheduler(model);
         ContextCompactor compactor = contextBudget == null ? null : new ContextCompactor(
                 scheduler,
@@ -372,7 +369,7 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
                 new Utf8ContextTokenEstimator(),
                 contextBudget,
                 modelIdentifier,
-                Clock.systemUTC(), redactor);
+                Clock.systemUTC());
         return new EndpointRuntime(scheduler, compactor, contextBudget, modelIdentifier,
                 new ConcurrentHashMap<>());
     }

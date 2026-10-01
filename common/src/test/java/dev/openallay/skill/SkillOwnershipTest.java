@@ -420,56 +420,63 @@ final class SkillOwnershipTest {
     }
 
     @Test
-    void redactedCatalogIdentitiesMatchTheActualSafeSystemAndReferenceDelivery() {
+    void originalCatalogIdentitiesMatchTheActualSystemAndReferenceDelivery() {
         String name = SkillCatalogSnapshot.UNRESTRICTED_JAVASCRIPT;
-        String marker = "synthetic-hidden-marker";
-        String originalBody = "Use evidence. Synthetic marker: " + marker + ".";
-        SkillCatalogSnapshot catalog = repository(name, originalBody,
-                Map.of("references/a.md", "Reference marker: " + marker + "."))
+        String playerFields = "token=quest-token password=castle-password";
+        String body = "Use evidence. Player notes: " + playerFields + ".";
+        String referenceBody = "Reference notes: " + playerFields + ".";
+        SkillCatalogSnapshot catalog = repository(name, body,
+                Map.of("references/a.md", referenceBody))
                 .snapshot(Set.of()).forRequest(true);
-        LoadSkillTool original = new LoadSkillTool(catalog).withOwner("client");
-        LoadSkillTool safe = original.withTextTransform(text -> text.replace(marker, "[redacted]"));
-        SkillInstructionContext instructions = new SkillInstructionContext(safe.catalogManifest());
+        LoadSkillTool tool = new LoadSkillTool(catalog).withOwner("client");
+        SkillInstructionContext instructions = new SkillInstructionContext(tool.catalogManifest());
         RetainedSkillContext retained = new RetainedSkillContext();
         LoadSkillTool.Input input = new LoadSkillTool.Input(name);
-        String safeBody = originalBody.replace(marker, "[redacted]");
-        instructions.prepareSystem("## UNRESTRICTED JAVASCRIPT GUIDANCE\n" + safeBody, retained);
-        safe.prepareContext("safe-system", List.of(), retained);
+        instructions.prepareSystem("## UNRESTRICTED JAVASCRIPT GUIDANCE\n" + body, retained);
+        tool.prepareContext("original-system", List.of(), retained);
 
         assertEquals(LoadSkillTool.LoadState.ALREADY_LOADED, instructions.reuse(input, retained).state());
-        LoadSkillTool.Output entry = success(safe.invokeFresh(unrestrictedRequest("safe-system"), input));
-        assertEquals(safeBody, entry.content());
-        assertFalse(entry.modelText().contains(marker));
+        LoadSkillTool.Output entry = success(tool.invokeFresh(unrestrictedRequest("original-system"), input));
+        assertEquals(body, entry.content());
+        assertTrue(entry.modelText().contains(playerFields));
         assertTrue(instructions.validate(input, entry));
-        assertNotEquals(LoadSkillTool.fingerprint(originalBody), entry.fingerprint());
-        assertEquals(originalBody, catalog.find(name).orElseThrow().instructions());
+        assertEquals(LoadSkillTool.fingerprint(body), entry.fingerprint());
+        assertEquals(body, catalog.find(name).orElseThrow().instructions());
+        assertEquals(tool.catalogManifest().documents().stream()
+                .filter(document -> document.document().equals("SKILL.md")).findFirst().orElseThrow().source(),
+                entry.source());
 
         LoadSkillTool.Input reference = new LoadSkillTool.Input(name, "references/a.md");
-        LoadSkillTool.Output safeReference = success(safe.invokeFresh(
-                unrestrictedRequest("safe-system"), reference));
-        assertEquals("Reference marker: [redacted].", safeReference.content());
-        assertTrue(instructions.validate(reference, safeReference));
-        assertFalse(safeReference.modelText().contains(marker));
-        assertFalse(safe.catalogManifest().toString().contains(marker));
-        assertTrue(original.catalogManifest().documents().stream().anyMatch(document ->
+        LoadSkillTool.Output deliveredReference = success(tool.invokeFresh(
+                unrestrictedRequest("original-system"), reference));
+        assertEquals(referenceBody, deliveredReference.content());
+        assertTrue(instructions.validate(reference, deliveredReference));
+        assertTrue(deliveredReference.modelText().contains(playerFields));
+        assertFalse(tool.catalogManifest().toString().contains(playerFields));
+        assertTrue(tool.catalogManifest().documents().stream().anyMatch(document ->
                 document.document().equals("SKILL.md")
-                        && document.fingerprint().equals(LoadSkillTool.fingerprint(originalBody))));
+                        && document.fingerprint().equals(LoadSkillTool.fingerprint(body))));
+        assertEquals(LoadSkillTool.fingerprint(referenceBody), deliveredReference.fingerprint());
+        assertEquals(entry.source(), deliveredReference.source());
     }
 
     @Test
-    void safeDeliveryScrubsMetadataUsesAnOpaqueSourceAndOmitsChangedCallableIdentifiers() {
-        String sentinel = "synthetic-hidden-marker";
-        SkillSource richSource = new SkillSource("synthetic-pack-" + sentinel, "guide/SKILL.md", Map.of(
+    void originalDeliveryPreservesMetadataAndCallableIdentifiersAndUsesAnOpaqueSource() {
+        String sentinel = "token-password";
+        SkillSource richSource = new SkillSource("player-pack-" + sentinel, "guide/SKILL.md", Map.of(
                 "guide/SKILL.md", """
                         ---
                         name: guide
-                        description: Guide metadata synthetic-hidden-marker
-                        license: License synthetic-hidden-marker
-                        compatibility: Compatibility synthetic-hidden-marker
+                        description: Guide metadata token-password
+                        license: License token-password
+                        compatibility: Compatibility token-password
+                        metadata:
+                          token: quest-token
+                          password: castle-password
                         ---
-                        Instructions synthetic-hidden-marker.
+                        Instructions token-password.
                         """,
-                "guide/references/a.md", "Reference synthetic-hidden-marker."));
+                "guide/references/a.md", "Reference token-password."));
         SkillRepository repository = new SkillRepository(new SkillParser(), Set.of());
         assertTrue(repository.reload(List.of(richSource,
                 source("pack", SkillSource.Origin.EXTERNAL, "path-guide", "Path guide.",
@@ -477,9 +484,8 @@ final class SkillOwnershipTest {
                 source("pack", SkillSource.Origin.EXTERNAL, sentinel, "Named guide.", Map.of()),
                 source("pack", SkillSource.Origin.EXTERNAL, "other", "Unaffected guidance.", Map.of())), Set.of()));
         SkillCatalogSnapshot catalog = repository.snapshot(Set.of());
-        LoadSkillTool original = new LoadSkillTool(catalog).withOwner("client");
-        LoadSkillTool safe = original.withTextTransform(text -> text.replace(sentinel, "[redacted]"));
-        SkillCatalogManifest manifest = safe.catalogManifest();
+        LoadSkillTool tool = new LoadSkillTool(catalog).withOwner("client");
+        SkillCatalogManifest manifest = tool.catalogManifest();
         SkillCatalogManifest.Document entry = manifest.documents().stream()
                 .filter(document -> document.name().equals("guide") && document.document().equals("SKILL.md"))
                 .findFirst().orElseThrow();
@@ -496,38 +502,39 @@ final class SkillOwnershipTest {
         assertTrue(entry.source().matches("[a-f0-9]{64}"));
         assertNotEquals(encodedOriginal, entry.source());
         assertNotEquals(LoadSkillTool.fingerprint(originalIdentity), entry.source());
-        assertEquals("Guide metadata [redacted]", entry.description());
-        assertFalse(manifest.toString().contains(sentinel));
+        assertEquals("Guide metadata " + sentinel, entry.description());
+        assertTrue(manifest.toString().contains(sentinel));
         assertFalse(manifest.toString().contains(originalMetadata.provenance()));
-        assertFalse(manifest.metadataPrompt().contains(sentinel));
-        assertEquals(Set.of("guide", "other"), manifest.documents().stream()
+        assertTrue(manifest.metadataPrompt().contains(sentinel));
+        assertEquals(Set.of("guide", "other", "path-guide", sentinel), manifest.documents().stream()
                 .map(SkillCatalogManifest.Document::name).collect(java.util.stream.Collectors.toSet()));
         assertFalse(java.util.Arrays.stream(SkillCatalogManifest.Document.class.getRecordComponents())
                 .anyMatch(component -> component.getName().equals("provenance")));
-
-        // An identity transform lets the public API expose its inputs without altering the safe view.
-        List<String> safeMetadataInputs = new ArrayList<>();
-        safe.withTextTransform(text -> {
-            safeMetadataInputs.add(text);
-            return text;
-        });
-        assertTrue(safeMetadataInputs.contains("License [redacted]"));
-        assertTrue(safeMetadataInputs.contains("Compatibility [redacted]"));
-        assertFalse(safeMetadataInputs.stream().anyMatch(text -> text.contains(sentinel)));
+        assertEquals("License " + sentinel, originalMetadata.license().orElseThrow());
+        assertEquals("Compatibility " + sentinel, originalMetadata.compatibility().orElseThrow());
+        assertEquals(Map.of("token", "quest-token", "password", "castle-password"), originalMetadata.attributes());
 
         LoadSkillTool.Input input = new LoadSkillTool.Input("guide");
-        LoadSkillTool.Output delivered = success(safe.invokeFresh(request("safe-metadata"), input));
-        assertEquals("Instructions [redacted].", delivered.content());
-        assertEquals(originalMetadata.provenance().replace(sentinel, "[redacted]"), delivered.provenance());
+        LoadSkillTool.Output delivered = success(tool.invokeFresh(request("original-metadata"), input));
+        assertEquals("Instructions " + sentinel + ".", delivered.content());
+        assertEquals(originalMetadata.provenance(), delivered.provenance());
         assertEquals(entry.source(), delivered.source());
+        assertEquals(entry.fingerprint(), delivered.fingerprint());
+        assertEquals(LoadSkillTool.fingerprint(delivered.content()), delivered.fingerprint());
         assertTrue(new SkillInstructionContext(manifest).validate(input, delivered));
-        assertFalse(delivered.modelText().contains(sentinel));
+        assertTrue(delivered.modelText().contains(sentinel));
         assertEquals("Guide metadata " + sentinel, originalMetadata.description());
-        for (String omitted : List.of("path-guide", sentinel)) {
-            ToolResult.Failure<?> failure = assertInstanceOf(ToolResult.Failure.class,
-                    safe.invokeFresh(request("omitted"), new LoadSkillTool.Input(omitted)));
-            assertEquals("skill_not_found", failure.code());
+        for (String preserved : List.of("path-guide", sentinel)) {
+            LoadSkillTool.Input preservedInput = new LoadSkillTool.Input(preserved);
+            LoadSkillTool.Output output = success(tool.invokeFresh(request("preserved"), preservedInput));
+            assertEquals(preserved, output.name());
+            assertTrue(new SkillInstructionContext(manifest).validate(preservedInput, output));
         }
+        LoadSkillTool.Input reference = new LoadSkillTool.Input("path-guide", "references/" + sentinel + ".md");
+        LoadSkillTool.Output referenceOutput = success(tool.invokeFresh(request("preserved-reference"), reference));
+        assertEquals(reference.reference(), referenceOutput.document());
+        assertEquals("Reference bytes.", referenceOutput.content());
+        assertTrue(new SkillInstructionContext(manifest).validate(reference, referenceOutput));
     }
 
     @Test

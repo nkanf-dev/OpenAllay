@@ -64,28 +64,12 @@ final class GuideClientE2EControllerTest {
     }
 
     @Test
-    void redactsOnlyExplicitlyReferencedProfileEnvironmentCredentials() {
-        var definition = new dev.openallay.model.config.ModelProfileDefinition(
-                "primary", "Primary", true,
-                dev.openallay.model.config.ModelProtocol.OPENAI_CHAT,
-                java.net.URI.create("https://provider.example/v1/"), "model",
-                "env:ACCEPTANCE_PROFILE_KEY", 32768, 2048,
-                java.time.Duration.ofSeconds(10), java.time.Duration.ofSeconds(60), null);
-        var reads = new java.util.ArrayList<String>();
-        var values = GuideClientE2EController.referencedEnvironmentSecrets(
-                Set.of("original-secret"), java.util.List.of(definition), name -> {
-                    reads.add(name); return "configured-secret";
-                });
-        assertEquals(java.util.List.of("ACCEPTANCE_PROFILE_KEY"), reads);
-        assertEquals(Set.of("original-secret", "configured-secret"), values);
-    }
-
-    @Test
     void writesCanonicalReportAndRequestsCleanShutdown() throws Exception {
         Path report = temporary.resolve("nested/report.json");
         ArrayDeque<Runnable> clientTasks = new ArrayDeque<>();
+        String playerValue = "player-plain-value-123456";
         GuideClientE2EConfig config = new GuideClientE2EConfig(
-                "fixture", "e2e", "question", GuideModelMode.CLIENT, report, true);
+                playerValue, "e2e", "question", GuideModelMode.CLIENT, report, true);
         GuideServiceManager services = new GuideServiceManager(
                 new CompletingLocal(),
                 new NoRemote(),
@@ -97,7 +81,7 @@ final class GuideClientE2EControllerTest {
         AtomicBoolean shutdown = new AtomicBoolean();
         GuideClientE2EController controller = new GuideClientE2EController(
                 config, "fabric", "26.2", "test", services, new Gson(),
-                () -> shutdown.set(true), Set.of("do-not-leak"));
+                () -> shutdown.set(true));
 
         assertFalse(controller.finished());
         controller.tick(UUID.fromString("30ab22ed-23fb-46f2-82ca-d4a656698eec"));
@@ -107,8 +91,8 @@ final class GuideClientE2EControllerTest {
         assertTrue(controller.finished());
         assertTrue(shutdown.get());
         String encoded = Files.readString(report);
-        assertFalse(encoded.contains("do-not-leak"));
         var json = JsonParser.parseString(encoded).getAsJsonObject();
+        assertEquals(playerValue, json.get("scenario").getAsString());
         assertEquals("fabric", json.get("loader").getAsString());
         assertEquals("COMPLETED", json.get("outcome").getAsString());
         assertEquals("e2e", json.get("sessionId").getAsString());
@@ -135,7 +119,7 @@ final class GuideClientE2EControllerTest {
         AtomicBoolean shutdown = new AtomicBoolean();
         GuideClientE2EController controller = new GuideClientE2EController(
                 config, "fabric", "26.2", "test", services, new Gson(),
-                () -> shutdown.set(true), Set.of());
+                () -> shutdown.set(true));
         UUID actor = UUID.fromString("30ab22ed-23fb-46f2-82ca-d4a656698eec");
 
         controller.tick(actor);
@@ -166,7 +150,7 @@ final class GuideClientE2EControllerTest {
         GuideServiceManager services = services(local, clientTasks);
         GuideClientE2EController controller = new GuideClientE2EController(
                 config(report), "fabric", "26.2", "test", services, new Gson(),
-                () -> {}, Set.of(), readiness::get);
+                () -> {}, readiness::get);
         UUID actor = UUID.fromString("30ab22ed-23fb-46f2-82ca-d4a656698eec");
 
         controller.tick(actor);
@@ -192,8 +176,8 @@ final class GuideClientE2EControllerTest {
         CountingLocal local = new CountingLocal();
         GuideClientE2EController controller = new GuideClientE2EController(
                 config(report), "fabric", "26.2", "test", services(local, clientTasks), new Gson(),
-                () -> {}, Set.of(), () -> RecipeProviderReadiness.failed(
-                        "recipe_provider_failed", "JEI capture failed"));
+                () -> {}, () -> RecipeProviderReadiness.failed(
+                        "recipe_provider_failed", "JEI capture failed for player-plain-value"));
 
         controller.tick(UUID.fromString("30ab22ed-23fb-46f2-82ca-d4a656698eec"));
         while (!clientTasks.isEmpty()) clientTasks.removeFirst().run();
@@ -203,6 +187,7 @@ final class GuideClientE2EControllerTest {
         var json = JsonParser.parseString(Files.readString(report)).getAsJsonObject();
         assertEquals("HARNESS_FAILED", json.get("outcome").getAsString());
         assertEquals("recipe_provider_failed", json.get("failureCode").getAsString());
+        assertEquals("JEI capture failed for player-plain-value", json.get("failureMessage").getAsString());
     }
 
     @Test
@@ -214,7 +199,7 @@ final class GuideClientE2EControllerTest {
                 "fixture", "e2e", "question", GuideModelMode.CLIENT, report, true, 3);
         GuideClientE2EController controller = new GuideClientE2EController(
                 config, "fabric", "26.2", "test", services(local, clientTasks), new Gson(),
-                () -> {}, Set.of());
+                () -> {});
 
         controller.tick(UUID.fromString("30ab22ed-23fb-46f2-82ca-d4a656698eec"));
         while (!clientTasks.isEmpty()) clientTasks.removeFirst().run();
@@ -240,7 +225,7 @@ final class GuideClientE2EControllerTest {
             AtomicBoolean shutdown = new AtomicBoolean();
             GuideClientE2EController controller = new GuideClientE2EController(
                     config(report), "fabric", "26.2", "test", services, new Gson(),
-                    () -> shutdown.set(true), Set.of());
+                    () -> shutdown.set(true));
             UUID actor = UUID.fromString("30ab22ed-23fb-46f2-82ca-d4a656698eec");
             controller.tick(actor);
             while (!tasks.isEmpty()) tasks.removeFirst().run();

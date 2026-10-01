@@ -26,7 +26,7 @@ final class GuideSessionExporterTest {
     private static final Instant NOW = Instant.parse("2026-07-19T12:34:56.789Z");
 
     @Test
-    void writesChronologicalCredentialRedactedTextUnderTheFixedManagedRoot(@TempDir Path game)
+    void writesChronologicalPlayerTextUnchangedUnderTheFixedManagedRoot(@TempDir Path game)
             throws Exception {
         GuideSessionExporter exporter = new GuideSessionExporter(game);
         GuideSessionExportSnapshot snapshot = snapshot(
@@ -42,9 +42,9 @@ final class GuideSessionExporterTest {
         assertEquals(1, exported.requestCount());
         assertTrue(text.indexOf("User") < text.indexOf("Assistant"));
         assertTrue(text.indexOf("Assistant") < text.indexOf("Tool · get_recipe"));
-        assertFalse(text.contains("abcdefghijklmnopqrstuvwxyz"));
-        assertFalse(text.contains("opaque-provider-value"));
-        assertFalse(text.contains("highly-sensitive-token"));
+        assertTrue(text.contains("API key: sk-abcdefghijklmnopqrstuvwxyz"));
+        assertTrue(text.contains("\"apiKey\":\"opaque-provider-value\""));
+        assertTrue(text.contains("authorization: Bearer highly-sensitive-token"));
         assertFalse(text.contains("normalizedSecret"));
         assertEquals(1, Files.list(game.resolve("openallay/exports")).count());
     }
@@ -126,9 +126,9 @@ final class GuideSessionExporterTest {
         assertTrue(text.contains("TypeError at script line 1"));
         assertTrue(text.contains("provider_unavailable"));
         assertTrue(text.contains("provider did not respond"));
-        assertFalse(text.contains("opaque-secret-in-args"));
-        assertFalse(text.contains("opaque-secret-in-error"));
-        assertTrue(text.contains("[REDACTED]"));
+        assertTrue(text.contains("\"apiKey\":\"opaque-secret-in-args\""));
+        assertTrue(text.contains("token=opaque-secret-in-error"));
+        assertFalse(text.contains("[REDACTED]"));
         assertTrue(text.contains("Workspace handles do not survive"));
     }
 

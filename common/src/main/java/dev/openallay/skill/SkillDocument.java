@@ -48,10 +48,6 @@ public final class SkillDocument {
         return new Text(contents, LoadSkillTool.fingerprint(contents), chunks);
     }
 
-    SkillDocument project(SkillMetadata metadata, String instructions, Map<String, String> references) {
-        return new SkillDocument(metadata, instructions, references, sourceFingerprint);
-    }
-
     String sourceFingerprint() { return sourceFingerprint; }
     public SkillMetadata metadata() { return metadata; }
     public String instructions() { return instructions; }

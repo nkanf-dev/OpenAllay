@@ -239,13 +239,27 @@ final class RemoteSkillContextBridgeTest {
     }
 
     @Test
-    void serverSafeViewNeverRewritesTheFrozenClientManifestOrClientText() {
-        Bridge bridge = new Bridge(repository("client-pack", "Client instructions.", Map.of()));
+    void serverPreservesTheFrozenClientManifestAndOriginalPlayerFields() {
+        String body = "Client notes: token=quest-token password=castle-password.";
+        String provenance = "client-pack token=pack-token password=pack-password";
+        SkillRepository client = repository(provenance, body, Map.of());
+        SkillCatalogManifest expected = new LoadSkillTool(client.snapshot(Set.of()), "client").catalogManifest();
+        Bridge bridge = new Bridge(client);
         try (Request request = bridge.open()) {
-            assertEquals(request.tools, request.tools.safeSkillView(text -> text.replace("Client", "Rewritten")));
+            assertEquals(expected, request.manifest);
             AgentToolResult actual = request.load(new LoadSkillTool.Input("guide"));
-            assertEquals("Client instructions.", output(actual).content());
+            assertEquals(body, output(actual).content());
+            assertEquals(expected.documents().getFirst().source(), output(actual).source());
             assertEquals(request.manifest.documents().getFirst().fingerprint(), output(actual).fingerprint());
+            assertEquals(provenance + ":guide/SKILL.md", output(actual).provenance());
+            RetainedSkillContext retained = new RetainedSkillContext();
+            request.prepare(history("original-player-fields", new LoadSkillTool.Input("guide"), actual), retained);
+            AgentToolResult receipt = request.load(new LoadSkillTool.Input("guide"));
+            assertEquals(LoadSkillTool.LoadState.ALREADY_LOADED, output(receipt).state());
+            assertEquals("", output(receipt).content());
+            assertEquals(output(actual).source(), output(receipt).source());
+            assertEquals(output(actual).fingerprint(), output(receipt).fingerprint());
+            assertEquals(1, bridge.calls);
         }
     }
 

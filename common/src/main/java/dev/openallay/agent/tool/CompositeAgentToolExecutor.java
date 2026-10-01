@@ -121,12 +121,6 @@ public final class CompositeAgentToolExecutor implements AgentToolExecutor {
     }
 
     @Override
-    public AgentToolExecutor safeSkillView(java.util.function.UnaryOperator<String> transform) {
-        return new CompositeAgentToolExecutor(delegates.stream()
-                .map(delegate -> delegate.safeSkillView(transform)).toList());
-    }
-
-    @Override
     public void closeSkillContext(String correlationId) {
         delegates.forEach(delegate -> delegate.closeSkillContext(correlationId));
     }

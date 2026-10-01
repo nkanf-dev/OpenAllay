@@ -46,18 +46,10 @@ public final class ClientModelRuntimeRegistry implements GuideLocalEndpoint {
     private final AgentToolExecutor extension;
     private final Function<ResolvedModelProfile, ModelClient> modelFactory;
     private final AgentSessionStore sessions = new AgentSessionStore();
-    private final dev.openallay.agent.KnownSecretRedactor redactor = new dev.openallay.agent.KnownSecretRedactor();
-    private volatile dev.openallay.model.config.CredentialResolver credentials;
-    private Set<dev.openallay.model.config.CredentialReference> credentialReferences = Set.of();
     private final AtomicReference<State> state = new AtomicReference<>();
     private final AtomicReference<ClientCapabilitySnapshot> capabilities;
     private final Path traceDirectory;
     private final java.util.function.BooleanSupplier tracePersistenceEnabled;
-
-    /** Safe text projection shared with the player-client Skill bridge; credentials stay private. */
-    public java.util.function.UnaryOperator<String> safeSkillText() {
-        return redactor::text;
-    }
 
     ClientModelRuntimeRegistry(
             OpenAllayRuntime productRuntime,
@@ -134,27 +126,6 @@ public final class ClientModelRuntimeRegistry implements GuideLocalEndpoint {
                 traceDirectory, tracePersistenceEnabled);
     }
 
-    /** Adds only configured credential references, including disabled or unavailable local profiles. */
-    public synchronized void bindCredentials(dev.openallay.model.config.CredentialResolver credentials) {
-        this.credentials = Objects.requireNonNull(credentials, "credentials");
-        rememberReferencedCredentials();
-    }
-
-    private void rememberReferencedCredentials() {
-        var resolver = credentials;
-        if (resolver == null) return;
-        for (var reference : credentialReferences) {
-            try {
-                var resolved = resolver.resolve(reference);
-                if (resolved instanceof ToolResult.Success<dev.openallay.model.config.SecretValue> success) {
-                    redactor.remember(Set.of(success.value().reveal()));
-                }
-            } catch (RuntimeException ignored) {
-                // An unavailable credential must not turn profile publication into a partial update.
-            }
-        }
-    }
-
     public synchronized void replace(
             ModelProfilesConfigLoader.Load replacement,
             Function<ResolvedModelProfile, ModelClient> replacementFactory) {
@@ -186,7 +157,7 @@ public final class ClientModelRuntimeRegistry implements GuideLocalEndpoint {
         return capabilities.get();
     }
 
-    /** Returns one complete redacted local Agent trace without exposing model credentials. */
+    /** Returns one complete recorded local Agent trace. Model credentials are not trace inputs. */
     public java.util.Optional<String> encodedTrace(String profileId, UUID requestId) {
         Objects.requireNonNull(requestId, "requestId");
         ClientGuideRuntime runtime;
@@ -314,16 +285,6 @@ public final class ClientModelRuntimeRegistry implements GuideLocalEndpoint {
         Objects.requireNonNull(load, "load");
         List<GuideClientModelProfile> summaries = new ArrayList<>();
         Map<String, ClientGuideRuntime> runtimes = new LinkedHashMap<>();
-        Set<String> configuredSecrets = load.profiles().stream()
-                .filter(ResolvedModelProfile::available)
-                .map(profile -> profile.runtimeConfig().apiKey().reveal())
-                .filter(secret -> secret != null && !secret.isBlank())
-                .collect(java.util.stream.Collectors.toUnmodifiableSet());
-        redactor.remember(configuredSecrets);
-        credentialReferences = load.config().profiles().stream()
-                .map(profile -> dev.openallay.model.config.CredentialReference.parse(profile.credentialRef()))
-                .collect(java.util.stream.Collectors.toUnmodifiableSet());
-        rememberReferencedCredentials();
         for (ResolvedModelProfile profile : load.profiles()) {
             GuideFailure failure = profile.failure();
             summaries.add(new GuideClientModelProfile(
@@ -344,7 +305,6 @@ public final class ClientModelRuntimeRegistry implements GuideLocalEndpoint {
                         extension,
                         new LiveTraceStore(
                                 traceDirectory,
-                                redactor,
                                 tracePersistenceEnabled),
                         profile.runtimeConfig().contextBudget(),
                         profile.canonicalModelId(),

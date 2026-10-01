@@ -89,7 +89,6 @@ public final class ModelSettingsBackend implements ClientSettingsService.ModelAc
         this.credentialStore = Objects.requireNonNull(credentialStore, "credentialStore");
         this.credentials = CredentialResolver.composite(
                 credentialStore, environmentSnapshot());
-        registry.bindCredentials(this.credentials);
         this.store = new ModelProfileSettingsStore(this.profilesPath);
     }
 

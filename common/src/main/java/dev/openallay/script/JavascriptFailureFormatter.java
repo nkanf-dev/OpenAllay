@@ -9,7 +9,6 @@ import dev.latvian.mods.rhino.ScriptStackElement;
 import dev.latvian.mods.rhino.Scriptable;
 import dev.latvian.mods.rhino.ScriptableObject;
 import dev.latvian.mods.rhino.WrappedException;
-import dev.openallay.agent.trace.LiveTraceJson;
 import dev.openallay.model.ModelClientException;
 import java.util.Collections;
 import java.util.IdentityHashMap;
@@ -18,7 +17,7 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 
-/** Actual exception messages and registered script frames, with the shared credential redactor. */
+/** Actual exception messages and registered script frames without native stack dumps. */
 public final class JavascriptFailureFormatter {
     static final String USER_SOURCE = "openallay-agent.js";
     static final int USER_PREFIX_LINES = 2;
@@ -32,10 +31,6 @@ public final class JavascriptFailureFormatter {
     /** Formats a tool-boundary failure without exposing a native stack. */
     public static String format(Throwable failure) {
         return nativeSummary(unwrap(failure));
-    }
-
-    public static String sanitizeMessage(String message) {
-        return LiveTraceJson.redact(message == null ? "" : message, Set.of());
     }
 
     void registerModule(String id, String source) {
@@ -68,7 +63,7 @@ public final class JavascriptFailureFormatter {
                 frames.add("at " + label);
             }
         }
-        return sanitizeMessage(frames.isEmpty() ? summary : summary + "\n" + String.join("\n", frames));
+        return frames.isEmpty() ? summary : summary + "\n" + String.join("\n", frames);
     }
 
     private static Throwable unwrap(Throwable failure) {
@@ -141,7 +136,7 @@ public final class JavascriptFailureFormatter {
     }
 
     private static String summary(String type, String message) {
-        return sanitizeMessage(type + (message == null || message.isBlank() ? "" : ": " + message));
+        return type + (message == null || message.isBlank() ? "" : ": " + message);
     }
 
     private String location(String name, int line, boolean origin) {

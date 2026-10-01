@@ -30,9 +30,8 @@ public sealed interface AgentEvent
             List<dev.openallay.model.ModelMessage> messages,
             List<dev.openallay.model.ModelMessage> requestMessages) implements AgentEvent {
         public ContextUpdated {
-            messages = dev.openallay.agent.context.ModelContextCodec.redacted(messages, java.util.Set.of());
-            requestMessages = dev.openallay.agent.context.ModelContextCodec.redacted(
-                    requestMessages, java.util.Set.of());
+            messages = dev.openallay.agent.context.ModelContextCodec.safe(messages);
+            requestMessages = dev.openallay.agent.context.ModelContextCodec.safe(requestMessages);
         }
     }
 
@@ -41,14 +40,17 @@ public sealed interface AgentEvent
             List<dev.openallay.model.ModelMessage> messages,
             List<dev.openallay.model.ModelMessage> requestMessages) implements AgentEvent {
         public ContextFinalized {
-            messages = dev.openallay.agent.context.ModelContextCodec.redacted(messages, java.util.Set.of());
-            requestMessages = dev.openallay.agent.context.ModelContextCodec.redacted(requestMessages, java.util.Set.of());
+            messages = dev.openallay.agent.context.ModelContextCodec.safe(messages);
+            requestMessages = dev.openallay.agent.context.ModelContextCodec.safe(requestMessages);
         }
     }
 
     record ModelProgress(ModelEvent event) implements AgentEvent {
         public ModelProgress {
             Objects.requireNonNull(event, "event");
+            if (event instanceof ModelEvent.ReasoningDelta) {
+                event = new ModelEvent.ReasoningDelta("");
+            }
         }
     }
 

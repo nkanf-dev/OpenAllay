@@ -35,7 +35,7 @@ final class AgentSkillOwnershipTest {
             model.add(request -> call("ask-" + current + "-c"));
             model.add(request -> text("Done."));
             List<AgentEvent> events = new ArrayList<>();
-            assertTrue(agent(repository, sessions, model, new KnownSecretRedactor())
+            assertTrue(agent(repository, sessions, model)
                     .ask(request("main", "System"), events::add).join().successful());
             List<AgentEvent.ToolCompleted> completed = events.stream()
                     .filter(AgentEvent.ToolCompleted.class::isInstance).map(AgentEvent.ToolCompleted.class::cast).toList();
@@ -49,18 +49,20 @@ final class AgentSkillOwnershipTest {
     }
 
     @Test
-    void safeCatalogRedactedDocumentUsesOneActualSafeIdentityAcrossThreeAsksAndRestore() {
-        String secret = "synthetic-credential-sentinel-only";
-        SkillRepository repository = repository("apiKey=\"example\"; token=" + secret + "; use workflow.");
+    void playerNamedFieldsRemainInOneActualDocumentIdentityAcrossThreeAsksAndRestore() {
+        String playerValue = "synthetic-player-value-only";
+        String body = "APIkey=\"example\"; token=" + playerValue + "; password=player-password; use workflow.";
+        SkillRepository repository = repository(body);
+        String fingerprint = new LoadSkillTool(repository.snapshot(Set.of()))
+                .catalogManifest().documents().getFirst().fingerprint();
         AgentSessionStore sessions = new AgentSessionStore();
-        KnownSecretRedactor redactor = new KnownSecretRedactor(Set.of(secret));
         List<ModelMessage> restored = List.of();
         for (int ask = 0; ask < 3; ask++) {
             Scripted model = new Scripted();
-            model.add(request -> call("safe-" + model.requests.size() + "-" + UUID.randomUUID()));
+            model.add(request -> call("document-" + model.requests.size() + "-" + UUID.randomUUID()));
             model.add(request -> text("Done."));
             List<AgentEvent> events = new ArrayList<>();
-            assertTrue(agent(repository, sessions, model, redactor).ask(request("safe", "System"), events::add)
+            assertTrue(agent(repository, sessions, model).ask(request("fields", "System"), events::add)
                     .join().successful());
             var completed = events.stream().filter(AgentEvent.ToolCompleted.class::isInstance)
                     .map(AgentEvent.ToolCompleted.class::cast).findFirst().orElseThrow();
@@ -68,25 +70,32 @@ final class AgentSkillOwnershipTest {
             assertFalse(completed.failure());
             assertEquals(ask == 0 ? LoadSkillTool.LoadState.COMPLETE : LoadSkillTool.LoadState.ALREADY_LOADED,
                     actual.state());
-            assertEquals(ask == 0, !actual.content().isEmpty());
+            assertEquals(ask == 0 ? body : "", actual.content());
+            assertEquals(fingerprint, actual.fingerprint());
             String wire = GSON.toJson(model.requests);
-            assertFalse(wire.contains(secret));
-            assertFalse(wire.contains("example"));
+            assertTrue(wire.contains(playerValue));
+            assertTrue(wire.contains("example"));
+            assertTrue(wire.contains("player-password"));
+            assertEquals(1, occurrenceCount(model.requests.getLast().messages(), body));
             assertTrue(model.requests.getLast().systemPrompt().contains("guide / SKILL.md: full"));
             restored = model.requests.getLast().messages();
         }
         AgentSessionStore fresh = new AgentSessionStore();
-        fresh.hydrate(new dev.openallay.agent.session.AgentSessionKey(ACTOR, "safe"), restored);
+        fresh.hydrate(new dev.openallay.agent.session.AgentSessionKey(ACTOR, "fields"), restored);
         Scripted model = new Scripted();
-        model.add(request -> call("restored-safe"));
+        model.add(request -> call("restored-fields"));
         model.add(request -> text("Done."));
         List<AgentEvent> events = new ArrayList<>();
-        assertTrue(agent(repository, fresh, model, redactor).ask(request("safe", "System"), events::add)
+        assertTrue(agent(repository, fresh, model).ask(request("fields", "System"), events::add)
                 .join().successful());
         var completed = events.stream().filter(AgentEvent.ToolCompleted.class::isInstance)
                 .map(AgentEvent.ToolCompleted.class::cast).findFirst().orElseThrow();
         assertEquals(LoadSkillTool.LoadState.ALREADY_LOADED, output(completed).state());
         assertEquals("", output(completed).content());
+        assertEquals(fingerprint, output(completed).fingerprint());
+        assertEquals(1, occurrenceCount(model.requests.getLast().messages(), body));
+        assertTrue(GSON.toJson(model.requests).contains(playerValue));
+        assertTrue(GSON.toJson(model.requests).contains("player-password"));
     }
 
     @Test
@@ -96,7 +105,7 @@ final class AgentSkillOwnershipTest {
         Scripted first = new Scripted();
         first.add(request -> call("first"));
         first.add(request -> text("Ready."));
-        assertTrue(agent(repository, sessions, first, new KnownSecretRedactor())
+        assertTrue(agent(repository, sessions, first)
                 .ask(request("manifest", "System"), ignored -> {}).join().successful());
         Scripted second = new Scripted();
         second.add(request -> {
@@ -105,7 +114,7 @@ final class AgentSkillOwnershipTest {
             return text("Use the retained workflow.");
         });
         List<AgentEvent> events = new ArrayList<>();
-        assertTrue(agent(repository, sessions, second, new KnownSecretRedactor())
+        assertTrue(agent(repository, sessions, second)
                 .ask(request("manifest", "System"), events::add).join().successful());
         assertTrue(events.stream().noneMatch(AgentEvent.ToolStarted.class::isInstance));
     }
@@ -156,7 +165,7 @@ final class AgentSkillOwnershipTest {
         first.add(request -> call("original"));
         first.add(request -> text("Done."));
         List<AgentEvent> original = new ArrayList<>();
-        assertTrue(agent(repository, sessions, first, new KnownSecretRedactor())
+        assertTrue(agent(repository, sessions, first)
                 .ask(request("history", "System"), original::add).join().successful());
         var prior = original.stream().filter(AgentEvent.ContextFinalized.class::isInstance)
                 .map(AgentEvent.ContextFinalized.class::cast).findFirst().orElseThrow();
@@ -171,17 +180,17 @@ final class AgentSkillOwnershipTest {
             assertFalse(old.error(), "Projection invalidation must not invent a historical Tool error");
             return text("Use current guidance if needed.");
         });
-        assertTrue(agent(repository, sessions, second, new KnownSecretRedactor())
+        assertTrue(agent(repository, sessions, second)
                 .ask(request("history", "System"), ignored -> {}).join().successful());
         assertTrue(GSON.toJson(prior.requestMessages()).contains("Old workflow."));
     }
 
     private static GameGuideAgent agent(SkillRepository repository, AgentSessionStore sessions,
-            Scripted model, KnownSecretRedactor redactor) {
+            Scripted model) {
         ToolRegistry registry = new ToolRegistry();
         registry.register("openallay", List.of(new LoadSkillTool(repository.snapshot(Set.of()))));
         return new GameGuideAgent(model, new LocalAgentToolExecutor(registry, GSON), sessions,
-                GSON, null, (request, tokens) -> {}, redactor);
+                GSON, null, (request, tokens) -> {});
     }
     private static ToolInvocationContext enabled(String id) {
         ToolInvocationContext ordinary = ToolInvocationContext.developmentConsole(id);

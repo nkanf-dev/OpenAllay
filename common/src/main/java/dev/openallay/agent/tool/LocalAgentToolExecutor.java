@@ -214,17 +214,6 @@ public final class LocalAgentToolExecutor implements AgentToolExecutor {
     }
 
     @Override
-    public AgentToolExecutor safeSkillView(java.util.function.UnaryOperator<String> transform) {
-        var registrations = tools.registrations().stream().map(registration -> {
-            if (registration.tool() instanceof dev.openallay.skill.LoadSkillTool skill) {
-                return new dev.openallay.tool.RegisteredTool(registration.providerId(), skill.withTextTransform(transform));
-            }
-            return registration;
-        }).toList();
-        return new LocalAgentToolExecutor(ToolRuntimeCatalog.from(registrations, Set.of()), gson);
-    }
-
-    @Override
     public void closeSkillContext(String correlationId) {
         for (var registration : tools.registrations()) {
             if (registration.tool() instanceof dev.openallay.skill.LoadSkillTool skill) {

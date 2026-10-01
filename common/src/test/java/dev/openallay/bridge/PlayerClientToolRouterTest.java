@@ -256,6 +256,9 @@ final class PlayerClientToolRouterTest {
                 JsonObject arguments = javascriptArguments(source);
                 arguments.addProperty("title", "Use server-authoritative data");
                 arguments.addProperty("description", "Inspect the world on the server");
+                arguments.addProperty("token", "player-token");
+                arguments.addProperty("password", "player-password");
+                arguments.addProperty("APIkey", "player-api-value");
                 CompletableFuture<AgentToolResult> result = tools.execute(
                         "openallay__run_javascript",
                         arguments,
@@ -365,6 +368,25 @@ final class PlayerClientToolRouterTest {
     }
 
     @Test
+    void preservesPlayerNamedFieldsInSchemaValidClientResults() {
+        Gson gson = new Gson();
+        var value = new PlayerFieldsTool.Output("player-token", "player-password", "player-api-value", 42);
+        JsonObject normalized = new ToolResultNormalizer(gson).normalize(
+                new ToolResult.Success<>(value), PlayerFieldsTool.Output.class);
+        AgentToolResult completed = receiveResult(new PlayerFieldsTool(), normalized, true);
+        assertFalse(completed.failure());
+        assertEquals(normalized, completed.normalized());
+        JsonObject actual = completed.normalized().getAsJsonObject("value");
+        assertEquals("player-token", actual.get("token").getAsString());
+        assertEquals("player-password", actual.get("password").getAsString());
+        assertEquals("player-api-value", actual.get("APIkey").getAsString());
+        assertEquals(42, actual.get("count").getAsInt());
+        assertTrue(completed.modelValue().getAsString().contains("player-token"));
+        assertTrue(completed.modelValue().getAsString().contains("player-password"));
+        assertTrue(completed.modelValue().getAsString().contains("player-api-value"));
+    }
+
+    @Test
     void rejectsMalformedModelTextAndUnknownEnvelopeFields() {
         Gson gson = new Gson();
         JsonObject valid = new ToolResultNormalizer(gson).normalize(
@@ -393,9 +415,10 @@ final class PlayerClientToolRouterTest {
     }
 
     @Test
-    void gameGuideAgentWrapsServerLocalSkillCatalogBeforeDeliveryAndReusesSafePlaintext() {
-        String sentinel = "synthetic-server-credential-sentinel-only";
-        String rawBody = "apiKey=\"example\"; token=" + sentinel + "; use the workflow.";
+    void gameGuideAgentPreservesServerLocalSkillPlaintextAndReusesItsOriginalFingerprint() {
+        String playerValue = "synthetic-server-player-value-only";
+        String rawBody = "APIkey=\"example\"; token=" + playerValue
+                + "; password=player-password; use the workflow.";
         var repository = new dev.openallay.skill.SkillRepository(new dev.openallay.skill.SkillParser(), Set.of());
         assertTrue(repository.reload(List.of(new dev.openallay.skill.SkillSource("server-pack", "guide/SKILL.md",
                 java.util.Map.of("guide/SKILL.md", "---\nname: guide\ndescription: Guide the player\n---\n" + rawBody))), Set.of()));
@@ -405,16 +428,9 @@ final class PlayerClientToolRouterTest {
         List<SentCall> remoteCalls = new ArrayList<>();
         PlayerClientToolRouter router = new PlayerClientToolRouter(registry, new Gson(),
                 transport(remoteCalls, new ArrayList<>()));
-        var redactor = new dev.openallay.agent.KnownSecretRedactor(Set.of(sentinel));
         var sessions = new dev.openallay.agent.session.AgentSessionStore();
-        String safeBody = redactor.text(rawBody);
-        assertFalse(safeBody.contains(sentinel));
-        assertFalse(safeBody.contains("example"));
         String rawFingerprint = new dev.openallay.skill.LoadSkillTool(snapshot, "server")
                 .catalogManifest().documents().getFirst().fingerprint();
-        String safeFingerprint = new dev.openallay.skill.LoadSkillTool(snapshot, "server")
-                .withTextTransform(redactor::text).catalogManifest().documents().getFirst().fingerprint();
-        assertFalse(rawFingerprint.equals(safeFingerprint));
         UUID actor = UUID.randomUUID();
         for (int ask = 0; ask < 2; ask++) {
             UUID id = UUID.randomUUID();
@@ -424,9 +440,12 @@ final class PlayerClientToolRouterTest {
             List<dev.openallay.model.ModelRequest> requests = new ArrayList<>();
             dev.openallay.model.ModelClient model = (request, events, cancellation) -> {
                 requests.add(request);
-                assertFalse(new Gson().toJson(request).contains(sentinel));
-                assertFalse(new Gson().toJson(request).contains("example"));
                 int step = turn.getAndIncrement();
+                if (currentAsk > 0 || step > 0) {
+                    assertTrue(new Gson().toJson(request).contains(playerValue));
+                    assertTrue(new Gson().toJson(request).contains("example"));
+                    assertTrue(new Gson().toJson(request).contains("player-password"));
+                }
                 if (step < 2) {
                     if (currentAsk > 0) assertTrue(request.systemPrompt().contains("guide / SKILL.md: full"));
                     JsonObject input = new JsonObject();
@@ -442,7 +461,7 @@ final class PlayerClientToolRouterTest {
             };
             try {
                 var agent = new dev.openallay.agent.GameGuideAgent(model, tools, sessions, new Gson(), null,
-                        (request, tokens) -> {}, redactor);
+                        (request, tokens) -> {});
                 List<dev.openallay.agent.AgentEvent> events = new ArrayList<>();
                 var result = agent.ask(new dev.openallay.agent.AgentRequest(id, actor, "main", "Use the workflow.",
                         "System", ToolInvocationContext.developmentConsole(actor + "/" + id), false), events::add).join();
@@ -455,13 +474,17 @@ final class PlayerClientToolRouterTest {
                     assertFalse(event.failure());
                     var output = new Gson().fromJson(event.normalized().get("value"),
                             dev.openallay.skill.LoadSkillTool.Output.class);
-                    assertEquals(safeFingerprint, output.fingerprint());
+                    assertEquals(rawFingerprint, output.fingerprint());
                     assertEquals(currentAsk == 0 && index == 0 ? dev.openallay.skill.LoadSkillTool.LoadState.COMPLETE
                             : dev.openallay.skill.LoadSkillTool.LoadState.ALREADY_LOADED, output.state());
-                    assertEquals(currentAsk == 0 && index == 0 ? safeBody : "", output.content());
+                    assertEquals(currentAsk == 0 && index == 0 ? rawBody : "", output.content());
                 }
                 assertTrue(requests.getLast().systemPrompt().contains("guide / SKILL.md: full"));
-                assertFalse(new Gson().toJson(events).contains(sentinel));
+                assertTrue(new Gson().toJson(requests).contains(playerValue));
+                if (currentAsk == 0) {
+                    assertTrue(new Gson().toJson(events).contains(playerValue));
+                    assertTrue(new Gson().toJson(events).contains("player-password"));
+                }
                 assertTrue(remoteCalls.isEmpty());
             } finally {
                 router.close(actor, id);
@@ -470,11 +493,12 @@ final class PlayerClientToolRouterTest {
     }
 
     @Test
-    void routerSafeSkillViewRebindsOnlyServerLocalPlaintextBeforeFingerprinting() {
+    void routerPreservesServerLocalSkillFieldsAndValidatesOriginalFingerprint() {
+        String body = "token=player-token; password=player-password; APIkey=player-api-value instructions.";
         var repository = new dev.openallay.skill.SkillRepository(new dev.openallay.skill.SkillParser(), Set.of());
         assertTrue(repository.reload(List.of(new dev.openallay.skill.SkillSource("server-pack", "guide/SKILL.md",
                 java.util.Map.of("guide/SKILL.md",
-                        "---\nname: guide\ndescription: Guide the player\n---\nKnown-secret-placeholder instructions."))), Set.of()));
+                        "---\nname: guide\ndescription: Guide the player\n---\n" + body))), Set.of()));
         var snapshot = repository.snapshot(Set.of());
         ToolRegistry registry = new ToolRegistry();
         registry.register("test", List.of(new dev.openallay.skill.LoadSkillTool(snapshot)));
@@ -485,7 +509,6 @@ final class PlayerClientToolRouterTest {
         UUID id = UUID.randomUUID();
         AgentToolExecutor tools = success(router.open(actor, id, "main", List.of(), snapshot));
         try {
-            assertEquals(tools, tools.safeSkillView(text -> text.replace("Known-secret-placeholder", "[redacted]")));
             var retained = new dev.openallay.skill.RetainedSkillContext();
             tools.prepareContext(id.toString(), List.of(), retained);
             JsonObject input = new JsonObject();
@@ -494,13 +517,12 @@ final class PlayerClientToolRouterTest {
                     ToolInvocationContext.developmentConsole(id.toString()), new CancellationSignal()).join();
             assertFalse(actual.failure());
             var output = new Gson().fromJson(actual.normalized().get("value"), dev.openallay.skill.LoadSkillTool.Output.class);
-            assertEquals("[redacted] instructions.", output.content());
-            assertFalse(actual.normalized().toString().contains("Known-secret-placeholder"));
+            assertEquals(body, output.content());
+            var manifest = new dev.openallay.skill.LoadSkillTool(snapshot, "server").catalogManifest();
+            assertEquals(manifest.documents().getFirst().fingerprint(), output.fingerprint());
             assertTrue(calls.isEmpty());
-            assertTrue(new dev.openallay.skill.SkillInstructionContext(
-                    new dev.openallay.skill.LoadSkillTool(snapshot, "server")
-                            .withTextTransform(text -> text.replace("Known-secret-placeholder", "[redacted]"))
-                            .catalogManifest()).validate(new dev.openallay.skill.LoadSkillTool.Input("guide"), output));
+            assertTrue(new dev.openallay.skill.SkillInstructionContext(manifest)
+                    .validate(new dev.openallay.skill.LoadSkillTool.Input("guide"), output));
         } finally {
             tools.closeRequestScope(id.toString());
             router.close(actor, id);
@@ -509,10 +531,11 @@ final class PlayerClientToolRouterTest {
 
     @Test
     void acceptsOnlyRealClientSkillChunksBoundToTheAdvertisedSnapshot() {
+        String body = "Client instructions. token=player-token; password=player-password; APIkey=player-api-value.";
         var client = new dev.openallay.skill.SkillRepository(new dev.openallay.skill.SkillParser(), Set.of());
         assertTrue(client.reload(List.of(new dev.openallay.skill.SkillSource("client-pack", "guide/SKILL.md",
                 java.util.Map.of("guide/SKILL.md",
-                        "---\nname: guide\ndescription: Guide the player\n---\nClient instructions."))), Set.of()));
+                        "---\nname: guide\ndescription: Guide the player\n---\n" + body))), Set.of()));
         var snapshot = client.snapshot(Set.of());
         var skill = new dev.openallay.skill.LoadSkillTool(snapshot, "client");
         var input = new dev.openallay.skill.LoadSkillTool.Input("guide");
@@ -520,7 +543,12 @@ final class PlayerClientToolRouterTest {
                 ToolInvocationContext.developmentConsole("capture"), input)).value();
         JsonObject valid = new ToolResultNormalizer(new Gson()).normalize(
                 new ToolResult.Success<>(output), dev.openallay.skill.LoadSkillTool.Output.class);
-        assertFalse(receiveSkillResult(snapshot, skill.catalogManifest(), valid, true).failure());
+        AgentToolResult accepted = receiveSkillResult(snapshot, skill.catalogManifest(), valid, true);
+        assertFalse(accepted.failure());
+        assertEquals(valid, accepted.normalized());
+        assertEquals(body, accepted.normalized().getAsJsonObject("value").get("content").getAsString());
+        assertEquals(output.fingerprint(), accepted.normalized().getAsJsonObject("value")
+                .get("fingerprint").getAsString());
         List<java.util.function.Consumer<JsonObject>> corruptions = List.of(
                 value -> value.addProperty("content", "Tampered instructions."),
                 value -> value.addProperty("source", "c2VydmVy"),
@@ -655,6 +683,21 @@ final class PlayerClientToolRouterTest {
         @Override
         public ToolResult<Output> invoke(ToolInvocationContext context, Input input) {
             return new ToolResult.Success<>(new Output(input.value()));
+        }
+    }
+
+    private static final class PlayerFieldsTool implements Tool<FactTool.Input, PlayerFieldsTool.Output> {
+        record Output(String token, String password, String APIkey, int count) {}
+
+        @Override
+        public ToolDescriptor<FactTool.Input, Output> descriptor() {
+            return new ToolDescriptor<>("test:player_fields", "Return player data",
+                    FactTool.Input.class, Output.class, ToolAccess.READ_ONLY);
+        }
+
+        @Override
+        public ToolResult<Output> invoke(ToolInvocationContext context, FactTool.Input input) {
+            return new ToolResult.Success<>(new Output("player-token", "player-password", "player-api-value", input.value()));
         }
     }
 

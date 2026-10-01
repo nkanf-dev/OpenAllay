@@ -326,35 +326,74 @@ final class ClientToolExecutionEndpointTest {
     }
 
     @Test
-    void clientSafeCatalogManifestMatchesExactlyThePlaintextSentToTheServer() {
+    void preservesPlayerAndSkillFieldsAndManifestMatchesExactlyThePlaintextSentToTheServer() throws Exception {
+        String name = "token-password-guide";
+        String reference = "references/token-password.md";
+        String contents = "Player notes: token=quest-token password=castle-password.";
+        String referenceContents = "Reference: token=map-token password=door-password.";
+        String description = "Guide token=metadata-token password=metadata-password";
+        String provenance = "player-pack token=pack-token password=pack-password";
+        dev.openallay.skill.SkillSource source = new dev.openallay.skill.SkillSource(
+                provenance, name + "/SKILL.md", java.util.Map.of(
+                        name + "/SKILL.md", "---\nname: " + name + "\ndescription: " + description + "\n---\n" + contents,
+                        name + "/" + reference, referenceContents));
         dev.openallay.skill.SkillRepository repository = new dev.openallay.skill.SkillRepository(
                 new dev.openallay.skill.SkillParser(), java.util.Set.of());
-        assertTrue(repository.reload(List.of(skillSource("Known-secret-placeholder instructions.")),
-                java.util.Set.of()));
+        assertTrue(repository.reload(List.of(source), java.util.Set.of()));
         var captured = repository.snapshot(java.util.Set.of());
         var original = new dev.openallay.skill.LoadSkillTool(captured, "client").catalogManifest();
         ToolRegistry registry = new ToolRegistry();
-        registry.register("test", List.of(new dev.openallay.skill.LoadSkillTool(captured)));
+        registry.register("test", List.of(new dev.openallay.skill.LoadSkillTool(captured), new PlayerFieldsTool()));
         List<ClientToolResultChunkPayload> sent = new ArrayList<>();
-        java.util.function.UnaryOperator<String> scrub = text -> text.replace("Known-secret-placeholder", "[redacted]");
+        String playerName = "Player token=name-token password=name-password";
         ClientToolExecutionEndpoint endpoint = new ClientToolExecutionEndpoint(
-                (capabilities, correlation, cancellation) -> CompletableFuture.completedFuture(
-                        ToolInvocationContext.developmentConsole(correlation)),
-                sent::add, new Gson(), 128, (java.util.concurrent.Executor) Runnable::run, scrub);
+                (capabilities, correlation, cancellation) -> {
+                    ToolInvocationContext base = ToolInvocationContext.developmentConsole(correlation);
+                    return CompletableFuture.completedFuture(new ToolInvocationContext(
+                            base.correlationId(), base.capturedAt(), new dev.openallay.context.CallerSnapshot(
+                                    dev.openallay.context.CallerKind.PLAYER, UUID.randomUUID(), playerName, false),
+                            base.player(), base.registries(), base.recipes(), base.observableGameState(), base.metrics()));
+                },
+                sent::add, new Gson(), 128, (java.util.concurrent.Executor) Runnable::run);
         UUID id = UUID.randomUUID();
         var opened = assertInstanceOf(ToolResult.Success.class, endpoint.open(id, "main",
                 ToolRuntimeCatalog.from(registry.registrations(), java.util.Set.of())));
         var request = (ClientToolExecutionEndpoint.OpenedRequest) opened.value();
-        assertFalse(original.equals(request.skillDocuments()));
-        endpoint.handle(new ClientToolCallPayload(id, UUID.randomUUID(), "main", "openallay:load_skill",
-                "{\"name\":\"guide\"}"));
-        String wire = reassemble(sent);
-        assertFalse(wire.contains("Known-secret-placeholder"));
-        var output = new Gson().fromJson(JsonParser.parseString(wire).getAsJsonObject().get("value"),
-                dev.openallay.skill.LoadSkillTool.Output.class);
-        assertEquals("[redacted] instructions.", output.content());
-        assertTrue(new dev.openallay.skill.SkillInstructionContext(request.skillDocuments()).validate(
-                new dev.openallay.skill.LoadSkillTool.Input("guide"), output));
+        assertEquals(original, request.skillDocuments());
+        assertTrue(request.skillDocuments().metadataPrompt().contains(description));
+        for (String document : List.of("SKILL.md", reference)) {
+            sent.clear();
+            var input = new dev.openallay.skill.LoadSkillTool.Input(name,
+                    document.equals("SKILL.md") ? null : document);
+            endpoint.handle(new ClientToolCallPayload(id, UUID.randomUUID(), "main", "openallay:load_skill",
+                    new Gson().toJson(input)));
+            String wire = reassemble(sent);
+            var normalized = JsonParser.parseString(wire).getAsJsonObject();
+            assertEquals("success", normalized.get("status").getAsString());
+            var output = new Gson().fromJson(normalized.get("value"), dev.openallay.skill.LoadSkillTool.Output.class);
+            String expected = document.equals("SKILL.md") ? contents : referenceContents;
+            var identity = request.skillDocuments().documents().stream()
+                    .filter(value -> value.document().equals(document)).findFirst().orElseThrow();
+            assertEquals(expected, output.content());
+            assertEquals(name, output.name());
+            assertEquals(document, output.document());
+            assertEquals(provenance + ":" + source.entryPath(), output.provenance());
+            assertEquals(identity.source(), output.source());
+            assertEquals(identity.fingerprint(), output.fingerprint());
+            assertEquals(java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256")
+                    .digest(expected.getBytes(java.nio.charset.StandardCharsets.UTF_8))), output.fingerprint());
+            assertEquals(List.of(reference), output.availableReferences());
+            assertTrue(normalized.get("modelText").getAsString().contains(expected));
+            assertEquals(output.modelText(), normalized.get("modelText").getAsString());
+            assertTrue(new dev.openallay.skill.SkillInstructionContext(request.skillDocuments()).validate(input, output));
+        }
+        sent.clear();
+        endpoint.handle(new ClientToolCallPayload(id, UUID.randomUUID(), "main", "test:player_fields",
+                "{\"token\":\"quest-token\",\"password\":\"castle-password\"}"));
+        var playerOutput = JsonParser.parseString(reassemble(sent)).getAsJsonObject().getAsJsonObject("value");
+        assertEquals(playerName, playerOutput.get("displayName").getAsString());
+        assertEquals("quest-token", playerOutput.get("token").getAsString());
+        assertEquals("castle-password", playerOutput.get("password").getAsString());
         endpoint.close(id);
     }
 
@@ -424,6 +463,24 @@ final class ClientToolExecutionEndpointTest {
                     "a late context must not reach even a Tool that ignores cancellation");
             assertEquals(0, tool.invocations);
             assertTrue(sent.isEmpty());
+        }
+    }
+
+    private static final class PlayerFieldsTool implements Tool<PlayerFieldsTool.Input, PlayerFieldsTool.Output> {
+        record Input(String token, String password) {}
+        record Output(String displayName, String token, String password) {}
+
+        private static final ToolDescriptor<Input, Output> DESCRIPTOR = new ToolDescriptor<>(
+                "test:player_fields", "Return player fields", Input.class, Output.class, ToolAccess.READ_ONLY);
+
+        @Override
+        public ToolDescriptor<Input, Output> descriptor() {
+            return DESCRIPTOR;
+        }
+
+        @Override
+        public ToolResult<Output> invoke(ToolInvocationContext context, Input input) {
+            return new ToolResult.Success<>(new Output(context.caller().displayName(), input.token(), input.password()));
         }
     }
 

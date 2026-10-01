@@ -55,7 +55,6 @@ public final class ClientToolExecutionEndpoint {
     private final ToolResultNormalizer normalizer;
     private final int transportChunkBytes;
     private final Executor worker;
-    private final java.util.function.UnaryOperator<String> skillTextTransform;
     private final Map<UUID, RequestState> requests = new ConcurrentHashMap<>();
 
     public ClientToolExecutionEndpoint(
@@ -63,15 +62,6 @@ public final class ClientToolExecutionEndpoint {
             ResponseSink responses,
             Gson gson,
             int transportChunkBytes) {
-        this(contexts, responses, gson, transportChunkBytes, java.util.function.UnaryOperator.identity());
-    }
-
-    public ClientToolExecutionEndpoint(
-            ContextProvider contexts,
-            ResponseSink responses,
-            Gson gson,
-            int transportChunkBytes,
-            java.util.function.UnaryOperator<String> skillTextTransform) {
         this(
                 contexts,
                 responses,
@@ -79,8 +69,7 @@ public final class ClientToolExecutionEndpoint {
                 transportChunkBytes,
                 command -> Thread.ofVirtual()
                         .name("openallay-client-tool-worker")
-                        .start(command),
-                skillTextTransform);
+                        .start(command));
     }
 
     ClientToolExecutionEndpoint(
@@ -89,17 +78,6 @@ public final class ClientToolExecutionEndpoint {
             Gson gson,
             int transportChunkBytes,
             Executor worker) {
-        this(contexts, responses, gson, transportChunkBytes, worker,
-                java.util.function.UnaryOperator.identity());
-    }
-
-    ClientToolExecutionEndpoint(
-            ContextProvider contexts,
-            ResponseSink responses,
-            Gson gson,
-            int transportChunkBytes,
-            Executor worker,
-            java.util.function.UnaryOperator<String> skillTextTransform) {
         if (transportChunkBytes <= 0) {
             throw new IllegalArgumentException("transportChunkBytes must be positive");
         }
@@ -108,7 +86,6 @@ public final class ClientToolExecutionEndpoint {
         this.gson = java.util.Objects.requireNonNull(gson, "gson");
         this.transportChunkBytes = transportChunkBytes;
         this.worker = java.util.Objects.requireNonNull(worker, "worker");
-        this.skillTextTransform = java.util.Objects.requireNonNull(skillTextTransform, "skillTextTransform");
         arguments = new ToolArgumentCodec(gson);
         normalizer = new ToolResultNormalizer(gson);
     }
@@ -124,7 +101,7 @@ public final class ClientToolExecutionEndpoint {
                 frozenTools.registrations().stream()
                         .map(registration -> registration.tool() instanceof LoadSkillTool skill
                                 ? new RegisteredTool(registration.providerId(),
-                                        skill.withOwner("client").withTextTransform(skillTextTransform))
+                                        skill.withOwner("client"))
                                 : registration)
                         .toList(),
                 Set.of());

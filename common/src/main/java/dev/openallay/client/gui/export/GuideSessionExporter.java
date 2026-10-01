@@ -1,6 +1,5 @@
 package dev.openallay.client.gui.export;
 
-import dev.openallay.agent.trace.LiveTraceJson;
 import dev.openallay.guide.export.GuideSessionExportSnapshot;
 import dev.openallay.model.ModelContent;
 import java.io.IOException;
@@ -109,7 +108,7 @@ public final class GuideSessionExporter {
                     .append(" · ").append(request.status()).append(" ===\n")
                     .append("Request ID: ").append(request.requestId()).append('\n')
                     .append("User\n")
-                    .append(redact(request.userMessage())).append("\n\n");
+                    .append(formatText(request.userMessage())).append("\n\n");
             if (request.originalContext().isEmpty()) {
                 appendUnrecordedTimeline(result, request, Set.of(), false);
             } else {
@@ -126,15 +125,15 @@ public final class GuideSessionExporter {
                                     continue;
                                 }
                                 result.append(message.role()).append('\n')
-                                        .append(redact(text.text())).append("\n\n");
+                                        .append(formatText(text.text())).append("\n\n");
                             }
                             case ModelContent.ToolUse call -> {
                                 tools.put(call.id(), call.name());
                                 recordedCalls.add(call.id());
                                 result.append("Tool · ").append(safeToolName(call.name()))
                                         .append(" · SUBMITTED\nInvocation ID: ")
-                                        .append(redact(call.id())).append("\nSubmitted arguments\n")
-                                        .append(LiveTraceJson.redact(call.input(), Set.of()))
+                                        .append(formatText(call.id())).append("\nSubmitted arguments\n")
+                                        .append(call.input())
                                         .append("\n\n");
                             }
                             case ModelContent.ToolResult outcome -> appendOutcome(result,
@@ -148,8 +147,8 @@ public final class GuideSessionExporter {
             }
             if (request.failure() != null) {
                 result.append("Request failure\nCode: ")
-                        .append(redact(request.failure().code()))
-                        .append("\nMessage: ").append(redact(request.failure().message()))
+                        .append(formatText(request.failure().code()))
+                        .append("\nMessage: ").append(formatText(request.failure().message()))
                         .append("\n\n");
             }
             if (request.status() == dev.openallay.guide.GuideRequestStatus.CANCELLED
@@ -168,17 +167,17 @@ public final class GuideSessionExporter {
                 case GuideSessionExportSnapshot.Entry.Assistant assistant -> {
                     if (!hasOriginalContext) {
                         result.append(assistant.streaming() ? "Assistant (in progress)\n" : "Assistant\n")
-                                .append(redact(assistant.text())).append("\n\n");
+                                .append(formatText(assistant.text())).append("\n\n");
                     } else if (assistant.streaming()) {
                         result.append("Visible unfinished assistant text (display snapshot, not an additional message)\n")
-                                .append(redact(assistant.text())).append("\n\n");
+                                .append(formatText(assistant.text())).append("\n\n");
                     }
                 }
                 case GuideSessionExportSnapshot.Entry.Tool tool -> {
                     if (!recordedCalls.contains(tool.invocationId())) {
                         result.append("Tool · ").append(safeToolName(tool.toolId()))
                                 .append(" · ").append(tool.status()).append("\nInvocation ID: ")
-                                .append(redact(tool.invocationId()))
+                                .append(formatText(tool.invocationId()))
                                 .append("\n[No completed model-visible result was recorded.]\n\n");
                     }
                 }
@@ -190,20 +189,19 @@ public final class GuideSessionExporter {
             StringBuilder result, String toolId, ModelContent.ToolResult outcome) {
         result.append("Tool · ").append(safeToolName(toolId))
                 .append(outcome.error() ? " · FAILED\n" : " · SUCCEEDED\n")
-                .append("Invocation ID: ").append(redact(outcome.toolUseId())).append('\n')
+                .append("Invocation ID: ").append(formatText(outcome.toolUseId())).append('\n')
                 .append(outcome.error() ? "Tool error (model-visible)\n" : "Result (model-visible)\n");
         var value = outcome.value();
         String text = value.isJsonPrimitive() && value.getAsJsonPrimitive().isString()
-                ? value.getAsString() : LiveTraceJson.redact(value, Set.of()).toString();
-        result.append(redact(text)).append("\n\n");
+                ? value.getAsString() : value.toString();
+        result.append(formatText(text)).append("\n\n");
     }
 
-    static String redact(String value) {
-        String safe = value == null ? "" : value
+    static String formatText(String value) {
+        return value == null ? "" : value
                 .replace("\r\n", "\n")
                 .replace('\r', '\n')
                 .replaceAll("[\\p{Cc}&&[^\\n\\t]]", "�");
-        return LiveTraceJson.redact(safe, Set.of());
     }
 
     private Path prepareManagedRoot() throws IOException {

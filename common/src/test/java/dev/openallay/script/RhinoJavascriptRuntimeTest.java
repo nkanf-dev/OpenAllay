@@ -680,36 +680,32 @@ final class RhinoJavascriptRuntimeTest {
     }
 
     @Test
-    void javascriptAndNativeDiagnosticsUseTheSharedCredentialRedactor() {
-        String sensitive = "api_key=sample-api-credential password='sample password' "
-                + "Authorization: Bearer " + "sample-bearer-credential " + "sk-" + "examplecredential123456";
+    void javascriptAndNativeDiagnosticsPreservePlayerSuppliedValuesWithoutScanning() {
+        String data = "api_key=sample-game-value password='sample password' "
+                + "Authorization: Bearer sample-bearer-value sk-examplevalue123456";
         for (String source : List.of(
-                "throw new Error(" + new com.google.gson.Gson().toJson(sensitive) + ");",
+                "throw new Error(" + new com.google.gson.Gson().toJson(data) + ");",
                 "const Integer = Java.type('java.lang.Integer');\nreturn Integer.parseInt("
-                        + new com.google.gson.Gson().toJson(sensitive) + ");")) {
+                        + new com.google.gson.Gson().toJson(data) + ");")) {
             JavascriptExecutionException failure = assertThrows(
                     JavascriptExecutionException.class,
                     () -> new RhinoJavascriptRuntime().execute(
                             source, Map.of(), Map.of(), Map.of(), new CancellationSignal(), null, null, true));
             String diagnostic = failure.getMessage();
-            assertTrue(diagnostic.contains("[REDACTED]"), diagnostic);
-            for (String secret : List.of("sample-api-credential", "sample password", "sample-bearer-credential",
-                    "sk-" + "examplecredential123456")) {
-                assertFalse(diagnostic.contains(secret), diagnostic);
-            }
+            assertTrue(diagnostic.contains(data), diagnostic);
+            assertFalse(diagnostic.contains("[REDACTED]"), diagnostic);
+            assertTrue(diagnostic.contains("openallay-agent.js:"), diagnostic);
+            assertFalse(diagnostic.contains("RhinoJavascriptRuntimeTest.java"));
         }
-        String longSecret = "sk-" + "z".repeat(600);
-        JavascriptExecutionException longCredential = assertThrows(JavascriptExecutionException.class,
-                () -> new RhinoJavascriptRuntime().execute("throw new Error('" + longSecret + "');",
+        String longValue = "sk-" + "z".repeat(600);
+        JavascriptExecutionException longError = assertThrows(JavascriptExecutionException.class,
+                () -> new RhinoJavascriptRuntime().execute("throw new Error('" + longValue + "');",
                         Map.of(), Map.of(), new CancellationSignal()));
-        assertTrue(longCredential.getMessage().contains("[REDACTED]"));
-        assertFalse(longCredential.getMessage().contains("zzzz"));
-        for (String secret : List.of("Authorization: Basic dXNlcjpwYXNzd29yZA==", "Cookie: first=private; second=hidden")) {
-            String diagnostic = JavascriptFailureFormatter.format(new IllegalArgumentException(secret));
-            assertTrue(diagnostic.contains("[REDACTED]"), diagnostic);
-            assertFalse(diagnostic.contains("dXNlcjpwYXNzd29yZA=="));
-            assertFalse(diagnostic.contains("private"));
-            assertFalse(diagnostic.contains("hidden"), "second Cookie value must be redacted");
+        assertTrue(longError.getMessage().contains(longValue));
+        for (String dataValue : List.of("Authorization: Basic dXNlcjpwYXNzd29yZA==",
+                "Cookie: first=private; second=hidden")) {
+            assertEquals("IllegalArgumentException: " + dataValue,
+                    JavascriptFailureFormatter.format(new IllegalArgumentException(dataValue)));
         }
     }
 
@@ -747,7 +743,9 @@ final class RhinoJavascriptRuntimeTest {
         assertTrue(diagnostic.contains("\"field\":\"blockstate\""), diagnostic);
         assertTrue(diagnostic.contains("The actual reason remains available."));
         assertTrue(diagnostic.endsWith("detail ".repeat(1000)), "message must not be clipped");
-        assertFalse(diagnostic.contains("private-password"));
+        assertEquals("ModOperationException: " + message, diagnostic,
+                "player-supplied exception values are retained without field-name scanning");
+        assertTrue(diagnostic.contains("\"password\":\"private-password\""));
         assertFalse(diagnostic.contains("RhinoJavascriptRuntimeTest.java"));
     }
 
@@ -809,15 +807,15 @@ final class RhinoJavascriptRuntimeTest {
     }
 
     @Test
-    void toolBoundaryRedactionPreservesDiagnosticTextAndOnlyRemovesCredentialValues() {
-        String diagnostic = "ReferenceError: api_key=private-key\nat openallay-agent.js:2";
-        String safe = JavascriptFailureFormatter.sanitizeMessage(diagnostic);
-        assertTrue(safe.contains("[REDACTED]\nat openallay-agent.js:2"), safe);
-        assertFalse(safe.contains("private-key"));
+    void toolBoundaryRetainsActualDiagnosticTextAndDoesNotDumpNativeStackFrames() {
+        String diagnostic = "ReferenceError: api_key=player-game-value\nat openallay-agent.js:2";
+        assertEquals("IllegalArgumentException: " + diagnostic,
+                JavascriptFailureFormatter.format(new IllegalArgumentException(diagnostic)));
         String detail = "Unknown class: value\nRequested by the current script.";
-        assertEquals(detail, JavascriptFailureFormatter.sanitizeMessage(detail));
-        assertTrue(JavascriptFailureFormatter.sanitizeMessage("password=private-key")
-                .contains("[REDACTED]"));
+        assertEquals("IllegalArgumentException: " + detail,
+                JavascriptFailureFormatter.format(new IllegalArgumentException(detail)));
+        assertEquals("IllegalArgumentException: password=player-game-value",
+                JavascriptFailureFormatter.format(new IllegalArgumentException("password=player-game-value")));
     }
 
     private static String bundledExample(String heading) {

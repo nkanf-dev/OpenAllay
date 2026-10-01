@@ -127,34 +127,6 @@ public final class LoadSkillTool
     }
 
     public LoadSkillTool withOwner(String replacement) { return new LoadSkillTool(catalog, replacement); }
-    /** Capture one safe document view before it can be emitted or fingerprinted. */
-    public LoadSkillTool withTextTransform(java.util.function.UnaryOperator<String> transform) {
-        Map<String, SkillDocument> safe = new java.util.HashMap<>();
-        boolean changed = false;
-        for (var metadata : catalog.metadata()) {
-            SkillDocument original = catalog.find(metadata.name()).orElseThrow();
-            if (!transform.apply(metadata.name()).equals(metadata.name())
-                    || original.references().keySet().stream().anyMatch(name -> !transform.apply(name).equals(name))) {
-                changed = true;
-                continue; // A scrubbed name/path is not a valid callable document identifier.
-            }
-            SkillMetadata safeMetadata = new SkillMetadata(metadata.name(), transform.apply(metadata.description()),
-                    metadata.license().map(transform), metadata.compatibility().map(transform), metadata.attributes(),
-                    metadata.requiredMods(), metadata.allowedTools(), metadata.references(),
-                    transform.apply(metadata.provenance()), metadata.origin());
-            String entry = transform.apply(original.instructions());
-            Map<String, String> references = new java.util.HashMap<>();
-            original.references().forEach((name, text) -> references.put(name, transform.apply(text)));
-            if (safeMetadata.equals(metadata) && entry.equals(original.instructions()) && references.equals(original.references())) {
-                safe.put(metadata.name(), original);
-            } else {
-                changed = true;
-                safe.put(metadata.name(), original.project(safeMetadata, entry, references));
-            }
-        }
-        return changed ? new LoadSkillTool(new SkillCatalogSnapshot(safe).forRequest(true), owner) : this;
-    }
-
     public SkillCatalogManifest catalogManifest() { return manifest; }
 
     /** Validates retained instruction results against this Tool's captured Skill catalog. */

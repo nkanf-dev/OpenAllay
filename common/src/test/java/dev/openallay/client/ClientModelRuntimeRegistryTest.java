@@ -83,48 +83,57 @@ final class ClientModelRuntimeRegistryTest {
     }
 
     @Test
-    void disabledCredentialsAndRetiredRuntimeKeysStayKnownAcrossReplacement() {
-        String disabledSecret = "opaqueDisabledCredentialAlpha";
-        var initial = load("a", "a");
-        var local = dev.openallay.model.config.CredentialReference.local(UUID.randomUUID());
-        var disabled = new ModelProfileDefinition("disabled", "Disabled", false, ModelProtocol.OPENAI_CHAT,
-                URI.create("https://disabled.example/v1"), "model", local.encoded(), 128_000, 4096,
-                Duration.ofSeconds(30), Duration.ofSeconds(300), null);
-        var definitions = new ArrayList<>(initial.config().profiles());
-        definitions.add(disabled);
-        var profiles = new ArrayList<>(initial.profiles());
-        profiles.add(new ResolvedModelProfile(disabled, null,
-                new dev.openallay.guide.GuideFailure("model_disabled", "disabled")));
-        var loaded = new ModelProfilesConfigLoader.Load(new ModelProfilesConfig("a", definitions), profiles);
-        CompletableFuture<ModelTurn> pending = new CompletableFuture<>();
-        RecordingModel captured = new RecordingModel("a", pending);
+    void capturedRuntimeKeepsAuthWhilePlayerTextIsNotScannedAcrossReplacement() {
         String retiredSecret = "opaqueRetiredCredentialAlpha";
         String replacementSecret = "opaqueReplacementCredentialBeta";
-        loaded = replaceTestCredential(loaded, retiredSecret);
-        ClientModelRuntimeRegistry registry = registry(loaded, Map.of("a", captured));
-        registry.bindCredentials(reference -> reference.equals(local)
-                ? new ToolResult.Success<>(SecretValue.of(disabledSecret))
-                : new ToolResult.Failure<>("unavailable", "unavailable"));
+        String question = "password=player-game-value token=player-token-value";
+        CompletableFuture<ModelTurn> pending = new CompletableFuture<>();
+        List<ModelConfig> capturedConfigs = new ArrayList<>();
+        RecordingModel captured = new RecordingModel("a", pending);
+        RecordingModel next = new RecordingModel("b");
+        ClientModelRuntimeRegistry registry = new ClientModelRuntimeRegistry(runtime(),
+                replaceTestCredential(load("a", "a"), retiredSecret), new Gson(), Runnable::run, null,
+                profile -> {
+                    capturedConfigs.add(profile.runtimeConfig());
+                    return capturedConfigs.size() == 1 ? captured : next;
+                });
         List<dev.openallay.agent.AgentEvent> events = new ArrayList<>();
         UUID actor = UUID.randomUUID();
-        var active = registry.ask("a", actor, "main", UUID.randomUUID(), "question " + disabledSecret,
-                ToolInvocationContext.developmentConsole("synthetic-redaction"), events::add);
-        RecordingModel next = new RecordingModel("b");
-        registry.replace(replaceTestCredential(load("b", "b"), replacementSecret), profile -> next);
-        pending.complete(new ModelTurn("test", "a", List.of(new ModelContent.Text(
-                "old " + retiredSecret + " disabled " + disabledSecret + " newly loaded " + replacementSecret)),
+        UUID requestId = UUID.randomUUID();
+        var active = registry.ask("a", actor, "main", requestId, question,
+                ToolInvocationContext.developmentConsole("synthetic-player-data"), events::add);
+        registry.replace(replaceTestCredential(load("b", "b"), replacementSecret));
+        String answer = "token=game-result Authorization: Bearer player-evidence";
+        pending.complete(new ModelTurn("test", "a", List.of(new ModelContent.Text(answer)),
                 "stop", ModelUsage.empty()));
         var result = active.join();
-        assertFalse(new Gson().toJson(result).contains(disabledSecret));
-        assertFalse(new Gson().toJson(result).contains(retiredSecret));
-        assertFalse(new Gson().toJson(result).contains(replacementSecret));
+
+        assertTrue(result.successful());
+        assertEquals(answer, result.text());
+        assertEquals(retiredSecret, capturedConfigs.getFirst().apiKey().reveal());
+        assertEquals(replacementSecret, capturedConfigs.getLast().apiKey().reveal());
+        assertEquals(List.of(question), captured.requests.getFirst().messages().stream()
+                .flatMap(message -> message.content().stream())
+                .filter(ModelContent.Text.class::isInstance).map(ModelContent.Text.class::cast)
+                .map(ModelContent.Text::text).toList());
+        assertTrue(new Gson().toJson(events).contains("player-evidence"));
+        String trace = new dev.openallay.agent.trace.LiveTraceJson().encode(result.trace());
+        assertTrue(trace.contains("player-game-value"));
+        assertTrue(trace.contains("player-evidence"));
+        for (String credential : List.of(retiredSecret, replacementSecret)) {
+            assertFalse(trace.contains(credential), "framework credentials are not Agent trace inputs");
+            assertFalse(new Gson().toJson(result).contains(credential));
+            assertFalse(new Gson().toJson(events).contains(credential));
+        }
         registry.ask("b", actor, "main", UUID.randomUUID(), "follow up",
-                ToolInvocationContext.developmentConsole("synthetic-redaction"), events::add).join();
-        String sent = new Gson().toJson(next.requests);
-        assertFalse(sent.contains(disabledSecret));
-        assertFalse(sent.contains(retiredSecret));
-        assertFalse(sent.contains(replacementSecret));
-        assertFalse(new Gson().toJson(events).contains(disabledSecret));
+                ToolInvocationContext.developmentConsole("synthetic-player-data"), events::add).join();
+        assertEquals(List.of(question, answer, "follow up"), next.requests.getFirst().messages().stream()
+                .flatMap(message -> message.content().stream())
+                .filter(ModelContent.Text.class::isInstance).map(ModelContent.Text.class::cast)
+                .map(ModelContent.Text::text).toList());
+        String profileSnapshot = new Gson().toJson(registry.profiles());
+        assertFalse(profileSnapshot.contains(retiredSecret));
+        assertFalse(profileSnapshot.contains(replacementSecret));
     }
 
     @Test

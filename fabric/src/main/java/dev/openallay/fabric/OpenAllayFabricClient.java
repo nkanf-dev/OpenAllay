@@ -118,9 +118,7 @@ public final class OpenAllayFabricClient implements ClientModInitializer {
                     });
                     return captured;
                 },
-                gson,
-                modelRegistry == null ? java.util.function.UnaryOperator.identity()
-                        : modelRegistry.safeSkillText());
+                gson);
         PayloadGuideRemoteEndpoint remote = new PayloadGuideRemoteEndpoint(
                 new PayloadGuideRemoteEndpoint.Port() {
                     @Override public dev.openallay.bridge.protocol.CapabilityPayload capabilities() {
@@ -205,7 +203,6 @@ public final class OpenAllayFabricClient implements ClientModInitializer {
             String modVersion = FabricLoader.getInstance().getModContainer("openallay")
                     .map(container -> container.getMetadata().getVersion().getFriendlyString())
                     .orElse("unknown");
-            String secret = System.getenv("OPENALLAY_API_KEY");
             GuideClientE2EController controller = new GuideClientE2EController(
                     config,
                     "fabric",
@@ -214,7 +211,6 @@ public final class OpenAllayFabricClient implements ClientModInitializer {
                     services,
                     gson,
                     () -> Minecraft.getInstance().stop(),
-                    secret == null || secret.isBlank() ? java.util.Set.of() : java.util.Set.of(secret),
                     contexts::recipeProviderReadiness,
                     settings == null ? null : settings.settings(),
                     modelRegistry == null ? null : modelRegistry::encodedTrace);

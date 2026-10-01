@@ -136,9 +136,7 @@ public final class OpenAllayNeoForgeClient {
                     });
                     return captured;
                 },
-                gson,
-                modelRegistry == null ? java.util.function.UnaryOperator.identity()
-                        : modelRegistry.safeSkillText());
+                gson);
         PayloadGuideRemoteEndpoint remote = new PayloadGuideRemoteEndpoint(
                 new PayloadGuideRemoteEndpoint.Port() {
                     @Override public dev.openallay.bridge.protocol.CapabilityPayload capabilities() {
@@ -222,7 +220,6 @@ public final class OpenAllayNeoForgeClient {
             String modVersion = ModList.get().getModContainerById("openallay")
                     .map(container -> container.getModInfo().getVersion().toString())
                     .orElse("unknown");
-            String secret = System.getenv("OPENALLAY_API_KEY");
             GuideClientE2EController controller = new GuideClientE2EController(
                     config,
                     "neoforge",
@@ -231,7 +228,6 @@ public final class OpenAllayNeoForgeClient {
                     services,
                     gson,
                     client::stop,
-                    secret == null || secret.isBlank() ? java.util.Set.of() : java.util.Set.of(secret),
                     contexts::recipeProviderReadiness,
                     settings == null ? null : settings.settings(),
                     modelRegistry == null ? null : modelRegistry::encodedTrace);

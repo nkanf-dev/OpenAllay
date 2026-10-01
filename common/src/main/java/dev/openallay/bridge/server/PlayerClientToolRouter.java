@@ -396,14 +396,6 @@ public final class PlayerClientToolRouter {
         }
 
         @Override
-        public AgentToolExecutor safeSkillView(java.util.function.UnaryOperator<String> transform) {
-            // GameGuideAgent captures this view before request execution. A remote manifest remains
-            // bound to the client's actual source; the server must not rewrite its identities.
-            if (clientSkillContext == null) local = local.safeSkillView(transform);
-            return this;
-        }
-
-        @Override
         public void closeRequestScope(String correlationId) {
             retained.remove(correlationId);
             local.closeRequestScope(correlationId);

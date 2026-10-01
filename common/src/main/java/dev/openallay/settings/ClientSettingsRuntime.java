@@ -305,7 +305,6 @@ public record ClientSettingsRuntime(
                     extension,
                     configDirectory.resolve("traces"),
                     () -> activeDisplay.get().debugMode());
-            registry.bindCredentials(credentials);
             CapabilitySettingsBackend capabilities = new CapabilitySettingsBackend(
                     capabilitiesPath, product, registry);
             ClientSettingsService.CommandActions commandActions =

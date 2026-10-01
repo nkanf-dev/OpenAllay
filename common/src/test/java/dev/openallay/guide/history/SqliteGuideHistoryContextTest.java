@@ -87,40 +87,73 @@ final class SqliteGuideHistoryContextTest {
     }
 
     @Test
-    void knownCredentialBoundarySurvivesDurableContextAndTextExport() throws Exception {
-        String secret = "opaqueSavedCredentialAlpha";
-        var redactor = new dev.openallay.agent.KnownSecretRedactor(java.util.Set.of(secret));
+    void playerFieldNamesAndValuesSurviveDurableContextAndTextExportWithoutPrivateReasoning() throws Exception {
+        String playerValue = "synthetic-player-value-alpha";
+        String question = "question token=" + playerValue + "; password=player-password; APIkey=player-api-value";
+        String invocationId = "token=player-call";
         JsonObject input = new JsonObject();
-        input.addProperty("source", "return '" + secret + "';");
-        input.addProperty(secret, "ordinary");
+        input.addProperty("source", "return '" + playerValue + "';");
+        input.addProperty(playerValue, "ordinary");
+        input.addProperty("token", playerValue);
+        input.addProperty("password", "player-password");
+        input.addProperty("APIkey", "player-api-value");
         JsonObject value = new JsonObject();
-        value.addProperty(secret, secret);
+        value.addProperty(playerValue, playerValue);
+        value.addProperty("token", playerValue);
+        value.addProperty("password", "player-password");
+        value.addProperty("APIkey", "player-api-value");
         value.addProperty("fact", 42);
-        List<ModelMessage> safe = redactor.messages(List.of(ModelMessage.userText("question"),
+        List<ModelMessage> messages = List.of(ModelMessage.userText(question),
                 new ModelMessage(ModelRole.ASSISTANT, List.of(
                         new ModelContent.Reasoning("private-reasoning", "private-signature"),
-                        new ModelContent.ToolUse("call", "openallay:run_javascript", input))),
-                new ModelMessage(ModelRole.USER, List.of(new ModelContent.ToolResult("call", value, false)))));
-        Path database = temporary.resolve("known-credential.db");
+                        new ModelContent.ToolUse(invocationId, "openallay:run_javascript", input))),
+                new ModelMessage(ModelRole.USER, List.of(new ModelContent.ToolResult(invocationId, value, false))));
+        List<ModelMessage> safe = ModelContextCodec.safe(messages);
+        Path database = temporary.resolve("player-fields.db");
         SqliteGuideHistoryStore writer = store(database);
         GuideHistoryFixture.seed(writer, partition(SCOPE, false));
         writer.commit(new GuideHistoryCommit(SCOPE, List.of(
-                new GuideHistoryMutation.ReplaceContext("main", safe),
-                new GuideHistoryMutation.ReplaceRequestContext(REQUEST, safe))));
+                new GuideHistoryMutation.ReplaceContext("main", messages),
+                new GuideHistoryMutation.ReplaceRequestContext(REQUEST, messages))));
         SqliteGuideHistoryStore reopened = store(database);
         List<ModelMessage> original = reopened.requestContext(SCOPE, REQUEST);
         assertEquals(safe, original);
         assertEquals(safe, reopened.context(contextRequest(SCOPE, 4000)).messages());
+        ModelContent.ToolUse call = (ModelContent.ToolUse) original.get(1).content().getFirst();
+        ModelContent.ToolResult result = (ModelContent.ToolResult) original.get(2).content().getFirst();
+        assertEquals(invocationId, call.id());
+        assertEquals(call.id(), result.toolUseId());
+        assertEquals(input, call.input());
+        assertEquals(value, result.value());
+        assertFalse(result.error());
+        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database)) {
+            for (String table : List.of("model_context", "request_model_context")) {
+                try (var statement = connection.createStatement();
+                        var resultSet = statement.executeQuery("select payload_json from " + table)) {
+                    assertTrue(resultSet.next());
+                    String payload = resultSet.getString(1);
+                    assertEquals(safe, new ModelContextCodec().decode(payload));
+                    assertTrue(payload.contains(playerValue));
+                    assertTrue(payload.contains("player-password"));
+                    assertTrue(payload.contains("player-api-value"));
+                    assertFalse(payload.contains("private-reasoning"));
+                    assertFalse(payload.contains("private-signature"));
+                }
+            }
+        }
         var snapshot = new dev.openallay.guide.export.GuideSessionExportSnapshot("main", List.of(
                 new dev.openallay.guide.export.GuideSessionExportSnapshot.Request(REQUEST, NOW,
-                        GuideRequestStatus.COMPLETED, "question", List.of(), original, null)), NOW);
+                        GuideRequestStatus.COMPLETED, question, List.of(), original, null)), NOW);
         var exported = new dev.openallay.client.gui.export.GuideSessionExporter(temporary).export(snapshot);
         String text = Files.readString(temporary.resolve("openallay/exports").resolve(exported.filename()));
-        assertFalse(text.contains(secret));
+        assertTrue(text.contains(question));
+        assertTrue(text.contains(input.toString()));
+        assertTrue(text.contains(value.toString()));
+        assertTrue(text.contains(invocationId));
         assertFalse(text.contains("private-reasoning"));
         assertFalse(text.contains("private-signature"));
         assertTrue(text.contains("42"));
-        assertTrue(text.contains("[REDACTED]"));
+        assertFalse(text.contains("[REDACTED]"));
     }
 
     @Test

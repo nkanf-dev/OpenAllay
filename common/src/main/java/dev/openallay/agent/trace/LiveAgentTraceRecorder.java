@@ -33,7 +33,11 @@ public final class LiveAgentTraceRecorder {
     }
 
     public synchronized void modelTurn(ModelTurn turn) {
-        add("model_turn", gson.toJsonTree(turn));
+        ModelTurn visible = new ModelTurn(turn.providerId(), turn.model(),
+                turn.content().stream()
+                        .filter(content -> !(content instanceof dev.openallay.model.ModelContent.Reasoning)).toList(),
+                turn.stopReason(), turn.usage());
+        add("model_turn", gson.toJsonTree(visible));
     }
 
     public synchronized void modelRequest(ModelRequest request) {

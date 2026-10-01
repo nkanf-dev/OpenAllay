@@ -125,11 +125,6 @@ public final class ClientPlacedToolExecutor implements AgentToolExecutor {
     public String skillSystemPrompt(String prompt) { return local.skillSystemPrompt(prompt); }
 
     @Override
-    public AgentToolExecutor safeSkillView(java.util.function.UnaryOperator<String> transform) {
-        return new ClientPlacedToolExecutor((LocalAgentToolExecutor) local.safeSkillView(transform), remote);
-    }
-
-    @Override
     public void closeSkillContext(String correlationId) { local.closeSkillContext(correlationId); }
 
     @Override

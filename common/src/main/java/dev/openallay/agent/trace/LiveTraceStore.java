@@ -9,41 +9,26 @@ import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class LiveTraceStore {
     private final Map<UUID, LiveAgentTrace> traces = new ConcurrentHashMap<>();
     private final Path persistenceDirectory;
-    private final dev.openallay.agent.KnownSecretRedactor redactor;
+    private final LiveTraceJson json = new LiveTraceJson();
     private final java.util.function.BooleanSupplier persistenceEnabled;
-    public dev.openallay.agent.KnownSecretRedactor redactor() { return redactor; }
 
-    public LiveTraceStore(Path persistenceDirectory, Set<String> secrets) {
-        this(persistenceDirectory, secrets, () -> true);
+    public LiveTraceStore(Path persistenceDirectory) {
+        this(persistenceDirectory, () -> true);
     }
 
     /** Persistence can follow the live Debug Mode setting without replacing the store. */
     public LiveTraceStore(
             Path persistenceDirectory,
-            Set<String> secrets,
-            java.util.function.BooleanSupplier persistenceEnabled) {
-        this(persistenceDirectory, new dev.openallay.agent.KnownSecretRedactor(secrets), persistenceEnabled);
-    }
-
-    public LiveTraceStore(
-            Path persistenceDirectory,
-            dev.openallay.agent.KnownSecretRedactor redactor,
             java.util.function.BooleanSupplier persistenceEnabled) {
         this.persistenceDirectory = persistenceDirectory;
-        this.redactor = java.util.Objects.requireNonNull(redactor, "redactor");
         this.persistenceEnabled = java.util.Objects.requireNonNull(
                 persistenceEnabled, "persistenceEnabled");
-    }
-
-    public dev.openallay.agent.AgentEvent safeEvent(dev.openallay.agent.AgentEvent event) {
-        return redactor.event(event);
     }
 
     public void record(LiveAgentTrace trace) {
@@ -67,7 +52,7 @@ public final class LiveTraceStore {
     public String encoded(UUID requestId) {
         LiveAgentTrace trace = find(requestId).orElseThrow(() ->
                 new IllegalArgumentException("Unknown live trace " + requestId));
-        return redactor.encodeTrace(trace);
+        return json.encode(trace);
     }
 
     private void persist(LiveAgentTrace trace) {
@@ -76,7 +61,7 @@ public final class LiveTraceStore {
             Path target = persistenceDirectory.resolve(trace.requestId() + ".json");
             Path temporary = Files.createTempFile(persistenceDirectory, ".openallay-trace-", ".tmp");
             try {
-                Files.writeString(temporary, redactor.encodeTrace(trace), StandardCharsets.UTF_8);
+                Files.writeString(temporary, json.encode(trace), StandardCharsets.UTF_8);
                 try {
                     Files.move(temporary, target,
                             StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
