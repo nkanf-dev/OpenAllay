@@ -2,248 +2,181 @@
 
 [简体中文](README.zh-CN.md)
 
-OpenAllay is a modern Minecraft Agent built for modpacks. Ask naturally: it can
-understand the task, explore the game data available in your current instance,
-work through several steps, and turn the result into a useful in-game answer.
+**Your AI companion for exploring modpacks, finding answers, and building in Minecraft.**
 
-![OpenAllay brings Skills, Extensions, shared models, rich interfaces, and visual guidance into Minecraft](docs/media/openallay-banner.png)
+Ask in plain language. OpenAllay uses the game data available in your instance
+to work through the task and bring useful answers back into the game.
 
-*One companion for the recipes, systems, settings, and knowledge spread across
-an entire modpack.*
+<picture>
+  <source type="image/svg+xml" srcset="docs/media/openallay-banner.svg">
+  <img src="docs/media/openallay-banner.png" alt="OpenAllay — your AI companion in Minecraft. Explore, build, and create.">
+</picture>
 
-## A modern Agent inside Minecraft
+[Download on GitHub](https://github.com/nkanf-dev/OpenAllay/releases) ·
+[Quick start](#quick-start) · [0.3.0 release notes](docs/releases/0.3.0.md) ·
+[Community](#community-and-development)
 
-OpenAllay is more than a chat box with a collection of fixed look-up buttons.
-It combines model context, tool use, Skills, and an embedded JavaScript analysis
-runtime. When a question needs real game data, the Agent can write a focused
-analysis for that question, compare a whole dataset at once, and continue from
-the result.
-
-That makes requests such as “rank every sword by damage” or “find the container
-with the cheapest recipe” one coherent analysis instead of dozens of repeated
-single-item searches.
-
-### Skills that teach workflows
-
-Skills give the Agent progressively disclosed instructions for a mod, activity,
-or type of problem. OpenAllay loads the relevant Skill when a task needs it,
-while simple questions can go straight to the available game data. Bundled
-Skills already cover missing recipes, modded machines, guide books, progression,
-multi-part game diagnosis, and the optional command workflow. Browse, install,
-and update more workflows from the
-[OpenAllay Skills community](https://github.com/nkanf-dev/OpenAllay-Skills), or
-import a local Skill package from the in-game settings.
-
-### Extensions that grow with your modpack
-
-OpenAllay Extensions provide typed game data, reusable JavaScript modules, mod
-integrations, and native result views. The in-game Extensions page shows what
-is currently connected, which data roots are available, and compatible packages
-from the
-[OpenAllay Extensions community](https://github.com/nkanf-dev/OpenAllay-Extensions).
-Community Extensions install as normal mod packages and become active after a
-restart. You can also import a compatible local Extension JAR without waiting
-for it to appear in the community catalog. This lets new mod integrations grow
-without turning every capability into another one-purpose Agent tool.
-
-### Online construction as an independent Extension
-
-OpenAllay 0.2.4 includes the Minecraft Builder Extension in both Fabric and
-NeoForge downloads. It comes from
-[OpenAllay-Extensions](https://github.com/nkanf-dev/OpenAllay-Extensions/tree/main/extensions/minecraft-builder)
-and supplies geometry, terrain tools, six building presets, saved structure
-templates, rotation, mirroring, and conflict-aware block undo through its
-JavaScript module and Skill.
-
-To build in your active single-player world, choose a local model and explicitly
-enable **unrestricted JavaScript** in **Settings → Extensions**. This setting is
-off by default and stays separate from Extension installation. Builder works in
-survival and creative worlds. Its undo checks for intervening block edits.
-
-Skill and Extension details list useful capabilities and dependencies. During
-installation, you can enable available requirements, cancel, or choose
-**Continue anyway** to install the package with your current permissions.
-
-### Results made for Minecraft
-
-Answers can include item icons, ingredient slots, recipe layouts, tables,
-progress steps, and expandable details. Typed JavaScript results can become
-native recipe or item presentations automatically. JavaScript tool cards show
-a short planned-action title and description alongside execution status and
-results, and saved conversations keep those descriptions. In Debug mode, tool
-details also show the submitted JavaScript and the input and output behind the
-answer.
-
-### Your model, your choice
-
-Connect an OpenAI-compatible Chat Completions or Anthropic Messages provider,
-save several model profiles, and switch between them from the conversation.
-OpenAllay works in single-player and on ordinary multiplayer servers without
-requiring the server to install it. A server that does install OpenAllay may
-offer a shared model and additional server-side capabilities. Its shared model
-appears automatically in **Models** while connected, clearly marked as
-server-provided and separate from your local profiles.
-
-A built-in offline model table fills in the context window and maximum output
-for matching models, including services whose model list contains only IDs.
-You can set either budget manually or clear its field to return to automatic values. The Models page also shows published token-price estimates, price
-tiers, sources, and dates as a reference for choosing a model.
-
-### Conversations that stay useful
-
-Keep topics in separate sessions, return to saved conversations, copy useful
-messages, or export a complete session. Live status explains whether the Agent
-is loading guidance, analysing game data, waiting for the model, or completing
-an action.
-
-## What OpenAllay 0.2 can do
-
-- Analyse and connect items, recipes, effects, tags, registries, guides,
-  settings, and player-visible game state with one JavaScript program.
-- Filter, group, sort, rank, aggregate, and compare whole collections instead
-  of querying one candidate per model round.
-- Discover the available data schema progressively, including typed fields
-  contributed by compatible Extensions.
-- Reuse bundled JavaScript modules for deterministic domain work such as recipe
-  and inventory calculations.
-- Inspect installed mods, video and gameplay settings, resource packs,
-  coordinates, dimension, and F3-style diagnostics.
-- Inspect a focused region of blocks or entities, then filter, compare, and
-  verify the observed result with JavaScript instead of flooding the
-  conversation.
-- Search supported guide-book content and use recipe information from the game,
-  JEI, REI, and recipe-rich mods such as Farmer's Delight.
-- Present trusted recipes, items, tables, compact values, and generic results
-  through data-driven native views.
-- Keep multiple conversations, durable history, model profiles, copy, export,
-  cancellation, and retry in the native OpenAllay screen.
-- Optionally expose the current Minecraft command set—including commands added
-  by mods—to the Agent, and let it read Minecraft's feedback before reporting
-  what happened. This experimental capability is disabled by default and can
-  be enabled from **Settings → Extensions**.
+| | Make it part of your game |
+| --- | --- |
+| **[Explore](#explore-your-modpack)** | Find recipes, compare gear, check ingredients, and understand your modpack. |
+| **[Build](#build-in-your-world)** | Shape terrain, create structures, and reuse templates in your single-player world. |
+| **[Skills](#create-your-own-skills)** | Add workflows and knowledge for the way you play. |
+| **[Extensions](#add-extensions)** | Connect more mods, game data, actions, and native result views. |
 
 ## Quick start
 
-Download the latest OpenAllay **0.2.x** build for **Fabric** or **NeoForge**
-from [Modrinth](https://modrinth.com/mod/openallay/versions) or
-[GitHub Releases](https://github.com/nkanf-dev/OpenAllay/releases).
-The 0.2 line targets Minecraft **26.2** and requires Java **25**.
-Fabric players also need the matching Fabric API.
+OpenAllay **0.3.0** targets **Minecraft 26.2**, **Java 25**, and **Fabric or
+NeoForge**. Use [GitHub Releases](https://github.com/nkanf-dev/OpenAllay/releases)
+for published downloads and choose the JAR for your loader. Fabric also needs
+the matching **Fabric API**.
 
-Place the downloaded JAR in your instance's `mods` folder, start Minecraft, and
-connect a model:
+1. Put the JAR in your instance's `mods` folder and start Minecraft.
+2. Enter a world and press **K**, or run `/guide`.
+3. Select the gear button, open **Models**, and add a model profile.
+4. Choose **OpenAI-compatible Chat Completions** or **Anthropic Messages**.
+   Enter your provider URL, model ID, and API key.
+5. Review the context window and maximum output. Matching models fill these in
+   automatically; enter them yourself if the provider or catalog has no values.
+6. Save, select the profile in the conversation header, and ask your first question.
 
-1. Enter a world and press **K**, or run `/guide`.
-2. Select the gear button and open **Models**.
-3. Add an **OpenAI-compatible Chat Completions** or **Anthropic Messages**
-   profile.
-4. Enter the provider URL, model ID, and API key.
-5. Review the matched context window, or enter it manually, then save.
-6. Select the profile from the conversation header and start asking questions.
+Try: **“How do I make this item, and do I have the ingredients?”**
 
-For Fabric modpacks that include Architectury, use **21.0.4** for working text
-input in the OpenAllay screen. Versions **21.0.2 and earlier** prevent text input.
+For Fabric modpacks with Architectury, use **21.0.4** for working text input.
+Versions **21.0.2 and earlier** prevent text input in the OpenAllay screen.
+Architectury is not required.
 
-## Try asking
+## Explore your modpack
 
-- “Which mods are installed, and what versions are they?”
+Spend less time switching between wikis, recipe screens, and guide books.
+OpenAllay can connect recipes, items, inventory, installed mods, settings, and
+nearby game observations in one conversation. It can compare a whole collection
+at once rather than looking up one item per model turn.
+
 - “Which sword in this modpack has the highest base damage?”
-- “Which craftable container needs the fewest total ingredients?”
-- “How do I make apple cider? Do I already have the ingredients?”
-- “Compare every food from Farmer's Delight by nutrition.”
-- “Which resource packs are active?”
-- “Show my coordinates, dimension, and F3 information.”
+- “Compare the foods from Farmer's Delight by nutrition.”
+- “How do I make apple cider? Do I have enough ingredients?”
 - “Search my installed guide books for magical crops.”
-- “What fields are available for potion effects in this modpack?”
+- “Which resource packs are active, and what are my current video settings?”
 
-With experimental commands enabled, you can also ask OpenAllay to perform an
-available Minecraft command, read the game's response, and distinguish
-confirmed feedback from a command that produced no visible reply.
+Answers can include item icons, ingredient slots, recipe layouts, tables, and
+expandable details. Tool cards show the work performed and its results. Large
+result previews are labeled as samples, separate from the completed calculation.
 
-## Using the in-game screen
+Optional integrations include **JEI**, **REI**, **Patchouli**, and recipe-rich
+mods such as **Farmer's Delight**. The available data depends on your installed
+mods and their integrations; none of these mods is required to use OpenAllay.
 
-OpenAllay opens in a non-pausing Minecraft screen.
+## Build in your world
 
-- **Enter** sends a message; **Shift+Enter** adds a new line.
-- **Stop** cancels the current request; **Retry** starts it again.
-- **Escape** closes only the screen. Reopen it to see the continuing answer.
-- Select a tool card to inspect its input and actual output.
-- Enable **Debug mode** when you want to inspect the JavaScript written by the
-  Agent and the complete live diagnostics.
-- Use separate sessions for different topics, or switch to another configured
-  model whenever you like.
+The **Minecraft Builder** Extension comes with both loader downloads. Describe
+what you want to build, then use geometry, terrain tools, building presets, and
+saved structure templates to bring it into your active single-player world.
+Templates support rotation and mirroring. Block undo checks for later edits and
+reports conflicts instead of overwriting them.
 
-## Mod and content support
+To start building:
 
-OpenAllay builds on content already present in your modpack:
+1. Open a **single-player world** and select a model profile configured on your
+   client, rather than a server-provided model.
+2. In **Settings → Extensions**, select **Minecraft Builder**. Under
+   **Extension native actions**, enable **Builder world writes**.
+3. Ask for a build, for example: “Build a small stone tower beside me.”
 
-- **JEI** recipes can use JEI's familiar layout inside OpenAllay.
-- **REI** can contribute recipe information to OpenAllay's recipe experience.
-- **Patchouli** guide-book content in active resources can be searched in-game.
-- Recipe-rich mods such as **Farmer's Delight** work with recipe analysis,
-  ingredient checks, and visual recipe pages.
-- Mod-added registries, fields, and commands can be discovered through the
-  typed Extension and command catalogs when their integrations are available.
+The world-write setting is off by default and belongs to Builder alone.
+**You do not need unrestricted JavaScript or JVM access.** Builder works in
+survival and creative worlds; it does not write to ordinary remote servers.
+Undo covers recorded block changes, not every side effect in the world.
 
-These integrations are optional. OpenAllay remains useful when one of them is
-not installed or is unavailable for the current setup.
+Builder is developed independently in
+[OpenAllay Extensions](https://github.com/nkanf-dev/OpenAllay-Extensions/tree/main/extensions/minecraft-builder).
 
+## Create your own Skills
 
-## Current development
+Teach OpenAllay how you play. Skills are reusable instructions and reference
+material for a mod, a task, or a play style—not another set of fixed buttons.
+OpenAllay loads relevant guidance when it needs it.
 
-Before formal 1.0, internal formats are **Latest Only**. Components released
-atomically with OpenAllay do not carry internal schema/protocol versions or old
-compatibility layers. Independently released Extension packages and their public
-API retain version contracts.
+Bundled Skills cover recipes, machines, guide books, progression, and game
+diagnosis. In **Settings → Skills**, browse, install, and update community
+workflows, or import a local Skill package. You can write and share your own
+modpack guides and workflows through
+[OpenAllay Skills](https://github.com/nkanf-dev/OpenAllay-Skills).
 
-The current source refactor removes manual JavaScript root declarations and the
-requirement to read game data before a computation can succeed. It preserves
-actual tool results, errors and loaded Skill text across questions, separates
-original history from compacted model context, and groups optional origin details.
-Builder now batches scans, terrain preparation, construction and undo and writes
-incremental operation journals. Deterministic tests and both loader builds pass;
-this source update does not change already published 0.2.4 artifacts or claim
-measured in-game latency. There is no internal-format migration or automatic reset of existing
-local test data.
+## Add Extensions
 
-## Roadmap
+Extensions connect new game data, reusable JavaScript modules, mod integrations,
+actions, and native result views. Open **Settings → Extensions** to see what is
+connected, browse compatible community packages, or import a local Extension JAR.
+Extensions install like normal mods and become active after a restart.
 
-OpenAllay is growing into an open Agent platform for Minecraft:
+Want to connect your own mod? Start with the examples and authoring guide in
+[OpenAllay Extensions](https://github.com/nkanf-dev/OpenAllay-Extensions).
 
-- **OpenAllay Skills** — workflows and domain knowledge that players, modpack
-  authors, and communities can create, improve, share, and install in-game.
-- **OpenAllay Extensions** — new game-data adapters, reusable modules, mod
-  integrations, Agent capabilities, and native result experiences, distributed
-  as familiar mod packages.
-- **OpenAllay Host** — shared models and centrally managed Agent services for
-  servers and communities.
-- **OpenAllay Studio** — a creative environment for rich in-game experiences,
-  dynamic interfaces, and reusable visual guidance.
+## Inside Minecraft
 
-### Next
+| Conversation | Tool details |
+| --- | --- |
+| ![OpenAllay conversation screen](docs/media/screenshots/openallay-chat.png) | ![OpenAllay tool details screen](docs/media/screenshots/openallay-tool-detail.png) |
 
-- A player memory system that you can review, correct, pin, or forget.
-- Better workflows for creating, editing, reviewing, and publishing Skills and
-  Extensions.
-- More first-party data adapters, knowledge sources, and mod integrations.
-- A clearer experimental-action experience with player approvals.
+*Screenshots show an earlier build. Layout and labels may differ in 0.3.0.*
 
-### Longer term
+Keep separate conversations for different projects, return to saved history,
+copy answers, or export a session. The screen does not pause the game.
 
-- Expand focused block and entity observation into maps, structures,
-  containers, and richer nearby-environment understanding.
-- Turn structures and documentation into step-by-step visual tutorials,
-  including Ponder-style guidance when a compatible integration is available.
-- Plan production chains across machines, intermediate materials, and large
-  technology trees.
-- Grow OpenAllay Host, Studio, and the wider community ecosystem.
+- **Enter** sends; **Shift+Enter** adds a line.
+- **Stop** cancels the request; **Retry** starts it again.
+- **Escape** closes the screen without stopping the answer.
+- Open tool details to inspect results. **Debug mode** also shows the submitted
+  JavaScript and full input/output.
 
-OpenAllay is an independent project and is not affiliated with or endorsed by
-Mojang Studios or Microsoft.
+## Choose your model
 
-## Contributors and developers
+Use a compatible hosted service or local endpoint. Save several profiles and
+switch between them in the conversation. A client-configured profile can use a
+remote provider—it does not require running a model on your computer.
 
-Want to contribute or run the project from source? Start with the
-[development guide](docs/development.md).
+In **Settings → Models**:
+
+- **Context window and maximum output:** use matched provider metadata or the
+  built-in model catalog, or enter your own values. Clear a field to return to
+  automatic values. Unknown limits need a manual value, not a guessed default.
+- **Reasoning effort:** leave **Auto · provider default** selected, or request an
+  explicit effort. Auto leaves the choice to the provider; OpenAllay does not know
+  its actual default. Available choices depend on the protocol, and support
+  varies by model and gateway. This setting is not a thinking-token budget.
+- **Reference prices:** compare published token prices, sources, and dates.
+  Your provider's actual rates may differ.
+
+The chat footer shows a context estimate and budget, reported input/output
+tokens, and estimated cost when available. **An estimate is not a bill.** Missing usage or pricing
+stays unknown, not zero. Provider rates, caching, and reasoning charges can
+change the amount you pay.
+
+OpenAllay is free and open source. Model providers may charge for API use.
+
+## Single-player and multiplayer
+
+| Setup | What to expect |
+| --- | --- |
+| **Single-player** | Explore your instance and use Builder with its world-write setting enabled. |
+| **Ordinary multiplayer server** | Install OpenAllay on your client only. Ask about the game data visible to your client; the server does not need OpenAllay. Builder world edits are not available here. |
+| **Server with OpenAllay** | The server may offer a shared model and additional server-side capabilities. Shared models appear automatically in **Models**, separately from your own profiles. |
+
+Optional **experimental game commands** can be enabled in **Settings →
+Extensions**. They use your normal Minecraft identity and command permissions,
+including available mod commands. This is separate from Builder world writes.
+
+## Community and development
+
+- [OpenAllay Skills](https://github.com/nkanf-dev/OpenAllay-Skills) — share
+  workflows, modpack knowledge, and reference material.
+- [OpenAllay Extensions](https://github.com/nkanf-dev/OpenAllay-Extensions) —
+  build integrations and new capabilities.
+- [Issues](https://github.com/nkanf-dev/OpenAllay/issues) — report a bug or suggest
+  an improvement. Include your Minecraft version, loader, and steps to reproduce.
+- [Development guide](docs/development.md) — build from source, contribute, and
+  read the pre-1.0 **Latest Only** policy for internal formats.
 
 OpenAllay is licensed under the [MIT License](LICENSE).
+It is an independent project, not affiliated with or endorsed by Mojang Studios
+or Microsoft.
