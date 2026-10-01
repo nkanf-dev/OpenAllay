@@ -106,7 +106,6 @@ public final class CapabilitySettingsBackend implements ClientSettingsService.Ca
                 .map(metadata -> metadata.name())
                 .forEach(disabledSkills::add);
         return new CapabilityPolicy(
-                CapabilityPolicy.SCHEMA_VERSION,
                 candidate.disabledTools(),
                 disabledSkills);
     }

@@ -7,24 +7,36 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import dev.openallay.bridge.CorrelationRegistry;
-import dev.openallay.bridge.protocol.BridgeProtocol;
 import dev.openallay.bridge.protocol.RemoteToolCallPayload;
 import dev.openallay.bridge.protocol.RemoteToolRequestClosePayload;
 import dev.openallay.bridge.protocol.RemoteToolResultChunkPayload;
+import dev.openallay.bridge.protocol.ResultChunker;
 import dev.openallay.context.ToolInvocationContext;
 import dev.openallay.model.CancellationSignal;
+import dev.openallay.script.RhinoJavascriptRuntime;
+import dev.openallay.script.command.CommandCapabilityConfig;
+import dev.openallay.script.command.CommandCapabilityRuntime;
+import dev.openallay.script.data.MinecraftAgentHostGraph;
+import dev.openallay.script.workspace.AgentResultWorkspaceRegistry;
+import dev.openallay.script.workspace.JavascriptResultPresenter;
+import dev.openallay.testing.GroundedTestFixtures;
 import dev.openallay.tool.RequestScopeParticipant;
 import dev.openallay.tool.Tool;
 import dev.openallay.tool.ToolAccess;
 import dev.openallay.tool.ToolDescriptor;
 import dev.openallay.tool.ToolRegistry;
 import dev.openallay.tool.ToolResult;
+import dev.openallay.tool.builtin.RunJavascriptTool;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 
 final class RemoteToolServerTest {
@@ -34,11 +46,11 @@ final class RemoteToolServerTest {
         request.start();
 
         request.server.closeRequest(request.actor, new RemoteToolRequestClosePayload(
-                BridgeProtocol.VERSION, "main"));
+                "main"));
 
         request.assertClosedBeforeLateCapture();
         request.server.closeRequest(request.actor, new RemoteToolRequestClosePayload(
-                BridgeProtocol.VERSION, "main"));
+                "main"));
         assertEquals(List.of(request.scope()), request.tool.closed);
     }
 
@@ -53,6 +65,128 @@ final class RemoteToolServerTest {
         assertTrue(request.sent.isEmpty());
         assertEquals(0, request.server.disconnect(request.actor));
         assertEquals(List.of(request.scope()), request.tool.closed);
+    }
+
+    @Test
+    void rootFreeServerJavascriptReadsTheServerSnapshotWithoutScanningSource() throws Exception {
+        JavascriptRequest request = new JavascriptRequest();
+        try {
+            JsonObject result = request.invoke("""
+                    const commandText = "commands.run('say no')";
+                    if (false) commands.run(commandText);
+                    return {
+                      recipe: mc.recipes[0].id,
+                      commands: typeof commands,
+                      java: typeof Java,
+                      packages: typeof Packages
+                    };
+                    """);
+
+            assertEquals("success", result.get("status").getAsString());
+            JsonObject preview = result.getAsJsonObject("value").getAsJsonObject("preview");
+            assertEquals("minecraft:iron_block", preview.get("recipe").getAsString());
+            assertEquals("undefined", preview.get("commands").getAsString());
+            assertEquals("undefined", preview.get("java").getAsString());
+            assertEquals("undefined", preview.get("packages").getAsString());
+            var sources = result.getAsJsonObject("value").getAsJsonArray("sources");
+            assertFalse(sources.isEmpty());
+            assertTrue(sources.asList().stream().allMatch(source -> source.getAsJsonObject()
+                    .getAsJsonObject("evidence").get("authority").getAsString().equals("SERVER_AUTHORITATIVE")));
+            assertEquals(1, request.graphCaptures.get());
+        } finally {
+            request.close();
+        }
+    }
+
+    @Test
+    void rootFreeCommandAccessFailsAtRuntimeWithoutAServerCommandCapability() throws Exception {
+        JavascriptRequest request = new JavascriptRequest();
+        try {
+            JsonObject result = request.invoke("return commands.run('say no');");
+
+            assertEquals("failure", result.get("status").getAsString());
+            assertEquals("javascript_error", result.get("code").getAsString());
+            assertTrue(result.get("message").getAsString().contains("commands"));
+            assertEquals(1, request.graphCaptures.get(),
+                    "the invocation must reach the runtime, not a model-field or source gate");
+        } finally {
+            request.close();
+        }
+    }
+
+    @Test
+    void rootFreeJavaAccessFailsAtRuntimeWithoutUnrestrictedServerAuthority() throws Exception {
+        JavascriptRequest request = new JavascriptRequest();
+        try {
+            JsonObject result = request.invoke(
+                    "return Java.type('java.lang.System').getProperty('java.version');");
+
+            assertEquals("failure", result.get("status").getAsString());
+            assertEquals("javascript_error", result.get("code").getAsString());
+            assertTrue(result.get("message").getAsString().contains("Java"));
+            assertEquals(1, request.graphCaptures.get());
+        } finally {
+            request.close();
+        }
+    }
+
+    private static final class JavascriptRequest {
+        private final UUID actor = GroundedTestFixtures.PLAYER_ID;
+        private final UUID correlation = UUID.randomUUID();
+        private final Gson gson = new Gson();
+        private final AtomicInteger graphCaptures = new AtomicInteger();
+        private final CompletableFuture<JsonObject> result = new CompletableFuture<>();
+        private final ResultChunker.Reassembler reassembler = new ResultChunker.Reassembler();
+        private final RemoteToolServer server;
+
+        private JavascriptRequest() {
+            // A setting alone cannot grant a command bridge. Server requests have no capture.
+            CommandCapabilityRuntime commands = new CommandCapabilityRuntime();
+            commands.replace(new CommandCapabilityConfig(true));
+            RunJavascriptTool javascript = new RunJavascriptTool(
+                    new RhinoJavascriptRuntime(),
+                    context -> {
+                        graphCaptures.incrementAndGet();
+                        return new MinecraftAgentHostGraph(context);
+                    },
+                    new AgentResultWorkspaceRegistry(),
+                    new JavascriptResultPresenter(),
+                    commands);
+            ToolRegistry tools = new ToolRegistry();
+            tools.register("test", List.of(javascript));
+            server = new RemoteToolServer(
+                    new ExportedToolPolicy(tools, Set.of(RunJavascriptTool.ID)),
+                    (actorId, capabilities, correlationId, cancellation) -> {
+                        assertEquals(actor, actorId);
+                        ToolInvocationContext base = GroundedTestFixtures.fullContext();
+                        ToolInvocationContext context = new ToolInvocationContext(
+                                correlationId, base.capturedAt(), base.caller(), base.player(),
+                                base.registries(), base.recipes(), base.observableGameState(), base.metrics());
+                        assertFalse(context.unrestrictedJavascript());
+                        return CompletableFuture.completedFuture(context);
+                    },
+                    (actorId, chunk) -> {
+                        assertEquals(actor, actorId);
+                        assertEquals(correlation, chunk.correlationId());
+                        reassembler.accept(chunk).ifPresent(json ->
+                                result.complete(JsonParser.parseString(json).getAsJsonObject()));
+                    },
+                    new CorrelationRegistry(),
+                    gson,
+                    128);
+        }
+
+        private JsonObject invoke(String source) throws Exception {
+            RunJavascriptTool.Input input = new RunJavascriptTool.Input(
+                    source, List.of(), "Enable commands and Java", "Request unrestricted command access");
+            assertInstanceOf(ToolResult.Success.class, server.handle(actor, new RemoteToolCallPayload(
+                    correlation, "main", RunJavascriptTool.ID, gson.toJson(input))));
+            return result.get(5, TimeUnit.SECONDS);
+        }
+
+        private void close() {
+            server.closeRequest(actor, new RemoteToolRequestClosePayload("main"));
+        }
     }
 
     private static final class PendingRequest {
@@ -81,7 +215,7 @@ final class RemoteToolServerTest {
 
         private void start() {
             assertInstanceOf(ToolResult.Success.class, server.handle(actor, new RemoteToolCallPayload(
-                    BridgeProtocol.VERSION, UUID.randomUUID(), "main", "test:scope", "{}")));
+                    UUID.randomUUID(), "main", "test:scope", "{}")));
             assertNotNull(cancellation);
             assertFalse(cancellation.isCancelled());
             assertTrue(tool.lifecycle.isEmpty());

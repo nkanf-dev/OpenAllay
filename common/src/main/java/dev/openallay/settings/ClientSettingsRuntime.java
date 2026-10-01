@@ -436,7 +436,7 @@ public record ClientSettingsRuntime(
         CommandCapabilityConfig candidate =
                 ((ToolResult.Success<CommandCapabilityConfig>) loaded).value();
         CommandCapabilityConfig prior = new CommandCapabilityConfig(
-                CommandCapabilityConfig.SCHEMA_VERSION, product.commands().enabled());
+                product.commands().enabled());
         product.commands().replace(candidate);
         product.skills().setRuntimeDisabledSkills(candidate.enabled()
                 ? Set.of()
@@ -485,7 +485,6 @@ public record ClientSettingsRuntime(
                 Duration.ofSeconds(300),
                 null);
         ModelProfilesConfig config = new ModelProfilesConfig(
-                ModelProfilesConfig.SCHEMA_VERSION,
                 definition.id(),
                 List.of(definition));
         ResolvedModelProfile resolved = new ResolvedModelProfile(

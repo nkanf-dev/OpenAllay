@@ -16,6 +16,8 @@ import java.util.UUID;
 public final class ServerAgentEventCodec {
     private final Gson gson;
     private final ContextCheckpointCodec checkpoints = new ContextCheckpointCodec();
+    private final dev.openallay.agent.context.ModelContextCodec contexts =
+            new dev.openallay.agent.context.ModelContextCodec();
 
     public ServerAgentEventCodec(Gson gson) {
         this.gson = Objects.requireNonNull(gson, "gson");
@@ -29,6 +31,16 @@ public final class ServerAgentEventCodec {
         String eventJson;
         if (event instanceof AgentEvent.ContextCompacted compacted) {
             eventJson = checkpoints.encode(compacted.checkpoint());
+        } else if (event instanceof AgentEvent.ContextUpdated updated) {
+            JsonObject context = new JsonObject();
+            context.add("messages", JsonParser.parseString(contexts.encode(updated.messages())));
+            context.add("requestMessages", JsonParser.parseString(contexts.encode(updated.requestMessages())));
+            eventJson = context.toString();
+        } else if (event instanceof AgentEvent.ContextFinalized finalized) {
+            JsonObject context = new JsonObject();
+            context.add("messages", JsonParser.parseString(contexts.encode(finalized.messages())));
+            context.add("requestMessages", JsonParser.parseString(contexts.encode(finalized.requestMessages())));
+            eventJson = context.toString();
         } else if (event instanceof AgentEvent.ToolStarted started) {
             eventJson = encodeToolStarted(started).toString();
         } else {
@@ -36,7 +48,7 @@ public final class ServerAgentEventCodec {
             eventJson = gson.toJson(body);
         }
         return new ServerAgentEventPayload(
-                BridgeProtocol.VERSION, requestId, type, eventJson, terminal);
+                requestId, type, eventJson, terminal);
     }
 
     public AgentEvent decode(ServerAgentEventPayload payload, UUID expectedRequestId) {
@@ -59,6 +71,8 @@ public final class ServerAgentEventCodec {
             case "state" -> new AgentEvent.StateChanged(read(body, Set.of("state"), AgentEvent.StateChanged.class).state());
             case "context_compacted" ->
                     new AgentEvent.ContextCompacted(checkpoints.decode(body.toString()));
+            case "context_updated" -> readContext(body);
+            case "context_finalized" -> readFinalized(body);
             case "text_delta" -> new AgentEvent.ModelProgress(
                     read(body, Set.of("text"), ModelEvent.TextDelta.class));
             case "reasoning_delta" -> new AgentEvent.ModelProgress(
@@ -91,6 +105,22 @@ public final class ServerAgentEventCodec {
             throw new IllegalArgumentException("Server Agent event terminal flag is inconsistent");
         }
         return event;
+    }
+
+    private AgentEvent.ContextUpdated readContext(JsonObject body) {
+        if (!body.keySet().equals(Set.of("messages", "requestMessages"))) {
+            throw new IllegalArgumentException("Server model context schema mismatch");
+        }
+        return new AgentEvent.ContextUpdated(contexts.decode(body.get("messages").toString()),
+                contexts.decode(body.get("requestMessages").toString()));
+    }
+
+    private AgentEvent.ContextFinalized readFinalized(JsonObject body) {
+        if (!body.keySet().equals(Set.of("messages", "requestMessages"))) {
+            throw new IllegalArgumentException("Server finalized context schema mismatch");
+        }
+        return new AgentEvent.ContextFinalized(contexts.decode(body.get("messages").toString()),
+                contexts.decode(body.get("requestMessages").toString()));
     }
 
     private <T> T read(JsonObject body, Set<String> fields, Class<T> type) {
@@ -153,6 +183,8 @@ public final class ServerAgentEventCodec {
         return switch (event) {
             case AgentEvent.StateChanged ignored -> "state";
             case AgentEvent.ContextCompacted ignored -> "context_compacted";
+            case AgentEvent.ContextUpdated ignored -> "context_updated";
+            case AgentEvent.ContextFinalized ignored -> "context_finalized";
             case AgentEvent.ToolStarted ignored -> "tool_started";
             case AgentEvent.ToolCompleted ignored -> "tool_completed";
             case AgentEvent.FinalText ignored -> "final_text";

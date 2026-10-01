@@ -5,7 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import dev.openallay.guide.GuideSessionSnapshot;
+import dev.openallay.agent.context.ContextBudget;
+import dev.openallay.model.ModelMessage;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -29,9 +30,9 @@ final class GuideHistoryRepositoryTest {
         GuideHistoryRepository repository = new GuideHistoryRepository(store);
         long caller = Thread.currentThread().threadId();
 
-        var first = repository.save(partition(1));
+        var first = repository.commit(commit(1));
         assertTrue(store.entered.await(2, TimeUnit.SECONDS));
-        var second = repository.save(partition(2));
+        var second = repository.commit(commit(2));
         var flush = repository.flush();
         assertFalse(second.isDone());
         assertFalse(flush.isDone());
@@ -41,7 +42,7 @@ final class GuideHistoryRepositoryTest {
         second.join();
         flush.join();
 
-        assertEquals(List.of(1L, 2L), store.savedGenerations);
+        assertEquals(List.of(1L, 2L), store.committedGenerations);
         assertTrue(store.threadNames.stream().allMatch(name -> name.startsWith("openallay-history-")));
         assertTrue(store.threadIds.stream().allMatch(id -> id != caller));
         repository.closeAsync().join();
@@ -53,23 +54,23 @@ final class GuideHistoryRepositoryTest {
         GuideHistoryRepository repository = new GuideHistoryRepository(store);
 
         CompletionException failure = assertThrows(
-                CompletionException.class, () -> repository.save(partition(1)).join());
-        repository.save(partition(2)).join();
+                CompletionException.class, () -> repository.commit(commit(1)).join());
+        repository.commit(commit(2)).join();
 
         GuideHistoryException history = (GuideHistoryException) failure.getCause();
         assertEquals("history_write_failed", history.code());
         assertTrue(repository.activity().idleForDeletion());
         repository.delete(GuideHistoryDeleteScope.actor(SCOPE.actorId())).join();
-        assertEquals(List.of(2L), store.savedGenerations);
+        assertEquals(List.of(2L), store.committedGenerations);
         assertEquals(1, store.deleteCalls);
         repository.closeAsync().join();
     }
 
     @Test
-    void deleteRejectsInsteadOfQueueingBehindPendingSave() throws Exception {
+    void deleteRejectsInsteadOfQueueingBehindPendingCommit() throws Exception {
         BlockingStore store = new BlockingStore();
         GuideHistoryRepository repository = new GuideHistoryRepository(store);
-        CompletableFuture<Void> save = repository.save(partition(1));
+        CompletableFuture<Void> writing = repository.commit(commit(1));
         assertTrue(store.entered.await(2, TimeUnit.SECONDS));
 
         assertEquals(new GuideHistoryActivity(1, false), repository.activity());
@@ -81,13 +82,13 @@ final class GuideHistoryRepositoryTest {
         assertEquals(0, store.resetCalls);
 
         store.release.countDown();
-        save.join();
+        writing.join();
         assertTrue(repository.activity().idleForDeletion());
         repository.closeAsync().join();
     }
 
     @Test
-    void reservedDeleteBlocksNewSaveAndCannotBeResurrected() throws Exception {
+    void reservedDeleteBlocksNewCommitAndCannotBeResurrected() throws Exception {
         DeletingStore store = new DeletingStore(false);
         GuideHistoryRepository repository = new GuideHistoryRepository(store);
 
@@ -97,18 +98,18 @@ final class GuideHistoryRepositoryTest {
 
         assertEquals(new GuideHistoryActivity(0, true), repository.activity());
         assertFutureCode(repository.metadata(SCOPE), "history_delete_busy");
-        assertFutureCode(repository.save(partition(1)), "history_delete_busy");
+        assertFutureCode(repository.commit(commit(1)), "history_delete_busy");
         assertFutureCode(
                 repository.delete(GuideHistoryDeleteScope.actor(SCOPE.actorId())),
                 "history_delete_busy");
         assertFutureCode(repository.resetDatabase(), "history_delete_busy");
-        assertTrue(store.savedGenerations.isEmpty());
+        assertTrue(store.committedGenerations.isEmpty());
 
         store.release.countDown();
         deleting.join();
         assertTrue(repository.activity().idleForDeletion());
-        repository.save(partition(2)).join();
-        assertEquals(List.of(2L), store.savedGenerations);
+        repository.commit(commit(2)).join();
+        assertEquals(List.of(2L), store.committedGenerations);
         repository.closeAsync().join();
     }
 
@@ -120,7 +121,7 @@ final class GuideHistoryRepositoryTest {
         assertTrue(store.entered.await(2, TimeUnit.SECONDS));
 
         CompletableFuture<Void> close = repository.closeAsync();
-        assertFutureCode(repository.load(SCOPE), "history_repository_closed");
+        assertFutureCode(repository.metadata(SCOPE), "history_repository_closed");
         assertFalse(close.isDone());
 
         store.release.countDown();
@@ -131,13 +132,13 @@ final class GuideHistoryRepositoryTest {
     }
 
     @Test
-    void cancellingReturnedSaveFutureDoesNotReleaseReservationOrFlushEarly() throws Exception {
+    void cancellingReturnedCommitFutureDoesNotReleaseReservationOrFlushEarly() throws Exception {
         BlockingStore store = new BlockingStore();
         GuideHistoryRepository repository = new GuideHistoryRepository(store);
-        CompletableFuture<Void> save = repository.save(partition(1));
+        CompletableFuture<Void> writing = repository.commit(commit(1));
         assertTrue(store.entered.await(2, TimeUnit.SECONDS));
 
-        assertTrue(save.cancel(false));
+        assertTrue(writing.cancel(false));
         assertEquals(new GuideHistoryActivity(1, false), repository.activity());
         assertFalse(repository.flush().isDone());
         assertFutureCode(
@@ -151,7 +152,7 @@ final class GuideHistoryRepositoryTest {
     }
 
     @Test
-    void cancellingReturnedDeleteFutureDoesNotAllowAResurrectionSave() throws Exception {
+    void cancellingReturnedDeleteFutureDoesNotAllowAResurrectionCommit() throws Exception {
         DeletingStore store = new DeletingStore(false);
         GuideHistoryRepository repository = new GuideHistoryRepository(store);
         CompletableFuture<Void> deleting = repository.delete(
@@ -161,12 +162,12 @@ final class GuideHistoryRepositoryTest {
         assertTrue(deleting.cancel(false));
         assertEquals(new GuideHistoryActivity(0, true), repository.activity());
         assertFalse(repository.flush().isDone());
-        assertFutureCode(repository.save(partition(1)), "history_delete_busy");
+        assertFutureCode(repository.commit(commit(1)), "history_delete_busy");
 
         store.release.countDown();
         repository.flush().join();
         assertTrue(repository.activity().idleForDeletion());
-        assertTrue(store.savedGenerations.isEmpty());
+        assertTrue(store.committedGenerations.isEmpty());
         repository.closeAsync().join();
     }
 
@@ -174,16 +175,16 @@ final class GuideHistoryRepositoryTest {
     void closeDrainsPriorWorkAndRejectsNewSubmission() throws Exception {
         BlockingStore store = new BlockingStore();
         GuideHistoryRepository repository = new GuideHistoryRepository(store);
-        var save = repository.save(partition(1));
+        var writing = repository.commit(commit(1));
         assertTrue(store.entered.await(2, TimeUnit.SECONDS));
 
         var close = repository.closeAsync();
         CompletionException rejected = assertThrows(
-                CompletionException.class, () -> repository.load(SCOPE).join());
+                CompletionException.class, () -> repository.metadata(SCOPE).join());
         assertFalse(close.isDone());
 
         store.release.countDown();
-        save.join();
+        writing.join();
         close.join();
 
         assertTrue(store.closed);
@@ -204,24 +205,41 @@ final class GuideHistoryRepositoryTest {
         assertTrue(store.entered.await(2, TimeUnit.SECONDS));
         CompletableFuture<Optional<GuideHistoryMetadata>> metadata =
                 repository.metadata(SCOPE);
+        CompletableFuture<GuideHistoryPage> page = repository.page(new GuideHistoryPageRequest(
+                SCOPE, "main", GuideHistoryPageRequest.Direction.NEWEST, null, 1));
+        CompletableFuture<GuideHistoryContextSeed> context = repository.context(
+                new GuideHistoryContextRequest(
+                        SCOPE, "main", new ContextBudget(8_192, 1_024), 256, "fixture-model"));
+        UUID requestId = UUID.fromString("1911776f-4b93-4107-82e3-7d901d0346b8");
+        CompletableFuture<List<ModelMessage>> original = repository.requestContext(SCOPE, requestId);
         assertFalse(metadata.isDone());
+        assertFalse(page.isDone());
+        assertFalse(context.isDone());
+        assertFalse(original.isDone());
         assertEquals(new GuideHistoryActivity(1, false), repository.activity());
 
         store.release.countDown();
         writing.join();
         assertTrue(metadata.join().isEmpty());
-        assertEquals(List.of("commit", "metadata"), store.operations);
+        assertTrue(page.join().requests().isEmpty());
+        assertEquals(List.of(ModelMessage.userText("active worker context")), context.join().messages());
+        assertEquals(List.of(ModelMessage.userText("original worker request")), original.join());
+        assertEquals(List.of("commit", "metadata", "page", "context", "requestContext"),
+                store.operations);
         assertTrue(store.threadIds.stream().allMatch(id -> id != caller));
         repository.closeAsync().join();
     }
 
-    private static GuideHistoryPartition partition(long generation) {
-        return new GuideHistoryPartition(
-                GuideHistoryPartition.SCHEMA_VERSION,
-                SCOPE,
-                "main",
-                List.of(new GuideSessionSnapshot("main", List.of(), List.of())),
-                Instant.ofEpochMilli(generation));
+    private static GuideHistoryCommit commit(long generation) {
+        return new GuideHistoryCommit(SCOPE, List.of(new GuideHistoryMutation.UpsertPartition(
+                "main", Instant.ofEpochMilli(generation))));
+    }
+
+    private static long generation(GuideHistoryCommit commit) {
+        return commit.mutations().stream()
+                .filter(GuideHistoryMutation.UpsertPartition.class::isInstance)
+                .map(GuideHistoryMutation.UpsertPartition.class::cast)
+                .findFirst().orElseThrow().updatedAt().toEpochMilli();
     }
 
     private static void assertFutureCode(CompletableFuture<?> future, String code) {
@@ -232,7 +250,7 @@ final class GuideHistoryRepositoryTest {
     private static final class BlockingStore implements GuideHistoryStore {
         private final CountDownLatch entered = new CountDownLatch(1);
         private final CountDownLatch release = new CountDownLatch(1);
-        private final List<Long> savedGenerations = new ArrayList<>();
+        private final List<Long> committedGenerations = new ArrayList<>();
         private final List<Long> threadIds = new ArrayList<>();
         private final List<String> threadNames = new ArrayList<>();
         private int deleteCalls;
@@ -240,13 +258,13 @@ final class GuideHistoryRepositoryTest {
         private volatile boolean closed;
 
         @Override
-        public GuideHistoryLoad load(GuideHistoryScope scope) {
+        public Optional<GuideHistoryMetadata> metadata(GuideHistoryScope scope) {
             recordThread();
-            return new GuideHistoryLoad(Optional.empty(), List.of());
+            return Optional.empty();
         }
 
         @Override
-        public void save(GuideHistoryPartition partition) {
+        public void commit(GuideHistoryCommit commit) {
             recordThread();
             entered.countDown();
             try {
@@ -256,7 +274,7 @@ final class GuideHistoryRepositoryTest {
                 throw new GuideHistoryException(
                         "history_write_failed", "History worker was interrupted", interrupted);
             }
-            savedGenerations.add(partition.updatedAt().toEpochMilli());
+            committedGenerations.add(generation(commit));
         }
 
         @Override
@@ -282,23 +300,23 @@ final class GuideHistoryRepositoryTest {
     }
 
     private static final class FailingStore implements GuideHistoryStore {
-        private final List<Long> savedGenerations = new ArrayList<>();
+        private final List<Long> committedGenerations = new ArrayList<>();
         private boolean first = true;
         private int deleteCalls;
 
         @Override
-        public GuideHistoryLoad load(GuideHistoryScope scope) {
-            return GuideHistoryLoad.empty();
+        public Optional<GuideHistoryMetadata> metadata(GuideHistoryScope scope) {
+            return Optional.empty();
         }
 
         @Override
-        public void save(GuideHistoryPartition partition) {
+        public void commit(GuideHistoryCommit commit) {
             if (first) {
                 first = false;
                 throw new GuideHistoryException(
                         "history_write_failed", "injected history failure");
             }
-            savedGenerations.add(partition.updatedAt().toEpochMilli());
+            committedGenerations.add(generation(commit));
         }
 
         @Override
@@ -316,7 +334,7 @@ final class GuideHistoryRepositoryTest {
         private final boolean reset;
         private final CountDownLatch entered = new CountDownLatch(1);
         private final CountDownLatch release = new CountDownLatch(1);
-        private final List<Long> savedGenerations = new ArrayList<>();
+        private final List<Long> committedGenerations = new ArrayList<>();
         private int deleteCalls;
         private int resetCalls;
         private volatile boolean closed;
@@ -326,13 +344,13 @@ final class GuideHistoryRepositoryTest {
         }
 
         @Override
-        public GuideHistoryLoad load(GuideHistoryScope scope) {
-            return GuideHistoryLoad.empty();
+        public Optional<GuideHistoryMetadata> metadata(GuideHistoryScope scope) {
+            return Optional.empty();
         }
 
         @Override
-        public void save(GuideHistoryPartition partition) {
-            savedGenerations.add(partition.updatedAt().toEpochMilli());
+        public void commit(GuideHistoryCommit commit) {
+            committedGenerations.add(generation(commit));
         }
 
         @Override
@@ -377,16 +395,6 @@ final class GuideHistoryRepositoryTest {
         private final List<Long> threadIds = new ArrayList<>();
 
         @Override
-        public GuideHistoryLoad load(GuideHistoryScope scope) {
-            return GuideHistoryLoad.empty();
-        }
-
-        @Override
-        public void save(GuideHistoryPartition partition) {
-            throw new AssertionError("full save is not expected");
-        }
-
-        @Override
         public void commit(GuideHistoryCommit commit) {
             operations.add("commit");
             threadIds.add(Thread.currentThread().threadId());
@@ -405,6 +413,32 @@ final class GuideHistoryRepositoryTest {
             operations.add("metadata");
             threadIds.add(Thread.currentThread().threadId());
             return Optional.empty();
+        }
+
+        @Override
+        public GuideHistoryPage page(GuideHistoryPageRequest request) {
+            assertEquals(SCOPE, request.scope());
+            operations.add("page");
+            threadIds.add(Thread.currentThread().threadId());
+            return new GuideHistoryPage(request.sessionId(), List.of(), null, null, false, false);
+        }
+
+        @Override
+        public GuideHistoryContextSeed context(GuideHistoryContextRequest request) {
+            assertEquals(SCOPE, request.scope());
+            operations.add("context");
+            threadIds.add(Thread.currentThread().threadId());
+            return new GuideHistoryContextSeed(request.sessionId(),
+                    List.of(ModelMessage.userText("active worker context")), List.of(), 10);
+        }
+
+        @Override
+        public List<ModelMessage> requestContext(GuideHistoryScope scope, UUID requestId) {
+            assertEquals(SCOPE, scope);
+            assertEquals(UUID.fromString("1911776f-4b93-4107-82e3-7d901d0346b8"), requestId);
+            operations.add("requestContext");
+            threadIds.add(Thread.currentThread().threadId());
+            return List.of(ModelMessage.userText("original worker request"));
         }
 
         @Override public void delete(GuideHistoryDeleteScope scope) {}

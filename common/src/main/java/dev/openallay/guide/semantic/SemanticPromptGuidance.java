@@ -16,7 +16,7 @@ public final class SemanticPromptGuidance {
                 Inline references use [[tw:<kind>|<target>|<optional label>]]. Prefer exact handles returned by tools.
                 Raw item, block, fluid, entity, biome, dimension, tag, or key IDs are presentation only and do not create evidence.
                 Controlled components use one fenced openallay-component JSON object with exactly these envelope fields:
-                {"schemaVersion":1,"type":string,"properties":object,"fallback":string,"narration":string}.
+                {"type":string,"properties":object,"fallback":string,"narration":string}.
                 fallback and narration must be non-empty player-readable text. Do not add envelope or properties fields.
                 Referenced items, recipes, and sources are accepted only when their exact IDs/handles came from Tool evidence in this request; never invent or repair them.
                 A recipe_grid must copy the complete exact recipe handle from the same request's Tool result. Never author slots, coordinates, textures, widget names, or a recipe layout; OpenAllay binds the handle to trusted native recipe data.

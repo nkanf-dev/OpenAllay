@@ -32,7 +32,6 @@ final class SemanticMessageParserTest {
                 ```
                 """);
 
-        assertEquals(SemanticDocument.SCHEMA_VERSION, document.schemaVersion());
         assertInstanceOf(SemanticBlock.Heading.class, document.blocks().get(0));
         SemanticBlock.Paragraph paragraph = assertInstanceOf(
                 SemanticBlock.Paragraph.class, document.blocks().get(1));

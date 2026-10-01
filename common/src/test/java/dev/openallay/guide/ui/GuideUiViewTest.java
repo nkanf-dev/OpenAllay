@@ -232,7 +232,7 @@ final class GuideUiViewTest {
 
         GuideUiRow.Tool debug = (GuideUiRow.Tool) GuideUiView.from(
                 snapshot(request), new GuideDisplayConfig(
-                        GuideDisplayConfig.SCHEMA_VERSION, true, true,
+                        true, true,
                 GuideDisplayConfig.DEFAULT_ASSISTANT_NAME)).rows().get(1);
         assertEquals("call-private", debug.detail().debug().orElseThrow().invocationId());
     }
@@ -258,7 +258,7 @@ final class GuideUiViewTest {
             assertFalse(GuideUiView.from(snapshot(request)).canCancel());
             assertEquals(null, GuideUiView.from(snapshot(request)).progress());
             GuideUiRow.Tool debug = (GuideUiRow.Tool) GuideUiView.from(snapshot(request),
-                    new GuideDisplayConfig(GuideDisplayConfig.SCHEMA_VERSION, true, true,
+                    new GuideDisplayConfig(true, true,
                             GuideDisplayConfig.DEFAULT_ASSISTANT_NAME)).rows().get(1);
             assertEquals(GuideToolDisplayStatus.NO_RESULT_RECORDED, debug.detail().displayStatus());
             assertEquals(GuideToolStatus.RUNNING, debug.detail().status());

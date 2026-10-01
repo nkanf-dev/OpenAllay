@@ -54,7 +54,6 @@ final class AgentBenchmarkRecorderTest {
 
     private static LiveAgentTrace trace() {
         return new LiveAgentTrace(
-                1,
                 UUID.randomUUID(),
                 UUID.randomUUID(),
                 "benchmark",

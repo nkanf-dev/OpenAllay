@@ -48,6 +48,15 @@ def build(data=None):
 
 
 class PublicCatalogTest(unittest.TestCase):
+    def test_catalog_root_keeps_only_payload_and_snapshot_provenance(self):
+        result = build()
+        self.assertEqual({"catalogVersion", "publishedAt", "sources", "models"}, set(result))
+        self.assertEqual("2026-09-30", result["catalogVersion"])
+        for invalid in ({**result, "extra": True},
+                        {key: value for key, value in result.items() if key != "sources"}):
+            with self.assertRaisesRegex(ValueError, "root schema mismatch"):
+                update.validate_catalog(invalid)
+
     def test_provider_prices_not_collapsed_and_decimal_units(self):
         result = build()
         direct, gateway = result["models"]

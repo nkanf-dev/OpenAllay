@@ -58,7 +58,7 @@ def load_phase(directory, scenario, repo=REPO):
             and native.get("cheatsOff") is True, "Native world identity or authorization differs")
     require(native.get("oracle") == "independent-integrated-server-owner-thread-readback",
             "Missing independent owner-thread readback")
-    require(trace.get("schemaVersion") == 1 and trace.get("requestId") == report.get("requestId")
+    require(trace.get("requestId") == report.get("requestId")
             and trace.get("sessionId") == report.get("sessionId") and trace.get("finalState") == "COMPLETED"
             and not trace.get("errorCode"), "Production trace is not the completed report request")
     checks = native.get("checks", [])

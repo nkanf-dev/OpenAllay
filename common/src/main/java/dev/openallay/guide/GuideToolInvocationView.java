@@ -7,27 +7,24 @@ import java.util.List;
 
 /** Closed, durable, player-readable invocation facts; never contains raw source or arguments. */
 public record GuideToolInvocationView(
-        List<String> roots,
         List<String> handles,
         List<String> modules,
         boolean liveArgumentsAvailable) {
     public GuideToolInvocationView {
-        roots = List.copyOf(roots);
         handles = List.copyOf(handles);
         modules = List.copyOf(modules);
     }
 
     public static GuideToolInvocationView none() {
-        return new GuideToolInvocationView(List.of(), List.of(), List.of(), false);
+        return new GuideToolInvocationView(List.of(), List.of(), false);
     }
 
     public static GuideToolInvocationView from(
             String toolId, JsonObject arguments, JsonObject normalized) {
         if (toolId == null || !toolId.endsWith(":run_javascript")) {
-            return new GuideToolInvocationView(List.of(), List.of(), List.of(), arguments != null);
+            return new GuideToolInvocationView(List.of(), List.of(), arguments != null);
         }
         return new GuideToolInvocationView(
-                strings(arguments, "roots"),
                 strings(arguments, "handles"),
                 strings(value(normalized), "modules"),
                 arguments != null);
@@ -38,15 +35,15 @@ public record GuideToolInvocationView(
         return observedModules.isEmpty()
                 ? this
                 : new GuideToolInvocationView(
-                        roots, handles, observedModules, liveArgumentsAvailable);
+                        handles, observedModules, liveArgumentsAvailable);
     }
 
     public GuideToolInvocationView restored() {
-        return new GuideToolInvocationView(roots, handles, modules, false);
+        return new GuideToolInvocationView(handles, modules, false);
     }
 
     public boolean empty() {
-        return roots.isEmpty() && handles.isEmpty() && modules.isEmpty();
+        return handles.isEmpty() && modules.isEmpty();
     }
 
     private static JsonObject value(JsonObject normalized) {

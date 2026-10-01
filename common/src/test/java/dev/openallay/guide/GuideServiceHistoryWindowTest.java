@@ -12,11 +12,9 @@ import dev.openallay.guide.history.GuideHistoryActivity;
 import dev.openallay.guide.history.GuideHistoryCommit;
 import dev.openallay.guide.history.GuideHistoryCursor;
 import dev.openallay.guide.history.GuideHistoryDeleteScope;
-import dev.openallay.guide.history.GuideHistoryLoad;
 import dev.openallay.guide.history.GuideHistoryMetadata;
 import dev.openallay.guide.history.GuideHistoryPage;
 import dev.openallay.guide.history.GuideHistoryPageRequest;
-import dev.openallay.guide.history.GuideHistoryPartition;
 import dev.openallay.guide.history.GuideHistoryScope;
 import dev.openallay.model.ModelUsage;
 import dev.openallay.tool.ToolResult;
@@ -45,7 +43,7 @@ final class GuideServiceHistoryWindowTest {
         GuideSessionSnapshot session = service.snapshot().sessions().getFirst();
         assertEquals(3, session.historyWindow().totalRequests());
         assertTrue(session.requests().isEmpty());
-        assertEquals(0, history.legacyLoads);
+        assertTrue(history.pages.isEmpty());
         assertEquals(1, history.metadataLoads);
     }
 
@@ -142,7 +140,6 @@ final class GuideServiceHistoryWindowTest {
         private final GuideHistoryMetadata metadata;
         private final List<CompletableFuture<GuideHistoryPage>> pages = new ArrayList<>();
         private int metadataLoads;
-        private int legacyLoads;
 
         private WindowHistory(GuideHistoryMetadata metadata) { this.metadata = metadata; }
         @Override public CompletableFuture<java.util.Optional<GuideHistoryMetadata>> metadata(
@@ -156,13 +153,6 @@ final class GuideServiceHistoryWindowTest {
             return result;
         }
         @Override public CompletableFuture<Void> commit(GuideHistoryCommit commit) {
-            return CompletableFuture.completedFuture(null);
-        }
-        @Override public CompletableFuture<GuideHistoryLoad> load(GuideHistoryScope scope) {
-            legacyLoads++;
-            return CompletableFuture.completedFuture(GuideHistoryLoad.empty());
-        }
-        @Override public CompletableFuture<Void> save(GuideHistoryPartition partition) {
             return CompletableFuture.completedFuture(null);
         }
         @Override public CompletableFuture<Void> delete(GuideHistoryDeleteScope scope) {

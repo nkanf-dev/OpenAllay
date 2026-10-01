@@ -24,7 +24,6 @@ public record SettingsDiagnosticsSnapshot(
 
     public record DebugSettingsDiagnostics(
             long settingsGeneration,
-            int databaseSchema,
             List<DebugModelProfile> models,
             DebugCapabilities capabilities,
             Optional<DebugGuide> guide,
@@ -33,8 +32,8 @@ public record SettingsDiagnosticsSnapshot(
             boolean sourcesRetained,
             List<String> failureCodes) {
         public DebugSettingsDiagnostics {
-            if (settingsGeneration < 0 || databaseSchema <= 0) {
-                throw new IllegalArgumentException("debug generations and schemas are invalid");
+            if (settingsGeneration < 0) {
+                throw new IllegalArgumentException("debug generation is invalid");
             }
             models = List.copyOf(models);
             Objects.requireNonNull(capabilities, "capabilities");

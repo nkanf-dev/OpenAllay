@@ -125,7 +125,7 @@ final class ClientModelRuntimeRegistryTest {
         var definition = new ModelProfileDefinition("a", "A", true, ModelProtocol.OPENAI_CHAT,
                 URI.create("https://openrouter.ai/api/v1/"), "openai/gpt-6-luna", "env:KEY",
                 null, 8192, Duration.ofSeconds(30), Duration.ofSeconds(300), null);
-        var config = new ModelProfilesConfig(2, "a", List.of(definition));
+        var config = new ModelProfilesConfig("a", List.of(definition));
         String json = new dev.openallay.model.config.ModelProfilesConfigWriter().encode(config);
         var loader = new ModelProfilesConfigLoader();
         var initial = ((ToolResult.Success<ModelProfilesConfigLoader.Load>) loader.load(
@@ -188,7 +188,7 @@ final class ClientModelRuntimeRegistryTest {
                 "a", actor, "main", UUID.randomUUID(), "first question",
                 ToolInvocationContext.developmentConsole("test"), ignored -> {});
         ClientCapabilitySnapshot withoutFact = success(new ClientCapabilityResolver().resolve(
-                new CapabilityPolicy(1, Set.of("test:fact"), Set.of()),
+                new CapabilityPolicy(Set.of("test:fact"), Set.of()),
                 product.tools().registrations(),
                 product.skills()));
         registry.replaceCapabilities(withoutFact);
@@ -235,7 +235,7 @@ final class ClientModelRuntimeRegistryTest {
         ClientModelRuntimeRegistry registry = registry(product, load("a", "a"), Map.of("a", model));
         var disabled = ToolInvocationContext.developmentConsole("java-disabled");
         var authorization = new dev.openallay.script.UnrestrictedJavascriptRuntime();
-        authorization.replace(new dev.openallay.script.UnrestrictedJavascriptConfig(1, true));
+        authorization.replace(new dev.openallay.script.UnrestrictedJavascriptConfig(true));
         var enabled = new ToolInvocationContext("java-enabled", disabled.capturedAt(), disabled.caller(),
                 disabled.player(), disabled.registries(), disabled.recipes(), disabled.observableGameState(),
                 disabled.metrics(), authorization.freeze("java-enabled"));
@@ -367,7 +367,7 @@ final class ClientModelRuntimeRegistryTest {
         }
         return new ModelProfilesConfigLoader.Load(
                 new ModelProfilesConfig(
-                        ModelProfilesConfig.SCHEMA_VERSION, defaultId, definitions),
+                        defaultId, definitions),
                 resolved);
     }
 

@@ -6,8 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import dev.openallay.agent.context.ContextCheckpoint;
-import dev.openallay.guide.GuideFailure;
 import dev.openallay.guide.GuideMessage;
 import dev.openallay.guide.GuideModelSelection;
 import dev.openallay.guide.GuideRequestSnapshot;
@@ -37,56 +35,17 @@ final class SqliteGuideHistoryStoreTest {
     @TempDir Path temporary;
 
     @Test
-    void keepsPartitionsIsolatedAcrossReplacement() {
+    void currentLayoutPagesAndRemainsWritable() throws Exception {
         SqliteGuideHistoryStore store = store();
-        GuideHistoryPartition alpha = partition("alpha.example", "alpha", completed("alpha", "one"));
-        GuideHistoryPartition beta = partition("beta.example", "beta", completed("beta", "two"));
+        GuideHistoryFixture saved = partition(
+                "current-layout.example", "main", completed("main", "saved"));
 
-        store.save(alpha);
-        store.save(beta);
-        GuideHistoryPartition replacement = partition(
-                "alpha.example", "alpha", completed("alpha", "replacement"));
-        store.save(replacement);
+        GuideHistoryFixture.seed(store, saved);
 
-        assertEquals(replacement, store.load(alpha.scope()).partition().orElseThrow());
-        assertEquals(beta, store.load(beta.scope()).partition().orElseThrow());
-    }
-
-    @Test
-    void recognizedOlderSchemasFailClosedWithoutChangingDatabaseBytesOrRows() throws Exception {
-        for (int oldVersion : List.of(1, 2, 3, 4)) {
-            Path versionDatabase = temporary.resolve("history-v" + oldVersion + ".sqlite3");
-            LegacyGuideHistorySchemaFixtures.create(versionDatabase, oldVersion);
-            insertLegacyRows(versionDatabase);
-            Path retained = temporary.resolve("retained-v" + oldVersion + ".txt");
-            Files.writeString(retained, "retained");
-            byte[] databaseBefore = Files.readAllBytes(versionDatabase);
-            LegacyRows rowsBefore = legacyRows(versionDatabase);
-
-            GuideHistoryException failure = assertThrows(
-                    GuideHistoryException.class,
-                    () -> store(versionDatabase).load(scope("old-schema-" + oldVersion + ".example")));
-
-            assertEquals("history_schema_unsupported", failure.code());
-            assertTrue(failure.getMessage().contains("was not changed"));
-            assertEquals(databaseBefore.length, Files.size(versionDatabase));
-            assertTrue(java.util.Arrays.equals(databaseBefore, Files.readAllBytes(versionDatabase)));
-            assertEquals(rowsBefore, legacyRows(versionDatabase));
-            assertEquals("retained", Files.readString(retained));
-        }
-    }
-
-    @Test
-    void currentSchemaLoadsAndRemainsWritable() throws Exception {
-        SqliteGuideHistoryStore store = store();
-        GuideHistoryPartition saved = partition(
-                "current-schema.example", "main", completed("main", "saved"));
-
-        store.save(saved);
-
-        assertEquals(saved, store.load(saved.scope()).partition().orElseThrow());
-        assertEquals(GuideHistoryPartition.SCHEMA_VERSION,
-                queryInt("select schema_version from schema_metadata where singleton = 1"));
+        assertEquals(saved.sessions().getFirst().requests().getFirst(),
+                pageRequest(store, saved.scope(), saved.sessions().getFirst().sessionId()));
+        assertEquals(9, queryInt("select count(*) from sqlite_master "
+                + "where type = 'table' and name not glob 'sqlite_*'"));
     }
 
     @Test
@@ -101,8 +60,7 @@ final class SqliteGuideHistoryStoreTest {
                 "server answer",
                 GuideTopology.SERVER,
                 GuideModelSelection.server());
-        GuideHistoryPartition partition = new GuideHistoryPartition(
-                GuideHistoryPartition.SCHEMA_VERSION,
+        GuideHistoryFixture partition = new GuideHistoryFixture(
                 GuideHistoryScope.derive(
                         ACTOR, GuideHistoryScope.Kind.MULTIPLAYER, "selection.example"),
                 "client",
@@ -116,9 +74,13 @@ final class SqliteGuideHistoryStoreTest {
                 RECOVERY_TIME);
         SqliteGuideHistoryStore store = store();
 
-        store.save(partition);
+        GuideHistoryFixture.seed(store, partition);
 
-        assertEquals(partition, store.load(partition.scope()).partition().orElseThrow());
+        assertEquals(List.of(GuideModelSelection.client("openrouter-claude"), GuideModelSelection.server()),
+                store.metadata(partition.scope()).orElseThrow().sessions().stream()
+                        .map(GuideHistoryMetadata.Session::modelSelection).toList());
+        assertEquals(clientRequest, pageRequest(store, partition.scope(), "client"));
+        assertEquals(serverRequest, pageRequest(store, partition.scope(), "server"));
         try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database());
                 var result = connection.createStatement().executeQuery(
                         "select model_selection_json from sessions order by ordinal")) {
@@ -132,93 +94,31 @@ final class SqliteGuideHistoryStoreTest {
     }
 
     @Test
-    void roundTripsSuccessfulAndFailedCheckpointsWithinTheirPartition() throws Exception {
-        GuideHistoryPartition base =
-                partition("checkpoint.example", "main", completed("main", "saved"));
-        ContextCheckpoint success = checkpoint(ContextCheckpoint.Status.SUCCEEDED);
-        ContextCheckpoint failed = new ContextCheckpoint(
-                UUID.randomUUID(), 0, 1, "b".repeat(64), "model-b", 1, 1,
-                RECOVERY_TIME, ContextCheckpoint.Status.FAILED, null,
-                "summary_malformed", "schema mismatch", 700);
-        GuideSessionSnapshot session = base.sessions().getFirst();
-        GuideHistoryPartition withCheckpoints = new GuideHistoryPartition(
-                GuideHistoryPartition.SCHEMA_VERSION,
-                base.scope(),
-                base.selectedSession(),
-                List.of(new GuideSessionSnapshot(
-                        session.sessionId(), session.messages(), session.requests(),
-                        List.of(success, failed), session.modelSelection())),
-                base.updatedAt());
-        SqliteGuideHistoryStore store = store();
-
-        store.save(withCheckpoints);
-
-        assertEquals(withCheckpoints, store.load(base.scope()).partition().orElseThrow());
-        GuideHistoryPartition other =
-                partition("other-checkpoint.example", "main", completed("main", "other"));
-        store.save(other);
-        assertTrue(store.load(other.scope()).partition().orElseThrow()
-                .sessions().getFirst().checkpoints().isEmpty());
-        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database());
-                var result = connection.createStatement().executeQuery(
-                        "select payload_json from compaction_checkpoints order by ordinal")) {
-            assertTrue(result.next());
-            String payload = result.getString(1);
-            assertFalse(payload.contains("normalized"));
-            assertFalse(payload.contains("reasoning"));
-            assertFalse(payload.contains("authorization"));
-        }
-    }
-
-    @Test
     void recoversActiveRequestAsInterruptedWithoutChangingTimelineOrder() {
         SqliteGuideHistoryStore store = store();
         GuideRequestSnapshot active = active("main", "partial");
-        GuideHistoryPartition original = partition("active.example", "main", active);
-        store.save(original);
+        GuideHistoryFixture original = partition("active.example", "main", active);
+        GuideHistoryFixture.seed(store, original);
 
-        GuideHistoryPartition recovered = store.load(original.scope()).partition().orElseThrow();
-        GuideRequestSnapshot request = recovered.sessions().getFirst().requests().getFirst();
+        store.metadata(original.scope());
+        GuideRequestSnapshot request = pageRequest(store, original.scope(), "main");
 
         assertEquals(GuideRequestStatus.INTERRUPTED, request.status());
         assertEquals("request_interrupted", request.failure().code());
         assertEquals(RECOVERY_TIME, request.terminalAt());
         assertEquals(List.of(0), request.timeline().stream().map(GuideTimelineEntry::ordinal).toList());
         assertFalse(((GuideTimelineEntry.Assistant) request.timeline().getFirst()).streaming());
-        assertEquals(request, store.load(original.scope()).partition().orElseThrow()
-                .sessions().getFirst().requests().getFirst());
-    }
-
-    @Test
-    void transactionFailureLeavesPreviousPartitionIntact() throws Exception {
-        SqliteGuideHistoryStore store = store();
-        GuideHistoryPartition original = partition("rollback.example", "main", completed("main", "saved"));
-        store.save(original);
-        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database());
-                var statement = connection.createStatement()) {
-            statement.execute("""
-                    create trigger reject_explode before insert on sessions
-                    when new.session_id = 'explode'
-                    begin select raise(abort, 'injected failure'); end
-                    """);
-        }
-
-        GuideHistoryPartition rejected = partition(
-                "rollback.example", "explode", completed("explode", "not saved"));
-        GuideHistoryException failure = assertThrows(
-                GuideHistoryException.class, () -> store.save(rejected));
-
-        assertEquals("history_write_failed", failure.code());
-        assertEquals(original, store.load(original.scope()).partition().orElseThrow());
+        store.metadata(original.scope());
+        assertEquals(request, pageRequest(store, original.scope(), "main"));
     }
 
     @Test
     void corruptPartitionIsDiagnosedWithoutBlockingAnotherPartition() throws Exception {
         SqliteGuideHistoryStore store = store();
-        GuideHistoryPartition corrupt = partition("corrupt.example", "main", completed("main", "bad"));
-        GuideHistoryPartition healthy = partition("healthy.example", "main", completed("main", "good"));
-        store.save(corrupt);
-        store.save(healthy);
+        GuideHistoryFixture corrupt = partition("corrupt.example", "main", completed("main", "bad"));
+        GuideHistoryFixture healthy = partition("healthy.example", "main", completed("main", "good"));
+        GuideHistoryFixture.seed(store, corrupt);
+        GuideHistoryFixture.seed(store, healthy);
         try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database());
                 var update = connection.prepareStatement(
                         "update timeline_entries set payload_json = '{}' where scope_id = ?")) {
@@ -226,177 +126,18 @@ final class SqliteGuideHistoryStoreTest {
             update.executeUpdate();
         }
 
-        GuideHistoryLoad load = store.load(corrupt.scope());
-
-        assertTrue(load.partition().isEmpty());
-        assertEquals("history_corrupt", load.diagnostics().getFirst().code());
-        assertEquals(healthy, store.load(healthy.scope()).partition().orElseThrow());
+        assertEquals(1, store.metadata(corrupt.scope()).orElseThrow()
+                .sessions().getFirst().requestCount());
+        GuideHistoryException failure = assertThrows(GuideHistoryException.class,
+                () -> pageRequest(store, corrupt.scope(), "main"));
+        assertEquals("history_corrupt", failure.code());
+        assertEquals(healthy.sessions().getFirst().requests().getFirst(),
+                pageRequest(store, healthy.scope(), "main"));
     }
 
     @Test
-    void futureSchemaFailsClosedWithoutMutation() throws Exception {
-        SqliteGuideHistoryStore store = store();
-        GuideHistoryPartition saved = partition("future.example", "main", completed("main", "saved"));
-        store.save(saved);
-        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database());
-                var statement = connection.createStatement()) {
-            statement.executeUpdate("update schema_metadata set schema_version = 99 where singleton = 1");
-        }
-
-        GuideHistoryException failure = assertThrows(
-                GuideHistoryException.class, () -> store.load(saved.scope()));
-
-        assertEquals("history_schema_unsupported", failure.code());
-        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database());
-                var result = connection.createStatement().executeQuery(
-                        "select schema_version from schema_metadata where singleton = 1")) {
-            assertTrue(result.next());
-            assertEquals(99, result.getInt(1));
-        }
-    }
-
-    @Test
-    void olderVersionWithForeignTableFailsClosedWithoutMutation() throws Exception {
-        SqliteGuideHistoryStore store = store();
-        GuideHistoryPartition saved =
-                partition("foreign-table.example", "main", completed("main", "saved"));
-        store.save(saved);
-        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database());
-                var statement = connection.createStatement()) {
-            statement.execute("create table unrelated_data(value text)");
-            statement.execute("insert into unrelated_data(value) values ('retained')");
-            statement.executeUpdate(
-                    "update schema_metadata set schema_version = 4 where singleton = 1");
-        }
-
-        GuideHistoryException failure = assertThrows(
-                GuideHistoryException.class, () -> store.load(saved.scope()));
-
-        assertEquals("history_schema_unsupported", failure.code());
-        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database());
-                var statement = connection.createStatement()) {
-            assertEquals(4, queryInt(
-                    statement,
-                    "select schema_version from schema_metadata where singleton = 1"));
-            assertEquals(1, queryInt(statement, "select count(*) from unrelated_data"));
-            assertEquals(1, queryInt(statement, "select count(*) from partitions"));
-        }
-    }
-
-    @Test
-    void olderVersionMissingTableFailsClosedWithoutMutation() throws Exception {
-        Path database = temporary.resolve("missing-table.sqlite3");
-        LegacyGuideHistorySchemaFixtures.create(database, 4);
-        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
-                var statement = connection.createStatement()) {
-            statement.execute("drop table request_sources");
-        }
-
-        GuideHistoryException failure = assertThrows(
-                GuideHistoryException.class,
-                () -> store(database).load(scope("missing-table.example")));
-
-        assertEquals("history_schema_unsupported", failure.code());
-        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
-                var statement = connection.createStatement()) {
-            assertEquals(4, queryInt(statement,
-                    "select schema_version from schema_metadata where singleton = 1"));
-            assertEquals(0, queryInt(statement,
-                    "select count(*) from sqlite_master where type = 'table' and name = 'request_sources'"));
-        }
-    }
-
-    @Test
-    void olderVersionMissingColumnFailsClosedWithoutMutation() throws Exception {
-        Path database = temporary.resolve("missing-column.sqlite3");
-        LegacyGuideHistorySchemaFixtures.create(database, 4);
-        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
-                var statement = connection.createStatement()) {
-            statement.execute("alter table requests drop column terminal_at");
-        }
-
-        GuideHistoryException failure = assertThrows(
-                GuideHistoryException.class,
-                () -> store(database).load(scope("missing-column.example")));
-
-        assertEquals("history_schema_unsupported", failure.code());
-        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
-                var statement = connection.createStatement()) {
-            assertEquals(4, queryInt(statement,
-                    "select schema_version from schema_metadata where singleton = 1"));
-            assertEquals(0, queryInt(statement,
-                    "select count(*) from pragma_table_info('requests') where name = 'terminal_at'"));
-        }
-    }
-
-    @Test
-    void olderVersionExtraColumnFailsClosedWithoutMutation() throws Exception {
-        Path database = temporary.resolve("extra-column.sqlite3");
-        LegacyGuideHistorySchemaFixtures.create(database, 4);
-        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
-                var statement = connection.createStatement()) {
-            statement.execute("alter table request_sources add column unexpected text");
-        }
-
-        GuideHistoryException failure = assertThrows(
-                GuideHistoryException.class,
-                () -> store(database).load(scope("extra-column.example")));
-
-        assertEquals("history_schema_unsupported", failure.code());
-        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
-                var statement = connection.createStatement()) {
-            assertEquals(4, queryInt(statement,
-                    "select schema_version from schema_metadata where singleton = 1"));
-            assertEquals(1, queryInt(statement,
-                    "select count(*) from pragma_table_info('request_sources') where name = 'unexpected'"));
-        }
-    }
-
-    @Test
-    void olderVersionDamagedColumnSignatureFailsClosedWithoutMutation() throws Exception {
-        Path database = temporary.resolve("damaged-column.sqlite3");
-        LegacyGuideHistorySchemaFixtures.create(database, 4);
-        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
-                var statement = connection.createStatement()) {
-            statement.execute("pragma foreign_keys=off");
-            statement.execute("alter table messages rename to original_messages");
-            statement.execute("""
-                    create table messages(
-                        scope_id text not null,
-                        session_id text not null,
-                        ordinal integer not null check(ordinal >= 0),
-                        request_id text not null,
-                        role integer not null,
-                        message_text text not null,
-                        created_at text not null,
-                        primary key(scope_id, session_id, ordinal),
-                        foreign key(scope_id, session_id)
-                            references sessions(scope_id, session_id) on delete cascade,
-                        foreign key(scope_id, request_id)
-                            references requests(scope_id, request_id) on delete cascade
-                    )
-                    """);
-            statement.execute("drop table original_messages");
-        }
-
-        GuideHistoryException failure = assertThrows(
-                GuideHistoryException.class,
-                () -> store(database).load(scope("damaged-column.example")));
-
-        assertEquals("history_schema_unsupported", failure.code());
-        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
-                var statement = connection.createStatement()) {
-            assertEquals(4, queryInt(statement,
-                    "select schema_version from schema_metadata where singleton = 1"));
-            assertEquals(1, queryInt(statement,
-                    "select count(*) from pragma_table_info('messages') "
-                            + "where name = 'role' and type = 'INTEGER'"));
-        }
-    }
-
-    @Test
-    void foreignDatabaseWithoutMetadataFailsClosedWithoutMutation() throws Exception {
-        Path database = temporary.resolve("foreign-without-metadata.sqlite3");
+    void foreignDatabaseFailsClosedWithoutMutation() throws Exception {
+        Path database = temporary.resolve("foreign-layout.sqlite3");
         try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
                 var statement = connection.createStatement()) {
             statement.execute("create table unrelated_data(value text)");
@@ -405,87 +146,59 @@ final class SqliteGuideHistoryStoreTest {
 
         GuideHistoryException failure = assertThrows(
                 GuideHistoryException.class,
-                () -> store(database).load(scope("foreign-without-metadata.example")));
+                () -> store(database).metadata(scope("foreign-layout.example")));
 
-        assertEquals("history_schema_unsupported", failure.code());
+        assertEquals("history_corrupt", failure.code());
         try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
                 var statement = connection.createStatement()) {
             assertEquals(1, queryInt(statement, "select count(*) from unrelated_data"));
             assertEquals(0, queryInt(statement,
-                    "select count(*) from sqlite_master where type = 'table' and name = 'schema_metadata'"));
-        }
-    }
-
-    @Test
-    void inconsistentMetadataRowsFailClosedWithoutMutation() throws Exception {
-        Path database = temporary.resolve("inconsistent-metadata.sqlite3");
-        LegacyGuideHistorySchemaFixtures.create(database, 4);
-        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
-                var statement = connection.createStatement()) {
-            statement.execute("alter table schema_metadata rename to original_schema_metadata");
-            statement.execute("""
-                    create table schema_metadata(
-                        singleton integer primary key,
-                        schema_version integer not null
-                    )
-                    """);
-            statement.execute("insert into schema_metadata values (1, 4), (2, 4)");
-            statement.execute("drop table original_schema_metadata");
-        }
-
-        GuideHistoryException failure = assertThrows(
-                GuideHistoryException.class,
-                () -> store(database).load(scope("inconsistent-metadata.example")));
-
-        assertEquals("history_schema_unsupported", failure.code());
-        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
-                var statement = connection.createStatement()) {
-            assertEquals(2, queryInt(statement, "select count(*) from schema_metadata"));
-            assertEquals(4, queryInt(statement,
-                    "select schema_version from schema_metadata where singleton = 1"));
+                    "select count(*) from sqlite_master where type = 'table' and name = 'partitions'"));
         }
     }
 
     @Test
     void partitionDeleteRemovesOnlyTheExactActorPartition() {
         SqliteGuideHistoryStore store = store();
-        GuideHistoryPartition current = partition(
+        GuideHistoryFixture current = partition(
                 ACTOR, "current.example", "main", completed("main", "current"));
-        GuideHistoryPartition sameActorOtherScope = partition(
+        GuideHistoryFixture sameActorOtherScope = partition(
                 ACTOR, "other.example", "main", completed("main", "same actor"));
-        GuideHistoryPartition otherActor = partition(
+        GuideHistoryFixture otherActor = partition(
                 OTHER_ACTOR, "current.example", "main", completed("main", "other actor"));
-        store.save(current);
-        store.save(sameActorOtherScope);
-        store.save(otherActor);
+        GuideHistoryFixture.seed(store, current);
+        GuideHistoryFixture.seed(store, sameActorOtherScope);
+        GuideHistoryFixture.seed(store, otherActor);
 
         store.delete(GuideHistoryDeleteScope.partition(current.scope()));
 
-        assertTrue(store.load(current.scope()).partition().isEmpty());
+        assertTrue(store.metadata(current.scope()).isEmpty());
         assertEquals(
-                sameActorOtherScope,
-                store.load(sameActorOtherScope.scope()).partition().orElseThrow());
-        assertEquals(otherActor, store.load(otherActor.scope()).partition().orElseThrow());
+                sameActorOtherScope.sessions().getFirst().requests().getFirst(),
+                pageRequest(store, sameActorOtherScope.scope(), "main"));
+        assertEquals(otherActor.sessions().getFirst().requests().getFirst(),
+                pageRequest(store, otherActor.scope(), "main"));
     }
 
     @Test
     void actorDeleteRemovesEveryMatchingPartitionAndNoOtherActor() {
         SqliteGuideHistoryStore store = store();
-        GuideHistoryPartition first = partition(
+        GuideHistoryFixture first = partition(
                 ACTOR, "first.example", "main", completed("main", "first"));
-        GuideHistoryPartition second = partition(
+        GuideHistoryFixture second = partition(
                 ACTOR, "second.example", "main", completed("main", "second"));
-        GuideHistoryPartition retained = partition(
+        GuideHistoryFixture retained = partition(
                 OTHER_ACTOR, "first.example", "main", completed("main", "retained"));
-        store.save(first);
-        store.save(second);
-        store.save(retained);
+        GuideHistoryFixture.seed(store, first);
+        GuideHistoryFixture.seed(store, second);
+        GuideHistoryFixture.seed(store, retained);
 
         store.delete(GuideHistoryDeleteScope.actor(ACTOR));
 
-        assertTrue(store.load(first.scope()).partition().isEmpty());
-        assertTrue(store.load(second.scope()).partition().isEmpty());
-        assertEquals(retained, store.load(retained.scope()).partition().orElseThrow());
+        assertTrue(store.metadata(first.scope()).isEmpty());
+        assertTrue(store.metadata(second.scope()).isEmpty());
+        assertEquals(retained.sessions().getFirst().requests().getFirst(),
+                pageRequest(store, retained.scope(), "main"));
     }
 
     @Test
@@ -500,12 +213,12 @@ final class SqliteGuideHistoryStoreTest {
     @Test
     void injectedDeleteFailureRollsBackEveryMatchingPartition() {
         SqliteGuideHistoryStore store = store();
-        GuideHistoryPartition first = partition(
+        GuideHistoryFixture first = partition(
                 ACTOR, "rollback-first.example", "main", completed("main", "first"));
-        GuideHistoryPartition second = partition(
+        GuideHistoryFixture second = partition(
                 ACTOR, "rollback-second.example", "main", completed("main", "second"));
-        store.save(first);
-        store.save(second);
+        GuideHistoryFixture.seed(store, first);
+        GuideHistoryFixture.seed(store, second);
         SqliteGuideHistoryStore failing = new SqliteGuideHistoryStore(
                 database(),
                 Clock.fixed(RECOVERY_TIME, ZoneOffset.UTC),
@@ -521,47 +234,48 @@ final class SqliteGuideHistoryStoreTest {
                 () -> failing.delete(GuideHistoryDeleteScope.actor(ACTOR)));
 
         assertEquals("history_delete_failed", failure.code());
-        assertEquals(first, store.load(first.scope()).partition().orElseThrow());
-        assertEquals(second, store.load(second.scope()).partition().orElseThrow());
+        assertEquals(first.sessions().getFirst().requests().getFirst(),
+                pageRequest(store, first.scope(), "main"));
+        assertEquals(second.sessions().getFirst().requests().getFirst(),
+                pageRequest(store, second.scope(), "main"));
     }
 
     @Test
-    void explicitResetReplacesUnsupportedSchemaWithoutDeletingSiblingFiles() throws Exception {
+    void explicitResetReplacesMalformedLayoutWithoutDeletingSiblingFiles() throws Exception {
         SqliteGuideHistoryStore store = store();
-        GuideHistoryPartition original = partition(
+        GuideHistoryFixture original = partition(
                 ACTOR, "reset.example", "main", completed("main", "saved"));
-        store.save(original);
+        GuideHistoryFixture.seed(store, original);
         Path retainedTrace = temporary.resolve("developer-trace.json");
         Files.writeString(retainedTrace, "retained");
         try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database());
                 var statement = connection.createStatement()) {
-            statement.executeUpdate(
-                    "update schema_metadata set schema_version = 999 where singleton = 1");
+            statement.execute("create table foreign_data(value text)");
+            statement.execute("insert into foreign_data values ('retained')");
         }
 
         store.resetDatabase();
 
-        assertTrue(store.load(original.scope()).partition().isEmpty());
+        assertTrue(store.metadata(original.scope()).isEmpty());
         assertEquals("retained", Files.readString(retainedTrace));
         try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database());
                 var statement = connection.createStatement()) {
-            assertEquals(GuideHistoryPartition.SCHEMA_VERSION, queryInt(
-                    statement,
-                    "select schema_version from schema_metadata where singleton = 1"));
+            assertEquals(0, queryInt(statement,
+                    "select count(*) from sqlite_master where type = 'table' and name = 'foreign_data'"));
             assertEquals(0, queryInt(statement, "select count(*) from partitions"));
         }
     }
 
     @Test
-    void injectedResetFailureRestoresUnsupportedSchemaAndEveryPriorRow() throws Exception {
+    void injectedResetFailureRestoresMalformedLayoutAndEveryPriorRow() throws Exception {
         SqliteGuideHistoryStore store = store();
-        GuideHistoryPartition original = partition(
+        GuideHistoryFixture original = partition(
                 ACTOR, "reset-rollback.example", "main", completed("main", "saved"));
-        store.save(original);
+        GuideHistoryFixture.seed(store, original);
         try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database());
                 var statement = connection.createStatement()) {
-            statement.executeUpdate(
-                    "update schema_metadata set schema_version = 999 where singleton = 1");
+            statement.execute("create table foreign_data(value text)");
+            statement.execute("insert into foreign_data values ('retained')");
         }
         SqliteGuideHistoryStore failing = new SqliteGuideHistoryStore(
                 database(),
@@ -569,7 +283,7 @@ final class SqliteGuideHistoryStoreTest {
                 new GuideHistoryCodec(),
                 mutation -> {
                     if (mutation == SqliteGuideHistoryStore.Mutation.RESET) {
-                        throw new java.sql.SQLException("injected after schema recreation");
+                        throw new java.sql.SQLException("injected after layout recreation");
                     }
                 });
 
@@ -579,12 +293,16 @@ final class SqliteGuideHistoryStoreTest {
         assertEquals("history_delete_failed", failure.code());
         try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database());
                 var statement = connection.createStatement()) {
-            assertEquals(999, queryInt(
-                    statement,
-                    "select schema_version from schema_metadata where singleton = 1"));
+            assertEquals(1, queryInt(statement, "select count(*) from foreign_data"));
             assertEquals(1, queryInt(statement, "select count(*) from partitions"));
             assertEquals(2, queryInt(statement, "select count(*) from messages"));
         }
+    }
+
+    private static GuideRequestSnapshot pageRequest(
+            GuideHistoryStore store, GuideHistoryScope scope, String sessionId) {
+        return store.page(new GuideHistoryPageRequest(scope, sessionId,
+                GuideHistoryPageRequest.Direction.NEWEST, null, 1)).requests().getFirst();
     }
 
     private SqliteGuideHistoryStore store() {
@@ -613,49 +331,6 @@ final class SqliteGuideHistoryStoreTest {
         }
     }
 
-    private static void insertLegacyRows(Path database) throws Exception {
-        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
-                var statement = connection.createStatement()) {
-            statement.execute("insert into partitions values ('scope', 'actor', 'MULTIPLAYER', 'main'"
-                    + (oldSchemaHasModelMode(database) ? ", 'CLIENT', 'NORMAL', '2026-07-18T00:00:00Z')"
-                            : ", 'NORMAL', '2026-07-18T00:00:00Z')"));
-            if (oldSchemaHasModelMode(database)) {
-                statement.execute("insert into sessions(scope_id, session_id, ordinal) values ('scope', 'main', 0)");
-            } else if (hasColumn(database, "sessions", "model_selection_json")) {
-                statement.execute("insert into sessions values ('scope', 'main', 0, '{}')");
-            } else {
-                statement.execute("insert into sessions values ('scope', 'main', 0)");
-            }
-        }
-    }
-
-    private static boolean oldSchemaHasModelMode(Path database) throws Exception {
-        return hasColumn(database, "partitions", "model_mode");
-    }
-
-    private static boolean hasColumn(Path database, String table, String column) throws Exception {
-        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
-                var statement = connection.createStatement();
-                var result = statement.executeQuery("pragma table_info('" + table + "')")) {
-            while (result.next()) if (column.equals(result.getString("name"))) return true;
-            return false;
-        }
-    }
-
-    private static LegacyRows legacyRows(Path database) throws Exception {
-        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
-                var statement = connection.createStatement()) {
-            int version = queryInt(statement,
-                    "select schema_version from schema_metadata where singleton = 1");
-            return new LegacyRows(version,
-                    queryInt(statement, "select count(*) from partitions"),
-                    queryInt(statement, "select count(*) from sessions"),
-                    queryInt(statement, "select count(*) from requests"));
-        }
-    }
-
-    private record LegacyRows(int version, int partitions, int sessions, int requests) {}
-
     private static int queryInt(java.sql.Statement statement, String query) throws Exception {
         try (var result = statement.executeQuery(query)) {
             assertTrue(result.next());
@@ -663,12 +338,12 @@ final class SqliteGuideHistoryStoreTest {
         }
     }
 
-    private static GuideHistoryPartition partition(
+    private static GuideHistoryFixture partition(
             String server, String sessionId, GuideRequestSnapshot request) {
         return partition(ACTOR, server, sessionId, request);
     }
 
-    private static GuideHistoryPartition partition(
+    private static GuideHistoryFixture partition(
             UUID actor,
             String server,
             String sessionId,
@@ -684,8 +359,7 @@ final class SqliteGuideHistoryStoreTest {
                 : List.of(new GuideMessage(
                         request.requestId(), GuideMessage.Role.USER,
                         request.userMessage(), request.createdAt()));
-        return new GuideHistoryPartition(
-                GuideHistoryPartition.SCHEMA_VERSION,
+        return new GuideHistoryFixture(
                 scope,
                 sessionId,
                 List.of(new GuideSessionSnapshot(sessionId, messages, List.of(request))),
@@ -746,16 +420,4 @@ final class SqliteGuideHistoryStoreTest {
         return request;
     }
 
-    private static ContextCheckpoint checkpoint(ContextCheckpoint.Status status) {
-        if (status != ContextCheckpoint.Status.SUCCEEDED) {
-            throw new IllegalArgumentException("success helper only");
-        }
-        return new ContextCheckpoint(
-                UUID.randomUUID(), 0, 1, "a".repeat(64), "model-a", 1, 1,
-                RECOVERY_TIME, status,
-                "{\"goals\":[],\"preferences\":[],\"completedTopics\":[],"
-                        + "\"currentTasks\":[],\"decisions\":[],"
-                        + "\"unresolvedQuestions\":[],\"evidenceReferences\":[]}",
-                null, null, 600);
-    }
 }

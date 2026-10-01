@@ -19,8 +19,9 @@ return String(text.toString());
 ```
 
 This mode bypasses OpenAllay JavaScript execution and result budgets.
-Select roots only for detached data you need; Java class lookup does not require
-a special root. Return explicit JSON-friendly summaries, not raw Java objects.
+Read available detached `mc` data directly when useful. Ordinary JavaScript and
+Java computations do not require a Minecraft read. Return explicit JSON-friendly
+results, not raw Java objects. Captured source metadata is collected automatically.
 Use `references/java-jvm.md` for Java collections, arrays, files, and JVM usage.
 
 Side effects are irreversible: cancellation, a later error, or closing the
@@ -34,6 +35,5 @@ scheduler for game operations; do not block that thread or mutate live game stat
 from the script worker. Class names, mapped members, and mod APIs depend on this
 installation; verify them rather than inventing them.
 
-Java observations are not automatically detached game evidence.
-Distinguish observed results from
-attempted side effects, and verify changes before claiming success.
+Java observations are execution results, not automatically detached Minecraft
+snapshots. Distinguish observed results from attempted side effects.

@@ -1,6 +1,9 @@
 package dev.openallay.guide.history;
 
+import dev.openallay.model.ModelMessage;
+import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -31,21 +34,6 @@ public final class GuideHistoryRepository implements GuideHistoryAccess {
     }
 
     @Override
-    public synchronized CompletableFuture<GuideHistoryLoad> load(GuideHistoryScope scope) {
-        Objects.requireNonNull(scope, "scope");
-        return submitLocked(
-                "history_load_failed",
-                "Unable to load durable guide history",
-                () -> store.load(scope));
-    }
-
-    @Override
-    public synchronized CompletableFuture<Void> save(GuideHistoryPartition partition) {
-        Objects.requireNonNull(partition, "partition");
-        return reserveWrite(() -> store.save(partition));
-    }
-
-    @Override
     public synchronized CompletableFuture<java.util.Optional<GuideHistoryMetadata>> metadata(
             GuideHistoryScope scope) {
         Objects.requireNonNull(scope, "scope");
@@ -73,6 +61,17 @@ public final class GuideHistoryRepository implements GuideHistoryAccess {
                 "history_context_failed",
                 "Unable to prepare guide history context",
                 () -> store.context(request));
+    }
+
+    @Override
+    public synchronized CompletableFuture<List<ModelMessage>> requestContext(
+            GuideHistoryScope scope, UUID requestId) {
+        Objects.requireNonNull(scope, "scope");
+        Objects.requireNonNull(requestId, "requestId");
+        return submitReadLocked(
+                "history_context_failed",
+                "Unable to load original guide request context",
+                () -> store.requestContext(scope, requestId));
     }
 
     @Override
@@ -205,6 +204,9 @@ public final class GuideHistoryRepository implements GuideHistoryAccess {
             String failureCode,
             String failureMessage,
             Supplier<T> operation) {
+        if (closing) {
+            return closedFailure();
+        }
         if (deleting) {
             return busyFailure();
         }

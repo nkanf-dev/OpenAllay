@@ -20,7 +20,8 @@ final class BenchmarkCorpusTest {
         BenchmarkCorpus corpus = new BenchmarkCorpusCodec().decode(
                 new InputStreamReader(input, StandardCharsets.UTF_8));
 
-        assertEquals(1, corpus.schemaVersion());
+        assertEquals(Set.of("cases"),
+                new com.google.gson.Gson().toJsonTree(corpus).getAsJsonObject().keySet());
         assertTrue(corpus.cases().size() >= 10);
         Set<String> categories = corpus.cases().stream()
                 .map(BenchmarkCase::category)
@@ -45,7 +46,7 @@ final class BenchmarkCorpusTest {
                 .allMatch(testCase ->
                         testCase.verifier().kind() == BenchmarkCase.Kind.ANSWER_CONTAINS));
         assertEquals(
-                "server-model-routing-v1",
+                "server-model-routing",
                 corpus.cases().stream()
                         .filter(testCase -> testCase.id().equals("server-model-routing"))
                         .findFirst()
@@ -53,7 +54,7 @@ final class BenchmarkCorpusTest {
                         .fixture());
         assertTrue(corpus.cases().stream()
                 .filter(testCase -> !testCase.id().equals("server-model-routing"))
-                .allMatch(testCase -> testCase.fixture().equals("javascript-agent-v2")));
+                .allMatch(testCase -> testCase.fixture().equals("javascript-agent")));
     }
 
     @Test
@@ -77,20 +78,18 @@ final class BenchmarkCorpusTest {
     }
 
     @Test
-    void rejectsUnknownFieldsAndSchemaVersions() {
+    void rejectsUnknownOrMissingFieldsAndInvalidVerifiers() {
         assertThrows(IllegalArgumentException.class, () -> new BenchmarkCorpusCodec().decode(
                 new java.io.StringReader("""
-                        {"schemaVersion":1,"version":"v","cases":[],"answer":"cheat"}
+                        {"cases":[],"answer":"cheat"}
                         """)));
         assertThrows(IllegalArgumentException.class, () -> new BenchmarkCorpusCodec().decode(
                 new java.io.StringReader("""
-                        {"schemaVersion":2,"version":"v","cases":[]}
+                        {}
                         """)));
         assertThrows(IllegalArgumentException.class, () -> new BenchmarkCorpusCodec().decode(
                 new java.io.StringReader("""
                         {
-                          "schemaVersion": 1,
-                          "version": "v",
                           "cases": [{
                             "id": "weak",
                             "category": "core",

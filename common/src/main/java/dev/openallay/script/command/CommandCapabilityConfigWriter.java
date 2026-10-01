@@ -5,9 +5,8 @@ public final class CommandCapabilityConfigWriter {
     public String encode(CommandCapabilityConfig config) {
         return """
                 {
-                  "schemaVersion": %d,
                   "enabled": %s
                 }
-                """.formatted(config.schemaVersion(), config.enabled());
+                """.formatted(config.enabled());
     }
 }

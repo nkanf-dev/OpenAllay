@@ -41,7 +41,6 @@ if (bundleExtensions) {
             def output = provenanceFile.get().asFile
             output.parentFile.mkdirs()
             output.text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson([
-                    schemaVersion: 1,
                     source: extensionLock.source + sourceEvidence,
                     project: extensionLock.project,
                     version: extensionLock.version,

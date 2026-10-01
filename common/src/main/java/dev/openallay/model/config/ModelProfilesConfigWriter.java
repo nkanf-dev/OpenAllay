@@ -15,7 +15,6 @@ public final class ModelProfilesConfigWriter {
     public String encode(ModelProfilesConfig config) {
         Objects.requireNonNull(config, "config");
         JsonObject root = new JsonObject();
-        root.addProperty("schemaVersion", config.schemaVersion());
         root.addProperty("defaultProfileId", config.defaultProfileId());
         root.add("profiles", encodeProfiles(config.profiles()));
         return gson.toJson(root) + System.lineSeparator();

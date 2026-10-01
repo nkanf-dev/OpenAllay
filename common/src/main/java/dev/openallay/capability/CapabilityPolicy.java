@@ -8,25 +8,20 @@ import java.util.regex.Pattern;
 
 /** Deny-only local policy for stable Tool identities and bundled Skill names. */
 public record CapabilityPolicy(
-        int schemaVersion,
         Set<String> disabledTools,
         Set<String> disabledSkills) {
-    public static final int SCHEMA_VERSION = 1;
 
     private static final Pattern TOOL_ID = Pattern.compile("[a-z0-9_.-]+:[a-z0-9_./-]+");
     private static final Pattern SKILL_NAME = Pattern.compile("[a-z0-9][a-z0-9-]*");
 
     public CapabilityPolicy {
-        if (schemaVersion != SCHEMA_VERSION) {
-            throw new IllegalArgumentException("Unsupported capability configuration schema");
-        }
         disabledTools = canonical(disabledTools, CapabilityPolicy::requireToolId, "disabledTools");
         disabledSkills = canonical(
                 disabledSkills, CapabilityPolicy::requireSkillName, "disabledSkills");
     }
 
     public static CapabilityPolicy defaults() {
-        return new CapabilityPolicy(SCHEMA_VERSION, Set.of(), Set.of());
+        return new CapabilityPolicy(Set.of(), Set.of());
     }
 
     public static String requireToolId(String value) {

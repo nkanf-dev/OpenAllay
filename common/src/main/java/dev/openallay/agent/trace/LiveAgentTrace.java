@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.UUID;
 
 public record LiveAgentTrace(
-        int schemaVersion,
         UUID requestId,
         UUID actorId,
         String sessionId,
@@ -17,9 +16,6 @@ public record LiveAgentTrace(
         String finalText,
         String errorCode) {
     public LiveAgentTrace {
-        if (schemaVersion != 1) {
-            throw new IllegalArgumentException("Unsupported live trace schema");
-        }
         events = List.copyOf(events);
     }
 }

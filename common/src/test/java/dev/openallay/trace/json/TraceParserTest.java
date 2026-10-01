@@ -15,9 +15,11 @@ final class TraceParserTest {
     private final TraceParser parser = new TraceParser();
 
     @Test
-    void parsesValidSchemaOneTrace() {
+    void parsesValidTrace() {
         ToolResult.Success<AgentTrace> result = success(validTrace());
 
+        assertEquals(Set.of("id", "userMessage", "requiredContext", "steps"),
+                new com.google.gson.Gson().toJsonTree(result.value()).getAsJsonObject().keySet());
         assertEquals("iron-recipe", result.value().id());
         assertEquals(Set.of(ContextCapability.RECIPES), result.value().requiredContext());
         assertEquals("test:fact", ((ToolCallStep) result.value().steps().getFirst()).tool());
@@ -31,8 +33,8 @@ final class TraceParserTest {
     }
 
     @Test
-    void rejectsUnsupportedSchemaAndDuplicateOrBlankIds() {
-        assertInvalid(validTrace().replace("\"schemaVersion\":1", "\"schemaVersion\":2"));
+    void rejectsMissingDuplicateOrBlankIds() {
+        assertInvalid(validTrace().replace("\"id\":\"iron-recipe\",", ""));
         assertInvalid(validTrace().replace("\"id\":\"iron-recipe\"", "\"id\":\"\""));
         assertInvalid(validTrace().replace(
                 "\"id\":\"iron-recipe\"", "\"id\":\"first\",\"id\":\"second\""));
@@ -71,7 +73,6 @@ final class TraceParserTest {
     private static String validTrace() {
         return """
                 {
-                  "schemaVersion":1,
                   "id":"iron-recipe",
                   "userMessage":"铁锭怎么做？",
                   "requiredContext":["recipes"],

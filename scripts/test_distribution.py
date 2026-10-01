@@ -131,7 +131,7 @@ class PackageTest(unittest.TestCase):
         nested["dev/openallay/"] = b""
         directory = "jars" if loader == "fabric" else "jarjar"
         nested_path = f"META-INF/{directory}/" + Path(self.lock["artifacts"][loader]).name
-        provenance = {"schemaVersion": 1, "source": {**self.lock["source"], "dirty": False, "pinned": True},
+        provenance = {"source": {**self.lock["source"], "dirty": False, "pinned": True},
             "project": self.lock["project"], "version": self.lock["version"], "modId": self.lock["modId"]}
         entries = {verify.PROVENANCE: json.dumps(provenance)}
         if loader == "fabric":

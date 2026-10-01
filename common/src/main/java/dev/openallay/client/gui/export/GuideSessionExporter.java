@@ -1,6 +1,8 @@
 package dev.openallay.client.gui.export;
 
+import dev.openallay.agent.trace.LiveTraceJson;
 import dev.openallay.guide.export.GuideSessionExportSnapshot;
+import dev.openallay.model.ModelContent;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
@@ -15,27 +17,19 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.util.HashSet;
 import java.util.HexFormat;
+import java.util.LinkedHashMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
-import java.util.regex.Pattern;
+import java.util.Set;
 
 /** Writes player-requested conversation text under one fixed game-directory child. */
 public final class GuideSessionExporter {
     private static final DateTimeFormatter FILE_TIME = DateTimeFormatter
             .ofPattern("uuuuMMdd-HHmmss-SSS", Locale.ROOT)
             .withZone(ZoneOffset.UTC);
-    private static final Pattern AUTHORIZATION = Pattern.compile(
-            "(?i)([\\\"']?authorization[\\\"']?\\s*[:=]\\s*(?:bearer\\s+)?)"
-                    + "(?:\\\"[^\\\"]*\\\"|'[^']*'|\\S+)");
-    private static final Pattern NAMED_SECRET = Pattern.compile(
-            "(?i)([\\\"']?(?:api[-_ ]?key|access[-_ ]?token|token|secret|password)"
-                    + "[\\\"']?\\s*[:=]\\s*)(?:\\\"[^\\\"]*\\\"|'[^']*'|\\S+)");
-    private static final Pattern BEARER_SECRET = Pattern.compile(
-            "(?i)\\bbearer\\s+[a-z0-9._~+/=-]{12,}");
-    private static final Pattern PREFIXED_SECRET = Pattern.compile(
-            "(?i)\\b(?:sk|pk)-[a-z0-9_-]{12,}\\b");
-
     public record ExportedFile(String filename, int requestCount) {
         public ExportedFile {
             if (filename == null || !filename.matches("[a-zA-Z0-9_.-]+\\.txt")
@@ -105,25 +99,58 @@ public final class GuideSessionExporter {
         StringBuilder result = new StringBuilder();
         result.append("OpenAllay conversation export\n")
                 .append("Session: ").append(snapshot.sessionId()).append('\n')
-                .append("Captured: ").append(snapshot.capturedAt()).append("\n\n");
+                .append("Captured: ").append(snapshot.capturedAt()).append("\n")
+                .append("Tool results below are the recorded model-visible values or declared previews.\n")
+                .append("Workspace handles do not survive the request that created them.\n\n");
         int index = 0;
         for (GuideSessionExportSnapshot.Request request : snapshot.requests()) {
             result.append("=== Request ").append(++index)
                     .append(" · ").append(request.createdAt())
                     .append(" · ").append(request.status()).append(" ===\n")
+                    .append("Request ID: ").append(request.requestId()).append('\n')
                     .append("User\n")
                     .append(redact(request.userMessage())).append("\n\n");
-            for (GuideSessionExportSnapshot.Entry entry : request.timeline()) {
-                switch (entry) {
-                    case GuideSessionExportSnapshot.Entry.Assistant assistant -> result
-                            .append(assistant.streaming() ? "Assistant (in progress)\n" : "Assistant\n")
-                            .append(redact(assistant.text())).append("\n\n");
-                    case GuideSessionExportSnapshot.Entry.Tool tool -> result
-                            .append("Tool · ")
-                            .append(safeToolName(tool.toolId()))
-                            .append(" · ").append(tool.status())
-                            .append("\n\n");
+            if (request.originalContext().isEmpty()) {
+                appendUnrecordedTimeline(result, request, Set.of(), false);
+            } else {
+                Map<String, String> tools = new LinkedHashMap<>();
+                Set<String> recordedCalls = new HashSet<>();
+                boolean firstUserText = true;
+                for (var message : request.originalContext()) {
+                    for (ModelContent content : message.content()) {
+                        switch (content) {
+                            case ModelContent.Text text -> {
+                                if (message.role() == dev.openallay.model.ModelRole.USER
+                                        && firstUserText && text.text().equals(request.userMessage())) {
+                                    firstUserText = false;
+                                    continue;
+                                }
+                                result.append(message.role()).append('\n')
+                                        .append(redact(text.text())).append("\n\n");
+                            }
+                            case ModelContent.ToolUse call -> {
+                                tools.put(call.id(), call.name());
+                                recordedCalls.add(call.id());
+                                result.append("Tool · ").append(safeToolName(call.name()))
+                                        .append(" · SUBMITTED\nInvocation ID: ")
+                                        .append(redact(call.id())).append("\nSubmitted arguments\n")
+                                        .append(LiveTraceJson.redact(call.input(), Set.of()))
+                                        .append("\n\n");
+                            }
+                            case ModelContent.ToolResult outcome -> appendOutcome(result,
+                                    tools.getOrDefault(outcome.toolUseId(), "unknown_tool"), outcome);
+                            case ModelContent.Reasoning ignored ->
+                                    throw new IllegalArgumentException("export cannot contain reasoning");
+                        }
+                    }
                 }
+                appendUnrecordedTimeline(result, request, recordedCalls, true);
+            }
+            if (request.failure() != null) {
+                result.append("Request failure\nCode: ")
+                        .append(redact(request.failure().code()))
+                        .append("\nMessage: ").append(redact(request.failure().message()))
+                        .append("\n\n");
             }
             if (request.status() == dev.openallay.guide.GuideRequestStatus.CANCELLED
                     || request.status() == dev.openallay.guide.GuideRequestStatus.INTERRUPTED) {
@@ -133,15 +160,50 @@ public final class GuideSessionExporter {
         return result.toString();
     }
 
+    private static void appendUnrecordedTimeline(
+            StringBuilder result, GuideSessionExportSnapshot.Request request,
+            Set<String> recordedCalls, boolean hasOriginalContext) {
+        for (var entry : request.timeline()) {
+            switch (entry) {
+                case GuideSessionExportSnapshot.Entry.Assistant assistant -> {
+                    if (!hasOriginalContext) {
+                        result.append(assistant.streaming() ? "Assistant (in progress)\n" : "Assistant\n")
+                                .append(redact(assistant.text())).append("\n\n");
+                    } else if (assistant.streaming()) {
+                        result.append("Visible unfinished assistant text (display snapshot, not an additional message)\n")
+                                .append(redact(assistant.text())).append("\n\n");
+                    }
+                }
+                case GuideSessionExportSnapshot.Entry.Tool tool -> {
+                    if (!recordedCalls.contains(tool.invocationId())) {
+                        result.append("Tool · ").append(safeToolName(tool.toolId()))
+                                .append(" · ").append(tool.status()).append("\nInvocation ID: ")
+                                .append(redact(tool.invocationId()))
+                                .append("\n[No completed model-visible result was recorded.]\n\n");
+                    }
+                }
+            }
+        }
+    }
+
+    private static void appendOutcome(
+            StringBuilder result, String toolId, ModelContent.ToolResult outcome) {
+        result.append("Tool · ").append(safeToolName(toolId))
+                .append(outcome.error() ? " · FAILED\n" : " · SUCCEEDED\n")
+                .append("Invocation ID: ").append(redact(outcome.toolUseId())).append('\n')
+                .append(outcome.error() ? "Tool error (model-visible)\n" : "Result (model-visible)\n");
+        var value = outcome.value();
+        String text = value.isJsonPrimitive() && value.getAsJsonPrimitive().isString()
+                ? value.getAsString() : LiveTraceJson.redact(value, Set.of()).toString();
+        result.append(redact(text)).append("\n\n");
+    }
+
     static String redact(String value) {
         String safe = value == null ? "" : value
                 .replace("\r\n", "\n")
                 .replace('\r', '\n')
                 .replaceAll("[\\p{Cc}&&[^\\n\\t]]", "�");
-        safe = AUTHORIZATION.matcher(safe).replaceAll("$1[REDACTED]");
-        safe = NAMED_SECRET.matcher(safe).replaceAll("$1[REDACTED]");
-        safe = BEARER_SECRET.matcher(safe).replaceAll("Bearer [REDACTED]");
-        return PREFIXED_SECRET.matcher(safe).replaceAll("[REDACTED]");
+        return LiveTraceJson.redact(safe, Set.of());
     }
 
     private Path prepareManagedRoot() throws IOException {

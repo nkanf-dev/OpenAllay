@@ -14,12 +14,14 @@ import org.junit.jupiter.api.Test;
 
 final class GuideToolDetailPresenterTest {
     @Test
-    void failuresUseFriendlyMessagesAndGenericToolsNeverShowRawJson() {
+    void actualFailuresRemainVisibleAndGenericToolsNeverShowRawJson() {
         GuideToolDetailView failure = GuideToolDetailPresenter.project(activity(
                 "openallay:run_javascript",
                 "{\"status\":\"failure\",\"code\":\"stale_reference\",\"message\":\"generation deadbeef\"}"),
                 false);
         assertTrue(failure.cards().isEmpty());
+        assertEquals("stale_reference", failure.failure().orElseThrow().code());
+        assertEquals("generation deadbeef", failure.failure().orElseThrow().message());
         assertEquals(
                 List.of(GuideToolMessage.of(
                         GuideToolMessage.Key.FAILURE_STALE_REFERENCE)),
@@ -32,6 +34,37 @@ final class GuideToolDetailPresenterTest {
         assertFalse(visible.contains("secretInternalId"));
         assertFalse(visible.contains("abc"));
         assertEquals("screen.openallay.tool.result", generic.titleKey());
+        GuideToolDetailView debug = GuideToolDetailPresenter.project(activity(
+                "openallay:future_tool",
+                "{\"status\":\"success\",\"value\":{\"secretInternalId\":\"abc\"}}"), true);
+        assertEquals("abc", debug.debug().orElseThrow().normalized().getAsJsonObject("value")
+                .get("secretInternalId").getAsString());
+    }
+
+    @Test
+    void debugResultDoesNotDuplicateCanonicalSourceMetadataOrAlterUnknownToolFields() {
+        String json = """
+                {"status":"success","value":{"resultType":"number","cardinality":1,
+                  "viewKind":"SCALAR","preview":42,"complete":true,
+                  "sources":[{"evidence":{"sourceId":"minecraft:client_blocks"},"lastCapturedAt":"1970-01-01T00:00:12Z"}]}}
+                """;
+        GuideToolActivity original = activity("openallay:run_javascript", json);
+        var source = new dev.openallay.guide.GuideSource("openallay:run_javascript",
+                new dev.openallay.context.EvidenceMetadata(
+                        dev.openallay.context.DataAuthority.CLIENT_VISIBLE,
+                        dev.openallay.context.DataCompleteness.COMPLETE, java.time.Instant.EPOCH,
+                        "minecraft:client_blocks", "minecraft:captured", "26.2", "fabric", java.util.Map.of()),
+                java.time.Instant.EPOCH.plusSeconds(12));
+        GuideToolActivity javascript = new GuideToolActivity(original.invocationId(), 0, original.toolId(),
+                original.status(), original.normalized(), original.presentationMessages(), List.of(source));
+        var detail = GuideToolDetailPresenter.project(javascript, true);
+        assertFalse(detail.debug().orElseThrow().normalized().getAsJsonObject("value").has("sources"));
+        assertEquals(42, detail.debug().orElseThrow().normalized().getAsJsonObject("value").get("preview").getAsInt());
+        assertTrue(javascript.normalized().getAsJsonObject("value").has("sources"));
+        assertTrue(GuideToolDetailPresenter.project(original, true).debug().orElseThrow()
+                .normalized().getAsJsonObject("value").has("sources"));
+        var unknown = GuideToolDetailPresenter.project(activity("addon:custom", json), true);
+        assertTrue(unknown.debug().orElseThrow().normalized().getAsJsonObject("value").has("sources"));
     }
 
     @Test
@@ -41,7 +74,6 @@ final class GuideToolDetailPresenterTest {
                   "source":"return mc.items.filter(item => item.id.includes('sword'));",
                   "title":"比较武器",
                   "description":"比较观察到的攻击伤害",
-                  "roots":["items"],
                   "handles":[]
                 }
                 """).getAsJsonObject();
@@ -62,7 +94,7 @@ final class GuideToolDetailPresenterTest {
                   "modelText":"internal projection","viewKind":"TABLE","complete":false,
                   "omittedRows":7,"omittedFields":0,"elapsedMillis":12,
                   "modules":["openallay:crafting"],
-                  "evidence":[{"authority":"CLIENT_VISIBLE"}]}}
+                  "sources":[]}}
                 """).getAsJsonObject(),
                 List.of(GuideToolMessage.of(GuideToolMessage.Key.RESULT_COMPLETED)),
                 List.of());
@@ -77,7 +109,6 @@ final class GuideToolDetailPresenterTest {
                 preview.rows().getFirst().get(preview.columns().indexOf("itemId")));
         assertEquals("比较武器", view.intent().title());
         assertEquals("比较观察到的攻击伤害", view.intent().description());
-        assertEquals(List.of("items"), view.invocation().roots());
         assertEquals(List.of("openallay:crafting"), view.invocation().modules());
         assertFalse(view.toString().contains("r_secret"));
         assertFalse(view.toString().contains("internal projection"));

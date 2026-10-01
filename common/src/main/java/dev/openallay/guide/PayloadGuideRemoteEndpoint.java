@@ -2,7 +2,6 @@ package dev.openallay.guide;
 
 import com.google.gson.Gson;
 import dev.openallay.agent.AgentEvent;
-import dev.openallay.bridge.protocol.BridgeProtocol;
 import dev.openallay.bridge.protocol.CapabilityPayload;
 import dev.openallay.bridge.protocol.ServerAgentEventCodec;
 import dev.openallay.bridge.protocol.ServerAgentEventPayload;
@@ -68,7 +67,7 @@ public final class PayloadGuideRemoteEndpoint implements GuideRemoteEndpoint {
             String question,
             Consumer<AgentEvent> consumer) {
         ServerAgentRequestPayload request = new ServerAgentRequestPayload(
-                BridgeProtocol.VERSION, requestId, sessionId, question, true);
+                requestId, sessionId, question, true);
         return send(request, consumer);
     }
 
@@ -83,26 +82,7 @@ public final class PayloadGuideRemoteEndpoint implements GuideRemoteEndpoint {
                 .map(ServerAgentHistoryMessage::from)
                 .toList();
         return send(new ServerAgentRequestPayload(
-                BridgeProtocol.VERSION, requestId, sessionId, question, true, detached), consumer);
-    }
-
-    @Override
-    public boolean ask(
-            UUID requestId,
-            String sessionId,
-            String question,
-            List<GuideMessage> history,
-            Consumer<AgentEvent> consumer) {
-        List<ServerAgentHistoryMessage> detached = history.stream()
-                .map(message -> new ServerAgentHistoryMessage(
-                        message.role() == GuideMessage.Role.USER
-                                ? ServerAgentHistoryMessage.Role.USER
-                                : ServerAgentHistoryMessage.Role.ASSISTANT,
-                        message.text()))
-                .toList();
-        ServerAgentRequestPayload request = new ServerAgentRequestPayload(
-                BridgeProtocol.VERSION, requestId, sessionId, question, true, detached);
-        return send(request, consumer);
+                requestId, sessionId, question, true, detached), consumer);
     }
 
     private boolean send(

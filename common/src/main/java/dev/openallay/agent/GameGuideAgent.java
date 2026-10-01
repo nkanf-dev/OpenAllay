@@ -100,80 +100,87 @@ public final class GameGuideAgent {
         AgentSessionStore.Lease lease =
                 ((ToolResult.Success<AgentSessionStore.Lease>) reservation).value();
         LiveAgentTraceRecorder trace = new LiveAgentTraceRecorder(gson, request);
-        transition(AgentState.PREPARING, trace, events);
-        List<ModelMessage> messages = new ArrayList<>(lease.history());
-        int protectedFromIndex = messages.size();
-        messages.add(ModelMessage.userText(request.userMessage()));
-        List<ModelMessage> completeMessages = List.copyOf(messages);
-        if (compactor != null && !lease.checkpoints().isEmpty()) {
-            for (int index = lease.checkpoints().size() - 1; index >= 0; index--) {
-                var reused = compactor.reuse(
-                        lease.checkpoints().get(index),
-                        request.systemPrompt(),
-                        messages,
-                        protectedFromIndex,
-                        tools.definitions());
-                if (reused.isPresent()) {
-                    transition(AgentState.MODEL_WAIT, trace, events);
-                    return loop(
-                                    request,
-                                    lease,
-                                    reused.orElseThrow().messages(),
-                                    completeMessages,
-                                    Math.max(0, reused.orElseThrow().messages().size() - 1),
-                                    Map.of(),
-                                    trace,
-                                    events)
-                            .exceptionally(throwable ->
-                                    fail(request, lease, trace, events, throwable));
-                }
-            }
-        }
-        if (compactor != null
-                && compactor.requiresCompaction(
-                        request.systemPrompt(), messages, tools.definitions())) {
-            transition(AgentState.COMPACTING, trace, events);
-            return compactor.compact(
+        try {
+            transition(AgentState.PREPARING, trace, events);
+            List<ModelMessage> messages = new ArrayList<>(tools.refreshContext(
+                    dev.openallay.agent.context.ModelContextCodec.safe(lease.history())));
+            int protectedFromIndex = messages.size();
+            messages.add(ModelMessage.userText(request.userMessage()));
+            List<ModelMessage> completeMessages = List.copyOf(messages);
+            sessions.recordContext(lease, messages, completeMessages);
+            events.accept(new AgentEvent.ContextUpdated(messages, lease.progress().requestMessages()));
+            if (compactor != null && !lease.checkpoints().isEmpty()) {
+                for (int index = lease.checkpoints().size() - 1; index >= 0; index--) {
+                    var reused = compactor.reuse(
+                            lease.checkpoints().get(index),
                             request.systemPrompt(),
                             messages,
                             protectedFromIndex,
-                            tools.definitions(),
-                            request.stream(),
-                            request.sessionKey().schedulingKey(),
-                            lease.cancellation())
-                    .thenCompose(result -> {
-                        if (result.checkpoint() != null) {
-                            sessions.recordCheckpoint(lease, result.checkpoint());
-                            events.accept(new AgentEvent.ContextCompacted(result.checkpoint()));
-                        }
-                        if (!result.successful()) {
-                            throw new ModelClientException(new dev.openallay.model.ModelFailure(
-                                    result.failureCode(), result.failureMessage(), null));
-                        }
+                            tools.definitions());
+                    if (reused.isPresent()) {
                         transition(AgentState.MODEL_WAIT, trace, events);
                         return loop(
-                                request,
-                                lease,
-                                result.projection().messages(),
-                                completeMessages,
-                                Math.max(0, result.projection().messages().size() - 1),
-                                Map.of(),
-                                trace,
-                                events);
-                    })
-                    .exceptionally(throwable -> fail(request, lease, trace, events, throwable));
+                                        request,
+                                        lease,
+                                        reused.orElseThrow().messages(),
+                                        completeMessages,
+                                        Math.max(0, reused.orElseThrow().messages().size() - 1),
+                                        Map.of(),
+                                        trace,
+                                        events)
+                                .exceptionallyAsync(throwable ->
+                                        fail(request, lease, trace, events, throwable));
+                    }
+                }
+            }
+            if (compactor != null
+                    && compactor.requiresCompaction(
+                            request.systemPrompt(), messages, tools.definitions())) {
+                transition(AgentState.COMPACTING, trace, events);
+                return compactor.compact(
+                                request.systemPrompt(),
+                                messages,
+                                protectedFromIndex,
+                                tools.definitions(),
+                                request.stream(),
+                                request.sessionKey().schedulingKey(),
+                                lease.cancellation())
+                        .thenCompose(result -> {
+                            if (result.checkpoint() != null) {
+                                sessions.recordCheckpoint(lease, result.checkpoint());
+                                events.accept(new AgentEvent.ContextCompacted(result.checkpoint()));
+                            }
+                            if (!result.successful()) {
+                                throw new ModelClientException(new dev.openallay.model.ModelFailure(
+                                        result.failureCode(), result.failureMessage(), null));
+                            }
+                            transition(AgentState.MODEL_WAIT, trace, events);
+                            return loop(
+                                    request,
+                                    lease,
+                                    result.projection().messages(),
+                                    completeMessages,
+                                    Math.max(0, result.projection().messages().size() - 1),
+                                    Map.of(),
+                                    trace,
+                                    events);
+                        })
+                        .exceptionallyAsync(throwable -> fail(request, lease, trace, events, throwable));
+            }
+            transition(AgentState.MODEL_WAIT, trace, events);
+            return loop(
+                            request,
+                            lease,
+                            messages,
+                            completeMessages,
+                            protectedFromIndex,
+                            Map.of(),
+                            trace,
+                            events)
+                    .exceptionallyAsync(throwable -> fail(request, lease, trace, events, throwable));
+        } catch (RuntimeException failure) {
+            return CompletableFuture.supplyAsync(() -> fail(request, lease, trace, events, failure));
         }
-        transition(AgentState.MODEL_WAIT, trace, events);
-        return loop(
-                        request,
-                        lease,
-                        messages,
-                        completeMessages,
-                        protectedFromIndex,
-                        Map.of(),
-                        trace,
-                        events)
-                .exceptionally(throwable -> fail(request, lease, trace, events, throwable));
     }
 
     private CompletableFuture<AgentResult> loop(
@@ -224,9 +231,15 @@ public final class GameGuideAgent {
                                 events);
                     });
         }
+        List<ModelMessage> projectedMessages = tools.refreshContext(messages);
+        boolean changedProjection = !lease.progress().projected().equals(projectedMessages);
+        if (sessions.recordContext(lease, projectedMessages, completeMessages) && changedProjection) {
+            events.accept(new AgentEvent.ContextUpdated(projectedMessages, lease.progress().requestMessages()));
+        }
+        tools.prepareContext(request.context().correlationId(), projectedMessages);
         ModelRequest modelRequest = new ModelRequest(
                 request.systemPrompt(),
-                messages,
+                projectedMessages,
                 tools.definitions(),
                 request.stream(),
                 request.sessionKey().schedulingKey());
@@ -239,18 +252,18 @@ public final class GameGuideAgent {
             // An optional diagnostic observer cannot break model execution.
         }
         trace.modelRequest(modelRequest);
-        return model.complete(
+        return lease.cancellation().observe(model.complete(
                         modelRequest,
                         event -> {
                             if (!lease.cancellation().isCancelled()) {
                                 events.accept(new AgentEvent.ModelProgress(event));
                             }
                         },
-                        lease.cancellation())
+                        lease.cancellation()))
                 .thenCompose(turn -> {
                     lease.cancellation().throwIfCancelled();
                     trace.modelTurn(turn);
-                    List<ModelMessage> nextMessages = new ArrayList<>(messages);
+                    List<ModelMessage> nextMessages = new ArrayList<>(projectedMessages);
                     nextMessages.add(new ModelMessage(ModelRole.ASSISTANT, turn.content()));
                     List<ModelMessage> nextCompleteMessages = new ArrayList<>(completeMessages);
                     nextCompleteMessages.add(new ModelMessage(ModelRole.ASSISTANT, turn.content()));
@@ -265,8 +278,17 @@ public final class GameGuideAgent {
                         // Runtime memory keeps the successfully projected context. Durable guide
                         // history independently retains the original request/timeline projection.
                         lease.cancellation().cancel();
-                        tools.closeRequestScope(request.context().correlationId());
+                        try {
+                            tools.closeRequestScope(request.context().correlationId());
+                        } catch (RuntimeException ignored) {
+                            // Cleanup cannot replace an actual completed answer.
+                        }
+                        sessions.recordContext(lease, nextMessages, nextCompleteMessages);
                         sessions.finish(lease, nextMessages);
+                        events.accept(new AgentEvent.ContextUpdated(
+                                nextMessages, lease.progress().requestMessages()));
+                        events.accept(new AgentEvent.ContextFinalized(
+                                nextMessages, lease.progress().requestMessages()));
                         LiveAgentTrace completed = trace.finish(AgentState.COMPLETED, turn.text(), null);
                         events.accept(new AgentEvent.FinalText(turn.text()));
                         return CompletableFuture.completedFuture(new AgentResult(
@@ -306,12 +328,12 @@ public final class GameGuideAgent {
             Map<String, String> previousCallOutcomes,
             LiveAgentTraceRecorder trace,
             Consumer<AgentEvent> events) {
-        lease.cancellation().throwIfCancelled();
         List<PendingToolCall> pending = new ArrayList<>();
-        Map<String, CompletableFuture<AgentToolResult>> firstCalls = new java.util.LinkedHashMap<>();
+        java.util.Set<String> firstCalls = new java.util.HashSet<>();
         java.util.Set<String> duplicatedThisTurn = new java.util.HashSet<>();
+        java.util.concurrent.atomic.AtomicReference<RuntimeException> terminalFailure =
+                new java.util.concurrent.atomic.AtomicReference<>();
         for (ModelContent.ToolUse call : calls) {
-            lease.cancellation().throwIfCancelled();
             String exposedId = tools.canonicalToolId(call.name())
                     .orElse(AgentToolExecutor.UNKNOWN_TOOL_ID);
             JsonObject executionArguments = dev.openallay.tool.builtin.RunJavascriptTool.ID.equals(exposedId)
@@ -319,61 +341,41 @@ public final class GameGuideAgent {
                     : call.input();
             String callKey = exposedId + ":" + canonical(executionArguments);
             String previousOutcome = previousCallOutcomes.get(callKey);
+            AgentToolResult feedback = null;
             if (REPEATED_CALL_SENTINEL.equals(previousOutcome)) {
-                throw new ModelClientException(new dev.openallay.model.ModelFailure(
-                        "repeated_tool_call",
-                        "Model ignored a no-new-information result and repeated the same tool call again",
-                        null));
+                ModelClientException repeated = new ModelClientException(
+                        new dev.openallay.model.ModelFailure(
+                                "repeated_tool_call",
+                                "Model ignored a no-new-information result and repeated the same tool call again",
+                                null));
+                terminalFailure.compareAndSet(null, repeated);
+                feedback = recoverToolFailure(exposedId, repeated);
+            } else if (previousOutcome != null || !firstCalls.add(callKey)) {
+                duplicatedThisTurn.add(callKey);
+                feedback = noNewInformation(exposedId);
             }
             trace.toolCall(exposedId, call.input());
-            if (previousOutcome != null || firstCalls.containsKey(callKey)) {
-                duplicatedThisTurn.add(callKey);
-                pending.add(new PendingToolCall(
-                        call,
-                        exposedId,
-                        callKey,
-                        false,
-                        CompletableFuture.completedFuture(noNewInformation(exposedId))));
-                continue;
-            }
-            events.accept(new AgentEvent.ToolStarted(
-                    call.id(),
-                    exposedId,
-                    call.input(),
-                    GuideToolInvocationPresentation.messages(exposedId, call.input())));
-            CompletableFuture<AgentToolResult> execution = tools
-                    .execute(call.name(), call.input(), request.context(), lease.cancellation())
-                    .handle((rawResult, executionFailure) -> executionFailure == null && rawResult != null
-                            ? new AgentToolResult(
-                                    exposedId, rawResult.normalized(), rawResult.failure())
-                            : recoverToolFailure(
-                                    exposedId, executionFailure, lease.cancellation()));
-            firstCalls.put(callKey, execution);
-            pending.add(new PendingToolCall(call, exposedId, callKey, true, execution));
+            pending.add(new PendingToolCall(call, exposedId, callKey, feedback));
         }
+
+        // Declare the entire exchange and its capture before any executor can cancel,
+        // block, or complete. Cancellation always has a slot for each advertised ID.
         CompletableFuture<?>[] futures = pending.stream()
-                .map(PendingToolCall::result)
+                .map(item -> item.result)
                 .toArray(CompletableFuture[]::new);
-        return CompletableFuture.allOf(futures).thenApply(ignored -> {
-            lease.cancellation().throwIfCancelled();
+        java.util.concurrent.atomic.AtomicBoolean capturedContext =
+                new java.util.concurrent.atomic.AtomicBoolean();
+        CompletableFuture<ToolOutcome> captured = CompletableFuture.allOf(futures).thenApply(ignored -> {
             List<ModelContent> results = new ArrayList<>();
             Map<String, String> updatedCallOutcomes =
                     new java.util.HashMap<>(previousCallOutcomes);
             for (PendingToolCall item : pending) {
-                AgentToolResult result = item.result().join();
-                trace.toolResult(result);
-                if (item.executed()) {
-                    events.accept(new AgentEvent.ToolCompleted(
-                            item.call().id(),
-                            result.toolId(),
-                            result.failure(),
-                            result.normalized()));
-                }
+                AgentToolResult result = item.result.join();
                 results.add(new ModelContent.ToolResult(
-                        item.call().id(), result.modelValue(), result.failure()));
+                        item.call.id(), result.modelValue(), result.failure()));
                 updatedCallOutcomes.put(
-                        item.callKey(),
-                        duplicatedThisTurn.contains(item.callKey())
+                        item.callKey,
+                        duplicatedThisTurn.contains(item.callKey)
                                 ? REPEATED_CALL_SENTINEL
                                 : canonical(result.modelValue()));
             }
@@ -381,9 +383,117 @@ public final class GameGuideAgent {
             updated.add(new ModelMessage(ModelRole.USER, results));
             List<ModelMessage> updatedComplete = new ArrayList<>(completeMessages);
             updatedComplete.add(new ModelMessage(ModelRole.USER, results));
+            capturedContext.set(sessions.recordContext(lease, updated, updatedComplete));
+            // Capture only safe progress here. Observers and terminal cleanup run later.
             return new ToolOutcome(
-                    updated, updatedComplete, Map.copyOf(updatedCallOutcomes), List.of());
+                    updated, updatedComplete, Map.copyOf(updatedCallOutcomes), List.copyOf(results));
         });
+        for (PendingToolCall item : pending) {
+            lease.cancellation().onCancel(() -> cancelToolResult(item));
+        }
+        for (PendingToolCall item : pending) {
+            if (item.feedback != null) item.result.complete(item.feedback);
+        }
+
+        if (!lease.cancellation().isCancelled()) {
+            try {
+                tools.prepareContext(request.context().correlationId(),
+                        messages.subList(0, messages.size() - 1));
+            } catch (RuntimeException failure) {
+                terminalFailure.compareAndSet(null, failure);
+                for (PendingToolCall item : pending) {
+                    item.result.complete(recoverToolFailure(item.exposedId, failure));
+                }
+            }
+        }
+        for (PendingToolCall item : pending) {
+            if (item.result.isDone()) continue;
+            if (lease.cancellation().isCancelled()) {
+                cancelToolResult(item);
+                continue;
+            }
+            item.started.set(true);
+            events.accept(new AgentEvent.ToolStarted(
+                    item.call.id(),
+                    item.exposedId,
+                    item.call.input(),
+                    GuideToolInvocationPresentation.messages(item.exposedId, item.call.input())));
+            if (item.result.isDone()) continue;
+            if (lease.cancellation().isCancelled()) {
+                cancelToolResult(item);
+                continue;
+            }
+            CompletableFuture<AgentToolResult> execution;
+            try {
+                execution = tools.execute(
+                        item.call.name(), item.call.input(), request.context(), lease.cancellation());
+                if (execution == null) {
+                    execution = CompletableFuture.failedFuture(new IllegalStateException(
+                            "Tool executor completed without a result"));
+                }
+            } catch (RuntimeException failure) {
+                execution = CompletableFuture.failedFuture(failure);
+            }
+            item.execution.set(execution);
+            if (lease.cancellation().isCancelled()) {
+                // A value returned only after Stop is late feedback, not a pre-Stop result.
+                item.result.complete(cancelledToolResult(item.exposedId));
+            } else {
+                execution.whenComplete((result, failure) -> settleToolResult(item, result, failure));
+            }
+        }
+        return captured.thenApplyAsync(outcome -> {
+            for (PendingToolCall item : pending) {
+                AgentToolResult result = item.result.join();
+                trace.toolResult(result);
+                if (item.started.get()) {
+                    events.accept(new AgentEvent.ToolCompleted(
+                            item.call.id(), result.toolId(), result.failure(), result.normalized()));
+                }
+            }
+            if (capturedContext.get()) {
+                events.accept(new AgentEvent.ContextUpdated(
+                        outcome.messages(), lease.progress().requestMessages()));
+            }
+            // Pair capture has no observer callbacks. Terminal cleanup stays on this worker.
+            lease.cancellation().throwIfCancelled();
+            RuntimeException failure = terminalFailure.get();
+            if (failure != null) throw failure;
+            return outcome;
+        });
+    }
+
+    private void settleToolResult(
+            PendingToolCall item, AgentToolResult rawResult, Throwable executionFailure) {
+        if (item.result.isDone()) return;
+        try {
+            item.result.complete(executionFailure == null && rawResult != null
+                    ? new AgentToolResult(item.exposedId, rawResult.normalized(), rawResult.failure())
+                    : recoverToolFailure(item.exposedId, executionFailure));
+        } catch (RuntimeException malformed) {
+            item.result.complete(recoverToolFailure(item.exposedId, malformed));
+        }
+    }
+
+    private void cancelToolResult(PendingToolCall item) {
+        if (item.result.isDone()) return;
+        CompletableFuture<AgentToolResult> execution = item.execution.get();
+        // Read only a completed raw future. This does not wait for tool execution.
+        if (execution != null && execution.isDone()) {
+            try {
+                settleToolResult(item, execution.join(), null);
+            } catch (RuntimeException failure) {
+                settleToolResult(item, null, failure);
+            }
+        } else {
+            item.result.complete(cancelledToolResult(item.exposedId));
+        }
+    }
+
+    private AgentToolResult cancelledToolResult(String exposedId) {
+        return new AgentToolResult(exposedId, normalizedFailure(
+                "agent_cancelled", "Tool call did not complete before the Agent request was cancelled"),
+                true);
     }
 
     private AgentResult fail(
@@ -410,10 +520,29 @@ public final class GameGuideAgent {
             state = AgentState.FAILED;
         }
         trace.failure(code, message);
-        transition(state, trace, events);
+        List<ModelMessage> retained = new ArrayList<>(lease.progress().projected());
+        List<ModelMessage> original = new ArrayList<>(lease.progress().original());
+        ModelMessage failureNote = new ModelMessage(ModelRole.ASSISTANT, List.of(new ModelContent.Text(
+                "[OpenAllay request ended: " + code + "] " + message)));
+        retained.add(failureNote);
+        original.add(failureNote);
+        boolean recorded = sessions.recordContext(lease, retained, original);
+        // Keep the lease owned until request resources are revoked and closed.
         lease.cancellation().cancel();
-        tools.closeRequestScope(request.context().correlationId());
-        sessions.finish(lease, lease.history());
+        try {
+            tools.closeRequestScope(request.context().correlationId());
+        } catch (RuntimeException ignored) {
+            // Cleanup cannot replace the original failure or strand the active lease.
+        }
+        sessions.finish(lease, retained);
+        if (recorded) {
+            events.accept(new AgentEvent.ContextUpdated(retained, lease.progress().requestMessages()));
+        }
+        if (state == AgentState.CANCELLED) {
+            sessions.finalizeCancelled(lease, retained);
+        }
+        events.accept(new AgentEvent.ContextFinalized(retained, lease.progress().requestMessages()));
+        transition(state, trace, events);
         LiveAgentTrace completed = trace.finish(state, null, code);
         events.accept(new AgentEvent.Failed(code, message));
         return new AgentResult(state, null, code, message, completed);
@@ -436,24 +565,16 @@ public final class GameGuideAgent {
                 true);
     }
 
-    private AgentToolResult recoverToolFailure(
-            String toolId,
-            Throwable throwable,
-            dev.openallay.model.CancellationSignal cancellation) {
-        cancellation.throwIfCancelled();
+    private AgentToolResult recoverToolFailure(String toolId, Throwable throwable) {
         Throwable cause = throwable == null
                 ? new IllegalStateException("Tool executor completed without a result")
                 : unwrap(throwable);
-        if (cause instanceof ModelClientException exception
-                && "agent_cancelled".equals(exception.failure().code())) {
-            throw exception;
-        }
-        return new AgentToolResult(
-                toolId,
-                normalizedFailure(
-                        "tool_failure",
-                        "Tool execution failed; use the failure as a limitation and continue"),
-                true);
+        String code = cause instanceof ModelClientException exception
+                ? exception.failure().code() : "tool_failure";
+        String detail = cause instanceof ModelClientException exception
+                ? exception.failure().message() : cause.getMessage();
+        if (detail == null || detail.isBlank()) detail = cause.getClass().getSimpleName();
+        return new AgentToolResult(toolId, normalizedFailure(code, detail), true);
     }
 
     private static void transition(
@@ -478,10 +599,23 @@ public final class GameGuideAgent {
             Map<String, String> callOutcomes,
             List<ModelContent> results) {}
 
-    private record PendingToolCall(
-            ModelContent.ToolUse call,
-            String exposedId,
-            String callKey,
-            boolean executed,
-            CompletableFuture<AgentToolResult> result) {}
+    private static final class PendingToolCall {
+        private final ModelContent.ToolUse call;
+        private final String exposedId;
+        private final String callKey;
+        private final AgentToolResult feedback;
+        private final CompletableFuture<AgentToolResult> result = new CompletableFuture<>();
+        private final java.util.concurrent.atomic.AtomicBoolean started =
+                new java.util.concurrent.atomic.AtomicBoolean();
+        private final java.util.concurrent.atomic.AtomicReference<CompletableFuture<AgentToolResult>> execution =
+                new java.util.concurrent.atomic.AtomicReference<>();
+
+        private PendingToolCall(
+                ModelContent.ToolUse call, String exposedId, String callKey, AgentToolResult feedback) {
+            this.call = call;
+            this.exposedId = exposedId;
+            this.callKey = callKey;
+            this.feedback = feedback;
+        }
+    }
 }

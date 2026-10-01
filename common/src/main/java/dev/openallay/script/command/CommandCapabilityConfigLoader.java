@@ -12,7 +12,7 @@ import java.util.Set;
 
 /** Strict, pre-release loader. Missing files use defaults; malformed files fail closed. */
 public final class CommandCapabilityConfigLoader {
-    private static final Set<String> FIELDS = Set.of("schemaVersion", "enabled");
+    private static final Set<String> FIELDS = Set.of("enabled");
 
     public ToolResult<CommandCapabilityConfig> load(Path path) {
         if (!Files.exists(path)) {
@@ -29,16 +29,15 @@ public final class CommandCapabilityConfigLoader {
         try {
             JsonObject value = JsonParser.parseReader(reader).getAsJsonObject();
             if (!value.keySet().equals(FIELDS)
-                    || !value.get("schemaVersion").isJsonPrimitive()
-                    || !value.get("enabled").isJsonPrimitive()) {
+                    || !value.get("enabled").isJsonPrimitive()
+                    || !value.get("enabled").getAsJsonPrimitive().isBoolean()) {
                 return failure(
                         "invalid_command_settings",
-                        "Command settings have unknown or missing fields");
+                        "Command settings must contain only a boolean enabled field");
             }
-            int schemaVersion = value.get("schemaVersion").getAsInt();
             boolean enabled = value.get("enabled").getAsBoolean();
             return new ToolResult.Success<>(
-                    new CommandCapabilityConfig(schemaVersion, enabled));
+                    new CommandCapabilityConfig(enabled));
         } catch (RuntimeException failure) {
             return failure("invalid_command_settings", "Command settings are invalid");
         }

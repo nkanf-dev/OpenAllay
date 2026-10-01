@@ -9,18 +9,12 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
-public record GuideHistoryPartition(
-        int schemaVersion,
+record GuideHistoryFixture(
         GuideHistoryScope scope,
         String selectedSession,
         List<GuideSessionSnapshot> sessions,
         Instant updatedAt) {
-    public static final int SCHEMA_VERSION = 5;
-
-    public GuideHistoryPartition {
-        if (schemaVersion != SCHEMA_VERSION) {
-            throw new IllegalArgumentException("unsupported durable history schema " + schemaVersion);
-        }
+    public GuideHistoryFixture {
         Objects.requireNonNull(scope, "scope");
         if (selectedSession == null || selectedSession.isBlank()) {
             throw new IllegalArgumentException("selectedSession must not be blank");
@@ -49,4 +43,31 @@ public record GuideHistoryPartition(
         Objects.requireNonNull(updatedAt, "updatedAt");
     }
 
+    static void seed(GuideHistoryStore store, GuideHistoryFixture fixture) {
+        List<GuideHistoryMutation> mutations = new java.util.ArrayList<>();
+        mutations.add(new GuideHistoryMutation.UpsertPartition(
+                fixture.selectedSession(), fixture.updatedAt()));
+        for (int ordinal = 0; ordinal < fixture.sessions().size(); ordinal++) {
+            GuideSessionSnapshot session = fixture.sessions().get(ordinal);
+            mutations.add(new GuideHistoryMutation.UpsertSession(
+                    session.sessionId(), ordinal, session.modelSelection()));
+            for (int sequence = 0; sequence < session.requests().size(); sequence++) {
+                var request = session.requests().get(sequence);
+                mutations.add(new GuideHistoryMutation.UpsertRequest(sequence, request));
+                request.timeline().forEach(entry -> mutations.add(
+                        new GuideHistoryMutation.UpsertTimelineEntry(request.requestId(), entry)));
+                mutations.add(new GuideHistoryMutation.ReplaceRequestSources(
+                        request.requestId(), request.sources()));
+            }
+            for (int message = 0; message < session.messages().size(); message++) {
+                mutations.add(new GuideHistoryMutation.UpsertMessage(
+                        session.sessionId(), message, session.messages().get(message)));
+            }
+            for (int checkpoint = 0; checkpoint < session.checkpoints().size(); checkpoint++) {
+                mutations.add(new GuideHistoryMutation.UpsertCheckpoint(
+                        session.sessionId(), checkpoint, session.checkpoints().get(checkpoint)));
+            }
+        }
+        store.commit(new GuideHistoryCommit(fixture.scope(), mutations));
+    }
 }

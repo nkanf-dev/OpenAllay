@@ -12,7 +12,7 @@ spec.loader.exec_module(fixture)
 class JavascriptFixtureTests(unittest.TestCase):
     def test_default_request_uses_current_javascript_tool_only(self):
         arguments = fixture.javascript_arguments()
-        self.assertEqual(["recipes", "player", "knowledge"], arguments["roots"])
+        self.assertNotIn("roots", arguments)
         self.assertIn("mc.recipes", arguments["source"])
         self.assertIn('require("openallay:crafting").allocate', arguments["source"])
         self.assertNotIn("search_recipes", arguments["source"])
@@ -52,6 +52,11 @@ class JavascriptFixtureTests(unittest.TestCase):
                                   "content": json.dumps({"status": "success", "value": {
                                       "preview": preview}})}]}
         content = fixture.assistant_content(request, 1)
+        components = [json.loads(block.split("```", 1)[0].strip())
+                      for block in content.split("```openallay-component")[1:]]
+        self.assertEqual(4, len(components))
+        for component in components:
+            self.assertEqual({"type", "properties", "fallback", "narration"}, set(component))
         self.assertIn(reference["generation"], content)
         self.assertIn('"craftable":true', content)
         self.assertIn('"available":3', content)
@@ -68,7 +73,7 @@ class BuilderFixtureTests(unittest.TestCase):
     def test_acceptance_loads_real_module_and_not_injected_backend(self):
         arguments = fixture.builder_arguments("acceptance")
         source = arguments["source"]
-        self.assertEqual(["player"], arguments["roots"])
+        self.assertNotIn("roots", arguments)
         self.assertIn('require("openallay_builder:building").open(', source)
         self.assertNotIn(".create(", source)
         for preset in ("simple_house", "skyscraper", "cottage", "windmill", "farm", "dock"):
@@ -133,7 +138,7 @@ class BuilderFixtureTests(unittest.TestCase):
 
     def test_ui_stop_runs_actual_cancellable_read_only_rhino_not_a_fake_result(self):
         arguments = fixture.ui_stop_arguments()
-        self.assertEqual(["player"], arguments["roots"])
+        self.assertNotIn("roots", arguments)
         self.assertIn("mc.player.uuid", arguments["source"])
         self.assertIn("while(true)", arguments["source"])
         for denied in ("Java", "commands", "building", "setBlock", "fetch", "Thread.sleep"):
@@ -160,7 +165,7 @@ class BuilderFixtureTests(unittest.TestCase):
 
     def test_ui_transport_failure_starts_with_actual_read_only_javascript(self):
         arguments = fixture.ui_provider_failure_arguments()
-        self.assertEqual(["player"], arguments["roots"])
+        self.assertNotIn("roots", arguments)
         self.assertEqual("return {player:mc.player};", arguments["source"])
         self.assertNotIn("Java", arguments["source"])
         self.assertNotIn("building", arguments["source"])

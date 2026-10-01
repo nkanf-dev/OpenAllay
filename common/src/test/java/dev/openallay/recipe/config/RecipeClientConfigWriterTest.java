@@ -13,7 +13,6 @@ final class RecipeClientConfigWriterTest {
     @Test
     void writesCanonicalSortedCredentialFreeSchemaAndRoundTrips() {
         RecipeClientConfig config = new RecipeClientConfig(
-                2,
                 RecipeVisibilityPolicy.UNLOCKED_ONLY,
                 "viewer:rei",
                 Set.of("viewer:jei", "future:viewer"));

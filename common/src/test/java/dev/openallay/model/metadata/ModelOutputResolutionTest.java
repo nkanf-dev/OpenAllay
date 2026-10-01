@@ -45,7 +45,7 @@ final class ModelOutputResolutionTest {
         var unknown = ModelOutputResolution.resolve(trusted, "unknown-model", null, Map.of(), catalog);
         assertNull(unknown.maxOutputTokens());
         assertEquals(ModelOutputResolution.Origin.REQUIRED, unknown.origin());
-        var empty = BuiltinModelCatalog.parse(new java.io.StringReader("{\"schemaVersion\":77}"));
+        var empty = BuiltinModelCatalog.parse(new java.io.StringReader("{}"));
         assertEquals(ModelOutputResolution.Origin.REQUIRED, ModelOutputResolution.resolve(
                 trusted, "gpt-6-luna", null, Map.of(), empty.catalog()).origin());
         assertEquals(4_096, ModelOutputResolution.resolve(trusted, "unknown-model", 4_096,

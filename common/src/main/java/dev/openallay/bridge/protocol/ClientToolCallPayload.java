@@ -4,14 +4,12 @@ import java.util.UUID;
 
 /** One server-hosted Agent invocation bound to the requesting player's client. */
 public record ClientToolCallPayload(
-        int version,
         UUID requestId,
         UUID invocationId,
         String sessionId,
         String toolId,
         String argumentsJson) {
     public ClientToolCallPayload {
-        BridgeProtocol.requireVersion(version);
         java.util.Objects.requireNonNull(requestId, "requestId");
         java.util.Objects.requireNonNull(invocationId, "invocationId");
         if (sessionId == null || !sessionId.matches("[a-zA-Z0-9_.-]+")) {

@@ -4,7 +4,6 @@ import java.util.UUID;
 
 /** One hash-checked chunk of a normalized player-client Tool result. */
 public record ClientToolResultChunkPayload(
-        int version,
         UUID requestId,
         UUID invocationId,
         int index,
@@ -12,7 +11,6 @@ public record ClientToolResultChunkPayload(
         String contentHash,
         String base64Data) {
     public ClientToolResultChunkPayload {
-        BridgeProtocol.requireVersion(version);
         java.util.Objects.requireNonNull(requestId, "requestId");
         java.util.Objects.requireNonNull(invocationId, "invocationId");
         if (index < 0 || total <= 0 || index >= total) {
@@ -33,13 +31,13 @@ public record ClientToolResultChunkPayload(
 
     public RemoteToolResultChunkPayload asRemoteChunk() {
         return new RemoteToolResultChunkPayload(
-                version, invocationId, index, total, contentHash, base64Data);
+                invocationId, index, total, contentHash, base64Data);
     }
 
     public static ClientToolResultChunkPayload from(
             UUID requestId, RemoteToolResultChunkPayload chunk) {
         return new ClientToolResultChunkPayload(
-                chunk.version(), requestId, chunk.correlationId(), chunk.index(), chunk.total(),
+                requestId, chunk.correlationId(), chunk.index(), chunk.total(),
                 chunk.contentHash(), chunk.base64Data());
     }
 }

@@ -5,23 +5,11 @@ import java.util.List;
 /**
  * Evidence-only post-run classification for failed benchmark attempts.
  *
- * @param schemaVersion strict audit document version
- * @param corpusVersion benchmark corpus identity
  * @param attempts failed-attempt audits in report order
  */
 public record BenchmarkTraceAudit(
-        int schemaVersion,
-        String corpusVersion,
         List<AttemptAudit> attempts) {
-    public static final int SCHEMA_VERSION = 1;
-
     public BenchmarkTraceAudit {
-        if (schemaVersion != SCHEMA_VERSION) {
-            throw new IllegalArgumentException("Unsupported benchmark trace audit schema");
-        }
-        if (corpusVersion == null || corpusVersion.isBlank()) {
-            throw new IllegalArgumentException("corpusVersion must not be blank");
-        }
         attempts = List.copyOf(attempts);
     }
 

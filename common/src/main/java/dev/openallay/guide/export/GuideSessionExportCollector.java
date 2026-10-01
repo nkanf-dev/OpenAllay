@@ -8,8 +8,10 @@ import dev.openallay.guide.history.GuideHistoryException;
 import dev.openallay.guide.history.GuideHistoryPage;
 import dev.openallay.guide.history.GuideHistoryPageRequest;
 import dev.openallay.guide.history.GuideHistoryScope;
+import dev.openallay.model.ModelMessage;
 import java.time.Instant;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -43,35 +45,67 @@ public final class GuideSessionExportCollector {
     public CompletableFuture<GuideSessionExportSnapshot> collect(
             String sessionId,
             List<SequencedRequest> captured,
+            Map<UUID, List<ModelMessage>> originals,
+            long upperSequence,
             Instant capturedAt) {
         requireSession(sessionId);
+        if (upperSequence < -1) throw new IllegalArgumentException("invalid export sequence boundary");
         captured = List.copyOf(captured);
+        Map<UUID, List<ModelMessage>> copiedOriginals = new LinkedHashMap<>();
+        originals.forEach((id, messages) -> copiedOriginals.put(id, List.copyOf(messages)));
+        Map<UUID, List<ModelMessage>> liveOriginals = Map.copyOf(copiedOriginals);
         Objects.requireNonNull(capturedAt, "capturedAt");
         for (SequencedRequest value : captured) {
             if (!value.request().sessionId().equals(sessionId)) {
                 throw new IllegalArgumentException("captured request belongs to another session");
             }
+            if (value.sequence() > upperSequence) {
+                throw new IllegalArgumentException("captured request exceeds export sequence boundary");
+            }
         }
         TreeMap<Long, GuideRequestSnapshot> ordered = new TreeMap<>();
         putAll(ordered, captured);
         if (history == null) {
-            return CompletableFuture.completedFuture(snapshot(sessionId, ordered, capturedAt));
+            return CompletableFuture.completedFuture(
+                    snapshot(sessionId, ordered, liveOriginals, capturedAt));
         }
         // The durable read can finish after the live request changes. Overlay the invocation-time
         // capture only after paging so the exported point in time wins by sequence and identity.
         List<SequencedRequest> live = captured;
-        return loadEarlier(sessionId, null, ordered, new HashSet<>())
-                .thenApply(ignored -> {
+        return loadEarlier(sessionId, null, ordered, new HashSet<>(), upperSequence)
+                .thenCompose(ignored -> {
                     putAll(ordered, live);
-                    return snapshot(sessionId, ordered, capturedAt);
-                });
+                    return loadOriginals(ordered, liveOriginals);
+                })
+                .thenApply(contexts -> snapshot(sessionId, ordered, contexts, capturedAt));
+    }
+
+    private CompletableFuture<Map<UUID, List<ModelMessage>>> loadOriginals(
+            Map<Long, GuideRequestSnapshot> ordered,
+            Map<UUID, List<ModelMessage>> live) {
+        Map<UUID, List<ModelMessage>> contexts = new LinkedHashMap<>(live);
+        CompletableFuture<Void> loaded = CompletableFuture.completedFuture(null);
+        for (GuideRequestSnapshot request : ordered.values()) {
+            UUID id = request.requestId();
+            if (!live.containsKey(id)) {
+                loaded = loaded.thenCompose(ignored -> history.requestContext(scope, id)
+                        .thenAccept(messages -> contexts.put(id, List.copyOf(messages))));
+            }
+        }
+        return loaded.handle((ignored, failure) -> {
+            if (failure != null) {
+                throw new java.util.concurrent.CompletionException(exportFailure(failure));
+            }
+            return Map.copyOf(contexts);
+        });
     }
 
     private CompletableFuture<Void> loadEarlier(
             String sessionId,
             GuideHistoryCursor before,
             TreeMap<Long, GuideRequestSnapshot> ordered,
-            Set<GuideHistoryCursor> visited) {
+            Set<GuideHistoryCursor> visited,
+            long upperSequence) {
         GuideHistoryPageRequest.Direction direction = before == null
                 ? GuideHistoryPageRequest.Direction.NEWEST
                 : GuideHistoryPageRequest.Direction.BEFORE;
@@ -90,7 +124,9 @@ public final class GuideSessionExportCollector {
                     if (page.first() != null) {
                         long sequence = page.first().sequence();
                         for (GuideRequestSnapshot value : page.requests()) {
-                            GuideRequestSnapshot previous = ordered.put(sequence++, value);
+                            long currentSequence = sequence++;
+                            if (currentSequence > upperSequence) continue;
+                            GuideRequestSnapshot previous = ordered.put(currentSequence, value);
                             if (previous != null
                                     && !previous.requestId().equals(value.requestId())) {
                                 throw new java.util.concurrent.CompletionException(exportFailure(
@@ -108,7 +144,7 @@ public final class GuideSessionExportCollector {
                         return CompletableFuture.failedFuture(exportFailure(
                                 new IllegalStateException("history cursor did not progress")));
                     }
-                    return loadEarlier(sessionId, next, ordered, visited);
+                    return loadEarlier(sessionId, next, ordered, visited, upperSequence);
                 });
     }
 
@@ -141,19 +177,23 @@ public final class GuideSessionExportCollector {
     private static GuideSessionExportSnapshot snapshot(
             String sessionId,
             TreeMap<Long, GuideRequestSnapshot> ordered,
+            Map<UUID, List<ModelMessage>> originals,
             Instant capturedAt) {
         return new GuideSessionExportSnapshot(
                 sessionId,
-                ordered.values().stream().map(GuideSessionExportCollector::project).toList(),
+                ordered.values().stream().map(request -> project(
+                        request, originals.getOrDefault(request.requestId(), List.of()))).toList(),
                 capturedAt);
     }
 
-    private static GuideSessionExportSnapshot.Request project(GuideRequestSnapshot request) {
+    private static GuideSessionExportSnapshot.Request project(
+            GuideRequestSnapshot request, List<ModelMessage> originalContext) {
         List<GuideSessionExportSnapshot.Entry> timeline = request.timeline().stream()
                 .map(GuideSessionExportCollector::projectEntry)
                 .toList();
         return new GuideSessionExportSnapshot.Request(
-                request.createdAt(), request.status(), request.userMessage(), timeline);
+                request.requestId(), request.createdAt(), request.status(), request.userMessage(),
+                timeline, originalContext, request.failure());
     }
 
     private static GuideSessionExportSnapshot.Entry projectEntry(GuideTimelineEntry entry) {
@@ -163,7 +203,8 @@ public final class GuideSessionExportCollector {
                             assistant.text(), assistant.streaming());
             case GuideTimelineEntry.Tool tool ->
                     new GuideSessionExportSnapshot.Entry.Tool(
-                            tool.activity().toolId(), tool.activity().status());
+                            tool.activity().invocationId(), tool.activity().toolId(),
+                            tool.activity().status());
         };
     }
 

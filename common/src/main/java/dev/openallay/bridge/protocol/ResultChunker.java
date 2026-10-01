@@ -29,7 +29,6 @@ public final class ResultChunker {
             int end = Math.min(all.length, start + transportChunkBytes);
             byte[] part = java.util.Arrays.copyOfRange(all, start, end);
             chunks.add(new RemoteToolResultChunkPayload(
-                    BridgeProtocol.VERSION,
                     correlationId,
                     index,
                     total,

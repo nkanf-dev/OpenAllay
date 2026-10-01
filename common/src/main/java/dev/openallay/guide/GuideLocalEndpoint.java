@@ -53,6 +53,9 @@ public interface GuideLocalEndpoint {
         return Optional.empty();
     }
 
+    /** True only when this scoped session already has actual runtime model context. */
+    default boolean hasContext(UUID actor, String sessionId) { return false; }
+
     default void hydrateContext(
             UUID actor,
             String sessionId,
@@ -84,13 +87,12 @@ public interface GuideLocalEndpoint {
 
     boolean cancel(UUID actor, String sessionId);
 
+    default boolean cancel(UUID actor, String sessionId, UUID expectedRequestId) {
+        return cancel(actor, sessionId);
+    }
+
     void clearSession(UUID actor, String sessionId);
 
     void clearActor(UUID actor);
 
-    default void hydrateSession(
-            UUID actor,
-            String sessionId,
-            List<GuideMessage> messages,
-            List<ContextCheckpoint> checkpoints) {}
 }

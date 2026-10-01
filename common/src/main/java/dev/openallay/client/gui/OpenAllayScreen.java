@@ -109,6 +109,7 @@ public final class OpenAllayScreen extends Screen {
     private int detailScroll;
     private int detailContentHeight;
     private final Map<String, CodeLayout> detailCodeLayouts = new LinkedHashMap<>();
+    private final Map<String, SourceDetailLayout> sourceDetailLayouts = new LinkedHashMap<>();
     private int activeProgressRenderFrames;
     private boolean sessionOverlay;
     private boolean modelSelectorOpen;
@@ -116,8 +117,11 @@ public final class OpenAllayScreen extends Screen {
     private int modelSelectorScroll;
     private int modelSelectorCursor;
     private GuideUiRow.Tool selectedTool;
-    private GuideSource selectedSource;
+    private GuideEvidencePresentation.Group selectedSource;
     private String selectedSourceFocusId;
+    private final HashSet<String> expandedDetails = new HashSet<>();
+    private final Map<List<GuideSource>, List<GuideEvidencePresentation.Group>> sourceGroupCache =
+            new java.util.IdentityHashMap<>();
     private final List<Hit> hits = new ArrayList<>();
     private final GuideTranscriptVirtualizer virtualizer = new GuideTranscriptVirtualizer();
     private final SemanticLayoutCache semanticLayouts = new SemanticLayoutCache();
@@ -733,8 +737,9 @@ public final class OpenAllayScreen extends Screen {
                 }
                 y = rendered.bottom();
             }
-            for (int sourceIndex = 0; sourceIndex < assistant.sources().size(); sourceIndex++) {
-                GuideSource source = assistant.sources().get(sourceIndex);
+            List<GuideEvidencePresentation.Group> sourceGroups = groupedSources(assistant.sources());
+            for (int sourceIndex = 0; sourceIndex < sourceGroups.size(); sourceIndex++) {
+                GuideEvidencePresentation.Group source = sourceGroups.get(sourceIndex);
                 int sourceY = y;
                 String label = sourceLabel(source, projectedDisplay.debugMode());
                 String sourceFocusId = sourceFocusId(assistant, source, sourceIndex);
@@ -846,7 +851,7 @@ public final class OpenAllayScreen extends Screen {
         if (row instanceof GuideUiRow.Assistant assistant) {
             int body = assistant.text().isBlank()
                     ? 10 : semanticLayout(assistant, width - 6).height();
-            return 11 + body + assistant.sources().size() * 12 + 8;
+            return 11 + body + groupedSources(assistant.sources()).size() * 12 + 8;
         }
         if (row instanceof GuideUiRow.Tool tool) {
             int statusLines = font.split(toolCardStatus(tool.detail().displayStatus()),
@@ -860,7 +865,7 @@ public final class OpenAllayScreen extends Screen {
 
     private List<FormattedCharSequence> toolSummaryLines(GuideUiRow.Tool tool, int width) {
         ArrayList<FormattedCharSequence> result = new ArrayList<>();
-        for (Component message : toolSummaryComponents(tool.activity(), tool.detail().displayStatus())) {
+        for (Component message : toolSummaryComponents(tool.activity(), tool.detail())) {
             for (FormattedCharSequence wrapped : font.split(message, Math.max(1, width))) {
                 result.add(wrapped);
                 if (result.size() == 3) return List.copyOf(result);
@@ -875,9 +880,18 @@ public final class OpenAllayScreen extends Screen {
 
     static List<Component> toolSummaryComponents(
             GuideToolActivity activity, GuideToolDisplayStatus status) {
+        GuideToolDetailView detail = dev.openallay.guide.ui.GuideToolDetailPresenter.project(activity, false);
+        return toolSummaryComponents(activity, detail.forRequest(status == GuideToolDisplayStatus.NO_RESULT_RECORDED));
+    }
+
+    private static List<Component> toolSummaryComponents(GuideToolActivity activity, GuideToolDetailView detail) {
         ArrayList<Component> summary = new ArrayList<>();
+        GuideToolDisplayStatus status = detail.displayStatus();
+        boolean actualFailure = detail.failure().isPresent();
+        if (actualFailure) summary.addAll(toolFailureComponents(detail, activity.toolId()));
         boolean javascript = activity.toolId().endsWith(":run_javascript");
         for (GuideToolMessage message : activity.presentationMessages()) {
+            if (actualFailure && message.key().name().startsWith("FAILURE_")) continue;
             if (javascript && message.key() == GuideToolMessage.Key.INVOCATION_RUN_JAVASCRIPT) continue;
             if (status == GuideToolDisplayStatus.NO_RESULT_RECORDED
                     && message.key() == GuideToolMessage.Key.RESULT_PENDING) continue;
@@ -888,6 +902,13 @@ public final class OpenAllayScreen extends Screen {
     }
 
     static List<Component> toolFailureComponents(GuideToolDetailView detail, String toolId) {
+        if (detail.failure().isPresent()) {
+            GuideToolDetailView.Failure failure = detail.failure().orElseThrow();
+            List<Component> lines = new ArrayList<>();
+            if (!failure.code().isBlank()) lines.add(Component.literal(failure.code()));
+            if (!failure.message().isBlank()) lines.add(Component.literal(failure.message()));
+            if (!lines.isEmpty()) return List.copyOf(lines);
+        }
         if (detail.displayStatus() != GuideToolDisplayStatus.FAILED) return List.of();
         return detail.narration().stream().map(message -> friendlyToolMessage(toolId, message)).toList();
     }
@@ -1105,170 +1126,120 @@ public final class OpenAllayScreen extends Screen {
                     Component.translatable("screen.openallay.detail.tool.status").getString()
                             + ": " + Component.translatable(toolDetail.displayStatus().translationKey()).getString(),
                     detail, y);
-            y += 4;
-            for (Component reason : toolFailureComponents(toolDetail, selectedTool.activity().toolId())) {
-                y = detailLine(graphics, reason, detail, y);
-            }
-            if (!toolDetail.intent().empty()) {
-                y = detailLine(graphics,
-                        Component.translatable("screen.openallay.tool.intent.label").getString(), detail, y);
-            }
-            y = detailLine(graphics,
-                    intentTitle(toolDetail.intent(), toolDetail.titleKey()).getString(), detail, y);
-            if (selectedTool.activity().toolId().endsWith(":run_javascript")) {
-                y = detailLine(graphics, toolDescription(toolDetail.intent()).getString(), detail, y);
-            }
-            y += 4;
-            if (selectedTool.activity().sources().isEmpty()) {
-                if ("openallay:run_javascript".equals(selectedTool.activity().toolId())
-                        && toolDetail.displayStatus() != GuideToolDisplayStatus.RUNNING) {
-                    y = detailLine(graphics, Component.translatable("screen.openallay.evidence.none"), detail, y);
-                }
-            } else {
-                for (GuideSource source : selectedTool.activity().sources()) {
-                    y = friendlyEvidence(graphics, source, detail, y);
-                }
-            }
-            if (!toolDetail.invocation().empty()) {
-                y = detailLine(
-                        graphics,
-                        Component.translatable("screen.openallay.detail.input").getString(),
-                        detail,
-                        y);
-                y = detailValues(
-                        graphics,
-                        "screen.openallay.detail.input.roots",
-                        toolDetail.invocation().roots(),
-                        detail,
-                        y);
-                y = detailValues(
-                        graphics,
-                        "screen.openallay.detail.input.handles",
-                        toolDetail.invocation().handles(),
-                        detail,
-                        y);
-                y = detailValues(
-                        graphics,
-                        "screen.openallay.detail.input.modules",
-                        toolDetail.invocation().modules(),
-                        detail,
-                        y);
-                y += 2;
-            }
-            y = detailLine(
-                    graphics,
-                    Component.translatable("screen.openallay.detail.output").getString(),
-                    detail,
-                    y);
-            for (GuideDetailCard card : toolDetail.cards()) {
-                y = detailCard(graphics, card, detail, y, mouseX, mouseY);
-            }
-            if (toolDetail.cards().isEmpty()
-                    && toolDetail.displayStatus() != GuideToolDisplayStatus.NO_RESULT_RECORDED
-                    && toolDetail.displayStatus() != GuideToolDisplayStatus.FAILED) {
-                for (GuideToolMessage message : toolDetail.narration()) {
-                    y = detailLine(graphics, toolMessage(message), detail, y);
-                }
-            }
-            if (toolDetail.debug().isPresent()) {
-                GuideToolDetailView.Debug debug = toolDetail.debug().orElseThrow();
-                y = detailLine(graphics,
-                        Component.translatable("screen.openallay.debug.section").getString(), detail, y + 4);
-                y = detailLine(graphics, "invocationId: " + debug.invocationId(), detail, y);
-                y = detailLine(graphics, "toolId: " + debug.toolId(), detail, y);
-                y = detailLine(graphics, "recordedToolStatus: " + toolDetail.status(), detail, y);
-                JsonObject invocation = debug.invocationArguments();
-                if (debug.toolId().endsWith(":run_javascript") && invocation != null) {
-                    if (invocation.has("source") && invocation.get("source").isJsonPrimitive()) {
-                        y = detailLine(
-                                graphics,
-                                Component.translatable(
-                                                "screen.openallay.debug.javascript_source")
-                                        .getString(),
-                                detail,
-                                y + 4);
-                        y = detailCode(
-                                graphics,
-                                invocation.get("source").getAsString(),
-                                detail,
-                                y,
-                                "javascript-source");
-                    }
-                    y = debugArray(
-                            graphics,
-                            invocation,
-                            "roots",
-                            "screen.openallay.debug.javascript_roots",
-                            detail,
-                            y);
-                    y = debugArray(
-                            graphics,
-                            invocation,
-                            "handles",
-                            "screen.openallay.debug.javascript_handles",
-                            detail,
-                            y);
-                }
-                if (!debug.validationDiagnostic().isBlank()) {
-                    y = detailLine(graphics,
-                            "validation: " + debug.validationDiagnostic(), detail, y);
-                }
-                for (GuideSource source : debug.sources()) {
-                    y = evidence(graphics, source, detail, y);
-                }
-                if (debug.normalized() != null) {
-                    JsonObject normalized = debug.normalized();
-                    JsonObject value = normalized.has("value") && normalized.get("value").isJsonObject()
-                            ? normalized.getAsJsonObject("value") : null;
-                    if (value != null) {
-                        for (String field : List.of(
-                                "handle",
-                                "resultType",
-                                "cardinality",
-                                "complete",
-                                "omittedRows",
-                                "omittedFields",
-                                "elapsedMillis")) {
-                            if (value.has(field) && value.get(field).isJsonPrimitive()) {
-                                y = detailLine(
-                                        graphics,
-                                        field + ": " + value.get(field).getAsString(),
-                                        detail,
-                                        y);
+            for (DetailSection section : toolDetailSections(toolDetail)) {
+                switch (section) {
+                    case RESULT -> {
+                        for (Component reason : toolFailureComponents(toolDetail, selectedTool.activity().toolId())) {
+                            y = detailLine(graphics, reason.copy().withStyle(ChatFormatting.RED), detail, y);
+                        }
+                        if (toolDetail.failure().isEmpty()) {
+                            y = detailLine(graphics, Component.translatable("screen.openallay.detail.output"), detail, y + 4);
+                        }
+                        for (GuideDetailCard card : toolDetail.cards()) {
+                            y = detailCard(graphics, card, detail, y, mouseX, mouseY);
+                        }
+                        if (toolDetail.cards().isEmpty()
+                                && toolDetail.failure().isEmpty()
+                                && toolDetail.displayStatus() != GuideToolDisplayStatus.NO_RESULT_RECORDED
+                                && toolDetail.displayStatus() != GuideToolDisplayStatus.FAILED) {
+                            for (GuideToolMessage message : toolDetail.narration()) {
+                                y = detailLine(graphics, toolMessage(message), detail, y);
                             }
                         }
-                        y = debugArray(
-                                graphics,
-                                value,
-                                "modules",
-                                "screen.openallay.debug.javascript_modules",
-                                detail,
-                                y);
                     }
-                    y = detailLine(
-                            graphics,
-                            Component.translatable(
-                                            "screen.openallay.debug.normalized_result")
-                                    .getString(),
-                            detail,
-                            y + 4);
-                    y = detailCode(
-                            graphics,
-                            DEBUG_GSON.toJson(normalized),
-                            detail,
-                            y,
-                            "normalized-result");
+                    case PROGRAM -> {
+                        y = detailLine(graphics, Component.translatable("screen.openallay.detail.program"), detail, y + 4);
+                        y = detailCode(graphics, toolProgram(toolDetail), detail, y, "javascript-source");
+                    }
+                    case INTENT -> {
+                        y = detailLine(graphics, Component.translatable("screen.openallay.tool.intent.label"), detail, y + 4);
+                        y = detailLine(graphics, intentTitle(toolDetail.intent(), toolDetail.titleKey()), detail, y);
+                        if (selectedTool.activity().toolId().endsWith(":run_javascript")) {
+                            y = detailLine(graphics, toolDescription(toolDetail.intent()), detail, y);
+                        }
+                        y = detailValues(graphics, "screen.openallay.detail.input.handles",
+                                toolDetail.invocation().handles(), detail, y);
+                        y = detailValues(graphics, "screen.openallay.detail.input.modules",
+                                toolDetail.invocation().modules(), detail, y);
+                    }
+                    case SOURCES -> {
+                        y = sourceGroups(graphics, selectedTool.activity().sources(), detail, y + 4);
+                    }
+                    case DEBUG -> {
+                        y = detailDisclosure(graphics, Component.translatable("screen.openallay.debug.section"),
+                                detail, y + 4, "debug-result");
+                        if (expandedDetails.contains("debug-result")) {
+                            GuideToolDetailView.Debug debug = toolDetail.debug().orElseThrow();
+                            y = detailLine(graphics, "invocationId: " + debug.invocationId(), detail, y);
+                            y = detailLine(graphics, "toolId: " + debug.toolId(), detail, y);
+                            y = detailLine(graphics, "recordedToolStatus: " + toolDetail.status(), detail, y);
+                            if (!debug.validationDiagnostic().isBlank()) {
+                                y = detailLine(graphics, "validation: " + debug.validationDiagnostic(), detail, y);
+                            }
+                            if (debug.invocationArguments() != null) {
+                                y = detailLine(graphics, Component.translatable("screen.openallay.detail.input"), detail, y);
+                                y = detailCode(graphics, DEBUG_GSON.toJson(debug.invocationArguments()),
+                                        detail, y, "invocation-arguments");
+                            }
+                            if (debug.normalized() != null) {
+                                if (!selectedTool.activity().sources().isEmpty()) {
+                                    y = detailLine(graphics, Component.translatable("screen.openallay.evidence.shown_separately"), detail, y);
+                                }
+                                y = detailLine(graphics, Component.translatable("screen.openallay.debug.normalized_result"), detail, y);
+                                y = detailCode(graphics, DEBUG_GSON.toJson(debug.normalized()), detail, y, "normalized-result");
+                            }
+                        }
+                    }
                 }
             }
         } else if (selectedSource != null) {
-            y = friendlyEvidence(graphics, selectedSource, detail, y);
-            if (projectedDisplay.debugMode()) {
-                y = detailLine(graphics, Component.translatable("screen.openallay.debug.section"), detail, y + 4);
-                y = evidence(graphics, selectedSource, detail, y);
-            }
+            y = sourceGroup(graphics, selectedSource, detail, y, "selected-source");
         }
         detailContentHeight = Math.max(0, y + detailScroll - detail.y());
         graphics.disableScissor();
+    }
+
+    enum DetailSection { RESULT, PROGRAM, INTENT, SOURCES, DEBUG }
+
+    /** Used by the renderer, so source metadata cannot precede the actual result or program. */
+    static List<DetailSection> toolDetailSections(GuideToolDetailView detail) {
+        List<DetailSection> sections = new ArrayList<>();
+        sections.add(DetailSection.RESULT);
+        if (!toolProgram(detail).isBlank()) sections.add(DetailSection.PROGRAM);
+        sections.add(DetailSection.INTENT);
+        if (detail.debug().isPresent()) sections.add(DetailSection.DEBUG);
+        sections.add(DetailSection.SOURCES);
+        return List.copyOf(sections);
+    }
+
+    static String toolProgram(GuideToolDetailView detail) {
+        if (detail.debug().isEmpty()) return "";
+        GuideToolDetailView.Debug debug = detail.debug().orElseThrow();
+        JsonObject arguments = debug.invocationArguments();
+        return debug.toolId().endsWith(":run_javascript") && arguments != null
+                && arguments.has("source") && arguments.get("source").isJsonPrimitive()
+                ? arguments.get("source").getAsString() : "";
+    }
+
+    private int detailDisclosure(
+            GuiGraphicsExtractor graphics, Component label, GuideUiLayout.Rect detail, int y, String id) {
+        Component text = Component.literal(expandedDetails.contains(id) ? "▼ " : "▶ ").append(label);
+        int bottom = detailLine(graphics, text, detail, y);
+        if (visibleDetail(y, bottom - y, detail)) {
+            int top = Math.max(y, detail.y() + 21);
+            int visibleBottom = Math.min(bottom, detail.bottom());
+            GuideUiLayout.Rect bounds = new GuideUiLayout.Rect(detail.x() + 4, top,
+                    detail.width() - 8, Math.max(0, visibleBottom - top));
+            String focusId = "detail:" + id;
+            if (isFocused(focusedContentId, focusId)) {
+                graphics.outline(bounds.x(), bounds.y(), bounds.width(), bounds.height(), ACCENT);
+            }
+            hits.add(new Hit(bounds, HitKind.DETAIL, () -> {
+                if (!expandedDetails.remove(id)) expandedDetails.add(id);
+                hits.removeIf(hit -> hit.kind() == HitKind.DETAIL && !"detail:close".equals(hit.focusId()));
+            }, focusId, text.getString()));
+        }
+        return bottom;
     }
 
     private int detailCard(
@@ -1663,45 +1634,100 @@ public final class OpenAllayScreen extends Screen {
                 : Component.translatable(key).getString();
     }
 
-    private int friendlyEvidence(
-            GuiGraphicsExtractor graphics, GuideSource source, GuideUiLayout.Rect detail, int y) {
-        GuideEvidencePresentation evidence = GuideEvidencePresentation.from(source);
-        y = detailLine(graphics, Component.translatable("screen.openallay.evidence.from",
-                Component.translatable(evidence.sourceKey())), detail, y);
-        y = detailLine(graphics, Component.translatable(evidence.authorityKey()), detail, y);
-        y = detailLine(graphics, Component.translatable("screen.openallay.evidence.coverage",
-                Component.translatable(evidence.coverageKey())), detail, y);
-        java.util.Locale locale = java.util.Locale.forLanguageTag(
-                minecraft.getLanguageManager().getSelected().replace('_', '-'));
-        y = detailLine(graphics, Component.translatable("screen.openallay.evidence.captured",
-                formatCapturedAt(evidence.capturedAt(), locale, java.time.ZoneId.systemDefault())), detail, y);
+    private List<GuideEvidencePresentation.Group> groupedSources(List<GuideSource> sources) {
+        return sourceGroupCache.computeIfAbsent(sources, GuideEvidencePresentation::groups);
+    }
+
+    private int sourceGroups(
+            GuiGraphicsExtractor graphics, List<GuideSource> sources, GuideUiLayout.Rect detail, int y) {
+        if (sources.isEmpty()) return y;
+        List<GuideEvidencePresentation.Group> groups = groupedSources(sources);
+        y = detailDisclosure(graphics, Component.translatable("screen.openallay.evidence.groups",
+                groups.size()), detail, y, "sources");
+        if (expandedDetails.contains("sources")) {
+            for (int index = 0; index < groups.size(); index++) {
+                y = sourceGroup(graphics, groups.get(index), detail, y, "source-group:" + index);
+            }
+        }
         return y;
+    }
+
+    private int sourceGroup(
+            GuiGraphicsExtractor graphics, GuideEvidencePresentation.Group group,
+            GuideUiLayout.Rect detail, int y, String id) {
+        y = detailDisclosure(graphics, Component.literal(sourceLabel(group, projectedDisplay.debugMode())),
+                detail, y, id);
+        if (!expandedDetails.contains(id)) return y;
+        int width = Math.max(1, detail.width() - 16);
+        String locale = minecraft.getLanguageManager().getSelected();
+        SourceDetailLayout cached = sourceDetailLayouts.get(id);
+        if (cached == null || !cached.matches(group, width, locale)) {
+            List<FormattedCharSequence> lines = new ArrayList<>();
+            for (Component component : sourceDetailComponents(group)) {
+                lines.addAll(font.split(component, width));
+            }
+            cached = new SourceDetailLayout(group, width, locale, lines);
+            sourceDetailLayouts.put(id, cached);
+        }
+        VisibleDetailLines visible = visibleDetailLines(detail, y, cached.lines().size());
+        for (int index = visible.first(); index < visible.end(); index++) {
+            graphics.text(font, cached.lines().get(index), detail.x() + 8, y + index * 10, TEXT, false);
+        }
+        return y + cached.lines().size() * 10 + 2;
+    }
+
+    /** Built only when a retained group, width, or locale changes; never clipped or capped. */
+    static List<Component> sourceDetailComponents(GuideEvidencePresentation.Group group) {
+        List<Component> lines = new ArrayList<>();
+        GuideEvidencePresentation evidence = group.presentation();
+        lines.add(Component.translatable(evidence.authorityKey()));
+        lines.add(Component.translatable("screen.openallay.evidence.coverage",
+                Component.translatable(evidence.coverageKey())));
+        lines.add(Component.translatable("screen.openallay.evidence.capture_range",
+                group.firstCapturedAt().toString(), group.lastCapturedAt().toString()));
+        var identity = group.identity();
+        lines.add(Component.literal("toolId: " + identity.toolId()));
+        lines.add(Component.literal("sourceId: " + identity.sourceId()));
+        lines.add(Component.literal("provenance: " + identity.provenance()));
+        lines.add(Component.literal("gameVersion: " + identity.gameVersion()));
+        lines.add(Component.literal("loader: " + identity.loader()));
+        for (var entry : identity.scope().entrySet()) {
+            lines.add(Component.literal(entry.getKey() + ": " + entry.getValue()));
+        }
+        // Shared scope is already above. Every retained observation-specific value stays available.
+        for (GuideSource record : group.records()) {
+            lines.add(Component.translatable("screen.openallay.evidence.capture_range",
+                    record.evidence().capturedAt().toString(), record.lastCapturedAt().toString()));
+            for (var entry : record.evidence().details().entrySet()) {
+                if (!identity.scope().containsKey(entry.getKey())) {
+                    lines.add(Component.literal(entry.getKey() + ": " + entry.getValue()));
+                }
+            }
+        }
+        return List.copyOf(lines);
+    }
+
+    record SourceDetailLayout(
+            GuideEvidencePresentation.Group group, int width, String locale, List<FormattedCharSequence> lines) {
+        SourceDetailLayout { lines = List.copyOf(lines); }
+
+        boolean matches(GuideEvidencePresentation.Group current, int currentWidth, String currentLocale) {
+            // The groups are immutable. Identity avoids comparing thousands of retained records each frame.
+            return group == current && width == currentWidth && locale.equals(currentLocale);
+        }
+    }
+
+    record VisibleDetailLines(int first, int end) {}
+
+    static VisibleDetailLines visibleDetailLines(GuideUiLayout.Rect detail, int y, int count) {
+        int first = Math.clamp(Math.ceilDiv(detail.y() + 21 - y, 10), 0, count);
+        int end = Math.clamp(Math.ceilDiv(detail.bottom() - 10 - y, 10), first, count);
+        return new VisibleDetailLines(first, end);
     }
 
     static String formatCapturedAt(Instant capturedAt, java.util.Locale locale, java.time.ZoneId zone) {
         return java.time.format.DateTimeFormatter.ofLocalizedDateTime(java.time.format.FormatStyle.SHORT)
                 .withLocale(locale).withZone(zone).format(capturedAt);
-    }
-
-    private int evidence(GuiGraphicsExtractor graphics, GuideSource source, GuideUiLayout.Rect detail, int y) {
-        var value = source.evidence();
-        y = detailLine(graphics,
-                Component.translatable("screen.openallay.detail.tool.source").getString()
-                        + ": " + readableSource(value.sourceId()), detail, y);
-        y = detailLine(graphics,
-                Component.translatable("screen.openallay.detail.tool.authority").getString()
-                        + ": " + value.authority(), detail, y);
-        y = detailLine(graphics,
-                Component.translatable("screen.openallay.detail.tool.provenance").getString()
-                        + ": " + value.provenance(), detail, y);
-        y = detailLine(graphics,
-                Component.translatable("screen.openallay.detail.tool.coverage").getString()
-                        + ": " + Component.translatable(coverageKey(value.completeness())).getString(),
-                detail, y);
-        y = detailLine(graphics,
-                Component.translatable("screen.openallay.detail.tool.captured_at").getString()
-                        + ": " + value.capturedAt().toString(), detail, y);
-        return y;
     }
 
     private int detailLine(GuiGraphicsExtractor graphics, String text, GuideUiLayout.Rect detail, int y) {
@@ -1773,30 +1799,6 @@ public final class OpenAllayScreen extends Screen {
                 y);
     }
 
-    private int debugArray(
-            GuiGraphicsExtractor graphics,
-            JsonObject object,
-            String field,
-            String labelKey,
-            GuideUiLayout.Rect detail,
-            int y) {
-        if (object == null || !object.has(field) || !object.get(field).isJsonArray()) {
-            return y;
-        }
-        String values = object.getAsJsonArray(field).asList().stream()
-                .filter(value -> value != null && value.isJsonPrimitive())
-                .map(value -> value.getAsString())
-                .collect(java.util.stream.Collectors.joining(", "));
-        if (values.isBlank()) {
-            values = Component.translatable("screen.openallay.debug.none").getString();
-        }
-        return detailLine(
-                graphics,
-                Component.translatable(labelKey).getString() + ": " + values,
-                detail,
-                y);
-    }
-
     private GuideUiLayout.Rect detailCloseBounds() {
         GuideUiLayout.Rect detail = layout.detail();
         return new GuideUiLayout.Rect(detail.right() - 24, detail.y() + 3, 20, 16);
@@ -1807,8 +1809,10 @@ public final class OpenAllayScreen extends Screen {
         selectedSource = null;
         selectedSourceFocusId = null;
         detailScroll = 0;
+        expandedDetails.clear();
         focusedContentId = null;
         detailCodeLayouts.clear();
+        sourceDetailLayouts.clear();
         rebuildForDetail();
     }
 
@@ -1822,21 +1826,33 @@ public final class OpenAllayScreen extends Screen {
         selectedSource = null;
         selectedSourceFocusId = null;
         detailScroll = 0;
+        expandedDetails.clear();
         detailCodeLayouts.clear();
+        sourceDetailLayouts.clear();
         rebuildForDetail();
         focusDetail();
     }
 
     private void open(GuideSource source) {
-        open(source, "source-detail:" + source.evidence().sourceId());
+        GuideEvidencePresentation.Identity identity = GuideEvidencePresentation.Identity.from(source);
+        GuideEvidencePresentation.Group group = view.rows().stream()
+                .filter(GuideUiRow.Tool.class::isInstance).map(GuideUiRow.Tool.class::cast)
+                .filter(tool -> tool.activity().sources().contains(source))
+                .flatMap(tool -> groupedSources(tool.activity().sources()).stream())
+                .filter(value -> value.identity().equals(identity)).findFirst()
+                .orElseGet(() -> GuideEvidencePresentation.groups(List.of(source)).getFirst());
+        open(group, "source-detail:" + identity);
     }
 
-    private void open(GuideSource source, String focusId) {
+    private void open(GuideEvidencePresentation.Group source, String focusId) {
         selectedSource = source;
         selectedSourceFocusId = Objects.requireNonNull(focusId, "focusId");
         selectedTool = null;
         detailScroll = 0;
+        expandedDetails.clear();
+        expandedDetails.add("selected-source");
         detailCodeLayouts.clear();
+        sourceDetailLayouts.clear();
         rebuildForDetail();
         focusDetail();
     }
@@ -1868,8 +1884,8 @@ public final class OpenAllayScreen extends Screen {
         }
         if (selectedSource != null) {
             boolean retained = next.rows().stream().anyMatch(row -> switch (row) {
-                case GuideUiRow.Assistant assistant -> assistant.sources().contains(selectedSource);
-                case GuideUiRow.Tool tool -> tool.activity().sources().contains(selectedSource);
+                case GuideUiRow.Assistant assistant -> groupedSources(assistant.sources()).contains(selectedSource);
+                case GuideUiRow.Tool tool -> groupedSources(tool.activity().sources()).contains(selectedSource);
                 default -> false;
             });
             if (!retained) {
@@ -1898,10 +1914,21 @@ public final class OpenAllayScreen extends Screen {
     }
 
     private void applyProjection(GuideUiView next, GuideDisplayConfig nextDisplay) {
+        // Keep immutable retained groups across streaming updates; discard only lists no longer present.
+        Map<List<GuideSource>, Boolean> retainedSources = new java.util.IdentityHashMap<>();
+        for (GuideUiRow row : next.rows()) {
+            switch (row) {
+                case GuideUiRow.Assistant assistant -> retainedSources.put(assistant.sources(), true);
+                case GuideUiRow.Tool tool -> retainedSources.put(tool.activity().sources(), true);
+                default -> { }
+            }
+        }
+        sourceGroupCache.keySet().removeIf(sources -> !retainedSources.containsKey(sources));
         boolean changedSession = !view.selectedSession().equals(next.selectedSession());
         GuideViewportAnchor anchor = layout == null ? null : virtualizer.anchorAt(scroll);
         boolean shouldFollow = followBottom;
         boolean closedDetail = refreshDetail(next);
+        if (closedDetail || changedSession) sourceDetailLayouts.clear();
         projectedDisplay = nextDisplay;
         view = next;
         if (view.modelChoices().isEmpty()) {
@@ -1913,6 +1940,7 @@ public final class OpenAllayScreen extends Screen {
                     modelSelectorCursor, 0, view.modelChoices().size() - 1);
         }
         if (changedSession) {
+            expandedDetails.clear();
             scroll = 0;
             followBottom = true;
             semanticLayouts.clear();
@@ -2302,9 +2330,9 @@ public final class OpenAllayScreen extends Screen {
     }
 
     static String sourceFocusId(
-            GuideUiRow.Assistant assistant, GuideSource source, int sourceIndex) {
+            GuideUiRow.Assistant assistant, GuideEvidencePresentation.Group source, int sourceIndex) {
         return "source:" + assistant.requestId() + ":" + assistant.ordinal() + ":"
-                + sourceIndex + ":" + source.evidence().sourceId();
+                + sourceIndex + ":" + source.identity();
     }
 
     static String modelFocusId(GuideUiModelChoice choice) {
@@ -2341,6 +2369,10 @@ public final class OpenAllayScreen extends Screen {
                         .append(choice.displayName())
                 : Component.translatable(
                         "screen.openallay.model.client", choice.displayName());
+    }
+
+    static String sourceLabel(GuideEvidencePresentation.Group group, boolean debugMode) {
+        return sourceLabel(group.records().getFirst(), debugMode);
     }
 
     static String sourceLabel(GuideSource source, boolean debugMode) {

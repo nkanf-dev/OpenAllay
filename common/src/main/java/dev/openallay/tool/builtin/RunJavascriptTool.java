@@ -7,7 +7,6 @@ import dev.openallay.agent.tool.ToolOptional;
 import dev.openallay.context.ContextCapability;
 import dev.openallay.context.DataAuthority;
 import dev.openallay.context.DataCompleteness;
-import dev.openallay.context.EvidenceBearing;
 import dev.openallay.context.EvidenceMetadata;
 import dev.openallay.context.ToolInvocationContext;
 import dev.openallay.extension.OpenAllayExtensionRegistry;
@@ -31,7 +30,6 @@ import dev.openallay.tool.ToolResult;
 import dev.openallay.tool.RequestScopeParticipant;
 import dev.openallay.tool.ModelFacingToolOutput;
 import dev.openallay.world.WorldObservationRuntime;
-import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -47,29 +45,18 @@ public final class RunJavascriptTool
     @ToolDescription("A JavaScript program body. End with an explicit return statement.")
     public record Input(
             String source,
-            @ToolDescription("Opaque result handles this script needs to reopen.")
+            @ToolDescription("Opaque result handles from this active request that the script needs to reopen.")
                     @ToolOptional List<String> handles,
-            @ToolDescription(
-                            "Select Minecraft data by bare top-level names, not mc. access paths: roots [\"player\"] "
-                                    + "selects mc.player (mc.player.position); roots [\"game\"] selects mc.game "
-                                    + "(mc.game.player.player.position when captured). Optional world and commands "
-                                    + "bindings also use bare names and are called directly. Omit only for schema discovery.")
-                    @ToolOptional List<String> roots,
             @ToolDescription("Short title in the player's language describing the intended work. Include on every new call.")
                     @ToolOptional String title,
             @ToolDescription("Short description in the player's language of what this call intends to do, not a result or success claim. Include on every new call.")
                     @ToolOptional String description) {
         public Input(String source, List<String> handles) {
-            this(source, handles, List.of());
-        }
-
-        public Input(String source, List<String> handles, List<String> roots) {
-            this(source, handles, roots, null, null);
+            this(source, handles, null, null);
         }
 
         public Input {
             handles = handles == null ? List.of() : List.copyOf(handles);
-            roots = roots == null ? List.of() : List.copyOf(roots);
         }
     }
 
@@ -86,14 +73,14 @@ public final class RunJavascriptTool
             int omittedFields,
             long elapsedMillis,
             List<String> modules,
-            List<EvidenceMetadata> evidence)
-            implements EvidenceBearing, ModelFacingToolOutput {
+            List<dev.openallay.context.SourceObservation> sources)
+            implements ModelFacingToolOutput {
         public Output {
             fields = List.copyOf(fields);
             preview = preview.deepCopy();
             java.util.Objects.requireNonNull(viewKind, "viewKind");
             modules = List.copyOf(modules);
-            evidence = List.copyOf(evidence);
+            sources = List.copyOf(sources);
         }
 
         @Override
@@ -104,10 +91,10 @@ public final class RunJavascriptTool
 
     private static final ToolDescriptor<Input, Output> DESCRIPTOR = new ToolDescriptor<>(
             ID,
-            "Run JavaScript over the selected detached Minecraft data and enabled Extension bindings. Every source must end with an explicit return. "
+            "Run JavaScript computations with automatic access to captured Minecraft data and enabled Extension bindings. The source field is program text and must end with an explicit return. "
                     + "Include title and description on every new call to explain the intended work in the player's language. "
                     + "Use the core JavaScript contract in the system prompt and prefer one filter/map/reduce/sort/join "
-                    + "program over repeated calls; do not rediscover documented roots. "
+                    + "program over repeated calls; read documented data directly. "
                     + "Load a Skill only when a matching domain-specific or optional workflow requires it. "
                     + "Large results stay in a request workspace "
                     + "and can be reopened by an opaque handle. Default mode uses detached read-only game data. "
@@ -136,9 +123,6 @@ public final class RunJavascriptTool
         execution.remove("description");
         return execution;
     }
-
-    private static final String COMMANDS_BINDING = "commands";
-    private static final String WORLD_BINDING = "world";
 
     private final RhinoJavascriptRuntime runtime;
     private final Function<ToolInvocationContext, MinecraftAgentHostGraph> graphFactory;
@@ -274,21 +258,17 @@ public final class RunJavascriptTool
         } catch (ModelClientException cancelled) {
             future.completeExceptionally(cancelled);
         } catch (JavascriptExecutionException failure) {
-            future.complete(new ToolResult.Failure<>(failure.code(), failure.getMessage()));
+            future.complete(new ToolResult.Failure<>(failure.code(),
+                    dev.openallay.script.JavascriptFailureFormatter.sanitizeMessage(failure.getMessage())));
         } catch (WorkspaceException failure) {
-            future.complete(new ToolResult.Failure<>(failure.code(), failure.getMessage()));
-        } catch (RuntimeException failure) {
-            String message = failure.getMessage();
+            future.complete(new ToolResult.Failure<>(failure.code(),
+                    dev.openallay.script.JavascriptFailureFormatter.sanitizeMessage(failure.getMessage())));
+        } catch (Throwable failure) {
+            // Settle even native errors after scope cleanup. Never forward a native stack or
+            // an unchecked exception's arbitrary message to the model.
             future.complete(new ToolResult.Failure<>(
                     "javascript_failure",
-                    message == null || message.isBlank()
-                            ? "JavaScript execution failed"
-                            : message));
-        } catch (Throwable failure) {
-            // This worker owns a manually completed future. Even a native/host Error must
-            // settle it after the try-with-resources cleanup, without exposing foreign text.
-            future.complete(new ToolResult.Failure<>(
-                    "javascript_failure", "JavaScript execution failed"));
+                    dev.openallay.script.JavascriptFailureFormatter.format(failure)));
         }
     }
 
@@ -309,13 +289,7 @@ public final class RunJavascriptTool
                     context.correlationId(), ignored -> graphFactory.apply(context));
             workspace = workspaces.open(context.correlationId());
         }
-        boolean commandsRequested = input.roots().contains(COMMANDS_BINDING);
-        boolean worldRequested = input.roots().contains(WORLD_BINDING);
-        List<String> minecraftRoots = input.roots().stream()
-                .filter(root -> !COMMANDS_BINDING.equals(root)
-                        && !WORLD_BINDING.equals(root))
-                .toList();
-        var selectedRoots = graph.select(minecraftRoots, input.roots().isEmpty());
+        var data = graph.open();
         var commandBridge = commands.bridge(
                 context.correlationId(), cancellation,
                 (kind, capturedAt) -> new EvidenceMetadata(
@@ -331,28 +305,17 @@ public final class RunJavascriptTool
                         context.player().map(value -> value.evidence().gameVersion()).orElse("unknown"),
                         context.player().map(value -> value.evidence().loader()).orElse("unknown"),
                         Map.of("openallay:scope", kind)),
-                selectedRoots::recordEvidence);
+                data::recordEvidence);
         var worldBridge = worldObservations.bridge(
-                context.correlationId(), cancellation, selectedRoots::recordEvidence);
-        if (commandsRequested && commandBridge.isEmpty()) {
-            throw new JavascriptExecutionException(
-                    "javascript_root_unavailable",
-                    "Requested JavaScript binding is unavailable: commands");
-        }
-        if (worldRequested && worldBridge.isEmpty()) {
-            throw new JavascriptExecutionException(
-                    "javascript_root_unavailable",
-                    "Requested JavaScript binding is unavailable: world");
-        }
-        if (scope != null) scope.open(selectedRoots::recordEvidence);
+                context.correlationId(), cancellation, data::recordEvidence);
+        if (scope != null) scope.open(data::recordEvidence);
         JavascriptExecution execution = runtime.execute(
                 input.source(),
-                selectedRoots,
+                data,
                 workspace.select(input.handles(), context.unrestrictedJavascript()),
                 workspace.selectShapes(input.handles()),
-                workspace.selectEvidence(input.handles()),
-                selectedRoots::recordEvidence,
-                selectedRoots::recordSchemaAccess,
+                workspace.selectSources(input.handles()),
+                data::recordSource,
                 cancellation,
                 commandBridge.orElse(null),
                 worldBridge.orElse(null),
@@ -361,18 +324,15 @@ public final class RunJavascriptTool
             scope.complete();
             scope.close();
         }
+        requestCancellation.throwIfCancelled();
         JsonElement canonical = execution.value();
-        List<EvidenceMetadata> evidence = selectedRoots.evidence();
-        if (evidence.isEmpty()) {
-            return new ToolResult.Failure<>(
-                    "context_evidence_unavailable",
-                    "The script did not access evidence-bearing Minecraft data");
-        }
+        var sources = data.sources();
         String handle = workspace.store(
-                canonical, execution.shape(), context.unrestrictedJavascript(), evidence);
+                canonical, execution.shape(), context.unrestrictedJavascript(), sources);
+        String coverage = inputCoverage(sources);
         var presentation = context.unrestrictedJavascript()
-                ? presenter.presentUnrestricted(handle, canonical, execution.shape(), evidenceSummary(evidence))
-                : presenter.present(handle, canonical, execution.shape(), evidenceSummary(evidence));
+                ? presenter.presentUnrestricted(handle, canonical, execution.shape(), coverage)
+                : presenter.present(handle, canonical, execution.shape(), coverage);
         String modelText = presentation.modelText();
         return new ToolResult.Success<>(new Output(
                 handle,
@@ -387,7 +347,7 @@ public final class RunJavascriptTool
                 presentation.omittedFields(),
                 execution.elapsed().toMillis(),
                 execution.modules(),
-                evidence));
+                sources));
     }
 
     @Override
@@ -402,30 +362,15 @@ public final class RunJavascriptTool
         // Request authority is immutable in ToolInvocationContext and scoped to this request.
     }
 
-    private static String evidenceSummary(List<EvidenceMetadata> evidence) {
-        StringBuilder result = new StringBuilder("\nevidence:");
-        int count = Math.min(6, evidence.size());
-        for (int index = 0; index < count; index++) {
-            EvidenceMetadata item = evidence.get(index);
-            result.append("\n- authority=")
-                    .append(item.authority())
-                    .append(" completeness=")
-                    .append(item.completeness())
-                    .append(" source=")
-                    .append(clip(item.sourceId(), 96))
-                    .append(" provenance=")
-                    .append(clip(item.provenance(), 160));
-        }
-        if (evidence.size() > count) {
-            result.append("\n- ").append(evidence.size() - count).append(" more evidence record(s)");
-        }
-        return result.toString();
+    private static String inputCoverage(List<dev.openallay.context.SourceObservation> sources) {
+        boolean incomplete = sources.stream().anyMatch(source ->
+                source.evidence().completeness() != DataCompleteness.COMPLETE);
+        boolean mixedAuthority = sources.stream().map(source -> source.evidence().authority())
+                .distinct().count() > 1;
+        if (!incomplete && !mixedAuthority) return "";
+        return "input coverage: " + sources.stream().map(source ->
+                source.evidence().authority() + " " + source.evidence().completeness())
+                .distinct().sorted().collect(java.util.stream.Collectors.joining("; "));
     }
 
-    private static String clip(String value, int maximum) {
-        if (value == null) {
-            return "";
-        }
-        return value.length() <= maximum ? value : value.substring(0, maximum) + "…";
-    }
 }

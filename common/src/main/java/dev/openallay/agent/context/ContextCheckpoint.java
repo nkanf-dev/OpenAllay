@@ -10,8 +10,6 @@ public record ContextCheckpoint(
         int sourceToIndexExclusive,
         String sourceHash,
         String modelIdentifier,
-        int promptVersion,
-        int schemaVersion,
         Instant createdAt,
         Status status,
         String summary,
@@ -33,9 +31,6 @@ public record ContextCheckpoint(
         }
         if (modelIdentifier == null || modelIdentifier.isBlank()) {
             throw new IllegalArgumentException("checkpoint modelIdentifier is required");
-        }
-        if (promptVersion <= 0 || schemaVersion <= 0) {
-            throw new IllegalArgumentException("checkpoint versions must be positive");
         }
         Objects.requireNonNull(createdAt, "createdAt");
         Objects.requireNonNull(status, "status");

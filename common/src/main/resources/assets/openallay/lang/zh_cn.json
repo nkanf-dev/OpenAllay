@@ -1,4 +1,8 @@
 {
+  "screen.openallay.detail.program": "提交的 JavaScript",
+  "screen.openallay.evidence.shown_separately": "来源元数据单独显示在「来源」中。",
+  "screen.openallay.evidence.groups": "来源 · %s 组",
+  "screen.openallay.evidence.capture_range": "观察时间：%s 至 %s",
   "screen.openallay.evidence.source.builder": "Builder 世界操作",
   "screen.openallay.action.sessions": "会话",
   "screen.openallay.action.refresh": "刷新",
@@ -307,7 +311,6 @@
   "screen.openallay.settings.diagnostics.debug.title": "调试详情（已脱敏）",
   "screen.openallay.settings.diagnostics.debug.narration": "已脱敏的技术诊断；凭据、供应商原始响应、推理、路径和其他玩家均不会出现。",
   "screen.openallay.settings.diagnostics.debug.settings_generation": "设置代次",
-  "screen.openallay.settings.diagnostics.debug.database_schema": "历史 schema",
   "screen.openallay.settings.diagnostics.debug.model": "模型配置",
   "screen.openallay.settings.diagnostics.debug.capabilities": "能力计数",
   "screen.openallay.settings.diagnostics.debug.guide": "OpenAllay状态",

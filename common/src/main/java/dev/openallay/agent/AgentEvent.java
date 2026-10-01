@@ -10,6 +10,8 @@ import java.util.Objects;
 public sealed interface AgentEvent
         permits AgentEvent.StateChanged,
                 AgentEvent.ContextCompacted,
+                AgentEvent.ContextUpdated,
+                AgentEvent.ContextFinalized,
                 AgentEvent.ModelProgress,
                 AgentEvent.ToolStarted,
                 AgentEvent.ToolCompleted,
@@ -20,6 +22,27 @@ public sealed interface AgentEvent
     record ContextCompacted(ContextCheckpoint checkpoint) implements AgentEvent {
         public ContextCompacted {
             Objects.requireNonNull(checkpoint, "checkpoint");
+        }
+    }
+
+    /** Actual model messages, distinct from the player-facing timeline. */
+    record ContextUpdated(
+            List<dev.openallay.model.ModelMessage> messages,
+            List<dev.openallay.model.ModelMessage> requestMessages) implements AgentEvent {
+        public ContextUpdated {
+            messages = dev.openallay.agent.context.ModelContextCodec.redacted(messages, java.util.Set.of());
+            requestMessages = dev.openallay.agent.context.ModelContextCodec.redacted(
+                    requestMessages, java.util.Set.of());
+        }
+    }
+
+    /** One final safe handoff may archive a visibly cancelled request without reopening its UI. */
+    record ContextFinalized(
+            List<dev.openallay.model.ModelMessage> messages,
+            List<dev.openallay.model.ModelMessage> requestMessages) implements AgentEvent {
+        public ContextFinalized {
+            messages = dev.openallay.agent.context.ModelContextCodec.redacted(messages, java.util.Set.of());
+            requestMessages = dev.openallay.agent.context.ModelContextCodec.redacted(requestMessages, java.util.Set.of());
         }
     }
 

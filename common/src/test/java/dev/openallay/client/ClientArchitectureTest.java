@@ -50,7 +50,8 @@ final class ClientArchitectureTest {
                 dev.openallay.context.ToolInvocationContext.developmentConsole("test"), delivered::add).join();
         assertEquals(0, delivered.size());
         queued.forEach(Runnable::run);
-        assertEquals(5, delivered.size());
+        assertTrue(delivered.stream().anyMatch(event -> event instanceof AgentEvent.ContextUpdated));
+        assertTrue(delivered.stream().anyMatch(event -> event instanceof AgentEvent.FinalText));
         assertTrue(delivered.stream().anyMatch(event -> event instanceof AgentEvent.ModelProgress));
     }
 
@@ -75,6 +76,7 @@ final class ClientArchitectureTest {
                     entrypoint::toString);
             assertTrue(source.contains("configDirectory.resolve(\"display.json\")"), entrypoint::toString);
             assertTrue(source.contains("ClientSettingsHistoryBinding"), entrypoint::toString);
+            assertTrue(source.contains("history.sqlite3"), entrypoint::toString);
             assertEquals(1, occurrences(source, "historySettings.bind(services)"),
                     entrypoint::toString);
             assertTrue(source.contains("ClientModelRuntimeRegistry"), entrypoint::toString);
@@ -128,7 +130,8 @@ final class ClientArchitectureTest {
 
         String protocol = Files.readString(root.resolve(
                 "common/src/main/java/dev/openallay/bridge/protocol/BridgeProtocol.java"));
-        assertTrue(protocol.contains("VERSION = 6"));
+        assertTrue(!protocol.contains("VERSION"));
+        assertTrue(!protocol.contains("requireVersion"));
         for (Path bridge : List.of(
                 root.resolve("fabric/src/main/java/dev/openallay/fabric/network/FabricServerBridge.java"),
                 root.resolve("neoforge/src/main/java/dev/openallay/neoforge/network/NeoForgeServerBridge.java"))) {

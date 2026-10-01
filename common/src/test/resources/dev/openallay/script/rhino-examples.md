@@ -9,7 +9,7 @@ Do not precede it with root, array, key, sample, or per-row discovery calls.
 
 ## Highest-damage sword
 
-Call `run_javascript` with `roots: ["items"]`.
+Call `run_javascript` with the following program.
 
 ```js
 var ranked = mc.items
@@ -46,7 +46,7 @@ later focused projection.
 
 ## Least-material container recipe
 
-Call `run_javascript` with `roots: ["items", "recipes"]`.
+Call `run_javascript` with the following program.
 
 ```js
 const items = new Map(mc.items.map(item => [item.id, item]));
@@ -74,7 +74,7 @@ inventory sufficiency is unrelated to minimum ingredient units.
 
 ## Strongest poison effect and its production path
 
-Call `run_javascript` with `roots: ["items", "recipes"]`.
+Call `run_javascript` with the following program.
 
 ```js
 var poison = [];

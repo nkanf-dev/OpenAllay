@@ -50,6 +50,23 @@ class PackagedBuilderLauncherTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 launcher.validate_model_config(path)
 
+    def test_model_configuration_requires_current_shape_without_rewriting(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "models.json"
+            valid = launcher.fixture_model_config(18765)
+            self.assertEqual({"defaultProfileId", "profiles"}, set(valid))
+            for invalid in (
+                [], {}, {"profiles": valid["profiles"]},
+                {**valid, "extra": True}, {**valid, "profiles": []},
+                {**valid, "profiles": {}}, {**valid, "profiles": [False]},
+                {**valid, "defaultProfileId": None}, {**valid, "defaultProfileId": "missing"},
+            ):
+                launcher.write_json(path, invalid)
+                original = path.read_bytes()
+                with self.assertRaises(ValueError):
+                    launcher.validate_model_config(path)
+                self.assertEqual(original, path.read_bytes())
+
     def test_output_cannot_escape_ignored_e2e_tree(self):
         with tempfile.TemporaryDirectory() as directory:
             repo = Path(directory)
@@ -120,7 +137,13 @@ class PackagedBuilderLauncherTests(unittest.TestCase):
             self.assertEqual("acceptance-instrumented", manifest["packagedArtifact"]["kind"])
             self.assertTrue(manifest["world"].startswith("openallay-builder-fabric-"))
             self.assertEqual([], list((output / "game/saves").iterdir()))
-            self.assertFalse(json.loads((output / "game/config/openallay/unrestricted-javascript.json").read_text())["enabled"])
+            config = output / "game/config/openallay"
+            self.assertEqual({"enabled": False}, json.loads((config / "unrestricted-javascript.json").read_text()))
+            self.assertEqual({"enabled": False}, json.loads((config / "experimental-commands.json").read_text()))
+            self.assertEqual({"debugMode": True, "animationsEnabled": True, "assistantName": "OpenAllay"},
+                             json.loads((config / "display.json").read_text()))
+            self.assertEqual({"defaultProfileId", "profiles"}, set(json.loads((config / "models.json").read_text())))
+            self.assertNotIn("schemaVersion", manifest)
             self.assertIn("-XstartOnFirstThread", manifest["command"])
             self.assertNotIn("--demo", manifest["command"])
             self.assertNotIn("--quickPlaySingleplayer", manifest["command"])

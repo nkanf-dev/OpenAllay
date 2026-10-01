@@ -38,6 +38,13 @@ public interface AgentToolExecutor {
             ToolInvocationContext context,
             CancellationSignal cancellation);
 
+    /** Validates instruction documents against this request's captured catalog. */
+    default List<dev.openallay.model.ModelMessage> refreshContext(
+            List<dev.openallay.model.ModelMessage> messages) { return messages; }
+
+    /** Receipts must describe text in the actual current projection, not a prior loaded flag. */
+    default void prepareContext(String correlationId, List<dev.openallay.model.ModelMessage> messages) {}
+
     /** Releases resources owned by one terminal Agent request. */
     default void closeRequestScope(String correlationId) {}
 }

@@ -1,18 +1,12 @@
 package dev.openallay.guide.ui;
 
 public record GuideDisplayConfig(
-        int schemaVersion,
         boolean debugMode,
         boolean animationsEnabled,
         String assistantName) {
-    public static final int SCHEMA_VERSION = 3;
     public static final String DEFAULT_ASSISTANT_NAME = "OpenAllay";
 
     public GuideDisplayConfig {
-        if (schemaVersion != SCHEMA_VERSION) {
-            throw new IllegalArgumentException(
-                    "Unsupported display config schema version " + schemaVersion);
-        }
         if (assistantName == null) {
             throw new IllegalArgumentException("assistantName must be a string");
         }
@@ -27,11 +21,11 @@ public record GuideDisplayConfig(
 
     public static GuideDisplayConfig defaults() {
         return new GuideDisplayConfig(
-                SCHEMA_VERSION, false, true, DEFAULT_ASSISTANT_NAME);
+                false, true, DEFAULT_ASSISTANT_NAME);
     }
 
     public GuideDisplayConfig withAssistantName(String nextAssistantName) {
         return new GuideDisplayConfig(
-                SCHEMA_VERSION, debugMode, animationsEnabled, nextAssistantName);
+                debugMode, animationsEnabled, nextAssistantName);
     }
 }

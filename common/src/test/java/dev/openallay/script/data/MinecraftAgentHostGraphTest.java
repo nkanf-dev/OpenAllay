@@ -15,13 +15,12 @@ import dev.openallay.script.schema.HostSchema;
 import dev.openallay.testing.JavascriptAgentTestFixtures;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 
 final class MinecraftAgentHostGraphTest {
     @Test
-    void selectsOriginalRegistryReferencesWithoutResolvingUnselectedRoots() {
+    void readsOriginalRegistryReferencesWithoutResolvingUnusedRoots() {
         var context = JavascriptAgentTestFixtures.context("direct-host-graph");
         AtomicInteger knowledgeCaptures = new AtomicInteger();
         AtomicInteger extensionCaptures = new AtomicInteger();
@@ -47,8 +46,8 @@ final class MinecraftAgentHostGraphTest {
                 },
                 extensions);
 
-        var selected = graph.select(Set.of("items"));
-        assertEquals(List.of(), selected.evidence());
+        var selected = graph.open();
+        assertEquals(List.of(), evidence(selected));
         assertEquals(0, knowledgeCaptures.get());
         assertEquals(0, extensionCaptures.get());
         @SuppressWarnings("unchecked")
@@ -58,56 +57,54 @@ final class MinecraftAgentHostGraphTest {
                 .filter(entry -> entry.kind().equals("item"))
                 .findFirst().orElseThrow();
         assertSame(expected, items.getFirst());
-        assertEquals(List.of(context.registries().orElseThrow().evidence()), selected.evidence());
+        assertEquals(List.of(context.registries().orElseThrow().evidence()), evidence(selected));
         assertEquals(0, knowledgeCaptures.get());
         assertEquals(0, extensionCaptures.get());
+        selected.get("items");
+        selected.get("registryEntries");
+        assertEquals(1, selected.sources().size());
 
-        var next = graph.select(Set.of("recipes"));
-        assertEquals(List.of(), next.evidence());
+
+        var next = graph.open();
+        assertEquals(List.of(), evidence(next));
         next.get("recipes");
-        assertTrue(next.evidence().contains(context.recipes().orElseThrow().evidence()));
-        assertEquals(List.of(context.recipes().orElseThrow().evidence()), next.evidence());
+        assertTrue(evidence(next).contains(context.recipes().orElseThrow().evidence()));
+        assertEquals(List.of(context.recipes().orElseThrow().evidence()), evidence(next));
 
-        var all = graph.select(Set.of());
+        var all = graph.open();
         int entries = 0;
         for (String root : all.keySet()) {
             assertTrue(!root.isBlank());
             entries++;
         }
         assertTrue(entries > 0);
-        assertEquals(List.of(), all.evidence());
+        assertEquals(List.of(), evidence(all));
         all.get("knowledge");
         all.get("knowledge");
         assertEquals(1, knowledgeCaptures.get());
-        assertTrue(all.evidence().stream().anyMatch(value -> value.sourceId().equals("openallay:knowledge_registry")));
+        assertTrue(evidence(all).stream().anyMatch(value -> value.sourceId().equals("openallay:knowledge_registry")));
         all.get("extensions");
         all.get("extensions");
         assertEquals(1, extensionCaptures.get());
-        assertTrue(all.evidence().contains(context.registries().orElseThrow().evidence()));
+        assertTrue(evidence(all).contains(context.registries().orElseThrow().evidence()));
     }
 
     @Test
     void metadataAndCapabilityRootsDoNotCreateEvidence() {
         var context = JavascriptAgentTestFixtures.context("metadata-roots");
         MinecraftAgentHostGraph graph = new MinecraftAgentHostGraph(context);
-        var selection = graph.select(Set.of("capabilities", "extensionCatalog"));
+        var selection = graph.open();
         selection.get("capabilities");
         selection.get("extensionCatalog");
-        assertEquals(
-                List.of("openallay:javascript_host_catalog", "openallay:javascript_extensions"),
-                selection.evidence().stream().map(value -> value.sourceId()).toList());
+        assertTrue(selection.sources().isEmpty());
+        assertTrue(selection.sources().isEmpty());
     }
 
     @Test
     void exposesCompleteCatalogMetadataAndUnifiedRegistryRows() {
         var context = JavascriptAgentTestFixtures.context("catalog-metadata");
         MinecraftAgentHostGraph graph = new MinecraftAgentHostGraph(context);
-        Map<String, Object> selected = graph.select(Set.of(
-                "registries",
-                "registryEntries",
-                "recipeCatalog",
-                "knowledgeCatalog",
-                "game"));
+        Map<String, Object> selected = graph.open();
 
         MinecraftAgentHostGraph.RegistryCatalog registries =
                 assertInstanceOf(
@@ -177,97 +174,42 @@ final class MinecraftAgentHostGraphTest {
         @SuppressWarnings("unchecked")
         List<JavascriptDataModuleRegistry.Descriptor> catalog =
                 (List<JavascriptDataModuleRegistry.Descriptor>)
-                        graph.select(Set.of("extensionCatalog")).get("extensionCatalog");
+                        graph.open().get("extensionCatalog");
         assertEquals("test-provider", catalog.getFirst().provider());
         assertInstanceOf(HostSchema.RecordValue.class, catalog.getFirst().schema());
         assertEquals(0, captures.get());
     }
 
     @Test
-    void rejectsKnownAccessPathsWithExactBareSelectorCorrections() {
-        var context = JavascriptAgentTestFixtures.context("root-corrections");
+    void exposesAllCapturedRootsWithoutDeclarationsAndOnlyFailsMissingDataOnRead() {
+        var context = JavascriptAgentTestFixtures.context("all-lazy-roots");
         MinecraftAgentHostGraph graph = new MinecraftAgentHostGraph(context);
-        for (String bare : List.of("player", "game")) {
-            JavascriptExecutionException failure = assertThrows(
-                    JavascriptExecutionException.class, () -> graph.select(List.of("mc." + bare)));
-            assertEquals("javascript_root_unavailable", failure.code());
-            assertTrue(failure.getMessage().contains("Invalid Minecraft root selector: mc." + bare));
-            assertTrue(failure.getMessage().contains("Use roots [\"" + bare + "\"] and access mc." + bare));
-            assertTrue(failure.getMessage().contains("Current declared bare roots: " + graph.schemaCatalog()
-                    .list().stream().map(root -> root.name()).toList()));
-            assertTrue(failure.getMessage().contains("Available this request: " + graph.schemaCatalog()
-                    .availableRootNames()));
-            assertFalse(failure.getMessage().contains("That declared root is unavailable"));
-        }
-        assertSame(context.player().orElseThrow(), graph.select(List.of("player")).get("player"));
-        assertSame(context.observableGameState().orElseThrow(), graph.select(List.of("game")).get("game"));
+        var data = graph.open();
+        assertTrue(data.containsKey("items"));
+        assertTrue(data.containsKey("player"));
+        assertTrue(data.sources().isEmpty());
+        assertSame(context.player().orElseThrow(), data.get("player"));
+        assertSame(context.observableGameState().orElseThrow(), data.get("game"));
+        assertFalse(data.containsKey("unknown"));
+        assertEquals(null, data.get("unknown"));
     }
 
     @Test
-    void rejectsUnknownNestedAndRepeatedPrefixSelectorsWithoutResolvingSuppliers() {
-        var context = JavascriptAgentTestFixtures.context("invalid-root-laziness");
-        AtomicInteger knowledgeCaptures = new AtomicInteger();
-        AtomicInteger extensionCaptures = new AtomicInteger();
-        JavascriptDataModuleRegistry extensions = new JavascriptDataModuleRegistry();
-        extensions.register("test", List.of(new JavascriptDataModule() {
-            @Override public String id() { return "test:lazy"; }
-            @Override public java.lang.reflect.Type valueType() { return ModuleRecord.class; }
-            @Override public Snapshot capture(dev.openallay.context.ToolInvocationContext ignored) {
-                extensionCaptures.incrementAndGet();
-                return new Snapshot(new ModuleRecord("value"), List.of(context.registries().orElseThrow().evidence()));
-            }
-        }));
-        MinecraftAgentHostGraph graph = new MinecraftAgentHostGraph(context, () -> {
-            knowledgeCaptures.incrementAndGet();
-            return KnowledgeSnapshot.empty();
-        }, extensions);
-        for (String requested : List.of("unknown", "", "bad-name", "player.position", "mc.unknown", "mc.player.position",
-                "mc.mc.player", "mc.commands", "mc.world", "mc.knowledge", "mc.extensions")) {
-            JavascriptExecutionException failure = assertThrows(
-                    JavascriptExecutionException.class, () -> graph.select(List.of(requested)));
-            assertEquals("javascript_root_unavailable", failure.code(), requested);
-            assertTrue(failure.getMessage().contains("Current declared bare roots:"));
-            assertTrue(failure.getMessage().contains("Available this request:"));
-            if ("unknown".equals(requested)) {
-                assertTrue(failure.getMessage().contains("Unknown Minecraft data root: unknown"));
-            } else {
-                assertTrue(failure.getMessage().contains("Invalid Minecraft root selector:"));
-            }
-            if (!List.of("mc.knowledge", "mc.extensions").contains(requested)) {
-                assertFalse(failure.getMessage().contains("Use roots ["), requested);
-            }
-            assertEquals(0, knowledgeCaptures.get());
-            assertEquals(0, extensionCaptures.get());
-        }
-        var corrected = graph.select(List.of("knowledge", "extensions"));
-        assertEquals(0, knowledgeCaptures.get());
-        assertEquals(0, extensionCaptures.get());
-        assertTrue(corrected.evidence().isEmpty());
-        corrected.get("knowledge");
-        assertEquals(1, knowledgeCaptures.get());
-        assertEquals(0, extensionCaptures.get());
-        corrected.get("extensions");
-        assertEquals(1, extensionCaptures.get());
-        assertFalse(corrected.containsKey("player"));
-    }
-
-    @Test
-    void distinguishesDeclaredButUnavailableRootsFromSelectorMistakes() {
+    void declaredUnavailableDataNeverBecomesUndefinedOrAnEmptyDataset() {
         MinecraftAgentHostGraph graph = new MinecraftAgentHostGraph(
-                dev.openallay.context.ToolInvocationContext.developmentConsole("unavailable-roots"));
-        for (String bare : List.of("player", "game")) {
+                dev.openallay.context.ToolInvocationContext.developmentConsole("missing-snapshots"));
+        var data = graph.open();
+        assertTrue(data.containsKey("player"));
+        assertTrue(data.sources().isEmpty());
+        for (String root : List.of("player", "game", "items", "recipes")) {
             JavascriptExecutionException failure = assertThrows(
-                    JavascriptExecutionException.class, () -> graph.select(List.of(bare)));
+                    JavascriptExecutionException.class, () -> data.get(root));
             assertEquals("javascript_root_unavailable", failure.code());
-            assertTrue(failure.getMessage().contains("Declared Minecraft data root is unavailable in this request: " + bare));
+            assertTrue(failure.getMessage().contains("mc." + root + " was not captured"));
             assertTrue(failure.getMessage().contains("Unavailable data is not an empty dataset"));
-            assertFalse(failure.getMessage().contains("Invalid Minecraft root selector"));
-            assertFalse(graph.schemaCatalog().availableRootNames().contains(bare));
-            JavascriptExecutionException prefixed = assertThrows(
-                    JavascriptExecutionException.class, () -> graph.select(List.of("mc." + bare)));
-            assertTrue(prefixed.getMessage().contains("Use roots [\"" + bare + "\"] and access mc." + bare));
-            assertTrue(prefixed.getMessage().contains("That declared root is unavailable in this request"));
+            assertFalse(graph.schemaCatalog().availableRootNames().contains(root));
         }
+        assertTrue(data.sources().isEmpty());
     }
 
     @Test
@@ -280,6 +222,11 @@ final class MinecraftAgentHostGraphTest {
         assertEquals(
                 "list",
                 catalog.describe("recipeCatalog.providers").orElseThrow().schema().kind());
+    }
+
+    private static List<dev.openallay.context.EvidenceMetadata> evidence(
+            MinecraftAgentHostGraph.InvocationData data) {
+        return data.sources().stream().map(dev.openallay.context.SourceObservation::evidence).toList();
     }
 
     private record ModuleRecord(String value) {}

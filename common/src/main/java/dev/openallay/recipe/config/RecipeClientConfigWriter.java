@@ -16,7 +16,6 @@ public final class RecipeClientConfigWriter {
     public String encode(RecipeClientConfig config) {
         Objects.requireNonNull(config, "config");
         JsonObject root = new JsonObject();
-        root.addProperty("schemaVersion", config.schemaVersion());
         root.addProperty("visibility", config.visibility().name());
         root.addProperty("preferredViewer", config.preferredViewer());
         JsonArray disabled = new JsonArray();

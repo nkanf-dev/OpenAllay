@@ -16,9 +16,9 @@ final class CoreJavascriptContractTest {
         for (HostSchemaCatalog.RootSummary root : catalog.list()) {
             assertTrue(rendered.contains("mc." + root.name()), root.name());
         }
-        assertTrue(rendered.contains("Select bare names: roots [\"player\"] for mc.player.position"));
-        assertTrue(rendered.contains("roots [\"game\"] for mc.game.player.player.position when captured"));
-        assertTrue(rendered.contains("Never put mc. access paths in roots"));
+        assertTrue(rendered.contains("Access any available property directly"));
+        assertTrue(rendered.contains("no root declarations are needed"));
+        assertTrue(rendered.contains("Ordinary computations need no Minecraft read"));
         assertTrue(catalog.describe("player.position").isPresent());
         assertTrue(catalog.describe("game.player.player.position").isPresent());
         assertTrue(rendered.contains("- mc.player.position: record"));
@@ -33,7 +33,7 @@ final class CoreJavascriptContractTest {
         assertTrue(rendered.contains("world.inspect("));
         assertTrue(rendered.contains("world.entities("));
         assertTrue(rendered.contains("world.entity(observationId)"));
-        assertTrue(rendered.contains("roots [\"world\"]"));
+        assertTrue(rendered.contains("world (optional captured capability)"));
         assertTrue(rendered.contains("never mc.world"));
         assertTrue(rendered.contains("returns blocks, coverage, and evidence"));
         assertTrue(rendered.contains("request-scoped observationId values, coverage, and evidence"));

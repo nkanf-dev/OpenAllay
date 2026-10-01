@@ -1,5 +1,10 @@
 # SKMB-2026-09-30-034: Extension-owned online construction and invocation context
 
+> Subsequent decision: [041](2026-10-01-041-execution-context-simplification.md)
+> authorizes a breaking simplification of generic JavaScript evidence-empty rejection and the full-snapshot journal representation.
+> Its implementation/verification is tracked separately; this document retains
+> the historical decision and is not proof that the new behavior is delivered.
+
 Status: accepted for the user-requested implementation. The user explicitly
 approved full online construction, independent Extension ownership, default
 inclusion, and completion; implementation details below select the narrow

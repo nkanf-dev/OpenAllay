@@ -10,23 +10,17 @@ import java.util.TreeSet;
 /**
  * Generic stable-ID recipe settings.
  *
- * @param schemaVersion strict persisted schema version
  * @param visibility recipe visibility policy
  * @param preferredViewer preferred recipe-viewer source or {@value #AUTO}
  * @param disabledSources source IDs excluded from recipe discovery
  */
 public record RecipeClientConfig(
-        int schemaVersion,
         RecipeVisibilityPolicy visibility,
         String preferredViewer,
         Set<String> disabledSources) {
-    public static final int SCHEMA_VERSION = 2;
     public static final String AUTO = "auto";
 
     public RecipeClientConfig {
-        if (schemaVersion != SCHEMA_VERSION) {
-            throw new IllegalArgumentException("Unsupported recipe configuration schema");
-        }
         Objects.requireNonNull(visibility, "visibility");
         if (preferredViewer == null || preferredViewer.isBlank()) {
             throw new IllegalArgumentException("preferredViewer must not be blank");
@@ -47,7 +41,6 @@ public record RecipeClientConfig(
 
     public static RecipeClientConfig defaults() {
         return new RecipeClientConfig(
-                SCHEMA_VERSION,
                 RecipeVisibilityPolicy.ALL_KNOWN,
                 AUTO,
                 Set.of());

@@ -16,7 +16,8 @@ final class SemanticPromptGuidanceTest {
         assertTrue(guidance.contains("[[tw:<kind>|<target>|<optional label>]]"));
         assertTrue(guidance.contains("openallay-component"));
         assertTrue(guidance.contains("do not create evidence"));
-        assertTrue(guidance.contains("\"schemaVersion\":1"));
+        assertTrue(guidance.contains(
+                "{\"type\":string,\"properties\":object,\"fallback\":string,\"narration\":string}"));
         assertTrue(guidance.contains("Do not add envelope or properties fields"));
         assertTrue(guidance.contains("never invent or repair them"));
         assertTrue(guidance.contains("Never author slots, coordinates, textures, widget names"));

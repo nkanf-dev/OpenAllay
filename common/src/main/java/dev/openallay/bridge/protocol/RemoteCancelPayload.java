@@ -2,9 +2,8 @@ package dev.openallay.bridge.protocol;
 
 import java.util.UUID;
 
-public record RemoteCancelPayload(int version, UUID correlationId) {
+public record RemoteCancelPayload(UUID correlationId) {
     public RemoteCancelPayload {
-        BridgeProtocol.requireVersion(version);
         java.util.Objects.requireNonNull(correlationId, "correlationId");
     }
 }

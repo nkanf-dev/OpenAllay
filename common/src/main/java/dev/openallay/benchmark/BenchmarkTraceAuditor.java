@@ -57,10 +57,7 @@ public final class BenchmarkTraceAuditor {
                         indexed.get(key)));
             }
         }
-        return new BenchmarkTraceAudit(
-                BenchmarkTraceAudit.SCHEMA_VERSION,
-                report.corpusVersion(),
-                attempts);
+        return new BenchmarkTraceAudit(attempts);
     }
 
     private static BenchmarkTraceAudit.AttemptAudit classify(

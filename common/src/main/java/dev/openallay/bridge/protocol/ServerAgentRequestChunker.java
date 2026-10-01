@@ -27,7 +27,6 @@ public final class ServerAgentRequestChunker {
             int end = Math.min(all.length, start + transportChunkBytes);
             byte[] part = java.util.Arrays.copyOfRange(all, start, end);
             chunks.add(new ServerAgentRequestChunkPayload(
-                    BridgeProtocol.VERSION,
                     requestId,
                     index,
                     total,

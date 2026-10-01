@@ -292,7 +292,6 @@ def build_catalog(provider_catalog: dict, canonical_catalog: dict, router_catalo
         entry = catalog_entry("openrouter", upstream, model, "openrouter", router=True)
         entries[entry["id"]] = entry
     result = {
-        "schemaVersion": 1,
         "catalogVersion": catalog_version or snapshot_time[:10],
         "publishedAt": published_at,
         "sources": [
@@ -306,7 +305,7 @@ def build_catalog(provider_catalog: dict, canonical_catalog: dict, router_catalo
 
 
 def validate_catalog(catalog: dict) -> None:
-    if set(catalog) != {"schemaVersion", "catalogVersion", "publishedAt", "sources", "models"} or catalog["schemaVersion"] != 1:
+    if set(catalog) != {"catalogVersion", "publishedAt", "sources", "models"}:
         raise ValueError("Catalog root schema mismatch")
     if not isinstance(catalog["catalogVersion"], str) or not catalog["catalogVersion"].strip():
         raise ValueError("Catalog version must be nonblank text")

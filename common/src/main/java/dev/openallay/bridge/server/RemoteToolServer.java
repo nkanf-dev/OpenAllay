@@ -12,7 +12,6 @@ import dev.openallay.context.ToolInvocationContext;
 import dev.openallay.model.CancellationSignal;
 import dev.openallay.tool.Tool;
 import dev.openallay.tool.ToolResult;
-import dev.openallay.tool.builtin.RunJavascriptTool;
 import dev.openallay.trace.replay.ToolArgumentCodec;
 import dev.openallay.trace.replay.ToolResultNormalizer;
 import java.util.Set;
@@ -180,12 +179,6 @@ public final class RemoteToolServer {
                             "invalid_arguments", "Remote tool arguments must be an object"));
         }
         com.google.gson.JsonObject object = parsed.getAsJsonObject();
-        if (tool.descriptor().id().equals(RunJavascriptTool.ID)
-                && requestsCommands(object)) {
-            return CompletableFuture.completedFuture(new ToolResult.Failure<>(
-                    "remote_tool_denied",
-                    "The server JavaScript projection does not expose experimental commands"));
-        }
         ToolResult<?> decoded = arguments.decode(object, tool.descriptor().inputType());
         if (decoded instanceof ToolResult.Failure<?> failure) {
             return CompletableFuture.completedFuture(failure);
@@ -232,19 +225,6 @@ public final class RemoteToolServer {
             return failure.failure().code();
         }
         return "remote_tool_failure";
-    }
-
-    private static boolean requestsCommands(com.google.gson.JsonObject arguments) {
-        if (!arguments.has("roots") || !arguments.get("roots").isJsonArray()) {
-            return false;
-        }
-        for (com.google.gson.JsonElement root : arguments.getAsJsonArray("roots")) {
-            if (root.isJsonPrimitive() && root.getAsJsonPrimitive().isString()
-                    && root.getAsString().equals("commands")) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private static String requestScope(UUID actorId, String requestId) {

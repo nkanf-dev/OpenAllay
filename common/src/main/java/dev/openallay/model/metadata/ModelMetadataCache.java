@@ -21,8 +21,7 @@ import java.util.concurrent.Executors;
 
 /** Ordered asynchronous cache for validated, credential-free provider metadata. */
 public final class ModelMetadataCache {
-    private static final int SCHEMA_VERSION = 1;
-    private static final Set<String> ROOT_FIELDS = Set.of("schemaVersion", "entries");
+    private static final Set<String> ROOT_FIELDS = Set.of("entries");
     private static final Set<String> ENTRY_FIELDS = Set.of(
             "source", "providerModelId", "canonicalModelId", "contextWindowTokens",
             "maxOutputTokens", "capturedAt");
@@ -147,7 +146,6 @@ public final class ModelMetadataCache {
 
     private static String encode(List<ModelMetadata> entries) {
         JsonObject root = new JsonObject();
-        root.addProperty("schemaVersion", SCHEMA_VERSION);
         JsonArray encodedEntries = new JsonArray();
         for (ModelMetadata metadata : entries) {
             JsonObject encoded = new JsonObject();
@@ -171,9 +169,6 @@ public final class ModelMetadataCache {
         JsonElement parsed = BuiltinModelCatalog.readStrict(new java.io.StringReader(json));
         JsonObject root = object(parsed, "metadata cache");
         requireFields(root, ROOT_FIELDS, "metadata cache");
-        if (integer(root.get("schemaVersion")) != SCHEMA_VERSION) {
-            throw new IllegalArgumentException("unsupported metadata cache schema");
-        }
         JsonElement entries = root.get("entries");
         if (entries == null || !entries.isJsonArray()) {
             throw new IllegalArgumentException("metadata cache entries must be an array");

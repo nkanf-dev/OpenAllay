@@ -13,7 +13,7 @@ Usage:
   scripts/run-agent-benchmark.sh live [options]
 
 Live options:
-  --profile <models.json>   Load a credential-free schema-2 model profile file.
+  --profile <models.json>   Load a credential-free model profile file.
   --profile-id <id>        Select a named profile; defaults to defaultProfileId.
   --repeats <count>        Attempts per selected case (default: 3).
   --cases <id,id,...>      Run an exact comma-separated case subset.

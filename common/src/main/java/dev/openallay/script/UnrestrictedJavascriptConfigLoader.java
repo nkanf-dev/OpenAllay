@@ -12,7 +12,7 @@ import java.util.Set;
 
 /** Strict fail-closed loader for the local dangerous capability toggle. */
 public final class UnrestrictedJavascriptConfigLoader {
-    private static final Set<String> FIELDS = Set.of("schemaVersion", "enabled");
+    private static final Set<String> FIELDS = Set.of("enabled");
     public ToolResult<UnrestrictedJavascriptConfig> load(Path path) {
         if (!Files.exists(path)) return new ToolResult.Success<>(UnrestrictedJavascriptConfig.defaults());
         try (Reader reader = Files.newBufferedReader(path, StandardCharsets.UTF_8)) { return load(reader); }
@@ -21,11 +21,10 @@ public final class UnrestrictedJavascriptConfigLoader {
     public ToolResult<UnrestrictedJavascriptConfig> load(Reader reader) {
         try {
             JsonObject value = JsonParser.parseReader(reader).getAsJsonObject();
-            if (!value.keySet().equals(FIELDS) || !value.get("schemaVersion").isJsonPrimitive()
+            if (!value.keySet().equals(FIELDS)
                     || !value.get("enabled").isJsonPrimitive()
-                    || !value.get("enabled").getAsJsonPrimitive().isBoolean()
-                    || !value.get("schemaVersion").getAsJsonPrimitive().isNumber()) return failure("invalid_javascript_settings");
-            return new ToolResult.Success<>(new UnrestrictedJavascriptConfig(value.get("schemaVersion").getAsInt(), value.get("enabled").getAsBoolean()));
+                    || !value.get("enabled").getAsJsonPrimitive().isBoolean()) return failure("invalid_javascript_settings");
+            return new ToolResult.Success<>(new UnrestrictedJavascriptConfig(value.get("enabled").getAsBoolean()));
         } catch (RuntimeException e) { return failure("invalid_javascript_settings"); }
     }
     private static ToolResult.Failure<UnrestrictedJavascriptConfig> failure(String code) {

@@ -11,12 +11,16 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import dev.openallay.agent.AgentEvent;
 import dev.openallay.agent.AgentState;
+import dev.openallay.context.DataCompleteness;
+import dev.openallay.context.EvidenceMetadata;
+import dev.openallay.context.SourceObservation;
 import dev.openallay.model.ModelEvent;
 import dev.openallay.model.ModelUsage;
 import dev.openallay.guide.semantic.SemanticInline;
 import dev.openallay.testing.GroundedTestFixtures;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
@@ -340,7 +344,7 @@ final class GuideStateReducerTest {
         failure.addProperty("title", "Overwrite by failure");
         request = reducer.apply(request, new AgentEvent.ToolCompleted(
                 "call-2", "openallay:run_javascript", true, failure), at(4));
-        JsonObject success = groundedResult();
+        JsonObject success = javascriptResult(new SourceObservation(GroundedTestFixtures.serverEvidence()));
         success.getAsJsonObject("value").addProperty("title", "Overwrite by result");
         request = reducer.apply(request, new AgentEvent.ToolCompleted(
                 "call-1", "openallay:run_javascript", false, success), at(5));
@@ -363,6 +367,114 @@ final class GuideStateReducerTest {
         assertTrue(request.tools().get(1).sources().isEmpty());
         assertFalse(request.timeline().toString().contains("hidden reasoning"));
         assertEquals("Final answer", request.assistantText());
+    }
+
+    @Test
+    void javascriptSourcesMergeByMetadataAndToolWithoutRetainingEveryTimestamp() {
+        GuideRequestSnapshot request = GuideRequestSnapshot.start(
+                UUID.randomUUID(), "main", GuideTopology.CLIENT_LOCAL, "Inspect", Instant.EPOCH);
+        SourceObservation later = new SourceObservation(
+                evidenceAt(20, DataCompleteness.COMPLETE, Map.of()), at(40));
+        SourceObservation middle = new SourceObservation(
+                evidenceAt(10, DataCompleteness.COMPLETE, Map.of()), at(30));
+        SourceObservation first = new SourceObservation(
+                evidenceAt(2, DataCompleteness.COMPLETE, Map.of()), at(50));
+        request = complete(request, "call-1", "openallay:run_javascript",
+                javascriptResult(later, middle), 1);
+        request = complete(request, "call-2", "openallay:run_javascript",
+                javascriptResult(first), 3);
+
+        assertEquals(List.of(new GuideSource(
+                "openallay:run_javascript", first.evidence(), at(50))), request.sources());
+        assertEquals(List.of(new GuideSource(
+                "openallay:run_javascript", middle.evidence(), at(40))),
+                request.tools().getFirst().sources());
+        assertEquals(List.of(new GuideSource(
+                "openallay:run_javascript", first.evidence(), at(50))),
+                request.tools().getLast().sources());
+    }
+
+    @Test
+    void javascriptSourceCoverageDetailsAndOtherToolIdsStaySeparate() {
+        GuideRequestSnapshot request = GuideRequestSnapshot.start(
+                UUID.randomUUID(), "main", GuideTopology.CLIENT_LOCAL, "Inspect", Instant.EPOCH);
+        SourceObservation complete = new SourceObservation(
+                evidenceAt(0, DataCompleteness.COMPLETE, Map.of()));
+        SourceObservation partial = new SourceObservation(
+                evidenceAt(1, DataCompleteness.PARTIAL, Map.of()));
+        SourceObservation unknown = new SourceObservation(
+                evidenceAt(2, DataCompleteness.UNKNOWN, Map.of()));
+        SourceObservation covered = new SourceObservation(
+                evidenceAt(3, DataCompleteness.COMPLETE, Map.of("test:coverage", "loaded_chunks")));
+        request = complete(request, "call-1", "openallay:run_javascript",
+                javascriptResult(complete, partial, unknown, covered), 1);
+        request = complete(request, "call-2", "openallay:get_recipe", groundedResult(), 3);
+
+        assertEquals(5, request.sources().size());
+        assertEquals(4, request.tools().getFirst().sources().size());
+    }
+
+    @Test
+    void javascriptNeverFallsBackToTheOldEvidenceArray() {
+        GuideRequestSnapshot request = GuideRequestSnapshot.start(
+                UUID.randomUUID(), "main", GuideTopology.CLIENT_LOCAL, "Inspect", Instant.EPOCH);
+        request = complete(request, "call-1", "openallay:run_javascript", groundedResult(), 1);
+        assertTrue(request.sources().isEmpty());
+        assertTrue(request.tools().getFirst().sources().isEmpty());
+
+        request = complete(request, "call-2", "server__openallay__run_javascript", groundedResult(), 3);
+        assertTrue(request.sources().isEmpty());
+        assertTrue(request.tools().getLast().sources().isEmpty());
+
+        SourceObservation source = new SourceObservation(
+                evidenceAt(4, DataCompleteness.PARTIAL, Map.of("test:coverage", "loaded_chunks")), at(6));
+        JsonObject normalized = javascriptResult(source);
+        normalized.getAsJsonObject("value").add(
+                "evidence", groundedResult().getAsJsonObject("value").get("evidence"));
+        request = complete(request, "call-3", "server__openallay__run_javascript", normalized, 5);
+
+        assertEquals(List.of(new GuideSource(
+                "server__openallay__run_javascript", source.evidence(), at(6))), request.sources());
+    }
+
+    @Test
+    void genuineEvidenceBearingToolCapturesStillAccumulate() {
+        GuideRequestSnapshot request = GuideRequestSnapshot.start(
+                UUID.randomUUID(), "main", GuideTopology.CLIENT_LOCAL, "Inspect", Instant.EPOCH);
+        request = complete(request, "call-1", "openallay:get_recipe", groundedResult(), 1);
+        request = complete(request, "call-2", "openallay:get_recipe", groundedResult(), 3);
+
+        assertEquals(List.of(new GuideSource("openallay:get_recipe",
+                GroundedTestFixtures.serverEvidence(), Instant.EPOCH)), request.sources());
+    }
+
+    private GuideRequestSnapshot complete(
+            GuideRequestSnapshot request, String invocationId, String toolId,
+            JsonObject normalized, long seconds) {
+        request = reducer.apply(request, new AgentEvent.ToolStarted(invocationId, toolId), at(seconds));
+        return reducer.apply(request, new AgentEvent.ToolCompleted(
+                invocationId, toolId, false, normalized), at(seconds + 1));
+    }
+
+    private static EvidenceMetadata evidenceAt(
+            long seconds, DataCompleteness completeness, Map<String, String> details) {
+        EvidenceMetadata original = GroundedTestFixtures.serverEvidence();
+        return new EvidenceMetadata(
+                original.authority(), completeness, at(seconds), original.sourceId(),
+                original.provenance(), original.gameVersion(), original.loader(), details);
+    }
+
+    private static JsonObject javascriptResult(SourceObservation... observations) {
+        JsonObject result = new JsonObject();
+        result.addProperty("status", "success");
+        JsonObject value = new JsonObject();
+        JsonArray sources = new JsonArray();
+        for (SourceObservation observation : observations) {
+            sources.add(new Gson().toJsonTree(observation));
+        }
+        value.add("sources", sources);
+        result.add("value", value);
+        return result;
     }
 
     private static JsonObject javascriptArguments(String title, String description) {

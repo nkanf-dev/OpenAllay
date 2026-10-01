@@ -22,6 +22,36 @@ final class ServerAgentEventCodecTest {
     private final ServerAgentEventCodec codec = new ServerAgentEventCodec(new Gson());
 
     @Test
+    void truthfulContextRoundTripsOriginalProgramsPlaintextErrorsAndStrictShape() {
+        UUID request = UUID.randomUUID();
+        JsonObject input = new JsonObject();
+        input.addProperty("source", "return mc.items.filter(x => x.id); ");
+        List<dev.openallay.model.ModelMessage> messages = List.of(
+                dev.openallay.model.ModelMessage.userText("Compare items"),
+                new dev.openallay.model.ModelMessage(dev.openallay.model.ModelRole.ASSISTANT,
+                        List.of(new dev.openallay.model.ModelContent.ToolUse(
+                                "actual-call", "openallay__run_javascript", input))),
+                new dev.openallay.model.ModelMessage(dev.openallay.model.ModelRole.USER,
+                        List.of(new dev.openallay.model.ModelContent.ToolResult("actual-call",
+                                new com.google.gson.JsonPrimitive("status: failure\ncode: javascript_error\nmessage: .filter is undefined"), true))));
+        AgentEvent.ContextUpdated original = new AgentEvent.ContextUpdated(messages, messages);
+        ServerAgentEventPayload encoded = codec.encode(request, original);
+        assertEquals("context_updated", encoded.eventType());
+        assertEquals(false, encoded.terminal());
+        assertEquals(original, codec.decode(encoded, request));
+        AgentEvent.ContextFinalized finalized = new AgentEvent.ContextFinalized(messages, messages);
+        var finalizedPayload = codec.encode(request, finalized);
+        assertEquals("context_finalized", finalizedPayload.eventType());
+        assertEquals(false, finalizedPayload.terminal());
+        assertEquals(finalized, codec.decode(finalizedPayload, request));
+        org.junit.jupiter.api.Assertions.assertFalse(encoded.eventJson().contains("durableProjection"));
+        JsonObject malformed = JsonParser.parseString(encoded.eventJson()).getAsJsonObject();
+        malformed.addProperty("unknown", true);
+        assertThrows(IllegalArgumentException.class, () -> codec.decode(new ServerAgentEventPayload(
+                request, encoded.eventType(), malformed.toString(), false), request));
+    }
+
+    @Test
     void roundTripsObservableEventsAndTerminalFlags() {
         UUID request = UUID.randomUUID();
         assertEquals(
@@ -108,7 +138,7 @@ final class ServerAgentEventCodecTest {
         assertEquals("call-1", completed.invocationId());
 
         ContextCheckpoint checkpoint = new ContextCheckpoint(
-                UUID.randomUUID(), 0, 2, "a".repeat(64), "model", 1, 1,
+                UUID.randomUUID(), 0, 2, "a".repeat(64), "model",
                 Instant.EPOCH, ContextCheckpoint.Status.SUCCEEDED, "{}", null, null, 42);
         AgentEvent.ContextCompacted compacted = assertInstanceOf(
                 AgentEvent.ContextCompacted.class,
@@ -151,11 +181,10 @@ final class ServerAgentEventCodecTest {
         UUID request = UUID.randomUUID();
         assertThrows(IllegalArgumentException.class, () -> codec.decode(
                 new ServerAgentEventPayload(
-                        BridgeProtocol.VERSION, request, "future_event", "{}", false),
+                        request, "future_event", "{}", false),
                 request));
         assertThrows(IllegalArgumentException.class, () -> codec.decode(
                 new ServerAgentEventPayload(
-                        BridgeProtocol.VERSION,
                         request,
                         "model_attempt_started",
                         "{\"attempt\":1,\"provider\":\"secret\"}",
@@ -163,7 +192,6 @@ final class ServerAgentEventCodecTest {
                 request));
         assertThrows(IllegalArgumentException.class, () -> codec.decode(
                 new ServerAgentEventPayload(
-                        BridgeProtocol.VERSION,
                         request,
                         "model_attempt_started",
                         "{\"attempt\":1,\"deadlineEpochMillis\":12345}",
@@ -171,11 +199,10 @@ final class ServerAgentEventCodecTest {
                 request));
         assertThrows(IllegalArgumentException.class, () -> codec.decode(
                 new ServerAgentEventPayload(
-                        BridgeProtocol.VERSION, request, "context_compacted", "{}", false),
+                        request, "context_compacted", "{}", false),
                 request));
         assertThrows(IllegalArgumentException.class, () -> codec.decode(
                 new ServerAgentEventPayload(
-                        BridgeProtocol.VERSION,
                         request,
                         "tool_started",
                         "{\"toolId\":\"openallay:get_recipe\"}",
@@ -183,7 +210,6 @@ final class ServerAgentEventCodecTest {
                 request));
         assertThrows(IllegalArgumentException.class, () -> codec.decode(
                 new ServerAgentEventPayload(
-                        BridgeProtocol.VERSION,
                         request,
                         "tool_started",
                         "{\"invocationId\":\"call-1\",\"toolId\":\"openallay:get_recipe\","
@@ -196,7 +222,6 @@ final class ServerAgentEventCodecTest {
         ServerAgentEventPayload finalText = codec.encode(request, new AgentEvent.FinalText("done"));
         assertThrows(IllegalArgumentException.class, () -> codec.decode(
                 new ServerAgentEventPayload(
-                        finalText.version(),
                         finalText.requestId(),
                         finalText.eventType(),
                         finalText.eventJson(),
@@ -205,15 +230,19 @@ final class ServerAgentEventCodecTest {
     }
 
     @Test
-    void bridgeCodecAcceptsDedicatedServerAgentCancelOnlyAtCurrentVersion() {
+    void bridgeCodecAcceptsOnlyRequestCorrelatedCancelShape() {
         UUID request = UUID.randomUUID();
         BridgeJsonCodec json = new BridgeJsonCodec();
-        ServerAgentCancelPayload value = new ServerAgentCancelPayload(BridgeProtocol.VERSION, request);
-
+        ServerAgentCancelPayload value = new ServerAgentCancelPayload(request);
+        assertEquals(Set.of("requestId"),
+                JsonParser.parseString(json.encode(value)).getAsJsonObject().keySet());
         assertEquals(request, json.decode(
                 json.encode(value), ServerAgentCancelPayload.class).requestId());
-        assertThrows(
-                IllegalArgumentException.class,
-                () -> new ServerAgentCancelPayload(BridgeProtocol.VERSION + 1, request));
+        assertThrows(IllegalArgumentException.class,
+                () -> json.decode("{}", ServerAgentCancelPayload.class));
+        JsonObject extraField = JsonParser.parseString(json.encode(value)).getAsJsonObject();
+        extraField.addProperty("eventId", UUID.randomUUID().toString());
+        assertThrows(IllegalArgumentException.class,
+                () -> json.decode(extraField.toString(), ServerAgentCancelPayload.class));
     }
 }

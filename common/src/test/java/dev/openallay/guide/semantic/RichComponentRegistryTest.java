@@ -15,7 +15,7 @@ final class RichComponentRegistryTest {
     private final SemanticReferenceIndex references = SemanticReferenceValidatorTest.index();
 
     @Test
-    void decodesEveryRegisteredVersionOneComponent() {
+    void decodesEveryRegisteredComponent() {
         RecipeReference recipe = SemanticReferenceValidatorTest.recipe();
         List<String> encoded = List.of(
                 envelope("item_row", """
@@ -60,7 +60,7 @@ final class RichComponentRegistryTest {
     }
 
     @Test
-    void unknownKeysActionsVersionsAndForeignReferencesFailClosed() {
+    void unknownKeysActionsMissingFieldsAndForeignReferencesFailClosed() {
         RecipeReference recipe = SemanticReferenceValidatorTest.recipe();
         List<String> invalid = List.of(
                 envelope("item_row", """
@@ -73,10 +73,10 @@ final class RichComponentRegistryTest {
                         recipe.sourceId(), "b".repeat(64), recipe.recipeId()),
                         "\"label\":\"Stale\"")),
                 """
-                        {"schemaVersion":2,"type":"status_badge","properties":{"state":"INFO","label":"Info"},"fallback":"Readable fallback","narration":"Narration"}
+                        {"type":"status_badge","properties":{"state":"INFO","label":"Info"},"fallback":"Readable fallback"}
                         """,
                 """
-                        {"schemaVersion":1,"type":"status_badge","properties":{"state":"INFO","label":"Info"},"fallback":"Readable fallback","narration":"Narration","callback":"java.lang.Runtime"}
+                        {"type":"status_badge","properties":{"state":"INFO","label":"Info"},"fallback":"Readable fallback","narration":"Narration","callback":"java.lang.Runtime"}
                         """);
 
         for (String value : invalid) {
@@ -91,7 +91,7 @@ final class RichComponentRegistryTest {
     void parserUsesFallbackForUnsupportedComponentBlock() {
         String markdown = """
                 ```openallay-component
-                {"schemaVersion":1,"type":"world_mutation","properties":{"command":"/op"},"fallback":"Cannot show this component","narration":"Unavailable"}
+                {"type":"world_mutation","properties":{"command":"/op"},"fallback":"Cannot show this component","narration":"Unavailable"}
                 ```
                 """;
 
@@ -103,7 +103,7 @@ final class RichComponentRegistryTest {
     }
 
     private static String envelope(String type, String properties) {
-        return "{\"schemaVersion\":1,\"type\":\"" + type
+        return "{\"type\":\"" + type
                 + "\",\"properties\":" + properties.strip()
                 + ",\"fallback\":\"Readable fallback\",\"narration\":\"Narration\"}";
     }

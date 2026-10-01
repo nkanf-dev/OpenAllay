@@ -42,8 +42,8 @@ public final class ExportedToolPolicy {
     }
 
     /**
-     * The server projection of run_javascript is read-only because the remote endpoint rejects the
-     * commands root and the server never captures a command bridge for that invocation.
+     * The server projection of run_javascript is read-only because server requests never capture
+     * unrestricted JavaScript authority or a command bridge. Program text is not a permission.
      */
     public static boolean isRemotelyReadable(ToolDescriptor<?, ?> descriptor) {
         return descriptor.access() == ToolAccess.READ_ONLY

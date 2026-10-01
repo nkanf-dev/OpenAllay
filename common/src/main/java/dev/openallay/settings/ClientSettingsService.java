@@ -12,7 +12,6 @@ import dev.openallay.guide.GuideFailure;
 import dev.openallay.guide.GuidePersistenceSnapshot;
 import dev.openallay.guide.GuideSnapshot;
 import dev.openallay.guide.history.GuideHistoryActivity;
-import dev.openallay.guide.history.GuideHistoryPartition;
 import dev.openallay.guide.ui.GuideDisplayConfig;
 import dev.openallay.model.CancellationSignal;
 import dev.openallay.model.catalog.ModelCatalog;
@@ -1160,7 +1159,7 @@ public final class ClientSettingsService implements AutoCloseable {
             Set<String> skills = new TreeSet<>(capabilityState.policy().disabledSkills());
             if (kind == RequirementKind.CAPABILITY) tools.remove(id);
             else if (kind == RequirementKind.SKILL) skills.remove(id);
-            return saveCapabilities(new CapabilityPolicy(CapabilityPolicy.SCHEMA_VERSION, tools, skills));
+            return saveCapabilities(new CapabilityPolicy(tools, skills));
         }
     }
 
@@ -1233,7 +1232,7 @@ public final class ClientSettingsService implements AutoCloseable {
 
     public CompletableFuture<ToolResult<Boolean>> saveExperimentalCommands(boolean enabled) {
         CommandCapabilityConfig candidate = new CommandCapabilityConfig(
-                CommandCapabilityConfig.SCHEMA_VERSION, enabled);
+                enabled);
         Reservation reservation = reserve(SettingsOperation.domain(
                 SettingsOperation.Kind.SAVING_EXPERIMENTAL_COMMANDS));
         if (!reservation.accepted()) {
@@ -1252,7 +1251,7 @@ public final class ClientSettingsService implements AutoCloseable {
     }
 
     public CompletableFuture<ToolResult<Boolean>> saveUnrestrictedJavascript(boolean enabled) {
-        var candidate = new UnrestrictedJavascriptConfig(UnrestrictedJavascriptConfig.SCHEMA_VERSION, enabled);
+        var candidate = new UnrestrictedJavascriptConfig(enabled);
         Reservation reservation = reserve(SettingsOperation.domain(SettingsOperation.Kind.SAVING_UNRESTRICTED_JAVASCRIPT));
         if (!reservation.accepted()) return CompletableFuture.completedFuture(failed(reservation.failureCode()));
         CompletableFuture<ToolResult<Boolean>> result = new CompletableFuture<>();
@@ -2205,7 +2204,6 @@ public final class ClientSettingsService implements AutoCloseable {
                                 historyState.guide(),
                                 historyState.activity(),
                                 historyState.scopeKind(),
-                                GuideHistoryPartition.SCHEMA_VERSION,
                                 sourceState.sources().stream().map(source ->
                                         new SettingsDiagnosticsAggregator.SourceStatus(
                                                 source.sourceId(), source.generation(),

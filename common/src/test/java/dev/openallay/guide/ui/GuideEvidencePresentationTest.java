@@ -2,6 +2,8 @@ package dev.openallay.guide.ui;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import dev.openallay.context.DataAuthority;
 import dev.openallay.context.DataCompleteness;
@@ -9,9 +11,93 @@ import dev.openallay.context.EvidenceMetadata;
 import dev.openallay.guide.GuideSource;
 import java.time.Instant;
 import java.util.Map;
+import java.util.List;
+import java.util.ArrayList;
 import org.junit.jupiter.api.Test;
 
 final class GuideEvidencePresentationTest {
+    @Test
+    void thousandsOfPositionAndTimeObservationsBecomeOneLosslessGroup() {
+        List<GuideSource> sources = new ArrayList<>();
+        for (int index = 0; index < 4096; index++) {
+            sources.add(new GuideSource("openallay:run_javascript", new EvidenceMetadata(
+                    DataAuthority.SERVER_AUTHORITATIVE, DataCompleteness.COMPLETE,
+                    Instant.EPOCH.plusSeconds(index), "openallay_builder:read", "openallay:builder",
+                    "26.2", "fabric", Map.of("openallay_builder:dimension", "minecraft:overworld",
+                            "openallay_builder:position", index + ",64,0",
+                            "openallay_builder:count", "1")), Instant.EPOCH.plusSeconds(index + 1)));
+        }
+        List<GuideEvidencePresentation.Group> groups = GuideEvidencePresentation.groups(sources);
+        assertEquals(1, groups.size());
+        var group = groups.getFirst();
+        assertEquals(Instant.EPOCH, group.firstCapturedAt());
+        assertEquals(Instant.EPOCH.plusSeconds(4096), group.lastCapturedAt());
+        assertEquals(sources, group.records());
+        assertEquals("4095,64,0", group.records().getLast().evidence().details().get("openallay_builder:position"));
+        sources.clear();
+        assertEquals(4096, group.records().size());
+        assertThrows(UnsupportedOperationException.class, () -> group.records().clear());
+        assertEquals(Map.of("openallay_builder:dimension", "minecraft:overworld"), group.identity().scope());
+    }
+
+    @Test
+    void observationRangeUsesRecordedExtremaRatherThanArrivalOrder() {
+        EvidenceMetadata later = new EvidenceMetadata(DataAuthority.CLIENT_VISIBLE, DataCompleteness.COMPLETE,
+                Instant.EPOCH.plusSeconds(10), "minecraft:client_blocks", "minecraft:captured",
+                "26.2", "fabric", Map.of());
+        EvidenceMetadata earlier = new EvidenceMetadata(later.authority(), later.completeness(),
+                Instant.EPOCH, later.sourceId(), later.provenance(), later.gameVersion(), later.loader(), Map.of());
+        var records = List.of(new GuideSource("openallay:run_javascript", later, Instant.EPOCH.plusSeconds(30)),
+                new GuideSource("openallay:run_javascript", earlier, Instant.EPOCH.plusSeconds(20)));
+        var group = GuideEvidencePresentation.groups(records).getFirst();
+        assertEquals(Instant.EPOCH, group.firstCapturedAt());
+        assertEquals(Instant.EPOCH.plusSeconds(30), group.lastCapturedAt());
+        assertEquals(records, group.records());
+    }
+
+    @Test
+    void groupingPreservesAuthorityCoverageProvenanceVersionLoaderAndScopeDifferences() {
+        EvidenceMetadata base = new EvidenceMetadata(DataAuthority.CLIENT_VISIBLE, DataCompleteness.COMPLETE,
+                Instant.EPOCH, "minecraft:client_blocks", "minecraft:captured", "26.2", "fabric",
+                Map.of("minecraft:dimension", "minecraft:overworld", "openallay:scope", "world"));
+        List<GuideSource> sources = new ArrayList<>();
+        sources.add(new GuideSource("openallay:run_javascript", base));
+        sources.add(new GuideSource("other:tool", base));
+        sources.add(source(base, DataAuthority.SERVER_AUTHORITATIVE, base.completeness(), base.sourceId(),
+                base.provenance(), base.gameVersion(), base.loader(), base.details()));
+        sources.add(source(base, base.authority(), DataCompleteness.PARTIAL, base.sourceId(),
+                base.provenance(), base.gameVersion(), base.loader(), base.details()));
+        sources.add(source(base, base.authority(), base.completeness(), "minecraft:server_blocks",
+                base.provenance(), base.gameVersion(), base.loader(), base.details()));
+        sources.add(source(base, base.authority(), base.completeness(), base.sourceId(),
+                "minecraft:another_capture", base.gameVersion(), base.loader(), base.details()));
+        sources.add(source(base, base.authority(), base.completeness(), base.sourceId(),
+                base.provenance(), "26.3", base.loader(), base.details()));
+        sources.add(source(base, base.authority(), base.completeness(), base.sourceId(),
+                base.provenance(), base.gameVersion(), "neoforge", base.details()));
+        sources.add(source(base, base.authority(), base.completeness(), base.sourceId(),
+                base.provenance(), base.gameVersion(), base.loader(),
+                Map.of("minecraft:dimension", "minecraft:the_nether", "openallay:scope", "world")));
+        sources.add(source(base, base.authority(), base.completeness(), base.sourceId(),
+                base.provenance(), base.gameVersion(), base.loader(),
+                Map.of("minecraft:dimension", "minecraft:overworld", "openallay:scope", "different")));
+        sources.add(source(base, base.authority(), base.completeness(), base.sourceId(),
+                base.provenance(), base.gameVersion(), base.loader(), Map.of("addon:count", "12")));
+        sources.add(source(base, base.authority(), base.completeness(), base.sourceId(),
+                base.provenance(), base.gameVersion(), base.loader(), Map.of("addon:count", "13")));
+        var groups = GuideEvidencePresentation.groups(sources);
+        assertEquals(sources.size(), groups.size());
+        assertTrue(groups.stream().allMatch(group -> group.records().size() == 1));
+        assertEquals(List.of(), GuideEvidencePresentation.groups(List.of()));
+    }
+
+    private static GuideSource source(
+            EvidenceMetadata base, DataAuthority authority, DataCompleteness completeness,
+            String sourceId, String provenance, String version, String loader, Map<String, String> details) {
+        return new GuideSource("openallay:run_javascript", new EvidenceMetadata(authority, completeness,
+                base.capturedAt(), sourceId, provenance, version, loader, details));
+    }
+
     @Test
     void normalEvidenceUsesClosedHumanLabelsAndNoTechnicalOrPrivateData() {
         Instant captured = Instant.parse("2026-10-01T14:35:00Z");

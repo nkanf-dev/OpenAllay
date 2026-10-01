@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import dev.openallay.context.DataAuthority;
 import dev.openallay.context.DataCompleteness;
 import dev.openallay.context.EvidenceMetadata;
+import dev.openallay.context.SourceObservation;
 import dev.openallay.context.ToolInvocationContext;
 import dev.openallay.model.CancellationSignal;
 import dev.openallay.model.ModelClientException;
@@ -125,14 +126,17 @@ public final class JavascriptInvocationLifecycleTest {
     void unexpectedHostErrorStillSettlesFutureAndReleasesAdmittedScope() throws Exception {
         Fixture fixture = new Fixture();
         RunJavascriptTool broken = new RunJavascriptTool(new RhinoJavascriptRuntime(),
-                context -> { throw new AssertionError("secret-token"); },
+                context -> { throw new AssertionError("Native capture failed: token=secret-token"); },
                 new AgentResultWorkspaceRegistry(), new JavascriptResultPresenter(),
                 new CommandCapabilityRuntime(), new WorldObservationRuntime(), fixture.registry);
         var result = broken.invokeAsync(ToolInvocationContext.developmentConsole("host-error"),
                 new RunJavascriptTool.Input("return 1;", List.of()), new CancellationSignal());
         var failure = assertInstanceOf(ToolResult.Failure.class, result.get(5, TimeUnit.SECONDS));
         assertEquals("javascript_failure", failure.code());
-        assertEquals("JavaScript execution failed", failure.message());
+        assertTrue(failure.message().startsWith("AssertionError:"));
+        assertTrue(failure.message().contains("Native capture failed: token=[REDACTED]"));
+        assertFalse(failure.message().contains("secret-token"));
+        assertFalse(failure.message().contains("JavascriptInvocationLifecycleTest.java"));
         assertEquals(0, fixture.registry.activeJavascriptInvocations());
     }
 
@@ -178,8 +182,11 @@ public final class JavascriptInvocationLifecycleTest {
             assertFalse(context.invocation().unrestrictedJavascript());
             return () -> {};
         })));
-        var failure = assertInstanceOf(ToolResult.Failure.class, fixture.invoke("no-evidence", "return 42;"));
-        assertEquals("context_evidence_unavailable", failure.code());
+        @SuppressWarnings("unchecked") var success = (ToolResult.Success<RunJavascriptTool.Output>)
+                assertInstanceOf(ToolResult.Success.class, fixture.invoke("no-evidence", "return 42;"));
+        assertEquals(42, success.value().preview().getAsInt());
+        assertTrue(success.value().sources().isEmpty());
+        assertTrue(captured.get().completedSuccessfully());
         assertFalse(captured.get().invocation().unrestrictedJavascript());
     }
 
@@ -203,7 +210,7 @@ public final class JavascriptInvocationLifecycleTest {
         for (var item : Map.of("first", first, "second", second).entrySet()) {
             @SuppressWarnings("unchecked") var success = (ToolResult.Success<RunJavascriptTool.Output>)
                     assertInstanceOf(ToolResult.Success.class, item.getValue().get(5, TimeUnit.SECONDS));
-            assertEquals(List.of(evidence(item.getKey())), success.value().evidence());
+            assertEquals(List.of(new SourceObservation(evidence(item.getKey()))), success.value().sources());
         }
         assertNotSame(contexts.get(0), contexts.get(1));
         contexts.forEach(context -> assertThrows(JavascriptExecutionException.class,
@@ -254,10 +261,12 @@ public final class JavascriptInvocationLifecycleTest {
                         new RunJavascriptTool.Input("return Java.type('dev.openallay.extension.JavascriptInvocationLifecycleTest$NativeFacade').capture();", List.of()),
                         new CancellationSignal()).join());
         assertEquals("native-capture", captured.value().preview().getAsString());
-        assertEquals(List.of(evidence("native-capture")), captured.value().evidence());
-        var unused = assertInstanceOf(ToolResult.Failure.class, fixture.tool.invokeAsync(authorized,
-                new RunJavascriptTool.Input("return 1;", List.of()), new CancellationSignal()).join());
-        assertEquals("context_evidence_unavailable", unused.code());
+        assertEquals(List.of(new SourceObservation(evidence("native-capture"))), captured.value().sources());
+        @SuppressWarnings("unchecked") var unused = (ToolResult.Success<RunJavascriptTool.Output>)
+                assertInstanceOf(ToolResult.Success.class, fixture.tool.invokeAsync(authorized,
+                        new RunJavascriptTool.Input("return 1;", List.of()), new CancellationSignal()).join());
+        assertEquals(1, unused.value().preview().getAsInt());
+        assertTrue(unused.value().sources().isEmpty());
         assertInstanceOf(ToolResult.Failure.class, fixture.tool.invokeAsync(authorized,
                 new RunJavascriptTool.Input("Java.type('dev.openallay.extension.JavascriptInvocationLifecycleTest$NativeFacade').capture(); throw new Error('failed');", List.of()),
                 new CancellationSignal()).join());

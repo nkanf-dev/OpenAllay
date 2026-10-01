@@ -23,7 +23,6 @@ final class BenchmarkRunnerTest {
                         ""));
 
         BenchmarkReport report = new BenchmarkRunner(new BenchmarkVerifier()).run(
-                "fixture-v1",
                 List.of(testCase),
                 (ignored, attempt) -> new BenchmarkOutcome(
                         JsonParser.parseString(attempt == 2
@@ -32,6 +31,8 @@ final class BenchmarkRunnerTest {
                         List.of(),
                         metrics(true, attempt + 1, attempt + 2)));
 
+        assertEquals(java.util.Set.of("cases"),
+                new com.google.gson.Gson().toJsonTree(report).getAsJsonObject().keySet());
         BenchmarkReport.CaseReport result = report.cases().getFirst();
         assertEquals(2, result.successes());
         assertEquals(2.0 / 3.0, result.successProbability(), 0.0001);
@@ -64,7 +65,6 @@ final class BenchmarkRunnerTest {
 
         BenchmarkReport.CaseReport report =
                 new BenchmarkRunner(new BenchmarkVerifier()).run(
-                                "fixture-v1",
                                 List.of(testCase),
                                 (ignored, attempt) -> new BenchmarkOutcome(
                                         JsonParser.parseString("{\"ok\":true}"),
@@ -93,7 +93,6 @@ final class BenchmarkRunnerTest {
 
         BenchmarkReport.AttemptReport attempt =
                 new BenchmarkRunner(new BenchmarkVerifier()).run(
-                                "fixture-v1",
                                 List.of(testCase),
                                 (ignored, number) -> new BenchmarkOutcome(
                                         JsonParser.parseString("{\"partial\":true}"),

@@ -95,7 +95,7 @@ class LiveEvidenceValidatorTests(unittest.TestCase):
                   "nativeAcceptance": {"outcome": "PASSED", "worldName": self.world,
                      "survival": True, "cheatsOff": True, "independentAnchor": self.anchor,
                      "oracle": "independent-integrated-server-owner-thread-readback", "checks": checks}}
-        trace = {"schemaVersion": 1, "requestId": scenario, "sessionId": scenario, "finalState": "COMPLETED",
+        trace = {"requestId": scenario, "sessionId": scenario, "finalState": "COMPLETED",
                  "events": [{"type": "tool_call", "payload": {"toolId": validator.JS_TOOL, "arguments": {"source": source}}},
                             {"type": "tool_result", "payload": {"toolId": validator.JS_TOOL, "failure": False,
                               "result": {"status": "success", "value": {"preview": result, "evidence": [

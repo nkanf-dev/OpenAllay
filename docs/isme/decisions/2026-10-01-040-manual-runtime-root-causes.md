@@ -1,5 +1,10 @@
 # SKMB-2026-10-01-040: Manual runtime root-cause corrections
 
+> Subsequent decision: [041](2026-10-01-041-execution-context-simplification.md)
+> authorizes a breaking simplification of the retained roots-selection contract, which is removed instead of further selector recovery.
+> Its implementation/verification is tracked separately; this document retains
+> the historical decision and is not proof that the new behavior is delivered.
+
 - status: accepted under explicit user implementation delegation
 - decided_by: root implementer
 - approval_source: user supplied four real-client failures and provider HTTP400 details, required root causes corrected in full, full verification, commit and push; “发版暂时不发”

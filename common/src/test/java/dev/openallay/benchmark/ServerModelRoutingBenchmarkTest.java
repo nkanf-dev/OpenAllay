@@ -44,13 +44,12 @@ final class ServerModelRoutingBenchmarkTest {
         BenchmarkCorpus corpus = corpus();
         BenchmarkSelector.Selection selection = new BenchmarkSelector().select(
                 corpus,
-                "server-model-routing-v1",
+                "server-model-routing",
                 Set.of("server-model"),
                 Set.of("server-model-routing"),
                 3);
 
         BenchmarkReport report = new BenchmarkRunner(new BenchmarkVerifier()).run(
-                corpus.version(),
                 selection.selected(),
                 (testCase, attempt) -> routeOneRequest(testCase, attempt));
 

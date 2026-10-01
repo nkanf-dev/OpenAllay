@@ -7,7 +7,6 @@ import dev.openallay.agent.tool.AgentToolExecutor;
 import dev.openallay.agent.tool.AgentToolResult;
 import dev.openallay.agent.tool.LocalAgentToolExecutor;
 import dev.openallay.agent.tool.ToolRuntimeCatalog;
-import dev.openallay.bridge.protocol.BridgeProtocol;
 import dev.openallay.bridge.protocol.ClientToolCallPayload;
 import dev.openallay.bridge.protocol.ClientToolCancelPayload;
 import dev.openallay.bridge.protocol.ClientToolResultChunkPayload;
@@ -17,12 +16,15 @@ import dev.openallay.context.ToolInvocationContext;
 import dev.openallay.model.CancellationSignal;
 import dev.openallay.model.ModelClientException;
 import dev.openallay.model.ModelFailure;
+import dev.openallay.model.ModelMessage;
 import dev.openallay.model.ModelToolDefinition;
+import dev.openallay.skill.LoadSkillTool;
+import dev.openallay.skill.SkillCatalogSnapshot;
 import dev.openallay.tool.ModelFacingToolOutput;
+import dev.openallay.tool.RegisteredTool;
 import dev.openallay.tool.ToolAccess;
 import dev.openallay.tool.ToolRegistry;
 import dev.openallay.tool.ToolResult;
-import dev.openallay.tool.builtin.RunJavascriptTool;
 import dev.openallay.trace.replay.ToolResultNormalizer;
 import java.util.List;
 import java.util.Map;
@@ -38,6 +40,7 @@ import java.time.Duration;
 /**
  * Owns server-side correlations for client-resident Tools used by a server-hosted Agent.
  * Each opened executor freezes one actor/request capability intersection.
+ * Advertised trusted Tools run on that client; other Tools run on the server.
  */
 public final class PlayerClientToolRouter {
     private static final java.util.concurrent.ScheduledExecutorService TIMEOUTS =
@@ -86,17 +89,28 @@ public final class PlayerClientToolRouter {
             UUID actorId,
             UUID requestId,
             String sessionId,
-            List<String> advertisedClientToolIds) {
+            List<String> advertisedClientToolIds,
+            SkillCatalogSnapshot requestSkills) {
         java.util.Objects.requireNonNull(actorId, "actorId");
         java.util.Objects.requireNonNull(requestId, "requestId");
+        java.util.Objects.requireNonNull(requestSkills, "requestSkills");
         if (sessionId == null || !sessionId.matches("[a-zA-Z0-9_.-]+")) {
             return new ToolResult.Failure<>("invalid_session", "Invalid Agent session ID");
         }
         Set<String> accepted = List.copyOf(advertisedClientToolIds).stream()
                 .filter(toolId -> trustedTools.find(toolId).isPresent())
                 .collect(java.util.stream.Collectors.toUnmodifiableSet());
+        // Rebind document guidance only. The trusted Tool IDs and placement policy do not change.
+        ToolRuntimeCatalog requestTools = ToolRuntimeCatalog.from(
+                trustedTools.registrations().stream()
+                        .map(registration -> registration.tool() instanceof LoadSkillTool
+                                ? new RegisteredTool(
+                                        registration.providerId(), new LoadSkillTool(requestSkills))
+                                : registration)
+                        .toList(),
+                Set.of());
         RequestKey key = new RequestKey(actorId, requestId);
-        RequestExecutor executor = new RequestExecutor(key, sessionId, accepted);
+        RequestExecutor executor = new RequestExecutor(key, sessionId, accepted, requestTools);
         if (active.putIfAbsent(key, executor) != null) {
             return new ToolResult.Failure<>(
                     "duplicate_request", "Client Tool request ID is already active");
@@ -146,14 +160,21 @@ public final class PlayerClientToolRouter {
         private final RequestKey key;
         private final String sessionId;
         private final Set<String> clientTools;
-        private final LocalAgentToolExecutor local = new LocalAgentToolExecutor(trustedTools, gson);
+        private final ToolRuntimeCatalog requestTools;
+        private final LocalAgentToolExecutor local;
         private final Map<UUID, Pending> pending = new ConcurrentHashMap<>();
         private final ResultChunker.Reassembler reassembler = new ResultChunker.Reassembler();
 
-        private RequestExecutor(RequestKey key, String sessionId, Set<String> clientTools) {
+        private RequestExecutor(
+                RequestKey key,
+                String sessionId,
+                Set<String> clientTools,
+                ToolRuntimeCatalog requestTools) {
             this.key = key;
             this.sessionId = sessionId;
             this.clientTools = Set.copyOf(clientTools);
+            this.requestTools = requestTools;
+            this.local = new LocalAgentToolExecutor(requestTools, gson);
         }
 
         @Override
@@ -163,8 +184,7 @@ public final class PlayerClientToolRouter {
 
         @Override
         public Set<ContextCapability> requiredContext() {
-            // Server placement remains available for server-authoritative sections, so the
-            // server snapshot is detached once before model work just as it was previously.
+            // Tools without an advertised client placement still use the server snapshot.
             return local.requiredContext();
         }
 
@@ -184,7 +204,7 @@ public final class PlayerClientToolRouter {
                 return completedFailure(
                         toolId, "tool_unavailable", "Tool is unavailable in this request");
             }
-            if (!useClient(toolId, arguments)) {
+            if (!clientTools.contains(toolId)) {
                 return local.execute(modelToolName, arguments, context, cancellation);
             }
             UUID invocationId = UUID.randomUUID();
@@ -193,7 +213,6 @@ public final class PlayerClientToolRouter {
             pending.put(invocationId, value);
             cancellation.onCancel(() -> cancelInvocation(invocationId, value));
             ClientToolCallPayload payload = new ClientToolCallPayload(
-                    BridgeProtocol.VERSION,
                     key.requestId,
                     invocationId,
                     sessionId,
@@ -226,28 +245,6 @@ public final class PlayerClientToolRouter {
             return result;
         }
 
-        private boolean useClient(String toolId, JsonObject arguments) {
-            if (toolId.equals(RunJavascriptTool.ID) && requestsRoot(arguments, "world")) {
-                // A server-hosted model uses the owning server thread for authoritative spatial
-                // observations. Other roots remain client-first when the player advertised them.
-                return false;
-            }
-            return clientTools.contains(toolId);
-        }
-
-        private boolean requestsRoot(JsonObject arguments, String expected) {
-            if (!arguments.has("roots") || !arguments.get("roots").isJsonArray()) {
-                return false;
-            }
-            for (var root : arguments.getAsJsonArray("roots")) {
-                if (root.isJsonPrimitive() && root.getAsJsonPrimitive().isString()
-                        && root.getAsString().equals(expected)) {
-                    return true;
-                }
-            }
-            return false;
-        }
-
         private boolean receive(ClientToolResultChunkPayload chunk) {
             Pending value = pending.get(chunk.invocationId());
             if (value == null) {
@@ -270,7 +267,7 @@ public final class PlayerClientToolRouter {
                     JsonObject normalized = JsonParser.parseString(
                                     complete.orElseThrow())
                             .getAsJsonObject();
-                    JsonObject validated = validateNormalized(value.toolId, normalized);
+                    JsonObject validated = validateNormalized(requestTools, value.toolId, normalized);
                     if (validated == null) {
                         value.result.complete(failure(
                                 value.toolId,
@@ -291,6 +288,20 @@ public final class PlayerClientToolRouter {
                             "Player client Tool result was invalid"));
                     return false;
                 }
+            }
+        }
+
+        @Override
+        public List<ModelMessage> refreshContext(List<ModelMessage> messages) {
+            // A client Skill document is not described by the server Skill catalog.
+            return clientTools.contains("openallay:load_skill")
+                    ? messages : local.refreshContext(messages);
+        }
+
+        @Override
+        public void prepareContext(String correlationId, List<ModelMessage> messages) {
+            if (!clientTools.contains("openallay:load_skill")) {
+                local.prepareContext(correlationId, messages);
             }
         }
 
@@ -333,7 +344,7 @@ public final class PlayerClientToolRouter {
             if (dispatched) {
                 try {
                     transport.cancel(key.actorId, new ClientToolCancelPayload(
-                            BridgeProtocol.VERSION, key.requestId, invocationId));
+                            key.requestId, invocationId));
                 } catch (RuntimeException ignored) {
                     // The enclosing cancellation still owns the terminal request state.
                 }
@@ -351,7 +362,7 @@ public final class PlayerClientToolRouter {
             }
             try {
                 transport.cancel(key.actorId, new ClientToolCancelPayload(
-                        BridgeProtocol.VERSION, key.requestId, invocationId));
+                        key.requestId, invocationId));
             } catch (RuntimeException ignored) {
                 // Timeout remains a complete Tool result even if cancellation cannot be sent.
             }
@@ -374,7 +385,8 @@ public final class PlayerClientToolRouter {
                 true);
     }
 
-    private JsonObject validateNormalized(String toolId, JsonObject normalized) {
+    private JsonObject validateNormalized(
+            ToolRuntimeCatalog requestTools, String toolId, JsonObject normalized) {
         if (normalized == null
                 || !normalized.has("status")
                 || !normalized.get("status").isJsonPrimitive()) {
@@ -398,7 +410,7 @@ public final class PlayerClientToolRouter {
         if (!status.equals("success")) {
             return null;
         }
-        dev.openallay.tool.Tool<?, ?> tool = trustedTools.find(toolId).orElse(null);
+        dev.openallay.tool.Tool<?, ?> tool = requestTools.find(toolId).orElse(null);
         if (tool == null) {
             return null;
         }

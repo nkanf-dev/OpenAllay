@@ -192,7 +192,6 @@ public final class ModelSettingsBackend implements ClientSettingsService.ModelAc
             SecretValue replacement,
             Map<ModelMetadata.Key, ModelMetadata> metadata) {
         ModelProfilesConfig isolated = new ModelProfilesConfig(
-                ModelProfilesConfig.SCHEMA_VERSION,
                 candidate.id(),
                 java.util.List.of(candidate));
         ToolResult<ModelProfilesConfigLoader.Load> loaded = replacement == null
@@ -338,7 +337,6 @@ public final class ModelSettingsBackend implements ClientSettingsService.ModelAc
             throw new IllegalArgumentException("replacement profile is unavailable");
         }
         return new ModelProfilesConfig(
-                ModelProfilesConfig.SCHEMA_VERSION,
                 candidate.defaultProfileId(),
                 definitions);
     }

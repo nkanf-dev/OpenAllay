@@ -56,7 +56,7 @@ public record ExtensionSettingsProjection(
                         "openallay:run_javascript",
                         "screen.openallay.settings.extensions.runtime.title",
                         "screen.openallay.settings.extensions.runtime.description",
-                        List.of("source", "roots", "handles"),
+                        List.of("source", "handles", "title", "description"),
                         List.of(
                                 "typed result",
                                 "workspace handle",

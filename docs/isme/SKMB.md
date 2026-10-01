@@ -48,6 +48,7 @@ historical checkpoints are not approval of a later release candidate.
 | SKMB-2026-10-01-037 | accepted | model-written JavaScript invocation display intent | B, E, F | decisions/2026-10-01-037-javascript-tool-intent.md | fef6f74 |
 | SKMB-2026-10-01-038 | accepted | native UI fit, friendly recorded evidence, terminal pending-Tool display, and retry clarity | B, E, F | decisions/2026-10-01-038-native-ui-evidence-and-lifecycle-clarity.md | f8c61e9 |
 | SKMB-2026-10-01-040 | accepted | manual runtime protocol IDs, JavaScript recovery, truthful diagnostics, and automatic output maximum | B, D, E, F | decisions/2026-10-01-040-manual-runtime-root-causes.md | d17ff22 |
+| SKMB-2026-10-01-041 | accepted; verified in source | execution independent of origins, lazy data access, real model history, compact source details and batch Builder journals | A, B, C, E, F, G | decisions/2026-10-01-041-execution-context-simplification.md | pending |
 
 SKMB-2026-07-18-006 is implemented by `a0eaeff`, `19ab90f`, and `c6ca6bc`.
 Its deterministic clean-build and packaged-driver evidence is recorded in the
@@ -163,6 +164,20 @@ See `decisions/2026-09-29-033-unrestricted-javascript-mode.md`.
   only, preserving raw status. Retry sends the question again rather than resuming
   a step. Integrated source still requires independent actual GUI review.
 
+## Execution/context simplification (041)
+
+Decision041 implements the explicitly authorized breaking refactor. The final
+clean common suite passed 1,123 tests (six opt-in skips) and both loader builds.
+The verification record distinguishes these gates from graphical acceptance. It supersedes the older model roots
+selector, mandatory origins for generic computation, lossy UI-derived context and
+knowledge-field result reduction. Before formal 1.0, internal formats are Latest Only with no schema/protocol
+versions, versioned filenames or legacy adapters. Independently released external
+Extension/core API versions remain. Existing files are not implicitly deleted or
+migrated. Real permission,
+thread, session, cancellation and partial-write boundaries remain unchanged.
+The named invariants below describe delivered historical contracts except where
+041 explicitly replaces them; they do not require retaining those obsolete paths.
+
 ## Named States
 
 | state | meaning | owner | notes | source |
@@ -186,7 +201,7 @@ See `decisions/2026-09-29-033-unrestricted-javascript-mode.md`.
 | history_page_loading | One viewport neighborhood is loading for the current actor/session generation | GuideHistoryRepository | Does not block unrelated sessions or context reads | SKMB-2026-07-18-018 |
 | context_loading | A model-budgeted durable context seed is loading before provider dispatch | GuideService | Cancellable; no provider request has started | SKMB-2026-07-18-018 |
 | credential_staged | A new immutable local secret exists but no persisted profile references it yet | LocalCredentialStore | Safe to ignore/collect until atomic profile replacement succeeds | SKMB-2026-07-19-019 |
-| profile_referenced | A credential-free schema-2 model profile atomically references a resolvable local or external credential | ModelProfileSettingsStore | Raw secret remains outside model JSON and observable settings state | SKMB-2026-07-19-019 |
+| profile_referenced | A credential-free current model profile atomically references a resolvable local or external credential | ModelProfileSettingsStore | Raw secret remains outside model JSON and observable settings state; internal formats are Latest Only before 1.0 | SKMB-2026-07-19-019, SKMB-2026-10-01-041 |
 | skill_reloading | A bundled/local Agent Skills package candidate is being validated | SkillRepository | Invalid override retains the previous valid or bundled package | SKMB-2026-07-19-019 |
 | history_schema_unsupported | A recognized released guide-history schema is not the current writable schema | GuideHistoryStore | No migration, reset, or rewrite occurs automatically | SKMB-2026-07-29-032 |
 | response_streaming | A model response body is actively producing validated deltas under its dispatch deadline | ModelClient | Cancellable; last-progress is observable and late bytes are generation-fenced | SKMB-2026-07-19-020 |
@@ -308,7 +323,7 @@ See `decisions/2026-09-29-033-unrestricted-javascript-mode.md`.
 | T83 | extension_catalog_v2_ready | player installs/updates an Extension compatible with the current loader | extension_artifact_selected | Resolve the current loader before HTTP and bind checksum/mod-ID authority to that artifact only | SKMB-2026-07-25-030 |
 | T84 | extension_artifact_selected | selected JAR checksum, embedded identity, compatibility, mod IDs, and loader metadata validate | extension_restart_required | Atomically stage the selected loader JAR under its stable managed name | SKMB-2026-07-25-030 |
 | T85 | skill_published with unknown or older package version | player installs the compatible catalog package | package_staging then skill_published with catalog version | Validate and atomically publish the complete versioned Markdown package; retain the prior package/version on failure | SKMB-2026-07-25-029 |
-| T86 | client model settings load | schema-2 `models.json` is absent, schema 1 is present, or a legacy `model.json` is present | guide_unconfigured or unchanged valid runtime | Do not import, rewrite, or delete older configuration; publish an actionable redacted notice and await explicit schema-2 save | SKMB-2026-07-25-031 |
+| T86 | client model settings load | current `models.json` is absent or malformed | guide_unconfigured or unchanged valid runtime | Validate only the current shape; no schema number, migration, old reader or automatic reset; return an actionable redacted error | SKMB-2026-10-01-041 |
 
 | T90 | extension_invocation_active | execution finishes, fails, cancels or request closes | closed | Revoke active context, close participant scopes in reverse order, preserve partial external effects | SKMB-2026-09-30-034 |
 | T88 | requirements_review_ready | player selects Continue anyway | publishing or unchanged enabled Skill | Proceed only with the selected package/use; grant no requirements | SKMB-2026-09-30-035 |
@@ -377,7 +392,7 @@ See `decisions/2026-09-29-033-unrestricted-javascript-mode.md`.
 | I55 | GUI viewport paging and model-context selection are independent and neither loads a complete durable partition into memory | SKMB-2026-07-18-018 |
 | I56 | Incremental history writes and page/context reads remain ordered off Minecraft-owned threads and generation-check every completion | SKMB-2026-07-18-018 |
 | I57 | Auto-scroll follows only while already at the bottom; earlier-page insertion preserves the player's anchor row and pixel offset | SKMB-2026-07-18-018 |
-| I58 | Client model schema 2 and all observable settings state retain only qualified credential references/presence; raw API keys exist only in the transient masked input, SecretValue, provider header boundary, and local `credentials.sqlite3`, while `env:<name>` remains external/headless-only | SKMB-2026-07-19-019 |
+| I58 | Client model configuration and all observable settings state retain only qualified credential references/presence; raw API keys exist only in transient masked input, SecretValue, provider headers and local `credentials.sqlite3`, while `env:<name>` remains external/headless-only | SKMB-2026-07-19-019, SKMB-2026-10-01-041 |
 | I59 | The 0.2.0 runtime has no legacy Tool-family/source settings state; Extensions projects declared JavaScript roots, schemas, modules, and adapters without capturing live data or providing source CRUD | SKMB-2026-07-19-019, SKMB-2026-07-25-028 |
 | I60 | Bundled Skills are read-only Agent Skills packages with uppercase `SKILL.md`; local edits are external overrides and never grant scripts, paths, tools, or Agent write authority | SKMB-2026-07-19-019 |
 | I61 | Current guide-history schema 5 is the only writable schema; recognized older, future, corrupt, foreign, missing/inconsistent-metadata, or otherwise unrecognized databases remain untouched | SKMB-2026-07-19-020, SKMB-2026-07-29-032 |
@@ -424,7 +439,7 @@ See `decisions/2026-09-29-033-unrestricted-javascript-mode.md`.
 | I102 | Extension download and staging select the current loader before transport; Fabric and NeoForge never consume each other's artifact URL, checksum, or mod-ID authority | SKMB-2026-07-25-030 |
 | I103 | Local Extension import remains catalog-independent and is governed by its embedded package manifest and actual loader metadata | SKMB-2026-07-25-030 |
 | I104 | Community Skill update state compares catalog version with durable `metadata.openallay/version`; missing metadata is unknown and offers a tracked update rather than proving the package current | SKMB-2026-07-25-029 |
-| I105 | Client model configuration supports only `models.json` schema 2; old or invalid files are preserved and never auto-imported, while server `server-model.json` remains independent | SKMB-2026-07-25-031 |
+| I105 | Before formal 1.0, atomically released internal configuration, history, wire, trace and semantic formats are Latest Only without internal version fields or compatibility paths; independently published Extension/core API contracts remain versioned | SKMB-2026-10-01-041 |
 
 | I106 | Construction algorithms, native domain APIs, persistence and Skill names belong to the independent Extension repository; core has only generic invocation/distribution contracts | SKMB-2026-09-30-034 |
 | I107 | Trusted Extension evidence is execution-local and is recorded only for actual operations; an active scope or module declaration is not factual evidence | SKMB-2026-09-30-034 |

@@ -1,11 +1,17 @@
 package dev.openallay.script;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.JsonParser;
+import dev.latvian.mods.rhino.Context;
+import dev.latvian.mods.rhino.EvaluatorException;
+import dev.latvian.mods.rhino.WrappedException;
 import dev.openallay.model.CancellationSignal;
+import dev.openallay.model.ModelClientException;
 import dev.openallay.script.data.MinecraftAgentHostGraph;
 import dev.openallay.testing.JavascriptAgentTestFixtures;
 import java.io.IOException;
@@ -81,7 +87,7 @@ final class RhinoJavascriptRuntimeTest {
                   selectedGame: typeof mc.game
                 };
                 """,
-                graph.select(List.of("items")),
+                graph.open(),
                 Map.of(),
                 new CancellationSignal());
 
@@ -100,7 +106,7 @@ final class RhinoJavascriptRuntimeTest {
                         .getAsJsonObject("schema")
                         .get("kind")
                         .getAsString());
-        assertEquals("undefined", value.get("selectedGame").getAsString());
+        assertEquals("object", value.get("selectedGame").getAsString());
     }
 
     @Test
@@ -169,7 +175,7 @@ final class RhinoJavascriptRuntimeTest {
     }
 
     @Test
-    void explainsTheKubeJsRhinoNestedCallbackLimitation() {
+    void reportsTheActualKubeJsRhinoNestedCallbackErrorWithoutRepairAdvice() {
         JavascriptExecutionException failure = assertThrows(
                 JavascriptExecutionException.class,
                 () -> new RhinoJavascriptRuntime().execute(
@@ -195,7 +201,8 @@ final class RhinoJavascriptRuntimeTest {
                         new CancellationSignal()));
 
         assertEquals("javascript_error", failure.code());
-        assertTrue(failure.getMessage().contains("indexed loop"));
+        assertTrue(failure.getMessage().contains("redeclaration of var"), failure.getMessage());
+        assertFalse(failure.getMessage().contains("indexed loop"));
     }
 
     @Test
@@ -586,6 +593,231 @@ final class RhinoJavascriptRuntimeTest {
 
         assertEquals("direct", result.value().getAsJsonObject().get("id").getAsString());
         assertEquals(12, result.value().getAsJsonObject().get("total").getAsInt());
+    }
+
+    @Test
+    void referenceErrorsUseUserLinesAndNamedScriptFramesInBothModes() {
+        String source = """
+                function inspectItem() {
+                  return missingItem.id;
+                }
+                return inspectItem();
+                """;
+        for (boolean unrestricted : List.of(false, true)) {
+            JavascriptExecutionException failure = assertThrows(
+                    JavascriptExecutionException.class,
+                    () -> new RhinoJavascriptRuntime().execute(
+                            source, Map.of(), Map.of(), Map.of(), new CancellationSignal(),
+                            null, null, unrestricted));
+
+            assertEquals("javascript_error", failure.code());
+            assertTrue(failure.getMessage().contains("ReferenceError:"), failure.getMessage());
+            assertTrue(failure.getMessage().contains("missingItem"), failure.getMessage());
+            assertTrue(failure.getMessage().contains("inspectItem (openallay-agent.js:2)"), failure.getMessage());
+            assertFalse(failure.getMessage().contains("openallay-runtime.js"));
+            assertFalse(failure.getMessage().contains("dev.latvian"));
+            assertFalse(failure.getMessage().contains("RhinoJavascriptRuntime.java"));
+        }
+    }
+
+    @Test
+    void typeErrorsAndSyntaxErrorsHaveSourceRelativeLocations() {
+        for (String source : List.of(
+                "const item = null;\nreturn item.id;",
+                "const item = {};\nconst broken = ;\nreturn item;",
+                "const item = 1;\nconst broken = (")) {
+            JavascriptExecutionException failure = assertThrows(
+                    JavascriptExecutionException.class,
+                    () -> new RhinoJavascriptRuntime().execute(
+                            source, Map.of(), Map.of(), new CancellationSignal()));
+
+            assertEquals("javascript_error", failure.code());
+            assertTrue(failure.getMessage().contains(
+                    source.contains("broken") ? "SyntaxError:" : "TypeError:"), failure.getMessage());
+            assertTrue(failure.getMessage().contains("openallay-agent.js:2"), failure.getMessage());
+        }
+    }
+
+    @Test
+    void moduleErrorsOnlyExposeRegisteredModuleAndUserFramesWithRelativeLines() {
+        var runtime = new RhinoJavascriptRuntime(Duration.ofSeconds(1), JavascriptRuntimeLimits.DEFAULT,
+                new JavascriptModuleCatalog(Map.of("example:broken", "const value = 1;\nmissingModuleCall();")));
+        JavascriptExecutionException failure = assertThrows(
+                JavascriptExecutionException.class,
+                () -> runtime.execute("return require('example:broken');",
+                        Map.of(), Map.of(), new CancellationSignal()));
+
+        assertEquals("javascript_module_error", failure.code());
+        assertTrue(failure.getMessage().contains("ReferenceError:"), failure.getMessage());
+        assertTrue(failure.getMessage().contains("openallay-module-example:broken.js:2"), failure.getMessage());
+        assertTrue(failure.getMessage().contains("openallay-agent.js:1"), failure.getMessage());
+        assertFalse(failure.getMessage().contains("openallay-runtime.js"));
+        assertFalse(failure.getMessage().contains(".java:"));
+    }
+
+    @Test
+    void nativeErrorsKeepTheirSafeClassAndMessageWithoutTheNativeStack() {
+        JavascriptExecutionException failure = assertThrows(
+                JavascriptExecutionException.class,
+                () -> new RhinoJavascriptRuntime().execute(
+                        "const Integer = Java.type('java.lang.Integer');\nreturn Integer.parseInt('not-a-number');",
+                        Map.of(), Map.of(), Map.of(), new CancellationSignal(), null, null, true));
+
+        assertEquals("javascript_error", failure.code());
+        assertTrue(failure.getMessage().contains("NumberFormatException:"), failure.getMessage());
+        assertTrue(failure.getMessage().contains("not-a-number"), failure.getMessage());
+        assertTrue(failure.getMessage().contains("openallay-agent.js:2"), failure.getMessage());
+        assertFalse(failure.getMessage().contains("java.lang."));
+        assertFalse(failure.getMessage().contains(".java:"));
+
+        JavascriptExecutionException missingFile = assertThrows(
+                JavascriptExecutionException.class,
+                () -> new RhinoJavascriptRuntime().execute(
+                        "const MissingFile = Java.type('java.nio.file.NoSuchFileException');\nthrow new MissingFile('report.txt');",
+                        Map.of(), Map.of(), Map.of(), new CancellationSignal(), null, null, true));
+        assertTrue(missingFile.getMessage().contains("NoSuchFileException: report.txt"), missingFile.getMessage());
+        assertTrue(missingFile.getMessage().contains("openallay-agent.js:2"), missingFile.getMessage());
+    }
+
+    @Test
+    void javascriptAndNativeDiagnosticsUseTheSharedCredentialRedactor() {
+        String sensitive = "api_key=sample-api-credential password='sample password' "
+                + "Authorization: Bearer " + "sample-bearer-credential " + "sk-" + "examplecredential123456";
+        for (String source : List.of(
+                "throw new Error(" + new com.google.gson.Gson().toJson(sensitive) + ");",
+                "const Integer = Java.type('java.lang.Integer');\nreturn Integer.parseInt("
+                        + new com.google.gson.Gson().toJson(sensitive) + ");")) {
+            JavascriptExecutionException failure = assertThrows(
+                    JavascriptExecutionException.class,
+                    () -> new RhinoJavascriptRuntime().execute(
+                            source, Map.of(), Map.of(), Map.of(), new CancellationSignal(), null, null, true));
+            String diagnostic = failure.getMessage();
+            assertTrue(diagnostic.contains("[REDACTED]"), diagnostic);
+            for (String secret : List.of("sample-api-credential", "sample password", "sample-bearer-credential",
+                    "sk-" + "examplecredential123456")) {
+                assertFalse(diagnostic.contains(secret), diagnostic);
+            }
+        }
+        String longSecret = "sk-" + "z".repeat(600);
+        JavascriptExecutionException longCredential = assertThrows(JavascriptExecutionException.class,
+                () -> new RhinoJavascriptRuntime().execute("throw new Error('" + longSecret + "');",
+                        Map.of(), Map.of(), new CancellationSignal()));
+        assertTrue(longCredential.getMessage().contains("[REDACTED]"));
+        assertFalse(longCredential.getMessage().contains("zzzz"));
+        for (String secret : List.of("Authorization: Basic dXNlcjpwYXNzd29yZA==", "Cookie: first=private; second=hidden")) {
+            String diagnostic = JavascriptFailureFormatter.format(new IllegalArgumentException(secret));
+            assertTrue(diagnostic.contains("[REDACTED]"), diagnostic);
+            assertFalse(diagnostic.contains("dXNlcjpwYXNzd29yZA=="));
+            assertFalse(diagnostic.contains("private"));
+            assertFalse(diagnostic.contains("hidden"), "second Cookie value must be redacted");
+        }
+    }
+
+    @Test
+    void formattingDoesNotRunErrorGettersOrStringifyThrownObjects() {
+        for (String source : List.of(
+                "throw {toString() { throw new Error('formatter executed user code'); }};",
+                "const error = new Error('safe'); Object.defineProperty(error, 'message', "
+                        + "{get() { throw new Error('formatter executed user code'); }}); throw error;")) {
+            JavascriptExecutionException failure = assertThrows(JavascriptExecutionException.class,
+                    () -> new RhinoJavascriptRuntime().execute(source, Map.of(), Map.of(), new CancellationSignal()));
+            assertEquals("javascript_error", failure.code());
+            assertTrue(failure.getMessage().contains("Thrown value has no plain-text message"), failure.getMessage());
+            assertFalse(failure.getMessage().contains("formatter executed user code"));
+        }
+    }
+
+    @Test
+    void modExceptionMessagesKeepUsefulUrlsJsonAndMultilineDetailsWithoutNativeFrames() {
+        Context context = new OpenAllayRhinoContextFactory(new CancellationSignal(), Duration.ofSeconds(1), false).enter();
+        var formatter = new JavascriptFailureFormatter("return 1;");
+        EvaluatorException foreign = new EvaluatorException(context, "unexpected token",
+                "/private/provider/secret.js", 29);
+        String diagnostic = formatter.format(foreign, context);
+        assertTrue(diagnostic.contains("SyntaxError: unexpected token"));
+        assertFalse(diagnostic.contains("/private/provider"));
+
+        String message = "Cannot resolve https://example.invalid/schema\n"
+                + "{\"field\":\"blockstate\",\"password\":\"private-password\"}\n"
+                + "The actual reason remains available. " + "detail ".repeat(1000);
+        RuntimeException modFailure = new ModOperationException(message);
+        diagnostic = formatter.format(modFailure, context);
+        assertTrue(diagnostic.startsWith("ModOperationException:"), diagnostic);
+        assertTrue(diagnostic.contains("https://example.invalid/schema"), diagnostic);
+        assertTrue(diagnostic.contains("\"field\":\"blockstate\""), diagnostic);
+        assertTrue(diagnostic.contains("The actual reason remains available."));
+        assertTrue(diagnostic.endsWith("detail ".repeat(1000)), "message must not be clipped");
+        assertFalse(diagnostic.contains("private-password"));
+        assertFalse(diagnostic.contains("RhinoJavascriptRuntimeTest.java"));
+    }
+
+    @Test
+    void allRegisteredScriptFramesSurviveWithoutAnArbitraryFrameCap() {
+        StringBuilder source = new StringBuilder();
+        for (int index = 0; index < 40; index++) {
+            // Preserve real caller frames instead of allowing Rhino's tail-call optimization.
+            source.append("function step").append(index).append("() { const value = ")
+                    .append(index == 39 ? "missingValue" : "step" + (index + 1) + "()")
+                    .append("; return value + 1; }\n");
+        }
+        source.append("return step0();");
+        JavascriptExecutionException failure = assertThrows(JavascriptExecutionException.class,
+                () -> new RhinoJavascriptRuntime().execute(source.toString(), Map.of(), Map.of(), new CancellationSignal()));
+        assertTrue(failure.getMessage().contains("step39 (openallay-agent.js:40)"), failure.getMessage());
+        assertTrue(failure.getMessage().contains("step0 (openallay-agent.js:1)"), failure.getMessage());
+    }
+
+    private static final class ModOperationException extends RuntimeException {
+        private ModOperationException(String message) { super(message); }
+    }
+
+    @Test
+    void helpersStayFrozenAndPrivateAcrossExecutions() {
+        RhinoJavascriptRuntime runtime = new RhinoJavascriptRuntime();
+        JavascriptExecution execution = runtime.execute("""
+                return {
+                  frozen: Object.isFrozen(helpers),
+                  nativeRepeat: typeof __nativeRepeat,
+                  guard: typeof __openallayGuardedStringSize,
+                  schemaView: typeof __openallayArrayView
+                };
+                """, Map.of(), Map.of(), new CancellationSignal());
+        assertTrue(execution.value().getAsJsonObject().get("frozen").getAsBoolean());
+        for (String key : List.of("nativeRepeat", "guard", "schemaView")) {
+            assertEquals("undefined", execution.value().getAsJsonObject().get(key).getAsString());
+        }
+        assertThrows(JavascriptExecutionException.class,
+                () -> runtime.execute("helpers.sum = () => 99;", Map.of(), Map.of(), new CancellationSignal()));
+        assertEquals(3, runtime.execute("return helpers.sum([1,2]);",
+                Map.of(), Map.of(), new CancellationSignal()).value().getAsInt());
+    }
+
+    @Test
+    void wrappedControlFailuresKeepHostCodesAndCancellationIdentity() {
+        Context context = new OpenAllayRhinoContextFactory(new CancellationSignal(), Duration.ofSeconds(1), false).enter();
+        JavascriptExecutionException host = new JavascriptExecutionException("workspace_handle_unavailable", "unavailable");
+        assertSame(host, assertThrows(JavascriptExecutionException.class,
+                () -> JavascriptFailureFormatter.rethrowControlFailure(new WrappedException(context, host))));
+
+        CancellationSignal cancellation = new CancellationSignal();
+        cancellation.cancel();
+        ModelClientException cancelled = assertThrows(ModelClientException.class, cancellation::throwIfCancelled);
+        assertSame(cancelled, assertThrows(ModelClientException.class,
+                () -> JavascriptFailureFormatter.rethrowControlFailure(new WrappedException(context, cancelled))));
+        assertEquals("agent_cancelled", assertThrows(ModelClientException.class,
+                () -> new RhinoJavascriptRuntime().execute("return 1;", Map.of(), Map.of(), cancellation)).failure().code());
+    }
+
+    @Test
+    void toolBoundaryRedactionPreservesDiagnosticTextAndOnlyRemovesCredentialValues() {
+        String diagnostic = "ReferenceError: api_key=private-key\nat openallay-agent.js:2";
+        String safe = JavascriptFailureFormatter.sanitizeMessage(diagnostic);
+        assertTrue(safe.contains("[REDACTED]\nat openallay-agent.js:2"), safe);
+        assertFalse(safe.contains("private-key"));
+        String detail = "Unknown class: value\nRequested by the current script.";
+        assertEquals(detail, JavascriptFailureFormatter.sanitizeMessage(detail));
+        assertTrue(JavascriptFailureFormatter.sanitizeMessage("password=private-key")
+                .contains("[REDACTED]"));
     }
 
     private static String bundledExample(String heading) {

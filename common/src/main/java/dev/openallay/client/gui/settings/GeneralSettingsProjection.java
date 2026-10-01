@@ -42,7 +42,6 @@ public record GeneralSettingsProjection(
 
     public GuideDisplayConfig toggleDebug() {
         return new GuideDisplayConfig(
-                GuideDisplayConfig.SCHEMA_VERSION,
                 !debugMode,
                 animationsEnabled,
                 assistantName);
@@ -50,7 +49,6 @@ public record GeneralSettingsProjection(
 
     public GuideDisplayConfig toggleAnimations() {
         return new GuideDisplayConfig(
-                GuideDisplayConfig.SCHEMA_VERSION,
                 debugMode,
                 !animationsEnabled,
                 assistantName);
@@ -58,7 +56,6 @@ public record GeneralSettingsProjection(
 
     public GuideDisplayConfig renameAssistant(String nextAssistantName) {
         return new GuideDisplayConfig(
-                GuideDisplayConfig.SCHEMA_VERSION,
                 debugMode,
                 animationsEnabled,
                 nextAssistantName);

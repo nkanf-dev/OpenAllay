@@ -9,7 +9,6 @@ import dev.openallay.agent.GameGuideAgent;
 import dev.openallay.agent.context.ContextBudget;
 import dev.openallay.agent.context.ContextCheckpoint;
 import dev.openallay.agent.context.ContextCompactor;
-import dev.openallay.agent.context.ToolResultContextReducer;
 import dev.openallay.agent.context.Utf8ContextTokenEstimator;
 import dev.openallay.agent.session.AgentSessionKey;
 import dev.openallay.agent.session.AgentSessionStore;
@@ -25,11 +24,8 @@ import dev.openallay.capability.ClientCapabilitySnapshot;
 import dev.openallay.context.ToolInvocationContext;
 import dev.openallay.guide.GuideLocalEndpoint;
 import dev.openallay.guide.GuideContextSpec;
-import dev.openallay.guide.GuideMessage;
 import dev.openallay.model.ModelClient;
-import dev.openallay.model.ModelContent;
 import dev.openallay.model.ModelMessage;
-import dev.openallay.model.ModelRole;
 import dev.openallay.model.scheduling.ModelRequestScheduler;
 import dev.openallay.tool.ToolResult;
 import java.time.Clock;
@@ -210,6 +206,11 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
     }
 
     @Override
+    public boolean hasContext(UUID actor, String sessionId) {
+        return sessions.hasContext(new AgentSessionKey(actor, sessionId));
+    }
+
+    @Override
     public void hydrateContext(
             UUID actor,
             String sessionId,
@@ -250,7 +251,10 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
                 requestRuntime.systemPrompt(context.unrestrictedJavascript()),
                 context,
                 true);
-        return requestRuntime.agent.ask(request, event -> dispatcher.execute(() -> events.accept(event)))
+        return requestRuntime.agent.ask(request, event -> {
+                    AgentEvent exposed = traces.safeEvent(event);
+                    dispatcher.execute(() -> events.accept(exposed));
+                })
                 .thenApply(result -> {
                     if (result.trace() != null) {
                         traces.record(result.trace());
@@ -268,21 +272,7 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
         selectedSessions.put(actor, sessionId);
     }
 
-    @Override
-    public void hydrateSession(
-            UUID actor,
-            String sessionId,
-            List<GuideMessage> messages,
-            List<ContextCheckpoint> checkpoints) {
-        List<ModelMessage> history = messages.stream()
-                .map(message -> new ModelMessage(
-                        message.role() == GuideMessage.Role.USER
-                                ? ModelRole.USER
-                                : ModelRole.ASSISTANT,
-                        List.of(new ModelContent.Text(message.text()))))
-                .toList();
-        sessions.hydrate(new AgentSessionKey(actor, sessionId), history, checkpoints);
-    }
+
 
     public List<String> sessions(UUID actor) {
         java.util.TreeSet<String> ids = new java.util.TreeSet<>(sessions.sessions(actor).stream()
@@ -309,6 +299,11 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
     @Override
     public boolean cancel(UUID actor, String sessionId) {
         return sessions.cancel(new AgentSessionKey(actor, sessionId));
+    }
+
+    @Override
+    public boolean cancel(UUID actor, String sessionId, UUID expectedRequestId) {
+        return sessions.cancel(new AgentSessionKey(actor, sessionId), expectedRequestId);
     }
 
     @Override
@@ -351,7 +346,6 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
                 scheduler,
                 gson,
                 new Utf8ContextTokenEstimator(),
-                new ToolResultContextReducer(),
                 contextBudget,
                 modelIdentifier,
                 Clock.systemUTC());

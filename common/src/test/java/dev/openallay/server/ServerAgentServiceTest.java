@@ -8,7 +8,6 @@ import dev.openallay.agent.GameGuideAgent;
 import dev.openallay.agent.session.AgentSessionStore;
 import dev.openallay.agent.tool.AgentToolExecutor;
 import dev.openallay.agent.tool.AgentToolResult;
-import dev.openallay.bridge.protocol.BridgeProtocol;
 import dev.openallay.bridge.protocol.ServerAgentEventPayload;
 import dev.openallay.bridge.protocol.ServerAgentHistoryMessage;
 import dev.openallay.bridge.protocol.ServerAgentRequestPayload;
@@ -80,7 +79,6 @@ final class ServerAgentServiceTest {
                 "system");
         UUID requestId = UUID.randomUUID();
         ServerAgentRequestPayload request = new ServerAgentRequestPayload(
-                BridgeProtocol.VERSION,
                 requestId,
                 "restored",
                 "current question",
@@ -180,7 +178,7 @@ final class ServerAgentServiceTest {
     }
 
     private static ServerAgentRequestPayload request(UUID id, String session) {
-        return new ServerAgentRequestPayload(BridgeProtocol.VERSION, id, session, "question", true);
+        return new ServerAgentRequestPayload(id, session, "question", true);
     }
 
     private static ModelTurn turn(String text) {

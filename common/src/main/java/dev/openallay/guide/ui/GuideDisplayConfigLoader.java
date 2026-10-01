@@ -13,7 +13,7 @@ import java.util.Set;
 
 public final class GuideDisplayConfigLoader {
     private static final Set<String> FIELDS = Set.of(
-            "schemaVersion", "debugMode", "animationsEnabled", "assistantName");
+            "debugMode", "animationsEnabled", "assistantName");
 
     public record Load(GuideDisplayConfig config, GuideFailure failure) {
         public Load {
@@ -50,13 +50,12 @@ public final class GuideDisplayConfigLoader {
                         "Display configuration schema mismatch; missing=" + missing
                                 + ", extra=" + extra);
             }
-            int version = integer(object, "schemaVersion");
             boolean debugMode = bool(object, "debugMode");
             boolean animationsEnabled = bool(object, "animationsEnabled");
             String assistantName = string(object, "assistantName");
             return new Load(
                     new GuideDisplayConfig(
-                            version, debugMode, animationsEnabled, assistantName), null);
+                            debugMode, animationsEnabled, assistantName), null);
         } catch (RuntimeException failure) {
             return invalid(failure);
         }
@@ -71,19 +70,6 @@ public final class GuideDisplayConfigLoader {
                         message == null || message.isBlank()
                                 ? "Invalid display configuration"
                                 : message));
-    }
-
-    private static int integer(JsonObject object, String field) {
-        JsonElement value = object.get(field);
-        try {
-            if (value == null || !value.isJsonPrimitive()
-                    || !value.getAsJsonPrimitive().isNumber()) {
-                throw new IllegalArgumentException(field + " must be an integer");
-            }
-            return value.getAsBigDecimal().intValueExact();
-        } catch (ArithmeticException failure) {
-            throw new IllegalArgumentException(field + " must be an integer", failure);
-        }
     }
 
     private static boolean bool(JsonObject object, String field) {

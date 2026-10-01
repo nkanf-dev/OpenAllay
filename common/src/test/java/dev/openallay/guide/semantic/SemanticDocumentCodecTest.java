@@ -83,21 +83,23 @@ final class SemanticDocumentCodecTest {
         String encoded = codec.encode(document);
 
         assertEquals(document, codec.decode(encoded));
+        assertEquals(java.util.Set.of("blocks", "fallbackText", "diagnostics"),
+                JsonParser.parseString(encoded).getAsJsonObject().keySet());
         org.junit.jupiter.api.Assertions.assertFalse(encoded.contains("org.commonmark"));
     }
 
     @Test
-    void rejectsUnknownVersionsKeysAndFallbackMismatch() {
+    void rejectsMissingOrUnknownFieldsAndFallbackMismatch() {
         JsonObject encoded = codec.encodeObject(new SemanticMessageParser().parse("Hello"));
 
-        JsonObject version = encoded.deepCopy();
-        version.addProperty("schemaVersion", 2);
+        JsonObject missing = encoded.deepCopy();
+        missing.remove("blocks");
         JsonObject unknown = encoded.deepCopy();
         unknown.addProperty("providerBody", "secret");
         JsonObject fallback = encoded.deepCopy();
         fallback.addProperty("fallbackText", "changed");
 
-        assertThrows(IllegalArgumentException.class, () -> codec.decode(version.toString()));
+        assertThrows(IllegalArgumentException.class, () -> codec.decode(missing.toString()));
         assertThrows(IllegalArgumentException.class, () -> codec.decode(unknown.toString()));
         assertThrows(IllegalArgumentException.class, () -> codec.decode(fallback.toString()));
 

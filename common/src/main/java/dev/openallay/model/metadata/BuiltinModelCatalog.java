@@ -82,12 +82,11 @@ public final class BuiltinModelCatalog {
         }
     }
 
-    /** Rejects unsupported versions, duplicate keys, unknown fields and partial data. */
+    /** Rejects duplicate keys, unknown fields and partial data. */
     public static Load parse(Reader input) {
         try {
             JsonObject root = object(readStrict(input));
-            fields(root, "schemaVersion", "catalogVersion", "publishedAt", "sources", "models");
-            if (integer(root.get("schemaVersion")) != 1) throw invalid();
+            fields(root, "catalogVersion", "publishedAt", "sources", "models");
             String version = text(root.get("catalogVersion"), false);
             Instant published = Instant.parse(text(root.get("publishedAt"), false));
             Map<String, Source> sources = new LinkedHashMap<>();

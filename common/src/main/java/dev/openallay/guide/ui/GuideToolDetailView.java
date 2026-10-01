@@ -1,7 +1,6 @@
 package dev.openallay.guide.ui;
 
 import com.google.gson.JsonObject;
-import dev.openallay.guide.GuideSource;
 import dev.openallay.guide.GuideToolInvocationView;
 import dev.openallay.guide.GuideToolIntent;
 import dev.openallay.guide.GuideToolMessage;
@@ -19,7 +18,8 @@ public record GuideToolDetailView(
         List<GuideDetailCard> cards,
         List<GuideToolMessage> narration,
         Optional<Debug> debug,
-        GuideToolDisplayStatus displayStatus) {
+        GuideToolDisplayStatus displayStatus,
+        Optional<Failure> failure) {
     public GuideToolDetailView {
         if (titleKey == null || titleKey.isBlank()) {
             throw new IllegalArgumentException("titleKey must not be blank");
@@ -31,6 +31,7 @@ public record GuideToolDetailView(
         narration = List.copyOf(narration);
         debug = Objects.requireNonNull(debug, "debug");
         Objects.requireNonNull(displayStatus, "displayStatus");
+        failure = Objects.requireNonNull(failure, "failure");
     }
 
     public GuideToolDetailView(
@@ -42,7 +43,7 @@ public record GuideToolDetailView(
             List<GuideToolMessage> narration,
             Optional<Debug> debug) {
         this(titleKey, status, invocation, intent, cards, narration, debug,
-                GuideToolDisplayStatus.from(status, false));
+                GuideToolDisplayStatus.from(status, false), Optional.empty());
     }
 
     public GuideToolDetailView(
@@ -59,7 +60,7 @@ public record GuideToolDetailView(
         GuideToolDisplayStatus projected = GuideToolDisplayStatus.from(status, terminal);
         return new GuideToolDetailView(titleKey, status, invocation, intent, cards,
                 projected == GuideToolDisplayStatus.NO_RESULT_RECORDED ? List.of() : narration,
-                debug, projected);
+                debug, projected, failure);
     }
 
     public GuideToolDetailView(
@@ -71,10 +72,17 @@ public record GuideToolDetailView(
         this(titleKey, status, GuideToolInvocationView.none(), cards, narration, debug);
     }
 
+    /** The actual normalized tool failure, not a model-authored explanation. */
+    public record Failure(String code, String message) {
+        public Failure {
+            Objects.requireNonNull(code, "code");
+            Objects.requireNonNull(message, "message");
+        }
+    }
+
     public record Debug(
             String invocationId,
             String toolId,
-            List<GuideSource> sources,
             JsonObject invocationArguments,
             JsonObject normalized,
             String validationDiagnostic) {
@@ -83,26 +91,10 @@ public record GuideToolDetailView(
                     || toolId == null || toolId.isBlank()) {
                 throw new IllegalArgumentException("debug identity must not be blank");
             }
-            sources = List.copyOf(sources);
             invocationArguments =
                     invocationArguments == null ? null : invocationArguments.deepCopy();
             normalized = normalized == null ? null : normalized.deepCopy();
             validationDiagnostic = validationDiagnostic == null ? "" : validationDiagnostic;
-        }
-
-        public Debug(
-                String invocationId,
-                String toolId,
-                List<GuideSource> sources,
-                JsonObject normalized,
-                String validationDiagnostic) {
-            this(
-                    invocationId,
-                    toolId,
-                    sources,
-                    null,
-                    normalized,
-                    validationDiagnostic);
         }
 
         @Override

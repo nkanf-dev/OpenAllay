@@ -16,8 +16,24 @@ public final class ToolArgumentCodec {
     public <I> ToolResult<I> decode(JsonObject arguments, Class<I> inputType) {
         try {
             if (arguments != null && inputType.isRecord()) {
+                var declared = java.util.Arrays.stream(inputType.getRecordComponents())
+                        .map(java.lang.reflect.RecordComponent::getName)
+                        .collect(java.util.stream.Collectors.toSet());
+                if (!declared.containsAll(arguments.keySet())) {
+                    return new ToolResult.Failure<>(
+                            "invalid_arguments", "tool arguments contain an undeclared field");
+                }
                 for (var component : inputType.getRecordComponents()) {
                     var value = arguments.get(component.getName());
+                    if (component.getGenericType() instanceof java.lang.reflect.ParameterizedType list
+                            && list.getRawType() == java.util.List.class
+                            && java.util.Arrays.equals(list.getActualTypeArguments(), new java.lang.reflect.Type[] {String.class})
+                            && value != null && !value.isJsonNull()
+                            && (!value.isJsonArray() || value.getAsJsonArray().asList().stream().anyMatch(item ->
+                                    !item.isJsonPrimitive() || !item.getAsJsonPrimitive().isString()))) {
+                        return new ToolResult.Failure<>(
+                                "invalid_arguments", component.getName() + " must be an array of text");
+                    }
                     if (component.getType() == String.class && value != null && !value.isJsonNull()
                             && (!value.isJsonPrimitive() || !value.getAsJsonPrimitive().isString())) {
                         return new ToolResult.Failure<>(

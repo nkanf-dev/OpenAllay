@@ -38,7 +38,7 @@ final class BundledSkillsTest {
         assertTrue(repository.find("answer-modded-minecraft-question").isEmpty());
         SkillDocument gameState = repository.find("inspect-game-state").orElseThrow();
         assertTrue(gameState.instructions().contains("`mc.game.diagnostics`"));
-        assertTrue(gameState.instructions().contains("`roots: [\"world\"]`"));
+        assertFalse(gameState.instructions().contains("roots:"));
         assertTrue(gameState.instructions().contains("core top-level `world`"));
         assertFalse(gameState.instructions().contains("`openallay:inspect_game_state`"));
         SkillDocument commands = repository.find("run-game-commands").orElseThrow();

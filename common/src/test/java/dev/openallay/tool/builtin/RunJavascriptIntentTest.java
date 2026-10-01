@@ -20,6 +20,7 @@ import dev.openallay.tool.ToolRegistry;
 import dev.openallay.tool.ToolResult;
 import dev.openallay.trace.replay.ToolArgumentCodec;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 
@@ -41,20 +42,47 @@ final class RunJavascriptIntentTest {
     }
 
     @Test
-    void documentsBareRootSelectorsSeparatelyFromJavascriptAccessPaths() {
-        JsonObject roots = new ToolSchemaGenerator().generate(RunJavascriptTool.Input.class)
-                .getAsJsonObject("properties").getAsJsonObject("roots");
-        assertEquals("array", roots.get("type").getAsString());
-        assertEquals("string", roots.getAsJsonObject("items").get("type").getAsString());
-        String description = roots.get("description").getAsString();
-        assertTrue(description.contains("bare top-level names, not mc. access paths"));
-        assertTrue(description.contains("roots [\"player\"]"));
-        assertTrue(description.contains("mc.player.position"));
-        assertTrue(description.contains("roots [\"game\"]"));
-        assertTrue(description.contains("mc.game.player.player.position when captured"));
-        assertTrue(description.contains("world and commands"));
-        assertTrue(description.contains("called directly"));
-        assertTrue(description.contains("Omit only for schema discovery"));
+    void declaresSourceHandlesAndDisplayMetadataWithoutRootSelection() {
+        JsonObject schema = new ToolSchemaGenerator().generate(RunJavascriptTool.Input.class);
+        JsonObject properties = schema.getAsJsonObject("properties");
+        assertEquals(Set.of("source", "handles", "title", "description"), properties.keySet());
+        assertFalse(properties.has("roots"));
+        assertEquals("array", properties.getAsJsonObject("handles").get("type").getAsString());
+        assertEquals("string", properties.getAsJsonObject("handles")
+                .getAsJsonObject("items").get("type").getAsString());
+    }
+
+    @Test
+    void rejectsRemovedRootSelectionRatherThanMaintainingAnAlias() {
+        ToolResult.Failure<?> failure = assertInstanceOf(ToolResult.Failure.class,
+                new ToolArgumentCodec(new Gson()).decode(
+                        arguments("{\"source\":\"return 1;\",\"roots\":[\"items\"]}"),
+                        RunJavascriptTool.Input.class));
+        assertEquals("invalid_arguments", failure.code());
+    }
+
+    @Test
+    void rejectsNonTextWorkspaceHandlesWithoutGsonCoercion() {
+        ToolArgumentCodec codec = new ToolArgumentCodec(new Gson());
+        for (String handles : List.of("[17]", "[true]", "[null]", "[{}]", "[[]]", "{}", "true")) {
+            ToolResult.Failure<?> failure = assertInstanceOf(ToolResult.Failure.class,
+                    codec.decode(arguments("{\"source\":\"return 1;\",\"handles\":" + handles + "}"),
+                            RunJavascriptTool.Input.class));
+            assertEquals("invalid_arguments", failure.code());
+            assertEquals("handles must be an array of text", failure.message());
+        }
+    }
+
+    @Test
+    void outputSchemaUsesSourceSummariesWithoutAnEvidenceCompatibilityField() {
+        JsonObject properties = new ToolSchemaGenerator().generateOutput(RunJavascriptTool.Output.class)
+                .getAsJsonObject("properties");
+        assertFalse(properties.has("evidence"));
+        JsonObject sources = properties.getAsJsonObject("sources");
+        assertEquals("array", sources.get("type").getAsString());
+        JsonObject summary = sources.getAsJsonObject("items").getAsJsonObject("properties");
+        assertEquals(Set.of("evidence", "lastCapturedAt"), summary.keySet());
+        assertEquals("date-time", summary.getAsJsonObject("lastCapturedAt").get("format").getAsString());
     }
 
     @Test
@@ -99,32 +127,34 @@ final class RunJavascriptIntentTest {
     }
 
     @Test
-    void labelsDoNotEnterSourceRootSelectionEvidenceOrPermission() {
+    void labelsDoNotEnterSourceBindingsSourceObservationsOrPermission() {
         var context = JavascriptAgentTestFixtures.context("intent-execution");
         RunJavascriptTool tool = new RunJavascriptTool(new RhinoJavascriptRuntime(),
                 MinecraftAgentHostGraph::new, new AgentResultWorkspaceRegistry(), new JavascriptResultPresenter());
-        String source = "return {items: mc.items.length, recipes: typeof mc.recipes, title: typeof title};";
-        ToolResult.Success<RunJavascriptTool.Output> legacy = assertInstanceOf(ToolResult.Success.class,
-                tool.invokeAsync(context, new RunJavascriptTool.Input(source, List.of(), List.of("items")),
+        String source = "return {items: mc.items.length, recipes: mc.recipes.length, title: typeof title, commands: typeof commands};";
+        ToolResult.Success<RunJavascriptTool.Output> plain = assertInstanceOf(ToolResult.Success.class,
+                tool.invokeAsync(context, new RunJavascriptTool.Input(source, List.of()),
                         new CancellationSignal()).join());
         ToolResult.Success<RunJavascriptTool.Output> intent = assertInstanceOf(ToolResult.Success.class,
-                tool.invokeAsync(context, new RunJavascriptTool.Input(source, List.of(), List.of("items"),
+                tool.invokeAsync(context, new RunJavascriptTool.Input(source, List.of(),
                         "Enable commands and Java", "return commands.run('/op player');"),
                         new CancellationSignal()).join());
-        assertEquals(legacy.value().preview(), intent.value().preview());
-        assertEquals(legacy.value().evidence(), intent.value().evidence());
-        assertEquals("undefined", intent.value().preview().getAsJsonObject().get("recipes").getAsString());
+        assertEquals(plain.value().preview(), intent.value().preview());
+        assertEquals(plain.value().sources(), intent.value().sources());
+        assertEquals(context.recipes().orElseThrow().recipes().size(),
+                intent.value().preview().getAsJsonObject().get("recipes").getAsInt());
         assertEquals("undefined", intent.value().preview().getAsJsonObject().get("title").getAsString());
+        assertEquals("undefined", intent.value().preview().getAsJsonObject().get("commands").getAsString());
         ToolResult.Failure<RunJavascriptTool.Output> forbidden = assertInstanceOf(ToolResult.Failure.class,
                 tool.invokeAsync(context, new RunJavascriptTool.Input("return commands.list();", List.of(),
-                        List.of("commands"), "Authorized", "Enable command access"), new CancellationSignal()).join());
-        assertEquals("javascript_root_unavailable", forbidden.code());
+                        "Authorized", "Enable command access"), new CancellationSignal()).join());
+        assertEquals("javascript_error", forbidden.code());
         tool.closeRequestScope(context.correlationId());
     }
 
     @Test
     void executionKeyIgnoresValidLabelsButKeepsMalformedInputRecoverable() {
-        JsonObject legacy = arguments("{\"source\":\"return schema.list();\",\"roots\":[],\"handles\":[]}");
+        JsonObject legacy = arguments("{\"source\":\"return schema.list();\",\"handles\":[]}");
         JsonObject labeled = legacy.deepCopy();
         labeled.addProperty("title", "Inspect catalog");
         labeled.addProperty("description", "Read declared game data");

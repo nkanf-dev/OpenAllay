@@ -123,7 +123,6 @@ def verify_package(path: Path, loader: str, lock: dict, allow_unpinned: bool = F
         require(not any(name.startswith("dev/openallay/builder/") for name in entries),
                 "Builder classes were flattened into core instead of independently nested")
         provenance = json.loads(archive.read(PROVENANCE))
-        require(provenance["schemaVersion"] == 1, "Unknown source provenance schema")
         require(provenance["source"]["repository"] == lock["source"]["repository"], "Source repository mismatch")
         require(provenance["project"] == lock["project"], "Extension source project mismatch")
         require(provenance["version"] == lock["version"], "Extension provenance version mismatch")

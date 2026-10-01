@@ -1,6 +1,5 @@
 package dev.openallay.world;
 
-import dev.openallay.context.DataAuthority;
 import dev.openallay.context.DataCompleteness;
 import dev.openallay.context.EvidenceMetadata;
 import dev.openallay.model.CancellationSignal;
@@ -266,15 +265,8 @@ public final class MinecraftClientWorldObservationCoordinator
     }
 
     private EvidenceMetadata evidence(DataCompleteness completeness, String source) {
-        return new EvidenceMetadata(
-                DataAuthority.CLIENT_VISIBLE,
-                completeness,
-                Instant.now(),
-                source,
-                "minecraft:client_world_observation",
-                platform.gameVersion(),
-                platform.platformName(),
-                Map.of("dimension", expectedDimension));
+        return WorldObservationEvidence.client(
+                platform, completeness, Instant.now(), source, expectedDimension);
     }
 
     private static WorldPosition position(WorldBounds bounds, long index) {

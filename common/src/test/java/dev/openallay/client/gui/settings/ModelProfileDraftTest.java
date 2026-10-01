@@ -113,7 +113,7 @@ final class ModelProfileDraftTest {
         assertEquals("128000", reopened.automaticMaxOutputTokens());
         assertFalse(reopened.dirtyComparedTo(saved));
         String encoded = new dev.openallay.model.config.ModelProfilesConfigWriter().encode(
-                new dev.openallay.model.config.ModelProfilesConfig(2, "main", java.util.List.of(saved)));
+                new dev.openallay.model.config.ModelProfilesConfig("main", java.util.List.of(saved)));
         assertFalse(encoded.contains("maxOutputTokens"));
         var refreshed = automatic.withAutomaticOutput(64_000);
         assertEquals("64000", refreshed.maxOutputTokens());

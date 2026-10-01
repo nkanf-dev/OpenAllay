@@ -3,14 +3,12 @@ package dev.openallay.bridge.protocol;
 import java.util.UUID;
 
 public record RemoteToolResultChunkPayload(
-        int version,
         UUID correlationId,
         int index,
         int total,
         String contentHash,
         String base64Data) {
     public RemoteToolResultChunkPayload {
-        BridgeProtocol.requireVersion(version);
         java.util.Objects.requireNonNull(correlationId, "correlationId");
         if (index < 0 || total <= 0 || index >= total) {
             throw new IllegalArgumentException("Invalid result chunk position");

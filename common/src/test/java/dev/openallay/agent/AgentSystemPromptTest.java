@@ -31,6 +31,16 @@ final class AgentSystemPromptTest {
     }
 
     @Test
+    void separatesComputationsFromGameCoverageAndKeepsWorkspaceRequestScoped() {
+        String prompt = AgentSystemPrompt.compose("");
+        assertTrue(prompt.contains("ordinary computations"));
+        assertTrue(prompt.contains("General knowledge and ordinary reasoning do not require a data read"));
+        assertTrue(prompt.contains("Distinguish execution status from data coverage"));
+        assertTrue(prompt.contains("Workspace handles belong only to the active request"));
+        assertFalse(prompt.contains("Never announce a Tool or Skill result as successful when it says failed, partial"));
+    }
+
+    @Test
     void everyExecutionModeRequestsBothPlayerLanguageIntentFields() {
         String contract = CoreJavascriptContract.render(MinecraftAgentHostGraph.declaredOnlyCatalog());
         for (boolean unrestricted : new boolean[] {false, true}) {

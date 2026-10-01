@@ -20,7 +20,6 @@ public final class RemoteCapabilityStore {
 
     private static CapabilityPayload empty() {
         return new CapabilityPayload(
-                dev.openallay.bridge.protocol.BridgeProtocol.VERSION,
                 List.of(), false, 0, 0, 0, "");
     }
 }

@@ -4,17 +4,11 @@ import com.google.gson.JsonObject;
 
 /** Strict outer protocol before dispatch to a registered type decoder. */
 public record RichComponentEnvelope(
-        int schemaVersion,
         String type,
         JsonObject properties,
         String fallbackText,
         String narration) {
-    public static final int SCHEMA_VERSION = 1;
-
     public RichComponentEnvelope {
-        if (schemaVersion != SCHEMA_VERSION) {
-            throw new IllegalArgumentException("unsupported rich component schema");
-        }
         if (type == null || !type.matches("[a-z][a-z0-9_]*")) {
             throw new IllegalArgumentException("rich component type is invalid");
         }

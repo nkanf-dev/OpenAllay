@@ -21,7 +21,6 @@ import java.util.UUID;
 
 /** Dedicated local credential database; no secret is exposed through observable settings state. */
 public final class LocalCredentialStore implements CredentialResolver, AutoCloseable {
-    private static final int SCHEMA_VERSION = 1;
     private static final Set<PosixFilePermission> OWNER_ONLY = EnumSet.of(
             PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE);
 
@@ -174,11 +173,12 @@ public final class LocalCredentialStore implements CredentialResolver, AutoClose
         } catch (IOException failure) {
             throw new SQLException("credential directory unavailable", failure);
         }
+        boolean create = !Files.exists(database);
         Connection connection = DriverManager.getConnection("jdbc:sqlite:" + database);
         boolean success = false;
         try {
+            ensureSchema(connection, create);
             configure(connection);
-            ensureSchema(connection);
             hardenPermissions();
             success = true;
             return connection;
@@ -196,27 +196,30 @@ public final class LocalCredentialStore implements CredentialResolver, AutoClose
         }
     }
 
-    private static void ensureSchema(Connection connection) throws SQLException {
-        boolean metadataExists = tableExists(connection, "schema_metadata");
-        boolean credentialsExist = tableExists(connection, "credentials");
-        if (!metadataExists && !credentialsExist) {
-            if (!applicationTables(connection).isEmpty()) {
-                throw new SQLException("unrecognized credential database");
-            }
+    private static void ensureSchema(Connection connection, boolean create) throws SQLException {
+        Set<String> tables = applicationTables(connection);
+        if (create && tables.isEmpty()) {
             createSchema(connection);
             return;
         }
-        if (!metadataExists || !credentialsExist || !applicationTables(connection).equals(
-                Set.of("schema_metadata", "credentials"))) {
+        if (!tables.equals(Set.of("credentials"))) {
             throw new SQLException("unrecognized credential database");
         }
-        try (Statement statement = connection.createStatement()) {
-            try (ResultSet result = statement.executeQuery(
-                    "select schema_version from schema_metadata where singleton = 1")) {
-                if (!result.next() || result.getInt(1) != SCHEMA_VERSION || result.next()) {
-                    throw new SQLException("unsupported credential schema");
+        Set<String> columns = new HashSet<>();
+        try (Statement statement = connection.createStatement();
+                ResultSet result = statement.executeQuery("pragma table_xinfo(credentials)")) {
+            while (result.next()) {
+                if (result.getString("dflt_value") != null || result.getInt("hidden") != 0) {
+                    throw new SQLException("unrecognized credential database");
                 }
+                columns.add(result.getString("name") + ":" + result.getString("type")
+                        + ":" + result.getInt("notnull") + ":" + result.getInt("pk"));
             }
+        }
+        if (!columns.equals(Set.of(
+                "credential_id:TEXT:0:1", "secret_value:BLOB:1:0",
+                "created_at:TEXT:1:0", "updated_at:TEXT:1:0"))) {
+            throw new SQLException("unrecognized credential database");
         }
     }
 
@@ -225,12 +228,6 @@ public final class LocalCredentialStore implements CredentialResolver, AutoClose
         connection.setAutoCommit(false);
         try (Statement statement = connection.createStatement()) {
             statement.execute("""
-                    create table schema_metadata(
-                        singleton integer primary key check(singleton = 1),
-                        schema_version integer not null
-                    )
-                    """);
-            statement.execute("""
                     create table credentials(
                         credential_id text primary key,
                         secret_value blob not null,
@@ -238,8 +235,6 @@ public final class LocalCredentialStore implements CredentialResolver, AutoClose
                         updated_at text not null
                     )
                     """);
-            statement.execute("insert into schema_metadata(singleton, schema_version) "
-                    + "values (1, " + SCHEMA_VERSION + ")");
             connection.commit();
         } catch (SQLException failure) {
             try {
@@ -250,16 +245,6 @@ public final class LocalCredentialStore implements CredentialResolver, AutoClose
             throw failure;
         } finally {
             connection.setAutoCommit(autoCommit);
-        }
-    }
-
-    private static boolean tableExists(Connection connection, String table) throws SQLException {
-        try (var query = connection.prepareStatement(
-                "select 1 from sqlite_master where type = 'table' and name = ?")) {
-            query.setString(1, table);
-            try (ResultSet result = query.executeQuery()) {
-                return result.next();
-            }
         }
     }
 

@@ -1,12 +1,11 @@
 package dev.openallay.guide.history;
 
+import dev.openallay.model.ModelMessage;
+import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 public interface GuideHistoryAccess {
-    CompletableFuture<GuideHistoryLoad> load(GuideHistoryScope scope);
-
-    CompletableFuture<Void> save(GuideHistoryPartition partition);
-
     default CompletableFuture<java.util.Optional<GuideHistoryMetadata>> metadata(
             GuideHistoryScope scope) {
         return unsupported();
@@ -17,6 +16,12 @@ public interface GuideHistoryAccess {
     }
 
     default CompletableFuture<GuideHistoryContextSeed> context(GuideHistoryContextRequest request) {
+        return unsupported();
+    }
+
+    /** Original request transcript; absent snapshots are empty, never reconstructed from display rows. */
+    default CompletableFuture<List<ModelMessage>> requestContext(
+            GuideHistoryScope scope, UUID requestId) {
         return unsupported();
     }
 

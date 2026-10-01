@@ -5,8 +5,11 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import dev.openallay.context.ToolInvocationContext;
+import com.google.gson.Gson;
+import dev.openallay.context.EvidenceBearing;
 import dev.openallay.context.EvidenceMetadata;
+import dev.openallay.context.SourceObservation;
+import dev.openallay.context.ToolInvocationContext;
 import dev.openallay.model.CancellationSignal;
 import dev.openallay.script.RhinoJavascriptRuntime;
 import dev.openallay.script.command.CommandCapabilityConfig;
@@ -19,17 +22,16 @@ import dev.openallay.script.workspace.AgentResultWorkspaceRegistry;
 import dev.openallay.script.workspace.JavascriptResultPresenter;
 import dev.openallay.testing.JavascriptAgentTestFixtures;
 import dev.openallay.world.WorldEntitySnapshot;
-import dev.openallay.world.WorldEntitySummary;
 import dev.openallay.world.EntityObservation;
-import dev.openallay.world.WorldBlockSnapshot;
 import dev.openallay.world.WorldObservationCoverage;
-import dev.openallay.world.WorldPosition;
-import dev.openallay.world.WorldBounds;
 import dev.openallay.world.BlockObservation;
 import dev.openallay.world.WorldObservationRequest;
 import dev.openallay.world.WorldObservationCoordinator;
 import dev.openallay.world.WorldObservationRuntime;
 import dev.openallay.tool.ToolResult;
+import dev.openallay.trace.replay.ToolResultNormalizer;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -38,8 +40,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
-/** Deterministic acceptance for the three product-level JavaScript analysis tasks. */
+/** Deterministic acceptance for JavaScript computations and captured Minecraft analysis. */
 final class RunJavascriptAcceptanceTest {
     private record DirectModule(int value) {}
 
@@ -134,6 +137,88 @@ final class RunJavascriptAcceptanceTest {
     }
 
     @Test
+    void ordinaryJavascriptComputationPublishesAndNormalizesWithEmptySources() {
+        ToolResult.Success<RunJavascriptTool.Output> success = assertInstanceOf(
+                ToolResult.Success.class,
+                tool.invokeAsync(context, new RunJavascriptTool.Input("""
+                        const squares = [1, 2, 3, 4, 5, 6]
+                          .filter(value => value % 2 === 0)
+                          .map(value => value * value);
+                        return {squares, total: squares.reduce((sum, value) => sum + value, 0)};
+                        """, List.of()), new CancellationSignal()).join());
+
+        var canonical = workspaces.open(context.correlationId())
+                .open(success.value().handle()).getAsJsonObject();
+        assertEquals(56, canonical.get("total").getAsInt());
+        assertEquals(List.of(4, 16, 36), canonical.getAsJsonArray("squares").asList().stream()
+                .map(value -> value.getAsInt()).toList());
+        assertTrue(success.value().sources().isEmpty());
+        assertTrue(workspaces.open(context.correlationId()).sources(success.value().handle()).isEmpty());
+        assertFalse(success.value().modelText().isBlank());
+        assertFalse(success.value().modelText().contains("source="));
+        assertFalse(EvidenceBearing.class.isAssignableFrom(RunJavascriptTool.Output.class));
+        var normalized = new ToolResultNormalizer(new Gson()).normalize(success, RunJavascriptTool.Output.class);
+        assertEquals("success", normalized.get("status").getAsString());
+        assertTrue(normalized.getAsJsonObject("value").getAsJsonArray("sources").isEmpty());
+        assertFalse(normalized.getAsJsonObject("value").has("evidence"));
+    }
+
+    @Test
+    void authorizedJavaNioComputationWithoutMinecraftDataRunsItsSideEffectExactlyOnce(
+            @TempDir Path directory) throws Exception {
+        Path file = directory.resolve("values.txt");
+        Files.writeString(file, "2\n3\n");
+        ToolInvocationContext base = ToolInvocationContext.developmentConsole("javascript-nio");
+        ToolInvocationContext authorized = new ToolInvocationContext(
+                base.correlationId(), base.capturedAt(), base.caller(), base.player(), base.registries(),
+                base.recipes(), base.observableGameState(), base.metrics(), true);
+        String source = """
+                const Files = Java.type('java.nio.file.Files');
+                const Path = Java.type('java.nio.file.Path');
+                const StandardOpenOption = Java.type('java.nio.file.StandardOpenOption');
+                const file = Path.of(%s);
+                Files.writeString(file, "7\\n", StandardOpenOption.APPEND);
+                const values = String(Files.readString(file)).trim().split(/\\s+/).map(Number);
+                return {count: values.length, sum: values.reduce((sum, value) => sum + value, 0)};
+                """.formatted(new Gson().toJson(file.toString()));
+
+        ToolResult.Success<RunJavascriptTool.Output> success = assertInstanceOf(
+                ToolResult.Success.class,
+                tool.invokeAsync(authorized, new RunJavascriptTool.Input(source, List.of()),
+                        new CancellationSignal()).join());
+
+        assertEquals(3, success.value().preview().getAsJsonObject().get("count").getAsInt());
+        assertEquals(12, success.value().preview().getAsJsonObject().get("sum").getAsInt());
+        assertEquals("2\n3\n7\n", Files.readString(file), "the successful operation must not be retried");
+        assertTrue(success.value().sources().isEmpty());
+        var normalized = new ToolResultNormalizer(new Gson()).normalize(success, RunJavascriptTool.Output.class);
+        assertEquals("success", normalized.get("status").getAsString());
+        assertEquals(1, workspaces.open(authorized.correlationId()).size());
+        assertTrue(workspaces.open(authorized.correlationId()).sources(success.value().handle()).isEmpty());
+        tool.closeRequestScope(authorized.correlationId());
+    }
+
+    @Test
+    void pureWorkspaceResultCanBeReopenedAndComputedWithEmptySources() {
+        ToolResult.Success<RunJavascriptTool.Output> first = assertInstanceOf(
+                ToolResult.Success.class,
+                tool.invokeAsync(context, new RunJavascriptTool.Input(
+                        "return [2, 3, 5];", List.of()), new CancellationSignal()).join());
+        ToolResult.Success<RunJavascriptTool.Output> second = assertInstanceOf(
+                ToolResult.Success.class,
+                tool.invokeAsync(context, new RunJavascriptTool.Input(
+                        "return workspace.open('" + first.value().handle() + "').map(value => value * value);",
+                        List.of(first.value().handle())), new CancellationSignal()).join());
+
+        assertEquals(List.of(4, 9, 25), workspaces.open(context.correlationId())
+                .open(second.value().handle()).getAsJsonArray().asList().stream()
+                .map(value -> value.getAsInt()).toList());
+        assertTrue(first.value().sources().isEmpty());
+        assertTrue(second.value().sources().isEmpty());
+        assertTrue(workspaces.open(context.correlationId()).sources(second.value().handle()).isEmpty());
+    }
+
+    @Test
     void capturesOneDetachedProjectionPerRequestAcrossJavascriptCalls() {
         AtomicInteger captures = new AtomicInteger();
         JavascriptDataModuleRegistry extensions = new JavascriptDataModuleRegistry();
@@ -219,8 +304,7 @@ final class RunJavascriptAcceptanceTest {
                                 context,
                                 new RunJavascriptTool.Input(
                                         "return mc.extensions['test:good'].value;",
-                                        List.of(),
-                                        List.of("extensions")),
+                                        List.of()),
                                 new CancellationSignal())
                         .join());
         assertEquals(7, success.value().preview().getAsInt());
@@ -231,8 +315,7 @@ final class RunJavascriptAcceptanceTest {
                                 context,
                                 new RunJavascriptTool.Input(
                                         "return mc.extensionDiagnostics;",
-                                        List.of(),
-                                        List.of("extensionDiagnostics")),
+                                        List.of()),
                                 new CancellationSignal())
                         .join());
         assertEquals(
@@ -246,15 +329,14 @@ final class RunJavascriptAcceptanceTest {
     }
 
     @Test
-    void exposesOnlyExplicitlySelectedMinecraftRootsToRhino() {
+    void automaticallyExposesCapturedMinecraftRootsToRhino() {
         ToolResult.Success<RunJavascriptTool.Output> success = assertInstanceOf(
                 ToolResult.Success.class,
                 tool.invokeAsync(
                                 context,
                                 new RunJavascriptTool.Input(
-                                        "return {items: mc.items.length, recipes: typeof mc.recipes};",
-                                        List.of(),
-                                        List.of("items")),
+                                        "return {items: mc.items.length, recipes: mc.recipes.length};",
+                                        List.of()),
                                 new CancellationSignal())
                         .join());
         var canonical = workspaces
@@ -262,24 +344,27 @@ final class RunJavascriptAcceptanceTest {
                 .open(success.value().handle())
                 .getAsJsonObject();
 
-        assertTrue(canonical.get("items").getAsInt() > 0);
-        assertEquals("undefined", canonical.get("recipes").getAsString());
+        assertEquals(context.registries().orElseThrow().entries().size(), canonical.get("items").getAsInt());
+        assertEquals(context.recipes().orElseThrow().recipes().size(), canonical.get("recipes").getAsInt());
+        assertEquals(List.of(context.registries().orElseThrow().evidence(),
+                        context.recipes().orElseThrow().evidence()),
+                success.value().sources().stream().map(SourceObservation::evidence).toList());
     }
 
     @Test
-    void barePlayerAndGameSelectionsReadTheirDocumentedPositionPaths() {
+    void playerAndGameRootsReadTheirDocumentedPositionPathsWithoutPredeclaration() {
         for (String root : List.of("player", "game")) {
             String path = "player".equals(root) ? "mc.player.position" : "mc.game.player.player.position";
             ToolResult.Success<RunJavascriptTool.Output> success = assertInstanceOf(
                     ToolResult.Success.class,
                     tool.invokeAsync(context, new RunJavascriptTool.Input(
-                            "return " + path + ";", List.of(), List.of(root)), new CancellationSignal()).join());
+                            "return " + path + ";", List.of()), new CancellationSignal()).join());
             var position = workspaces.open(context.correlationId()).open(success.value().handle()).getAsJsonObject();
             var expected = context.player().orElseThrow().position();
             assertEquals(expected.x(), position.get("x").getAsInt());
             assertEquals(expected.y(), position.get("y").getAsInt());
             assertEquals(expected.z(), position.get("z").getAsInt());
-            assertFalse(success.value().evidence().isEmpty());
+            assertFalse(success.value().sources().isEmpty());
         }
     }
 
@@ -289,7 +374,7 @@ final class RunJavascriptAcceptanceTest {
                 ToolResult.Failure.class,
                 tool.invokeAsync(context, new RunJavascriptTool.Input(
                         "var module = require('openallay:crafting'); var count = mc.items.length; return module;",
-                        List.of(), List.of("items")), new CancellationSignal()).join());
+                        List.of()), new CancellationSignal()).join());
         assertEquals("javascript_result_invalid", failure.code());
         assertTrue(failure.message().contains("Return JSON data from the operation"));
         assertTrue(failure.message().contains("not the function or module itself"));
@@ -299,41 +384,37 @@ final class RunJavascriptAcceptanceTest {
                 ToolResult.Success.class,
                 tool.invokeAsync(context, new RunJavascriptTool.Input(
                         "var module = require('openallay:crafting'); return {count: mc.items.length};",
-                        List.of(), List.of("items")), new CancellationSignal()).join());
+                        List.of()), new CancellationSignal()).join());
         assertTrue(corrected.value().preview().getAsJsonObject().get("count").getAsInt() > 0);
-        assertFalse(corrected.value().evidence().isEmpty());
+        assertFalse(corrected.value().sources().isEmpty());
     }
 
     @Test
-    void reportsOnlyEvidenceForRootsActuallyReadByThisInvocation() {
+    void reportsOnlySourcesForRootsActuallyReadByThisInvocation() {
         ToolResult.Success<RunJavascriptTool.Output> items = assertInstanceOf(
                 ToolResult.Success.class,
                 tool.invokeAsync(
                                 context,
-                                new RunJavascriptTool.Input(
-                                        "return mc.items.length;", List.of(), List.of("items")),
+                                new RunJavascriptTool.Input("return mc.items.length;", List.of()),
                                 new CancellationSignal())
                         .join());
-        assertEquals(
-                List.of(context.registries().orElseThrow().evidence()),
-                items.value().evidence());
-        assertTrue(items.value().modelText().contains(
-                "source=" + context.registries().orElseThrow().evidence().sourceId()));
-        assertFalse(items.value().modelText().contains(
-                "source=" + context.player().orElseThrow().evidence().sourceId()));
+        EvidenceMetadata expected = context.registries().orElseThrow().evidence();
+        assertEquals(List.of(new SourceObservation(expected)), items.value().sources());
+        assertFalse(items.value().modelText().contains("source="));
 
-        ToolResult.Failure<RunJavascriptTool.Output> noRead = assertInstanceOf(
-                ToolResult.Failure.class,
+        ToolResult.Success<RunJavascriptTool.Output> noRead = assertInstanceOf(
+                ToolResult.Success.class,
                 tool.invokeAsync(
                                 context,
-                                new RunJavascriptTool.Input("return 1;", List.of(), List.of("items")),
+                                new RunJavascriptTool.Input("return 1;", List.of()),
                                 new CancellationSignal())
                         .join());
-        assertEquals("context_evidence_unavailable", noRead.code());
+        assertEquals(1, noRead.value().preview().getAsInt());
+        assertTrue(noRead.value().sources().isEmpty());
     }
 
     @Test
-    void schemaDiscoveryIsACompleteEvidenceBearingMetadataResult() {
+    void schemaDiscoverySucceedsWithoutClaimingCapturedDataSources() {
         ToolResult.Success<RunJavascriptTool.Output> listed = assertInstanceOf(
                 ToolResult.Success.class,
                 tool.invokeAsync(
@@ -341,18 +422,28 @@ final class RunJavascriptAcceptanceTest {
                                 new RunJavascriptTool.Input("return schema.list();", List.of()),
                                 new CancellationSignal())
                         .join());
-        assertEquals(List.of("openallay:javascript_host_catalog"),
-                listed.value().evidence().stream().map(EvidenceMetadata::sourceId).toList());
-        assertTrue(listed.value().modelText().contains("openallay:javascript_host_catalog"));
+        assertFalse(workspaces.open(context.correlationId())
+                .open(listed.value().handle()).getAsJsonArray().isEmpty());
+        assertTrue(listed.value().sources().isEmpty());
+        assertFalse(listed.value().modelText().contains("source="));
+    }
 
-        ToolResult.Failure<RunJavascriptTool.Output> noFact = assertInstanceOf(
-                ToolResult.Failure.class,
-                tool.invokeAsync(
-                                context,
-                                new RunJavascriptTool.Input("return 1;", List.of()),
-                                new CancellationSignal())
-                        .join());
-        assertEquals("context_evidence_unavailable", noFact.code());
+    @Test
+    void requestMetadataAndCapabilityInspectionDoNotManufactureSources() {
+        ToolResult.Success<RunJavascriptTool.Output> success = assertInstanceOf(
+                ToolResult.Success.class,
+                tool.invokeAsync(context, new RunJavascriptTool.Input("""
+                        return {
+                          caller: mc.caller.displayName,
+                          metrics: mc.metrics,
+                          capturedAt: mc.capturedAt,
+                          capabilities: mc.capabilities
+                        };
+                        """, List.of()), new CancellationSignal()).join());
+
+        var stored = workspaces.open(context.correlationId()).open(success.value().handle()).getAsJsonObject();
+        assertEquals(context.caller().displayName(), stored.get("caller").getAsString());
+        assertTrue(success.value().sources().isEmpty());
     }
 
     @Test
@@ -362,7 +453,7 @@ final class RunJavascriptAcceptanceTest {
                 tool.invokeAsync(
                                 context,
                                 new RunJavascriptTool.Input(
-                                        "return mc.items.length;", List.of(), List.of("items")),
+                                        "return mc.items.length;", List.of()),
                                 new CancellationSignal())
                         .join());
         ToolResult.Success<RunJavascriptTool.Output> second = assertInstanceOf(
@@ -370,11 +461,12 @@ final class RunJavascriptAcceptanceTest {
                 tool.invokeAsync(
                                 context,
                                 new RunJavascriptTool.Input(
-                                        "return workspace.open(\"" + first.value().handle() + "\");",
-                                        List.of(first.value().handle()), List.of("recipes")),
+                                        "workspace.open(\"" + first.value().handle() + "\"); "
+                                                + "return workspace.open(\"" + first.value().handle() + "\");",
+                                        List.of(first.value().handle())),
                                 new CancellationSignal())
                         .join());
-        assertEquals(first.value().evidence(), second.value().evidence());
+        assertEquals(first.value().sources(), second.value().sources());
     }
 
     @Test
@@ -417,15 +509,15 @@ final class RunJavascriptAcceptanceTest {
                 ToolResult.Success.class,
                 observed.invokeAsync(context, new RunJavascriptTool.Input(
                         "return world.inspect({from:{x:0,y:0,z:0},to:{x:0,y:0,z:0}}).coverage.complete;",
-                        List.of(), List.of("world")), new CancellationSignal()).join());
-        assertEquals(List.of(worldEvidence), success.value().evidence());
+                        List.of()), new CancellationSignal()).join());
+        assertEquals(List.of(new SourceObservation(worldEvidence)), success.value().sources());
     }
 
     @Test
-    void acceptsCommandsAsAnExplicitScriptBindingRatherThanAnMcRoot() {
+    void usesEnabledCommandsDirectlyWithoutRootPredeclaration() {
         CommandCapabilityRuntime commands = new CommandCapabilityRuntime();
         commands.replace(new CommandCapabilityConfig(
-                CommandCapabilityConfig.SCHEMA_VERSION, true));
+                true));
         UUID actor = UUID.fromString("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
         commands.capture(
                 context.correlationId(),
@@ -445,7 +537,7 @@ final class RunJavascriptAcceptanceTest {
         ToolResult<RunJavascriptTool.Output> commandResult = commandTool.invokeAsync(
                         context,
                         new RunJavascriptTool.Input(
-                                "return commands.run('/version');", List.of(), List.of("commands")),
+                                "return commands.run('/version');", List.of()),
                         new CancellationSignal())
                 .join();
         if (commandResult instanceof ToolResult.Failure<RunJavascriptTool.Output> failure) {
@@ -466,19 +558,22 @@ final class RunJavascriptAcceptanceTest {
     }
 
     @Test
-    void rejectsAnExplicitCommandsBindingWhenTheRequestCapabilityIsDisabled() {
+    void disabledCommandsRemainUndefinedAndFailOnlyWhenAccessed() {
+        ToolResult.Success<RunJavascriptTool.Output> availability = assertInstanceOf(
+                ToolResult.Success.class,
+                tool.invokeAsync(context, new RunJavascriptTool.Input(
+                        "return typeof commands;", List.of()), new CancellationSignal()).join());
+        assertEquals("undefined", availability.value().preview().getAsString());
+        assertTrue(availability.value().sources().isEmpty());
+
         ToolResult.Failure<RunJavascriptTool.Output> failure = assertInstanceOf(
                 ToolResult.Failure.class,
                 tool.invokeAsync(
                                 context,
-                                new RunJavascriptTool.Input(
-                                        "return commands.list();",
-                                        List.of(),
-                                        List.of("commands")),
+                                new RunJavascriptTool.Input("return commands.list();", List.of()),
                                 new CancellationSignal())
                         .join());
-
-        assertEquals("javascript_root_unavailable", failure.code());
+        assertEquals("javascript_error", failure.code());
     }
 
     private com.google.gson.JsonElement invoke(String source) {
@@ -489,7 +584,7 @@ final class RunJavascriptAcceptanceTest {
                 .join();
         ToolResult.Success<RunJavascriptTool.Output> success =
                 assertInstanceOf(ToolResult.Success.class, raw);
-        assertFalse(success.value().evidence().isEmpty());
+        assertFalse(success.value().sources().isEmpty());
         return workspaces.open(context.correlationId()).open(success.value().handle());
     }
 

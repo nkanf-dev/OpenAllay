@@ -1,5 +1,10 @@
 # SKMB-2026-07-24-026: Direct Rhino Host Objects
 
+> Subsequent decision: [041](2026-10-01-041-execution-context-simplification.md)
+> authorizes a breaking simplification of explicit top-level root masking; lazy detached wrapping is retained.
+> Its implementation/verification is tracked separately; this document retains
+> the historical decision and is not proof that the new behavior is delivered.
+
 - Status: accepted
 - Date: 2026-07-24
 - Scope: Rhino input binding, request host graph, workspace reopening, and extension data ABI

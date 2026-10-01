@@ -25,7 +25,7 @@ final class ModelProfilesConfigWriterTest {
         String encoded = new ModelProfilesConfigWriter().encode(config);
         JsonObject root = JsonParser.parseString(encoded).getAsJsonObject();
 
-        assertEquals(List.of("schemaVersion", "defaultProfileId", "profiles"),
+        assertEquals(List.of("defaultProfileId", "profiles"),
                 root.keySet().stream().toList());
         assertEquals(List.of(
                         "id", "displayName", "enabled", "protocol", "baseUrl", "model",
@@ -61,7 +61,7 @@ final class ModelProfilesConfigWriterTest {
                 source.requestTimeout(),
                 null);
         String encoded = new ModelProfilesConfigWriter().encode(new ModelProfilesConfig(
-                ModelProfilesConfig.SCHEMA_VERSION, minimal.id(), List.of(minimal)));
+                minimal.id(), List.of(minimal)));
         JsonObject profile = JsonParser.parseString(encoded).getAsJsonObject()
                 .getAsJsonArray("profiles").get(0).getAsJsonObject();
 
@@ -80,10 +80,10 @@ final class ModelProfilesConfigWriterTest {
                 ModelProtocol.OPENAI_CHAT, URI.create("https://provider.example/v1/"),
                 "gpt-6-luna", "env:MODEL_KEY", 1_000_000, null,
                 Duration.ofSeconds(30), Duration.ofSeconds(300), null);
-        var config = new ModelProfilesConfig(2, profile.id(), List.of(profile));
+        var config = new ModelProfilesConfig(profile.id(), List.of(profile));
         String encoded = new ModelProfilesConfigWriter().encode(config);
         JsonObject json = JsonParser.parseString(encoded).getAsJsonObject();
-        assertEquals(2, json.get("schemaVersion").getAsInt());
+        assertFalse(json.has("schemaVersion"));
         assertFalse(json.getAsJsonArray("profiles").get(0).getAsJsonObject().has("maxOutputTokens"));
         var loaded = success(new ModelProfilesConfigLoader().load(new StringReader(encoded),
                 Map.of("MODEL_KEY", "fixture-key"))).value();
@@ -109,7 +109,7 @@ final class ModelProfilesConfigWriterTest {
                 new ModelProfileDefinition.MetadataProvenance(
                         "openrouter", "vendor/model", Instant.parse("2026-07-18T00:00:00Z")));
         return new ModelProfilesConfig(
-                ModelProfilesConfig.SCHEMA_VERSION, definition.id(), List.of(definition));
+                definition.id(), List.of(definition));
     }
 
     @SuppressWarnings("unchecked")

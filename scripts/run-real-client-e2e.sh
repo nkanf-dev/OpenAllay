@@ -90,7 +90,6 @@ else
 import json, pathlib, sys
 path = pathlib.Path(sys.argv[1])
 path.write_text(json.dumps({
-    "schemaVersion": 2,
     "defaultProfileId": "e2e-fixture",
     "profiles": [{
         "id": "e2e-fixture",

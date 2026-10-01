@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.JsonObject;
-import dev.openallay.bridge.protocol.BridgeProtocol;
 import dev.openallay.bridge.protocol.CapabilityPayload;
 import dev.openallay.bridge.protocol.RemoteToolCallPayload;
 import dev.openallay.bridge.protocol.RemoteToolRequestClosePayload;
@@ -23,7 +22,6 @@ final class RemoteToolExecutorAliasTest {
     void resolvesEncodedAndCanonicalAliasesOnlyWithinTheServerPrefix() {
         RemoteCapabilityStore capabilities = new RemoteCapabilityStore();
         capabilities.replace(new CapabilityPayload(
-                BridgeProtocol.VERSION,
                 List.of(new CapabilityPayload.RemoteToolCapability(
                         "openallay:inspect_game_state",
                         "Inspect game state",
@@ -187,7 +185,6 @@ final class RemoteToolExecutorAliasTest {
     private static RemoteCapabilityStore capabilities() {
         RemoteCapabilityStore capabilities = new RemoteCapabilityStore();
         capabilities.replace(new CapabilityPayload(
-                BridgeProtocol.VERSION,
                 List.of(new CapabilityPayload.RemoteToolCapability(
                         "openallay:inspect_game_state",
                         "Inspect game state",

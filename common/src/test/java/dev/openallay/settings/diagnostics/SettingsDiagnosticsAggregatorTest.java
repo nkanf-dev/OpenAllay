@@ -27,7 +27,6 @@ import dev.openallay.guide.GuideToolMessage;
 import dev.openallay.guide.GuideToolStatus;
 import dev.openallay.guide.GuideTopology;
 import dev.openallay.guide.history.GuideHistoryActivity;
-import dev.openallay.guide.history.GuideHistoryPartition;
 import dev.openallay.guide.history.GuideHistoryCursor;
 import dev.openallay.model.ModelUsage;
 import dev.openallay.model.config.ModelProfileDefinition;
@@ -78,7 +77,6 @@ final class SettingsDiagnosticsAggregatorTest {
 
         SettingsDiagnosticsSnapshot.DebugSettingsDiagnostics technical =
                 debug.debug().orElseThrow();
-        assertEquals(GuideHistoryPartition.SCHEMA_VERSION, technical.databaseSchema());
         assertEquals("https://provider.example:8443",
                 technical.models().getFirst().endpointAuthority());
         assertEquals(REQUEST,
@@ -131,7 +129,7 @@ final class SettingsDiagnosticsAggregatorTest {
                         available.settingsGeneration(), available.models(),
                         available.capabilities(), available.recipes(), Optional.of(guide),
                         available.historyActivity(), available.historyScopeKind(),
-                        available.databaseSchema(), available.sources());
+                        available.sources());
 
         SettingsDiagnosticsSnapshot normal =
                 new SettingsDiagnosticsAggregator().snapshot(false, pagedInputs);
@@ -167,7 +165,6 @@ final class SettingsDiagnosticsAggregatorTest {
                         Optional.empty(),
                         GuideHistoryActivity.idle(),
                         SettingsDiagnosticsAggregator.HistoryScopeKind.NONE,
-                        GuideHistoryPartition.SCHEMA_VERSION,
                         List.of()));
 
         assertEquals(FriendlyStatus.NOT_CONNECTED, snapshot.cards().stream()
@@ -209,7 +206,6 @@ final class SettingsDiagnosticsAggregatorTest {
                         Optional.of(unavailable),
                         GuideHistoryActivity.idle(),
                         available.historyScopeKind(),
-                        available.databaseSchema(),
                         available.sources()));
 
         assertEquals(FriendlyStatus.UNAVAILABLE, snapshot.cards().stream()
@@ -249,7 +245,7 @@ final class SettingsDiagnosticsAggregatorTest {
         var unknown = new SettingsDiagnosticsAggregator.DiagnosticsInputs(
                 prior.settingsGeneration(), prior.models(), prior.capabilities(), prior.recipes(),
                 prior.guide(), GuideHistoryActivity.idle(), prior.historyScopeKind(),
-                prior.databaseSchema(), List.of(), false, false, null);
+                List.of(), false, false, null);
         var snapshot = new SettingsDiagnosticsAggregator().snapshot(true, unknown);
         var knowledge = snapshot.cards().stream().filter(card -> card.domain() == Domain.KNOWLEDGE)
                 .findFirst().orElseThrow();
@@ -266,7 +262,7 @@ final class SettingsDiagnosticsAggregatorTest {
         var empty = new SettingsDiagnosticsAggregator.DiagnosticsInputs(
                 prior.settingsGeneration(), prior.models(), prior.capabilities(), prior.recipes(),
                 prior.guide(), GuideHistoryActivity.idle(), prior.historyScopeKind(),
-                prior.databaseSchema(), List.of(), true, false, 900L);
+                List.of(), true, false, 900L);
         var known = new SettingsDiagnosticsAggregator().snapshot(true, empty);
         var knownKnowledge = known.cards().stream().filter(card -> card.domain() == Domain.KNOWLEDGE)
                 .findFirst().orElseThrow();
@@ -284,7 +280,6 @@ final class SettingsDiagnosticsAggregatorTest {
                 Optional.of(guide()),
                 new GuideHistoryActivity(2, false),
                 SettingsDiagnosticsAggregator.HistoryScopeKind.MULTIPLAYER_SERVER,
-                GuideHistoryPartition.SCHEMA_VERSION,
                 List.of(new SettingsDiagnosticsAggregator.SourceStatus(
                         "viewer:rei",
                         "generation-7",
@@ -308,7 +303,7 @@ final class SettingsDiagnosticsAggregatorTest {
                 Duration.ofSeconds(60),
                 null);
         ModelProfilesConfig config = new ModelProfilesConfig(
-                ModelProfilesConfig.SCHEMA_VERSION, "primary", List.of(definition));
+                "primary", List.of(definition));
         return ModelProfileSettingsView.from(
                 config,
                 List.of(new ModelProfileSettingsView.Resolution(
@@ -366,8 +361,6 @@ final class SettingsDiagnosticsAggregatorTest {
                 2,
                 "a".repeat(64),
                 "model-main",
-                1,
-                1,
                 Instant.EPOCH,
                 ContextCheckpoint.Status.SUCCEEDED,
                 "reasoning secret-value",

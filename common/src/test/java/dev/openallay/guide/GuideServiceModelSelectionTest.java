@@ -56,8 +56,6 @@ final class GuideServiceModelSelectionTest {
                 1,
                 "0".repeat(64),
                 "model-a",
-                1,
-                1,
                 Instant.EPOCH,
                 ContextCheckpoint.Status.SUCCEEDED,
                 "summary",

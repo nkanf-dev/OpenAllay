@@ -76,7 +76,7 @@ final class CapabilityPolicyStoreTest {
     }
 
     private static CapabilityPolicy policy(Set<String> tools, Set<String> skills) {
-        return new CapabilityPolicy(CapabilityPolicy.SCHEMA_VERSION, tools, skills);
+        return new CapabilityPolicy(tools, skills);
     }
 
     @SuppressWarnings("unchecked")

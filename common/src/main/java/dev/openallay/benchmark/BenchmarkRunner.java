@@ -18,7 +18,6 @@ public final class BenchmarkRunner {
     }
 
     public BenchmarkReport run(
-            String corpusVersion,
             List<BenchmarkCase> cases,
             Executor executor) {
         Objects.requireNonNull(executor, "executor");
@@ -67,7 +66,7 @@ public final class BenchmarkRunner {
                             .toList()),
                     attemptReports));
         }
-        return new BenchmarkReport(corpusVersion, reports);
+        return new BenchmarkReport(reports);
     }
 
     private static BenchmarkReport.FailureKind failureKind(

@@ -110,7 +110,6 @@ final class GuideHistoryCodecTest {
         GuideToolActivity tool = ((GuideTimelineEntry.Tool) restored.get(1)).activity();
         assertNull(tool.normalized());
         assertNull(tool.invocationArguments());
-        assertEquals(List.of("items", "recipes"), tool.invocation().roots());
         assertEquals(List.of("r_previous"), tool.invocation().handles());
         assertEquals(List.of("openallay:crafting"), tool.invocation().modules());
         assertFalse(tool.invocation().liveArgumentsAvailable());
@@ -127,6 +126,7 @@ final class GuideHistoryCodecTest {
         assertFalse(encoded.contains("secretRawField"));
         assertFalse(encoded.contains("must-not-persist"));
         assertFalse(encoded.contains("debug-source-must-not-persist"));
+        assertFalse(encoded.contains("\"roots\""));
         assertTrue(encoded.contains("\"invocation\""));
     }
 
@@ -158,7 +158,7 @@ final class GuideHistoryCodecTest {
         }
         assertFalse(encoded.contains("private source"));
         JsonObject stored = JsonParser.parseString(encoded).getAsJsonArray().get(0).getAsJsonObject();
-        assertEquals(java.util.Set.of("roots", "handles", "modules"), stored.getAsJsonObject("invocation").keySet());
+        assertEquals(java.util.Set.of("handles", "modules"), stored.getAsJsonObject("invocation").keySet());
         assertFalse(stored.has("title"));
         assertFalse(stored.has("invocationArguments"));
     }
@@ -181,6 +181,28 @@ final class GuideHistoryCodecTest {
         corrupt.getAsJsonArray("presentationMessages").get(0).getAsJsonObject()
                 .getAsJsonArray("arguments").set(0, JsonParser.parseString("7"));
         assertThrows(IllegalArgumentException.class, () -> codec.decodeEntry(corrupt.toString()));
+    }
+
+    @Test
+    void roundTripsCaptureRangeAndRejectsPreviousSourceShape() {
+        GuideHistoryCodec codec = new GuideHistoryCodec();
+        var evidence = GroundedTestFixtures.serverEvidence();
+        GuideSource source = new GuideSource("openallay:run_javascript", evidence,
+                evidence.capturedAt().plusSeconds(30));
+
+        String encoded = codec.encodeSources(List.of(source));
+        assertEquals(List.of(source), codec.decodeSources(encoded));
+        JsonObject serialized = JsonParser.parseString(encoded).getAsJsonArray()
+                .get(0).getAsJsonObject();
+        assertEquals(java.util.Set.of("toolId", "evidence", "lastCapturedAt"),
+                serialized.keySet());
+        JsonArray previousShape = JsonParser.parseString(encoded).getAsJsonArray();
+        previousShape.get(0).getAsJsonObject().remove("lastCapturedAt");
+        assertThrows(IllegalArgumentException.class,
+                () -> codec.decodeSources(previousShape.toString()));
+        serialized.addProperty("lastCapturedAt", "not-an-instant");
+        assertThrows(java.time.format.DateTimeParseException.class,
+                () -> codec.decodeSources("[" + serialized + "]"));
     }
 
     @Test

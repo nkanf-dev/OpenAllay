@@ -27,7 +27,7 @@ final class RequirementSettingsEnvironmentTest {
     @Test
     void reportUsesInstalledStateNotCatalogPresenceAndNeverEnablesMissingOrUnavailable() {
         CapabilitySettingsView capabilities = new CapabilitySettingsView(
-                new CapabilityPolicy(1, Set.of("test:disabled"), Set.of("disabled-skill")),
+                new CapabilityPolicy(Set.of("test:disabled"), Set.of("disabled-skill")),
                 new CapabilityCatalogSnapshot(List.of(
                         capability("test:disabled", true, false),
                         capability("test:unavailable", false, true),
@@ -114,7 +114,7 @@ final class RequirementSettingsEnvironmentTest {
         assertTrue(changes.stream().allMatch(change -> change.kind() == RequirementKind.CAPABILITY));
         var enabled = RequirementSettingsEnvironment.from(capabilities, SkillSettingsView.empty(),
                 ExtensionSettingsView.defaults(), CommandCapabilityConfig.defaults(),
-                new UnrestrictedJavascriptConfig(UnrestrictedJavascriptConfig.SCHEMA_VERSION, true));
+                new UnrestrictedJavascriptConfig(true));
         var enabledReport = RequirementEvaluator.evaluate(requirements, enabled);
         assertEquals(RequirementStatus.SATISFIED, enabled.capabilities().get(
                 RequirementSettingsEnvironment.UNRESTRICTED_JAVASCRIPT_ALIAS).status());

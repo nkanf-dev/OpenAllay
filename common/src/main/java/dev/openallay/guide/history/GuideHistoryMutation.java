@@ -1,16 +1,18 @@
 package dev.openallay.guide.history;
 
 import dev.openallay.agent.context.ContextCheckpoint;
+import dev.openallay.agent.context.ModelContextCodec;
 import dev.openallay.guide.GuideMessage;
 import dev.openallay.guide.GuideModelSelection;
 import dev.openallay.guide.GuideRequestSnapshot;
 import dev.openallay.guide.GuideSource;
 import dev.openallay.guide.GuideTimelineEntry;
+import dev.openallay.model.ModelMessage;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
-/** Closed set of minimum durable changes accepted by schema 5. */
+/** Closed set of minimum durable changes accepted by the history store. */
 public sealed interface GuideHistoryMutation permits
         GuideHistoryMutation.UpsertPartition,
         GuideHistoryMutation.UpsertSession,
@@ -18,6 +20,8 @@ public sealed interface GuideHistoryMutation permits
         GuideHistoryMutation.UpsertMessage,
         GuideHistoryMutation.UpsertTimelineEntry,
         GuideHistoryMutation.ReplaceRequestSources,
+        GuideHistoryMutation.ReplaceContext,
+        GuideHistoryMutation.ReplaceRequestContext,
         GuideHistoryMutation.UpsertCheckpoint,
         GuideHistoryMutation.DeleteSession,
         GuideHistoryMutation.ClearSession {
@@ -72,6 +76,24 @@ public sealed interface GuideHistoryMutation permits
         public ReplaceRequestSources {
             java.util.Objects.requireNonNull(requestId, "requestId");
             sources = List.copyOf(sources);
+        }
+    }
+
+    /** Replaces the actual Agent transcript, not any player-visible history projection. */
+    record ReplaceContext(String sessionId, List<ModelMessage> messages)
+            implements GuideHistoryMutation {
+        public ReplaceContext {
+            requireSession(sessionId);
+            messages = ModelContextCodec.safe(messages);
+        }
+    }
+
+    /** Original model-visible request messages retained independently of session compaction. */
+    record ReplaceRequestContext(UUID requestId, List<ModelMessage> messages)
+            implements GuideHistoryMutation {
+        public ReplaceRequestContext {
+            java.util.Objects.requireNonNull(requestId, "requestId");
+            messages = ModelContextCodec.safe(messages);
         }
     }
 

@@ -29,7 +29,7 @@ RECIPE_SOURCE = os.environ.get("OPENALLAY_E2E_RECIPE_SOURCE")
 
 
 def javascript_arguments():
-    """Ask the production JavaScript Tool to inspect only current captured roots."""
+    """Ask the production JavaScript Tool to read current captured data lazily."""
     recipe_id = json.dumps(RECIPE_ID)
     output_id = json.dumps(RECIPE_OUTPUT)
     source = f'''var candidates = [];
@@ -99,7 +99,6 @@ return {{
 '''
     return {
         "source": source,
-        "roots": ["recipes", "player", "knowledge"],
         "title": "读取当前配方与背包",
         "description": "用本次捕获的配方、背包和知识来源计算材料对照与制作能力。",
     }
@@ -151,7 +150,7 @@ def assistant_content(request, completed):
                "配方、制作检查和库存材料来自本次 `run_javascript` 结果；"
                "组件只引用本次捕获中的精确配方。\n\n"]
     component = {
-        "schemaVersion": 1, "type": "recipe_grid",
+        "type": "recipe_grid",
         "properties": {**reference, "label": RECIPE_LABEL + "配方"},
         "fallback": RECIPE_LABEL + "配方已从当前捕获读取",
         "narration": RECIPE_LABEL + "配方来自当前请求捕获",
@@ -162,7 +161,7 @@ def assistant_content(request, completed):
     ingredients = result.get("ingredients", [])
     if ingredients:
         ingredient_component = {
-            "schemaVersion": 1, "type": "ingredient_check",
+            "type": "ingredient_check",
             "properties": {"ingredients": [
                 {**ingredient,
                  "label": ingredient["itemId"].split(":", 1)[-1].replace("_", " ")}
@@ -176,7 +175,7 @@ def assistant_content(request, completed):
     craftability = result.get("craftability")
     if isinstance(craftability, dict):
         craft_component = {
-            "schemaVersion": 1, "type": "craftability_summary",
+            "type": "craftability_summary",
             "properties": {**reference,
                            **{key: craftability[key] for key in (
                                "craftable", "conclusive", "requestedCrafts", "maximumCrafts")}},
@@ -189,7 +188,7 @@ def assistant_content(request, completed):
     sources = result.get("sources", [])
     if sources:
         source_component = {
-            "schemaVersion": 1, "type": "source_summary",
+            "type": "source_summary",
             "properties": {"sources": [
                 {"sourceId": source["sourceId"],
                  "label": source_label(source["sourceId"])}
@@ -283,12 +282,12 @@ def builder_scenario(user_text):
 def ui_stop_arguments():
     """Cancellable Rhino work; no Java, I/O, commands, or native world writes."""
     return {"source": "var observed=mc.player.uuid; while(true){} return observed;",
-            "roots": ["player"], "title": "读取状态并等待明确停止",
+            "title": "读取状态并等待明确停止",
             "description": "读取脱离游戏对象的玩家状态，然后等待真实请求取消；不会宣称有返回结果或修改世界。"}
 
 
 def ui_provider_failure_arguments():
-    return {"source": "return {player:mc.player};", "roots": ["player"],
+    return {"source": "return {player:mc.player};",
             "title": "读取当前玩家状态", "description": "读取实际捕获的玩家状态；随后由明确标记的 loopback 验收端点返回受控传输失败。"}
 
 
@@ -374,7 +373,7 @@ return {scenario:"builder_reload",template:{name:"openallay_e2e_builder_native",
         "server-denied": ("检查服务端模型的 Java 隔离", "尝试实际 Java 桥访问并保留结构化权限失败，不获取额外权限。"),
     }
     title, description = intents[scenario]
-    return {"source": source, "roots": ["player"], "title": title, "description": description}
+    return {"source": source, "title": title, "description": description}
 
 
 def builder_turn(scenario, turn_messages, user_text=""):

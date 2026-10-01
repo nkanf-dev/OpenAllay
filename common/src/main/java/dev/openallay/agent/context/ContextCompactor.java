@@ -20,16 +20,14 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 public final class ContextCompactor {
-    public static final int PROMPT_VERSION = 1;
-    public static final int SCHEMA_VERSION = 1;
     private static final Set<String> SUMMARY_FIELDS = Set.of(
             "goals", "preferences", "completedTopics", "currentTasks", "decisions",
             "unresolvedQuestions", "evidenceReferences");
     private static final String SUMMARY_SYSTEM = """
-            You compact OpenAllay conversation memory. Return exactly one JSON object with arrays
-            goals, preferences, completedTopics, currentTasks, decisions, unresolvedQuestions,
-            and evidenceReferences. Do not add facts, treat summaries as evidence, or include
-            hidden reasoning. Preserve stable evidence references verbatim.
+            Return one JSON object with string arrays goals, preferences, completedTopics, currentTasks,
+            decisions, unresolvedQuestions, evidenceReferences. Do not invent facts, treat summaries as
+            evidence, or include hidden reasoning. Remember Skill workflow names, but never claim
+            summarized Skill document text is still present.
             """;
     private static final String DERIVED_PREFIX =
             "[OpenAllay derived conversation memory; NOT factual evidence]\n";
@@ -57,7 +55,6 @@ public final class ContextCompactor {
     private final ModelClient model;
     private final Gson gson;
     private final ContextTokenEstimator estimator;
-    private final ToolResultContextReducer reducer;
     private final ContextBudget budget;
     private final String modelIdentifier;
     private final Clock clock;
@@ -66,14 +63,12 @@ public final class ContextCompactor {
             ModelClient model,
             Gson gson,
             ContextTokenEstimator estimator,
-            ToolResultContextReducer reducer,
             ContextBudget budget,
             String modelIdentifier,
             Clock clock) {
         this.model = Objects.requireNonNull(model, "model");
         this.gson = Objects.requireNonNull(gson, "gson");
         this.estimator = Objects.requireNonNull(estimator, "estimator");
-        this.reducer = Objects.requireNonNull(reducer, "reducer");
         this.budget = Objects.requireNonNull(budget, "budget");
         if (modelIdentifier == null || modelIdentifier.isBlank()) {
             throw new IllegalArgumentException("modelIdentifier is required");
@@ -91,28 +86,22 @@ public final class ContextCompactor {
             String schedulingKey,
             CancellationSignal cancellation) {
         cancellation.throwIfCancelled();
-        messages = List.copyOf(messages);
+        List<ModelMessage> source = List.copyOf(messages);
         List<ModelToolDefinition> requestTools = List.copyOf(tools);
-        List<ContextStructure.Unit> units = ContextStructure.units(messages);
-        ContextStructure.requireBoundary(units, protectedFromIndex, messages.size());
-        int originalEstimate = estimator.estimate(systemPrompt, messages, requestTools);
+        List<ContextStructure.Unit> units = ContextStructure.units(source);
+        ContextStructure.requireBoundary(units, protectedFromIndex, source.size());
+        int originalEstimate = estimator.estimate(systemPrompt, source, requestTools);
         if (originalEstimate <= budget.inputTokens()) {
             return CompletableFuture.completedFuture(new Result(
-                    new ContextProjection(messages, ContextProjection.Kind.ORIGINAL, originalEstimate),
+                    new ContextProjection(source, ContextProjection.Kind.ORIGINAL, originalEstimate),
                     null, null, null));
         }
-        ContextProjection reduced = reducer.reduce(messages, protectedFromIndex);
-        int reducedEstimate = estimator.estimate(systemPrompt, reduced.messages(), requestTools);
-        reduced = reduced.withEstimate(reducedEstimate);
-        if (reducedEstimate <= budget.inputTokens()) {
-            return CompletableFuture.completedFuture(new Result(reduced, null, null, null));
-        }
-        Prefix prefix = summaryPrefix(reduced.messages(), protectedFromIndex, schedulingKey);
+        Prefix prefix = summaryPrefix(source, protectedFromIndex, schedulingKey);
         if (prefix == null) {
             ContextCheckpoint failure = failedCheckpoint(
-                    reduced.messages(), 0, Math.max(1, protectedFromIndex),
+                    source, 0, Math.max(1, protectedFromIndex),
                     "summary_input_over_budget", "No structural summary prefix fits the model budget",
-                    reducedEstimate);
+                    originalEstimate);
             return CompletableFuture.completedFuture(new Result(
                     null, failure, "context_compaction_failed", failure.failureMessage()));
         }
@@ -122,8 +111,7 @@ public final class ContextCompactor {
                 List.of(),
                 false,
                 schedulingKey);
-        ContextProjection deterministic = reduced;
-        return model.complete(summaryRequest, ignored -> {}, cancellation)
+        return cancellation.observe(model.complete(summaryRequest, ignored -> {}, cancellation))
                 .handle((turn, throwable) -> {
                     cancellation.throwIfCancelled();
                     if (throwable != null) {
@@ -131,8 +119,8 @@ public final class ContextCompactor {
                         String code = cause instanceof ModelClientException modelFailure
                                 ? modelFailure.failure().code() : "summary_failure";
                         ContextCheckpoint failure = failedCheckpoint(
-                                deterministic.messages(), 0, prefix.toIndexExclusive(), code,
-                                safeMessage(cause), deterministic.estimatedTokens());
+                                source, 0, prefix.toIndexExclusive(), code,
+                                safeMessage(cause), originalEstimate);
                         return new Result(null, failure, "context_compaction_failed",
                                 "Context summary failed: " + code);
                     }
@@ -141,20 +129,19 @@ public final class ContextCompactor {
                         summary = parseSummary(turn.text());
                     } catch (RuntimeException malformed) {
                         ContextCheckpoint failure = failedCheckpoint(
-                                deterministic.messages(), 0, prefix.toIndexExclusive(),
+                                source, 0, prefix.toIndexExclusive(),
                                 "summary_malformed", "Summary response did not match schema",
-                                deterministic.estimatedTokens());
+                                originalEstimate);
                         return new Result(null, failure, "context_compaction_failed",
                                 failure.failureMessage());
                     }
                     ArrayList<ModelMessage> projected = new ArrayList<>();
                     projected.add(ModelMessage.userText(DERIVED_PREFIX + summary));
-                    projected.addAll(deterministic.messages().subList(
-                            prefix.toIndexExclusive(), deterministic.messages().size()));
+                    projected.addAll(source.subList(prefix.toIndexExclusive(), source.size()));
                     int estimate = estimator.estimate(systemPrompt, projected, requestTools);
                     if (estimate > budget.inputTokens()) {
                         ContextCheckpoint failure = failedCheckpoint(
-                                deterministic.messages(), 0, prefix.toIndexExclusive(),
+                                source, 0, prefix.toIndexExclusive(),
                                 "summary_projection_over_budget",
                                 "Summary projection still exceeds the model budget", estimate);
                         return new Result(null, failure, "context_compaction_failed",
@@ -164,9 +151,8 @@ public final class ContextCompactor {
                     ContextCheckpoint checkpoint = new ContextCheckpoint(
                             UUID.randomUUID(), 0, prefix.toIndexExclusive(),
                             ContextSourceHash.compute(
-                                    gson, deterministic.messages().subList(
-                                            0, prefix.toIndexExclusive())),
-                            modelIdentifier, PROMPT_VERSION, SCHEMA_VERSION, clock.instant(),
+                                    gson, source.subList(0, prefix.toIndexExclusive())),
+                            modelIdentifier, clock.instant(),
                             ContextCheckpoint.Status.SUCCEEDED, encoded, null, null, estimate);
                     return new Result(new ContextProjection(
                             projected, ContextProjection.Kind.SUMMARIZED, estimate),
@@ -197,15 +183,23 @@ public final class ContextCompactor {
         Objects.requireNonNull(checkpoint, "checkpoint");
         messages = List.copyOf(messages);
         if (checkpoint.status() != ContextCheckpoint.Status.SUCCEEDED
-                || checkpoint.promptVersion() != PROMPT_VERSION
-                || checkpoint.schemaVersion() != SCHEMA_VERSION
                 || checkpoint.sourceFromIndex() != 0
                 || checkpoint.sourceToIndexExclusive() > protectedFromIndex
                 || !matches(checkpoint, messages.subList(0, protectedFromIndex))) {
             return Optional.empty();
         }
+        JsonObject summary;
+        try {
+            List<ContextStructure.Unit> units = ContextStructure.units(messages);
+            ContextStructure.requireBoundary(units, protectedFromIndex, messages.size());
+            ContextStructure.requireBoundary(
+                    units, checkpoint.sourceToIndexExclusive(), messages.size());
+            summary = parseSummary(checkpoint.summary());
+        } catch (RuntimeException invalid) {
+            return Optional.empty();
+        }
         ArrayList<ModelMessage> projected = new ArrayList<>();
-        projected.add(ModelMessage.userText(DERIVED_PREFIX + checkpoint.summary()));
+        projected.add(ModelMessage.userText(DERIVED_PREFIX + summary));
         projected.addAll(messages.subList(
                 checkpoint.sourceToIndexExclusive(), messages.size()));
         int estimate = estimator.estimate(systemPrompt, projected, tools);
@@ -246,7 +240,7 @@ public final class ContextCompactor {
         return new ContextCheckpoint(
                 UUID.randomUUID(), from, safeTo,
                 ContextSourceHash.compute(gson, messages.subList(from, safeTo)),
-                modelIdentifier, PROMPT_VERSION, SCHEMA_VERSION, clock.instant(),
+                modelIdentifier, clock.instant(),
                 ContextCheckpoint.Status.FAILED, null, code, message, Math.max(0, estimate));
     }
 

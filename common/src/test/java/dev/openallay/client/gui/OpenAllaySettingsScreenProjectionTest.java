@@ -29,7 +29,7 @@ final class OpenAllaySettingsScreenProjectionTest {
         ModelProfileDefinition alpha = profile("alpha");
         ModelProfileDefinition beta = profile("beta");
         ModelProfilesConfig config = new ModelProfilesConfig(
-                ModelProfilesConfig.SCHEMA_VERSION, "alpha", List.of(alpha, beta));
+                "alpha", List.of(alpha, beta));
         ModelProfileSettingsView models = ModelProfileSettingsView.from(
                 config,
                 List.of(
@@ -88,7 +88,7 @@ final class OpenAllaySettingsScreenProjectionTest {
                 "gpt-6-luna", "env:LUNA_KEY", 1_000_000, null,
                 Duration.ofSeconds(30), Duration.ofSeconds(300), null);
         var models = ModelProfileSettingsView.from(
-                new ModelProfilesConfig(ModelProfilesConfig.SCHEMA_VERSION, "luna", List.of(definition)),
+                new ModelProfilesConfig("luna", List.of(definition)),
                 List.of(new ModelProfileSettingsView.Resolution(
                         definition, true, true, 1_000_000, 128_000, null)),
                 java.util.Set.of("LUNA_KEY"), null, null);
@@ -104,7 +104,7 @@ final class OpenAllaySettingsScreenProjectionTest {
                 "unpublished-model", "env:OFF_KEY", null, null,
                 Duration.ofSeconds(30), Duration.ofSeconds(300), null);
         var unavailable = ModelProfileSettingsView.from(
-                new ModelProfilesConfig(ModelProfilesConfig.SCHEMA_VERSION, "off", List.of(disabled)),
+                new ModelProfilesConfig("off", List.of(disabled)),
                 List.of(new ModelProfileSettingsView.Resolution(disabled, false, false, null, null,
                         new dev.openallay.guide.GuideFailure("model_disabled", "Disabled"))),
                 java.util.Set.of(), null, null);

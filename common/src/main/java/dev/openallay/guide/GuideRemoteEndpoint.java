@@ -19,15 +19,6 @@ public interface GuideRemoteEndpoint {
     boolean ask(
             UUID requestId, String sessionId, String question, Consumer<AgentEvent> events);
 
-    default boolean ask(
-            UUID requestId,
-            String sessionId,
-            String question,
-            List<GuideMessage> history,
-            Consumer<AgentEvent> events) {
-        return ask(requestId, sessionId, question, events);
-    }
-
     default boolean askWithContext(
             UUID requestId,
             String sessionId,

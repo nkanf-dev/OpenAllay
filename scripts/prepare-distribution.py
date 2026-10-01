@@ -21,8 +21,6 @@ DEFAULT_SOURCE = ROOT / ".gradle/distribution-sources/openallay-extensions"
 
 def load_manifest(path: Path) -> dict:
     data = json.loads(path.read_text(encoding="utf-8"))
-    if data.get("schemaVersion") != 1:
-        raise ValueError("Unsupported Extension distribution lock schema")
     source = data["source"]
     if not re.fullmatch(r"[0-9a-f]{40}", source["revision"]):
         raise ValueError("Extension source revision must be a full 40-character Git commit")

@@ -116,18 +116,6 @@ public final class GuideServiceManager {
     private GuideHistoryAccess afterDisconnect(CompletableFuture<Void> disconnected) {
         return new GuideHistoryAccess() {
             @Override
-            public CompletableFuture<dev.openallay.guide.history.GuideHistoryLoad> load(
-                    GuideHistoryScope scope) {
-                return disconnected.thenCompose(ignored -> history.load(scope));
-            }
-
-            @Override
-            public CompletableFuture<Void> save(
-                    dev.openallay.guide.history.GuideHistoryPartition partition) {
-                return disconnected.thenCompose(ignored -> history.save(partition));
-            }
-
-            @Override
             public CompletableFuture<java.util.Optional<
                     dev.openallay.guide.history.GuideHistoryMetadata>> metadata(
                     GuideHistoryScope scope) {
@@ -144,6 +132,12 @@ public final class GuideServiceManager {
             public CompletableFuture<dev.openallay.guide.history.GuideHistoryContextSeed> context(
                     dev.openallay.guide.history.GuideHistoryContextRequest request) {
                 return disconnected.thenCompose(ignored -> history.context(request));
+            }
+
+            @Override
+            public CompletableFuture<java.util.List<dev.openallay.model.ModelMessage>> requestContext(
+                    GuideHistoryScope scope, UUID requestId) {
+                return disconnected.thenCompose(ignored -> history.requestContext(scope, requestId));
             }
 
             @Override

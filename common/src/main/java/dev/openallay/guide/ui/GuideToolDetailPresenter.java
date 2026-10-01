@@ -25,9 +25,8 @@ public final class GuideToolDetailPresenter {
                 ? Optional.of(new GuideToolDetailView.Debug(
                         activity.invocationId(),
                         activity.toolId(),
-                        activity.sources(),
                         activity.invocationArguments(),
-                        normalized,
+                        debugResult(activity, normalized),
                         normalized == null && activity.status() == GuideToolStatus.RUNNING
                                 ? "tool is still running" : projection.diagnostic()))
                 : Optional.empty();
@@ -38,7 +37,23 @@ public final class GuideToolDetailPresenter {
                 activity.intent(),
                 projection.cards(),
                 narration,
-                debug);
+                debug,
+                GuideToolDisplayStatus.from(activity.status(), false),
+                normalized != null && "failure".equals(string(normalized, "status"))
+                        ? Optional.of(new GuideToolDetailView.Failure(
+                                string(normalized, "code"), string(normalized, "message")))
+                        : Optional.empty());
+    }
+
+    /** Canonical origin records are displayed separately, not repeated inside debug result JSON. */
+    private static JsonObject debugResult(GuideToolActivity activity, JsonObject normalized) {
+        if (normalized == null) return null;
+        JsonObject result = normalized.deepCopy();
+        if ("run_javascript".equals(toolName(activity.toolId())) && !activity.sources().isEmpty()) {
+            JsonObject value = object(result, "value");
+            if (value != null) value.remove("sources");
+        }
+        return result;
     }
 
     private static Projection projectCards(String toolId, JsonObject normalized) {

@@ -57,7 +57,6 @@ final class TraceRepositoryTest {
     private static String trace(String id) {
         return """
                 {
-                  "schemaVersion": 1,
                   "id": "%s",
                   "userMessage": "test",
                   "requiredContext": [],

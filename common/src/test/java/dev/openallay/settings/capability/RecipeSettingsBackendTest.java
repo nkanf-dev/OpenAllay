@@ -34,7 +34,6 @@ final class RecipeSettingsBackendTest {
                 path, runtime, () -> providers, () -> navigators,
                 new dev.openallay.settings.AtomicSettingsFile()::replace);
         RecipeClientConfig candidate = new RecipeClientConfig(
-                RecipeClientConfig.SCHEMA_VERSION,
                 RecipeVisibilityPolicy.ALL_KNOWN,
                 "viewer:rei",
                 Set.of("future:viewer"));
@@ -62,7 +61,6 @@ final class RecipeSettingsBackendTest {
                 path, runtime, List::of, List::of,
                 new dev.openallay.settings.AtomicSettingsFile()::replace);
         RecipeClientConfig prior = new RecipeClientConfig(
-                RecipeClientConfig.SCHEMA_VERSION,
                 RecipeVisibilityPolicy.ALL_KNOWN,
                 RecipeClientConfig.AUTO,
                 Set.of("prior:source"));
@@ -74,7 +72,6 @@ final class RecipeSettingsBackendTest {
                     throw new SettingsWriteException();
                 });
         RecipeClientConfig candidate = new RecipeClientConfig(
-                RecipeClientConfig.SCHEMA_VERSION,
                 RecipeVisibilityPolicy.UNLOCKED_ONLY,
                 RecipeClientConfig.AUTO,
                 Set.of());

@@ -3,14 +3,12 @@ package dev.openallay.bridge.protocol;
 import java.util.UUID;
 
 public record ServerAgentRequestChunkPayload(
-        int version,
         UUID requestId,
         int index,
         int total,
         String contentHash,
         String base64Data) {
     public ServerAgentRequestChunkPayload {
-        BridgeProtocol.requireVersion(version);
         java.util.Objects.requireNonNull(requestId, "requestId");
         if (index < 0 || total <= 0 || index >= total) {
             throw new IllegalArgumentException("Invalid server Agent request chunk position");

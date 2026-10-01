@@ -263,9 +263,14 @@ def packaged_artifact(path, loader, mod_version=MOD_VERSION):
 
 def validate_model_config(source):
     config = json.loads(Path(source).read_text(encoding="utf-8"))
-    if config.get("schemaVersion") != 2 or not config.get("profiles"):
-        raise ValueError("An explicit schema-2 model profile is required")
+    if not isinstance(config, dict) or set(config) != {"defaultProfileId", "profiles"}:
+        raise ValueError("Model configuration must contain only defaultProfileId and profiles")
+    if (not isinstance(config["profiles"], list) or not config["profiles"]
+            or not isinstance(config["defaultProfileId"], str) or not config["defaultProfileId"]):
+        raise ValueError("An explicit default model profile is required")
     for profile in config["profiles"]:
+        if not isinstance(profile, dict):
+            raise ValueError("Model profiles must be objects")
         credential = profile.get("credentialRef", "")
         if not re.fullmatch(r"env:[A-Za-z_][A-Za-z0-9_]*", credential):
             raise ValueError("Acceptance profile credentials must use environment references only")
@@ -276,11 +281,13 @@ def validate_model_config(source):
             raise ValueError("Acceptance endpoint must not contain credentials, queries, or fragments")
         if any(key.lower() in ("apikey", "token", "password", "secret") for key in profile):
             raise ValueError("Acceptance profile must not contain embedded secrets")
+    if not any(profile.get("id") == config["defaultProfileId"] for profile in config["profiles"]):
+        raise ValueError("defaultProfileId must name an explicit model profile")
     return config
 
 
 def fixture_model_config(port):
-    return {"schemaVersion": 2, "defaultProfileId": "e2e-fixture", "profiles": [{
+    return {"defaultProfileId": "e2e-fixture", "profiles": [{
         "id": "e2e-fixture", "displayName": "OpenAllay E2E Fixture", "enabled": True,
         "protocol": "openai_chat", "baseUrl": f"http://127.0.0.1:{port}/v1/",
         "model": "openallay-e2e-fixture", "credentialRef": "env:OPENALLAY_E2E_FIXTURE_KEY",
@@ -414,9 +421,9 @@ def prepare(args, repo=REPO):
     if loader == "fabric":
         shutil.copyfile(api, game / "mods" / api.name)
     write_json(config / "models.json", models)
-    write_json(config / "unrestricted-javascript.json", {"schemaVersion": 1, "enabled": args.enable_unrestricted})
-    write_json(config / "experimental-commands.json", {"schemaVersion": 1, "enabled": False})
-    write_json(config / "display.json", {"schemaVersion": 3, "debugMode": True,
+    write_json(config / "unrestricted-javascript.json", {"enabled": args.enable_unrestricted})
+    write_json(config / "experimental-commands.json", {"enabled": False})
+    write_json(config / "display.json", {"debugMode": True,
                                          "animationsEnabled": True, "assistantName": "OpenAllay"})
     fps = 10 if args.low_impact else 30
     (game / "options.txt").write_text("onboardAccessibility:false\njoinedFirstServer:true\nrenderDistance:4\nsimulationDistance:5\nmaxFps:" + str(fps) + "\npauseOnLostFocus:false\n", encoding="utf-8")
@@ -462,7 +469,7 @@ def prepare(args, repo=REPO):
     command += ["-Dopenallay.e2e." + key + "=" + value for key, value in properties.items()]
     command += [main_class] + game_args
     files = [p for p in game.rglob("*") if p.is_file()]
-    manifest = {"schemaVersion": 1, "loader": loader, "minecraft": MC_VERSION, "javaRequired": 25,
+    manifest = {"loader": loader, "minecraft": MC_VERSION, "javaRequired": 25,
                 "runId": run_id, "world": world, "scenario": args.scenario,
                 "gameDirectory": str(game), "packagedArtifact": identity,
                 "unrestrictedOptIn": args.enable_unrestricted, "lowImpact": args.low_impact,
@@ -553,7 +560,7 @@ def prepare_resume(args, repo=REPO):
     if args.model_config:
         write_json(config / "models.json", models)
     # This explicit opt-in changes only the prior disposable generated config.
-    write_json(config / "unrestricted-javascript.json", {"schemaVersion": 1, "enabled": True})
+    write_json(config / "unrestricted-javascript.json", {"enabled": True})
     command = []
     skip_next = False
     prior_command = prior["command"]
@@ -730,7 +737,7 @@ def parser():
     result.add_argument("--http-proxy-from-env", action="store_true", help="Explicit JVM HTTP(S) proxy from conventional env settings; local/credential-free only")
     result.add_argument("--resume-prepared", type=Path, help="Prepare a reload phase using only a prior manifest's disposable world under build/e2e")
     result.add_argument("--jar", type=Path, help="Default production-named built artifact; no source classes")
-    result.add_argument("--model-config", type=Path, help="Explicit secret-free schema-2 config with env credential references")
+    result.add_argument("--model-config", type=Path, help="Explicit secret-free model config with env credential references")
     result.add_argument("--fixture-port", type=int, default=18765, help="Loopback fixture is started separately")
     result.add_argument("--minecraft-root", type=Path, default=Path.home() / "Library/Application Support/minecraft")
     result.add_argument("--gradle-cache", type=Path, default=Path.home() / ".gradle/caches/modules-2/files-2.1")

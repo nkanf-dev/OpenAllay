@@ -6,16 +6,10 @@ import java.util.Set;
 
 /** Strict ordered profile document stored without credential values. */
 public record ModelProfilesConfig(
-        int schemaVersion,
         String defaultProfileId,
         List<ModelProfileDefinition> profiles) {
-    public static final int SCHEMA_VERSION = 2;
 
     public ModelProfilesConfig {
-        if (schemaVersion != SCHEMA_VERSION) {
-            throw new IllegalArgumentException(
-                    "Unsupported model profiles schema version " + schemaVersion);
-        }
         if (defaultProfileId == null || !defaultProfileId.matches("[a-zA-Z0-9_.-]+")) {
             throw new IllegalArgumentException("invalid defaultProfileId");
         }

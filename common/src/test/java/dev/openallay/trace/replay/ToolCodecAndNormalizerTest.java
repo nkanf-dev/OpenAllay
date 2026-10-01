@@ -39,6 +39,14 @@ final class ToolCodecAndNormalizerTest {
     }
 
     @Test
+    void rejectsUndeclaredArgumentsWithoutEchoingForeignText() {
+        ToolResult.Failure<?> failure = assertInstanceOf(ToolResult.Failure.class,
+                new ToolArgumentCodec(gson).decode(object("{\"count\":3,\"removedField\":true}"), Input.class));
+        assertEquals("invalid_arguments", failure.code());
+        assertEquals("tool arguments contain an undeclared field", failure.message());
+    }
+
+    @Test
     void canonicalizationSortsObjectsAndPreservesCompleteArraysAndStrings() {
         ToolResultNormalizer normalizer = new ToolResultNormalizer(gson);
         JsonObject value = normalizer.normalize(

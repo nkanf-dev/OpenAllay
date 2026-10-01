@@ -3,6 +3,8 @@ package dev.openallay.script.data;
 import dev.openallay.context.CallerSnapshot;
 import dev.openallay.context.ContextMetrics;
 import dev.openallay.context.EvidenceMetadata;
+import dev.openallay.context.SourceObservation;
+import dev.openallay.context.SourceObservationCollector;
 import dev.openallay.context.PlayerSnapshot;
 import dev.openallay.context.RecipeEntrySnapshot;
 import dev.openallay.context.RecipeSnapshot;
@@ -45,11 +47,9 @@ import java.util.function.Supplier;
  * Request-scoped root graph over the original detached Java snapshots.
  *
  * <p>Every root has a declared descriptor. Schema discovery reads only those descriptors and
- * never invokes a root supplier. Selected values are resolved lazily and retained for the request.
+ * never invokes a root supplier. Values are resolved only when read and retained for the request.
  */
 public final class MinecraftAgentHostGraph {
-    private static final java.util.regex.Pattern ROOT =
-            java.util.regex.Pattern.compile("[a-zA-Z][a-zA-Z0-9]*");
     private static final String CORE_PROVIDER = "openallay:core";
 
     private final Map<String, HostRootDescriptor> roots;
@@ -60,10 +60,6 @@ public final class MinecraftAgentHostGraph {
     private final Optional<ObservableGameStateSnapshot> gameSnapshot;
     private final MemoizedSupplier knowledgeSnapshot;
     private final MemoizedSupplier extensionSnapshot;
-    private final EvidenceMetadata contextEvidence;
-    private final EvidenceMetadata hostCatalogEvidence;
-    private final EvidenceMetadata extensionCatalogEvidence;
-    private final EvidenceMetadata extensionDiagnosticsEvidence;
 
     public MinecraftAgentHostGraph(ToolInvocationContext context) {
         this(context, KnowledgeSnapshot::empty, new JavascriptDataModuleRegistry());
@@ -178,15 +174,6 @@ public final class MinecraftAgentHostGraph {
         knowledgeSnapshot = new MemoizedSupplier(() ->
                 Objects.requireNonNull(knowledge.get(), "knowledge snapshot"));
         extensionSnapshot = new MemoizedSupplier(() -> extensions.capture(context));
-        contextEvidence = metadataEvidence(
-                context, "openallay:request_context", "openallay:tool_context", "captured_context_metadata");
-        hostCatalogEvidence = metadataEvidence(
-                context, "openallay:javascript_host_catalog", "openallay:declared_roots", "schema_and_capabilities");
-        extensionCatalogEvidence = metadataEvidence(
-                context, "openallay:javascript_extensions", "openallay:extension_registry", "registered_extensions");
-        extensionDiagnosticsEvidence = metadataEvidence(
-                context, "openallay:extension_capture_diagnostics", "openallay:extension_capture", "capture_diagnostics");
-
         LinkedHashMap<String, HostRootDescriptor> declared = new LinkedHashMap<>();
         add(declared, descriptor(
                 "caller", type("caller"), true, "Request caller", "context",
@@ -335,115 +322,50 @@ public final class MinecraftAgentHostGraph {
         schemaCatalog = new HostSchemaCatalog(roots.values());
     }
 
-    /**
-     * Returns an immutable lazy map. Empty selection exposes all available roots, while explicit
-     * selection resolves only requested roots plus stable discovery metadata.
-     */
-    public RootSelection select(Collection<String> requested) {
-        return select(requested, true);
-    }
-
-    public RootSelection select(Collection<String> requested, boolean allWhenEmpty) {
-        Collection<String> selection = requested == null ? List.of() : List.copyOf(requested);
-        LinkedHashSet<String> names = new LinkedHashSet<>();
-        if (selection.isEmpty() && allWhenEmpty) {
-            names.addAll(schemaCatalog.availableRootNames());
-        } else {
-            for (String root : selection) {
-                HostRootDescriptor descriptor = roots.get(root);
-                if (root == null
-                        || !ROOT.matcher(root).matches()
-                        || descriptor == null
-                        || !descriptor.available()) {
-                    throw rootSelectionFailure(root, descriptor);
-                }
-                names.add(root);
-            }
-            names.add("capturedAt");
-            names.add("capabilities");
-        }
-        EvidenceRecorder evidence = new EvidenceRecorder();
-        LinkedHashMap<String, HostRootDescriptor> selected = new LinkedHashMap<>();
-        for (String name : names) {
-            HostRootDescriptor root = roots.get(name);
-            if (root != null) selected.put(name, root);
-        }
-        if (names.contains("evidence")) {
-            selected.put("evidence", new HostRootDescriptor(
-                    "evidence", type("evidence"), true, CORE_PROVIDER,
-                    "Evidence for data roots already accessed by this script", "evidence",
-                    evidence::snapshot));
-        }
-        return new RootSelection(
-                new LazyRootMap(selected, List.copyOf(selected.keySet()), schemaCatalog,
-                        evidenceOwners(), evidence), evidence, schemaCatalog, hostCatalogEvidence);
-    }
-
-    private JavascriptExecutionException rootSelectionFailure(
-            String requested, HostRootDescriptor descriptor) {
-        String message;
-        if (requested == null || !ROOT.matcher(requested).matches()) {
-            message = "Invalid Minecraft root selector: " + requested
-                    + ". roots requires bare top-level names, not JavaScript access paths.";
-            if (requested != null && requested.startsWith("mc.")) {
-                String bare = requested.substring(3);
-                HostRootDescriptor known = roots.get(bare);
-                if (ROOT.matcher(bare).matches() && known != null) {
-                    message += " Use roots [\"" + bare + "\"] and access mc." + bare + ".";
-                    if (!known.available()) {
-                        message += " That declared root is unavailable in this request.";
-                    }
-                }
-            }
-        } else if (descriptor == null) {
-            message = "Unknown Minecraft data root: " + requested
-                    + ". roots requires a declared bare top-level name.";
-        } else {
-            message = "Declared Minecraft data root is unavailable in this request: " + requested
-                    + ". Unavailable data is not an empty dataset.";
-        }
-        return new JavascriptExecutionException(
-                "javascript_root_unavailable",
-                message + " Current declared bare roots: " + roots.keySet()
-                        + ". Available this request: " + schemaCatalog.availableRootNames() + ".");
+    /** Opens an invocation-local view over all declared detached data, resolving only actual reads. */
+    public InvocationData open() {
+        SourceObservationCollector sources = new SourceObservationCollector();
+        return new InvocationData(
+                new LazyRootMap(roots, List.copyOf(roots.keySet()), schemaCatalog,
+                        evidenceOwners(), sources), sources, schemaCatalog);
     }
 
     public HostSchemaCatalog schemaCatalog() {
         return schemaCatalog;
     }
 
-    private Map<String, Supplier<List<EvidenceMetadata>>> evidenceOwners() {
-        Map<String, Supplier<List<EvidenceMetadata>>> owners = new LinkedHashMap<>();
-        owners.put("context", () -> List.of(contextEvidence));
-        owners.put("player", () -> playerSnapshot.map(value -> List.of(
-                        value.evidence(), value.inventory().evidence()))
+    private Map<String, Supplier<List<SourceObservation>>> evidenceOwners() {
+        Map<String, Supplier<List<SourceObservation>>> owners = new LinkedHashMap<>();
+        owners.put("player", () -> playerSnapshot.map(value -> sourceSummaries(
+                        java.util.stream.Stream.of(value.evidence(), value.inventory().evidence())))
                 .orElseGet(List::of));
-        owners.put("registries", () -> registrySnapshot.map(value -> List.of(value.evidence()))
+        owners.put("registries", () -> registrySnapshot.map(value ->
+                        List.of(new SourceObservation(value.evidence())))
                 .orElseGet(List::of));
-        owners.put("recipes", () -> recipeSnapshot.map(MinecraftAgentHostGraph::recipeEvidence)
+        owners.put("recipes", () -> recipeSnapshot.map(value -> sourceSummaries(
+                        java.util.stream.Stream.concat(
+                                java.util.stream.Stream.of(value.evidence()),
+                                java.util.stream.Stream.concat(
+                                        value.recipes().stream().map(RecipeEntrySnapshot::evidence),
+                                        value.groups().stream().flatMap(group -> group.evidence().stream())))))
                 .orElseGet(List::of));
-        owners.put("game", () -> gameSnapshot.map(MinecraftAgentHostGraph::gameEvidence)
+        owners.put("game", () -> gameSnapshot.map(value -> sourceSummaries(gameEvidence(value).stream()))
                 .orElseGet(List::of));
         owners.put("knowledge", () -> {
             KnowledgeSnapshot snapshot = knowledgeSnapshot(KnowledgeSnapshot.class, knowledgeSnapshot);
-            ArrayList<EvidenceMetadata> values = new ArrayList<>(snapshot.evidence());
-            snapshot.documents().stream().map(KnowledgeDocument::evidence).forEach(values::add);
-            return distinct(values);
+            return sourceSummaries(java.util.stream.Stream.concat(
+                    snapshot.evidence().stream(), snapshot.documents().stream().map(KnowledgeDocument::evidence)));
         });
-        owners.put("extensions", () -> extensionSnapshot(
-                        JavascriptDataModuleRegistry.Snapshot.class, extensionSnapshot).evidence());
-        owners.put("catalog", () -> List.of(hostCatalogEvidence));
-        owners.put("extension_catalog", () -> List.of(extensionCatalogEvidence));
-        owners.put("extension_diagnostics", () -> List.of(extensionDiagnosticsEvidence));
+        owners.put("extensions", () -> sourceSummaries(extensionSnapshot(
+                        JavascriptDataModuleRegistry.Snapshot.class, extensionSnapshot).evidence().stream()));
         return Map.copyOf(owners);
     }
 
-    private static List<EvidenceMetadata> recipeEvidence(RecipeSnapshot snapshot) {
-        ArrayList<EvidenceMetadata> values = new ArrayList<>();
-        values.add(snapshot.evidence());
-        snapshot.recipes().stream().map(RecipeEntrySnapshot::evidence).forEach(values::add);
-        snapshot.groups().stream().flatMap(group -> group.evidence().stream()).forEach(values::add);
-        return distinct(values);
+    /** Retains distinct real origins without constructing a second per-row metadata collection. */
+    private static List<SourceObservation> sourceSummaries(java.util.stream.Stream<EvidenceMetadata> evidence) {
+        SourceObservationCollector sources = new SourceObservationCollector();
+        evidence.forEach(sources::add);
+        return sources.snapshot();
     }
 
     private static List<EvidenceMetadata> gameEvidence(ObservableGameStateSnapshot game) {
@@ -463,65 +385,33 @@ public final class MinecraftAgentHostGraph {
         return distinct(values);
     }
 
-    private static EvidenceMetadata metadataEvidence(
-            ToolInvocationContext context, String sourceId, String provenance, String scope) {
-        EvidenceMetadata environment = context.player().map(PlayerSnapshot::evidence)
-                .or(() -> context.registries().map(RegistrySnapshot::evidence))
-                .or(() -> context.recipes().map(RecipeSnapshot::evidence))
-                .or(() -> context.observableGameState().map(value -> value.runtime().evidence()))
-                .orElse(null);
-        return new EvidenceMetadata(
-                dev.openallay.context.DataAuthority.INTEGRATION_API,
-                dev.openallay.context.DataCompleteness.COMPLETE,
-                context.capturedAt(),
-                sourceId,
-                provenance,
-                environment == null ? "unknown" : environment.gameVersion(),
-                environment == null ? "unknown" : environment.loader(),
-                Map.of("openallay:scope", scope));
-    }
-
     private static List<EvidenceMetadata> distinct(Collection<EvidenceMetadata> values) {
         return List.copyOf(new LinkedHashSet<>(values));
     }
 
-    public static final class RootSelection extends AbstractMap<String, Object>
-            implements dev.openallay.script.schema.DeclaredHostRoots {
+    public static final class InvocationData extends AbstractMap<String, Object>
+            implements DeclaredHostRoots {
         private final Map<String, Object> roots;
-        private final EvidenceRecorder evidence;
+        private final SourceObservationCollector sources;
         private final HostSchemaCatalog schemaCatalog;
-        private final EvidenceMetadata schemaEvidence;
 
-        private RootSelection(
+        private InvocationData(
                 Map<String, Object> roots,
-                EvidenceRecorder evidence,
-                HostSchemaCatalog schemaCatalog,
-                EvidenceMetadata schemaEvidence) {
+                SourceObservationCollector sources,
+                HostSchemaCatalog schemaCatalog) {
             this.roots = roots;
-            this.evidence = evidence;
+            this.sources = sources;
             this.schemaCatalog = schemaCatalog;
-            this.schemaEvidence = schemaEvidence;
         }
 
-        public Map<String, Object> roots() { return roots; }
         @Override public HostSchemaCatalog schemaCatalog() { return schemaCatalog; }
-        /**
-         * Returns evidence for data roots dereferenced through this selection. This is root-level
-         * lineage, not a claim that every exposed field affected the returned JavaScript value.
-         */
-        public List<EvidenceMetadata> evidence() { return evidence.snapshot(); }
-        public void recordEvidence(Collection<EvidenceMetadata> additions) { evidence.add(additions); }
-        public void recordEvidence(EvidenceMetadata addition) { evidence.add(List.of(addition)); }
-        public void recordSchemaAccess() { evidence.add(List.of(schemaEvidence)); }
+        /** Read origins, not a claim that every observed field affected the return value. */
+        public List<SourceObservation> sources() { return sources.snapshot(); }
+        public void recordEvidence(EvidenceMetadata addition) { sources.add(addition); }
+        public void recordSource(SourceObservation addition) { sources.add(addition); }
         @Override public Set<Entry<String, Object>> entrySet() { return roots.entrySet(); }
         @Override public Object get(Object key) { return roots.get(key); }
         @Override public boolean containsKey(Object key) { return roots.containsKey(key); }
-    }
-
-    private static final class EvidenceRecorder {
-        private final LinkedHashSet<EvidenceMetadata> values = new LinkedHashSet<>();
-        private synchronized void add(Collection<EvidenceMetadata> evidence) { values.addAll(evidence); }
-        private synchronized List<EvidenceMetadata> snapshot() { return List.copyOf(values); }
     }
 
     private static HostRootDescriptor descriptor(
@@ -703,21 +593,22 @@ public final class MinecraftAgentHostGraph {
         private final Map<String, HostRootDescriptor> roots;
         private final List<String> names;
         private final HostSchemaCatalog schemaCatalog;
-        private final Map<String, Supplier<List<EvidenceMetadata>>> evidenceOwners;
-        private final EvidenceRecorder evidence;
+        private final Map<String, Supplier<List<SourceObservation>>> evidenceOwners;
+        private final SourceObservationCollector sources;
+        private final Set<String> observedOwners = new java.util.HashSet<>();
         private final Set<Entry<String, Object>> entries;
 
         private LazyRootMap(
                 Map<String, HostRootDescriptor> roots,
                 List<String> names,
                 HostSchemaCatalog schemaCatalog,
-                Map<String, Supplier<List<EvidenceMetadata>>> evidenceOwners,
-                EvidenceRecorder evidence) {
+                Map<String, Supplier<List<SourceObservation>>> evidenceOwners,
+                SourceObservationCollector sources) {
             this.roots = roots;
             this.names = names;
             this.schemaCatalog = schemaCatalog;
             this.evidenceOwners = evidenceOwners;
-            this.evidence = evidence;
+            this.sources = sources;
             entries = new AbstractSet<>() {
                 @Override
                 public Iterator<Entry<String, Object>> iterator() {
@@ -738,9 +629,18 @@ public final class MinecraftAgentHostGraph {
 
         private Object resolve(String name) {
             HostRootDescriptor descriptor = roots.get(name);
+            if (!descriptor.available()) {
+                throw new JavascriptExecutionException(
+                        "javascript_root_unavailable",
+                        "Minecraft data mc." + name + " was not captured for this request. "
+                                + "Unavailable data is not an empty dataset. "
+                                + "Use schema.list() to inspect current availability.");
+            }
             Object value = descriptor.resolve();
-            Supplier<List<EvidenceMetadata>> owner = evidenceOwners.get(descriptor.evidenceOwner());
-            if (owner != null) evidence.add(owner.get());
+            if (observedOwners.add(descriptor.evidenceOwner())) {
+                Supplier<List<SourceObservation>> owner = evidenceOwners.get(descriptor.evidenceOwner());
+                if (owner != null) sources.addAll(owner.get());
+            }
             return value;
         }
 

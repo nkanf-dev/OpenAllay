@@ -7,7 +7,6 @@ import com.google.gson.JsonParser;
 import dev.openallay.tool.ToolResult;
 import java.io.IOException;
 import java.io.Reader;
-import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashSet;
@@ -18,7 +17,7 @@ import java.util.function.UnaryOperator;
 /** Strict current-schema decoder for local capability policy. */
 public final class CapabilityPolicyLoader {
     private static final Set<String> ROOT_FIELDS =
-            Set.of("schemaVersion", "disabledTools", "disabledSkills");
+            Set.of("disabledTools", "disabledSkills");
 
     public ToolResult<CapabilityPolicy> load(Path path) {
         Objects.requireNonNull(path, "path");
@@ -44,13 +43,12 @@ public final class CapabilityPolicyLoader {
                 throw new IllegalArgumentException(
                         "capability configuration fields must be exactly " + ROOT_FIELDS);
             }
-            int schemaVersion = integer(root, "schemaVersion");
             Set<String> disabledTools = identities(
                     root, "disabledTools", CapabilityPolicy::requireToolId);
             Set<String> disabledSkills = identities(
                     root, "disabledSkills", CapabilityPolicy::requireSkillName);
             return new ToolResult.Success<>(new CapabilityPolicy(
-                    schemaVersion, disabledTools, disabledSkills));
+                    disabledTools, disabledSkills));
         } catch (RuntimeException failure) {
             return failed(failure.getMessage() == null
                     ? "Invalid capability configuration"
@@ -76,18 +74,6 @@ public final class CapabilityPolicyLoader {
             }
         }
         return values;
-    }
-
-    private static int integer(JsonObject root, String field) {
-        JsonElement encoded = required(root, field);
-        if (!encoded.isJsonPrimitive() || !encoded.getAsJsonPrimitive().isNumber()) {
-            throw new IllegalArgumentException(field + " must be an integer");
-        }
-        try {
-            return new BigDecimal(encoded.getAsString()).intValueExact();
-        } catch (ArithmeticException | NumberFormatException failure) {
-            throw new IllegalArgumentException(field + " must be an integer");
-        }
     }
 
     private static JsonElement required(JsonObject root, String field) {

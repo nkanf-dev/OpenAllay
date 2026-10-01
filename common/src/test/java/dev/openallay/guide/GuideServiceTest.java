@@ -73,6 +73,96 @@ final class GuideServiceTest {
     }
 
     @Test
+    void queuedStopPublishesCancellationBeforeABlockingEndpointAndAcceptsIntentWhenItReturnsFalse()
+            throws Exception {
+        QueuedDispatcher dispatcher = new QueuedDispatcher();
+        QueuedLocal local = new QueuedLocal(dispatcher);
+        GuideService service = queuedService(local, dispatcher);
+        List<GuideSnapshot> observed = new ArrayList<>();
+        service.subscribe(observed::add);
+        CompletableFuture<ToolResult<UUID>> asking = service.ask("stop during delayed handoff");
+        dispatcher.runAll();
+        UUID request = success(asking.join());
+        assertEquals(GuideRequestStatus.MODEL_WAIT, request(service, "main", request).status());
+        CompletableFuture<ToolResult<Boolean>> stopping = service.cancel();
+        CompletableFuture<Void> processing = CompletableFuture.runAsync(dispatcher::runAll);
+        try {
+            assertTrue(local.cancelEntered.await(2, java.util.concurrent.TimeUnit.SECONDS));
+
+            assertFalse(stopping.isDone());
+            assertEquals(GuideRequestStatus.CANCELLED, request(service, "main", request).status());
+            assertEquals(GuideRequestStatus.CANCELLED, observed.getLast().sessions().getFirst()
+                    .requests().getFirst().status());
+            assertEquals(List.of("main"), local.cancelled);
+        } finally {
+            local.cancelRelease.countDown();
+        }
+        processing.get(2, java.util.concurrent.TimeUnit.SECONDS);
+
+        assertTrue(success(stopping.join()));
+        assertEquals(GuideRequestStatus.CANCELLED, request(service, "main", request).status());
+        GuideRequestSnapshot stopped = request(service, "main", request);
+        List<dev.openallay.model.ModelMessage> original = List.of(
+                dev.openallay.model.ModelMessage.userText("safe finalized request after stop"));
+        local.queue(request, new AgentEvent.ContextFinalized(original, original));
+        local.queue(request, new AgentEvent.FinalText("late visible answer"));
+        local.queue(request, new AgentEvent.ContextUpdated(
+                List.of(dev.openallay.model.ModelMessage.userText("ordinary late context")),
+                List.of(dev.openallay.model.ModelMessage.userText("ordinary late original"))));
+        dispatcher.runAll();
+
+        assertEquals(stopped, request(service, "main", request));
+        CompletableFuture<ToolResult<dev.openallay.guide.export.GuideSessionExportSnapshot>> exporting =
+                service.captureSelectedSessionForExport();
+        dispatcher.runAll();
+        assertEquals(original, success(exporting.join()).requests().getFirst().originalContext());
+    }
+
+    @Test
+    void queuedPrecompletedEngineHandoffArchivesExactAnswerWithoutReopeningCancelledUi() {
+        QueuedDispatcher dispatcher = new QueuedDispatcher();
+        QueuedLocal local = new QueuedLocal(dispatcher);
+        local.cancelRelease.countDown();
+        GuideService service = queuedService(local, dispatcher);
+        CompletableFuture<ToolResult<UUID>> asking = service.ask("engine completed before display handoff");
+        dispatcher.runAll();
+        UUID request = success(asking.join());
+        List<dev.openallay.model.ModelMessage> original = List.of(
+                dev.openallay.model.ModelMessage.userText("engine completed before display handoff"),
+                new dev.openallay.model.ModelMessage(dev.openallay.model.ModelRole.ASSISTANT, List.of(
+                        new dev.openallay.model.ModelContent.Text("exact precompleted engine answer"))));
+        List<dev.openallay.model.ModelMessage> active = new ArrayList<>();
+        active.add(dev.openallay.model.ModelMessage.userText("earlier session model context"));
+        active.addAll(original);
+        CompletableFuture<ToolResult<Boolean>> stopping = service.cancel();
+        local.queue(request, new AgentEvent.ContextFinalized(active, original));
+        local.queue(request, new AgentEvent.StateChanged(AgentState.COMPLETED));
+        local.queue(request, new AgentEvent.FinalText("exact precompleted engine answer"));
+
+        dispatcher.runAll();
+
+        assertTrue(success(stopping.join()));
+        GuideRequestSnapshot cancelled = request(service, "main", request);
+        assertEquals(GuideRequestStatus.CANCELLED, cancelled.status());
+        assertEquals("agent_cancelled", cancelled.failure().code());
+        assertEquals("", cancelled.assistantText());
+        assertTrue(cancelled.timeline().isEmpty());
+        assertEquals(List.of("engine completed before display handoff"),
+                service.snapshot().sessions().getFirst().messages().stream().map(GuideMessage::text).toList());
+        CompletableFuture<ToolResult<dev.openallay.guide.export.GuideSessionExportSnapshot>> exporting =
+                service.captureSelectedSessionForExport();
+        dispatcher.runAll();
+        var archived = success(exporting.join()).requests().getFirst();
+        assertEquals(GuideRequestStatus.CANCELLED, archived.status());
+        assertEquals(original, archived.originalContext());
+        assertEquals("exact precompleted engine answer",
+                assertInstanceOf(dev.openallay.model.ModelContent.Text.class,
+                        archived.originalContext().getLast().content().getFirst()).text());
+        assertTrue(archived.timeline().isEmpty());
+        assertEquals(cancelled, request(service, "main", request));
+    }
+
+    @Test
     void servicePreservesInterleavedAssistantAndToolTimeline() {
         FakeLocal local = new FakeLocal();
         GuideService service = service(local, new FakeRemote(false));
@@ -110,6 +200,32 @@ final class GuideServiceTest {
         remote.fail(request, "server_model_failure", "no fallback");
         assertEquals(GuideRequestStatus.FAILED, request(service, "main", request).status());
         assertEquals(GuideModelMode.SERVER, service.snapshot().modelMode());
+    }
+
+    @Test
+    void serverRequestsWithoutPersistenceReuseActualContextInsteadOfVisibleHistory() {
+        FakeRemote remote = new FakeRemote(true);
+        GuideService service = service(null, remote);
+        success(service.setModelMode(GuideModelMode.SERVER).join());
+        UUID first = success(service.ask("first visible question").join());
+        List<dev.openallay.model.ModelMessage> actual = List.of(
+                dev.openallay.model.ModelMessage.userText("actual retained model context"));
+        remote.pending.get(first).accept(new AgentEvent.ContextUpdated(
+                actual, List.of(dev.openallay.model.ModelMessage.userText("first request original"))));
+        remote.pending.get(first).accept(new AgentEvent.FinalText("visible answer"));
+
+        UUID next = success(service.ask("next visible question").join());
+        service.selectSession("other").join();
+        success(service.setModelMode(GuideModelMode.SERVER).join());
+        UUID other = success(service.ask("other session question").join());
+
+        assertEquals(List.of(), remote.contextByRequest.get(first));
+        assertEquals(actual, remote.contextByRequest.get(next));
+        assertEquals(List.of(), remote.contextByRequest.get(other));
+        assertEquals(List.of("first visible question", "visible answer", "next visible question"),
+                service.snapshot().sessions().stream()
+                        .filter(session -> session.sessionId().equals("main"))
+                        .findFirst().orElseThrow().messages().stream().map(GuideMessage::text).toList());
     }
 
     @Test
@@ -159,6 +275,11 @@ final class GuideServiceTest {
         FakeLocal local = new FakeLocal();
         GuideService service = service(local, new FakeRemote(false));
         UUID request = success(service.ask("export this").join());
+        List<dev.openallay.model.ModelMessage> original = List.of(
+                dev.openallay.model.ModelMessage.userText("actual export request"));
+        local.pending.get(request).accept(new AgentEvent.ContextUpdated(
+                List.of(dev.openallay.model.ModelMessage.userText("compacted session context")),
+                original));
         local.complete(request, "exported answer");
 
         dev.openallay.guide.export.GuideSessionExportSnapshot exported = success(
@@ -172,6 +293,7 @@ final class GuideServiceTest {
         assertEquals("exported answer",
                 ((dev.openallay.guide.export.GuideSessionExportSnapshot.Entry.Assistant)
                         exported.requests().getFirst().timeline().getFirst()).text());
+        assertEquals(original, exported.requests().getFirst().originalContext());
     }
 
     @Test
@@ -188,6 +310,13 @@ final class GuideServiceTest {
 
         local.complete(request, "late answer");
         assertTrue(service.snapshot().sessions().getFirst().requests().isEmpty());
+    }
+
+    private static GuideService queuedService(QueuedLocal local, QueuedDispatcher dispatcher) {
+        return new GuideService(ACTOR, local, new FakeRemote(false),
+                (capabilities, correlation) -> new ToolResult.Success<>(
+                        ToolInvocationContext.developmentConsole(correlation)),
+                dispatcher, Clock.fixed(Instant.EPOCH, ZoneOffset.UTC), new Gson());
     }
 
     private static GuideService service(FakeLocal local, FakeRemote remote) {
@@ -220,6 +349,58 @@ final class GuideServiceTest {
     @SuppressWarnings("unchecked")
     private static <T> ToolResult.Failure<T> failure(ToolResult<T> result) {
         return (ToolResult.Failure<T>) assertInstanceOf(ToolResult.Failure.class, result);
+    }
+
+    private static final class QueuedDispatcher implements dev.openallay.client.ClientEventDispatcher {
+        private final java.util.concurrent.ConcurrentLinkedQueue<Runnable> tasks =
+                new java.util.concurrent.ConcurrentLinkedQueue<>();
+
+        @Override public void execute(Runnable event) { tasks.add(event); }
+
+        private void runAll() {
+            Runnable task;
+            while ((task = tasks.poll()) != null) task.run();
+        }
+    }
+
+    private static final class QueuedLocal implements GuideLocalEndpoint {
+        private final QueuedDispatcher dispatcher;
+        private final Map<UUID, Consumer<AgentEvent>> pending = new java.util.HashMap<>();
+        private final List<String> cancelled = new ArrayList<>();
+        private final java.util.concurrent.CountDownLatch cancelEntered =
+                new java.util.concurrent.CountDownLatch(1);
+        private final java.util.concurrent.CountDownLatch cancelRelease =
+                new java.util.concurrent.CountDownLatch(1);
+
+        private QueuedLocal(QueuedDispatcher dispatcher) { this.dispatcher = dispatcher; }
+        @Override public Set<ContextCapability> requiredContext() { return Set.of(); }
+        @Override public CompletableFuture<AgentResult> ask(UUID actor, String sessionId,
+                UUID requestId, String question, ToolInvocationContext context,
+                Consumer<AgentEvent> events) {
+            pending.put(requestId, events);
+            queue(requestId, new AgentEvent.StateChanged(AgentState.MODEL_WAIT));
+            return new CompletableFuture<>();
+        }
+        @Override public boolean cancel(UUID actor, String sessionId) {
+            cancelled.add(sessionId);
+            cancelEntered.countDown();
+            try {
+                if (!cancelRelease.await(2, java.util.concurrent.TimeUnit.SECONDS)) {
+                    throw new AssertionError("blocking cancellation fixture was not released");
+                }
+            } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+                throw new AssertionError(interrupted);
+            }
+            return false;
+        }
+        @Override public void clearSession(UUID actor, String sessionId) {}
+        @Override public void clearActor(UUID actor) {}
+
+        private void queue(UUID requestId, AgentEvent event) {
+            Consumer<AgentEvent> captured = pending.get(requestId);
+            dispatcher.execute(() -> captured.accept(event));
+        }
     }
 
     private static final class FakeLocal implements GuideLocalEndpoint {
@@ -273,6 +454,8 @@ final class GuideServiceTest {
     private static final class FakeRemote implements GuideRemoteEndpoint {
         private boolean available;
         private final Map<UUID, Consumer<AgentEvent>> pending = new java.util.HashMap<>();
+        private final Map<UUID, List<dev.openallay.model.ModelMessage>> contextByRequest =
+                new java.util.HashMap<>();
         private final List<UUID> cancelled = new ArrayList<>();
 
         private FakeRemote(boolean available) { this.available = available; }
@@ -285,6 +468,16 @@ final class GuideServiceTest {
             pending.put(requestId, events);
             events.accept(new AgentEvent.StateChanged(AgentState.MODEL_WAIT));
             return true;
+        }
+        @Override
+        public boolean askWithContext(
+                UUID requestId,
+                String sessionId,
+                String question,
+                List<dev.openallay.model.ModelMessage> history,
+                Consumer<AgentEvent> events) {
+            contextByRequest.put(requestId, List.copyOf(history));
+            return ask(requestId, sessionId, question, events);
         }
         @Override public boolean cancel(UUID requestId) {
             cancelled.add(requestId);

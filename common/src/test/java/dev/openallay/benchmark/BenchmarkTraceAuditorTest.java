@@ -98,7 +98,6 @@ final class BenchmarkTraceAuditorTest {
     void rejectsAReportWithoutAnExactlyCorrelatedTraceReference() {
         BenchmarkReport.AttemptReport attempt = verificationFailure();
         BenchmarkReport report = new BenchmarkReport(
-                "fixture-v1",
                 List.of(new BenchmarkReport.CaseReport(
                         "case-a",
                         1,
@@ -118,7 +117,6 @@ final class BenchmarkTraceAuditorTest {
     private BenchmarkTraceAudit.AttemptAudit audit(
             BenchmarkReport.AttemptReport attempt, LiveAgentTrace trace) {
         BenchmarkReport report = new BenchmarkReport(
-                "fixture-v1",
                 List.of(new BenchmarkReport.CaseReport(
                         "case-a",
                         1,
@@ -163,7 +161,6 @@ final class BenchmarkTraceAuditorTest {
     private static LiveAgentTrace trace(
             AgentState state, String errorCode, LiveTraceEvent... events) {
         return new LiveAgentTrace(
-                1,
                 UUID.randomUUID(),
                 UUID.randomUUID(),
                 "benchmark",

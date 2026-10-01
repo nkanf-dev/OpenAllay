@@ -3,11 +3,10 @@ package dev.openallay.script;
 import com.google.gson.JsonElement;
 import dev.latvian.mods.rhino.BaseFunction;
 import dev.latvian.mods.rhino.Context;
-import dev.latvian.mods.rhino.RhinoException;
 import dev.latvian.mods.rhino.Scriptable;
 import dev.latvian.mods.rhino.ScriptableObject;
 import dev.openallay.model.CancellationSignal;
-import dev.openallay.context.EvidenceMetadata;
+import dev.openallay.context.SourceObservation;
 import dev.openallay.model.ModelClientException;
 import dev.openallay.script.host.RhinoHostAdapter;
 import dev.openallay.script.schema.DeclaredHostRoots;
@@ -188,7 +187,7 @@ public final class RhinoJavascriptRuntime {
             Map<String, JavascriptResultShape> workspaceShapes, CancellationSignal cancellation,
             JavascriptCommandBridge commands, JavascriptWorldBridge world, boolean unrestricted) {
         return execute(source, minecraftRoots, workspaceValues, workspaceShapes, Map.of(),
-                ignored -> {}, () -> {}, cancellation, commands, world, unrestricted);
+                ignored -> {}, cancellation, commands, world, unrestricted);
     }
 
     public JavascriptExecution execute(
@@ -196,9 +195,8 @@ public final class RhinoJavascriptRuntime {
             Map<String, Object> minecraftRoots,
             Map<String, JsonElement> workspaceValues,
             Map<String, JavascriptResultShape> workspaceShapes,
-            Map<String, List<EvidenceMetadata>> workspaceEvidence,
-            Consumer<EvidenceMetadata> workspaceEvidenceRecorder,
-            Runnable schemaEvidenceRecorder,
+            Map<String, List<SourceObservation>> workspaceSources,
+            Consumer<SourceObservation> workspaceSourceRecorder,
             CancellationSignal cancellation,
             JavascriptCommandBridge commands,
             JavascriptWorldBridge world,
@@ -215,15 +213,15 @@ public final class RhinoJavascriptRuntime {
         Objects.requireNonNull(minecraftRoots, "minecraftRoots");
         Objects.requireNonNull(workspaceValues, "workspaceValues");
         Objects.requireNonNull(workspaceShapes, "workspaceShapes");
-        Objects.requireNonNull(workspaceEvidence, "workspaceEvidence");
-        Objects.requireNonNull(workspaceEvidenceRecorder, "workspaceEvidenceRecorder");
-        Objects.requireNonNull(schemaEvidenceRecorder, "schemaEvidenceRecorder");
+        Objects.requireNonNull(workspaceSources, "workspaceSources");
+        Objects.requireNonNull(workspaceSourceRecorder, "workspaceSourceRecorder");
         Objects.requireNonNull(cancellation, "cancellation").throwIfCancelled();
 
         long started = System.nanoTime();
         OpenAllayRhinoContextFactory factory =
                 new OpenAllayRhinoContextFactory(cancellation, timeout, unrestricted);
         Context context = factory.enter();
+        JavascriptFailureFormatter failures = new JavascriptFailureFormatter(source);
         try {
             ScriptableObject scope = unrestricted
                     ? context.initStandardObjects(null, false)
@@ -241,14 +239,13 @@ public final class RhinoJavascriptRuntime {
                             adapter,
                             minecraftRoots instanceof DeclaredHostRoots declared
                                     ? declared.schemaCatalog()
-                                    : new HostSchemaCatalog(List.of()),
-                            schemaEvidenceRecorder));
+                                    : new HostSchemaCatalog(List.of())));
             defineGlobal(
                     context,
                     scope,
                     "workspace",
                     workspace(context, scope, adapter, workspaceValues, workspaceShapes,
-                            workspaceEvidence, workspaceEvidenceRecorder));
+                            workspaceSources, workspaceSourceRecorder));
             if (commands != null) {
                 defineGlobal(context, scope, "commands", commands.bind(context, scope, adapter));
             }
@@ -260,9 +257,11 @@ public final class RhinoJavascriptRuntime {
                     context,
                     scope,
                     "require",
-                    moduleLoader(context, scope, usedModules));
-            String program = buildProgram(source, unrestricted);
-            Object value = context.evaluateString(scope, program, "openallay-agent.js", 1, null);
+                    moduleLoader(context, scope, usedModules, failures));
+            installHelpers(context, scope, unrestricted);
+            String program = buildProgram(source);
+            Object value = context.evaluateString(
+                    scope, program, JavascriptFailureFormatter.USER_SOURCE, 1, null);
             RhinoJsonNormalizer.Result normalized = unrestricted
                     ? normalizer.normalizeUnrestricted(value, context)
                     : normalizer.normalize(value, context);
@@ -275,12 +274,10 @@ public final class RhinoJavascriptRuntime {
             throw failure;
         } catch (ModelClientException cancellationFailure) {
             throw cancellationFailure;
-        } catch (RhinoException failure) {
-            throw new JavascriptExecutionException(
-                    "javascript_error", summarize(failure), failure);
         } catch (RuntimeException failure) {
+            JavascriptFailureFormatter.rethrowControlFailure(failure);
             throw new JavascriptExecutionException(
-                    "javascript_error", "JavaScript execution failed", failure);
+                    "javascript_error", failures.format(failure, context), failure);
         }
     }
 
@@ -299,18 +296,20 @@ public final class RhinoJavascriptRuntime {
         defineGlobal(context, scope, "Java", java);
     }
 
-    private static String buildProgram(String source, boolean unrestricted) {
+    private static void installHelpers(Context context, ScriptableObject scope, boolean unrestricted) {
         String helpers = unrestricted ? HELPERS : SAFE_RUNTIME_GUARDS + HELPERS;
-        return """
-                (function() {
-                  "use strict";
-                  %s
-                  return (function() {
-                    "use strict";
-                    %s
-                  })();
-                })()
-                """.formatted(helpers, source);
+        Object value = context.evaluateString(
+                scope,
+                "(function() {\n\"use strict\";\n" + helpers + "\nreturn helpers;\n})()",
+                "openallay-runtime.js",
+                1,
+                null);
+        defineGlobal(context, scope, "helpers", value);
+    }
+
+    private static String buildProgram(String source) {
+        // Keep the two wrapper lines in sync with JavascriptFailureFormatter.USER_PREFIX_LINES.
+        return "(function() {\n\"use strict\";\n" + source + "\n})()";
     }
 
     private static void defineGlobal(
@@ -331,9 +330,10 @@ public final class RhinoJavascriptRuntime {
             RhinoHostAdapter adapter,
             Map<String, JsonElement> values,
             Map<String, JavascriptResultShape> shapes,
-            Map<String, List<EvidenceMetadata>> evidence,
-            Consumer<EvidenceMetadata> evidenceRecorder) {
+            Map<String, List<SourceObservation>> sources,
+            Consumer<SourceObservation> sourceRecorder) {
         Scriptable workspace = context.newObject(scope);
+        Set<String> opened = new java.util.HashSet<>();
         BaseFunction open = new BaseFunction(
                 scope, ScriptableObject.getFunctionPrototype(scope, context)) {
             @Override
@@ -358,7 +358,9 @@ public final class RhinoJavascriptRuntime {
                             "workspace_handle_unavailable",
                             "Result handle is unavailable in this execution");
                 }
-                evidence.getOrDefault(handle.toString(), List.of()).forEach(evidenceRecorder);
+                if (opened.add(handle.toString())) {
+                    sources.getOrDefault(handle.toString(), List.of()).forEach(sourceRecorder);
+                }
                 JavascriptResultShape shape = shapes.get(handle.toString());
                 return shape == null
                         ? adapter.adapt(value)
@@ -389,8 +391,7 @@ public final class RhinoJavascriptRuntime {
             Context context,
             ScriptableObject scope,
             RhinoHostAdapter adapter,
-            HostSchemaCatalog catalog,
-            Runnable evidenceRecorder) {
+            HostSchemaCatalog catalog) {
         Scriptable api = context.newObject(scope);
         BaseFunction list = new BaseFunction(
                 scope, ScriptableObject.getFunctionPrototype(scope, context)) {
@@ -410,7 +411,6 @@ public final class RhinoJavascriptRuntime {
                             "javascript_schema_invalid",
                             "schema.list does not accept arguments");
                 }
-                evidenceRecorder.run();
                 return adapter.adapt(catalog.list());
             }
         };
@@ -436,7 +436,6 @@ public final class RhinoJavascriptRuntime {
                         .orElseThrow(() -> new JavascriptExecutionException(
                                 "javascript_schema_unavailable",
                                 "Declared JavaScript schema path is unavailable: " + path));
-                evidenceRecorder.run();
                 return adapter.adapt(described);
             }
         };
@@ -461,7 +460,8 @@ public final class RhinoJavascriptRuntime {
     private BaseFunction moduleLoader(
             Context context,
             ScriptableObject scope,
-            LinkedHashSet<String> usedModules) {
+            LinkedHashSet<String> usedModules,
+            JavascriptFailureFormatter failures) {
         LinkedHashMap<String, Object> cache = new LinkedHashMap<>();
         Set<String> loading = new java.util.HashSet<>();
         return new BaseFunction(
@@ -494,6 +494,8 @@ public final class RhinoJavascriptRuntime {
                 }
                 try {
                     String moduleSource = modules.source(id);
+                    failures.registerModule(id, moduleSource);
+                    // Six wrapper lines precede module source; the formatter maps them out.
                     String program = """
                             (function() {
                               "use strict";
@@ -507,16 +509,19 @@ public final class RhinoJavascriptRuntime {
                             })()
                             """.formatted(moduleSource);
                     Object exports = callContext.evaluateString(
-                            scope, program, "openallay-module-" + id + ".js", 1, null);
+                            scope, program, JavascriptFailureFormatter.moduleSourceName(id), 1, null);
                     cache.put(id, exports);
                     usedModules.add(id);
                     return exports;
                 } catch (JavascriptExecutionException failure) {
                     throw failure;
-                } catch (RhinoException failure) {
+                } catch (ModelClientException cancellationFailure) {
+                    throw cancellationFailure;
+                } catch (RuntimeException failure) {
+                    JavascriptFailureFormatter.rethrowControlFailure(failure);
                     throw new JavascriptExecutionException(
                             "javascript_module_error",
-                            "JavaScript module failed: " + id,
+                            failures.format(failure, callContext),
                             failure);
                 } finally {
                     loading.remove(id);
@@ -531,18 +536,5 @@ public final class RhinoJavascriptRuntime {
                         "require is not a constructor");
             }
         };
-    }
-
-    private static String summarize(RhinoException failure) {
-        String message = failure.getMessage();
-        if (message == null || message.isBlank()) {
-            message = "JavaScript evaluation failed";
-        }
-        if (message.contains("redeclaration of var")) {
-            message = "KubeJS Rhino cannot reuse a block-scoped local declared inside a nested "
-                    + "array callback here; replace the inner find/map callback with an indexed "
-                    + "loop. " + message;
-        }
-        return message.length() <= 320 ? message : message.substring(0, 320);
     }
 }

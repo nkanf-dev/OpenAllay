@@ -24,7 +24,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-/** Strict schema-2 named-profile loader for client model settings. */
+/** Strict named-profile loader for client model settings. */
 public final class ModelProfilesConfigLoader {
     private final BuiltinModelCatalog catalog;
 
@@ -37,7 +37,7 @@ public final class ModelProfilesConfigLoader {
     }
 
     private static final Set<String> ROOT_FIELDS =
-            Set.of("schemaVersion", "defaultProfileId", "profiles");
+            Set.of("defaultProfileId", "profiles");
     private static final Set<String> REQUIRED_PROFILE_FIELDS = Set.of(
             "id", "displayName", "enabled", "protocol", "baseUrl", "model",
             "credentialRef", "connectTimeoutSeconds", "requestTimeoutSeconds");
@@ -78,8 +78,7 @@ public final class ModelProfilesConfigLoader {
         if (!Files.exists(profilesPath)) {
             return new ToolResult.Failure<>(
                     "model_not_configured",
-                    "No client model profiles configuration exists; save models.json schema 2. "
-                            + "The legacy model.json file is not imported.");
+                    "No client model profiles configuration exists; save models.json.");
         }
         try (Reader reader = Files.newBufferedReader(profilesPath)) {
             return load(reader, credentials, metadata);
@@ -110,12 +109,6 @@ public final class ModelProfilesConfigLoader {
             JsonElement parsed = JsonParser.parseReader(reader);
             JsonObject root = object(parsed, "Model profiles configuration");
             exactFields(root, ROOT_FIELDS, Set.of(), "model profiles configuration");
-            int schemaVersion = integer(root, "schemaVersion");
-            if (schemaVersion != ModelProfilesConfig.SCHEMA_VERSION) {
-                throw new IllegalArgumentException(
-                        "Only model profiles schema version "
-                                + ModelProfilesConfig.SCHEMA_VERSION + " is supported");
-            }
             String defaultProfileId = string(root, "defaultProfileId");
             JsonArray encodedProfiles = array(root, "profiles");
             List<ModelProfileDefinition> definitions = new ArrayList<>();
@@ -123,7 +116,7 @@ public final class ModelProfilesConfigLoader {
                 definitions.add(profile(object(encoded, "model profile")));
             }
             ModelProfilesConfig config = new ModelProfilesConfig(
-                    ModelProfilesConfig.SCHEMA_VERSION, defaultProfileId, definitions);
+                    defaultProfileId, definitions);
             List<ResolvedModelProfile> resolved = config.profiles().stream()
                     .map(profile -> resolve(profile, credentials, metadataCopy))
                     .toList();

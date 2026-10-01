@@ -29,6 +29,7 @@ final class ModelMetadataCacheTest {
         assertFalse(json.contains("apiKey"));
         assertFalse(json.contains("Authorization"));
         assertFalse(json.contains("secret"));
+        assertFalse(json.contains("schemaVersion"));
         ModelMetadataCache second = new ModelMetadataCache(path);
         assertEquals(metadata, second.load().join()
                 .find("openrouter", "vendor/model"));
@@ -60,7 +61,7 @@ final class ModelMetadataCacheTest {
     @Test
     void malformedCacheFailsClosedAndIsNotOverwritten() throws Exception {
         Path path = temporary.resolve("model-metadata.json");
-        String malformed = "{\"schemaVersion\":99,\"entries\":[]}";
+        String malformed = "{\"entries\":{}}";
         Files.writeString(path, malformed);
         ModelMetadataCache cache = new ModelMetadataCache(path);
 
@@ -82,24 +83,24 @@ final class ModelMetadataCacheTest {
                  "canonicalModelId":"vendor/model","contextWindowTokens":128000,
                  "maxOutputTokens":null,"capturedAt":"1970-01-01T00:00:00Z"}
                 """;
-        Files.writeString(path, "{\"schemaVersion\":1,\"entries\":[" + entry + "," + entry + "]}");
+        Files.writeString(path, "{\"entries\":[" + entry + "," + entry + "]}");
         ModelMetadataCache duplicate = new ModelMetadataCache(path);
         assertEquals("metadata_cache_invalid", duplicate.load().join().failure().code());
         duplicate.closeAsync().join();
 
-        Files.writeString(path, "{\"schemaVersion\":1,\"entries\":[],\"extra\":true}");
+        Files.writeString(path, "{\"entries\":[],\"extra\":true}");
         ModelMetadataCache unknown = new ModelMetadataCache(path);
         assertEquals("metadata_cache_invalid", unknown.load().join().failure().code());
         unknown.closeAsync().join();
     }
 
     @Test
-    void duplicateJsonFieldsPricingAndUnversionedCacheAreRejectedWithoutMigration() throws Exception {
+    void duplicateJsonFieldsPricingAndMissingFieldsAreRejectedWithoutRewriting() throws Exception {
         Path path = temporary.resolve("strict-cache.json");
         for (String malformed : java.util.List.of(
-                "{\"schemaVersion\":1,\"schemaVersion\":1,\"entries\":[]}",
-                "{\"entries\":[]}",
-                "{\"schemaVersion\":1,\"entries\":[],\"pricing\":{}}")) {
+                "{\"entries\":[],\"entries\":[]}",
+                "{}",
+                "{\"entries\":[],\"pricing\":{}}")) {
             Files.writeString(path, malformed);
             ModelMetadataCache cache = new ModelMetadataCache(path);
             assertEquals("metadata_cache_invalid", cache.load().join().failure().code());

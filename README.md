@@ -188,6 +188,24 @@ OpenAllay builds on content already present in your modpack:
 These integrations are optional. OpenAllay remains useful when one of them is
 not installed or is unavailable for the current setup.
 
+
+## Current development
+
+Before formal 1.0, internal formats are **Latest Only**. Components released
+atomically with OpenAllay do not carry internal schema/protocol versions or old
+compatibility layers. Independently released Extension packages and their public
+API retain version contracts.
+
+The current source refactor removes manual JavaScript root declarations and the
+requirement to read game data before a computation can succeed. It preserves
+actual tool results, errors and loaded Skill text across questions, separates
+original history from compacted model context, and groups optional origin details.
+Builder now batches scans, terrain preparation, construction and undo and writes
+incremental operation journals. Deterministic tests and both loader builds pass;
+this source update does not change already published 0.2.4 artifacts or claim
+measured in-game latency. There is no internal-format migration or automatic reset of existing
+local test data.
+
 ## Roadmap
 
 OpenAllay is growing into an open Agent platform for Minecraft:

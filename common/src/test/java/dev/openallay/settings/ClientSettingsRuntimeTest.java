@@ -38,9 +38,6 @@ final class ClientSettingsRuntimeTest {
     void missingFilesUseDisabledMemoryDefaultWithoutMaterializingConfiguration(
             @TempDir Path directory) throws Exception {
         Path profiles = directory.resolve("models.json");
-        Path legacy = directory.resolve("model.json");
-        String legacyContents = "{\"apiKey\":\"old-secret\"}";
-        Files.writeString(legacy, legacyContents);
         Path metadata = directory.resolve("model-metadata.json");
 
         ToolResult<ClientSettingsRuntime> created = ClientSettingsRuntime.create(
@@ -64,8 +61,6 @@ final class ClientSettingsRuntimeTest {
                 .definition().maxOutputTokens());
         assertEquals("model_not_configured", settings.settings().snapshot().notice().code());
         assertFalse(Files.exists(profiles));
-        assertTrue(Files.exists(legacy));
-        assertEquals(legacyContents, Files.readString(legacy));
         settings.closeAsync().join();
     }
 
@@ -76,7 +71,7 @@ final class ClientSettingsRuntimeTest {
         var definition = new ModelProfileDefinition("main", "Main", true, ModelProtocol.OPENAI_CHAT,
                 URI.create("https://arbitrary.example/v1/"), "gpt-6-luna", "env:KEY", null, 8192,
                 Duration.ofSeconds(30), Duration.ofSeconds(300), null);
-        var config = new ModelProfilesConfig(2, "main", List.of(definition));
+        var config = new ModelProfilesConfig("main", List.of(definition));
         Files.writeString(profiles, new dev.openallay.model.config.ModelProfilesConfigWriter().encode(config));
         ClientSettingsRuntime settings = success(ClientSettingsRuntime.create(runtime(), profiles,
                 directory.resolve("model-metadata.json"), Map.of("KEY", "private-sentinel"),
@@ -101,7 +96,6 @@ final class ClientSettingsRuntimeTest {
         Path profiles = directory.resolve("models.json");
         Files.writeString(profiles, """
                 {
-                  "schemaVersion":2,
                   "defaultProfileId":"e2e-fixture",
                   "profiles":[
                     {"id":"e2e-fixture","displayName":"Offline UI fixture","enabled":true,
@@ -176,7 +170,7 @@ final class ClientSettingsRuntimeTest {
 
         assertInstanceOf(ToolResult.Success.class, settings.settings()
                 .saveDisplay(new GuideDisplayConfig(
-                        GuideDisplayConfig.SCHEMA_VERSION, true, true,
+                        true, true,
                 GuideDisplayConfig.DEFAULT_ASSISTANT_NAME)).join());
 
         assertTrue(display.config().debugMode());
@@ -214,7 +208,7 @@ final class ClientSettingsRuntimeTest {
                 Duration.ofSeconds(300),
                 null);
         ModelProfilesConfig config = new ModelProfilesConfig(
-                ModelProfilesConfig.SCHEMA_VERSION, "main", List.of(definition));
+                "main", List.of(definition));
 
         assertInstanceOf(ToolResult.Success.class, first.settings()
                 .saveModels(config, "main", SecretValue.of("first-secret-value")).join());
@@ -226,7 +220,7 @@ final class ClientSettingsRuntimeTest {
                 .join());
 
         String encoded = Files.readString(profiles);
-        assertTrue(encoded.contains("\"schemaVersion\":2"));
+        assertFalse(encoded.contains("schemaVersion"));
         assertTrue(encoded.contains("\"credentialRef\":\"local:"));
         assertFalse(encoded.contains("first-secret-value"));
         assertFalse(encoded.contains("second-secret-value"));
@@ -297,7 +291,7 @@ final class ClientSettingsRuntimeTest {
                     Duration.ofSeconds(5),
                     null);
             ModelProfilesConfig config = new ModelProfilesConfig(
-                    ModelProfilesConfig.SCHEMA_VERSION, "main", List.of(profile));
+                    "main", List.of(profile));
             assertInstanceOf(ToolResult.Success.class, settings.settings()
                     .saveModels(config, "main", SecretValue.of("saved-catalog-key")).join());
             ModelProfileDefinition saved = settings.settings().snapshot()
@@ -338,7 +332,7 @@ final class ClientSettingsRuntimeTest {
                     saved.metadata());
             assertInstanceOf(ToolResult.Success.class, settings.settings()
                     .saveModels(new ModelProfilesConfig(
-                            ModelProfilesConfig.SCHEMA_VERSION, "main", List.of(missing)))
+                            "main", List.of(missing)))
                     .join());
             assertFalse(settings.settings().snapshot().models().profiles().getFirst()
                     .credentialPresent());
@@ -379,8 +373,7 @@ final class ClientSettingsRuntimeTest {
                 Map.of(), Runnable::run, null, Clock.systemUTC(), GuideDisplayConfig.defaults()));
         try {
             assertTrue(skills.find("inspect-game-state").isPresent());
-            var policy = new dev.openallay.capability.CapabilityPolicy(1,
-                    java.util.Set.of(), java.util.Set.of("inspect-game-state"));
+            var policy = new dev.openallay.capability.CapabilityPolicy(java.util.Set.of(), java.util.Set.of("inspect-game-state"));
             assertInstanceOf(ToolResult.Success.class, settings.settings().saveCapabilities(policy).join());
             var frozen = settings.models().capabilities();
             assertFalse(frozen.skills().find("inspect-game-state").isPresent());
@@ -457,8 +450,7 @@ final class ClientSettingsRuntimeTest {
                 Map.of(), Runnable::run, null, Clock.systemUTC(), display, binding));
         java.util.concurrent.atomic.AtomicInteger loads = new java.util.concurrent.atomic.AtomicInteger();
         try {
-            settings.settings().saveDisplay(new GuideDisplayConfig(GuideDisplayConfig.SCHEMA_VERSION,
-                    true, true, GuideDisplayConfig.DEFAULT_ASSISTANT_NAME)).join();
+            settings.settings().saveDisplay(new GuideDisplayConfig(true, true, GuideDisplayConfig.DEFAULT_ASSISTANT_NAME)).join();
             assertFalse(settings.settings().snapshot().diagnostics().debug().orElseThrow().sourcesKnown());
             dev.openallay.knowledge.KnowledgeSourceProvider provider = new dev.openallay.knowledge.KnowledgeSourceProvider() {
                 @Override public String sourceId() { return "patchouli"; }
@@ -494,6 +486,10 @@ final class ClientSettingsRuntimeTest {
                 @Override public java.util.Set<dev.openallay.context.ContextCapability> requiredContext() {
                     return java.util.Set.of();
                 }
+                @Override public java.util.Optional<dev.openallay.guide.GuideContextSpec> contextSpec(String profileId) {
+                    return java.util.Optional.of(new dev.openallay.guide.GuideContextSpec(
+                            new dev.openallay.agent.context.ContextBudget(64_000, 4_096), 1_000, "test-model"));
+                }
                 @Override public java.util.Optional<dev.openallay.guide.GuideContextEstimate> contextEstimate(
                         String profileId, UUID actorId, String sessionId) {
                     return java.util.Optional.ofNullable(estimate);
@@ -520,13 +516,17 @@ final class ClientSettingsRuntimeTest {
                 @Override public void disconnect() {}
             };
             dev.openallay.guide.history.GuideHistoryAccess history = new dev.openallay.guide.history.GuideHistoryAccess() {
-                @Override public java.util.concurrent.CompletableFuture<dev.openallay.guide.history.GuideHistoryLoad> load(
+                @Override public java.util.concurrent.CompletableFuture<java.util.Optional<dev.openallay.guide.history.GuideHistoryMetadata>> metadata(
                         dev.openallay.guide.history.GuideHistoryScope ignored) {
-                    return java.util.concurrent.CompletableFuture.completedFuture(
-                            dev.openallay.guide.history.GuideHistoryLoad.empty());
+                    return java.util.concurrent.CompletableFuture.completedFuture(java.util.Optional.empty());
                 }
-                @Override public java.util.concurrent.CompletableFuture<Void> save(
-                        dev.openallay.guide.history.GuideHistoryPartition partition) {
+                @Override public java.util.concurrent.CompletableFuture<dev.openallay.guide.history.GuideHistoryContextSeed> context(
+                        dev.openallay.guide.history.GuideHistoryContextRequest request) {
+                    return java.util.concurrent.CompletableFuture.completedFuture(
+                            new dev.openallay.guide.history.GuideHistoryContextSeed(request.sessionId(), List.of(), List.of(), 0));
+                }
+                @Override public java.util.concurrent.CompletableFuture<Void> commit(
+                        dev.openallay.guide.history.GuideHistoryCommit commit) {
                     return java.util.concurrent.CompletableFuture.completedFuture(null);
                 }
                 @Override public java.util.concurrent.CompletableFuture<Void> delete(

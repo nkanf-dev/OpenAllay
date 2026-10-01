@@ -140,6 +140,27 @@ public final class LocalAgentToolExecutor implements AgentToolExecutor {
     }
 
     @Override
+    public List<dev.openallay.model.ModelMessage> refreshContext(
+            List<dev.openallay.model.ModelMessage> messages) {
+        List<dev.openallay.model.ModelMessage> current = messages;
+        for (var registration : tools.registrations()) {
+            if (registration.tool() instanceof dev.openallay.skill.LoadSkillTool skill) {
+                current = skill.refreshContext(current);
+            }
+        }
+        return current;
+    }
+
+    @Override
+    public void prepareContext(String correlationId, List<dev.openallay.model.ModelMessage> messages) {
+        for (var registration : tools.registrations()) {
+            if (registration.tool() instanceof dev.openallay.skill.LoadSkillTool skill) {
+                skill.prepareContext(correlationId, messages);
+            }
+        }
+    }
+
+    @Override
     public void closeRequestScope(String correlationId) {
         tools.registrations().stream()
                 .map(registration -> registration.tool())

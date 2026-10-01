@@ -1,5 +1,10 @@
 # SKMB-2026-07-24-027: JavaScript Modules, Complete Live E2E Traces, and Silent History Saves
 
+> Subsequent decision: [041](2026-10-01-041-execution-context-simplification.md)
+> authorizes a breaking simplification of display-only tool persistence where it replaced actual model context.
+> Its implementation/verification is tracked separately; this document retains
+> the historical decision and is not proof that the new behavior is delivered.
+
 - Status: accepted
 - Date: 2026-07-24
 - Scope: Rhino module loading, craftability exposure, real-client trace retention,

@@ -47,7 +47,7 @@ final class GuideToolDetailViewTest {
         JsonObject normalized = new JsonObject();
         normalized.addProperty("status", "success");
         GuideToolDetailView.Debug debug = new GuideToolDetailView.Debug(
-                "call-1", "openallay:inspect_inventory", List.of(), normalized, "");
+                "call-1", "openallay:inspect_inventory", null, normalized, "");
         GuideToolDetailView view = new GuideToolDetailView(
                 "screen.openallay.tool.inventory",
                 GuideToolStatus.SUCCEEDED,
@@ -78,6 +78,19 @@ final class GuideToolDetailViewTest {
         assertTrue(interrupted.narration().isEmpty());
         assertEquals(GuideToolDisplayStatus.RUNNING, pending.displayStatus());
         assertEquals(1, pending.narration().size());
+    }
+
+    @Test
+    void failureTextIsNotClippedOrLostByTerminalProjection() {
+        String message = "The actual error line with source location. ".repeat(200);
+        GuideToolDetailView.Failure failure = new GuideToolDetailView.Failure("javascript_error", message);
+        GuideToolDetailView view = new GuideToolDetailView(
+                "screen.openallay.tool.run_javascript", GuideToolStatus.FAILED,
+                dev.openallay.guide.GuideToolInvocationView.none(),
+                dev.openallay.guide.GuideToolIntent.none(), List.of(), List.of(), Optional.empty(),
+                GuideToolDisplayStatus.FAILED, Optional.of(failure));
+        assertEquals(failure, view.forRequest(true).failure().orElseThrow());
+        assertEquals(message, view.failure().orElseThrow().message());
     }
 
     @Test

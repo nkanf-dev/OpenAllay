@@ -73,7 +73,7 @@ public record CapabilitySettingsProjection(
             target.add(card.actionId());
         }
         return new ToolResult.Success<>(new CapabilityPolicy(
-                CapabilityPolicy.SCHEMA_VERSION, tools, skills));
+                tools, skills));
     }
 
     public List<Card> cards(CapabilityKind kind) {

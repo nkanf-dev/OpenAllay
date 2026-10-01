@@ -35,6 +35,10 @@ public final class LiveTraceStore {
                 persistenceEnabled, "persistenceEnabled");
     }
 
+    public dev.openallay.agent.AgentEvent safeEvent(dev.openallay.agent.AgentEvent event) {
+        return dev.openallay.agent.AgentEventRedactor.redact(event, secrets);
+    }
+
     public void record(LiveAgentTrace trace) {
         traces.put(trace.requestId(), trace);
         if (persistenceDirectory != null && persistenceEnabled.getAsBoolean()) {

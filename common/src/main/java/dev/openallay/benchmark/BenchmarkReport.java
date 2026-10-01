@@ -3,10 +3,8 @@ package dev.openallay.benchmark;
 import java.util.List;
 
 public record BenchmarkReport(
-        String corpusVersion,
         List<CaseReport> cases) {
     public BenchmarkReport {
-        corpusVersion = require(corpusVersion);
         cases = List.copyOf(cases);
     }
 

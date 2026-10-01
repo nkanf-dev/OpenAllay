@@ -12,7 +12,7 @@ import java.util.TreeSet;
 
 /** Compact model projection; canonical JSON remains in the workspace. */
 public final class JavascriptResultPresenter {
-    static final int MODEL_TEXT_TOKEN_BUDGET = 8_192;
+    static final int MODEL_TEXT_BYTE_BUDGET = 8_192;
     private static final int MINIMUM_PREVIEW_BUDGET = 256;
 
     public Presentation present(String handle, JsonElement value) {
@@ -53,7 +53,7 @@ public final class JavascriptResultPresenter {
         List<String> fields = fields(value);
         int projectionBudget = Math.max(
                 MINIMUM_PREVIEW_BUDGET,
-                MODEL_TEXT_TOKEN_BUDGET
+                MODEL_TEXT_BYTE_BUDGET
                         - utf8Bytes(metadata(handle, type, cardinality, fields))
                         - utf8Bytes(suffix)
                         - 512);
@@ -73,7 +73,7 @@ public final class JavascriptResultPresenter {
                 rendered += "\n" + suffix;
             }
             int renderedTokens = utf8Bytes(rendered);
-            if (renderedTokens <= MODEL_TEXT_TOKEN_BUDGET) {
+            if (renderedTokens <= MODEL_TEXT_BYTE_BUDGET) {
                 return new Presentation(
                         handle,
                         type,
@@ -86,7 +86,7 @@ public final class JavascriptResultPresenter {
                         preview.omittedRows(),
                         preview.omittedFields());
             }
-            int excess = renderedTokens - MODEL_TEXT_TOKEN_BUDGET;
+            int excess = renderedTokens - MODEL_TEXT_BYTE_BUDGET;
             int next = projectionBudget - Math.max(256, excess);
             if (next >= projectionBudget) {
                 break;
@@ -178,7 +178,7 @@ public final class JavascriptResultPresenter {
         if (!suffix.isEmpty()) {
             text += "\n" + suffix;
         }
-        text = clipUtf8(text, MODEL_TEXT_TOKEN_BUDGET);
+        text = clipUtf8(text, MODEL_TEXT_BYTE_BUDGET);
         return new Presentation(
                 handle,
                 type,
@@ -195,7 +195,7 @@ public final class JavascriptResultPresenter {
     private static String metadata(
             String handle, String type, long cardinality, List<String> fields) {
         StringBuilder result = new StringBuilder();
-        result.append("result: ").append(handle).append('\n');
+        result.append("result: ").append(handle).append(" (current request only)\n");
         result.append("type: ").append(type).append('\n');
         result.append("cardinality: ").append(cardinality).append('\n');
         if (!fields.isEmpty()) {
@@ -224,7 +224,7 @@ public final class JavascriptResultPresenter {
                     .append(omitted)
                     .append(" row(s); use workspace.open(\"")
                     .append(handle)
-                    .append("\") in a later script to filter, aggregate, or project them");
+                    .append("\") in this request to filter, aggregate, or project them");
         } else if (omittedFields > 0 || !complete) {
             result.append('\n')
                     .append("omitted: ")

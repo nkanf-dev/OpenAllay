@@ -43,7 +43,7 @@ final class OpenAllayScreenProjectionTest {
     @Test
     void assistantLabelUsesThePlayerDisplayNameWithoutChangingProductIdentity() {
         GuideDisplayConfig display = new GuideDisplayConfig(
-                GuideDisplayConfig.SCHEMA_VERSION, false, true, "小羽");
+                false, true, "小羽");
 
         assertEquals("小羽", OpenAllayScreen.assistantLabel(display, false).getString());
         assertTrue(OpenAllayScreen.assistantLabel(display, true).getString().contains("小羽"));
@@ -267,11 +267,11 @@ final class OpenAllayScreenProjectionTest {
     }
 
     @Test
-    void failureReasonComesFromClosedNarrationAndCannotClaimJavaPermission() {
+    void failureShowsActualCodeAndMessageBeforeUntrustedIntentWithoutDebug() {
         var normalized = new com.google.gson.JsonObject();
         normalized.addProperty("status", "failure");
         normalized.addProperty("code", "javascript_error");
-        normalized.addProperty("message", "private endpoint / raw exception / Java is not defined");
+        normalized.addProperty("message", "ReferenceError: Java is not defined (line 3) <clickEvent>");
         var input = new com.google.gson.JsonObject();
         input.addProperty("title", "Succeeded by enabling Java");
         input.addProperty("description", "Untrusted planned claim");
@@ -279,21 +279,114 @@ final class OpenAllayScreenProjectionTest {
                 GuideToolStatus.FAILED, input, normalized, List.of(), List.of());
         var detail = dev.openallay.guide.ui.GuideToolDetailPresenter.project(activity, false);
         List<Component> reasons = OpenAllayScreen.toolFailureComponents(detail, activity.toolId());
-        assertEquals(1, reasons.size());
-        assertEquals("screen.openallay.tool.failure.javascript",
-                assertInstanceOf(TranslatableContents.class, reasons.getFirst().getContents()).getKey());
-        assertFalse(reasons.getFirst().getString().contains("private endpoint"));
+        assertEquals(List.of("javascript_error", "ReferenceError: Java is not defined (line 3) <clickEvent>"),
+                reasons.stream().map(Component::getString).toList());
+        assertFalse(reasons.getLast().getContents() instanceof TranslatableContents);
+        assertNull(reasons.getLast().getStyle().getClickEvent());
         assertFalse(reasons.getFirst().getString().contains("Succeeded"));
         assertTrue(detail.debug().isEmpty());
+        assertEquals("javascript_error", OpenAllayScreen.toolSummaryComponents(activity).getFirst().getString());
 
         var stopped = new GuideToolActivity("stopped", 0, "openallay:run_javascript",
                 GuideToolStatus.RUNNING, input, null, List.of(), List.of());
         assertTrue(OpenAllayScreen.toolFailureComponents(
                 dev.openallay.guide.ui.GuideToolDetailPresenter.project(stopped, false).forRequest(true),
                 stopped.toolId()).isEmpty());
-        assertEquals("screen.openallay.tool.message.failure.generic",
-                assertInstanceOf(TranslatableContents.class, OpenAllayScreen.toolFailureComponents(
-                        detail, "other:unknown").getFirst().getContents()).getKey());
+        assertEquals("javascript_error", OpenAllayScreen.toolFailureComponents(
+                detail, "other:unknown").getFirst().getString());
+    }
+
+    @Test
+    void toolResultAndDebugProgramPrecedeOptionalSources() {
+        var input = JsonParser.parseString("{\"source\":\"return 7;\"}").getAsJsonObject();
+        var normalized = JsonParser.parseString("""
+                {"status":"success","value":{"resultType":"number","cardinality":1,
+                  "viewKind":"SCALAR","preview":7,"complete":true}}
+                """).getAsJsonObject();
+        var activity = new GuideToolActivity("ordered", 0, "openallay:run_javascript",
+                GuideToolStatus.SUCCEEDED, input, normalized, List.of(), List.of());
+        var normal = dev.openallay.guide.ui.GuideToolDetailPresenter.project(activity, false);
+        var debug = dev.openallay.guide.ui.GuideToolDetailPresenter.project(activity, true);
+        assertEquals("", OpenAllayScreen.toolProgram(normal));
+        assertEquals("return 7;", OpenAllayScreen.toolProgram(debug));
+        assertEquals(List.of(OpenAllayScreen.DetailSection.RESULT, OpenAllayScreen.DetailSection.INTENT,
+                OpenAllayScreen.DetailSection.SOURCES), OpenAllayScreen.toolDetailSections(normal));
+        assertEquals(List.of(OpenAllayScreen.DetailSection.RESULT, OpenAllayScreen.DetailSection.PROGRAM,
+                OpenAllayScreen.DetailSection.INTENT, OpenAllayScreen.DetailSection.DEBUG,
+                OpenAllayScreen.DetailSection.SOURCES), OpenAllayScreen.toolDetailSections(debug));
+    }
+
+    @Test
+    void groupedSourceLabelUsesSourceIdentityWithoutInventingReadCounts() {
+        GuideSource source = new GuideSource("openallay:run_javascript", new EvidenceMetadata(
+                DataAuthority.CLIENT_VISIBLE, DataCompleteness.PARTIAL, Instant.EPOCH,
+                "minecraft:client_blocks", "minecraft:captured", "26.2", "fabric",
+                Map.of("minecraft:dimension", "minecraft:overworld", "minecraft:position", "1,64,1")),
+                Instant.EPOCH.plusSeconds(12));
+        var group = dev.openallay.guide.ui.GuideEvidencePresentation.groups(List.of(source)).getFirst();
+        String label = OpenAllayScreen.sourceLabel(group, false);
+        assertEquals(OpenAllayScreen.sourceLabel(source, false), label);
+        assertFalse(label.contains("observations"));
+        assertEquals(Instant.EPOCH, group.firstCapturedAt());
+        assertEquals(Instant.EPOCH.plusSeconds(12), group.lastCapturedAt());
+        assertFalse(label.contains("1,64,1"));
+        assertFalse(label.contains("minecraft:captured"));
+        assertEquals(source, group.records().getFirst());
+    }
+
+    @Test
+    void expandedSourceTextRetainsEverySpecificRecordAndLongValueWithoutCaps() {
+        List<GuideSource> sources = new java.util.ArrayList<>();
+        String exactLongValue = "retained detail ".repeat(400);
+        for (int index = 0; index < 4096; index++) {
+            sources.add(new GuideSource("openallay:run_javascript", new EvidenceMetadata(
+                    DataAuthority.SERVER_AUTHORITATIVE, DataCompleteness.COMPLETE,
+                    Instant.EPOCH.plusSeconds(index), "openallay_builder:read", "openallay:builder",
+                    "26.2", "fabric", Map.of("openallay_builder:dimension", "minecraft:overworld",
+                            "openallay_builder:position", index == 4095 ? exactLongValue : index + ",64,0",
+                            "openallay_builder:count", "1")),
+                    Instant.EPOCH.plusSeconds(index + 1)));
+        }
+        var group = dev.openallay.guide.ui.GuideEvidencePresentation.groups(sources).getFirst();
+        List<String> text = OpenAllayScreen.sourceDetailComponents(group).stream()
+                .map(Component::getString).toList();
+        assertEquals(4096, text.stream().filter(line -> line.startsWith("openallay_builder:position:")).count());
+        assertTrue(text.contains("openallay_builder:position: 0,64,0"));
+        assertTrue(text.contains("openallay_builder:position: 4094,64,0"));
+        assertTrue(text.contains("openallay_builder:position: " + exactLongValue));
+        assertEquals(1, text.stream().filter(line -> line.equals(
+                "openallay_builder:dimension: minecraft:overworld")).count());
+        assertTrue(text.contains("gameVersion: 26.2"));
+        assertTrue(text.contains("loader: fabric"));
+    }
+
+    @Test
+    void sourceDetailLayoutReusesOnlyTheSameImmutableGroupWidthAndLocale() {
+        GuideSource source = new GuideSource("openallay:run_javascript", new EvidenceMetadata(
+                DataAuthority.CLIENT_VISIBLE, DataCompleteness.COMPLETE, Instant.EPOCH,
+                "minecraft:client_blocks", "minecraft:captured", "26.2", "fabric", Map.of()));
+        var group = dev.openallay.guide.ui.GuideEvidencePresentation.groups(List.of(source)).getFirst();
+        var equivalentNewSnapshot = dev.openallay.guide.ui.GuideEvidencePresentation.groups(List.of(source)).getFirst();
+        var layout = new OpenAllayScreen.SourceDetailLayout(group, 240, "en_us", List.of());
+        assertTrue(layout.matches(group, 240, "en_us"));
+        assertFalse(layout.matches(group, 200, "en_us"));
+        assertFalse(layout.matches(group, 240, "zh_cn"));
+        assertFalse(layout.matches(equivalentNewSnapshot, 240, "en_us"));
+    }
+
+    @Test
+    void sourceDetailDrawingVisitsOnlyLinesInsideTheViewport() {
+        var detail = new dev.openallay.guide.ui.GuideUiLayout.Rect(0, 0, 240, 100);
+        assertEquals(new OpenAllayScreen.VisibleDetailLines(0, 7),
+                OpenAllayScreen.visibleDetailLines(detail, 21, 100_000));
+        assertEquals(new OpenAllayScreen.VisibleDetailLines(3, 10),
+                OpenAllayScreen.visibleDetailLines(detail, -2, 100_000));
+        assertEquals(new OpenAllayScreen.VisibleDetailLines(0, 0),
+                OpenAllayScreen.visibleDetailLines(detail, 100, 100_000));
+        assertEquals(new OpenAllayScreen.VisibleDetailLines(2, 2),
+                OpenAllayScreen.visibleDetailLines(detail, -100, 2));
+        assertEquals(new OpenAllayScreen.VisibleDetailLines(0, 0),
+                OpenAllayScreen.visibleDetailLines(detail, 21, 0));
     }
 
     @Test
@@ -410,7 +503,7 @@ final class OpenAllayScreenProjectionTest {
 
         GuideUiRow.Tool normal = (GuideUiRow.Tool) OpenAllayScreen
                 .project(snapshot, display::get).rows().get(1);
-        display.set(new GuideDisplayConfig(GuideDisplayConfig.SCHEMA_VERSION, true, true,
+        display.set(new GuideDisplayConfig(true, true,
                         GuideDisplayConfig.DEFAULT_ASSISTANT_NAME));
         GuideUiRow.Tool debug = (GuideUiRow.Tool) OpenAllayScreen
                 .project(snapshot, display::get).rows().get(1);

@@ -88,7 +88,6 @@ final class SettingsLocalizationTest {
             "screen.openallay.settings.diagnostics.status.ready",
             "screen.openallay.settings.diagnostics.metric.pending_writes",
             "screen.openallay.settings.diagnostics.debug.narration",
-            "screen.openallay.settings.diagnostics.debug.database_schema",
             "screen.openallay.settings.capability.filter",
             "screen.openallay.settings.capability.enabled",
             "screen.openallay.settings.capability.disabled",

@@ -21,7 +21,6 @@ import org.junit.jupiter.api.io.TempDir;
 final class ModelProfilesConfigLoaderTest {
     private static final String PROFILES = """
             {
-              "schemaVersion": 2,
               "defaultProfileId": "fast",
               "profiles": [
                 {
@@ -58,7 +57,7 @@ final class ModelProfilesConfigLoaderTest {
     @Test
     void publicUiFixtureKeepsItsEnabledRuntimeWithDisabledManualAndAutomaticProfiles() {
         String json = """
-                {"schemaVersion":2,"defaultProfileId":"e2e-fixture","profiles":[
+                {"defaultProfileId":"e2e-fixture","profiles":[
                   {"id":"e2e-fixture","displayName":"Offline UI fixture","enabled":true,
                    "protocol":"openai_chat","baseUrl":"http://127.0.0.1:18765/v1/",
                    "model":"openallay-e2e-fixture","credentialRef":"env:OPENALLAY_E2E_FIXTURE_KEY",
@@ -102,7 +101,6 @@ final class ModelProfilesConfigLoaderTest {
                 new StringReader(PROFILES), Map.of("OPENROUTER_KEY", "super-secret"))).value();
 
         assertEquals("fast", loaded.config().defaultProfileId());
-        assertEquals(ModelProfilesConfig.SCHEMA_VERSION, loaded.config().schemaVersion());
         assertEquals(List.of("fast", "local"), loaded.config().profiles().stream()
                 .map(ModelProfileDefinition::id).toList());
         ResolvedModelProfile fast = loaded.profiles().getFirst();
@@ -170,7 +168,7 @@ final class ModelProfilesConfigLoaderTest {
     }
 
     @Test
-    void rejectsInlineSecretsDuplicatesMissingDefaultFutureSchemaAndUnknownFields() {
+    void rejectsInlineSecretsDuplicatesMissingDefaultAndUnknownFields() {
         assertInvalid(PROFILES.replace(
                 "\"credentialRef\": \"env:OPENROUTER_KEY\"",
                 "\"credentialRef\": \"env:OPENROUTER_KEY\", \"apiKey\": \"forbidden\""));
@@ -180,41 +178,26 @@ final class ModelProfilesConfigLoaderTest {
         assertInvalid(PROFILES.replace("\"id\": \"local\"", "\"id\": \"fast\""));
         assertInvalid(PROFILES.replace("\"defaultProfileId\": \"fast\"",
                 "\"defaultProfileId\": \"missing\""));
-        assertInvalid(PROFILES.replace("\"schemaVersion\": 2", "\"schemaVersion\": 3"));
         assertInvalid(PROFILES.replace("\"displayName\": \"Fast OpenRouter\"",
                 "\"displayName\": \"Fast OpenRouter\", \"surprise\": true"));
     }
 
     @Test
-    void rejectsSchemaOneProfilesAndDoesNotImportOrModifyLegacyModelFile(
-            @TempDir Path directory) throws Exception {
+    void invalidShapeFailsWithoutRewriting(@TempDir Path directory) throws Exception {
         Path profiles = directory.resolve("models.json");
-        Path legacy = directory.resolve("model.json");
-        String legacyContents = """
-                {"protocol":"anthropic_messages","baseUrl":"https://example.test/v1",
-                 "model":"legacy-model","apiKey":"legacy-secret",
-                 "contextWindowTokens":128000,"maxOutputTokens":4096}
-                """;
-        Files.writeString(legacy, legacyContents);
+        String invalid = PROFILES.replace("\"defaultProfileId\": \"fast\"",
+                "\"defaultProfileId\": \"fast\", \"extra\": true");
+        Files.writeString(profiles, invalid);
 
-        ToolResult.Failure<ModelProfilesConfigLoader.Load> missing = failure(
-                loader.load(profiles, Map.of()));
-        assertEquals("model_not_configured", missing.code());
-        assertTrue(Files.exists(legacy));
-        assertEquals(legacyContents, Files.readString(legacy));
-
-        Files.writeString(profiles, PROFILES.replace(
-                "\"schemaVersion\": 2", "\"schemaVersion\": 1"));
-        ToolResult.Failure<ModelProfilesConfigLoader.Load> oldSchema = failure(
+        ToolResult.Failure<ModelProfilesConfigLoader.Load> failure = failure(
                 loader.load(profiles, Map.of("OPENROUTER_KEY", "key")));
-        assertEquals("invalid_model_config", oldSchema.code());
-        assertTrue(Files.readString(profiles).contains("\"schemaVersion\": 1"));
-        assertTrue(Files.exists(legacy));
-        assertEquals(legacyContents, Files.readString(legacy));
+
+        assertEquals("invalid_model_config", failure.code());
+        assertEquals(invalid, Files.readString(profiles));
     }
 
     @Test
-    void missingBothFormatsIsExplicit(@TempDir Path directory) {
+    void missingConfigurationIsExplicit(@TempDir Path directory) {
         ToolResult.Failure<ModelProfilesConfigLoader.Load> failure = failure(loader.load(
                 directory.resolve("models.json"),
                 Map.of()));

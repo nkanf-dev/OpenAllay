@@ -7,7 +7,6 @@ import java.util.Objects;
 public record ContextProjection(List<ModelMessage> messages, Kind kind, int estimatedTokens) {
     public enum Kind {
         ORIGINAL,
-        TOOL_RESULTS_REDUCED,
         SUMMARIZED
     }
 
@@ -22,11 +21,4 @@ public record ContextProjection(List<ModelMessage> messages, Kind kind, int esti
         }
     }
 
-    public static ContextProjection unestimated(List<ModelMessage> messages, Kind kind) {
-        return new ContextProjection(messages, kind, -1);
-    }
-
-    public ContextProjection withEstimate(int tokens) {
-        return new ContextProjection(messages, kind, tokens);
-    }
 }

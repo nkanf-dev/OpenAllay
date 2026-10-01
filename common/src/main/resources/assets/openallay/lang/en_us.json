@@ -1,4 +1,8 @@
 {
+  "screen.openallay.detail.program": "Submitted JavaScript",
+  "screen.openallay.evidence.shown_separately": "Source metadata is shown separately under Sources.",
+  "screen.openallay.evidence.groups": "Sources · %s groups",
+  "screen.openallay.evidence.capture_range": "Observed from %s to %s",
   "screen.openallay.evidence.source.builder": "Builder world operation",
   "screen.openallay.action.sessions": "Sessions",
   "screen.openallay.action.refresh": "Refresh",
@@ -307,7 +311,6 @@
   "screen.openallay.settings.diagnostics.debug.title": "Debug details (redacted)",
   "screen.openallay.settings.diagnostics.debug.narration": "Redacted technical diagnostics. Credentials, provider bodies, reasoning, paths, and other players are excluded.",
   "screen.openallay.settings.diagnostics.debug.settings_generation": "Settings generation",
-  "screen.openallay.settings.diagnostics.debug.database_schema": "History schema",
   "screen.openallay.settings.diagnostics.debug.model": "Model profile",
   "screen.openallay.settings.diagnostics.debug.capabilities": "Capability counts",
   "screen.openallay.settings.diagnostics.debug.guide": "Guide state",

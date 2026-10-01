@@ -76,6 +76,19 @@ public final class CompositeAgentToolExecutor implements AgentToolExecutor {
     }
 
     @Override
+    public List<dev.openallay.model.ModelMessage> refreshContext(
+            List<dev.openallay.model.ModelMessage> messages) {
+        List<dev.openallay.model.ModelMessage> current = messages;
+        for (AgentToolExecutor delegate : delegates) current = delegate.refreshContext(current);
+        return current;
+    }
+
+    @Override
+    public void prepareContext(String correlationId, List<dev.openallay.model.ModelMessage> messages) {
+        delegates.forEach(delegate -> delegate.prepareContext(correlationId, messages));
+    }
+
+    @Override
     public void closeRequestScope(String correlationId) {
         delegates.forEach(delegate -> delegate.closeRequestScope(correlationId));
     }

@@ -30,7 +30,6 @@ import dev.openallay.model.metadata.ModelMetadata;
 import dev.openallay.model.metadata.ModelMetadataUpdate;
 import dev.openallay.settings.model.ModelConnectionResult;
 import dev.openallay.settings.model.ModelProfileSettingsView;
-import dev.openallay.bridge.protocol.BridgeProtocol;
 import dev.openallay.bridge.protocol.CapabilityPayload;
 import dev.openallay.settings.capability.CapabilitySettingsView;
 import dev.openallay.settings.capability.RecipeSettingsView;
@@ -70,7 +69,6 @@ final class ClientSettingsServiceTest {
         FakeModels models = new FakeModels(state(config("alpha")));
         ClientSettingsService service = service(models, Set.of("ALPHA_KEY"));
         CapabilityPayload advertised = new CapabilityPayload(
-                BridgeProtocol.VERSION,
                 List.of(),
                 true,
                 100_000,
@@ -117,7 +115,7 @@ final class ClientSettingsServiceTest {
     void debugDisplayAddsOnlyTheSeparateTechnicalDiagnosticsProjection() {
         FakeModels models = new FakeModels(state(config("alpha")));
         ClientSettingsService service = new ClientSettingsService(
-                new GuideDisplayConfig(GuideDisplayConfig.SCHEMA_VERSION, true, true,
+                new GuideDisplayConfig(true, true,
                         GuideDisplayConfig.DEFAULT_ASSISTANT_NAME),
                 models.current,
                 Set.of("ALPHA_KEY"),
@@ -302,7 +300,6 @@ final class ClientSettingsServiceTest {
         FakeDomains domains = new FakeDomains();
         ClientSettingsService service = service(models, domains, Runnable::run);
         RecipeClientConfig candidate = new RecipeClientConfig(
-                RecipeClientConfig.SCHEMA_VERSION,
                 RecipeVisibilityPolicy.ALL_KNOWN,
                 "viewer:rei",
                 Set.of("viewer:jei"));
@@ -325,7 +322,7 @@ final class ClientSettingsServiceTest {
         CapabilitySettingsView prior = service.snapshot().capabilities();
 
         ToolResult<Boolean> result = service.saveCapabilities(new CapabilityPolicy(
-                CapabilityPolicy.SCHEMA_VERSION, Set.of("test:fact"), Set.of())).join();
+                Set.of("test:fact"), Set.of())).join();
 
         assertFailure(result, "capability_dependency_conflict");
         assertEquals(prior, service.snapshot().capabilities());
@@ -612,7 +609,7 @@ final class ClientSettingsServiceTest {
     void failedExactEnableRetainsSettingsAndContinueRemainsAvailable() {
         FakeDomains domains = new FakeDomains();
         domains.capabilities = new CapabilitySettingsView(
-                new CapabilityPolicy(CapabilityPolicy.SCHEMA_VERSION, Set.of("test:tool"), Set.of()),
+                new CapabilityPolicy(Set.of("test:tool"), Set.of()),
                 new CapabilityCatalogSnapshot(List.of(new dev.openallay.capability.CapabilitySettingsEntry(
                         "test:owner", "test:tool", dev.openallay.capability.CapabilityKind.TOOL,
                         "settings.test.title", "settings.test.description", null, true, false))), Set.of(), Set.of());
@@ -713,7 +710,7 @@ final class ClientSettingsServiceTest {
                 models, domains, display, history, Runnable::run);
 
         assertSuccess(service.saveDisplay(new GuideDisplayConfig(
-                GuideDisplayConfig.SCHEMA_VERSION, true, true,
+                true, true,
                 GuideDisplayConfig.DEFAULT_ASSISTANT_NAME)).join());
 
         assertTrue(service.snapshot().display().debugMode());
@@ -734,7 +731,7 @@ final class ClientSettingsServiceTest {
                 models, domains, display, new FakeHistory(), Runnable::run);
 
         assertFailure(service.saveDisplay(new GuideDisplayConfig(
-                GuideDisplayConfig.SCHEMA_VERSION, true, true,
+                true, true,
                 GuideDisplayConfig.DEFAULT_ASSISTANT_NAME)).join(),
                 "settings_write_failed");
 
@@ -747,7 +744,7 @@ final class ClientSettingsServiceTest {
         FakeModels models = new FakeModels(state(config("alpha")));
         FakeDomains domains = new FakeDomains();
         FakeDisplay display = new FakeDisplay(new GuideDisplayConfig(
-                GuideDisplayConfig.SCHEMA_VERSION, true, true,
+                true, true,
                 GuideDisplayConfig.DEFAULT_ASSISTANT_NAME));
         FakeHistory history = new FakeHistory();
         ClientSettingsService service = service(
@@ -765,7 +762,7 @@ final class ClientSettingsServiceTest {
                 service.requestHistoryConfirmation(
                         ClientSettingsService.HistoryAction.RESET_DATABASE));
         assertSuccess(service.saveDisplay(new GuideDisplayConfig(
-                GuideDisplayConfig.SCHEMA_VERSION, true, true,
+                true, true,
                 GuideDisplayConfig.DEFAULT_ASSISTANT_NAME)).join());
         assertFailure(service.confirmHistoryReset(staleFirst),
                 "history_delete_confirmation_required");
@@ -1021,7 +1018,6 @@ final class ClientSettingsServiceTest {
 
     private static ModelProfilesConfig config(String... ids) {
         return new ModelProfilesConfig(
-                ModelProfilesConfig.SCHEMA_VERSION,
                 ids[0],
                 java.util.Arrays.stream(ids).map(ClientSettingsServiceTest::profile).toList());
     }

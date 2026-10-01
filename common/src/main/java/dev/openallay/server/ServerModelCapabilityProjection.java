@@ -1,6 +1,5 @@
 package dev.openallay.server;
 
-import dev.openallay.bridge.protocol.BridgeProtocol;
 import dev.openallay.bridge.protocol.CapabilityPayload;
 import dev.openallay.guide.GuideContextSpec;
 import java.util.List;
@@ -16,11 +15,10 @@ public final class ServerModelCapabilityProjection {
         List<CapabilityPayload.RemoteToolCapability> detached = List.copyOf(tools);
         if (serverModel.isEmpty()) {
             return new CapabilityPayload(
-                    BridgeProtocol.VERSION, detached, false, 0, 0, 0, "");
+                    detached, false, 0, 0, 0, "");
         }
         GuideContextSpec spec = serverModel.orElseThrow();
         return new CapabilityPayload(
-                BridgeProtocol.VERSION,
                 detached,
                 true,
                 spec.budget().contextWindowTokens(),

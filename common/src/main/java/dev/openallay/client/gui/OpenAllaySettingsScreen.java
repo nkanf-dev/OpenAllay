@@ -1531,9 +1531,6 @@ public final class OpenAllaySettingsScreen extends Screen {
         y = debugLine(graphics, x, y, width,
                 "screen.openallay.settings.diagnostics.debug.settings_generation",
                 Long.toString(debug.settingsGeneration()));
-        y = debugLine(graphics, x, y, width,
-                "screen.openallay.settings.diagnostics.debug.database_schema",
-                Integer.toString(debug.databaseSchema()));
         for (SettingsDiagnosticsSnapshot.DebugModelProfile model : debug.models()) {
             String value = model.profileId() + " · " + model.protocol()
                     + " · " + model.endpointAuthority() + " · " + model.modelId()
@@ -2836,7 +2833,7 @@ public final class OpenAllaySettingsScreen extends Screen {
         select(retained.getFirst().id());
         confirmation = Confirmation.NONE;
         accept(service.saveModels(new ModelProfilesConfig(
-                ModelProfilesConfig.SCHEMA_VERSION, defaultId, retained)));
+                defaultId, retained)));
     }
 
     private void makeDefault() {
@@ -2847,7 +2844,7 @@ public final class OpenAllaySettingsScreen extends Screen {
         }
         ModelProfilesConfig current = snapshot.models().config();
         accept(service.saveModels(new ModelProfilesConfig(
-                current.schemaVersion(), selectedProfileId, current.profiles())));
+                selectedProfileId, current.profiles())));
     }
 
     private void testConnection() {
@@ -3027,7 +3024,7 @@ public final class OpenAllaySettingsScreen extends Screen {
                 && !selectedProfileId.equals(replacement.id())) {
             defaultId = replacement.id();
         }
-        return new ModelProfilesConfig(current.schemaVersion(), defaultId, profiles);
+        return new ModelProfilesConfig(defaultId, profiles);
     }
 
     private void switchSection(SettingsSection replacement) {

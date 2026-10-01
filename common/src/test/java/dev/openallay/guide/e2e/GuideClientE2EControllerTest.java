@@ -16,8 +16,10 @@ import dev.openallay.guide.GuideModelMode;
 import dev.openallay.guide.GuideRemoteEndpoint;
 import dev.openallay.guide.GuideServiceManager;
 import dev.openallay.guide.history.GuideHistoryAccess;
-import dev.openallay.guide.history.GuideHistoryLoad;
-import dev.openallay.guide.history.GuideHistoryPartition;
+import dev.openallay.guide.history.GuideHistoryCommit;
+import dev.openallay.guide.history.GuideHistoryContextRequest;
+import dev.openallay.guide.history.GuideHistoryContextSeed;
+import dev.openallay.guide.history.GuideHistoryMetadata;
 import dev.openallay.guide.history.GuideHistoryScope;
 import dev.openallay.model.ModelUsage;
 import dev.openallay.model.ModelEvent;
@@ -26,6 +28,7 @@ import dev.openallay.recipe.RecipeProviderReadiness;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Clock;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.ArrayDeque;
@@ -141,7 +144,7 @@ final class GuideClientE2EControllerTest {
         assertFalse(controller.finished());
         assertFalse(Files.exists(report));
 
-        history.loaded.complete(GuideHistoryLoad.empty());
+        history.loaded.complete(java.util.Optional.empty());
         while (!clientTasks.isEmpty()) clientTasks.removeFirst().run();
         controller.tick(actor);
         while (!clientTasks.isEmpty()) clientTasks.removeFirst().run();
@@ -294,6 +297,11 @@ final class GuideClientE2EControllerTest {
 
     private static final class CompletingLocal implements GuideLocalEndpoint {
         @Override public Set<ContextCapability> requiredContext() { return Set.of(); }
+        @Override public java.util.Optional<dev.openallay.guide.GuideContextSpec> contextSpec(
+                String profileId) {
+            return java.util.Optional.of(new dev.openallay.guide.GuideContextSpec(
+                    new dev.openallay.agent.context.ContextBudget(8_192, 1_024), 256, "fixture-model"));
+        }
 
         @Override
         public CompletableFuture<AgentResult> ask(
@@ -351,15 +359,21 @@ final class GuideClientE2EControllerTest {
     }
 
     private static final class DelayedHistory implements GuideHistoryAccess {
-        private final CompletableFuture<GuideHistoryLoad> loaded = new CompletableFuture<>();
+        private final CompletableFuture<java.util.Optional<GuideHistoryMetadata>> loaded = new CompletableFuture<>();
 
         @Override
-        public CompletableFuture<GuideHistoryLoad> load(GuideHistoryScope scope) {
+        public CompletableFuture<java.util.Optional<GuideHistoryMetadata>> metadata(GuideHistoryScope scope) {
             return loaded;
         }
 
         @Override
-        public CompletableFuture<Void> save(GuideHistoryPartition partition) {
+        public CompletableFuture<GuideHistoryContextSeed> context(GuideHistoryContextRequest request) {
+            return CompletableFuture.completedFuture(new GuideHistoryContextSeed(
+                    request.sessionId(), List.of(), List.of(), 0));
+        }
+
+        @Override
+        public CompletableFuture<Void> commit(GuideHistoryCommit commit) {
             return CompletableFuture.completedFuture(null);
         }
 

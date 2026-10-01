@@ -107,6 +107,8 @@ public final class ServerAgentService {
         Owner owner = new Owner(
                 sender,
                 payload.sessionId(),
+                payload.question(),
+                payload.history().stream().map(ServerAgentHistoryMessage::toModelMessage).toList(),
                 new dev.openallay.model.CancellationSignal(),
                 runtime);
         if (active.putIfAbsent(payload.requestId(), owner) != null) {
@@ -143,10 +145,11 @@ public final class ServerAgentService {
                     List<ModelMessage> restored = payload.history().stream()
                             .map(ServerAgentHistoryMessage::toModelMessage)
                             .toList();
-                    return runtime.agent().askWithHistory(
-                            request,
-                            restored,
-                            event -> publish(payload.requestId(), owner, event));
+                    return sessions.hasContext(request.sessionKey())
+                            ? runtime.agent().ask(request,
+                                    event -> publish(payload.requestId(), owner, event))
+                            : runtime.agent().askWithHistory(request, restored,
+                                    event -> publish(payload.requestId(), owner, event));
                 })
                 .exceptionally(throwable -> {
                     publishFailure(payload.requestId(), owner, throwable);
@@ -161,10 +164,20 @@ public final class ServerAgentService {
             return false;
         }
         boolean cancelledBeforeCapture = owner.cancellation().cancel();
-        boolean cancelledAgent = sessions.cancel(new AgentSessionKey(sender, owner.sessionId()));
+        boolean cancelledAgent = sessions.cancel(
+                new AgentSessionKey(sender, owner.sessionId()), requestId);
         if (cancelledBeforeCapture || cancelledAgent) {
-            publish(requestId, owner, new AgentEvent.Failed(
-                    "agent_cancelled", "Agent request was cancelled"));
+            if (!cancelledAgent) {
+                List<ModelMessage> original = List.of(ModelMessage.userText(owner.question()),
+                        new ModelMessage(dev.openallay.model.ModelRole.ASSISTANT,
+                                List.of(new dev.openallay.model.ModelContent.Text(
+                                        "[OpenAllay request ended: agent_cancelled] Agent request was cancelled"))));
+                List<ModelMessage> projected = new java.util.ArrayList<>(owner.history());
+                projected.addAll(original);
+                publish(requestId, owner, new AgentEvent.ContextFinalized(projected, original));
+                publish(requestId, owner, new AgentEvent.Failed(
+                        "agent_cancelled", "Agent request was cancelled"));
+            }
             return true;
         }
         return false;
@@ -241,6 +254,12 @@ public final class ServerAgentService {
     private record Owner(
             UUID actorId,
             String sessionId,
+            String question,
+            List<ModelMessage> history,
             dev.openallay.model.CancellationSignal cancellation,
-            RequestRuntime runtime) {}
+            RequestRuntime runtime) {
+        private Owner {
+            history = dev.openallay.agent.context.ModelContextCodec.safe(history);
+        }
+    }
 }

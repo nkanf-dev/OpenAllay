@@ -90,6 +90,23 @@ public final class ClientPlacedToolExecutor implements AgentToolExecutor {
                 new AgentToolResult(UNKNOWN_TOOL_ID, normalized, true));
     }
 
+    @Override
+    public List<dev.openallay.model.ModelMessage> refreshContext(
+            List<dev.openallay.model.ModelMessage> messages) {
+        return local.refreshContext(messages);
+    }
+
+    @Override
+    public void prepareContext(String correlationId, List<dev.openallay.model.ModelMessage> messages) {
+        local.prepareContext(correlationId, messages);
+    }
+
+    @Override
+    public void closeRequestScope(String correlationId) {
+        local.closeRequestScope(correlationId);
+        remote.closeRequestScope(correlationId);
+    }
+
     private static String withoutRemotePrefix(String name) {
         if (!name.startsWith(REMOTE_PREFIX)) {
             throw new IllegalArgumentException("Remote Tool definition lacks placement prefix");

@@ -1,6 +1,7 @@
 package dev.openallay.skill;
 
 import dev.openallay.context.ToolInvocationContext;
+import dev.openallay.model.ModelMessage;
 import dev.openallay.agent.tool.ToolOptional;
 import dev.openallay.tool.ModelFacingToolOutput;
 import dev.openallay.tool.RequestScopeParticipant;
@@ -48,6 +49,7 @@ public final class LoadSkillTool
     public record Output(
             String name,
             String document,
+            String fingerprint,
             LoadState state,
             String content,
             int offset,
@@ -67,21 +69,24 @@ public final class LoadSkillTool
         @Override
         public String modelText() {
             StringBuilder text = new StringBuilder()
+                    .append("skill_instructions\n")
                     .append("skill: ").append(name).append('\n')
                     .append("document: ").append(document).append('\n')
+                    .append("fingerprint: ").append(fingerprint).append('\n')
                     .append("state: ")
                     .append(state.name().toLowerCase(java.util.Locale.ROOT))
                     .append('\n')
-                    .append("complete: ").append(complete).append('\n');
+                    .append("complete: ").append(complete).append('\n')
+                    .append("range: ").append(offset).append("..").append(nextOffset).append('\n')
+                    .append("content_length: ").append(content.length()).append('\n');
             if (state == LoadState.ALREADY_LOADED) {
                 if (!complete) {
                     text.append("next_cursor: ").append(nextCursor).append('\n');
                 }
                 return text.append(
-                                "note: this document range is already present in the current request context")
+                                "note: this document range is already present in the current model context")
                         .toString();
             }
-            text.append("range: ").append(offset).append("..").append(nextOffset).append('\n');
             if (!availableReferences.isEmpty()) {
                 text.append("references: ")
                         .append(String.join(", ", availableReferences))
@@ -101,18 +106,38 @@ public final class LoadSkillTool
             "Progressively load one available Skill's instructions, or one exact declared reference after the Skill is loaded. "
                     + "When complete is false, continue with the returned opaque cursor and the same name/reference. "
                     + "Use Skills for matching vertical workflows, not for core JavaScript host syntax. "
-                    + "Repeated reads in one request return compact receipts; set rehydrate=true only when "
+                    + "Reads already present in the current model context return compact receipts; set rehydrate=true only when "
                     + "the exact document text must intentionally be emitted again.",
             Input.class,
             Output.class,
             ToolAccess.READ_ONLY);
 
     private final SkillCatalog catalog;
-    private final Map<String, Map<DocumentKey, Map<String, Output>>> requestLoads =
+    private final SkillInstructionContext instructionContext;
+    private final Map<String, Map<DocumentKey, Map<Integer, Output>>> requestLoads =
             new ConcurrentHashMap<>();
 
     public LoadSkillTool(SkillCatalog catalog) {
         this.catalog = java.util.Objects.requireNonNull(catalog, "catalog");
+        this.instructionContext = new SkillInstructionContext(catalog);
+    }
+
+    /** Validates retained instruction results against this Tool's captured Skill catalog. */
+    public List<ModelMessage> refreshContext(List<ModelMessage> messages) {
+        return instructionContext.refresh(messages);
+    }
+
+    /** Rebuilds receipts from the actual model context, including after compaction. */
+    public void prepareContext(String correlationId, List<ModelMessage> messages) {
+        java.util.Objects.requireNonNull(correlationId, "correlationId");
+        Map<DocumentKey, Map<Integer, Output>> documents = new ConcurrentHashMap<>();
+        for (Output delivered : instructionContext.deliveredRanges(messages)) {
+            DocumentKey key = new DocumentKey(
+                    delivered.name(), delivered.document(), delivered.fingerprint());
+            documents.computeIfAbsent(key, ignored -> new ConcurrentHashMap<>())
+                    .put(delivered.offset(), delivered);
+        }
+        requestLoads.put(correlationId, documents);
     }
 
     @Override
@@ -146,21 +171,6 @@ public final class LoadSkillTool
                     "Skill " + input.name() + " has no declared reference " + reference);
         }
         String fingerprint = fingerprint(contents);
-        String requestedCursor = normalizedCursor(input.cursor());
-        DocumentKey documentKey =
-                new DocumentKey(document.metadata().name(), documentName, fingerprint);
-        Map<DocumentKey, Map<String, Output>> requestDocuments =
-                requestLoads.computeIfAbsent(
-                        context.correlationId(), ignored -> new ConcurrentHashMap<>());
-        Map<String, Output> deliveredRanges =
-                requestDocuments.computeIfAbsent(
-                        documentKey, ignored -> new ConcurrentHashMap<>());
-        if (!Boolean.TRUE.equals(input.rehydrate())) {
-            Output delivered = deliveredRanges.get(requestedCursor);
-            if (delivered != null) {
-                return new ToolResult.Success<>(alreadyLoaded(delivered));
-            }
-        }
         int offset;
         try {
             offset = decodeCursor(
@@ -170,6 +180,20 @@ public final class LoadSkillTool
                     fingerprint);
         } catch (IllegalArgumentException failure) {
             return new ToolResult.Failure<>("skill_cursor_invalid", failure.getMessage());
+        }
+        DocumentKey documentKey =
+                new DocumentKey(document.metadata().name(), documentName, fingerprint);
+        Map<DocumentKey, Map<Integer, Output>> requestDocuments =
+                requestLoads.computeIfAbsent(
+                        context.correlationId(), ignored -> new ConcurrentHashMap<>());
+        Map<Integer, Output> deliveredRanges =
+                requestDocuments.computeIfAbsent(
+                        documentKey, ignored -> new ConcurrentHashMap<>());
+        if (!Boolean.TRUE.equals(input.rehydrate())) {
+            Output delivered = deliveredRanges.get(offset);
+            if (delivered != null) {
+                return new ToolResult.Success<>(alreadyLoaded(delivered));
+            }
         }
         int end = chunkEnd(contents, offset);
         boolean complete = end == contents.length();
@@ -183,6 +207,7 @@ public final class LoadSkillTool
         Output output = new Output(
                 document.metadata().name(),
                 documentName,
+                fingerprint,
                 state,
                 contents.substring(offset, end),
                 offset,
@@ -192,7 +217,7 @@ public final class LoadSkillTool
                 availableReferences,
                 document.metadata().allowedTools().stream().sorted().toList(),
                 document.metadata().provenance());
-        deliveredRanges.put(requestedCursor, output);
+        deliveredRanges.put(offset, output);
         return new ToolResult.Success<>(output);
     }
 
@@ -201,7 +226,7 @@ public final class LoadSkillTool
         requestLoads.remove(correlationId);
     }
 
-    private static int chunkEnd(String contents, int offset) {
+    static int chunkEnd(String contents, int offset) {
         if (offset < 0 || offset > contents.length()) {
             throw new IllegalArgumentException("Skill cursor offset is outside the document");
         }
@@ -224,15 +249,15 @@ public final class LoadSkillTool
         return line >= preferredFloor ? line + 1 : hardEnd;
     }
 
-    private static String encodeCursor(
+    static String encodeCursor(
             String name, String document, String fingerprint, int offset) {
-        String payload = String.join("\u0000", "1", name, document, fingerprint, Integer.toString(offset));
+        String payload = String.join("\u0000", name, document, fingerprint, Integer.toString(offset));
         return Base64.getUrlEncoder()
                 .withoutPadding()
                 .encodeToString(payload.getBytes(StandardCharsets.UTF_8));
     }
 
-    private static int decodeCursor(
+    static int decodeCursor(
             String cursor, String name, String document, String fingerprint) {
         if (cursor == null || cursor.isBlank()) {
             return 0;
@@ -241,15 +266,14 @@ public final class LoadSkillTool
             String decoded = new String(
                     Base64.getUrlDecoder().decode(cursor), StandardCharsets.UTF_8);
             String[] fields = decoded.split("\u0000", -1);
-            if (fields.length != 5
-                    || !"1".equals(fields[0])
-                    || !name.equals(fields[1])
-                    || !document.equals(fields[2])
-                    || !fingerprint.equals(fields[3])) {
+            if (fields.length != 4
+                    || !name.equals(fields[0])
+                    || !document.equals(fields[1])
+                    || !fingerprint.equals(fields[2])) {
                 throw new IllegalArgumentException(
                         "Skill cursor does not belong to this document snapshot");
             }
-            return Integer.parseInt(fields[4]);
+            return Integer.parseInt(fields[3]);
         } catch (IllegalArgumentException failure) {
             if ("Skill cursor does not belong to this document snapshot"
                     .equals(failure.getMessage())) {
@@ -259,7 +283,7 @@ public final class LoadSkillTool
         }
     }
 
-    private static String fingerprint(String contents) {
+    static String fingerprint(String contents) {
         try {
             byte[] digest = MessageDigest.getInstance("SHA-256")
                     .digest(contents.getBytes(StandardCharsets.UTF_8));
@@ -273,6 +297,7 @@ public final class LoadSkillTool
         return new Output(
                 delivered.name(),
                 delivered.document(),
+                delivered.fingerprint(),
                 LoadState.ALREADY_LOADED,
                 "",
                 delivered.offset(),
@@ -282,10 +307,6 @@ public final class LoadSkillTool
                 delivered.availableReferences(),
                 delivered.allowedTools(),
                 delivered.provenance());
-    }
-
-    private static String normalizedCursor(String cursor) {
-        return cursor == null || cursor.isBlank() ? "" : cursor;
     }
 
     private record DocumentKey(String name, String document, String fingerprint) {}

@@ -845,7 +845,7 @@ public final class GuideClientE2EController {
             throw new IllegalStateException("Actual display settings are unavailable");
         screenshotActionPending = true;
         var current = clientSettings.snapshot().display();
-        var replacement = new dev.openallay.guide.ui.GuideDisplayConfig(current.schemaVersion(), enabled,
+        var replacement = new dev.openallay.guide.ui.GuideDisplayConfig(enabled,
                 current.animationsEnabled(), current.assistantName());
         clientSettings.saveDisplay(replacement).thenAccept(saved -> net.minecraft.client.Minecraft.getInstance().execute(() -> {
             screenshotActionPending = false;

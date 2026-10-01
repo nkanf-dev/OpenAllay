@@ -25,7 +25,7 @@ final class RecipeClientRuntimeTest {
     void loadsGenericConfigAndRetainsLastValidStateOnReloadFailure() throws Exception {
         Path path = directory.resolve("recipes.json");
         Files.writeString(path, """
-                {"schemaVersion":2,"visibility":"unlocked_only","preferredViewer":"viewer:rei",
+                {"visibility":"unlocked_only","preferredViewer":"viewer:rei",
                  "disabledSources":["minecraft:client_recipe_book","viewer:jei"]}
                 """);
         RecipeClientRuntime runtime = new RecipeClientRuntime(path);
@@ -85,7 +85,6 @@ final class RecipeClientRuntimeTest {
 
     private static RecipeClientConfig config(String viewer, Set<String> disabled) {
         return new RecipeClientConfig(
-                RecipeClientConfig.SCHEMA_VERSION,
                 RecipeVisibilityPolicy.ALL_KNOWN,
                 viewer,
                 disabled);

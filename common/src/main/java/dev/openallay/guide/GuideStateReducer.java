@@ -6,6 +6,8 @@ import com.google.gson.JsonObject;
 import dev.openallay.agent.AgentEvent;
 import dev.openallay.agent.AgentState;
 import dev.openallay.context.EvidenceMetadata;
+import dev.openallay.context.SourceObservation;
+import dev.openallay.context.SourceObservationCollector;
 import dev.openallay.model.ModelEvent;
 import dev.openallay.model.ModelFailure;
 import dev.openallay.guide.semantic.SemanticMessageParser;
@@ -14,7 +16,9 @@ import dev.openallay.guide.semantic.SemanticStreamingState;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -53,6 +57,8 @@ public final class GuideStateReducer {
                 progress = progress.advance(
                         phase(changed.state()), now, progress.attempt(), null, null);
             }
+            case AgentEvent.ContextUpdated ignored -> { return current; }
+            case AgentEvent.ContextFinalized ignored -> { return current; }
             case AgentEvent.ContextCompacted ignored ->
                     progress = progress.advance(
                             GuideRequestPhase.COMPACTING,
@@ -115,17 +121,7 @@ public final class GuideStateReducer {
                 ArrayList<GuideTimelineEntry> next = new ArrayList<>(timeline);
                 next.set(match, new GuideTimelineEntry.Tool(running.ordinal(), replacement));
                 timeline = List.copyOf(next);
-                ArrayList<GuideSource> merged = new ArrayList<>(sources);
-                for (GuideSource source : toolSources) {
-                    if (!merged.contains(source)) {
-                        merged.add(source);
-                    }
-                }
-                merged.sort(Comparator
-                        .comparing((GuideSource value) -> value.evidence().sourceId())
-                        .thenComparing(value -> value.evidence().provenance())
-                        .thenComparing(GuideSource::toolId));
-                sources = List.copyOf(merged);
+                sources = mergeSources(sources, toolSources);
                 progress = progress.advance(GuideRequestPhase.TOOL_WAIT, now);
             }
             case AgentEvent.ModelProgress modelProgress -> {
@@ -459,15 +455,45 @@ public final class GuideStateReducer {
         if (!normalized.has("value") || !normalized.get("value").isJsonObject()) {
             return List.of();
         }
-        JsonElement evidence = normalized.getAsJsonObject("value").get("evidence");
-        if (evidence == null || !evidence.isJsonArray()) {
+        boolean javascript = "openallay:run_javascript".equals(decodedModelToolId(toolId));
+        JsonElement values = normalized.getAsJsonObject("value")
+                .get(javascript ? "sources" : "evidence");
+        if (values == null || !values.isJsonArray()) {
             return List.of();
         }
-        ArrayList<GuideSource> result = new ArrayList<>();
-        for (JsonElement item : evidence.getAsJsonArray()) {
-            result.add(new GuideSource(toolId, gson.fromJson(item, EvidenceMetadata.class)));
+        SourceObservationCollector observations = new SourceObservationCollector();
+        for (JsonElement item : values.getAsJsonArray()) {
+            if (javascript) {
+                observations.add(gson.fromJson(item, SourceObservation.class));
+            } else {
+                observations.add(gson.fromJson(item, EvidenceMetadata.class));
+            }
         }
-        return List.copyOf(result);
+        return observations.snapshot().stream()
+                .map(source -> new GuideSource(
+                        toolId, source.evidence(), source.lastCapturedAt()))
+                .toList();
+    }
+
+    private static List<GuideSource> mergeSources(
+            List<GuideSource> existing, List<GuideSource> additions) {
+        Map<String, SourceObservationCollector> byTool = new LinkedHashMap<>();
+        for (List<GuideSource> sources : List.of(existing, additions)) {
+            for (GuideSource source : sources) {
+                byTool.computeIfAbsent(source.toolId(), ignored -> new SourceObservationCollector())
+                        .add(new SourceObservation(
+                                source.evidence(), source.lastCapturedAt()));
+            }
+        }
+        ArrayList<GuideSource> merged = new ArrayList<>();
+        byTool.forEach((toolId, observations) -> observations.snapshot().forEach(source ->
+                merged.add(new GuideSource(
+                        toolId, source.evidence(), source.lastCapturedAt()))));
+        merged.sort(Comparator
+                .comparing((GuideSource value) -> value.evidence().sourceId())
+                .thenComparing(value -> value.evidence().provenance())
+                .thenComparing(GuideSource::toolId));
+        return List.copyOf(merged);
     }
 
     private static String decodedModelToolId(String value) {

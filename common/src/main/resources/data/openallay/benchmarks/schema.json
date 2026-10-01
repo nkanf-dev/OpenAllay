@@ -1,13 +1,11 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://openallay.dev/schema/benchmark-1.json",
+  "$id": "https://openallay.dev/schema/benchmark.json",
   "title": "OpenAllay benchmark corpus",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schemaVersion", "version", "cases"],
+  "required": ["cases"],
   "properties": {
-    "schemaVersion": {"const": 1},
-    "version": {"type": "string", "minLength": 1},
     "cases": {
       "type": "array",
       "items": {

@@ -37,7 +37,7 @@ final class JavascriptCommandBridgeTest {
     void toggleIsFrozenForTheLifetimeOfEachRequest() {
         CommandCapabilityRuntime commands = runtime();
         commands.replace(new CommandCapabilityConfig(
-                CommandCapabilityConfig.SCHEMA_VERSION, true));
+                true));
         assertTrue(commands.freezeRequest("enabled-request"));
 
         commands.replace(CommandCapabilityConfig.defaults());
@@ -50,7 +50,7 @@ final class JavascriptCommandBridgeTest {
         assertFalse(commands.bridge("disabled-request", new CancellationSignal()).isPresent());
 
         commands.replace(new CommandCapabilityConfig(
-                CommandCapabilityConfig.SCHEMA_VERSION, true));
+                true));
         commands.capture(
                 "disabled-request", ACTOR, catalog(), successful(commands, List.of()));
         assertFalse(commands.bridge("disabled-request", new CancellationSignal()).isPresent());
@@ -60,7 +60,7 @@ final class JavascriptCommandBridgeTest {
     void enabledCapabilityListsDescribesAndSubmitsInScriptOrder() {
         CommandCapabilityRuntime commands = runtime();
         commands.replace(new CommandCapabilityConfig(
-                CommandCapabilityConfig.SCHEMA_VERSION, true));
+                true));
         List<String> submitted = new ArrayList<>();
         commands.capture("request", ACTOR, catalog(), successful(commands, submitted));
         JavascriptCommandBridge bridge =
@@ -104,7 +104,7 @@ final class JavascriptCommandBridgeTest {
     void submittedCommandsRemainWhenLaterJavascriptFails() {
         CommandCapabilityRuntime commands = runtime();
         commands.replace(new CommandCapabilityConfig(
-                CommandCapabilityConfig.SCHEMA_VERSION, true));
+                true));
         List<String> submitted = new ArrayList<>();
         commands.capture("request", ACTOR, catalog(), successful(commands, submitted));
 
@@ -126,7 +126,7 @@ final class JavascriptCommandBridgeTest {
     void cancellationBeforeSubmissionSubmitsNothing() {
         CommandCapabilityRuntime commands = runtime();
         commands.replace(new CommandCapabilityConfig(
-                CommandCapabilityConfig.SCHEMA_VERSION, true));
+                true));
         List<String> submitted = new ArrayList<>();
         commands.capture("request", ACTOR, catalog(), successful(commands, submitted));
         CancellationSignal cancellation = new CancellationSignal();
@@ -147,7 +147,7 @@ final class JavascriptCommandBridgeTest {
     void structuredMinecraftSubmissionFailuresReachTheToolBoundary() {
         CommandCapabilityRuntime commands = runtime();
         commands.replace(new CommandCapabilityConfig(
-                CommandCapabilityConfig.SCHEMA_VERSION, true));
+                true));
         commands.capture(
                 "request",
                 ACTOR,
@@ -173,7 +173,7 @@ final class JavascriptCommandBridgeTest {
     void commandWithoutGameMessageReturnsExplicitNoFeedbackState() {
         CommandCapabilityRuntime commands = runtime();
         commands.replace(new CommandCapabilityConfig(
-                CommandCapabilityConfig.SCHEMA_VERSION, true));
+                true));
         commands.capture(
                 "request",
                 ACTOR,
@@ -196,7 +196,7 @@ final class JavascriptCommandBridgeTest {
     void waitsForFeedbackThatArrivesAfterMinecraftAcceptedTheCommand() {
         CommandCapabilityRuntime commands = new CommandCapabilityRuntime(5, 500);
         commands.replace(new CommandCapabilityConfig(
-                CommandCapabilityConfig.SCHEMA_VERSION, true));
+                true));
         commands.capture(
                 "request",
                 ACTOR,
@@ -228,7 +228,7 @@ final class JavascriptCommandBridgeTest {
     void parserAndPermissionRejectionsRemainObservedMinecraftFeedback() {
         CommandCapabilityRuntime commands = runtime();
         commands.replace(new CommandCapabilityConfig(
-                CommandCapabilityConfig.SCHEMA_VERSION, true));
+                true));
         commands.capture(
                 "request",
                 ACTOR,
@@ -273,7 +273,7 @@ final class JavascriptCommandBridgeTest {
             throws Exception {
         CommandCapabilityRuntime commands = new CommandCapabilityRuntime(10, 500);
         commands.replace(new CommandCapabilityConfig(
-                CommandCapabilityConfig.SCHEMA_VERSION, true));
+                true));
         AtomicInteger activeSubmissions = new AtomicInteger();
         AtomicInteger maximumActive = new AtomicInteger();
         CommandCapabilityRuntime.Submitter submitter = (actor, command, cancellation) -> {
@@ -307,7 +307,7 @@ final class JavascriptCommandBridgeTest {
     void cancellationWhileWaitingForThePlayerLockPreventsDispatch() throws Exception {
         CommandCapabilityRuntime commands = new CommandCapabilityRuntime(10, 5_000);
         commands.replace(new CommandCapabilityConfig(
-                CommandCapabilityConfig.SCHEMA_VERSION, true));
+                true));
         CountDownLatch firstDispatched = new CountDownLatch(1);
         CompletableFuture<Void> firstSubmission = new CompletableFuture<>();
         AtomicInteger secondDispatches = new AtomicInteger();
@@ -362,7 +362,7 @@ final class JavascriptCommandBridgeTest {
     void cancellationDuringFeedbackWaitStopsWaitingButDoesNotUndoSubmission() {
         CommandCapabilityRuntime commands = new CommandCapabilityRuntime(5, 500);
         commands.replace(new CommandCapabilityConfig(
-                CommandCapabilityConfig.SCHEMA_VERSION, true));
+                true));
         List<String> submitted = new ArrayList<>();
         CancellationSignal cancellation = new CancellationSignal();
         commands.capture(

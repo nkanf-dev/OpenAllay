@@ -16,7 +16,7 @@ fabric_entries="$(jar tf "$fabric_jar")"
 neoforge_entries="$(jar tf "$neoforge_jar")"
 
 for entry in \
-  'dev/openallay/guide/history/GuideHistoryPartition.class' \
+  'dev/openallay/guide/history/SqliteGuideHistoryStore.class' \
   'dev/openallay/guide/semantic/SemanticMessageParser.class'; do
   grep -Fqx "$entry" <<<"$fabric_entries"
   grep -Fqx "$entry" <<<"$neoforge_entries"
@@ -35,8 +35,6 @@ unzip -p "$fabric_jar" fabric.mod.json | python3 -c \
 python3 -c \
   'import json; [json.load(open(path, encoding="utf-8")) for path in ("common/src/main/resources/assets/openallay/lang/en_us.json", "common/src/main/resources/assets/openallay/lang/zh_cn.json")]'
 
-grep -Fq 'SCHEMA_VERSION = 5' \
-  common/src/main/java/dev/openallay/guide/history/GuideHistoryPartition.java
 if rg -n -i 'migrate|migration|upgradeSchema' \
   common/src/main/java/dev/openallay/guide/history >/dev/null; then
   printf '%s\n' 'Unexpected history migration surface found' >&2

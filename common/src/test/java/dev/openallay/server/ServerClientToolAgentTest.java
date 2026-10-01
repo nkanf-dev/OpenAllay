@@ -9,7 +9,6 @@ import com.google.gson.JsonObject;
 import dev.openallay.agent.GameGuideAgent;
 import dev.openallay.agent.session.AgentSessionStore;
 import dev.openallay.agent.tool.AgentToolExecutor;
-import dev.openallay.bridge.protocol.BridgeProtocol;
 import dev.openallay.bridge.protocol.ClientToolCallPayload;
 import dev.openallay.bridge.protocol.ClientToolCancelPayload;
 import dev.openallay.bridge.protocol.ClientToolResultChunkPayload;
@@ -72,14 +71,18 @@ final class ServerClientToolAgentTest {
         routerRef.set(router);
         AgentSessionStore sessions = new AgentSessionStore();
         RecoveringModel model = new RecoveringModel();
-        List<ServerAgentEventPayload> events = new ArrayList<>();
+        List<ServerAgentEventPayload> events = new java.util.concurrent.CopyOnWriteArrayList<>();
+        CompletableFuture<Void> runtimeClosed = new CompletableFuture<>();
         ServerAgentService service = new ServerAgentService(
                 (actor, payload) -> {
                     ToolResult<AgentToolExecutor> opened = router.open(
                             actor,
                             payload.requestId(),
                             payload.sessionId(),
-                            payload.clientToolIds());
+                            payload.clientToolIds(),
+                            new dev.openallay.skill.SkillRepository(
+                                    new dev.openallay.skill.SkillParser(), java.util.Set.of())
+                                    .snapshot(java.util.Set.of()));
                     if (opened instanceof ToolResult.Failure<AgentToolExecutor> failure) {
                         return new ToolResult.Failure<>(failure.code(), failure.message());
                     }
@@ -87,7 +90,10 @@ final class ServerClientToolAgentTest {
                     return new ToolResult.Success<>(new ServerAgentService.RequestRuntime(
                             new GameGuideAgent(model, tools, sessions, gson),
                             tools,
-                            () -> router.close(actor, payload.requestId())));
+                            () -> {
+                                router.close(actor, payload.requestId());
+                                runtimeClosed.complete(null);
+                            }));
                 },
                 sessions,
                 (actor, capabilities, correlation, cancellation) -> CompletableFuture.completedFuture(
@@ -101,7 +107,6 @@ final class ServerClientToolAgentTest {
         ToolResult<ServerAgentService.Accepted> accepted = service.ask(
                 UUID.randomUUID(),
                 new ServerAgentRequestPayload(
-                        BridgeProtocol.VERSION,
                         requestId,
                         "main",
                         "question",
@@ -110,6 +115,11 @@ final class ServerClientToolAgentTest {
                         List.of("test:fact")));
 
         assertInstanceOf(ToolResult.Success.class, accepted);
+        try {
+            runtimeClosed.get(5, java.util.concurrent.TimeUnit.SECONDS);
+        } catch (Exception failure) {
+            throw new AssertionError("the asynchronous recovered Agent must close its runtime", failure);
+        }
         assertEquals(2, model.calls.get());
         assertTrue(model.observedFailureResult);
         assertEquals(0, service.activeRequests());

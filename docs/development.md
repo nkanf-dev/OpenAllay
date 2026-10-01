@@ -1,136 +1,77 @@
 # Development
 
-OpenAllay's 0.2.4 release candidate targets Minecraft 26.2 and requires Java 25.
-It uses Extension API 0.2.1, guide-history schema 5, and server protocol 5.
-Use the checked-in Gradle wrapper; no system Gradle installation is required.
+OpenAllay targets Minecraft 26.2 and Java 25 and implements Extension API 0.2.1.
+Use the checked-in Gradle wrapper; a system Gradle installation is not needed.
 
-## Build and test
+This guide describes the selected source contract in
+[decision 041](isme/decisions/2026-10-01-041-execution-context-simplification.md).
+The source refactor passed 1,123 common tests (six opt-in skips) and both loader
+builds. See the [verification record](verification/execution-context-simplification.md).
+This is not a claim about the already distributed 0.2.4 artifacts or an in-game
+latency measurement.
+
+Before formal 1.0, internal formats are **Latest Only**: keep the current shape
+and exact validation, without internal version numbers, versioned filenames,
+migrations, or old aliases. This covers configuration, history, model context,
+checkpoints, semantic components, common packets, traces, and benchmarks.
+Independently released Extension packages/public APIs and community catalogs keep
+their compatibility versions. Minecraft, loader, model, dependency, and native
+`dataVersion` values remain external facts. This policy never authorizes deletion
+of world saves, existing databases, exports, or operation journals.
+
+## Setup, build, and run
+
+### Common and loader gates
 
 ```bash
 ./gradlew :common:test
 ./gradlew :fabric:build :neoforge:build
 ```
 
+Production code in `common/` must not import Fabric or NeoForge APIs.
+Loader entrypoints, lifecycle hooks, command registration, and packet sends
+belong in their loader modules. Both loaders share the common runtime/settings.
+
 For unreliable Maven connections, replace `./gradlew` with `./gradlew-curl`.
-The helper extracts failed dependency URLs from Gradle output, downloads them
-with curl retries into the ignored `.gradle/curl-mirror` directory, and resumes
-the same command. On FLClash, its proxy can be selected explicitly:
+It downloads failed dependency URLs with curl retries into ignored
+`.gradle/curl-mirror` state, then resumes the command. To select an FLClash proxy:
 
 ```bash
 OPENALLAY_CURL_PROXY=socks5h://127.0.0.1:7890 ./gradlew-curl build
 ```
 
-## Agent benchmark
+### Default distribution
 
-The versioned benchmark corpus is
-`common/src/main/resources/data/openallay/benchmarks/core.json`. Its fixture
-identity, required capabilities, prompts, turn budgets, and external canonical
-predicates are decoded strictly. Deterministic corpus/verifier coverage is
-offline. It also verifies that the local live-benchmark fixture actually
-contains and selects its content-profile and inventory-rich cases instead of
-silently filtering them:
+Both loader artifacts bundle the separately built Builder Extension from
+`OpenAllay-Extensions`. The lock at `distribution/extensions.lock.json` pins
+Builder 0.1.0 to `174d2f515872ca60d356b084095cfd026e275944`. This source revision
+includes 041's batched operations and incremental journal. Its 155 common tests,
+both loader builds and package checks passed; the integrated core distribution
+gate is recorded separately. Product, Extension, and API versions are independent.
+Installation does not enable JVM authority. Player automation and Baritone
+integration remain research-only.
 
-```bash
-scripts/run-agent-benchmark.sh deterministic
-```
-
-The live mode is an explicit, billable provider operation. It runs every case
-applicable to the `javascript-agent-v2` fixture through the production
-`GameGuideAgent`, model protocol adapter, Tool registry, Rhino runtime, Skill
-loader, result normalizer, and trace recorder:
+Prepare the exact source before a full distribution build:
 
 ```bash
-OPENALLAY_MODEL_BASE_URL='https://provider.example/v1/' \
-OPENALLAY_MODEL='provider/model-id' \
-OPENALLAY_API_KEY='...' \
-OPENALLAY_BENCHMARK_REPEATS=3 \
-scripts/run-agent-benchmark.sh live
+python3 scripts/prepare-distribution.py
+./gradlew clean :common:test :fabric:build :neoforge:build
 ```
 
-The preferred reproducible form reuses the credential-free schema-2
-`models.json` format and selects one named profile. Its `credentialRef` must
-resolve an environment variable in the benchmark process:
+Preparation uses ignored local build state. Gradle does not download Extension
+source implicitly; missing, modified, or wrong-revision source fails the build.
+`./gradlew :common:jar` and `./gradlew :common:test` can bootstrap without it.
 
-```bash
-OPENROUTER_API_KEY='...' \
-scripts/run-agent-benchmark.sh live \
-  --profile config/openallay/models.json \
-  --profile-id openrouter-main \
-  --repeats 3
-```
+- `-PbundleExtensions=false` makes an explicit core-only developer build.
+- `-PopenallayExtensionsDir=../OpenAllay-Extensions -PallowUnpinnedExtensions=true`
+  supports coordinated development against a local checkout.
 
-`--cases`, `--include-commands`, and `--output` make case selection, the
-experimental write-capable fixture, and retained-report location explicit.
-The schema-4 live report records the selected profile ID, canonical model
-identity, typed per-attempt result, and raw provider-neutral trace without
-retaining the credential. A sibling `*-audit.json` file classifies only
-unambiguous stable terminal/Tool error codes; unresolved or multi-domain
-failures remain `UNRESOLVED` for engineering review.
+Distribution verification rejects both core-only and unpinned builds. Before
+shipping coordinated changes, commit the Extension, update the lock, prepare its
+exact revision, and rerun the ordinary full gate. No source checkout or Python
+process runs inside Minecraft.
 
-`OPENALLAY_BENCHMARK_CASES` may contain a comma-separated subset of exact case
-IDs. Experimental command cases are excluded unless
-`OPENALLAY_BENCHMARK_INCLUDE_COMMANDS=true`. Server routing is exercised by
-the deterministic `server-model-routing-v1` GuideService fixture and remains
-explicitly outside the local JavaScript/provider fixture. The default local
-fixture includes the Farmer's Delight-style food
-ranking and recipe/inventory craftability cases as detached, generalized test
-data; it does not copy expected answers into model context. Default runs print
-an `OPENALLAY_BENCHMARK_SKIPPED` line for every unavailable case and retain a
-schema-2 selection plan with its required fixture, skip reason, and missing
-capabilities, so fixture coverage cannot shrink silently. Explicitly selected
-unavailable cases still fail fast.
-Reports under
-`build/reports/openallay/benchmarks/` retain corpus
-version, commit, redacted provider authority, canonical model ID, complete
-provider-neutral Agent traces, success probability, per-attempt counters, and
-median model/Tool calls. The audit sidecar retains evidence source, code, event
-index, and Tool ID so it can be traced back to the raw report. Wall-clock
-values remain trace diagnostics and are not benchmark score inputs. API keys
-and authorization data are never written to either file.
-
-## Continuous integration and releases
-
-The `Quality` GitHub Actions workflow runs for pull requests, pushes to `main`,
-`mc/**` and `feat/**`, and manual dispatches. It validates automation sources,
-tests distribution scripts, prepares the pinned Extension source, runs the clean
-common test plus both loader build gate, inspects the Phase 4 and SQLite packaging
-contracts, and verifies exactly one production JAR per loader under the OpenAllay
-identity. Graphical gameplay and billable model acceptance are separate opt-in
-checks.
-
-Releases are created only by pushing an annotated strict-SemVer tag. The tag
-must exactly match `version` in `gradle.properties`. A SemVer prerelease suffix,
-including `-SNAPSHOT`, is published as a GitHub prerelease and a Modrinth alpha;
-a version without a suffix is published as a stable release.
-
-```bash
-# After the candidate audit and required checks pass:
-git tag -a v0.2.4 -m 'OpenAllay 0.2.4'
-git push origin main v0.2.4
-```
-
-Pushing `v*` starts the `Release` workflow. It rejects lightweight or non-SemVer
-tags, a version mismatch with `gradle.properties`, tags outside `origin/main`,
-existing GitHub releases, failed tests, malformed distributions, and a missing
-`MODRINTH_TOKEN` Actions secret. It prepares the exact pinned Extension source and
-runs the clean common/both-loader and packaging gates before staging.
-
-A successful run publishes exactly `openallay-fabric-26.2-<version>.jar` and
-`openallay-neoforge-26.2-<version>.jar` to Modrinth, then attaches build provenance
-and publishes those same two JARs plus `SHA256SUMS` to GitHub. The nested Builder
-stays a separate Extension inside each loader artifact. Publication is ordered,
-not atomic: verify both services and artifact hashes after the job finishes.
-The Modrinth publisher updates its project page from README and is idempotent by
-loader/version presence, not byte equality.
-
-When the tagged commit contains `docs/releases/<version>.md`, release notes use
-that curated player overview plus a Full changelog link when a prior tag exists.
-Versions without a curated file retain generated notes, commit range and
-contributors. Enable protected `v*` tags, required `Quality` checks, read-only
-default Actions permissions, and immutable releases in repository settings;
-workflow files cannot enforce those repository-level controls themselves.
-
-## Run environments
+### Development instances
 
 ```bash
 ./gradlew :fabric:runClient
@@ -139,42 +80,37 @@ workflow files cannot enforce those repository-level controls themselves.
 ./gradlew :neoforge:runServer
 ```
 
-Dedicated validation is headless. Fabric accepts `--args nogui`; NeoForge's
-development launcher is already headless and must be run without Gradle
-`--args`, because that option replaces its launch main class.
+Dedicated validation is headless. Fabric accepts `--args nogui`. NeoForge's
+launcher is already headless; do not pass Gradle `--args`, which replaces its
+launch main class.
 
-The accepted Fabric 26.2 full-mod development profile uses Architectury Fabric
-21.0.4. Architectury Fabric 21.0.2 and earlier is known to break character
-input, so Fabric metadata marks only versions through 21.0.2 incompatible when
-the optional mod is present. Version 21.0.3 has not been verified: it is not
-blocked, but its compatibility is unknown. This boundary does not make
-Architectury a requirement. NeoForge is unaffected by this Fabric-only issue.
+The accepted Fabric 26.2 full-mod profile uses optional Architectury Fabric
+21.0.4. Versions through 21.0.2 break text input and are marked incompatible.
+Version 21.0.3 has not been verified: it is not blocked, but compatibility is
+unknown. Architectury is not required. NeoForge is unaffected. See the
+[Fabric content profile](verification/2026-07-25-fabric-26.2-content-profile.md).
 
-## Client model configuration
+## Runtime configuration
 
-The main mode is pure client-side. The only supported player-managed format is
-`config/openallay/models.json` schema 2. It contains no secret: each profile
-retains only a qualified `credentialRef`. Schema 1 and the old single-profile
-`model.json` format are not imported. If `models.json` is missing, OpenAllay
-starts unconfigured even when `model.json` exists. Invalid or old files remain
-untouched and produce a redacted settings notice; explicitly save a valid schema
-2 profile to configure the client. This client-only rule does not change the
-separate server-owned `server-model.json` format.
+### Client models and credentials
 
-Ordinary players enter an API key through the native masked password field.
-OpenAllay stores it under an immutable `local:<uuid>` reference in
-`config/openallay/credentials.sqlite3`; a saved key is never filled back into
-the widget or exposed through copy/cut, settings snapshots, diagnostics, logs,
-packets, prompts, or history. On POSIX systems the credential database receives
-owner-only permissions on a best-effort basis. This is local restrictive
-storage, not an OS-native vault.
+Client profiles use the strict current shape in `config/openallay/models.json`,
+without a format-version field or legacy import path. Missing configuration starts
+unconfigured; malformed files stay untouched and produce a redacted notice.
+Saving valid configuration is explicit.
 
-Externally authored development or headless configurations may instead name an
-environment reference. This form is not requested by the normal player UI:
+Players enter keys through the native masked field. The credential store is
+`config/openallay/credentials.sqlite3`; profiles retain only immutable
+`local:<uuid>` references. Stored keys are never filled back into the widget or
+exposed in copy/cut, settings snapshots, diagnostics, logs, packets, prompts,
+traces, or history. POSIX owner-only permissions are best effort; this is local
+restrictive storage, not an OS-native vault.
+
+For externally authored development or headless configuration, use an
+environment reference instead. The normal player UI does not request this form:
 
 ```json
 {
-  "schemaVersion": 2,
   "defaultProfileId": "openrouter-main",
   "profiles": [
     {
@@ -195,268 +131,157 @@ environment reference. This form is not requested by the normal player UI:
 ```
 
 `anthropic_messages` is the other protocol. Remote endpoints require HTTPS;
-HTTP is accepted only for loopback development. Inline `apiKey` and `apiKeyEnv`
-are not valid in schema 2. Context precedence is explicit `contextWindowTokens`,
-then exact trusted provider metadata/cache, then an eligible BEST match in the
-bundled table. Unresolved models require manual context. Explicit values always
-win, including a 1,000,000-token user budget. There is no 32K fallback or arbitrary
-context cap. The `256000` value above is an example, not a fallback.
+HTTP is allowed only for loopback development. Inline `apiKey` and `apiKeyEnv`
+are invalid. The numbers above are manual examples, not defaults.
 
-Output ownership follows the same explicit/automatic distinction. An explicit
-`maxOutputTokens` remains a manual budget. Omitted or JSON-null output resolves the
-exact trusted provider maximum, then the matched bundled maximum. An unknown
-maximum requires manual configuration; there is no 8192/4096 output fallback.
-Clearing the native Models output field restores automatic maximum selection.
-The resolved output and context must satisfy `ContextBudget`; neither is silently
-clamped. For the matched `gpt-6-luna`, the bundled maximum is 128,000 output tokens;
-a manual 1,000,000 context remains unchanged. This is published capability data,
-not a promise that every gateway accepts the same maximum.
+Context resolution is explicit `contextWindowTokens`, then exact trusted
+provider metadata/cache, then an eligible deterministic BEST match in the
+bundled catalog. Canonical/upstream IDs and published aliases precede provider
+wrapper normalization and family/version-aware similarity. Unrelated unknown
+models require manual context. Explicit values win, including a 1,000,000-token
+budget; there is no 32K fallback or arbitrary context cap. An untouched automatic
+context stays omitted on save; only an actual edit makes it manual.
 
-The builtin model table works offline at arbitrary OpenAI-compatible endpoints,
-even when authenticated `/models` returns IDs without limits.
-Disabled profiles can retain an unresolved context window. Their diagnostic and
-settings projections preserve that unknown value without blocking usable profiles
-from starting; enabled unresolved profiles still need a resolved or explicit budget. Missing context
-uses an eligible deterministic BEST match: canonical/upstream ID and published
-alias first, provider-wrapper normalization next, then family/version-aware
-similarity. Unknown unrelated names still require manual context. Models settings
-shows the chosen model, published context/output, source/capture time, and every
-published USD-per-million-token price tier. These are reference estimates, not
-claims about the configured gateway's actual bill. Model ID, endpoint, protocol,
-profile selection and explicit output setting are never changed.
+Output is also manual or automatic:
 
-An untouched automatic context display remains omitted in `models.json` on save;
-only an actual context edit makes it explicit. Later exact trusted metadata can
-therefore replace a builtin estimate, and edits affect only future requests.
-Published output ceilings are advisory, not new request output defaults.
+- Explicit `maxOutputTokens` remains the manual budget.
+- Omitted or JSON-null output resolves the exact trusted provider maximum, then
+  the eligible bundled maximum. Clearing the native output field restores auto.
+- An unknown maximum requires manual configuration. There is no 8192/4096
+  fallback or guessed context-derived maximum.
 
-The separate strict resource
-`data/openallay/models/builtin-model-catalog.json` contains reviewed capability
-and pricing provenance. The provider metadata cache remains schema 1 and contains
-no prices or builtin matches. Developers can update the table explicitly:
+Resolved runtime limits must satisfy `ContextBudget`: context exceeds two output
+reserves. Neither value is silently clamped. The matched `gpt-6-luna` publishes a
+128,000-token output maximum; an explicit 1,000,000-token context stays unchanged.
+Published capability data does not promise every gateway accepts that maximum.
+Disabled profiles may retain unresolved context/output without breaking settings
+or diagnostics; enabled profiles need resolved or explicit limits.
+
+The bundled catalog works offline at arbitrary OpenAI-compatible endpoints,
+including gateways whose authenticated `/models` returns IDs without limits.
+Settings shows the match, limits, source/capture time, and published
+USD-per-million-token price tiers as reference estimates, not gateway billing
+claims. Resolution never changes model ID, endpoint, protocol, payer, credential,
+profile selection, or a manual budget. See
+[decision 036](isme/decisions/2026-10-01-036-builtin-model-catalog.md) and
+[decision 040](isme/decisions/2026-10-01-040-manual-runtime-root-causes.md).
+
+### Metadata and catalog maintenance
+
+`config/openallay/model-metadata.json` is the strict current trusted capability
+cache; it contains no prices or builtin matches. Startup reads it asynchronously.
+A cache miss refreshes in the background; failure retains prior cache and explicit
+configuration. OpenRouter uses `GET /api/v1/models` fields `id`, `canonical_slug`,
+`context_length`, and optional `top_provider.max_completion_tokens`.
+Metadata listing/refresh is configuration I/O, not an Agent Tool or inference
+acceptance. HTTP transport mechanics can be shared, but provider and future
+knowledge clients keep separate credentials, permissions, codecs, and evidence.
+
+The strict bundled resource is `data/openallay/models/builtin-model-catalog.json`.
+Its refresh is an explicit developer operation:
 
 ```bash
 python3 -m unittest discover -s scripts -p test_update_builtin_model_catalog.py -v
 python3 scripts/update-builtin-model-catalog.py --fetch-public --output /tmp/builtin-model-catalog.proposal.json
 ```
 
-The updater pulls only the fixed unauthenticated public sources into a proposal.
-Review identities, aliases, limits, decimal price units/tiers and source changes
-before replacing the committed resource. Runtime does not fetch these URLs.
-Keep the shipped `data/openallay/models/LICENSE.models.dev` attribution. See
-[the source evidence and reproducible offline refresh procedure](verification/builtin-model-catalog/README.md)
-and SKMB-2026-10-01-036 for the full precedence and matching contract.
+The updater reads fixed unauthenticated public sources into a proposal. Review
+identities, aliases, limits, decimal price units/tiers, and source changes before
+replacing the resource. Runtime does not fetch those URLs. Keep
+`data/openallay/models/LICENSE.models.dev`. See the
+[source evidence and offline refresh procedure](verification/builtin-model-catalog/README.md).
 
-`connectTimeoutSeconds` covers establishment of the provider connection.
-`requestTimeoutSeconds` is the total budget for one dispatched model attempt,
-including response headers, streaming body consumption, and decoding. A
-scheduled cancellable watchdog closes a stalled body and reports the stable
-`model_timeout` failure; cancellation, timeout, or completion wins exactly once
-and late bytes cannot mutate the request.
+### Settings publication and model ownership
 
-OpenRouter metadata uses the official `GET /api/v1/models` catalog fields
-`id`, `canonical_slug`, `context_length`, and the optional
-`top_provider.max_completion_tokens`. Startup reads
-`config/openallay/model-metadata.json` asynchronously. A cache miss refreshes in
-the background without blocking startup; successful credential-free metadata
-is cached across launches, and a failed refresh leaves explicit configuration
-and prior cache intact. The cache is configuration-layer state, not an Agent
-tool. Model providers and future online knowledge tools reuse the JDK HTTP
-transport mechanics but retain separate credentials, permissions, codecs, and
-evidence policy.
+The common native settings screen contains General, Models, Extensions, Skills,
+History, Diagnostics, and About. Models supports profile editing, defaults,
+external reload, metadata refresh, authenticated `/models` listing, and an
+explicit connection test. Listing uses a currently typed key first, otherwise
+the saved credential. Headers stay within the validated provider origin;
+Anthropic catalog requests use native headers plus Bearer gateway compatibility.
+The model ID remains editable.
 
-The guide screen's compact model control opens an explicit scrollable selector
-for the selected session's named profiles and the server model when offered;
-it never changes the model merely by cycling a button. Returning from settings
-refreshes capabilities automatically. Switching during an active request
-changes only the next request; the status line continues to show the model
-captured by the running request. Commands provide the same semantics:
+A save validates the full candidate, stages any new immutable credential,
+atomically replaces `models.json`, then publishes the prepared runtime. Changes
+affect future requests. Active requests retain their captured runtime and key;
+unreachable credential rows are collected only after successful publication.
+Missing files create only a disabled in-memory draft until explicit save.
 
-```text
-/guide model list
-/guide model profile <profile-id>
-/guide model client
-/guide model server
-```
+The server owns `config/openallay/server-model.json`, a separate format.
+A valid runtime is constructed at startup before it is advertised. Missing,
+disabled, or invalid server configuration advertises no model and records only a
+server-local diagnostic. Clients see a synchronized, read-only server choice;
+client settings cannot edit, test, delete, or persist it, and client packets never
+contain its key. Server selection is connection-scoped. Disconnect restores the
+local default for future requests; active requests retain captured runtime until
+terminal cleanup. See
+[model ownership and bridge decision 021](isme/decisions/2026-07-19-021-model-ownership-and-player-tool-bridge.md).
 
-The last two forms remain compatibility shortcuts. `client` restores that
-session's last named client profile and never silently chooses another one.
+The connection test warns about cost and requires a second confirmation. It
+sends one non-streaming, non-retrying request with at most 64 output tokens and
+no history, Tools, Skills, game state, evidence, or trace. Assistant text and
+provider bodies are discarded. Only category, redacted authority, protocol,
+completion time, and latency remain. Closing settings cancels a probe or discards
+drafts, but does not cancel an already confirmed configuration/history write.
 
-The Guide screen's gear button opens the common native settings screen on both
-Fabric and NeoForge. Its Models page can create, edit, enable/disable, delete,
-select the default profile, reload external edits, manually refresh trusted
-metadata, and run one explicit connection test. Saving validates the whole
-candidate and stages a new immutable local credential where needed, atomically
-replaces `models.json`, and only then publishes the already-prepared runtime for
-future requests. Active requests retain the runtime they captured at
-submission. Replacing a key never overwrites the credential used by an active
-profile; unreachable rows are collected only after successful publication.
+`connectTimeoutSeconds` covers connection establishment. `requestTimeoutSeconds`
+is the full budget for one dispatched attempt, including headers, streaming, and
+decoding. A cancellable watchdog closes stalled bodies with `model_timeout`.
+Cancellation, timeout, or completion wins once; late bytes cannot mutate state.
 
-The Models page mixes client-owned profiles with the connected server model.
-The server entry is synchronized automatically, carries a server badge, and is
-strictly read-only: client settings cannot edit, test, delete, or persist it.
-It is configured exclusively by the server's `server-model.json`. A valid
-server runtime is constructed at server startup before the first capability
-packet can advertise it. Missing, disabled, or invalid configuration advertises
-no server model and records only a server-local diagnostic. Disconnect removes
-the entry and restores each affected session to its local default for future
-requests; an already active request keeps the model/runtime it captured. The
-model ID field
-remains editable and can fetch an authenticated `/models` catalog using the
-currently typed password first or the already-saved credential otherwise. A
-saved credential is represented by an explicit saved-key hint; its value is
-never filled back into the field. Anthropic profiles send their native API-key
-and version headers plus Bearer compatibility for gateways whose catalog route
-is OpenAI-style; every header remains confined to the validated provider
-origin.
+### Display, history, and diagnostics
 
-When a player explicitly selects the server model, the request advertises only
-that player's currently enabled registered read-only client Tools. The server
-intersects the IDs with its trusted registry and may call those Tools back on
-the requesting client, including client options, installed mods, packs,
-shaders, F3-style diagnostics, and player-visible state. Results return in
-bounded chunks and remain correlated to the actor, request, and invocation.
-Tool failures are returned to the model as structured results so it can explain
-or recover; explicit cancellation, disconnect, and shutdown remain terminal.
-The same rule applies to client-hosted models using server Tools: bridge
-unavailability, malformed results, and the five-minute remote Tool deadline are
-complete Tool failures, not Agent termination. Incomplete request, result, and
-event chunk assemblies are sparse, accepted only for active requests, and
-expire after the same deadline (or immediately at request termination).
-Only the live Minecraft snapshot capture runs on the client thread. Tool
-execution and potentially large normalization/chunk encoding run on a virtual
-worker, and packet sends are marshalled back to the client thread. Invalid
-settings fail closed to an empty advertised client Tool set.
-
-Focused spatial observation uses the optional `world` binding of
-`openallay:run_javascript`. Client-local execution captures client-visible
-loaded blocks and entities on the Minecraft client thread. A server-hosted
-model keeps scripts requesting `roots: ["world"]` on the server and captures
-server-authoritative data for the authenticated requesting player. A
-client-hosted model may call the server's advertised read-only JavaScript
-projection for the same authoritative route. That projection rejects the
-experimental `commands` root; command mutation remains a separate client-owned,
-default-off capability.
-
-Both routes detach block state, coordinates, entity summaries, and entity
-details before the Rhino worker observes them. Entity observation IDs are
-opaque and valid only for that request. Cancellation or disconnect stops later
-capture slices and closes the request workspace; unloaded regions remain
-explicit partial coverage rather than empty proof.
-
-The top-level settings sections are General, Models, Extensions, Skills,
-History, Diagnostics, and About. Extensions is a master-detail projection of
-the JavaScript host, reusable modules, registered detached adapters, pending
-community packages, and opt-in experimental capabilities. It is not a legacy
-per-Tool enablement page. Skills remain a separate installed/community
-document surface; their filesystem packages, validation, provenance, and
-override rules are described below.
-
-The public Skill community catalog is a strict schema-2 JSON document. Each
-entry includes the stable package ID plus a player-facing display name,
-description, and publisher, so the Community tab can explain a Skill before
-installation. Archive, SHA-256, compatibility, version, and source remain
-machine-validated package fields. Development-era schema-1 caches are rejected;
-successful refreshes and all codec output use schema 2. The installed package's
-validated root `SKILL.md`, not catalog display metadata, remains the
-Agent-instruction source of truth.
-
-The connection test displays a cost warning and requires a second confirmation.
-It sends one non-streaming, non-retrying request capped at 64 output tokens with
-no Guide history, Tools, Skills, game state, evidence, or trace. Assistant text
-and provider bodies are discarded. The result contains only a stable category,
-redacted endpoint authority, protocol, completion time, and latency. Model
-metadata refresh/listing is a separate configuration operation and never counts
-as a successful inference test. Closing settings cancels only an active probe;
-an already-confirmed atomic save continues to its terminal result.
-
-If `models.json` does not exist, OpenAllay presents one disabled in-memory draft
-and does not create a file until the player explicitly saves. Old `model.json`
-files are not imported or modified. Invalid startup files remain untouched and
-produce a redacted settings notice. The screen receives only credential presence
-and transient password-input state; it cannot read or render a stored value.
-
-The 0.2 runtime has no Tool-family settings, per-Tool enablement files, or
-user-editable Tool source envelopes. JavaScript is the primary model-facing
-game-data capability. The Extensions page describes `openallay:run_javascript`,
-its request-scoped `mc` roots, bundled helper modules, registered data adapters,
-and the default-off game-command bridge. Skills remain a separate document
-surface.
-
-Recipe capture and knowledge integrations continue to publish their current
-runtime data into the JavaScript host graph. Their availability is determined
-by the installed game/mod environment rather than a second Tool configuration
-layer. Existing recipe behavior options remain in
-`config/openallay/tools/recipes-options.json`; they are runtime capture
-configuration, not a model-facing Tool catalog.
-
-Player-facing tool details are controlled separately by
-`config/openallay/display.json` on both loaders. A missing file uses the safe
-default below:
+`config/openallay/display.json` has the strict current shape. Missing files use:
 
 ```json
 {
-  "schemaVersion": 3,
   "debugMode": false,
   "animationsEnabled": true,
   "assistantName": "OpenAllay"
 }
 ```
 
-`assistantName` is the player-chosen local name shown for the companion in the
-native interface. It is trimmed, must not be blank, and cannot contain control
-characters. Renaming it changes presentation only; it does not rewrite saved
-conversation content, session IDs, evidence, or model/tool configuration.
+`assistantName` is trimmed, nonblank, and control-free. It changes local
+presentation, not saved content, IDs, evidence, or model/Tool configuration.
+Animations affect progress presentation only. Invalid startup files keep Debug
+off and stay untouched; reload retains the last valid projection. Atomic General-page saves reproject through
+`GuideDisplayRuntime` without a restart.
 
-Normal mode renders scrollable recipe, inventory, usage, and craftability cards
-with native item icons, counts, tooltips, and typed recipe-viewer actions. Tool and
-source details show friendly recorded source, authority meaning, coverage and
-localized capture time under decision 038. Raw tool/invocation IDs, enum spellings,
-provenance, metadata values, internal failure codes and normalized JSON remain
-Debug-only. Setting `debugMode` to `true` appends a separate local diagnostic
-section containing the already-redacted technical projection. An invalid file
-keeps Debug Mode off and displays a localized notice; it never rewrites the
-malformed file. The General page edits Debug Mode through the shared
-`GuideDisplayRuntime`; an atomic save immediately reprojects both the settings
-screen and newly rendered Guide content without requiring a restart. Reload
-retains the last valid projection on malformed external edits.
+Normal Tool details put useful results and actual safe error codes/messages first.
+Origins are auxiliary grouped details, initially collapsed, with distinct-source
+counts and actual capture ranges. Authority and coverage remain distinguishable;
+client-visible or imported data is not called server-confirmed. Debug places the
+submitted program and input/output before origin details. Programs, raw JSON,
+technical identities, and metadata remain Debug-only. Diagnostics exclude
+secrets, provider bodies, reasoning, transcripts, raw history scopes, paths,
+actors, and request/cursor payloads.
 
-`animationsEnabled` controls only subtle progress presentation. It does not
-change semantic content, action availability, evidence, layout identity, or
-narration. Schemas 1 and 2 are pre-release development state and are rejected
-rather than migrated. Normal diagnostics say that history is loaded on demand and
-show current-page loading/failure in friendly terms. Debug diagnostics add
-only count-based window cursors, loaded/total counts, semantic cache hits and
-misses, fallback counts, and context-token estimates; they never include raw
-cursor/request payloads, transcripts, paths, provider bodies, actors, or scope
-identifiers.
+Source diagnostics consume counts-only immutable state published by the existing
+knowledge reload, not live captures from settings rendering. Known empty is
+separate from unknown/not captured; failures may retain valid counts as partial.
+Disconnect, shutdown, and player/world scope replacement clear published source
+facts and old primary-provider handles. Saved source configuration and enablement
+policy remain; a new connection is unknown until fresh capture.
 
-The History page projects only friendly connection kind, persistence health,
-active-request state, and pending-write/deletion status. It can delete the
-current player/world-or-server partition or all partitions belonging to the
-current local player identity. Both actions require a fresh one-use
-confirmation and are rejected as `history_delete_busy` while matching requests
-or ordered writes are active. Whole-database reset is visible only in Debug
-Mode and requires a distinct second confirmation. Settings delegates every
-operation to the current `GuideService`/ordered repository; it never receives a
-raw scope identifier, database path, or SQL string.
+Context diagnostics use the latest actual local request estimate, bound to the
+selected model/session/request, not the sum of compaction checkpoints. Server
+models, pre-dispatch requests, and replaced or disconnected endpoints report
+unknown. Pending-write/active-request counts describe current work; checkpoint
+counts describe retained compaction records. Debug adds count-based history
+window/cache/fallback metrics and context estimates only. See
+[decision 040](isme/decisions/2026-10-01-040-manual-runtime-root-causes.md).
 
-Diagnostics always presents localized, player-friendly cards for model,
-knowledge/capability, recipe, history, and context health. Debug Mode adds a
-separate whitelisted technical section containing only redacted endpoint
-authority, metadata/checkpoint/source generations, counts, and stable status
-codes. Neither projection can contain provider bodies, reasoning, transcript
-content, credential values, raw history scopes, or filesystem paths. Closing
-the screen discards drafts and confirmation tokens but does not cancel an
-already confirmed history/configuration transaction; shutdown disconnects the
-Guide service, closes ordered history, cancels any live probe, and closes the
-metadata cache asynchronously on both loaders.
+History settings delegates to `GuideService` and its ordered repository without
+raw database paths, scopes, or SQL. Deleting the current partition or all current
+player partitions needs a fresh one-use confirmation and fails
+`history_delete_busy` during matching requests/writes. Whole-database reset is
+Debug-only and needs a distinct second confirmation. Shutdown disconnects the
+service, closes ordered history, cancels probes, and closes metadata cache
+asynchronously on both loaders.
 
-For an optional server-hosted model, use
-`config/openallay/server-model.json` on the server. The capability is advertised
-only when that configuration is valid. Client packets never contain the key.
+## Guide requests, history, and UI
 
-## Player commands
+### Native commands
 
 ```text
 /guide <question>
@@ -470,408 +295,340 @@ only when that configuration is valid. Client packets never contain the key.
 /guide session new <id>
 /guide session switch <id>
 /guide session close <id>
+/guide model list
+/guide model profile <profile-id>
 /guide model client
 /guide model server
 ```
 
-The same player may run requests concurrently in different sessions. A second
-request in the same session returns `agent_busy`. OpenAllay applies no fixed
-global concurrency or queue-count limit. Provider HTTP 429 closes only the
-matching endpoint gate, honors `Retry-After` when present, and otherwise uses
-cancellable exponential backoff with fair session rotation.
+`client` restores that session's last named profile without silently choosing
+another. The screen uses
+an explicit profile/server selector. Switching during work changes the next
+request; status still names the model captured by the running request.
 
-Client-local tools use detached client player, registry, and synchronized
-recipe-display snapshots. If the server advertises enhancements, the same
-client Agent also sees separately named server read tools. Model location and
-tool location are independent.
-
-## Shared GuideService and opt-in client E2E
-
-Commands, the Phase 3C screen, and development probes consume one
-connection-scoped `GuideService`. It owns immutable request/session snapshots,
-model mode, topology, cancellation, retry, sources, and disconnect cleanup.
-Each active snapshot carries only redacted lifecycle progress: phase, request
-and phase start, most recent progress, attempt, and optional retry/deadline.
-The GUI derives elapsed/countdown text locally in a fixed-height strip; clocks
-do not append transcript rows or create history writes.
-Across the client/server bridge, an attempt carries its relative timeout budget
-rather than a server wall-clock epoch. The receiving client derives a local
-display-only deadline, so clock skew cannot shorten, extend, or invalidate the
-server-owned watchdog.
-The server Agent protocol is version 5 and is decoded once in common
-code. Unknown or malformed events fail only their correlated request; there is
-no silent client/server fallback. Server-model requests carry only the
-partition's visible user/completed-assistant history; they never carry restored
-capabilities, live evidence, reasoning, credentials, or full normalized tool
-results. Protocol v5 also carries the selected server model's actual context
-budget and canonical model identity, and splits the encoded request into independently strict,
-SHA-256-checked 24 KiB transport chunks so long histories do not depend on one
-Minecraft custom-payload string.
-
-Normal-mode guide history is stored at `config/openallay/history.sqlite3` in
-SQLite schema 5. The 0.2.4 candidate retains the format released in 0.2.2;
-JavaScript display intent adds no database or wire version. Recognized older
-OpenAllay schemas 1, 2, 3, and 4 return
-`history_schema_unsupported`; startup does not alter their tables, rows, or
-files. Future, corrupt, foreign, missing/inconsistent-metadata, and otherwise
-unrecognized databases also fail closed without mutation. To retain old history,
-back up the database and open it with a compatible OpenAllay version. To discard
-it, use the separately confirmed Debug Mode reset only after making any desired
-backup. There is no automatic migration or reset. Each partition key is a
-SHA-256 digest of the player
-UUID, connection kind, and normalized integrated-world path or multiplayer
-address; the raw path/address is not stored. Database work runs on one ordered
-background worker and never blocks the client or render thread.
-
-The durable projection contains sessions, their selected model profiles, user
-messages, chronological visible assistant/tool/status entries, each request's
-captured model selection, evidence summaries, and terminal request state. It
-excludes model reasoning, credentials, authorization data,
-raw provider bodies, full inventory snapshots, and full normalized tool
-results. Loading temporarily disables submission. A load or write failure keeps
-the in-memory Agent usable and shows that new messages are not durable. Work
-left active by process loss restores as `INTERRUPTED`; continuing it always
-requires an explicit retry with a new request ID. Versioned compaction
-checkpoints are retained separately as derived, non-evidence memory and reused
-only when their source hash and prompt/schema versions match. The generating
-model ID is provenance, not a reuse lock: changing provider or model keeps the
-session transcript and a valid checkpoint, then re-estimates the projection
-against the newly selected model's own budget. Player history administration
-and redacted normal/debug diagnostics are available in native settings.
-Startup restores partition/session metadata without materializing request
-bodies. The screen requests viewport-sized history pages independently from
-provider-neutral context reads, which use the selected model's actual budget.
-Safe Markdown, validated Minecraft references, registered controlled
-components, semantic fallback text, variable-height virtualization, stable
-anchors, and presentation-only animation are implemented in common code.
-
-The real-client probe is disabled unless `openallay.e2e.enabled=true`. When
-enabled, it waits for a real client player, submits through the same
-`GuideService`, records status transitions, tool IDs, evidence, timings and
-payload hashes, writes a redacted JSON report, then optionally requests clean
-client shutdown. Report writing belongs to this development harness and is not
-an Agent tool.
-
-The helper below starts a deterministic loopback OpenAI/SSE fixture and launches
-the selected graphical development client:
-
-```bash
-./scripts/run-real-client-e2e.sh fabric
-./scripts/run-real-client-e2e.sh neoforge
-```
-
-Connect the launched client to a disposable world or test server, or set
-`OPENALLAY_E2E_QUICK_PLAY_WORLD` to an existing disposable single-player world.
-The fixture waits for durable hydration and every enabled installed recipe
-viewer to publish a non-empty current catalog. It requests one
-`openallay:run_javascript` call over the detached recipe, player, and knowledge
-roots, then uses the exact current-capture recipe reference and computed result
-in deterministic pre-authored component responses. The loopback fixture is not
-a model and does not test model planning, answer quality, or live provider
-behavior. It does exercise the production Tool, current game capture, evidence
-binding, UI chronology, and native presentation path. The report records
-redacted semantic/component/fallback counts and history-window/cache metrics,
-and the script rejects any outcome other than `COMPLETED`.
-
-The default retained recipe is `minecraft:iron_block`. A compatible mod recipe
-can exercise native viewer embedding without changing the fixture, for example:
-
-```bash
-OPENALLAY_E2E_RECIPE_OUTPUT=farmersdelight:apple_cider \
-OPENALLAY_E2E_RECIPE_ID=farmersdelight:cooking/apple_cider \
-OPENALLAY_E2E_RECIPE_LABEL=苹果酒 \
-./scripts/run-real-client-e2e.sh fabric
-```
-
-These variables affect only the deterministic loopback scenario. The exact
-reference is read from the current JavaScript capture result; the fixture never
-fabricates a viewer handle or craftability result.
-
-Set `OPENALLAY_E2E_HISTORY_SEED_REQUESTS` to create sequential durable seed
-requests before the reported scenario. `OPENALLAY_E2E_MIN_HISTORY_REQUESTS`
-asserts the durable total; `OPENALLAY_E2E_REQUIRE_PAGED_HISTORY=true` additionally
-requires a restart to hydrate fewer requests than the durable total and expose
-an earlier-page cursor. The harness temporarily replaces `models.json` with an
-isolated loopback profile and restores the exact prior file on exit.
-
-The harness is intentionally opt-in because it opens a graphical client. CI
-validates the controller, both loader hooks, shell syntax, and fixture syntax,
-but does not claim a real-client run. Earlier Phase 4C Fabric reports, redacted
-logs, exact JEI navigation screenshots, artifact URLs, and hashes are retained
-under `docs/verification/phase-4c-all-known-recipes/`. Earlier consolidated
-Fabric/NeoForge semantic-history reports and compatibility boundaries are under
-`docs/verification/phase-4-final-acceptance/`; those artifacts predate the
-manual-acceptance correction set and do not close it.
-The closing correction reports, 12 reviewed screenshots, exact game-state Tool
-probes, runtime artifact provenance, and production hashes are retained under
-`docs/verification/phase-4-final-corrections/`.
-
-## Player GUI
-
-The configurable `key.openallay.open_guide` mapping defaults to `K`; bare
-`/guide` uses the same opener on Fabric and NeoForge. The native full-screen
-Screen does not pause the world. Escape and opening another Screen only detach
-the UI subscription, so active work continues and reopening reconstructs from
-the latest immutable GuideSnapshot.
-
-The screen provides a responsive session rail/overlay, virtualized wrapped
-transcript, multiline composer (Enter sends, Shift+Enter inserts a line break,
-and Ctrl+Enter remains a compatibility shortcut), stop/retry controls, and an
-explicit local/server model selector. Enter outside the focused composer keeps
-the selected widget/card action. Only model text deltas are visible;
-reasoning is absent from the UI view type. Assistant segments and tool cards
-render in actual Agent event order, and a running card updates in place by its
-tool invocation ID before later assistant text appears. Grounded recipe,
-inventory and craftability tools receive first-class summaries, while other
-tools use a deterministic friendly fallback. Tool and evidence details show the
-recorded source, actual authority, coverage and capture time in normal mode;
-raw technical metadata and normalized JSON require local default-off Debug Mode.
-Details have an explicit close button, Escape closes them before the Guide, and
-navigation keys scroll them without dismissing or clicking through the panel.
-Session switches and disconnect cleanup remove stale detail state.
-
-Decision 038 reserves responsive header/composer bounds and scrollable General/
-About content. A raw pending Tool in a terminal request displays **Stopped before
-a result was recorded**, a UI-only projection that preserves raw status and
-fabricates neither success nor failure. Retry resends the question; it does not
-resume a step. Stop prevents future work, not completed effects.
-
-The final 0.2.4 packaged UI scenes passed on 2026-10-01: Fabric
-`20261001-ui-disabled-03` (24 PNGs), NeoForge `20261001-ui-provider-failure-02`
-(26 PNGs), and Fabric `20261001-ui-stop-01` (24 PNGs). The first retains native
-permission-off/no-write success; the second retains a successful player read
-followed by actual HTTP 503 and request failure; the third retains actual accepted
-cancellation with no normalized Tool result. Each restores its original display
-configuration. Independent Minecraft UI/UX review inspected all 74 final PNGs
-and approved the reviewed scope with no release-blocking P0/P1. The integrated
-clean gate passed 907 common tests with zero failures/errors and 6 skips, both
-loader builds, and distribution/Phase 4/SQLite packaging. The retained local
-review is `/Users/nkanf/docs/openallay-ui-ux-review-2026-10-01.md`; the artifact and
-scene records are in `build/e2e/ui-release-0.2.4/`. Source/tests support the other
-contract paths; these three captures are the graphical acceptance scope.
-
-Deleting a session from the Guide screen uses two native confirmations bound to
-the originally selected session; the second warning states that durable history
-is removed and any active request is stopped. User and assistant rows expose an
-explicit local clipboard action. The Export action captures the complete
-current session in request/timeline order and atomically writes a UTF-8 text
-file below `openallay/exports` in the Minecraft game directory. The writer has no
-path input, rejects symlink escape, and omits normalized Tool payloads,
-checkpoints, model settings, raw diagnostics, and credential-shaped text.
-
-Validated inline `recipe_grid` components bind only to the complete normalized
-recipe result from their same-request Tool invocation. Visible bindings enter a
-client-thread-only `NativeDomainView` lifecycle and are released when their row
-leaves the viewport or the Screen closes. JEI 26.2 exact references re-resolve
-against the current provider generation and embed its public
-`IRecipeLayoutDrawable` (`drawRecipe`, overlays/tooltips, and `tick`). Oversized,
-stale, missing, or failed layouts fall through to OpenAllay's neutral labelled
-slot canvas. REI 26.2 currently exposes category widget construction but no
-verified exact durable-reference re-resolution contract used by OpenAllay, so
-its native provider records `rei_exact_embedding_unsupported` and uses the same
-neutral fallback instead of claiming or approximating a mod-owned screen.
-
-If the selected model is unavailable, the screen still opens and shows the
-configuration/capability state. Client profiles remain at
-`config/openallay/models.json`; the Models page accepts a transient masked API
-key but never displays a stored secret. Model-mode changes affect future
-requests only and never trigger silent fallback.
-
-## Rhino Agent runtime
-
-Every factual success carries immutable evidence: authority, completeness,
-capture time, source, provenance, game version, loader, and optional scoped
-details. The general model-facing analysis operation is:
+Development Tool inspection requires game-master permission:
 
 ```text
-openallay:run_javascript
+/openallay dev tools
 ```
 
-OpenAllay embeds the KubeJS-Mods Rhino fork directly; KubeJS itself is not a
-runtime dependency. Every invocation gets a fresh Rhino context and immutable
-detached `mc` graph. Safe mode is the default; only a request with explicitly
-captured client-local unrestricted authorization gets standard Rhino objects and
-`Java.type` interop under decision 033. `MinecraftAgentHostGraph` retains the original
-detached Java records and lists; `RhinoHostAdapter` exposes record components,
-collection elements, String-keyed map entries, Optional values, stable scalars,
-and existing Gson leaves through lazy identity-cached read-only `Scriptable`
-views. Request and workspace input is never converted to a second Gson tree,
-embedded in source, stringified, or parsed with `JSON.parse`.
+Commands, screens, and probes use one connection-scoped `GuideService` for
+sessions, routing, immutable snapshots, cancellation, retry, and cleanup. A
+player can run requests in different sessions concurrently; the same session
+returns `agent_busy`. There is no fixed global concurrency or queue-count cap.
+HTTP 429 gates only the matching endpoint, honors `Retry-After`, and otherwise
+uses cancellable exponential backoff with fair session rotation.
 
-Normal JavaScript `filter`, `map`, `reduce`, grouping, joins, optional chaining,
-and pure helper functions replace repeated per-row domain Tool calls. Host
-arrays use the standard Array prototype but are not writable. Non-mutating
-transforms create ordinary JavaScript arrays; call `filter`, `map`, `flatMap`,
-or `slice` before `sort`, `reverse`, `splice`, or other mutation.
+### Model and Tool placement
 
-The runtime embeds the KubeJS Rhino fork. Tested top-level collection pipelines
-behave normally. For nested lookups inside a repeated callback, use an indexed
-`for (var index = 0; ...)` loop instead of an inner `find`/`map` callback that
-declares block-scoped locals; Rhino 2101 otherwise reports a redeclaration
-failure. Bundled Skills and examples use the tested form.
+Model location and Tool location are independent. Placement is deterministic:
+a server model uses an advertised player-client Tool when available, otherwise
+a server Tool. Explicit server execution remains server-authoritative; client
+observations remain client-visible. A script is not parsed, rerouted, or retried
+elsewhere because of its data access.
 
-Model guidance asks each new `run_javascript` call to include a short `title` and
-`description` in the player's language. The optional input fields accept strings;
-absent, null or blank values use localized defaults, and non-string live values
-fail `invalid_arguments`. Cards label this literal model text **Planned action**,
-separately from code-owned execution status and factual results. Completion
-updates the same invocation and preserves its start intent.
+Clients advertise only the initiating player's enabled, registered read-only
+Tool IDs; the server intersects them with its trusted registry. Calls/results
+remain bound to actor, request, invocation, and frozen capabilities. Invalid
+client settings advertise an empty set, not all Tools. Live capture runs on the
+owning Minecraft thread. Tool execution, normalization, and chunk encoding run
+on a virtual worker; packet sends return to the client thread.
 
-Valid intent labels do not change source, roots, handles, duplicate execution
-identity, permissions or evidence. History and server ToolStarted events retain
-only the closed display intent through existing JavaScript presentation-message
-arguments: zero for legacy, two for title/description. Raw arguments and source
-remain excluded. Stored/wire arguments still have strict string/control-character
-validation; history schema 5 and protocol 5 are unchanged. See decision 037.
+Remote unavailability, malformed results, and the five-minute Tool deadline
+become structured Tool failures. Cancellation, disconnect, and shutdown remain
+terminal. Incomplete assemblies are sparse, active-request-only, and expire at
+the deadline or terminal cleanup. This bridge adds no cross-side world RPC,
+remote unrestricted Java, server commands, or client ghost writes.
 
-`run_javascript` accepts `roots`; normal analysis should select only the
-required host views, for example `["items"]` or `["items", "recipes"]`.
-Registry and recipe rows are exposed once in those JavaScript-native views.
-`mc.registryEntries` is the unified cross-kind registry array, while
-`mc.registries` and `mc.recipeCatalog` carry catalog metadata.
+The optional `world` binding captures focused loaded blocks/entities through the
+selected execution side. Values detach before Rhino; entity observation IDs are
+opaque and request-local. Unloaded areas remain explicit partial coverage.
+Cancellation/disconnect stops later capture slices and closes the workspace.
 
-The graph exposes captured capabilities such as:
+### Real model context and durable records
+
+The provider-neutral transcript owns model context; UI events are its projection,
+not an input reconstruction recipe. Preserve original redacted user/assistant
+exchanges, actual ToolUse arguments, paired complete compact ToolResult text and
+its error bit, and terminal outcomes. Do not fabricate restored arguments or
+replace useful errors with display summaries. Durable records exclude provider
+reasoning, credentials, HTTP bodies, live objects, and canonical workspace trees.
+
+Original recorded exchanges remain separate from the active compacted context
+snapshot/checkpoint. Persist both without reversing a UI projection.
+Compaction summarizes older complete units against the selected model's actual
+budget without overwriting originals, inventing malformed-result errors, or
+filtering by hardcoded domain fields. Summaries are not game-fact evidence.
+Active context has complete use/result pairs; original diagnostic history may
+honestly mark an unfinished call. Failure preserves completed exchanges/errors;
+cancellation never marks unfinished work successful. Process loss restores
+`INTERRUPTED` and never replays a provider call or Tool side effect.
+
+Hydrate only a missing live session from matching durable context. Later asks in
+the same connection reuse it. Skill plaintext already present after compaction
+is reused by exact document fingerprint and loaded range, not a permanent loaded
+flag. Changed/deleted documents invalidate only their text; a dropped range can
+be loaded again. Model changes retain recorded history and re-estimate the active
+context against the newly selected budget.
+
+The stable file is `config/openallay/history.sqlite3`, with current shape
+validation and no internal version/migration/old-layout reader. Malformed data
+reports an error without implicit reset, rewrite, or deletion. Partition keys
+hash player UUID, connection kind, and normalized world path/server address;
+raw paths/addresses are not stored. Session/actor/world partitions and late-event
+generation checks remain intact. One ordered background worker owns writes.
+Startup restores session metadata; UI pages remain separate from context reads.
+Loading temporarily disables submission. Persistence failure leaves the
+in-memory Agent usable but marks new records non-durable.
+
+Both loaders use the same current common packet codec. Malformed events fail
+only their correlated request, with no compatibility alias or silent fallback.
+Server-model context carries real authorized exchanges, actual context budget,
+and canonical model identity, not captured capabilities, credentials, provider
+reasoning, or live objects. Strict SHA-256-checked 24 KiB chunks carry long
+requests. Relative attempt budgets keep client display clocks separate from the
+server-owned watchdog.
+
+Durable Tool IDs stay request-qualified. Provider codecs preserve valid IDs and
+deterministically map invalid outbound IDs without losing Tool-call/result pairs.
+OpenAI-compatible IDs follow the endpoint's 64-character field and alphabet,
+not a new product cap.
+
+### UI and native views
+
+`K` (`key.openallay.open_guide`) and bare `/guide` open the same non-pausing native
+Screen on both loaders. Closing it detaches only the UI subscription; work
+continues. Reopening projects the latest immutable snapshot. Enter sends from
+the composer, Shift+Enter inserts a newline, and Ctrl+Enter also sends.
+Other focused widgets keep their normal Enter action.
+
+The common UI virtualizes wrapped, variable-height history with stable anchors,
+safe Markdown, validated game references, controlled components, and semantic
+fallbacks. Model text and Tool cards follow actual event order; reasoning is
+absent from the UI type. Progress clocks reproject locally without transcript
+rows or history writes. A terminal raw pending Tool displays **Stopped before a
+result was recorded** without altering its status or inventing an outcome.
+Retry resends the question rather than resuming a step; Stop prevents future
+work, not completed effects. Escape closes details before the Guide.
+
+Session deletion has two confirmations bound to the selected session; deletion
+removes durable history and stops active work. Clipboard actions are local.
+Export uses original redacted records in actual order, including useful recorded
+calls, results, and errors, independently of active context compaction. It writes
+UTF-8 atomically below `openallay/exports` in the game directory, accepts no path,
+and rejects symlink escape. Provider reasoning/configuration, secrets, and live
+workspace state are excluded. Existing exports stay unchanged.
+
+`recipe_grid` binds only to the complete normalized result of its same-request
+Tool invocation. Native views have a client-thread-only lifecycle and release
+when rows leave the viewport or the screen closes. JEI 26.2 re-resolves exact
+references against its current generation and embeds public
+`IRecipeLayoutDrawable` drawing, overlays/tooltips, and ticks. Missing, stale,
+oversized, or failed layouts use the neutral labelled slot canvas. REI reports
+`rei_exact_embedding_unsupported` and uses that fallback; it does not claim an
+unverified exact durable-reference contract.
+
+## JavaScript and Extension contracts
+
+### Analysis surface
+
+The model-facing Tools are `openallay:run_javascript`, `openallay:load_skill`, and
+`openallay:manage_skill`, subject to the frozen request catalog/policy. Removed
+domain Tool families are not a parallel catalog. Recipes, inventory, knowledge,
+game state, and adapters live in the JavaScript host graph. Recipe capture options
+remain at `config/openallay/tools/recipes-options.json`, not per-Tool settings.
+
+OpenAllay embeds the KubeJS-Mods Rhino fork, not KubeJS itself. Each invocation
+has a fresh context over detached immutable values. `MinecraftAgentHostGraph`
+keeps original records/lists; `RhinoHostAdapter` exposes components, collections,
+String-keyed maps, optionals, scalars, and Gson leaves as lazy read-only views.
+It does not serialize input into source or a second Gson tree, use `JSON.parse`,
+or expose Java methods/reflection through detached host views.
+
+There is no `roots` input. One lazy invocation view exposes all already authorized
+detached `mc` roots. Access `mc.player.position`, `mc.game`, or `mc.items` directly.
+Enumeration/schema discovery does not resolve unrelated suppliers. A declared
+but uncaptured root gives an actionable unavailable error; unknown ordinary
+properties retain JavaScript semantics. No parser guesses dependencies or retries
+execution elsewhere. Return supported computation data, not executable
+modules/functions; an invalid return does not prove terrain or an adapter is absent.
+For example, both programs need only their `source` text, without a data selector:
+
+```javascript
+return 6 * 7;
+return mc.items.filter(item => /chest/.test(item.id)).map(item => item.id);
+```
+
+Available captured views include:
 
 ```text
 mc.capabilities
 mc.items / blocks / fluids / effects / enchantments / entities
 mc.registryEntries / registries
 mc.recipes / recipeCatalog
-mc.player
-mc.game
+mc.player / game
 mc.knowledge / knowledgeCatalog
 mc.extensions / extensionCatalog / extensionDiagnostics
 ```
 
-Every root is declared by the same KubeJS-Rhino `TypeInfo`-derived catalog used
-by the closed host adapter. `schema.list()` reports roots and availability
-without resolving values; `schema.describe("game.mods.installed")` walks one
-stable declared path. Registry `properties`, recipe `extensions`, and extension
-objects remain open-ended. Use one focused `helpers.schema` sample only for
-those genuinely dynamic values, rather than rediscovering stable core records.
-All capture still occurs on the Minecraft-owned thread and detaches immediately
-before Rhino runs on a virtual worker.
+`world` and `commands` depend on frozen runtime capabilities, not model selection.
+`schema.list()` reports roots/availability without resolving data;
+`schema.describe("game.mods.installed")` walks stable paths from the same
+KubeJS-Rhino `TypeInfo` catalog. Use a focused `helpers.schema` sample for dynamic
+registry properties, recipe extensions, or adapter values.
 
-Canonical results remain internal Gson JSON for evidence validation, UI cards,
-traces, and subsequent programs. The provider receives a compact CLI-like text
-projection without JSON wrappers or evidence payload duplication. Large results
-stay in a request workspace under an opaque handle; a later program can pass
-that handle explicitly and call `workspace.open(handle)`. Client-executed Tools
-for a server-hosted model share the same request correlation and close their
-workspace at the terminal request event.
+Host arrays support normal non-mutating `filter`, `map`, `reduce`, and `flatMap`.
+Copy with those operations or `slice` before `sort`, `reverse`, or `splice`.
+For nested lookups in repeated callbacks, use an indexed `for (var index = 0; ...)`
+loop: Rhino 2101 can report redeclarations for inner `find`/`map` callbacks with
+block-scoped locals. Bundled examples use the tested form.
 
-In safe mode, the runtime rejects source and result graphs that exceed the
-accepted depth/node/array/object/string budgets before workspace publication.
-A safe-mode workspace admits at most 16 canonical results and 32 MiB of estimated
-content, with an 8 MiB per-result budget. One execution may reopen at most four
-handles totaling 8 MiB. Safe-mode model/UI previews are bounded; Debug renders
-bounded metadata rather than raw normalized JSON. Provider input is re-estimated
-against the selected model budget before every continuation turn in both modes.
+Models should include short player-language `title` and `description` on every
+new JavaScript call. Missing/null/blank strings use localized defaults;
+non-string live values fail `invalid_arguments`. Cards render literal model
+text as **Planned action**, separate from status/results. Intent changes neither
+source, duplicate identity, permission, nor factual authority. The submitted
+arguments belong to the original redacted exchange, not just its UI projection.
 
-The safe Rhino scope denies arbitrary Java wrappers, reflection, class loading,
-network, process, real filesystem and live game access. Captured `mc` views remain
-read-only; the separately authorized command binding retains its own permissions.
-Instruction observation enforces cancellation and a monotonic deadline. Invalid,
-cyclic, non-finite or unsupported results fail with stable `javascript_*` codes.
-Decision 033 bypasses OpenAllay source, interpreter-time, result-normalization,
-workspace, handle-selection and preview budgets only for authorized client-local
-unrestricted execution. Request correlation, cancellation, evidence validation
-and terminal workspace cleanup remain active.
+A supported return is a successful computation, even with no sources. Generic
+JavaScript execution has no post-execution evidence gate; never fabricate a read
+to admit a result. Actual factual snapshots and genuinely `EvidenceBearing`
+types retain strict immutable metadata and normalization. The `source` argument
+is the JavaScript program, not a provenance request.
 
-Trusted optional integrations first capture and detach public mod API state on
-the owning Minecraft thread. Java-side `JavascriptDataModule` implementations
-run later on the Agent worker and may only project immutable
-`ToolInvocationContext` records or immutable collections into evidence-bearing
-values under `mc.extensions`; they cannot call live APIs or use reflection.
-Capture failures are isolated as module diagnostics. Unsupported nested values
-remain isolated to the property that attempts to read them. The detached `mc`
-projection exposes component values, not Java methods, `Class`, generic wrappers
-or reflection. This projection stays read-only in unrestricted mode; separate
-`Java.type` interop does not turn adapter data into live objects.
+Origins are auxiliary. Successful accesses record actual first/last capture times
+for a stable source identity; authority, coverage, scope, provenance, and external
+versions stay distinct. Repeated references do not create per-block source lists
+or count inherited workspace values as fresh captures. Plain computation has no
+origins; qualifications appear where they affect interpretation, not as a required
+footer or success condition.
 
-JEI and REI are loader-discovered first-party `OpenAllayExtension`
-implementations. Their existing public-API recipe captures remain the factual
-providers; the Extension projection exposes detached provider availability,
-completeness, generation-bearing recipe references, categories, diagnostics,
-and focus/navigation capabilities at `mc.extensions["openallay:jei"]` or
-`mc.extensions["openallay:rei"]`. JEI advertises exact durable-reference
-navigation and native layouts. REI advertises item-focused recipe/usage
-navigation but explicitly reports that exact durable-reference navigation is
-unsupported. Losing either runtime degrades only that provider projection.
+Canonical results stay internal for UI/workspace/normalization. Providers receive
+compact text or an explicit preview; the recorded exchange retains that actual
+text and error state. Large values use opaque handles reopened with
+`workspace.open(handle)`, inheriting only actually used origins. Handles and
+canonical values last for the current request only, never across questions or
+restart; terminal cleanup closes local and callback workspaces.
 
-External Extensions use the same loader-owned startup path. A Fabric
-`ModInitializer` calls `OpenAllayFabric.registerExtension(...)`; a NeoForge mod
-constructor calls `OpenAllayNeoForge.registerExtension(...)`. Registration may
-happen before or after OpenAllay bootstrap: early candidates are queued and
-late candidates are validated against the live registry. OpenAllay deliberately
-does not scan classes or hot-load packages, so installing or importing a JAR
-always requires a normal loader restart.
+### Safe and unrestricted execution
 
-EMI is not registered as a 26.2 Extension. Its official project and artifact
-catalog currently publish through Minecraft 1.21.x rather than a compatible
-26.2 public API artifact, so OpenAllay does not compile against, advertise, or
-pretend to support it. A future adapter must first verify a real 26.2 public API
-on both target loaders.
+Safe mode denies arbitrary Java wrappers, reflection, class loading, network,
+process, filesystem, and live game access. Instruction observation checks
+cancellation and a monotonic deadline. Unsupported, cyclic, or non-finite results
+fail with sanitized useful type/message/location and stable `javascript_*` codes.
+Safe resource budgets and bounded previews apply without inventing empty results,
+domain limits, or success claims.
 
-Reviewed JavaScript modules are the reusable domain layer—the equivalent of
-prebuilt, composable operations rather than additional one-purpose Tools.
-`require("openallay:crafting")` exposes recipe-cost and deterministic global
-capacity-allocation operations inside the same `run_javascript` batch. The
-module reports observed allocation, missing requirements, maximum crafts, and
-whether evidence is conclusive; it does not recursively craft intermediate
-items. Its behavior is compared with the Java allocation oracle in contract
-tests. Exact module IDs resolve only from bundled resources and are cached within
-one execution. Loading a module grants no additional authority: safe-mode host
-restrictions or the request's captured unrestricted permission still apply.
-The 0.2.0 line removes the legacy domain retrieval and craftability Tool
-implementations. Runtime model Tools are `openallay:run_javascript` plus the
-Skill-loading surface; recipes, guides, inventory, game context, and extension
-data are mounted below the JavaScript host graph instead of represented by
-parallel Tool families.
+Unrestricted JavaScript is a separate default-off setting at
+`config/openallay/unrestricted-javascript.json`. Only client-local model requests
+can capture it. Server-model requests and all server-originated client callbacks
+always capture safe mode, even when the local toggle is on. Missing/invalid
+configuration disables it; changes affect future requests only.
 
-The player-facing Settings section named **Extensions** has separate installed
-and community master-detail pages. Installed cards list compatibility,
-diagnostics, and every declared root, data adapter, JavaScript module, Skill,
-and native result view without capturing game state or invoking an adapter.
-The community page refreshes the strict schema-2 catalog at
-`https://raw.githubusercontent.com/nkanf-dev/OpenAllay-Extensions/main/catalog.json`
-and retains its last valid generation in
-`config/openallay/catalogs/extensions.json`. Every package embeds a strict
-schema-1 identity at `META-INF/openallay-extension.json`. One schema-2 catalog
-entry represents one logical Extension ID/version and contains a separate URL,
-SHA-256, and mod-ID set for each supported loader. OpenAllay selects the current
-loader before download. A compatible downloaded package must match its
-loader-specific artifact, embedded identity, descriptor, and checksum. A local
-JAR is identified directly by the embedded manifest and does not need a catalog
-entry. Both paths validate actual SHA-256, compatibility ranges, and loader mod
-metadata before atomically writing the JAR under a stable managed name in the
-instance `mods` directory. The settings
-projection remains
-`restart_required` until a later loader startup actually registers the
-Extension; it never claims hot activation.
+Authorized execution gets Rhino standard objects and `Java.type`, bypassing
+OpenAllay source, interpreter-time, result-normalization, workspace,
+handle-selection, and preview budgets. Immutable `mc` views, request correlation,
+cancellation, factual-type validation, and terminal cleanup remain. Provider input
+is re-estimated against the selected budget before every continuation in both modes.
+JVM file/network/process/live-object effects are possible; cancellation is not
+rollback and cannot guarantee interruption of blocking Java/native calls. Live
+Minecraft access must be scheduled to the owning thread. Never disclose
+JVM-accessible credentials through context, results, traces, logs, or answers.
 
-The first visit to either community tab starts one non-blocking catalog
-refresh. Any cached Skill or Extension generation remains immediately usable
-while the refresh runs. A failure keeps that cache and shows one diagnostic
-instead of repeatedly retrying; the refresh button is the explicit retry.
+The frozen authorized Skill catalog automatically includes
+`unrestricted-javascript` guidance and its loadable interop reference. Guidance
+teaches existing authority; it cannot grant it, override deny policy, or make
+Java values evidence. Ordinary/server requests do not advertise it. See
+[decision 033](isme/decisions/2026-09-29-033-unrestricted-javascript-mode.md).
 
-The public authoring repository includes an independent dual-loader example at
-`examples/hello-extension`. Its CI builds one shared typed contribution into
-separate Fabric and NeoForge packages, verifies each embedded manifest and
-loader metadata, and records both SHA-256 values. OpenAllay `0.2.0` predates the
-public Extension SPI; `0.2.1` is the first release that publishes it. External
-projects must compile against `0.2.1` or a later compatible 0.2.x artifact and
-must not advertise `0.2.0` as an OpenAllay product dependency. Product and
-Extension API versions are independent: OpenAllay `0.2.4` implements Extension
-API `0.2.1`. A manifest using its invocation participants can declare
-`[0.2.1,0.3)` while loader metadata separately requires a product version that
-provides those APIs. Existing API `0.2.0` contributions and four-list constructors
-remain compatible. The model catalog and display intent do not change the SPI.
+### Trusted adapters and packages
 
-An experimental game-command capability also lives on that page and is
-disabled by default. Its strict state is stored in
-`config/openallay/experimental-commands.json`. Enabling it affects future
-requests only and adds:
+Optional integrations capture public mod API state on the owning Minecraft
+thread and detach it. Worker-side `JavascriptDataModule` implementations project
+only immutable `ToolInvocationContext` values into `mc.extensions` with actual
+snapshot metadata; they cannot call live APIs or use reflection. Capture failure
+isolates the module; unsupported nested values fail at the accessed property. Unrestricted
+Java interop does not turn adapter values into mutable/live objects.
+
+JEI and REI are loader-discovered first-party Extensions. Their detached data
+reports provider availability, completeness, generation-bearing references,
+categories, diagnostics, and navigation capabilities. JEI supports exact
+navigation/native layouts; REI supports item-focused recipe/usage navigation,
+not exact durable-reference navigation. Provider loss degrades only that
+projection. EMI has no verified compatible 26.2 public API artifact and is not
+compiled against or advertised.
+
+External startup registration uses `OpenAllayFabric.registerExtension(...)` in a
+Fabric `ModInitializer` or `OpenAllayNeoForge.registerExtension(...)` in a
+NeoForge constructor. Early candidates queue; late ones validate against the
+live registry. There is no class scan or hot-loading; JAR installation requires
+a loader restart.
+
+Reusable modules, such as `require("openallay:crafting")`, compose analysis in
+one JavaScript batch. Crafting reports observed allocation, missing requirements,
+maximum crafts, and conclusiveness; it does not recursively craft intermediates.
+Exact module IDs resolve only bundled resources, cached within an execution,
+and grant no authority.
+
+Extensions settings projects installed roots, adapters, modules, Skills, and
+native views without capture/invocation. Community packages use the strict
+schema-2 catalog at
+`https://raw.githubusercontent.com/nkanf-dev/OpenAllay-Extensions/main/catalog.json`,
+cached at `config/openallay/catalogs/extensions.json`. Each logical ID/version
+has loader-specific URL, SHA-256, and mod IDs. Local and community JARs must pass
+actual checksum, compatibility, loader metadata, and embedded schema-1
+`META-INF/openallay-extension.json` validation before atomic installation under
+a managed name in `mods`. Local imports need no catalog entry. Status stays
+`restart_required` until startup registers the Extension.
+
+The public authoring repository's `examples/hello-extension` builds both loaders.
+External projects need product 0.2.1 or later compatible 0.2.x; 0.2.0 predates the
+public SPI. Current core implements API 0.2.1. Existing API 0.2.0 contributions
+and four-list constructors remain compatible.
+
+### Invocation scopes, requirements, and Builder
+
+API 0.2.1 adds optional `JavascriptInvocationParticipant` contributions.
+Participants open on the JavaScript worker and close in reverse order on that
+worker. `JavascriptInvocationContext` supplies immutable invocation state,
+cancellation, `requireActive()`, evidence recording, and
+`completedSuccessfully()`. The latter means the body returned normally in an
+active scope, not that a domain action, normalization, or evidence validation
+succeeded. Closing revokes scope lifetime. Queued owner-thread actions must
+recheck scope and exact connection/world identity. This adds no live host binding
+or domain Tool.
+
+Skills use advisory `openallay/requires-capabilities`,
+`openallay/requires-extensions`, and `openallay/requires-skills` metadata;
+Extension descriptors/manifests/catalogs use equivalent `requirements` arrays.
+These grant nothing and add no installation/runtime gate. Package review can
+enable available requirements explicitly, cancel, or Continue anyway. Continuing
+publishes only the validated package, without dependency installation or hidden
+authorization. Required-mods compatibility and actual Tool policy remain separate.
+See [decision 035](isme/decisions/2026-09-30-035-advisory-extension-skill-requirements.md).
+
+Builder code, Skill, modules, native scheduling, templates, and journals belong
+to `OpenAllay-Extensions`, not core. Its backend uses the active integrated server
+under client-local unrestricted authority. It does not edit client world mirrors,
+open offline saves, add a remote write protocol, or fall back to commands.
+Unsupported contexts fail explicitly. Native scans, geometry, paste, and undo
+batch owner-thread work; a cooperative quantum is scheduling, not a volume cap.
+
+Current journals/templates have no internal version or old-format reader.
+Journals use a base checkpoint plus strictly sequenced atomic deltas. Force intent
+before mutation and persist actual readback before the next quantum. Publish a
+complete checkpoint before deleting covered deltas; missing/corrupt uncovered
+records fail explicitly. IO stays off Minecraft owners and no Rhino callback runs
+on them. Restart never replays writes or rolls back effects automatically;
+conflict checks and honest partial outcomes remain. Batching does not establish
+a runtime speed claim. See decision 041 for the selected representation and
+[decision 034](isme/decisions/2026-09-30-034-extension-online-construction.md) for
+unchanged online authority and partial-failure boundaries.
+
+### Experimental commands
+
+`config/openallay/experimental-commands.json` controls a separate default-off
+capability. Authorized future requests expose the binding directly:
 
 ```javascript
 commands.list()
@@ -879,82 +636,39 @@ commands.describe(path)
 commands.run(command)
 ```
 
-Use `roots: ["commands"]` for command-only JavaScript. `commands` is a
-top-level binding rather than an `mc` dataset root, and selecting it while the
-experimental capability is disabled fails explicitly.
+This is a top-level binding, not `mc.commands`. When disabled, the binding and
+matching Skill are absent. The detached Brigadier catalog includes
+all vanilla/server/loader/mod commands visible to that player. Execution removes
+at most one leading slash, then uses the normal player route on the client
+thread. OpenAllay adds no allowlist, argument restriction, or call-count cap;
+Minecraft parsing, connection, identity, and permissions remain authoritative.
 
-The detached catalog recursively mirrors the complete Brigadier dispatcher
-visible to the requesting player, including vanilla, server, loader, and
-mod-registered commands. Execution removes at most one leading slash and then
-uses the normal player command route on the Minecraft client thread. OpenAllay
-adds no command allowlist, argument restriction, or call-count cap; Minecraft's
-parser, connection, player identity, and permissions remain authoritative.
-Calls are ordered and serialized per player. `commands.run` waits on the Rhino
-worker for the associated non-overlay Minecraft feedback window and returns
-`state`, ordered `messages`, and `durationMillis`; it does not block the render
-thread. `state` is `feedback` or `no_feedback`, not a fabricated universal
-success bit. A command already submitted is not rolled back if a later
-statement fails or the request is cancelled. When the setting is off, the
-`commands` object and matching Skill are absent from the request.
-
-## Unrestricted JavaScript and automatic JVM guidance
-
-The Extensions page has a separate default-off unrestricted JavaScript setting.
-Only a client-local model request can capture this permission. Server-model
-requests and every server-originated client Tool callback explicitly capture
-safe mode, regardless of the local toggle; they never inherit local JVM authority.
-A setting change affects future requests only. Missing or invalid configuration
-resolves to disabled.
-
-Authorized requests automatically receive the bundled `unrestricted-javascript`
-Skill instructions in their system prompt and can load its declared Java interop
-reference through `load_skill`. The Skill explains the actual Rhino `Java.type`
-bridge, static and instance method calls, Java collections, and safe owning-thread
-scheduling for Minecraft access. It explains capability use; it does not grant
-permission. Tool and Skill deny policies still apply. The prompt and `load_skill`
-use the same frozen request catalog, including after a repository or policy change.
-The context budget reserves room for the larger of the isolated and authorized
-prompts. Ordinary requests and server command prompts do not advertise this Skill.
-
-In this mode the Agent may use JVM file, network, process, and live-object APIs
-for the player's task, rather than pretending execution is confined to detached
-`mc` roots. The `mc` roots themselves remain immutable. Cancellation is not
-rollback and cannot guarantee interruption of blocking native/Java operations.
-Java values alone are not grounding evidence. Never include JVM credentials in
-model context, tool results, traces, logs, or player answers. See
-SKMB-2026-09-29-033 for the authority and lifetime contract.
+Calls serialize per player. The Rhino worker waits for the ordered non-overlay
+feedback window and returns `state`, `messages`, and `durationMillis` without
+blocking render. `feedback`/`no_feedback` is not universal success. Submitted
+commands are not rolled back by later failure or cancellation; verifying world
+effects needs a later observation.
 
 ## Knowledge and Skills
 
-Patchouli is read directly from active client resource packs, without a binary
-dependency. Locale precedence is active locale, `zh_cn`, then `en_us`.
-Config/advancement-gated entries whose visibility cannot be proven are excluded.
-Text, item/recipe links, and embedded dense or sparse multiblocks are indexed.
+Patchouli is read from active client resources without a binary dependency.
+Locale order is active locale, `zh_cn`, then `en_us`. Entries whose gated
+visibility cannot be proven are excluded. Text, item/recipe links, and
+multiblocks are indexed. Each successful reload atomically publishes one
+immutable in-memory index and matching evidence. Search protects exact document
+and linked item/recipe IDs, then weights aliases, metadata, titles, and headings
+before Unicode-aware BM25-style section scoring. Results retain
+`sourceId`/`documentId`, stable heading-derived `sectionId`, and evidenced excerpt.
 
-Each successful knowledge reload builds one immutable, in-memory index and
-publishes it atomically with the matching snapshot evidence. Search first
-protects exact document and linked item/recipe identities, then weights stable
-path aliases, source metadata, titles and Markdown headings before applying a
-Unicode-aware BM25-style score to section text. Each indexed result retains an
-exact `sourceId`/`documentId` pair for later document projection and adds a
-stable heading-derived `sectionId` plus an evidenced excerpt. Documents without
-headings use the stable `document` section.
+The retriever is pure Java over detached generations, not a second SQLite FTS
+lifecycle. Future ranking adapters must retain exact identities, provenance,
+evidence, and the offline path. See
+[retrieval decision 022](isme/decisions/2026-07-19-022-native-domain-views-retrieval-memory.md).
+Optional FTB Quests uses allowlisted public method handles, not private reflection,
+and captures only team-visible content. Absent compatible 26.2 APIs produce an
+integration diagnostic, not Agent failure.
 
-This index deliberately remains pure Java. Knowledge generations already live
-as detached resource snapshots, so copying them into SQLite FTS would create a
-second mutation and failure lifecycle without adding durability. The active
-retriever is behind a narrow common interface so a later optional embedding or
-reranking adapter can compose with the local candidates, but exact identities,
-provenance, evidence and the deterministic offline path cannot be replaced by
-an external score.
-
-FTB Quests is optional. Its public API is resolved through allowlisted public
-method handles; private reflection is never used. Only chapters and quests the
-API reports visible for the current team enter the snapshot. On 26.2, where no
-compatible FTB Quests release is currently available, the source reports an
-explicit integration diagnostic and the rest of the Agent continues normally.
-
-Skills follow a constrained Agent Skills filesystem format:
+Skills are non-executable instruction packages:
 
 ```text
 skills/<skill-name>/
@@ -963,50 +677,107 @@ skills/<skill-name>/
 └── assets/         # optional non-executable resources
 ```
 
-`SKILL.md` contains YAML frontmatter and Markdown instructions. `name` and
-`description` are required and the directory name matches `name`; optional
-Agent Skills fields and OpenAllay namespaced string metadata remain strictly
-validated. `allowed-tools` expresses a dependency only and never grants a
-permission. Scripts, URL references, root escape, unsafe symlinks, arbitrary
-paths, and unsupported files are rejected.
+Frontmatter requires `name` and `description`; directory/name must match.
+Optional fields and namespaced string metadata are strictly validated.
+`allowed-tools` is a dependency, not permission. Scripts, URL references, root
+escape, unsafe symlinks, arbitrary paths, and unsupported files are rejected.
 
-Community packages store their package version as the string metadata key
-`openallay/version`. Settings compares that durable value with the catalog
-version. A legacy package without the key has an unknown installed version and
-is offered one update; a matching installed version is current. Skill API
-compatibility is a separate `0.2` contract and is not inferred from the
-OpenAllay product patch version.
+Bundled packages are immutable; valid local packages under
+`config/openallay/skills/` override the same bundled name. Settings and
+`openallay:manage_skill` share the confined contract. Create/update/delete take
+an exact name, complete `SKILL.md`, and optional Markdown references, never a
+path. Candidates stage, parse, dependency-check, and publish atomically for
+future requests; deleting an override reveals the bundled package.
+`openallay:load_skill` reads at most 8192 characters per chunk. Continue incomplete
+reads with the returned opaque cursor, bound to document and fingerprint;
+malformed, foreign, or stale cursors fail closed.
 
-The Skill community catalog is cached at
-`config/openallay/catalogs/skills.json`; refresh, install, and local import are
-configuration-layer operations and never become model Tools.
+The schema-2 community catalog includes display name, description, and publisher,
+plus validated package/version/source/archive/checksum/compatibility. Catalog
+copy is not Agent instruction authority; the installed validated `SKILL.md` is.
+`openallay/version` is the durable package version. Skill API compatibility remains
+0.2, independent of product patch versions. Cache lives at `config/openallay/catalogs/skills.json`.
 
-Bundled packages under the mod resources are immutable and use uppercase
-`SKILL.md`. Local packages live under `config/openallay/skills/`; a valid local
-package with the same name overrides its bundled package. The settings UI and
-`openallay:manage_skill` share the confined package contract. Agent create,
-update, and delete accept only an exact Skill name, complete `SKILL.md`, and
-optional Markdown references below `references/`; they never accept a path.
-Candidates are staged, parsed, dependency-checked, and published atomically.
-Changes affect future request snapshots only. Deleting a bundled override
-reveals the immutable bundled package.
+Either community tab starts one non-blocking refresh on first visit while its
+valid cache stays usable. Failure keeps the cache and one diagnostic; explicit
+refresh retries. Catalog/install/import are configuration operations, not Tools.
+Skills cannot fetch URLs, execute modules, register Tools, expand the sandbox,
+or grant authority.
 
-`openallay:load_skill` returns at most 8192 characters at a time. When
-`complete` is false, the model continues the same exact document with the
-returned opaque cursor. The cursor is bound to the Skill name, reference path,
-and content fingerprint; malformed, cross-document, and stale cursors fail
-closed instead of falling back to a full read.
+## Verification
 
-Skills are instructions and references, not executable Rhino modules. They
-cannot fetch URLs, register Tools, grant permissions, or expand the JavaScript
-sandbox. A Skill teaches the model how to use the registered runtime; it does
-not itself execute.
+### Offline gates and acceptance scope
 
-## Live provider acceptance
+Run common tests and both loader builds after relevant changes; use the full
+pinned-distribution gate before shipping. The `Quality` workflow also validates
+automation, distribution scripts, Phase 4/SQLite packaging, and one production
+JAR per loader. Deterministic tests/builds do not establish graphical gameplay or
+paid-provider acceptance. OpenAI-compatible optional `tool_calls`, usage, and
+usage-detail fields may be absent/null; invalid non-null shapes and malformed
+Tool arguments remain failures.
 
-The normal test suite skips real network calls. To verify streaming, a real
-tool call, tool-result continuation, grounded Chinese output, and secret
-redaction, export credentials only in the shell environment and run:
+The [refactor plan](superpowers/plans/2026-10-01-execution-context-simplification.md)
+tracks common, Extension, both-loader, and pinned-package gates. Earlier hotfix
+results do not verify this refactor or measure its speed. This source task does
+not change product versions, create a tag, or publish a release.
+
+Authorized releases use a separate annotated strict-SemVer tag workflow matching
+`gradle.properties`, with pinned source/tests/packaging gates and
+`MODRINTH_TOKEN`. Publication to Modrinth then GitHub is ordered, not atomic;
+verify both services and hashes. Curated notes live in `docs/releases/<version>.md`.
+
+### Agent benchmark
+
+The strict current corpus is
+`common/src/main/resources/data/openallay/benchmarks/core.json`. Offline fixtures
+verify predicates, selection, and capability coverage:
+
+```bash
+scripts/run-agent-benchmark.sh deterministic
+```
+
+Live mode is explicit and billable. It runs the production Agent, protocol
+adapter, registry, Rhino, Skills, normalization, and trace path for the local
+JavaScript fixture:
+
+```bash
+OPENALLAY_MODEL_BASE_URL='https://provider.example/v1/' \
+OPENALLAY_MODEL='provider/model-id' \
+OPENALLAY_API_KEY='...' \
+OPENALLAY_BENCHMARK_REPEATS=3 \
+scripts/run-agent-benchmark.sh live
+```
+
+For reproducible named-profile selection, use credential-free current model
+configuration with an environment reference resolved in the benchmark process:
+
+```bash
+OPENROUTER_API_KEY='...' \
+scripts/run-agent-benchmark.sh live \
+  --profile config/openallay/models.json \
+  --profile-id openrouter-main \
+  --repeats 3
+```
+
+`--cases` (or comma-separated `OPENALLAY_BENCHMARK_CASES`), `--include-commands`
+(or `OPENALLAY_BENCHMARK_INCLUDE_COMMANDS=true`), and `--output` select cases,
+opt-in writes, and report location. Command cases are excluded by default.
+Unavailable cases print `OPENALLAY_BENCHMARK_SKIPPED` and retain a current-shape
+selection plan; explicitly selected unavailable cases fail fast. Detached food
+ranking and recipe/inventory fixtures do not expose expected answers to the model.
+Server routing has a separate deterministic GuideService fixture, not the local
+provider fixture.
+
+Reports under `build/reports/openallay/benchmarks/` retain corpus identity/commit,
+profile/canonical model identity, redacted authority, typed attempts, complete
+provider-neutral traces, success probability, counters, and median calls.
+Sibling `*-audit.json` records evidence/code/event/Tool IDs for unambiguous stable
+errors; ambiguous/multi-domain failures remain `UNRESOLVED`. Wall-clock timing is
+diagnostic, not scoring. Neither report contains keys or authorization data.
+
+### Live provider and settings probes
+
+Normal tests skip network calls. Export keys only in the environment:
 
 ```bash
 OPENALLAY_MODEL_BASE_URL=https://provider.example/v1/ \
@@ -1016,17 +787,8 @@ OPENALLAY_MODEL_PROTOCOL=ANTHROPIC_MESSAGES \
 ./scripts/live-model-smoke.sh
 ```
 
-Never commit a model JSON containing `apiKey`.
-
-For local transport investigation, explicitly add
-`-Dopenallay.model.diagnostics=true` to the Minecraft JVM. The packaged launcher
-supports `--model-diagnostics`. This default-off switch logs exception class
-names, one allowlisted model frame, HTTP status, field types and decoder counts.
-It excludes exception messages, provider values/bodies, reasoning and credentials;
-it is separate from player Debug Mode and does not make a provider request.
-
-To exercise the production Rhino prompt, bundled analytical Skill, JavaScript
-Tool, compact model projection, and the two requested batch scenarios, use:
+This checks streaming, Tool continuation, grounded Chinese output, and redaction.
+For Rhino/Skill/batched sword and container scenarios:
 
 ```bash
 OPENALLAY_MODEL_BASE_URL=https://provider.example/v1/ \
@@ -1036,18 +798,14 @@ OPENALLAY_MODEL_PROTOCOL=OPENAI_CHAT \
 ./scripts/live-model-smoke.sh javascript-agent
 ```
 
-The live test accepts `OPENALLAY_LIVE_STREAM=false` when isolating provider
-stream transport from Agent/tool behavior. It records only redacted task,
-Tool-ID, script, result-summary, and invocation-count diagnostics.
-When an endpoint is intermittently unavailable, set
-`OPENALLAY_LIVE_JAVASCRIPT_SCENARIO=sword` or `container` to rerun only that
-scenario; the default `all` still exercises both.
+`OPENALLAY_LIVE_STREAM=false` isolates stream transport.
+`OPENALLAY_LIVE_JAVASCRIPT_SCENARIO=sword` or `container` selects one scenario;
+default `all` runs both. Retained diagnostics are redacted task, Tool ID, script,
+result-summary, and invocation-count projections.
 
-To exercise exactly the native settings connection-probe contract from a
-headless script, place a strict schema-2 `models.json`-format file in an ignored
-path such as `run/openallay/settings-probe.json`. The externally authored file
-uses `"credentialRef": "env:PROVIDER_KEY_NAMED_BY_THE_FILE"`; export that
-environment variable in the shell, then run:
+For the exact native connection-probe contract, put a strict current profile in
+an ignored file such as `run/openallay/settings-probe.json`, using
+`"credentialRef": "env:PROVIDER_KEY_NAMED_BY_THE_FILE"`:
 
 ```bash
 export OPENALLAY_SETTINGS_PROBE_CONFIG="$PWD/run/openallay/settings-probe.json"
@@ -1055,257 +813,83 @@ export PROVIDER_KEY_NAMED_BY_THE_FILE='...'
 ./scripts/live-model-smoke.sh settings-probe
 ```
 
-The script never accepts a credential on argv. It rejects inline `apiKey`,
-`apiKeyEnv`, URL credentials/query/fragment, schema-1 profiles, and non-HTTPS
-remote endpoints through the strict production loader. This environment-reference
-path is for external/headless operation and is not a player settings workflow.
-Retained output contains only the terminal code and, on success, profile ID,
-protocol, redacted authority, and latency; it never prints assistant output or
-raw provider bodies.
+The script rejects credentials on argv, inline keys, malformed current shapes,
+URL credentials/query/fragment, and non-HTTPS remote endpoints through the
+production loader. Output is only terminal code and successful profile/protocol/redacted
+authority/latency, never assistant text or provider bodies. Never commit raw keys.
 
-## Development commands
+Transport diagnostics use default-off `-Dopenallay.model.diagnostics=true`;
+the packaged launcher also accepts `--model-diagnostics`. It logs exception
+classes, one allowlisted model frame, HTTP status, field types, and decoder
+counts, not exception messages, provider values/bodies, reasoning, or secrets.
+It is separate from player Debug Mode and makes no provider request itself.
 
-The following commands require game-master permission:
+### Opt-in graphical clients
 
-```text
-/openallay dev tools
-```
-
-The model-facing catalog contains `openallay:run_javascript` plus the Skill
-loading and management Tools available to the current runtime. Recipe, guide,
-inventory, game-state, resource-search, and craftability domain Tools were
-removed for 0.2.0; their detached data is available through the JavaScript host
-graph and bundled Skills instead.
-
-## Deterministic Agent trace replay
-
-Phase 1 deliberately replays recorded Agent traces instead of pretending that a
-rule-based response is a live model. A tool-call step invokes the real
-`ToolRegistry`; its normalized result is checked with an `exact`, `contains`, or
-`schema` expectation. Assistant-message steps are explicitly pre-authored trace
-content.
-
-Trace JSON files live under:
-
-```text
-data/<namespace>/agent_traces/<trace-id>.json
-```
-
-Schema version 1 is strict. Unknown fields, duplicate JSON keys, unsupported
-versions, malformed tool IDs, and a mismatch between filename and declared
-trace ID are rejected. Resources are discovered from the active server resource
-manager each time, so a normal data-pack reload updates the available traces.
-
-The trace declares which context capabilities it needs: `registries`,
-`recipes`, and/or `player`. Capture occurs on the Minecraft server thread and
-immediately detaches game objects into immutable records before tools run.
-Console replay of a player-required trace returns `player_required`.
-
-The Phase 1 replay contract has no project-defined item-count, recipe-count,
-inventory-count, string-length, trace-step or report-length cap. Its reports
-preserve the requested fixture data and observe counts, estimated serialized
-bytes, capture time, tool-result bytes and replay time. This is a historical
-replay contract, not a general statement about current Rhino, workspace or
-provider-context budgets.
-
-The Phase 2 transport runs in the Minecraft JVM with JDK HTTP, without a
-Node/Python sidecar or MCP bridge. The later Rhino runtime's safe and unrestricted
-execution modes are described above.
-
-The trace parser and replay engine remain available for extension-owned
-deterministic fixtures. OpenAllay no longer bundles replay documents that call
-the removed domain Tools.
-
-## Phase 3A verification baseline
-
-On 2026-07-17 the complete common suite reported 100 tests, 0 failures, 0
-errors, and 1 opt-in live-provider test skipped. Both production artifacts built
-successfully:
-
-```text
-fabric/build/libs/openallay-fabric-26.2-0.1.0-SNAPSHOT.jar
-neoforge/build/libs/openallay-neoforge-26.2-0.1.0-SNAPSHOT.jar
-```
-
-Both JARs contain the five new grounded workflow tools,
-`EvidenceMetadata`, and `CraftabilityCalculator`. Repository and artifact
-credential-pattern scans returned no matches. Phase 3B command E2E,
-GuideService, and Phase 3C GUI are not included in this baseline.
-
-## Phase 3B verification baseline
-
-On 2026-07-17 the complete common suite reported 119 tests, 0 failures, 0
-errors, and 1 opt-in live-provider test skipped. Fabric and NeoForge production
-builds both passed and contain `GuideService`, `GuideStateReducer`, the strict
-server event codec, and the gated real-client controller. Tracked-file and JAR
-credential-pattern scans returned no matches. The deterministic HTTP/SSE model
-fixture answered a direct contract request successfully. No graphical client
-was launched during this unattended run, so no real-client report or visual
-gameplay acceptance is claimed by this baseline.
-
-## Phase 3 final verification baseline
-
-The final clean build on 2026-07-17 reported 125 common tests, 0 failures, 0
-errors, and 1 opt-in live-provider test skipped, followed by successful Fabric
-and NeoForge production builds. Required GUI/service classes and language assets
-are present in both artifacts. Tracked files, all Git objects (including the
-unreachable-object set reported by `git fsck`), and every built JAR returned no
-credential-pattern matches. Script syntax and the deterministic fixture parser
-also passed.
-
-```text
-Fabric  SHA-256 157dcf0fd50bc4b85fa41ee24d363f42b8c7e8d8f24bb8b79a7fddb13cf55f56
-NeoForge SHA-256 2d6d31bef6a8f023ee4f95399ba8e6ab6bd89333c7cb4276c77b99c2d2b7f347
-```
-
-This baseline does not include a graphical client launch, screenshot, or
-manual interaction claim.
-
-## Loader boundary
-
-Production source under `common/` must not import Fabric or NeoForge APIs. Loader
-entrypoints, lifecycle hooks, and command registration remain in their respective
-loader modules. A unit test enforces this boundary.
-
-## Default Extension distribution build
-
-OpenAllay's default loader artifacts include a separately built online Builder
-Extension. Its source and commits live in `OpenAllay-Extensions`, not in core.
-The 0.2.4 candidate retains Builder version `0.1.0` at source revision
-`53548537bb7db2b4c3cee09af60f0c7b098bbd79` from
-`distribution/extensions.lock.json`; core, Extension and API versions are separate.
-Installation does not enable unrestricted JavaScript. Player automation and
-Baritone integration remain research-only.
-
-Prepare the exact locked Extension source explicitly before a distribution build:
+The development controller requires `openallay.e2e.enabled=true`, a real player,
+and the same `GuideService`. It retains redacted transitions, Tool/evidence
+records, timings, and payload hashes, then can request clean shutdown. Reports
+belong to the harness, not an Agent Tool.
 
 ```bash
-python3 scripts/prepare-distribution.py
-./gradlew clean :common:test :fabric:build :neoforge:build
+./scripts/run-real-client-e2e.sh fabric
+./scripts/run-real-client-e2e.sh neoforge
 ```
 
-Preparation checks out `distribution/extensions.lock.json` into ignored local
-build state. Gradle does not perform an implicit source download. A missing,
-wrong-revision or modified checkout fails the default distribution build.
-`./gradlew :common:jar` and `:common:test` can bootstrap without that checkout.
-`-PbundleExtensions=false` is an explicit core-only developer build, not a
-complete distribution; distribution verification rejects it.
+Connect to a disposable world/server or set `OPENALLAY_E2E_QUICK_PLAY_WORLD`.
+The loopback OpenAI/SSE fixture waits for history hydration and current non-empty
+recipe-viewer catalogs. It uses production JavaScript capture and exact current
+references with pre-authored component responses. This tests capture, evidence,
+chronology, and native presentation, not model planning or live provider quality.
+Only `COMPLETED` passes. The harness isolates `models.json` and restores the exact
+prior file on exit.
 
-For coordinated changes across both repositories, use
-`-PopenallayExtensionsDir=../OpenAllay-Extensions -PallowUnpinnedExtensions=true`.
-This still builds the Extension, but marks its provenance as unpinned and is
-rejected by release distribution verification. Commit the Extension, update the
-source lock, prepare its exact revision and rerun the ordinary full gate before
-shipping. No Python process or source checkout runs inside Minecraft.
+The default recipe is `minecraft:iron_block`; a compatible mod recipe can use:
 
-## Trusted Extension invocation scopes and requirement metadata
+```bash
+OPENALLAY_E2E_RECIPE_OUTPUT=farmersdelight:apple_cider \
+OPENALLAY_E2E_RECIPE_ID=farmersdelight:cooking/apple_cider \
+OPENALLAY_E2E_RECIPE_LABEL=苹果酒 \
+./scripts/run-real-client-e2e.sh fabric
+```
 
-Extension API `0.2.1` adds an optional fifth contribution list of
-`JavascriptInvocationParticipant` values. Existing four-list constructors remain
-available. A participant opens on the JavaScript worker and returns an
-`AutoCloseable`; cleanup runs in reverse order on that same worker. The supplied
-`JavascriptInvocationContext` exposes the immutable invocation, cancellation,
-`requireActive()`, operation evidence recording, and `completedSuccessfully()`.
-No live game binding or domain Tool is added by this interface.
+The fixture reads the actual recipe reference/result, never fabricates handles or
+craftability. `OPENALLAY_E2E_HISTORY_SEED_REQUESTS` creates durable seed requests;
+`OPENALLAY_E2E_MIN_HISTORY_REQUESTS` asserts totals.
+`OPENALLAY_E2E_REQUIRE_PAGED_HISTORY=true` additionally checks restart hydration
+loads fewer requests than the durable total and exposes an earlier-page cursor.
 
-`completedSuccessfully()` means the JavaScript body returned normally while its
-scope was active. It is not a claim that a domain action succeeded or that later
-Tool normalization/evidence validation passed. Closing any scope revokes its
-cancellation lifetime, even after a normal return. Extensions must not confuse
-that revocation with the domain operation's outcome. Queued owner-thread actions
-must recheck active scope and their own exact connection/world identity.
+Packaged Builder testing uses `scripts/run-packaged-builder-acceptance.py`,
+production-named loader JARs, and the nested Extension after an explicit reviewed
+launch. See the [packaged acceptance guide](verification/packaged-builder-acceptance.md)
+for isolated instances, native owner-thread world oracles, restart/copy/undo,
+journal checks, and prior receipts. Java exit status or model narration is not
+acceptance; every selected native check must pass.
 
-Skill extra metadata can declare whitespace-separated advisory IDs under
-`openallay/requires-capabilities`, `openallay/requires-extensions`, and
-`openallay/requires-skills`. Extension descriptors, package manifests and catalog
-entries support an optional `requirements` object with the equivalent
-`capabilities`, `extensions`, and `skills` arrays. These fields grant nothing and
-never add an installation or runtime gate. Existing actual Tool policy and
-required-mods compatibility semantics remain separate.
+### Retained evidence and trace replay
 
-Settings displays declared requirements and their current status. Package
-installation first validates/stages a candidate for review. The player can
-explicitly enable an available requirement, cancel, or Continue anyway. Continuing
-publishes only the selected package; it does not change authorizations or install
-dependencies. An explicitly confirmed setting write may finish even if the
-review is then closed; closing is not rollback. Changes affect future requests,
-not captured authority in an active request.
+For detailed history rather than current-gate claims, see:
 
-All construction source, JS modules, Skill, native scheduling, templates and
-journals are in the separate `OpenAllay-Extensions` repository. The core runtime
-has no construction function or construction Skill-name branch. The default
-Builder backend uses the active integrated server under client-local unrestricted
-JavaScript. It does not implement a remote server write protocol, edit a client
-world mirror, open offline saves, or silently switch to commands. Unsupported
-execution contexts fail explicitly. See decisions 034 and 035 for lifecycle,
-artifact, partial-failure and advisory-review semantics.
+- [Phase 4C recipes](verification/phase-4c-all-known-recipes/README.md)
+- [Phase 4 acceptance](verification/phase-4-final-acceptance/README.md) and
+  [closing corrections](verification/phase-4-final-corrections/README.md)
+- [Native model settings](verification/phase-4g-native-model-settings/README.md),
+  [history diagnostics](verification/phase-4i-native-settings/README.md), and
+  [semantic history](verification/phase-4j-semantic-history/README.md)
+- [Rhino live acceptance](verification/rhino-agent-runtime/live-javascript-agent.md)
+- [UI polish plan](superpowers/plans/2026-10-01-ui-ux-polish.md) and
+  [decision index](isme/SKMB.md)
 
-### Packaged Builder acceptance harness
+The earlier packaged UI scenes and Builder receipts cover only their recorded
+artifacts/scenarios, not later corrective source. CI checks harness/controller
+syntax and both loader hooks; it does not launch a graphical client.
 
-`scripts/run-packaged-builder-acceptance.py` prepares an isolated instance and
-requires an explicit reviewed launch. It uses the default production-named JAR
-and nested Builder, not Gradle source classes. See
-[the packaged acceptance guide](verification/packaged-builder-acceptance.md).
-This is opt-in graphical testing. Its native oracle reads actual integrated-server
-blocks on the owning server thread. Java exit success or a final model answer is
-not acceptance. Every selected native check must pass.
-
-The guide records the 2026-09-30 packaged runtime receipts: Fabric and NeoForge
-each passed disabled authorization (1 native check), full construction (85), and
-same-world restart (85). The primary `gpt-kanglives` / `gpt-6-luna` profile, with
-explicit 1,000,000-token context, completed separate copy (58) and linked undo (80)
-requests. Strict journal validators passed exact copy linkage and all 75 inverse
-undo positions with clean conflict/uncertain lists. These receipts identify their
-0.2.3 acceptance-instrumented artifacts; they are not hashes or final-gate results
-for the later 0.2.4 candidate.
-
-The controller can create a new survival, commands-off superflat world or reopen
-only a prior manifest-owned acceptance world. Normal sessions never use these
-hooks. The launcher validates the previous native report before reload and live
-undo. The two live-model phases retain actual copied state before undo, then
-verify source preservation and target restoration. Retained Tool results and
-journals must also prove the copy operation and linked undo; model narration is
-not proof.
-
-The disposable synthetic username must fit Minecraft's 16-character login field.
-Simulation distance is 5, within the Minecraft26.2 range. `--low-impact` reduces
-only the generated client's window, FPS, and heap; render distance remains 4 for
-fixture coverage. It does not change ordinary game options.
-
-OpenAI-compatible optional `tool_calls`, usage, and usage-detail fields may be
-missing or JSON null. Both response codecs treat those forms as absent. Invalid
-non-null shapes and malformed tool arguments remain failures. Live connection
-probes and graphical acceptance remain separate from deterministic tests.
-
-## Manual runtime corrections after 0.2.4
-
-Decision 040 records the real-client failures and their corrections. Durable Tool
-identities remain request-qualified internally. Provider codecs preserve valid
-IDs and deterministically map invalid outbound IDs while preserving Tool-call
-and Tool-result pairing; OpenAI-compatible call IDs obey the endpoint's 64-character
-schema field and alphabet. No history or server protocol format changes.
-
-`run_javascript.roots` is a list of bare top-level names: `roots:["player"]`
-selects `mc.player`, and `roots:["game"]` selects `mc.game`. Invalid access-path
-selectors provide exact corrective feedback without selecting extra roots.
-A returned module/function remains `javascript_result_invalid`; return JSON data
-from an operation instead. An argument/result failure does not prove terrain or
-an integration is missing.
-
-Settings diagnostics read counts-only published source state from the existing
-knowledge reload. Missing capture/evidence is shown as unknown rather than zero.
-Source failures can retain the last valid counts with an explicit partial state.
-Disconnect, shutdown and player/world scope replacement clear published source
-facts and old primary-provider handles through the common context-provider hook.
-The next connection stays unknown until fresh capture; saved source configuration
-and enablement policy remain unchanged.
-The context metric is the latest actual local request estimate, not the sum of
-compaction checkpoints. Its lookup is bound to the selected model/session/request;
-server models, pre-dispatch requests and replaced/disconnected endpoints report
-unknown. Pending writes/active requests are current work counts; checkpoint counts
-are retained compaction records. No provider request or live capture occurs from
-the settings render path.
-
-These corrections are committed/pushed without a new tag or release. The original
-0.2.4 manual run and its failed traces remain retained; verification for this
-source change is recorded in the implementation plan.
+Extension-owned deterministic traces may still use
+`data/<namespace>/agent_traces/<trace-id>.json`. The current strict shape rejects
+unknown fields, duplicate keys, invalid IDs, and filename/ID mismatch. Active
+server resources reload the available traces. Required registry/recipe/player
+captures detach on the owning server thread; console player traces fail
+`player_required`. Tool steps use the real registry with `exact`, `contains`, or
+`schema` expectations; assistant steps are pre-authored, not a live model.
+Replay adds no domain-count, step, or report cap; execution safety and provider
+context budgets remain separate. Core bundles no traces for removed domain Tools.

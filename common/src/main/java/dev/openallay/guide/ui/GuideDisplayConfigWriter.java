@@ -15,7 +15,6 @@ public final class GuideDisplayConfigWriter {
     public String encode(GuideDisplayConfig config) {
         Objects.requireNonNull(config, "config");
         JsonObject root = new JsonObject();
-        root.addProperty("schemaVersion", config.schemaVersion());
         root.addProperty("debugMode", config.debugMode());
         root.addProperty("animationsEnabled", config.animationsEnabled());
         root.addProperty("assistantName", config.assistantName());

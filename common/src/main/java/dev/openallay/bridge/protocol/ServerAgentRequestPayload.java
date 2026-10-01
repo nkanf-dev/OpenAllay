@@ -4,7 +4,6 @@ import java.util.UUID;
 import java.util.List;
 
 public record ServerAgentRequestPayload(
-        int version,
         UUID requestId,
         String sessionId,
         String question,
@@ -12,7 +11,6 @@ public record ServerAgentRequestPayload(
         List<ServerAgentHistoryMessage> history,
         List<String> clientToolIds) {
     public ServerAgentRequestPayload {
-        BridgeProtocol.requireVersion(version);
         java.util.Objects.requireNonNull(requestId, "requestId");
         if (sessionId == null || !sessionId.matches("[a-zA-Z0-9_.-]+")) {
             throw new IllegalArgumentException("Invalid Agent session ID");
@@ -33,22 +31,21 @@ public record ServerAgentRequestPayload(
     }
 
     public ServerAgentRequestPayload(
-            int version, UUID requestId, String sessionId, String question, boolean stream) {
-        this(version, requestId, sessionId, question, stream, List.of(), List.of());
+            UUID requestId, String sessionId, String question, boolean stream) {
+        this(requestId, sessionId, question, stream, List.of(), List.of());
     }
 
     public ServerAgentRequestPayload(
-            int version,
             UUID requestId,
             String sessionId,
             String question,
             boolean stream,
             List<ServerAgentHistoryMessage> history) {
-        this(version, requestId, sessionId, question, stream, history, List.of());
+        this(requestId, sessionId, question, stream, history, List.of());
     }
 
     public ServerAgentRequestPayload withClientToolIds(List<String> replacement) {
         return new ServerAgentRequestPayload(
-                version, requestId, sessionId, question, stream, history, replacement);
+                requestId, sessionId, question, stream, history, replacement);
     }
 }

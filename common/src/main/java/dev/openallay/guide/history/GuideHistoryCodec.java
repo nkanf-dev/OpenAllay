@@ -34,8 +34,9 @@ public final class GuideHistoryCodec {
             "type", "ordinal", "invocationId", "index", "toolId", "status",
             "invocation", "presentationMessages", "sources");
     private static final Set<String> TOOL_INVOCATION_FIELDS =
-            Set.of("roots", "handles", "modules");
-    private static final Set<String> SOURCE_FIELDS = Set.of("toolId", "evidence");
+            Set.of("handles", "modules");
+    private static final Set<String> SOURCE_FIELDS =
+            Set.of("toolId", "evidence", "lastCapturedAt");
     private static final Set<String> EVIDENCE_FIELDS = Set.of(
             "authority", "completeness", "capturedAt", "sourceId", "provenance",
             "gameVersion", "loader", "details");
@@ -181,7 +182,6 @@ public final class GuideHistoryCodec {
 
     private static JsonObject encodeInvocation(GuideToolInvocationView invocation) {
         JsonObject object = new JsonObject();
-        object.add("roots", encodeStrings(invocation.roots()));
         object.add("handles", encodeStrings(invocation.handles()));
         object.add("modules", encodeStrings(invocation.modules()));
         return object;
@@ -190,7 +190,6 @@ public final class GuideHistoryCodec {
     private static GuideToolInvocationView decodeInvocation(JsonObject object) {
         requireFields(object, TOOL_INVOCATION_FIELDS, "tool invocation");
         return new GuideToolInvocationView(
-                decodeStrings(array(object, "roots")),
                 decodeStrings(array(object, "handles")),
                 decodeStrings(array(object, "modules")),
                 false);
@@ -231,6 +230,7 @@ public final class GuideHistoryCodec {
             JsonObject object = new JsonObject();
             object.addProperty("toolId", source.toolId());
             object.add("evidence", encodeEvidence(source.evidence()));
+            object.addProperty("lastCapturedAt", source.lastCapturedAt().toString());
             encoded.add(object);
         }
         return encoded;
@@ -243,7 +243,8 @@ public final class GuideHistoryCodec {
             requireFields(object, SOURCE_FIELDS, "durable source");
             decoded.add(new GuideSource(
                     string(object, "toolId"),
-                    decodeEvidence(object(object.get("evidence"), "durable evidence"))));
+                    decodeEvidence(object(object.get("evidence"), "durable evidence")),
+                    Instant.parse(string(object, "lastCapturedAt"))));
         }
         return List.copyOf(decoded);
     }

@@ -58,7 +58,6 @@ public record RecipeSettingsProjection(
             disabled.add(actionId);
         }
         return new ToolResult.Success<>(new RecipeClientConfig(
-                RecipeClientConfig.SCHEMA_VERSION,
                 config.visibility(),
                 config.preferredViewer(),
                 disabled));
@@ -69,7 +68,6 @@ public record RecipeSettingsProjection(
                 ? RecipeVisibilityPolicy.UNLOCKED_ONLY
                 : RecipeVisibilityPolicy.ALL_KNOWN;
         return new RecipeClientConfig(
-                RecipeClientConfig.SCHEMA_VERSION,
                 next,
                 config.preferredViewer(),
                 config.disabledSources());
@@ -89,7 +87,6 @@ public record RecipeSettingsProjection(
         int index = options.indexOf(config.preferredViewer());
         String next = options.get((index + 1) % options.size());
         return new RecipeClientConfig(
-                RecipeClientConfig.SCHEMA_VERSION,
                 config.visibility(),
                 next,
                 config.disabledSources());

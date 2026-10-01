@@ -22,7 +22,7 @@ final class GuideDisplayRuntimeTest {
         GuideDisplayRuntime runtime = new GuideDisplayRuntime(path);
 
         ToolResult<GuideDisplayConfig> saved = runtime.save(new GuideDisplayConfig(
-                GuideDisplayConfig.SCHEMA_VERSION, true, false,
+                true, false,
                         GuideDisplayConfig.DEFAULT_ASSISTANT_NAME));
 
         assertTrue(saved instanceof ToolResult.Success<GuideDisplayConfig>);
@@ -31,7 +31,7 @@ final class GuideDisplayRuntimeTest {
         assertTrue(Files.readString(path).contains("\"debugMode\": true"));
 
         Files.writeString(path, """
-                {"schemaVersion":3,"debugMode":false,"animationsEnabled":true,
+                {"debugMode":false,"animationsEnabled":true,
                  "assistantName":"小羽"}
                 """);
         ToolResult<GuideDisplayConfig> reloaded = runtime.reload();
@@ -47,10 +47,10 @@ final class GuideDisplayRuntimeTest {
         Path path = temporary.resolve("display.json");
         GuideDisplayRuntime runtime = new GuideDisplayRuntime(path);
         runtime.save(new GuideDisplayConfig(
-                GuideDisplayConfig.SCHEMA_VERSION, true, false,
+                true, false,
                         GuideDisplayConfig.DEFAULT_ASSISTANT_NAME));
         Files.writeString(path,
-                "{\"schemaVersion\":1,\"debugMode\":false}");
+                "{\"debugMode\":false}");
 
         ToolResult<GuideDisplayConfig> result = runtime.reload();
 
@@ -66,7 +66,7 @@ final class GuideDisplayRuntimeTest {
     void failedDebugSaveRetainsFileAndProjection() throws Exception {
         Path path = temporary.resolve("display.json");
         String original =
-                "{\"schemaVersion\":3,\"debugMode\":false,\"animationsEnabled\":true,"
+                "{\"debugMode\":false,\"animationsEnabled\":true,"
                         + "\"assistantName\":\"OpenAllay\"}";
         Files.writeString(path, original);
         GuideDisplayRuntime runtime = new GuideDisplayRuntime(
@@ -77,7 +77,7 @@ final class GuideDisplayRuntimeTest {
 
         ToolResult<GuideDisplayConfig> result =
                 runtime.save(new GuideDisplayConfig(
-                        GuideDisplayConfig.SCHEMA_VERSION, true, false,
+                        true, false,
                         GuideDisplayConfig.DEFAULT_ASSISTANT_NAME));
 
         ToolResult.Failure<GuideDisplayConfig> failure =

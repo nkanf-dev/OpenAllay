@@ -21,7 +21,6 @@ final class CapabilityPolicyLoaderTest {
     void retainsUnknownDisabledIdentitiesAndCanonicalizesOrder() {
         CapabilityPolicy policy = success(loader.load(new StringReader("""
                 {
-                  "schemaVersion": 1,
                   "disabledTools": ["openallay:get_recipe", "future:tool"],
                   "disabledSkills": ["future-skill", "recipe-helper"]
                 }
@@ -44,60 +43,54 @@ final class CapabilityPolicyLoaderTest {
     }
 
     @Test
-    void rejectsMissingExtraAndUnsupportedSchema() {
+    void rejectsMissingAndExtraFields() {
         assertFailure("""
-                {"schemaVersion":1,"disabledTools":[]}
+                {"disabledTools":[]}
                 """);
         assertFailure("""
-                {"schemaVersion":1,"disabledTools":[],"disabledSkills":[],"extra":true}
-                """);
-        assertFailure("""
-                {"schemaVersion":2,"disabledTools":[],"disabledSkills":[]}
+                {"disabledTools":[],"disabledSkills":[],"extra":true}
                 """);
     }
 
     @Test
     void rejectsDuplicatesAndInvalidToolIdentities() {
         assertFailure("""
-                {"schemaVersion":1,"disabledTools":["future:tool","future:tool"],"disabledSkills":[]}
+                {"disabledTools":["future:tool","future:tool"],"disabledSkills":[]}
                 """);
         assertFailure("""
-                {"schemaVersion":1,"disabledTools":["missing_namespace"],"disabledSkills":[]}
+                {"disabledTools":["missing_namespace"],"disabledSkills":[]}
                 """);
         assertFailure("""
-                {"schemaVersion":1,"disabledTools":["Future:tool"],"disabledSkills":[]}
+                {"disabledTools":["Future:tool"],"disabledSkills":[]}
                 """);
         assertFailure("""
-                {"schemaVersion":1,"disabledTools":["future:","other:ok"],"disabledSkills":[]}
+                {"disabledTools":["future:","other:ok"],"disabledSkills":[]}
                 """);
     }
 
     @Test
     void rejectsDuplicatesAndInvalidSkillNames() {
         assertFailure("""
-                {"schemaVersion":1,"disabledTools":[],"disabledSkills":["future-skill","future-skill"]}
+                {"disabledTools":[],"disabledSkills":["future-skill","future-skill"]}
                 """);
         assertFailure("""
-                {"schemaVersion":1,"disabledTools":[],"disabledSkills":[""]}
+                {"disabledTools":[],"disabledSkills":[""]}
                 """);
         assertFailure("""
-                {"schemaVersion":1,"disabledTools":[],"disabledSkills":["Future-Skill"]}
+                {"disabledTools":[],"disabledSkills":["Future-Skill"]}
                 """);
         assertFailure("""
-                {"schemaVersion":1,"disabledTools":[],"disabledSkills":["future_skill"]}
+                {"disabledTools":[],"disabledSkills":["future_skill"]}
                 """);
     }
 
     @Test
-    void rejectsNonStringArraysAndFractionalSchema() {
+    void rejectsNonStringArrays() {
         assertFailure("""
-                {"schemaVersion":1,"disabledTools":[1],"disabledSkills":[]}
+                {"disabledTools":[1],"disabledSkills":[]}
                 """);
         assertFailure("""
-                {"schemaVersion":1,"disabledTools":[],"disabledSkills":{}}
-                """);
-        assertFailure("""
-                {"schemaVersion":1.5,"disabledTools":[],"disabledSkills":[]}
+                {"disabledTools":[],"disabledSkills":{}}
                 """);
     }
 

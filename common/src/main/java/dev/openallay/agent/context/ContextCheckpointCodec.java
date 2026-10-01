@@ -10,7 +10,7 @@ import java.util.UUID;
 public final class ContextCheckpointCodec {
     private static final Set<String> FIELDS = Set.of(
             "checkpointId", "sourceFromIndex", "sourceToIndexExclusive", "sourceHash",
-            "modelIdentifier", "promptVersion", "schemaVersion", "createdAt", "status",
+            "modelIdentifier", "createdAt", "status",
             "summary", "failureCode", "failureMessage", "estimatedProjectionTokens");
 
     public String encode(ContextCheckpoint checkpoint) {
@@ -20,8 +20,6 @@ public final class ContextCheckpointCodec {
         object.addProperty("sourceToIndexExclusive", checkpoint.sourceToIndexExclusive());
         object.addProperty("sourceHash", checkpoint.sourceHash());
         object.addProperty("modelIdentifier", checkpoint.modelIdentifier());
-        object.addProperty("promptVersion", checkpoint.promptVersion());
-        object.addProperty("schemaVersion", checkpoint.schemaVersion());
         object.addProperty("createdAt", checkpoint.createdAt().toString());
         object.addProperty("status", checkpoint.status().name());
         nullable(object, "summary", checkpoint.summary());
@@ -43,8 +41,6 @@ public final class ContextCheckpointCodec {
                 integer(object, "sourceToIndexExclusive"),
                 text(object, "sourceHash"),
                 text(object, "modelIdentifier"),
-                integer(object, "promptVersion"),
-                integer(object, "schemaVersion"),
                 Instant.parse(text(object, "createdAt")),
                 ContextCheckpoint.Status.valueOf(text(object, "status")),
                 nullableText(object, "summary"),
@@ -73,7 +69,11 @@ public final class ContextCheckpointCodec {
 
     private static int integer(JsonObject object, String key) {
         try {
-            return object.get(key).getAsBigDecimal().intValueExact();
+            JsonElement value = object.get(key);
+            if (!value.isJsonPrimitive() || !value.getAsJsonPrimitive().isNumber()) {
+                throw new IllegalArgumentException(key + " must be a number");
+            }
+            return value.getAsBigDecimal().intValueExact();
         } catch (RuntimeException failure) {
             throw new IllegalArgumentException(key + " must be an integer", failure);
         }

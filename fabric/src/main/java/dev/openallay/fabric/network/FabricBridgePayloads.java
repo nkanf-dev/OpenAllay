@@ -23,7 +23,7 @@ public final class FabricBridgePayloads {
 
     public record Packet(String kind, String json) implements CustomPacketPayload {
         public static final Type<Packet> TYPE = new Type<>(
-                Identifier.fromNamespaceAndPath("openallay", "bridge_v1"));
+                Identifier.fromNamespaceAndPath("openallay", "bridge"));
         public static final StreamCodec<RegistryFriendlyByteBuf, Packet> CODEC = StreamCodec.composite(
                 ByteBufCodecs.STRING_UTF8,
                 Packet::kind,

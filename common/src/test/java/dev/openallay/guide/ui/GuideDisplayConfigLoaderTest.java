@@ -28,10 +28,10 @@ final class GuideDisplayConfigLoaderTest {
     }
 
     @Test
-    void readsVersionedDebugMode() throws Exception {
+    void readsDebugMode() throws Exception {
         Path path = temporary.resolve("display.json");
         Files.writeString(path, """
-                {"schemaVersion":3,"debugMode":true,"animationsEnabled":false,
+                {"debugMode":true,"animationsEnabled":false,
                  "assistantName":"小羽"}
                 """);
 
@@ -46,7 +46,7 @@ final class GuideDisplayConfigLoaderTest {
     @Test
     void canonicalWriterRoundTripsThroughStrictReaderLoader() {
         GuideDisplayConfig candidate = new GuideDisplayConfig(
-                GuideDisplayConfig.SCHEMA_VERSION, true, false, "  小羽  ");
+                true, false, "  小羽  ");
 
         String encoded = new GuideDisplayConfigWriter().encode(candidate);
         GuideDisplayConfigLoader.Load load = new GuideDisplayConfigLoader()
@@ -56,7 +56,6 @@ final class GuideDisplayConfigLoaderTest {
         assertNull(load.failure());
         assertEquals("""
                 {
-                  \"schemaVersion\": 3,
                   \"debugMode\": true,
                   \"animationsEnabled\": false,
                   \"assistantName\": \"小羽\"
@@ -65,17 +64,16 @@ final class GuideDisplayConfigLoaderTest {
     }
 
     @Test
-    void rejectsUnknownFieldsFutureVersionsAndWrongTypesWithoutRewriting() throws Exception {
+    void rejectsUnknownOrMissingFieldsAndWrongTypesWithoutRewriting() throws Exception {
         GuideDisplayConfigLoader loader = new GuideDisplayConfigLoader();
         Path path = temporary.resolve("display.json");
         for (String invalid : new String[] {
-                "{\"schemaVersion\":3,\"debugMode\":false,\"animationsEnabled\":true,\"assistantName\":\"OpenAllay\",\"rawSecrets\":true}",
-                "{\"schemaVersion\":2,\"debugMode\":false,\"animationsEnabled\":true}",
-                "{\"schemaVersion\":4,\"debugMode\":false,\"animationsEnabled\":true,\"assistantName\":\"OpenAllay\"}",
-                "{\"schemaVersion\":3,\"debugMode\":\"yes\",\"animationsEnabled\":true,\"assistantName\":\"OpenAllay\"}",
-                "{\"schemaVersion\":3,\"debugMode\":false,\"animationsEnabled\":true,\"assistantName\":false}",
-                "{\"schemaVersion\":3,\"debugMode\":false,\"animationsEnabled\":true,\"assistantName\":\"   \"}",
-                "{\"schemaVersion\":3,\"debugMode\":false,\"animationsEnabled\":true,\"assistantName\":\"bad\\nname\"}"
+                "{\"debugMode\":false,\"animationsEnabled\":true,\"assistantName\":\"OpenAllay\",\"rawSecrets\":true}",
+                "{\"debugMode\":false,\"animationsEnabled\":true}",
+                "{\"debugMode\":\"yes\",\"animationsEnabled\":true,\"assistantName\":\"OpenAllay\"}",
+                "{\"debugMode\":false,\"animationsEnabled\":true,\"assistantName\":false}",
+                "{\"debugMode\":false,\"animationsEnabled\":true,\"assistantName\":\"   \"}",
+                "{\"debugMode\":false,\"animationsEnabled\":true,\"assistantName\":\"bad\\nname\"}"
         }) {
             Files.writeString(path, invalid);
 

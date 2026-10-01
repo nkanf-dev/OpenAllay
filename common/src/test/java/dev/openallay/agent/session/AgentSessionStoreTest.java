@@ -44,6 +44,41 @@ final class AgentSessionStoreTest {
     }
 
     @Test
+    void cancellationRetainsSafeProgressAndImmediatelyAdmitsFencedReplacement() {
+        AgentSessionStore store = new AgentSessionStore();
+        AgentSessionKey key = new AgentSessionKey(UUID.randomUUID(), "main");
+        UUID repeatedIdentity = UUID.randomUUID();
+        AgentSessionStore.Lease old = success(store.reserve(key, repeatedIdentity)).value();
+        List<ModelMessage> safe = List.of(ModelMessage.userText("completed exchange stays available"));
+        assertTrue(store.recordContext(old, safe, safe));
+        assertTrue(store.cancel(key));
+        AgentSessionStore.Lease replacement = success(store.reserve(key, repeatedIdentity)).value();
+        assertEquals(safe.getFirst(), replacement.history().getFirst());
+        assertTrue(replacement.history().getLast().content().getFirst().toString().contains("agent_cancelled"));
+        assertFalse(store.recordContext(old, List.of(ModelMessage.userText("late old")), safe));
+        assertFalse(store.finish(old, List.of(ModelMessage.userText("late old"))));
+        assertTrue(store.status(key).active());
+        assertEquals(repeatedIdentity, store.status(key).requestId());
+        assertTrue(store.finish(replacement, replacement.history()));
+    }
+
+    @Test
+    void delayedCancellationForOldRequestCannotRevokeSuccessorInSameSession() {
+        AgentSessionStore store = new AgentSessionStore();
+        AgentSessionKey key = new AgentSessionKey(UUID.randomUUID(), "main");
+        UUID oldId = UUID.randomUUID();
+        AgentSessionStore.Lease old = success(store.reserve(key, oldId)).value();
+        assertTrue(store.cancel(key, oldId));
+        UUID successorId = UUID.randomUUID();
+        AgentSessionStore.Lease successor = success(store.reserve(key, successorId)).value();
+        assertFalse(store.cancel(key, oldId));
+        assertFalse(successor.cancellation().isCancelled());
+        assertTrue(old.cancellation().isCancelled());
+        assertEquals(successorId, store.status(key).requestId());
+        assertTrue(store.finish(successor, successor.history()));
+    }
+
+    @Test
     void differentSessionsForOneActorCanBeActiveTogether() {
         AgentSessionStore store = new AgentSessionStore();
         UUID actor = UUID.randomUUID();

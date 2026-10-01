@@ -10,13 +10,13 @@ import org.junit.jupiter.api.Test;
 final class BenchmarkSelectorTest {
     @Test
     void distinguishesFixtureMismatchFromMissingCapabilities() {
-        BenchmarkCorpus corpus = new BenchmarkCorpus(1, "fixture-v1", List.of(
-                testCase("world", "javascript-agent-v2", List.of("world")),
-                testCase("routing", "server-model-routing-v1", List.of("server-model"))));
+        BenchmarkCorpus corpus = new BenchmarkCorpus(List.of(
+                testCase("world", "javascript-agent", List.of("world")),
+                testCase("routing", "server-model-routing", List.of("server-model"))));
 
         BenchmarkSelector.Selection selection = new BenchmarkSelector().select(
                 corpus,
-                "javascript-agent-v2",
+                "javascript-agent",
                 Set.of(),
                 Set.of(),
                 3);
@@ -25,12 +25,12 @@ final class BenchmarkSelectorTest {
         assertEquals(List.of(
                 new BenchmarkSelector.SkippedCase(
                         "world",
-                        "javascript-agent-v2",
+                        "javascript-agent",
                         BenchmarkSelector.SkipReason.MISSING_CAPABILITIES,
                         List.of("world")),
                 new BenchmarkSelector.SkippedCase(
                         "routing",
-                        "server-model-routing-v1",
+                        "server-model-routing",
                         BenchmarkSelector.SkipReason.FIXTURE_MISMATCH,
                         List.of("server-model"))),
                 selection.skipped());
@@ -38,18 +38,18 @@ final class BenchmarkSelectorTest {
 
     @Test
     void requestedUnavailableCasesFailInsteadOfShrinkingTheRun() {
-        BenchmarkCorpus corpus = new BenchmarkCorpus(1, "fixture-v1", List.of(
-                testCase("routing", "server-model-routing-v1", List.of("server-model"))));
+        BenchmarkCorpus corpus = new BenchmarkCorpus(List.of(
+                testCase("routing", "server-model-routing", List.of("server-model"))));
 
         assertThrows(IllegalArgumentException.class, () -> new BenchmarkSelector().select(
                 corpus,
-                "javascript-agent-v2",
+                "javascript-agent",
                 Set.of("server-model"),
                 Set.of("routing"),
                 1));
         assertThrows(IllegalArgumentException.class, () -> new BenchmarkSelector().select(
                 corpus,
-                "javascript-agent-v2",
+                "javascript-agent",
                 Set.of(),
                 Set.of("unknown"),
                 1));

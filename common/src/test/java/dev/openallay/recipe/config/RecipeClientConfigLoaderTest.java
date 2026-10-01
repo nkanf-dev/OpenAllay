@@ -29,7 +29,7 @@ final class RecipeClientConfigLoaderTest {
     @Test
     void loadsGenericStableSourceIdsAndRetainsUnknownDisabledIds() {
         RecipeClientConfig config = success(loader.load(new StringReader("""
-                {"schemaVersion":2,"visibility":"ALL_KNOWN",
+                {"visibility":"ALL_KNOWN",
                  "preferredViewer":"viewer:emi",
                  "disabledSources":["viewer:jei","future:viewer"]}
                 """)));
@@ -39,36 +39,28 @@ final class RecipeClientConfigLoaderTest {
     }
 
     @Test
-    void oldAdapterSpecificSchemaFailsWithoutMigration() {
+    void rejectsMissingUnknownDuplicateBlankMalformedAndWrongTypeFields() {
         assertInvalid("""
-                {"schemaVersion":1,"visibility":"all_known","preferredViewer":"auto",
-                 "sources":{"vanilla":true,"jei":true,"rei":true}}
-                """);
-    }
-
-    @Test
-    void rejectsMissingUnknownDuplicateBlankMalformedAndNonIntegralFields() {
-        assertInvalid("""
-                {"schemaVersion":2,"visibility":"all_known","preferredViewer":"auto"}
+                {"visibility":"all_known","preferredViewer":"auto"}
                 """);
         assertInvalid("""
-                {"schemaVersion":2,"visibility":"all_known","preferredViewer":"auto",
+                {"visibility":"all_known","preferredViewer":"auto",
                  "disabledSources":[],"extra":true}
                 """);
         assertInvalid("""
-                {"schemaVersion":2.5,"visibility":"all_known","preferredViewer":"auto",
+                {"visibility":true,"preferredViewer":"auto",
                  "disabledSources":[]}
                 """);
         assertInvalid("""
-                {"schemaVersion":2,"visibility":"all_known","preferredViewer":"auto",
+                {"visibility":"all_known","preferredViewer":"auto",
                  "disabledSources":["viewer:jei","viewer:jei"]}
                 """);
         assertInvalid("""
-                {"schemaVersion":2,"visibility":"all_known","preferredViewer":"auto",
+                {"visibility":"all_known","preferredViewer":"auto",
                  "disabledSources":[""]}
                 """);
         assertInvalid("""
-                {"schemaVersion":2,"visibility":"all_known","preferredViewer":"not an id",
+                {"visibility":"all_known","preferredViewer":"not an id",
                  "disabledSources":[]}
                 """);
     }

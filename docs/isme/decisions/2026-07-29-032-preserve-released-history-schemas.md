@@ -1,5 +1,10 @@
 # SKMB-2026-07-29-032: Preserve Released Guide History Schemas
 
+> Subsequent decision: [041](2026-10-01-041-execution-context-simplification.md)
+> selects unversioned Latest Only internal formats before formal 1.0; no migration or compatibility readers remain.
+> Its implementation/verification is tracked separately; this document retains
+> the historical decision and is not proof that the new behavior is delivered.
+
 - status: accepted
 - decided_by: designer
 - approval_source: >-

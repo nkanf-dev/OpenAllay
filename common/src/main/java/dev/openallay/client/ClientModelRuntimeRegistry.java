@@ -17,12 +17,9 @@ import dev.openallay.guide.GuideClientModelProfile;
 import dev.openallay.guide.GuideFailure;
 import dev.openallay.guide.GuideContextSpec;
 import dev.openallay.guide.GuideLocalEndpoint;
-import dev.openallay.guide.GuideMessage;
 import dev.openallay.guide.GuideModelProfileException;
 import dev.openallay.model.ModelClient;
-import dev.openallay.model.ModelContent;
 import dev.openallay.model.ModelMessage;
-import dev.openallay.model.ModelRole;
 import dev.openallay.model.config.ModelProfilesConfigLoader;
 import dev.openallay.model.config.ResolvedModelProfile;
 import dev.openallay.model.ProviderModelClients;
@@ -250,6 +247,11 @@ public final class ClientModelRuntimeRegistry implements GuideLocalEndpoint {
     }
 
     @Override
+    public boolean cancel(UUID actor, String sessionId, UUID expectedRequestId) {
+        return sessions.cancel(new AgentSessionKey(actor, sessionId), expectedRequestId);
+    }
+
+    @Override
     public void clearSession(UUID actor, String sessionId) {
         sessions.clear(new AgentSessionKey(actor, sessionId));
         state.get().runtimes().values().forEach(runtime -> runtime.clearContextEstimate(actor, sessionId));
@@ -261,19 +263,11 @@ public final class ClientModelRuntimeRegistry implements GuideLocalEndpoint {
         state.get().runtimes().values().forEach(runtime -> runtime.clearContextEstimates(actor));
     }
 
+
+
     @Override
-    public void hydrateSession(
-            UUID actor,
-            String sessionId,
-            List<GuideMessage> messages,
-            List<ContextCheckpoint> checkpoints) {
-        List<ModelMessage> history = messages.stream()
-                .map(message -> new ModelMessage(
-                        message.role() == GuideMessage.Role.USER
-                                ? ModelRole.USER : ModelRole.ASSISTANT,
-                        List.of(new ModelContent.Text(message.text()))))
-                .toList();
-        sessions.hydrate(new AgentSessionKey(actor, sessionId), history, checkpoints);
+    public boolean hasContext(UUID actor, String sessionId) {
+        return sessions.hasContext(new AgentSessionKey(actor, sessionId));
     }
 
     @Override

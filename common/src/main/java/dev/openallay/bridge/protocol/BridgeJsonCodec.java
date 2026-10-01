@@ -10,36 +10,37 @@ import java.util.Set;
 public final class BridgeJsonCodec {
     private static final Map<Class<?>, Set<String>> FIELDS = Map.ofEntries(
             Map.entry(CapabilityPayload.class, Set.of(
-                    "version", "remoteTools", "serverModel",
+                    "remoteTools", "serverModel",
                     "serverContextWindowTokens", "serverMaxOutputTokens",
                     "serverPromptAndToolTokens", "serverCanonicalModelId")),
             Map.entry(RemoteToolCallPayload.class,
-                    Set.of("version", "correlationId", "sessionId", "toolId", "argumentsJson")),
+                    Set.of("correlationId", "sessionId", "toolId", "argumentsJson")),
             Map.entry(RemoteToolResultChunkPayload.class,
-                    Set.of("version", "correlationId", "index", "total", "contentHash", "base64Data")),
-            Map.entry(RemoteCancelPayload.class, Set.of("version", "correlationId")),
+                    Set.of("correlationId", "index", "total", "contentHash", "base64Data")),
+            Map.entry(RemoteCancelPayload.class, Set.of("correlationId")),
+            Map.entry(RemoteToolRequestClosePayload.class, Set.of("requestId")),
             Map.entry(ServerAgentRequestPayload.class,
                     Set.of(
-                            "version", "requestId", "sessionId", "question", "stream",
+                            "requestId", "sessionId", "question", "stream",
                             "history", "clientToolIds")),
             Map.entry(ClientToolCallPayload.class,
                     Set.of(
-                            "version", "requestId", "invocationId", "sessionId", "toolId",
+                            "requestId", "invocationId", "sessionId", "toolId",
                             "argumentsJson")),
             Map.entry(ClientToolResultChunkPayload.class,
                     Set.of(
-                            "version", "requestId", "invocationId", "index", "total",
+                            "requestId", "invocationId", "index", "total",
                             "contentHash", "base64Data")),
             Map.entry(ClientToolCancelPayload.class,
-                    Set.of("version", "requestId", "invocationId")),
+                    Set.of("requestId", "invocationId")),
             Map.entry(ServerAgentRequestChunkPayload.class,
-                    Set.of("version", "requestId", "index", "total", "contentHash", "base64Data")),
-            Map.entry(ServerAgentCancelPayload.class, Set.of("version", "requestId")),
+                    Set.of("requestId", "index", "total", "contentHash", "base64Data")),
+            Map.entry(ServerAgentCancelPayload.class, Set.of("requestId")),
             Map.entry(ServerAgentEventPayload.class,
-                    Set.of("version", "requestId", "eventType", "eventJson", "terminal")),
+                    Set.of("requestId", "eventType", "eventJson", "terminal")),
             Map.entry(ServerAgentEventChunkPayload.class,
                     Set.of(
-                            "version", "requestId", "eventId", "index", "total",
+                            "requestId", "eventId", "index", "total",
                             "contentHash", "base64Data")));
 
     private final Gson gson;

@@ -103,7 +103,7 @@ final class ModelMetadataBootstrapTest {
     private Path profiles() throws Exception {
         Path path = temporary.resolve("models.json");
         Files.writeString(path, """
-                {"schemaVersion":2,"defaultProfileId":"main","profiles":[{
+                {"defaultProfileId":"main","profiles":[{
                   "id":"main","displayName":"Main","enabled":true,
                   "protocol":"openai_chat",
                   "baseUrl":"https://openrouter.ai/api/v1",

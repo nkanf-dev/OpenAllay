@@ -1,5 +1,6 @@
 package dev.openallay.model.config;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -38,6 +39,14 @@ final class LocalCredentialStoreTest {
         assertFalse(success(store.contains(second)));
         assertEquals("secret-one", success(store.resolve(first)).reveal());
         assertTrue(Files.exists(path));
+        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + path);
+                var statement = connection.createStatement();
+                var result = statement.executeQuery(
+                        "select name from sqlite_master where type = 'table' and name not glob 'sqlite_*'")) {
+            assertTrue(result.next());
+            assertEquals("credentials", result.getString(1));
+            assertFalse(result.next());
+        }
         if (Files.getFileStore(path).supportsFileAttributeView("posix")) {
             assertEquals(
                     Set.of(
@@ -63,17 +72,20 @@ final class LocalCredentialStoreTest {
     }
 
     @Test
-    void futureSchemaFailsClosedWithoutDeletingRows() throws Exception {
-        Path path = temporary.resolve("future.sqlite3");
+    void unexpectedTableFailsClosedWithoutDeletingRows() throws Exception {
+        Path path = temporary.resolve("unexpected.sqlite3");
         LocalCredentialStore store = new LocalCredentialStore(path, Clock.systemUTC());
         CredentialReference reference = success(store.insert(SecretValue.of("retained-secret")));
         try (var connection = DriverManager.getConnection("jdbc:sqlite:" + path);
                 var statement = connection.createStatement()) {
-            statement.executeUpdate(
-                    "update schema_metadata set schema_version = 99 where singleton = 1");
+            statement.execute("create table unexpected(value text)");
         }
 
+        byte[] original = Files.readAllBytes(path);
         assertEquals("credential_store_unavailable", failure(store.resolve(reference)).code());
+        assertEquals("credential_store_unavailable", failure(store.contains(reference)).code());
+        assertEquals("credential_store_unavailable", failure(store.collectUnreferenced(Set.of())).code());
+        assertArrayEquals(original, Files.readAllBytes(path));
         try (var connection = DriverManager.getConnection("jdbc:sqlite:" + path);
                 var statement = connection.createStatement();
                 var result = statement.executeQuery("select count(*) from credentials")) {
@@ -90,11 +102,13 @@ final class LocalCredentialStoreTest {
             statement.execute("create table unrelated(value text)");
             statement.execute("insert into unrelated(value) values ('retained')");
         }
+        byte[] original = Files.readAllBytes(path);
         LocalCredentialStore store = new LocalCredentialStore(path, Clock.systemUTC());
 
         assertEquals(
                 "credential_store_unavailable",
                 failure(store.insert(SecretValue.of("must-not-persist"))).code());
+        assertArrayEquals(original, Files.readAllBytes(path));
 
         try (var connection = DriverManager.getConnection("jdbc:sqlite:" + path);
                 var statement = connection.createStatement();
@@ -102,6 +116,40 @@ final class LocalCredentialStoreTest {
             assertTrue(result.next());
             assertEquals("retained", result.getString(1));
         }
+    }
+
+    @Test
+    void unexpectedCredentialColumnsFailClosedWithoutDeletingRows() throws Exception {
+        Path path = temporary.resolve("invalid-columns.sqlite3");
+        LocalCredentialStore store = new LocalCredentialStore(path, Clock.systemUTC());
+        CredentialReference reference = success(store.insert(SecretValue.of("retained-secret")));
+        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + path);
+                var statement = connection.createStatement()) {
+            statement.execute("alter table credentials add column unexpected text");
+        }
+        byte[] original = Files.readAllBytes(path);
+
+        assertEquals("credential_store_unavailable", failure(store.resolve(reference)).code());
+        assertEquals("credential_store_unavailable",
+                failure(store.deleteIfUnreferenced(reference, Set.of())).code());
+        assertArrayEquals(original, Files.readAllBytes(path));
+        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + path);
+                var statement = connection.createStatement();
+                var result = statement.executeQuery("select count(*) from credentials")) {
+            assertTrue(result.next());
+            assertEquals(1, result.getInt(1));
+        }
+    }
+
+    @Test
+    void existingEmptyFileIsNotReset() throws Exception {
+        Path path = temporary.resolve("empty.sqlite3");
+        Files.createFile(path);
+        LocalCredentialStore store = new LocalCredentialStore(path, Clock.systemUTC());
+
+        assertEquals("credential_store_unavailable",
+                failure(store.insert(SecretValue.of("must-not-persist"))).code());
+        assertEquals(0, Files.size(path));
     }
 
     @SuppressWarnings("unchecked")

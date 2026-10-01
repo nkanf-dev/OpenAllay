@@ -4,7 +4,6 @@ import com.google.gson.Gson;
 import dev.openallay.OpenAllayRuntime;
 import dev.openallay.agent.GameGuideAgent;
 import dev.openallay.agent.context.ContextCompactor;
-import dev.openallay.agent.context.ToolResultContextReducer;
 import dev.openallay.agent.context.Utf8ContextTokenEstimator;
 import dev.openallay.agent.session.AgentSessionStore;
 import dev.openallay.agent.tool.LocalAgentToolExecutor;
@@ -76,12 +75,11 @@ public record ServerGuideRuntime(
         LocalAgentToolExecutor tools = new LocalAgentToolExecutor(runtime.tools(), gson);
         AgentSessionStore sessions = new AgentSessionStore();
         ContextCompactor compactor = new ContextCompactor(
-                scheduled, gson, new Utf8ContextTokenEstimator(), new ToolResultContextReducer(),
+                scheduled, gson, new Utf8ContextTokenEstimator(),
                 config.contextBudget(), config.model(), Clock.systemUTC());
         PlayerClientToolRouter clientTools = new PlayerClientToolRouter(
                 runtime.tools(), gson, clientToolTransport, config.requestTimeout());
         String prompt = systemPrompt(runtime.skills(), false);
-        String commandPrompt = systemPrompt(runtime.skills(), true);
         int promptAndTools = new Utf8ContextTokenEstimator().estimate(
                 prompt, java.util.List.of(), tools.definitions());
         dev.openallay.guide.GuideContextSpec contextSpec =
@@ -89,11 +87,17 @@ public record ServerGuideRuntime(
                         config.contextBudget(), promptAndTools, config.model());
         ServerAgentService service = new ServerAgentService(
                 (actor, payload) -> {
+                    boolean experimentalCommands = payload.clientToolIds().contains(
+                            dev.openallay.bridge.client.ClientToolExecutionEndpoint
+                                    .EXPERIMENTAL_COMMANDS_CAPABILITY);
+                    dev.openallay.skill.SkillCatalogSnapshot requestSkills =
+                            requestSkills(runtime.skills(), experimentalCommands);
                     ToolResult<dev.openallay.agent.tool.AgentToolExecutor> opened = clientTools.open(
                             actor,
                             payload.requestId(),
                             payload.sessionId(),
-                            payload.clientToolIds());
+                            payload.clientToolIds(),
+                            requestSkills);
                     if (opened instanceof ToolResult.Failure<dev.openallay.agent.tool.AgentToolExecutor>
                             failure) {
                         return new ToolResult.Failure<>(failure.code(), failure.message());
@@ -106,16 +110,18 @@ public record ServerGuideRuntime(
                     return new ToolResult.Success<>(new ServerAgentService.RequestRuntime(
                             agent,
                             requestTools,
-                            payload.clientToolIds().contains(
-                                            dev.openallay.bridge.client.ClientToolExecutionEndpoint
-                                                    .EXPERIMENTAL_COMMANDS_CAPABILITY)
-                                    ? commandPrompt
-                                    : prompt,
+                            systemPrompt(requestSkills),
                             () -> clientTools.close(actor, payload.requestId())));
                 },
                 sessions,
                 contexts,
-                events,
+                (actor, payload) -> {
+                    var eventCodec = new dev.openallay.bridge.protocol.ServerAgentEventCodec(gson);
+                    var event = eventCodec.decode(payload, payload.requestId());
+                    event = dev.openallay.agent.AgentEventRedactor.redact(
+                            event, java.util.Set.of(config.apiKey().reveal()));
+                    events.send(actor, eventCodec.encode(payload.requestId(), event));
+                },
                 gson,
                 prompt,
                 scheduled::awaitReady);
@@ -125,10 +131,19 @@ public record ServerGuideRuntime(
 
     static String systemPrompt(
             dev.openallay.skill.SkillRepository skills, boolean experimentalCommands) {
+        return systemPrompt(requestSkills(skills, experimentalCommands));
+    }
+
+    static String systemPrompt(dev.openallay.skill.SkillCatalogSnapshot skills) {
+        return dev.openallay.agent.AgentSystemPrompt.compose(skills.metadataPrompt());
+    }
+
+    /** Captures matching prompt and server-local load_skill documents for one request. */
+    static dev.openallay.skill.SkillCatalogSnapshot requestSkills(
+            dev.openallay.skill.SkillRepository skills, boolean experimentalCommands) {
         java.util.Objects.requireNonNull(skills, "skills");
-        dev.openallay.skill.SkillCatalogSnapshot snapshot = experimentalCommands
+        return experimentalCommands
                 ? skills.snapshotWithRuntimeEnabled(java.util.Set.of(), java.util.Set.of("run-game-commands"))
                 : skills.snapshot(java.util.Set.of());
-        return dev.openallay.agent.AgentSystemPrompt.compose(snapshot.metadataPrompt());
     }
 }

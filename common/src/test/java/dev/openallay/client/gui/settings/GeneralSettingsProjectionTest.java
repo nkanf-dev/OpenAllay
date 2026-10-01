@@ -11,7 +11,7 @@ final class GeneralSettingsProjectionTest {
     @Test
     void displayControlsDefaultSafelyAndToggleIndependently() {
         GeneralSettingsProjection projection = GeneralSettingsProjection.from(new GuideDisplayConfig(
-                GuideDisplayConfig.SCHEMA_VERSION, false, true, "小羽"));
+                false, true, "小羽"));
 
         assertEquals("小羽", projection.assistantName());
         assertFalse(projection.debugMode());

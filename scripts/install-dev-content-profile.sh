@@ -53,7 +53,6 @@ with open(sys.argv[1], encoding="utf-8") as source:
     profile = json.load(source)
 
 if set(profile) != {
-    "schemaVersion",
     "name",
     "loader",
     "minecraftVersion",
@@ -61,7 +60,7 @@ if set(profile) != {
     "artifacts",
 }:
     raise SystemExit("profile fields do not match schema")
-if profile["schemaVersion"] != 1 or profile["loader"] != "fabric":
+if profile["loader"] != "fabric":
     raise SystemExit("unsupported content profile")
 
 for artifact in profile["artifacts"]:

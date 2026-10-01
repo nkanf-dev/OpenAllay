@@ -106,7 +106,6 @@ public final class RemoteToolExecutor implements AgentToolExecutor {
         pending.put(correlation, value);
         cancellation.onCancel(() -> cancelInvocation(correlation, value));
         RemoteToolCallPayload payload = new RemoteToolCallPayload(
-                BridgeProtocol.VERSION,
                 correlation,
                 context.correlationId(),
                 toolId,
@@ -203,7 +202,7 @@ public final class RemoteToolExecutor implements AgentToolExecutor {
     public void closeRequestScope(String correlationId) {
         try {
             transport.close(new RemoteToolRequestClosePayload(
-                    BridgeProtocol.VERSION, correlationId));
+                    correlationId));
         } catch (RuntimeException ignored) {
             // Local request termination still owns the terminal state. Disconnect cleanup on the
             // server is the fallback for a lost best-effort close packet.
@@ -227,7 +226,7 @@ public final class RemoteToolExecutor implements AgentToolExecutor {
         reassembler.cancel(correlation);
         if (dispatched) {
             try {
-                transport.cancel(new RemoteCancelPayload(BridgeProtocol.VERSION, correlation));
+                transport.cancel(new RemoteCancelPayload(correlation));
             } catch (RuntimeException ignored) {
                 // The enclosing cancellation still owns the terminal request state.
             }
@@ -244,7 +243,7 @@ public final class RemoteToolExecutor implements AgentToolExecutor {
             reassembler.cancel(correlation);
         }
         try {
-            transport.cancel(new RemoteCancelPayload(BridgeProtocol.VERSION, correlation));
+            transport.cancel(new RemoteCancelPayload(correlation));
         } catch (RuntimeException ignored) {
             // Timeout remains a complete Tool result even when cancellation cannot be sent.
         }

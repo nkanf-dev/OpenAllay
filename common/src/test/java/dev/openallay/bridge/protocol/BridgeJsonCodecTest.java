@@ -5,17 +5,60 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import java.time.Duration;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 final class BridgeJsonCodecTest {
     @Test
-    void roundTripsUnicodeAndRejectsUnknownFieldsAndVersions() {
+    void everyPayloadUsesOnlyItsCurrentFields() {
+        BridgeJsonCodec codec = new BridgeJsonCodec();
+        UUID requestId = UUID.randomUUID();
+        UUID invocationId = UUID.randomUUID();
+        RemoteToolResultChunkPayload raw = new ResultChunker()
+                .split(invocationId, "{\"status\":\"success\"}", 5).getFirst();
+
+        assertExactPayloadShape(codec, new CapabilityPayload(List.of(), false, 0, 0, 0, ""),
+                Set.of("remoteTools", "serverModel", "serverContextWindowTokens",
+                        "serverMaxOutputTokens", "serverPromptAndToolTokens", "serverCanonicalModelId"));
+        assertExactPayloadShape(codec,
+                new RemoteToolCallPayload(invocationId, "main", "test:read", "{}"),
+                Set.of("correlationId", "sessionId", "toolId", "argumentsJson"));
+        assertExactPayloadShape(codec, raw,
+                Set.of("correlationId", "index", "total", "contentHash", "base64Data"));
+        assertExactPayloadShape(codec, new RemoteCancelPayload(invocationId),
+                Set.of("correlationId"));
+        assertExactPayloadShape(codec, new RemoteToolRequestClosePayload("main"),
+                Set.of("requestId"));
+        assertExactPayloadShape(codec,
+                new ServerAgentRequestPayload(requestId, "main", "question", true),
+                Set.of("requestId", "sessionId", "question", "stream", "history", "clientToolIds"));
+        assertExactPayloadShape(codec,
+                new ClientToolCallPayload(requestId, invocationId, "main", "test:read", "{}"),
+                Set.of("requestId", "invocationId", "sessionId", "toolId", "argumentsJson"));
+        assertExactPayloadShape(codec, ClientToolResultChunkPayload.from(requestId, raw),
+                Set.of("requestId", "invocationId", "index", "total", "contentHash", "base64Data"));
+        assertExactPayloadShape(codec, new ClientToolCancelPayload(requestId, invocationId),
+                Set.of("requestId", "invocationId"));
+        assertExactPayloadShape(codec,
+                new ServerAgentRequestChunker().split(requestId, "question", 5).getFirst(),
+                Set.of("requestId", "index", "total", "contentHash", "base64Data"));
+        assertExactPayloadShape(codec, new ServerAgentCancelPayload(requestId), Set.of("requestId"));
+        assertExactPayloadShape(codec,
+                new ServerAgentEventPayload(requestId, "final_text", "{\"text\":\"done\"}", true),
+                Set.of("requestId", "eventType", "eventJson", "terminal"));
+        assertExactPayloadShape(codec, ServerAgentEventChunkPayload.from(requestId, raw),
+                Set.of("requestId", "eventId", "index", "total", "contentHash", "base64Data"));
+    }
+
+    @Test
+    void roundTripsUnicodeAndRejectsMalformedPayloadShapes() {
         BridgeJsonCodec codec = new BridgeJsonCodec();
         ServerAgentRequestPayload payload = new ServerAgentRequestPayload(
-                BridgeProtocol.VERSION,
                 UUID.randomUUID(),
                 "machine",
                 "压印机怎么搭？",
@@ -34,7 +77,9 @@ final class BridgeJsonCodecTest {
                         "\"text\":\"先前问题\"",
                         "\"text\":\"先前问题\",\"extra\":true"),
                 ServerAgentRequestPayload.class));
-        assertThrows(IllegalArgumentException.class, () -> new RemoteCancelPayload(99, UUID.randomUUID()));
+        assertThrows(IllegalArgumentException.class, () -> codec.decode(
+                codec.encode(payload).replace("\"clientToolIds\":[]", "\"clientToolIds\":null"),
+                ServerAgentRequestPayload.class));
     }
 
     @Test
@@ -43,7 +88,6 @@ final class BridgeJsonCodecTest {
         UUID requestId = UUID.randomUUID();
         UUID invocationId = UUID.randomUUID();
         ServerAgentRequestPayload request = new ServerAgentRequestPayload(
-                BridgeProtocol.VERSION,
                 requestId,
                 "main",
                 "读取视频设置",
@@ -55,7 +99,6 @@ final class BridgeJsonCodecTest {
                 codec.decode(codec.encode(request), ServerAgentRequestPayload.class));
 
         ClientToolCallPayload call = new ClientToolCallPayload(
-                BridgeProtocol.VERSION,
                 requestId,
                 invocationId,
                 "main",
@@ -63,7 +106,7 @@ final class BridgeJsonCodecTest {
                 "{\"section\":\"OPTIONS\"}");
         assertEquals(call, codec.decode(codec.encode(call), ClientToolCallPayload.class));
         ClientToolCancelPayload cancel = new ClientToolCancelPayload(
-                BridgeProtocol.VERSION, requestId, invocationId);
+                requestId, invocationId);
         assertEquals(cancel, codec.decode(codec.encode(cancel), ClientToolCancelPayload.class));
 
         ClientToolResultChunkPayload result = ClientToolResultChunkPayload.from(
@@ -83,7 +126,6 @@ final class BridgeJsonCodecTest {
                 codec.encode(call).replaceFirst("\\{", "{\"extra\":1,"),
                 ClientToolCallPayload.class));
         assertThrows(IllegalArgumentException.class, () -> new ServerAgentRequestPayload(
-                BridgeProtocol.VERSION,
                 requestId,
                 "main",
                 "question",
@@ -124,7 +166,6 @@ final class BridgeJsonCodecTest {
     void untrustedHugeChunkCountDoesNotDriveProportionalAllocation() {
         byte[] data = "x".getBytes(java.nio.charset.StandardCharsets.UTF_8);
         RemoteToolResultChunkPayload chunk = new RemoteToolResultChunkPayload(
-                BridgeProtocol.VERSION,
                 UUID.randomUUID(),
                 0,
                 Integer.MAX_VALUE,
@@ -213,6 +254,23 @@ final class BridgeJsonCodecTest {
                     ServerAgentEventChunkPayload.from(requestId, raw);
             assertTrue(codec.encode(chunk).length() < 32_767);
         }
+    }
+
+    private static void assertExactPayloadShape(
+            BridgeJsonCodec codec, Object payload, Set<String> fields) {
+        String json = codec.encode(payload);
+        JsonObject body = JsonParser.parseString(json).getAsJsonObject();
+        assertEquals(fields, body.keySet());
+        assertEquals(payload, codec.decode(json, payload.getClass()));
+
+        JsonObject missing = body.deepCopy();
+        missing.remove(fields.iterator().next());
+        assertThrows(IllegalArgumentException.class,
+                () -> codec.decode(missing.toString(), payload.getClass()));
+        JsonObject extra = body.deepCopy();
+        extra.addProperty("unexpected", true);
+        assertThrows(IllegalArgumentException.class,
+                () -> codec.decode(extra.toString(), payload.getClass()));
     }
 
     private static void awaitNoAssemblies(java.util.function.IntSupplier active) throws Exception {

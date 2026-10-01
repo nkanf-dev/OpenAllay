@@ -18,6 +18,9 @@ import dev.openallay.guide.semantic.SemanticDocument;
 import dev.openallay.guide.semantic.SemanticMessageParser;
 import dev.openallay.guide.ui.GuideTranscriptVirtualizer;
 import dev.openallay.guide.ui.GuideViewportAnchor;
+import dev.openallay.model.ModelContent;
+import dev.openallay.model.ModelMessage;
+import dev.openallay.model.ModelRole;
 import dev.openallay.model.ModelUsage;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -49,10 +52,16 @@ final class Phase4SemanticHistoryScaleTest {
         Path database = temporary.resolve("scale.db");
         SqliteGuideHistoryStore store = new SqliteGuideHistoryStore(
                 database, Clock.fixed(NOW, ZoneOffset.UTC), new GuideHistoryCodec());
-        GuideHistoryPartition fixture = fixture();
+        GuideHistoryFixture fixture = fixture();
 
         long saveStarted = System.nanoTime();
-        store.save(fixture);
+        GuideHistoryFixture.seed(store, fixture);
+        List<ModelMessage> actualContext = List.of(
+                ModelMessage.userText("current compacted request"),
+                new ModelMessage(ModelRole.ASSISTANT,
+                        List.of(new ModelContent.Text("current compacted answer"))));
+        store.commit(new GuideHistoryCommit(SCOPE, List.of(
+                new GuideHistoryMutation.ReplaceContext("main", actualContext))));
         long saveMillis = elapsedMillis(saveStarted);
 
         long metadataStarted = System.nanoTime();
@@ -73,7 +82,7 @@ final class Phase4SemanticHistoryScaleTest {
         GuideHistoryContextSeed context = store.context(contextRequest);
         long contextMillis = elapsedMillis(contextStarted);
         assertTrue(context.estimatedTokens() <= contextRequest.availableHistoryTokens());
-        assertTrue(context.messages().size() < TIMELINE_ROWS);
+        assertEquals(actualContext, context.messages());
 
         long unrelatedRequestRow = rowId(database, "requests", requestId(0), null);
         long unrelatedTimelineRow = rowId(database, "timeline_entries", requestId(0), 0);
@@ -119,7 +128,7 @@ final class Phase4SemanticHistoryScaleTest {
                 visible.toIndexExclusive() - visible.fromIndex());
     }
 
-    private static GuideHistoryPartition fixture() {
+    private static GuideHistoryFixture fixture() {
         SemanticMessageParser parser = new SemanticMessageParser();
         List<SemanticDocument> documents = List.of(
                 parser.parse("# Heading\n\nA paragraph with **strong** text."),
@@ -148,8 +157,8 @@ final class Phase4SemanticHistoryScaleTest {
                     NOW.plusSeconds(index), NOW.plusSeconds(index + 1),
                     NOW.plusSeconds(index + 1), GuideModelSelection.client("scale")));
         }
-        return new GuideHistoryPartition(
-                GuideHistoryPartition.SCHEMA_VERSION, SCOPE, "main",
+        return new GuideHistoryFixture(
+                SCOPE, "main",
                 List.of(new GuideSessionSnapshot(
                         "main", List.of(), requests, List.of(),
                         GuideModelSelection.client("scale"))),

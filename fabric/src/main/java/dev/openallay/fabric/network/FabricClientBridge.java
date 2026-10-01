@@ -28,8 +28,7 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 public final class FabricClientBridge {
     private final BridgeJsonCodec codec = new BridgeJsonCodec();
     private final RemoteCapabilityStore capabilities = new RemoteCapabilityStore();
-    private final Map<UUID, Consumer<ServerAgentEventPayload>> serverRequests =
-            new ConcurrentHashMap<>();
+    private final Map<UUID, ServerRequest> serverRequests = new ConcurrentHashMap<>();
     private final Map<UUID, Set<UUID>> agentEventIds = new ConcurrentHashMap<>();
     private final Object serverRequestLock = new Object();
     private final ServerAgentRequestChunker requestChunker = new ServerAgentRequestChunker();
@@ -136,7 +135,7 @@ public final class FabricClientBridge {
             outbound = request.withClientToolIds(success.value().clientToolIds());
         }
         synchronized (serverRequestLock) {
-            serverRequests.put(request.requestId(), events);
+            serverRequests.put(request.requestId(), new ServerRequest(events));
         }
         try {
             for (var chunk : requestChunker.split(
@@ -156,18 +155,19 @@ public final class FabricClientBridge {
     }
 
     public boolean cancelServer(UUID requestId) {
-        Consumer<ServerAgentEventPayload> removed;
+        boolean cancelled;
         synchronized (serverRequestLock) {
-            removed = serverRequests.remove(requestId);
-            clearAgentEventChunksLocked(requestId);
+            ServerRequest request = serverRequests.get(requestId);
+            cancelled = request != null && !request.cancelled;
+            if (cancelled) request.cancelled = true;
         }
         ClientToolExecutionEndpoint endpoint = clientTools;
         if (endpoint != null) endpoint.close(requestId);
-        if (removed == null || !ClientPlayNetworking.canSend(FabricBridgePayloads.Packet.TYPE)) {
+        if (!cancelled || !ClientPlayNetworking.canSend(FabricBridgePayloads.Packet.TYPE)) {
             return false;
         }
         send("agent_cancel", new ServerAgentCancelPayload(
-                dev.openallay.bridge.protocol.BridgeProtocol.VERSION, requestId));
+                requestId));
         return true;
     }
 
@@ -233,25 +233,46 @@ public final class FabricClientBridge {
     }
 
     private void receiveAgentEvent(ServerAgentEventPayload event) {
-        Consumer<ServerAgentEventPayload> consumer;
+        ServerRequest request;
         boolean terminal = event.terminal();
         synchronized (serverRequestLock) {
-            consumer = serverRequests.get(event.requestId());
-            if (consumer == null) {
+            request = serverRequests.get(event.requestId());
+            if (request == null) {
                 return;
             }
-            if (terminal) {
+            if (terminal && !request.cancelled) {
                 serverRequests.remove(event.requestId());
                 clearAgentEventChunksLocked(event.requestId());
             }
         }
         try {
-            consumer.accept(event);
+            request.events.accept(event);
         } finally {
+            synchronized (serverRequestLock) {
+                if ("context_finalized".equals(event.eventType())) request.contextFinalized = true;
+                if (terminal) request.terminal = true;
+                // Cancellation closes tools now, but context handoff must outlive terminal delivery.
+                if (request.cancelled && request.contextFinalized && request.terminal
+                        && serverRequests.remove(event.requestId(), request)) {
+                    clearAgentEventChunksLocked(event.requestId());
+                }
+            }
             if (terminal) {
                 ClientToolExecutionEndpoint endpoint = clientTools;
                 if (endpoint != null) endpoint.close(event.requestId());
             }
+        }
+    }
+
+    /** One pending cancellation handshake, owned and cleared with its request callback. */
+    private static final class ServerRequest {
+        private final Consumer<ServerAgentEventPayload> events;
+        private boolean cancelled;
+        private boolean contextFinalized;
+        private boolean terminal;
+
+        private ServerRequest(Consumer<ServerAgentEventPayload> events) {
+            this.events = java.util.Objects.requireNonNull(events, "events");
         }
     }
 

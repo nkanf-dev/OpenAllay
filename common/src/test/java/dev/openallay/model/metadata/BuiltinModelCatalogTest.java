@@ -77,8 +77,8 @@ final class BuiltinModelCatalogTest {
     }
     @Test void strictSchemaProvenanceNumbersAndDuplicatesRejectWholeResource() {
         String json = sampleJson();
-        for (String bad : List.of(json.replace("\"schemaVersion\":1", "\"schemaVersion\":2"),
-                json.replace("\"schemaVersion\":1", "\"schemaVersion\":1,\"schemaVersion\":1"),
+        for (String bad : List.of(
+                json.replace("\"models\":", "\"sources\":[],\"models\":"),
                 json.replace("\"catalogVersion\"", "\"unknown\""),
                 json.replace("\"contextWindowTokens\":1050000", "\"contextWindowTokens\":0"),
                 json.replace("\"maxOutputTokens\":128000", "\"maxOutputTokens\":1.5"),
@@ -138,7 +138,7 @@ final class BuiltinModelCatalogTest {
                 .profiles().getFirst().runtimeConfig().contextWindowTokens());
     }
     @Test void malformedBuiltinDoesNotBreakExplicitProfilesAndUnknownContextStaysRequired() {
-        var empty = BuiltinModelCatalog.parse(new StringReader("{\"schemaVersion\":77}"));
+        var empty = BuiltinModelCatalog.parse(new StringReader("{}"));
         var loader = new ModelProfilesConfigLoader(empty.catalog());
         assertTrue(load(loader, definition("gpt-6-luna", "https://provider.example/v1/", 1_000_000),
                 Map.of()).profiles().getFirst().available());
@@ -191,7 +191,7 @@ final class BuiltinModelCatalogTest {
     }
     static ModelProfilesConfigLoader.Load load(ModelProfilesConfigLoader loader,
             ModelProfileDefinition definition, Map<ModelMetadata.Key, ModelMetadata> metadata) {
-        var config = new ModelProfilesConfig(2, definition.id(), List.of(definition));
+        var config = new ModelProfilesConfig(definition.id(), List.of(definition));
         var result = loader.load(new StringReader(new ModelProfilesConfigWriter().encode(config)),
                 CredentialResolver.environment(Map.of("KEY", "private-sentinel")), metadata);
         return ((ToolResult.Success<ModelProfilesConfigLoader.Load>) result).value();

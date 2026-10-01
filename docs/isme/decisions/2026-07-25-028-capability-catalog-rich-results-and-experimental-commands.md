@@ -1,5 +1,10 @@
 # SKMB-2026-07-25-028: Capability Catalog, Typed Rhino Results, and Experimental Commands
 
+> Subsequent decision: [041](2026-10-01-041-execution-context-simplification.md)
+> authorizes a breaking simplification of mandatory origins for generic JavaScript, roots declarations, and display-only model-context restoration.
+> Its implementation/verification is tracked separately; this document retains
+> the historical decision and is not proof that the new behavior is delivered.
+
 - Status: accepted
 - Decided by: designer
 - Approval source: >-

@@ -85,7 +85,7 @@ final class ModelProfileSettingsStoreTest {
         var automatic = new ModelProfileDefinition("main", "Luna", true, ModelProtocol.OPENAI_CHAT,
                 URI.create("https://openrouter.ai/api/v1/"), "gpt-6-luna", "env:MODEL_KEY",
                 1_000_000, null, Duration.ofSeconds(30), Duration.ofSeconds(300), null);
-        var config = new ModelProfilesConfig(2, "main", List.of(automatic));
+        var config = new ModelProfilesConfig("main", List.of(automatic));
         Path target = temporary.resolve("models.json");
         var store = new ModelProfileSettingsStore(target);
         var saved = success(store.save(config, Map.of("MODEL_KEY", "fixture-key"), Map.of(),
@@ -111,7 +111,7 @@ final class ModelProfileSettingsStoreTest {
         var profile = new ModelProfileDefinition("main", "Luna", true, ModelProtocol.OPENAI_CHAT,
                 URI.create("https://provider.example/v1/"), "gpt-6-luna", "env:MODEL_KEY",
                 1_000_000, null, Duration.ofSeconds(30), Duration.ofSeconds(300), null);
-        var config = new ModelProfilesConfig(2, "main", List.of(profile));
+        var config = new ModelProfilesConfig("main", List.of(profile));
         AtomicBoolean published = new AtomicBoolean();
         var store = new ModelProfileSettingsStore(target, (ignoredPath, ignoredContents) -> {
             throw new SettingsWriteException();
@@ -148,7 +148,7 @@ final class ModelProfileSettingsStoreTest {
                 Duration.ofSeconds(300),
                 null);
         return new ModelProfilesConfig(
-                ModelProfilesConfig.SCHEMA_VERSION, profile.id(), List.of(profile));
+                profile.id(), List.of(profile));
     }
 
     @SuppressWarnings("unchecked")

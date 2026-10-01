@@ -65,7 +65,6 @@ public final class LiveAgentTraceRecorder {
     public synchronized LiveAgentTrace finish(
             AgentState state, String finalText, String errorCode) {
         return new LiveAgentTrace(
-                1,
                 request.requestId(),
                 request.actorId(),
                 request.sessionId(),

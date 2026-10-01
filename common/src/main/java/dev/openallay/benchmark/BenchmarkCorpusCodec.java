@@ -8,10 +8,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-/** Strict schema-1 benchmark corpus codec. */
+/** Strict benchmark corpus codec. */
 public final class BenchmarkCorpusCodec {
     private static final Set<String> ROOT_FIELDS =
-            Set.of("schemaVersion", "version", "cases");
+            Set.of("cases");
     private static final Set<String> CASE_FIELDS =
             Set.of(
                     "id",
@@ -31,9 +31,7 @@ public final class BenchmarkCorpusCodec {
             throw invalid("Benchmark corpus root must be an object");
         }
         exactFields(root, ROOT_FIELDS, "corpus");
-        int schemaVersion = integer(root, "schemaVersion");
-        String version = string(root, "version");
-        if (!root.get("cases").isJsonArray()) {
+        if (!root.has("cases") || !root.get("cases").isJsonArray()) {
             throw invalid("cases must be an array");
         }
         ArrayList<BenchmarkCase> cases = new ArrayList<>();
@@ -52,7 +50,7 @@ public final class BenchmarkCorpusCodec {
                     integer(object, "maxModelTurns"),
                     verifier(object.getAsJsonObject("verifier"))));
         });
-        return new BenchmarkCorpus(schemaVersion, version, cases);
+        return new BenchmarkCorpus(cases);
     }
 
     private static BenchmarkCase.Verifier verifier(JsonObject object) {

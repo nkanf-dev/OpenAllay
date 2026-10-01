@@ -48,7 +48,6 @@ final class RecipeSettingsProjectionTest {
     @Test
     void preferredCycleSkipsUnavailableOrDisabledViewersButCanLeaveStalePreference() {
         RecipeClientConfig stale = new RecipeClientConfig(
-                RecipeClientConfig.SCHEMA_VERSION,
                 RecipeVisibilityPolicy.ALL_KNOWN,
                 "viewer:rei",
                 Set.of("viewer:rei"));

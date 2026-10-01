@@ -1,5 +1,10 @@
 # SKMB-2026-07-24-025: Rhino Agent Runtime, Request Workspace, and Managed Skills
 
+> Subsequent decision: [041](2026-10-01-041-execution-context-simplification.md)
+> authorizes a breaking simplification of the model roots selector and mandatory source attribution for generic computations.
+> Its implementation/verification is tracked separately; this document retains
+> the historical decision and is not proof that the new behavior is delivered.
+
 - Status: accepted; implemented and verified
 - Date: 2026-07-24
 - Scope: post-0.1.0 Agent tool architecture

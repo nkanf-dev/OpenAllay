@@ -18,9 +18,7 @@ import dev.openallay.guide.history.GuideHistoryCommit;
 import dev.openallay.guide.history.GuideHistoryContextRequest;
 import dev.openallay.guide.history.GuideHistoryContextSeed;
 import dev.openallay.guide.history.GuideHistoryDeleteScope;
-import dev.openallay.guide.history.GuideHistoryLoad;
 import dev.openallay.guide.history.GuideHistoryMetadata;
-import dev.openallay.guide.history.GuideHistoryPartition;
 import dev.openallay.guide.history.GuideHistoryScope;
 import dev.openallay.model.ModelMessage;
 import dev.openallay.tool.ToolResult;
@@ -46,7 +44,7 @@ final class GuideServiceContextLoadTest {
             Instant.parse("2026-07-18T13:00:00Z"), ZoneOffset.UTC);
 
     @Test
-    void recalculatesDurableContextForEachSelectedProfileBeforeDispatch() {
+    void loadsDurableContextOnceAndKeepsLiveContextAcrossProfileSwitch() {
         ContextHistory history = new ContextHistory();
         ContextLocal local = new ContextLocal();
         GuideService service = service(local, new NoRemote(), history);
@@ -65,9 +63,8 @@ final class GuideServiceContextLoadTest {
 
         service.setModelSelection(GuideModelSelection.client("large")).join();
         UUID second = success(service.ask("second").join());
-        assertEquals(256_000, history.requests.getLast().budget().contextWindowTokens());
+        assertEquals(1, history.requests.size());
         assertEquals("same/model", history.requests.getLast().modelIdentifier());
-        history.completeLatest(seed("old question", "old answer"));
         assertEquals(List.of("small", "large"), local.dispatched);
         assertEquals(GuideRequestStatus.MODEL_WAIT, request(service, second).status());
     }
@@ -122,8 +119,7 @@ final class GuideServiceContextLoadTest {
                 "main", List.of(ModelMessage.userText(user), new dev.openallay.model.ModelMessage(
                         dev.openallay.model.ModelRole.ASSISTANT,
                         List.of(new dev.openallay.model.ModelContent.Text(assistant)))),
-                List.of(), 10, new dev.openallay.guide.history.GuideHistoryCursor(
-                        0, UUID.nameUUIDFromBytes(user.getBytes(java.nio.charset.StandardCharsets.UTF_8))));
+                List.of(), 10);
     }
 
     private static GuideRequestSnapshot request(GuideService service, UUID requestId) {
@@ -151,12 +147,6 @@ final class GuideServiceContextLoadTest {
         }
         @Override public CompletableFuture<Void> commit(GuideHistoryCommit commit) {
             return CompletableFuture.completedFuture(null);
-        }
-        @Override public CompletableFuture<GuideHistoryLoad> load(GuideHistoryScope scope) {
-            throw new AssertionError("legacy full load");
-        }
-        @Override public CompletableFuture<Void> save(GuideHistoryPartition partition) {
-            throw new AssertionError("legacy full save");
         }
         @Override public CompletableFuture<Void> delete(GuideHistoryDeleteScope scope) {
             return CompletableFuture.completedFuture(null);
@@ -189,6 +179,7 @@ final class GuideServiceContextLoadTest {
                     new ContextBudget(profileId.equals("small") ? 64_000 : 256_000, 4_096),
                     1_000, "same/model"));
         }
+        @Override public boolean hasContext(UUID actor, String sessionId) { return !hydrated.isEmpty(); }
         @Override public void hydrateContext(
                 UUID actor, String sessionId, List<ModelMessage> messages,
                 List<ContextCheckpoint> checkpoints) {

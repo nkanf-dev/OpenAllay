@@ -13,7 +13,6 @@ import dev.openallay.agent.session.AgentSessionStore;
 import dev.openallay.agent.session.AgentSessionKey;
 import dev.openallay.agent.context.ContextBudget;
 import dev.openallay.agent.context.ContextCompactor;
-import dev.openallay.agent.context.ToolResultContextReducer;
 import dev.openallay.agent.context.Utf8ContextTokenEstimator;
 import dev.openallay.agent.tool.AgentToolExecutor;
 import dev.openallay.agent.tool.AgentToolResult;
@@ -479,12 +478,10 @@ final class GameGuideAgentTest {
     }
 
     @Test
-    void javascriptRootSelectorFailuresReachTheModelAndCorrectedBareSelectionSucceeds() {
+    void javascriptAccessesMultipleCapturedViewsWithoutRootDeclarations() {
         QueueModelClient model = new QueueModelClient();
-        String source = "return {position: mc.game.player.player.position, unselected: typeof mc.items};";
-        model.enqueue(CompletableFuture.completedFuture(javascriptProgramTurn("call-player-path", source, "mc.player")));
-        model.enqueue(CompletableFuture.completedFuture(javascriptProgramTurn("call-game-path", source, "mc.game")));
-        model.enqueue(CompletableFuture.completedFuture(javascriptProgramTurn("call-game-bare", source, "game")));
+        String source = "return {position: mc.game.player.player.position, items: mc.items.length};";
+        model.enqueue(CompletableFuture.completedFuture(javascriptProgramTurn("call-direct-data", source)));
         model.enqueue(CompletableFuture.completedFuture(textTurn("The captured position is 1, 64, 2.")));
         AtomicInteger captures = new AtomicInteger();
         var javascript = new dev.openallay.tool.builtin.RunJavascriptTool(
@@ -495,53 +492,38 @@ final class GameGuideAgentTest {
                 new dev.openallay.script.workspace.JavascriptResultPresenter());
         var registry = new dev.openallay.tool.ToolRegistry();
         registry.register("test", List.of(javascript));
-        var context = dev.openallay.testing.JavascriptAgentTestFixtures.context("agent-root-recovery");
+        var context = dev.openallay.testing.JavascriptAgentTestFixtures.context("agent-direct-data");
         AgentRequest request = new AgentRequest(UUID.randomUUID(), UUID.randomUUID(), "main",
-                "Read the player position.", AgentSystemPrompt.compose(""), context, false);
+                "Read the player position and item count.", AgentSystemPrompt.compose(""), context, false);
         List<AgentEvent> events = new ArrayList<>();
         AgentResult result = new GameGuideAgent(model,
                 new dev.openallay.agent.tool.LocalAgentToolExecutor(registry, new Gson()),
                 new AgentSessionStore(), new Gson()).ask(request, events::add).join();
         assertTrue(result.successful());
-        assertEquals(1, captures.get(), "all calls retain the same detached request graph");
-        assertEquals(4, model.requests.size());
-        List<AgentEvent.ToolCompleted> completed = events.stream()
+        assertEquals(1, captures.get());
+        assertEquals(2, model.requests.size());
+        AgentEvent.ToolCompleted completed = events.stream()
                 .filter(AgentEvent.ToolCompleted.class::isInstance)
-                .map(AgentEvent.ToolCompleted.class::cast).toList();
-        assertEquals(List.of("call-player-path", "call-game-path", "call-game-bare"), completed.stream()
-                .map(AgentEvent.ToolCompleted::invocationId).toList());
-        for (int index = 0; index < 2; index++) {
-            String bare = index == 0 ? "player" : "game";
-            assertTrue(completed.get(index).failure());
-            assertEquals("javascript_root_unavailable", completed.get(index).normalized().get("code").getAsString());
-            assertFalse(completed.get(index).normalized().has("value"), "selector failure publishes no empty fact");
-            ModelContent.ToolResult failure = (ModelContent.ToolResult) model.requests.get(index + 1)
-                    .messages().getLast().content().getFirst();
-            assertTrue(failure.error());
-            String feedback = failure.value().getAsString();
-            assertTrue(feedback.contains("code: javascript_root_unavailable"));
-            assertTrue(feedback.contains("Use roots [\"" + bare + "\"] and access mc." + bare));
-            assertTrue(feedback.contains("Current declared bare roots:"));
-        }
-        assertFalse(completed.get(2).failure(), "different corrected execution arguments are not suppressed");
-        var preview = completed.get(2).normalized().getAsJsonObject("value").getAsJsonObject("preview");
+                .map(AgentEvent.ToolCompleted.class::cast).findFirst().orElseThrow();
+        assertFalse(completed.failure());
+        var preview = completed.normalized().getAsJsonObject("value").getAsJsonObject("preview");
         assertEquals(1, preview.getAsJsonObject("position").get("x").getAsInt());
         assertEquals(64, preview.getAsJsonObject("position").get("y").getAsInt());
         assertEquals(2, preview.getAsJsonObject("position").get("z").getAsInt());
-        assertEquals("undefined", preview.get("unselected").getAsString());
-        ModelContent.ToolResult success = (ModelContent.ToolResult) model.requests.get(3)
+        assertTrue(preview.get("items").getAsInt() > 0);
+        ModelContent.ToolResult success = (ModelContent.ToolResult) model.requests.get(1)
                 .messages().getLast().content().getFirst();
         assertFalse(success.error());
-        assertFalse(success.value().getAsString().contains("no_new_information"));
+        assertFalse(success.value().getAsString().contains("context_evidence_unavailable"));
     }
 
     @Test
     void javascriptModuleReturnFailureReachesTheModelWithJsonRecoveryAndNoEmptyFact() {
         QueueModelClient model = new QueueModelClient();
         model.enqueue(CompletableFuture.completedFuture(javascriptProgramTurn("call-module",
-                "var module = require('openallay:crafting'); var count = mc.items.length; return module;", "items")));
+                "var module = require('openallay:crafting'); var count = mc.items.length; return module;")));
         model.enqueue(CompletableFuture.completedFuture(javascriptProgramTurn("call-data",
-                "var module = require('openallay:crafting'); return {count: mc.items.length};", "items")));
+                "var module = require('openallay:crafting'); return {count: mc.items.length};")));
         model.enqueue(CompletableFuture.completedFuture(textTurn("The captured item count is 6.")));
         var javascript = new dev.openallay.tool.builtin.RunJavascriptTool(
                 new dev.openallay.script.RhinoJavascriptRuntime(),
@@ -580,10 +562,9 @@ final class GameGuideAgentTest {
         assertFalse(success.error());
     }
 
-    private static ModelTurn javascriptProgramTurn(String invocationId, String source, String root) {
+    private static ModelTurn javascriptProgramTurn(String invocationId, String source) {
         JsonObject input = new JsonObject();
         input.addProperty("source", source);
-        input.add("roots", JsonParser.parseString("[\"" + root + "\"]"));
         input.addProperty("title", "Read captured data");
         input.addProperty("description", "Read the requested data without changing the world");
         return new ModelTurn("test", "test-model", List.of(new ModelContent.ToolUse(
@@ -667,7 +648,7 @@ final class GameGuideAgentTest {
 
         assertEquals("context_compaction_failed", failed.errorCode());
         assertEquals(1, malformed.requests.size());
-        assertEquals(4, failedSessions.status(key).historyMessages());
+        assertEquals(6, failedSessions.status(key).historyMessages());
 
         AgentSessionStore cancelledSessions = new AgentSessionStore();
         cancelledSessions.hydrate(key, largeHistory());
@@ -681,7 +662,7 @@ final class GameGuideAgentTest {
 
         assertEquals(AgentState.CANCELLED, running.join().state());
         assertEquals(1, pendingModel.requests.size());
-        assertEquals(4, cancelledSessions.status(key).historyMessages());
+        assertEquals(6, cancelledSessions.status(key).historyMessages());
     }
 
     @Test
@@ -692,7 +673,6 @@ final class GameGuideAgentTest {
                 model,
                 new Gson(),
                 new Utf8ContextTokenEstimator(),
-                new ToolResultContextReducer(),
                 new ContextBudget(600, 100),
                 "test-model",
                 Clock.systemUTC());
@@ -714,7 +694,7 @@ final class GameGuideAgentTest {
     private static ContextCompactor compactor(ModelClient model) {
         return new ContextCompactor(
                 model, new Gson(), new Utf8ContextTokenEstimator(),
-                new ToolResultContextReducer(), new ContextBudget(1_200, 100),
+                new ContextBudget(1_200, 100),
                 "test-model", Clock.systemUTC());
     }
 

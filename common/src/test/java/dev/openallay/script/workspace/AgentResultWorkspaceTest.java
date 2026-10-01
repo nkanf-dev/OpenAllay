@@ -6,7 +6,13 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.JsonParser;
+import dev.openallay.context.SourceObservation;
+import dev.openallay.script.result.JavascriptResultShape;
+import dev.openallay.script.result.JavascriptSemanticKind;
+import dev.openallay.testing.GroundedTestFixtures;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -26,6 +32,48 @@ final class AgentResultWorkspaceTest {
         WorkspaceException closed =
                 assertThrows(WorkspaceException.class, () -> workspace.open(handle));
         assertEquals("workspace_closed", closed.code());
+    }
+
+    @Test
+    void sourceReplayRetainsExactSummaryWithoutCountingReadsAsCaptures() {
+        AgentResultWorkspace workspace = new AgentResultWorkspace();
+        SourceObservation source = new SourceObservation(
+                GroundedTestFixtures.serverEvidence(), Instant.EPOCH.plusSeconds(20));
+        ArrayList<SourceObservation> supplied = new ArrayList<>(List.of(source));
+        String handle = workspace.store(
+                JsonParser.parseString("[1,2,3]"),
+                JavascriptResultShape.ordinary(JavascriptSemanticKind.GENERIC), false, supplied);
+        supplied.clear();
+
+        for (int index = 0; index < 20; index++) {
+            workspace.open(handle);
+            workspace.select(List.of(handle));
+            assertEquals(List.of(source), workspace.sources(handle));
+            assertEquals(List.of(source), workspace.selectSources(List.of(handle)).get(handle));
+        }
+        assertSame(source, workspace.sources(handle).getFirst());
+        assertEquals(1, workspace.selectSources(List.of(handle, handle)).size());
+        assertThrows(UnsupportedOperationException.class, () -> workspace.sources(handle).clear());
+        assertThrows(UnsupportedOperationException.class,
+                () -> workspace.selectSources(List.of(handle)).clear());
+    }
+
+    @Test
+    void sourceSelectionRejectsMissingAndClosedHandles() {
+        AgentResultWorkspace workspace = new AgentResultWorkspace();
+        String handle = workspace.store(JsonParser.parseString("1"));
+        assertEquals(List.of(), workspace.sources(handle));
+        assertTrue(workspace.selectSources(null).isEmpty());
+        assertEquals("workspace_handle_unavailable", assertThrows(WorkspaceException.class,
+                () -> workspace.sources("missing")).code());
+        assertEquals("workspace_handle_unavailable", assertThrows(WorkspaceException.class,
+                () -> workspace.selectSources(List.of(handle, "missing"))).code());
+
+        workspace.close();
+        assertEquals("workspace_closed", assertThrows(WorkspaceException.class,
+                () -> workspace.sources(handle)).code());
+        assertEquals("workspace_closed", assertThrows(WorkspaceException.class,
+                () -> workspace.selectSources(List.of(handle))).code());
     }
 
     @Test
@@ -69,7 +117,7 @@ final class AgentResultWorkspaceTest {
         assertTrue(result.omittedRows() > 0);
         assertTrue(result.modelText().contains("workspace.open(\"r_large_rows\")"));
         assertTrue(result.modelText().getBytes(StandardCharsets.UTF_8).length
-                <= JavascriptResultPresenter.MODEL_TEXT_TOKEN_BUDGET);
+                <= JavascriptResultPresenter.MODEL_TEXT_BYTE_BUDGET);
     }
 
     @Test
@@ -87,7 +135,7 @@ final class AgentResultWorkspaceTest {
         result.preview().getAsJsonObject().entrySet().forEach(entry ->
                 assertTrue(!entry.getValue().getAsString().isBlank()));
         assertTrue(result.modelText().getBytes(StandardCharsets.UTF_8).length
-                <= JavascriptResultPresenter.MODEL_TEXT_TOKEN_BUDGET);
+                <= JavascriptResultPresenter.MODEL_TEXT_BYTE_BUDGET);
     }
 
     @Test

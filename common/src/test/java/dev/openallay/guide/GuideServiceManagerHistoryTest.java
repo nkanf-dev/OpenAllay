@@ -11,10 +11,9 @@ import dev.openallay.context.ContextCapability;
 import dev.openallay.context.ToolInvocationContext;
 import dev.openallay.guide.history.GuideHistoryAccess;
 import dev.openallay.guide.history.GuideHistoryActivity;
+import dev.openallay.guide.history.GuideHistoryCommit;
 import dev.openallay.guide.history.GuideHistoryDeleteScope;
-import dev.openallay.guide.history.GuideHistoryLoad;
 import dev.openallay.guide.history.GuideHistoryMetadata;
-import dev.openallay.guide.history.GuideHistoryPartition;
 import dev.openallay.guide.history.GuideHistoryScope;
 import dev.openallay.tool.ToolResult;
 import java.time.Clock;
@@ -206,12 +205,6 @@ final class GuideServiceManagerHistoryTest {
         private int resetCalls;
 
         @Override
-        public CompletableFuture<GuideHistoryLoad> load(GuideHistoryScope scope) {
-            loads.add(scope);
-            return CompletableFuture.completedFuture(GuideHistoryLoad.empty());
-        }
-
-        @Override
         public CompletableFuture<java.util.Optional<GuideHistoryMetadata>> metadata(
                 GuideHistoryScope scope) {
             loads.add(scope);
@@ -219,7 +212,7 @@ final class GuideServiceManagerHistoryTest {
         }
 
         @Override
-        public CompletableFuture<Void> save(GuideHistoryPartition partition) {
+        public CompletableFuture<Void> commit(GuideHistoryCommit commit) {
             return CompletableFuture.completedFuture(null);
         }
 

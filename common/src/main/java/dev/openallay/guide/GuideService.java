@@ -8,8 +8,6 @@ import dev.openallay.context.ToolInvocationContext;
 import dev.openallay.guide.history.GuideHistoryAccess;
 import dev.openallay.guide.history.GuideHistoryDeleteScope;
 import dev.openallay.guide.history.GuideHistoryException;
-import dev.openallay.guide.history.GuideHistoryLoad;
-import dev.openallay.guide.history.GuideHistoryPartition;
 import dev.openallay.guide.history.GuideHistoryMetadata;
 import dev.openallay.guide.history.GuideHistoryPage;
 import dev.openallay.guide.history.GuideHistoryPageRequest;
@@ -48,6 +46,7 @@ public final class GuideService implements GuideHistoryAdministration {
     private final GuideHistoryAccess history;
     private final Map<String, SessionState> sessions = new LinkedHashMap<>();
     private final Map<UUID, String> requestSessions = new LinkedHashMap<>();
+    private final Map<UUID, CancelledFinalization> pendingCancelledFinalization = new LinkedHashMap<>();
     private final CopyOnWriteArrayList<Consumer<GuideSnapshot>> listeners =
             new CopyOnWriteArrayList<>();
     private volatile GuideSnapshot snapshot;
@@ -159,21 +158,34 @@ public final class GuideService implements GuideHistoryAdministration {
             }
             boolean preparingContext = session.preparingContextRequest != null
                     && session.preparingContextRequest.equals(active.requestId());
-            boolean cancelled;
+            var note = new dev.openallay.model.ModelMessage(dev.openallay.model.ModelRole.ASSISTANT,
+                    List.of(new dev.openallay.model.ModelContent.Text(
+                            "[OpenAllay request ended: agent_cancelled] Agent request was cancelled")));
+            List<dev.openallay.model.ModelMessage> current = new ArrayList<>(session.modelContext);
+            List<dev.openallay.model.ModelMessage> original = new ArrayList<>(
+                    session.originalContext.getOrDefault(active.requestId(), List.of()));
+            if (original.isEmpty()) {
+                original.add(dev.openallay.model.ModelMessage.userText(active.userMessage()));
+                current.add(dev.openallay.model.ModelMessage.userText(active.userMessage()));
+            }
+            current.add(note);
+            original.add(note);
+            if (!preparingContext) {
+                pendingCancelledFinalization.put(active.requestId(), new CancelledFinalization(
+                        session.id, Objects.requireNonNull(session.requestSequences.get(active.requestId()))));
+            }
+            apply(active.requestId(), new AgentEvent.ContextUpdated(current, original));
+            apply(active.requestId(), new AgentEvent.Failed(
+                    "agent_cancelled", "Agent request was cancelled"));
             if (preparingContext) {
                 session.contextGeneration++;
                 session.preparingContextRequest = null;
-                cancelled = true;
-            } else {
-                cancelled = active.topology() == GuideTopology.SERVER
-                        ? remote.cancel(active.requestId())
-                        : local != null && local.cancel(actor, active.sessionId());
+            } else if (active.topology() == GuideTopology.SERVER) {
+                remote.cancel(active.requestId());
+            } else if (local != null) {
+                local.cancel(actor, active.sessionId(), active.requestId());
             }
-            if (cancelled) {
-                apply(active.requestId(), new AgentEvent.Failed(
-                        "agent_cancelled", "Agent request was cancelled"));
-            }
-            result.complete(new ToolResult.Success<>(cancelled));
+            result.complete(new ToolResult.Success<>(true));
         });
         return result;
     }
@@ -234,7 +246,7 @@ public final class GuideService implements GuideHistoryAdministration {
                 if (active.topology() == GuideTopology.SERVER) {
                     remote.cancel(active.requestId());
                 } else if (local != null) {
-                    local.cancel(actor, sessionId);
+                    local.cancel(actor, sessionId, active.requestId());
                 }
             }
             if (local != null) {
@@ -244,6 +256,8 @@ public final class GuideService implements GuideHistoryAdministration {
             session.requests.forEach(request -> requestSessions.remove(request.requestId()));
             durableProjection.removeSession(sessionId, session.requests);
             pendingHistoryMutations.add(new GuideHistoryMutation.DeleteSession(sessionId));
+            pendingCancelledFinalization.entrySet().removeIf(
+                    entry -> entry.getValue().sessionId().equals(sessionId));
             sessions.remove(sessionId);
             if (sessions.isEmpty()) {
                 sessions.put("main", new SessionState("main", defaultClientSelection()));
@@ -288,7 +302,9 @@ public final class GuideService implements GuideHistoryAdministration {
                                         request)).toList();
                 GuideSessionExportCollector collector =
                         new GuideSessionExportCollector(historyScope, history);
-                collector.collect(capturedSession, captured, capturedAt)
+                collector.collect(capturedSession, captured,
+                                Map.copyOf(session.originalContext),
+                                session.nextRequestSequence - 1, capturedAt)
                         .whenComplete((export, failure) -> dispatcher.execute(() -> {
                             if (failure == null) {
                                 result.complete(new ToolResult.Success<>(export));
@@ -324,6 +340,10 @@ public final class GuideService implements GuideHistoryAdministration {
             durableProjection.removeRequests(session.requests);
             session.requests.clear();
             session.messages.clear();
+            session.originalContext.clear();
+            pendingCancelledFinalization.entrySet().removeIf(
+                    entry -> entry.getValue().sessionId().equals(session.id));
+            session.modelContext = List.of();
             session.requestSequences.clear();
             session.totalRequests = 0;
             session.nextRequestSequence = 0;
@@ -424,7 +444,7 @@ public final class GuideService implements GuideHistoryAdministration {
                 if (active.topology() == GuideTopology.SERVER) {
                     remote.cancel(active.requestId());
                 } else if (local != null) {
-                    local.cancel(actor, active.sessionId());
+                    local.cancel(actor, active.sessionId(), active.requestId());
                 }
                 apply(active.requestId(), new AgentEvent.Failed(
                         "agent_cancelled", "Agent request was cancelled by disconnect"));
@@ -440,6 +460,7 @@ public final class GuideService implements GuideHistoryAdministration {
             }
             remote.disconnect();
             requestSessions.clear();
+            pendingCancelledFinalization.clear();
             sessions.clear();
             sessions.put("main", new SessionState("main", defaultClientSelection()));
             selectedSession = "main";
@@ -564,6 +585,7 @@ public final class GuideService implements GuideHistoryAdministration {
             }
         }
         requestSessions.clear();
+        pendingCancelledFinalization.clear();
         sessions.values().forEach(session -> invalidatePageLoad(
                 session, "history_page_cancelled", "History page request was cancelled"));
         sessions.clear();
@@ -627,6 +649,7 @@ public final class GuideService implements GuideHistoryAdministration {
         GuideRequestSnapshot request = GuideRequestSnapshot.start(
                 requestId, sessionId, topology, question, now, capturedSelection);
         session.requests.add(request);
+        session.originalContext.put(requestId, List.of());
         long requestSequence = session.nextRequestSequence++;
         session.requestSequences.put(requestId, requestSequence);
         session.totalRequests++;
@@ -645,13 +668,11 @@ public final class GuideService implements GuideHistoryAdministration {
             if (incrementalHistory) {
                 prepareRemoteContext(session, requestId, question);
             } else {
-                List<GuideMessage> previousHistory = List.copyOf(
-                        session.messages.subList(0, session.messages.size() - 1));
-                if (!remote.ask(
+                if (!remote.askWithContext(
                         requestId,
                         sessionId,
                         question,
-                        previousHistory,
+                        session.modelContext,
                         event -> apply(requestId, event))) {
                     apply(requestId, new AgentEvent.Failed(
                             "capability_unavailable",
@@ -662,7 +683,7 @@ public final class GuideService implements GuideHistoryAdministration {
                     return;
                 }
             }
-        } else if (incrementalHistory) {
+        } else if (incrementalHistory && !local.hasContext(actor, sessionId)) {
             prepareLocalContext(
                     session, requestId, capturedSelection.profileId(), question);
         } else {
@@ -866,13 +887,43 @@ public final class GuideService implements GuideHistoryAdministration {
     }
 
     private void apply(UUID requestId, AgentEvent event) {
-        String sessionId = requestSessions.get(requestId);
-        if (sessionId == null) {
+        if (event instanceof AgentEvent.ContextFinalized finalized) {
+            CancelledFinalization pending = pendingCancelledFinalization.remove(requestId);
+            if (disconnected || pending == null) return;
+            SessionState session = sessions.get(pending.sessionId());
+            if (session == null) return;
+            session.originalContext.put(requestId, finalized.requestMessages());
+            if (incrementalHistory) {
+                pendingHistoryMutations.add(new GuideHistoryMutation.ReplaceRequestContext(
+                        requestId, finalized.requestMessages()));
+            }
+            if (pending.sequence() == session.nextRequestSequence - 1) {
+                session.modelContext = finalized.messages();
+                if (incrementalHistory) {
+                    pendingHistoryMutations.add(new GuideHistoryMutation.ReplaceContext(
+                            pending.sessionId(), finalized.messages()));
+                }
+            }
+            publish();
             return;
         }
+        String sessionId = requestSessions.get(requestId);
+        if (sessionId == null) return;
         SessionState session = sessions.get(sessionId);
         int index = indexOf(session, requestId);
-        if (index < 0) {
+        if (index < 0) return;
+        GuideRequestSnapshot target = session.requests.get(index);
+        if (target.terminal()) return;
+        if (event instanceof AgentEvent.ContextUpdated updated) {
+            session.modelContext = updated.messages();
+            session.originalContext.put(requestId, updated.requestMessages());
+            if (incrementalHistory) {
+                pendingHistoryMutations.add(new GuideHistoryMutation.ReplaceContext(
+                        sessionId, updated.messages()));
+                pendingHistoryMutations.add(new GuideHistoryMutation.ReplaceRequestContext(
+                        requestId, updated.requestMessages()));
+            }
+            publish();
             return;
         }
         if (event instanceof AgentEvent.ContextCompacted compacted) {
@@ -1001,11 +1052,6 @@ public final class GuideService implements GuideHistoryAdministration {
         if (disconnected) {
             return;
         }
-        if (failure != null && historyFailure(failure, "history_load_failed")
-                .code().equals("history_operation_unsupported")) {
-            startLegacyHistoryLoad();
-            return;
-        }
         if (failure != null) {
             allowHistoryWrites = false;
             persistence = unavailable(failure, "history_load_failed");
@@ -1042,53 +1088,14 @@ public final class GuideService implements GuideHistoryAdministration {
         publishWithoutSave();
     }
 
-    private void startLegacyHistoryLoad() {
-        CompletableFuture<GuideHistoryLoad> loading;
-        try {
-            loading = Objects.requireNonNull(history.load(historyScope), "history load future");
-        } catch (RuntimeException failure) {
-            completeLegacyHistoryLoad(null, failure);
-            return;
-        }
-        loading.whenComplete((loaded, failure) -> dispatcher.execute(
-                () -> completeLegacyHistoryLoad(loaded, failure)));
-    }
-
-    private void completeLegacyHistoryLoad(GuideHistoryLoad loaded, Throwable failure) {
-        if (disconnected) return;
-        if (failure != null || loaded == null) {
-            allowHistoryWrites = false;
-            persistence = unavailable(
-                    failure == null
-                            ? new GuideHistoryException(
-                                    "history_load_failed", "History load returned no result")
-                            : failure,
-                    "history_load_failed");
-            publishWithoutSave();
-            return;
-        }
-        if (!loaded.diagnostics().isEmpty()) {
-            allowHistoryWrites = false;
-            persistence = new GuidePersistenceSnapshot(
-                    GuidePersistenceSnapshot.State.UNAVAILABLE,
-                    0,
-                    0,
-                    loaded.diagnostics().getFirst());
-            publishWithoutSave();
-            return;
-        }
-        loaded.partition().ifPresent(this::hydrate);
-        allowHistoryWrites = true;
-        incrementalHistory = false;
-        persistence = GuidePersistenceSnapshot.available(0);
-        publishWithoutSave();
-    }
-
     private void hydrateMetadata(GuideHistoryMetadata metadata) {
         sessions.clear();
         requestSessions.clear();
+        pendingCancelledFinalization.clear();
         for (GuideHistoryMetadata.Session snapshot : metadata.sessions()) {
-            SessionState session = new SessionState(snapshot.sessionId(), snapshot.modelSelection());
+            GuideModelSelection restored = snapshot.modelSelection().kind() == GuideModelSelection.Kind.SERVER
+                    ? defaultClientSelection() : snapshot.modelSelection();
+            SessionState session = new SessionState(snapshot.sessionId(), restored);
             session.totalRequests = snapshot.requestCount();
             session.firstAvailable = snapshot.first();
             session.lastAvailable = snapshot.last();
@@ -1282,37 +1289,6 @@ public final class GuideService implements GuideHistoryAdministration {
                 session.pageFailure);
     }
 
-    private void hydrate(GuideHistoryPartition partition) {
-        sessions.clear();
-        requestSessions.clear();
-        for (GuideSessionSnapshot snapshot : partition.sessions()) {
-            GuideModelSelection restored = snapshot.modelSelection().kind()
-                            == GuideModelSelection.Kind.SERVER
-                    ? defaultClientSelection()
-                    : snapshot.modelSelection();
-            SessionState session = new SessionState(snapshot.sessionId(), restored);
-            session.messages.addAll(snapshot.messages());
-            session.requests.addAll(snapshot.requests());
-            session.totalRequests = snapshot.requests().size();
-            session.nextRequestSequence = snapshot.requests().size();
-            for (int index = 0; index < snapshot.requests().size(); index++) {
-                session.requestSequences.put(snapshot.requests().get(index).requestId(), (long) index);
-            }
-            session.checkpoints.addAll(snapshot.checkpoints());
-            sessions.put(session.id, session);
-            snapshot.requests().forEach(request ->
-                    requestSessions.put(request.requestId(), session.id));
-            if (local != null) {
-                local.hydrateSession(
-                        actor,
-                        session.id,
-                        snapshot.messages(),
-                        snapshot.checkpoints());
-            }
-        }
-        selectedSession = partition.selectedSession();
-    }
-
     private void scheduleHistorySave() {
         if (history == null || !allowHistoryWrites || historyDeletionPending || disconnected) {
             return;
@@ -1325,18 +1301,13 @@ public final class GuideService implements GuideHistoryAdministration {
                 committed,
                 null);
         try {
-            CompletableFuture<Void> write;
-            if (incrementalHistory) {
-                GuideHistoryCommit commit = incrementalCommit();
-                if (commit == null) {
-                    persistence = GuidePersistenceSnapshot.available(committed);
-                    return;
-                }
-                write = Objects.requireNonNull(history.commit(commit), "history commit future");
-            } else {
-                write = Objects.requireNonNull(
-                        history.save(durablePartition()), "history save future");
+            GuideHistoryCommit commit = incrementalCommit();
+            if (commit == null) {
+                persistence = GuidePersistenceSnapshot.available(committed);
+                return;
             }
+            CompletableFuture<Void> write = Objects.requireNonNull(
+                    history.commit(commit), "history commit future");
             write.whenComplete((ignored, failure) ->
                     dispatcher.execute(() -> finishHistorySave(generation, failure)));
         } catch (RuntimeException failure) {
@@ -1429,23 +1400,6 @@ public final class GuideService implements GuideHistoryAdministration {
                     historyFailure(failure, "history_write_failed"));
         }
         publishWithoutSave();
-    }
-
-    private GuideHistoryPartition durablePartition() {
-        List<GuideSessionSnapshot> durableSessions = sessions.values().stream()
-                .map(session -> new GuideSessionSnapshot(
-                        session.id,
-                        session.messages,
-                        session.requests.stream().map(GuideService::durableRequest).toList(),
-                        session.checkpoints,
-                        session.modelSelection))
-                .toList();
-        return new GuideHistoryPartition(
-                GuideHistoryPartition.SCHEMA_VERSION,
-                historyScope,
-                selectedSession,
-                durableSessions,
-                clock.instant());
     }
 
     private static GuideRequestSnapshot durableRequest(GuideRequestSnapshot request) {
@@ -1587,6 +1541,9 @@ public final class GuideService implements GuideHistoryAdministration {
         private final List<GuideMessage> messages = new ArrayList<>();
         private final List<GuideRequestSnapshot> requests = new ArrayList<>();
         private final List<ContextCheckpoint> checkpoints = new ArrayList<>();
+        private List<dev.openallay.model.ModelMessage> modelContext = List.of();
+        private final Map<UUID, List<dev.openallay.model.ModelMessage>> originalContext =
+                new LinkedHashMap<>();
         private GuideModelSelection modelSelection;
         private String lastClientProfileId;
         private long totalRequests;
@@ -1615,6 +1572,8 @@ public final class GuideService implements GuideHistoryAdministration {
                     ? modelSelection.profileId() : "default";
         }
     }
+
+    private record CancelledFinalization(String sessionId, long sequence) {}
 
     private record PageKey(
             GuideHistoryPageRequest.Direction direction,

@@ -22,7 +22,7 @@ final class ExtensionSettingsProjectionTest {
 
         assertEquals("openallay:run_javascript", projection.runtime().id());
         assertEquals(
-                java.util.List.of("source", "roots", "handles"),
+                java.util.List.of("source", "handles", "title", "description"),
                 projection.runtime().parameters());
         assertTrue(projection.roots().stream()
                 .anyMatch(root -> root.name().equals("items")

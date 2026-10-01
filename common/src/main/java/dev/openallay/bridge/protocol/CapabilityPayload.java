@@ -3,7 +3,6 @@ package dev.openallay.bridge.protocol;
 import java.util.List;
 
 public record CapabilityPayload(
-        int version,
         List<RemoteToolCapability> remoteTools,
         boolean serverModel,
         int serverContextWindowTokens,
@@ -11,7 +10,6 @@ public record CapabilityPayload(
         int serverPromptAndToolTokens,
         String serverCanonicalModelId) {
     public CapabilityPayload {
-        BridgeProtocol.requireVersion(version);
         remoteTools = List.copyOf(remoteTools);
         if (serverModel) {
             if (serverCanonicalModelId == null || serverCanonicalModelId.isBlank()) {

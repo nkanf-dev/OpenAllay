@@ -23,7 +23,7 @@ public final class RichComponentRegistry {
     }
 
     private static final Set<String> ENVELOPE_KEYS = Set.of(
-            "schemaVersion", "type", "properties", "fallback", "narration");
+            "type", "properties", "fallback", "narration");
     private final Map<String, Decoder> decoders;
 
     public RichComponentRegistry(Map<String, Decoder> decoders) {
@@ -65,7 +65,6 @@ public final class RichComponentRegistry {
             }
             exact(object, ENVELOPE_KEYS);
             RichComponentEnvelope envelope = new RichComponentEnvelope(
-                    integer(object, "schemaVersion"),
                     string(object, "type"),
                     object(object, "properties"),
                     string(object, "fallback"),
@@ -136,14 +135,6 @@ public final class RichComponentRegistry {
             throw new IllegalArgumentException(field + " must be a string");
         }
         return value.getAsString();
-    }
-
-    static int integer(JsonObject object, String field) {
-        JsonElement value = object.get(field);
-        if (value == null || !value.isJsonPrimitive() || !value.getAsJsonPrimitive().isNumber()) {
-            throw new IllegalArgumentException(field + " must be an integer");
-        }
-        return value.getAsInt();
     }
 
     static long positiveLong(JsonObject object, String field) {

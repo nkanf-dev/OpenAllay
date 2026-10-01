@@ -1,5 +1,10 @@
 # SKMB-2026-07-18-018: Semantic Messages and Windowed History
 
+> Subsequent decision: [041](2026-10-01-041-execution-context-simplification.md)
+> authorizes a breaking simplification of UI-derived model context and the old persistence format, not GUI virtualization or semantic controls.
+> Its implementation/verification is tracked separately; this document retains
+> the historical decision and is not proof that the new behavior is delivered.
+
 - status: accepted
 - decided_by: designer delegation
 - approval_source: the designer approved the consolidated Phase 4 semantic-rich-message and long-history design, then delegated all remaining Phase 4 implementation decisions to the agent's best judgment

@@ -32,7 +32,7 @@ final class ModelSettingsProjectionTest {
                 Duration.ofSeconds(300),
                 null);
         ModelProfilesConfig config = new ModelProfilesConfig(
-                ModelProfilesConfig.SCHEMA_VERSION, "local", List.of(local));
+                "local", List.of(local));
         ModelProfileSettingsView locals = ModelProfileSettingsView.from(
                 config,
                 List.of(new ModelProfileSettingsView.Resolution(local, true, 256_000, null)),
@@ -65,7 +65,7 @@ final class ModelSettingsProjectionTest {
                 ModelProtocol.OPENAI_CHAT, URI.create("https://provider.example/v1/"),
                 "unknown", "env:KEY", null, null,
                 Duration.ofSeconds(30), Duration.ofSeconds(300), null);
-        var config = new ModelProfilesConfig(2, "luna", List.of(automatic, disabled));
+        var config = new ModelProfilesConfig("luna", List.of(automatic, disabled));
         var encoded = new dev.openallay.model.config.ModelProfilesConfigWriter().encode(config);
         var loaded = (dev.openallay.tool.ToolResult.Success<dev.openallay.model.config.ModelProfilesConfigLoader.Load>)
                 new dev.openallay.model.config.ModelProfilesConfigLoader().load(

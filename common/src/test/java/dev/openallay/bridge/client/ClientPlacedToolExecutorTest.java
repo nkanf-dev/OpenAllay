@@ -7,7 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import dev.openallay.agent.tool.LocalAgentToolExecutor;
-import dev.openallay.bridge.protocol.BridgeProtocol;
 import dev.openallay.bridge.protocol.CapabilityPayload;
 import dev.openallay.bridge.protocol.RemoteToolCallPayload;
 import dev.openallay.context.ToolInvocationContext;
@@ -28,7 +27,6 @@ final class ClientPlacedToolExecutorTest {
         registry.register("test", List.of(new InspectTool()));
         RemoteCapabilityStore capabilities = new RemoteCapabilityStore();
         capabilities.replace(new CapabilityPayload(
-                BridgeProtocol.VERSION,
                 List.of(
                         capability("test:fact"),
                         capability("unique:fact")),

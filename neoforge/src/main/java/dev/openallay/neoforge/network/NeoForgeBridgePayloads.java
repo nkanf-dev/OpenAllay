@@ -1,5 +1,6 @@
 package dev.openallay.neoforge.network;
 
+import dev.openallay.OpenAllayConstants;
 import dev.openallay.OpenAllayRuntime;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -14,7 +15,8 @@ public final class NeoForgeBridgePayloads {
 
     public static void register(IEventBus modBus, OpenAllayRuntime runtime) {
         NeoForgeServerBridge server = new NeoForgeServerBridge(runtime);
-        modBus.addListener((RegisterPayloadHandlersEvent event) -> event.registrar("1")
+        // NeoForge requires a nonempty registration label; this is not an internal format version.
+        modBus.addListener((RegisterPayloadHandlersEvent event) -> event.registrar(OpenAllayConstants.MOD_ID)
                 .optional()
                 .playBidirectional(Packet.TYPE, Packet.CODEC, server::receive));
         server.registerLifecycle();
@@ -22,7 +24,7 @@ public final class NeoForgeBridgePayloads {
 
     public record Packet(String kind, String json) implements CustomPacketPayload {
         public static final Type<Packet> TYPE = new Type<>(
-                Identifier.fromNamespaceAndPath("openallay", "bridge_v1"));
+                Identifier.fromNamespaceAndPath("openallay", "bridge"));
         public static final StreamCodec<RegistryFriendlyByteBuf, Packet> CODEC = StreamCodec.composite(
                 ByteBufCodecs.STRING_UTF8,
                 Packet::kind,

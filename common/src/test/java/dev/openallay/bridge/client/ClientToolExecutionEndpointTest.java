@@ -9,7 +9,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.google.gson.Gson;
 import com.google.gson.JsonParser;
 import dev.openallay.agent.tool.ToolRuntimeCatalog;
-import dev.openallay.bridge.protocol.BridgeProtocol;
 import dev.openallay.bridge.protocol.ClientToolCallPayload;
 import dev.openallay.bridge.protocol.ClientToolCancelPayload;
 import dev.openallay.bridge.protocol.ClientToolResultChunkPayload;
@@ -61,7 +60,6 @@ final class ClientToolExecutionEndpointTest {
 
         for (int index = 0; index < 2; index++) {
             endpoint.handle(new ClientToolCallPayload(
-                    BridgeProtocol.VERSION,
                     requestId,
                     UUID.randomUUID(),
                     "main",
@@ -96,7 +94,6 @@ final class ClientToolExecutionEndpointTest {
 
         UUID invocation = UUID.randomUUID();
         assertInstanceOf(ToolResult.Success.class, endpoint.handle(new ClientToolCallPayload(
-                BridgeProtocol.VERSION,
                 requestId,
                 invocation,
                 "main",
@@ -131,7 +128,6 @@ final class ClientToolExecutionEndpointTest {
                 requestId, "main", ToolRuntimeCatalog.from(registry.registrations(), java.util.Set.of()));
 
         endpoint.handle(new ClientToolCallPayload(
-                BridgeProtocol.VERSION,
                 requestId,
                 UUID.randomUUID(),
                 "other",
@@ -141,7 +137,6 @@ final class ClientToolExecutionEndpointTest {
         sent.clear();
         endpoint.close(requestId);
         endpoint.handle(new ClientToolCallPayload(
-                BridgeProtocol.VERSION,
                 requestId,
                 UUID.randomUUID(),
                 "main",
@@ -168,7 +163,6 @@ final class ClientToolExecutionEndpointTest {
         endpoint.open(
                 requestId, "main", ToolRuntimeCatalog.from(registry.registrations(), java.util.Set.of()));
         endpoint.handle(new ClientToolCallPayload(
-                BridgeProtocol.VERSION,
                 requestId,
                 invocationId,
                 "main",
@@ -176,13 +170,13 @@ final class ClientToolExecutionEndpointTest {
                 "{\"value\":7}"));
 
         assertTrue(endpoint.cancel(new ClientToolCancelPayload(
-                BridgeProtocol.VERSION, requestId, invocationId)));
+                requestId, invocationId)));
         assertTrue(context.complete(ToolInvocationContext.developmentConsole(invocationId.toString())));
         assertEquals(0, tool.asyncInvocations);
         assertEquals(0, tool.invocations);
         assertTrue(sent.isEmpty());
         assertFalse(endpoint.cancel(new ClientToolCancelPayload(
-                BridgeProtocol.VERSION, requestId, invocationId)));
+                requestId, invocationId)));
     }
 
     @Test
@@ -227,7 +221,6 @@ final class ClientToolExecutionEndpointTest {
             endpoint.open(requestId, "main", ToolRuntimeCatalog.from(
                     registry.registrations(), java.util.Set.of()));
             endpoint.handle(new ClientToolCallPayload(
-                    BridgeProtocol.VERSION,
                     requestId,
                     invocationId,
                     "main",
@@ -270,7 +263,7 @@ final class ClientToolExecutionEndpointTest {
                 .contains(ClientToolExecutionEndpoint.EXPERIMENTAL_COMMANDS_CAPABILITY));
 
         commands.replace(new CommandCapabilityConfig(
-                CommandCapabilityConfig.SCHEMA_VERSION, true));
+                true));
         UUID enabledRequest = UUID.randomUUID();
         var enabled = (ToolResult.Success<ClientToolExecutionEndpoint.OpenedRequest>)
                 endpoint.open(enabledRequest, "main", catalog);
@@ -327,7 +320,7 @@ final class ClientToolExecutionEndpointTest {
 
         private void start() {
             assertInstanceOf(ToolResult.Success.class, endpoint.handle(new ClientToolCallPayload(
-                    BridgeProtocol.VERSION, requestId, UUID.randomUUID(),
+                    requestId, UUID.randomUUID(),
                     "main", "test:scope", "{}")));
             assertNotNull(cancellation);
             assertFalse(cancellation.isCancelled());

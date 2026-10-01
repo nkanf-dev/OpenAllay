@@ -111,7 +111,7 @@ import org.junit.jupiter.api.io.TempDir;
  * verifier and are never appended to model context.
  */
 final class LiveAgentBenchmarkAcceptanceTest {
-    private static final String FIXTURE = "javascript-agent-v2";
+    private static final String FIXTURE = "javascript-agent";
     private static final Set<String> FIXTURE_CAPABILITIES = Set.of(
             "game",
             "player",
@@ -148,7 +148,7 @@ final class LiveAgentBenchmarkAcceptanceTest {
         assertEquals(List.of(
                 new BenchmarkSelector.SkippedCase(
                         "server-model-routing",
-                        "server-model-routing-v1",
+                        "server-model-routing",
                         BenchmarkSelector.SkipReason.FIXTURE_MISMATCH,
                         List.of("server-model")),
                 new BenchmarkSelector.SkippedCase(
@@ -171,7 +171,6 @@ final class LiveAgentBenchmarkAcceptanceTest {
         Path profiles = directory.resolve("models.json");
         Files.writeString(profiles, """
                 {
-                  "schemaVersion": 2,
                   "defaultProfileId": "default-profile",
                   "profiles": [{
                     "id": "default-profile",
@@ -223,21 +222,21 @@ final class LiveAgentBenchmarkAcceptanceTest {
                         "OPENALLAY_PRODUCT_COMMIT", "test-commit",
                         "OPENALLAY_BENCHMARK_OUTPUT", directory.resolve("reports").toString()),
                 selected,
-                corpus,
                 selection,
-                new BenchmarkReport(corpus.version(), List.of()),
+                new BenchmarkReport(List.of()),
                 List.of(),
                 new GsonBuilder().setPrettyPrinting().create());
         String report = Files.readString(retained, StandardCharsets.UTF_8);
         String audit = Files.readString(auditPath(retained), StandardCharsets.UTF_8);
-        assertTrue(report.contains("\"schemaVersion\": 4"));
+        assertEquals(Set.of("fixture", "productCommit", "provider", "profileId",
+                        "canonicalModelId", "selection", "benchmark", "traces"),
+                JsonParser.parseString(report).getAsJsonObject().keySet());
+        assertEquals(Set.of("attempts"),
+                JsonParser.parseString(audit).getAsJsonObject().keySet());
         assertTrue(report.contains("\"profileId\": \"benchmark-profile\""));
         assertTrue(report.contains("\"canonicalModelId\": \"provider/benchmark\""));
         assertTrue(report.contains("\"provider\": \"https://benchmark.example\""));
         assertFalse(report.contains("secret"));
-        assertTrue(audit.contains("\"schemaVersion\": 1"));
-        assertTrue(audit.contains("\"corpusVersion\": \""
-                + corpus.version() + "\""));
         assertFalse(audit.contains("secret"));
     }
 
@@ -263,7 +262,7 @@ final class LiveAgentBenchmarkAcceptanceTest {
         JavascriptDataModuleRegistry extensions = extensions();
         CommandCapabilityRuntime commands = new CommandCapabilityRuntime();
         commands.replace(new CommandCapabilityConfig(
-                CommandCapabilityConfig.SCHEMA_VERSION, includeCommands));
+                includeCommands));
         WorldObservationRuntime world = new WorldObservationRuntime();
         RunJavascriptTool javascript = new RunJavascriptTool(
                 new RhinoJavascriptRuntime(),
@@ -299,7 +298,6 @@ final class LiveAgentBenchmarkAcceptanceTest {
         List<BenchmarkTraceAuditor.TraceRef> traces = new CopyOnWriteArrayList<>();
 
         BenchmarkReport report = new BenchmarkRunner(new BenchmarkVerifier()).run(
-                corpus.version(),
                 cases,
                 (testCase, attempt) -> execute(
                         testCase,
@@ -313,7 +311,7 @@ final class LiveAgentBenchmarkAcceptanceTest {
                         traces));
 
         Path retained = retain(
-                environment, modelProfile, corpus, selection, report, traces, gson);
+                environment, modelProfile, selection, report, traces, gson);
         selection.skipped().forEach(value -> System.out.println(
                 "OPENALLAY_BENCHMARK_SKIPPED"
                         + " id=" + value.caseId()
@@ -623,7 +621,6 @@ final class LiveAgentBenchmarkAcceptanceTest {
     private static Path retain(
             Map<String, String> environment,
             BenchmarkModelProfile modelProfile,
-            BenchmarkCorpus corpus,
             BenchmarkSelector.Selection selection,
             BenchmarkReport report,
             List<BenchmarkTraceAuditor.TraceRef> traces,
@@ -634,8 +631,6 @@ final class LiveAgentBenchmarkAcceptanceTest {
         String provider = endpoint.getScheme() + "://" + endpoint.getHost()
                 + (endpoint.getPort() < 0 ? "" : ":" + endpoint.getPort());
         LiveReport retained = new LiveReport(
-                4,
-                corpus.version(),
                 FIXTURE,
                 environment.getOrDefault("OPENALLAY_PRODUCT_COMMIT", "unknown"),
                 provider,
@@ -761,8 +756,6 @@ final class LiveAgentBenchmarkAcceptanceTest {
     }
 
     private record LiveReport(
-            int schemaVersion,
-            String corpusVersion,
             String fixture,
             String productCommit,
             String provider,

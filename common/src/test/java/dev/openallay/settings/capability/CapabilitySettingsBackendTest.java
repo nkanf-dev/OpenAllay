@@ -53,7 +53,6 @@ final class CapabilitySettingsBackendTest {
 
         ToolResult.Failure<CapabilitySettingsView> failure = failure(
                 backend.saveCapabilities(new CapabilityPolicy(
-                        CapabilityPolicy.SCHEMA_VERSION,
                         Set.of("test:fact"),
                         Set.of())));
 
@@ -77,7 +76,6 @@ final class CapabilitySettingsBackendTest {
                     published.set(snapshot);
                 });
         CapabilityPolicy candidate = new CapabilityPolicy(
-                CapabilityPolicy.SCHEMA_VERSION,
                 Set.of("test:fact", "future:tool"),
                 Set.of("fact-guide", "future-skill"));
 
@@ -101,12 +99,11 @@ final class CapabilitySettingsBackendTest {
         CapabilitySettingsBackend backend = new CapabilitySettingsBackend(
                 path, fixture.runtime(), fixture.initial(), published::set);
         CapabilityPolicy candidate = new CapabilityPolicy(
-                CapabilityPolicy.SCHEMA_VERSION, Set.of("test:fact"), Set.of());
+                Set.of("test:fact"), Set.of());
 
         CapabilitySettingsView view = success(backend.publishCapabilities(candidate));
 
         CapabilityPolicy normalized = new CapabilityPolicy(
-                CapabilityPolicy.SCHEMA_VERSION,
                 Set.of("test:fact"),
                 Set.of("fact-guide"));
         assertEquals(normalized, published.get().policy());
@@ -121,8 +118,7 @@ final class CapabilitySettingsBackendTest {
         AtomicReference<ClientCapabilitySnapshot> published = new AtomicReference<>(fixture.initial());
         CapabilitySettingsBackend backend = new CapabilitySettingsBackend(
                 path, fixture.runtime(), fixture.initial(), published::set);
-        CapabilityPolicy denied = new CapabilityPolicy(CapabilityPolicy.SCHEMA_VERSION,
-                Set.of("future:tool"), Set.of("fact-guide", "future-skill"));
+        CapabilityPolicy denied = new CapabilityPolicy(Set.of("future:tool"), Set.of("fact-guide", "future-skill"));
         success(backend.saveCapabilities(denied));
 
         CapabilitySettingsView refreshed = success(backend.refreshCapabilities());

@@ -9,7 +9,6 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import dev.openallay.agent.tool.AgentToolExecutor;
 import dev.openallay.agent.tool.AgentToolResult;
-import dev.openallay.bridge.protocol.BridgeProtocol;
 import dev.openallay.bridge.protocol.ClientToolCallPayload;
 import dev.openallay.bridge.protocol.ClientToolCancelPayload;
 import dev.openallay.bridge.protocol.ClientToolResultChunkPayload;
@@ -24,6 +23,7 @@ import dev.openallay.tool.ToolAccess;
 import dev.openallay.tool.ToolDescriptor;
 import dev.openallay.tool.ToolRegistry;
 import dev.openallay.tool.ToolResult;
+import dev.openallay.tool.builtin.RunJavascriptTool;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -48,7 +48,7 @@ final class PlayerClientToolRouterTest {
                 actor,
                 requestId,
                 "main",
-                List.of("test:fact", "malicious:invented")));
+                List.of("test:fact", "malicious:invented"), emptySkills()));
 
         CompletableFuture<AgentToolResult> result = tools.execute(
                 "test:fact",
@@ -89,7 +89,7 @@ final class PlayerClientToolRouterTest {
         UUID actor = UUID.randomUUID();
         UUID requestId = UUID.randomUUID();
         AgentToolExecutor tools = success(router.open(
-                actor, requestId, "main", List.of("test:fact")));
+                actor, requestId, "main", List.of("test:fact"), emptySkills()));
         CompletableFuture<AgentToolResult> result = tools.execute(
                 "test__fact",
                 arguments("value", 1),
@@ -124,7 +124,7 @@ final class PlayerClientToolRouterTest {
         UUID actor = UUID.randomUUID();
         UUID requestId = UUID.randomUUID();
         AgentToolExecutor tools = success(router.open(
-                actor, requestId, "main", List.of("test:fact")));
+                actor, requestId, "main", List.of("test:fact"), emptySkills()));
         CancellationSignal cancellation = new CancellationSignal();
         CompletableFuture<AgentToolResult> result = tools.execute(
                 "test:fact",
@@ -160,7 +160,7 @@ final class PlayerClientToolRouterTest {
         UUID actor = UUID.randomUUID();
         UUID requestId = UUID.randomUUID();
         AgentToolExecutor tools = success(router.open(
-                actor, requestId, "main", List.of("test:fact")));
+                actor, requestId, "main", List.of("test:fact"), emptySkills()));
         CancellationSignal cancellation = new CancellationSignal();
         cancellation.cancel();
 
@@ -187,7 +187,7 @@ final class PlayerClientToolRouterTest {
         UUID actor = UUID.randomUUID();
         UUID requestId = UUID.randomUUID();
         AgentToolExecutor tools = success(router.open(
-                actor, requestId, "main", List.of("test:fact")));
+                actor, requestId, "main", List.of("test:fact"), emptySkills()));
 
         AgentToolResult result = tools.execute(
                         "test__fact",
@@ -210,7 +210,7 @@ final class PlayerClientToolRouterTest {
         UUID actor = UUID.randomUUID();
         UUID requestId = UUID.randomUUID();
         AgentToolExecutor tools = success(router.open(
-                actor, requestId, "main", List.of("test:fact")));
+                actor, requestId, "main", List.of("test:fact"), emptySkills()));
 
         for (int attempt = 0; attempt < 100; attempt++) {
             CancellationSignal cancellation = new CancellationSignal();
@@ -236,35 +236,110 @@ final class PlayerClientToolRouterTest {
     }
 
     @Test
-    void serverHostedAgentKeepsWorldJavascriptOnAuthoritativeServerRoute() {
+    void advertisedJavascriptAlwaysUsesClientPlacementWithoutInspectingArguments() {
+        ServerJavascriptTool javascript = new ServerJavascriptTool();
         ToolRegistry registry = new ToolRegistry();
-        registry.register("test", List.of(new ServerJavascriptTool()));
+        registry.register("test", List.of(javascript));
         List<SentCall> calls = new ArrayList<>();
         PlayerClientToolRouter router = new PlayerClientToolRouter(
                 registry, new Gson(), transport(calls, new ArrayList<>()));
         UUID actor = UUID.randomUUID();
         UUID requestId = UUID.randomUUID();
         AgentToolExecutor tools = success(router.open(
-                actor,
-                requestId,
-                "main",
-                List.of("openallay:run_javascript")));
-        JsonObject arguments = new JsonObject();
-        arguments.addProperty("source", "return world.inspect({});");
-        arguments.add("roots", com.google.gson.JsonParser.parseString("[\"world\"]"));
-
-        AgentToolResult result = tools.execute(
+                actor, requestId, "main", List.of(RunJavascriptTool.ID), emptySkills()));
+        try {
+            for (String source : List.of(
+                    "return mc.player.position;",
+                    "return world.inspect({});",
+                    "return commands.run('say no');",
+                    "not valid JavaScript")) {
+                JsonObject arguments = javascriptArguments(source);
+                arguments.addProperty("title", "Use server-authoritative data");
+                arguments.addProperty("description", "Inspect the world on the server");
+                CompletableFuture<AgentToolResult> result = tools.execute(
                         "openallay__run_javascript",
                         arguments,
                         ToolInvocationContext.developmentConsole(requestId.toString()),
-                        new CancellationSignal())
-                .join();
+                        new CancellationSignal());
 
-        assertTrue(calls.isEmpty());
-        assertFalse(result.failure());
-        assertEquals(
-                "server-authoritative",
-                result.normalized().getAsJsonObject("value").get("route").getAsString());
+                assertFalse(result.isDone());
+                assertEquals(actor, calls.getLast().actorId());
+                assertEquals(RunJavascriptTool.ID, calls.getLast().payload().toolId());
+                assertEquals(arguments.toString(), calls.getLast().payload().argumentsJson());
+            }
+            assertEquals(4, calls.size());
+            assertEquals(0, javascript.invocations);
+        } finally {
+            router.close(actor, requestId);
+        }
+    }
+
+    @Test
+    void javascriptWithoutAnAdvertisedClientUsesServerPlacementWithoutRoots() {
+        ServerJavascriptTool javascript = new ServerJavascriptTool();
+        ToolRegistry registry = new ToolRegistry();
+        registry.register("test", List.of(javascript));
+        List<SentCall> calls = new ArrayList<>();
+        PlayerClientToolRouter router = new PlayerClientToolRouter(
+                registry, new Gson(), transport(calls, new ArrayList<>()));
+        UUID actor = UUID.randomUUID();
+        UUID requestId = UUID.randomUUID();
+        AgentToolExecutor tools = success(router.open(actor, requestId, "main", List.of(), emptySkills()));
+        try {
+            AgentToolResult result = tools.execute(
+                            "openallay__run_javascript",
+                            javascriptArguments("return mc.player.position;"),
+                            ToolInvocationContext.developmentConsole(requestId.toString()),
+                            new CancellationSignal())
+                    .join();
+
+            assertTrue(calls.isEmpty());
+            assertEquals(1, javascript.invocations);
+            assertFalse(result.failure());
+            assertEquals(
+                    "server-authoritative",
+                    result.normalized().getAsJsonObject("value").get("route").getAsString());
+        } finally {
+            router.close(actor, requestId);
+        }
+    }
+
+    @Test
+    void unavailableAdvertisedClientDoesNotRetryJavascriptOnTheServer() {
+        ServerJavascriptTool javascript = new ServerJavascriptTool();
+        ToolRegistry registry = new ToolRegistry();
+        registry.register("test", List.of(javascript));
+        List<SentCall> calls = new ArrayList<>();
+        PlayerClientToolRouter router = new PlayerClientToolRouter(
+                registry, new Gson(), new PlayerClientToolRouter.Transport() {
+                    @Override
+                    public boolean call(UUID actorId, ClientToolCallPayload payload) {
+                        calls.add(new SentCall(actorId, payload));
+                        return false;
+                    }
+
+                    @Override
+                    public void cancel(UUID actorId, ClientToolCancelPayload payload) {}
+                });
+        UUID actor = UUID.randomUUID();
+        UUID requestId = UUID.randomUUID();
+        AgentToolExecutor tools = success(router.open(
+                actor, requestId, "main", List.of(RunJavascriptTool.ID), emptySkills()));
+        try {
+            AgentToolResult result = tools.execute(
+                            "openallay__run_javascript",
+                            javascriptArguments("return mc.player.position;"),
+                            ToolInvocationContext.developmentConsole(requestId.toString()),
+                            new CancellationSignal())
+                    .join();
+
+            assertEquals(1, calls.size());
+            assertEquals(0, javascript.invocations);
+            assertTrue(result.failure());
+            assertEquals("client_tool_bridge_unavailable", result.normalized().get("code").getAsString());
+        } finally {
+            router.close(actor, requestId);
+        }
     }
 
     @Test
@@ -327,7 +402,7 @@ final class PlayerClientToolRouterTest {
         UUID actor = UUID.fromString("00000000-0000-0000-0000-000000000001");
         UUID requestId = UUID.fromString("00000000-0000-0000-0000-000000000002");
         AgentToolExecutor tools = success(router.open(
-                actor, requestId, "main", List.of(tool.descriptor().id())));
+                actor, requestId, "main", List.of(tool.descriptor().id()), emptySkills()));
         try {
             CompletableFuture<AgentToolResult> result = tools.execute(
                     tool.descriptor().id(), arguments("value", 4),
@@ -374,6 +449,15 @@ final class PlayerClientToolRouterTest {
         return result;
     }
 
+    private static JsonObject javascriptArguments(String source) {
+        return new Gson().toJsonTree(new RunJavascriptTool.Input(source, List.of())).getAsJsonObject();
+    }
+
+    private static dev.openallay.skill.SkillCatalogSnapshot emptySkills() {
+        return new dev.openallay.skill.SkillRepository(
+                new dev.openallay.skill.SkillParser(), Set.of()).snapshot(Set.of());
+    }
+
     private static ToolRegistry registry() {
         ToolRegistry registry = new ToolRegistry();
         registry.register("test", List.of(new FactTool()));
@@ -418,25 +502,26 @@ final class PlayerClientToolRouterTest {
     }
 
     private static final class ServerJavascriptTool
-            implements Tool<ServerJavascriptTool.Input, ServerJavascriptTool.Output> {
-        record Input(String source, List<String> roots) {}
+            implements Tool<RunJavascriptTool.Input, ServerJavascriptTool.Output> {
         record Output(String route) {}
 
-        private static final ToolDescriptor<Input, Output> DESCRIPTOR = new ToolDescriptor<>(
-                "openallay:run_javascript",
+        private static final ToolDescriptor<RunJavascriptTool.Input, Output> DESCRIPTOR = new ToolDescriptor<>(
+                RunJavascriptTool.ID,
                 "Run detached JavaScript",
-                Input.class,
+                RunJavascriptTool.Input.class,
                 Output.class,
                 ToolAccess.EXPERIMENTAL_ACTION,
                 Set.of());
+        private int invocations;
 
         @Override
-        public ToolDescriptor<Input, Output> descriptor() {
+        public ToolDescriptor<RunJavascriptTool.Input, Output> descriptor() {
             return DESCRIPTOR;
         }
 
         @Override
-        public ToolResult<Output> invoke(ToolInvocationContext context, Input input) {
+        public ToolResult<Output> invoke(ToolInvocationContext context, RunJavascriptTool.Input input) {
+            invocations++;
             return new ToolResult.Success<>(new Output("server-authoritative"));
         }
     }

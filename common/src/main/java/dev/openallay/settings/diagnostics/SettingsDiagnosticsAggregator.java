@@ -87,7 +87,6 @@ public final class SettingsDiagnosticsAggregator {
             Optional<GuideSnapshot> guide,
             GuideHistoryActivity historyActivity,
             HistoryScopeKind historyScopeKind,
-            int databaseSchema,
             List<SourceStatus> sources,
             boolean sourcesKnown,
             boolean sourcesRetained,
@@ -96,14 +95,14 @@ public final class SettingsDiagnosticsAggregator {
                 long settingsGeneration, ModelProfileSettingsView models,
                 CapabilitySettingsView capabilities, RecipeSettingsView recipes,
                 Optional<GuideSnapshot> guide, GuideHistoryActivity historyActivity,
-                HistoryScopeKind historyScopeKind, int databaseSchema, List<SourceStatus> sources) {
+                HistoryScopeKind historyScopeKind, List<SourceStatus> sources) {
             this(settingsGeneration, models, capabilities, recipes, guide, historyActivity,
-                    historyScopeKind, databaseSchema, sources, true, false, null);
+                    historyScopeKind, sources, true, false, null);
         }
 
         public DiagnosticsInputs {
-            if (settingsGeneration < 0 || databaseSchema <= 0) {
-                throw new IllegalArgumentException("diagnostic generations and schemas are invalid");
+            if (settingsGeneration < 0) {
+                throw new IllegalArgumentException("diagnostic generation is invalid");
             }
             Objects.requireNonNull(models, "models");
             Objects.requireNonNull(capabilities, "capabilities");
@@ -281,7 +280,6 @@ public final class SettingsDiagnosticsAggregator {
                 .toList();
         return new DebugSettingsDiagnostics(
                 inputs.settingsGeneration(),
-                inputs.databaseSchema(),
                 models,
                 capabilities,
                 inputs.guide().map(guide -> debugGuide(inputs, guide, summary)),

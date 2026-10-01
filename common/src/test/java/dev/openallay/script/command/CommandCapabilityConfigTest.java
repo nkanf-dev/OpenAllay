@@ -21,7 +21,7 @@ final class CommandCapabilityConfigTest {
         assertFalse(((ToolResult.Success<CommandCapabilityConfig>) loaded).value().enabled());
 
         ToolResult<CommandCapabilityConfig> saved = store.save(
-                new CommandCapabilityConfig(CommandCapabilityConfig.SCHEMA_VERSION, true));
+                new CommandCapabilityConfig(true));
         assertTrue(((ToolResult.Success<CommandCapabilityConfig>) saved).value().enabled());
 
         CommandCapabilityConfigStore restarted =
@@ -31,17 +31,17 @@ final class CommandCapabilityConfigTest {
     }
 
     @Test
-    void unknownFieldsAndVersionsFailClosed() {
+    void unknownFieldsAndWrongTypesFailClosed() {
         CommandCapabilityConfigLoader loader = new CommandCapabilityConfigLoader();
         assertInstanceOf(
                 ToolResult.Failure.class,
                 loader.load(new StringReader("""
-                        {"schemaVersion":1,"enabled":true,"surprise":true}
+                        {"enabled":true,"surprise":true}
                         """)));
         assertInstanceOf(
                 ToolResult.Failure.class,
                 loader.load(new StringReader("""
-                        {"schemaVersion":2,"enabled":true}
+                        {"enabled":"true"}
                         """)));
     }
 }

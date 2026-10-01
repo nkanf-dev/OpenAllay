@@ -1,10 +1,12 @@
 package dev.openallay.script.workspace;
 
 import com.google.gson.JsonElement;
+import dev.openallay.context.SourceObservation;
 import dev.openallay.script.result.JavascriptResultShape;
 import dev.openallay.script.result.JavascriptSemanticKind;
 import java.util.Collection;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
@@ -21,7 +23,7 @@ public final class AgentResultWorkspace implements AutoCloseable {
     private final Map<String, JsonElement> values = new LinkedHashMap<>();
     private final Map<String, JavascriptResultShape> shapes = new LinkedHashMap<>();
     private final Map<String, Long> sizes = new LinkedHashMap<>();
-    private final Map<String, java.util.List<dev.openallay.context.EvidenceMetadata>> evidence =
+    private final Map<String, List<SourceObservation>> sources =
             new LinkedHashMap<>();
     private long storedUnits;
     private boolean closed;
@@ -37,16 +39,17 @@ public final class AgentResultWorkspace implements AutoCloseable {
     }
 
     public synchronized String store(JsonElement value, JavascriptResultShape shape, boolean unrestricted) {
-        return store(value, shape, unrestricted, java.util.List.of());
+        return store(value, shape, unrestricted, List.of());
     }
 
     public synchronized String store(
             JsonElement value,
             JavascriptResultShape shape,
             boolean unrestricted,
-            java.util.List<dev.openallay.context.EvidenceMetadata> evidence) {
+            List<SourceObservation> sources) {
         requireOpen();
         java.util.Objects.requireNonNull(shape, "shape");
+        List<SourceObservation> storedSources = List.copyOf(sources);
         long units = measure(value);
         if (!unrestricted && units > MAX_RESULT_UNITS) {
             throw new WorkspaceException(
@@ -62,7 +65,7 @@ public final class AgentResultWorkspace implements AutoCloseable {
         values.put(handle, value.deepCopy());
         shapes.put(handle, shape);
         sizes.put(handle, units);
-        this.evidence.put(handle, java.util.List.copyOf(evidence));
+        this.sources.put(handle, storedSources);
         storedUnits += units;
         return handle;
     }
@@ -85,7 +88,7 @@ public final class AgentResultWorkspace implements AutoCloseable {
     public synchronized Map<String, JsonElement> select(Collection<String> handles, boolean unrestricted) {
         requireOpen();
         Collection<String> requested =
-                handles == null ? java.util.List.<String>of() : handles;
+                handles == null ? List.<String>of() : handles;
         if (!unrestricted && requested.size() > MAX_SELECTED_HANDLES) {
             throw new WorkspaceException(
                     "workspace_selection_too_large",
@@ -115,9 +118,9 @@ public final class AgentResultWorkspace implements AutoCloseable {
         return Map.copyOf(selected);
     }
 
-    public synchronized java.util.List<dev.openallay.context.EvidenceMetadata> evidence(String handle) {
+    public synchronized List<SourceObservation> sources(String handle) {
         requireOpen();
-        java.util.List<dev.openallay.context.EvidenceMetadata> value = evidence.get(handle);
+        List<SourceObservation> value = sources.get(handle);
         if (value == null) {
             throw new WorkspaceException(
                     "workspace_handle_unavailable", "Result handle is unavailable in this request");
@@ -125,13 +128,13 @@ public final class AgentResultWorkspace implements AutoCloseable {
         return value;
     }
 
-    public synchronized Map<String, java.util.List<dev.openallay.context.EvidenceMetadata>>
-            selectEvidence(Collection<String> handles) {
+    public synchronized Map<String, List<SourceObservation>>
+            selectSources(Collection<String> handles) {
         requireOpen();
-        java.util.LinkedHashMap<String, java.util.List<dev.openallay.context.EvidenceMetadata>> selected =
+        java.util.LinkedHashMap<String, List<SourceObservation>> selected =
                 new java.util.LinkedHashMap<>();
-        for (String handle : handles == null ? java.util.List.<String>of() : handles) {
-            java.util.List<dev.openallay.context.EvidenceMetadata> value = evidence.get(handle);
+        for (String handle : handles == null ? List.<String>of() : handles) {
+            List<SourceObservation> value = sources.get(handle);
             if (value == null) {
                 throw new WorkspaceException(
                         "workspace_handle_unavailable", "Result handle is unavailable in this request");
@@ -145,7 +148,7 @@ public final class AgentResultWorkspace implements AutoCloseable {
             Collection<String> handles) {
         requireOpen();
         Collection<String> requested =
-                handles == null ? java.util.List.<String>of() : handles;
+                handles == null ? List.<String>of() : handles;
         LinkedHashMap<String, JavascriptResultShape> selected = new LinkedHashMap<>();
         for (String handle : requested) {
             JavascriptResultShape shape = shapes.get(handle);
@@ -169,7 +172,7 @@ public final class AgentResultWorkspace implements AutoCloseable {
         values.clear();
         shapes.clear();
         sizes.clear();
-        evidence.clear();
+        sources.clear();
         storedUnits = 0;
     }
 

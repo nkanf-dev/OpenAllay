@@ -92,7 +92,6 @@ final class AgentTraceReplayerTest {
         assertTrue(unknownReport.error().startsWith("unknown_tool"));
 
         AgentTrace needsPlayer = new AgentTrace(
-                1,
                 "needs-player",
                 "who am I",
                 Set.of(ContextCapability.PLAYER),
@@ -125,7 +124,7 @@ final class AgentTraceReplayerTest {
     }
 
     private static AgentTrace trace(dev.openallay.trace.model.TraceStep... steps) {
-        return new AgentTrace(1, "test-trace", "test", Set.of(), List.of(steps));
+        return new AgentTrace("test-trace", "test", Set.of(), List.of(steps));
     }
 
     private static JsonObject object(String json) {

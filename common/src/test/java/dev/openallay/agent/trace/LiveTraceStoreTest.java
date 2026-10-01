@@ -79,7 +79,7 @@ final class LiveTraceStoreTest {
     private static LiveAgentTrace trace(JsonObject payload) {
         Instant now = Instant.now();
         return new LiveAgentTrace(
-                1, UUID.randomUUID(), UUID.randomUUID(), "main", now, now,
+                UUID.randomUUID(), UUID.randomUUID(), "main", now, now,
                 AgentState.COMPLETED,
                 List.of(new LiveTraceEvent("request", 1, payload)),
                 "answer", null);

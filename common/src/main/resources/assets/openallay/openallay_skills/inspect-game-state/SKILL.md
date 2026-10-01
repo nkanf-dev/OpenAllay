@@ -34,7 +34,7 @@ say what is unavailable and stop rather than guessing.
 
 Recipes and Guides are separate deep-content domains; load their Skills for
 those questions. Spatial block/entity observation is also outside this
-troubleshooting Skill: use the core top-level `world` binding directly with
-`roots: ["world"]` when that request capability is available. Maps, structures,
+troubleshooting Skill: use the core top-level `world` binding directly when that
+request capability is available. Maps, structures,
 another container's contents, arbitrary paths/classes, raw commands, and every
 write or world interaction remain outside this Skill.

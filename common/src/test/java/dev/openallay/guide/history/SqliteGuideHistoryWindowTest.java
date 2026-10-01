@@ -19,6 +19,9 @@ import dev.openallay.guide.GuideToolActivity;
 import dev.openallay.guide.GuideToolMessage;
 import dev.openallay.guide.GuideToolStatus;
 import dev.openallay.guide.GuideTopology;
+import dev.openallay.model.ModelContent;
+import dev.openallay.model.ModelMessage;
+import dev.openallay.model.ModelRole;
 import dev.openallay.model.ModelUsage;
 import java.nio.file.Path;
 import java.sql.DriverManager;
@@ -44,7 +47,13 @@ final class SqliteGuideHistoryWindowTest {
     void metadataPagesAndContextUseIndependentBoundaries() throws Exception {
         Path database = temporary.resolve("history.db");
         SqliteGuideHistoryStore store = store(database);
-        store.save(partition(5, false, true));
+        GuideHistoryFixture.seed(store, partition(5, false, true));
+        List<ModelMessage> actualContext = List.of(
+                ModelMessage.userText("actual previous question"),
+                new ModelMessage(ModelRole.ASSISTANT,
+                        List.of(new ModelContent.Text("actual previous answer"))));
+        store.commit(new GuideHistoryCommit(SCOPE, List.of(
+                new GuideHistoryMutation.ReplaceContext("main", actualContext))));
 
         GuideHistoryMetadata metadata = store.metadata(SCOPE).orElseThrow();
         assertEquals(5, metadata.sessions().getFirst().requestCount());
@@ -72,9 +81,8 @@ final class SqliteGuideHistoryWindowTest {
         GuideHistoryContextRequest contextRequest = new GuideHistoryContextRequest(
                 SCOPE, "main", new ContextBudget(1_200, 100), 50, "same-model");
         GuideHistoryContextSeed context = store.context(contextRequest);
-        assertFalse(context.messages().isEmpty());
+        assertEquals(actualContext, context.messages());
         assertTrue(context.estimatedTokens() <= contextRequest.availableHistoryTokens());
-        assertTrue(context.messages().size() < 5 * 6);
         ContextStructure.units(context.messages());
 
         try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
@@ -88,6 +96,7 @@ final class SqliteGuideHistoryWindowTest {
         }
         assertEquals(5, store.metadata(SCOPE).orElseThrow()
                 .sessions().getFirst().requestCount());
+        assertEquals(actualContext, store.context(contextRequest).messages());
         GuideHistoryException corrupt = assertThrows(
                 GuideHistoryException.class,
                 () -> store.page(new GuideHistoryPageRequest(
@@ -100,8 +109,8 @@ final class SqliteGuideHistoryWindowTest {
     void minimumCommitUpdatesOneRequestWithoutReplacingUnrelatedRows() throws Exception {
         Path database = temporary.resolve("incremental.db");
         SqliteGuideHistoryStore store = store(database);
-        GuideHistoryPartition original = partition(2, false, true);
-        store.save(original);
+        GuideHistoryFixture original = partition(2, false, true);
+        GuideHistoryFixture.seed(store, original);
         long unrelatedRow = rowId(database, "requests", requestId(0));
         long unrelatedTimeline = rowId(database, "timeline_entries", requestId(0));
         GuideRequestSnapshot previous = original.sessions().getFirst().requests().get(1);
@@ -173,8 +182,8 @@ final class SqliteGuideHistoryWindowTest {
     void failedIncrementalTransactionRollsBackAllMutations() {
         Path database = temporary.resolve("rollback.db");
         SqliteGuideHistoryStore baseline = store(database);
-        GuideHistoryPartition original = partition(1, false, false);
-        baseline.save(original);
+        GuideHistoryFixture original = partition(1, false, false);
+        GuideHistoryFixture.seed(baseline, original);
         GuideRequestSnapshot previous = original.sessions().getFirst().requests().getFirst();
         GuideRequestSnapshot failed = new GuideRequestSnapshot(
                 previous.requestId(), previous.sessionId(), previous.topology(),
@@ -209,7 +218,7 @@ final class SqliteGuideHistoryWindowTest {
     @Test
     void metadataRecoveryInterruptsOrphanWithoutRepeatingIt() {
         SqliteGuideHistoryStore store = store(temporary.resolve("recovery.db"));
-        store.save(partition(1, true, false));
+        GuideHistoryFixture.seed(store, partition(1, true, false));
 
         store.metadata(SCOPE).orElseThrow();
         GuideRequestSnapshot recovered = store.page(new GuideHistoryPageRequest(
@@ -222,37 +231,9 @@ final class SqliteGuideHistoryWindowTest {
     }
 
     @Test
-    void recognizedOldSchemasRemainUnchangedAndFutureSchemasFailClosed() throws Exception {
-        for (int version : List.of(1, 2, 3, 4)) {
-            Path database = temporary.resolve("schema-" + version + ".db");
-            LegacyGuideHistorySchemaFixtures.create(database, version);
-            byte[] original = java.nio.file.Files.readAllBytes(database);
-            SqliteGuideHistoryStore store = store(database);
-
-            GuideHistoryException unsupported = assertThrows(
-                    GuideHistoryException.class, () -> store.metadata(SCOPE));
-            assertEquals("history_schema_unsupported", unsupported.code());
-            assertTrue(java.util.Arrays.equals(original, java.nio.file.Files.readAllBytes(database)));
-        }
-
-        Path future = temporary.resolve("schema-99.db");
-        SqliteGuideHistoryStore futureStore = store(future);
-        futureStore.save(partition(3, false, false));
-        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + future);
-                var statement = connection.createStatement()) {
-            statement.executeUpdate("update schema_metadata set schema_version = 99");
-        }
-        byte[] originalFuture = java.nio.file.Files.readAllBytes(future);
-        GuideHistoryException failure = assertThrows(
-                GuideHistoryException.class, () -> futureStore.metadata(SCOPE));
-        assertEquals("history_schema_unsupported", failure.code());
-        assertTrue(java.util.Arrays.equals(originalFuture, java.nio.file.Files.readAllBytes(future)));
-    }
-
-    @Test
-    void largePartitionReturnsOnlyRequestedPageAndBudgetedContextObjects() {
+    void largeUiPartitionDoesNotCreateModelContextFromDisplayRows() {
         SqliteGuideHistoryStore store = store(temporary.resolve("large.db"));
-        store.save(partition(256, false, false));
+        GuideHistoryFixture.seed(store, partition(256, false, false));
 
         assertEquals(256, store.metadata(SCOPE).orElseThrow()
                 .sessions().getFirst().requestCount());
@@ -262,8 +243,8 @@ final class SqliteGuideHistoryWindowTest {
         GuideHistoryContextRequest request = new GuideHistoryContextRequest(
                 SCOPE, "main", new ContextBudget(700, 100), 50, "same-model");
         GuideHistoryContextSeed seed = store.context(request);
-        assertTrue(seed.messages().size() < 20);
-        assertTrue(seed.estimatedTokens() <= request.availableHistoryTokens());
+        assertTrue(seed.messages().isEmpty());
+        assertEquals(0, seed.estimatedTokens());
     }
 
     private SqliteGuideHistoryStore store(Path database) {
@@ -271,7 +252,7 @@ final class SqliteGuideHistoryWindowTest {
                 database, Clock.fixed(NOW, ZoneOffset.UTC), new GuideHistoryCodec());
     }
 
-    private static GuideHistoryPartition partition(
+    private static GuideHistoryFixture partition(
             int count, boolean activeLast, boolean withTool) {
         List<GuideRequestSnapshot> requests = new ArrayList<>();
         for (int index = 0; index < count; index++) {
@@ -296,8 +277,7 @@ final class SqliteGuideHistoryWindowTest {
                     active ? null : NOW.plusSeconds(index + 1),
                     GuideModelSelection.client("profile")));
         }
-        return new GuideHistoryPartition(
-                GuideHistoryPartition.SCHEMA_VERSION,
+        return new GuideHistoryFixture(
                 SCOPE,
                 "main",
                 List.of(new GuideSessionSnapshot(

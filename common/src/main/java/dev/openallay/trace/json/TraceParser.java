@@ -28,7 +28,7 @@ import java.util.Set;
 
 public final class TraceParser {
     private static final Set<String> TRACE_FIELDS =
-            Set.of("schemaVersion", "id", "userMessage", "requiredContext", "steps");
+            Set.of("id", "userMessage", "requiredContext", "steps");
     private static final Set<String> TOOL_STEP_FIELDS =
             Set.of("type", "tool", "arguments", "expect");
     private static final Set<String> MESSAGE_STEP_FIELDS = Set.of("type", "content");
@@ -53,7 +53,6 @@ public final class TraceParser {
 
     private AgentTrace parseTrace(JsonObject object) {
         requireFields(object, "$", TRACE_FIELDS, TRACE_FIELDS);
-        int schemaVersion = requireInt(object, "schemaVersion", "$", 1);
         String id = requireString(object, "id", "$");
         String userMessage = requireString(object, "userMessage", "$");
 
@@ -78,7 +77,7 @@ public final class TraceParser {
         for (int index = 0; index < stepArray.size(); index++) {
             steps.add(parseStep(requireObject(stepArray.get(index), "$.steps[" + index + "]"), index));
         }
-        return new AgentTrace(schemaVersion, id, userMessage, capabilities, steps);
+        return new AgentTrace(id, userMessage, capabilities, steps);
     }
 
     private TraceStep parseStep(JsonObject object, int index) {
@@ -209,29 +208,6 @@ public final class TraceParser {
             throw invalid("Expected string at " + path);
         }
         return element.getAsString();
-    }
-
-    private static int requireInt(JsonObject object, String field, String path, int expected) {
-        JsonElement element = object.get(field);
-        if (element == null
-                || !element.isJsonPrimitive()
-                || !element.getAsJsonPrimitive().isNumber()) {
-            throw invalid("Expected integer at " + path + "." + field);
-        }
-        String number = element.getAsString();
-        if (!number.matches("-?(0|[1-9][0-9]*)")) {
-            throw invalid("Expected integer at " + path + "." + field);
-        }
-        int value;
-        try {
-            value = Integer.parseInt(number);
-        } catch (NumberFormatException exception) {
-            throw invalid("Expected integer at " + path + "." + field);
-        }
-        if (value != expected) {
-            throw invalid("Unsupported trace schema: " + value);
-        }
-        return value;
     }
 
     private static JsonParseException invalid(String message) {

@@ -13,7 +13,7 @@ import java.util.Set;
 /** Strict durable codec for the OpenAllay-owned semantic AST. */
 public final class SemanticDocumentCodec {
     private static final Set<String> DOCUMENT_FIELDS =
-            Set.of("schemaVersion", "blocks", "fallbackText", "diagnostics");
+            Set.of("blocks", "fallbackText", "diagnostics");
     private static final Set<String> DIAGNOSTIC_FIELDS = Set.of("code", "nodeId");
     private static final Set<String> REFERENCE_FIELDS =
             Set.of("kind", "target", "label", "grounded", "originInvocationId");
@@ -28,7 +28,6 @@ public final class SemanticDocumentCodec {
         java.util.Objects.requireNonNull(document, "document");
         requireUniqueNodeIds(document);
         JsonObject object = new JsonObject();
-        object.addProperty("schemaVersion", document.schemaVersion());
         object.add("blocks", blocks(document.blocks()));
         object.addProperty("fallbackText", document.fallbackText());
         JsonArray diagnostics = new JsonArray();
@@ -48,10 +47,6 @@ public final class SemanticDocumentCodec {
 
     public SemanticDocument decodeObject(JsonObject object) {
         exact(object, DOCUMENT_FIELDS, "semantic document");
-        int version = integer(object, "schemaVersion");
-        if (version != SemanticDocument.SCHEMA_VERSION) {
-            throw new IllegalArgumentException("unsupported semantic document schema " + version);
-        }
         List<SemanticDiagnostic> diagnostics = new ArrayList<>();
         for (JsonElement value : array(object, "diagnostics")) {
             JsonObject encoded = object(value, "semantic diagnostic");
@@ -60,7 +55,6 @@ public final class SemanticDocumentCodec {
                     string(encoded, "code"), string(encoded, "nodeId")));
         }
         SemanticDocument document = new SemanticDocument(
-                version,
                 decodeBlocks(array(object, "blocks")),
                 string(object, "fallbackText"),
                 diagnostics);

@@ -16,7 +16,6 @@ public final class CapabilityPolicyWriter {
     public String encode(CapabilityPolicy policy) {
         Objects.requireNonNull(policy, "policy");
         JsonObject root = new JsonObject();
-        root.addProperty("schemaVersion", policy.schemaVersion());
         root.add("disabledTools", array(policy.disabledTools()));
         root.add("disabledSkills", array(policy.disabledSkills()));
         return GSON.toJson(root) + System.lineSeparator();
