@@ -3,6 +3,7 @@ package dev.openallay.model.http;
 import dev.openallay.model.ModelClientException;
 import dev.openallay.model.ModelFailure;
 import dev.openallay.model.ModelRateLimitException;
+import dev.openallay.model.ModelUpstreamException;
 import dev.openallay.net.HttpResponseHeaders;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -31,6 +32,9 @@ public final class ModelHttpErrors {
         }
         if (status == 400) {
             throw rejectedBadRequest(status, body);
+        }
+        if (status == 502 || status == 503 || status == 504) {
+            throw new ModelUpstreamException(status, retryAfter(headers));
         }
         throw new ModelClientException(new ModelFailure("model_http_error", message, status));
     }

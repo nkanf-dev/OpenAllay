@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import dev.openallay.model.ModelClientException;
 import dev.openallay.model.ModelRateLimitException;
+import dev.openallay.model.ModelUpstreamException;
 import dev.openallay.net.HttpResponseHeaders;
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
@@ -143,6 +144,45 @@ final class ModelHttpErrorsTest {
         assertEquals("Model endpoint returned HTTP 429", failure.failure().message());
         assertEquals(Duration.ofSeconds(7), failure.retryAfter());
         assertFalse(failure.toString().contains("private provider body"));
+    }
+
+    @Test
+    void classifiesOnlyTransientGatewayStatusesWithoutReadingTheirBody() {
+        for (int status : List.of(502, 503, 504)) {
+            ModelUpstreamException failure = assertThrows(ModelUpstreamException.class,
+                    () -> ModelHttpErrors.requireSuccess(status,
+                            new HttpResponseHeaders(Map.of("retry-after", List.of("7"))),
+                            new java.io.InputStream() {
+                                @Override
+                                public int read() {
+                                    throw new AssertionError("Upstream error bodies must not be read");
+                                }
+                            }));
+            assertEquals("model_upstream_error", failure.failure().code());
+            assertEquals(status, failure.failure().httpStatus());
+            assertEquals(Duration.ofSeconds(7), failure.retryAfter());
+            assertEquals("Model service or gateway returned HTTP " + status
+                    + "; this model reply did not complete. Completed operations are preserved.",
+                    failure.failure().message());
+        }
+        for (int status : List.of(401, 403, 404, 408, 409, 500, 501, 505)) {
+            ModelClientException failure = assertThrows(ModelClientException.class,
+                    () -> ModelHttpErrors.requireSuccess(status,
+                            new HttpResponseHeaders(Map.of()), body("private detail")));
+            assertEquals("model_http_error", failure.failure().code());
+            assertEquals(status, failure.failure().httpStatus());
+            assertFalse(failure instanceof ModelUpstreamException);
+        }
+    }
+
+    @Test
+    void upstreamRetryAfterUsesExistingHttpDateAndInvalidHeaderRules() {
+        for (String header : List.of("invalid", "Mon, 01 Jan 1990 00:00:00 GMT", "-1")) {
+            ModelUpstreamException failure = assertThrows(ModelUpstreamException.class,
+                    () -> ModelHttpErrors.requireSuccess(503,
+                            new HttpResponseHeaders(Map.of("retry-after", List.of(header))), body("")));
+            assertEquals(header.equals("invalid") ? null : Duration.ZERO, failure.retryAfter());
+        }
     }
 
     private static ByteArrayInputStream body(String text) {

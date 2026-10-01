@@ -47,7 +47,7 @@ public sealed interface ModelEvent
         }
     }
 
-    /** Response headers arrived and response-body decoding is about to begin. */
+    /** Successful response headers arrived; model response-body decoding is about to begin. */
     record ResponseStarted() implements ModelEvent {}
 
     record RateLimited(long retryAfterMillis, int attempt) implements ModelEvent {

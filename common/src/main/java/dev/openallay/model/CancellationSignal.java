@@ -7,9 +7,27 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public final class CancellationSignal implements dev.openallay.net.HttpCancellation {
     private final AtomicBoolean cancelled = new AtomicBoolean();
     private final List<Runnable> listeners = new ArrayList<>();
+    private final CancellationSignal parent;
+    private final Runnable parentListener;
+
+    public CancellationSignal() {
+        parent = null;
+        parentListener = null;
+    }
+
+    private CancellationSignal(CancellationSignal parent) {
+        this.parent = parent;
+        parentListener = this::cancel;
+        parent.onCancel(parentListener);
+    }
+
+    /** Adds a local deadline without delaying immediate revocation by the caller. */
+    public CancellationSignal linkedChild() {
+        return new CancellationSignal(this);
+    }
 
     public boolean isCancelled() {
-        return cancelled.get();
+        return cancelled.get() || (parent != null && parent.isCancelled());
     }
 
     public void throwIfCancelled() {
@@ -23,7 +41,7 @@ public final class CancellationSignal implements dev.openallay.net.HttpCancellat
         java.util.Objects.requireNonNull(listener, "listener");
         boolean runNow;
         synchronized (listeners) {
-            runNow = cancelled.get();
+            runNow = isCancelled();
             if (!runNow) {
                 listeners.add(listener);
             }
@@ -39,6 +57,11 @@ public final class CancellationSignal implements dev.openallay.net.HttpCancellat
     public boolean cancel(java.util.concurrent.Executor notifications) {
         java.util.Objects.requireNonNull(notifications, "notifications");
         if (!cancelled.compareAndSet(false, true)) return false;
+        if (parent != null) {
+            synchronized (parent.listeners) {
+                parent.listeners.remove(parentListener);
+            }
+        }
         List<Runnable> snapshot;
         synchronized (listeners) {
             snapshot = List.copyOf(listeners);

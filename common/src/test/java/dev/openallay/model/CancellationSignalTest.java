@@ -39,6 +39,47 @@ final class CancellationSignalTest {
     }
 
     @Test
+    void linkedChildSeesImmediateParentRevocationBeforeDeferredNotifications() {
+        CancellationSignal parent = new CancellationSignal();
+        CancellationSignal child = parent.linkedChild();
+        List<Runnable> deferred = new ArrayList<>();
+        List<String> calls = new ArrayList<>();
+        child.onCancel(() -> calls.add("notified"));
+
+        parent.cancel(deferred::add);
+
+        assertTrue(child.isCancelled());
+        assertThrows(ModelClientException.class, child::throwIfCancelled);
+        assertTrue(calls.isEmpty());
+        child.onCancel(() -> calls.add("late"));
+        assertEquals(List.of("late"), calls);
+        deferred.getFirst().run();
+        assertEquals(List.of("late", "notified"), calls);
+    }
+
+    @Test
+    void retiredChildReleasesItsParentCancellationListener() throws Exception {
+        CancellationSignal parent = new CancellationSignal();
+        var listenersField = CancellationSignal.class.getDeclaredField("listeners");
+        listenersField.setAccessible(true);
+        List<?> listeners = (List<?>) listenersField.get(parent);
+        CancellationSignal child = parent.linkedChild();
+        assertEquals(1, listeners.size());
+        child.cancel();
+        assertTrue(listeners.isEmpty());
+        assertFalse(parent.isCancelled());
+    }
+
+    @Test
+    void localDeadlineDoesNotCancelItsParent() {
+        CancellationSignal parent = new CancellationSignal();
+        CancellationSignal child = parent.linkedChild();
+        child.cancel();
+        assertTrue(child.isCancelled());
+        assertFalse(parent.isCancelled());
+    }
+
+    @Test
     void failingListenerDoesNotPreventOtherRevocationsOrTerminalCleanup() {
         CancellationSignal signal = new CancellationSignal();
         List<String> calls = new ArrayList<>();

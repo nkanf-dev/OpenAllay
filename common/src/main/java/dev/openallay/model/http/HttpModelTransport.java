@@ -74,7 +74,11 @@ public final class HttpModelTransport {
         emit.accept(new ModelEvent.AttemptStarted(1, request.timeout().toMillis()));
         transport.execute(request, cancellation, (status, headers, body) -> {
             receivedStatus.set(status);
-            emit.accept(new ModelEvent.ResponseStarted());
+            // Error headers are not model output. A successful response is a
+            // conservative no-replay boundary, even before its first body byte.
+            if (status >= 200 && status < 300) {
+                emit.accept(new ModelEvent.ResponseStarted());
+            }
             return decoder.decode(status, headers, body, emit);
         }).whenComplete((value, failure) -> {
             synchronized (eventGate) {
@@ -93,16 +97,20 @@ public final class HttpModelTransport {
                         || cause instanceof java.util.concurrent.CancellationException;
                 boolean timedOut = cause instanceof HttpTimeoutException
                         || cause instanceof TimeoutException;
+                int status = receivedStatus.get();
+                boolean rejected = status >= 300;
                 result.completeExceptionally(new ModelClientException(new ModelFailure(
                         cancelled
                                 ? "agent_cancelled"
-                                : timedOut ? "model_timeout" : "model_transport_error",
+                                : timedOut ? "model_timeout"
+                                        : rejected ? "model_http_error" : "model_transport_error",
                         cancelled
                                 ? "Model request was cancelled"
                                 : timedOut
                                         ? "Model request timed out"
-                                        : "Model transport is unavailable",
-                        null)));
+                                        : rejected ? "Model endpoint returned HTTP " + status
+                                                : "Model transport is unavailable",
+                        rejected && !cancelled && !timedOut ? status : null)));
             }
         });
         return result;

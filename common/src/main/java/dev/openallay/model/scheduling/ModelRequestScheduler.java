@@ -8,6 +8,7 @@ import dev.openallay.model.ModelFailure;
 import dev.openallay.model.ModelRateLimitException;
 import dev.openallay.model.ModelRequest;
 import dev.openallay.model.ModelTurn;
+import dev.openallay.model.ModelUpstreamException;
 import java.time.Duration;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -18,11 +19,15 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 public final class ModelRequestScheduler implements ModelClient {
     private static final Duration DEFAULT_TRANSPORT_RETRY_DELAY = Duration.ofSeconds(1);
     private static final int DEFAULT_TRANSPORT_RETRIES = 2;
+    private static final ScheduledThreadPoolExecutor RETRY_TIMERS = retryTimers();
     private final ModelClient delegate;
     private final Duration transportRetryDelay;
     private final int transportRetries;
@@ -53,7 +58,12 @@ public final class ModelRequestScheduler implements ModelClient {
             Consumer<ModelEvent> events,
             CancellationSignal cancellation) {
         Pending pending = new Pending(request, events, cancellation);
-        cancellation.onCancel(() -> cancelQueued(pending));
+        pending.result.whenComplete((turn, failure) -> release(pending));
+        pending.exchangeCancellation.onCancel(() -> {
+            if (cancellation.isCancelled()) {
+                cancelQueued(pending);
+            }
+        });
         enqueue(pending, false);
         return pending.result;
     }
@@ -134,14 +144,35 @@ public final class ModelRequestScheduler implements ModelClient {
         if (pending.cancellation.isCancelled() || pending.result.isDone()) {
             return;
         }
+        if (pending.recoveryDeadlineNanos != 0
+                && pending.recoveryDeadlineNanos - System.nanoTime() <= 0) {
+            expireRecovery(pending);
+            return;
+        }
         pending.attempt++;
+        long attemptStartedNanos = System.nanoTime();
+        pending.attemptDeadlineNanos = 0;
         java.util.concurrent.atomic.AtomicBoolean responseProgress =
                 new java.util.concurrent.atomic.AtomicBoolean();
         pending.events.accept(new ModelEvent.AttemptStarted(pending.attempt, null));
+        if (pending.cancellation.isCancelled() || pending.result.isDone()) {
+            cancelQueued(pending);
+            return;
+        }
         delegate.complete(
                         pending.request,
                         event -> {
-                            if (!(event instanceof ModelEvent.AttemptStarted)) {
+                            if (pending.recoveryDeadlineNanos != 0
+                                    && pending.recoveryDeadlineNanos - System.nanoTime() <= 0) {
+                                expireRecovery(pending);
+                                return;
+                            }
+                            if (event instanceof ModelEvent.AttemptStarted started) {
+                                if (started.attemptTimeoutMillis() != null) {
+                                    pending.attemptDeadlineNanos = attemptStartedNanos
+                                            + TimeUnit.MILLISECONDS.toNanos(started.attemptTimeoutMillis());
+                                }
+                            } else {
                                 responseProgress.set(true);
                             }
                             if (!pending.cancellation.isCancelled()
@@ -150,14 +181,27 @@ public final class ModelRequestScheduler implements ModelClient {
                                         event instanceof ModelEvent.AttemptStarted started
                                                 ? new ModelEvent.AttemptStarted(
                                                         pending.attempt,
-                                                        started.attemptTimeoutMillis())
+                                                        attemptBudgetMillis(pending, started.attemptTimeoutMillis()))
                                                 : event);
                             }
                         },
-                        pending.cancellation)
+                        pending.exchangeCancellation)
                 .whenComplete((turn, throwable) -> {
+                    if (pending.result.isDone()) {
+                        return;
+                    }
+                    if (pending.cancellation.isCancelled()) {
+                        cancelQueued(pending);
+                        return;
+                    }
+                    if (pending.recoveryDeadlineNanos != 0
+                            && pending.recoveryDeadlineNanos - System.nanoTime() <= 0) {
+                        expireRecovery(pending);
+                        return;
+                    }
                     Throwable cause = unwrap(throwable);
                     if (cause instanceof ModelRateLimitException limited
+                            && !responseProgress.get()
                             && !pending.cancellation.isCancelled()) {
                         Duration delay = limited.retryAfter() == null
                                 ? fallbackDelay(pending.attempt)
@@ -167,8 +211,9 @@ public final class ModelRequestScheduler implements ModelClient {
                         closeGate(delay);
                         enqueue(pending, true);
                     } else if (retryableTransport(cause, responseProgress.get(), pending)
-                            && !pending.cancellation.isCancelled()) {
-                        scheduleTransportRetry(pending);
+                            && !pending.cancellation.isCancelled()
+                            && scheduleTransportRetry(pending, cause)) {
+                        // The same model round remains pending. Never re-enter the agent/tool loop.
                     } else if (throwable != null) {
                         pending.result.completeExceptionally(cause);
                     } else {
@@ -180,31 +225,91 @@ public final class ModelRequestScheduler implements ModelClient {
     private boolean retryableTransport(Throwable cause, boolean responseProgress, Pending pending) {
         return !responseProgress
                 && cause instanceof ModelClientException modelFailure
-                && modelFailure.failure().code().equals("model_transport_error")
+                && (modelFailure.failure().code().equals("model_transport_error")
+                        || cause instanceof ModelUpstreamException)
                 && pending.attempt <= transportRetries;
     }
 
-    private void scheduleTransportRetry(Pending pending) {
+    private boolean scheduleTransportRetry(Pending pending, Throwable cause) {
         Duration delay = transportRetryDelay.multipliedBy(Math.max(1, pending.attempt));
-        Thread.ofVirtual().name("openallay-model-transport-retry").start(() -> {
-            try {
-                long remaining = delay.toNanos();
-                while (remaining > 0 && !pending.cancellation.isCancelled()
-                        && !pending.result.isDone()) {
-                    long slice = Math.min(remaining, Duration.ofMillis(100).toNanos());
-                    long before = System.nanoTime();
-                    Thread.sleep(Duration.ofNanos(slice));
-                    remaining -= Math.max(1, System.nanoTime() - before);
-                }
-                if (!pending.cancellation.isCancelled() && !pending.result.isDone()) {
-                    enqueue(pending, true);
-                }
-            } catch (InterruptedException interrupted) {
-                Thread.currentThread().interrupt();
-                pending.result.completeExceptionally(new ModelClientException(
-                        new ModelFailure("model_transport_error", "Model transport is unavailable", null)));
+        if (cause instanceof ModelUpstreamException upstream
+                && upstream.retryAfter() != null && upstream.retryAfter().compareTo(delay) > 0) {
+            delay = upstream.retryAfter();
+        }
+        synchronized (this) {
+            if (pending.result.isDone() || pending.cancellation.isCancelled()) {
+                return false;
             }
-        });
+            long deadline = pending.recoveryDeadlineNanos == 0
+                    ? pending.attemptDeadlineNanos : pending.recoveryDeadlineNanos;
+            long remaining = deadline - System.nanoTime();
+            // Do not shorten Retry-After or grant another full timeout to recover.
+            // If recovery cannot fit, preserve the actual upstream/transport failure.
+            if (deadline != 0 && (remaining <= 0
+                    || delay.compareTo(Duration.ofNanos(remaining)) >= 0)) {
+                return false;
+            }
+            if (pending.recoveryDeadlineNanos == 0 && deadline != 0) {
+                pending.recoveryDeadlineNanos = deadline;
+                pending.deadlineWake = scheduleRecovery(() -> expireRecovery(pending), remaining);
+            }
+            long delayNanos;
+            try {
+                delayNanos = delay.toNanos();
+            } catch (ArithmeticException excessiveDelay) {
+                return false;
+            }
+            pending.retryWake = scheduleRecovery(() -> enqueue(pending, true), delayNanos);
+            return true;
+        }
+    }
+
+    private static Long attemptBudgetMillis(Pending pending, Long reportedMillis) {
+        if (pending.recoveryDeadlineNanos == 0) {
+            return reportedMillis;
+        }
+        long remaining = Math.max(0, TimeUnit.NANOSECONDS.toMillis(
+                pending.recoveryDeadlineNanos - System.nanoTime()));
+        return reportedMillis == null ? remaining : Math.min(reportedMillis, remaining);
+    }
+
+    private static void expireRecovery(Pending pending) {
+        // Revoke the exchange before publishing a future whose consumers may block.
+        // Transport cleanup must not depend on CompletableFuture callback order.
+        pending.exchangeCancellation.cancel(notifications -> Thread.ofVirtual()
+                .name("openallay-model-recovery-cancel").start(notifications));
+        boolean cancelled = pending.cancellation.isCancelled();
+        pending.result.completeExceptionally(new ModelClientException(new ModelFailure(
+                cancelled ? "agent_cancelled" : "model_timeout",
+                cancelled ? "Agent request was cancelled" : "Model request timed out", null)));
+    }
+
+    private static ScheduledFuture<?> scheduleRecovery(Runnable action, long delayNanos) {
+        // Never let a decoder, cancellation listener, or consumer occupy the shared timer.
+        return RETRY_TIMERS.schedule(
+                () -> Thread.ofVirtual().name("openallay-model-recovery-task").start(action),
+                delayNanos, TimeUnit.NANOSECONDS);
+    }
+
+    private static ScheduledThreadPoolExecutor retryTimers() {
+        ScheduledThreadPoolExecutor timers = new ScheduledThreadPoolExecutor(
+                1, Thread.ofPlatform().daemon().name("openallay-model-recovery").factory());
+        timers.setRemoveOnCancelPolicy(true);
+        return timers;
+    }
+
+    private void release(Pending pending) {
+        synchronized (this) {
+            removeQueuedLocked(pending);
+            if (pending.retryWake != null) {
+                pending.retryWake.cancel(false);
+            }
+            if (pending.deadlineWake != null) {
+                pending.deadlineWake.cancel(false);
+            }
+        }
+        // Deadline expiry cancels only this exchange, not the caller's abort signal.
+        pending.exchangeCancellation.cancel();
     }
 
     private void closeGate(Duration delay) {
@@ -253,19 +358,20 @@ public final class ModelRequestScheduler implements ModelClient {
     }
 
     private void cancelQueued(Pending pending) {
-        synchronized (this) {
-            ArrayDeque<Pending> queue = queues.get(pending.request.sessionKey());
-            if (queue != null) {
-                queue.remove(pending);
-                if (queue.isEmpty()) {
-                    queues.remove(pending.request.sessionKey());
-                    rotation.remove(pending.request.sessionKey());
-                    inRotation.remove(pending.request.sessionKey());
-                }
-            }
-        }
         pending.result.completeExceptionally(new ModelClientException(
                 new ModelFailure("agent_cancelled", "Agent request was cancelled", null)));
+    }
+
+    private void removeQueuedLocked(Pending pending) {
+        ArrayDeque<Pending> queue = queues.get(pending.request.sessionKey());
+        if (queue != null) {
+            queue.remove(pending);
+            if (queue.isEmpty()) {
+                queues.remove(pending.request.sessionKey());
+                rotation.remove(pending.request.sessionKey());
+                inRotation.remove(pending.request.sessionKey());
+            }
+        }
     }
 
     private void cancelGateWaiter(GateWaiter waiter) {
@@ -305,7 +411,12 @@ public final class ModelRequestScheduler implements ModelClient {
         private final Consumer<ModelEvent> events;
         private final CancellationSignal cancellation;
         private final CompletableFuture<ModelTurn> result = new CompletableFuture<>();
+        private final CancellationSignal exchangeCancellation;
         private int attempt;
+        private volatile long attemptDeadlineNanos;
+        private volatile long recoveryDeadlineNanos;
+        private ScheduledFuture<?> retryWake;
+        private ScheduledFuture<?> deadlineWake;
 
         private Pending(
                 ModelRequest request,
@@ -314,6 +425,7 @@ public final class ModelRequestScheduler implements ModelClient {
             this.request = request;
             this.events = events;
             this.cancellation = cancellation;
+            this.exchangeCancellation = cancellation.linkedChild();
         }
     }
 
