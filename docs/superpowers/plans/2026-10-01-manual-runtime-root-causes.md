@@ -63,3 +63,10 @@ user manual0.2.4 run and its failures remain retained separately; no new graphic
 or paid-provider success is claimed. The task does not bump version or create a
 release/tag. The independent docs/development.md simplification runs separately
 and does not block this correction.
+
+## Source integration
+
+The coherent implementation and regression suite is committed as `d17ff22`.
+Main contains the same verified tree. Version remains 0.2.4, released tag remains
+unchanged, and no new release is created. Push and remote Quality status are
+reported separately when completed.

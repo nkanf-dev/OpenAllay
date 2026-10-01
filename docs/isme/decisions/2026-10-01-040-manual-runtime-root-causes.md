@@ -4,7 +4,7 @@
 - decided_by: root implementer
 - approval_source: user supplied four real-client failures and provider HTTP400 details, required root causes corrected in full, full verification, commit and push; “发版暂时不发”
 - date: 2026-10-01
-- commit: pending
+- commit: d17ff22
 - patterns: B_state_persistence, D_external_dependency, E_security_boundary, F_fail_semantics
 - scope: restored Tool IDs at provider boundaries, strict JS root recovery, truthful source/context diagnostics, automatic output maximum
 

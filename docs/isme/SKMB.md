@@ -47,7 +47,7 @@ historical checkpoints are not approval of a later release candidate.
 | SKMB-2026-10-01-036 | accepted | builtin model catalog, automatic BEST missing-context matching and published price estimates | B, C, D, F | decisions/2026-10-01-036-builtin-model-catalog.md | b9e415b |
 | SKMB-2026-10-01-037 | accepted | model-written JavaScript invocation display intent | B, E, F | decisions/2026-10-01-037-javascript-tool-intent.md | fef6f74 |
 | SKMB-2026-10-01-038 | accepted | native UI fit, friendly recorded evidence, terminal pending-Tool display, and retry clarity | B, E, F | decisions/2026-10-01-038-native-ui-evidence-and-lifecycle-clarity.md | f8c61e9 |
-| SKMB-2026-10-01-040 | accepted | manual runtime protocol IDs, JavaScript recovery, truthful diagnostics, and automatic output maximum | B, D, E, F | decisions/2026-10-01-040-manual-runtime-root-causes.md | pending |
+| SKMB-2026-10-01-040 | accepted | manual runtime protocol IDs, JavaScript recovery, truthful diagnostics, and automatic output maximum | B, D, E, F | decisions/2026-10-01-040-manual-runtime-root-causes.md | d17ff22 |
 
 SKMB-2026-07-18-006 is implemented by `a0eaeff`, `19ab90f`, and `c6ca6bc`.
 Its deterministic clean-build and packaged-driver evidence is recorded in the
