@@ -59,8 +59,8 @@ public final class AgentSystemPrompt {
                 """));
         sections.add(new Section("CORE JAVASCRIPT", coreContract));
         sections.add(new Section("SKILL GUIDANCE", """
-                Load relevant Skills and declared references when useful.
-                Continue an incomplete document with its returned cursor.
+                Use Skill instructions already in this context.
+                Load missing instructions or declared references when the task needs them.
                 """));
         sections.add(new Section("AVAILABLE SKILLS", skills.isEmpty()
                 ? "<available_skills>\n  <none/>\n</available_skills>"
@@ -71,7 +71,7 @@ public final class AgentSystemPrompt {
         sections.add(new Section("EXECUTION", """
                 - Use available capabilities to complete the player's task. Correct recoverable errors and continue.
                 - Include title and description on every run_javascript call: a short title and description in the player's language explaining the intended work.
-                - Return explicit JSON-friendly results with answer-relevant data.
+                - Analyze data in JavaScript. Return explicit JSON-friendly results with the data needed for the answer.
                 - Workspace handles belong only to the active request.
                 """));
         String javaAuthority = unrestrictedJavascript

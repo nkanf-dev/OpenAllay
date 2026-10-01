@@ -18,9 +18,10 @@ text.add(System.getProperty("java.version"));
 return String(text.toString());
 ```
 
-This mode bypasses OpenAllay JavaScript execution and result budgets.
+This mode removes the default isolated execution limits; it does not change the
+model-facing result view.
 Return explicit JSON-friendly values rather than raw Java objects.
-Use `references/java-jvm.md` for Java collections, arrays, files, and JVM usage.
+Use `references/java-jvm.md` when Java collection, array, file, or JVM details are needed.
 
 Scripts run on a worker. Schedule live game operations on their owning thread.
 Class names, mapped members, and mod APIs vary by installation; inspect available

@@ -77,6 +77,8 @@ final class BundledSkillsTest {
                 .find("unrestricted-javascript").orElseThrow();
         assertTrue(java.instructions().contains("Java.type(\"fully.qualified.ClassName\")"));
         assertTrue(java.instructions().contains("JSON-friendly"));
+        assertTrue(java.instructions().contains("does not change the\nmodel-facing result view"));
+        assertFalse(java.instructions().contains("bypasses OpenAllay JavaScript execution and result budgets"));
         assertTrue(java.instructions().contains("owning thread"));
         assertFalse(java.instructions().contains("verify them rather than inventing them"));
         assertFalse(java.references().get("references/java-jvm.md")

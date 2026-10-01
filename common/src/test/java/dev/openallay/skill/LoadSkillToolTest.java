@@ -17,6 +17,14 @@ import org.junit.jupiter.api.Test;
 
 final class LoadSkillToolTest {
     @Test
+    void describesMissingInstructionLoadingWithoutDemandingFullDocumentReads() {
+        String description = new LoadSkillTool(repository("Follow evidence.")).descriptor().description();
+        assertEquals(true, description.contains("Reuse Skill text already in the current model context"));
+        assertEquals(true, description.contains("system-delivered instructions"));
+        assertEquals(true, description.contains("needed incomplete document"));
+    }
+
+    @Test
     void returnsOnlyAValidatedNamedSkill() {
         SkillRepository repository = new SkillRepository(new SkillParser(), Set.of());
         repository.reload(java.util.List.of(new SkillSource(

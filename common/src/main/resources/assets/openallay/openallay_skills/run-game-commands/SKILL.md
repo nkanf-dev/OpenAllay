@@ -21,8 +21,7 @@ command capability for this request:
   and returns the messages that Minecraft produced. Input whitespace is stripped
   and a single optional leading `/` is removed before submission.
 
-Select the `commands` root for `run_javascript`; the binding is `commands`, not
-`mc.commands`.
+Call the top-level `commands` binding directly, not `mc.commands`.
 
 The canonical execution form is:
 

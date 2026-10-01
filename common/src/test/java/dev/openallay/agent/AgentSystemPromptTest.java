@@ -42,6 +42,16 @@ final class AgentSystemPromptTest {
     }
 
     @Test
+    void reusesContextInstructionsAndLoadsOnlyMissingWorkflowDetails() {
+        String prompt = AgentSystemPrompt.compose("");
+        assertTrue(prompt.contains("Use Skill instructions already in this context"));
+        assertTrue(prompt.contains("Load missing instructions or declared references when the task needs them"));
+        assertTrue(prompt.contains("Analyze data in JavaScript"));
+        assertTrue(prompt.contains("the data needed for the answer"));
+        assertFalse(prompt.contains("Load relevant Skills and declared references"));
+    }
+
+    @Test
     void keepsProgramInputTypedDataAndRequestScopedWorkspaceContracts() {
         String prompt = AgentSystemPrompt.compose("");
         assertTrue(prompt.contains("source is the JavaScript program text, not source attribution"));

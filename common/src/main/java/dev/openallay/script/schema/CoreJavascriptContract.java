@@ -21,7 +21,7 @@ public final class CoreJavascriptContract {
                 The general analysis Tool is run_javascript. Its stable globals are:
                 - mc: immutable captured Minecraft data documented below. Access any available property directly, for example mc.player.position or mc.items.filter(...). The runtime resolves data lazily and records actual read origins automatically; no root declarations are needed.
                 - schema.list() and schema.describe(path): descriptor-only discovery; path omits the mc. prefix.
-                - workspace.open(handle): reopen one exact result from this request.
+                - workspace.open(handle): reopen one complete canonical result from this active request. Include its exact handle in the run_javascript handles input. Handles expire when this request closes; past transcript handles cannot be reopened.
                 - helpers.schema(value): inspect one genuinely dynamic JSON or Extension value.
                 - require(id): load one exact bundled JavaScript module documented by the current contract or a vertical Skill.
                 - commands (optional captured capability): commands.list(), commands.describe(path), and commands.run(text). This is a top-level binding, separate from mc and schema; its availability is stated for this request.
@@ -32,7 +32,8 @@ public final class CoreJavascriptContract {
 
                 Host arrays support non-mutating filter, map, flatMap, slice, reduce, some, and includes.
                 Copy a host array before sort, reverse, splice, push, or index assignment.
-                Prefer one complete filter/join/aggregate program and return answer-sized data.
+                Prefer one complete filter/join/aggregate program.
+                Execution permission does not change model output budgets. Complete returned data stays in the request workspace; the model receives a labelled view with its size, structure, and a handle for further computation.
                 source is the JavaScript program text, not source attribution. Ordinary computations need no Minecraft read.
                 Returned data is the execution result; captured origins are automatic auxiliary metadata, not a success requirement.
 
