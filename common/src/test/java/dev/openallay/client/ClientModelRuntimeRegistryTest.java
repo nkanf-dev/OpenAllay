@@ -83,6 +83,51 @@ final class ClientModelRuntimeRegistryTest {
     }
 
     @Test
+    void disabledCredentialsAndRetiredRuntimeKeysStayKnownAcrossReplacement() {
+        String disabledSecret = "opaqueDisabledCredentialAlpha";
+        var initial = load("a", "a");
+        var local = dev.openallay.model.config.CredentialReference.local(UUID.randomUUID());
+        var disabled = new ModelProfileDefinition("disabled", "Disabled", false, ModelProtocol.OPENAI_CHAT,
+                URI.create("https://disabled.example/v1"), "model", local.encoded(), 128_000, 4096,
+                Duration.ofSeconds(30), Duration.ofSeconds(300), null);
+        var definitions = new ArrayList<>(initial.config().profiles());
+        definitions.add(disabled);
+        var profiles = new ArrayList<>(initial.profiles());
+        profiles.add(new ResolvedModelProfile(disabled, null,
+                new dev.openallay.guide.GuideFailure("model_disabled", "disabled")));
+        var loaded = new ModelProfilesConfigLoader.Load(new ModelProfilesConfig("a", definitions), profiles);
+        CompletableFuture<ModelTurn> pending = new CompletableFuture<>();
+        RecordingModel captured = new RecordingModel("a", pending);
+        String retiredSecret = "opaqueRetiredCredentialAlpha";
+        String replacementSecret = "opaqueReplacementCredentialBeta";
+        loaded = replaceTestCredential(loaded, retiredSecret);
+        ClientModelRuntimeRegistry registry = registry(loaded, Map.of("a", captured));
+        registry.bindCredentials(reference -> reference.equals(local)
+                ? new ToolResult.Success<>(SecretValue.of(disabledSecret))
+                : new ToolResult.Failure<>("unavailable", "unavailable"));
+        List<dev.openallay.agent.AgentEvent> events = new ArrayList<>();
+        UUID actor = UUID.randomUUID();
+        var active = registry.ask("a", actor, "main", UUID.randomUUID(), "question " + disabledSecret,
+                ToolInvocationContext.developmentConsole("synthetic-redaction"), events::add);
+        RecordingModel next = new RecordingModel("b");
+        registry.replace(replaceTestCredential(load("b", "b"), replacementSecret), profile -> next);
+        pending.complete(new ModelTurn("test", "a", List.of(new ModelContent.Text(
+                "old " + retiredSecret + " disabled " + disabledSecret + " newly loaded " + replacementSecret)),
+                "stop", ModelUsage.empty()));
+        var result = active.join();
+        assertFalse(new Gson().toJson(result).contains(disabledSecret));
+        assertFalse(new Gson().toJson(result).contains(retiredSecret));
+        assertFalse(new Gson().toJson(result).contains(replacementSecret));
+        registry.ask("b", actor, "main", UUID.randomUUID(), "follow up",
+                ToolInvocationContext.developmentConsole("synthetic-redaction"), events::add).join();
+        String sent = new Gson().toJson(next.requests);
+        assertFalse(sent.contains(disabledSecret));
+        assertFalse(sent.contains(retiredSecret));
+        assertFalse(sent.contains(replacementSecret));
+        assertFalse(new Gson().toJson(events).contains(disabledSecret));
+    }
+
+    @Test
     void missingProfileFailsClosedAndNeverRoutesToDefault() {
         RecordingModel modelA = new RecordingModel("model-a");
         ClientModelRuntimeRegistry registry = registry(
@@ -439,6 +484,17 @@ final class ClientModelRuntimeRegistryTest {
                 Runnable::run,
                 null,
                 profile -> clients.get(profile.definition().id()));
+    }
+
+    private static ModelProfilesConfigLoader.Load replaceTestCredential(
+            ModelProfilesConfigLoader.Load load, String value) {
+        return new ModelProfilesConfigLoader.Load(load.config(), load.profiles().stream().map(profile -> {
+            if (!profile.available()) return profile;
+            ModelConfig config = profile.runtimeConfig();
+            return new ResolvedModelProfile(profile.definition(), new ModelConfig(config.enabled(), config.protocol(),
+                    config.baseUri(), config.model(), SecretValue.of(value), config.contextWindowTokens(),
+                    config.maxOutputTokens(), config.connectTimeout(), config.requestTimeout()), null);
+        }).toList());
     }
 
     private static ModelProfilesConfigLoader.Load load(

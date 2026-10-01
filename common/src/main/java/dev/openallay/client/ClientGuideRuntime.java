@@ -103,7 +103,7 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
             String modelIdentifier,
             ClientCapabilitySnapshot capabilities) {
         this(
-                endpoint(model, gson, contextBudget, modelIdentifier),
+                endpoint(model, gson, contextBudget, modelIdentifier, traces.redactor()),
                 sessions,
                 gson,
                 dispatcher,
@@ -146,7 +146,7 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
                                     new dev.openallay.guide.GuideContextEstimate(request.requestId(), tokens));
                         }
                     }
-                });
+                }, traces.redactor());
     }
 
     ClientGuideRuntime withCapabilities(ClientCapabilitySnapshot replacement) {
@@ -346,7 +346,8 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
             ModelClient model,
             Gson gson,
             ContextBudget contextBudget,
-            String modelIdentifier) {
+            String modelIdentifier,
+            dev.openallay.agent.KnownSecretRedactor redactor) {
         ModelRequestScheduler scheduler = new ModelRequestScheduler(model);
         ContextCompactor compactor = contextBudget == null ? null : new ContextCompactor(
                 scheduler,
@@ -354,7 +355,7 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
                 new Utf8ContextTokenEstimator(),
                 contextBudget,
                 modelIdentifier,
-                Clock.systemUTC());
+                Clock.systemUTC(), redactor);
         return new EndpointRuntime(scheduler, compactor, contextBudget, modelIdentifier,
                 new ConcurrentHashMap<>());
     }

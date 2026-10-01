@@ -22,21 +22,53 @@ public final class LiveTraceJson {
             "(?i)(?:" + SECRET_NAMES + "|authorizationHeader|cookieHeader|setCookieHeader)");
     private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
 
+    /** Immutable matching plan. Sort credentials once, not once per result leaf. */
+    public static final class SecretPlan {
+        private final java.util.List<String> ordered;
+
+        public SecretPlan(Set<String> secrets) {
+            ordered = secrets.stream().filter(value -> value != null && !value.isBlank())
+                    .sorted(java.util.Comparator.comparingInt(String::length).reversed()).toList();
+        }
+    }
+
     public String encode(LiveAgentTrace trace, Set<String> secrets) {
-        return gson.toJson(redact(gson.toJsonTree(trace), secrets));
+        return encode(trace, new SecretPlan(secrets));
+    }
+
+    public String encode(LiveAgentTrace trace, SecretPlan plan) {
+        return gson.toJson(redact(gson.toJsonTree(trace), plan));
     }
 
     public static String redact(String text, Set<String> secrets) {
+        return redact(text, new SecretPlan(secrets));
+    }
+
+    public static String redact(String text, SecretPlan plan) {
         String safe = text;
-        for (String secret : secrets.stream().filter(value -> value != null && !value.isBlank())
-                .sorted(java.util.Comparator.comparingInt(String::length).reversed()).toList()) {
-            safe = safe.replace(secret, "[REDACTED]");
-        }
+        for (String secret : plan.ordered) safe = safe.replace(secret, "[REDACTED]");
         safe = HEADER_SECRET.matcher(safe).replaceAll(LiveTraceJson::maskedAssignment);
         safe = URL_USERINFO.matcher(safe).replaceAll("$1[REDACTED]@");
         safe = NAMED_SECRET.matcher(safe).replaceAll(LiveTraceJson::maskedAssignment);
         safe = BEARER_SECRET.matcher(safe).replaceAll("Bearer [REDACTED]");
         return PREFIXED_SECRET.matcher(safe).replaceAll("[REDACTED]");
+    }
+
+    /** Preserve call/result pairing without merging two distinct secret-bearing invocation IDs. */
+    public static String redactIdentity(String identity, Set<String> secrets) {
+        return redactIdentity(identity, new SecretPlan(secrets));
+    }
+
+    public static String redactIdentity(String identity, SecretPlan plan) {
+        String safe = redact(identity, plan);
+        if (safe.equals(identity)) return identity;
+        try {
+            byte[] digest = java.security.MessageDigest.getInstance("SHA-256")
+                    .digest(identity.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            return "redacted_" + java.util.HexFormat.of().formatHex(digest);
+        } catch (java.security.NoSuchAlgorithmException impossible) {
+            throw new IllegalStateException("SHA-256 is unavailable", impossible);
+        }
     }
 
     private static String maskedAssignment(java.util.regex.MatchResult match) {
@@ -47,22 +79,45 @@ public final class LiveTraceJson {
     }
 
     public static JsonElement redact(JsonElement value, Set<String> secrets) {
+        return redact(value, new SecretPlan(secrets));
+    }
+
+    /** No mutation. Unchanged subtrees keep identity; callers own any required defensive copy. */
+    public static JsonElement redact(JsonElement value, SecretPlan plan) {
         if (value == null || value.isJsonNull()) return com.google.gson.JsonNull.INSTANCE;
         if (value.isJsonPrimitive()) {
-            return value.getAsJsonPrimitive().isString()
-                    ? new com.google.gson.JsonPrimitive(redact(value.getAsString(), secrets))
-                    : value.deepCopy();
+            if (!value.getAsJsonPrimitive().isString()) return value;
+            String original = value.getAsString();
+            String safe = redact(original, plan);
+            return safe.equals(original) ? value : new com.google.gson.JsonPrimitive(safe);
         }
         if (value.isJsonArray()) {
             com.google.gson.JsonArray safe = new com.google.gson.JsonArray();
-            value.getAsJsonArray().forEach(item -> safe.add(redact(item, secrets)));
-            return safe;
+            boolean changed = false;
+            for (JsonElement item : value.getAsJsonArray()) {
+                JsonElement replacement = redact(item, plan);
+                changed |= replacement != item;
+                safe.add(replacement);
+            }
+            return changed ? safe : value;
         }
         JsonObject safe = new JsonObject();
-        value.getAsJsonObject().entrySet().forEach(entry -> safe.add(entry.getKey(),
-                SECRET_KEY.matcher(entry.getKey()).matches()
-                        ? new com.google.gson.JsonPrimitive("[REDACTED]")
-                        : redact(entry.getValue(), secrets)));
-        return safe;
+        JsonObject original = value.getAsJsonObject();
+        java.util.Map<String, Integer> nextSuffix = new java.util.HashMap<>();
+        boolean changed = false;
+        for (var entry : original.entrySet()) {
+            String key = redact(entry.getKey(), plan);
+            if (!key.equals(entry.getKey())) {
+                String base = key;
+                int suffix = nextSuffix.getOrDefault(base, 2);
+                while (safe.has(key) || original.has(key)) key = base + "_" + suffix++;
+                nextSuffix.put(base, suffix);
+            }
+            JsonElement replacement = SECRET_KEY.matcher(entry.getKey()).matches()
+                    ? new com.google.gson.JsonPrimitive("[REDACTED]") : redact(entry.getValue(), plan);
+            changed |= !key.equals(entry.getKey()) || !replacement.equals(entry.getValue());
+            safe.add(key, replacement);
+        }
+        return changed ? safe : value;
     }
 }

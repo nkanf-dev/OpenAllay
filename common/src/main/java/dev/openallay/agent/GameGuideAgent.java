@@ -36,6 +36,7 @@ public final class GameGuideAgent {
     private final Gson gson;
     private final ToolResultNormalizer canonicalizer;
     private final ContextCompactor compactor;
+    private final KnownSecretRedactor redactor;
     private final java.util.function.BiConsumer<AgentRequest, Integer> contextEstimates;
 
     public GameGuideAgent(
@@ -60,6 +61,15 @@ public final class GameGuideAgent {
             ModelClient model, AgentToolExecutor tools, AgentSessionStore sessions, Gson gson,
             ContextCompactor compactor,
             java.util.function.BiConsumer<AgentRequest, Integer> contextEstimates) {
+        this(model, tools, sessions, gson, compactor, contextEstimates, new KnownSecretRedactor());
+    }
+
+    public GameGuideAgent(
+            ModelClient model, AgentToolExecutor tools, AgentSessionStore sessions, Gson gson,
+            ContextCompactor compactor,
+            java.util.function.BiConsumer<AgentRequest, Integer> contextEstimates,
+            KnownSecretRedactor redactor) {
+        this.redactor = Objects.requireNonNull(redactor, "redactor");
         this.contextEstimates = Objects.requireNonNull(contextEstimates, "contextEstimates");
         this.model = Objects.requireNonNull(model, "model");
         this.tools = Objects.requireNonNull(tools, "tools");
@@ -89,9 +99,13 @@ public final class GameGuideAgent {
     }
 
     private CompletableFuture<AgentResult> askReserved(
-            AgentRequest request,
-            Consumer<AgentEvent> events,
+            AgentRequest rawRequest,
+            Consumer<AgentEvent> rawEvents,
             ToolResult<AgentSessionStore.Lease> reservation) {
+        AgentRequest request = new AgentRequest(rawRequest.requestId(), rawRequest.actorId(), rawRequest.sessionId(),
+                redactor.text(rawRequest.userMessage()), redactor.text(rawRequest.systemPrompt()),
+                rawRequest.context(), rawRequest.stream());
+        Consumer<AgentEvent> events = event -> rawEvents.accept(redactor.event(event));
         if (reservation instanceof ToolResult.Failure<AgentSessionStore.Lease> failure) {
             events.accept(new AgentEvent.Failed(failure.code(), failure.message()));
             return CompletableFuture.completedFuture(new AgentResult(
@@ -102,8 +116,8 @@ public final class GameGuideAgent {
         LiveAgentTraceRecorder trace = new LiveAgentTraceRecorder(gson, request);
         try {
             transition(AgentState.PREPARING, trace, events);
-            List<ModelMessage> messages = new ArrayList<>(tools.refreshContext(
-                    dev.openallay.agent.context.ModelContextCodec.safe(lease.history())));
+            List<ModelMessage> messages = new ArrayList<>(redactor.messages(tools.refreshContext(
+                    redactor.messages(lease.history()))));
             int protectedFromIndex = messages.size();
             messages.add(ModelMessage.userText(request.userMessage()));
             List<ModelMessage> completeMessages = List.copyOf(messages);
@@ -231,18 +245,18 @@ public final class GameGuideAgent {
                                 events);
                     });
         }
-        List<ModelMessage> projectedMessages = tools.refreshContext(messages);
+        List<ModelMessage> projectedMessages = redactor.messages(tools.refreshContext(redactor.messages(messages)));
         boolean changedProjection = !lease.progress().projected().equals(projectedMessages);
         if (sessions.recordContext(lease, projectedMessages, completeMessages) && changedProjection) {
             events.accept(new AgentEvent.ContextUpdated(projectedMessages, lease.progress().requestMessages()));
         }
         tools.prepareContext(request.context().correlationId(), projectedMessages);
-        ModelRequest modelRequest = new ModelRequest(
+        ModelRequest modelRequest = redactor.request(new ModelRequest(
                 request.systemPrompt(),
                 projectedMessages,
                 tools.definitions(),
                 request.stream(),
-                request.sessionKey().schedulingKey());
+                request.sessionKey().schedulingKey()));
         lease.cancellation().throwIfCancelled();
         int estimatedTokens = new dev.openallay.agent.context.Utf8ContextTokenEstimator().estimate(
                 modelRequest.systemPrompt(), modelRequest.messages(), modelRequest.tools());
@@ -260,14 +274,19 @@ public final class GameGuideAgent {
                             }
                         },
                         lease.cancellation()))
-                .thenCompose(turn -> {
+                .thenCompose(rawTurn -> {
                     lease.cancellation().throwIfCancelled();
+                    var turn = new dev.openallay.model.ModelTurn(
+                            redactor.text(rawTurn.providerId()), redactor.text(rawTurn.model()),
+                            redactor.content(rawTurn.content()), redactor.text(rawTurn.stopReason()), rawTurn.usage());
                     trace.modelTurn(turn);
                     List<ModelMessage> nextMessages = new ArrayList<>(projectedMessages);
                     nextMessages.add(new ModelMessage(ModelRole.ASSISTANT, turn.content()));
                     List<ModelMessage> nextCompleteMessages = new ArrayList<>(completeMessages);
                     nextCompleteMessages.add(new ModelMessage(ModelRole.ASSISTANT, turn.content()));
                     if (turn.toolUses().isEmpty()) {
+                        nextMessages = new ArrayList<>(redactor.messages(nextMessages));
+                        nextCompleteMessages = new ArrayList<>(redactor.messages(nextCompleteMessages));
                         if (turn.text().isBlank()) {
                             throw new ModelClientException(new dev.openallay.model.ModelFailure(
                                     "model_protocol_error",
@@ -370,7 +389,9 @@ public final class GameGuideAgent {
             Map<String, String> updatedCallOutcomes =
                     new java.util.HashMap<>(previousCallOutcomes);
             for (PendingToolCall item : pending) {
-                AgentToolResult result = item.result.join();
+                AgentToolResult raw = item.result.join();
+                AgentToolResult result = new AgentToolResult(raw.toolId(),
+                        redactor.json(raw.normalized()).getAsJsonObject(), raw.failure());
                 results.add(new ModelContent.ToolResult(
                         item.call.id(), result.modelValue(), result.failure()));
                 updatedCallOutcomes.put(
@@ -383,6 +404,8 @@ public final class GameGuideAgent {
             updated.add(new ModelMessage(ModelRole.USER, results));
             List<ModelMessage> updatedComplete = new ArrayList<>(completeMessages);
             updatedComplete.add(new ModelMessage(ModelRole.USER, results));
+            updated = new ArrayList<>(redactor.messages(updated));
+            updatedComplete = new ArrayList<>(redactor.messages(updatedComplete));
             capturedContext.set(sessions.recordContext(lease, updated, updatedComplete));
             // Capture only safe progress here. Observers and terminal cleanup run later.
             return new ToolOutcome(
@@ -468,7 +491,8 @@ public final class GameGuideAgent {
         if (item.result.isDone()) return;
         try {
             item.result.complete(executionFailure == null && rawResult != null
-                    ? new AgentToolResult(item.exposedId, rawResult.normalized(), rawResult.failure())
+                    ? new AgentToolResult(item.exposedId,
+                            redactor.json(rawResult.normalized()).getAsJsonObject(), rawResult.failure())
                     : recoverToolFailure(item.exposedId, executionFailure));
         } catch (RuntimeException malformed) {
             item.result.complete(recoverToolFailure(item.exposedId, malformed));
@@ -519,6 +543,8 @@ public final class GameGuideAgent {
             message = cause.getMessage() == null ? cause.getClass().getSimpleName() : cause.getMessage();
             state = AgentState.FAILED;
         }
+        code = redactor.text(code);
+        message = redactor.text(message);
         trace.failure(code, message);
         List<ModelMessage> retained = new ArrayList<>(lease.progress().projected());
         List<ModelMessage> original = new ArrayList<>(lease.progress().original());
@@ -553,7 +579,8 @@ public final class GameGuideAgent {
     }
 
     private JsonObject normalizedFailure(String code, String message) {
-        return canonicalizer.normalize(new ToolResult.Failure<>(code, message), Object.class);
+        return redactor.json(canonicalizer.normalize(
+                new ToolResult.Failure<>(code, message), Object.class)).getAsJsonObject();
     }
 
     private AgentToolResult noNewInformation(String toolId) {

@@ -87,6 +87,43 @@ final class SqliteGuideHistoryContextTest {
     }
 
     @Test
+    void knownCredentialBoundarySurvivesDurableContextAndTextExport() throws Exception {
+        String secret = "opaqueSavedCredentialAlpha";
+        var redactor = new dev.openallay.agent.KnownSecretRedactor(java.util.Set.of(secret));
+        JsonObject input = new JsonObject();
+        input.addProperty("source", "return '" + secret + "';");
+        input.addProperty(secret, "ordinary");
+        JsonObject value = new JsonObject();
+        value.addProperty(secret, secret);
+        value.addProperty("fact", 42);
+        List<ModelMessage> safe = redactor.messages(List.of(ModelMessage.userText("question"),
+                new ModelMessage(ModelRole.ASSISTANT, List.of(
+                        new ModelContent.Reasoning("private-reasoning", "private-signature"),
+                        new ModelContent.ToolUse("call", "openallay:run_javascript", input))),
+                new ModelMessage(ModelRole.USER, List.of(new ModelContent.ToolResult("call", value, false)))));
+        Path database = temporary.resolve("known-credential.db");
+        SqliteGuideHistoryStore writer = store(database);
+        GuideHistoryFixture.seed(writer, partition(SCOPE, false));
+        writer.commit(new GuideHistoryCommit(SCOPE, List.of(
+                new GuideHistoryMutation.ReplaceContext("main", safe),
+                new GuideHistoryMutation.ReplaceRequestContext(REQUEST, safe))));
+        SqliteGuideHistoryStore reopened = store(database);
+        List<ModelMessage> original = reopened.requestContext(SCOPE, REQUEST);
+        assertEquals(safe, original);
+        assertEquals(safe, reopened.context(contextRequest(SCOPE, 4000)).messages());
+        var snapshot = new dev.openallay.guide.export.GuideSessionExportSnapshot("main", List.of(
+                new dev.openallay.guide.export.GuideSessionExportSnapshot.Request(REQUEST, NOW,
+                        GuideRequestStatus.COMPLETED, "question", List.of(), original, null)), NOW);
+        var exported = new dev.openallay.client.gui.export.GuideSessionExporter(temporary).export(snapshot);
+        String text = Files.readString(temporary.resolve("openallay/exports").resolve(exported.filename()));
+        assertFalse(text.contains(secret));
+        assertFalse(text.contains("private-reasoning"));
+        assertFalse(text.contains("private-signature"));
+        assertTrue(text.contains("42"));
+        assertTrue(text.contains("[REDACTED]"));
+    }
+
+    @Test
     void absentSnapshotNeverReconstructsDisplayHistory() {
         SqliteGuideHistoryStore store = store(temporary.resolve("no-snapshot.db"));
         assertTrue(store.context(contextRequest(SCOPE, 4_000)).messages().isEmpty());

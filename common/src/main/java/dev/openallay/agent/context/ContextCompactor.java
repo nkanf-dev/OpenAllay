@@ -53,6 +53,7 @@ public final class ContextCompactor {
     }
 
     private final ModelClient model;
+    private final dev.openallay.agent.KnownSecretRedactor redactor;
     private final Gson gson;
     private final ContextTokenEstimator estimator;
     private final ContextBudget budget;
@@ -66,6 +67,14 @@ public final class ContextCompactor {
             ContextBudget budget,
             String modelIdentifier,
             Clock clock) {
+        this(model, gson, estimator, budget, modelIdentifier, clock,
+                new dev.openallay.agent.KnownSecretRedactor());
+    }
+
+    public ContextCompactor(
+            ModelClient model, Gson gson, ContextTokenEstimator estimator, ContextBudget budget,
+            String modelIdentifier, Clock clock, dev.openallay.agent.KnownSecretRedactor redactor) {
+        this.redactor = Objects.requireNonNull(redactor, "redactor");
         this.model = Objects.requireNonNull(model, "model");
         this.gson = Objects.requireNonNull(gson, "gson");
         this.estimator = Objects.requireNonNull(estimator, "estimator");
@@ -86,7 +95,7 @@ public final class ContextCompactor {
             String schedulingKey,
             CancellationSignal cancellation) {
         cancellation.throwIfCancelled();
-        List<ModelMessage> source = List.copyOf(messages);
+        List<ModelMessage> source = redactor.messages(messages);
         List<ModelToolDefinition> requestTools = List.copyOf(tools);
         List<ContextStructure.Unit> units = ContextStructure.units(source);
         ContextStructure.requireBoundary(units, protectedFromIndex, source.size());
@@ -111,7 +120,7 @@ public final class ContextCompactor {
                 List.of(),
                 false,
                 schedulingKey);
-        return cancellation.observe(model.complete(summaryRequest, ignored -> {}, cancellation))
+        return cancellation.observe(model.complete(redactor.request(summaryRequest), ignored -> {}, cancellation))
                 .handle((turn, throwable) -> {
                     cancellation.throwIfCancelled();
                     if (throwable != null) {
@@ -126,7 +135,7 @@ public final class ContextCompactor {
                     }
                     JsonObject summary;
                     try {
-                        summary = parseSummary(turn.text());
+                        summary = parseSummary(redactor.text(turn.text()));
                     } catch (RuntimeException malformed) {
                         ContextCheckpoint failure = failedCheckpoint(
                                 source, 0, prefix.toIndexExclusive(),
@@ -181,7 +190,7 @@ public final class ContextCompactor {
             int protectedFromIndex,
             List<ModelToolDefinition> tools) {
         Objects.requireNonNull(checkpoint, "checkpoint");
-        messages = List.copyOf(messages);
+        messages = redactor.messages(messages);
         if (checkpoint.status() != ContextCheckpoint.Status.SUCCEEDED
                 || checkpoint.sourceFromIndex() != 0
                 || checkpoint.sourceToIndexExclusive() > protectedFromIndex
@@ -194,7 +203,7 @@ public final class ContextCompactor {
             ContextStructure.requireBoundary(units, protectedFromIndex, messages.size());
             ContextStructure.requireBoundary(
                     units, checkpoint.sourceToIndexExclusive(), messages.size());
-            summary = parseSummary(checkpoint.summary());
+            summary = parseSummary(redactor.text(checkpoint.summary()));
         } catch (RuntimeException invalid) {
             return Optional.empty();
         }

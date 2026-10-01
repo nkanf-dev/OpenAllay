@@ -95,7 +95,8 @@ public final class ContextStructure {
                     .filter(item -> !(item instanceof ModelContent.Reasoning))
                     .toList();
             if (!content.isEmpty()) {
-                safe.add(new ModelMessage(message.role(), content));
+                safe.add(content.size() == message.content().size()
+                        ? message : new ModelMessage(message.role(), content));
             }
         }
         return List.copyOf(safe);
