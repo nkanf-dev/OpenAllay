@@ -82,6 +82,98 @@ final class RhinoHostAdapterTest {
     }
 
     @Test
+    void nativeJsonStringifyUsesDetachedComponentsInBothAuthorityModes() {
+        Fixture fixture = fixture();
+        var roots = Map.<String, Object>of(
+                "fixture", fixture,
+                "mapping", Map.of("name", "detached", "rows", List.of(1, 2)),
+                "json", JsonParser.parseString(
+                        "{\"groups\":[{\"values\":[1,2]},{\"values\":[\"a\",\"b\"]}],\"empty\":[]}"));
+        var runtime = new RhinoJavascriptRuntime();
+        for (boolean unrestricted : List.of(false, true)) {
+            for (String name : List.of("fixture", "mapping", "json")) {
+                var direct = runtime.execute("return mc." + name + ";", roots, Map.of(), Map.of(),
+                        new CancellationSignal(), null, null, unrestricted).value();
+                var roundTrip = runtime.execute(
+                        "return JSON.parse(JSON.stringify(mc." + name + "));", roots,
+                        Map.of(), Map.of(), new CancellationSignal(), null, null, unrestricted).value();
+                assertEquals(direct, roundTrip, name + " unrestricted=" + unrestricted);
+                assertFalse(roundTrip.toString().contains("dev.openallay.script.host"));
+                assertFalse(roundTrip.toString().contains("getParentScope"));
+            }
+            var values = runtime.execute(
+                    "return JSON.parse(JSON.stringify(mc.fixture.values));", roots, Map.of(), Map.of(),
+                    new CancellationSignal(), null, null, unrestricted).value();
+            assertEquals(JsonParser.parseString("[1,2,3]"), values);
+            var workspace = runtime.execute(
+                    "return JSON.parse(JSON.stringify(workspace.open('selected')));", Map.of(),
+                    Map.of("selected", JsonParser.parseString("{\"rows\":[1,2],\"empty\":[]}")),
+                    Map.of(), new CancellationSignal(), null, null, unrestricted).value();
+            assertEquals(JsonParser.parseString("{\"rows\":[1,2],\"empty\":[]}"), workspace);
+        }
+    }
+
+    @Test
+    void nativeJsonNestedHostsUseClosedViewsAndSafeAccessorFailures() {
+        var runtime = new RhinoJavascriptRuntime();
+        for (boolean unrestricted : List.of(false, true)) {
+            var roots = Map.<String, Object>of(
+                    "fixture", fixture(),
+                    "mapping", Map.of("name", "line\nvalue", "rows", List.of(1, 2)));
+            var result = runtime.execute("return JSON.parse(JSON.stringify({host:mc.fixture, rows:mc.fixture.values, map:mc.mapping}));",
+                    roots, Map.of(), Map.of(), new CancellationSignal(), null, null, unrestricted).value();
+            var direct = runtime.execute("return {host:mc.fixture, rows:mc.fixture.values, map:mc.mapping};",
+                    roots, Map.of(), Map.of(), new CancellationSignal(), null, null, unrestricted).value();
+            assertEquals(direct, result);
+            var facilities = runtime.execute("return {getClass: typeof mc.fixture.getClass, entrySet: typeof mc.mapping.entrySet, "
+                            + "put: typeof mc.mapping.put, iterator: typeof mc.fixture.values.iterator};",
+                    roots, Map.of(), Map.of(), new CancellationSignal(), null, null, unrestricted).value();
+            facilities.getAsJsonObject().entrySet().forEach(entry -> assertEquals("undefined", entry.getValue().getAsString()));
+            var failure = assertThrows(JavascriptExecutionException.class, () -> runtime.execute(
+                    "return JSON.stringify(mc.broken);", Map.of("broken", new BrokenAccessor("ignored")),
+                    Map.of(), Map.of(), new CancellationSignal(), null, null, unrestricted));
+            assertEquals("javascript_host_access_failed", failure.code());
+            assertFalse(failure.getMessage().contains("private-native-marker"));
+        }
+    }
+
+    private record BrokenAccessor(String value) {
+        @Override public String value() { throw new IllegalStateException("private-native-marker"); }
+    }
+
+    @Test
+    void javaSerializationViewsRemainLazyAndReadOnlyWithoutExposingMethods() {
+        var factory = new dev.latvian.mods.rhino.ContextFactory();
+        var context = factory.enter();
+        var scope = context.initSafeStandardObjects(null, false);
+        var adapter = new RhinoHostAdapter(context, scope);
+        HostObjectView object = (HostObjectView) adapter.adapt(Map.of("value", 1));
+        assertThrows(HostAccessException.class, () -> object.put("value", 2));
+        assertThrows(HostAccessException.class, () -> object.remove("missing"));
+        assertThrows(HostAccessException.class, () -> object.computeIfAbsent("value", ignored -> 2));
+        assertThrows(HostAccessException.class, () -> object.replaceAll((key, value) -> 2));
+        assertThrows(UnsupportedOperationException.class,
+                () -> object.entrySet().iterator().next().setValue(2));
+        assertThrows(UnsupportedOperationException.class, () -> object.keySet().clear());
+        AtomicInteger reads = new AtomicInteger();
+        HostListView list = (HostListView) adapter.adapt(new java.util.AbstractList<Integer>() {
+            @Override public Integer get(int index) { reads.incrementAndGet(); return index; }
+            @Override public int size() { return 2; }
+        });
+        var iterator = list.iterator();
+        assertEquals(0, reads.get());
+        assertTrue(iterator.hasNext());
+        assertEquals(0, reads.get());
+        assertEquals(0, iterator.next());
+        assertEquals(1, reads.get());
+        assertThrows(HostAccessException.class, iterator::remove);
+        var result = execute("return {getClass: typeof mc.object.getClass, entrySet: typeof mc.object.entrySet, "
+                + "put: typeof mc.object.put, iterator: typeof mc.list.iterator};",
+                Map.of("object", Map.of("value", 1), "list", List.of(1, 2)));
+        result.getAsJsonObject().entrySet().forEach(entry -> assertEquals("undefined", entry.getValue().getAsString()));
+    }
+
+    @Test
     void rejectsAllMutationPathsWithOneStableFailure() {
         Fixture fixture = fixture();
         for (String source : List.of(

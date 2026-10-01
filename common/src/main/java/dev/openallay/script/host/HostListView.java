@@ -5,11 +5,13 @@ import dev.latvian.mods.rhino.Context;
 import dev.latvian.mods.rhino.Scriptable;
 import dev.latvian.mods.rhino.ScriptableObject;
 import dev.openallay.script.result.JavascriptResultShape;
+import java.util.Iterator;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 
 /** Array-prototype-compatible, lazy, read-only view over a detached Java sequence. */
-public final class HostListView extends ScriptableObject {
+public final class HostListView extends ScriptableObject implements Iterable<Object> {
     interface Values {
         int size();
 
@@ -57,6 +59,23 @@ public final class HostListView extends ScriptableObject {
             @Override public int size() { return value.size(); }
             @Override public Object get(int index) { return value.get(index); }
         }, elementShape);
+    }
+
+    /** Lazy closed values for Rhino's existing NativeGSON Iterable serialization path. */
+    @Override
+    public Iterator<Object> iterator() {
+        return new Iterator<>() {
+            private int index;
+            @Override public boolean hasNext() { return index < values.size(); }
+            @Override public Object next() {
+                if (!hasNext()) throw new NoSuchElementException();
+                Object value = values.get(index++);
+                return elementShape == null
+                        ? adapter.adapt(value)
+                        : adapter.adaptWorkspace(value, elementShape);
+            }
+            @Override public void remove() { throw HostAccessException.readOnly(); }
+        };
     }
 
     @Override

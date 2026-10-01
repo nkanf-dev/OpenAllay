@@ -26,28 +26,6 @@ import java.util.Set;
 public final class RhinoJavascriptRuntime {
     public static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(2);
 
-    private static final String SAFE_RUNTIME_GUARDS = """
-            const __openallayGuardedStringSize = value => {
-              const size = Number(value);
-              if (!Number.isFinite(size) || size < 0 || size > 524288) {
-                throw new Error("javascript_result_budget_exceeded: requested string is too large");
-              }
-              return size;
-            };
-            const __nativeRepeat = String.prototype.repeat;
-            const __nativePadStart = String.prototype.padStart;
-            const __nativePadEnd = String.prototype.padEnd;
-            Object.defineProperty(String.prototype, "repeat", {
-              value(count) { return __nativeRepeat.call(this, __openallayGuardedStringSize(count)); }
-            });
-            Object.defineProperty(String.prototype, "padStart", {
-              value(length, fill) { return __nativePadStart.call(this, __openallayGuardedStringSize(length), fill); }
-            });
-            Object.defineProperty(String.prototype, "padEnd", {
-              value(length, fill) { return __nativePadEnd.call(this, __openallayGuardedStringSize(length), fill); }
-            });
-            """;
-
     private static final String HELPERS = """
             const __openallayArrayView = value =>
               Array.isArray(value)
@@ -74,21 +52,39 @@ public final class RhinoJavascriptRuntime {
                 return values.reduce((best, value) =>
                   best === undefined || select(value) > select(best) ? value : best, undefined);
               },
-              schema(value, depth = 3) {
-                const visit = (current, remaining) => {
+              schema(value, depth) {
+                // Rhino's interpreter reuses lexical bindings in nested/repeated callbacks.
+                // Keep recursive traversal callback-free, with loop state in this call frame.
+                function visit(current, remaining) {
                   if (current === null) return "null";
                   if (__openallayArrayView(current)) {
                     if (remaining <= 0 || current.length === 0) return [];
-                    const samples = current.slice(0, 8).map(item => visit(item, remaining - 1));
-                    return samples.filter((sample, index) =>
-                      index === samples.findIndex(other => JSON.stringify(other) === JSON.stringify(sample)));
+                    const selected = current.slice(0, 8);
+                    const samples = [];
+                    const signatures = [];
+                    let sample;
+                    let signature;
+                    for (let index = 0; index < selected.length; index++) {
+                      if (!(index in selected)) continue;
+                      sample = visit(selected[index], remaining - 1);
+                      signature = JSON.stringify(sample);
+                      if (!signatures.includes(signature)) {
+                        samples.push(sample);
+                        signatures.push(signature);
+                      }
+                    }
+                    return samples;
                   }
                   if (typeof current !== "object") return typeof current;
                   if (remaining <= 0) return "object";
-                  return Object.fromEntries(Object.keys(current).sort()
-                    .map(key => [key, visit(current[key], remaining - 1)]));
-                };
-                return visit(value, Math.max(0, Number(depth) || 0));
+                  const keys = Object.keys(current).sort();
+                  const entries = [];
+                  for (let index = 0; index < keys.length; index++) {
+                    entries.push([keys[index], visit(current[keys[index]], remaining - 1)]);
+                  }
+                  return Object.fromEntries(entries);
+                }
+                return visit(value, depth === undefined ? 3 : Math.max(0, Number(depth) || 0));
               }
             });
             """;
@@ -226,6 +222,7 @@ public final class RhinoJavascriptRuntime {
             ScriptableObject scope = unrestricted
                     ? context.initStandardObjects(null, false)
                     : context.initSafeStandardObjects(null, false);
+            RhinoBuiltinBindings.install(context, scope, limits, unrestricted);
             if (unrestricted) installJavaBridge(context, scope);
             RhinoHostAdapter adapter = new RhinoHostAdapter(context, scope);
             defineGlobal(context, scope, "mc", adapter.adapt(minecraftRoots));
@@ -258,7 +255,7 @@ public final class RhinoJavascriptRuntime {
                     scope,
                     "require",
                     moduleLoader(context, scope, usedModules, failures));
-            installHelpers(context, scope, unrestricted);
+            installHelpers(context, scope);
             String program = buildProgram(source);
             Object value = context.evaluateString(
                     scope, program, JavascriptFailureFormatter.USER_SOURCE, 1, null);
@@ -296,11 +293,10 @@ public final class RhinoJavascriptRuntime {
         defineGlobal(context, scope, "Java", java);
     }
 
-    private static void installHelpers(Context context, ScriptableObject scope, boolean unrestricted) {
-        String helpers = unrestricted ? HELPERS : SAFE_RUNTIME_GUARDS + HELPERS;
+    private static void installHelpers(Context context, ScriptableObject scope) {
         Object value = context.evaluateString(
                 scope,
-                "(function() {\n\"use strict\";\n" + helpers + "\nreturn helpers;\n})()",
+                "(function() {\n\"use strict\";\n" + HELPERS + "\nreturn helpers;\n})()",
                 "openallay-runtime.js",
                 1,
                 null);
