@@ -16,6 +16,23 @@ import org.junit.jupiter.api.Test;
 
 final class OpenAiStreamAccumulatorTest {
     @Test
+    void absentNullAndPartialUsageStayUnknownWhileExplicitZeroIsReported() {
+        for (String raw : List.of("null", "{}", "{\"prompt_tokens\":3}",
+                "{\"prompt_tokens\":null,\"completion_tokens\":1}",
+                "{\"prompt_tokens\":0,\"completion_tokens\":0}",
+                "{\"prompt_tokens\":9,\"completion_tokens\":2,\"extra_provider_field\":true}")) {
+            JsonObject response = textChunk();
+            response.add("usage", JsonParser.parseString(raw));
+            List<ModelEvent> events = new ArrayList<>();
+            OpenAiStreamAccumulator accumulator = new OpenAiStreamAccumulator(events::add);
+            accumulator.accept(event(response));
+            accumulator.finish();
+            boolean complete = raw.contains("\"completion_tokens\":0") || raw.contains("\"prompt_tokens\":9");
+            assertEquals(complete, events.stream().anyMatch(ModelEvent.UsageUpdate.class::isInstance));
+        }
+    }
+
+    @Test
     void acceptsMissingAndNullOptionalToolCallsAndUsage() {
         for (boolean nullToolCalls : List.of(false, true)) {
             for (boolean nullUsage : List.of(false, true)) {
@@ -38,6 +55,7 @@ final class OpenAiStreamAccumulatorTest {
                 assertEquals(0, turn.usage().outputTokens());
                 assertEquals(0, turn.usage().cacheReadTokens());
                 assertTrue(events.stream().anyMatch(ModelEvent.MessageComplete.class::isInstance));
+                assertTrue(events.stream().noneMatch(ModelEvent.UsageUpdate.class::isInstance));
             }
         }
     }

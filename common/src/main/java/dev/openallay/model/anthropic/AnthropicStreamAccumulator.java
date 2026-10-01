@@ -21,6 +21,8 @@ final class AnthropicStreamAccumulator {
     private long inputTokens;
     private long outputTokens;
     private long cacheReadTokens;
+    private boolean inputReported;
+    private boolean outputReported;
 
     AnthropicStreamAccumulator(Consumer<ModelEvent> events) {
         this.events = events;
@@ -55,15 +57,16 @@ final class AnthropicStreamAccumulator {
             content.add(block.toContent());
         }
         ModelUsage usage = new ModelUsage(inputTokens, outputTokens, cacheReadTokens);
-        events.accept(new ModelEvent.UsageUpdate(usage));
+        if (inputReported && outputReported) events.accept(new ModelEvent.UsageUpdate(usage));
         events.accept(new ModelEvent.MessageComplete(stopReason));
         return new ModelTurn("anthropic_messages", model, content, stopReason, usage);
     }
 
     private void messageStart(JsonObject message) {
         model = message.get("model").getAsString();
-        JsonObject usage = message.getAsJsonObject("usage");
+        JsonObject usage = optionalUsage(message);
         if (usage != null) {
+            inputReported = AnthropicJsonCodec.hasCount(usage, "input_tokens");
             inputTokens = value(usage, "input_tokens");
             cacheReadTokens = value(usage, "cache_read_input_tokens");
         }
@@ -120,8 +123,9 @@ final class AnthropicStreamAccumulator {
         if (delta != null && delta.has("stop_reason") && !delta.get("stop_reason").isJsonNull()) {
             stopReason = delta.get("stop_reason").getAsString();
         }
-        JsonObject usage = root.getAsJsonObject("usage");
+        JsonObject usage = optionalUsage(root);
         if (usage != null) {
+            outputReported = AnthropicJsonCodec.hasCount(usage, "output_tokens");
             outputTokens = value(usage, "output_tokens");
         }
     }
@@ -134,8 +138,13 @@ final class AnthropicStreamAccumulator {
         return block;
     }
 
+    private static JsonObject optionalUsage(JsonObject object) {
+        var value = object.get("usage");
+        return value == null || value.isJsonNull() ? null : value.getAsJsonObject();
+    }
+
     private static long value(JsonObject object, String field) {
-        return object.has(field) ? object.get(field).getAsLong() : 0;
+        return AnthropicJsonCodec.hasCount(object, field) ? object.get(field).getAsLong() : 0;
     }
 
     private static final class Block {

@@ -50,6 +50,7 @@ public final class GuideService implements GuideHistoryAdministration {
     private final CopyOnWriteArrayList<Consumer<GuideSnapshot>> listeners =
             new CopyOnWriteArrayList<>();
     private volatile GuideSnapshot snapshot;
+    private volatile GuideTelemetrySnapshot telemetry;
     private String selectedSession = "main";
     private GuidePersistenceSnapshot persistence;
     private boolean allowHistoryWrites;
@@ -114,7 +115,37 @@ public final class GuideService implements GuideHistoryAdministration {
         return snapshot;
     }
 
-    /** Settings-only runtime projection; never reconstructed from checkpoint sums or transcript pages. */
+    /** Cached numeric state only; safe for a screen tick without capture, history I/O or tokenization. */
+    public GuideTelemetrySnapshot telemetry() {
+        GuideTelemetrySnapshot value = telemetry;
+        return value == null
+                ? GuideTelemetrySnapshot.unknown(snapshot.selectedSession(), snapshot.modelSelection())
+                : value;
+    }
+
+    private GuideTelemetrySnapshot buildTelemetry() {
+        GuideTelemetrySnapshot unknown = GuideTelemetrySnapshot.unknown(
+                snapshot.selectedSession(), snapshot.modelSelection());
+        if (disconnected) return unknown;
+        SessionState selected = sessions.get(snapshot.selectedSession());
+        if (selected == null || selected.requests.isEmpty()) return unknown;
+        GuideRequestSnapshot latest = selected.requests.getLast();
+        GuideUsageTracker usage = selected.usage;
+        if (!latest.requestId().equals(usage.requestId())
+                || !snapshot.modelSelection().equals(usage.selection())) return unknown;
+        String currentModel = publicModelIdentifier(snapshot.modelSelection());
+        if (!Objects.equals(currentModel, usage.modelIdentifier())) return unknown;
+        return new GuideTelemetrySnapshot(selected.id, usage.selection(), usage.requestId(),
+                contextEstimate().orElse(null), usage.requestSnapshot(), usage.sessionSnapshot());
+    }
+
+    private String publicModelIdentifier(GuideModelSelection selection) {
+        if (selection.kind() != GuideModelSelection.Kind.CLIENT) return null;
+        return snapshot.clientProfiles().stream().filter(profile -> profile.id().equals(selection.profileId()))
+                .map(GuideClientModelProfile::modelIdentifier).findFirst().orElse(null);
+    }
+
+    /** Runtime projection; never reconstructed from checkpoint sums or transcript pages. */
     public java.util.Optional<GuideContextEstimate> contextEstimate() {
         if (disconnected || local == null) return java.util.Optional.empty();
         GuideSessionSnapshot selected = snapshot.sessions().stream()
@@ -346,6 +377,7 @@ public final class GuideService implements GuideHistoryAdministration {
             session.requests.forEach(request -> requestSessions.remove(request.requestId()));
             capturedProjection.clearSession(session.id);
             session.requests.clear();
+            session.usage = new GuideUsageTracker();
             session.messages.clear();
             session.checkpoints.clear();
             session.originalContext.clear();
@@ -665,6 +697,7 @@ public final class GuideService implements GuideHistoryAdministration {
         GuideRequestSnapshot request = GuideRequestSnapshot.start(
                 requestId, sessionId, topology, question, now, capturedSelection);
         session.requests.add(request);
+        session.usage.begin(requestId, capturedSelection, publicModelIdentifier(capturedSelection));
         session.originalContext.put(requestId, List.of());
         long requestSequence = session.nextRequestSequence++;
         session.requestSequences.put(requestId, requestSequence);
@@ -689,7 +722,7 @@ public final class GuideService implements GuideHistoryAdministration {
                         sessionId,
                         question,
                         session.modelContext,
-                        event -> apply(requestId, event))) {
+                        event -> dispatcher.execute(() -> apply(requestId, event)))) {
                     apply(requestId, new AgentEvent.Failed(
                             "capability_unavailable",
                             "The connected server rejected the model request"));
@@ -803,7 +836,7 @@ public final class GuideService implements GuideHistoryAdministration {
         try {
             accepted = remote.askWithContext(
                     requestId, sessionId, question, seed.messages(),
-                    event -> apply(requestId, event));
+                    event -> dispatcher.execute(() -> apply(requestId, event)));
         } catch (RuntimeException malformed) {
             accepted = false;
         }
@@ -876,7 +909,7 @@ public final class GuideService implements GuideHistoryAdministration {
                             requestId,
                             question,
                             context,
-                            event -> apply(requestId, event))
+                            event -> dispatcher.execute(() -> apply(requestId, event)))
                     .whenComplete((ignored, throwable) -> {
                         if (throwable != null) {
                             dispatcher.execute(() -> failIfActive(requestId, throwable));
@@ -930,6 +963,7 @@ public final class GuideService implements GuideHistoryAdministration {
         if (index < 0) return;
         GuideRequestSnapshot target = session.requests.get(index);
         if (target.terminal()) return;
+        if (requestId.equals(session.usage.requestId())) session.usage.accept(event);
         if (event instanceof AgentEvent.ContextUpdated updated) {
             session.modelContext = updated.messages();
             session.originalContext.put(requestId, updated.requestMessages());
@@ -1015,6 +1049,7 @@ public final class GuideService implements GuideHistoryAdministration {
 
     private void publishWithoutSave() {
         snapshot = buildSnapshot();
+        telemetry = buildTelemetry();
         for (Consumer<GuideSnapshot> listener : listeners) {
             try {
                 listener.accept(snapshot);
@@ -1635,6 +1670,7 @@ public final class GuideService implements GuideHistoryAdministration {
 
     private static final class SessionState {
         private final String id;
+        private GuideUsageTracker usage = new GuideUsageTracker();
         private final List<GuideMessage> messages = new ArrayList<>();
         private final List<GuideRequestSnapshot> requests = new ArrayList<>();
         private final List<ContextCheckpoint> checkpoints = new ArrayList<>();

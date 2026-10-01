@@ -551,5 +551,18 @@
   "screen.openallay.settings.models.reasoning.max": "Maximum",
   "screen.openallay.settings.models.reasoning.auto_description": "Request setting: Auto. %1$s is omitted. The provider/model default and actual effort are unknown to OpenAllay.",
   "screen.openallay.settings.models.reasoning.explicit_description": "Request setting: %1$s=%2$s. Model and gateway support varies; the provider may reject this value. This does not enable thinking or set a thinking token budget.",
-  "screen.openallay.settings.models.reasoning.unsupported_description": "This protocol does not support the selected effort (%2$s). Select a supported value before saving; OpenAllay will not silently omit it."
+  "screen.openallay.settings.models.reasoning.unsupported_description": "This protocol does not support the selected effort (%2$s). Select a supported value before saving; OpenAllay will not silently omit it.",
+  "screen.openallay.telemetry.context": "Context tokens",
+  "screen.openallay.telemetry.unknown": "Unknown",
+  "screen.openallay.telemetry.input": "Request in: %s",
+  "screen.openallay.telemetry.output": "Request out: %s",
+  "screen.openallay.telemetry.cost": "Est. cost: %s",
+  "screen.openallay.telemetry.compact": "Tokens %s · ↑%s ↓%s · %s",
+  "screen.openallay.telemetry.latest": "Latest request · selected session/model",
+  "screen.openallay.telemetry.budget": "Estimated input: %s / %s tokens\nTotal window: %s; reserved: %s (2 × %s output)",
+  "screen.openallay.telemetry.context_unknown": "Context unknown: no matching local request estimate.",
+  "screen.openallay.telemetry.request": "Provider-reported request tokens: in %s · out %s\nEstimated USD: %s",
+  "screen.openallay.telemetry.partial": "Counts may be partial: a call is pending or usage was not reported.",
+  "screen.openallay.telemetry.session": "Observed this connection, this session: in %s · out %s (not restored history)",
+  "screen.openallay.telemetry.price_note": "Reference prices from the built-in catalog, not a bill. Gateway rates, cache and reasoning charges may differ; missing data stays unknown."
 }

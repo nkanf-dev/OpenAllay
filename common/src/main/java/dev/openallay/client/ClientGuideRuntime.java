@@ -159,7 +159,10 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
                         AgentSessionStore.Status status = sessions.status(request.sessionKey());
                         if (status.active() && request.requestId().equals(status.requestId())) {
                             endpoint.estimates().put(request.sessionKey(),
-                                    new dev.openallay.guide.GuideContextEstimate(request.requestId(), tokens));
+                                    new dev.openallay.guide.GuideContextEstimate(
+                                            request.requestId(), tokens,
+                                            endpoint.contextBudget(), endpoint.contextBudget() == null
+                                                    ? null : endpoint.modelIdentifier()));
                         }
                     }
                 });

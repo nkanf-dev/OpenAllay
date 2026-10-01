@@ -22,6 +22,7 @@ final class OpenAiStreamAccumulator {
     private String model;
     private String stopReason;
     private ModelUsage usage = ModelUsage.empty();
+    private boolean usageReported;
 
     OpenAiStreamAccumulator(Consumer<ModelEvent> events) {
         this.events = events;
@@ -46,6 +47,7 @@ final class OpenAiStreamAccumulator {
         }
         if (root.has("usage") && !root.get("usage").isJsonNull()) {
             JsonObject value = root.getAsJsonObject("usage");
+            usageReported = OpenAiJsonCodec.hasUsageCounts(value);
             JsonElement details = value.get("prompt_tokens_details");
             usage = new ModelUsage(
                     number(value, "prompt_tokens"),
@@ -122,7 +124,7 @@ final class OpenAiStreamAccumulator {
             content.add(tool);
             events.accept(new ModelEvent.ToolUseComplete(tool.id(), tool.name(), tool.input()));
         }
-        events.accept(new ModelEvent.UsageUpdate(usage));
+        if (usageReported) events.accept(new ModelEvent.UsageUpdate(usage));
         events.accept(new ModelEvent.MessageComplete(stopReason));
         return new ModelTurn("openai_chat", model, content, stopReason, usage);
     }

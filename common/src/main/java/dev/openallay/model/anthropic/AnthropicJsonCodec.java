@@ -85,10 +85,19 @@ public final class AnthropicJsonCodec {
             content.add(block);
             emitCompleteBlock(block, events);
         }
-        ModelUsage usage = parseUsage(root.getAsJsonObject("usage"));
-        events.accept(new ModelEvent.UsageUpdate(usage));
+        JsonElement usageValue = root.get("usage");
+        JsonObject usageObject = usageValue == null || usageValue.isJsonNull()
+                ? null : usageValue.getAsJsonObject();
+        ModelUsage usage = parseUsage(usageObject);
+        if (hasCount(usageObject, "input_tokens") && hasCount(usageObject, "output_tokens")) {
+            events.accept(new ModelEvent.UsageUpdate(usage));
+        }
         events.accept(new ModelEvent.MessageComplete(stopReason));
         return new ModelTurn("anthropic_messages", model, content, stopReason, usage);
+    }
+
+    static boolean hasCount(JsonObject object, String key) {
+        return object != null && object.has(key) && !object.get(key).isJsonNull();
     }
 
     public ModelUsage parseUsage(JsonObject object) {

@@ -29,6 +29,21 @@ import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 final class OpenAiJsonCodecTest {
+    @Test
+    void absentNullAndPartialUsageStayUnknownWhileExplicitZeroIsReported() {
+        for (String raw : List.of("null", "{}", "{\"prompt_tokens\":3}",
+                "{\"prompt_tokens\":null,\"completion_tokens\":1}",
+                "{\"prompt_tokens\":0,\"completion_tokens\":0}",
+                "{\"prompt_tokens\":9,\"completion_tokens\":2,\"extra_provider_field\":true}")) {
+            JsonObject response = textResponse();
+            response.add("usage", JsonParser.parseString(raw));
+            List<ModelEvent> events = new ArrayList<>();
+            codec.parseTurn(response.toString(), events::add);
+            boolean complete = raw.contains("\"completion_tokens\":0") || raw.contains("\"prompt_tokens\":9");
+            assertEquals(complete, events.stream().anyMatch(ModelEvent.UsageUpdate.class::isInstance));
+        }
+    }
+
     private final OpenAiJsonCodec codec = new OpenAiJsonCodec(new Gson());
 
     @Test
@@ -52,6 +67,7 @@ final class OpenAiJsonCodecTest {
                 assertEquals(0, turn.usage().outputTokens());
                 assertEquals(0, turn.usage().cacheReadTokens());
                 assertTrue(events.stream().anyMatch(ModelEvent.MessageComplete.class::isInstance));
+                assertTrue(events.stream().noneMatch(ModelEvent.UsageUpdate.class::isInstance));
             }
         }
     }

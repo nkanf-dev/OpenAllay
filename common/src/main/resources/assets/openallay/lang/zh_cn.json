@@ -551,5 +551,18 @@
   "screen.openallay.settings.models.reasoning.max": "最大",
   "screen.openallay.settings.models.reasoning.auto_description": "请求设置：自动，不发送 %1$s。服务商/模型的默认值及实际推理强度对 OpenAllay 均未知。",
   "screen.openallay.settings.models.reasoning.explicit_description": "请求设置：%1$s=%2$s。模型和网关支持范围不同，服务商可能拒绝该值。此设置不会启用思考，也不是思考 token 预算。",
-  "screen.openallay.settings.models.reasoning.unsupported_description": "此协议不支持所选强度（%2$s）。保存前请选择受支持的值；OpenAllay 不会悄悄省略该设置。"
+  "screen.openallay.settings.models.reasoning.unsupported_description": "此协议不支持所选强度（%2$s）。保存前请选择受支持的值；OpenAllay 不会悄悄省略该设置。",
+  "screen.openallay.telemetry.context": "上下文 Tokens",
+  "screen.openallay.telemetry.unknown": "未知",
+  "screen.openallay.telemetry.input": "本次输入：%s",
+  "screen.openallay.telemetry.output": "本次输出：%s",
+  "screen.openallay.telemetry.cost": "估算费用：%s",
+  "screen.openallay.telemetry.compact": "Tokens %s · ↑%s ↓%s · %s",
+  "screen.openallay.telemetry.latest": "最近请求 · 当前会话/所选模型",
+  "screen.openallay.telemetry.budget": "输入估算：%s / %s tokens\n总窗口：%s；预留：%s（2 × %s 输出）",
+  "screen.openallay.telemetry.context_unknown": "上下文未知：暂无匹配的本地请求估算。",
+  "screen.openallay.telemetry.request": "提供商返回的本次用量：输入 %s · 输出 %s\n估算美元费用：%s",
+  "screen.openallay.telemetry.partial": "用量可能不完整：仍在请求中，或某次调用未返回统计。",
+  "screen.openallay.telemetry.session": "本次连接内此会话已观测：输入 %s · 输出 %s（不含恢复的历史）",
+  "screen.openallay.telemetry.price_note": "价格来自内置目录，仅作估算而非账单。网关费率、缓存及推理计费可能不同；缺失数据保持未知。"
 }

@@ -85,8 +85,9 @@ public final class OpenAiJsonCodec {
         String stopReason = requiredString(choice, "finish_reason");
         JsonObject message = choice.getAsJsonObject("message");
         List<ModelContent> content = decodeAssistant(message, events);
-        ModelUsage usage = parseUsage(optionalObject(root, "usage"));
-        events.accept(new ModelEvent.UsageUpdate(usage));
+        JsonObject usageObject = optionalObject(root, "usage");
+        ModelUsage usage = parseUsage(usageObject);
+        if (hasUsageCounts(usageObject)) events.accept(new ModelEvent.UsageUpdate(usage));
         events.accept(new ModelEvent.MessageComplete(stopReason));
         return new ModelTurn("openai_chat", model, content, stopReason, usage);
     }
@@ -175,6 +176,11 @@ public final class OpenAiJsonCodec {
             }
         }
         return content;
+    }
+
+    static boolean hasUsageCounts(JsonObject object) {
+        return object != null && object.has("prompt_tokens") && !object.get("prompt_tokens").isJsonNull()
+                && object.has("completion_tokens") && !object.get("completion_tokens").isJsonNull();
     }
 
     private static ModelUsage parseUsage(JsonObject object) {

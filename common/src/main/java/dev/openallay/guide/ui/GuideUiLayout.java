@@ -28,14 +28,14 @@ public record GuideUiLayout(
         Header header = Header.calculate(margin, margin, available,
                 titleWidth, sessionsWidth, exportWidth, refreshWidth, settings, height < 240);
         int topHeight = header.status().y() + header.status().height() - margin + 2;
-        int progressHeight = 22;
+        int progressHeight = height < 240 && width < 560 ? 12 : 22;
         int composerHeight = 68;
         boolean narrow = width < 560;
         int railWidth = narrow ? 0 : 128;
         boolean inlineDetail = detailOpen && width >= 760;
         int detailWidth = inlineDetail ? 220 : 0;
         int bodyTop = margin + topHeight + margin;
-        int composerTop = height - margin - composerHeight;
+        int composerTop = height - margin - composerHeight - (narrow ? 18 : 0);
         int progressTop = composerTop - 4 - progressHeight;
         int bodyBottom = progressTop - margin;
         int bodyHeight = Math.max(0, bodyBottom - bodyTop);
@@ -61,6 +61,14 @@ public record GuideUiLayout(
                 detailOpen && !inlineDetail,
                 header,
                 ComposerControls.calculate(composer));
+    }
+
+    /** Wide: unused lower-left rail space. Narrow: a separate strip below the composer. */
+    public Rect telemetry() {
+        return narrow
+                ? new Rect(composer.x(), composer.bottom() + 4, composer.width(), 14)
+                : new Rect(sessionRail.x(), progress.y(), sessionRail.width(),
+                        composer.bottom() - progress.y());
     }
 
     public record Header(

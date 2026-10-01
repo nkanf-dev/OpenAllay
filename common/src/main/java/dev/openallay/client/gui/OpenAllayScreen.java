@@ -134,6 +134,13 @@ public final class OpenAllayScreen extends Screen {
     private String focusedContentId;
     private GuideDisplayConfig projectedDisplay;
     private long presentationTicks;
+    private dev.openallay.guide.GuideTelemetrySnapshot telemetry;
+    private Component telemetryContext = Component.empty();
+    private Component telemetryInput = Component.empty();
+    private Component telemetryOutput = Component.empty();
+    private Component telemetryCost = Component.empty();
+    private Component telemetryCompact = Component.empty();
+    private Component telemetryTooltip = Component.empty();
 
     public OpenAllayScreen(GuideService service) {
         this(service, RecipeClientRuntime.defaults(), GuideDisplayConfig.defaults());
@@ -264,6 +271,7 @@ public final class OpenAllayScreen extends Screen {
         scroll = followBottom
                 ? virtualizer.maximumScroll(transcriptViewportHeight())
                 : virtualizer.clampScroll(scroll, transcriptViewportHeight());
+        refreshTelemetry();
         updateControls();
         if (detailOpen()) focusDetail();
         else setInitialFocus(composer);
@@ -318,6 +326,7 @@ public final class OpenAllayScreen extends Screen {
         presentationTicks++;
         nativeViews.tick();
         applyPendingProjection();
+        refreshTelemetry();
         if (layout != null) requestViewportHistory(layout.transcript());
         updateControls();
     }
@@ -523,6 +532,7 @@ public final class OpenAllayScreen extends Screen {
         renderSessions(graphics);
         renderTranscript(graphics, mouseX, mouseY);
         renderProgress(graphics);
+        renderTelemetry(graphics, mouseX, mouseY);
         renderDetail(graphics, mouseX, mouseY);
         super.extractRenderState(graphics, mouseX, mouseY, a);
         renderModelSelector(graphics, mouseX, mouseY);
@@ -580,6 +590,83 @@ public final class OpenAllayScreen extends Screen {
                     }));
             y += 24;
             if (y > rail.y() + rail.height() - 22) break;
+        }
+    }
+
+    private void refreshTelemetry() {
+        var next = service.telemetry();
+        if (Objects.equals(telemetry, next)) return;
+        telemetry = next;
+        String unknown = Component.translatable("screen.openallay.telemetry.unknown").getString();
+        var context = telemetry.context();
+        boolean contextKnown = context != null && context.budget() != null;
+        String occupancy = contextKnown
+                ? "~" + compactTokens(context.estimatedTokens()) + "/" + compactTokens(context.budget().inputTokens())
+                : unknown;
+        telemetryContext = Component.literal(occupancy);
+        var usage = telemetry.requestUsage();
+        String input = usage.known() ? compactTokens(usage.inputTokens()) : unknown;
+        String output = usage.known() ? compactTokens(usage.outputTokens()) : unknown;
+        String partial = usage.known() && usage.incomplete() ? "+" : "";
+        telemetryInput = Component.translatable("screen.openallay.telemetry.input", input + partial);
+        telemetryOutput = Component.translatable("screen.openallay.telemetry.output", output + partial);
+        String cost = usage.estimatedUsd() == null ? unknown : "~$" + usage.estimatedUsd()
+                .setScale(5, java.math.RoundingMode.HALF_UP).toPlainString();
+        telemetryCost = Component.translatable("screen.openallay.telemetry.cost", cost);
+        telemetryCompact = Component.translatable("screen.openallay.telemetry.compact",
+                occupancy, input + partial, output + partial, cost);
+        MutableComponent detail = Component.translatable("screen.openallay.telemetry.latest");
+        detail.append("\n").append(contextKnown
+                ? Component.translatable("screen.openallay.telemetry.budget",
+                        context.estimatedTokens(), context.budget().inputTokens(),
+                        context.budget().contextWindowTokens(), context.budget().reservedTokens(),
+                        context.budget().maxOutputTokens())
+                : Component.translatable("screen.openallay.telemetry.context_unknown"));
+        detail.append("\n").append(Component.translatable("screen.openallay.telemetry.request",
+                usage.known() ? Long.toString(usage.inputTokens()) : unknown,
+                usage.known() ? Long.toString(usage.outputTokens()) : unknown,
+                cost));
+        if (usage.incomplete()) detail.append("\n").append(
+                Component.translatable("screen.openallay.telemetry.partial"));
+        var session = telemetry.sessionUsage();
+        if (session.known()) detail.append("\n").append(Component.translatable(
+                "screen.openallay.telemetry.session", session.inputTokens(), session.outputTokens()));
+        detail.append("\n").append(Component.translatable("screen.openallay.telemetry.price_note"));
+        telemetryTooltip = detail;
+    }
+
+    static String compactTokens(long count) {
+        if (count < 1_000) return Long.toString(count);
+        return String.format(java.util.Locale.ROOT, count < 1_000_000 ? "%.1fk" : "%.1fM",
+                count / (count < 1_000_000 ? 1_000.0 : 1_000_000.0));
+    }
+
+    private void renderTelemetry(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+        GuideUiLayout.Rect area = layout.telemetry();
+        graphics.fill(area.x(), area.y(), area.right(), area.bottom(), PANEL_ALT);
+        graphics.enableScissor(area.x() + 4, area.y(), area.right() - 4, area.bottom());
+        if (layout.narrow()) {
+            graphics.text(font, telemetryCompact, area.x() + 4, area.y() + 2, MUTED, false);
+        } else {
+            int x = area.x() + 7;
+            int y = area.y() + 7;
+            graphics.text(font, Component.translatable("screen.openallay.telemetry.context"), x, y, MUTED, false);
+            graphics.text(font, telemetryContext, x, y + 12, TEXT, false);
+            int barWidth = Math.max(1, area.width() - 14);
+            graphics.fill(x, y + 25, x + barWidth, y + 28, 0xFF3E4753);
+            if (telemetry != null && telemetry.context() != null && telemetry.context().budget() != null) {
+                double ratio = Math.min(1, (double) telemetry.context().estimatedTokens()
+                        / telemetry.context().budget().inputTokens());
+                graphics.fill(x, y + 25, x + (int) (barWidth * ratio), y + 28,
+                        ratio >= 0.9 ? 0xFFFFD479 : ACCENT);
+            }
+            graphics.text(font, telemetryInput, x, y + 35, MUTED, false);
+            graphics.text(font, telemetryOutput, x, y + 47, MUTED, false);
+            graphics.text(font, telemetryCost, x, y + 61, MUTED, false);
+        }
+        graphics.disableScissor();
+        if (area.contains(mouseX, mouseY) && !modelSelectorOpen) {
+            graphics.setTooltipForNextFrame(font, telemetryTooltip, mouseX, mouseY);
         }
     }
 

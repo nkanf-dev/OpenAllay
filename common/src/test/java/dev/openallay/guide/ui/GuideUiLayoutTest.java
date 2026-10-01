@@ -33,6 +33,21 @@ final class GuideUiLayoutTest {
     }
 
     @Test
+    void telemetryNeverCoversComposerButtonsOrPanelsAtSmallGuiScales() {
+        for (int[] size : new int[][] {{240, 180}, {280, 180}, {280, 240}, {320, 240}, {559, 320}, {560, 320}, {900, 500}}) {
+            GuideUiLayout layout = GuideUiLayout.calculate(size[0], size[1], true);
+            GuideUiLayout.Rect footer = layout.telemetry();
+            assertInside(new GuideUiLayout.Rect(0, 0, size[0], size[1]), footer);
+            assertFalse(overlap(footer, layout.composer()));
+            assertFalse(overlap(footer, layout.progress()));
+            assertFalse(overlap(footer, layout.transcript()));
+            assertFalse(overlap(footer, layout.sessionRail()));
+            assertFalse(overlap(footer, layout.detail()));
+            assertTrue(layout.transcript().bottom() <= layout.progress().y());
+        }
+    }
+
+    @Test
     void localizedLabelsWrapControlsRatherThanOverlapTitle() {
         GuideUiLayout layout = GuideUiLayout.calculate(427, 320, false, 150, 72, 60, 66, true);
         assertTrue(layout.header().sessions().y() > layout.header().title().y());
