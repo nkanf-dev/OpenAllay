@@ -76,6 +76,12 @@ public final class CommandCapabilityRuntime {
                         this, actorId, catalog, submitter, new AtomicLong()));
     }
 
+    /** True only after this request captured a player route, not merely an enabled setting. */
+    public boolean availableFor(String correlationId) {
+        requireCorrelation(correlationId);
+        return requests.containsKey(correlationId);
+    }
+
     public Optional<JavascriptCommandBridge> bridge(
             String correlationId, CancellationSignal cancellation) {
         requireCorrelation(correlationId);

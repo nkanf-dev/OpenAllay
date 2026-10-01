@@ -201,6 +201,11 @@ public final class RunJavascriptTool
         return commands.freezeRequest(correlationId);
     }
 
+    /** Matches the exact command bridge supplied to Rhino by this Tool instance. */
+    public boolean commandCapabilityAvailable(String correlationId) {
+        return commands.availableFor(correlationId);
+    }
+
     @Override
     public ToolResult<Output> invoke(ToolInvocationContext context, Input input) {
         throw new UnsupportedOperationException("run_javascript is asynchronous");

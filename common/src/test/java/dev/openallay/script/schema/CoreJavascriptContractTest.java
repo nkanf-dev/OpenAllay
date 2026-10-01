@@ -30,6 +30,11 @@ final class CoreJavascriptContractTest {
         assertTrue(rendered.contains("schema.describe(path)"));
         assertTrue(rendered.contains("workspace.open(handle)"));
         assertTrue(rendered.contains("require(id)"));
+        assertTrue(rendered.contains("commands.list()"));
+        assertTrue(rendered.contains("commands.describe(path)"));
+        assertTrue(rendered.contains("commands.run(text)"));
+        assertTrue(rendered.contains("top-level binding, separate from mc and schema"));
+        assertFalse(catalog.describe("commands").isPresent());
         assertTrue(rendered.contains("world.inspect("));
         assertTrue(rendered.contains("world.entities("));
         assertTrue(rendered.contains("world.entity(observationId)"));

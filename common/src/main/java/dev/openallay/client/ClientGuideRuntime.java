@@ -193,11 +193,11 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
             return Optional.empty();
         }
         // Reserve enough room for either captured mode without advertising the enabled view.
-        ClientGuideRuntime enabled = withCapabilities(capabilities.forRequest(true));
+        ClientGuideRuntime enabled = withCapabilities(capabilities.forRequest(true, true));
         var estimator = new Utf8ContextTokenEstimator();
         int promptAndTools = Math.max(
                 estimator.estimate(systemPrompt(), List.of(), toolExecutor.definitions()),
-                estimator.estimate(enabled.systemPrompt(true), List.of(), enabled.toolExecutor.definitions()));
+                estimator.estimate(enabled.systemPrompt(true, true), List.of(), enabled.toolExecutor.definitions()));
         if (promptAndTools >= endpoint.contextBudget().inputTokens()) {
             return Optional.empty();
         }
@@ -241,14 +241,15 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
             String question,
             ToolInvocationContext context,
             Consumer<AgentEvent> events) {
-        ClientCapabilitySnapshot requestCapabilities = capabilities.forRequest(context.unrestrictedJavascript());
+        ClientCapabilitySnapshot requestCapabilities = capabilities.forRequest(context);
         ClientGuideRuntime requestRuntime = withCapabilities(requestCapabilities);
         AgentRequest request = new AgentRequest(
                 requestId,
                 actor,
                 session,
                 question,
-                requestRuntime.systemPrompt(context.unrestrictedJavascript()),
+                requestRuntime.systemPrompt(context.unrestrictedJavascript(),
+                        requestCapabilities.commandCapabilityAvailable(context.correlationId())),
                 context,
                 true);
         return requestRuntime.agent.ask(request, event -> {
@@ -327,13 +328,18 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
     }
 
     private String systemPrompt(boolean unrestrictedJavascript) {
+        return systemPrompt(unrestrictedJavascript, false);
+    }
+
+    private String systemPrompt(boolean unrestrictedJavascript, boolean commandsAvailable) {
         return dev.openallay.agent.AgentSystemPrompt.compose(
                 capabilities.skills().metadataPrompt(),
                 dev.openallay.script.schema.CoreJavascriptContract.render(
                         dev.openallay.script.data.MinecraftAgentHostGraph.declaredOnlyCatalog()),
                 unrestrictedJavascript,
                 capabilities.skills().find(dev.openallay.skill.SkillCatalogSnapshot.UNRESTRICTED_JAVASCRIPT)
-                        .map(dev.openallay.skill.SkillDocument::instructions).orElse(""));
+                        .map(dev.openallay.skill.SkillDocument::instructions).orElse(""),
+                commandsAvailable);
     }
 
     private static EndpointRuntime endpoint(

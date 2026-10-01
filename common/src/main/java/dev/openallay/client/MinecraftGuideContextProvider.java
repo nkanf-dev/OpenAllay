@@ -58,15 +58,16 @@ public final class MinecraftGuideContextProvider implements GuideContextProvider
 
     @Override
     public void freezeRequest(String correlationId, boolean clientLocalModel) {
-        var runtime = unrestrictedJavascript;
-        if (runtime == null || !clientLocalModel) return;
-        runtime.freeze(correlationId);
+        runtime.commands().freezeRequest(correlationId);
+        var javascript = unrestrictedJavascript;
+        if (javascript != null && clientLocalModel) javascript.freeze(correlationId);
     }
 
     @Override
     public void closeRequest(String correlationId) {
-        var runtime = unrestrictedJavascript;
-        if (runtime != null) runtime.close(correlationId);
+        runtime.commands().closeRequest(correlationId);
+        var javascript = unrestrictedJavascript;
+        if (javascript != null) javascript.close(correlationId);
     }
 
     @Override

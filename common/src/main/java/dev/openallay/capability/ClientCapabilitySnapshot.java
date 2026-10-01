@@ -15,7 +15,29 @@ public record ClientCapabilitySnapshot(
         Set<ContextCapability> requiredContext) {
     /** Builds matching prompt and load_skill catalogs for one frozen invocation context. */
     public ClientCapabilitySnapshot forRequest(boolean unrestrictedJavascript) {
-        SkillCatalogSnapshot requestSkills = skills.forRequest(unrestrictedJavascript);
+        return withRequestSkills(skills.forRequest(unrestrictedJavascript));
+    }
+
+    /** Reserves the complete eligible guidance before a request captures its optional routes. */
+    public ClientCapabilitySnapshot forRequest(boolean unrestrictedJavascript, boolean experimentalCommands) {
+        return withRequestSkills(skills.forRequest(unrestrictedJavascript, experimentalCommands));
+    }
+
+    /** Selects optional command guidance from the exact route that Rhino will bind. */
+    public ClientCapabilitySnapshot forRequest(dev.openallay.context.ToolInvocationContext context) {
+        return withRequestSkills(skills.forRequest(
+                context.unrestrictedJavascript(), commandCapabilityAvailable(context.correlationId())));
+    }
+
+    public boolean commandCapabilityAvailable(String correlationId) {
+        return localTools.find(dev.openallay.tool.builtin.RunJavascriptTool.ID)
+                .filter(dev.openallay.tool.builtin.RunJavascriptTool.class::isInstance)
+                .map(dev.openallay.tool.builtin.RunJavascriptTool.class::cast)
+                .map(tool -> tool.commandCapabilityAvailable(correlationId))
+                .orElse(false);
+    }
+
+    private ClientCapabilitySnapshot withRequestSkills(SkillCatalogSnapshot requestSkills) {
         var registrations = localTools.registrations().stream()
                 .filter(registration -> !requestSkills.metadata().isEmpty()
                         || !registration.tool().descriptor().id().equals(ClientCapabilityResolver.LOAD_SKILL_ID))

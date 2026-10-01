@@ -34,6 +34,41 @@ final class JavascriptCommandBridgeTest {
     }
 
     @Test
+    void commandGlobalIsIndependentOfSafeOrUnrestrictedJavascriptMode() {
+        for (boolean unrestricted : List.of(false, true)) {
+            for (boolean enabled : List.of(false, true)) {
+                CommandCapabilityRuntime commands = runtime();
+                commands.replace(new CommandCapabilityConfig(enabled));
+                commands.capture("request", ACTOR, catalog(), successful(commands, List.of()));
+                JsonElement result = new RhinoJavascriptRuntime().execute(
+                        """
+                        return {
+                          binding: typeof commands,
+                          java: typeof Java,
+                          listed: typeof commands === "object" ? commands.list().nodes.length : 0,
+                          methods: typeof commands === "object"
+                            ? [typeof commands.list, typeof commands.describe, typeof commands.run] : [],
+                          mcCommands: typeof mc.commands
+                        };
+                        """,
+                        Map.of(), Map.of(), Map.of(), new CancellationSignal(),
+                        commands.bridge("request", new CancellationSignal()).orElse(null), null,
+                        unrestricted).value();
+                assertEquals(enabled ? "object" : "undefined",
+                        result.getAsJsonObject().get("binding").getAsString());
+                assertEquals(unrestricted ? "object" : "undefined",
+                        result.getAsJsonObject().get("java").getAsString());
+                assertEquals(enabled ? catalog().nodes().size() : 0,
+                        result.getAsJsonObject().get("listed").getAsInt());
+                assertEquals(enabled ? List.of("function", "function", "function") : List.of(),
+                        result.getAsJsonObject().getAsJsonArray("methods").asList().stream()
+                                .map(JsonElement::getAsString).toList());
+                assertEquals("undefined", result.getAsJsonObject().get("mcCommands").getAsString());
+            }
+        }
+    }
+
+    @Test
     void toggleIsFrozenForTheLifetimeOfEachRequest() {
         CommandCapabilityRuntime commands = runtime();
         commands.replace(new CommandCapabilityConfig(

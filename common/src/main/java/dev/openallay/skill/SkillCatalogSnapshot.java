@@ -9,6 +9,7 @@ import java.util.TreeMap;
 /** Immutable Skill documents captured independently from future repository reloads. */
 public final class SkillCatalogSnapshot implements SkillCatalog {
     public static final String UNRESTRICTED_JAVASCRIPT = "unrestricted-javascript";
+    public static final String GAME_COMMANDS = "run-game-commands";
     private final Map<String, SkillDocument> skills;
     private final Map<String, SkillDocument> eligibleSkills;
 
@@ -17,6 +18,11 @@ public final class SkillCatalogSnapshot implements SkillCatalog {
     }
 
     private SkillCatalogSnapshot(Map<String, SkillDocument> skills, boolean unrestrictedJavascript) {
+        this(skills, unrestrictedJavascript, skills.containsKey(GAME_COMMANDS));
+    }
+
+    private SkillCatalogSnapshot(
+            Map<String, SkillDocument> skills, boolean unrestrictedJavascript, boolean experimentalCommands) {
         TreeMap<String, SkillDocument> canonical = new TreeMap<>(skills);
         canonical.forEach((name, document) -> {
             if (!name.equals(document.metadata().name())) {
@@ -27,12 +33,20 @@ public final class SkillCatalogSnapshot implements SkillCatalog {
         if (!unrestrictedJavascript) {
             canonical.remove(UNRESTRICTED_JAVASCRIPT);
         }
+        if (!experimentalCommands) {
+            canonical.remove(GAME_COMMANDS);
+        }
         this.skills = Collections.unmodifiableMap(canonical);
     }
 
     /** Selects guidance from captured documents, never from a mutable setting or repository. */
     public SkillCatalogSnapshot forRequest(boolean unrestrictedJavascript) {
-        return new SkillCatalogSnapshot(eligibleSkills, unrestrictedJavascript);
+        return forRequest(unrestrictedJavascript, skills.containsKey(GAME_COMMANDS));
+    }
+
+    /** Command guidance follows the captured bridge, independently of the JavaScript mode. */
+    public SkillCatalogSnapshot forRequest(boolean unrestrictedJavascript, boolean experimentalCommands) {
+        return new SkillCatalogSnapshot(eligibleSkills, unrestrictedJavascript, experimentalCommands);
     }
 
     @Override

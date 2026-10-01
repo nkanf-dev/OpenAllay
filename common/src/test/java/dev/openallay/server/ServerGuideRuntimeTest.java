@@ -26,5 +26,7 @@ final class ServerGuideRuntimeTest {
         assertFalse(commandPrompt.contains("<name>unrestricted-javascript</name>"));
         assertFalse(ordinaryPrompt.contains("<name>unrestricted-javascript</name>"));
         assertTrue(commandPrompt.contains("JavaScript uses the default isolated mode"));
+        assertTrue(commandPrompt.contains("commands.run(text) are available as top-level"));
+        assertTrue(ordinaryPrompt.contains("The commands binding is not present for this request"));
     }
 }

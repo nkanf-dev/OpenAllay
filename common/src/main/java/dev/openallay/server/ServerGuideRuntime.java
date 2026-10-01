@@ -110,7 +110,7 @@ public record ServerGuideRuntime(
                     return new ToolResult.Success<>(new ServerAgentService.RequestRuntime(
                             agent,
                             requestTools,
-                            systemPrompt(requestSkills),
+                            systemPrompt(requestSkills, experimentalCommands),
                             () -> clientTools.close(actor, payload.requestId())));
                 },
                 sessions,
@@ -131,11 +131,19 @@ public record ServerGuideRuntime(
 
     static String systemPrompt(
             dev.openallay.skill.SkillRepository skills, boolean experimentalCommands) {
-        return systemPrompt(requestSkills(skills, experimentalCommands));
+        return systemPrompt(requestSkills(skills, experimentalCommands), experimentalCommands);
     }
 
     static String systemPrompt(dev.openallay.skill.SkillCatalogSnapshot skills) {
-        return dev.openallay.agent.AgentSystemPrompt.compose(skills.metadataPrompt());
+        return systemPrompt(skills, false);
+    }
+
+    static String systemPrompt(dev.openallay.skill.SkillCatalogSnapshot skills, boolean commandsAvailable) {
+        return dev.openallay.agent.AgentSystemPrompt.compose(
+                skills.metadataPrompt(),
+                dev.openallay.script.schema.CoreJavascriptContract.render(
+                        dev.openallay.script.data.MinecraftAgentHostGraph.declaredOnlyCatalog()),
+                false, "", commandsAvailable);
     }
 
     /** Captures matching prompt and server-local load_skill documents for one request. */

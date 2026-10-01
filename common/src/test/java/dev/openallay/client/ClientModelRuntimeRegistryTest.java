@@ -324,6 +324,69 @@ final class ClientModelRuntimeRegistryTest {
     }
 
     @Test
+    void commandPromptAndLoadSkillCatalogFollowTheActualTopLevelBindingInBothJavascriptModes() {
+        for (boolean unrestricted : List.of(false, true)) {
+            for (boolean enabled : List.of(false, true)) {
+                var commands = new dev.openallay.script.command.CommandCapabilityRuntime();
+                commands.replace(new dev.openallay.script.command.CommandCapabilityConfig(enabled));
+                var workspaces = new dev.openallay.script.workspace.AgentResultWorkspaceRegistry();
+                var javascript = new dev.openallay.tool.builtin.RunJavascriptTool(
+                        new dev.openallay.script.RhinoJavascriptRuntime(),
+                        dev.openallay.script.data.MinecraftAgentHostGraph::new, workspaces,
+                        new dev.openallay.script.workspace.JavascriptResultPresenter(), commands);
+                ToolRegistry tools = new ToolRegistry();
+                tools.register("test:javascript", List.of(javascript));
+                SkillRepository skills = new SkillRepository(new SkillParser(), List.of(dev.openallay.tool.builtin.RunJavascriptTool.ID));
+                assertTrue(skills.reload(new dev.openallay.skill.BundledSkillLoader().load(), Set.of()));
+                skills.setRuntimeDisabledSkills(enabled ? Set.of() : Set.of("run-game-commands"));
+                tools.register("test:skills", List.of(new dev.openallay.skill.LoadSkillTool(skills)));
+                OpenAllayRuntime product = new OpenAllayRuntime(new PlatformService() {
+                    public String platformName() { return "test"; }
+                    public String gameVersion() { return "26.2-test"; }
+                    public boolean isModLoaded(String id) { return false; }
+                    public boolean isDevelopmentEnvironment() { return true; }
+                }, tools, new KnowledgeRegistry(), new PatchouliMultiblockStore(),
+                        new dev.openallay.script.extension.JavascriptDataModuleRegistry(), commands,
+                        skills, new DevelopmentToolInspector(tools), null,
+                        new dev.openallay.capability.CapabilitySettingsCatalog());
+                String correlation = "commands-" + enabled + "-java-" + unrestricted;
+                commands.capture(correlation, UUID.randomUUID(),
+                        new dev.openallay.script.command.CommandCatalogSnapshot(java.time.Instant.EPOCH, List.of()),
+                        (actor, command, cancellation) -> CompletableFuture.completedFuture(null));
+                var base = ToolInvocationContext.developmentConsole(correlation);
+                var context = new ToolInvocationContext(correlation, base.capturedAt(), base.caller(),
+                        base.player(), base.registries(), base.recipes(), base.observableGameState(),
+                        base.metrics(), unrestricted);
+                var toolInput = new com.google.gson.JsonObject();
+                toolInput.addProperty("source", "return {commands: typeof commands, java: typeof Java};");
+                CompletableFuture<ModelTurn> tool = CompletableFuture.completedFuture(new ModelTurn(
+                        "test", "model-a", List.of(new ModelContent.ToolUse("inspect-binding",
+                                "openallay__run_javascript", toolInput)), "tool_use", ModelUsage.empty()));
+                ToolSequenceModel model = new ToolSequenceModel(tool);
+                ClientModelRuntimeRegistry registry = registry(product, load("a", "a"), Map.of("a", model));
+
+                List<dev.openallay.agent.AgentEvent> executionEvents = new ArrayList<>();
+                assertTrue(registry.ask("a", UUID.randomUUID(), "main", UUID.randomUUID(), "inspect binding",
+                        context, executionEvents::add).join().successful());
+
+                String prompt = model.requests.getFirst().systemPrompt();
+                assertEquals(enabled, prompt.contains("<name>run-game-commands</name>"));
+                assertEquals(enabled, prompt.contains("commands.run(text) are available as top-level"));
+                assertEquals(!enabled, prompt.contains("The commands binding is not present for this request"));
+                assertEquals(unrestricted, prompt.contains("<name>unrestricted-javascript</name>"));
+                dev.openallay.agent.AgentEvent.ToolCompleted result = executionEvents.stream()
+                        .filter(dev.openallay.agent.AgentEvent.ToolCompleted.class::isInstance)
+                        .map(dev.openallay.agent.AgentEvent.ToolCompleted.class::cast)
+                        .findFirst().orElseThrow();
+                assertFalse(result.failure());
+                var preview = result.normalized().getAsJsonObject("value").getAsJsonObject("preview");
+                assertEquals(enabled ? "object" : "undefined", preview.get("commands").getAsString());
+                assertEquals(unrestricted ? "object" : "undefined", preview.get("java").getAsString());
+            }
+        }
+    }
+
+    @Test
     void latestEstimateIncludesExactPromptToolsAndMessagesAndDoesNotLeakAcrossScopes() {
         RecordingModel modelA = new RecordingModel("model-a");
         RecordingModel modelB = new RecordingModel("model-b");

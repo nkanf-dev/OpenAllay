@@ -33,8 +33,13 @@ public final class ClientCapabilityResolver {
         }
 
         try {
-            SkillCatalogSnapshot skillSnapshot = skills.snapshot(policy.disabledSkills());
-            SkillCatalogSnapshot eligibleSkills = skillSnapshot.forRequest(true);
+            SkillCatalogSnapshot currentSkills = skills.snapshot(policy.disabledSkills());
+            // Retain explicitly allowed command guidance even when the current toggle is off.
+            // A request may already have frozen the enabled toggle before context loading finishes.
+            SkillCatalogSnapshot skillSnapshot = skills.snapshotWithRuntimeEnabled(
+                            policy.disabledSkills(), Set.of(SkillCatalogSnapshot.GAME_COMMANDS))
+                    .forRequest(false, currentSkills.find(SkillCatalogSnapshot.GAME_COMMANDS).isPresent());
+            SkillCatalogSnapshot eligibleSkills = skillSnapshot.forRequest(true, true);
             List<RegisteredTool> candidate = new ArrayList<>();
             RegisteredTool loadSkillRegistration = null;
             for (RegisteredTool registration : List.copyOf(registrations)) {
