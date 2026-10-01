@@ -22,7 +22,7 @@ public final class BridgeJsonCodec {
             Map.entry(ServerAgentRequestPayload.class,
                     Set.of(
                             "requestId", "sessionId", "question", "stream",
-                            "history", "clientToolIds")),
+                            "history", "clientToolIds", "skillDocuments")),
             Map.entry(ClientToolCallPayload.class,
                     Set.of(
                             "requestId", "invocationId", "sessionId", "toolId",
@@ -123,11 +123,77 @@ public final class BridgeJsonCodec {
                             "Server Agent client Tool IDs must contain strings");
                 }
             }
+            validateSkillManifest(object.get("skillDocuments"));
         }
-        T value = gson.fromJson(object, type);
-        if (value == null) {
-            throw new IllegalArgumentException("Bridge payload decoded to null");
+        try {
+            T value = gson.fromJson(object, type);
+            if (value == null) {
+                throw new IllegalArgumentException("Bridge payload decoded to null");
+            }
+            return value;
+        } catch (IllegalArgumentException invalid) {
+            throw invalid;
+        } catch (RuntimeException malformed) {
+            // Gson wraps record-constructor validation failures. Keep the public wire boundary's
+            // malformed-payload contract stable without exposing reflected constructor arguments.
+            throw new IllegalArgumentException("Bridge payload values do not match the current shape", malformed);
         }
-        return value;
+    }
+
+    private static void validateSkillManifest(JsonElement element) {
+        JsonObject manifest = exactObject(element, Set.of("documents"));
+        JsonElement documents = manifest.get("documents");
+        if (!documents.isJsonArray()) {
+            throw new IllegalArgumentException("Skill documents must be an array");
+        }
+        for (JsonElement item : documents.getAsJsonArray()) {
+            JsonObject document = exactObject(item, Set.of("name", "document", "source", "fingerprint",
+                    "length", "chunks", "availableReferences", "description"));
+            for (String field : java.util.List.of("name", "document", "source", "fingerprint", "description")) {
+                requireText(document.get(field));
+            }
+            requireInteger(document.get("length"));
+            JsonElement references = document.get("availableReferences");
+            if (!references.isJsonArray()) {
+                throw new IllegalArgumentException("Skill references must be an array");
+            }
+            references.getAsJsonArray().forEach(BridgeJsonCodec::requireText);
+            JsonElement chunks = document.get("chunks");
+            if (!chunks.isJsonArray()) {
+                throw new IllegalArgumentException("Skill chunks must be an array");
+            }
+            for (JsonElement raw : chunks.getAsJsonArray()) {
+                JsonObject chunk = exactObject(raw, Set.of("offset", "end", "fingerprint"));
+                requireInteger(chunk.get("offset"));
+                requireInteger(chunk.get("end"));
+                requireText(chunk.get("fingerprint"));
+            }
+        }
+    }
+
+    private static JsonObject exactObject(JsonElement element, Set<String> fields) {
+        if (element == null || !element.isJsonObject()
+                || !element.getAsJsonObject().keySet().equals(fields)) {
+            throw new IllegalArgumentException("Skill catalog metadata schema mismatch");
+        }
+        return element.getAsJsonObject();
+    }
+
+    private static void requireText(JsonElement value) {
+        if (!value.isJsonPrimitive() || !value.getAsJsonPrimitive().isString()) {
+            throw new IllegalArgumentException("Skill catalog metadata field must be text");
+        }
+    }
+
+    private static void requireInteger(JsonElement value) {
+        if (!value.isJsonPrimitive() || !value.getAsJsonPrimitive().isNumber()
+                || !value.getAsString().matches("[0-9]+")) {
+            throw new IllegalArgumentException("Skill catalog metadata field must be a nonnegative integer");
+        }
+        try {
+            Integer.parseInt(value.getAsString());
+        } catch (NumberFormatException invalid) {
+            throw new IllegalArgumentException("Skill catalog metadata integer is out of range", invalid);
+        }
     }
 }

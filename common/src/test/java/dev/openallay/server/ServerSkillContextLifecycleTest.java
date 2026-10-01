@@ -144,7 +144,7 @@ final class ServerSkillContextLifecycleTest {
             assertSame(original.get(1), refreshed.get(1));
             assertSame(original.get(5), refreshed.get(5));
             ModelContent.ToolResult invalidated = toolResult(refreshed, "previous-1");
-            assertTrue(invalidated.error());
+            assertFalse(invalidated.error());
             assertTrue(invalidated.value().getAsString().startsWith("skill_instructions: invalidated\n"));
             assertFalse(invalidated.value().getAsString().contains("Old A instructions."));
             assertEquals(original.get(2), refreshed.get(2));
@@ -164,8 +164,8 @@ final class ServerSkillContextLifecycleTest {
             assertEquals("", unchangedReceipt.content());
             assertEquals(LoadSkillTool.LoadState.COMPLETE, changed.state());
             assertEquals("New A instructions.", changed.content());
-            assertEquals("Old A instructions.", output(execute(previous, previousId,
-                    new LoadSkillTool.Input("guide", "references/a.md", null, true))).content());
+            assertEquals(LoadSkillTool.LoadState.ALREADY_LOADED, output(execute(previous, previousId,
+                    new LoadSkillTool.Input("guide", "references/a.md"))).state());
             assertEquals(original, previous.refreshContext(original));
         } finally {
             router.close(ACTOR, previousId);
@@ -177,7 +177,7 @@ final class ServerSkillContextLifecycleTest {
     void clientPlacedActualPlaintextIsNotInvalidatedByDifferentServerDocuments() {
         SkillRepository server = repository("Server metadata", "Unrelated server instructions.", Map.of());
         SkillRepository client = repository("Client metadata", "Actual client instructions.", Map.of());
-        LoadSkillTool actualClientTool = new LoadSkillTool(client.snapshot(Set.of()));
+        LoadSkillTool actualClientTool = new LoadSkillTool(client.snapshot(Set.of()), "client");
         AtomicReference<PlayerClientToolRouter> routerRef = new AtomicReference<>();
         PlayerClientToolRouter.Transport transport = new PlayerClientToolRouter.Transport() {
             @Override
@@ -215,7 +215,8 @@ final class ServerSkillContextLifecycleTest {
         UUID firstId = UUID.randomUUID();
         UUID secondId = UUID.randomUUID();
         SkillCatalogSnapshot firstSkills = ServerGuideRuntime.requestSkills(server, false);
-        AgentToolExecutor first = opened(router, firstId, List.of("openallay:load_skill"), firstSkills);
+        AgentToolExecutor first = opened(router, firstId, List.of("openallay:load_skill"), firstSkills,
+                actualClientTool.catalogManifest());
         List<AgentEvent> firstEvents = new ArrayList<>();
         List<AgentEvent> secondEvents = new ArrayList<>();
         try {
@@ -225,7 +226,8 @@ final class ServerSkillContextLifecycleTest {
             List<ModelMessage> retained = lastContext(firstEvents).messages();
             assertTrue(server.reload(List.of(), Set.of()));
             SkillCatalogSnapshot secondSkills = ServerGuideRuntime.requestSkills(server, false);
-            AgentToolExecutor second = opened(router, secondId, List.of("openallay:load_skill"), secondSkills);
+            AgentToolExecutor second = opened(router, secondId, List.of("openallay:load_skill"), secondSkills,
+                    actualClientTool.catalogManifest());
             assertEquals(retained, second.refreshContext(retained));
             second.prepareContext(correlation(secondId), retained);
             assertTrue(new GameGuideAgent(model, second, sessions, GSON).ask(
@@ -266,7 +268,12 @@ final class ServerSkillContextLifecycleTest {
 
     private static AgentToolExecutor opened(
             PlayerClientToolRouter router, UUID id, List<String> clientIds, SkillCatalogSnapshot skills) {
-        ToolResult<AgentToolExecutor> result = router.open(ACTOR, id, "main", clientIds, skills);
+        return opened(router, id, clientIds, skills, dev.openallay.skill.SkillCatalogManifest.EMPTY);
+    }
+
+    private static AgentToolExecutor opened(PlayerClientToolRouter router, UUID id, List<String> clientIds,
+            SkillCatalogSnapshot skills, dev.openallay.skill.SkillCatalogManifest clientSkills) {
+        ToolResult<AgentToolExecutor> result = router.open(ACTOR, id, "main", clientIds, skills, clientSkills);
         assertInstanceOf(ToolResult.Success.class, result);
         return ((ToolResult.Success<AgentToolExecutor>) result).value();
     }

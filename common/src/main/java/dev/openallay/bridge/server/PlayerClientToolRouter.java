@@ -19,12 +19,16 @@ import dev.openallay.model.ModelFailure;
 import dev.openallay.model.ModelMessage;
 import dev.openallay.model.ModelToolDefinition;
 import dev.openallay.skill.LoadSkillTool;
+import dev.openallay.skill.RetainedSkillContext;
+import dev.openallay.skill.SkillCatalogManifest;
 import dev.openallay.skill.SkillCatalogSnapshot;
+import dev.openallay.skill.SkillInstructionContext;
 import dev.openallay.tool.ModelFacingToolOutput;
 import dev.openallay.tool.RegisteredTool;
 import dev.openallay.tool.ToolAccess;
 import dev.openallay.tool.ToolRegistry;
 import dev.openallay.tool.ToolResult;
+import dev.openallay.trace.replay.ToolArgumentCodec;
 import dev.openallay.trace.replay.ToolResultNormalizer;
 import java.util.List;
 import java.util.Map;
@@ -60,6 +64,7 @@ public final class PlayerClientToolRouter {
     private final Gson gson;
     private final Transport transport;
     private final ToolResultNormalizer normalizer;
+    private final ToolArgumentCodec argumentsCodec;
     private final Duration resultTimeout;
     private final Map<RequestKey, RequestExecutor> active = new ConcurrentHashMap<>();
 
@@ -83,6 +88,7 @@ public final class PlayerClientToolRouter {
             throw new IllegalArgumentException("resultTimeout must be positive");
         }
         normalizer = new ToolResultNormalizer(gson);
+        argumentsCodec = new ToolArgumentCodec(gson);
     }
 
     public ToolResult<AgentToolExecutor> open(
@@ -91,9 +97,21 @@ public final class PlayerClientToolRouter {
             String sessionId,
             List<String> advertisedClientToolIds,
             SkillCatalogSnapshot requestSkills) {
+        return open(actorId, requestId, sessionId, advertisedClientToolIds, requestSkills,
+                SkillCatalogManifest.EMPTY);
+    }
+
+    public ToolResult<AgentToolExecutor> open(
+            UUID actorId,
+            UUID requestId,
+            String sessionId,
+            List<String> advertisedClientToolIds,
+            SkillCatalogSnapshot requestSkills,
+            SkillCatalogManifest clientSkillDocuments) {
         java.util.Objects.requireNonNull(actorId, "actorId");
         java.util.Objects.requireNonNull(requestId, "requestId");
         java.util.Objects.requireNonNull(requestSkills, "requestSkills");
+        java.util.Objects.requireNonNull(clientSkillDocuments, "clientSkillDocuments");
         if (sessionId == null || !sessionId.matches("[a-zA-Z0-9_.-]+")) {
             return new ToolResult.Failure<>("invalid_session", "Invalid Agent session ID");
         }
@@ -105,12 +123,13 @@ public final class PlayerClientToolRouter {
                 trustedTools.registrations().stream()
                         .map(registration -> registration.tool() instanceof LoadSkillTool
                                 ? new RegisteredTool(
-                                        registration.providerId(), new LoadSkillTool(requestSkills))
+                                        registration.providerId(), new LoadSkillTool(requestSkills, "server"))
                                 : registration)
                         .toList(),
                 Set.of());
         RequestKey key = new RequestKey(actorId, requestId);
-        RequestExecutor executor = new RequestExecutor(key, sessionId, accepted, requestTools);
+        RequestExecutor executor = new RequestExecutor(
+                key, sessionId, accepted, requestTools, clientSkillDocuments);
         if (active.putIfAbsent(key, executor) != null) {
             return new ToolResult.Failure<>(
                     "duplicate_request", "Client Tool request ID is already active");
@@ -134,7 +153,9 @@ public final class PlayerClientToolRouter {
         if (executor == null) {
             return false;
         }
+        executor.closed = true;
         executor.cancelPending();
+        List.copyOf(executor.retained.keySet()).forEach(executor::closeRequestScope);
         executor.closeRequestScope(actorId + "/" + requestId);
         return true;
     }
@@ -161,20 +182,26 @@ public final class PlayerClientToolRouter {
         private final String sessionId;
         private final Set<String> clientTools;
         private final ToolRuntimeCatalog requestTools;
-        private final LocalAgentToolExecutor local;
+        private AgentToolExecutor local;
+        private final SkillInstructionContext clientSkillContext;
+        private final Map<String, RetainedSkillContext> retained = new ConcurrentHashMap<>();
         private final Map<UUID, Pending> pending = new ConcurrentHashMap<>();
+        private volatile boolean closed;
         private final ResultChunker.Reassembler reassembler = new ResultChunker.Reassembler();
 
         private RequestExecutor(
                 RequestKey key,
                 String sessionId,
                 Set<String> clientTools,
-                ToolRuntimeCatalog requestTools) {
+                ToolRuntimeCatalog requestTools,
+                SkillCatalogManifest clientSkillDocuments) {
             this.key = key;
             this.sessionId = sessionId;
             this.clientTools = Set.copyOf(clientTools);
             this.requestTools = requestTools;
             this.local = new LocalAgentToolExecutor(requestTools, gson);
+            this.clientSkillContext = clientTools.contains("openallay:load_skill")
+                    ? new SkillInstructionContext(clientSkillDocuments) : null;
         }
 
         @Override
@@ -200,6 +227,9 @@ public final class PlayerClientToolRouter {
                 ToolInvocationContext context,
                 CancellationSignal cancellation) {
             String toolId = canonicalToolId(modelToolName).orElse(UNKNOWN_TOOL_ID);
+            if (closed) {
+                return completedFailure(toolId, "client_tool_unavailable", "Client Tool request is no longer active");
+            }
             if (toolId.equals(UNKNOWN_TOOL_ID)) {
                 return completedFailure(
                         toolId, "tool_unavailable", "Tool is unavailable in this request");
@@ -207,9 +237,32 @@ public final class PlayerClientToolRouter {
             if (!clientTools.contains(toolId)) {
                 return local.execute(modelToolName, arguments, context, cancellation);
             }
+            LoadSkillTool.Input skillInput = null;
+            if (clientSkillContext != null && toolId.equals("openallay:load_skill")) {
+                if (cancellation.isCancelled()) {
+                    return CompletableFuture.failedFuture(new ModelClientException(new ModelFailure(
+                            "agent_cancelled", "Client Tool invocation was cancelled", null)));
+                }
+                ToolResult<LoadSkillTool.Input> decoded = argumentsCodec.decode(
+                        arguments, LoadSkillTool.Input.class);
+                if (decoded instanceof ToolResult.Failure<LoadSkillTool.Input> failure) {
+                    return completedFailure(toolId, failure.code(), failure.message());
+                }
+                skillInput = ((ToolResult.Success<LoadSkillTool.Input>) decoded).value();
+                RetainedSkillContext bound = retained.get(context.correlationId());
+                LoadSkillTool.Output reused = bound == null
+                        || (SkillCatalogSnapshot.UNRESTRICTED_JAVASCRIPT.equals(skillInput.name())
+                                && !context.unrestrictedJavascript())
+                        ? null : clientSkillContext.reuse(skillInput, bound);
+                if (reused != null) {
+                    return CompletableFuture.completedFuture(new AgentToolResult(
+                            toolId, normalizer.normalize(new ToolResult.Success<>(reused),
+                                    LoadSkillTool.Output.class), false));
+                }
+            }
             UUID invocationId = UUID.randomUUID();
             CompletableFuture<AgentToolResult> result = new CompletableFuture<>();
-            Pending value = new Pending(toolId, result);
+            Pending value = new Pending(toolId, result, skillInput);
             pending.put(invocationId, value);
             cancellation.onCancel(() -> cancelInvocation(invocationId, value));
             ClientToolCallPayload payload = new ClientToolCallPayload(
@@ -268,7 +321,10 @@ public final class PlayerClientToolRouter {
                                     complete.orElseThrow())
                             .getAsJsonObject();
                     JsonObject validated = validateNormalized(requestTools, value.toolId, normalized);
-                    if (validated == null) {
+                    if (validated == null
+                            || (value.skillInput != null
+                                    && validated.get("status").getAsString().equals("success")
+                                    && !validSkillResult(value.skillInput, normalized, validated))) {
                         value.result.complete(failure(
                                 value.toolId,
                                 "client_tool_result_invalid",
@@ -293,21 +349,75 @@ public final class PlayerClientToolRouter {
 
         @Override
         public List<ModelMessage> refreshContext(List<ModelMessage> messages) {
-            // A client Skill document is not described by the server Skill catalog.
-            return clientTools.contains("openallay:load_skill")
-                    ? messages : local.refreshContext(messages);
+            return clientSkillContext == null ? local.refreshContext(messages)
+                    : clientSkillContext.refresh(messages);
+        }
+
+        @Override
+        public List<ModelMessage> refreshContext(
+                List<ModelMessage> messages, RetainedSkillContext retainedSkills) {
+            return clientSkillContext == null ? local.refreshContext(messages, retainedSkills)
+                    : clientSkillContext.refresh(messages, retainedSkills);
         }
 
         @Override
         public void prepareContext(String correlationId, List<ModelMessage> messages) {
-            if (!clientTools.contains("openallay:load_skill")) {
-                local.prepareContext(correlationId, messages);
+            prepareContext(correlationId, messages,
+                    retained.computeIfAbsent(correlationId, ignored -> new RetainedSkillContext()));
+        }
+
+        @Override
+        public void prepareContext(
+                String correlationId, List<ModelMessage> messages, RetainedSkillContext retainedSkills) {
+            if (clientSkillContext == null) {
+                local.prepareContext(correlationId, messages, retainedSkills);
+            } else {
+                clientSkillContext.reconcile(messages, retainedSkills);
             }
+            retained.put(correlationId, retainedSkills);
+        }
+
+        @Override
+        public void prepareSystem(String systemPrompt, RetainedSkillContext retainedSkills) {
+            if (clientSkillContext == null) local.prepareSystem(systemPrompt, retainedSkills);
+            else clientSkillContext.prepareSystem(systemPrompt, retainedSkills);
+        }
+
+        @Override
+        public String skillManifest(String correlationId) {
+            if (clientSkillContext == null) return local.skillManifest(correlationId);
+            RetainedSkillContext bound = retained.get(correlationId);
+            return bound == null ? "" : clientSkillContext.manifest(bound);
+        }
+
+        @Override
+        public String skillSystemPrompt(String prompt) {
+            return clientSkillContext == null ? local.skillSystemPrompt(prompt) : prompt;
+        }
+
+        @Override
+        public AgentToolExecutor safeSkillView(java.util.function.UnaryOperator<String> transform) {
+            // GameGuideAgent captures this view before request execution. A remote manifest remains
+            // bound to the client's actual source; the server must not rewrite its identities.
+            if (clientSkillContext == null) local = local.safeSkillView(transform);
+            return this;
         }
 
         @Override
         public void closeRequestScope(String correlationId) {
+            retained.remove(correlationId);
             local.closeRequestScope(correlationId);
+        }
+
+        private boolean validSkillResult(
+                LoadSkillTool.Input input, JsonObject raw, JsonObject validated) {
+            if (!raw.get("value").isJsonObject()
+                    || !exactSkillOutput(raw.getAsJsonObject("value"))) return false;
+            LoadSkillTool.Output output = gson.fromJson(
+                    validated.get("value"), LoadSkillTool.Output.class);
+            // A client execution must return real text. Only the server can issue reuse receipts.
+            return output.state() != LoadSkillTool.LoadState.ALREADY_LOADED
+                    && clientSkillContext.validate(input, output);
         }
 
         private int failPending(String code, String message) {
@@ -443,17 +553,50 @@ public final class PlayerClientToolRouter {
         }
     }
 
+    private static boolean exactSkillOutput(JsonObject output) {
+        if (!output.keySet().equals(Set.of("name", "document", "source", "fingerprint", "state",
+                "content", "offset", "nextOffset", "complete", "nextCursor", "availableReferences",
+                "allowedTools", "provenance"))) return false;
+        for (String field : List.of("name", "document", "source", "fingerprint", "state",
+                "content", "nextCursor", "provenance")) {
+            var value = output.get(field);
+            if (!value.isJsonPrimitive() || !value.getAsJsonPrimitive().isString()) return false;
+        }
+        for (String field : List.of("offset", "nextOffset")) {
+            var value = output.get(field);
+            if (!value.isJsonPrimitive() || !value.getAsJsonPrimitive().isNumber()
+                    || !value.getAsString().matches("[0-9]+")) return false;
+            try {
+                Integer.parseInt(value.getAsString());
+            } catch (NumberFormatException invalid) {
+                return false;
+            }
+        }
+        var complete = output.get("complete");
+        if (!complete.isJsonPrimitive() || !complete.getAsJsonPrimitive().isBoolean()) return false;
+        for (String field : List.of("availableReferences", "allowedTools")) {
+            var value = output.get(field);
+            if (!value.isJsonArray() || value.getAsJsonArray().asList().stream()
+                    .anyMatch(item -> !item.isJsonPrimitive()
+                            || !item.getAsJsonPrimitive().isString())) return false;
+        }
+        return true;
+    }
+
     private record RequestKey(UUID actorId, UUID requestId) {}
 
     private static final class Pending {
         private final String toolId;
         private final CompletableFuture<AgentToolResult> result;
+        private final LoadSkillTool.Input skillInput;
         private volatile ScheduledFuture<?> deadline;
         private boolean dispatched;
 
-        private Pending(String toolId, CompletableFuture<AgentToolResult> result) {
+        private Pending(String toolId, CompletableFuture<AgentToolResult> result,
+                LoadSkillTool.Input skillInput) {
             this.toolId = toolId;
             this.result = result;
+            this.skillInput = skillInput;
         }
 
         private void setDeadline(ScheduledFuture<?> replacement) {

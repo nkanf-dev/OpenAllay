@@ -24,31 +24,27 @@ public final class LoadSkillTool
     public record Input(
             String name,
             @ToolOptional String reference,
-            @ToolOptional String cursor,
-            @ToolOptional Boolean rehydrate) {
+            @ToolOptional String cursor) {
         public Input(String name) {
-            this(name, null, null, false);
+            this(name, null, null);
         }
 
         public Input(String name, String reference) {
-            this(name, reference, null, false);
+            this(name, reference, null);
         }
 
-        public Input(String name, String reference, String cursor) {
-            this(name, reference, cursor, false);
-        }
     }
 
     public enum LoadState {
         CONTENT,
         COMPLETE,
-        ALREADY_LOADED,
-        REHYDRATED
+        ALREADY_LOADED
     }
 
     public record Output(
             String name,
             String document,
+            String source,
             String fingerprint,
             LoadState state,
             String content,
@@ -72,6 +68,7 @@ public final class LoadSkillTool
                     .append("skill_instructions\n")
                     .append("skill: ").append(name).append('\n')
                     .append("document: ").append(document).append('\n')
+                    .append("source: ").append(source).append('\n')
                     .append("fingerprint: ").append(fingerprint).append('\n')
                     .append("state: ")
                     .append(state.name().toLowerCase(java.util.Locale.ROOT))
@@ -106,38 +103,103 @@ public final class LoadSkillTool
             "Progressively load one available Skill's instructions, or one exact declared reference after the Skill is loaded. "
                     + "When complete is false, continue with the returned opaque cursor and the same name/reference. "
                     + "Use Skills for matching vertical workflows, not for core JavaScript host syntax. "
-                    + "Reads already present in the current model context return compact receipts; set rehydrate=true only when "
-                    + "the exact document text must intentionally be emitted again.",
+                    + "Document ranges already present in the current model context return compact reuse receipts.",
             Input.class,
             Output.class,
             ToolAccess.READ_ONLY);
 
     private final SkillCatalog catalog;
+    private final String owner;
+    private final SkillCatalogManifest manifest;
     private final SkillInstructionContext instructionContext;
-    private final Map<String, Map<DocumentKey, Map<Integer, Output>>> requestLoads =
-            new ConcurrentHashMap<>();
+    private final Map<String, Binding> requests = new ConcurrentHashMap<>();
 
-    public LoadSkillTool(SkillCatalog catalog) {
+    private record Binding(RetainedSkillContext retained, Map<RetainedSkillContext.Key,
+            Map<Integer, RetainedSkillContext.Range>> pending) {}
+
+    public LoadSkillTool(SkillCatalog catalog) { this(catalog, "local"); }
+
+    public LoadSkillTool(SkillCatalog catalog, String owner) {
         this.catalog = java.util.Objects.requireNonNull(catalog, "catalog");
-        this.instructionContext = new SkillInstructionContext(catalog);
+        this.owner = java.util.Objects.requireNonNull(owner, "owner");
+        this.manifest = SkillCatalogManifest.capture(catalog, owner);
+        this.instructionContext = new SkillInstructionContext(manifest);
     }
+
+    public LoadSkillTool withOwner(String replacement) { return new LoadSkillTool(catalog, replacement); }
+    /** Capture one safe document view before it can be emitted or fingerprinted. */
+    public LoadSkillTool withTextTransform(java.util.function.UnaryOperator<String> transform) {
+        Map<String, SkillDocument> safe = new java.util.HashMap<>();
+        boolean changed = false;
+        for (var metadata : catalog.metadata()) {
+            SkillDocument original = catalog.find(metadata.name()).orElseThrow();
+            if (!transform.apply(metadata.name()).equals(metadata.name())
+                    || original.references().keySet().stream().anyMatch(name -> !transform.apply(name).equals(name))) {
+                changed = true;
+                continue; // A scrubbed name/path is not a valid callable document identifier.
+            }
+            SkillMetadata safeMetadata = new SkillMetadata(metadata.name(), transform.apply(metadata.description()),
+                    metadata.license().map(transform), metadata.compatibility().map(transform), metadata.attributes(),
+                    metadata.requiredMods(), metadata.allowedTools(), metadata.references(),
+                    transform.apply(metadata.provenance()), metadata.origin());
+            String entry = transform.apply(original.instructions());
+            Map<String, String> references = new java.util.HashMap<>();
+            original.references().forEach((name, text) -> references.put(name, transform.apply(text)));
+            if (safeMetadata.equals(metadata) && entry.equals(original.instructions()) && references.equals(original.references())) {
+                safe.put(metadata.name(), original);
+            } else {
+                changed = true;
+                safe.put(metadata.name(), original.project(safeMetadata, entry, references));
+            }
+        }
+        return changed ? new LoadSkillTool(new SkillCatalogSnapshot(safe).forRequest(true), owner) : this;
+    }
+
+    public SkillCatalogManifest catalogManifest() { return manifest; }
 
     /** Validates retained instruction results against this Tool's captured Skill catalog. */
     public List<ModelMessage> refreshContext(List<ModelMessage> messages) {
         return instructionContext.refresh(messages);
     }
 
-    /** Rebuilds receipts from the actual model context, including after compaction. */
+    /** Standalone executors still reconcile from actual messages, not a lifetime loaded flag. */
     public void prepareContext(String correlationId, List<ModelMessage> messages) {
+        Binding binding = requests.computeIfAbsent(correlationId,
+                ignored -> new Binding(new RetainedSkillContext(), new ConcurrentHashMap<>()));
+        prepareContext(correlationId, messages, binding.retained());
+    }
+
+    public void prepareContext(
+            String correlationId, List<ModelMessage> messages, RetainedSkillContext retained) {
         java.util.Objects.requireNonNull(correlationId, "correlationId");
-        Map<DocumentKey, Map<Integer, Output>> documents = new ConcurrentHashMap<>();
-        for (Output delivered : instructionContext.deliveredRanges(messages)) {
-            DocumentKey key = new DocumentKey(
-                    delivered.name(), delivered.document(), delivered.fingerprint());
-            documents.computeIfAbsent(key, ignored -> new ConcurrentHashMap<>())
-                    .put(delivered.offset(), delivered);
-        }
-        requestLoads.put(correlationId, documents);
+        instructionContext.reconcile(messages, retained);
+        requests.put(correlationId, new Binding(retained, new ConcurrentHashMap<>()));
+    }
+
+    public List<ModelMessage> refreshContext(
+            List<ModelMessage> messages, RetainedSkillContext retained) {
+        return instructionContext.refresh(messages, retained);
+    }
+
+    public String systemPrompt(String prompt) {
+        String marker = "## UNRESTRICTED JAVASCRIPT GUIDANCE\n";
+        int start = prompt.indexOf(marker);
+        SkillDocument skill = catalog.find(SkillCatalogSnapshot.UNRESTRICTED_JAVASCRIPT).orElse(null);
+        if (start < 0 || skill == null) return prompt;
+        start += marker.length();
+        // This following heading is owned by AgentSystemPrompt, not by the Skill markdown body.
+        int end = prompt.lastIndexOf("\n\n## EXECUTION\n");
+        if (end < start) return prompt;
+        return prompt.substring(0, start) + skill.instructions() + prompt.substring(end);
+    }
+
+    public void prepareSystem(String systemPrompt, RetainedSkillContext retained) {
+        instructionContext.prepareSystem(systemPrompt, retained);
+    }
+
+    public String manifest(String correlationId) {
+        Binding binding = requests.get(correlationId);
+        return binding == null ? "" : instructionContext.manifest(binding.retained());
     }
 
     @Override
@@ -147,6 +209,15 @@ public final class LoadSkillTool
 
     @Override
     public ToolResult<Output> invoke(ToolInvocationContext context, Input input) {
+        return invoke(context, input, false);
+    }
+
+    /** Remote endpoints do not own the Agent projection. Reuse belongs to that Agent only. */
+    public ToolResult<Output> invokeFresh(ToolInvocationContext context, Input input) {
+        return invoke(context, input, true);
+    }
+
+    private ToolResult<Output> invoke(ToolInvocationContext context, Input input, boolean fresh) {
         if (input == null || input.name() == null || input.name().isBlank()) {
             return new ToolResult.Failure<>("invalid_skill_name", "Skill name must not be blank");
         }
@@ -159,71 +230,71 @@ public final class LoadSkillTool
             return new ToolResult.Failure<>(
                     "skill_not_found", "No available Skill named " + input.name());
         }
-        List<String> availableReferences = document.references().keySet().stream().sorted().toList();
         String reference = input.reference() == null ? "" : input.reference().strip();
         String documentName = reference.isEmpty() ? "SKILL.md" : reference;
-        String contents = reference.isEmpty()
-                ? document.instructions()
-                : document.references().get(reference);
+        SkillDocument.Text captured = document.documents().get(documentName);
+        String contents = captured == null ? null : captured.contents();
         if (!reference.isEmpty() && contents == null) {
             return new ToolResult.Failure<>(
                     "skill_reference_not_found",
                     "Skill " + input.name() + " has no declared reference " + reference);
         }
-        String fingerprint = fingerprint(contents);
+        String fingerprint = captured.fingerprint();
         int offset;
         try {
             offset = decodeCursor(
                     input.cursor(),
                     document.metadata().name(),
                     documentName,
+                    SkillCatalogManifest.source(owner, document),
                     fingerprint);
         } catch (IllegalArgumentException failure) {
             return new ToolResult.Failure<>("skill_cursor_invalid", failure.getMessage());
         }
-        DocumentKey documentKey =
-                new DocumentKey(document.metadata().name(), documentName, fingerprint);
-        Map<DocumentKey, Map<Integer, Output>> requestDocuments =
-                requestLoads.computeIfAbsent(
-                        context.correlationId(), ignored -> new ConcurrentHashMap<>());
-        Map<Integer, Output> deliveredRanges =
-                requestDocuments.computeIfAbsent(
-                        documentKey, ignored -> new ConcurrentHashMap<>());
-        if (!Boolean.TRUE.equals(input.rehydrate())) {
-            Output delivered = deliveredRanges.get(offset);
-            if (delivered != null) {
-                return new ToolResult.Success<>(alreadyLoaded(delivered));
+        if (offset < 0 || offset > contents.length()) {
+            return new ToolResult.Failure<>("skill_cursor_invalid", "Skill cursor offset is outside the document");
+        }
+        RetainedSkillContext.Key documentKey = new RetainedSkillContext.Key(
+                document.metadata().name(), documentName, SkillCatalogManifest.source(owner, document), fingerprint);
+        SkillCatalogManifest.Chunk chunk = captured.chunks().stream()
+                .filter(part -> part.offset() == offset).findFirst().orElse(null);
+        if (chunk == null) {
+            return new ToolResult.Failure<>("skill_cursor_invalid", "Skill cursor is not a document chunk boundary");
+        }
+        int end = chunk.end();
+        // Stage only range facts for another call in the same pending exchange. The session index
+        // is updated only when a complete, actual model-context projection is reconciled.
+        if (!fresh) {
+            Binding binding = requests.computeIfAbsent(context.correlationId(),
+                    ignored -> new Binding(new RetainedSkillContext(), new ConcurrentHashMap<>()));
+            synchronized (binding) {
+                Map<Integer, RetainedSkillContext.Range> pending = binding.pending()
+                        .computeIfAbsent(documentKey, ignored -> new ConcurrentHashMap<>());
+                if (binding.retained().contains(documentKey, offset, end) || pending.containsKey(offset)) {
+                    return new ToolResult.Success<>(output(document, documentName, captured,
+                            LoadState.ALREADY_LOADED, offset, end, "", owner));
+                }
+                pending.put(offset, new RetainedSkillContext.Range(documentKey, offset, end, contents.length()));
             }
         }
-        int end = chunkEnd(contents, offset);
-        boolean complete = end == contents.length();
-        String nextCursor = complete
-                ? ""
-                : encodeCursor(
-                        document.metadata().name(), documentName, fingerprint, end);
-        LoadState state = Boolean.TRUE.equals(input.rehydrate())
-                ? LoadState.REHYDRATED
-                : complete ? LoadState.COMPLETE : LoadState.CONTENT;
-        Output output = new Output(
-                document.metadata().name(),
-                documentName,
-                fingerprint,
-                state,
-                contents.substring(offset, end),
-                offset,
-                end,
-                complete,
-                nextCursor,
-                availableReferences,
-                document.metadata().allowedTools().stream().sorted().toList(),
-                document.metadata().provenance());
-        deliveredRanges.put(offset, output);
-        return new ToolResult.Success<>(output);
+        return new ToolResult.Success<>(output(document, documentName, captured,
+                end == contents.length() ? LoadState.COMPLETE : LoadState.CONTENT,
+                offset, end, contents.substring(offset, end), owner));
+    }
+
+    static Output output(SkillDocument skill, String name, SkillDocument.Text document,
+            LoadState state, int offset, int end, String content, String owner) {
+        boolean complete = end == document.contents().length();
+        return new Output(skill.metadata().name(), name, SkillCatalogManifest.source(owner, skill), document.fingerprint(), state, content,
+                offset, end, complete,
+                complete ? "" : encodeCursor(skill.metadata().name(), name, SkillCatalogManifest.source(owner, skill), document.fingerprint(), end),
+                skill.references().keySet().stream().sorted().toList(),
+                skill.metadata().allowedTools().stream().sorted().toList(), skill.metadata().provenance());
     }
 
     @Override
     public void closeRequestScope(String correlationId) {
-        requestLoads.remove(correlationId);
+        requests.remove(correlationId);
     }
 
     static int chunkEnd(String contents, int offset) {
@@ -250,15 +321,15 @@ public final class LoadSkillTool
     }
 
     static String encodeCursor(
-            String name, String document, String fingerprint, int offset) {
-        String payload = String.join("\u0000", name, document, fingerprint, Integer.toString(offset));
+            String name, String document, String source, String fingerprint, int offset) {
+        String payload = String.join("\u0000", name, document, source, fingerprint, Integer.toString(offset));
         return Base64.getUrlEncoder()
                 .withoutPadding()
                 .encodeToString(payload.getBytes(StandardCharsets.UTF_8));
     }
 
     static int decodeCursor(
-            String cursor, String name, String document, String fingerprint) {
+            String cursor, String name, String document, String source, String fingerprint) {
         if (cursor == null || cursor.isBlank()) {
             return 0;
         }
@@ -266,14 +337,15 @@ public final class LoadSkillTool
             String decoded = new String(
                     Base64.getUrlDecoder().decode(cursor), StandardCharsets.UTF_8);
             String[] fields = decoded.split("\u0000", -1);
-            if (fields.length != 4
+            if (fields.length != 5
                     || !name.equals(fields[0])
                     || !document.equals(fields[1])
-                    || !fingerprint.equals(fields[2])) {
+                    || !source.equals(fields[2])
+                    || !fingerprint.equals(fields[3])) {
                 throw new IllegalArgumentException(
                         "Skill cursor does not belong to this document snapshot");
             }
-            return Integer.parseInt(fields[3]);
+            return Integer.parseInt(fields[4]);
         } catch (IllegalArgumentException failure) {
             if ("Skill cursor does not belong to this document snapshot"
                     .equals(failure.getMessage())) {
@@ -293,21 +365,4 @@ public final class LoadSkillTool
         }
     }
 
-    private static Output alreadyLoaded(Output delivered) {
-        return new Output(
-                delivered.name(),
-                delivered.document(),
-                delivered.fingerprint(),
-                LoadState.ALREADY_LOADED,
-                "",
-                delivered.offset(),
-                delivered.nextOffset(),
-                delivered.complete(),
-                delivered.nextCursor(),
-                delivered.availableReferences(),
-                delivered.allowedTools(),
-                delivered.provenance());
-    }
-
-    private record DocumentKey(String name, String document, String fingerprint) {}
 }

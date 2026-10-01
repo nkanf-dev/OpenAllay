@@ -36,7 +36,7 @@ final class BridgeJsonCodecTest {
                 Set.of("requestId"));
         assertExactPayloadShape(codec,
                 new ServerAgentRequestPayload(requestId, "main", "question", true),
-                Set.of("requestId", "sessionId", "question", "stream", "history", "clientToolIds"));
+                Set.of("requestId", "sessionId", "question", "stream", "history", "clientToolIds", "skillDocuments"));
         assertExactPayloadShape(codec,
                 new ClientToolCallPayload(requestId, invocationId, "main", "test:read", "{}"),
                 Set.of("requestId", "invocationId", "sessionId", "toolId", "argumentsJson"));
@@ -133,6 +133,50 @@ final class BridgeJsonCodecTest {
                 List.of(),
                 List.of("openallay:inspect_game_state", "openallay:inspect_game_state")));
         assertTrue(request.clientToolIds().contains("openallay:inspect_game_state"));
+    }
+
+    @Test
+    void roundTripsOnlyFrozenSkillMetadataAndRejectsOldOrBodyBearingShapes() {
+        String digest = "a".repeat(64);
+        var manifest = new dev.openallay.skill.SkillCatalogManifest(List.of(
+                new dev.openallay.skill.SkillCatalogManifest.Document("guide", "SKILL.md", "Y2xpZW50",
+                        digest, 9, List.of(new dev.openallay.skill.SkillCatalogManifest.Chunk(0, 9, digest)),
+                        List.of("references/a.md"), "Guide the player"),
+                new dev.openallay.skill.SkillCatalogManifest.Document("guide", "references/a.md", "Y2xpZW50",
+                        digest, 9, List.of(new dev.openallay.skill.SkillCatalogManifest.Chunk(0, 9, digest)),
+                        List.of("references/a.md"), "Guide the player")));
+        var payload = new ServerAgentRequestPayload(UUID.randomUUID(), "main", "question", true,
+                List.of(), List.of("openallay:load_skill"), manifest);
+        BridgeJsonCodec codec = new BridgeJsonCodec();
+        String json = codec.encode(payload);
+        assertEquals(payload, codec.decode(json, ServerAgentRequestPayload.class));
+        JsonObject current = JsonParser.parseString(json).getAsJsonObject();
+        assertEquals(Set.of("documents"), current.getAsJsonObject("skillDocuments").keySet());
+        JsonObject document = current.getAsJsonObject("skillDocuments")
+                .getAsJsonArray("documents").get(0).getAsJsonObject();
+        assertEquals(Set.of("name", "document", "source", "fingerprint", "length", "chunks",
+                "availableReferences", "description"), document.keySet());
+        assertEquals(Set.of("offset", "end", "fingerprint"), document.getAsJsonArray("chunks")
+                .get(0).getAsJsonObject().keySet());
+        JsonObject old = current.deepCopy();
+        old.remove("skillDocuments");
+        assertThrows(IllegalArgumentException.class,
+                () -> codec.decode(old.toString(), ServerAgentRequestPayload.class));
+        for (String malformed : List.of(
+                json.replace("\"skillDocuments\":{\"documents\":", "\"skillDocuments\":{\"content\":\"body\",\"documents\":"),
+                json.replace("\"document\":\"SKILL.md\"", "\"document\":\"SKILL.md\",\"content\":\"body\""),
+                json.replace("\"offset\":0", "\"offset\":0,\"content\":\"body\""),
+                json.replace("\"length\":9", "\"length\":\"9\""),
+                json.replace("\"length\":9", "\"length\":9.5"),
+                json.replace("\"length\":9", "\"length\":4294967305"),
+                json.replace("\"end\":9", "\"end\":10"),
+                json.replace("\"offset\":0", "\"offset\":1"),
+                json.replace("\"source\":\"Y2xpZW50\"", "\"source\":\"invalid source\""),
+                json.replace("\"references/a.md\"", "42"),
+                json.replace("\"chunks\":[", "\"chunks\":null,\"unused\":["))) {
+            assertThrows(IllegalArgumentException.class,
+                    () -> codec.decode(malformed, ServerAgentRequestPayload.class), malformed);
+        }
     }
 
     @Test

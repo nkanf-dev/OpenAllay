@@ -196,13 +196,30 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
         ClientGuideRuntime enabled = withCapabilities(capabilities.forRequest(true, true));
         var estimator = new Utf8ContextTokenEstimator();
         int promptAndTools = Math.max(
-                estimator.estimate(systemPrompt(), List.of(), toolExecutor.definitions()),
-                estimator.estimate(enabled.systemPrompt(true, true), List.of(), enabled.toolExecutor.definitions()));
+                estimator.estimate(budgetSystemPrompt(systemPrompt()), List.of(), toolExecutor.definitions()),
+                estimator.estimate(enabled.budgetSystemPrompt(enabled.systemPrompt(true, true)),
+                        List.of(), enabled.toolExecutor.definitions()));
         if (promptAndTools >= endpoint.contextBudget().inputTokens()) {
             return Optional.empty();
         }
         return Optional.of(new GuideContextSpec(
                 endpoint.contextBudget(), promptAndTools, endpoint.modelIdentifier()));
+    }
+
+    private String budgetSystemPrompt(String prompt) {
+        // Match the Agent's initial actual system delivery, including inline Skill range facts.
+        AgentToolExecutor captured = toolExecutor.safeSkillView(traces.redactor()::text);
+        String safe = traces.redactor().text(captured.skillSystemPrompt(prompt));
+        var retained = new dev.openallay.skill.RetainedSkillContext();
+        String correlation = "context-budget-" + UUID.randomUUID();
+        captured.prepareSystem(safe, retained);
+        captured.prepareContext(correlation, List.of(), retained);
+        try {
+            String facts = captured.skillManifest(correlation);
+            return traces.redactor().text(facts.isBlank() ? safe : safe + "\n" + facts);
+        } finally {
+            captured.closeSkillContext(correlation);
+        }
     }
 
     @Override

@@ -16,7 +16,8 @@ public final class AgentSessionStore {
             CancellationSignal cancellation,
             List<ModelMessage> history,
             List<ContextCheckpoint> checkpoints,
-            Progress progress) {
+            Progress progress,
+            dev.openallay.skill.RetainedSkillContext retainedSkills) {
         public Lease {
             history = List.copyOf(history);
             checkpoints = List.copyOf(checkpoints);
@@ -54,6 +55,8 @@ public final class AgentSessionStore {
         private List<ContextCheckpoint> checkpoints = List.of();
         private Lease active;
         private Lease latest;
+        private dev.openallay.skill.RetainedSkillContext retainedSkills =
+                new dev.openallay.skill.RetainedSkillContext();
     }
 
     private final Map<AgentSessionKey, Session> sessions = new HashMap<>();
@@ -80,10 +83,11 @@ public final class AgentSessionStore {
         if (replacementHistory != null) {
             session.history = List.copyOf(replacementHistory);
             session.checkpoints = List.copyOf(replacementCheckpoints);
+            session.retainedSkills = new dev.openallay.skill.RetainedSkillContext();
         }
         Lease lease = new Lease(
                 key, requestId, new CancellationSignal(), session.history, session.checkpoints,
-                new Progress(session.history));
+                new Progress(session.history), session.retainedSkills);
         session.active = lease;
         session.latest = lease;
         return new ToolResult.Success<>(lease);
@@ -144,6 +148,7 @@ public final class AgentSessionStore {
         }
         session.history = List.copyOf(history);
         session.checkpoints = List.copyOf(checkpoints);
+        session.retainedSkills = new dev.openallay.skill.RetainedSkillContext();
     }
 
     public boolean cancel(AgentSessionKey key) {
@@ -173,6 +178,9 @@ public final class AgentSessionStore {
                                 "[OpenAllay request ended: agent_cancelled] Agent request was cancelled"))));
                 session.history = List.copyOf(retained);
                 session.active = null;
+                // The cancelled worker may still finish a prepare callback after Stop. Its lease
+                // keeps the old index; a successor reconciles its own actual projection in a new one.
+                session.retainedSkills = new dev.openallay.skill.RetainedSkillContext();
             }
         }
         return accepted;

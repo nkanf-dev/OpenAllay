@@ -72,7 +72,7 @@ public final class GameGuideAgent {
         this.redactor = Objects.requireNonNull(redactor, "redactor");
         this.contextEstimates = Objects.requireNonNull(contextEstimates, "contextEstimates");
         this.model = Objects.requireNonNull(model, "model");
-        this.tools = Objects.requireNonNull(tools, "tools");
+        this.tools = Objects.requireNonNull(tools, "tools").safeSkillView(redactor::text);
         this.sessions = Objects.requireNonNull(sessions, "sessions");
         this.gson = Objects.requireNonNull(gson, "gson");
         this.compactor = compactor;
@@ -103,7 +103,7 @@ public final class GameGuideAgent {
             Consumer<AgentEvent> rawEvents,
             ToolResult<AgentSessionStore.Lease> reservation) {
         AgentRequest request = new AgentRequest(rawRequest.requestId(), rawRequest.actorId(), rawRequest.sessionId(),
-                redactor.text(rawRequest.userMessage()), redactor.text(rawRequest.systemPrompt()),
+                redactor.text(rawRequest.userMessage()), redactor.text(tools.skillSystemPrompt(rawRequest.systemPrompt())),
                 rawRequest.context(), rawRequest.stream());
         Consumer<AgentEvent> events = event -> rawEvents.accept(redactor.event(event));
         if (reservation instanceof ToolResult.Failure<AgentSessionStore.Lease> failure) {
@@ -116,18 +116,25 @@ public final class GameGuideAgent {
         LiveAgentTraceRecorder trace = new LiveAgentTraceRecorder(gson, request);
         try {
             transition(AgentState.PREPARING, trace, events);
+            List<ModelMessage> originalHistory = redactor.messages(lease.history());
+            tools.prepareSystem(request.systemPrompt(), lease.retainedSkills());
             List<ModelMessage> messages = new ArrayList<>(redactor.messages(tools.refreshContext(
-                    redactor.messages(lease.history()))));
+                    originalHistory, lease.retainedSkills())));
             int protectedFromIndex = messages.size();
-            messages.add(ModelMessage.userText(request.userMessage()));
-            List<ModelMessage> completeMessages = List.copyOf(messages);
+            ModelMessage question = ModelMessage.userText(request.userMessage());
+            messages.add(question);
+            List<ModelMessage> complete = new ArrayList<>(originalHistory);
+            complete.add(question);
+            List<ModelMessage> completeMessages = List.copyOf(complete);
+            tools.prepareContext(request.context().correlationId(), messages, lease.retainedSkills());
+            String preparedPrompt = systemPrompt(request);
             sessions.recordContext(lease, messages, completeMessages);
             events.accept(new AgentEvent.ContextUpdated(messages, lease.progress().requestMessages()));
             if (compactor != null && !lease.checkpoints().isEmpty()) {
                 for (int index = lease.checkpoints().size() - 1; index >= 0; index--) {
                     var reused = compactor.reuse(
                             lease.checkpoints().get(index),
-                            request.systemPrompt(),
+                            preparedPrompt,
                             messages,
                             protectedFromIndex,
                             tools.definitions());
@@ -149,10 +156,10 @@ public final class GameGuideAgent {
             }
             if (compactor != null
                     && compactor.requiresCompaction(
-                            request.systemPrompt(), messages, tools.definitions())) {
+                            preparedPrompt, messages, tools.definitions())) {
                 transition(AgentState.COMPACTING, trace, events);
                 return compactor.compact(
-                                request.systemPrompt(),
+                                preparedPrompt,
                                 messages,
                                 protectedFromIndex,
                                 tools.definitions(),
@@ -207,14 +214,19 @@ public final class GameGuideAgent {
             LiveAgentTraceRecorder trace,
             Consumer<AgentEvent> events) {
         lease.cancellation().throwIfCancelled();
+        tools.prepareSystem(request.systemPrompt(), lease.retainedSkills());
+        List<ModelMessage> projectedMessages = redactor.messages(tools.refreshContext(
+                redactor.messages(messages), lease.retainedSkills()));
+        tools.prepareContext(request.context().correlationId(), projectedMessages, lease.retainedSkills());
+        String projectedPrompt = systemPrompt(request);
         if (compactor != null
                 && compactor.requiresCompaction(
-                        request.systemPrompt(), messages, tools.definitions())) {
-            int protectedMessageCount = messages.size() - protectedFromIndex;
+                        projectedPrompt, projectedMessages, tools.definitions())) {
+            int protectedMessageCount = projectedMessages.size() - protectedFromIndex;
             transition(AgentState.COMPACTING, trace, events);
             return compactor.compact(
-                            request.systemPrompt(),
-                            messages,
+                            projectedPrompt,
+                            projectedMessages,
                             protectedFromIndex,
                             tools.definitions(),
                             request.stream(),
@@ -245,14 +257,12 @@ public final class GameGuideAgent {
                                 events);
                     });
         }
-        List<ModelMessage> projectedMessages = redactor.messages(tools.refreshContext(redactor.messages(messages)));
         boolean changedProjection = !lease.progress().projected().equals(projectedMessages);
         if (sessions.recordContext(lease, projectedMessages, completeMessages) && changedProjection) {
             events.accept(new AgentEvent.ContextUpdated(projectedMessages, lease.progress().requestMessages()));
         }
-        tools.prepareContext(request.context().correlationId(), projectedMessages);
         ModelRequest modelRequest = redactor.request(new ModelRequest(
-                request.systemPrompt(),
+                projectedPrompt,
                 projectedMessages,
                 tools.definitions(),
                 request.stream(),
@@ -361,7 +371,8 @@ public final class GameGuideAgent {
             String callKey = exposedId + ":" + canonical(executionArguments);
             String previousOutcome = previousCallOutcomes.get(callKey);
             AgentToolResult feedback = null;
-            if (REPEATED_CALL_SENTINEL.equals(previousOutcome)) {
+            boolean skillRead = "openallay:load_skill".equals(exposedId);
+            if (!skillRead && REPEATED_CALL_SENTINEL.equals(previousOutcome)) {
                 ModelClientException repeated = new ModelClientException(
                         new dev.openallay.model.ModelFailure(
                                 "repeated_tool_call",
@@ -369,7 +380,7 @@ public final class GameGuideAgent {
                                 null));
                 terminalFailure.compareAndSet(null, repeated);
                 feedback = recoverToolFailure(exposedId, repeated);
-            } else if (previousOutcome != null || !firstCalls.add(callKey)) {
+            } else if (!skillRead && (previousOutcome != null || !firstCalls.add(callKey))) {
                 duplicatedThisTurn.add(callKey);
                 feedback = noNewInformation(exposedId);
             }
@@ -421,7 +432,7 @@ public final class GameGuideAgent {
         if (!lease.cancellation().isCancelled()) {
             try {
                 tools.prepareContext(request.context().correlationId(),
-                        messages.subList(0, messages.size() - 1));
+                        messages.subList(0, messages.size() - 1), lease.retainedSkills());
             } catch (RuntimeException failure) {
                 terminalFailure.compareAndSet(null, failure);
                 for (PendingToolCall item : pending) {
@@ -490,10 +501,22 @@ public final class GameGuideAgent {
             PendingToolCall item, AgentToolResult rawResult, Throwable executionFailure) {
         if (item.result.isDone()) return;
         try {
-            item.result.complete(executionFailure == null && rawResult != null
-                    ? new AgentToolResult(item.exposedId,
-                            redactor.json(rawResult.normalized()).getAsJsonObject(), rawResult.failure())
-                    : recoverToolFailure(item.exposedId, executionFailure));
+            if (executionFailure == null && rawResult != null) {
+                JsonObject raw = rawResult.normalized();
+                JsonObject safe = redactor.json(raw).getAsJsonObject();
+                // A remote client may have a different known-secret set. Never scrub a Skill body
+                // under its old raw identity and then pretend those instructions were delivered.
+                if ("openallay:load_skill".equals(item.exposedId) && !rawResult.failure()
+                        && !Objects.equals(raw.get("modelText"), safe.get("modelText"))) {
+                    item.result.complete(new AgentToolResult(item.exposedId, normalizedFailure(
+                            "skill_delivery_redacted",
+                            "Skill delivery differs from this endpoint's safe document snapshot"), true));
+                } else {
+                    item.result.complete(new AgentToolResult(item.exposedId, safe, rawResult.failure()));
+                }
+            } else {
+                item.result.complete(recoverToolFailure(item.exposedId, executionFailure));
+            }
         } catch (RuntimeException malformed) {
             item.result.complete(recoverToolFailure(item.exposedId, malformed));
         }
@@ -572,6 +595,12 @@ public final class GameGuideAgent {
         LiveAgentTrace completed = trace.finish(state, null, code);
         events.accept(new AgentEvent.Failed(code, message));
         return new AgentResult(state, null, code, message, completed);
+    }
+
+    private String systemPrompt(AgentRequest request) {
+        String facts = tools.skillManifest(request.context().correlationId());
+        return redactor.text(facts.isBlank() ? request.systemPrompt()
+                : request.systemPrompt() + "\n" + facts);
     }
 
     private String canonical(JsonElement value) {

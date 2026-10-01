@@ -52,7 +52,7 @@ final class ClientToolExecutionEndpointTest {
                 chunk -> {},
                 new Gson(),
                 128,
-                Runnable::run);
+                (java.util.concurrent.Executor) Runnable::run);
         UUID requestId = UUID.randomUUID();
         endpoint.open(
                 requestId, "main",
@@ -82,7 +82,7 @@ final class ClientToolExecutionEndpointTest {
                 sent::add,
                 new Gson(),
                 4,
-                Runnable::run);
+                (java.util.concurrent.Executor) Runnable::run);
         UUID requestId = UUID.randomUUID();
         ToolResult<ClientToolExecutionEndpoint.OpenedRequest> opened = endpoint.open(
                 requestId, "main", ToolRuntimeCatalog.from(registry.registrations(), java.util.Set.of()));
@@ -122,7 +122,7 @@ final class ClientToolExecutionEndpointTest {
                 sent::add,
                 new Gson(),
                 128,
-                Runnable::run);
+                (java.util.concurrent.Executor) Runnable::run);
         UUID requestId = UUID.randomUUID();
         endpoint.open(
                 requestId, "main", ToolRuntimeCatalog.from(registry.registrations(), java.util.Set.of()));
@@ -157,7 +157,7 @@ final class ClientToolExecutionEndpointTest {
                 sent::add,
                 new Gson(),
                 128,
-                Runnable::run);
+                (java.util.concurrent.Executor) Runnable::run);
         UUID requestId = UUID.randomUUID();
         UUID invocationId = UUID.randomUUID();
         endpoint.open(
@@ -251,7 +251,7 @@ final class ClientToolExecutionEndpointTest {
                 chunk -> {},
                 new Gson(),
                 128,
-                Runnable::run);
+                (java.util.concurrent.Executor) Runnable::run);
         ToolRuntimeCatalog catalog =
                 ToolRuntimeCatalog.from(registry.registrations(), java.util.Set.of());
 
@@ -275,6 +275,92 @@ final class ClientToolExecutionEndpointTest {
         assertTrue(commands.enabledFor(enabledRequest.toString()));
         endpoint.close(disabledRequest);
         endpoint.close(enabledRequest);
+    }
+
+    @Test
+    void freezesClientSkillMetadataAndAlwaysReturnsFreshPlaintext() {
+        dev.openallay.skill.SkillRepository repository = new dev.openallay.skill.SkillRepository(
+                new dev.openallay.skill.SkillParser(), java.util.Set.of());
+        assertTrue(repository.reload(List.of(skillSource("Captured client instructions.")), java.util.Set.of()));
+        var captured = repository.snapshot(java.util.Set.of());
+        ToolRegistry registry = new ToolRegistry();
+        registry.register("test", List.of(new dev.openallay.skill.LoadSkillTool(captured)));
+        List<ClientToolResultChunkPayload> sent = new ArrayList<>();
+        ClientToolExecutionEndpoint endpoint = new ClientToolExecutionEndpoint(
+                (capabilities, correlation, cancellation) -> CompletableFuture.completedFuture(
+                        ToolInvocationContext.developmentConsole(correlation)),
+                sent::add, new Gson(), 128, (java.util.concurrent.Executor) Runnable::run);
+        UUID requestId = UUID.randomUUID();
+        var opened = assertInstanceOf(ToolResult.Success.class, endpoint.open(
+                requestId, "main", ToolRuntimeCatalog.from(registry.registrations(), java.util.Set.of())));
+        var request = (ClientToolExecutionEndpoint.OpenedRequest) opened.value();
+        assertEquals(new dev.openallay.skill.LoadSkillTool(captured, "client").catalogManifest(),
+                request.skillDocuments());
+        assertFalse(new Gson().toJson(request.skillDocuments()).contains("Captured client instructions."));
+        assertFalse(new Gson().toJson(request.skillDocuments()).contains("content"));
+        assertFalse(new dev.openallay.skill.LoadSkillTool(captured, "server").catalogManifest()
+                .equals(request.skillDocuments()));
+        assertTrue(repository.reload(List.of(skillSource("New client instructions.")), java.util.Set.of()));
+
+        for (int attempt = 0; attempt < 3; attempt++) {
+            sent.clear();
+            endpoint.handle(new ClientToolCallPayload(requestId, UUID.randomUUID(), "main",
+                    "openallay:load_skill", "{\"name\":\"guide\"}"));
+            var normalized = JsonParser.parseString(reassemble(sent)).getAsJsonObject();
+            assertEquals("success", normalized.get("status").getAsString());
+            var output = new Gson().fromJson(normalized.get("value"), dev.openallay.skill.LoadSkillTool.Output.class);
+            assertEquals(dev.openallay.skill.LoadSkillTool.LoadState.COMPLETE, output.state());
+            assertEquals("Captured client instructions.", output.content());
+            assertEquals(request.skillDocuments().documents().getFirst().source(), output.source());
+        }
+        endpoint.close(requestId);
+
+        ToolRegistry reloaded = new ToolRegistry();
+        reloaded.register("test", List.of(new dev.openallay.skill.LoadSkillTool(
+                repository.snapshot(java.util.Set.of()))));
+        var nextOpened = assertInstanceOf(ToolResult.Success.class, endpoint.open(
+                UUID.randomUUID(), "main", ToolRuntimeCatalog.from(reloaded.registrations(), java.util.Set.of())));
+        var next = (ClientToolExecutionEndpoint.OpenedRequest) nextOpened.value();
+        assertFalse(request.skillDocuments().equals(next.skillDocuments()));
+        endpoint.disconnect();
+    }
+
+    @Test
+    void clientSafeCatalogManifestMatchesExactlyThePlaintextSentToTheServer() {
+        dev.openallay.skill.SkillRepository repository = new dev.openallay.skill.SkillRepository(
+                new dev.openallay.skill.SkillParser(), java.util.Set.of());
+        assertTrue(repository.reload(List.of(skillSource("Known-secret-placeholder instructions.")),
+                java.util.Set.of()));
+        var captured = repository.snapshot(java.util.Set.of());
+        var original = new dev.openallay.skill.LoadSkillTool(captured, "client").catalogManifest();
+        ToolRegistry registry = new ToolRegistry();
+        registry.register("test", List.of(new dev.openallay.skill.LoadSkillTool(captured)));
+        List<ClientToolResultChunkPayload> sent = new ArrayList<>();
+        java.util.function.UnaryOperator<String> scrub = text -> text.replace("Known-secret-placeholder", "[redacted]");
+        ClientToolExecutionEndpoint endpoint = new ClientToolExecutionEndpoint(
+                (capabilities, correlation, cancellation) -> CompletableFuture.completedFuture(
+                        ToolInvocationContext.developmentConsole(correlation)),
+                sent::add, new Gson(), 128, (java.util.concurrent.Executor) Runnable::run, scrub);
+        UUID id = UUID.randomUUID();
+        var opened = assertInstanceOf(ToolResult.Success.class, endpoint.open(id, "main",
+                ToolRuntimeCatalog.from(registry.registrations(), java.util.Set.of())));
+        var request = (ClientToolExecutionEndpoint.OpenedRequest) opened.value();
+        assertFalse(original.equals(request.skillDocuments()));
+        endpoint.handle(new ClientToolCallPayload(id, UUID.randomUUID(), "main", "openallay:load_skill",
+                "{\"name\":\"guide\"}"));
+        String wire = reassemble(sent);
+        assertFalse(wire.contains("Known-secret-placeholder"));
+        var output = new Gson().fromJson(JsonParser.parseString(wire).getAsJsonObject().get("value"),
+                dev.openallay.skill.LoadSkillTool.Output.class);
+        assertEquals("[redacted] instructions.", output.content());
+        assertTrue(new dev.openallay.skill.SkillInstructionContext(request.skillDocuments()).validate(
+                new dev.openallay.skill.LoadSkillTool.Input("guide"), output));
+        endpoint.close(id);
+    }
+
+    private static dev.openallay.skill.SkillSource skillSource(String contents) {
+        return new dev.openallay.skill.SkillSource("client-pack", "guide/SKILL.md", java.util.Map.of(
+                "guide/SKILL.md", "---\nname: guide\ndescription: Guide the player\n---\n" + contents));
     }
 
     private static ToolRegistry registry() {
@@ -313,7 +399,7 @@ final class ClientToolExecutionEndpointTest {
                     sent::add,
                     new Gson(),
                     128,
-                    Runnable::run);
+                    (java.util.concurrent.Executor) Runnable::run);
             endpoint.open(requestId, "main", ToolRuntimeCatalog.from(
                     registry.registrations(), java.util.Set.of()));
         }

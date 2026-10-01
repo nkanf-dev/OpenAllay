@@ -32,7 +32,7 @@ final class SkillInstructionContextTest {
         assertEquals(messages, refreshed);
         assertSame(messages.getFirst(), refreshed.getFirst());
         assertSame(messages.get(1), refreshed.get(1));
-        assertEquals(List.of(output), context.deliveredRanges(messages));
+        assertDelivered(output, context.deliveredRanges(messages).getFirst());
     }
 
     @Test
@@ -126,16 +126,20 @@ final class SkillInstructionContextTest {
     }
 
     @Test
-    void rehydratedResultsAreValidatedAsRealInstructionText() {
+    void restoredPlaintextIsValidatedWithoutAnExplicitReloadOption() {
         SkillRepository repository = repository("Follow evidence.", Map.of());
-        LoadSkillTool.Input input = new LoadSkillTool.Input("guide", null, null, true);
+        LoadSkillTool.Input input = new LoadSkillTool.Input("guide");
         LoadSkillTool.Output output = load(repository, input);
-        List<ModelMessage> messages = exchange("rehydrate", "load_skill", input, output);
-        SkillInstructionContext context = new SkillInstructionContext(repository);
+        List<ModelMessage> messages = exchange("restored", "load_skill", input, output);
+        SkillInstructionContext context = new SkillInstructionContext(repository.snapshot(Set.of()));
+        RetainedSkillContext restored = new RetainedSkillContext();
 
-        assertEquals(LoadSkillTool.LoadState.REHYDRATED, output.state());
-        assertEquals(messages, context.refresh(messages));
-        assertEquals(List.of(output), context.deliveredRanges(messages));
+        assertEquals(messages, context.refresh(messages, restored));
+        context.reconcile(messages, restored);
+
+        assertEquals(LoadSkillTool.LoadState.COMPLETE, output.state());
+        assertDelivered(output, context.deliveredRanges(messages).getFirst());
+        assertEquals(LoadSkillTool.LoadState.ALREADY_LOADED, context.reuse(input, restored).state());
     }
 
     @Test
@@ -167,6 +171,7 @@ final class SkillInstructionContextTest {
         List<String> tampered = List.of(
                 output.modelText().replace("skill: guide", "skill: other"),
                 output.modelText().replace("document: SKILL.md", "document: references/a.md"),
+                output.modelText().replace("source: " + output.source(), "source: other_owner"),
                 output.modelText().replace(output.fingerprint(), "0".repeat(64)),
                 output.modelText().replace("range: 0..16", "range: 1..16"),
                 output.modelText().replace("content_length: 16", "content_length: 15"),
@@ -197,7 +202,7 @@ final class SkillInstructionContextTest {
     }
 
     @Test
-    void invalidationRetainsToolPairAndOtherContentWithoutReportingSuccessfulLoad() {
+    void invalidationRetainsToolPairOtherContentAndTheHistoricalSuccessFlag() {
         SkillRepository repository = repository("Old instructions.", Map.of());
         LoadSkillTool.Input input = new LoadSkillTool.Input("guide");
         List<ModelMessage> messages = exchange("read", "openallay:load_skill", input, load(repository, input));
@@ -212,8 +217,10 @@ final class SkillInstructionContextTest {
 
         assertEquals(messages.getFirst(), refreshed.getFirst());
         assertEquals("read", result.toolUseId());
-        assertTrue(result.error());
+        assertFalse(result.error());
         assertEquals(unrelated, refreshed.get(1).content().get(1));
+        assertEquals("Old instructions.", loadBody(messages.get(1)));
+        assertFalse(((ModelContent.ToolResult) messages.get(1).content().getFirst()).error());
         assertFalse(result.value().getAsString().contains("state: complete"));
         assertEquals(refreshed, context.refresh(refreshed));
     }
@@ -232,7 +239,7 @@ final class SkillInstructionContextTest {
         List<ModelMessage> wrongCursor = exchange("next", "openallay__load_skill", firstInput, next);
 
         assertEquals(valid, context.refresh(valid));
-        assertEquals(List.of(next), context.deliveredRanges(valid));
+        assertDelivered(next, context.deliveredRanges(valid).getFirst());
         assertEquals(List.of(), context.deliveredRanges(wrongCursor));
         assertInvalidated(context.refresh(wrongCursor).get(1));
     }
@@ -266,8 +273,27 @@ final class SkillInstructionContextTest {
 
     private static void assertInvalidated(ModelMessage message) {
         ModelContent.ToolResult result = (ModelContent.ToolResult) message.content().getFirst();
-        assertTrue(result.error());
+        assertFalse(result.error());
         assertTrue(result.value().getAsString().startsWith("skill_instructions: invalidated\n"));
+    }
+
+    private static void assertDelivered(LoadSkillTool.Output expected, LoadSkillTool.Output actual) {
+        assertEquals(expected.name(), actual.name());
+        assertEquals(expected.document(), actual.document());
+        assertEquals(expected.source(), actual.source());
+        assertEquals(expected.fingerprint(), actual.fingerprint());
+        assertEquals(expected.state(), actual.state());
+        assertEquals(expected.content(), actual.content());
+        assertEquals(expected.offset(), actual.offset());
+        assertEquals(expected.nextOffset(), actual.nextOffset());
+        assertEquals(expected.complete(), actual.complete());
+        assertEquals(expected.nextCursor(), actual.nextCursor());
+        assertEquals(expected.availableReferences(), actual.availableReferences());
+    }
+
+    private static String loadBody(ModelMessage message) {
+        String text = resultText(message);
+        return text.substring(text.indexOf("content:\n") + "content:\n".length());
     }
 
     private static String resultText(ModelMessage message) {
@@ -283,9 +309,6 @@ final class SkillInstructionContextTest {
         }
         if (input.cursor() != null) {
             arguments.addProperty("cursor", input.cursor());
-        }
-        if (input.rehydrate() != null) {
-            arguments.addProperty("rehydrate", input.rehydrate());
         }
         return List.of(new ModelMessage(ModelRole.ASSISTANT, List.of(
                         new ModelContent.ToolUse(id, toolName, arguments))),

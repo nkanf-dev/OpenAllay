@@ -45,6 +45,34 @@ public interface AgentToolExecutor {
     /** Receipts must describe text in the actual current projection, not a prior loaded flag. */
     default void prepareContext(String correlationId, List<dev.openallay.model.ModelMessage> messages) {}
 
+    /** Session facts are separate from request resources and never own another plaintext copy. */
+    default List<dev.openallay.model.ModelMessage> refreshContext(
+            List<dev.openallay.model.ModelMessage> messages, dev.openallay.skill.RetainedSkillContext retained) {
+        return refreshContext(messages);
+    }
+
+    default void prepareContext(String correlationId, List<dev.openallay.model.ModelMessage> messages,
+            dev.openallay.skill.RetainedSkillContext retained) {
+        prepareContext(correlationId, messages);
+    }
+
+    /** Called with the actual redacted system text before each active projection is prepared. */
+    default void prepareSystem(String systemPrompt, dev.openallay.skill.RetainedSkillContext retained) {}
+
+    /** Factual index only. It does not grant capabilities or require another Tool call. */
+    default String skillManifest(String correlationId) { return ""; }
+
+    /** Assemble inline guidance from the same captured safe document view as load_skill. */
+    default String skillSystemPrompt(String prompt) { return prompt; }
+
+    /** Trusted catalog projection, before Skill fingerprints and plaintext delivery. */
+    default AgentToolExecutor safeSkillView(java.util.function.UnaryOperator<String> transform) {
+        return this;
+    }
+
+    /** Discards an ephemeral Skill context binding without closing unrelated request resources. */
+    default void closeSkillContext(String correlationId) {}
+
     /** Releases resources owned by one terminal Agent request. */
     default void closeRequestScope(String correlationId) {}
 }

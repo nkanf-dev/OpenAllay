@@ -89,6 +89,49 @@ public final class CompositeAgentToolExecutor implements AgentToolExecutor {
     }
 
     @Override
+    public List<dev.openallay.model.ModelMessage> refreshContext(
+            List<dev.openallay.model.ModelMessage> messages, dev.openallay.skill.RetainedSkillContext retained) {
+        List<dev.openallay.model.ModelMessage> current = messages;
+        for (AgentToolExecutor delegate : delegates) current = delegate.refreshContext(current, retained);
+        return current;
+    }
+
+    @Override
+    public void prepareContext(String correlationId, List<dev.openallay.model.ModelMessage> messages,
+            dev.openallay.skill.RetainedSkillContext retained) {
+        delegates.forEach(delegate -> delegate.prepareContext(correlationId, messages, retained));
+    }
+
+    @Override
+    public void prepareSystem(String systemPrompt, dev.openallay.skill.RetainedSkillContext retained) {
+        delegates.forEach(delegate -> delegate.prepareSystem(systemPrompt, retained));
+    }
+
+    @Override
+    public String skillManifest(String correlationId) {
+        return delegates.stream().map(delegate -> delegate.skillManifest(correlationId))
+                .filter(text -> !text.isBlank()).collect(java.util.stream.Collectors.joining("\n"));
+    }
+
+    @Override
+    public String skillSystemPrompt(String prompt) {
+        String safe = prompt;
+        for (AgentToolExecutor delegate : delegates) safe = delegate.skillSystemPrompt(safe);
+        return safe;
+    }
+
+    @Override
+    public AgentToolExecutor safeSkillView(java.util.function.UnaryOperator<String> transform) {
+        return new CompositeAgentToolExecutor(delegates.stream()
+                .map(delegate -> delegate.safeSkillView(transform)).toList());
+    }
+
+    @Override
+    public void closeSkillContext(String correlationId) {
+        delegates.forEach(delegate -> delegate.closeSkillContext(correlationId));
+    }
+
+    @Override
     public void closeRequestScope(String correlationId) {
         delegates.forEach(delegate -> delegate.closeRequestScope(correlationId));
     }

@@ -118,7 +118,9 @@ public final class OpenAllayFabricClient implements ClientModInitializer {
                     });
                     return captured;
                 },
-                gson);
+                gson,
+                modelRegistry == null ? java.util.function.UnaryOperator.identity()
+                        : modelRegistry.safeSkillText());
         PayloadGuideRemoteEndpoint remote = new PayloadGuideRemoteEndpoint(
                 new PayloadGuideRemoteEndpoint.Port() {
                     @Override public dev.openallay.bridge.protocol.CapabilityPayload capabilities() {

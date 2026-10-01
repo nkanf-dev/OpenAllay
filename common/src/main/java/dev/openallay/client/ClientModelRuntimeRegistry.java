@@ -54,6 +54,11 @@ public final class ClientModelRuntimeRegistry implements GuideLocalEndpoint {
     private final Path traceDirectory;
     private final java.util.function.BooleanSupplier tracePersistenceEnabled;
 
+    /** Safe text projection shared with the player-client Skill bridge; credentials stay private. */
+    public java.util.function.UnaryOperator<String> safeSkillText() {
+        return redactor::text;
+    }
+
     ClientModelRuntimeRegistry(
             OpenAllayRuntime productRuntime,
             ModelProfilesConfigLoader.Load initial,

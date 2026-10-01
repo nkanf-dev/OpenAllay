@@ -40,6 +40,9 @@ final class LoadSkillToolTest {
                         new LoadSkillTool.Input("guide")));
         assertEquals("Follow evidence.", success.value().content());
         assertEquals("SKILL.md", success.value().document());
+        assertEquals(tool.catalogManifest().documents().getFirst().source(), success.value().source());
+        assertEquals(true, new SkillInstructionContext(tool.catalogManifest())
+                .validate(new LoadSkillTool.Input("guide"), success.value()));
         assertEquals(true, success.value().complete());
         assertEquals(true, success.value().modelText().startsWith("skill_instructions\n"));
         assertEquals(false, success.value().modelText().contains("skill_context: 1"));
@@ -147,8 +150,8 @@ final class LoadSkillToolTest {
         assertEquals(false, first.complete());
         String cursorPayload = new String(java.util.Base64.getUrlDecoder().decode(first.nextCursor()),
                 java.nio.charset.StandardCharsets.UTF_8);
-        assertEquals("guide\u0000SKILL.md\u0000" + first.fingerprint() + "\u0000" + first.nextOffset(),
-                cursorPayload);
+        assertEquals("guide\u0000SKILL.md\u0000" + first.source() + "\u0000"
+                + first.fingerprint() + "\u0000" + first.nextOffset(), cursorPayload);
 
         ToolResult.Success<LoadSkillTool.Output> secondSuccess = assertInstanceOf(
                 ToolResult.Success.class,
@@ -166,6 +169,21 @@ final class LoadSkillToolTest {
                         ToolInvocationContext.developmentConsole("test"),
                         new LoadSkillTool.Input("guide", "references/a.md", first.nextCursor())));
         assertEquals("skill_reference_not_found", wrongDocument.code());
+
+        ToolResult.Failure<LoadSkillTool.Output> wrongSource = assertInstanceOf(
+                ToolResult.Failure.class,
+                tool.withOwner("another-owner").invokeFresh(
+                        ToolInvocationContext.developmentConsole("other-source"),
+                        new LoadSkillTool.Input("guide", null, first.nextCursor())));
+        assertEquals("skill_cursor_invalid", wrongSource.code());
+        String oldPayload = "guide\u0000SKILL.md\u0000" + first.fingerprint() + "\u0000" + first.nextOffset();
+        String oldCursor = java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(
+                oldPayload.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        ToolResult.Failure<LoadSkillTool.Output> oldShape = assertInstanceOf(
+                ToolResult.Failure.class,
+                tool.invoke(ToolInvocationContext.developmentConsole("old-shape"),
+                        new LoadSkillTool.Input("guide", null, oldCursor)));
+        assertEquals("skill_cursor_invalid", oldShape.code());
     }
 
     @Test
@@ -187,23 +205,68 @@ final class LoadSkillToolTest {
     }
 
     @Test
-    void explicitRehydrationAndRequestCloseAllowContentToBeReadAgain() {
+    void requestCloseDropsPendingStagingWithoutAForcedReloadOption() {
         SkillRepository repository = repository("Follow evidence.");
         LoadSkillTool tool = new LoadSkillTool(repository);
-        ToolInvocationContext firstRequest =
-                ToolInvocationContext.developmentConsole("request-1");
+        ToolInvocationContext request = ToolInvocationContext.developmentConsole("request-1");
 
-        success(tool.invoke(firstRequest, new LoadSkillTool.Input("guide")));
-        LoadSkillTool.Output rehydrated = success(tool.invoke(
-                firstRequest, new LoadSkillTool.Input("guide", null, null, true)));
-        assertEquals(LoadSkillTool.LoadState.REHYDRATED, rehydrated.state());
-        assertEquals("Follow evidence.", rehydrated.content());
-
+        success(tool.invoke(request, new LoadSkillTool.Input("guide")));
         tool.closeRequestScope("request-1");
-        LoadSkillTool.Output reopened = success(tool.invoke(
-                firstRequest, new LoadSkillTool.Input("guide")));
+        LoadSkillTool.Output reopened = success(tool.invoke(request, new LoadSkillTool.Input("guide")));
+
         assertEquals(LoadSkillTool.LoadState.COMPLETE, reopened.state());
         assertEquals("Follow evidence.", reopened.content());
+    }
+
+    @Test
+    void successfulInvocationOnlyStagesARangeUntilTheActualProjectionIsPrepared() {
+        LoadSkillTool tool = new LoadSkillTool(repository("Follow evidence.").snapshot(Set.of()));
+        ToolInvocationContext request = ToolInvocationContext.developmentConsole("request-1");
+        RetainedSkillContext retained = new RetainedSkillContext();
+        LoadSkillTool.Input input = new LoadSkillTool.Input("guide");
+        tool.prepareContext("request-1", List.of(), retained);
+
+        LoadSkillTool.Output first = success(tool.invoke(request, input));
+        LoadSkillTool.Output stagedReceipt = success(tool.invoke(request, input));
+
+        assertEquals(LoadSkillTool.LoadState.COMPLETE, first.state());
+        assertEquals(LoadSkillTool.LoadState.ALREADY_LOADED, stagedReceipt.state());
+        assertEquals(List.of(), retained.ranges());
+        assertEquals("", tool.manifest("request-1"));
+
+        tool.prepareContext("request-1", List.of(), retained);
+        LoadSkillTool.Output afterDroppedExchange = success(tool.invoke(request, input));
+        assertEquals(LoadSkillTool.LoadState.COMPLETE, afterDroppedExchange.state());
+        assertEquals(first.content(), afterDroppedExchange.content());
+        assertEquals(List.of(), retained.ranges());
+
+        tool.prepareContext("request-1", history("retained", input, afterDroppedExchange), retained);
+        assertEquals(1, retained.ranges().size());
+        assertEquals(LoadSkillTool.LoadState.ALREADY_LOADED, success(tool.invoke(request, input)).state());
+        assertEquals(true, tool.manifest("request-1").contains("guide / SKILL.md: full"));
+    }
+
+    @Test
+    void freshEndpointAlwaysReturnsPlaintextAndNeverOwnsTheAgentProjection() {
+        LoadSkillTool tool = new LoadSkillTool(repository("Follow evidence.").snapshot(Set.of()))
+                .withOwner("client");
+        ToolInvocationContext request = ToolInvocationContext.developmentConsole("request-1");
+        RetainedSkillContext retained = new RetainedSkillContext();
+        LoadSkillTool.Input input = new LoadSkillTool.Input("guide");
+        tool.prepareContext("request-1", List.of(), retained);
+
+        LoadSkillTool.Output first = success(tool.invokeFresh(request, input));
+        LoadSkillTool.Output second = success(tool.invokeFresh(request, input));
+
+        assertEquals(first, second);
+        assertEquals(LoadSkillTool.LoadState.COMPLETE, second.state());
+        assertEquals(List.of(), retained.ranges());
+        assertEquals("", tool.manifest("request-1"));
+        assertEquals(LoadSkillTool.LoadState.COMPLETE, success(tool.invoke(request, input)).state());
+
+        tool.prepareContext("request-1", history("retained", input, first), retained);
+        assertEquals(LoadSkillTool.LoadState.ALREADY_LOADED, success(tool.invoke(request, input)).state());
+        assertEquals(first, success(tool.invokeFresh(request, input)));
     }
 
     @Test
@@ -235,7 +298,9 @@ final class LoadSkillToolTest {
         LoadSkillTool secondTool = new LoadSkillTool(repository.snapshot(Set.of()));
         List<ModelMessage> history = history("load-1", new LoadSkillTool.Input("guide"), first);
 
-        secondTool.prepareContext("request-2", history);
+        RetainedSkillContext retained = new RetainedSkillContext();
+        secondTool.prepareContext("request-2", history, retained);
+        assertEquals(1, retained.ranges().size());
         LoadSkillTool.Output second = success(secondTool.invoke(
                 ToolInvocationContext.developmentConsole("request-2"),
                 new LoadSkillTool.Input("guide")));
@@ -279,7 +344,9 @@ final class LoadSkillToolTest {
         ToolInvocationContext secondContext = ToolInvocationContext.developmentConsole("request-2");
 
         // Only the second plaintext chunk survives the context projection.
-        secondTool.prepareContext("request-2", history("load-2", secondInput, second));
+        RetainedSkillContext retained = new RetainedSkillContext();
+        secondTool.prepareContext("request-2", history("load-2", secondInput, second), retained);
+        assertEquals(true, secondTool.manifest("request-2").contains("missing_offset=0"));
         LoadSkillTool.Output firstAgain = success(secondTool.invoke(
                 secondContext, new LoadSkillTool.Input("guide")));
         LoadSkillTool.Output secondReceipt = success(secondTool.invoke(secondContext, secondInput));
@@ -345,9 +412,6 @@ final class LoadSkillToolTest {
         }
         if (input.cursor() != null) {
             arguments.addProperty("cursor", input.cursor());
-        }
-        if (input.rehydrate() != null) {
-            arguments.addProperty("rehydrate", input.rehydrate());
         }
         return List.of(
                 new ModelMessage(ModelRole.ASSISTANT, List.of(new ModelContent.ToolUse(

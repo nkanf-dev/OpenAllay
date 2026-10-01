@@ -63,7 +63,7 @@ public final class ClientCapabilityResolver {
                             "Enabled Skills require the registered load_skill Tool");
                 }
                 candidate.add(new RegisteredTool(
-                        loadSkillRegistration.providerId(), new LoadSkillTool(skillSnapshot)));
+                        loadSkillRegistration.providerId(), new LoadSkillTool(skillSnapshot, "client")));
             }
 
             ToolRuntimeCatalog localTools = ToolRuntimeCatalog.from(candidate, disabled);

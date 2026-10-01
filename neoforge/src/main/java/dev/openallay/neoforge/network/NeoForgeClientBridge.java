@@ -76,7 +76,8 @@ public final class NeoForgeClientBridge {
     public void configureClientTools(
             Supplier<ToolRuntimeCatalog> localToolCatalog,
             ClientToolExecutionEndpoint.ContextProvider contexts,
-            Gson gson) {
+            Gson gson,
+            java.util.function.UnaryOperator<String> skillTextTransform) {
         this.localToolCatalog = java.util.Objects.requireNonNull(
                 localToolCatalog, "localToolCatalog");
         this.clientTools = new ClientToolExecutionEndpoint(
@@ -84,7 +85,8 @@ public final class NeoForgeClientBridge {
                 chunk -> net.minecraft.client.Minecraft.getInstance().execute(
                         () -> send("client_tool_result", chunk)),
                 gson,
-                dev.openallay.bridge.protocol.BridgeProtocol.TRANSPORT_CHUNK_BYTES);
+                dev.openallay.bridge.protocol.BridgeProtocol.TRANSPORT_CHUNK_BYTES,
+                skillTextTransform);
     }
     public void onDisconnect(Runnable listener) { disconnectListeners.add(listener); }
     public void onCapabilitiesChanged(Runnable listener) { capabilityListeners.add(listener); }
@@ -104,7 +106,8 @@ public final class NeoForgeClientBridge {
             ServerAgentRequestPayload request, Consumer<ServerAgentEventPayload> events) {
         if (!capabilities.snapshot().serverModel()) return false;
         ClientToolExecutionEndpoint endpoint = clientTools;
-        ServerAgentRequestPayload outbound = request.withClientToolIds(java.util.List.of());
+        ServerAgentRequestPayload outbound = request.withClientTools(
+                java.util.List.of(), dev.openallay.skill.SkillCatalogManifest.EMPTY);
         if (endpoint != null) {
             Supplier<ToolRuntimeCatalog> catalogs = localToolCatalog;
             if (catalogs == null) return false;
@@ -114,7 +117,8 @@ public final class NeoForgeClientBridge {
                     ClientToolExecutionEndpoint.OpenedRequest> success)) {
                 return false;
             }
-            outbound = request.withClientToolIds(success.value().clientToolIds());
+            outbound = request.withClientTools(
+                    success.value().clientToolIds(), success.value().skillDocuments());
         }
         synchronized (serverRequestLock) {
             serverRequests.put(request.requestId(), new ServerRequest(events));

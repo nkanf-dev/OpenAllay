@@ -11,6 +11,22 @@ import org.junit.jupiter.api.Test;
 
 final class ServerGuideRuntimeTest {
     @Test
+    void remoteSkillPromptDescribesOnlyTheActualClientFrozenCatalog() {
+        SkillRepository client = new SkillRepository(new SkillParser(), Set.of());
+        assertTrue(client.reload(java.util.List.of(new dev.openallay.skill.SkillSource(
+                "client-extension", "client-only/SKILL.md", java.util.Map.of("client-only/SKILL.md",
+                        "---\nname: client-only\ndescription: Use <client> facts & workflows\n---\n"
+                                + "Private client Skill instructions."))), Set.of()));
+        var manifest = new dev.openallay.skill.LoadSkillTool(client.snapshot(Set.of()), "client")
+                .catalogManifest();
+        String prompt = ServerGuideRuntime.systemPrompt(manifest);
+        assertTrue(prompt.contains("<name>client-only</name>"));
+        assertTrue(prompt.contains("Use &lt;client&gt; facts &amp; workflows"));
+        assertFalse(prompt.contains("Private client Skill instructions."));
+        assertFalse(prompt.contains("<name>unrestricted-javascript</name>"));
+    }
+
+    @Test
     void commandSkillIsAdvertisedOnlyForRequestsWithTheCapturedCapabilityMarker() {
         SkillRepository skills = new SkillRepository(
                 new SkillParser(), Set.of("openallay:run_javascript"));

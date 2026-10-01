@@ -98,7 +98,8 @@ public record ServerGuideRuntime(
                             payload.requestId(),
                             payload.sessionId(),
                             payload.clientToolIds(),
-                            requestSkills);
+                            requestSkills,
+                            payload.skillDocuments());
                     if (opened instanceof ToolResult.Failure<dev.openallay.agent.tool.AgentToolExecutor>
                             failure) {
                         return new ToolResult.Failure<>(failure.code(), failure.message());
@@ -111,7 +112,9 @@ public record ServerGuideRuntime(
                     return new ToolResult.Success<>(new ServerAgentService.RequestRuntime(
                             agent,
                             requestTools,
-                            systemPrompt(requestSkills, experimentalCommands),
+                            payload.clientToolIds().contains("openallay:load_skill")
+                                    ? systemPrompt(payload.skillDocuments(), experimentalCommands)
+                                    : systemPrompt(requestSkills, experimentalCommands),
                             () -> clientTools.close(actor, payload.requestId())));
                 },
                 sessions,
@@ -139,6 +142,18 @@ public record ServerGuideRuntime(
     }
 
     static String systemPrompt(dev.openallay.skill.SkillCatalogSnapshot skills, boolean commandsAvailable) {
+        return dev.openallay.agent.AgentSystemPrompt.compose(
+                skills.metadataPrompt(),
+                dev.openallay.script.schema.CoreJavascriptContract.render(
+                        dev.openallay.script.data.MinecraftAgentHostGraph.declaredOnlyCatalog()),
+                false, "", commandsAvailable);
+    }
+
+    static String systemPrompt(dev.openallay.skill.SkillCatalogManifest skills) {
+        return systemPrompt(skills, false);
+    }
+
+    static String systemPrompt(dev.openallay.skill.SkillCatalogManifest skills, boolean commandsAvailable) {
         return dev.openallay.agent.AgentSystemPrompt.compose(
                 skills.metadataPrompt(),
                 dev.openallay.script.schema.CoreJavascriptContract.render(

@@ -43,7 +43,7 @@ public record ClientCapabilitySnapshot(
                         || !registration.tool().descriptor().id().equals(ClientCapabilityResolver.LOAD_SKILL_ID))
                 .map(registration -> registration.tool() instanceof dev.openallay.skill.LoadSkillTool
                         ? new dev.openallay.tool.RegisteredTool(registration.providerId(),
-                                new dev.openallay.skill.LoadSkillTool(requestSkills))
+                                new dev.openallay.skill.LoadSkillTool(requestSkills, "client"))
                         : registration).toList();
         return new ClientCapabilitySnapshot(policy,
                 ToolRuntimeCatalog.from(registrations, Set.of()), requestSkills, requiredContext);

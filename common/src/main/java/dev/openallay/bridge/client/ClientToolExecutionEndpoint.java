@@ -10,6 +10,9 @@ import dev.openallay.bridge.protocol.ResultChunker;
 import dev.openallay.context.ContextCapability;
 import dev.openallay.context.ToolInvocationContext;
 import dev.openallay.model.CancellationSignal;
+import dev.openallay.skill.LoadSkillTool;
+import dev.openallay.skill.SkillCatalogManifest;
+import dev.openallay.tool.RegisteredTool;
 import dev.openallay.tool.Tool;
 import dev.openallay.tool.ToolAccess;
 import dev.openallay.tool.RequestScopeParticipant;
@@ -52,6 +55,7 @@ public final class ClientToolExecutionEndpoint {
     private final ToolResultNormalizer normalizer;
     private final int transportChunkBytes;
     private final Executor worker;
+    private final java.util.function.UnaryOperator<String> skillTextTransform;
     private final Map<UUID, RequestState> requests = new ConcurrentHashMap<>();
 
     public ClientToolExecutionEndpoint(
@@ -59,6 +63,15 @@ public final class ClientToolExecutionEndpoint {
             ResponseSink responses,
             Gson gson,
             int transportChunkBytes) {
+        this(contexts, responses, gson, transportChunkBytes, java.util.function.UnaryOperator.identity());
+    }
+
+    public ClientToolExecutionEndpoint(
+            ContextProvider contexts,
+            ResponseSink responses,
+            Gson gson,
+            int transportChunkBytes,
+            java.util.function.UnaryOperator<String> skillTextTransform) {
         this(
                 contexts,
                 responses,
@@ -66,7 +79,8 @@ public final class ClientToolExecutionEndpoint {
                 transportChunkBytes,
                 command -> Thread.ofVirtual()
                         .name("openallay-client-tool-worker")
-                        .start(command));
+                        .start(command),
+                skillTextTransform);
     }
 
     ClientToolExecutionEndpoint(
@@ -75,6 +89,17 @@ public final class ClientToolExecutionEndpoint {
             Gson gson,
             int transportChunkBytes,
             Executor worker) {
+        this(contexts, responses, gson, transportChunkBytes, worker,
+                java.util.function.UnaryOperator.identity());
+    }
+
+    ClientToolExecutionEndpoint(
+            ContextProvider contexts,
+            ResponseSink responses,
+            Gson gson,
+            int transportChunkBytes,
+            Executor worker,
+            java.util.function.UnaryOperator<String> skillTextTransform) {
         if (transportChunkBytes <= 0) {
             throw new IllegalArgumentException("transportChunkBytes must be positive");
         }
@@ -83,6 +108,7 @@ public final class ClientToolExecutionEndpoint {
         this.gson = java.util.Objects.requireNonNull(gson, "gson");
         this.transportChunkBytes = transportChunkBytes;
         this.worker = java.util.Objects.requireNonNull(worker, "worker");
+        this.skillTextTransform = java.util.Objects.requireNonNull(skillTextTransform, "skillTextTransform");
         arguments = new ToolArgumentCodec(gson);
         normalizer = new ToolResultNormalizer(gson);
     }
@@ -94,21 +120,34 @@ public final class ClientToolExecutionEndpoint {
             return new ToolResult.Failure<>("invalid_session", "Invalid Agent session ID");
         }
         java.util.Objects.requireNonNull(frozenTools, "frozenTools");
+        ToolRuntimeCatalog requestTools = ToolRuntimeCatalog.from(
+                frozenTools.registrations().stream()
+                        .map(registration -> registration.tool() instanceof LoadSkillTool skill
+                                ? new RegisteredTool(registration.providerId(),
+                                        skill.withOwner("client").withTextTransform(skillTextTransform))
+                                : registration)
+                        .toList(),
+                Set.of());
+        SkillCatalogManifest skillDocuments = requestTools.find("openallay:load_skill")
+                .filter(LoadSkillTool.class::isInstance)
+                .map(LoadSkillTool.class::cast)
+                .map(LoadSkillTool::catalogManifest)
+                .orElse(SkillCatalogManifest.EMPTY);
         java.util.ArrayList<String> exported = new java.util.ArrayList<>(
-                frozenTools.descriptors().stream()
+                requestTools.descriptors().stream()
                 .filter(descriptor -> descriptor.access() == ToolAccess.READ_ONLY
                         || descriptor.access() == ToolAccess.EXPERIMENTAL_ACTION)
                 .map(descriptor -> descriptor.id())
                 .sorted()
                 .toList());
-        frozenTools.find("openallay:run_javascript")
+        requestTools.find("openallay:run_javascript")
                 .filter(dev.openallay.tool.builtin.RunJavascriptTool.class::isInstance)
                 .map(dev.openallay.tool.builtin.RunJavascriptTool.class::cast)
                 .filter(tool -> tool.freezeCommandCapability(requestId.toString()))
                 .ifPresent(ignored -> exported.add(EXPERIMENTAL_COMMANDS_CAPABILITY));
         RequestState state = new RequestState(
                 sessionId,
-                frozenTools,
+                requestTools,
                 exported.stream()
                         .filter(id -> !id.equals(EXPERIMENTAL_COMMANDS_CAPABILITY))
                         .collect(java.util.stream.Collectors.toUnmodifiableSet()));
@@ -117,7 +156,7 @@ public final class ClientToolExecutionEndpoint {
                     "duplicate_request", "Client Tool request ID is already active");
         }
         return new ToolResult.Success<>(
-                new OpenedRequest(requestId, sessionId, List.copyOf(exported)));
+                new OpenedRequest(requestId, sessionId, List.copyOf(exported), skillDocuments));
     }
 
     public ToolResult<VoidResult> handle(ClientToolCallPayload payload) {
@@ -286,15 +325,23 @@ public final class ClientToolExecutionEndpoint {
             ToolInvocationContext context,
             Object input,
             CancellationSignal cancellation) {
+        if (raw instanceof LoadSkillTool skill) {
+            // The server projection owns retained plaintext. The client has no delivery receipts.
+            return CompletableFuture.completedFuture(
+                    skill.invokeFresh(context, (LoadSkillTool.Input) input));
+        }
         return ((Tool<I, O>) raw)
                 .invokeAsync(context, (I) input, cancellation)
                 .thenApply(result -> result);
     }
 
-    public record OpenedRequest(UUID requestId, String sessionId, List<String> clientToolIds) {
+    public record OpenedRequest(
+            UUID requestId, String sessionId, List<String> clientToolIds,
+            SkillCatalogManifest skillDocuments) {
         public OpenedRequest {
             java.util.Objects.requireNonNull(requestId, "requestId");
             clientToolIds = List.copyOf(clientToolIds);
+            java.util.Objects.requireNonNull(skillDocuments, "skillDocuments");
         }
     }
 

@@ -22,6 +22,7 @@ import java.util.stream.Collectors;
 
 public final class LocalAgentToolExecutor implements AgentToolExecutor {
     private final ToolRuntimeCatalog tools;
+    private final Gson gson;
     private final ToolNameCodec names;
     private final ToolArgumentCodec arguments;
     private final ToolResultNormalizer normalizer;
@@ -34,6 +35,7 @@ public final class LocalAgentToolExecutor implements AgentToolExecutor {
 
     public LocalAgentToolExecutor(ToolRuntimeCatalog tools, Gson gson) {
         this.tools = Objects.requireNonNull(tools, "tools");
+        this.gson = Objects.requireNonNull(gson, "gson");
         List<ToolDescriptor<?, ?>> descriptors = tools.descriptors();
         names = new ToolNameCodec(descriptors.stream().map(ToolDescriptor::id).toList());
         arguments = new ToolArgumentCodec(gson);
@@ -156,6 +158,77 @@ public final class LocalAgentToolExecutor implements AgentToolExecutor {
         for (var registration : tools.registrations()) {
             if (registration.tool() instanceof dev.openallay.skill.LoadSkillTool skill) {
                 skill.prepareContext(correlationId, messages);
+            }
+        }
+    }
+
+    @Override
+    public List<dev.openallay.model.ModelMessage> refreshContext(
+            List<dev.openallay.model.ModelMessage> messages, dev.openallay.skill.RetainedSkillContext retained) {
+        List<dev.openallay.model.ModelMessage> current = messages;
+        for (var registration : tools.registrations()) {
+            if (registration.tool() instanceof dev.openallay.skill.LoadSkillTool skill) {
+                current = skill.refreshContext(current, retained);
+            }
+        }
+        return current;
+    }
+
+    @Override
+    public void prepareContext(String correlationId, List<dev.openallay.model.ModelMessage> messages,
+            dev.openallay.skill.RetainedSkillContext retained) {
+        for (var registration : tools.registrations()) {
+            if (registration.tool() instanceof dev.openallay.skill.LoadSkillTool skill) {
+                skill.prepareContext(correlationId, messages, retained);
+            }
+        }
+    }
+
+    @Override
+    public void prepareSystem(String systemPrompt, dev.openallay.skill.RetainedSkillContext retained) {
+        for (var registration : tools.registrations()) {
+            if (registration.tool() instanceof dev.openallay.skill.LoadSkillTool skill) {
+                skill.prepareSystem(systemPrompt, retained);
+            }
+        }
+    }
+
+    @Override
+    public String skillManifest(String correlationId) {
+        return tools.registrations().stream().map(registration -> registration.tool())
+                .filter(dev.openallay.skill.LoadSkillTool.class::isInstance)
+                .map(dev.openallay.skill.LoadSkillTool.class::cast)
+                .map(skill -> skill.manifest(correlationId)).filter(text -> !text.isBlank())
+                .collect(java.util.stream.Collectors.joining("\n"));
+    }
+
+    @Override
+    public String skillSystemPrompt(String prompt) {
+        String safe = prompt;
+        for (var registration : tools.registrations()) {
+            if (registration.tool() instanceof dev.openallay.skill.LoadSkillTool skill) {
+                safe = skill.systemPrompt(safe);
+            }
+        }
+        return safe;
+    }
+
+    @Override
+    public AgentToolExecutor safeSkillView(java.util.function.UnaryOperator<String> transform) {
+        var registrations = tools.registrations().stream().map(registration -> {
+            if (registration.tool() instanceof dev.openallay.skill.LoadSkillTool skill) {
+                return new dev.openallay.tool.RegisteredTool(registration.providerId(), skill.withTextTransform(transform));
+            }
+            return registration;
+        }).toList();
+        return new LocalAgentToolExecutor(ToolRuntimeCatalog.from(registrations, Set.of()), gson);
+    }
+
+    @Override
+    public void closeSkillContext(String correlationId) {
+        for (var registration : tools.registrations()) {
+            if (registration.tool() instanceof dev.openallay.skill.LoadSkillTool skill) {
+                skill.closeRequestScope(correlationId);
             }
         }
     }

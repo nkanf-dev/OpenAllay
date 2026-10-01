@@ -102,6 +102,37 @@ public final class ClientPlacedToolExecutor implements AgentToolExecutor {
     }
 
     @Override
+    public List<dev.openallay.model.ModelMessage> refreshContext(
+            List<dev.openallay.model.ModelMessage> messages, dev.openallay.skill.RetainedSkillContext retained) {
+        return local.refreshContext(messages, retained);
+    }
+
+    @Override
+    public void prepareContext(String correlationId, List<dev.openallay.model.ModelMessage> messages,
+            dev.openallay.skill.RetainedSkillContext retained) {
+        local.prepareContext(correlationId, messages, retained);
+    }
+
+    @Override
+    public void prepareSystem(String systemPrompt, dev.openallay.skill.RetainedSkillContext retained) {
+        local.prepareSystem(systemPrompt, retained);
+    }
+
+    @Override
+    public String skillManifest(String correlationId) { return local.skillManifest(correlationId); }
+
+    @Override
+    public String skillSystemPrompt(String prompt) { return local.skillSystemPrompt(prompt); }
+
+    @Override
+    public AgentToolExecutor safeSkillView(java.util.function.UnaryOperator<String> transform) {
+        return new ClientPlacedToolExecutor((LocalAgentToolExecutor) local.safeSkillView(transform), remote);
+    }
+
+    @Override
+    public void closeSkillContext(String correlationId) { local.closeSkillContext(correlationId); }
+
+    @Override
     public void closeRequestScope(String correlationId) {
         local.closeRequestScope(correlationId);
         remote.closeRequestScope(correlationId);
