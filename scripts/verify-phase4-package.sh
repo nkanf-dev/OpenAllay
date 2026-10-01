@@ -35,15 +35,15 @@ unzip -p "$fabric_jar" fabric.mod.json | python3 -c \
 python3 -c \
   'import json; [json.load(open(path, encoding="utf-8")) for path in ("common/src/main/resources/assets/openallay/lang/en_us.json", "common/src/main/resources/assets/openallay/lang/zh_cn.json")]'
 
-if rg -n -i 'migrate|migration|upgradeSchema' \
+if grep -R -n -E -i 'migrate|migration|upgradeSchema' \
   common/src/main/java/dev/openallay/guide/history >/dev/null; then
   printf '%s\n' 'Unexpected history migration surface found' >&2
   exit 1
 fi
 
-if git grep -nE 'sk-[A-Za-z0-9]{20,}|Bearer[[:space:]]+[A-Za-z0-9_-]{20,}' \
+if git grep --untracked -nE 'sk-[A-Za-z0-9]{20,}|Bearer[[:space:]]+[A-Za-z0-9_-]{20,}' \
   -- . ':!docs/verification' >/dev/null; then
-  printf '%s\n' 'Credential-like literal found in tracked source' >&2
+  printf '%s\n' 'Credential-like literal found in source' >&2
   exit 1
 fi
 

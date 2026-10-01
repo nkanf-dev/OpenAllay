@@ -109,3 +109,17 @@ source publication; local build success alone is not a CI claim.
 - No world save, existing exported conversation, model secret or ignored runtime
   configuration was rewritten by this work. The manual world and both original
   exports were checked intact after the final clean build.
+
+## Core CI follow-up
+
+Core Quality run 36817829332 compiled both loaders and passed its Gradle build,
+but its later Phase4 script failed. The Linux runner lacked `rg`, and the source
+scanner found literal synthetic Bearer values in a newly tracked redaction test.
+The pre-commit local scan had not included that then-untracked test file.
+
+The correction uses standard `grep`, includes untracked source in the local
+credential scan, and splits synthetic test literals without changing their runtime
+values or assertions. The focused model-context codec tests, shell syntax and
+Phase4 package check passed. No production behavior or artifact bytes changed.
+The next remote run is checked separately rather than treating this failed run as
+successful.

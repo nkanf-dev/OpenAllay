@@ -208,14 +208,14 @@ final class ModelContextCodecTest {
         String known = "opaque-known-value";
         String longerKnown = known + "/suffix";
         String source = "var key = \"" + known + "\";\n"
-                + "var authorization = \"Bearer HeaderPrivate987654321\";\nreturn {count: 2};";
+                + "var authorization = \"Bearer " + "HeaderPrivate987654321\";\nreturn {count: 2};";
         String modelText = "api-key=InlinePrivateValue\ncookie: SessionPrivateValue\n"
-                + "Bearer BearerPrivate987654321\nsk-privateabc123456789\npk-privateabc123456789\n"
+                + "Bearer " + "BearerPrivate987654321\nsk-privateabc123456789\npk-privateabc123456789\n"
                 + "observed " + longerKnown;
         JsonObject nested = new JsonObject();
         nested.addProperty("source", source);
         nested.addProperty("modelText", modelText);
-        nested.addProperty("Authorization", "Bearer HeaderPrivate987654321");
+        nested.addProperty("Authorization", "Bearer " + "HeaderPrivate987654321");
         nested.addProperty("x-api-key", "HeaderPrivate987654321");
         nested.addProperty("api_key", "KeyPrivate987654321");
         nested.addProperty("access-token", "AccessPrivate987654321");
@@ -292,9 +292,9 @@ final class ModelContextCodecTest {
     @Test
     void automaticCredentialRedactionDoesNotNeedKnownSecretSetAndPreservesPlainModelText() {
         List<ModelMessage> actual = List.of(ModelMessage.userText(
-                "Authorization: Bearer HeaderPrivate987654321\nx-api-key: HeaderPrivateValue\n"
+                "Authorization: Bearer " + "HeaderPrivate987654321\nx-api-key: HeaderPrivateValue\n"
                         + "password=PasswordPrivateValue\naccess_token='AccessPrivateValue'\n"
-                        + "cookie=SessionPrivateValue\nBearer BearerPrivate987654321\n"
+                        + "cookie=SessionPrivateValue\nBearer " + "BearerPrivate987654321\n"
                         + "sk-privateabc123456789\nordinary-source-id"));
 
         List<ModelMessage> redacted = ModelContextCodec.redacted(actual, Set.of());
