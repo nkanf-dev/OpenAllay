@@ -139,6 +139,47 @@ final class GuideServiceManagerHistoryTest {
         assertFalse(connected.toString().contains("private.example"));
     }
 
+    @Test
+    void connectionScopeChangesInvalidatePublishedContextSourcesBeforeNewActorReadsThem() {
+        var knowledge = new dev.openallay.knowledge.KnowledgeRegistry();
+        int[] clears = {0};
+        GuideContextProvider contexts = new GuideContextProvider() {
+            @Override public ToolResult<ToolInvocationContext> capture(
+                    Set<ContextCapability> capabilities, String correlation) {
+                return new ToolResult.Success<>(ToolInvocationContext.developmentConsole(correlation));
+            }
+            @Override public void clearConnectionState() { clears[0]++; knowledge.clearConnectionState(); }
+        };
+        GuideHistoryScope[] selected = {GuideHistoryScope.derive(
+                ACTOR, GuideHistoryScope.Kind.SINGLEPLAYER, "world-a")};
+        GuideServiceManager manager = new GuideServiceManager(new IdleLocal(), new IdleRemote(),
+                contexts, Runnable::run, Clock.systemUTC(), new Gson(), new RecordingHistory(),
+                actor -> selected[0]);
+        manager.forActor(ACTOR);
+        assertEquals(1, clears[0]);
+        assertTrue(knowledge.reload(List.of(new dev.openallay.knowledge.KnowledgeSourceProvider() {
+            @Override public String sourceId() { return "patchouli"; }
+            @Override public dev.openallay.knowledge.KnowledgeLoad load() {
+                var evidence = new dev.openallay.context.EvidenceMetadata(
+                        dev.openallay.context.DataAuthority.RESOURCE_ASSET,
+                        dev.openallay.context.DataCompleteness.COMPLETE,
+                        java.time.Instant.EPOCH, "patchouli:resources", "patchouli:parser",
+                        "fixture", "fixture", java.util.Map.of());
+                return new dev.openallay.knowledge.KnowledgeLoad(List.of(), List.of(), List.of(evidence));
+            }
+        })));
+        assertTrue(knowledge.sourceSnapshot().loaded());
+        selected[0] = GuideHistoryScope.derive(ACTOR, GuideHistoryScope.Kind.SINGLEPLAYER, "world-b");
+        manager.forActor(ACTOR);
+        assertEquals(2, clears[0]);
+        assertFalse(knowledge.sourceSnapshot().loaded());
+        manager.disconnect().join();
+        assertEquals(3, clears[0]);
+        assertFalse(knowledge.sourceSnapshot().loaded());
+        manager.disconnect().join();
+        assertEquals(4, clears[0]);
+    }
+
     private static void assertFailure(ToolResult<?> result, String code) {
         assertEquals(code,
                 ((ToolResult.Failure<?>) assertInstanceOf(ToolResult.Failure.class, result)).code());

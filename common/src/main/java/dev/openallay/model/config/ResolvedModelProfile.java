@@ -46,7 +46,9 @@ public record ResolvedModelProfile(
                 runtimeConfig == null
                         ? definition.contextWindowTokens()
                         : Integer.valueOf(runtimeConfig.contextWindowTokens()),
-                definition.maxOutputTokens(),
+                runtimeConfig == null
+                        ? definition.maxOutputTokens()
+                        : Integer.valueOf(runtimeConfig.maxOutputTokens()),
                 failure);
     }
 
@@ -61,6 +63,6 @@ public record ResolvedModelProfile(
             String credentialRef,
             boolean apiKeyPresent,
             Integer contextWindowTokens,
-            int maxOutputTokens,
+            Integer maxOutputTokens,
             GuideFailure failure) {}
 }

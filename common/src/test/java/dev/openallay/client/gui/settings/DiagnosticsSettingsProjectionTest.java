@@ -12,6 +12,19 @@ import org.junit.jupiter.api.Test;
 
 final class DiagnosticsSettingsProjectionTest {
     @Test
+    void unknownMetricRemainsUnknownThroughProjection() {
+        var metric = new SettingsDiagnosticCard.Metric(
+                "screen.openallay.settings.diagnostics.metric.estimated_tokens", (Long) null);
+        var card = new SettingsDiagnosticCard(SettingsDiagnosticCard.Domain.CONTEXT,
+                SettingsDiagnosticCard.FriendlyStatus.NOT_CONNECTED,
+                "screen.openallay.settings.diagnostics.context.title",
+                "screen.openallay.settings.diagnostics.status.not_connected", List.of(), List.of(metric));
+        var projection = DiagnosticsSettingsProjection.from(
+                new SettingsDiagnosticsSnapshot(List.of(card), Optional.empty()));
+        assertEquals(null, projection.cards().getFirst().metrics().getFirst().value());
+    }
+
+    @Test
     void friendlyCardsRetainTextStatusAndCannotGainTechnicalSection() {
         SettingsDiagnosticCard card = new SettingsDiagnosticCard(
                 SettingsDiagnosticCard.Domain.HISTORY,

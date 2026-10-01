@@ -35,7 +35,7 @@ public record ModelSettingsProjection(List<ModelCard> models) {
                     profile.definition().id().equals(local.config().defaultProfileId()),
                     profile.failure() == null ? null : profile.failure().code(),
                     profile.effectiveContextWindowTokens(),
-                    profile.definition().maxOutputTokens()));
+                    profile.effectiveMaxOutputTokens()));
         }
         if (server.available()) {
             cards.add(new ModelCard(
@@ -76,7 +76,7 @@ public record ModelSettingsProjection(List<ModelCard> models) {
             boolean defaultProfile,
             String failureCode,
             Integer contextWindowTokens,
-            int maxOutputTokens) {
+            Integer maxOutputTokens) {
         public ModelCard {
             Objects.requireNonNull(selectionId, "selectionId");
             Objects.requireNonNull(profileId, "profileId");

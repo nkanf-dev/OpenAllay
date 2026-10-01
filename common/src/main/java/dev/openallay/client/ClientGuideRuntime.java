@@ -141,7 +141,16 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
                         ? new ClientPlacedToolExecutor(local, remote)
                         : new CompositeAgentToolExecutor(List.of(local, extension));
         agent = new GameGuideAgent(
-                endpoint.scheduler(), toolExecutor, sessions, gson, endpoint.compactor());
+                endpoint.scheduler(), toolExecutor, sessions, gson, endpoint.compactor(),
+                (request, tokens) -> {
+                    synchronized (sessions) {
+                        AgentSessionStore.Status status = sessions.status(request.sessionKey());
+                        if (status.active() && request.requestId().equals(status.requestId())) {
+                            endpoint.estimates().put(request.sessionKey(),
+                                    new dev.openallay.guide.GuideContextEstimate(request.requestId(), tokens));
+                        }
+                    }
+                });
     }
 
     ClientGuideRuntime withCapabilities(ClientCapabilitySnapshot replacement) {
@@ -154,6 +163,24 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
                 traces,
                 replacement,
                 selectedSessions);
+    }
+
+    @Override
+    public Optional<dev.openallay.guide.GuideContextEstimate> contextEstimate(
+            String profileId, UUID actor, String sessionId) {
+        return Optional.ofNullable(endpoint.estimates().get(new AgentSessionKey(actor, sessionId)));
+    }
+
+    void clearContextEstimate(UUID actor, String sessionId) {
+        synchronized (sessions) {
+            endpoint.estimates().remove(new AgentSessionKey(actor, sessionId));
+        }
+    }
+
+    void clearContextEstimates(UUID actor) {
+        synchronized (sessions) {
+            endpoint.estimates().keySet().removeIf(key -> key.actorId().equals(actor));
+        }
     }
 
     Object endpointIdentity() {
@@ -268,6 +295,7 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
         boolean existed = sessions.sessions(actor).stream()
                 .anyMatch(key -> key.sessionId().equals(sessionId));
         sessions.clear(new AgentSessionKey(actor, sessionId));
+        clearContextEstimate(actor, sessionId);
         if (selectedSession(actor).equals(sessionId)) {
             selectedSessions.put(actor, "main");
         }
@@ -286,10 +314,12 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
     @Override
     public void clearSession(UUID actor, String sessionId) {
         sessions.clear(new AgentSessionKey(actor, sessionId));
+        clearContextEstimate(actor, sessionId);
     }
 
     public void clearActor(UUID actor) {
         sessions.clearActor(actor);
+        clearContextEstimates(actor);
         selectedSessions.remove(actor);
     }
 
@@ -325,7 +355,8 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
                 contextBudget,
                 modelIdentifier,
                 Clock.systemUTC());
-        return new EndpointRuntime(scheduler, compactor, contextBudget, modelIdentifier);
+        return new EndpointRuntime(scheduler, compactor, contextBudget, modelIdentifier,
+                new ConcurrentHashMap<>());
     }
 
     private static ClientCapabilitySnapshot defaultCapabilities(OpenAllayRuntime runtime) {
@@ -343,5 +374,6 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
             ModelRequestScheduler scheduler,
             ContextCompactor compactor,
             ContextBudget contextBudget,
-            String modelIdentifier) {}
+            String modelIdentifier,
+            Map<AgentSessionKey, dev.openallay.guide.GuideContextEstimate> estimates) {}
 }

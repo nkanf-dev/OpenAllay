@@ -75,6 +75,7 @@ public final class OpenAllaySettingsScreen extends Screen {
     private int editorScroll;
     private int modelEditorContentHeight = 240;
     private boolean updatingAutomaticContext;
+    private boolean updatingAutomaticOutput;
     private final BuiltinModelSettingsProjection.EventCache modelEstimateCache =
             new BuiltinModelSettingsProjection.EventCache();
     private String selectedSkillName;
@@ -1048,6 +1049,7 @@ public final class OpenAllaySettingsScreen extends Screen {
             captureDraft();
             refreshAutomaticContext();
             updateAutomaticContextWidget();
+            updateAutomaticOutputWidget();
         });
         y += 22;
         int fetchWidth = inputWidth >= 130 ? 46 : 30;
@@ -1060,6 +1062,7 @@ public final class OpenAllaySettingsScreen extends Screen {
             draft = draft.withModel(value);
             refreshAutomaticContext();
             updateAutomaticContextWidget();
+            updateAutomaticOutputWidget();
         });
         Button fetch = addRenderableWidget(OpenAllayButton.create(
                         Component.translatable("screen.openallay.settings.models.fetch"),
@@ -1097,6 +1100,7 @@ public final class OpenAllaySettingsScreen extends Screen {
                 draft = draft.withContextWindow(value);
                 refreshAutomaticContext();
                 updateAutomaticContextWidget();
+                updateAutomaticOutputWidget();
             }
         });
         y += 22;
@@ -1104,6 +1108,13 @@ public final class OpenAllaySettingsScreen extends Screen {
                 inputX, y, inputWidth, "screen.openallay.settings.models.max_output", draft.maxOutputTokens());
         maxOutput.setTooltip(Tooltip.create(Component.translatable(
                 "screen.openallay.settings.models.max_output.description")));
+        maxOutput.setResponder(value -> {
+            if (draft != null && !updatingAutomaticOutput) {
+                draft = draft.withMaxOutput(value);
+                refreshAutomaticContext();
+                updateAutomaticOutputWidget();
+            }
+        });
         y += 22;
         connectTimeout = field(
                 inputX,
@@ -1484,7 +1495,9 @@ public final class OpenAllaySettingsScreen extends Screen {
             for (SettingsDiagnosticCard.Metric metric : card.metrics()) {
                 graphics.text(
                         font,
-                        Component.translatable(metric.labelKey(), metric.value()),
+                        Component.translatable(metric.labelKey(), metric.value() == null
+                                ? Component.translatable("screen.openallay.settings.diagnostics.unknown")
+                                : metric.value()),
                         x + 12,
                         metricY,
                         MUTED,
@@ -1563,7 +1576,9 @@ public final class OpenAllaySettingsScreen extends Screen {
                     "checkpoints=" + guide.context().checkpointCount()
                             + " · failed=" + guide.context().failedCheckpoints()
                             + " · estimatedTokens="
-                            + guide.context().estimatedProjectionTokens());
+                            + (guide.context().estimatedProjectionTokens() == null
+                                    ? Component.translatable("screen.openallay.settings.diagnostics.unknown").getString()
+                                    : guide.context().estimatedProjectionTokens()));
             SettingsDiagnosticsSnapshot.DebugHistory history = guide.history();
             y = debugLine(graphics, x, y, width,
                     "screen.openallay.settings.diagnostics.debug.history_window",
@@ -1576,12 +1591,19 @@ public final class OpenAllaySettingsScreen extends Screen {
                     "cache=" + history.cacheHits() + "/" + history.cacheMisses()
                             + " · fallbacks=" + history.semanticFallbackCount());
         }
+        if (!debug.sourcesKnown()) {
+            y = debugLine(graphics, x, y, width,
+                    "screen.openallay.settings.diagnostics.debug.source",
+                    Component.translatable("screen.openallay.settings.diagnostics.unknown").getString());
+        }
         for (SettingsDiagnosticsSnapshot.DebugSource source : debug.sources()) {
             y = debugLine(graphics, x, y, width,
                     "screen.openallay.settings.diagnostics.debug.source",
                     source.sourceId() + " · " + source.state()
                             + " · generation=" + source.generation()
-                            + " · count=" + source.itemCount()
+                            + " · count=" + (source.itemCount() == null
+                                    ? Component.translatable("screen.openallay.settings.diagnostics.unknown").getString()
+                                    : source.itemCount())
                             + (source.failureCode() == null
                                     ? ""
                                     : " · failure=" + source.failureCode()));
@@ -3067,7 +3089,8 @@ public final class OpenAllaySettingsScreen extends Screen {
         if (draft == null || selectedServerModel) return;
         draft = modelEstimateCache.refresh(draft,
                 dev.openallay.model.metadata.BuiltinModelCatalog.bundled(),
-                this::draftContextResolution);
+                this::draftContextResolution,
+                this::draftOutputResolution);
     }
 
     private dev.openallay.model.metadata.ModelContextResolution draftContextResolution() {
@@ -3080,6 +3103,25 @@ public final class OpenAllaySettingsScreen extends Screen {
             return new dev.openallay.model.metadata.ModelContextResolution(null,
                     dev.openallay.model.metadata.ModelContextResolution.Origin.REQUIRED);
         }
+    }
+
+    private dev.openallay.model.metadata.ModelOutputResolution draftOutputResolution() {
+        try {
+            Integer manual = draft.automaticMaxOutputTokens() != null
+                    || draft.maxOutputTokens() == null || draft.maxOutputTokens().isBlank()
+                    ? null : Integer.valueOf(draft.maxOutputTokens().trim());
+            return service.modelOutput(java.net.URI.create(draft.baseUrl()), draft.model(), manual);
+        } catch (RuntimeException invalidDraft) {
+            return new dev.openallay.model.metadata.ModelOutputResolution(null,
+                    dev.openallay.model.metadata.ModelOutputResolution.Origin.REQUIRED);
+        }
+    }
+
+    private void updateAutomaticOutputWidget() {
+        if (maxOutput == null) return;
+        updatingAutomaticOutput = true;
+        try { maxOutput.setValue(draft.maxOutputTokens()); }
+        finally { updatingAutomaticOutput = false; }
     }
 
     private void updateAutomaticContextWidget() {
@@ -3128,7 +3170,9 @@ public final class OpenAllaySettingsScreen extends Screen {
                     requestTimeout.getValue(),
                     draft.metadata(),
                     Objects.equals(contextWindow.getValue(), draft.automaticContextWindowTokens())
-                            ? draft.automaticContextWindowTokens() : null);
+                            ? draft.automaticContextWindowTokens() : null,
+                    Objects.equals(maxOutput.getValue(), draft.automaticMaxOutputTokens())
+                            ? draft.automaticMaxOutputTokens() : null);
         }
         if (section == SettingsSection.GENERAL && assistantName != null) {
             assistantNameDraft = assistantName.getValue();

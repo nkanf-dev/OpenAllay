@@ -57,6 +57,67 @@ final class ModelHttpErrorsTest {
     }
 
     @Test
+    void classifiesAllowlistedCallIdSchemaErrorsWithoutExposingProviderDetails() {
+        for (String parameter : List.of(
+                "call_id", "input[2].call_id", "tool_call_id", "tool_use_id",
+                "messages[3].tool_call_id", "messages[2].tool_calls[0].id",
+                "messages[4].content[0].tool_use_id")) {
+            for (String code : List.of("string_above_max_length", "string_pattern_mismatch")) {
+                ModelClientException failure = assertThrows(
+                        ModelClientException.class,
+                        () -> ModelHttpErrors.requireSuccess(
+                                400,
+                                new HttpResponseHeaders(Map.of()),
+                                body("{\"error\":{\"type\":\"invalid_request_error\","
+                                        + "\"code\":\"" + code + "\",\"param\":\"" + parameter + "\","
+                                        + "\"message\":\"private 66-character identifier and prompt text\"}}")));
+
+                assertEquals("model_protocol_rejected", failure.failure().code());
+                assertEquals("Model tool-call history was rejected by the endpoint",
+                        failure.failure().message());
+                assertEquals(400, failure.failure().httpStatus());
+                assertFalse(failure.toString().contains("private"));
+                assertFalse(failure.toString().contains(parameter));
+                assertFalse(failure.toString().contains(code));
+            }
+        }
+    }
+
+    @Test
+    void doesNotTreatEveryLengthErrorOrArbitraryCallIdParameterAsToolHistory() {
+        for (String parameter : List.of(
+                "input[2].name", "input[2].call_id.extra", "private_call_id", "model")) {
+            ModelClientException failure = assertThrows(
+                    ModelClientException.class,
+                    () -> ModelHttpErrors.requireSuccess(
+                            400,
+                            new HttpResponseHeaders(Map.of()),
+                            body("{\"error\":{\"code\":\"string_above_max_length\","
+                                    + "\"param\":\"" + parameter + "\",\"message\":\"private detail\"}}")));
+            assertEquals("model_request_rejected", failure.failure().code());
+            assertEquals("Model request was rejected by the endpoint", failure.failure().message());
+            assertFalse(failure.toString().contains("private detail"));
+        }
+        ModelClientException unrelatedCode = assertThrows(
+                ModelClientException.class,
+                () -> ModelHttpErrors.requireSuccess(400, new HttpResponseHeaders(Map.of()),
+                        body("{\"error\":{\"code\":\"unknown_validation\",\"param\":\"input[2].call_id\"}}")));
+        assertEquals("model_request_rejected", unrelatedCode.failure().code());
+    }
+
+    @Test
+    void malformedAndOversizedErrorBodiesStaySanitized() {
+        for (String encoded : List.of("{private malformed", "{\"error\":{\"message\":\"" + "private".repeat(2000))) {
+            ModelClientException failure = assertThrows(
+                    ModelClientException.class,
+                    () -> ModelHttpErrors.requireSuccess(400, new HttpResponseHeaders(Map.of()), body(encoded)));
+            assertEquals("model_request_rejected", failure.failure().code());
+            assertEquals(400, failure.failure().httpStatus());
+            assertFalse(failure.toString().contains("private"));
+        }
+    }
+
+    @Test
     void unknownBadRequestUsesStableRequestRejection() {
         ModelClientException failure = assertThrows(
                 ModelClientException.class,

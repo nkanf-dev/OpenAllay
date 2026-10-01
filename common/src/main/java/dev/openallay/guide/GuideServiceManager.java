@@ -67,6 +67,7 @@ public final class GuideServiceManager {
                     nextHistory = afterDisconnect(disconnected);
                 }
             }
+            contexts.clearConnectionState();
             current = new GuideService(
                     actor, local, remote, contexts, dispatcher, clock, gson, scope, nextHistory);
         }
@@ -74,6 +75,7 @@ public final class GuideServiceManager {
     }
 
     public synchronized CompletableFuture<Void> disconnect() {
+        contexts.clearConnectionState();
         if (current != null) {
             CompletableFuture<Void> disconnected = current.disconnect();
             current = null;
@@ -99,7 +101,8 @@ public final class GuideServiceManager {
                 true,
                 java.util.Optional.of(current.snapshot()),
                 history.activity(),
-                java.util.Optional.of(current.historyScope().kind()));
+                java.util.Optional.of(current.historyScope().kind()),
+                current.contextEstimate().map(GuideContextEstimate::estimatedTokens).orElse(null));
     }
 
     public synchronized CompletableFuture<ToolResult<Boolean>> resetHistoryDatabase() {

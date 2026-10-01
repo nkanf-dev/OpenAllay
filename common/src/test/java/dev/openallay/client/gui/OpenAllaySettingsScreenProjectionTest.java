@@ -82,6 +82,40 @@ final class OpenAllaySettingsScreenProjectionTest {
     }
 
     @Test
+    void automaticOutputProjectionKeepsExplicitMillionContextAndUnknownDisabledOutput() {
+        var definition = new ModelProfileDefinition("luna", "Luna", true,
+                ModelProtocol.OPENAI_CHAT, URI.create("https://provider.example/v1/"),
+                "gpt-6-luna", "env:LUNA_KEY", 1_000_000, null,
+                Duration.ofSeconds(30), Duration.ofSeconds(300), null);
+        var models = ModelProfileSettingsView.from(
+                new ModelProfilesConfig(ModelProfilesConfig.SCHEMA_VERSION, "luna", List.of(definition)),
+                List.of(new ModelProfileSettingsView.Resolution(
+                        definition, true, true, 1_000_000, 128_000, null)),
+                java.util.Set.of("LUNA_KEY"), null, null);
+        var snapshot = new ClientSettingsSnapshot(0, GuideDisplayConfig.defaults(), models,
+                SettingsOperation.idle(), null);
+        var card = OpenAllaySettingsScreen.project(snapshot).models().getFirst();
+        assertEquals(1_000_000, card.contextWindowTokens());
+        assertEquals(128_000, card.maxOutputTokens());
+        assertEquals(null, definition.maxOutputTokens());
+
+        var disabled = new ModelProfileDefinition("off", "Off", false,
+                ModelProtocol.OPENAI_CHAT, URI.create("https://provider.example/v1/"),
+                "unpublished-model", "env:OFF_KEY", null, null,
+                Duration.ofSeconds(30), Duration.ofSeconds(300), null);
+        var unavailable = ModelProfileSettingsView.from(
+                new ModelProfilesConfig(ModelProfilesConfig.SCHEMA_VERSION, "off", List.of(disabled)),
+                List.of(new ModelProfileSettingsView.Resolution(disabled, false, false, null, null,
+                        new dev.openallay.guide.GuideFailure("model_disabled", "Disabled"))),
+                java.util.Set.of(), null, null);
+        var unknown = OpenAllaySettingsScreen.project(new ClientSettingsSnapshot(
+                0, GuideDisplayConfig.defaults(), unavailable, SettingsOperation.idle(), null))
+                .models().getFirst();
+        assertEquals(null, unknown.contextWindowTokens());
+        assertEquals(null, unknown.maxOutputTokens());
+    }
+
+    @Test
     void screenshotControlsAreInertUnlessTheExplicitE2ePropertyIsEnabled() {
         String key = dev.openallay.guide.e2e.GuideClientE2EConfig.ENABLED;
         String prior = System.getProperty(key);

@@ -3,6 +3,7 @@ package dev.openallay.client.gui.settings;
 import dev.openallay.model.metadata.BuiltinModelCatalog;
 import dev.openallay.model.metadata.BuiltinModelMatcher;
 import dev.openallay.model.metadata.ModelContextResolution;
+import dev.openallay.model.metadata.ModelOutputResolution;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
@@ -15,18 +16,29 @@ public record BuiltinModelSettingsProjection(List<Line> lines) {
     public static final class EventCache {
         private ModelProfileDraft draft;
         private ModelContextResolution resolution;
+        private ModelOutputResolution outputResolution;
         private BuiltinModelCatalog.Load loaded;
         private BuiltinModelSettingsProjection projection = new BuiltinModelSettingsProjection(List.of());
 
         public ModelProfileDraft refresh(ModelProfileDraft candidate, BuiltinModelCatalog.Load catalog,
                 java.util.function.Supplier<ModelContextResolution> resolve) {
+            return refresh(candidate, catalog, resolve, () -> outputResolution(candidate, catalog));
+        }
+
+        public ModelProfileDraft refresh(ModelProfileDraft candidate, BuiltinModelCatalog.Load catalog,
+                java.util.function.Supplier<ModelContextResolution> resolve,
+                java.util.function.Supplier<ModelOutputResolution> resolveOutput) {
             ModelContextResolution effective = resolve.get();
-            ModelProfileDraft updated = candidate.withAutomaticContext(effective.contextWindowTokens());
-            if (!updated.equals(draft) || !effective.equals(resolution) || catalog != loaded) {
+            ModelOutputResolution effectiveOutput = resolveOutput.get();
+            ModelProfileDraft updated = candidate.withAutomaticContext(effective.contextWindowTokens())
+                    .withAutomaticOutput(effectiveOutput.maxOutputTokens());
+            if (!updated.equals(draft) || !effective.equals(resolution)
+                    || !effectiveOutput.equals(outputResolution) || catalog != loaded) {
                 draft = updated;
                 resolution = effective;
+                outputResolution = effectiveOutput;
                 loaded = catalog;
-                projection = from(updated, catalog, effective);
+                projection = from(updated, catalog, effective, effectiveOutput);
             }
             return updated;
         }
@@ -54,6 +66,20 @@ public record BuiltinModelSettingsProjection(List<Line> lines) {
                 java.util.Map.of(), loaded.catalog()));
     }
 
+    private static ModelOutputResolution outputResolution(
+            ModelProfileDraft draft, BuiltinModelCatalog.Load loaded) {
+        Integer explicit = null;
+        if (draft.automaticMaxOutputTokens() == null && draft.maxOutputTokens() != null
+                && !draft.maxOutputTokens().isBlank()) {
+            explicit = parseInteger(draft.maxOutputTokens());
+            if (explicit == null || explicit <= 0) {
+                return new ModelOutputResolution(null, ModelOutputResolution.Origin.REQUIRED);
+            }
+        }
+        return ModelOutputResolution.resolve(null, draft.model(), explicit,
+                java.util.Map.of(), loaded.catalog());
+    }
+
     private static Integer parseInteger(String text) {
         try { return Integer.valueOf(text.trim()); }
         catch (NumberFormatException invalid) { return null; }
@@ -61,6 +87,12 @@ public record BuiltinModelSettingsProjection(List<Line> lines) {
 
     public static BuiltinModelSettingsProjection from(ModelProfileDraft draft,
             BuiltinModelCatalog.Load loaded, ModelContextResolution resolution) {
+        return from(draft, loaded, resolution, outputResolution(draft, loaded));
+    }
+
+    public static BuiltinModelSettingsProjection from(ModelProfileDraft draft,
+            BuiltinModelCatalog.Load loaded, ModelContextResolution resolution,
+            ModelOutputResolution outputResolution) {
         List<Line> lines = new ArrayList<>();
         lines.add(Line.of("context_source." + resolution.origin().name().toLowerCase(java.util.Locale.ROOT)));
         if (resolution.origin() == ModelContextResolution.Origin.TRUSTED
@@ -69,6 +101,15 @@ public record BuiltinModelSettingsProjection(List<Line> lines) {
             lines.add(Line.of("effective_source", source, resolution.capturedAt().toString()));
         }
         lines.add(Line.of("reset_auto"));
+        lines.add(Line.of("output_source." + outputResolution.origin().name()
+                .toLowerCase(java.util.Locale.ROOT)));
+        if (outputResolution.origin() == ModelOutputResolution.Origin.TRUSTED
+                && outputResolution.source() != null && outputResolution.capturedAt() != null) {
+            String source = outputResolution.source().equals("openrouter")
+                    ? "OpenRouter" : outputResolution.source();
+            lines.add(Line.of("effective_source", source, outputResolution.capturedAt().toString()));
+        }
+        lines.add(Line.of("output_reset_auto"));
         if (loaded.failure() != null) {
             lines.add(Line.of("unavailable"));
             return new BuiltinModelSettingsProjection(lines);

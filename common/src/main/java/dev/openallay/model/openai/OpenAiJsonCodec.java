@@ -13,6 +13,7 @@ import dev.openallay.model.ModelRole;
 import dev.openallay.model.ModelToolDefinition;
 import dev.openallay.model.ModelTurn;
 import dev.openallay.model.ModelUsage;
+import dev.openallay.model.ProviderToolIds;
 import dev.openallay.model.config.ModelConfig;
 import java.util.ArrayList;
 import java.util.List;
@@ -36,8 +37,9 @@ public final class OpenAiJsonCodec {
         system.addProperty("role", "system");
         system.addProperty("content", request.systemPrompt());
         messages.add(system);
+        ProviderToolIds toolIds = ProviderToolIds.forOpenAiChat(request.messages());
         for (ModelMessage message : request.messages()) {
-            encodeMessage(message, messages);
+            encodeMessage(message, messages, toolIds);
         }
         root.add("messages", messages);
         if (!request.tools().isEmpty()) {
@@ -79,7 +81,8 @@ public final class OpenAiJsonCodec {
         return new ModelTurn("openai_chat", model, content, stopReason, usage);
     }
 
-    private void encodeMessage(ModelMessage message, JsonArray output) {
+    private void encodeMessage(
+            ModelMessage message, JsonArray output, ProviderToolIds toolIds) {
         List<ModelContent.ToolResult> results = message.content().stream()
                 .filter(ModelContent.ToolResult.class::isInstance)
                 .map(ModelContent.ToolResult.class::cast)
@@ -88,7 +91,7 @@ public final class OpenAiJsonCodec {
             for (ModelContent.ToolResult result : results) {
                 JsonObject encoded = new JsonObject();
                 encoded.addProperty("role", "tool");
-                encoded.addProperty("tool_call_id", result.toolUseId());
+                encoded.addProperty("tool_call_id", toolIds.encode(result.toolUseId()));
                 encoded.addProperty("content", providerToolResult(result.value()));
                 output.add(encoded);
             }
@@ -104,7 +107,7 @@ public final class OpenAiJsonCodec {
             switch (block) {
                 case ModelContent.Text value -> text.append(value.text());
                 case ModelContent.Reasoning value -> reasoning.append(value.text());
-                case ModelContent.ToolUse value -> toolCalls.add(encodeToolCall(value));
+                case ModelContent.ToolUse value -> toolCalls.add(encodeToolCall(value, toolIds));
                 case ModelContent.ToolResult ignored -> throw new IllegalStateException();
             }
         }
@@ -118,12 +121,12 @@ public final class OpenAiJsonCodec {
         output.add(encoded);
     }
 
-    private JsonObject encodeToolCall(ModelContent.ToolUse tool) {
+    private JsonObject encodeToolCall(ModelContent.ToolUse tool, ProviderToolIds toolIds) {
         JsonObject function = new JsonObject();
         function.addProperty("name", tool.name());
         function.addProperty("arguments", gson.toJson(tool.input()));
         JsonObject result = new JsonObject();
-        result.addProperty("id", tool.id());
+        result.addProperty("id", toolIds.encode(tool.id()));
         result.addProperty("type", "function");
         result.add("function", function);
         return result;

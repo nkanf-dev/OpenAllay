@@ -23,9 +23,20 @@ public record ModelProfileDraft(
         String connectTimeoutSeconds,
         String requestTimeoutSeconds,
         ModelProfileDefinition.MetadataProvenance metadata,
-        String automaticContextWindowTokens) {
+        String automaticContextWindowTokens,
+        String automaticMaxOutputTokens) {
     public ModelProfileDraft {
         Objects.requireNonNull(protocol, "protocol");
+    }
+
+    public ModelProfileDraft(
+            String id, String displayName, boolean enabled, ModelProtocol protocol,
+            String baseUrl, String model, String credentialRef, String contextWindowTokens,
+            String maxOutputTokens, String connectTimeoutSeconds, String requestTimeoutSeconds,
+            ModelProfileDefinition.MetadataProvenance metadata, String automaticContextWindowTokens) {
+        this(id, displayName, enabled, protocol, baseUrl, model, credentialRef,
+                contextWindowTokens, maxOutputTokens, connectTimeoutSeconds, requestTimeoutSeconds,
+                metadata, automaticContextWindowTokens, null);
     }
 
     public ModelProfileDraft(
@@ -35,7 +46,7 @@ public record ModelProfileDraft(
             ModelProfileDefinition.MetadataProvenance metadata) {
         this(id, displayName, enabled, protocol, baseUrl, model, credentialRef,
                 contextWindowTokens, maxOutputTokens, connectTimeoutSeconds, requestTimeoutSeconds,
-                metadata, null);
+                metadata, null, null);
     }
 
     public ModelProfileDraft(
@@ -78,7 +89,9 @@ public record ModelProfileDraft(
                 definition.contextWindowTokens() == null
                         ? ""
                         : Integer.toString(definition.contextWindowTokens()),
-                Integer.toString(definition.maxOutputTokens()),
+                definition.maxOutputTokens() == null
+                        ? ""
+                        : Integer.toString(definition.maxOutputTokens()),
                 Long.toString(definition.connectTimeout().toSeconds()),
                 Long.toString(definition.requestTimeout().toSeconds()),
                 definition.metadata()).autoFill(BuiltinModelCatalog.bundled().catalog());
@@ -94,7 +107,7 @@ public record ModelProfileDraft(
                 "",
                 "env:OPENALLAY_API_KEY",
                 "",
-                "4096",
+                "",
                 "30",
                 "300",
                 null);
@@ -109,24 +122,32 @@ public record ModelProfileDraft(
         return new ModelProfileDraft(
                 id, displayName, enabled, protocol, baseUrl, replacement, credentialRef,
                 changed && automaticContextWindowTokens != null ? "" : contextWindowTokens,
-                maxOutputTokens, connectTimeoutSeconds, requestTimeoutSeconds,
+                changed && automaticMaxOutputTokens != null ? "" : maxOutputTokens,
+                connectTimeoutSeconds, requestTimeoutSeconds,
                 changed ? null : metadata,
-                changed ? null : automaticContextWindowTokens).autoFill(catalog);
+                changed ? null : automaticContextWindowTokens,
+                changed ? null : automaticMaxOutputTokens).autoFill(catalog);
     }
 
     /** An actual player edit adopts a manual value; save alone does not. */
     public ModelProfileDraft withContextWindow(String value) {
         return new ModelProfileDraft(id, displayName, enabled, protocol, baseUrl, model,
                 credentialRef, value, maxOutputTokens, connectTimeoutSeconds,
-                requestTimeoutSeconds, metadata, null);
+                requestTimeoutSeconds, metadata, null, automaticMaxOutputTokens);
+    }
+
+    /** An actual output edit adopts a manual value. Clearing returns ownership to automatic. */
+    public ModelProfileDraft withMaxOutput(String value) {
+        return new ModelProfileDraft(id, displayName, enabled, protocol, baseUrl, model,
+                credentialRef, contextWindowTokens, value, connectTimeoutSeconds,
+                requestTimeoutSeconds, metadata, automaticContextWindowTokens, null);
     }
 
     public ModelProfileDraft autoFill(BuiltinModelCatalog catalog) {
-        if (contextWindowTokens != null && !contextWindowTokens.isBlank()
-                && automaticContextWindowTokens == null) return this;
-        Integer context = catalog.match(model).map(match -> match.entry().contextWindowTokens())
-                .orElse(null);
-        return withAutomaticContext(context);
+        var matched = catalog.match(model);
+        Integer context = matched.map(match -> match.entry().contextWindowTokens()).orElse(null);
+        Integer output = matched.map(match -> match.entry().maxOutputTokens()).orElse(null);
+        return withAutomaticContext(context).withAutomaticOutput(output);
     }
 
     /** Trusted effective metadata can replace an automatic display value, never a manual edit. */
@@ -136,7 +157,18 @@ public record ModelProfileDraft(
         String text = value == null ? "" : Integer.toString(value);
         return new ModelProfileDraft(id, displayName, enabled, protocol, baseUrl, model,
                 credentialRef, text, maxOutputTokens, connectTimeoutSeconds,
-                requestTimeoutSeconds, metadata, value == null ? null : text);
+                requestTimeoutSeconds, metadata, value == null ? null : text, automaticMaxOutputTokens);
+    }
+
+    /** Metadata refresh can replace an automatic display value, never an explicit player edit. */
+    public ModelProfileDraft withAutomaticOutput(Integer value) {
+        if (maxOutputTokens != null && !maxOutputTokens.isBlank()
+                && automaticMaxOutputTokens == null) return this;
+        String text = value == null ? "" : Integer.toString(value);
+        return new ModelProfileDraft(id, displayName, enabled, protocol, baseUrl, model,
+                credentialRef, contextWindowTokens, text, connectTimeoutSeconds,
+                requestTimeoutSeconds, metadata, automaticContextWindowTokens,
+                value == null ? null : text);
     }
 
     public boolean dirtyComparedTo(ModelProfileDefinition definition) {
@@ -160,7 +192,9 @@ public record ModelProfileDraft(
                     model == null ? null : model.trim(),
                     credentialRef == null ? null : credentialRef.trim(),
                     contextWindow,
-                    Integer.parseInt(maxOutputTokens == null ? "" : maxOutputTokens.trim()),
+                    maxOutputTokens == null || maxOutputTokens.isBlank()
+                            || Objects.equals(maxOutputTokens, automaticMaxOutputTokens)
+                            ? null : Integer.valueOf(maxOutputTokens.trim()),
                     Duration.ofSeconds(Long.parseLong(
                             connectTimeoutSeconds == null ? "" : connectTimeoutSeconds.trim())),
                     Duration.ofSeconds(Long.parseLong(

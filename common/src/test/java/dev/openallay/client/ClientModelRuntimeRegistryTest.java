@@ -276,6 +276,42 @@ final class ClientModelRuntimeRegistryTest {
         assertFalse(model.requests.get(3).systemPrompt().contains("Request Java guidance sentinel"));
     }
 
+    @Test
+    void latestEstimateIncludesExactPromptToolsAndMessagesAndDoesNotLeakAcrossScopes() {
+        RecordingModel modelA = new RecordingModel("model-a");
+        RecordingModel modelB = new RecordingModel("model-b");
+        OpenAllayRuntime product = runtimeWithFactTool();
+        ClientModelRuntimeRegistry registry = registry(
+                product, load("a", "a", "b"), Map.of("a", modelA, "b", modelB));
+        UUID actor = UUID.randomUUID();
+        UUID requestId = UUID.randomUUID();
+        assertTrue(registry.contextEstimate("a", actor, "main").isEmpty());
+        assertTrue(registry.ask("a", actor, "main", requestId, "small request",
+                ToolInvocationContext.developmentConsole("estimate"), ignored -> {}).join().successful());
+        ModelRequest actual = modelA.requests.getLast();
+        int expected = new dev.openallay.agent.context.Utf8ContextTokenEstimator().estimate(
+                actual.systemPrompt(), actual.messages(), actual.tools());
+        var estimate = registry.contextEstimate("a", actor, "main").orElseThrow();
+        assertEquals(requestId, estimate.requestId());
+        assertEquals(expected, estimate.estimatedTokens());
+        assertTrue(expected > 0);
+        assertTrue(registry.contextEstimate("b", actor, "main").isEmpty());
+        assertTrue(registry.contextEstimate("a", UUID.randomUUID(), "main").isEmpty());
+        assertTrue(registry.contextEstimate("a", actor, "other").isEmpty());
+        registry.replaceCapabilities(registry.capabilities());
+        assertEquals(estimate, registry.contextEstimate("a", actor, "main").orElseThrow());
+        registry.clearSession(actor, "main");
+        assertTrue(registry.contextEstimate("a", actor, "main").isEmpty());
+        registry.ask("a", actor, "main", UUID.randomUUID(), "again",
+                ToolInvocationContext.developmentConsole("estimate"), ignored -> {}).join();
+        registry.clearActor(actor);
+        assertTrue(registry.contextEstimate("a", actor, "main").isEmpty());
+        registry.ask("a", actor, "main", UUID.randomUUID(), "replacement",
+                ToolInvocationContext.developmentConsole("estimate"), ignored -> {}).join();
+        registry.replace(load("a", "a", "b"));
+        assertTrue(registry.contextEstimate("a", actor, "main").isEmpty());
+    }
+
     private static ClientModelRuntimeRegistry registry(
             ModelProfilesConfigLoader.Load load,
             Map<String, ModelClient> clients) {

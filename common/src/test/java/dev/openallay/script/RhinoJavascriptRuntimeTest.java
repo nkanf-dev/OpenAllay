@@ -465,6 +465,33 @@ final class RhinoJavascriptRuntimeTest {
     }
 
     @Test
+    void executableAndUndefinedResultsOfferRecoveryWithoutClaimingMissingGameData() {
+        RhinoJavascriptRuntime runtime = new RhinoJavascriptRuntime();
+        for (String source : List.of("return function () {};", "return require('openallay:crafting');")) {
+            JavascriptExecutionException executable = assertThrows(
+                    JavascriptExecutionException.class,
+                    () -> runtime.execute(source, Map.of(), Map.of(), new CancellationSignal()));
+            assertEquals("javascript_result_invalid", executable.code());
+            assertTrue(executable.getMessage().contains("contains a function"));
+            assertTrue(executable.getMessage().contains("Return JSON data from the operation"));
+            assertTrue(executable.getMessage().contains("not the function or module itself; omit function properties"));
+            assertTrue(executable.getMessage().contains("does not mean the operation is unavailable"));
+        }
+        JavascriptExecutionException undefined = assertThrows(
+                JavascriptExecutionException.class,
+                () -> runtime.execute("return mc.missing;", Map.of(), Map.of(), new CancellationSignal()));
+        assertEquals("javascript_result_invalid", undefined.code());
+        assertTrue(undefined.getMessage().contains("result is undefined"));
+        assertTrue(undefined.getMessage().contains("selected roots and documented fields"));
+        assertTrue(undefined.getMessage().contains("does not mean game data is unavailable"));
+        assertEquals(3, runtime.execute("""
+                return require("openallay:crafting").recipeCost({
+                  ingredients: [{count: 3, consumed: true}], catalysts: [], fluids: []
+                }).consumedItems;
+                """, Map.of(), Map.of(), new CancellationSignal()).value().getAsInt());
+    }
+
+    @Test
     void rejectsCyclesAndNonFiniteNumbers() {
         RhinoJavascriptRuntime runtime = new RhinoJavascriptRuntime();
         JavascriptExecutionException cycle = assertThrows(

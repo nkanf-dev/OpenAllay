@@ -19,7 +19,7 @@ public final class CoreJavascriptContract {
         Objects.requireNonNull(catalog, "catalog");
         StringBuilder text = new StringBuilder("""
                 The general analysis Tool is run_javascript. Its stable globals are:
-                - mc: selected immutable Minecraft roots documented below.
+                - mc: selected immutable Minecraft roots documented below. Select bare names: roots ["player"] for mc.player.position; roots ["game"] for mc.game.player.player.position when captured. Never put mc. access paths in roots.
                 - schema.list() and schema.describe(path): descriptor-only discovery; path omits the mc. prefix.
                 - workspace.open(handle): reopen one exact result from this request.
                 - helpers.schema(value): inspect one genuinely dynamic JSON or Extension value.

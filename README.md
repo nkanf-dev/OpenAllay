@@ -84,9 +84,9 @@ offer a shared model and additional server-side capabilities. Its shared model
 appears automatically in **Models** while connected, clearly marked as
 server-provided and separate from your local profiles.
 
-A built-in offline model table fills in the context window for matching models,
-including services whose model list contains only IDs. You can edit the value
-at any time. The Models page also shows published token-price estimates, price
+A built-in offline model table fills in the context window and maximum output
+for matching models, including services whose model list contains only IDs.
+You can set either budget manually or clear its field to return to automatic values. The Models page also shows published token-price estimates, price
 tiers, sources, and dates as a reference for choosing a model.
 
 ### Conversations that stay useful

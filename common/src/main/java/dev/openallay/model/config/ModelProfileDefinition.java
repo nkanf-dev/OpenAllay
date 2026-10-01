@@ -17,7 +17,7 @@ public record ModelProfileDefinition(
         String model,
         String credentialRef,
         Integer contextWindowTokens,
-        int maxOutputTokens,
+        Integer maxOutputTokens,
         Duration connectTimeout,
         Duration requestTimeout,
         MetadataProvenance metadata) {
@@ -42,10 +42,13 @@ public record ModelProfileDefinition(
         } else {
             credentialRef = CredentialReference.parse(credentialRef).encoded();
         }
-        if (maxOutputTokens <= 0) {
+        if (maxOutputTokens != null && maxOutputTokens <= 0) {
             throw new IllegalArgumentException("maxOutputTokens must be positive");
         }
-        if (contextWindowTokens != null) {
+        if (contextWindowTokens != null && contextWindowTokens <= 0) {
+            throw new IllegalArgumentException("contextWindowTokens must be positive");
+        }
+        if (contextWindowTokens != null && maxOutputTokens != null) {
             new ContextBudget(contextWindowTokens, maxOutputTokens);
         }
         Objects.requireNonNull(connectTimeout, "connectTimeout");

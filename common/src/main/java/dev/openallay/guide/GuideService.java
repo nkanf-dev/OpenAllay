@@ -110,6 +110,26 @@ public final class GuideService implements GuideHistoryAdministration {
         return snapshot;
     }
 
+    /** Settings-only runtime projection; never reconstructed from checkpoint sums or transcript pages. */
+    public java.util.Optional<GuideContextEstimate> contextEstimate() {
+        if (disconnected || local == null) return java.util.Optional.empty();
+        GuideSessionSnapshot selected = snapshot.sessions().stream()
+                .filter(session -> session.sessionId().equals(snapshot.selectedSession()))
+                .findFirst().orElse(null);
+        if (selected == null || selected.requests().isEmpty()
+                || selected.modelSelection().kind() != GuideModelSelection.Kind.CLIENT) {
+            return java.util.Optional.empty();
+        }
+        GuideRequestSnapshot request = selected.requests().stream().filter(value -> !value.terminal())
+                .reduce((first, second) -> second)
+                .orElse(selected.requests().getLast());
+        if (!request.modelSelection().equals(selected.modelSelection())) {
+            return java.util.Optional.empty();
+        }
+        return local.contextEstimate(selected.modelSelection().profileId(), actor, selected.sessionId())
+                .filter(estimate -> estimate.requestId().equals(request.requestId()));
+    }
+
     public GuideSubscription subscribe(Consumer<GuideSnapshot> listener) {
         Objects.requireNonNull(listener, "listener");
         dispatcher.execute(() -> {

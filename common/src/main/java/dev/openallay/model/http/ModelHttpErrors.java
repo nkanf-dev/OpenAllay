@@ -37,7 +37,8 @@ public final class ModelHttpErrors {
 
     private static ModelClientException rejectedBadRequest(int status, InputStream body)
             throws IOException {
-        String classifier = readBounded(body).toLowerCase(java.util.Locale.ROOT);
+        BadRequestClassifier details = readBounded(body);
+        String classifier = details.text().toLowerCase(java.util.Locale.ROOT);
         String code;
         String message;
         if (containsAny(classifier,
@@ -45,7 +46,7 @@ public final class ModelHttpErrors {
                 "max_tokens", "max_completion_tokens")) {
             code = "model_context_rejected";
             message = "Model context was rejected by the endpoint";
-        } else if (containsAny(classifier,
+        } else if (details.toolCallIdSchemaRejection() || containsAny(classifier,
                 "tool_call", "tool call", "tool_use", "tool result", "tool_result",
                 "function call", "function_call")) {
             code = "model_protocol_rejected";
@@ -57,8 +58,10 @@ public final class ModelHttpErrors {
         return new ModelClientException(new ModelFailure(code, message, status));
     }
 
+    private record BadRequestClassifier(String text, boolean toolCallIdSchemaRejection) {}
+
     /** Returns only classifier fields and never preserves the provider body itself. */
-    private static String readBounded(InputStream body) throws IOException {
+    private static BadRequestClassifier readBounded(InputStream body) throws IOException {
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
         byte[] buffer = new byte[1024];
         while (bytes.size() < ERROR_BODY_LIMIT_BYTES) {
@@ -73,7 +76,7 @@ public final class ModelHttpErrors {
         try {
             JsonElement parsed = JsonParser.parseString(encoded);
             if (!parsed.isJsonObject()) {
-                return "";
+                return new BadRequestClassifier("", false);
             }
             JsonObject root = parsed.getAsJsonObject();
             JsonObject error = root.has("error") && root.get("error").isJsonObject()
@@ -83,10 +86,34 @@ public final class ModelHttpErrors {
             appendString(error, "type", classifier);
             appendString(error, "code", classifier);
             appendString(error, "message", classifier);
-            return classifier.toString();
+            return new BadRequestClassifier(classifier.toString(), toolCallIdSchemaRejection(error));
         } catch (RuntimeException ignored) {
-            return "";
+            return new BadRequestClassifier("", false);
         }
+    }
+
+    private static boolean toolCallIdSchemaRejection(JsonObject error) {
+        String code = stringField(error, "code");
+        if (!code.equals("string_above_max_length") && !code.equals("string_pattern_mismatch")) {
+            return false;
+        }
+        // Inspect only known protocol field paths. Do not retain or expose a provider's
+        // arbitrary parameter value, body, or message as a diagnostic.
+        String parameter = stringField(error, "param");
+        return parameter.equals("call_id")
+                || parameter.equals("tool_call_id")
+                || parameter.equals("tool_use_id")
+                || parameter.matches("input\\[\\d+\\]\\.call_id")
+                || parameter.matches("messages\\[\\d+\\]\\.tool_call_id")
+                || parameter.matches("messages\\[\\d+\\]\\.tool_calls\\[\\d+\\]\\.id")
+                || parameter.matches("messages\\[\\d+\\]\\.content\\[\\d+\\]\\.tool_use_id");
+    }
+
+    private static String stringField(JsonObject object, String field) {
+        JsonElement value = object.get(field);
+        return value != null && value.isJsonPrimitive() && value.getAsJsonPrimitive().isString()
+                ? value.getAsString()
+                : "";
     }
 
     private static void appendString(JsonObject object, String field, StringBuilder output) {

@@ -54,7 +54,8 @@ final class RhinoJsonNormalizer {
             return ordinary(JsonNull.INSTANCE, JavascriptSemanticKind.SCALAR);
         }
         if (value == Undefined.INSTANCE || value == Undefined.SCRIPTABLE_INSTANCE) {
-            throw invalid("JavaScript result is undefined");
+            throw invalid("JavaScript result is undefined. Return an explicit JSON value; check the "
+                    + "selected roots and documented fields. This alone does not mean game data is unavailable.");
         }
         if (value instanceof Boolean booleanValue) {
             return ordinary(new JsonPrimitive(booleanValue), JavascriptSemanticKind.SCALAR);
@@ -79,7 +80,12 @@ final class RhinoJsonNormalizer {
             if (unwrapped == null) return ordinary(JsonNull.INSTANCE, JavascriptSemanticKind.SCALAR);
             return ordinary(new JsonPrimitive(String.valueOf(unwrapped)), JavascriptSemanticKind.SCALAR);
         }
-        if (value instanceof BaseFunction || value instanceof NativePromise || value instanceof Symbol) {
+        if (value instanceof BaseFunction) {
+            throw invalid("JavaScript result contains a function. Return JSON data from the operation, "
+                    + "not the function or module itself; omit function properties. "
+                    + "This result error does not mean the operation is unavailable.");
+        }
+        if (value instanceof NativePromise || value instanceof Symbol) {
             throw invalid("JavaScript result contains an unsupported host or executable value");
         }
         if (value instanceof NativeArray array) {

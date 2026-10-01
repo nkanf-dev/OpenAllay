@@ -47,6 +47,7 @@ historical checkpoints are not approval of a later release candidate.
 | SKMB-2026-10-01-036 | accepted | builtin model catalog, automatic BEST missing-context matching and published price estimates | B, C, D, F | decisions/2026-10-01-036-builtin-model-catalog.md | b9e415b |
 | SKMB-2026-10-01-037 | accepted | model-written JavaScript invocation display intent | B, E, F | decisions/2026-10-01-037-javascript-tool-intent.md | fef6f74 |
 | SKMB-2026-10-01-038 | accepted | native UI fit, friendly recorded evidence, terminal pending-Tool display, and retry clarity | B, E, F | decisions/2026-10-01-038-native-ui-evidence-and-lifecycle-clarity.md | f8c61e9 |
+| SKMB-2026-10-01-040 | accepted | manual runtime protocol IDs, JavaScript recovery, truthful diagnostics, and automatic output maximum | B, D, E, F | decisions/2026-10-01-040-manual-runtime-root-causes.md | pending |
 
 SKMB-2026-07-18-006 is implemented by `a0eaeff`, `19ab90f`, and `c6ca6bc`.
 Its deterministic clean-build and packaged-driver evidence is recorded in the
@@ -211,6 +212,13 @@ See `decisions/2026-09-29-033-unrestricted-javascript-mode.md`.
 | extension_invocation_active | A trusted Extension participant scope exists for one script call | Generic invocation registry and Extension-owned scope | Closing the call/request revokes further callbacks and evidence | SKMB-2026-09-30-034 |
 | online_edit_running | An authorized online edit has durable intent and may have partial applied changes | Independently packaged Builder Extension | Cancellation does not undo applied writes | SKMB-2026-09-30-034 |
 | requirements_review_ready | A checked package or installed Skill has advisory requirements ready for player review | Settings service | No install or permission mutation occurred merely by previewing | SKMB-2026-09-30-035 |
+| model_request_encoding | Internal Tool identities are being mapped into one provider request's valid wire IDs | Provider JSON codec | Request-local deterministic aliases preserve pairs; durable IDs remain unchanged | SKMB-2026-10-01-040 |
+| provider_request_ready | The encoded message group has protocol-safe call IDs | ModelClient protocol adapter | Existing provider dispatch/cancellation ownership | SKMB-2026-10-01-040 |
+| source_not_loaded | No current knowledge reload has published factual source status | KnowledgeRegistry diagnostics projection | Counts are unknown, not zero | SKMB-2026-10-01-040 |
+| source_ready | A current source generation published counts and coverage | KnowledgeRegistry | Immutable counts-only projection; empty is factual only with evidence | SKMB-2026-10-01-040 |
+| source_partial or source_failed_retained | A degraded reload retains explicitly labeled prior factual source counts | KnowledgeRegistry | Does not imply newest capture succeeded or missing data is empty | SKMB-2026-10-01-040 |
+| context_estimate_unknown | The selected request/profile has no matching actual local model dispatch estimate | ClientGuideRuntime/GuideService | Server, preparing and stale/mismatched estimates remain unknown | SKMB-2026-10-01-040 |
+| context_estimate_known | Exact latest local ModelRequest estimate matches selected actor/session/request/profile | ClientGuideRuntime/GuideService | Volatile runtime projection; cleared by lifecycle and never fabricated from checkpoints | SKMB-2026-10-01-040 |
 
 ## Transition Decisions
 
@@ -305,6 +313,9 @@ See `decisions/2026-09-29-033-unrestricted-javascript-mode.md`.
 | T90 | extension_invocation_active | execution finishes, fails, cancels or request closes | closed | Revoke active context, close participant scopes in reverse order, preserve partial external effects | SKMB-2026-09-30-034 |
 | T88 | requirements_review_ready | player selects Continue anyway | publishing or unchanged enabled Skill | Proceed only with the selected package/use; grant no requirements | SKMB-2026-09-30-035 |
 | T89 | requirements_review_ready | player explicitly enables available requirements | applying then re-evaluated review | Use existing setting writes; retain failures and do not install dependencies implicitly | SKMB-2026-09-30-035 |
+| T91 | model_request_encoding | restored qualified Tool IDs reach a provider codec | provider_request_ready | Preserve internal IDs and deterministically encode valid paired outbound IDs under that protocol's constraints | SKMB-2026-10-01-040 |
+| T92 | source_not_loaded or source_ready | existing knowledge reload completes or fails | source_ready, source_partial or source_failed_retained | Publish immutable source-count status; retain prior valid counts explicitly and never manufacture missing counts as zero | SKMB-2026-10-01-040 |
+| T93 | local_request_preparing | exact ModelRequest is about to dispatch | context_estimate_known | Observe the actual estimate scoped to endpoint, actor, session and request; pre-dispatch/server/mismatched scope stays unknown | SKMB-2026-10-01-040 |
 
 ## Invariants
 
@@ -418,6 +429,10 @@ See `decisions/2026-09-29-033-unrestricted-javascript-mode.md`.
 | I106 | Construction algorithms, native domain APIs, persistence and Skill names belong to the independent Extension repository; core has only generic invocation/distribution contracts | SKMB-2026-09-30-034 |
 | I107 | Trusted Extension evidence is execution-local and is recorded only for actual operations; an active scope or module declaration is not factual evidence | SKMB-2026-09-30-034 |
 | I108 | Advisory requirements neither block install/use nor grant authority; Continue anyway does not mutate authorizations or frozen requests | SKMB-2026-09-30-035 |
+| I109 | Provider outbound ID aliases preserve ToolUse/ToolResult pairing and uniqueness without rewriting durable IDs, clearing history or introducing product-wide ID limits | SKMB-2026-10-01-040 |
+| I110 | Root-selector errors and executable-result errors remain failures with exact recovery guidance; they do not establish absence of game data or authorize extra roots | SKMB-2026-10-01-040 |
+| I111 | Source diagnostics use immutable published counts; context diagnostics use the exact latest local request estimate bound to its request/model/session, and unavailable metrics are unknown rather than zero | SKMB-2026-10-01-040 |
+| I112 | Explicit context/output budgets remain manual; automatic output uses exact trusted metadata then eligible bundled published maximum, never an arbitrary default or silent clamp | SKMB-2026-10-01-040 |
 
 ## Fail Semantics
 
@@ -491,6 +506,10 @@ See `decisions/2026-09-29-033-unrestricted-javascript-mode.md`.
 | F65 | Extension invocation setup fails or its context is revoked | Close opened scopes and return a structured failure; no late operations/evidence may publish | SKMB-2026-09-30-034 |
 | F66 | Online construction is cancelled, loses its bound world, or fails after writes | Stop further work, preserve the partial journal and report incomplete outcome; do not undo automatically | SKMB-2026-09-30-034 |
 | F67 | Requirements are missing, disabled or unknown | Show advisory status and enable/cancel/Continue anyway choices; actual invocation still fails if its real capability is unavailable | SKMB-2026-09-30-035 |
+| F68 | A provider rejects an invalid outbound Tool-call ID | Classify allowlisted call_id schema failures as protocol rejection; encode corrected paired IDs on future explicit requests without leaking or replaying the body | SKMB-2026-10-01-040 |
+| F69 | A JavaScript selector is invalid, unknown or declared-but-unavailable, or the return contains executable values | Retain the matching stable failure with descriptor-only correction/JSON-operation guidance; select no additional roots and publish no successful empty fact | SKMB-2026-10-01-040 |
+| F70 | Source status or request estimate is unavailable, stale or unbound | Project unknown; never treat hardcoded empty counts/checkpoint sums as current factual status | SKMB-2026-10-01-040 |
+| F71 | Automatic output has no published maximum or violates the selected context budget | Require a valid manual output configuration; preserve the draft and prior runtime instead of defaulting or clamping | SKMB-2026-10-01-040 |
 
 ## Reviewed Statistical Defaults
 

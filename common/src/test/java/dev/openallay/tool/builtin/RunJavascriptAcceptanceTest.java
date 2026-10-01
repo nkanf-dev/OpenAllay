@@ -267,6 +267,44 @@ final class RunJavascriptAcceptanceTest {
     }
 
     @Test
+    void barePlayerAndGameSelectionsReadTheirDocumentedPositionPaths() {
+        for (String root : List.of("player", "game")) {
+            String path = "player".equals(root) ? "mc.player.position" : "mc.game.player.player.position";
+            ToolResult.Success<RunJavascriptTool.Output> success = assertInstanceOf(
+                    ToolResult.Success.class,
+                    tool.invokeAsync(context, new RunJavascriptTool.Input(
+                            "return " + path + ";", List.of(), List.of(root)), new CancellationSignal()).join());
+            var position = workspaces.open(context.correlationId()).open(success.value().handle()).getAsJsonObject();
+            var expected = context.player().orElseThrow().position();
+            assertEquals(expected.x(), position.get("x").getAsInt());
+            assertEquals(expected.y(), position.get("y").getAsInt());
+            assertEquals(expected.z(), position.get("z").getAsInt());
+            assertFalse(success.value().evidence().isEmpty());
+        }
+    }
+
+    @Test
+    void functionReturnIsAnActionableFailureWithoutPublishingAnEmptyFact() {
+        ToolResult.Failure<RunJavascriptTool.Output> failure = assertInstanceOf(
+                ToolResult.Failure.class,
+                tool.invokeAsync(context, new RunJavascriptTool.Input(
+                        "var module = require('openallay:crafting'); var count = mc.items.length; return module;",
+                        List.of(), List.of("items")), new CancellationSignal()).join());
+        assertEquals("javascript_result_invalid", failure.code());
+        assertTrue(failure.message().contains("Return JSON data from the operation"));
+        assertTrue(failure.message().contains("not the function or module itself"));
+        assertTrue(failure.message().contains("does not mean the operation is unavailable"));
+        assertEquals(0, workspaces.open(context.correlationId()).size());
+        ToolResult.Success<RunJavascriptTool.Output> corrected = assertInstanceOf(
+                ToolResult.Success.class,
+                tool.invokeAsync(context, new RunJavascriptTool.Input(
+                        "var module = require('openallay:crafting'); return {count: mc.items.length};",
+                        List.of(), List.of("items")), new CancellationSignal()).join());
+        assertTrue(corrected.value().preview().getAsJsonObject().get("count").getAsInt() > 0);
+        assertFalse(corrected.value().evidence().isEmpty());
+    }
+
+    @Test
     void reportsOnlyEvidenceForRootsActuallyReadByThisInvocation() {
         ToolResult.Success<RunJavascriptTool.Output> items = assertInstanceOf(
                 ToolResult.Success.class,

@@ -10,6 +10,8 @@ import java.util.Set;
 public final class KnowledgeRegistry {
     private volatile PublishedKnowledge published = published(KnowledgeSnapshot.empty());
     private volatile List<KnowledgeDiagnostic> diagnostics = List.of();
+    private volatile KnowledgeSourceSnapshot sourceSnapshot = KnowledgeSourceSnapshot.notLoaded();
+    private long sourceGeneration;
     private List<KnowledgeSourceProvider> primaryProviders = List.of();
     private List<KnowledgeSourceProvider> supplementalProviders = List.of();
     private Set<String> disabledPrimaryProviderIds = Set.of();
@@ -72,9 +74,14 @@ public final class KnowledgeRegistry {
         List<dev.openallay.context.EvidenceMetadata> evidence = new ArrayList<>();
         Set<String> keys = new HashSet<>();
         String failureCode = "provider_failure";
+        String activeSource = "knowledge";
+        List<KnowledgeSourceSnapshot.Source> sourceStates = new ArrayList<>();
+        String generation = "knowledge-" + (sourceGeneration + 1);
         try {
             for (KnowledgeSourceProvider provider : providers) {
+                activeSource = provider.sourceId();
                 KnowledgeLoad load = provider.load();
+                sourceStates.add(sourceState(provider.sourceId(), load, generation));
                 nextDiagnostics.addAll(load.diagnostics());
                 evidence.addAll(load.evidence());
                 for (KnowledgeDocument document : load.documents()) {
@@ -98,9 +105,25 @@ public final class KnowledgeRegistry {
             PublishedKnowledge next = published(nextSnapshot);
             published = next;
             diagnostics = List.copyOf(nextDiagnostics);
+            sourceGeneration++;
+            sourceSnapshot = new KnowledgeSourceSnapshot(true, false, null, sourceStates);
             return true;
         } catch (Exception failure) {
-            String source = providers.isEmpty() ? "knowledge" : providers.getFirst().sourceId();
+            String source = activeSource;
+            List<KnowledgeSourceSnapshot.Source> retained = new ArrayList<>();
+            for (KnowledgeSourceSnapshot.Source prior : sourceSnapshot.sources()) {
+                if (prior.generation() != null) {
+                    retained.add(new KnowledgeSourceSnapshot.Source(
+                            prior.sourceId(), prior.generation(), KnowledgeSourceSnapshot.State.PARTIAL,
+                            prior.itemCount(), failureCode));
+                }
+            }
+            boolean hasRetained = sourceGeneration > 0;
+            if (retained.stream().noneMatch(value -> value.sourceId().equals(source))) {
+                retained.add(new KnowledgeSourceSnapshot.Source(
+                        source, null, KnowledgeSourceSnapshot.State.FAILED, null, failureCode));
+            }
+            sourceSnapshot = new KnowledgeSourceSnapshot(true, hasRetained, failureCode, retained);
             diagnostics = List.of(new KnowledgeDiagnostic(
                     source,
                     failureCode,
@@ -108,6 +131,38 @@ public final class KnowledgeRegistry {
                     source));
             return false;
         }
+    }
+
+    private static KnowledgeSourceSnapshot.Source sourceState(
+            String sourceId, KnowledgeLoad load, String generation) {
+        int count = (int) load.documents().stream().filter(KnowledgeDocument::visible).count();
+        boolean unknown = load.evidence().isEmpty() || load.evidence().stream().anyMatch(value ->
+                value.completeness() == dev.openallay.context.DataCompleteness.UNKNOWN);
+        boolean partial = unknown || !load.diagnostics().isEmpty() || load.evidence().stream().anyMatch(value ->
+                value.completeness() != dev.openallay.context.DataCompleteness.COMPLETE);
+        KnowledgeSourceSnapshot.State state = unknown && count == 0
+                ? KnowledgeSourceSnapshot.State.UNAVAILABLE
+                : partial ? KnowledgeSourceSnapshot.State.PARTIAL : KnowledgeSourceSnapshot.State.AVAILABLE;
+        String code = load.diagnostics().isEmpty()
+                ? (partial ? "knowledge_incomplete" : null) : load.diagnostics().getFirst().code();
+        return new KnowledgeSourceSnapshot.Source(
+                sourceId, state == KnowledgeSourceSnapshot.State.UNAVAILABLE ? null : generation,
+                state, unknown && count == 0 ? null : count, code);
+    }
+
+    /** Drops connection-captured data/handles without loading providers or changing saved policy. */
+    public synchronized void clearConnectionState() {
+        published = published(KnowledgeSnapshot.empty());
+        diagnostics = List.of();
+        sourceSnapshot = KnowledgeSourceSnapshot.notLoaded();
+        sourceGeneration = 0;
+        primaryProviders = List.of();
+        // Supplemental configuration and explicit primary-source deny choices survive reconnect.
+    }
+
+    /** Reading this immutable status does not load providers or inspect Game state. */
+    public KnowledgeSourceSnapshot sourceSnapshot() {
+        return sourceSnapshot;
     }
 
     public KnowledgeSnapshot snapshot() {

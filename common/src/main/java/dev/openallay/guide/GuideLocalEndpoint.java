@@ -47,6 +47,12 @@ public interface GuideLocalEndpoint {
         return Optional.empty();
     }
 
+    /** Local runtime-only status. Remote or unobserved requests remain explicitly unknown. */
+    default Optional<GuideContextEstimate> contextEstimate(
+            String profileId, UUID actor, String sessionId) {
+        return Optional.empty();
+    }
+
     default void hydrateContext(
             UUID actor,
             String sessionId,

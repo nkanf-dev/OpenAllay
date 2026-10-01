@@ -298,7 +298,13 @@ public final class ClientSettingsService implements AutoCloseable {
             boolean configured,
             Optional<GuideSnapshot> guide,
             GuideHistoryActivity activity,
-            SettingsDiagnosticsAggregator.HistoryScopeKind scopeKind) {
+            SettingsDiagnosticsAggregator.HistoryScopeKind scopeKind,
+            Long estimatedContextTokens) {
+        public HistoryRuntimeState(boolean configured, Optional<GuideSnapshot> guide,
+                GuideHistoryActivity activity, SettingsDiagnosticsAggregator.HistoryScopeKind scopeKind) {
+            this(configured, guide, activity, scopeKind, null);
+        }
+
         public HistoryRuntimeState {
             guide = Objects.requireNonNull(guide, "guide");
             Objects.requireNonNull(activity, "activity");
@@ -374,6 +380,11 @@ public final class ClientSettingsService implements AutoCloseable {
     private CommandCapabilityConfig commandState;
     private UnrestrictedJavascriptConfig unrestrictedState = UnrestrictedJavascriptConfig.defaults();
     private HistoryRuntimeState historyState;
+    private java.util.function.Supplier<dev.openallay.knowledge.KnowledgeSourceSnapshot> knowledgeSources =
+            dev.openallay.knowledge.KnowledgeSourceSnapshot::notLoaded;
+    private dev.openallay.knowledge.KnowledgeSourceSnapshot sourceState =
+            dev.openallay.knowledge.KnowledgeSourceSnapshot.notLoaded();
+    private boolean knowledgeSourcesBound;
     private long modelGeneration;
     private long metadataGeneration;
     private Map<ModelMetadata.Key, ModelMetadata> metadata = Map.of();
@@ -1302,14 +1313,38 @@ public final class ClientSettingsService implements AutoCloseable {
         return result;
     }
 
+    /** Binds an immutable published status; the supplier must not capture or load Game data. */
+    public void bindKnowledgeSources(
+            java.util.function.Supplier<dev.openallay.knowledge.KnowledgeSourceSnapshot> sources) {
+        synchronized (lock) {
+            if (knowledgeSourcesBound) {
+                throw new IllegalStateException("Knowledge diagnostics are already bound");
+            }
+            knowledgeSources = Objects.requireNonNull(sources, "sources");
+            knowledgeSourcesBound = true;
+            sourceState = safeSourceState();
+            publishLocked();
+        }
+    }
+
     public void refreshRuntimeState() {
         HistoryRuntimeState refreshed = safeHistoryState(historyActions);
+        dev.openallay.knowledge.KnowledgeSourceSnapshot refreshedSources = safeSourceState();
         synchronized (lock) {
-            if (closed || refreshed.equals(historyState)) {
+            if (closed || refreshed.equals(historyState) && refreshedSources.equals(sourceState)) {
                 return;
             }
             historyState = refreshed;
+            sourceState = refreshedSources;
             publishLocked();
+        }
+    }
+
+    private dev.openallay.knowledge.KnowledgeSourceSnapshot safeSourceState() {
+        try {
+            return Objects.requireNonNull(knowledgeSources.get(), "source snapshot");
+        } catch (RuntimeException unavailable) {
+            return dev.openallay.knowledge.KnowledgeSourceSnapshot.notLoaded();
         }
     }
 
@@ -2120,6 +2155,13 @@ public final class ClientSettingsService implements AutoCloseable {
                 BuiltinModelCatalog.bundled().catalog());
     }
 
+    /** Automatic output uses the model's published maximum; explicit budgets remain manual. */
+    public dev.openallay.model.metadata.ModelOutputResolution modelOutput(
+            java.net.URI endpoint, String model, Integer explicit) {
+        return dev.openallay.model.metadata.ModelOutputResolution.resolve(
+                endpoint, model, explicit, metadataSnapshot(), BuiltinModelCatalog.bundled().catalog());
+    }
+
     private Map<ModelMetadata.Key, ModelMetadata> metadataSnapshot() {
         synchronized (lock) {
             return metadata;
@@ -2164,7 +2206,14 @@ public final class ClientSettingsService implements AutoCloseable {
                                 historyState.activity(),
                                 historyState.scopeKind(),
                                 GuideHistoryPartition.SCHEMA_VERSION,
-                                List.of())),
+                                sourceState.sources().stream().map(source ->
+                                        new SettingsDiagnosticsAggregator.SourceStatus(
+                                                source.sourceId(), source.generation(),
+                                                SettingsDiagnosticsAggregator.SourceState.valueOf(source.state().name()),
+                                                source.itemCount(), source.failureCode())).toList(),
+                                sourceState.loaded(),
+                                sourceState.retained(),
+                                historyState.estimatedContextTokens())),
                 operation,
                 notice,
                 requirementReviewLocked());

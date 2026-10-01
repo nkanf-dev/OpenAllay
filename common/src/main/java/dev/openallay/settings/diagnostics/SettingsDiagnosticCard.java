@@ -35,10 +35,15 @@ public record SettingsDiagnosticCard(
         metrics = List.copyOf(metrics);
     }
 
-    public record Metric(String labelKey, long value) {
+    /** Null means not observed; zero is reserved for a known empty/idle count. */
+    public record Metric(String labelKey, Long value) {
+        public Metric(String labelKey, long value) {
+            this(labelKey, Long.valueOf(value));
+        }
+
         public Metric {
             labelKey = key(labelKey, "labelKey");
-            if (value < 0) {
+            if (value != null && value < 0) {
                 throw new IllegalArgumentException("diagnostic metric must not be negative");
             }
         }

@@ -221,6 +221,89 @@ final class ModelProfilesConfigLoaderTest {
         assertEquals("model_not_configured", failure.code());
     }
 
+    @Test
+    void automaticOutputUsesBundledMaximumAndPreservesExplicitMillionContext() {
+        String json = PROFILES.replace("vendor/model-a", "gpt-6-luna")
+                .replace("256000", "1000000")
+                .replace("\"maxOutputTokens\": 8192,", "");
+        var loaded = success(loader.load(new StringReader(json),
+                Map.of("OPENROUTER_KEY", "fixture-key"))).value();
+        var profile = loaded.profiles().getFirst();
+        assertTrue(profile.available());
+        assertEquals(1_000_000, profile.runtimeConfig().contextWindowTokens());
+        assertEquals(128_000, profile.runtimeConfig().maxOutputTokens());
+        assertNull(profile.definition().maxOutputTokens());
+        assertEquals(128_000, profile.diagnosticView().maxOutputTokens());
+        assertEquals(128_000, dev.openallay.settings.model.ModelProfileSettingsView.Resolution
+                .from(profile).effectiveMaxOutputTokens());
+        assertTrue(success(loader.load(new StringReader(json.replace("gpt-6-luna", "gpt-6-lunna")),
+                Map.of("OPENROUTER_KEY", "fixture-key"))).value().profiles().getFirst().available());
+        assertEquals(128_000, success(loader.load(new StringReader(json.replace("gpt-6-luna", "gpt-6-lunna")),
+                Map.of("OPENROUTER_KEY", "fixture-key"))).value().profiles().getFirst()
+                .runtimeConfig().maxOutputTokens());
+    }
+
+    @Test
+    void trustedExactOutputOutranksBuiltinButExplicitBudgetsAlwaysWin() {
+        String json = PROFILES.replace("vendor/model-a", "openai/gpt-6-luna")
+                .replace("256000", "1000000");
+        var metadata = new ModelMetadata("openrouter", "openai/gpt-6-luna", "canonical",
+                1_050_000, 64_000, Instant.EPOCH);
+        var cache = Map.of(metadata.key(), metadata);
+        var automatic = success(loader.load(new StringReader(json.replace(
+                "\"maxOutputTokens\": 8192", "\"maxOutputTokens\": null")),
+                Map.of("OPENROUTER_KEY", "fixture-key"), cache)).value().profiles().getFirst();
+        assertEquals(64_000, automatic.runtimeConfig().maxOutputTokens());
+        for (int budget : List.of(4_096, 8_192, 128_000)) {
+            var explicit = success(loader.load(new StringReader(json.replace(
+                    "\"maxOutputTokens\": 8192", "\"maxOutputTokens\": " + budget)),
+                    Map.of("OPENROUTER_KEY", "fixture-key"), cache)).value().profiles().getFirst();
+            assertEquals(budget, explicit.runtimeConfig().maxOutputTokens());
+            assertEquals(budget, explicit.definition().maxOutputTokens());
+        }
+        var unpublished = new ModelMetadata("openrouter", "openai/gpt-6-luna", "canonical",
+                1_050_000, null, Instant.EPOCH);
+        assertEquals(128_000, success(loader.load(new StringReader(json.replace(
+                "\"maxOutputTokens\": 8192,", "")), Map.of("OPENROUTER_KEY", "fixture-key"),
+                Map.of(unpublished.key(), unpublished))).value().profiles().getFirst()
+                .runtimeConfig().maxOutputTokens());
+    }
+
+    @Test
+    void missingOutputRequiresManualRepairAndDisabledNullRemainsUnknown() {
+        String json = PROFILES.replace("\"maxOutputTokens\": 8192,", "")
+                .replace("\"maxOutputTokens\": 4096,", "");
+        var loaded = success(loader.load(new StringReader(json),
+                Map.of("OPENROUTER_KEY", "fixture-key"))).value();
+        var failed = loaded.profiles().getFirst();
+        assertEquals("invalid_model_config", failed.failure().code());
+        assertTrue(failed.failure().message().contains("maxOutputTokens"));
+        assertNull(failed.runtimeConfig());
+        assertNull(failed.diagnosticView().maxOutputTokens());
+        var disabled = loaded.profiles().get(1);
+        assertEquals("model_disabled", disabled.failure().code());
+        assertNull(disabled.definition().maxOutputTokens());
+        assertNull(disabled.diagnosticView().maxOutputTokens());
+        assertNull(dev.openallay.settings.model.ModelProfileSettingsView.Resolution
+                .from(disabled, false).effectiveMaxOutputTokens());
+    }
+
+    @Test
+    void automaticMaximumDoesNotClampToFitContextAndMalformedOutputIsRejected() {
+        String json = PROFILES.replace("vendor/model-a", "gpt-6-luna")
+                .replace("\"maxOutputTokens\": 8192,", "");
+        var resolved = success(loader.load(new StringReader(json),
+                Map.of("OPENROUTER_KEY", "fixture-key"))).value().profiles().getFirst();
+        assertEquals("invalid_model_config", resolved.failure().code());
+        assertTrue(resolved.failure().message().contains("two maxOutputTokens"));
+        assertNull(resolved.runtimeConfig());
+        for (String value : List.of("true", "1.5", "\"8192\"", "0", "-1")) {
+            assertInvalid(PROFILES.replace("\"maxOutputTokens\": 8192",
+                    "\"maxOutputTokens\": " + value));
+        }
+        assertInvalid(json.replace("256000", "0"));
+    }
+
     private void assertInvalid(String json) {
         assertEquals("invalid_model_config", failure(loader.load(
                 new StringReader(json), Map.of("OPENROUTER_KEY", "key"))).code());

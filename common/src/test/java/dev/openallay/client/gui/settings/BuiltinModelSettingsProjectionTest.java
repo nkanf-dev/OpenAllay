@@ -77,6 +77,56 @@ final class BuiltinModelSettingsProjectionTest {
         assertEquals(2, calls.get());
     }
 
+    @Test void outputSourcesAndRefreshOwnershipRemainSeparateFromContext() {
+        var cache = new BuiltinModelSettingsProjection.EventCache();
+        var calls = new java.util.concurrent.atomic.AtomicInteger();
+        var draft = ModelProfileDraft.create("main").withModel("gpt-6-luna")
+                .withContextWindow("1000000");
+        var updated = cache.refresh(draft, BuiltinModelCatalog.bundled(),
+                () -> new ModelContextResolution(1_000_000, ModelContextResolution.Origin.EXPLICIT),
+                () -> {
+                    calls.incrementAndGet();
+                    return new dev.openallay.model.metadata.ModelOutputResolution(64_000,
+                            dev.openallay.model.metadata.ModelOutputResolution.Origin.TRUSTED,
+                            "openrouter", java.time.Instant.EPOCH);
+                });
+        assertEquals("1000000", updated.contextWindowTokens());
+        assertEquals("64000", updated.maxOutputTokens());
+        assertEquals("64000", updated.automaticMaxOutputTokens());
+        assertTrue(cache.projection().toString().contains("output_source.trusted"));
+        assertTrue(cache.projection().toString().contains("output_reset_auto"));
+        assertTrue(cache.projection().toString().contains("OpenRouter"));
+        var first = cache.projection();
+        for (int frame = 0; frame < 100; frame++) assertSame(first, cache.projection());
+        assertEquals(1, calls.get());
+        var manual = updated.withMaxOutput("8192");
+        var retained = cache.refresh(manual, BuiltinModelCatalog.bundled(),
+                () -> new ModelContextResolution(1_000_000, ModelContextResolution.Origin.EXPLICIT),
+                () -> new dev.openallay.model.metadata.ModelOutputResolution(8_192,
+                        dev.openallay.model.metadata.ModelOutputResolution.Origin.EXPLICIT));
+        assertEquals("8192", retained.maxOutputTokens());
+        assertNull(retained.automaticMaxOutputTokens());
+        assertTrue(cache.projection().toString().contains("output_source.explicit"));
+        var required = BuiltinModelSettingsProjection.from(draft.withModel("unpublished-model"));
+        assertTrue(required.toString().contains("output_source.required"));
+        assertTrue(BuiltinModelSettingsProjection.from(draft).toString()
+                .contains("output_source.builtin"));
+    }
+
+    @Test void malformedManualOutputPresentationStaysStableWithoutReplacingTheEdit() {
+        var cache = new BuiltinModelSettingsProjection.EventCache();
+        for (String malformed : java.util.List.of("true", "1.5", "0", "-1")) {
+            var draft = ModelProfileDraft.create("main").withModel("gpt-6-luna")
+                    .withMaxOutput(malformed);
+            var projection = BuiltinModelSettingsProjection.from(draft);
+            assertTrue(projection.toString().contains("output_source.required"));
+            var updated = cache.refresh(draft, BuiltinModelCatalog.bundled(),
+                    () -> new ModelContextResolution(1_050_000, ModelContextResolution.Origin.BUILTIN));
+            assertEquals(malformed, updated.maxOutputTokens());
+            assertNull(updated.automaticMaxOutputTokens());
+        }
+    }
+
     @Test void allProjectionKeysExistInEnglishAndChinese() throws Exception {
         var draft = ModelProfileDraft.create("main").withModel("gpt-6-luna");
         var lines = BuiltinModelSettingsProjection.from(draft).lines();

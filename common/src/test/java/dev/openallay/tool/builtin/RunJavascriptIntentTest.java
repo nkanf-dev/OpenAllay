@@ -41,6 +41,23 @@ final class RunJavascriptIntentTest {
     }
 
     @Test
+    void documentsBareRootSelectorsSeparatelyFromJavascriptAccessPaths() {
+        JsonObject roots = new ToolSchemaGenerator().generate(RunJavascriptTool.Input.class)
+                .getAsJsonObject("properties").getAsJsonObject("roots");
+        assertEquals("array", roots.get("type").getAsString());
+        assertEquals("string", roots.getAsJsonObject("items").get("type").getAsString());
+        String description = roots.get("description").getAsString();
+        assertTrue(description.contains("bare top-level names, not mc. access paths"));
+        assertTrue(description.contains("roots [\"player\"]"));
+        assertTrue(description.contains("mc.player.position"));
+        assertTrue(description.contains("roots [\"game\"]"));
+        assertTrue(description.contains("mc.game.player.player.position when captured"));
+        assertTrue(description.contains("world and commands"));
+        assertTrue(description.contains("called directly"));
+        assertTrue(description.contains("Omit only for schema discovery"));
+    }
+
+    @Test
     void acceptsLegacyNullEmptyAndUnboundedPlainTextMetadata() {
         ToolArgumentCodec codec = new ToolArgumentCodec(new Gson());
         for (String metadata : List.of("", ",\"title\":null,\"description\":null",

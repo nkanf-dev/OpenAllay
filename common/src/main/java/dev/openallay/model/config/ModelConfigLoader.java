@@ -3,6 +3,8 @@ package dev.openallay.model.config;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import dev.openallay.model.metadata.BuiltinModelCatalog;
+import dev.openallay.model.metadata.ModelOutputResolution;
 import dev.openallay.tool.ToolResult;
 import java.io.IOException;
 import java.io.Reader;
@@ -70,13 +72,20 @@ public final class ModelConfigLoader {
                     environment.get(keyEnvName),
                     environment.get("OPENALLAY_API_KEY"),
                     optionalString(object, "apiKey"));
-            int maxOutputTokens = integer(
-                    environment, "OPENALLAY_MAX_OUTPUT_TOKENS", object, "maxOutputTokens", 8192);
             int contextWindowTokens = requiredInteger(
                     environment,
                     "OPENALLAY_CONTEXT_WINDOW_TOKENS",
                     object,
                     "contextWindowTokens");
+            java.net.URI endpoint = java.net.URI.create(require(baseUrl, "baseUrl"));
+            String modelId = require(model, "model");
+            Integer maxOutputTokens = ModelOutputResolution.resolve(endpoint, modelId,
+                    optionalOutputInteger(environment, object), Map.of(),
+                    BuiltinModelCatalog.bundled().catalog()).maxOutputTokens();
+            if (maxOutputTokens == null) {
+                throw new IllegalArgumentException(
+                        "maxOutputTokens is required unless model metadata publishes its maximum");
+            }
             int connectSeconds = integer(
                     environment, "OPENALLAY_CONNECT_TIMEOUT_SECONDS", object, "connectTimeoutSeconds", 30);
             int requestSeconds = integer(
@@ -84,8 +93,8 @@ public final class ModelConfigLoader {
             return new ToolResult.Success<>(new ModelConfig(
                     enabled,
                     protocol,
-                    java.net.URI.create(require(baseUrl, "baseUrl")),
-                    require(model, "model"),
+                    endpoint,
+                    modelId,
                     SecretValue.of(require(apiKey, "API key")),
                     contextWindowTokens,
                     maxOutputTokens,
@@ -157,6 +166,28 @@ public final class ModelConfigLoader {
             return value == null ? fallback : Integer.parseInt(value);
         } catch (NumberFormatException exception) {
             throw new IllegalArgumentException(field + " must be an integer");
+        }
+    }
+
+    private static Integer optionalOutputInteger(
+            Map<String, String> environment, JsonObject object) {
+        String environmentValue = environment.get("OPENALLAY_MAX_OUTPUT_TOKENS");
+        if (environmentValue != null) {
+            try {
+                return Integer.valueOf(environmentValue);
+            } catch (NumberFormatException failure) {
+                throw new IllegalArgumentException("maxOutputTokens must be an integer", failure);
+            }
+        }
+        JsonElement value = object.get("maxOutputTokens");
+        if (value == null || value.isJsonNull()) return null;
+        if (!value.isJsonPrimitive() || !value.getAsJsonPrimitive().isNumber()) {
+            throw new IllegalArgumentException("maxOutputTokens must be an integer");
+        }
+        try {
+            return value.getAsBigDecimal().intValueExact();
+        } catch (ArithmeticException | NumberFormatException failure) {
+            throw new IllegalArgumentException("maxOutputTokens must be an integer", failure);
         }
     }
 

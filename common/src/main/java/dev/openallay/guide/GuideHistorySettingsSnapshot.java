@@ -10,11 +10,20 @@ public record GuideHistorySettingsSnapshot(
         boolean configured,
         Optional<GuideSnapshot> guide,
         GuideHistoryActivity activity,
-        Optional<GuideHistoryScope.Kind> scopeKind) {
+        Optional<GuideHistoryScope.Kind> scopeKind,
+        Long estimatedContextTokens) {
+    public GuideHistorySettingsSnapshot(boolean configured, Optional<GuideSnapshot> guide,
+            GuideHistoryActivity activity, Optional<GuideHistoryScope.Kind> scopeKind) {
+        this(configured, guide, activity, scopeKind, null);
+    }
+
     public GuideHistorySettingsSnapshot {
         guide = Objects.requireNonNull(guide, "guide");
         Objects.requireNonNull(activity, "activity");
         scopeKind = Objects.requireNonNull(scopeKind, "scopeKind");
+        if (estimatedContextTokens != null && estimatedContextTokens < 0) {
+            throw new IllegalArgumentException("Context estimate must not be negative");
+        }
         if (guide.isPresent() != scopeKind.isPresent()) {
             throw new IllegalArgumentException(
                     "connected history settings require one friendly scope kind");

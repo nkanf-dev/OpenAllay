@@ -46,6 +46,35 @@ import org.junit.jupiter.api.Test;
 
 final class GameGuideAgentTest {
     @Test
+    void localEstimateObserverSeesEachExactModelInputWithoutAddingWireEvents() {
+        QueueModelClient model = new QueueModelClient();
+        model.enqueue(CompletableFuture.completedFuture(toolTurn("estimate_call", 42)));
+        model.enqueue(CompletableFuture.completedFuture(textTurn("finished")));
+        List<Integer> estimates = new ArrayList<>();
+        List<AgentEvent> events = new ArrayList<>();
+        AgentRequest request = request(UUID.randomUUID());
+        GameGuideAgent agent = new GameGuideAgent(model, new FakeTools(), new AgentSessionStore(),
+                new Gson(), null, (observed, tokens) -> {
+                    assertEquals(request.requestId(), observed.requestId());
+                    estimates.add(tokens);
+                });
+        assertTrue(agent.ask(request, events::add).join().successful());
+        assertEquals(2, estimates.size());
+        var estimator = new Utf8ContextTokenEstimator();
+        for (int index = 0; index < model.requests.size(); index++) {
+            ModelRequest actual = model.requests.get(index);
+            assertEquals(estimator.estimate(actual.systemPrompt(), actual.messages(), actual.tools()),
+                    estimates.get(index));
+        }
+        assertFalse(events.stream().anyMatch(AgentEvent.ContextCompacted.class::isInstance));
+        QueueModelClient other = new QueueModelClient();
+        other.enqueue(CompletableFuture.completedFuture(textTurn("still works")));
+        assertTrue(new GameGuideAgent(other, new FakeTools(), new AgentSessionStore(), new Gson(), null,
+                (observed, tokens) -> { throw new IllegalStateException("observer unavailable"); })
+                .ask(request(UUID.randomUUID()), ignored -> {}).join().successful());
+    }
+
+    @Test
     void executesRealToolFlowAndReturnsGroundedFinalText() {
         QueueModelClient model = new QueueModelClient();
         model.enqueue(CompletableFuture.completedFuture(toolTurn("call_1", 42)));
@@ -447,6 +476,118 @@ final class GameGuideAgentTest {
         assertTrue(invalid.error());
         assertTrue(invalid.value().getAsString().contains("code: invalid_arguments"));
         javascript.closeRequestScope("agent-test");
+    }
+
+    @Test
+    void javascriptRootSelectorFailuresReachTheModelAndCorrectedBareSelectionSucceeds() {
+        QueueModelClient model = new QueueModelClient();
+        String source = "return {position: mc.game.player.player.position, unselected: typeof mc.items};";
+        model.enqueue(CompletableFuture.completedFuture(javascriptProgramTurn("call-player-path", source, "mc.player")));
+        model.enqueue(CompletableFuture.completedFuture(javascriptProgramTurn("call-game-path", source, "mc.game")));
+        model.enqueue(CompletableFuture.completedFuture(javascriptProgramTurn("call-game-bare", source, "game")));
+        model.enqueue(CompletableFuture.completedFuture(textTurn("The captured position is 1, 64, 2.")));
+        AtomicInteger captures = new AtomicInteger();
+        var javascript = new dev.openallay.tool.builtin.RunJavascriptTool(
+                new dev.openallay.script.RhinoJavascriptRuntime(), context -> {
+                    captures.incrementAndGet();
+                    return new dev.openallay.script.data.MinecraftAgentHostGraph(context);
+                }, new dev.openallay.script.workspace.AgentResultWorkspaceRegistry(),
+                new dev.openallay.script.workspace.JavascriptResultPresenter());
+        var registry = new dev.openallay.tool.ToolRegistry();
+        registry.register("test", List.of(javascript));
+        var context = dev.openallay.testing.JavascriptAgentTestFixtures.context("agent-root-recovery");
+        AgentRequest request = new AgentRequest(UUID.randomUUID(), UUID.randomUUID(), "main",
+                "Read the player position.", AgentSystemPrompt.compose(""), context, false);
+        List<AgentEvent> events = new ArrayList<>();
+        AgentResult result = new GameGuideAgent(model,
+                new dev.openallay.agent.tool.LocalAgentToolExecutor(registry, new Gson()),
+                new AgentSessionStore(), new Gson()).ask(request, events::add).join();
+        assertTrue(result.successful());
+        assertEquals(1, captures.get(), "all calls retain the same detached request graph");
+        assertEquals(4, model.requests.size());
+        List<AgentEvent.ToolCompleted> completed = events.stream()
+                .filter(AgentEvent.ToolCompleted.class::isInstance)
+                .map(AgentEvent.ToolCompleted.class::cast).toList();
+        assertEquals(List.of("call-player-path", "call-game-path", "call-game-bare"), completed.stream()
+                .map(AgentEvent.ToolCompleted::invocationId).toList());
+        for (int index = 0; index < 2; index++) {
+            String bare = index == 0 ? "player" : "game";
+            assertTrue(completed.get(index).failure());
+            assertEquals("javascript_root_unavailable", completed.get(index).normalized().get("code").getAsString());
+            assertFalse(completed.get(index).normalized().has("value"), "selector failure publishes no empty fact");
+            ModelContent.ToolResult failure = (ModelContent.ToolResult) model.requests.get(index + 1)
+                    .messages().getLast().content().getFirst();
+            assertTrue(failure.error());
+            String feedback = failure.value().getAsString();
+            assertTrue(feedback.contains("code: javascript_root_unavailable"));
+            assertTrue(feedback.contains("Use roots [\"" + bare + "\"] and access mc." + bare));
+            assertTrue(feedback.contains("Current declared bare roots:"));
+        }
+        assertFalse(completed.get(2).failure(), "different corrected execution arguments are not suppressed");
+        var preview = completed.get(2).normalized().getAsJsonObject("value").getAsJsonObject("preview");
+        assertEquals(1, preview.getAsJsonObject("position").get("x").getAsInt());
+        assertEquals(64, preview.getAsJsonObject("position").get("y").getAsInt());
+        assertEquals(2, preview.getAsJsonObject("position").get("z").getAsInt());
+        assertEquals("undefined", preview.get("unselected").getAsString());
+        ModelContent.ToolResult success = (ModelContent.ToolResult) model.requests.get(3)
+                .messages().getLast().content().getFirst();
+        assertFalse(success.error());
+        assertFalse(success.value().getAsString().contains("no_new_information"));
+    }
+
+    @Test
+    void javascriptModuleReturnFailureReachesTheModelWithJsonRecoveryAndNoEmptyFact() {
+        QueueModelClient model = new QueueModelClient();
+        model.enqueue(CompletableFuture.completedFuture(javascriptProgramTurn("call-module",
+                "var module = require('openallay:crafting'); var count = mc.items.length; return module;", "items")));
+        model.enqueue(CompletableFuture.completedFuture(javascriptProgramTurn("call-data",
+                "var module = require('openallay:crafting'); return {count: mc.items.length};", "items")));
+        model.enqueue(CompletableFuture.completedFuture(textTurn("The captured item count is 6.")));
+        var javascript = new dev.openallay.tool.builtin.RunJavascriptTool(
+                new dev.openallay.script.RhinoJavascriptRuntime(),
+                dev.openallay.script.data.MinecraftAgentHostGraph::new,
+                new dev.openallay.script.workspace.AgentResultWorkspaceRegistry(),
+                new dev.openallay.script.workspace.JavascriptResultPresenter());
+        var registry = new dev.openallay.tool.ToolRegistry();
+        registry.register("test", List.of(javascript));
+        var context = dev.openallay.testing.JavascriptAgentTestFixtures.context("agent-result-recovery");
+        AgentRequest request = new AgentRequest(UUID.randomUUID(), UUID.randomUUID(), "main",
+                "Count the captured items.", AgentSystemPrompt.compose(""), context, false);
+        List<AgentEvent> events = new ArrayList<>();
+        AgentResult result = new GameGuideAgent(model,
+                new dev.openallay.agent.tool.LocalAgentToolExecutor(registry, new Gson()),
+                new AgentSessionStore(), new Gson()).ask(request, events::add).join();
+        assertTrue(result.successful());
+        ModelContent.ToolResult failure = (ModelContent.ToolResult) model.requests.get(1)
+                .messages().getLast().content().getFirst();
+        assertTrue(failure.error());
+        String feedback = failure.value().getAsString();
+        assertTrue(feedback.contains("code: javascript_result_invalid"));
+        assertTrue(feedback.contains("Return JSON data from the operation"));
+        assertTrue(feedback.contains("not the function or module itself"));
+        assertTrue(feedback.contains("does not mean the operation is unavailable"));
+        List<AgentEvent.ToolCompleted> completed = events.stream()
+                .filter(AgentEvent.ToolCompleted.class::isInstance)
+                .map(AgentEvent.ToolCompleted.class::cast).toList();
+        assertEquals(2, completed.size());
+        assertTrue(completed.getFirst().failure());
+        assertFalse(completed.getFirst().normalized().has("value"));
+        assertFalse(completed.get(1).failure());
+        assertEquals(6, completed.get(1).normalized().getAsJsonObject("value")
+                .getAsJsonObject("preview").get("count").getAsInt());
+        ModelContent.ToolResult success = (ModelContent.ToolResult) model.requests.get(2)
+                .messages().getLast().content().getFirst();
+        assertFalse(success.error());
+    }
+
+    private static ModelTurn javascriptProgramTurn(String invocationId, String source, String root) {
+        JsonObject input = new JsonObject();
+        input.addProperty("source", source);
+        input.add("roots", JsonParser.parseString("[\"" + root + "\"]"));
+        input.addProperty("title", "Read captured data");
+        input.addProperty("description", "Read the requested data without changing the world");
+        return new ModelTurn("test", "test-model", List.of(new ModelContent.ToolUse(
+                invocationId, "openallay__run_javascript", input)), "tool_use", ModelUsage.empty());
     }
 
     private static ModelTurn javascriptTurn(String invocationId, String title) {

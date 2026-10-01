@@ -36,6 +36,7 @@ public final class GameGuideAgent {
     private final Gson gson;
     private final ToolResultNormalizer canonicalizer;
     private final ContextCompactor compactor;
+    private final java.util.function.BiConsumer<AgentRequest, Integer> contextEstimates;
 
     public GameGuideAgent(
             ModelClient model,
@@ -51,6 +52,15 @@ public final class GameGuideAgent {
             AgentSessionStore sessions,
             Gson gson,
             ContextCompactor compactor) {
+        this(model, tools, sessions, gson, compactor, (request, tokens) -> {});
+    }
+
+    /** Local counts-only observer. It does not add Agent events or change the wire/history schema. */
+    public GameGuideAgent(
+            ModelClient model, AgentToolExecutor tools, AgentSessionStore sessions, Gson gson,
+            ContextCompactor compactor,
+            java.util.function.BiConsumer<AgentRequest, Integer> contextEstimates) {
+        this.contextEstimates = Objects.requireNonNull(contextEstimates, "contextEstimates");
         this.model = Objects.requireNonNull(model, "model");
         this.tools = Objects.requireNonNull(tools, "tools");
         this.sessions = Objects.requireNonNull(sessions, "sessions");
@@ -220,6 +230,14 @@ public final class GameGuideAgent {
                 tools.definitions(),
                 request.stream(),
                 request.sessionKey().schedulingKey());
+        lease.cancellation().throwIfCancelled();
+        int estimatedTokens = new dev.openallay.agent.context.Utf8ContextTokenEstimator().estimate(
+                modelRequest.systemPrompt(), modelRequest.messages(), modelRequest.tools());
+        try {
+            contextEstimates.accept(request, estimatedTokens);
+        } catch (RuntimeException ignored) {
+            // An optional diagnostic observer cannot break model execution.
+        }
         trace.modelRequest(modelRequest);
         return model.complete(
                         modelRequest,

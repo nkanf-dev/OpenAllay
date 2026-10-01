@@ -4,9 +4,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.openallay.knowledge.KnowledgeSnapshot;
+import dev.openallay.script.JavascriptExecutionException;
 import dev.openallay.script.extension.JavascriptDataModule;
 import dev.openallay.script.extension.JavascriptDataModuleRegistry;
 import dev.openallay.script.schema.HostSchema;
@@ -179,6 +181,93 @@ final class MinecraftAgentHostGraphTest {
         assertEquals("test-provider", catalog.getFirst().provider());
         assertInstanceOf(HostSchema.RecordValue.class, catalog.getFirst().schema());
         assertEquals(0, captures.get());
+    }
+
+    @Test
+    void rejectsKnownAccessPathsWithExactBareSelectorCorrections() {
+        var context = JavascriptAgentTestFixtures.context("root-corrections");
+        MinecraftAgentHostGraph graph = new MinecraftAgentHostGraph(context);
+        for (String bare : List.of("player", "game")) {
+            JavascriptExecutionException failure = assertThrows(
+                    JavascriptExecutionException.class, () -> graph.select(List.of("mc." + bare)));
+            assertEquals("javascript_root_unavailable", failure.code());
+            assertTrue(failure.getMessage().contains("Invalid Minecraft root selector: mc." + bare));
+            assertTrue(failure.getMessage().contains("Use roots [\"" + bare + "\"] and access mc." + bare));
+            assertTrue(failure.getMessage().contains("Current declared bare roots: " + graph.schemaCatalog()
+                    .list().stream().map(root -> root.name()).toList()));
+            assertTrue(failure.getMessage().contains("Available this request: " + graph.schemaCatalog()
+                    .availableRootNames()));
+            assertFalse(failure.getMessage().contains("That declared root is unavailable"));
+        }
+        assertSame(context.player().orElseThrow(), graph.select(List.of("player")).get("player"));
+        assertSame(context.observableGameState().orElseThrow(), graph.select(List.of("game")).get("game"));
+    }
+
+    @Test
+    void rejectsUnknownNestedAndRepeatedPrefixSelectorsWithoutResolvingSuppliers() {
+        var context = JavascriptAgentTestFixtures.context("invalid-root-laziness");
+        AtomicInteger knowledgeCaptures = new AtomicInteger();
+        AtomicInteger extensionCaptures = new AtomicInteger();
+        JavascriptDataModuleRegistry extensions = new JavascriptDataModuleRegistry();
+        extensions.register("test", List.of(new JavascriptDataModule() {
+            @Override public String id() { return "test:lazy"; }
+            @Override public java.lang.reflect.Type valueType() { return ModuleRecord.class; }
+            @Override public Snapshot capture(dev.openallay.context.ToolInvocationContext ignored) {
+                extensionCaptures.incrementAndGet();
+                return new Snapshot(new ModuleRecord("value"), List.of(context.registries().orElseThrow().evidence()));
+            }
+        }));
+        MinecraftAgentHostGraph graph = new MinecraftAgentHostGraph(context, () -> {
+            knowledgeCaptures.incrementAndGet();
+            return KnowledgeSnapshot.empty();
+        }, extensions);
+        for (String requested : List.of("unknown", "", "bad-name", "player.position", "mc.unknown", "mc.player.position",
+                "mc.mc.player", "mc.commands", "mc.world", "mc.knowledge", "mc.extensions")) {
+            JavascriptExecutionException failure = assertThrows(
+                    JavascriptExecutionException.class, () -> graph.select(List.of(requested)));
+            assertEquals("javascript_root_unavailable", failure.code(), requested);
+            assertTrue(failure.getMessage().contains("Current declared bare roots:"));
+            assertTrue(failure.getMessage().contains("Available this request:"));
+            if ("unknown".equals(requested)) {
+                assertTrue(failure.getMessage().contains("Unknown Minecraft data root: unknown"));
+            } else {
+                assertTrue(failure.getMessage().contains("Invalid Minecraft root selector:"));
+            }
+            if (!List.of("mc.knowledge", "mc.extensions").contains(requested)) {
+                assertFalse(failure.getMessage().contains("Use roots ["), requested);
+            }
+            assertEquals(0, knowledgeCaptures.get());
+            assertEquals(0, extensionCaptures.get());
+        }
+        var corrected = graph.select(List.of("knowledge", "extensions"));
+        assertEquals(0, knowledgeCaptures.get());
+        assertEquals(0, extensionCaptures.get());
+        assertTrue(corrected.evidence().isEmpty());
+        corrected.get("knowledge");
+        assertEquals(1, knowledgeCaptures.get());
+        assertEquals(0, extensionCaptures.get());
+        corrected.get("extensions");
+        assertEquals(1, extensionCaptures.get());
+        assertFalse(corrected.containsKey("player"));
+    }
+
+    @Test
+    void distinguishesDeclaredButUnavailableRootsFromSelectorMistakes() {
+        MinecraftAgentHostGraph graph = new MinecraftAgentHostGraph(
+                dev.openallay.context.ToolInvocationContext.developmentConsole("unavailable-roots"));
+        for (String bare : List.of("player", "game")) {
+            JavascriptExecutionException failure = assertThrows(
+                    JavascriptExecutionException.class, () -> graph.select(List.of(bare)));
+            assertEquals("javascript_root_unavailable", failure.code());
+            assertTrue(failure.getMessage().contains("Declared Minecraft data root is unavailable in this request: " + bare));
+            assertTrue(failure.getMessage().contains("Unavailable data is not an empty dataset"));
+            assertFalse(failure.getMessage().contains("Invalid Minecraft root selector"));
+            assertFalse(graph.schemaCatalog().availableRootNames().contains(bare));
+            JavascriptExecutionException prefixed = assertThrows(
+                    JavascriptExecutionException.class, () -> graph.select(List.of("mc." + bare)));
+            assertTrue(prefixed.getMessage().contains("Use roots [\"" + bare + "\"] and access mc." + bare));
+            assertTrue(prefixed.getMessage().contains("That declared root is unavailable in this request"));
+        }
     }
 
     @Test

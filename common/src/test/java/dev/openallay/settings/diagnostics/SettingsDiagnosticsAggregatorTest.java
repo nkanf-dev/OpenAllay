@@ -243,6 +243,38 @@ final class SettingsDiagnosticsAggregatorTest {
                         false));
     }
 
+    @Test
+    void unknownSourcesAndContextAreNotRenderedAsKnownZero() {
+        var prior = inputs();
+        var unknown = new SettingsDiagnosticsAggregator.DiagnosticsInputs(
+                prior.settingsGeneration(), prior.models(), prior.capabilities(), prior.recipes(),
+                prior.guide(), GuideHistoryActivity.idle(), prior.historyScopeKind(),
+                prior.databaseSchema(), List.of(), false, false, null);
+        var snapshot = new SettingsDiagnosticsAggregator().snapshot(true, unknown);
+        var knowledge = snapshot.cards().stream().filter(card -> card.domain() == Domain.KNOWLEDGE)
+                .findFirst().orElseThrow();
+        assertEquals(null, knowledge.metrics().get(2).value());
+        assertEquals(null, knowledge.metrics().get(3).value());
+        assertTrue(knowledge.noteKeys().contains("screen.openallay.settings.diagnostics.knowledge.not_observed"));
+        assertFalse(snapshot.debug().orElseThrow().sourcesKnown());
+        assertEquals(null, snapshot.debug().orElseThrow().guide().orElseThrow()
+                .context().estimatedProjectionTokens());
+        var context = snapshot.cards().stream().filter(card -> card.domain() == Domain.CONTEXT)
+                .findFirst().orElseThrow();
+        assertEquals(1L, context.metrics().getFirst().value());
+        assertEquals(null, context.metrics().getLast().value());
+        var empty = new SettingsDiagnosticsAggregator.DiagnosticsInputs(
+                prior.settingsGeneration(), prior.models(), prior.capabilities(), prior.recipes(),
+                prior.guide(), GuideHistoryActivity.idle(), prior.historyScopeKind(),
+                prior.databaseSchema(), List.of(), true, false, 900L);
+        var known = new SettingsDiagnosticsAggregator().snapshot(true, empty);
+        var knownKnowledge = known.cards().stream().filter(card -> card.domain() == Domain.KNOWLEDGE)
+                .findFirst().orElseThrow();
+        assertEquals(0L, knownKnowledge.metrics().get(2).value());
+        assertEquals(900L, known.debug().orElseThrow().guide().orElseThrow()
+                .context().estimatedProjectionTokens());
+    }
+
     private static SettingsDiagnosticsAggregator.DiagnosticsInputs inputs() {
         return new SettingsDiagnosticsAggregator.DiagnosticsInputs(
                 17,
@@ -258,7 +290,7 @@ final class SettingsDiagnosticsAggregatorTest {
                         "generation-7",
                         SettingsDiagnosticsAggregator.SourceState.AVAILABLE,
                         42,
-                        null)));
+                        null)), true, false, 321L);
     }
 
     private static ModelProfileSettingsView models() {

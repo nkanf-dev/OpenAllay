@@ -80,6 +80,51 @@ final class ModelProfileSettingsStoreTest {
         assertTrue(Files.exists(target));
     }
 
+    @Test
+    void automaticOutputSaveOmitsOwnershipAndReloadUsesNewMetadataForFutureRuntime() throws Exception {
+        var automatic = new ModelProfileDefinition("main", "Luna", true, ModelProtocol.OPENAI_CHAT,
+                URI.create("https://openrouter.ai/api/v1/"), "gpt-6-luna", "env:MODEL_KEY",
+                1_000_000, null, Duration.ofSeconds(30), Duration.ofSeconds(300), null);
+        var config = new ModelProfilesConfig(2, "main", List.of(automatic));
+        Path target = temporary.resolve("models.json");
+        var store = new ModelProfileSettingsStore(target);
+        var saved = success(store.save(config, Map.of("MODEL_KEY", "fixture-key"), Map.of(),
+                loaded -> () -> assertEquals(128_000, loaded.profiles().getFirst()
+                        .runtimeConfig().maxOutputTokens()))).value();
+        assertEquals(config, saved.config());
+        assertFalse(read(target).contains("maxOutputTokens"));
+        var captured = saved.profiles().getFirst().runtimeConfig();
+        var metadata = new ModelMetadata("openrouter", "gpt-6-luna", "canonical",
+                1_050_000, 64_000, java.time.Instant.EPOCH);
+        var reload = (ToolResult.Success<ModelProfilesConfigLoader.Load>) new ModelProfilesConfigLoader()
+                .load(target, Map.of("MODEL_KEY", "fixture-key"), Map.of(metadata.key(), metadata));
+        assertEquals(64_000, reload.value().profiles().getFirst().runtimeConfig().maxOutputTokens());
+        assertEquals(1_000_000, reload.value().profiles().getFirst().runtimeConfig().contextWindowTokens());
+        assertEquals(128_000, captured.maxOutputTokens());
+        assertEquals(config, reload.value().config());
+    }
+
+    @Test
+    void automaticOutputWriteFailureKeepsExistingFileAndPreparedRuntimeUnpublished() throws Exception {
+        Path target = temporary.resolve("models.json");
+        Files.writeString(target, "old settings\n");
+        var profile = new ModelProfileDefinition("main", "Luna", true, ModelProtocol.OPENAI_CHAT,
+                URI.create("https://provider.example/v1/"), "gpt-6-luna", "env:MODEL_KEY",
+                1_000_000, null, Duration.ofSeconds(30), Duration.ofSeconds(300), null);
+        var config = new ModelProfilesConfig(2, "main", List.of(profile));
+        AtomicBoolean published = new AtomicBoolean();
+        var store = new ModelProfileSettingsStore(target, (ignoredPath, ignoredContents) -> {
+            throw new SettingsWriteException();
+        });
+        var result = store.save(config, Map.of("MODEL_KEY", "fixture-key"), Map.of(), loaded -> {
+            assertEquals(128_000, loaded.profiles().getFirst().runtimeConfig().maxOutputTokens());
+            return () -> published.set(true);
+        });
+        assertEquals("settings_write_failed", failure(result).code());
+        assertEquals("old settings\n", read(target));
+        assertFalse(published.get());
+    }
+
     private static String read(Path path) {
         try {
             return Files.readString(path);

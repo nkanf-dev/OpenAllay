@@ -8,6 +8,7 @@ import dev.openallay.guide.GuideFailure;
 import dev.openallay.model.metadata.ModelMetadata;
 import dev.openallay.model.metadata.BuiltinModelCatalog;
 import dev.openallay.model.metadata.ModelContextResolution;
+import dev.openallay.model.metadata.ModelOutputResolution;
 import dev.openallay.model.metadata.OpenRouterMetadataResolver;
 import dev.openallay.tool.ToolResult;
 import java.io.IOException;
@@ -39,10 +40,9 @@ public final class ModelProfilesConfigLoader {
             Set.of("schemaVersion", "defaultProfileId", "profiles");
     private static final Set<String> REQUIRED_PROFILE_FIELDS = Set.of(
             "id", "displayName", "enabled", "protocol", "baseUrl", "model",
-            "credentialRef", "maxOutputTokens", "connectTimeoutSeconds",
-            "requestTimeoutSeconds");
+            "credentialRef", "connectTimeoutSeconds", "requestTimeoutSeconds");
     private static final Set<String> OPTIONAL_PROFILE_FIELDS =
-            Set.of("contextWindowTokens", "metadata");
+            Set.of("contextWindowTokens", "maxOutputTokens", "metadata");
     private static final Set<String> METADATA_FIELDS =
             Set.of("source", "upstreamModelId", "capturedAt");
 
@@ -153,7 +153,7 @@ public final class ModelProfilesConfigLoader {
                 string(object, "model"),
                 CredentialReference.parse(string(object, "credentialRef")).encoded(),
                 optionalInteger(object, "contextWindowTokens"),
-                integer(object, "maxOutputTokens"),
+                optionalInteger(object, "maxOutputTokens"),
                 Duration.ofSeconds(integer(object, "connectTimeoutSeconds")),
                 Duration.ofSeconds(integer(object, "requestTimeoutSeconds")),
                 metadata);
@@ -174,6 +174,14 @@ public final class ModelProfilesConfigLoader {
                     definition,
                     "invalid_model_config",
                     "contextWindowTokens is required unless trusted or builtin model metadata resolves it");
+        }
+        Integer maxOutput = ModelOutputResolution.resolve(definition.baseUri(), definition.model(),
+                definition.maxOutputTokens(), metadata, catalog).maxOutputTokens();
+        if (maxOutput == null) {
+            return failed(
+                    definition,
+                    "invalid_model_config",
+                    "maxOutputTokens is required unless trusted or builtin metadata publishes its maximum");
         }
         ToolResult<SecretValue> resolvedCredential;
         try {
@@ -196,7 +204,7 @@ public final class ModelProfilesConfigLoader {
                             definition.model(),
                             secret,
                             contextWindow,
-                            definition.maxOutputTokens(),
+                            maxOutput,
                             definition.connectTimeout(),
                             definition.requestTimeout()),
                     null,

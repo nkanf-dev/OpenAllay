@@ -53,12 +53,12 @@ public final class SettingsDiagnosticsAggregator {
             String sourceId,
             String generation,
             SourceState state,
-            int itemCount,
+            Integer itemCount,
             String failureCode) {
         public SourceStatus {
             sourceId = safeIdentifier(sourceId);
             Objects.requireNonNull(state, "state");
-            if (itemCount < 0) {
+            if (itemCount != null && itemCount < 0) {
                 throw new IllegalArgumentException("source item count must not be negative");
             }
             if ((state == SourceState.AVAILABLE || state == SourceState.PARTIAL)
@@ -88,7 +88,19 @@ public final class SettingsDiagnosticsAggregator {
             GuideHistoryActivity historyActivity,
             HistoryScopeKind historyScopeKind,
             int databaseSchema,
-            List<SourceStatus> sources) {
+            List<SourceStatus> sources,
+            boolean sourcesKnown,
+            boolean sourcesRetained,
+            Long estimatedContextTokens) {
+        public DiagnosticsInputs(
+                long settingsGeneration, ModelProfileSettingsView models,
+                CapabilitySettingsView capabilities, RecipeSettingsView recipes,
+                Optional<GuideSnapshot> guide, GuideHistoryActivity historyActivity,
+                HistoryScopeKind historyScopeKind, int databaseSchema, List<SourceStatus> sources) {
+            this(settingsGeneration, models, capabilities, recipes, guide, historyActivity,
+                    historyScopeKind, databaseSchema, sources, true, false, null);
+        }
+
         public DiagnosticsInputs {
             if (settingsGeneration < 0 || databaseSchema <= 0) {
                 throw new IllegalArgumentException("diagnostic generations and schemas are invalid");
@@ -100,6 +112,12 @@ public final class SettingsDiagnosticsAggregator {
             Objects.requireNonNull(historyActivity, "historyActivity");
             Objects.requireNonNull(historyScopeKind, "historyScopeKind");
             sources = List.copyOf(sources);
+            if (estimatedContextTokens != null && estimatedContextTokens < 0) {
+                throw new IllegalArgumentException("Context estimate must not be negative");
+            }
+            if (!sourcesKnown && (!sources.isEmpty() || sourcesRetained)) {
+                throw new IllegalArgumentException("Unknown sources cannot expose observed source state");
+            }
             if (guide.isEmpty() != (historyScopeKind == HistoryScopeKind.NONE)) {
                 throw new IllegalArgumentException("history scope kind must match Guide availability");
             }
@@ -112,9 +130,9 @@ public final class SettingsDiagnosticsAggregator {
         GuideSummary guide = summarizeGuide(inputs.guide());
         List<SettingsDiagnosticCard> cards = List.of(
                 modelCard(inputs.models()),
-                knowledgeCard(inputs.capabilities(), inputs.sources()),
+                knowledgeCard(inputs),
                 historyCard(inputs, guide),
-                contextCard(inputs.guide(), guide));
+                contextCard(inputs, guide));
         Optional<DebugSettingsDiagnostics> debug = debugMode
                 ? Optional.of(debug(inputs, guide))
                 : Optional.empty();
@@ -136,8 +154,9 @@ public final class SettingsDiagnosticsAggregator {
                 metric("screen.openallay.settings.diagnostics.metric.credentials", credentials)));
     }
 
-    private static SettingsDiagnosticCard knowledgeCard(
-            CapabilitySettingsView capabilities, List<SourceStatus> sources) {
+    private static SettingsDiagnosticCard knowledgeCard(DiagnosticsInputs inputs) {
+        CapabilitySettingsView capabilities = inputs.capabilities();
+        List<SourceStatus> sources = inputs.sources();
         int catalog = capabilities.catalog().entries().size();
         int enabled = (int) capabilities.catalog().entries().stream()
                 .filter(entry -> entry.available() && entry.enabled()).count();
@@ -146,16 +165,22 @@ public final class SettingsDiagnosticsAggregator {
                         || source.state() == SourceState.PARTIAL)
                 .count();
         int total = catalog + sources.size();
-        FriendlyStatus status = total == 0
+        boolean degraded = sources.stream().anyMatch(source -> source.state() != SourceState.AVAILABLE);
+        FriendlyStatus status = total == 0 && inputs.sourcesKnown()
                 ? FriendlyStatus.UNAVAILABLE
-                : enabled + availableSources == total
-                        ? FriendlyStatus.READY
-                        : FriendlyStatus.ATTENTION;
-        return card(Domain.KNOWLEDGE, status, List.of(
+                : inputs.sourcesKnown() && !degraded && enabled + availableSources == total
+                        ? FriendlyStatus.READY : FriendlyStatus.ATTENTION;
+        List<String> notes = !inputs.sourcesKnown()
+                ? List.of("screen.openallay.settings.diagnostics.knowledge.not_observed")
+                : inputs.sourcesRetained()
+                        ? List.of("screen.openallay.settings.diagnostics.knowledge.retained") : List.of();
+        return card(Domain.KNOWLEDGE, status, notes, List.of(
                 metric("screen.openallay.settings.diagnostics.metric.registered", catalog),
                 metric("screen.openallay.settings.diagnostics.metric.enabled", enabled),
-                metric("screen.openallay.settings.diagnostics.metric.sources", sources.size()),
-                metric("screen.openallay.settings.diagnostics.metric.available_sources", availableSources)));
+                optionalMetric("screen.openallay.settings.diagnostics.metric.sources",
+                        inputs.sourcesKnown() ? Long.valueOf(sources.size()) : null),
+                optionalMetric("screen.openallay.settings.diagnostics.metric.available_sources",
+                        inputs.sourcesKnown() ? Long.valueOf(availableSources) : null)));
     }
 
     private static SettingsDiagnosticCard historyCard(
@@ -195,14 +220,14 @@ public final class SettingsDiagnosticsAggregator {
             });
         }
         return card(Domain.HISTORY, status, notes, List.of(
-                metric("screen.openallay.settings.diagnostics.metric.pending_writes",
-                        inputs.historyActivity().pendingWrites()),
-                metric("screen.openallay.settings.diagnostics.metric.active_requests",
-                        guide.activeRequests())));
+                optionalMetric("screen.openallay.settings.diagnostics.metric.pending_writes",
+                        inputs.guide().isPresent() ? Long.valueOf(inputs.historyActivity().pendingWrites()) : null),
+                optionalMetric("screen.openallay.settings.diagnostics.metric.active_requests",
+                        inputs.guide().isPresent() ? Long.valueOf(guide.activeRequests()) : null)));
     }
 
-    private static SettingsDiagnosticCard contextCard(
-            Optional<GuideSnapshot> guideSnapshot, GuideSummary guide) {
+    private static SettingsDiagnosticCard contextCard(DiagnosticsInputs inputs, GuideSummary guide) {
+        Optional<GuideSnapshot> guideSnapshot = inputs.guide();
         FriendlyStatus status = guideSnapshot.isEmpty()
                 ? FriendlyStatus.NOT_CONNECTED
                 : guide.failedCheckpoints() > 0
@@ -210,13 +235,16 @@ public final class SettingsDiagnosticsAggregator {
                         : guide.activeRequests() > 0
                                 ? FriendlyStatus.WORKING
                                 : FriendlyStatus.READY;
-        return card(Domain.CONTEXT, status, List.of(
-                metric("screen.openallay.settings.diagnostics.metric.checkpoints",
-                        guide.checkpointCount()),
-                metric("screen.openallay.settings.diagnostics.metric.checkpoint_failures",
-                        guide.failedCheckpoints()),
-                metric("screen.openallay.settings.diagnostics.metric.estimated_tokens",
-                        guide.estimatedProjectionTokens())));
+        return card(Domain.CONTEXT, status,
+                guideSnapshot.isPresent()
+                        ? List.of("screen.openallay.settings.diagnostics.context.retained") : List.of(),
+                List.of(
+                        optionalMetric("screen.openallay.settings.diagnostics.metric.checkpoints",
+                                guideSnapshot.isPresent() ? Long.valueOf(guide.checkpointCount()) : null),
+                        optionalMetric("screen.openallay.settings.diagnostics.metric.checkpoint_failures",
+                                guideSnapshot.isPresent() ? Long.valueOf(guide.failedCheckpoints()) : null),
+                        optionalMetric("screen.openallay.settings.diagnostics.metric.estimated_tokens",
+                                inputs.estimatedContextTokens())));
     }
 
     private static DebugSettingsDiagnostics debug(
@@ -258,6 +286,8 @@ public final class SettingsDiagnosticsAggregator {
                 capabilities,
                 inputs.guide().map(guide -> debugGuide(inputs, guide, summary)),
                 sources,
+                inputs.sourcesKnown(),
+                inputs.sourcesRetained(),
                 failureCodes(inputs));
     }
 
@@ -302,7 +332,7 @@ public final class SettingsDiagnosticsAggregator {
                         summary.checkpointCount(),
                         summary.successfulCheckpoints(),
                         summary.failedCheckpoints(),
-                        summary.estimatedProjectionTokens()),
+                        inputs.estimatedContextTokens()),
                 debugHistory(guide));
     }
 
@@ -366,16 +396,13 @@ public final class SettingsDiagnosticsAggregator {
                 .count();
         Optional<GuideSessionSnapshot> selected = selectedSession(guide);
         if (selected.isEmpty()) {
-            return new GuideSummary(active, 0, 0, 0, 0);
+            return new GuideSummary(active, 0, 0, 0);
         }
         List<ContextCheckpoint> checkpoints = selected.orElseThrow().checkpoints();
         int successful = (int) checkpoints.stream()
                 .filter(value -> value.status() == ContextCheckpoint.Status.SUCCEEDED).count();
         int failed = checkpoints.size() - successful;
-        long estimated = checkpoints.stream()
-                .mapToLong(ContextCheckpoint::estimatedProjectionTokens)
-                .sum();
-        return new GuideSummary(active, checkpoints.size(), successful, failed, estimated);
+        return new GuideSummary(active, checkpoints.size(), successful, failed);
     }
 
     private static Optional<GuideSessionSnapshot> selectedSession(GuideSnapshot guide) {
@@ -411,6 +438,10 @@ public final class SettingsDiagnosticsAggregator {
     }
 
     private static Metric metric(String key, long value) {
+        return new Metric(key, value);
+    }
+
+    private static Metric optionalMetric(String key, Long value) {
         return new Metric(key, value);
     }
 
@@ -458,10 +489,9 @@ public final class SettingsDiagnosticsAggregator {
             long activeRequests,
             int checkpointCount,
             int successfulCheckpoints,
-            int failedCheckpoints,
-            long estimatedProjectionTokens) {
+            int failedCheckpoints) {
         private static GuideSummary empty() {
-            return new GuideSummary(0, 0, 0, 0, 0);
+            return new GuideSummary(0, 0, 0, 0);
         }
     }
 }

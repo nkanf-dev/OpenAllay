@@ -39,7 +39,9 @@ public final class ModelProfilesConfigWriter {
         if (profile.contextWindowTokens() != null) {
             encoded.addProperty("contextWindowTokens", profile.contextWindowTokens());
         }
-        encoded.addProperty("maxOutputTokens", profile.maxOutputTokens());
+        if (profile.maxOutputTokens() != null) {
+            encoded.addProperty("maxOutputTokens", profile.maxOutputTokens());
+        }
         encoded.addProperty("connectTimeoutSeconds", exactSeconds(profile.connectTimeout()));
         encoded.addProperty("requestTimeoutSeconds", exactSeconds(profile.requestTimeout()));
         if (profile.metadata() != null) {

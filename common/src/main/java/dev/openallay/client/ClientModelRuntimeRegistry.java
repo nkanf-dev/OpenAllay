@@ -205,6 +205,16 @@ public final class ClientModelRuntimeRegistry implements GuideLocalEndpoint {
     }
 
     @Override
+    public java.util.Optional<dev.openallay.guide.GuideContextEstimate> contextEstimate(
+            String profileId, UUID actor, String sessionId) {
+        try {
+            return runtime(state.get(), profileId).contextEstimate(profileId, actor, sessionId);
+        } catch (GuideModelProfileException unavailable) {
+            return java.util.Optional.empty();
+        }
+    }
+
+    @Override
     public CompletableFuture<AgentResult> ask(
             UUID actor,
             String sessionId,
@@ -242,11 +252,13 @@ public final class ClientModelRuntimeRegistry implements GuideLocalEndpoint {
     @Override
     public void clearSession(UUID actor, String sessionId) {
         sessions.clear(new AgentSessionKey(actor, sessionId));
+        state.get().runtimes().values().forEach(runtime -> runtime.clearContextEstimate(actor, sessionId));
     }
 
     @Override
     public void clearActor(UUID actor) {
         sessions.clearActor(actor);
+        state.get().runtimes().values().forEach(runtime -> runtime.clearContextEstimates(actor));
     }
 
     @Override

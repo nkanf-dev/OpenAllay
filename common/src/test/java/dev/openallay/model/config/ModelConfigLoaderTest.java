@@ -93,7 +93,8 @@ final class ModelConfigLoaderTest {
                 loader.load(
                         new StringReader("""
                                 {"protocol":"anthropic_messages","baseUrl":"http://127.0.0.1:8080/v1",
-                                 "model":"local","apiKey":"test","contextWindowTokens":128000}
+                                 "model":"local","apiKey":"test","contextWindowTokens":128000,
+                                 "maxOutputTokens":4096}
                                 """),
                         Map.of()));
 
@@ -106,17 +107,63 @@ final class ModelConfigLoaderTest {
                                 new StringReader("""
                                         {"protocol":"anthropic_messages","baseUrl":"https://example.test/v1",
                                          "model":"m","apiKey":"k","contextWindowTokens":128000,
-                                         "surprise":true}
+                                         "maxOutputTokens":4096,"surprise":true}
                                         """),
                                 Map.of()))
                         .code());
+    }
+
+    @Test
+    void automaticOutputUsesPublishedMaximumAndNeverChangesExplicitContext() {
+        String automatic = """
+                {"protocol":"openai_chat","baseUrl":"https://example.test/v1",
+                 "model":"gpt-6-luna","apiKey":"fixture-key","contextWindowTokens":1000000}
+                """;
+        ModelConfig config = success(loader.load(new StringReader(automatic), Map.of())).value();
+        assertEquals(128_000, config.maxOutputTokens());
+        assertEquals(1_000_000, config.contextWindowTokens());
+        assertEquals(744_000, config.contextBudget().inputTokens());
+        String nullable = automatic.replace("1000000}", "1000000,\"maxOutputTokens\":null}");
+        assertEquals(128_000, success(loader.load(new StringReader(nullable), Map.of()))
+                .value().maxOutputTokens());
+        assertEquals("invalid_model_config", failure(loader.load(new StringReader(
+                automatic.replace("1000000", "256000")), Map.of())).code());
+        ToolResult.Failure<ModelConfig> unknown = failure(loader.load(new StringReader(
+                automatic.replace("gpt-6-luna", "unpublished-model")), Map.of()));
+        assertEquals("maxOutputTokens is required unless model metadata publishes its maximum",
+                unknown.message());
+    }
+
+    @Test
+    void explicitEnvironmentAndJsonOutputBudgetsWinAndInvalidNumbersFailStrictly() {
+        String json = """
+                {"protocol":"openai_chat","baseUrl":"https://example.test/v1",
+                 "model":"gpt-6-luna","apiKey":"fixture-key","contextWindowTokens":1000000,
+                 "maxOutputTokens":8192}
+                """;
+        for (int budget : java.util.List.of(4_096, 8_192, 128_000)) {
+            assertEquals(budget, success(loader.load(new StringReader(json.replace("8192",
+                    Integer.toString(budget))), Map.of())).value().maxOutputTokens());
+            assertEquals(budget, success(loader.load(new StringReader(json), Map.of(
+                    "OPENALLAY_MAX_OUTPUT_TOKENS", Integer.toString(budget))))
+                    .value().maxOutputTokens());
+        }
+        for (String value : java.util.List.of("true", "1.5", "\"8192\"", "0", "-1")) {
+            assertEquals("invalid_model_config", failure(loader.load(new StringReader(
+                    json.replace("8192", value)), Map.of())).code());
+        }
+        for (String value : java.util.List.of("true", "1.5", "", "0", "-1")) {
+            assertEquals("invalid_model_config", failure(loader.load(new StringReader(json),
+                    Map.of("OPENALLAY_MAX_OUTPUT_TOKENS", value))).code());
+        }
     }
 
     private ToolResult<ModelConfig> config(String url) {
         return loader.load(
                 new StringReader(("""
                         {"protocol":"anthropic_messages","baseUrl":"%s",
-                         "model":"m","apiKey":"k","contextWindowTokens":128000}
+                         "model":"m","apiKey":"k","contextWindowTokens":128000,
+                         "maxOutputTokens":4096}
                         """).formatted(url)),
                 Map.of());
     }

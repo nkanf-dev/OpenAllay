@@ -29,6 +29,8 @@ public record SettingsDiagnosticsSnapshot(
             DebugCapabilities capabilities,
             Optional<DebugGuide> guide,
             List<DebugSource> sources,
+            boolean sourcesKnown,
+            boolean sourcesRetained,
             List<String> failureCodes) {
         public DebugSettingsDiagnostics {
             if (settingsGeneration < 0 || databaseSchema <= 0) {
@@ -143,11 +145,11 @@ public record SettingsDiagnosticsSnapshot(
             int checkpointCount,
             int successfulCheckpoints,
             int failedCheckpoints,
-            long estimatedProjectionTokens) {
+            Long estimatedProjectionTokens) {
         public DebugContext {
             if (checkpointCount < 0 || successfulCheckpoints < 0 || failedCheckpoints < 0
                     || successfulCheckpoints + failedCheckpoints != checkpointCount
-                    || estimatedProjectionTokens < 0) {
+                    || estimatedProjectionTokens != null && estimatedProjectionTokens < 0) {
                 throw new IllegalArgumentException("debug context counts are invalid");
             }
         }
@@ -182,13 +184,13 @@ public record SettingsDiagnosticsSnapshot(
             String sourceId,
             String generation,
             SettingsDiagnosticsAggregator.SourceState state,
-            int itemCount,
+            Integer itemCount,
             String failureCode) {
         public DebugSource {
             requireTechnical(sourceId, "sourceId");
             if (generation != null) requireTechnical(generation, "generation");
             Objects.requireNonNull(state, "state");
-            if (itemCount < 0) {
+            if (itemCount != null && itemCount < 0) {
                 throw new IllegalArgumentException("debug source count must not be negative");
             }
             if (failureCode != null) requireTechnical(failureCode, "failureCode");

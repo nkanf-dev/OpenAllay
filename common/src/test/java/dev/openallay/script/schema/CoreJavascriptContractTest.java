@@ -16,6 +16,13 @@ final class CoreJavascriptContractTest {
         for (HostSchemaCatalog.RootSummary root : catalog.list()) {
             assertTrue(rendered.contains("mc." + root.name()), root.name());
         }
+        assertTrue(rendered.contains("Select bare names: roots [\"player\"] for mc.player.position"));
+        assertTrue(rendered.contains("roots [\"game\"] for mc.game.player.player.position when captured"));
+        assertTrue(rendered.contains("Never put mc. access paths in roots"));
+        assertTrue(catalog.describe("player.position").isPresent());
+        assertTrue(catalog.describe("game.player.player.position").isPresent());
+        assertTrue(rendered.contains("- mc.player.position: record"));
+        assertTrue(rendered.contains("- mc.game.player.player.position: record"));
         assertTrue(rendered.contains("mc.game.mods.installed"));
         assertTrue(rendered.contains("mc.recipeCatalog.providers"));
         assertTrue(rendered.contains("mc.registryEntries"));

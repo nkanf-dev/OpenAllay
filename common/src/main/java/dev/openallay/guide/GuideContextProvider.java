@@ -14,6 +14,9 @@ public interface GuideContextProvider {
 
     default void closeRequest(String correlationId) {}
 
+    /** Owner-thread connection boundary. It must invalidate captured data without sampling Game state. */
+    default void clearConnectionState() {}
+
     default ToolResult<Integer> refreshKnowledge() {
         return new ToolResult.Success<>(0);
     }

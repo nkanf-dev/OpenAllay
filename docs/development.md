@@ -202,6 +202,16 @@ bundled table. Unresolved models require manual context. Explicit values always
 win, including a 1,000,000-token user budget. There is no 32K fallback or arbitrary
 context cap. The `256000` value above is an example, not a fallback.
 
+Output ownership follows the same explicit/automatic distinction. An explicit
+`maxOutputTokens` remains a manual budget. Omitted or JSON-null output resolves the
+exact trusted provider maximum, then the matched bundled maximum. An unknown
+maximum requires manual configuration; there is no 8192/4096 output fallback.
+Clearing the native Models output field restores automatic maximum selection.
+The resolved output and context must satisfy `ContextBudget`; neither is silently
+clamped. For the matched `gpt-6-luna`, the bundled maximum is 128,000 output tokens;
+a manual 1,000,000 context remains unchanged. This is published capability data,
+not a promise that every gateway accepts the same maximum.
+
 The builtin model table works offline at arbitrary OpenAI-compatible endpoints,
 even when authenticated `/models` returns IDs without limits.
 Disabled profiles can retain an unresolved context window. Their diagnostic and
@@ -1266,3 +1276,36 @@ OpenAI-compatible optional `tool_calls`, usage, and usage-detail fields may be
 missing or JSON null. Both response codecs treat those forms as absent. Invalid
 non-null shapes and malformed tool arguments remain failures. Live connection
 probes and graphical acceptance remain separate from deterministic tests.
+
+## Manual runtime corrections after 0.2.4
+
+Decision 040 records the real-client failures and their corrections. Durable Tool
+identities remain request-qualified internally. Provider codecs preserve valid
+IDs and deterministically map invalid outbound IDs while preserving Tool-call
+and Tool-result pairing; OpenAI-compatible call IDs obey the endpoint's 64-character
+schema field and alphabet. No history or server protocol format changes.
+
+`run_javascript.roots` is a list of bare top-level names: `roots:["player"]`
+selects `mc.player`, and `roots:["game"]` selects `mc.game`. Invalid access-path
+selectors provide exact corrective feedback without selecting extra roots.
+A returned module/function remains `javascript_result_invalid`; return JSON data
+from an operation instead. An argument/result failure does not prove terrain or
+an integration is missing.
+
+Settings diagnostics read counts-only published source state from the existing
+knowledge reload. Missing capture/evidence is shown as unknown rather than zero.
+Source failures can retain the last valid counts with an explicit partial state.
+Disconnect, shutdown and player/world scope replacement clear published source
+facts and old primary-provider handles through the common context-provider hook.
+The next connection stays unknown until fresh capture; saved source configuration
+and enablement policy remain unchanged.
+The context metric is the latest actual local request estimate, not the sum of
+compaction checkpoints. Its lookup is bound to the selected model/session/request;
+server models, pre-dispatch requests and replaced/disconnected endpoints report
+unknown. Pending writes/active requests are current work counts; checkpoint counts
+are retained compaction records. No provider request or live capture occurs from
+the settings render path.
+
+These corrections are committed/pushed without a new tag or release. The original
+0.2.4 manual run and its failed traces remain retained; verification for this
+source change is recorded in the implementation plan.

@@ -355,9 +355,7 @@ public final class MinecraftAgentHostGraph {
                         || !ROOT.matcher(root).matches()
                         || descriptor == null
                         || !descriptor.available()) {
-                    throw new JavascriptExecutionException(
-                            "javascript_root_unavailable",
-                            "Requested Minecraft data root is unavailable: " + root);
+                    throw rootSelectionFailure(root, descriptor);
                 }
                 names.add(root);
             }
@@ -379,6 +377,35 @@ public final class MinecraftAgentHostGraph {
         return new RootSelection(
                 new LazyRootMap(selected, List.copyOf(selected.keySet()), schemaCatalog,
                         evidenceOwners(), evidence), evidence, schemaCatalog, hostCatalogEvidence);
+    }
+
+    private JavascriptExecutionException rootSelectionFailure(
+            String requested, HostRootDescriptor descriptor) {
+        String message;
+        if (requested == null || !ROOT.matcher(requested).matches()) {
+            message = "Invalid Minecraft root selector: " + requested
+                    + ". roots requires bare top-level names, not JavaScript access paths.";
+            if (requested != null && requested.startsWith("mc.")) {
+                String bare = requested.substring(3);
+                HostRootDescriptor known = roots.get(bare);
+                if (ROOT.matcher(bare).matches() && known != null) {
+                    message += " Use roots [\"" + bare + "\"] and access mc." + bare + ".";
+                    if (!known.available()) {
+                        message += " That declared root is unavailable in this request.";
+                    }
+                }
+            }
+        } else if (descriptor == null) {
+            message = "Unknown Minecraft data root: " + requested
+                    + ". roots requires a declared bare top-level name.";
+        } else {
+            message = "Declared Minecraft data root is unavailable in this request: " + requested
+                    + ". Unavailable data is not an empty dataset.";
+        }
+        return new JavascriptExecutionException(
+                "javascript_root_unavailable",
+                message + " Current declared bare roots: " + roots.keySet()
+                        + ". Available this request: " + schemaCatalog.availableRootNames() + ".");
     }
 
     public HostSchemaCatalog schemaCatalog() {

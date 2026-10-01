@@ -3,6 +3,7 @@ package dev.openallay.model.config;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.JsonObject;
@@ -71,6 +72,25 @@ final class ModelProfilesConfigWriterTest {
                         "credentialRef", "maxOutputTokens", "connectTimeoutSeconds",
                         "requestTimeoutSeconds"),
                 profile.keySet().stream().toList());
+    }
+
+    @Test
+    void automaticOutputStaysOmittedAcrossCanonicalSchemaTwoRoundTrip() {
+        ModelProfileDefinition profile = new ModelProfileDefinition("luna", "Luna", true,
+                ModelProtocol.OPENAI_CHAT, URI.create("https://provider.example/v1/"),
+                "gpt-6-luna", "env:MODEL_KEY", 1_000_000, null,
+                Duration.ofSeconds(30), Duration.ofSeconds(300), null);
+        var config = new ModelProfilesConfig(2, profile.id(), List.of(profile));
+        String encoded = new ModelProfilesConfigWriter().encode(config);
+        JsonObject json = JsonParser.parseString(encoded).getAsJsonObject();
+        assertEquals(2, json.get("schemaVersion").getAsInt());
+        assertFalse(json.getAsJsonArray("profiles").get(0).getAsJsonObject().has("maxOutputTokens"));
+        var loaded = success(new ModelProfilesConfigLoader().load(new StringReader(encoded),
+                Map.of("MODEL_KEY", "fixture-key"))).value();
+        assertEquals(config, loaded.config());
+        assertNull(loaded.config().profiles().getFirst().maxOutputTokens());
+        assertEquals(128_000, loaded.profiles().getFirst().runtimeConfig().maxOutputTokens());
+        assertEquals(encoded, new ModelProfilesConfigWriter().encode(loaded.config()));
     }
 
     private static ModelProfilesConfig config() {

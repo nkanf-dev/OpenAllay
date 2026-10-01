@@ -48,7 +48,8 @@ public final class ClientSettingsHistoryBinding
                             SettingsDiagnosticsAggregator.HistoryScopeKind.SINGLEPLAYER_WORLD;
                     case MULTIPLAYER ->
                             SettingsDiagnosticsAggregator.HistoryScopeKind.MULTIPLAYER_SERVER;
-                });
+                },
+                snapshot.estimatedContextTokens());
     }
 
     @Override

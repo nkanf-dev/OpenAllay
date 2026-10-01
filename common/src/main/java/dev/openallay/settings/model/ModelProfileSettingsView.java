@@ -52,6 +52,7 @@ public record ModelProfileSettingsView(
                     profile.available(),
                     profile.credentialPresent(),
                     profile.effectiveContextWindowTokens(),
+                    profile.effectiveMaxOutputTokens(),
                     profile.failure()));
         }
         return new ModelProfileSettingsView(
@@ -64,6 +65,7 @@ public record ModelProfileSettingsView(
             boolean available,
             boolean credentialPresent,
             Integer effectiveContextWindowTokens,
+            Integer effectiveMaxOutputTokens,
             GuideFailure failure) {
         public Resolution {
             Objects.requireNonNull(definition, "definition");
@@ -76,9 +78,20 @@ public record ModelProfileSettingsView(
         public Resolution(
                 ModelProfileDefinition definition,
                 boolean available,
+                boolean credentialPresent,
                 Integer effectiveContextWindowTokens,
                 GuideFailure failure) {
-            this(definition, available, available, effectiveContextWindowTokens, failure);
+            this(definition, available, credentialPresent, effectiveContextWindowTokens,
+                    definition.maxOutputTokens(), failure);
+        }
+
+        public Resolution(
+                ModelProfileDefinition definition,
+                boolean available,
+                Integer effectiveContextWindowTokens,
+                GuideFailure failure) {
+            this(definition, available, available, effectiveContextWindowTokens,
+                    definition.maxOutputTokens(), failure);
         }
 
         public static Resolution from(ResolvedModelProfile profile) {
@@ -95,6 +108,9 @@ public record ModelProfileSettingsView(
                     profile.runtimeConfig() == null
                             ? profile.definition().contextWindowTokens()
                             : Integer.valueOf(profile.runtimeConfig().contextWindowTokens()),
+                    profile.runtimeConfig() == null
+                            ? profile.definition().maxOutputTokens()
+                            : Integer.valueOf(profile.runtimeConfig().maxOutputTokens()),
                     profile.failure());
         }
     }
@@ -104,6 +120,7 @@ public record ModelProfileSettingsView(
             boolean available,
             boolean credentialPresent,
             Integer effectiveContextWindowTokens,
+            Integer effectiveMaxOutputTokens,
             GuideFailure failure) {
         public Profile {
             Objects.requireNonNull(definition, "definition");
@@ -111,6 +128,16 @@ public record ModelProfileSettingsView(
                 throw new IllegalArgumentException(
                         "available model profiles have no failure and unavailable profiles require one");
             }
+        }
+
+        public Profile(
+                ModelProfileDefinition definition,
+                boolean available,
+                boolean credentialPresent,
+                Integer effectiveContextWindowTokens,
+                GuideFailure failure) {
+            this(definition, available, credentialPresent, effectiveContextWindowTokens,
+                    definition.maxOutputTokens(), failure);
         }
 
         public boolean credentialStoredLocally() {

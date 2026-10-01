@@ -126,6 +126,11 @@ public final class MinecraftGuideContextProvider implements GuideContextProvider
     }
 
     @Override
+    public void clearConnectionState() {
+        runtime.knowledge().clearConnectionState();
+    }
+
+    @Override
     public ToolResult<Integer> refreshKnowledge() {
         try {
             List<KnowledgeSourceProvider> providers = new ArrayList<>();

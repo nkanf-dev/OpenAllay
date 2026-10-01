@@ -50,8 +50,10 @@ public final class RunJavascriptTool
             @ToolDescription("Opaque result handles this script needs to reopen.")
                     @ToolOptional List<String> handles,
             @ToolDescription(
-                            "Top-level bindings required by this program, for example items, recipes, or the "
-                                    + "enabled experimental commands binding. Omit only for schema discovery.")
+                            "Select Minecraft data by bare top-level names, not mc. access paths: roots [\"player\"] "
+                                    + "selects mc.player (mc.player.position); roots [\"game\"] selects mc.game "
+                                    + "(mc.game.player.player.position when captured). Optional world and commands "
+                                    + "bindings also use bare names and are called directly. Omit only for schema discovery.")
                     @ToolOptional List<String> roots,
             @ToolDescription("Short title in the player's language describing the intended work. Include on every new call.")
                     @ToolOptional String title,

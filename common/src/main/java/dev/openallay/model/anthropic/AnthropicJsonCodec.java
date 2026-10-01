@@ -13,6 +13,7 @@ import dev.openallay.model.ModelRole;
 import dev.openallay.model.ModelToolDefinition;
 import dev.openallay.model.ModelTurn;
 import dev.openallay.model.ModelUsage;
+import dev.openallay.model.ProviderToolIds;
 import dev.openallay.model.config.ModelConfig;
 import java.util.ArrayList;
 import java.util.List;
@@ -33,12 +34,13 @@ public final class AnthropicJsonCodec {
         root.addProperty("system", request.systemPrompt());
         root.addProperty("stream", request.stream());
         JsonArray messages = new JsonArray();
+        ProviderToolIds toolIds = ProviderToolIds.forAnthropicMessages(request.messages());
         for (ModelMessage message : request.messages()) {
             JsonObject encoded = new JsonObject();
             encoded.addProperty("role", message.role() == ModelRole.USER ? "user" : "assistant");
             JsonArray content = new JsonArray();
             for (ModelContent block : message.content()) {
-                content.add(encodeContent(block));
+                content.add(encodeContent(block, toolIds));
             }
             encoded.add("content", content);
             messages.add(encoded);
@@ -87,7 +89,7 @@ public final class AnthropicJsonCodec {
                 longValue(object, "cache_read_input_tokens"));
     }
 
-    private JsonObject encodeContent(ModelContent block) {
+    private JsonObject encodeContent(ModelContent block, ProviderToolIds toolIds) {
         JsonObject encoded = new JsonObject();
         switch (block) {
             case ModelContent.Text text -> {
@@ -103,13 +105,13 @@ public final class AnthropicJsonCodec {
             }
             case ModelContent.ToolUse toolUse -> {
                 encoded.addProperty("type", "tool_use");
-                encoded.addProperty("id", toolUse.id());
+                encoded.addProperty("id", toolIds.encode(toolUse.id()));
                 encoded.addProperty("name", toolUse.name());
                 encoded.add("input", toolUse.input());
             }
             case ModelContent.ToolResult result -> {
                 encoded.addProperty("type", "tool_result");
-                encoded.addProperty("tool_use_id", result.toolUseId());
+                encoded.addProperty("tool_use_id", toolIds.encode(result.toolUseId()));
                 encoded.addProperty("content", providerToolResult(result.value()));
                 encoded.addProperty("is_error", result.error());
             }

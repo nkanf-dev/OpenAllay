@@ -60,6 +60,8 @@ final class ClientSettingsRuntimeTest {
         assertEquals("default", settings.settings().snapshot()
                 .models().config().defaultProfileId());
         assertFalse(settings.settings().snapshot().models().profiles().getFirst().available());
+        assertEquals(null, settings.settings().snapshot().models().profiles().getFirst()
+                .definition().maxOutputTokens());
         assertEquals("model_not_configured", settings.settings().snapshot().notice().code());
         assertFalse(Files.exists(profiles));
         assertTrue(Files.exists(legacy));
@@ -437,6 +439,147 @@ final class ClientSettingsRuntimeTest {
             assertTrue(settings.settings().snapshot().skills().find("extension-guide").isPresent());
             assertEquals("Original extension reference", skills.find("extension-guide").orElseThrow()
                     .references().get("references/details.md"));
+        } finally {
+            settings.closeAsync().join();
+        }
+    }
+
+    @Test
+    void nativeRuntimeObservesPublishedSourcesAndLateBoundHistoryWithoutProviderCallsOnRefresh(
+            @TempDir Path directory) throws Exception {
+        OpenAllayRuntime product = runtime();
+        ClientSettingsHistoryBinding binding = new ClientSettingsHistoryBinding();
+        GuideDisplayRuntime display = new GuideDisplayRuntime(directory.resolve("display.json"));
+        ClientSettingsRuntime settings = success(ClientSettingsRuntime.create(product,
+                directory.resolve("models.json"), directory.resolve("model-metadata.json"),
+                directory.resolve("capabilities.json"), directory.resolve("recipes.json"),
+                new dev.openallay.recipe.config.RecipeClientRuntime(directory.resolve("recipes.json")),
+                Map.of(), Runnable::run, null, Clock.systemUTC(), display, binding));
+        java.util.concurrent.atomic.AtomicInteger loads = new java.util.concurrent.atomic.AtomicInteger();
+        try {
+            settings.settings().saveDisplay(new GuideDisplayConfig(GuideDisplayConfig.SCHEMA_VERSION,
+                    true, true, GuideDisplayConfig.DEFAULT_ASSISTANT_NAME)).join();
+            assertFalse(settings.settings().snapshot().diagnostics().debug().orElseThrow().sourcesKnown());
+            dev.openallay.knowledge.KnowledgeSourceProvider provider = new dev.openallay.knowledge.KnowledgeSourceProvider() {
+                @Override public String sourceId() { return "patchouli"; }
+                @Override public dev.openallay.knowledge.KnowledgeLoad load() {
+                    loads.incrementAndGet();
+                    var evidence = new dev.openallay.context.EvidenceMetadata(
+                            dev.openallay.context.DataAuthority.RESOURCE_ASSET,
+                            dev.openallay.context.DataCompleteness.COMPLETE,
+                            java.time.Instant.EPOCH, "patchouli:resources", "patchouli:parser",
+                            "fixture", "fixture", Map.of());
+                    return new dev.openallay.knowledge.KnowledgeLoad(List.of(), List.of(), List.of(evidence));
+                }
+            };
+            assertTrue(product.knowledge().reload(List.of(provider)));
+            settings.settings().refreshRuntimeState();
+            var sources = settings.settings().snapshot().diagnostics().debug().orElseThrow();
+            assertTrue(sources.sourcesKnown());
+            assertEquals(1, sources.sources().size());
+            assertEquals(0, sources.sources().getFirst().itemCount());
+            assertEquals(dev.openallay.settings.diagnostics.SettingsDiagnosticsAggregator.SourceState.AVAILABLE,
+                    sources.sources().getFirst().state());
+            long generation = settings.settings().snapshot().generation();
+            settings.settings().refreshRuntimeState();
+            assertEquals(1, loads.get());
+            assertEquals(generation, settings.settings().snapshot().generation());
+            assertTrue(settings.settings().snapshot().diagnostics().debug().orElseThrow().guide().isEmpty());
+
+            UUID actor = UUID.randomUUID();
+            var scope = dev.openallay.guide.history.GuideHistoryScope.derive(
+                    actor, dev.openallay.guide.history.GuideHistoryScope.Kind.SINGLEPLAYER, "fixture-world");
+            dev.openallay.guide.GuideLocalEndpoint local = new dev.openallay.guide.GuideLocalEndpoint() {
+                private dev.openallay.guide.GuideContextEstimate estimate;
+                @Override public java.util.Set<dev.openallay.context.ContextCapability> requiredContext() {
+                    return java.util.Set.of();
+                }
+                @Override public java.util.Optional<dev.openallay.guide.GuideContextEstimate> contextEstimate(
+                        String profileId, UUID actorId, String sessionId) {
+                    return java.util.Optional.ofNullable(estimate);
+                }
+                @Override public java.util.concurrent.CompletableFuture<dev.openallay.agent.AgentResult> ask(
+                        UUID actorId, String sessionId, UUID requestId, String question,
+                        dev.openallay.context.ToolInvocationContext context,
+                        java.util.function.Consumer<dev.openallay.agent.AgentEvent> events) {
+                    estimate = new dev.openallay.guide.GuideContextEstimate(requestId, 777);
+                    events.accept(new dev.openallay.agent.AgentEvent.FinalText("done"));
+                    return java.util.concurrent.CompletableFuture.completedFuture(new dev.openallay.agent.AgentResult(
+                            dev.openallay.agent.AgentState.COMPLETED, "done", null, null, null));
+                }
+                @Override public boolean cancel(UUID actorId, String sessionId) { return false; }
+                @Override public void clearSession(UUID actorId, String sessionId) { estimate = null; }
+                @Override public void clearActor(UUID actorId) { estimate = null; }
+            };
+            dev.openallay.guide.GuideRemoteEndpoint remote = new dev.openallay.guide.GuideRemoteEndpoint() {
+                @Override public boolean serverModelAvailable() { return false; }
+                @Override public boolean serverToolsAvailable() { return false; }
+                @Override public boolean ask(UUID requestId, String sessionId, String question,
+                        java.util.function.Consumer<dev.openallay.agent.AgentEvent> events) { return false; }
+                @Override public boolean cancel(UUID requestId) { return false; }
+                @Override public void disconnect() {}
+            };
+            dev.openallay.guide.history.GuideHistoryAccess history = new dev.openallay.guide.history.GuideHistoryAccess() {
+                @Override public java.util.concurrent.CompletableFuture<dev.openallay.guide.history.GuideHistoryLoad> load(
+                        dev.openallay.guide.history.GuideHistoryScope ignored) {
+                    return java.util.concurrent.CompletableFuture.completedFuture(
+                            dev.openallay.guide.history.GuideHistoryLoad.empty());
+                }
+                @Override public java.util.concurrent.CompletableFuture<Void> save(
+                        dev.openallay.guide.history.GuideHistoryPartition partition) {
+                    return java.util.concurrent.CompletableFuture.completedFuture(null);
+                }
+                @Override public java.util.concurrent.CompletableFuture<Void> delete(
+                        dev.openallay.guide.history.GuideHistoryDeleteScope ignored) {
+                    return java.util.concurrent.CompletableFuture.completedFuture(null);
+                }
+                @Override public java.util.concurrent.CompletableFuture<Void> resetDatabase() {
+                    return java.util.concurrent.CompletableFuture.completedFuture(null);
+                }
+                @Override public java.util.concurrent.CompletableFuture<Void> flush() {
+                    return java.util.concurrent.CompletableFuture.completedFuture(null);
+                }
+                @Override public dev.openallay.guide.history.GuideHistoryActivity activity() {
+                    return dev.openallay.guide.history.GuideHistoryActivity.idle();
+                }
+            };
+            dev.openallay.guide.GuideContextProvider contexts = new dev.openallay.guide.GuideContextProvider() {
+                @Override public ToolResult<dev.openallay.context.ToolInvocationContext> capture(
+                        java.util.Set<dev.openallay.context.ContextCapability> capabilities, String correlation) {
+                    product.knowledge().reload(List.of(provider));
+                    return new ToolResult.Success<>(
+                            dev.openallay.context.ToolInvocationContext.developmentConsole(correlation));
+                }
+                @Override public void clearConnectionState() { product.knowledge().clearConnectionState(); }
+            };
+            var manager = new dev.openallay.guide.GuideServiceManager(local, remote, contexts,
+                    Runnable::run, Clock.systemUTC(), new com.google.gson.Gson(), history, ignored -> scope);
+            binding.bind(manager);
+            var guide = manager.forActor(actor);
+            settings.settings().refreshRuntimeState();
+            assertFalse(settings.settings().snapshot().diagnostics().debug().orElseThrow().sourcesKnown());
+            assertEquals(null, settings.settings().snapshot().diagnostics().debug().orElseThrow()
+                    .guide().orElseThrow().context().estimatedProjectionTokens());
+            assertInstanceOf(ToolResult.Success.class, guide.ask("normal small request").join());
+            settings.settings().refreshRuntimeState();
+            var diagnostics = settings.settings().snapshot().diagnostics().debug().orElseThrow().guide().orElseThrow();
+            assertEquals(0, diagnostics.activeRequestCount());
+            assertEquals(0, diagnostics.pendingWrites());
+            assertEquals(0, diagnostics.context().checkpointCount());
+            assertEquals(777L, diagnostics.context().estimatedProjectionTokens());
+            guide.selectSession("other").join();
+            settings.settings().refreshRuntimeState();
+            assertEquals(null, settings.settings().snapshot().diagnostics().debug().orElseThrow()
+                    .guide().orElseThrow().context().estimatedProjectionTokens());
+            manager.disconnect().join();
+            settings.settings().refreshRuntimeState();
+            assertTrue(settings.settings().snapshot().diagnostics().debug().orElseThrow().guide().isEmpty());
+            assertFalse(settings.settings().snapshot().diagnostics().debug().orElseThrow().sourcesKnown());
+            assertTrue(product.knowledge().snapshot().documents().isEmpty());
+            manager.forActor(actor);
+            settings.settings().refreshRuntimeState();
+            assertFalse(settings.settings().snapshot().diagnostics().debug().orElseThrow().sourcesKnown());
+            assertEquals(2, loads.get());
         } finally {
             settings.closeAsync().join();
         }

@@ -406,6 +406,7 @@ public record ClientSettingsRuntime(
                     dispatcher,
                     command -> Thread.startVirtualThread(command),
                     startupNotice);
+            service.bindKnowledgeSources(product.knowledge()::sourceSnapshot);
             serviceReference.set(service);
             ModelMetadataUpdate early = pendingUpdate.getAndSet(null);
             if (early != null) {
@@ -479,7 +480,7 @@ public record ClientSettingsRuntime(
                 "configure-model-id",
                 CredentialReference.environment("OPENALLAY_API_KEY").encoded(),
                 256_000,
-                4_096,
+                null,
                 Duration.ofSeconds(30),
                 Duration.ofSeconds(300),
                 null);
