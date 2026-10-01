@@ -31,13 +31,25 @@ final class AgentSystemPromptTest {
     }
 
     @Test
-    void separatesComputationsFromGameCoverageAndKeepsWorkspaceRequestScoped() {
+    void encouragesTaskCompletionAndRecoveryWithoutRepeatingRestrictions() {
         String prompt = AgentSystemPrompt.compose("");
-        assertTrue(prompt.contains("ordinary computations"));
-        assertTrue(prompt.contains("General knowledge and ordinary reasoning do not require a data read"));
-        assertTrue(prompt.contains("Distinguish execution status from data coverage"));
+        assertTrue(prompt.contains("Use available capabilities to complete the player's task"));
+        assertTrue(prompt.contains("Correct recoverable errors and continue"));
+        assertTrue(prompt.contains("Report observed outcomes and relevant uncertainty"));
+        assertFalse(prompt.contains("Never treat unavailable, partial, empty, stale, or conflicting data"));
+        assertFalse(prompt.contains("never invent arbitrary URLs or paths"));
+        assertFalse(prompt.contains("Distinguish execution status from data coverage"));
+    }
+
+    @Test
+    void keepsProgramInputTypedDataAndRequestScopedWorkspaceContracts() {
+        String prompt = AgentSystemPrompt.compose("");
+        assertTrue(prompt.contains("source is the JavaScript program text, not source attribution"));
+        assertTrue(prompt.contains("Ordinary computations need no Minecraft read"));
+        assertTrue(prompt.contains("Declared mc schema:"));
+        assertTrue(prompt.contains("mc.items: array<record>"));
+        assertTrue(prompt.contains("Copy a host array before sort"));
         assertTrue(prompt.contains("Workspace handles belong only to the active request"));
-        assertFalse(prompt.contains("Never announce a Tool or Skill result as successful when it says failed, partial"));
     }
 
     @Test
@@ -47,7 +59,7 @@ final class AgentSystemPromptTest {
             String prompt = AgentSystemPrompt.compose("", contract, unrestricted);
             assertTrue(prompt.contains("Include title and description on every run_javascript call"));
             assertTrue(prompt.contains("player's language explaining the intended work"));
-            assertTrue(prompt.contains("display intent, not success claims, evidence, or permissions"));
+            assertTrue(prompt.contains("Return explicit JSON-friendly results"));
         }
     }
 
@@ -67,13 +79,34 @@ final class AgentSystemPromptTest {
         String enabled = AgentSystemPrompt.compose("", contract, true, "Use Java.type and new StringBuilder.");
         assertTrue(enabled.contains("## UNRESTRICTED JAVASCRIPT GUIDANCE"));
         assertTrue(enabled.contains("Use Java.type and new StringBuilder."));
-        assertTrue(enabled.contains("mc host views are read-only"));
+        assertTrue(enabled.contains("mc: immutable captured Minecraft data"));
         assertFalse(enabled.contains("never invent arbitrary URLs or paths"));
         assertFalse(enabled.contains("run_javascript analyzes detached Minecraft data."));
         String disabled = AgentSystemPrompt.compose("", contract, false, "Use Java.type and new StringBuilder.");
         assertFalse(disabled.contains("UNRESTRICTED JAVASCRIPT GUIDANCE"));
         assertFalse(disabled.contains("Use Java.type and new StringBuilder."));
-        assertTrue(disabled.contains("never invent arbitrary URLs or paths"));
+        assertTrue(disabled.contains("JavaScript uses the default isolated mode"));
+    }
+
+    @Test
+    void commandBindingAvailabilityDoesNotChangeJavaAuthority() {
+        String contract = CoreJavascriptContract.render(MinecraftAgentHostGraph.declaredOnlyCatalog());
+        for (boolean unrestricted : new boolean[] {false, true}) {
+            String available = AgentSystemPrompt.compose("", contract, unrestricted, "", true);
+            assertTrue(available.contains("commands.list(), commands.describe(path), and commands.run(text)"));
+            assertTrue(available.contains("top-level JavaScript methods for this request"));
+            assertFalse(available.contains("The commands binding is not present"));
+
+            String absent = AgentSystemPrompt.compose("", contract, unrestricted, "", false);
+            assertTrue(absent.contains("The commands binding is not present for this request"));
+            assertTrue(absent.contains("Use available capabilities to complete the player's task"));
+            String mode = unrestricted ? "Use Java APIs as needed for the player's task"
+                    : "JavaScript uses the default isolated mode";
+            assertTrue(available.contains(mode));
+            assertTrue(absent.contains(mode));
+        }
+        assertFalse(AgentSystemPrompt.compose("", contract, true, "")
+                .contains("The commands binding is not present"));
     }
 
     @Test
@@ -91,7 +124,7 @@ final class AgentSystemPromptTest {
     void suppliesAnExplicitEmptySkillCatalogWithoutChangingAuthority() {
         String prompt = AgentSystemPrompt.compose("  ");
         assertTrue(prompt.contains("<none/>"));
-        assertTrue(prompt.contains("Only registered operations are authorized"));
+        assertTrue(prompt.contains("Use the current Tool definitions' exact names and schemas"));
         assertTrue(prompt.contains("JavaScript uses the default isolated mode"));
     }
 }

@@ -23,7 +23,6 @@ public final class SemanticPromptGuidance {
                 Use only a component in this closed catalog and follow its exact properties contract:
                 %s
                 A controlled component is presentation only: it never adds factual authority, permissions, callbacks, or execution.
-                Do not emit HTML, links, URLs, scripts, callbacks, commands, executable code, arbitrary component types, or invented handles.
                 Use plain prose when a component would not make the answer clearer.
                 """.formatted(catalog.toString().stripTrailing());
     }

@@ -63,6 +63,27 @@ final class BundledSkillsTest {
     }
 
     @Test
+    void nonCommandGuidanceKeepsUsageFactsWithoutGenericStopRules() {
+        SkillRepository repository = new SkillRepository(new SkillParser(), Set.of("openallay:run_javascript"));
+        assertTrue(repository.reload(new BundledSkillLoader().load(), Set.of("ftbquests")));
+
+        String gameState = repository.find("inspect-game-state").orElseThrow().instructions();
+        assertTrue(gameState.contains("`mc.game.diagnostics`"));
+        assertTrue(gameState.contains("core top-level `world`"));
+        assertFalse(gameState.contains("stop rather than guessing"));
+        assertFalse(gameState.contains("remain outside this Skill"));
+
+        SkillDocument java = repository.snapshot(Set.of()).forRequest(true)
+                .find("unrestricted-javascript").orElseThrow();
+        assertTrue(java.instructions().contains("Java.type(\"fully.qualified.ClassName\")"));
+        assertTrue(java.instructions().contains("JSON-friendly"));
+        assertTrue(java.instructions().contains("owning thread"));
+        assertFalse(java.instructions().contains("verify them rather than inventing them"));
+        assertFalse(java.references().get("references/java-jvm.md")
+                .contains("Do not guess a universal"));
+    }
+
+    @Test
     void unrestrictedGuidanceIsCapturedPerRequestAndDeniedForServerCallbacks() {
         SkillRepository repository = new SkillRepository(new SkillParser(), Set.of("openallay:run_javascript"));
         assertTrue(repository.reload(new BundledSkillLoader().load(), Set.of("ftbquests")));

@@ -19,21 +19,12 @@ return String(text.toString());
 ```
 
 This mode bypasses OpenAllay JavaScript execution and result budgets.
-Read available detached `mc` data directly when useful. Ordinary JavaScript and
-Java computations do not require a Minecraft read. Return explicit JSON-friendly
-results, not raw Java objects. Captured source metadata is collected automatically.
+Return explicit JSON-friendly values rather than raw Java objects.
 Use `references/java-jvm.md` for Java collections, arrays, files, and JVM usage.
 
-Side effects are irreversible: cancellation, a later error, or closing the
-request does not roll back files, processes, network calls, or game changes.
-Cancellation and request lifetime cleanup still apply; blocking Java calls may
-not stop promptly.
+Scripts run on a worker. Schedule live game operations on their owning thread.
+Class names, mapped members, and mod APIs vary by installation; inspect available
+classes and members as needed.
 
-Scripts run on a worker, not the Minecraft render/server thread. A live object
-is not thread-safe just because it is reachable. Use the owning thread's supported
-scheduler for game operations; do not block that thread or mutate live game state
-from the script worker. Class names, mapped members, and mod APIs depend on this
-installation; verify them rather than inventing them.
-
-Java observations are execution results, not automatically detached Minecraft
-snapshots. Distinguish observed results from attempted side effects.
+Side effects are not rolled back by cancellation or later errors.
+Blocking Java calls may not stop promptly.

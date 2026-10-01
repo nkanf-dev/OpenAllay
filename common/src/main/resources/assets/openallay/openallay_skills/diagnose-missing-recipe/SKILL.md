@@ -12,7 +12,5 @@ absence. Search `mc.knowledge` for
 progression changes, disabled recipes, alternate machines, quest gates, or
 replacement items.
 
-Return the observed matching recipes, relevant diagnostics, and exact
-sourceId/generation/recipeId handles. Do not infer that a recipe exists from
-documentation when the active recipe catalog does not contain it.
-If the available evidence remains empty or partial, report that limitation.
+Return the matching active recipes, relevant diagnostics, and exact
+sourceId/generation/recipeId handles.
