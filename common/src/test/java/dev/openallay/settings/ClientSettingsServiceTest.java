@@ -516,6 +516,42 @@ final class ClientSettingsServiceTest {
     }
 
     @Test
+    void extensionCapabilitySaveRunsOnWorkerAndPublishesOnlySuccessfulResult() {
+        FakeModels models = new FakeModels(state(config("alpha")));
+        FakeExtensions extensions = new FakeExtensions();
+        ManualExecutor worker = new ManualExecutor();
+        ClientSettingsService service = service(models, new FakeDomains(),
+                new FakeDisplay(GuideDisplayConfig.defaults()), new FakeSkills(), extensions,
+                new FakeHistory(), worker);
+        ExtensionSettingsView before = service.snapshot().extensions();
+        CompletableFuture<ToolResult<Boolean>> pending =
+                service.saveExtensionCapability("community:demo", "demo:world_actions", true);
+
+        assertFalse(pending.isDone());
+        assertEquals(0, extensions.capabilitySaves);
+        assertEquals(SettingsOperation.Kind.SAVING_EXTENSION_CAPABILITY, service.snapshot().operation().kind());
+        assertFailure(service.saveExperimentalCommands(true).join(), "settings_busy");
+        assertEquals(before, service.snapshot().extensions());
+        worker.runNext();
+        assertSuccess(pending.join());
+        assertEquals(1, extensions.capabilitySaves);
+        assertTrue(service.snapshot().extensions().extensions().stream()
+                .filter(extension -> extension.id().equals("community:demo")).findFirst().orElseThrow()
+                .capabilities().getFirst().enabled());
+        assertFalse(service.snapshot().unrestrictedJavascript().enabled());
+        assertEquals("extension_capability_saved", service.snapshot().notice().code());
+        assertEquals(SettingsOperation.Kind.IDLE, service.snapshot().operation().kind());
+        ExtensionSettingsView published = service.snapshot().extensions();
+        extensions.failCapabilitySave = true;
+        CompletableFuture<ToolResult<Boolean>> failed =
+                service.saveExtensionCapability("community:demo", "demo:world_actions", false);
+        worker.runNext();
+        assertFailure(failed.join(), "settings_write_failed");
+        assertEquals(published, service.snapshot().extensions());
+        assertEquals(SettingsOperation.Kind.IDLE, service.snapshot().operation().kind());
+    }
+
+    @Test
     void communityExtensionInstallPublishesRestartRequiredImmutableProjection() {
         FakeModels models = new FakeModels(state(config("alpha")));
         FakeDomains domains = new FakeDomains();
@@ -1524,6 +1560,28 @@ final class ClientSettingsServiceTest {
     private static final class FakeExtensions
             implements ClientSettingsService.ExtensionActions {
         private ExtensionSettingsView current;
+        private int capabilitySaves;
+        private boolean failCapabilitySave;
+
+        @Override
+        public ToolResult<ExtensionSettingsView> saveCapability(
+                String extensionId, String capabilityId, boolean enabled) {
+            capabilitySaves++;
+            if (failCapabilitySave) return new ToolResult.Failure<>("settings_write_failed", "Unable to save settings");
+            ExtensionSettingsView.Extension previous = current.extensions().stream()
+                    .filter(extension -> extension.id().equals(extensionId)).findFirst().orElseThrow();
+            ExtensionSettingsView.Extension replacement = new ExtensionSettingsView.Extension(
+                    previous.id(), previous.name(), previous.version(), previous.provider(), previous.summary(),
+                    previous.state(), previous.loaders(), previous.minecraftVersionRange(),
+                    previous.openAllayApiVersionRange(), previous.source(), previous.contributions(),
+                    previous.diagnostic(), previous.packageInfo(), previous.requirements(),
+                    List.of(new ExtensionSettingsView.Capability(capabilityId, "Native world actions",
+                            "Can change the local world.", enabled)));
+            current = new ExtensionSettingsView(current.roots(), current.bundledModules(), current.adapters(),
+                    current.extensions().stream().map(extension -> extension.id().equals(extensionId)
+                            ? replacement : extension).toList(), current.catalog());
+            return new ToolResult.Success<>(current);
+        }
 
         @Override
         public CompletableFuture<ToolResult<PreparedPackageInstall>> prepareCommunity(

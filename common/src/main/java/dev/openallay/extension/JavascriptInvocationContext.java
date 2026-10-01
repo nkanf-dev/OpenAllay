@@ -5,88 +5,122 @@ import dev.openallay.context.ToolInvocationContext;
 import dev.openallay.model.CancellationSignal;
 import dev.openallay.script.JavascriptExecutionException;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Consumer;
 
 /**
- * Trusted invocation-local authority and evidence sink. This is not a JavaScript host binding.
- * Extensions must check {@link #requireActive()} immediately before each native owner-thread
- * action, and separately revalidate their exact backend/session identity.
+ * Trusted invocation-local authority and evidence sink, never a JavaScript host value.
+ * Each Extension receives only its own frozen capability grants. All Extension contexts in
+ * this invocation share activity, cancellation, and evidence. Native owner actions must recheck
+ * activity and capability immediately before use, then revalidate the exact backend/session.
  */
 public final class JavascriptInvocationContext {
-    private final ToolInvocationContext invocation;
-    private final CancellationSignal cancellation = new CancellationSignal();
-    private final CancellationSignal requestCancellation;
-    private Consumer<EvidenceMetadata> evidence;
-    private boolean active = true;
-    private boolean completedSuccessfully;
+    private final State state;
+    private final String extensionId;
+    private final Set<String> capabilities;
 
     JavascriptInvocationContext(ToolInvocationContext invocation, CancellationSignal requestCancellation) {
-        this.invocation = Objects.requireNonNull(invocation, "invocation");
-        this.requestCancellation = Objects.requireNonNull(requestCancellation, "requestCancellation");
+        state = new State(invocation, requestCancellation);
+        extensionId = "";
+        capabilities = Set.of();
     }
 
-    public ToolInvocationContext invocation() {
-        return invocation;
+    private JavascriptInvocationContext(State state, String extensionId, Set<String> capabilities) {
+        this.state = state;
+        this.extensionId = extensionId;
+        this.capabilities = Set.copyOf(capabilities);
     }
+
+    JavascriptInvocationContext forExtension(String owner, Set<String> grants) {
+        return new JavascriptInvocationContext(state, owner, grants);
+    }
+
+    public ToolInvocationContext invocation() { return state.invocation; }
+
+    /** The registered owner of this trusted context, not a script-supplied identity. */
+    public String extensionId() { return extensionId; }
 
     /** Becomes cancelled on request cancellation, request close, or execution scope exit. */
-    public CancellationSignal cancellation() {
-        return cancellation;
-    }
+    public CancellationSignal cancellation() { return state.cancellation; }
 
-    /**
-     * Whether the JavaScript execution returned normally while this scope was still active.
-     * Readable after revocation for cleanup. This does not assert domain operation completion,
-     * final Tool validation, or that every script claim has evidence.
-     */
-    public synchronized boolean completedSuccessfully() {
-        return completedSuccessfully;
-    }
-
-    synchronized void complete() {
+    public boolean hasCapability(String id) {
         requireActive();
-        completedSuccessfully = true;
+        return capabilities.contains(id);
+    }
+
+    /** Does not consult Agent Java/JVM settings or another Extension's declarations/grants. */
+    public void requireCapability(String id) {
+        if (!hasCapability(id)) {
+            throw new JavascriptExecutionException("javascript_extension_capability_denied",
+                    "This Extension operation requires an explicit player grant: " + id);
+        }
+    }
+
+    /** Normal script return, not a claim that a domain operation or final Tool completed. */
+    public boolean completedSuccessfully() {
+        synchronized (state) { return state.completedSuccessfully; }
+    }
+
+    void complete() {
+        synchronized (state) {
+            requireActive();
+            state.completedSuccessfully = true;
+        }
     }
 
     /** Records only evidence for an actually completed capture or operation. */
-    public synchronized void recordEvidence(EvidenceMetadata metadata) {
-        requireActive();
-        if (evidence == null) {
-            throw new JavascriptExecutionException(
-                    "javascript_invocation_inactive", "JavaScript invocation is not active");
+    public void recordEvidence(EvidenceMetadata metadata) {
+        synchronized (state) {
+            requireActive();
+            if (state.evidence == null) {
+                throw new JavascriptExecutionException(
+                        "javascript_invocation_inactive", "JavaScript invocation is not active");
+            }
+            state.evidence.accept(Objects.requireNonNull(metadata, "metadata"));
         }
-        evidence.accept(Objects.requireNonNull(metadata, "metadata"));
     }
 
-    /** Rejects cancelled/closed work. This method is safe to call on a native owner thread. */
-    public synchronized void requireActive() {
-        requestCancellation.throwIfCancelled();
-        if (!active) {
-            throw new JavascriptExecutionException(
-                    "javascript_invocation_closed", "JavaScript invocation is closed");
+    /** Safe to call on a native owner thread immediately before applying an operation. */
+    public void requireActive() {
+        synchronized (state) {
+            state.requestCancellation.throwIfCancelled();
+            if (!state.active) {
+                throw new JavascriptExecutionException(
+                        "javascript_invocation_closed", "JavaScript invocation is closed");
+            }
+            state.cancellation.throwIfCancelled();
         }
-        cancellation.throwIfCancelled();
     }
 
-    boolean requestCancelled() {
-        return requestCancellation.isCancelled();
-    }
+    boolean requestCancelled() { return state.requestCancellation.isCancelled(); }
 
-    synchronized void bindEvidence(Consumer<EvidenceMetadata> sink) {
-        requireActive();
-        evidence = Objects.requireNonNull(sink, "evidence");
+    void bindEvidence(Consumer<EvidenceMetadata> sink) {
+        synchronized (state) {
+            requireActive();
+            state.evidence = Objects.requireNonNull(sink, "evidence");
+        }
     }
 
     void revoke() {
-        synchronized (this) {
-            active = false;
-            evidence = null;
+        synchronized (state) {
+            state.active = false;
+            state.evidence = null;
         }
-        // Foreign cancellation listeners cannot prevent revocation or subsequent cleanup.
-        try {
-            cancellation.cancel();
-        } catch (Throwable ignored) {
-            // No Extension exception text crosses the Tool result boundary.
+        try { state.cancellation.cancel(); }
+        catch (Throwable ignored) { /* Foreign listeners cannot prevent revocation/cleanup. */ }
+    }
+
+    private static final class State {
+        private final ToolInvocationContext invocation;
+        private final CancellationSignal cancellation = new CancellationSignal();
+        private final CancellationSignal requestCancellation;
+        private Consumer<EvidenceMetadata> evidence;
+        private boolean active = true;
+        private boolean completedSuccessfully;
+
+        private State(ToolInvocationContext invocation, CancellationSignal requestCancellation) {
+            this.invocation = Objects.requireNonNull(invocation, "invocation");
+            this.requestCancellation = Objects.requireNonNull(requestCancellation, "requestCancellation");
         }
     }
 }

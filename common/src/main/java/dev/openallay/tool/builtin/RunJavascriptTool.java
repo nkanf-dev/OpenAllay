@@ -323,7 +323,8 @@ public final class RunJavascriptTool
                 cancellation,
                 commandBridge.orElse(null),
                 worldBridge.orElse(null),
-                context.unrestrictedJavascript());
+                context.unrestrictedJavascript(),
+                scope);
         if (scope != null) {
             scope.complete();
             scope.close();

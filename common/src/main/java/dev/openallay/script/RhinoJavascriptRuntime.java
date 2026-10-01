@@ -6,6 +6,7 @@ import dev.latvian.mods.rhino.Context;
 import dev.latvian.mods.rhino.Scriptable;
 import dev.latvian.mods.rhino.ScriptableObject;
 import dev.openallay.model.CancellationSignal;
+import dev.openallay.extension.JavascriptInvocationScope;
 import dev.openallay.context.SourceObservation;
 import dev.openallay.model.ModelClientException;
 import dev.openallay.script.host.RhinoHostAdapter;
@@ -197,6 +198,22 @@ public final class RhinoJavascriptRuntime {
             JavascriptCommandBridge commands,
             JavascriptWorldBridge world,
             boolean unrestricted) {
+        return execute(source, minecraftRoots, workspaceValues, workspaceShapes, workspaceSources,
+                workspaceSourceRecorder, cancellation, commands, world, unrestricted, null);
+    }
+
+    public JavascriptExecution execute(
+            String source,
+            Map<String, Object> minecraftRoots,
+            Map<String, JsonElement> workspaceValues,
+            Map<String, JavascriptResultShape> workspaceShapes,
+            Map<String, List<SourceObservation>> workspaceSources,
+            Consumer<SourceObservation> workspaceSourceRecorder,
+            CancellationSignal cancellation,
+            JavascriptCommandBridge commands,
+            JavascriptWorldBridge world,
+            boolean unrestricted,
+            JavascriptInvocationScope extensionScope) {
         if (source == null || source.isBlank()) {
             throw new JavascriptExecutionException(
                     "javascript_invalid", "JavaScript source must not be blank");
@@ -249,16 +266,19 @@ public final class RhinoJavascriptRuntime {
             if (world != null) {
                 defineGlobal(context, scope, "world", world.bind(context, scope, adapter));
             }
+            Map<String, Scriptable> extensionBindings = RhinoExtensionBindings.bind(
+                    context, scope, adapter, normalizer, extensionScope);
             LinkedHashSet<String> usedModules = new LinkedHashSet<>();
             defineGlobal(
                     context,
                     scope,
                     "require",
-                    moduleLoader(context, scope, usedModules, failures));
+                    moduleLoader(context, scope, usedModules, failures, extensionBindings));
             installHelpers(context, scope);
             String program = buildProgram(source);
             Object value = context.evaluateString(
                     scope, program, JavascriptFailureFormatter.USER_SOURCE, 1, null);
+            ((OpenAllayRhinoContext) context).checkBudget();
             RhinoJsonNormalizer.Result normalized = unrestricted
                     ? normalizer.normalizeUnrestricted(value, context)
                     : normalizer.normalize(value, context);
@@ -457,7 +477,8 @@ public final class RhinoJavascriptRuntime {
             Context context,
             ScriptableObject scope,
             LinkedHashSet<String> usedModules,
-            JavascriptFailureFormatter failures) {
+            JavascriptFailureFormatter failures,
+            Map<String, Scriptable> extensionBindings) {
         LinkedHashMap<String, Object> cache = new LinkedHashMap<>();
         Set<String> loading = new java.util.HashSet<>();
         return new BaseFunction(
@@ -479,6 +500,11 @@ public final class RhinoJavascriptRuntime {
                             "require needs one exact bundled module id");
                 }
                 String id = idValue.toString();
+                Scriptable binding = extensionBindings.get(id);
+                if (binding != null) {
+                    usedModules.add(id);
+                    return binding;
+                }
                 if (cache.containsKey(id)) {
                     usedModules.add(id);
                     return cache.get(id);

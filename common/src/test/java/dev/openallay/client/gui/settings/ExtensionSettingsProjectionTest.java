@@ -45,6 +45,44 @@ final class ExtensionSettingsProjectionTest {
     }
 
     @Test
+    void declaredScopesKeepRiskMetadataAndGrantsIndependentOfUnrestrictedJvm() {
+        var capability = new ExtensionSettingsView.Capability(
+                "sample:world_actions", "Native world actions", "Can change the local world.", false);
+        var extension = new ExtensionSettingsView.Extension(
+                "sample:extension", "Sample", "1.0.0", "Provider", "Sample extension",
+                ExtensionSettingsView.State.ACTIVE, List.of("fabric"), "[26.2,26.3)", "[0.2,0.3)", "bundled",
+                new ExtensionSettingsView.Contributions(List.of(), List.of(), List.of(), List.of(), List.of(),
+                        List.of("sample:native")), "", ExtensionSettingsView.PackageInfo.none(),
+                dev.openallay.requirement.RequirementSet.EMPTY, List.of(capability));
+        var view = new ExtensionSettingsView(List.of(), List.of(), List.of(), List.of(extension));
+        var safe = ExtensionSettingsProjection.from(view, CommandCapabilityConfig.defaults(),
+                new dev.openallay.script.UnrestrictedJavascriptConfig(false), false);
+        var unrestricted = ExtensionSettingsProjection.from(view, CommandCapabilityConfig.defaults(),
+                new dev.openallay.script.UnrestrictedJavascriptConfig(true), false);
+        var scopes = safe.findInstalled("sample:extension").orElseThrow().capabilities();
+
+        assertEquals(List.of(new ExtensionSettingsProjection.CapabilityCard(
+                "sample:world_actions", "Native world actions", "Can change the local world.", false)), scopes);
+        assertEquals(scopes, unrestricted.findInstalled("sample:extension").orElseThrow().capabilities());
+        assertEquals(List.of("sample:native"), safe.findInstalled("sample:extension")
+                .orElseThrow().contributions().hostBindings());
+        assertFalse(safe.unrestrictedJavascript());
+        assertTrue(unrestricted.unrestrictedJavascript());
+    }
+
+    @Test
+    void originalConstructorsDeclareNoImplicitCapabilitiesOrNativeBindings() {
+        var contributions = new ExtensionSettingsView.Contributions(
+                List.of(), List.of(), List.of(), List.of(), List.of());
+        var extension = new ExtensionSettingsView.Extension(
+                "sample:extension", "Sample", "1.0.0", "Provider", "Read bindings only",
+                ExtensionSettingsView.State.ACTIVE, List.of("fabric"), "[26.2,26.3)", "[0.2,0.3)",
+                "bundled", contributions, "");
+        assertTrue(extension.capabilities().isEmpty());
+        assertTrue(contributions.hostBindings().isEmpty());
+    }
+
+    @Test
     void toggleOnlyChangesExperimentalCommandChoice() {
         ExtensionSettingsProjection original = ExtensionSettingsProjection.from(
                 ExtensionSettingsView.defaults(),

@@ -40,6 +40,15 @@ final class RhinoJsonNormalizer {
                 unlimited.new Budget(true));
     }
 
+    /** Internal host transport is exact, not a model preview or workspace result projection. */
+    JsonElement normalizeHostValue(Object value, Context context) {
+        RhinoJsonNormalizer transport = new RhinoJsonNormalizer(new JavascriptRuntimeLimits(
+                Integer.MAX_VALUE, limits.maxResultDepth(), Long.MAX_VALUE,
+                Long.MAX_VALUE, Integer.MAX_VALUE, Integer.MAX_VALUE));
+        return transport.normalize(value, context, new IdentityHashMap<>(), 0,
+                transport.new Budget(true, true)).value();
+    }
+
     private Result normalize(
             Object value,
             Context context,
@@ -73,6 +82,7 @@ final class RhinoJsonNormalizer {
             return ordinary(new JsonPrimitive(number), JavascriptSemanticKind.SCALAR);
         }
         if (value instanceof Wrapper wrapper) {
+            if (budget.hostTransport) throw invalid("Extension host values cannot contain Java wrappers");
             Object unwrapped = wrapper.unwrap();
             if (unwrapped instanceof CharSequence text) return ordinary(new JsonPrimitive(text.toString()), JavascriptSemanticKind.SCALAR);
             if (unwrapped instanceof Number number && Double.isFinite(number.doubleValue())) return ordinary(new JsonPrimitive(number), JavascriptSemanticKind.SCALAR);
@@ -97,7 +107,23 @@ final class RhinoJsonNormalizer {
             try {
                 JsonArray result = new JsonArray();
                 JavascriptResultShape aggregate = null;
+                if (budget.hostTransport) {
+                    // NativeArray's Iterable Java view maps undefined/hole entries to null.
+                    // Read actual indexed guest values instead, preserving invalidity.
+                    for (int index = 0; index < length; index++) {
+                        Object item = array.get(context, index, array);
+                        if (item == Scriptable.NOT_FOUND) throw invalid(
+                                "Extension host arguments cannot contain array holes");
+                        Result child = normalize(item, context, ancestors, depth + 1, budget);
+                        result.add(child.value());
+                        aggregate = aggregate(aggregate, child.shape());
+                    }
+                    return new Result(result, arrayShape(aggregate));
+                }
                 for (Object item : array) {
+                    if (budget.hostTransport && item == Undefined.INSTANCE) {
+                        throw invalid("Extension host arguments cannot contain undefined array values");
+                    }
                     Result child = item == Undefined.INSTANCE
                             ? ordinary(JsonNull.INSTANCE, JavascriptSemanticKind.SCALAR)
                             : normalize(item, context, ancestors, depth + 1, budget);
@@ -116,11 +142,28 @@ final class RhinoJsonNormalizer {
             enter(value, ancestors);
             try {
                 JsonObject result = new JsonObject();
+                if (budget.hostTransport) {
+                    // NativeObject's Java Map view omits undefined entries. Use actual own
+                    // JavaScript keys so transport cannot silently remove malformed fields.
+                    for (Object id : object.getIds(context)) {
+                        if (!(id instanceof String) && !(id instanceof Integer)) {
+                            throw invalid("Extension host arguments require ordinary JSON keys");
+                        }
+                        String key = id.toString();
+                        Object child = id instanceof Integer index
+                                ? object.get(context, index, object) : object.get(context, key, object);
+                        result.add(key, normalize(child, context, ancestors, depth + 1, budget).value());
+                    }
+                    return ordinary(result, JavascriptSemanticKind.KEY_VALUE);
+                }
                 for (Object rawEntry : object.entrySet()) {
                     Map.Entry<?, ?> entry = (Map.Entry<?, ?>) rawEntry;
                     String key = String.valueOf(entry.getKey());
                     budget.string(key.length());
                     Object child = entry.getValue();
+                    if (budget.hostTransport && child == Undefined.INSTANCE) {
+                        throw invalid("Extension host arguments cannot contain undefined fields");
+                    }
                     if (child != Undefined.INSTANCE) {
                         result.add(
                                 key,
@@ -167,6 +210,9 @@ final class RhinoJsonNormalizer {
                     String key = String.valueOf(id);
                     budget.string(key.length());
                     Object child = object.get(context, key, object);
+                    if (budget.hostTransport && child == Undefined.INSTANCE) {
+                        throw invalid("Extension host arguments cannot contain undefined fields");
+                    }
                     if (child != Undefined.INSTANCE) {
                         result.add(key, normalize(
                                 child, context, ancestors, depth + 1, budget).value());
@@ -223,11 +269,16 @@ final class RhinoJsonNormalizer {
 
     private final class Budget {
         private final boolean unrestricted;
+        private final boolean hostTransport;
         private long nodes;
         private long stringCharacters;
 
-        private Budget() { this(false); }
-        private Budget(boolean unrestricted) { this.unrestricted = unrestricted; }
+        private Budget() { this(false, false); }
+        private Budget(boolean unrestricted) { this(unrestricted, false); }
+        private Budget(boolean unrestricted, boolean hostTransport) {
+            this.unrestricted = unrestricted;
+            this.hostTransport = hostTransport;
+        }
 
         private void node() {
             if (!unrestricted && ++nodes > limits.maxResultNodes()) {

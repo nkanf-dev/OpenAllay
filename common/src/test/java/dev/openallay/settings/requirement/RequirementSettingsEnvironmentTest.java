@@ -87,7 +87,7 @@ final class RequirementSettingsEnvironmentTest {
     }
 
     @Test
-    void publishedBuilderCapabilityAliasUsesTheSameDisabledAndSatisfiedSettingFacts() {
+    void publishedCapabilityAliasUsesTheSameDisabledAndSatisfiedSettingFacts() {
         var capabilities = CapabilitySettingsView.defaults();
         var requirements = new RequirementSet(Set.of(RequirementSettingsEnvironment.UNRESTRICTED_JAVASCRIPT,
                 RequirementSettingsEnvironment.UNRESTRICTED_JAVASCRIPT_ALIAS,
@@ -125,6 +125,55 @@ final class RequirementSettingsEnvironmentTest {
                 RequirementSettingsEnvironment.UNRESTRICTED_JAVASCRIPT_ALIAS)));
         assertFalse(RequirementSettingsEnvironment.isUnrestrictedJavascript("unrestricted_javascript"));
         assertFalse(RequirementSettingsEnvironment.isUnrestrictedJavascript("thirdparty:unrestricted-javascript"));
+    }
+
+    @Test
+    void extensionCapabilityFactsTrackExactDeclarationsAndNeverOfferAutomaticGrants() {
+        var enabled = scopedExtension("enabled:extension", ExtensionSettingsView.State.ACTIVE,
+                "enabled:world_actions", true);
+        var disabled = scopedExtension("disabled:extension", ExtensionSettingsView.State.ACTIVE,
+                "disabled:world_actions", false);
+        var pending = scopedExtension("pending:extension", ExtensionSettingsView.State.RESTART_REQUIRED,
+                "pending:world_actions", true);
+        var unavailable = scopedExtension("broken:extension", ExtensionSettingsView.State.UNAVAILABLE,
+                "broken:world_actions", true);
+        var community = scopedExtension("community:extension", ExtensionSettingsView.State.COMMUNITY,
+                "community:world_actions", true);
+        var view = new ExtensionSettingsView(List.of(), List.of(), List.of(),
+                List.of(enabled, disabled, pending, unavailable, community));
+        var environment = RequirementSettingsEnvironment.from(CapabilitySettingsView.defaults(),
+                SkillSettingsView.empty(), view, CommandCapabilityConfig.defaults(),
+                new UnrestrictedJavascriptConfig(true));
+        var report = RequirementEvaluator.evaluate(new RequirementSet(Set.of(
+                "enabled:world_actions", "disabled:world_actions", "pending:world_actions",
+                "broken:world_actions", "community:world_actions", "unknown:world_actions"),
+                Set.of(), Set.of()), environment);
+        Map<String, RequirementStatus> statuses = report.entries().stream().collect(
+                java.util.stream.Collectors.toMap(entry -> entry.id(), entry -> entry.status()));
+
+        assertEquals(RequirementStatus.SATISFIED, statuses.get("enabled:world_actions"));
+        assertEquals(RequirementStatus.DISABLED, statuses.get("disabled:world_actions"));
+        assertEquals(RequirementStatus.SATISFIED, statuses.get("pending:world_actions"));
+        assertEquals(RequirementStatus.UNAVAILABLE, statuses.get("broken:world_actions"));
+        assertEquals(RequirementStatus.UNAVAILABLE, statuses.get("community:world_actions"));
+        assertEquals(RequirementStatus.UNKNOWN, statuses.get("unknown:world_actions"));
+        assertTrue(RequirementSettingsEnvironment.changes(report, CapabilitySettingsView.defaults()).isEmpty());
+        assertEquals("Native world actions", environment.capabilities().get("disabled:world_actions").name());
+        var withoutJvm = RequirementSettingsEnvironment.from(CapabilitySettingsView.defaults(),
+                SkillSettingsView.empty(), view, CommandCapabilityConfig.defaults(),
+                UnrestrictedJavascriptConfig.defaults());
+        assertEquals(environment.capabilities().get("disabled:world_actions"),
+                withoutJvm.capabilities().get("disabled:world_actions"));
+    }
+
+    private static ExtensionSettingsView.Extension scopedExtension(
+            String id, ExtensionSettingsView.State state, String scope, boolean enabled) {
+        return new ExtensionSettingsView.Extension(id, id, "1.0", "Test", "Test", state,
+                List.of("fabric"), "[26.2,26.3)", "[0.2,0.3)", "local",
+                new ExtensionSettingsView.Contributions(List.of(), List.of(), List.of(), List.of(), List.of()), "",
+                ExtensionSettingsView.PackageInfo.none(), RequirementSet.EMPTY,
+                List.of(new ExtensionSettingsView.Capability(scope, "Native world actions",
+                        "Can change the local world.", enabled)));
     }
 
     private static CapabilitySettingsEntry capability(String id, boolean available, boolean enabled) {

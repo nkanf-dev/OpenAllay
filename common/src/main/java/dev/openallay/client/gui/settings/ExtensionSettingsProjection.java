@@ -103,7 +103,10 @@ public record ExtensionSettingsProjection(
                                 extension.packageInfo().sha256(),
                                 extension.packageInfo().updateAvailable(),
                                 extension.packageInfo().installable(),
-                                RequirementSettingsProjection.evaluate(extension.requirements(), environment)))
+                                RequirementSettingsProjection.evaluate(extension.requirements(), environment),
+                                extension.capabilities().stream().map(capability -> new CapabilityCard(
+                                        capability.id(), capability.name(), capability.description(), capability.enabled()))
+                                        .toList()))
                         .toList(),
                 new CatalogCard(
                         view.catalog().configured(),
@@ -212,8 +215,10 @@ public record ExtensionSettingsProjection(
             String sha256,
             boolean updateAvailable,
             boolean installable,
-            RequirementSettingsProjection requirements) {
+            RequirementSettingsProjection requirements,
+            List<CapabilityCard> capabilities) {
         public ExtensionCard {
+            capabilities = List.copyOf(capabilities);
             loaders = List.copyOf(loaders);
             Objects.requireNonNull(state, "state");
             Objects.requireNonNull(contributions, "contributions");
@@ -222,6 +227,8 @@ public record ExtensionSettingsProjection(
             sha256 = sha256 == null ? "" : sha256;
         }
     }
+
+    public record CapabilityCard(String id, String name, String description, boolean enabled) {}
 
     private static String renderSchema(HostSchema schema, int depth) {
         if (depth >= 5) {

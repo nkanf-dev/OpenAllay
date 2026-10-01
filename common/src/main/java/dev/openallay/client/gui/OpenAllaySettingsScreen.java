@@ -346,6 +346,7 @@ public final class OpenAllaySettingsScreen extends Screen {
                     pageScroll - (int) Math.round(scrollY * 24), 0, maximum);
             if (replacement != pageScroll) {
                 pageScroll = replacement;
+                if (section == SettingsSection.EXTENSIONS) rebuildWidgets();
             }
             return true;
         }
@@ -661,6 +662,7 @@ public final class OpenAllaySettingsScreen extends Screen {
                             extension,
                             Math.max(80, detail.width() - 20),
                             projection.debugMode())));
+            selectedExtension().ifPresent(extension -> addExtensionCapabilityActions(extension, detail));
             int actionY = detail.bottom() - 106;
             if (extensionTab == ExtensionTab.COMMUNITY
                     || selectedExtension().map(
@@ -691,7 +693,8 @@ public final class OpenAllaySettingsScreen extends Screen {
                 contributions.dataModules(),
                 contributions.javascriptModules(),
                 contributions.skills(),
-                contributions.resultViews())) {
+                contributions.resultViews(),
+                contributions.hostBindings())) {
             if (!values.isEmpty()) {
                 height += wrappedHeight(
                         Component.literal(String.join(", ", values)), width, 10) + 2;
@@ -706,7 +709,72 @@ public final class OpenAllaySettingsScreen extends Screen {
         if (debugMode && !extension.sha256().isBlank()) {
             height += wrappedHeight(Component.literal(extension.sha256()), width, 10) + 12;
         }
+        if (!extension.capabilities().isEmpty()) {
+            height += extensionCapabilityHeaderHeight(width);
+            for (var capability : extension.capabilities()) {
+                height += 26 + wrappedHeight(Component.literal(capability.description()), width, 10) + 8;
+            }
+        }
         return height + 82;
+    }
+
+    private int extensionCapabilityHeaderHeight(int width) {
+        return wrappedHeight(Component.translatable(
+                "screen.openallay.settings.extensions.capabilities.title"), width, 11)
+                + 4 + wrappedHeight(Component.translatable(
+                        "screen.openallay.settings.extensions.capabilities.description"), width, 10) + 8;
+    }
+
+    private int extensionCapabilityActionsY(
+            ExtensionSettingsProjection.ExtensionCard extension, SettingsLayout.Rect area, int width) {
+        Component name = Component.literal(extension.name()).copy().append(" · ")
+                .append(Component.translatable(extensionStateKey(extension)));
+        return area.y() + 32 - pageScroll
+                + wrappedHeight(name, width, 11) + 4
+                + wrappedHeight(Component.literal(extension.summary()), width, 10) + 7
+                + extensionCapabilityHeaderHeight(width);
+    }
+
+    private void addExtensionCapabilityActions(
+            ExtensionSettingsProjection.ExtensionCard extension, SettingsLayout.Rect area) {
+        int x = area.x() + 10;
+        int width = Math.max(80, area.width() - 20);
+        int y = extensionCapabilityActionsY(extension, area, width);
+        int bottomInset = extensionTab == ExtensionTab.COMMUNITY || extension.installable() ? 114 : 62;
+        for (var capability : extension.capabilities()) {
+            Button toggle = addRenderableWidget(OpenAllayButton.create(
+                            Component.translatable(capability.enabled()
+                                            ? "screen.openallay.settings.extensions.capabilities.enabled"
+                                            : "screen.openallay.settings.extensions.capabilities.disabled",
+                                    capability.name()),
+                            ignored -> accept(service.saveExtensionCapability(
+                                    extension.id(), capability.id(), !capability.enabled())))
+                    .selected(capability.enabled())
+                    .tooltip(Tooltip.create(Component.literal(capability.description())))
+                    .bounds(x, y, width, 20).build());
+            toggle.active = snapshot.operation().kind() == SettingsOperation.Kind.IDLE
+                    && (extension.state() == dev.openallay.settings.extension.ExtensionSettingsView.State.ACTIVE
+                            || extension.state() == dev.openallay.settings.extension.ExtensionSettingsView.State.RESTART_REQUIRED);
+            toggle.visible = y >= area.y() + 28 && y + 20 <= area.bottom() - bottomInset;
+            y += 26 + wrappedHeight(Component.literal(capability.description()), width, 10) + 8;
+        }
+    }
+
+    private int renderExtensionCapabilities(
+            GuiGraphicsExtractor graphics, ExtensionSettingsProjection.ExtensionCard extension,
+            int x, int y, int width) {
+        if (extension.capabilities().isEmpty()) return y;
+        y = renderWrapped(graphics, Component.translatable(
+                "screen.openallay.settings.extensions.capabilities.title"), x, y, width, ACCENT, 11);
+        y = renderWrapped(graphics, Component.translatable(
+                "screen.openallay.settings.extensions.capabilities.description"), x, y + 4, width, MUTED, 10);
+        y += 8;
+        for (var capability : extension.capabilities()) {
+            // The native switch occupies the same scroll position in addExtensionCapabilityActions.
+            y = renderWrapped(graphics, Component.literal(capability.description()),
+                    x, y + 26, width, MUTED, 10) + 8;
+        }
+        return y;
     }
 
     private void addExtensionCommunityActions(
@@ -1741,6 +1809,7 @@ public final class OpenAllaySettingsScreen extends Screen {
                 MUTED,
                 10);
         y += 7;
+        y = renderExtensionCapabilities(graphics, extension, x, y, width);
         y = extensionDetailLine(
                 graphics,
                 "screen.openallay.settings.extensions.detail.version",
@@ -1901,7 +1970,10 @@ public final class OpenAllaySettingsScreen extends Screen {
                         contributions.skills()),
                 new ContributionLine(
                         "screen.openallay.settings.extensions.detail.result_views",
-                        contributions.resultViews()));
+                        contributions.resultViews()),
+                new ContributionLine(
+                        "screen.openallay.settings.extensions.detail.host_bindings",
+                        contributions.hostBindings()));
         boolean any = false;
         for (ContributionLine line : lines) {
             if (line.values().isEmpty()) {

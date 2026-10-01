@@ -30,6 +30,8 @@ public final class OpenAllayExtensionRegistry {
     private final Map<String, String> contributionOwners = new TreeMap<>();
     private final Map<String, Set<JavascriptInvocationScope>> invocations = new java.util.HashMap<>();
     private List<JavascriptInvocationParticipant> javascriptInvocationParticipants = List.of();
+    private ExtensionCapabilityPolicy capabilityPolicy = ExtensionCapabilityPolicy.defaults();
+    private final Map<String, ExtensionCapabilityPolicy> javascriptRequests = new java.util.HashMap<>();
     private long generation;
 
     public OpenAllayExtensionRegistry(
@@ -59,8 +61,8 @@ public final class OpenAllayExtensionRegistry {
                     declared.resultViews(), declared.javascriptInvocationParticipants().stream()
                             .map(participant -> (JavascriptInvocationParticipant)
                                     new RegisteredParticipant(participant.id(), participant))
-                            .toList());
-        } catch (RuntimeException failure) {
+                            .toList(), declared.hostBindings(), declared.capabilities());
+        } catch (Throwable failure) {
             return rejected("", OpenAllayExtensionState.UNAVAILABLE, "extension_registration_failed");
         }
         if (active.containsKey(descriptor.id())) {
@@ -82,7 +84,7 @@ public final class OpenAllayExtensionRegistry {
                     descriptor.id(),
                     OpenAllayExtensionState.UNAVAILABLE,
                     "duplicate_contribution_id");
-        } catch (RuntimeException failure) {
+        } catch (Throwable failure) {
             return rejected(
                     descriptor.id(),
                     OpenAllayExtensionState.UNAVAILABLE,
@@ -106,6 +108,37 @@ public final class OpenAllayExtensionRegistry {
         return environment;
     }
 
+    public synchronized Map<String, List<ExtensionCapability>> capabilityDescriptors() {
+        Map<String, List<ExtensionCapability>> descriptors = new TreeMap<>();
+        active.forEach((id, value) -> descriptors.put(id, value.contribution().capabilities()));
+        return Map.copyOf(descriptors);
+    }
+
+    public synchronized ExtensionCapabilityPolicy capabilityPolicy() { return capabilityPolicy; }
+
+    /** Explicit settings publication only. Neither package installation nor Java access calls this. */
+    public synchronized void replaceCapabilityPolicy(ExtensionCapabilityPolicy policy) {
+        Objects.requireNonNull(policy, "policy");
+        Map<String, Set<String>> accepted = new TreeMap<>();
+        active.forEach((id, extension) -> {
+            Set<String> scopes = extension.contribution().capabilities().stream()
+                    .map(ExtensionCapability::id).filter(scope -> policy.allows(id, scope))
+                    .collect(java.util.stream.Collectors.toUnmodifiableSet());
+            if (!scopes.isEmpty()) accepted.put(id, scopes);
+        });
+        capabilityPolicy = new ExtensionCapabilityPolicy(accepted);
+    }
+
+    /** Server-origin requests always carry no Extension operation grants. */
+    public synchronized void freezeJavascriptRequest(String correlationId, boolean clientLocalModel) {
+        Objects.requireNonNull(correlationId, "correlationId");
+        if (!clientLocalModel) {
+            javascriptRequests.put(correlationId, ExtensionCapabilityPolicy.defaults());
+            return;
+        }
+        javascriptRequests.computeIfAbsent(correlationId, ignored -> capabilityPolicy);
+    }
+
     /**
      * Admits work synchronously before its worker is launched. The caller owns the request
      * cancellation signal and must revoke it before terminal request cleanup. A queued callback
@@ -119,8 +152,22 @@ public final class OpenAllayExtensionRegistry {
         Set<JavascriptInvocationScope> scopes =
                 invocations.computeIfAbsent(requestId, ignored -> new HashSet<>());
         JavascriptInvocationScope[] reference = new JavascriptInvocationScope[1];
+        ExtensionCapabilityPolicy frozen = javascriptRequests.getOrDefault(
+                requestId, ExtensionCapabilityPolicy.defaults());
+        List<JavascriptInvocationScope.Participant> participants = active.values().stream()
+                .flatMap(value -> value.contribution().javascriptInvocationParticipants().stream()
+                        .map(participant -> new JavascriptInvocationScope.Participant(
+                                value.descriptor().id(), participant))).toList();
+        List<JavascriptInvocationScope.Binding> bindings = active.values().stream()
+                .flatMap(value -> value.contribution().hostBindings().stream()
+                        .map(binding -> new JavascriptInvocationScope.Binding(
+                                value.descriptor().id(), binding))).toList();
+        Map<String, Set<String>> grants = new TreeMap<>();
+        active.forEach((id, value) -> grants.put(id, value.contribution().capabilities().stream()
+                .map(ExtensionCapability::id).filter(capability -> frozen.allows(id, capability))
+                .collect(java.util.stream.Collectors.toUnmodifiableSet())));
         JavascriptInvocationScope scope = new JavascriptInvocationScope(
-                invocation, cancellation, javascriptInvocationParticipants,
+                invocation, cancellation, participants, bindings, grants,
                 () -> releaseInvocation(requestId, reference[0]));
         reference[0] = scope;
         scopes.add(scope);
@@ -132,6 +179,7 @@ public final class OpenAllayExtensionRegistry {
         Set<JavascriptInvocationScope> scopes;
         synchronized (this) {
             scopes = invocations.remove(correlationId);
+            javascriptRequests.remove(correlationId);
         }
         if (scopes != null) scopes.forEach(JavascriptInvocationScope::revoke);
     }
@@ -177,6 +225,24 @@ public final class OpenAllayExtensionRegistry {
             }
             claim(extensionId, id, batch);
         }
+        Set<String> declaredCapabilities = new HashSet<>();
+        for (ExtensionCapability capability : contribution.capabilities()) {
+            Objects.requireNonNull(capability, "capability");
+            claim(extensionId, capability.id(), batch);
+            declaredCapabilities.add(capability.id());
+        }
+        for (JavascriptHostBinding binding : contribution.hostBindings()) {
+            Objects.requireNonNull(binding, "hostBinding");
+            claim(extensionId, binding.id(), batch);
+            if (javascriptModules.ids().contains(binding.id())) {
+                throw new DuplicateContribution();
+            }
+            for (JavascriptHostMethod method : binding.methods()) {
+                if (!declaredCapabilities.containsAll(method.requiredCapabilities())) {
+                    throw new IllegalArgumentException("Host method requires an undeclared owner capability");
+                }
+            }
+        }
         dataModules.validateRegistration(extensionId, contribution.dataModules());
         javascriptModules.validateRegistration(extensionId, moduleSources);
         skills.validateExternal(contribution.skills(), installedMods);
@@ -213,6 +279,10 @@ public final class OpenAllayExtensionRegistry {
         RegisteredExtension registered = new RegisteredExtension(descriptor, contribution);
         contribution.javascriptInvocationParticipants().forEach(participant ->
                 contributionOwners.put(participant.id(), descriptor.id()));
+        contribution.hostBindings().forEach(binding ->
+                contributionOwners.put(binding.id(), descriptor.id()));
+        contribution.capabilities().forEach(capability ->
+                contributionOwners.put(capability.id(), descriptor.id()));
         active.put(descriptor.id(), registered);
         javascriptInvocationParticipants = active.values().stream()
                 .flatMap(value -> value.contribution().javascriptInvocationParticipants().stream())
@@ -243,13 +313,24 @@ public final class OpenAllayExtensionRegistry {
             List<String> javascriptModules,
             List<String> skills,
             List<String> resultViews,
-            String diagnostic) {
+            String diagnostic,
+            List<String> hostBindings,
+            List<ExtensionCapability> capabilities) {
         public ExtensionView {
             dataModules = List.copyOf(dataModules);
             javascriptModules = List.copyOf(javascriptModules);
             skills = List.copyOf(skills);
             resultViews = List.copyOf(resultViews);
             diagnostic = diagnostic == null ? "" : diagnostic;
+            hostBindings = List.copyOf(hostBindings);
+            capabilities = List.copyOf(capabilities);
+        }
+
+        public ExtensionView(OpenAllayExtensionDescriptor descriptor, OpenAllayExtensionState state,
+                List<String> dataModules, List<String> javascriptModules, List<String> skills,
+                List<String> resultViews, String diagnostic) {
+            this(descriptor, state, dataModules, javascriptModules, skills, resultViews,
+                    diagnostic, List.of(), List.of());
         }
     }
 
@@ -273,7 +354,9 @@ public final class OpenAllayExtensionRegistry {
                             .map(JavascriptResultViewProvider::id)
                             .sorted()
                             .toList(),
-                    "");
+                    "",
+                    contribution.hostBindings().stream().map(JavascriptHostBinding::id).sorted().toList(),
+                    contribution.capabilities());
         }
     }
 

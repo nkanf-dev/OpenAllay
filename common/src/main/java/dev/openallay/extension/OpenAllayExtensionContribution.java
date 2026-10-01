@@ -11,13 +11,17 @@ public record OpenAllayExtensionContribution(
         List<JavascriptModuleSource> javascriptModules,
         List<SkillSource> skills,
         List<JavascriptResultViewProvider> resultViews,
-        List<JavascriptInvocationParticipant> javascriptInvocationParticipants) {
+        List<JavascriptInvocationParticipant> javascriptInvocationParticipants,
+        List<JavascriptHostBinding> hostBindings,
+        List<ExtensionCapability> capabilities) {
     public OpenAllayExtensionContribution {
         dataModules = List.copyOf(dataModules);
         javascriptModules = List.copyOf(javascriptModules);
         skills = List.copyOf(skills);
         resultViews = List.copyOf(resultViews);
         javascriptInvocationParticipants = List.copyOf(javascriptInvocationParticipants);
+        hostBindings = List.copyOf(hostBindings);
+        capabilities = List.copyOf(capabilities);
     }
 
     /** Keeps the original Extension API constructor binary- and source-compatible. */
@@ -26,7 +30,18 @@ public record OpenAllayExtensionContribution(
             List<JavascriptModuleSource> javascriptModules,
             List<SkillSource> skills,
             List<JavascriptResultViewProvider> resultViews) {
-        this(dataModules, javascriptModules, skills, resultViews, List.of());
+        this(dataModules, javascriptModules, skills, resultViews, List.of(), List.of(), List.of());
+    }
+
+    /** Retains the lifecycle-participant Extension API constructor for 0.2.x binaries. */
+    public OpenAllayExtensionContribution(
+            List<JavascriptDataModule> dataModules,
+            List<JavascriptModuleSource> javascriptModules,
+            List<SkillSource> skills,
+            List<JavascriptResultViewProvider> resultViews,
+            List<JavascriptInvocationParticipant> javascriptInvocationParticipants) {
+        this(dataModules, javascriptModules, skills, resultViews,
+                javascriptInvocationParticipants, List.of(), List.of());
     }
 
     public static OpenAllayExtensionContribution empty() {

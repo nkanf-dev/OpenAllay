@@ -20,14 +20,18 @@ final class OpenAllayRhinoContext extends Context {
 
     private final CancellationSignal cancellation;
     private final boolean unrestricted;
-    private final long deadlineNanos;
+    private final long timeoutNanos;
+    private final long startedNanos;
+    private long nativeWaitNanos;
+    private boolean nativeCall;
 
     OpenAllayRhinoContext(
             ContextFactory factory, CancellationSignal cancellation, Duration timeout, boolean unrestricted) {
         super(factory);
         this.cancellation = cancellation;
         this.unrestricted = unrestricted;
-        this.deadlineNanos = System.nanoTime() + timeout.toNanos();
+        this.timeoutNanos = timeout.toNanos();
+        this.startedNanos = System.nanoTime();
         setInstructionObserverThreshold(OBSERVER_THRESHOLD);
     }
 
@@ -59,14 +63,36 @@ final class OpenAllayRhinoContext extends Context {
                 "Java host objects are not available in the OpenAllay runtime");
     }
 
+    /** Excludes only trusted native execution from interpreter time, never Agent callbacks. */
+    <T> T callNative(java.util.concurrent.Callable<T> action) throws Exception {
+        checkBudget();
+        if (nativeCall) throw new JavascriptExecutionException("javascript_host_access_denied",
+                "A native host method cannot re-enter Agent JavaScript");
+        nativeCall = true;
+        long started = System.nanoTime();
+        try {
+            return action.call();
+        } finally {
+            nativeWaitNanos += System.nanoTime() - started;
+            nativeCall = false;
+            checkBudget();
+        }
+    }
+
     @Override
     protected void observeInstructionCount(int instructionCount) {
+        if (nativeCall) throw new JavascriptExecutionException("javascript_host_access_denied",
+                "A native host method cannot execute Agent JavaScript");
+        checkBudget();
+    }
+
+    void checkBudget() {
         cancellation.throwIfCancelled();
         if (Thread.currentThread().isInterrupted()) {
             throw new JavascriptExecutionException(
                     "javascript_cancelled", "JavaScript execution was interrupted");
         }
-        if (!unrestricted && System.nanoTime() >= deadlineNanos) {
+        if (!unrestricted && System.nanoTime() - startedNanos - nativeWaitNanos >= timeoutNanos) {
             throw new JavascriptExecutionException(
                     "javascript_timeout", "JavaScript execution exceeded its time budget");
         }

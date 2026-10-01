@@ -20,6 +20,7 @@ public final class CancellationSignal implements dev.openallay.net.HttpCancellat
     }
 
     public void onCancel(Runnable listener) {
+        java.util.Objects.requireNonNull(listener, "listener");
         boolean runNow;
         synchronized (listeners) {
             runNow = cancelled.get();
@@ -27,9 +28,7 @@ public final class CancellationSignal implements dev.openallay.net.HttpCancellat
                 listeners.add(listener);
             }
         }
-        if (runNow) {
-            listener.run();
-        }
+        if (runNow) notifyListener(listener);
     }
 
     public boolean cancel() {
@@ -45,16 +44,25 @@ public final class CancellationSignal implements dev.openallay.net.HttpCancellat
             snapshot = List.copyOf(listeners);
             listeners.clear();
         }
-        notifications.execute(() -> {
-            for (Runnable listener : snapshot) {
-                try {
-                    listener.run();
-                } catch (RuntimeException ignored) {
-                    // One foreign callback cannot prevent later revocations or terminal cleanup.
-                }
-            }
-        });
+        AtomicBoolean notified = new AtomicBoolean();
+        Runnable notifyAll = () -> {
+            if (notified.compareAndSet(false, true)) snapshot.forEach(CancellationSignal::notifyListener);
+        };
+        try {
+            notifications.execute(notifyAll);
+        } catch (Throwable rejected) {
+            // Revocation is already final. A rejected notification executor cannot drop cleanup.
+            notifyAll.run();
+        }
         return true;
+    }
+
+    private static void notifyListener(Runnable listener) {
+        try { listener.run(); }
+        catch (Throwable ignored) {
+            // Cancellation is best-effort notification, not a foreign exception boundary.
+            // Even Error/ThreadDeath from a callback cannot drop another listener's cleanup.
+        }
     }
 
     /** Settles the observed operation even when its raw provider future ignores cancellation. */

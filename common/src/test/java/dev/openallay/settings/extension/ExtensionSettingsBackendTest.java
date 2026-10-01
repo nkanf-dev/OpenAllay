@@ -5,6 +5,9 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.openallay.extension.OpenAllayExtension;
+import dev.openallay.extension.ExtensionCapability;
+import dev.openallay.extension.ExtensionCapabilityPolicy;
+import dev.openallay.extension.ExtensionCapabilityPolicyStore;
 import dev.openallay.extension.OpenAllayExtensionContribution;
 import dev.openallay.extension.OpenAllayExtensionDescriptor;
 import dev.openallay.extension.OpenAllayExtensionEnvironment;
@@ -40,6 +43,124 @@ final class ExtensionSettingsBackendTest {
         assertEquals(
                 "https://raw.githubusercontent.com/nkanf-dev/OpenAllay-Extensions/main/catalog.json",
                 ExtensionSettingsBackend.DEFAULT_CATALOG_URI.toString());
+    }
+
+    @Test
+    void productionLoadFiltersUnknownGrantsWithoutRewritingFile() throws Exception {
+        JavascriptDataModuleRegistry modules = new JavascriptDataModuleRegistry();
+        OpenAllayExtensionRegistry registry = scopedRegistry(modules);
+        Path config = temporary.resolve("config");
+        Files.createDirectories(config);
+        Path target = config.resolve("extension-capabilities.json");
+        String contents = "{\"grants\":{\"sample:extension\":[\"sample:world_actions\",\"sample:unknown\"],"
+                + "\"future:extension\":[\"future:world_actions\"]}}";
+        Files.writeString(target, contents);
+        ExtensionSettingsBackend backend = new ExtensionSettingsBackend(
+                config, temporary.resolve("mods"), registry, modules);
+
+        assertTrue(registry.capabilityPolicy().allows("sample:extension", "sample:world_actions"));
+        assertTrue(!registry.capabilityPolicy().allows("sample:extension", "sample:unknown"));
+        assertTrue(!registry.capabilityPolicy().allows("future:extension", "future:world_actions"));
+        assertEquals(contents, Files.readString(target));
+        assertTrue(extension(backend.currentView(), "sample:extension").capabilities().getFirst().enabled());
+    }
+
+    @Test
+    void productionMissingOrMalformedPolicyIsDefaultOffAndDoesNotWrite() throws Exception {
+        for (boolean malformed : List.of(false, true)) {
+            JavascriptDataModuleRegistry modules = new JavascriptDataModuleRegistry();
+            OpenAllayExtensionRegistry registry = scopedRegistry(modules);
+            registry.replaceCapabilityPolicy(granted());
+            Path config = temporary.resolve(malformed ? "malformed" : "missing");
+            Path target = config.resolve("extension-capabilities.json");
+            if (malformed) {
+                Files.createDirectories(config);
+                Files.writeString(target, "{\"grants\":{},\"grants\":{}}");
+            }
+            ExtensionSettingsBackend backend = new ExtensionSettingsBackend(
+                    config, temporary.resolve("mods"), registry, modules);
+            assertEquals(ExtensionCapabilityPolicy.defaults(), registry.capabilityPolicy());
+            assertTrue(!extension(backend.currentView(), "sample:extension").capabilities().getFirst().enabled());
+            if (malformed) {
+                assertEquals("{\"grants\":{},\"grants\":{}}", Files.readString(target));
+                assertEquals("invalid_extension_capability_config",
+                        backend.currentView().catalog().notice().orElseThrow().code());
+            } else assertTrue(Files.notExists(target));
+        }
+    }
+
+    @Test
+    void onlyExplicitKnownCapabilitySavesPersistThenPublish() throws Exception {
+        JavascriptDataModuleRegistry modules = new JavascriptDataModuleRegistry();
+        OpenAllayExtensionRegistry registry = scopedRegistry(modules);
+        Path target = temporary.resolve("extension-capabilities.json");
+        ExtensionSettingsBackend backend = scopedBackend(registry, modules, target);
+        ExtensionSettingsView.Extension view = extension(backend.currentView(), "sample:extension");
+        assertEquals("sample:world_actions", view.capabilities().getFirst().id());
+        assertEquals("Native world actions", view.capabilities().getFirst().name());
+        assertTrue(view.capabilities().getFirst().description().contains("change the local world"));
+        assertTrue(!view.capabilities().getFirst().enabled());
+        assertEquals(List.of("sample:native"), view.contributions().hostBindings());
+        assertInstanceOf(ToolResult.Failure.class,
+                backend.saveCapability("future:extension", "sample:world_actions", true));
+        assertInstanceOf(ToolResult.Failure.class,
+                backend.saveCapability("sample:extension", "sample:unknown", true));
+        assertTrue(Files.notExists(target));
+        assertEquals(ExtensionCapabilityPolicy.defaults(), registry.capabilityPolicy());
+
+        assertInstanceOf(ToolResult.Success.class,
+                backend.saveCapability("sample:extension", "sample:world_actions", true));
+        assertEquals(granted(), registry.capabilityPolicy());
+        assertTrue(Files.readString(target).contains("sample:world_actions"));
+        assertTrue(extension(backend.currentView(), "sample:extension").capabilities().getFirst().enabled());
+        assertInstanceOf(ToolResult.Success.class,
+                backend.saveCapability("sample:extension", "sample:world_actions", false));
+        assertEquals(ExtensionCapabilityPolicy.defaults(), registry.capabilityPolicy());
+    }
+
+    @Test
+    void failedCapabilitySaveDoesNotPublishCandidate() throws Exception {
+        JavascriptDataModuleRegistry modules = new JavascriptDataModuleRegistry();
+        OpenAllayExtensionRegistry registry = scopedRegistry(modules);
+        Path target = temporary.resolve("not-a-file");
+        Files.createDirectories(target);
+        ExtensionSettingsBackend backend = scopedBackend(registry, modules, target);
+        registry.replaceCapabilityPolicy(granted());
+
+        assertEquals("settings_write_failed", assertInstanceOf(ToolResult.Failure.class,
+                backend.saveCapability("sample:extension", "sample:world_actions", false)).code());
+        assertEquals(granted(), registry.capabilityPolicy());
+        assertTrue(Files.isDirectory(target));
+    }
+
+    private ExtensionSettingsBackend scopedBackend(
+            OpenAllayExtensionRegistry registry, JavascriptDataModuleRegistry modules, Path target) {
+        return new ExtensionSettingsBackend(registry, modules, new ExtensionCatalogCodec(),
+                new ExtensionPackageInstaller(registry.environment(), temporary.resolve("mods")),
+                null, new ExtensionCapabilityPolicyStore(target));
+    }
+
+    private static ExtensionCapabilityPolicy granted() {
+        return new ExtensionCapabilityPolicy(Map.of("sample:extension", Set.of("sample:world_actions")));
+    }
+
+    private static OpenAllayExtensionRegistry scopedRegistry(JavascriptDataModuleRegistry modules) {
+        OpenAllayExtensionRegistry registry = new OpenAllayExtensionRegistry(
+                new OpenAllayExtensionEnvironment("fabric", "26.2", "0.2.0"), modules,
+                new JavascriptModuleCatalog(Map.of()), new SkillRepository(new SkillParser(), List.of()), Set.of());
+        assertEquals(dev.openallay.extension.OpenAllayExtensionState.ACTIVE, registry.register(new OpenAllayExtension() {
+            @Override public OpenAllayExtensionDescriptor descriptor() {
+                return new OpenAllayExtensionDescriptor("sample:extension", "Sample", "1.0.0", "Provider",
+                        "Native actions", Set.of("fabric"), "[26.2,26.3)", "[0.2,0.3)", "bundled");
+            }
+            @Override public OpenAllayExtensionContribution contribution() {
+                return new OpenAllayExtensionContribution(List.of(), List.of(), List.of(), List.of(), List.of(),
+                        List.of(new dev.openallay.extension.JavascriptHostBinding("sample:native", List.of())),
+                        List.of(new ExtensionCapability("sample:world_actions", "Native world actions",
+                                "Can change the local world using this Extension's native operations.")));
+            }
+        }).state());
+        return registry;
     }
 
     @Test
@@ -216,6 +337,8 @@ final class ExtensionSettingsBackendTest {
         assertEquals("community", staged.source());
         assertTrue(!staged.packageInfo().catalogListed());
         assertEquals(64, staged.packageInfo().sha256().length());
+        assertTrue(staged.capabilities().isEmpty());
+        assertEquals(ExtensionCapabilityPolicy.defaults(), registry.capabilityPolicy());
     }
 
     @Test

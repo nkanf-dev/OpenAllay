@@ -2,6 +2,9 @@ package dev.openallay.settings.extension;
 
 import dev.openallay.extension.OpenAllayExtensionDescriptor;
 import dev.openallay.extension.OpenAllayExtensionRegistry;
+import dev.openallay.extension.ExtensionCapability;
+import dev.openallay.extension.ExtensionCapabilityPolicy;
+import dev.openallay.extension.ExtensionCapabilityPolicyStore;
 import dev.openallay.extension.catalog.ExtensionCatalogClient;
 import dev.openallay.extension.catalog.ExtensionCatalogCodec;
 import dev.openallay.extension.catalog.ExtensionCatalogEntry;
@@ -21,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
 
@@ -34,6 +38,7 @@ public final class ExtensionSettingsBackend implements ClientSettingsService.Ext
     private final ExtensionCatalogCodec codec;
     private final ExtensionPackageInstaller installer;
     private final ExtensionCatalogClient catalogClient;
+    private final ExtensionCapabilityPolicyStore capabilityStore;
     private ExtensionCatalogManifest catalog =
             new ExtensionCatalogManifest(
                     ExtensionCatalogManifest.SCHEMA_VERSION,
@@ -59,7 +64,8 @@ public final class ExtensionSettingsBackend implements ClientSettingsService.Ext
                 dataModules,
                 new ExtensionCatalogCodec(),
                 new ExtensionPackageInstaller(registry.environment(), managedModsRoot),
-                defaultCatalog(configDirectory));
+                defaultCatalog(configDirectory),
+                new ExtensionCapabilityPolicyStore(configDirectory.resolve("extension-capabilities.json")));
     }
 
     /** Constructor retained for deterministic backend/installer contract tests. */
@@ -77,14 +83,70 @@ public final class ExtensionSettingsBackend implements ClientSettingsService.Ext
             ExtensionCatalogCodec codec,
             ExtensionPackageInstaller installer,
             ExtensionCatalogClient catalogClient) {
+        this(registry, dataModules, codec, installer, catalogClient, null);
+    }
+
+    ExtensionSettingsBackend(
+            OpenAllayExtensionRegistry registry,
+            JavascriptDataModuleRegistry dataModules,
+            ExtensionCatalogCodec codec,
+            ExtensionPackageInstaller installer,
+            ExtensionCatalogClient catalogClient,
+            ExtensionCapabilityPolicyStore capabilityStore) {
         this.registry = Objects.requireNonNull(registry, "registry");
         this.dataModules = Objects.requireNonNull(dataModules, "dataModules");
         this.codec = Objects.requireNonNull(codec, "codec");
         this.installer = Objects.requireNonNull(installer, "installer");
         this.catalogClient = catalogClient;
+        this.capabilityStore = capabilityStore;
+        if (capabilityStore != null) {
+            ToolResult<ExtensionCapabilityPolicy> loaded = capabilityStore.load();
+            registry.replaceCapabilityPolicy(declaredPolicy(capabilityStore.current()));
+            if (loaded instanceof ToolResult.Failure<ExtensionCapabilityPolicy> failure) {
+                notice = Optional.of(new ExtensionSettingsView.Notice(failure.code(), failure.message()));
+            }
+        }
         if (catalogClient != null && catalogClient.current().isPresent()) {
             catalog = catalogClient.current().orElseThrow();
         }
+    }
+
+    @Override
+    public synchronized ToolResult<ExtensionSettingsView> saveCapability(
+            String extensionId, String capabilityId, boolean enabled) {
+        var declarations = registry.capabilityDescriptors();
+        if (!declarations.containsKey(extensionId)
+                || declarations.get(extensionId).stream()
+                        .noneMatch(capability -> capability.id().equals(capabilityId))) {
+            return new ToolResult.Failure<>(
+                    "unknown_extension_capability",
+                    "The Extension capability is not declared by an active Extension");
+        }
+        if (capabilityStore == null) {
+            return new ToolResult.Failure<>(
+                    "settings_unavailable", "Extension capability settings are unavailable");
+        }
+        ExtensionCapabilityPolicy candidate =
+                declaredPolicy(registry.capabilityPolicy()).withGrant(extensionId, capabilityId, enabled);
+        ToolResult<ExtensionCapabilityPolicy> saved = capabilityStore.save(candidate);
+        if (saved instanceof ToolResult.Failure<ExtensionCapabilityPolicy> failure) {
+            return new ToolResult.Failure<>(failure.code(), failure.message());
+        }
+        registry.replaceCapabilityPolicy(((ToolResult.Success<ExtensionCapabilityPolicy>) saved).value());
+        notice = Optional.empty();
+        return new ToolResult.Success<>(currentView());
+    }
+
+    private ExtensionCapabilityPolicy declaredPolicy(ExtensionCapabilityPolicy policy) {
+        Map<String, Set<String>> grants = new TreeMap<>();
+        registry.capabilityDescriptors().forEach((extensionId, capabilities) -> {
+            Set<String> enabled = capabilities.stream()
+                    .map(ExtensionCapability::id)
+                    .filter(capabilityId -> policy.allows(extensionId, capabilityId))
+                    .collect(java.util.stream.Collectors.toSet());
+            if (!enabled.isEmpty()) grants.put(extensionId, enabled);
+        });
+        return new ExtensionCapabilityPolicy(grants);
     }
 
     @Override
@@ -289,7 +351,8 @@ public final class ExtensionSettingsBackend implements ClientSettingsService.Ext
                 installed.contributions(),
                 installed.diagnostic(),
                 packageInfo(available, update, update),
-                installed.requirements());
+                installed.requirements(),
+                installed.capabilities());
     }
 
     private ExtensionSettingsView.Extension staged(
@@ -317,7 +380,8 @@ public final class ExtensionSettingsBackend implements ClientSettingsService.Ext
                         .map(entry -> packageInfo(entry, false, false))
                         .orElseGet(() -> ExtensionSettingsView.PackageInfo.local(
                                 descriptor.version(), staged.sha256())),
-                descriptor.requirements());
+                descriptor.requirements(),
+                installed == null ? List.of() : installed.capabilities());
     }
 
     private ExtensionSettingsView.Extension extension(

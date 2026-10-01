@@ -59,6 +59,7 @@ public final class MinecraftGuideContextProvider implements GuideContextProvider
     @Override
     public void freezeRequest(String correlationId, boolean clientLocalModel) {
         runtime.commands().freezeRequest(correlationId);
+        runtime.extensions().freezeJavascriptRequest(correlationId, clientLocalModel);
         var javascript = unrestrictedJavascript;
         if (javascript != null && clientLocalModel) javascript.freeze(correlationId);
     }
@@ -66,6 +67,7 @@ public final class MinecraftGuideContextProvider implements GuideContextProvider
     @Override
     public void closeRequest(String correlationId) {
         runtime.commands().closeRequest(correlationId);
+        runtime.extensions().closeJavascriptRequest(correlationId);
         var javascript = unrestrictedJavascript;
         if (javascript != null) javascript.close(correlationId);
     }
@@ -82,7 +84,8 @@ public final class MinecraftGuideContextProvider implements GuideContextProvider
     }
 
     private ToolResult<ToolInvocationContext> capture(
-            Set<ContextCapability> capabilities, String correlationId, boolean allowUnrestricted) {
+            Set<ContextCapability> capabilities, String correlationId, boolean clientLocalModel) {
+        runtime.extensions().freezeJavascriptRequest(correlationId, clientLocalModel);
         if (client.player == null) {
             return new ToolResult.Failure<>(
                     "player_required", "No client player is connected");
@@ -92,7 +95,7 @@ public final class MinecraftGuideContextProvider implements GuideContextProvider
             if (refreshed instanceof ToolResult.Failure<Integer> failure) {
                 return new ToolResult.Failure<>(failure.code(), failure.message());
             }
-            boolean unrestricted = allowUnrestricted && unrestrictedJavascript != null
+            boolean unrestricted = clientLocalModel && unrestrictedJavascript != null
                     && unrestrictedJavascript.freeze(correlationId);
             ToolInvocationContext context =
                     new ClientContextCapture(gson, runtime.platform(), recipeClient)

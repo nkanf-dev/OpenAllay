@@ -19,7 +19,7 @@ import java.util.TreeMap;
 /** Local configuration facts only. Runtime request authority remains owned by runtime code. */
 public final class RequirementSettingsEnvironment {
     public static final String UNRESTRICTED_JAVASCRIPT = "openallay:unrestricted_javascript";
-    /** Public Builder manifests and Skill metadata use this exact capability ID. */
+    /** Published Extension manifests and Skill metadata can use this exact capability ID. */
     public static final String UNRESTRICTED_JAVASCRIPT_ALIAS = "unrestricted-javascript";
     public static final String EXPERIMENTAL_COMMANDS = "openallay:experimental_commands";
 
@@ -52,6 +52,13 @@ public final class RequirementSettingsEnvironment {
 
         Map<String, RequirementAvailability> extensionFacts = new TreeMap<>();
         for (var extension : extensions.extensions()) {
+            boolean active = extension.state() == ExtensionSettingsView.State.ACTIVE
+                    || extension.state() == ExtensionSettingsView.State.RESTART_REQUIRED;
+            for (var capability : extension.capabilities()) {
+                capabilityFacts.put(capability.id(), fact(capability.name(), !active
+                        ? RequirementStatus.UNAVAILABLE
+                        : capability.enabled() ? RequirementStatus.SATISFIED : RequirementStatus.DISABLED));
+            }
             extensionFacts.put(extension.id(), fact(extension.name(), switch (extension.state()) {
                 case ACTIVE -> RequirementStatus.SATISFIED;
                 case RESTART_REQUIRED -> RequirementStatus.RESTART_REQUIRED;
