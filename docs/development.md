@@ -3,12 +3,11 @@
 OpenAllay targets Minecraft 26.2 and Java 25 and implements Extension API 0.2.1.
 Use the checked-in Gradle wrapper; a system Gradle installation is not needed.
 
-This guide describes the selected source contract in
-[decision 041](isme/decisions/2026-10-01-041-execution-context-simplification.md).
-The source refactor passed 1,123 common tests (six opt-in skips) and both loader
-builds. See the [verification record](verification/execution-context-simplification.md).
-This is not a claim about the already distributed 0.2.4 artifacts or an in-game
-latency measurement.
+This guide includes the subsequent Builder performance, request-control and Skill
+context changes. See the [current verification record](verification/2026-10-01-builder-performance-runtime-controls.md).
+Historical execution/context receipts remain in the [041 verification record](verification/execution-context-simplification.md).
+These are source builds, not replacements for already distributed 0.2.4 artifacts
+or a claim of measured in-game latency.
 
 Before formal 1.0, internal formats are **Latest Only**: keep the current shape
 and exact validation, without internal version numbers, versioned filenames,
@@ -44,10 +43,10 @@ OPENALLAY_CURL_PROXY=socks5h://127.0.0.1:7890 ./gradlew-curl build
 
 Both loader artifacts bundle the separately built Builder Extension from
 `OpenAllay-Extensions`. The lock at `distribution/extensions.lock.json` pins
-Builder 0.1.0 to `174d2f515872ca60d356b084095cfd026e275944`. This source revision
-includes 041's batched operations and incremental journal. Its 155 common tests,
-both loader builds and package checks passed; the integrated core distribution
-gate is recorded separately. Product, Extension, and API versions are independent.
+Builder 0.1.0 to `7923e3ffdceb640ce3e4634afb9b56a89cebcf13`. This source revision
+includes 041's batched operations and incremental journal. Its 203 common tests,
+both loader builds and package checks passed; the final integrated gate is recorded
+in the current verification record. Product, Extension, and API versions are independent.
 Installation does not enable JVM authority. Player automation and Baritone
 integration remain research-only.
 
