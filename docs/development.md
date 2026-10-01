@@ -129,6 +129,15 @@ environment reference instead. The normal player UI does not request this form:
 }
 ```
 
+`reasoningEffort` is optional. The Models page shows **Provider default (AUTO)**
+or an explicit protocol effort. AUTO omits the wire field; the actual gateway
+default is unknown. OpenAI Chat sends `reasoning_effort` and offers
+`none`, `minimal`, `low`, `medium`, `high`, `xhigh`, and `max`. Anthropic sends
+`output_config.effort` and offers `low`, `medium`, `high`, `xhigh`, and `max`.
+This does not implicitly enable Anthropic thinking or set a thinking-token budget.
+A specific model/gateway can reject an explicit choice; no name-based capability
+ban or silent downgrade is applied. Active requests keep their captured effort.
+
 `anthropic_messages` is the other protocol. Remote endpoints require HTTPS;
 HTTP is allowed only for loopback development. Inline `apiKey` and `apiKeyEnv`
 are invalid. The numbers above are manual examples, not defaults.
@@ -362,6 +371,14 @@ Active context has complete use/result pairs; original diagnostic history may
 honestly mark an unfinished call. Failure preserves completed exchanges/errors;
 cancellation never marks unfinished work successful. Process loss restores
 `INTERRUPTED` and never replays a provider call or Tool side effect.
+
+The session/lease owns only retained Skill range facts; the active model projection
+owns the instruction text. Each request publishes a concise loaded-document manifest
+with exact full/partial ranges and available references. It is factual state, not a
+prompt prohibition. Duplicate loads can remain visible calls but reuse valid retained
+ranges without appending the text again. Client document identity stays client-owned
+when switching between local and shared-server models. Compaction loss, changed or
+deleted documents, and cancelled old leases update only their actual ranges.
 
 Hydrate only a missing live session from matching durable context. Later asks in
 the same connection reuse it. Skill plaintext already present after compaction
@@ -612,6 +629,13 @@ under client-local unrestricted authority. It does not edit client world mirrors
 open offline saves, add a remote write protocol, or fall back to commands.
 Unsupported contexts fail explicitly. Native scans, geometry, paste, and undo
 batch owner-thread work; a cooperative quantum is scheduling, not a volume cap.
+
+Builder exposes fresh dense `read_region` and sparse ordered `get_blocks` for batched
+verification. `batch(callback)` groups placements with read/lifecycle barriers.
+`update_connections` performs deterministic native shape normalization. The explicit
+`sync_physics` API performs full neighbor/comparator notifications; normal building
+no longer runs this expensive full-volume phase implicitly. Native hooks can exceed
+the cooperative admission deadline. Neither call promises settled later game physics.
 
 Current journals/templates have no internal version or old-format reader.
 Journals use a base checkpoint plus strictly sequenced atomic deltas. Force intent
