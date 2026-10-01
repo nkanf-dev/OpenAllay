@@ -4,7 +4,7 @@ import com.google.gson.Gson;
 import dev.openallay.OpenAllayRuntime;
 import dev.openallay.agent.GameGuideAgent;
 import dev.openallay.agent.context.ContextCompactor;
-import dev.openallay.agent.context.Utf8ContextTokenEstimator;
+import dev.openallay.model.tokenizer.ModelContextTokenEstimator;
 import dev.openallay.agent.session.AgentSessionStore;
 import dev.openallay.agent.tool.LocalAgentToolExecutor;
 import dev.openallay.bridge.server.PlayerClientToolRouter;
@@ -74,17 +74,18 @@ public record ServerGuideRuntime(
         ModelRequestScheduler scheduled = new ModelRequestScheduler(raw);
         LocalAgentToolExecutor tools = new LocalAgentToolExecutor(runtime.tools(), gson);
         AgentSessionStore sessions = new AgentSessionStore();
+        var estimator = ModelContextTokenEstimator.create(config.protocol(), config.model(), config.tokenEncoding());
         ContextCompactor compactor = new ContextCompactor(
-                scheduled, gson, new Utf8ContextTokenEstimator(),
+                scheduled, gson, estimator,
                 config.contextBudget(), config.model(), Clock.systemUTC());
         PlayerClientToolRouter clientTools = new PlayerClientToolRouter(
                 runtime.tools(), gson, clientToolTransport, config.requestTimeout());
         String prompt = systemPrompt(runtime.skills(), false);
-        int promptAndTools = new Utf8ContextTokenEstimator().estimate(
+        int promptAndTools = estimator.estimate(
                 prompt, java.util.List.of(), tools.definitions());
         dev.openallay.guide.GuideContextSpec contextSpec =
                 new dev.openallay.guide.GuideContextSpec(
-                        config.contextBudget(), promptAndTools, config.model());
+                        config.contextBudget(), promptAndTools, config.model(), estimator);
         ServerAgentService service = new ServerAgentService(
                 (actor, payload) -> {
                     boolean experimentalCommands = payload.clientToolIds().contains(

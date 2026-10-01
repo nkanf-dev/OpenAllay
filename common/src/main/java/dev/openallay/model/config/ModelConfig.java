@@ -1,6 +1,7 @@
 package dev.openallay.model.config;
 
 import dev.openallay.agent.context.ContextBudget;
+import dev.openallay.model.tokenizer.ModelTokenEncoding;
 import java.net.URI;
 import java.time.Duration;
 import java.util.Locale;
@@ -16,9 +17,11 @@ public record ModelConfig(
         int maxOutputTokens,
         Duration connectTimeout,
         Duration requestTimeout,
-        ModelReasoningEffort reasoningEffort) {
+        ModelReasoningEffort reasoningEffort,
+        ModelTokenEncoding tokenEncoding) {
     public ModelConfig {
         Objects.requireNonNull(protocol, "protocol");
+        Objects.requireNonNull(tokenEncoding, "tokenEncoding");
         Objects.requireNonNull(reasoningEffort, "reasoningEffort").requireSupported(protocol);
         Objects.requireNonNull(baseUri, "baseUri");
         if (model == null || model.isBlank()) {
@@ -42,6 +45,14 @@ public record ModelConfig(
     public ModelConfig(
             boolean enabled, ModelProtocol protocol, URI baseUri, String model,
             SecretValue apiKey, int contextWindowTokens, int maxOutputTokens,
+            Duration connectTimeout, Duration requestTimeout, ModelReasoningEffort reasoningEffort) {
+        this(enabled, protocol, baseUri, model, apiKey, contextWindowTokens,
+                maxOutputTokens, connectTimeout, requestTimeout, reasoningEffort, ModelTokenEncoding.AUTO);
+    }
+
+    public ModelConfig(
+            boolean enabled, ModelProtocol protocol, URI baseUri, String model,
+            SecretValue apiKey, int contextWindowTokens, int maxOutputTokens,
             Duration connectTimeout, Duration requestTimeout) {
         this(enabled, protocol, baseUri, model, apiKey, contextWindowTokens,
                 maxOutputTokens, connectTimeout, requestTimeout, ModelReasoningEffort.AUTO);
@@ -58,7 +69,7 @@ public record ModelConfig(
                 maxOutputTokens,
                 connectTimeout.toMillis(),
                 requestTimeout.toMillis(),
-                reasoningEffort);
+                reasoningEffort, tokenEncoding);
     }
 
     public ContextBudget contextBudget() {
@@ -90,5 +101,6 @@ public record ModelConfig(
             int maxOutputTokens,
             long connectTimeoutMillis,
             long requestTimeoutMillis,
-            ModelReasoningEffort reasoningEffort) {}
+            ModelReasoningEffort reasoningEffort,
+            ModelTokenEncoding tokenEncoding) {}
 }

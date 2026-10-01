@@ -9,7 +9,8 @@ import dev.openallay.agent.GameGuideAgent;
 import dev.openallay.agent.context.ContextBudget;
 import dev.openallay.agent.context.ContextCheckpoint;
 import dev.openallay.agent.context.ContextCompactor;
-import dev.openallay.agent.context.Utf8ContextTokenEstimator;
+import dev.openallay.agent.context.ContextTokenEstimator;
+import dev.openallay.model.tokenizer.ModelContextTokenEstimator;
 import dev.openallay.agent.session.AgentSessionKey;
 import dev.openallay.agent.session.AgentSessionStore;
 import dev.openallay.agent.trace.LiveTraceStore;
@@ -102,8 +103,23 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
             ContextBudget contextBudget,
             String modelIdentifier,
             ClientCapabilitySnapshot capabilities) {
+        this(model, sessions, gson, dispatcher, extension, traces, contextBudget, modelIdentifier,
+                capabilities, ModelContextTokenEstimator.conservative());
+    }
+
+    ClientGuideRuntime(
+            ModelClient model,
+            AgentSessionStore sessions,
+            Gson gson,
+            ClientEventDispatcher dispatcher,
+            AgentToolExecutor extension,
+            LiveTraceStore traces,
+            ContextBudget contextBudget,
+            String modelIdentifier,
+            ClientCapabilitySnapshot capabilities,
+            ContextTokenEstimator estimator) {
         this(
-                endpoint(model, gson, contextBudget, modelIdentifier),
+                endpoint(model, gson, contextBudget, modelIdentifier, estimator),
                 sessions,
                 gson,
                 dispatcher,
@@ -194,7 +210,7 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
         }
         // Reserve enough room for either captured mode without advertising the enabled view.
         ClientGuideRuntime enabled = withCapabilities(capabilities.forRequest(true, true));
-        var estimator = new Utf8ContextTokenEstimator();
+        ContextTokenEstimator estimator = endpoint.estimator();
         int promptAndTools = Math.max(
                 estimator.estimate(budgetSystemPrompt(systemPrompt()), List.of(), toolExecutor.definitions()),
                 estimator.estimate(enabled.budgetSystemPrompt(enabled.systemPrompt(true, true)),
@@ -203,7 +219,7 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
             return Optional.empty();
         }
         return Optional.of(new GuideContextSpec(
-                endpoint.contextBudget(), promptAndTools, endpoint.modelIdentifier()));
+                endpoint.contextBudget(), promptAndTools, endpoint.modelIdentifier(), endpoint.estimator()));
     }
 
     private String budgetSystemPrompt(String prompt) {
@@ -361,16 +377,17 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
             ModelClient model,
             Gson gson,
             ContextBudget contextBudget,
-            String modelIdentifier) {
+            String modelIdentifier, ContextTokenEstimator estimator) {
+        Objects.requireNonNull(estimator, "estimator");
         ModelRequestScheduler scheduler = new ModelRequestScheduler(model);
         ContextCompactor compactor = contextBudget == null ? null : new ContextCompactor(
                 scheduler,
                 gson,
-                new Utf8ContextTokenEstimator(),
+                estimator,
                 contextBudget,
                 modelIdentifier,
                 Clock.systemUTC());
-        return new EndpointRuntime(scheduler, compactor, contextBudget, modelIdentifier,
+        return new EndpointRuntime(scheduler, compactor, estimator, contextBudget, modelIdentifier,
                 new ConcurrentHashMap<>());
     }
 
@@ -388,6 +405,7 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
     private record EndpointRuntime(
             ModelRequestScheduler scheduler,
             ContextCompactor compactor,
+            ContextTokenEstimator estimator,
             ContextBudget contextBudget,
             String modelIdentifier,
             Map<AgentSessionKey, dev.openallay.guide.GuideContextEstimate> estimates) {}

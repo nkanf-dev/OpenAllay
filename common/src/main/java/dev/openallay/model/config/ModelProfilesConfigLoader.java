@@ -42,7 +42,7 @@ public final class ModelProfilesConfigLoader {
             "id", "displayName", "enabled", "protocol", "baseUrl", "model",
             "credentialRef", "connectTimeoutSeconds", "requestTimeoutSeconds");
     private static final Set<String> OPTIONAL_PROFILE_FIELDS =
-            Set.of("contextWindowTokens", "maxOutputTokens", "metadata", "reasoningEffort");
+            Set.of("contextWindowTokens", "maxOutputTokens", "metadata", "reasoningEffort", "tokenEncoding");
     private static final Set<String> METADATA_FIELDS =
             Set.of("source", "upstreamModelId", "capturedAt");
 
@@ -152,7 +152,10 @@ public final class ModelProfilesConfigLoader {
                 metadata,
                 object.has("reasoningEffort")
                         ? ModelReasoningEffort.parse(string(object, "reasoningEffort"))
-                        : ModelReasoningEffort.AUTO);
+                        : ModelReasoningEffort.AUTO,
+                object.has("tokenEncoding")
+                        ? dev.openallay.model.tokenizer.ModelTokenEncoding.parse(string(object, "tokenEncoding"))
+                        : dev.openallay.model.tokenizer.ModelTokenEncoding.AUTO);
     }
 
     private ResolvedModelProfile resolve(
@@ -203,7 +206,7 @@ public final class ModelProfilesConfigLoader {
                             maxOutput,
                             definition.connectTimeout(),
                             definition.requestTimeout(),
-                            definition.reasoningEffort()),
+                            definition.reasoningEffort(), definition.tokenEncoding()),
                     null,
                     discovered == null
                             ? definition.model()

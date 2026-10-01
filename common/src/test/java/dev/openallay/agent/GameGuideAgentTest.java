@@ -59,7 +59,7 @@ final class GameGuideAgentTest {
                 });
         assertTrue(agent.ask(request, events::add).join().successful());
         assertEquals(2, estimates.size());
-        var estimator = new Utf8ContextTokenEstimator();
+        var estimator = dev.openallay.model.tokenizer.ModelContextTokenEstimator.conservative();
         for (int index = 0; index < model.requests.size(); index++) {
             ModelRequest actual = model.requests.get(index);
             assertEquals(estimator.estimate(actual.systemPrompt(), actual.messages(), actual.tools()),

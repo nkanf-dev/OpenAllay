@@ -28,19 +28,26 @@ public final class AnthropicJsonCodec {
     }
 
     public String requestBody(ModelConfig config, ModelRequest request) {
-        JsonObject root = new JsonObject();
+        JsonObject root = contextInput(request.systemPrompt(), request.messages(), request.tools());
         root.addProperty("model", config.model());
         root.addProperty("max_tokens", config.maxOutputTokens());
-        root.addProperty("system", request.systemPrompt());
         root.addProperty("stream", request.stream());
         if (config.reasoningEffort() != dev.openallay.model.config.ModelReasoningEffort.AUTO) {
             JsonObject outputConfig = new JsonObject();
             outputConfig.addProperty("effort", config.reasoningEffort().encoded());
             root.add("output_config", outputConfig);
         }
+        return gson.toJson(root);
+    }
+
+    /** Provider-native input shape shared by HTTP encoding and offline token budgeting. */
+    public JsonObject contextInput(
+            String systemPrompt, List<ModelMessage> inputMessages, List<ModelToolDefinition> inputTools) {
+        JsonObject root = new JsonObject();
+        root.addProperty("system", systemPrompt);
         JsonArray messages = new JsonArray();
-        ProviderToolIds toolIds = ProviderToolIds.forAnthropicMessages(request.messages());
-        for (ModelMessage message : request.messages()) {
+        ProviderToolIds toolIds = ProviderToolIds.forAnthropicMessages(inputMessages);
+        for (ModelMessage message : inputMessages) {
             JsonObject encoded = new JsonObject();
             encoded.addProperty("role", message.role() == ModelRole.USER ? "user" : "assistant");
             JsonArray content = new JsonArray();
@@ -51,9 +58,9 @@ public final class AnthropicJsonCodec {
             messages.add(encoded);
         }
         root.add("messages", messages);
-        if (!request.tools().isEmpty()) {
+        if (!inputTools.isEmpty()) {
             JsonArray tools = new JsonArray();
-            for (ModelToolDefinition tool : request.tools()) {
+            for (ModelToolDefinition tool : inputTools) {
                 JsonObject encoded = new JsonObject();
                 encoded.addProperty("name", tool.name());
                 encoded.addProperty("description", tool.description());
@@ -62,7 +69,7 @@ public final class AnthropicJsonCodec {
             }
             root.add("tools", tools);
         }
-        return gson.toJson(root);
+        return root;
     }
 
     public ModelTurn parseTurn(String json, Consumer<ModelEvent> events) {

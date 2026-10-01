@@ -258,7 +258,7 @@ public final class GameGuideAgent {
                 request.stream(),
                 request.sessionKey().schedulingKey());
         lease.cancellation().throwIfCancelled();
-        int estimatedTokens = new dev.openallay.agent.context.Utf8ContextTokenEstimator().estimate(
+        int estimatedTokens = dev.openallay.model.tokenizer.ModelContextTokenEstimator.conservative().estimate(
                 modelRequest.systemPrompt(), modelRequest.messages(), modelRequest.tools());
         try {
             contextEstimates.accept(request, estimatedTokens);

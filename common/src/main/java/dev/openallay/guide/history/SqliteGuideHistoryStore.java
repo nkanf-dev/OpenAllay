@@ -6,7 +6,6 @@ import dev.openallay.agent.context.ContextCheckpoint;
 import dev.openallay.agent.context.ContextSourceHash;
 import dev.openallay.agent.context.ContextStructure;
 import dev.openallay.agent.context.ModelContextCodec;
-import dev.openallay.agent.context.Utf8ContextTokenEstimator;
 import dev.openallay.guide.GuideFailure;
 import dev.openallay.guide.GuideMessage;
 import dev.openallay.guide.GuideRequestSnapshot;
@@ -164,7 +163,7 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
                 return new GuideHistoryContextSeed(request.sessionId(), List.of(), List.of(), 0);
             }
             // Do not discard over-budget structural units. Agent owns reduction and compaction.
-            int estimated = new Utf8ContextTokenEstimator().estimate("", messages, List.of());
+            int estimated = request.estimator().estimate("", messages, List.of());
             List<ContextCheckpoint> checkpoints = readApplicableCheckpoint(
                     connection, request.scope().scopeId(), request.sessionId(),
                     request.modelIdentifier(), messages);

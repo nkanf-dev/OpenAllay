@@ -46,6 +46,9 @@ public final class ModelProfilesConfigWriter {
         if (profile.reasoningEffort() != ModelReasoningEffort.AUTO) {
             encoded.addProperty("reasoningEffort", profile.reasoningEffort().encoded());
         }
+        if (profile.tokenEncoding() != dev.openallay.model.tokenizer.ModelTokenEncoding.AUTO) {
+            encoded.addProperty("tokenEncoding", profile.tokenEncoding().encoded());
+        }
         if (profile.metadata() != null) {
             JsonObject metadata = new JsonObject();
             metadata.addProperty("source", profile.metadata().source());

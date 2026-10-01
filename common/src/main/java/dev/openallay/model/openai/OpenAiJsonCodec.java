@@ -28,26 +28,33 @@ public final class OpenAiJsonCodec {
     }
 
     public String requestBody(ModelConfig config, ModelRequest request) {
-        JsonObject root = new JsonObject();
+        JsonObject root = contextInput(request.systemPrompt(), request.messages(), request.tools());
         root.addProperty("model", config.model());
         root.addProperty("max_completion_tokens", config.maxOutputTokens());
         root.addProperty("stream", request.stream());
         if (config.reasoningEffort() != dev.openallay.model.config.ModelReasoningEffort.AUTO) {
             root.addProperty("reasoning_effort", config.reasoningEffort().encoded());
         }
+        return gson.toJson(root);
+    }
+
+    /** Provider-native input shape shared by HTTP encoding and offline token budgeting. */
+    public JsonObject contextInput(
+            String systemPrompt, List<ModelMessage> inputMessages, List<ModelToolDefinition> inputTools) {
+        JsonObject root = new JsonObject();
         JsonArray messages = new JsonArray();
         JsonObject system = new JsonObject();
         system.addProperty("role", "system");
-        system.addProperty("content", request.systemPrompt());
+        system.addProperty("content", systemPrompt);
         messages.add(system);
-        ProviderToolIds toolIds = ProviderToolIds.forOpenAiChat(request.messages());
-        for (ModelMessage message : request.messages()) {
+        ProviderToolIds toolIds = ProviderToolIds.forOpenAiChat(inputMessages);
+        for (ModelMessage message : inputMessages) {
             encodeMessage(message, messages, toolIds);
         }
         root.add("messages", messages);
-        if (!request.tools().isEmpty()) {
+        if (!inputTools.isEmpty()) {
             JsonArray tools = new JsonArray();
-            for (ModelToolDefinition tool : request.tools()) {
+            for (ModelToolDefinition tool : inputTools) {
                 JsonObject function = new JsonObject();
                 function.addProperty("name", tool.name());
                 function.addProperty("description", tool.description());
@@ -59,7 +66,7 @@ public final class OpenAiJsonCodec {
             }
             root.add("tools", tools);
         }
-        return gson.toJson(root);
+        return root;
     }
 
     public ModelTurn parseTurn(String json, Consumer<ModelEvent> events) {

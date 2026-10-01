@@ -3190,7 +3190,7 @@ public final class OpenAllaySettingsScreen extends Screen {
                             ? draft.automaticContextWindowTokens() : null,
                     Objects.equals(maxOutput.getValue(), draft.automaticMaxOutputTokens())
                             ? draft.automaticMaxOutputTokens() : null,
-                    draft.reasoningEffort());
+                    draft.reasoningEffort(), draft.tokenEncoding());
         }
         if (section == SettingsSection.GENERAL && assistantName != null) {
             assistantNameDraft = assistantName.getValue();

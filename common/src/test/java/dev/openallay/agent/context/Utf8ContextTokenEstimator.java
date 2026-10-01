@@ -8,8 +8,8 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Provider-neutral conservative estimator. One UTF-8 byte is treated as one
- * token, while fixed framing bytes cover protocol structure omitted here.
+ * Test-only deterministic byte fixture. It deliberately is not a model tokenizer.
+ * Byte-sized fixtures keep structural compaction tests stable across tokenizer libraries.
  */
 public final class Utf8ContextTokenEstimator implements ContextTokenEstimator {
     private static final int REQUEST_OVERHEAD = 16;
@@ -39,6 +39,11 @@ public final class Utf8ContextTokenEstimator implements ContextTokenEstimator {
                     + bytes(tool.inputSchema().toString());
         }
         return estimate >= Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) estimate;
+    }
+
+    @Override
+    public int estimateText(String text) {
+        return bytes(text);
     }
 
     private static long contentBytes(ModelContent content) {

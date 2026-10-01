@@ -28,7 +28,8 @@ public final class ModelConfigLoader {
             "maxOutputTokens",
             "connectTimeoutSeconds",
             "requestTimeoutSeconds",
-            "reasoningEffort");
+            "reasoningEffort",
+            "tokenEncoding");
 
     public ToolResult<ModelConfig> load(Path path, Map<String, String> environment) {
         Objects.requireNonNull(path, "path");
@@ -101,7 +102,11 @@ public final class ModelConfigLoader {
                     maxOutputTokens,
                     Duration.ofSeconds(connectSeconds),
                     Duration.ofSeconds(requestSeconds),
-                    reasoningEffort(environment, object)));
+                    reasoningEffort(environment, object),
+                    object.has("tokenEncoding")
+                            ? dev.openallay.model.tokenizer.ModelTokenEncoding.parse(
+                                    optionalString(object, "tokenEncoding"))
+                            : dev.openallay.model.tokenizer.ModelTokenEncoding.AUTO));
         } catch (RuntimeException exception) {
             return new ToolResult.Failure<>(
                     "invalid_model_config",

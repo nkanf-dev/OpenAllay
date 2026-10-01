@@ -4,6 +4,7 @@ import dev.openallay.model.config.ModelProfileDefinition;
 import dev.openallay.model.metadata.BuiltinModelCatalog;
 import dev.openallay.model.config.ModelProtocol;
 import dev.openallay.model.config.ModelReasoningEffort;
+import dev.openallay.model.tokenizer.ModelTokenEncoding;
 import dev.openallay.model.catalog.ModelCatalogRequest;
 import dev.openallay.tool.ToolResult;
 import java.net.URI;
@@ -26,10 +27,24 @@ public record ModelProfileDraft(
         ModelProfileDefinition.MetadataProvenance metadata,
         String automaticContextWindowTokens,
         String automaticMaxOutputTokens,
-        ModelReasoningEffort reasoningEffort) {
+        ModelReasoningEffort reasoningEffort,
+        ModelTokenEncoding tokenEncoding) {
     public ModelProfileDraft {
         Objects.requireNonNull(protocol, "protocol");
         Objects.requireNonNull(reasoningEffort, "reasoningEffort");
+        Objects.requireNonNull(tokenEncoding, "tokenEncoding");
+    }
+
+    public ModelProfileDraft(
+            String id, String displayName, boolean enabled, ModelProtocol protocol,
+            String baseUrl, String model, String credentialRef, String contextWindowTokens,
+            String maxOutputTokens, String connectTimeoutSeconds, String requestTimeoutSeconds,
+            ModelProfileDefinition.MetadataProvenance metadata, String automaticContextWindowTokens,
+            String automaticMaxOutputTokens, ModelReasoningEffort reasoningEffort) {
+        this(id, displayName, enabled, protocol, baseUrl, model, credentialRef,
+                contextWindowTokens, maxOutputTokens, connectTimeoutSeconds, requestTimeoutSeconds,
+                metadata, automaticContextWindowTokens, automaticMaxOutputTokens, reasoningEffort,
+                ModelTokenEncoding.AUTO);
     }
 
     public ModelProfileDraft(
@@ -109,7 +124,7 @@ public record ModelProfileDraft(
                         : Integer.toString(definition.maxOutputTokens()),
                 Long.toString(definition.connectTimeout().toSeconds()),
                 Long.toString(definition.requestTimeout().toSeconds()),
-                definition.metadata(), null, null, definition.reasoningEffort())
+                definition.metadata(), null, null, definition.reasoningEffort(), definition.tokenEncoding())
                 .autoFill(BuiltinModelCatalog.bundled().catalog());
     }
 
@@ -142,21 +157,21 @@ public record ModelProfileDraft(
                 connectTimeoutSeconds, requestTimeoutSeconds,
                 changed ? null : metadata,
                 changed ? null : automaticContextWindowTokens,
-                changed ? null : automaticMaxOutputTokens, reasoningEffort).autoFill(catalog);
+                changed ? null : automaticMaxOutputTokens, reasoningEffort, tokenEncoding).autoFill(catalog);
     }
 
     /** An actual player edit adopts a manual value; save alone does not. */
     public ModelProfileDraft withContextWindow(String value) {
         return new ModelProfileDraft(id, displayName, enabled, protocol, baseUrl, model,
                 credentialRef, value, maxOutputTokens, connectTimeoutSeconds,
-                requestTimeoutSeconds, metadata, null, automaticMaxOutputTokens, reasoningEffort);
+                requestTimeoutSeconds, metadata, null, automaticMaxOutputTokens, reasoningEffort, tokenEncoding);
     }
 
     /** An actual output edit adopts a manual value. Clearing returns ownership to automatic. */
     public ModelProfileDraft withMaxOutput(String value) {
         return new ModelProfileDraft(id, displayName, enabled, protocol, baseUrl, model,
                 credentialRef, contextWindowTokens, value, connectTimeoutSeconds,
-                requestTimeoutSeconds, metadata, automaticContextWindowTokens, null, reasoningEffort);
+                requestTimeoutSeconds, metadata, automaticContextWindowTokens, null, reasoningEffort, tokenEncoding);
     }
 
     public ModelProfileDraft autoFill(BuiltinModelCatalog catalog) {
@@ -174,7 +189,7 @@ public record ModelProfileDraft(
         return new ModelProfileDraft(id, displayName, enabled, protocol, baseUrl, model,
                 credentialRef, text, maxOutputTokens, connectTimeoutSeconds,
                 requestTimeoutSeconds, metadata, value == null ? null : text,
-                automaticMaxOutputTokens, reasoningEffort);
+                automaticMaxOutputTokens, reasoningEffort, tokenEncoding);
     }
 
     /** Metadata refresh can replace an automatic display value, never an explicit player edit. */
@@ -185,14 +200,21 @@ public record ModelProfileDraft(
         return new ModelProfileDraft(id, displayName, enabled, protocol, baseUrl, model,
                 credentialRef, contextWindowTokens, text, connectTimeoutSeconds,
                 requestTimeoutSeconds, metadata, automaticContextWindowTokens,
-                value == null ? null : text, reasoningEffort);
+                value == null ? null : text, reasoningEffort, tokenEncoding);
     }
 
     public ModelProfileDraft withReasoningEffort(ModelReasoningEffort value) {
         return new ModelProfileDraft(id, displayName, enabled, protocol, baseUrl, model,
                 credentialRef, contextWindowTokens, maxOutputTokens, connectTimeoutSeconds,
                 requestTimeoutSeconds, metadata, automaticContextWindowTokens,
-                automaticMaxOutputTokens, value);
+                automaticMaxOutputTokens, value, tokenEncoding);
+    }
+
+    public ModelProfileDraft withTokenEncoding(ModelTokenEncoding value) {
+        return new ModelProfileDraft(id, displayName, enabled, protocol, baseUrl, model,
+                credentialRef, contextWindowTokens, maxOutputTokens, connectTimeoutSeconds,
+                requestTimeoutSeconds, metadata, automaticContextWindowTokens,
+                automaticMaxOutputTokens, reasoningEffort, value);
     }
 
     public boolean dirtyComparedTo(ModelProfileDefinition definition) {
@@ -224,7 +246,7 @@ public record ModelProfileDraft(
                     Duration.ofSeconds(Long.parseLong(
                             requestTimeoutSeconds == null ? "" : requestTimeoutSeconds.trim())),
                     metadata,
-                    reasoningEffort);
+                    reasoningEffort, tokenEncoding);
             return new ToolResult.Success<>(definition);
         } catch (RuntimeException failure) {
             return new ToolResult.Failure<>(

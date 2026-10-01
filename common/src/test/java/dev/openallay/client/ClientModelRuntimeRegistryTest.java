@@ -360,7 +360,7 @@ final class ClientModelRuntimeRegistryTest {
         assertTrue(first.systemPrompt().contains("Request Java guidance sentinel"));
         assertTrue(first.systemPrompt().contains("<name>unrestricted-javascript</name>"));
         assertFalse(first.systemPrompt().contains("Captured Java reference sentinel"));
-        assertTrue(reserved >= new dev.openallay.agent.context.Utf8ContextTokenEstimator()
+        assertTrue(reserved >= registry.contextSpec("a").orElseThrow().estimator()
                 .estimate(first.systemPrompt(), List.of(), first.tools()));
         assertTrue(model.requests.get(1).messages().stream()
                 .flatMap(message -> message.content().stream())
@@ -453,7 +453,7 @@ final class ClientModelRuntimeRegistryTest {
         assertTrue(registry.ask("a", actor, "main", requestId, "small request",
                 ToolInvocationContext.developmentConsole("estimate"), ignored -> {}).join().successful());
         ModelRequest actual = modelA.requests.getLast();
-        int expected = new dev.openallay.agent.context.Utf8ContextTokenEstimator().estimate(
+        int expected = registry.contextSpec("a").orElseThrow().estimator().estimate(
                 actual.systemPrompt(), actual.messages(), actual.tools());
         var estimate = registry.contextEstimate("a", actor, "main").orElseThrow();
         assertEquals(requestId, estimate.requestId());

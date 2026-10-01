@@ -13,7 +13,7 @@ import dev.openallay.agent.context.ContextCheckpoint;
 import dev.openallay.agent.context.ContextSourceHash;
 import dev.openallay.agent.context.ContextStructure;
 import dev.openallay.agent.context.ModelContextCodec;
-import dev.openallay.agent.context.Utf8ContextTokenEstimator;
+import dev.openallay.model.tokenizer.ModelContextTokenEstimator;
 import dev.openallay.guide.GuideModelSelection;
 import dev.openallay.guide.GuideRequestSnapshot;
 import dev.openallay.guide.GuideRequestStatus;
@@ -184,7 +184,7 @@ final class SqliteGuideHistoryContextTest {
         GuideHistoryContextSeed seed = store.context(request);
 
         assertEquals(messages, seed.messages());
-        assertEquals(new Utf8ContextTokenEstimator().estimate("", messages, List.of()),
+        assertEquals(ModelContextTokenEstimator.conservative().estimate("", messages, List.of()),
                 seed.estimatedTokens());
         assertTrue(seed.estimatedTokens() > request.availableHistoryTokens());
         assertEquals(3, ContextStructure.units(seed.messages()).size());

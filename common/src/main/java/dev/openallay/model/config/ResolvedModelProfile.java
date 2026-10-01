@@ -50,6 +50,7 @@ public record ResolvedModelProfile(
                         ? definition.maxOutputTokens()
                         : Integer.valueOf(runtimeConfig.maxOutputTokens()),
                 definition.reasoningEffort(),
+                definition.tokenEncoding(),
                 failure);
     }
 
@@ -66,5 +67,6 @@ public record ResolvedModelProfile(
             Integer contextWindowTokens,
             Integer maxOutputTokens,
             ModelReasoningEffort reasoningEffort,
+            dev.openallay.model.tokenizer.ModelTokenEncoding tokenEncoding,
             GuideFailure failure) {}
 }

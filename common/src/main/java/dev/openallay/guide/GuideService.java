@@ -718,7 +718,7 @@ public final class GuideService implements GuideHistoryAdministration {
                     session.id,
                     spec.budget(),
                     spec.promptAndToolTokens(),
-                    spec.canonicalModelId())), "history context future");
+                    spec.canonicalModelId(), spec.estimator())), "history context future");
         } catch (RuntimeException failure) {
             finishLocalContext(
                     session.id, requestId, profileId, question, generation, null, failure);
@@ -751,7 +751,7 @@ public final class GuideService implements GuideHistoryAdministration {
                     session.id,
                     spec.budget(),
                     spec.promptAndToolTokens(),
-                    spec.canonicalModelId())), "history context future");
+                    spec.canonicalModelId(), spec.estimator())), "history context future");
         } catch (RuntimeException failure) {
             finishRemoteContext(
                     session.id, requestId, question, generation, null, failure);

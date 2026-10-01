@@ -95,7 +95,7 @@ public final class ModelConnectionProbe {
                 Math.min(config.maxOutputTokens(), OUTPUT_TOKEN_LIMIT),
                 config.connectTimeout(),
                 config.requestTimeout(),
-                config.reasoningEffort());
+                config.reasoningEffort(), config.tokenEncoding());
     }
 
     private static ModelConnectionResult.Failure classify(

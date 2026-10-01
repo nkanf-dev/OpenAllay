@@ -308,7 +308,10 @@ public final class ClientModelRuntimeRegistry implements GuideLocalEndpoint {
                                 tracePersistenceEnabled),
                         profile.runtimeConfig().contextBudget(),
                         profile.canonicalModelId(),
-                        capabilities.get()));
+                        capabilities.get(),
+                        dev.openallay.model.tokenizer.ModelContextTokenEstimator.create(
+                                profile.runtimeConfig().protocol(), profile.canonicalModelId(),
+                                profile.runtimeConfig().tokenEncoding())));
             }
         }
         return new State(load.config().defaultProfileId(), summaries, runtimes);
