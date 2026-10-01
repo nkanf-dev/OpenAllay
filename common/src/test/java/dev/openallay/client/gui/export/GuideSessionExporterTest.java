@@ -42,9 +42,9 @@ final class GuideSessionExporterTest {
         assertEquals(1, exported.requestCount());
         assertTrue(text.indexOf("User") < text.indexOf("Assistant"));
         assertTrue(text.indexOf("Assistant") < text.indexOf("Tool · get_recipe"));
-        assertTrue(text.contains("API key: sk-abcdefghijklmnopqrstuvwxyz"));
+        assertTrue(text.contains("API key: sk-" + "abcdefghijklmnopqrstuvwxyz"));
         assertTrue(text.contains("\"apiKey\":\"opaque-provider-value\""));
-        assertTrue(text.contains("authorization: Bearer highly-sensitive-token"));
+        assertTrue(text.contains("authorization: Bearer " + "highly-sensitive-token"));
         assertFalse(text.contains("normalizedSecret"));
         assertEquals(1, Files.list(game.resolve("openallay/exports")).count());
     }

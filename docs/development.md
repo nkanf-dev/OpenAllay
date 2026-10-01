@@ -45,10 +45,12 @@ OPENALLAY_CURL_PROXY=socks5h://127.0.0.1:7890 ./gradlew-curl build
 
 Both loader artifacts bundle the separately built Builder Extension from
 `OpenAllay-Extensions`. The lock at `distribution/extensions.lock.json` pins
-Builder 0.1.0 to `7923e3ffdceb640ce3e4634afb9b56a89cebcf13`. This source revision
-includes 041's batched operations and incremental journal. Its 203 common tests,
-both loader builds and package checks passed; the final integrated gate is recorded
-in the current verification record. Product, Extension, and API versions are independent.
+Builder 0.2.0 to `5645230e70612264724bc4249abe138859477d43`. This source revision
+preserves batched operations and incremental journals, and uses scoped native APIs
+without granting Agent JVM access. Its 221 common tests, both loader builds and
+package checks passed; final integrated release gates are recorded in the
+[0.3.0 verification record](verification/2026-10-01-openallay-0.3.0-release.md).
+Product, Extension, and API versions are independent.
 Installation does not enable JVM authority. Player automation and Baritone
 integration remain research-only.
 
@@ -358,11 +360,12 @@ Cancellation/disconnect stops later capture slices and closes the workspace.
 ### Real model context and durable records
 
 The provider-neutral transcript owns model context; UI events are its projection,
-not an input reconstruction recipe. Preserve original redacted user/assistant
+not an input reconstruction recipe. Preserve original user/assistant
 exchanges, actual ToolUse arguments, paired complete compact ToolResult text and
 its error bit, and terminal outcomes. Do not fabricate restored arguments or
-replace useful errors with display summaries. Durable records exclude provider
-reasoning, credentials, HTTP bodies, live objects, and canonical workspace trees.
+replace useful errors with display summaries. Durable records exclude provider-private reasoning, framework model configuration,
+authentication headers, HTTP bodies, live objects, and canonical workspace trees.
+Player and tool data are not scanned or rewritten for sensitive-looking content.
 
 Original recorded exchanges remain separate from the active compacted context
 snapshot/checkpoint. Persist both without reversing a UI projection.
@@ -431,11 +434,11 @@ work, not completed effects. Escape closes details before the Guide.
 
 Session deletion has two confirmations bound to the selected session; deletion
 removes durable history and stops active work. Clipboard actions are local.
-Export uses original redacted records in actual order, including useful recorded
+Export uses original records in actual order, including useful recorded
 calls, results, and errors, independently of active context compaction. It writes
 UTF-8 atomically below `openallay/exports` in the game directory, accepts no path,
-and rejects symlink escape. Provider reasoning/configuration, secrets, and live
-workspace state are excluded. Existing exports stay unchanged.
+and rejects symlink escape. Provider reasoning/configuration and live workspace state are excluded; player
+and tool content is preserved rather than scanned. Existing exports stay unchanged.
 
 `recipe_grid` binds only to the complete normalized result of its same-request
 Tool invocation. Native views have a client-thread-only lifecycle and release
@@ -506,7 +509,7 @@ new JavaScript call. Missing/null/blank strings use localized defaults;
 non-string live values fail `invalid_arguments`. Cards render literal model
 text as **Planned action**, separate from status/results. Intent changes neither
 source, duplicate identity, permission, nor factual authority. The submitted
-arguments belong to the original redacted exchange, not just its UI projection.
+arguments belong to the original exchange, not just its UI projection.
 
 A supported return is a successful computation, even with no sources. Generic
 JavaScript execution has no post-execution evidence gate; never fabricate a read
@@ -825,7 +828,8 @@ OPENALLAY_MODEL_PROTOCOL=ANTHROPIC_MESSAGES \
 ./scripts/live-model-smoke.sh
 ```
 
-This checks streaming, Tool continuation, grounded Chinese output, and redaction.
+This checks streaming, Tool continuation, grounded Chinese output, and separation
+of framework provider configuration from the recorded conversation.
 For Rhino/Skill/batched sword and container scenarios:
 
 ```bash
@@ -838,7 +842,7 @@ OPENALLAY_MODEL_PROTOCOL=OPENAI_CHAT \
 
 `OPENALLAY_LIVE_STREAM=false` isolates stream transport.
 `OPENALLAY_LIVE_JAVASCRIPT_SCENARIO=sword` or `container` selects one scenario;
-default `all` runs both. Retained diagnostics are redacted task, Tool ID, script,
+default `all` runs both. Retained diagnostics are task, Tool ID, script,
 result-summary, and invocation-count projections.
 
 For the exact native connection-probe contract, put a strict current profile in
@@ -865,7 +869,7 @@ It is separate from player Debug Mode and makes no provider request itself.
 ### Opt-in graphical clients
 
 The development controller requires `openallay.e2e.enabled=true`, a real player,
-and the same `GuideService`. It retains redacted transitions, Tool/evidence
+and the same `GuideService`. It retains transitions, Tool/evidence
 records, timings, and payload hashes, then can request clean shutdown. Reports
 belong to the harness, not an Agent Tool.
 

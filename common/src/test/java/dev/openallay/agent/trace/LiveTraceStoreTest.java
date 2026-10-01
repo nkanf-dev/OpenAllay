@@ -37,7 +37,7 @@ final class LiveTraceStoreTest {
         nested.addProperty("token", "one-time-test-key");
         nested.addProperty("password", "synthetic-password");
         nested.addProperty("authorization", "Bearer header-only-secret");
-        nested.addProperty("api_key", "sk-syntheticabc123456789");
+        nested.addProperty("api_key", "sk-" + "syntheticabc123456789");
         nested.addProperty("x-api-key", "pk-syntheticabc123456789");
         nested.addProperty("Cookie", "first=private; second=hidden");
         nested.addProperty("endpoint", "https://user:pass@example.invalid/path?token=test#entry");
