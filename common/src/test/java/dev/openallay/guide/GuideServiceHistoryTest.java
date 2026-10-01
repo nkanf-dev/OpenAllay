@@ -522,9 +522,251 @@ final class GuideServiceHistoryTest {
     }
 
     @Test
+    void failedContextsRemainOwnedUntilASuccessfulCumulativeSuccessorCommit() {
+        FakeHistory history = new FakeHistory(false);
+        FakeLocal local = new FakeLocal(true);
+        GuideService service = service(local, history);
+        history.metadata.complete(Optional.empty());
+        UUID request = success(service.ask("synthetic failed context turn").join());
+        history.completeAllCommits();
+        List<ModelMessage> active = List.of(ModelMessage.userText("synthetic active context 雪"));
+        List<ModelMessage> original = finalizedToolPair("synthetic-original-call");
+        int contextIndex = history.commits.size();
+        local.updateContext(request, active, original);
+        local.complete(request, "synthetic terminal answer");
+
+        assertEquals(contextIndex + 1, history.commits.size(),
+                "later events must wait for the current writer acknowledgment");
+        history.commitCompletions.get(contextIndex).completeExceptionally(
+                new GuideHistoryException("history_write_failed", "synthetic failure"));
+
+        assertEquals(GuidePersistenceSnapshot.State.UNAVAILABLE,
+                service.snapshot().persistence().state());
+        assertEquals("history_write_failed", service.snapshot().persistence().failure().code());
+        assertEquals(contextIndex + 2, history.commits.size());
+        List<GuideHistoryMutation> recovering = history.commits.getLast().mutations();
+        assertEquals(List.of(active), recovering.stream()
+                .filter(GuideHistoryMutation.ReplaceContext.class::isInstance)
+                .map(GuideHistoryMutation.ReplaceContext.class::cast)
+                .map(GuideHistoryMutation.ReplaceContext::messages).toList());
+        assertEquals(List.of(original), recovering.stream()
+                .filter(GuideHistoryMutation.ReplaceRequestContext.class::isInstance)
+                .map(GuideHistoryMutation.ReplaceRequestContext.class::cast)
+                .map(GuideHistoryMutation.ReplaceRequestContext::messages).toList());
+        assertEquals(GuideRequestStatus.COMPLETED, recovering.stream()
+                .filter(GuideHistoryMutation.UpsertRequest.class::isInstance)
+                .map(GuideHistoryMutation.UpsertRequest.class::cast)
+                .filter(mutation -> mutation.request().requestId().equals(request))
+                .findFirst().orElseThrow().request().status());
+        assertTrue(service.snapshot().persistence().committedGeneration()
+                < service.snapshot().persistence().submittedGeneration());
+
+        history.commitCompletions.getLast().complete(null);
+
+        assertEquals(GuidePersistenceSnapshot.State.AVAILABLE,
+                service.snapshot().persistence().state());
+        assertEquals(service.snapshot().persistence().submittedGeneration(),
+                service.snapshot().persistence().committedGeneration());
+        assertEquals(1, local.pending.size(), "durability retry must not replay the provider");
+        int acknowledged = history.commits.size();
+        service.selectSession("main").join();
+        assertEquals(acknowledged, history.commits.size(),
+                "an acknowledged context must not be rewritten for an unchanged publish");
+    }
+
+    @Test
+    void idleWriteFailureRetainsContextForAnExplicitLaterPublishWithoutFalseAvailability() {
+        FakeHistory history = new FakeHistory(false);
+        FakeLocal local = new FakeLocal(true);
+        GuideService service = service(local, history);
+        history.metadata.complete(Optional.empty());
+        UUID request = success(service.ask("synthetic idle failure").join());
+        history.completeAllCommits();
+        List<ModelMessage> original = finalizedToolPair("synthetic-idle-call");
+        local.updateContext(request, original, original);
+        int failedIndex = history.commits.size() - 1;
+        history.commitCompletions.get(failedIndex).completeExceptionally(
+                new GuideHistoryException("history_write_failed", "synthetic idle failure"));
+        assertEquals(failedIndex + 1, history.commits.size(), "do not spin retrying a failed store");
+        assertEquals(GuidePersistenceSnapshot.State.UNAVAILABLE,
+                service.snapshot().persistence().state());
+
+        service.selectSession("main").join();
+
+        assertEquals(failedIndex + 2, history.commits.size());
+        assertEquals(GuidePersistenceSnapshot.State.UNAVAILABLE,
+                service.snapshot().persistence().state(),
+                "a new submitted write is not proof that the failed data is durable");
+        assertEquals(List.of(original), history.commits.getLast().mutations().stream()
+                .filter(GuideHistoryMutation.ReplaceRequestContext.class::isInstance)
+                .map(GuideHistoryMutation.ReplaceRequestContext.class::cast)
+                .map(GuideHistoryMutation.ReplaceRequestContext::messages).toList());
+        history.completeAllCommits();
+        assertEquals(GuidePersistenceSnapshot.State.AVAILABLE,
+                service.snapshot().persistence().state());
+    }
+
+    @Test
+    void queuedChangesCoalesceByUnitAndRetryIncludesUnacknowledgedInitialRows() {
+        FakeHistory history = new FakeHistory(false);
+        FakeLocal local = new FakeLocal(true);
+        GuideService service = service(local, history);
+        history.metadata.complete(Optional.empty());
+        UUID request = success(service.ask("synthetic queued stream").join());
+        List<ModelMessage> latest = List.of();
+        for (int index = 0; index < 128; index++) {
+            latest = List.of(ModelMessage.userText("synthetic latest snapshot " + index));
+            local.updateContext(request, latest, latest);
+        }
+        local.compact(request);
+        local.tool(request);
+        local.complete(request, "synthetic completed stream");
+        assertEquals(1, history.commits.size());
+
+        history.commitCompletions.getFirst().completeExceptionally(
+                new GuideHistoryException("history_write_failed", "synthetic initial failure"));
+
+        assertEquals(2, history.commits.size());
+        List<GuideHistoryMutation> retry = history.commits.getLast().mutations();
+        assertEquals(1, retry.stream().filter(GuideHistoryMutation.UpsertSession.class::isInstance).count());
+        assertEquals(1, retry.stream().filter(GuideHistoryMutation.UpsertRequest.class::isInstance).count());
+        assertEquals(1, retry.stream().filter(GuideHistoryMutation.UpsertCheckpoint.class::isInstance).count());
+        assertEquals(1, retry.stream().filter(GuideHistoryMutation.ReplaceContext.class::isInstance).count());
+        assertEquals(1, retry.stream().filter(GuideHistoryMutation.ReplaceRequestContext.class::isInstance).count());
+        assertEquals(List.of(latest), retry.stream()
+                .filter(GuideHistoryMutation.ReplaceRequestContext.class::isInstance)
+                .map(GuideHistoryMutation.ReplaceRequestContext.class::cast)
+                .map(GuideHistoryMutation.ReplaceRequestContext::messages).toList());
+        assertEquals(1, retry.stream().filter(GuideHistoryMutation.UpsertTimelineEntry.class::isInstance)
+                .map(GuideHistoryMutation.UpsertTimelineEntry.class::cast)
+                .filter(mutation -> mutation.entry() instanceof GuideTimelineEntry.Tool).count());
+        history.completeAllCommits();
+        assertEquals(GuidePersistenceSnapshot.State.AVAILABLE,
+                service.snapshot().persistence().state());
+    }
+
+    @Test
+    void clearAndCloseRemainOrderedAfterAFailedInFlightContextWithoutResurrectingIt() {
+        for (boolean close : List.of(false, true)) {
+            FakeHistory history = new FakeHistory(false);
+            FakeLocal local = new FakeLocal(true);
+            GuideService service = service(local, history);
+            history.metadata.complete(Optional.empty());
+            UUID oldRequest = success(service.ask("synthetic deleted old turn").join());
+            history.completeAllCommits();
+            List<ModelMessage> oldContext = finalizedToolPair("synthetic-deleted-call");
+            local.updateContext(oldRequest, oldContext, oldContext);
+            int failedIndex = history.commits.size() - 1;
+            local.complete(oldRequest, "synthetic old terminal");
+            if (close) service.closeSession("main").join();
+            else service.clearSelectedSession().join();
+            UUID newerRequest = success(service.ask("synthetic recreated turn").join());
+            List<ModelMessage> newerContext = finalizedToolPair("synthetic-recreated-call");
+            local.updateContext(newerRequest, newerContext, newerContext);
+            local.compact(newerRequest);
+            local.complete(newerRequest, "synthetic new terminal");
+            assertFailure(service.deleteActorHistory().join(), "history_delete_busy");
+            assertTrue(history.deletes.isEmpty());
+
+            history.commitCompletions.get(failedIndex).completeExceptionally(
+                    new GuideHistoryException("history_write_failed", "synthetic barrier failure"));
+
+            List<GuideHistoryMutation> retry = history.commits.getLast().mutations();
+            assertEquals(1, retry.stream().filter(mutation -> close
+                    ? mutation instanceof GuideHistoryMutation.DeleteSession
+                    : mutation instanceof GuideHistoryMutation.ClearSession).count());
+            assertTrue(retry.stream().noneMatch(mutation ->
+                    mutation instanceof GuideHistoryMutation.UpsertRequest row
+                            && row.request().requestId().equals(oldRequest)
+                    || mutation instanceof GuideHistoryMutation.ReplaceRequestContext context
+                            && context.requestId().equals(oldRequest)));
+            assertEquals(List.of(newerContext), retry.stream()
+                    .filter(GuideHistoryMutation.ReplaceContext.class::isInstance)
+                    .map(GuideHistoryMutation.ReplaceContext.class::cast)
+                    .map(GuideHistoryMutation.ReplaceContext::messages).toList());
+            int barrier = -1;
+            int newRow = -1;
+            for (int index = 0; index < retry.size(); index++) {
+                if (retry.get(index) instanceof GuideHistoryMutation.DeleteSession
+                        || retry.get(index) instanceof GuideHistoryMutation.ClearSession) barrier = index;
+                if (retry.get(index) instanceof GuideHistoryMutation.UpsertRequest row
+                        && row.request().requestId().equals(newerRequest)) newRow = index;
+            }
+            assertTrue(barrier >= 0 && newRow > barrier);
+            history.completeAllCommits();
+            assertEquals(GuidePersistenceSnapshot.State.AVAILABLE,
+                    service.snapshot().persistence().state());
+            int committed = history.commits.size();
+            service.selectSession("main").join();
+            assertEquals(committed, history.commits.size());
+            assertEquals(List.of(newerRequest), service.snapshot().sessions().getFirst().requests()
+                    .stream().map(GuideRequestSnapshot::requestId).toList());
+        }
+    }
+
+    @Test
+    void acknowledgmentOfAnOlderBatchCannotMarkQueuedFinalDataAvailable() {
+        FakeHistory history = new FakeHistory(false);
+        FakeLocal local = new FakeLocal(true);
+        GuideService service = service(local, history);
+        history.metadata.complete(Optional.empty());
+        UUID request = success(service.ask("synthetic ordered acknowledgments").join());
+        CompletableFuture<Void> first = history.commitCompletions.getFirst();
+        local.complete(request, "synthetic final delta");
+        long submitted = service.snapshot().persistence().submittedGeneration();
+        assertEquals(1, history.commits.size());
+
+        first.complete(null);
+
+        assertEquals(2, history.commits.size());
+        assertEquals(GuidePersistenceSnapshot.State.SAVING, service.snapshot().persistence().state());
+        assertEquals(submitted, service.snapshot().persistence().submittedGeneration());
+        assertTrue(service.snapshot().persistence().committedGeneration() < submitted);
+        GuidePersistenceSnapshot waiting = service.snapshot().persistence();
+        first.completeExceptionally(new GuideHistoryException("history_write_failed", "stale failure"));
+        assertEquals(waiting, service.snapshot().persistence());
+        history.commitCompletions.getLast().complete(null);
+        assertEquals(GuidePersistenceSnapshot.available(submitted), service.snapshot().persistence());
+    }
+
+    @Test
+    void disconnectDrainsQueuedCancellationBeforeFlushingWithoutCapturingEmptyMemory() {
+        FakeHistory history = new FakeHistory(false);
+        FakeLocal local = new FakeLocal(true);
+        GuideService service = service(local, history);
+        history.metadata.complete(Optional.empty());
+        UUID request = success(service.ask("synthetic disconnect while writing").join());
+        List<ModelMessage> original = finalizedToolPair("synthetic-disconnect-call");
+        local.updateContext(request, original, original);
+
+        CompletableFuture<Void> disconnecting = service.disconnect();
+
+        assertFalse(disconnecting.isDone());
+        assertEquals(1, history.commits.size());
+        assertTrue(service.snapshot().sessions().getFirst().requests().isEmpty());
+        history.completeAllCommits();
+        disconnecting.join();
+        assertEquals(2, history.commits.size());
+        List<GuideHistoryMutation> finalWrite = history.commits.getLast().mutations();
+        assertEquals(GuideRequestStatus.CANCELLED, finalWrite.stream()
+                .filter(GuideHistoryMutation.UpsertRequest.class::isInstance)
+                .map(GuideHistoryMutation.UpsertRequest.class::cast)
+                .filter(mutation -> mutation.request().requestId().equals(request))
+                .findFirst().orElseThrow().request().status());
+        assertEquals(List.of(original), finalWrite.stream()
+                .filter(GuideHistoryMutation.ReplaceRequestContext.class::isInstance)
+                .map(GuideHistoryMutation.ReplaceRequestContext.class::cast)
+                .map(GuideHistoryMutation.ReplaceRequestContext::messages).toList());
+        assertTrue(history.commits.stream().flatMap(commit -> commit.mutations().stream())
+                .noneMatch(mutation -> mutation instanceof GuideHistoryMutation.ClearSession
+                        || mutation instanceof GuideHistoryMutation.DeleteSession));
+        assertEquals(1, history.flushCalls);
+    }
+
+    @Test
     void commitFailureKeepsInMemoryRequestAndMarksItUnsaved() {
-        FakeHistory history = new FakeHistory();
-        FakeLocal local = new FakeLocal();
+        FakeHistory history = new FakeHistory(false);
+        FakeLocal local = new FakeLocal(true);
         GuideService service = service(local, history);
         history.metadata.complete(Optional.empty());
 
@@ -727,7 +969,7 @@ final class GuideServiceHistoryTest {
 
     @Test
     void pendingWriteAndUnavailablePersistenceRejectDeletionWithoutRepositoryCall() {
-        FakeHistory pending = new FakeHistory();
+        FakeHistory pending = new FakeHistory(false);
         GuideService service = service(new FakeLocal(), pending);
         pending.metadata.complete(Optional.empty());
         service.selectSession("pending").join();
@@ -938,6 +1180,7 @@ final class GuideServiceHistoryTest {
     }
 
     private static final class FakeHistory implements GuideHistoryAccess {
+        private final boolean autoAcknowledge;
         private final CompletableFuture<Optional<GuideHistoryMetadata>> metadata = new CompletableFuture<>();
         private final List<GuideHistoryCommit> commits = new ArrayList<>();
         private final List<CompletableFuture<Void>> commitCompletions = new ArrayList<>();
@@ -948,6 +1191,11 @@ final class GuideServiceHistoryTest {
         private final List<CompletableFuture<Void>> deleteCompletions = new ArrayList<>();
         private GuideHistoryPage recoveredPage;
         private int resetCalls;
+        private int flushCalls;
+
+        private FakeHistory() { this(true); }
+
+        private FakeHistory(boolean autoAcknowledge) { this.autoAcknowledge = autoAcknowledge; }
 
         @Override
         public CompletableFuture<Optional<GuideHistoryMetadata>> metadata(GuideHistoryScope scope) {
@@ -978,6 +1226,7 @@ final class GuideServiceHistoryTest {
             commits.add(commit);
             CompletableFuture<Void> completion = new CompletableFuture<>();
             commitCompletions.add(completion);
+            if (autoAcknowledge) completion.complete(null);
             return completion;
         }
 
@@ -999,6 +1248,7 @@ final class GuideServiceHistoryTest {
 
         @Override
         public CompletableFuture<Void> flush() {
+            flushCalls++;
             if (!deleteCompletions.isEmpty() && !deleteCompletions.getLast().isDone()) {
                 return deleteCompletions.getLast().handle((ignored, failure) -> null);
             }
@@ -1014,7 +1264,9 @@ final class GuideServiceHistoryTest {
         }
 
         private void completeAllCommits() {
-            commitCompletions.forEach(completion -> completion.complete(null));
+            for (int index = 0; index < commitCompletions.size(); index++) {
+                commitCompletions.get(index).complete(null);
+            }
         }
 
         private void completeDeletion() {
@@ -1028,18 +1280,22 @@ final class GuideServiceHistoryTest {
     }
 
     private static final class FakeLocal implements GuideLocalEndpoint {
+        private final boolean alwaysHasContext;
         private final java.util.Map<UUID, Consumer<AgentEvent>> pending = new java.util.LinkedHashMap<>();
         private final List<ModelMessage> hydratedMessages = new ArrayList<>();
         private final List<ContextCheckpoint> hydratedCheckpoints = new ArrayList<>();
         private final List<UUID> clearedActors = new ArrayList<>();
         private final Set<String> contextSessions = new java.util.HashSet<>();
 
+        private FakeLocal() { this(false); }
+        private FakeLocal(boolean alwaysHasContext) { this.alwaysHasContext = alwaysHasContext; }
+
         @Override public Set<ContextCapability> requiredContext() { return Set.of(); }
         @Override public Optional<GuideContextSpec> contextSpec(String profileId) {
             return Optional.of(GuideServiceHistoryTest.contextSpec());
         }
         @Override public boolean hasContext(UUID actor, String sessionId) {
-            return contextSessions.contains(sessionId);
+            return alwaysHasContext || contextSessions.contains(sessionId);
         }
         @Override
         public CompletableFuture<AgentResult> ask(
