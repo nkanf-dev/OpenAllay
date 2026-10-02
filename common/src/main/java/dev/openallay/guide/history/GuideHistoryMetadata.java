@@ -31,19 +31,34 @@ public record GuideHistoryMetadata(
             GuideHistoryCursor first,
             GuideHistoryCursor last,
             GuideUsageSnapshot usage,
-            GuideUsageSnapshot inheritedUsage) {
+            GuideUsageSnapshot inheritedUsage,
+            int messageCount) {
         public Session(String sessionId, int ordinal, GuideModelSelection modelSelection,
                 long requestCount, GuideHistoryCursor first, GuideHistoryCursor last) {
             this(sessionId, ordinal, modelSelection, requestCount, first, last,
                     requestCount == 0 ? GuideUsageSnapshot.empty() : GuideUsageSnapshot.unknown(),
-                    GuideUsageSnapshot.empty());
+                    GuideUsageSnapshot.empty(), 0);
+        }
+
+        public Session(String sessionId, int ordinal, GuideModelSelection modelSelection,
+                long requestCount, GuideHistoryCursor first, GuideHistoryCursor last, int messageCount) {
+            this(sessionId, ordinal, modelSelection, requestCount, first, last,
+                    requestCount == 0 ? GuideUsageSnapshot.empty() : GuideUsageSnapshot.unknown(),
+                    GuideUsageSnapshot.empty(), messageCount);
+        }
+
+        public Session(String sessionId, int ordinal, GuideModelSelection modelSelection,
+                long requestCount, GuideHistoryCursor first, GuideHistoryCursor last,
+                GuideUsageSnapshot usage, GuideUsageSnapshot inheritedUsage) {
+            this(sessionId, ordinal, modelSelection, requestCount, first, last,
+                    usage, inheritedUsage, 0);
         }
 
         public Session {
             if (sessionId == null || !sessionId.matches("[a-zA-Z0-9_.-]+")) {
                 throw new IllegalArgumentException("invalid session ID");
             }
-            if (ordinal < 0 || requestCount < 0) {
+            if (ordinal < 0 || requestCount < 0 || messageCount < 0) {
                 throw new IllegalArgumentException("session metadata count is invalid");
             }
             java.util.Objects.requireNonNull(modelSelection, "modelSelection");

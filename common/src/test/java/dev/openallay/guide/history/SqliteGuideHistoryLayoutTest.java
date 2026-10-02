@@ -26,7 +26,8 @@ final class SqliteGuideHistoryLayoutTest {
             GuideHistoryScope.Kind.MULTIPLAYER, "layout.example");
     private static final Set<String> TABLES = Set.of(
             "partitions", "sessions", "requests", "messages", "timeline_entries",
-            "request_sources", "compaction_checkpoints", "model_context", "request_model_context");
+            "request_sources", "compaction_checkpoints", "model_context", "request_model_context",
+            "request_context_boundaries");
 
     @TempDir Path temporary;
 
@@ -45,6 +46,31 @@ final class SqliteGuideHistoryLayoutTest {
                 () -> store(database).metadata(SCOPE));
         assertEquals("history_corrupt", failure.code());
         assertTrue(Arrays.equals(before, Files.readAllBytes(database)));
+    }
+
+    @Test
+    void preForkCurrentLayoutIsRejectedWithoutResettingOrMigratingTheDatabase() throws Exception {
+        Path database = temporary.resolve("pre-fork-layout.db");
+        store(database).metadata(SCOPE);
+        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
+                var statement = connection.createStatement()) {
+            statement.execute("drop table request_context_boundaries");
+        }
+        byte[] before = Files.readAllBytes(database);
+        GuideHistoryException failure = assertThrows(GuideHistoryException.class,
+                () -> store(database).metadata(SCOPE));
+        assertEquals("history_corrupt", failure.code());
+        assertTrue(Arrays.equals(before, Files.readAllBytes(database)));
+        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
+                var rows = connection.createStatement().executeQuery("""
+                        select name from sqlite_master where type = 'table' and name not glob 'sqlite_*'
+                        """)) {
+            Set<String> expected = new java.util.HashSet<>(TABLES);
+            expected.remove("request_context_boundaries");
+            Set<String> actual = new java.util.HashSet<>();
+            while (rows.next()) actual.add(rows.getString(1));
+            assertEquals(expected, actual);
+        }
     }
 
     @Test
@@ -127,6 +153,9 @@ final class SqliteGuideHistoryLayoutTest {
                 () -> store.requestContext(SCOPE, requestId),
                 () -> store.commit(new GuideHistoryCommit(SCOPE, List.of(
                         new GuideHistoryMutation.UpsertPartition("main", NOW)))),
+                () -> store.fork(new GuideHistoryForkRequest(SCOPE,
+                        new GuideHistoryMutation.ForkSession("main", new GuideHistoryCursor(0, requestId),
+                                "branch", 1, dev.openallay.guide.GuideModelSelection.client("profile")))),
                 () -> store.delete(new GuideHistoryDeleteScope.Partition(SCOPE)));
         for (Runnable operation : operations) {
             GuideHistoryException failure = assertThrows(GuideHistoryException.class, operation::run);
@@ -146,6 +175,8 @@ final class SqliteGuideHistoryLayoutTest {
     void missingTableExtraColumnAndWrongColumnTypeFailClosed() throws Exception {
         List<String> damage = List.of(
                 "drop table request_model_context",
+                "drop table request_context_boundaries",
+                "alter table request_context_boundaries add column foreign_column text",
                 "alter table requests add column foreign_column text",
                 """
                 drop table model_context;
@@ -181,6 +212,16 @@ final class SqliteGuideHistoryLayoutTest {
     @Test
     void missingAndNonCascadingOwnershipFailClosedAcrossDisplayAndContextTables() throws Exception {
         List<String> damage = List.of(
+                """
+                drop table request_context_boundaries;
+                create table request_context_boundaries(
+                    scope_id text not null,
+                    request_id text not null,
+                    payload_json text not null,
+                    checkpoints_json text not null,
+                    primary key(scope_id, request_id)
+                )
+                """,
                 """
                 drop table timeline_entries;
                 create table timeline_entries(

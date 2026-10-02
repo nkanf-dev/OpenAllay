@@ -144,11 +144,10 @@ final class GuideServiceHistoryTest {
         assertEquals(request, persistedEntry.requestId());
         assertNull(persistedTool.normalized());
         assertFalse(persistedTool.presentationMessages().isEmpty());
-        assertEquals(List.of(checkpoint()), history.commits.stream()
-                .flatMap(commit -> commit.mutations().stream())
-                .filter(GuideHistoryMutation.UpsertCheckpoint.class::isInstance)
-                .map(GuideHistoryMutation.UpsertCheckpoint.class::cast)
-                .map(GuideHistoryMutation.UpsertCheckpoint::checkpoint).toList());
+        assertEquals(List.of(new GuideHistoryMutation.AppendCheckpoint("main", checkpoint())),
+                history.commits.stream().flatMap(commit -> commit.mutations().stream())
+                        .filter(GuideHistoryMutation.AppendCheckpoint.class::isInstance)
+                        .map(GuideHistoryMutation.AppendCheckpoint.class::cast).toList());
 
         int latestIndex = history.commitCompletions.size() - 1;
         history.commitCompletions.get(latestIndex).complete(null);
@@ -630,7 +629,9 @@ final class GuideServiceHistoryTest {
         List<GuideHistoryMutation> retry = history.commits.getLast().mutations();
         assertEquals(1, retry.stream().filter(GuideHistoryMutation.UpsertSession.class::isInstance).count());
         assertEquals(1, retry.stream().filter(GuideHistoryMutation.UpsertRequest.class::isInstance).count());
-        assertEquals(1, retry.stream().filter(GuideHistoryMutation.UpsertCheckpoint.class::isInstance).count());
+        assertEquals(List.of(new GuideHistoryMutation.AppendCheckpoint("main", checkpoint())), retry.stream()
+                .filter(GuideHistoryMutation.AppendCheckpoint.class::isInstance)
+                .map(GuideHistoryMutation.AppendCheckpoint.class::cast).toList());
         assertEquals(1, retry.stream().filter(GuideHistoryMutation.ReplaceContext.class::isInstance).count());
         assertEquals(1, retry.stream().filter(GuideHistoryMutation.ReplaceRequestContext.class::isInstance).count());
         assertEquals(List.of(latest), retry.stream()

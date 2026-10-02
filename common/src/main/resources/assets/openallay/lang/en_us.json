@@ -581,5 +581,10 @@
   "screen.openallay.settings.models.builtin.image_source.unknown": "Image-input source: unavailable",
   "screen.openallay.settings.models.builtin.image_effective_source": "Image-input evidence: %s · captured %s",
   "screen.openallay.telemetry.image_unknown": "Text tokens estimated only; image tokens are not yet included.",
-  "screen.openallay.telemetry.text_estimate": "Text %s"
+  "screen.openallay.telemetry.text_estimate": "Text %s",
+  "screen.openallay.session.fork": "Branch from latest completed task",
+  "screen.openallay.action.fork": "Branch from here",
+  "screen.openallay.action.fork.description": "Create an independent session branch from this completed task. Tools are not re-executed.",
+  "screen.openallay.fork.running": "Creating branch…",
+  "screen.openallay.fork.success": "Created branch %s. The original session is unchanged."
 }

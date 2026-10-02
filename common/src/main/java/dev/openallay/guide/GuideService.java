@@ -17,6 +17,8 @@ import dev.openallay.guide.history.GuideHistoryContextRequest;
 import dev.openallay.guide.history.GuideHistoryContextSeed;
 import dev.openallay.guide.history.GuideHistoryMutation;
 import dev.openallay.guide.history.GuideHistoryScope;
+import dev.openallay.guide.history.GuideHistoryForkRequest;
+import dev.openallay.guide.history.GuideHistoryForkResult;
 import dev.openallay.guide.export.GuideSessionExportCollector;
 import dev.openallay.guide.export.GuideSessionExportSnapshot;
 import dev.openallay.tool.ToolResult;
@@ -67,6 +69,8 @@ public final class GuideService implements GuideHistoryAdministration {
     private volatile GuideSnapshot snapshot;
     private volatile GuideTelemetrySnapshot telemetry;
     private String selectedSession = "main";
+    private long sessionSelectionGeneration;
+    private final Map<String, UUID> pendingForks = new LinkedHashMap<>();
     private GuidePersistenceSnapshot persistence;
     private boolean allowHistoryWrites;
     private boolean historyDeletionPending;
@@ -405,6 +409,7 @@ public final class GuideService implements GuideHistoryAdministration {
             }
             boolean preparingContext = session.preparingContextRequest != null
                     && session.preparingContextRequest.equals(active.requestId());
+            if (preparingContext) session.unresolvedForkContext.add(active.requestId());
             var note = new dev.openallay.model.ModelMessage(dev.openallay.model.ModelRole.ASSISTANT,
                     List.of(new dev.openallay.model.ModelContent.Text(
                             "[OpenAllay request ended: agent_cancelled] Agent request was cancelled")));
@@ -421,9 +426,18 @@ public final class GuideService implements GuideHistoryAdministration {
             original.add(note);
             if (!preparingContext) {
                 pendingCancelledFinalization.put(active.requestId(), new CancelledFinalization(
-                        session.id, Objects.requireNonNull(session.requestSequences.get(active.requestId()))));
+                        session.id, Objects.requireNonNull(session.requestSequences.get(active.requestId())),
+                        List.copyOf(session.checkpoints)));
             }
-            apply(active.requestId(), new AgentEvent.ContextUpdated(current, original));
+            if (preparingContext) {
+                // The actual predecessor projection is still loading. Keep it durable and
+                // record only this request's known input/end note; no guessed fork boundary.
+                session.originalContext.put(active.requestId(), List.copyOf(original));
+                if (incrementalHistory) pendingHistoryMutations.add(
+                        new GuideHistoryMutation.ReplaceRequestContext(active.requestId(), original));
+            } else {
+                apply(active.requestId(), new AgentEvent.ContextUpdated(current, original));
+            }
             apply(active.requestId(), new AgentEvent.Failed(
                     "agent_cancelled", "Agent request was cancelled"));
             if (!preparingContext) {
@@ -482,13 +496,303 @@ public final class GuideService implements GuideHistoryAdministration {
                         "invalid_session", "Session ID may contain letters, numbers, dot, underscore, and dash"));
                 return;
             }
+            if (pendingForks.containsKey(sessionId)) {
+                result.complete(new ToolResult.Failure<>("fork_pending", "This session is being created by a fork"));
+                return;
+            }
             sessions.computeIfAbsent(sessionId,
                     id -> new SessionState(id, defaultClientSelection()));
             selectedSession = sessionId;
+            sessionSelectionGeneration++;
             publish();
             result.complete(new ToolResult.Success<>(sessionId));
         });
         return result;
+    }
+
+    /** Forks only after a terminal request. Tools and runtime workspaces are never resumed or cloned. */
+    public CompletableFuture<ToolResult<String>> forkSession(
+            String sourceSessionId, UUID completedRequestId, String newSessionId) {
+        CompletableFuture<ToolResult<String>> result = new CompletableFuture<>();
+        dispatcher.execute(() -> startFork(sourceSessionId, completedRequestId, newSessionId, result));
+        return result;
+    }
+
+    public CompletableFuture<ToolResult<String>> forkSession(String sourceSessionId, UUID completedRequestId) {
+        return forkSession(sourceSessionId, completedRequestId, "fork-" + UUID.randomUUID());
+    }
+
+    /** Uses the latest terminal request, never the newest row of an older GUI page. */
+    public CompletableFuture<ToolResult<String>> forkSelectedSession() {
+        CompletableFuture<ToolResult<String>> result = new CompletableFuture<>();
+        dispatcher.execute(() -> {
+            if (rejectStateChange(result)) return;
+            SessionState source = sessions.get(selectedSession);
+            if (source == null || history == null) {
+                forkLatestLoaded(source, result);
+                return;
+            }
+            long epoch = source.forkEpoch;
+            long selectionGeneration = sessionSelectionGeneration;
+            scheduleHistorySave();
+            drainHistoryWrites().thenCompose(ignored -> history.page(new GuideHistoryPageRequest(
+                    historyScope, source.id, GuideHistoryPageRequest.Direction.NEWEST, null, 2)))
+                    .whenComplete((page, failure) -> dispatcher.execute(() -> {
+                        if (failure != null) {
+                            GuideFailure known = historyFailure(failure, "history_fork_failed");
+                            result.complete(new ToolResult.Failure<>(known.code(), known.message()));
+                            return;
+                        }
+                        if (disconnected || sessions.get(source.id) != source || source.forkEpoch != epoch
+                                || !selectedSession.equals(source.id)
+                                || sessionSelectionGeneration != selectionGeneration) {
+                            result.complete(new ToolResult.Failure<>("fork_source_changed", "The selected session changed"));
+                            return;
+                        }
+                        mergePage(source, GuideHistoryPageRequest.Direction.NEWEST, 2, page);
+                        forkLatestLoaded(source, result);
+                    }));
+        });
+        return result;
+    }
+
+    private void forkLatestLoaded(SessionState source, CompletableFuture<ToolResult<String>> result) {
+        GuideRequestSnapshot last = source == null ? null : source.requests.stream()
+                .filter(GuideRequestSnapshot::terminal).reduce((first, second) -> second).orElse(null);
+        if (last == null) {
+            result.complete(new ToolResult.Failure<>(
+                    "fork_boundary_unavailable", "Select a completed request to fork from"));
+            return;
+        }
+        startFork(source.id, last.requestId(), "fork-" + UUID.randomUUID(), result);
+    }
+
+    private void startFork(String sourceSessionId, UUID requestId, String targetSessionId,
+            CompletableFuture<ToolResult<String>> result) {
+        if (rejectStateChange(result)) return;
+        if (disconnected || !validSession(targetSessionId)) {
+            result.complete(new ToolResult.Failure<>("fork_unavailable", "The fork target is unavailable"));
+            return;
+        }
+        SessionState source = sessions.get(sourceSessionId);
+        GuideRequestSnapshot request = source == null ? null : source.requests.stream()
+                .filter(value -> value.requestId().equals(requestId)).findFirst().orElse(null);
+        GuideHistoryCursor cutoff = request == null ? null : cursor(source, request);
+        if (request == null || !request.terminal() || cutoff == null
+                || pendingCancelledFinalization.containsKey(requestId)) {
+            result.complete(new ToolResult.Failure<>(
+                    "fork_boundary_unavailable", "Fork requires a finalized completed request boundary"));
+            return;
+        }
+        if (sessions.containsKey(targetSessionId) || pendingForks.containsKey(targetSessionId)) {
+            result.complete(new ToolResult.Failure<>("fork_target_exists", "The fork target session already exists"));
+            return;
+        }
+        UUID nonce = UUID.randomUUID();
+        pendingForks.put(targetSessionId, nonce);
+        long sourceEpoch = source.forkEpoch;
+        String capturedSelection = selectedSession;
+        long capturedSelectionGeneration = sessionSelectionGeneration;
+        GuideHistoryMutation.ForkSession mutation = new GuideHistoryMutation.ForkSession(
+                source.id, cutoff, targetSessionId, sessions.size(), source.modelSelection);
+        if (history == null) {
+            try {
+                GuideHistoryForkResult fork = forkMemory(source, mutation);
+                Map<UUID, List<dev.openallay.model.ModelMessage>> originals = new LinkedHashMap<>();
+                Map<UUID, GuideHistoryMutation.CaptureRequestBoundary> boundaries = new LinkedHashMap<>();
+                for (GuideRequestSnapshot inherited : fork.page().requests()) {
+                    long sequence = fork.page().first().sequence() + originals.size();
+                    UUID sourceId = source.requestSequences.entrySet().stream()
+                            .filter(entry -> entry.getValue() == sequence).map(Map.Entry::getKey)
+                            .findFirst().orElseThrow();
+                    originals.put(inherited.requestId(), source.originalContext.getOrDefault(sourceId, List.of()));
+                    GuideHistoryMutation.CaptureRequestBoundary boundary = source.forkBoundaries.get(sourceId);
+                    if (boundary != null) boundaries.put(inherited.requestId(),
+                            new GuideHistoryMutation.CaptureRequestBoundary(inherited.requestId(),
+                                    boundary.messages(), boundary.checkpoints()));
+                }
+                retainForkImages(mutation, fork, originals, boundaries).whenComplete((ignored, failure) ->
+                        dispatcher.execute(() -> completeFork(source, sourceEpoch, capturedSelection,
+                                capturedSelectionGeneration, nonce, mutation, fork, failure, result,
+                                originals, boundaries)));
+            } catch (RuntimeException failure) {
+                completeFork(source, sourceEpoch, capturedSelection, capturedSelectionGeneration, nonce, mutation, null, failure, result);
+            }
+            return;
+        }
+        if (!allowHistoryWrites) {
+            pendingForks.remove(targetSessionId);
+            result.complete(new ToolResult.Failure<>("history_unavailable", "Durable guide history is unavailable"));
+            return;
+        }
+        scheduleHistorySave();
+        drainHistoryWrites().whenComplete((ignored, writeFailure) -> dispatcher.execute(() -> {
+            if (writeFailure != null || disconnected || sessions.get(source.id) != source
+                    || source.forkEpoch != sourceEpoch) {
+                completeFork(source, sourceEpoch, capturedSelection, capturedSelectionGeneration, nonce, mutation,
+                        null, writeFailure == null ? new GuideHistoryException(
+                                "fork_source_changed", "The source session changed before the fork") : writeFailure, result);
+                return;
+            }
+            CompletableFuture<GuideHistoryForkResult> operation;
+            try {
+                operation = history.fork(new GuideHistoryForkRequest(historyScope, mutation));
+            } catch (RuntimeException failure) {
+                completeFork(source, sourceEpoch, capturedSelection, capturedSelectionGeneration, nonce, mutation, null, failure, result);
+                return;
+            }
+            operation.whenComplete((fork, failure) -> dispatcher.execute(() -> completeFork(
+                    source, sourceEpoch, capturedSelection, capturedSelectionGeneration, nonce, mutation, fork, failure, result)));
+        }));
+    }
+
+    /** Memory-only forks must retain every original image, not only the compacted tail. */
+    private CompletableFuture<Void> retainForkImages(GuideHistoryMutation.ForkSession mutation,
+            GuideHistoryForkResult fork, Map<UUID, List<dev.openallay.model.ModelMessage>> requestOriginals,
+            Map<UUID, GuideHistoryMutation.CaptureRequestBoundary> requestBoundaries) {
+        if (attachmentStore == null) return CompletableFuture.completedFuture(null);
+        List<dev.openallay.model.ModelMessage> originals = new ArrayList<>(fork.messages());
+        requestOriginals.values().forEach(originals::addAll);
+        requestBoundaries.values().forEach(boundary -> originals.addAll(boundary.messages()));
+        List<dev.openallay.model.image.ImageReference> references = imageReferences(originals);
+        String owner = imageOwnerPrefix + "session:" + mutation.sessionId();
+        retainedImages.put(owner, references);
+        return CompletableFuture.runAsync(() -> {
+            try { attachmentStore.retain(actor, owner, references); }
+            catch (java.io.IOException failure) { throw new java.io.UncheckedIOException(failure); }
+        }, IMAGE_IO);
+    }
+
+    private void completeFork(SessionState source, long sourceEpoch, String capturedSelection,
+            long capturedSelectionGeneration, UUID nonce,
+            GuideHistoryMutation.ForkSession mutation, GuideHistoryForkResult fork, Throwable failure,
+            CompletableFuture<ToolResult<String>> result) {
+        completeFork(source, sourceEpoch, capturedSelection, capturedSelectionGeneration, nonce,
+                mutation, fork, failure, result, Map.of(), Map.of());
+    }
+
+    private void completeFork(SessionState source, long sourceEpoch, String capturedSelection,
+            long capturedSelectionGeneration, UUID nonce,
+            GuideHistoryMutation.ForkSession mutation, GuideHistoryForkResult fork, Throwable failure,
+            CompletableFuture<ToolResult<String>> result,
+            Map<UUID, List<dev.openallay.model.ModelMessage>> originals,
+            Map<UUID, GuideHistoryMutation.CaptureRequestBoundary> boundaries) {
+        if (!nonce.equals(pendingForks.get(mutation.sessionId()))) {
+            result.complete(new ToolResult.Failure<>("fork_superseded", "The fork was superseded"));
+            return;
+        }
+        pendingForks.remove(mutation.sessionId());
+        if (failure != null || fork == null) {
+            GuideFailure known = historyFailure(failure, "history_fork_failed");
+            result.complete(new ToolResult.Failure<>(known.code(), known.message()));
+            return;
+        }
+        if (!mutation.sessionId().equals(fork.session().sessionId())
+                || !mutation.modelSelection().equals(fork.session().modelSelection())) {
+            result.complete(new ToolResult.Failure<>("history_scope_mismatch", "The fork result belongs to another session"));
+            return;
+        }
+        if (disconnected || sessions.containsKey(mutation.sessionId())) {
+            // The committed branch remains durable. Never attach an old callback to a new live view.
+            result.complete(new ToolResult.Failure<>("fork_source_changed", "The live guide changed during the fork"));
+            return;
+        }
+        boolean sourceUnchanged = sessions.get(source.id) == source && source.forkEpoch == sourceEpoch;
+        SessionState target = new SessionState(fork.session().sessionId(), fork.session().modelSelection());
+        target.totalRequests = fork.session().requestCount();
+        target.usage.restore(fork.session().usage(), fork.session().inheritedUsage());
+        target.firstAvailable = fork.session().first();
+        target.lastAvailable = fork.session().last();
+        target.nextRequestSequence = fork.session().last().sequence() + 1;
+        target.messageOrdinalBase = fork.nextMessageOrdinal();
+        target.modelContext = fork.messages();
+        target.checkpoints.addAll(fork.checkpoints());
+        sessions.put(target.id, target);
+        mergePage(target, GuideHistoryPageRequest.Direction.NEWEST, 120, fork.page());
+        if (history == null) {
+            target.originalContext.putAll(originals);
+            target.forkBoundaries.putAll(boundaries);
+        }
+        for (DurableProjection projection : List.of(capturedProjection, durableProjection)) {
+            projection.sessions.put(target.id, new SessionProjection(fork.session().ordinal(), target.modelSelection));
+            for (int index = 0; index < target.checkpoints.size(); index++) {
+                projection.checkpoints.put(new CheckpointKey(target.id, index), target.checkpoints.get(index));
+                projection.checkpointPayloads.put(target.checkpoints.get(index).checkpointId(), target.checkpoints.get(index));
+                projection.checkpointSessions.put(target.checkpoints.get(index).checkpointId(), target.id);
+            }
+        }
+        if (local != null && target.modelSelection.kind() == GuideModelSelection.Kind.CLIENT) {
+            try {
+                local.hydrateContext(actor, target.id, fork.messages(),
+                        GuideHistoryForkResult.reusableCheckpoints(fork.checkpoints(), fork.messages()));
+            } catch (RuntimeException unavailable) {
+                // The persisted snapshot is still available for the normal next-request hydration.
+                local.clearSession(actor, target.id);
+            }
+        }
+        if (sourceUnchanged && selectedSession.equals(capturedSelection)
+                && sessionSelectionGeneration == capturedSelectionGeneration) {
+            selectedSession = target.id;
+            sessionSelectionGeneration++;
+        }
+        publish();
+        result.complete(new ToolResult.Success<>(target.id));
+    }
+
+    private GuideHistoryForkResult forkMemory(SessionState source, GuideHistoryMutation.ForkSession mutation) {
+        GuideHistoryMutation.CaptureRequestBoundary boundary = source.forkBoundaries.get(mutation.cutoff().requestId());
+        if (boundary == null || boundary.messages().isEmpty()) throw new GuideHistoryException(
+                "fork_context_unavailable", "The completed request has no safe model context snapshot");
+        List<GuideRequestSnapshot> inherited = new ArrayList<>();
+        List<GuideHistoryCursor> cursors = new ArrayList<>();
+        for (GuideRequestSnapshot original : source.requests) {
+            long sequence = source.requestSequences.get(original.requestId());
+            if (sequence > mutation.cutoff().sequence()) continue;
+            if (!original.terminal()) throw new GuideHistoryException(
+                    "fork_boundary_unavailable", "Fork requires a completed request prefix");
+            if (source.originalContext.getOrDefault(original.requestId(), List.of()).isEmpty()) {
+                throw new GuideHistoryException("fork_context_unavailable",
+                        "An inherited request has no original model transcript");
+            }
+            UUID id = UUID.randomUUID();
+            GuideRequestSnapshot safe = durableRequest(original);
+            inherited.add(new GuideRequestSnapshot(id, mutation.sessionId(), safe.topology(), safe.userMessage(),
+                    safe.timeline(), safe.status(), safe.sources(), safe.usage(), safe.retryAfterMillis(),
+                    safe.failure(), safe.createdAt(), safe.updatedAt(), safe.terminalAt(), safe.modelSelection(),
+                    safe.progress(), safe.usageProjection(), safe.usageOriginRequestId() == null
+                            ? safe.requestId() : safe.usageOriginRequestId()));
+            cursors.add(new GuideHistoryCursor(sequence, id));
+        }
+        int inheritedMessageCount = (int) source.messages.stream().filter(message ->
+                source.requestSequences.getOrDefault(message.requestId(), Long.MAX_VALUE)
+                        <= mutation.cutoff().sequence()).count();
+        return new GuideHistoryForkResult(new GuideHistoryMetadata.Session(mutation.sessionId(), mutation.ordinal(),
+                mutation.modelSelection(), inherited.size(), cursors.getFirst(), cursors.getLast(),
+                GuideUsageSnapshot.empty(), inherited.stream().map(GuideRequestSnapshot::usageProjection)
+                        .reduce(GuideUsageSnapshot.empty(), GuideUsageSnapshot::plus), inheritedMessageCount),
+                new GuideHistoryPage(mutation.sessionId(), inherited, cursors.getFirst(), cursors.getLast(), false, false),
+                boundary.messages(), boundary.checkpoints().stream().map(checkpoint ->
+                        new ContextCheckpoint(UUID.randomUUID(), checkpoint.sourceFromIndex(),
+                                checkpoint.sourceToIndexExclusive(), checkpoint.sourceHash(), checkpoint.modelIdentifier(),
+                                checkpoint.createdAt(), checkpoint.status(), checkpoint.summary(), checkpoint.failureCode(),
+                                checkpoint.failureMessage(), checkpoint.estimatedProjectionTokens())).toList(),
+                inheritedMessageCount);
+    }
+
+    private void captureForkBoundary(SessionState session, UUID requestId) {
+        captureForkBoundary(session, requestId, session.modelContext, session.checkpoints);
+    }
+
+    private void captureForkBoundary(SessionState session, UUID requestId,
+            List<dev.openallay.model.ModelMessage> messages, List<ContextCheckpoint> checkpoints) {
+        if (session.unresolvedForkContext.contains(requestId)
+                || pendingCancelledFinalization.containsKey(requestId)
+                || !session.originalContext.containsKey(requestId)
+                || session.originalContext.get(requestId).isEmpty() || messages.isEmpty()) return;
+        GuideHistoryMutation.CaptureRequestBoundary boundary = new GuideHistoryMutation.CaptureRequestBoundary(
+                requestId, messages, checkpoints);
+        if (history == null) session.forkBoundaries.put(requestId, boundary);
+        if (incrementalHistory) pendingHistoryMutations.add(boundary);
     }
 
     public CompletableFuture<ToolResult<Boolean>> closeSession(String sessionId) {
@@ -649,8 +953,12 @@ public final class GuideService implements GuideHistoryAdministration {
             session.usageCarriers.clear();
             session.usage = new GuideUsageTracker();
             session.messages.clear();
+            session.messageOrdinalBase = 0;
             session.checkpoints.clear();
             session.originalContext.clear();
+            session.forkBoundaries.clear();
+            session.unresolvedForkContext.clear();
+            session.forkEpoch++;
             pendingCancelledFinalization.entrySet().removeIf(
                     entry -> entry.getValue().sessionId().equals(session.id));
             session.modelContext = List.of();
@@ -863,6 +1171,7 @@ public final class GuideService implements GuideHistoryAdministration {
                     "history_unavailable", "Durable guide history is unavailable");
         }
         if (historyDeletionPending
+                || !pendingForks.isEmpty()
                 || inFlightHistoryWrite != null
                 || !queuedHistoryMutations.isEmpty()
                 || !pendingHistoryMutations.isEmpty()
@@ -916,6 +1225,8 @@ public final class GuideService implements GuideHistoryAdministration {
         }
         requestSessions.clear();
         pendingCancelledFinalization.clear();
+        pendingForks.clear();
+        sessionSelectionGeneration++;
         sessions.values().forEach(session -> invalidatePageLoad(
                 session, "history_page_cancelled", "History page request was cancelled"));
         sessions.clear();
@@ -1255,6 +1566,7 @@ public final class GuideService implements GuideHistoryAdministration {
                             pending.sessionId(), finalized.messages()));
                 }
             }
+            captureForkBoundary(session, requestId, finalized.messages(), pending.checkpoints());
             publish();
             return;
         }
@@ -1298,7 +1610,16 @@ public final class GuideService implements GuideHistoryAdministration {
             return;
         }
         if (event instanceof AgentEvent.ContextCompacted compacted) {
-            session.checkpoints.add(compacted.checkpoint());
+            ContextCheckpoint checkpoint = compacted.checkpoint();
+            int existing = -1;
+            for (int ordinal = 0; ordinal < session.checkpoints.size(); ordinal++) {
+                if (session.checkpoints.get(ordinal).checkpointId().equals(checkpoint.checkpointId())) {
+                    existing = ordinal;
+                    break;
+                }
+            }
+            if (existing < 0) session.checkpoints.add(checkpoint);
+            else session.checkpoints.set(existing, checkpoint);
             publish();
             return;
         }
@@ -1309,7 +1630,10 @@ public final class GuideService implements GuideHistoryAdministration {
         }
         after = after.withUsageProjection(before.usageProjection());
         session.requests.set(index, after);
-        if (after.terminal()) contexts.closeRequest(requestId.toString());
+        if (after.terminal()) {
+            contexts.closeRequest(requestId.toString());
+            captureForkBoundary(session, requestId);
+        }
         if (after.status() == GuideRequestStatus.COMPLETED
                 && !after.assistantText().isBlank()) {
             session.messages.add(new GuideMessage(
@@ -1481,6 +1805,7 @@ public final class GuideService implements GuideHistoryAdministration {
                     ? defaultClientSelection() : snapshot.modelSelection();
             SessionState session = new SessionState(snapshot.sessionId(), restored);
             session.totalRequests = snapshot.requestCount();
+            session.messageOrdinalBase = snapshot.messageCount();
             session.usage.restore(snapshot.usage(), snapshot.inheritedUsage());
             session.firstAvailable = snapshot.first();
             session.lastAvailable = snapshot.last();
@@ -1636,8 +1961,10 @@ public final class GuideService implements GuideHistoryAdministration {
                 session, loadedDurable.getFirst());
         session.lastLoaded = loadedDurable.isEmpty() ? null : cursor(
                 session, loadedDurable.getLast());
-        session.hasEarlier = page.hasEarlier();
-        session.hasLater = page.hasLater();
+        session.hasEarlier = session.firstLoaded != null && session.firstAvailable != null
+                && session.firstLoaded.sequence() > session.firstAvailable.sequence();
+        session.hasLater = session.lastLoaded != null && session.lastAvailable != null
+                && session.lastLoaded.sequence() < session.lastAvailable.sequence();
         registerPageBaseline(page);
     }
 
@@ -1806,26 +2133,29 @@ public final class GuideService implements GuideHistoryAdministration {
                             request.requestId(), request.sources()));
                 }
             }
-            for (int ordinal = 0; ordinal < session.messages.size(); ordinal++) {
+            for (int index = 0; index < session.messages.size(); index++) {
+                int ordinal = Math.addExact(session.messageOrdinalBase, index);
                 MessageKey key = new MessageKey(session.id, ordinal);
-                GuideMessage message = session.messages.get(ordinal);
+                GuideMessage message = session.messages.get(index);
                 if (!message.equals(capturedProjection.messages.get(key))) {
                     mutations.add(new GuideHistoryMutation.UpsertMessage(
                             session.id, ordinal, message));
                 }
             }
             for (int ordinal = 0; ordinal < session.checkpoints.size(); ordinal++) {
-                CheckpointKey key = new CheckpointKey(session.id, ordinal);
                 ContextCheckpoint checkpoint = session.checkpoints.get(ordinal);
-                if (!checkpoint.equals(capturedProjection.checkpoints.get(key))) {
-                    mutations.add(new GuideHistoryMutation.UpsertCheckpoint(
-                            session.id, ordinal, checkpoint));
+                if (!checkpoint.equals(capturedProjection.checkpointPayloads.get(checkpoint.checkpointId()))) {
+                    mutations.add(new GuideHistoryMutation.AppendCheckpoint(session.id, checkpoint));
                 }
             }
         }
         if (mutations.isEmpty() && selectedSession.equals(capturedProjection.selectedSession)) {
             return null;
         }
+        List<GuideHistoryMutation> boundaries = mutations.stream()
+                .filter(value -> value instanceof GuideHistoryMutation.CaptureRequestBoundary).toList();
+        mutations.removeAll(boundaries);
+        mutations.addAll(boundaries);
         mutations.add(0, new GuideHistoryMutation.UpsertPartition(
                 selectedSession, clock.instant()));
         GuideHistoryCommit commit = new GuideHistoryCommit(historyScope, mutations);
@@ -2012,11 +2342,16 @@ public final class GuideService implements GuideHistoryAdministration {
         private final String id;
         private GuideUsageTracker usage = new GuideUsageTracker();
         private final List<GuideMessage> messages = new ArrayList<>();
+        // Unloaded inherited durable messages own earlier ordinals.
+        private int messageOrdinalBase;
         private final List<GuideRequestSnapshot> requests = new ArrayList<>();
         private final List<ContextCheckpoint> checkpoints = new ArrayList<>();
         private List<dev.openallay.model.ModelMessage> modelContext = List.of();
         private final Map<UUID, List<dev.openallay.model.ModelMessage>> originalContext =
                 new LinkedHashMap<>();
+        private final Map<UUID, GuideHistoryMutation.CaptureRequestBoundary> forkBoundaries = new LinkedHashMap<>();
+        private final Set<UUID> unresolvedForkContext = new java.util.HashSet<>();
+        private long forkEpoch;
         private GuideModelSelection modelSelection;
         private String lastClientProfileId;
         private long totalRequests;
@@ -2048,7 +2383,11 @@ public final class GuideService implements GuideHistoryAdministration {
         }
     }
 
-    private record CancelledFinalization(String sessionId, long sequence) {}
+    private record CancelledFinalization(String sessionId, long sequence, List<ContextCheckpoint> checkpoints) {
+        private CancelledFinalization {
+            checkpoints = List.copyOf(checkpoints);
+        }
+    }
     private record UsageCarrier(long sequence, GuideUsageSnapshot usage) {}
 
     private record PageKey(
@@ -2120,12 +2459,15 @@ public final class GuideService implements GuideHistoryAdministration {
                 case GuideHistoryMutation.UpsertMessage row -> row.sessionId();
                 case GuideHistoryMutation.ReplaceContext row -> row.sessionId();
                 case GuideHistoryMutation.UpsertCheckpoint row -> row.sessionId();
+                case GuideHistoryMutation.AppendCheckpoint row -> row.sessionId();
                 case GuideHistoryMutation.DeleteSession row -> row.sessionId();
                 case GuideHistoryMutation.ClearSession row -> row.sessionId();
                 case GuideHistoryMutation.UpsertRequest row -> row.request().sessionId();
                 case GuideHistoryMutation.UpsertTimelineEntry row -> sessionOf(row.requestId());
                 case GuideHistoryMutation.ReplaceRequestSources row -> sessionOf(row.requestId());
                 case GuideHistoryMutation.ReplaceRequestContext row -> sessionOf(row.requestId());
+                case GuideHistoryMutation.CaptureRequestBoundary row -> sessionOf(row.requestId());
+                case GuideHistoryMutation.ForkSession row -> row.sessionId();
                 case GuideHistoryMutation.UpsertPartition ignored -> null;
             };
         }
@@ -2156,6 +2498,12 @@ public final class GuideService implements GuideHistoryAdministration {
                         new MutationKey(mutation.getClass(), row.sessionId(), 0);
                 case GuideHistoryMutation.ReplaceRequestContext row ->
                         new MutationKey(mutation.getClass(), row.requestId(), 0);
+                case GuideHistoryMutation.CaptureRequestBoundary row ->
+                        new MutationKey(mutation.getClass(), row.requestId(), 0);
+                case GuideHistoryMutation.ForkSession row ->
+                        new MutationKey(mutation.getClass(), row.sessionId(), 0);
+                case GuideHistoryMutation.AppendCheckpoint row ->
+                        new MutationKey(mutation.getClass(), row.checkpoint().checkpointId(), 0);
                 case GuideHistoryMutation.UpsertCheckpoint row ->
                         new MutationKey(mutation.getClass(), row.sessionId(), row.ordinal());
                 case GuideHistoryMutation.DeleteSession row ->
@@ -2192,6 +2540,8 @@ public final class GuideService implements GuideHistoryAdministration {
         private final Map<UUID, List<GuideSource>> sources = new LinkedHashMap<>();
         private final Map<MessageKey, GuideMessage> messages = new LinkedHashMap<>();
         private final Map<CheckpointKey, ContextCheckpoint> checkpoints = new LinkedHashMap<>();
+        private final Map<UUID, ContextCheckpoint> checkpointPayloads = new LinkedHashMap<>();
+        private final Map<UUID, String> checkpointSessions = new LinkedHashMap<>();
 
         private void acknowledge(List<GuideHistoryMutation> changes) {
             for (GuideHistoryMutation mutation : changes) {
@@ -2207,12 +2557,21 @@ public final class GuideService implements GuideHistoryAdministration {
                             row.requestId(), row.sources());
                     case GuideHistoryMutation.UpsertMessage row -> messages.put(
                             new MessageKey(row.sessionId(), row.ordinal()), row.message());
-                    case GuideHistoryMutation.UpsertCheckpoint row -> checkpoints.put(
-                            new CheckpointKey(row.sessionId(), row.ordinal()), row.checkpoint());
+                    case GuideHistoryMutation.UpsertCheckpoint row -> {
+                        checkpoints.put(new CheckpointKey(row.sessionId(), row.ordinal()), row.checkpoint());
+                        checkpointPayloads.put(row.checkpoint().checkpointId(), row.checkpoint());
+                        checkpointSessions.put(row.checkpoint().checkpointId(), row.sessionId());
+                    }
+                    case GuideHistoryMutation.AppendCheckpoint row -> {
+                        checkpointPayloads.put(row.checkpoint().checkpointId(), row.checkpoint());
+                        checkpointSessions.put(row.checkpoint().checkpointId(), row.sessionId());
+                    }
                     case GuideHistoryMutation.DeleteSession row -> removeSession(row.sessionId());
                     case GuideHistoryMutation.ClearSession row -> clearSession(row.sessionId());
                     case GuideHistoryMutation.ReplaceContext ignored -> { }
                     case GuideHistoryMutation.ReplaceRequestContext ignored -> { }
+                    case GuideHistoryMutation.CaptureRequestBoundary ignored -> { }
+                    case GuideHistoryMutation.ForkSession ignored -> { }
                 }
             }
         }
@@ -2225,6 +2584,8 @@ public final class GuideService implements GuideHistoryAdministration {
             sources.clear();
             messages.clear();
             checkpoints.clear();
+            checkpointPayloads.clear();
+            checkpointSessions.clear();
         }
 
         private void clearSession(String sessionId) {
@@ -2237,6 +2598,11 @@ public final class GuideService implements GuideHistoryAdministration {
             timeline.keySet().removeIf(key -> ids.contains(key.requestId()));
             messages.keySet().removeIf(key -> key.sessionId().equals(sessionId));
             checkpoints.keySet().removeIf(key -> key.sessionId().equals(sessionId));
+            Set<UUID> removedCheckpoints = checkpointSessions.entrySet().stream()
+                    .filter(entry -> entry.getValue().equals(sessionId)).map(Map.Entry::getKey)
+                    .collect(java.util.stream.Collectors.toSet());
+            removedCheckpoints.forEach(checkpointPayloads::remove);
+            removedCheckpoints.forEach(checkpointSessions::remove);
         }
 
         private void removeSession(String sessionId) {

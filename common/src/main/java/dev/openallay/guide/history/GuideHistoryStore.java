@@ -27,6 +27,11 @@ public interface GuideHistoryStore extends AutoCloseable {
         throw new UnsupportedOperationException("incremental commits are unavailable");
     }
 
+    /** Ordered atomic clone of full durable history through one completed request. */
+    default GuideHistoryForkResult fork(GuideHistoryForkRequest request) {
+        throw new UnsupportedOperationException("session forks are unavailable");
+    }
+
     void delete(GuideHistoryDeleteScope scope);
 
     void resetDatabase();

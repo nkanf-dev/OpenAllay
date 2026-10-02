@@ -589,7 +589,17 @@ public final class OpenAllayScreen extends Screen {
                         scroll = 0;
                     }));
             y += 24;
-            if (y > rail.y() + rail.height() - 22) break;
+            if (y > rail.y() + rail.height() - 42) break;
+        }
+        GuideSessionSnapshot selected = service.snapshot().sessions().stream()
+                .filter(session -> session.sessionId().equals(view.selectedSession())).findFirst().orElse(null);
+        boolean hasHistory = selected != null && selected.historyWindow().totalRequests() > 0;
+        Component forkLabel = Component.translatable("screen.openallay.session.fork");
+        int actionY = rail.bottom() - 18;
+        graphics.text(font, forkLabel, rail.x() + 8, actionY, hasHistory ? ACCENT : MUTED, false);
+        if (hasHistory) {
+            hits.add(new Hit(new GuideUiLayout.Rect(rail.x() + 4, actionY - 2, rail.width() - 8, 14),
+                    HitKind.SESSION, this::forkSelectedSession));
         }
     }
 
@@ -796,6 +806,7 @@ public final class OpenAllayScreen extends Screen {
             graphics.text(font, Component.translatable("screen.openallay.speaker.user"),
                     x, y, ACCENT, false);
             renderCopyAction(graphics, row, user.text(), x, y, width);
+            renderForkAction(graphics, user.requestId(), user.text(), x, y, width);
             y += 11;
             y = renderWrapped(graphics, GuideMarkup.paragraphs(user.text()), x + 6, y, width - 6, TEXT);
             return y + 8;
@@ -805,6 +816,9 @@ public final class OpenAllayScreen extends Screen {
             graphics.text(font, assistantLabel(projectedDisplay, assistant.streaming()),
                     x + 6, y, ACCENT, false);
             renderCopyAction(graphics, row, assistant.text(), x, y, width);
+            if (completedAssistantBoundary(service.snapshot(), view.selectedSession(), assistant)) {
+                renderForkAction(graphics, assistant.requestId(), assistant.text(), x, y, width);
+            }
             y += 11;
             if (assistant.text().isBlank()) {
                 graphics.text(font, Component.translatable(
@@ -1116,6 +1130,10 @@ public final class OpenAllayScreen extends Screen {
             service.requestHistoryWindow(
                     session.sessionId(), GuideHistoryPageRequest.Direction.BEFORE,
                     session.historyWindow().firstLoaded(), count);
+        } else if (scroll >= virtualizer.maximumScroll(transcriptViewportHeight()) - 32
+                && session.historyWindow().hasLater() && session.historyWindow().lastLoaded() != null) {
+            service.requestHistoryWindow(session.sessionId(), GuideHistoryPageRequest.Direction.AFTER,
+                    session.historyWindow().lastLoaded(), count);
         }
     }
 
@@ -2067,6 +2085,60 @@ public final class OpenAllayScreen extends Screen {
                         || value.status() == GuideRequestStatus.INTERRUPTED)
                 .reduce((first, second) -> second).orElse(null);
         if (request != null) accept(service.retry(request.requestId()), ignored -> notice = "");
+    }
+
+    private void forkSelectedSession() {
+        notice = Component.translatable("screen.openallay.fork.running").getString();
+        accept(service.forkSelectedSession(), id -> {
+            notice = Component.translatable("screen.openallay.fork.success", id).getString();
+            sessionOverlay = false;
+            scroll = 0;
+        });
+    }
+
+    private void forkSession(String sourceSessionId, UUID completedRequestId) {
+        notice = Component.translatable("screen.openallay.fork.running").getString();
+        accept(service.forkSession(sourceSessionId, completedRequestId), id -> {
+            notice = Component.translatable("screen.openallay.fork.success", id).getString();
+            sessionOverlay = false;
+            scroll = 0;
+        });
+    }
+
+    private void renderForkAction(GuiGraphicsExtractor graphics, UUID requestId, String text,
+            int x, int y, int width) {
+        if (!forkableRequest(service.snapshot(), view.selectedSession(), requestId)) return;
+        Component label = Component.translatable("screen.openallay.action.fork");
+        int copyWidth = text == null || text.isBlank() ? 0
+                : font.width(Component.translatable("screen.openallay.action.copy")) + 14;
+        int actionWidth = font.width(label) + 8;
+        int actionX = x + width - copyWidth - actionWidth;
+        String focusId = "fork:" + requestId;
+        if (isFocused(focusedContentId, focusId)) {
+            graphics.fill(actionX - 2, y - 2, actionX + actionWidth, y + 10, 0xFF31453F);
+        }
+        graphics.text(font, label, actionX + 2, y, MUTED, false);
+        String source = view.selectedSession();
+        hits.add(new Hit(new GuideUiLayout.Rect(actionX - 2, y - 2, actionWidth + 2, 12),
+                HitKind.CONTENT, () -> forkSession(source, requestId), focusId,
+                Component.translatable("screen.openallay.action.fork.description").getString()));
+    }
+
+    static boolean completedAssistantBoundary(GuideSnapshot snapshot, String sessionId, GuideUiRow.Assistant row) {
+        if (row.streaming()) return false;
+        return snapshot.sessions().stream().filter(session -> session.sessionId().equals(sessionId))
+                .flatMap(session -> session.requests().stream())
+                .filter(request -> request.requestId().equals(row.requestId()) && request.terminal())
+                .anyMatch(request -> !request.timeline().isEmpty()
+                        && request.timeline().getLast() instanceof dev.openallay.guide.GuideTimelineEntry.Assistant assistant
+                        && assistant.ordinal() == row.ordinal());
+    }
+
+    /** A selected user row denotes its whole terminal request, not a partial assistant/tool row. */
+    static boolean forkableRequest(GuideSnapshot snapshot, String sessionId, UUID requestId) {
+        return snapshot.sessions().stream().filter(session -> session.sessionId().equals(sessionId))
+                .flatMap(session -> session.requests().stream())
+                .anyMatch(request -> request.requestId().equals(requestId) && request.terminal());
     }
 
     private void createSession() {

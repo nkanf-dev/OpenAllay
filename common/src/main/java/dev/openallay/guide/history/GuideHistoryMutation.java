@@ -23,6 +23,9 @@ public sealed interface GuideHistoryMutation permits
         GuideHistoryMutation.ReplaceContext,
         GuideHistoryMutation.ReplaceRequestContext,
         GuideHistoryMutation.UpsertCheckpoint,
+        GuideHistoryMutation.AppendCheckpoint,
+        GuideHistoryMutation.CaptureRequestBoundary,
+        GuideHistoryMutation.ForkSession,
         GuideHistoryMutation.DeleteSession,
         GuideHistoryMutation.ClearSession {
 
@@ -104,6 +107,41 @@ public sealed interface GuideHistoryMutation permits
             requireSession(sessionId);
             if (ordinal < 0) throw new IllegalArgumentException("checkpoint ordinal is invalid");
             java.util.Objects.requireNonNull(checkpoint, "checkpoint");
+        }
+    }
+
+    /** Allocates the durable append ordinal; repeated checkpoint identity does not create another row. */
+    record AppendCheckpoint(String sessionId, ContextCheckpoint checkpoint) implements GuideHistoryMutation {
+        public AppendCheckpoint {
+            requireSession(sessionId);
+            java.util.Objects.requireNonNull(checkpoint, "checkpoint");
+        }
+    }
+
+    /** Actual safe Agent projection after a terminal request, not a display reconstruction. */
+    record CaptureRequestBoundary(
+            UUID requestId, List<ModelMessage> messages, List<ContextCheckpoint> checkpoints)
+            implements GuideHistoryMutation {
+        public CaptureRequestBoundary {
+            java.util.Objects.requireNonNull(requestId, "requestId");
+            messages = ModelContextCodec.safe(messages);
+            checkpoints = List.copyOf(checkpoints);
+        }
+    }
+
+    /** Applies only after an exact terminal request; never resumes a pending tool step. */
+    record ForkSession(
+            String sourceSessionId, GuideHistoryCursor cutoff, String sessionId,
+            int ordinal, GuideModelSelection modelSelection) implements GuideHistoryMutation {
+        public ForkSession {
+            requireSession(sourceSessionId);
+            java.util.Objects.requireNonNull(cutoff, "cutoff");
+            requireSession(sessionId);
+            if (sourceSessionId.equals(sessionId)) {
+                throw new IllegalArgumentException("fork target must be a new session");
+            }
+            if (ordinal < 0) throw new IllegalArgumentException("session ordinal is invalid");
+            java.util.Objects.requireNonNull(modelSelection, "modelSelection");
         }
     }
 

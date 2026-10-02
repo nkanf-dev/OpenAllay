@@ -29,6 +29,11 @@ public interface GuideHistoryAccess {
         return unsupported();
     }
 
+    /** Ordered atomic clone of full durable history through one completed request. */
+    default CompletableFuture<GuideHistoryForkResult> fork(GuideHistoryForkRequest request) {
+        return unsupported();
+    }
+
     CompletableFuture<Void> delete(GuideHistoryDeleteScope scope);
 
     CompletableFuture<Void> resetDatabase();

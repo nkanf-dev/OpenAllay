@@ -80,7 +80,20 @@ public final class GuideHistoryRepository implements GuideHistoryAccess {
         return reserveWrite(() -> store.commit(commit));
     }
 
+    @Override
+    public synchronized CompletableFuture<GuideHistoryForkResult> fork(GuideHistoryForkRequest request) {
+        Objects.requireNonNull(request, "request");
+        return reserveMutation(() -> store.fork(request));
+    }
+
     private CompletableFuture<Void> reserveWrite(Runnable operation) {
+        return reserveMutation(() -> {
+            operation.run();
+            return null;
+        });
+    }
+
+    private <T> CompletableFuture<T> reserveMutation(Supplier<T> operation) {
         if (closing) {
             return closedFailure();
         }
@@ -88,20 +101,17 @@ public final class GuideHistoryRepository implements GuideHistoryAccess {
             return busyFailure();
         }
         pendingWrites++;
-        CompletableFuture<Void> scheduled;
+        CompletableFuture<T> scheduled;
         try {
             scheduled = CompletableFuture.supplyAsync(() -> guarded(
                     "history_write_failed",
                     "Unable to save durable guide history",
-                    () -> {
-                        operation.run();
-                        return null;
-                    }), worker);
+                    operation), worker);
         } catch (RuntimeException failure) {
             pendingWrites--;
             throw failure;
         }
-        ReservationFutures tracked = trackReservation(scheduled, this::completeWrite);
+        ReservationFutures<T> tracked = trackReservation(scheduled, this::completeWrite);
         latest = tracked.internal().handle((ignored, failure) -> null);
         return tracked.outward();
     }
@@ -143,7 +153,7 @@ public final class GuideHistoryRepository implements GuideHistoryAccess {
             deleting = false;
             throw failure;
         }
-        ReservationFutures tracked = trackReservation(scheduled, this::completeDeletion);
+        ReservationFutures<Void> tracked = trackReservation(scheduled, this::completeDeletion);
         latest = tracked.internal().handle((ignored, failure) -> null);
         return tracked.outward();
     }
@@ -156,26 +166,26 @@ public final class GuideHistoryRepository implements GuideHistoryAccess {
         deleting = false;
     }
 
-    private static ReservationFutures trackReservation(
-            CompletableFuture<Void> scheduled, Runnable release) {
-        CompletableFuture<Void> internal = new CompletableFuture<>();
-        CompletableFuture<Void> outward = new CompletableFuture<>();
-        scheduled.whenComplete((ignored, failure) -> {
+    private static <T> ReservationFutures<T> trackReservation(
+            CompletableFuture<T> scheduled, Runnable release) {
+        CompletableFuture<T> internal = new CompletableFuture<>();
+        CompletableFuture<T> outward = new CompletableFuture<>();
+        scheduled.whenComplete((value, failure) -> {
             release.run();
             if (failure == null) {
-                internal.complete(null);
-                outward.complete(null);
+                internal.complete(value);
+                outward.complete(value);
             } else {
                 internal.completeExceptionally(failure);
                 outward.completeExceptionally(failure);
             }
         });
-        return new ReservationFutures(internal, outward);
+        return new ReservationFutures<>(internal, outward);
     }
 
-    private record ReservationFutures(
-            CompletableFuture<Void> internal,
-            CompletableFuture<Void> outward) {}
+    private record ReservationFutures<T>(
+            CompletableFuture<T> internal,
+            CompletableFuture<T> outward) {}
 
     private static <T> CompletableFuture<T> busyFailure() {
         return CompletableFuture.failedFuture(new GuideHistoryException(

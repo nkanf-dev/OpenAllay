@@ -103,7 +103,9 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
                     select s.session_id, s.ordinal, s.model_selection_json,
                            count(r.request_id) as request_count,
                            min(r.sequence) as first_sequence,
-                           max(r.sequence) as last_sequence
+                           max(r.sequence) as last_sequence,
+                           (select coalesce(max(m.ordinal), -1) + 1 from messages m
+                            where m.scope_id = s.scope_id and m.session_id = s.session_id) as message_count
                     from sessions s
                     left join requests r
                       on r.scope_id = s.scope_id and r.session_id = s.session_id
@@ -129,7 +131,8 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
                                         connection, scope.scopeId(),
                                         result.getString("session_id"), lastSequence),
                                 sessionUsage(connection, scope.scopeId(), result.getString("session_id"), false),
-                                sessionUsage(connection, scope.scopeId(), result.getString("session_id"), true)));
+                                sessionUsage(connection, scope.scopeId(), result.getString("session_id"), true),
+                                result.getInt("message_count")));
                     }
                 }
             }
@@ -285,6 +288,8 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
                         pending.addAll(GuideImageOwnership.references(context.messages()));
                     } else if (mutation instanceof GuideHistoryMutation.ReplaceRequestContext context) {
                         pending.addAll(GuideImageOwnership.references(context.messages()));
+                    } else if (mutation instanceof GuideHistoryMutation.CaptureRequestBoundary boundary) {
+                        pending.addAll(GuideImageOwnership.references(boundary.messages()));
                     }
                 }
                 // Verify and pin both existing and incoming assets before any SQL mutation.
@@ -330,6 +335,235 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
                     "history_corrupt", "Guide history context is malformed; database was not changed", malformed);
         }
     }
+
+    @Override
+    public GuideHistoryForkResult fork(GuideHistoryForkRequest request) {
+        Objects.requireNonNull(request, "request");
+        GuideHistoryForkResult durableResult = null;
+        try (GuideImageOwnership.Guard ignored = imageOwnership.lock();
+                Connection connection = open()) {
+            reconcileScope(connection, request.scope());
+            List<ImageReference> pending = new ArrayList<>(GuideImageOwnership.references(
+                    readImageOwners(connection, request.scope().scopeId())));
+            // The immutable cutoff and every inherited original/boundary transcript belong
+            // to the complete source scope. Validate and retain all before creating a target.
+            imageOwnership.pin(request.scope(), pending);
+            connection.setAutoCommit(false);
+            try {
+                GuideHistoryForkResult result = applyForkSession(
+                        connection, request.scope(), request.mutation());
+                pending.addAll(GuideImageOwnership.references(
+                        readImageOwners(connection, request.scope().scopeId())));
+                imageOwnership.pin(request.scope(), pending);
+                failureInjector.beforeCommit(Mutation.COMMIT);
+                connection.commit();
+                durableResult = result;
+            } catch (SQLException | IOException | RuntimeException failure) {
+                if (rollback(connection, failure)) {
+                    recoverPinsAfterRollback(connection, request.scope(), failure);
+                }
+                if (failure instanceof GuideHistoryException known) throw known;
+                throw new GuideHistoryException(
+                        "history_fork_failed", "Unable to fork durable guide history", failure);
+            }
+            // A fork cannot safely be replayed after durability. Manifest failures leave the
+            // source+target write pins retained and still return the committed fork result.
+            finishDurableImages(connection, List.of(request.scope()), false);
+            return durableResult;
+        } catch (SQLException | IOException failure) {
+            if (durableResult != null) return durableResult;
+            throw new GuideHistoryException(
+                    "history_fork_failed", "Unable to fork durable guide history", failure);
+        } catch (IllegalArgumentException | JsonParseException malformed) {
+            if (durableResult != null) return durableResult;
+            throw new GuideHistoryException(
+                    "history_corrupt", "Guide history context is malformed; database was not changed", malformed);
+        }
+    }
+
+    private GuideHistoryForkResult applyForkSession(
+            Connection connection, GuideHistoryScope scope, GuideHistoryMutation.ForkSession fork)
+            throws SQLException {
+        String scopeId = scope.scopeId();
+        if (readHeader(connection, scope) == null) {
+            throw new GuideHistoryException("fork_unavailable", "The source partition does not exist");
+        }
+        try (PreparedStatement query = connection.prepareStatement(
+                "select 1 from sessions where scope_id = ? and session_id = ?")) {
+            query.setString(1, scopeId);
+            query.setString(2, fork.sessionId());
+            try (ResultSet result = query.executeQuery()) {
+                if (result.next()) throw new GuideHistoryException(
+                        "fork_target_exists", "The fork target session already exists");
+            }
+        }
+        List<SequencedRequest> source = new ArrayList<>();
+        try (PreparedStatement query = connection.prepareStatement(requestColumns() + """
+                from requests where scope_id = ? and session_id = ? and sequence <= ?
+                order by sequence
+                """)) {
+            query.setString(1, scopeId);
+            query.setString(2, fork.sourceSessionId());
+            query.setLong(3, fork.cutoff().sequence());
+            try (ResultSet result = query.executeQuery()) {
+                while (result.next()) source.add(readRequestRow(connection, scopeId, result));
+            }
+        }
+        if (source.isEmpty() || !source.getLast().cursor().equals(fork.cutoff())
+                || source.stream().anyMatch(row -> !row.request().terminal())) {
+            throw new GuideHistoryException(
+                    "fork_boundary_unavailable", "Fork requires an exact completed request boundary");
+        }
+        RequestBoundary boundary = readRequestBoundary(connection, scopeId, fork.cutoff().requestId());
+        if (boundary == null || boundary.messages().isEmpty()) {
+            throw new GuideHistoryException(
+                    "fork_context_unavailable", "The completed request has no safe model context snapshot");
+        }
+        int ordinal;
+        try (PreparedStatement query = connection.prepareStatement(
+                "select coalesce(max(ordinal), -1) + 1 from sessions where scope_id = ?")) {
+            query.setString(1, scopeId);
+            try (ResultSet result = query.executeQuery()) {
+                result.next();
+                ordinal = result.getInt(1);
+            }
+        }
+        applyMutation(connection, scope, new GuideHistoryMutation.UpsertSession(
+                fork.sessionId(), ordinal, fork.modelSelection()));
+        Map<UUID, UUID> identities = new LinkedHashMap<>();
+        for (SequencedRequest row : source) {
+            if (readRequestContext(connection, scopeId, row.request().requestId()).isEmpty()) {
+                throw new GuideHistoryException("fork_context_unavailable",
+                        "An inherited request has no original model transcript");
+            }
+            UUID targetId = UUID.randomUUID();
+            identities.put(row.request().requestId(), targetId);
+            GuideRequestSnapshot target = forkRequest(row.request(), targetId, fork.sessionId());
+            upsertRequest(connection, scopeId, row.cursor().sequence(), target);
+            for (String table : List.of("timeline_entries", "request_sources", "request_model_context",
+                    "request_context_boundaries")) {
+                copyRequestPayload(connection, scopeId, table, row.request().requestId(), targetId);
+            }
+        }
+        int messageOrdinal = 0;
+        try (PreparedStatement query = connection.prepareStatement("""
+                select ordinal, request_id, role, message_text, created_at from messages
+                where scope_id = ? and session_id = ? order by ordinal
+                """)) {
+            query.setString(1, scopeId);
+            query.setString(2, fork.sourceSessionId());
+            try (ResultSet result = query.executeQuery()) {
+                while (result.next()) {
+                    UUID targetId = identities.get(UUID.fromString(result.getString("request_id")));
+                    if (targetId == null) continue;
+                    upsertMessage(connection, scopeId, new GuideHistoryMutation.UpsertMessage(
+                            fork.sessionId(), messageOrdinal++, new GuideMessage(targetId,
+                                    GuideMessage.Role.valueOf(result.getString("role")),
+                                    result.getString("message_text"),
+                                    Instant.parse(result.getString("created_at")))));
+                }
+            }
+        }
+        applyMutation(connection, scope, new GuideHistoryMutation.ReplaceContext(
+                fork.sessionId(), boundary.messages()));
+        // Checkpoints are diagnostic copies with fresh row identity. Only source-hash-valid
+        // whole units may enter the new runtime reuse index.
+        List<ContextCheckpoint> copied = new ArrayList<>();
+        for (ContextCheckpoint checkpoint : boundary.checkpoints()) {
+            ContextCheckpoint target = new ContextCheckpoint(UUID.randomUUID(),
+                    checkpoint.sourceFromIndex(), checkpoint.sourceToIndexExclusive(),
+                    checkpoint.sourceHash(), checkpoint.modelIdentifier(), checkpoint.createdAt(),
+                    checkpoint.status(), checkpoint.summary(), checkpoint.failureCode(),
+                    checkpoint.failureMessage(), checkpoint.estimatedProjectionTokens());
+            applyMutation(connection, scope, new GuideHistoryMutation.UpsertCheckpoint(
+                    fork.sessionId(), copied.size(), target));
+            copied.add(target);
+        }
+        List<SequencedRequest> window = readPage(connection, new GuideHistoryPageRequest(
+                scope, fork.sessionId(), GuideHistoryPageRequest.Direction.NEWEST, null, 120));
+        GuideHistoryCursor first = cursor(connection, scopeId, fork.sessionId(), source.getFirst().cursor().sequence());
+        GuideHistoryCursor last = cursor(connection, scopeId, fork.sessionId(), fork.cutoff().sequence());
+        GuideHistoryPage page = new GuideHistoryPage(fork.sessionId(),
+                window.stream().map(SequencedRequest::request).toList(),
+                window.getFirst().cursor(), window.getLast().cursor(), source.size() > window.size(), false);
+        return new GuideHistoryForkResult(new GuideHistoryMetadata.Session(
+                fork.sessionId(), ordinal, fork.modelSelection(), source.size(), first, last,
+                GuideUsageSnapshot.empty(), sessionUsage(connection, scopeId, fork.sessionId(), true),
+                messageOrdinal),
+                page, boundary.messages(), copied, messageOrdinal);
+    }
+
+    private static GuideRequestSnapshot forkRequest(
+            GuideRequestSnapshot source, UUID requestId, String targetSessionId) {
+        return new GuideRequestSnapshot(requestId, targetSessionId, source.topology(),
+                source.userMessage(), source.timeline(), source.status(), source.sources(), source.usage(),
+                source.retryAfterMillis(), source.failure(), source.createdAt(), source.updatedAt(),
+                source.terminalAt(), source.modelSelection(), source.progress(), source.usageProjection(),
+                source.usageOriginRequestId() == null ? source.requestId() : source.usageOriginRequestId());
+    }
+
+    private static void copyRequestPayload(Connection connection, String scopeId, String table,
+            UUID sourceId, UUID targetId) throws SQLException {
+        String columns = switch (table) {
+            case "timeline_entries", "request_sources" -> "ordinal, payload_json";
+            case "request_model_context" -> "payload_json";
+            case "request_context_boundaries" -> "payload_json, checkpoints_json";
+            default -> throw new IllegalArgumentException("unknown fork payload table");
+        };
+        try (PreparedStatement copy = connection.prepareStatement("insert into " + table
+                + "(scope_id, request_id, " + columns + ") select scope_id, ?, " + columns
+                + " from " + table + " where scope_id = ? and request_id = ?")) {
+            copy.setString(1, targetId.toString());
+            copy.setString(2, scopeId);
+            copy.setString(3, sourceId.toString());
+            copy.executeUpdate();
+        }
+    }
+
+    private void captureRequestBoundary(Connection connection, String scopeId,
+            GuideHistoryMutation.CaptureRequestBoundary boundary) throws SQLException {
+        com.google.gson.JsonArray checkpoints = new com.google.gson.JsonArray();
+        for (ContextCheckpoint checkpoint : boundary.checkpoints()) {
+            checkpoints.add(com.google.gson.JsonParser.parseString(codec.encodeCheckpoint(checkpoint)));
+        }
+        try (PreparedStatement statement = connection.prepareStatement("""
+                insert into request_context_boundaries(scope_id, request_id, payload_json, checkpoints_json)
+                values (?, ?, ?, ?)
+                on conflict(scope_id, request_id) do update set
+                    payload_json = excluded.payload_json, checkpoints_json = excluded.checkpoints_json
+                """)) {
+            statement.setString(1, scopeId);
+            statement.setString(2, boundary.requestId().toString());
+            statement.setString(3, modelContexts.encode(boundary.messages()));
+            statement.setString(4, checkpoints.toString());
+            statement.executeUpdate();
+        }
+    }
+
+    private RequestBoundary readRequestBoundary(Connection connection, String scopeId, UUID requestId)
+            throws SQLException {
+        try (PreparedStatement query = connection.prepareStatement("""
+                select payload_json, checkpoints_json from request_context_boundaries
+                where scope_id = ? and request_id = ?
+                """)) {
+            query.setString(1, scopeId);
+            query.setString(2, requestId.toString());
+            try (ResultSet result = query.executeQuery()) {
+                if (!result.next()) return null;
+                com.google.gson.JsonElement raw = com.google.gson.JsonParser.parseString(
+                        result.getString("checkpoints_json"));
+                if (!raw.isJsonArray()) throw new IllegalArgumentException("boundary checkpoints must be an array");
+                List<ContextCheckpoint> checkpoints = new ArrayList<>();
+                for (com.google.gson.JsonElement value : raw.getAsJsonArray()) {
+                    checkpoints.add(codec.decodeCheckpoint(value.toString()));
+                }
+                return new RequestBoundary(modelContexts.decode(result.getString("payload_json")),
+                        List.copyOf(checkpoints));
+            }
+        }
+    }
+
+    private record RequestBoundary(List<ModelMessage> messages, List<ContextCheckpoint> checkpoints) {}
 
     @Override
     public void delete(GuideHistoryDeleteScope scope) {
@@ -415,9 +649,13 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
                 union all
                 select 'request:' || request_id as owner, payload_json
                 from request_model_context where scope_id = ?
+                union all
+                select 'boundary:' || request_id as owner, payload_json
+                from request_context_boundaries where scope_id = ?
                 """)) {
             query.setString(1, scopeId);
             query.setString(2, scopeId);
+            query.setString(3, scopeId);
             try (ResultSet result = query.executeQuery()) {
                 while (result.next()) {
                     List<ImageReference> refs = GuideImageOwnership.references(
@@ -438,8 +676,11 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
             case GuideHistoryMutation.UpsertTimelineEntry ignored -> false;
             case GuideHistoryMutation.ReplaceRequestSources ignored -> false;
             case GuideHistoryMutation.UpsertCheckpoint ignored -> false;
+            case GuideHistoryMutation.AppendCheckpoint ignored -> false;
             case GuideHistoryMutation.ReplaceContext ignored -> true;
             case GuideHistoryMutation.ReplaceRequestContext ignored -> true;
+            case GuideHistoryMutation.CaptureRequestBoundary ignored -> true;
+            case GuideHistoryMutation.ForkSession ignored -> true;
             case GuideHistoryMutation.DeleteSession ignored -> true;
             case GuideHistoryMutation.ClearSession ignored -> true;
         };
@@ -628,6 +869,7 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
         tables.put("compaction_checkpoints", sortedForeignKeys(sessionOwner));
         tables.put("model_context", sortedForeignKeys(sessionOwner));
         tables.put("request_model_context", sortedForeignKeys(requestOwner));
+        tables.put("request_context_boundaries", sortedForeignKeys(requestOwner));
         return Map.copyOf(tables);
     }
 
@@ -713,6 +955,11 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
                 column("scope_id", "TEXT", true, 1),
                 column("request_id", "TEXT", true, 2),
                 column("payload_json", "TEXT", true, 0)));
+        tables.put("request_context_boundaries", columns(
+                column("scope_id", "TEXT", true, 1),
+                column("request_id", "TEXT", true, 2),
+                column("payload_json", "TEXT", true, 0),
+                column("checkpoints_json", "TEXT", true, 0)));
         return Map.copyOf(tables);
     }
 
@@ -856,6 +1103,17 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
                         scope_id text not null,
                         request_id text not null,
                         payload_json text not null,
+                        primary key(scope_id, request_id),
+                        foreign key(scope_id, request_id)
+                            references requests(scope_id, request_id) on delete cascade
+                    )
+                    """);
+            statement.execute("""
+                    create table request_context_boundaries(
+                        scope_id text not null,
+                        request_id text not null,
+                        payload_json text not null,
+                        checkpoints_json text not null,
                         primary key(scope_id, request_id),
                         foreign key(scope_id, request_id)
                             references requests(scope_id, request_id) on delete cascade
@@ -1049,6 +1307,43 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
                     statement.executeUpdate();
                 }
             }
+            case GuideHistoryMutation.AppendCheckpoint checkpoint -> {
+                Integer existingOrdinal = null;
+                try (PreparedStatement query = connection.prepareStatement("""
+                        select ordinal from compaction_checkpoints
+                        where scope_id = ? and session_id = ? and checkpoint_id = ?
+                        """)) {
+                    query.setString(1, scopeId);
+                    query.setString(2, checkpoint.sessionId());
+                    query.setString(3, checkpoint.checkpoint().checkpointId().toString());
+                    try (ResultSet result = query.executeQuery()) {
+                        if (result.next()) existingOrdinal = result.getInt("ordinal");
+                    }
+                }
+                if (existingOrdinal != null) {
+                    applyMutation(connection, scope, new GuideHistoryMutation.UpsertCheckpoint(
+                            checkpoint.sessionId(), existingOrdinal, checkpoint.checkpoint()));
+                } else {
+                    try (PreparedStatement statement = connection.prepareStatement("""
+                            insert into compaction_checkpoints(
+                                scope_id, session_id, ordinal, checkpoint_id, payload_json)
+                            select ?, ?, coalesce(max(ordinal), -1) + 1, ?, ?
+                            from compaction_checkpoints where scope_id = ? and session_id = ?
+                            """)) {
+                        statement.setString(1, scopeId);
+                        statement.setString(2, checkpoint.sessionId());
+                        statement.setString(3, checkpoint.checkpoint().checkpointId().toString());
+                        statement.setString(4, codec.encodeCheckpoint(checkpoint.checkpoint()));
+                        statement.setString(5, scopeId);
+                        statement.setString(6, checkpoint.sessionId());
+                        // The scoped checkpoint identity constraint rejects another session's ID.
+                        statement.executeUpdate();
+                    }
+                }
+            }
+            case GuideHistoryMutation.CaptureRequestBoundary boundary ->
+                    captureRequestBoundary(connection, scopeId, boundary);
+            case GuideHistoryMutation.ForkSession fork -> applyForkSession(connection, scope, fork);
             case GuideHistoryMutation.DeleteSession session -> {
                 try (PreparedStatement statement = connection.prepareStatement("""
                         delete from sessions where scope_id = ? and session_id = ?
@@ -1442,8 +1737,14 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
                         withUser.add(acceptedUser);
                         current = List.copyOf(withUser);
                     }
+                    List<ModelMessage> recoveredCurrent = withInterruptionNote(current);
                     applyMutation(connection, scope, new GuideHistoryMutation.ReplaceContext(
-                            request.sessionId(), withInterruptionNote(current)));
+                            request.sessionId(), recoveredCurrent));
+                    // Process recovery closes only complete structural units. It does not resume
+                    // any unrecorded tool step, and this boundary can seed an independent fork.
+                    captureRequestBoundary(connection, scope.scopeId(),
+                            new GuideHistoryMutation.CaptureRequestBoundary(
+                                    request.requestId(), recoveredCurrent, List.of()));
                 }
             }
             if (changed) {

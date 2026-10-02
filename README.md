@@ -123,6 +123,7 @@ copy answers, or export a session. The screen does not pause the game.
 - **Enter** sends; **Shift+Enter** adds a line.
 - **Stop** cancels the request; **Retry** starts it again.
 - **Escape** closes the screen without stopping the answer.
+- **Branch sessions (Fork):** create an independent conversation from a completed task without re-running Tools.
 - Open tool details to inspect results. **Debug mode** also shows the submitted
   JavaScript and full input/output.
 

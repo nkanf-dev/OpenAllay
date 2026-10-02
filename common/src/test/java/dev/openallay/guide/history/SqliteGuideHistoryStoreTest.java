@@ -20,7 +20,11 @@ import java.sql.DriverManager;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -44,8 +48,39 @@ final class SqliteGuideHistoryStoreTest {
 
         assertEquals(saved.sessions().getFirst().requests().getFirst(),
                 pageRequest(store, saved.scope(), saved.sessions().getFirst().sessionId()));
-        assertEquals(9, queryInt("select count(*) from sqlite_master "
-                + "where type = 'table' and name not glob 'sqlite_*'"));
+        Map<String, Set<String>> expectedColumns = Map.ofEntries(
+                Map.entry("partitions", Set.of("scope_id", "actor_id", "connection_kind",
+                        "selected_session", "capture_mode", "updated_at")),
+                Map.entry("sessions", Set.of("scope_id", "session_id", "ordinal",
+                        "model_selection_json")),
+                Map.entry("requests", Set.of("scope_id", "session_id", "request_id", "sequence",
+                        "topology", "model_selection_json", "user_message", "status",
+                        "model_usage_json", "usage_projection_json", "usage_origin_request_id",
+                        "retry_after_millis", "failure_code", "failure_message",
+                        "created_at", "updated_at", "terminal_at")),
+                Map.entry("messages", Set.of("scope_id", "session_id", "ordinal", "request_id",
+                        "role", "message_text", "created_at")),
+                Map.entry("timeline_entries", Set.of("scope_id", "request_id", "ordinal", "payload_json")),
+                Map.entry("request_sources", Set.of("scope_id", "request_id", "ordinal", "payload_json")),
+                Map.entry("compaction_checkpoints", Set.of("scope_id", "session_id", "ordinal",
+                        "checkpoint_id", "payload_json")),
+                Map.entry("model_context", Set.of("scope_id", "session_id", "payload_json")),
+                Map.entry("request_model_context", Set.of("scope_id", "request_id", "payload_json")),
+                Map.entry("request_context_boundaries", Set.of("scope_id", "request_id",
+                        "payload_json", "checkpoints_json")));
+        Map<String, Set<String>> actualColumns = new LinkedHashMap<>();
+        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database());
+                var rows = connection.createStatement().executeQuery("""
+                        select m.name as table_name, p.name as column_name
+                        from sqlite_master m join pragma_table_info(m.name) p
+                        where m.type = 'table' and m.name not glob 'sqlite_*'
+                        """)) {
+            while (rows.next()) {
+                actualColumns.computeIfAbsent(rows.getString("table_name"), ignored -> new HashSet<>())
+                        .add(rows.getString("column_name"));
+            }
+        }
+        assertEquals(expectedColumns, actualColumns);
     }
 
     @Test
