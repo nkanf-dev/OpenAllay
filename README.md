@@ -7,10 +7,7 @@
 Ask in plain language. OpenAllay uses the game data available in your instance
 to work through the task and bring useful answers back into the game.
 
-<picture>
-  <source type="image/svg+xml" srcset="docs/media/openallay-banner.svg">
-  <img src="docs/media/openallay-banner.png" alt="OpenAllay — your AI companion in Minecraft. Explore, build, and create.">
-</picture>
+<img src="docs/media/openallay-banner.png" alt="OpenAllay — your AI companion in Minecraft. Explore, build, and create.">
 
 [Download on GitHub](https://github.com/nkanf-dev/OpenAllay/releases) ·
 [Quick start](#quick-start) · [0.3.0 release notes](docs/releases/0.3.0.md) ·

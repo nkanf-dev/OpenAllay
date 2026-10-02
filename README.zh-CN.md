@@ -7,10 +7,7 @@
 像聊天一样说出需求。OpenAllay 会利用当前游戏中可用的数据，逐步完成任务，
 把有用的答案带回游戏。
 
-<picture>
-  <source type="image/svg+xml" srcset="docs/media/openallay-banner.svg">
-  <img src="docs/media/openallay-banner.png" alt="OpenAllay — 你的 Minecraft AI 伙伴。探索、建造、创造。">
-</picture>
+<img src="docs/media/openallay-banner.png" alt="OpenAllay — 你的 Minecraft AI 伙伴。探索、建造、创造。">
 
 [GitHub 下载](https://github.com/nkanf-dev/OpenAllay/releases) ·
 [快速上手](#快速上手) · [0.3.0 更新说明](docs/releases/0.3.0.md) ·

@@ -2,39 +2,29 @@
 
 ## OpenAllay banner
 
-- **Editable source:** [`openallay-banner.svg`](openallay-banner.svg)
-- **PNG fallback:** [`openallay-banner.png`](openallay-banner.png)
-- **Canvas:** 1600 × 560 px, opaque midnight-blue background.
-- **Content:** OpenAllay · Your AI companion in Minecraft · Explore / Build / Create.
+- **README image:** [`openallay-banner.png`](openallay-banner.png), the original artwork restored without changing its pixels.
+- **Hand-drawn vector:** [`openallay-banner.svg`](openallay-banner.svg), manually authored to preserve the original composition, pixel lettering, symbol, colors, cubes, and connecting line.
+- **Canvas:** 1672 × 941 px in both formats.
 
-The SVG is the source of truth. The companion, floating island, castle, garden,
-and feature icons are original vector geometry. The file contains no embedded
-raster images, external resources, scripts, or linked fonts. Named groups keep
-the illustration, wordmark, tagline, and feature labels separate for editing.
+The SVG is a redraw of the original artwork, not a redesign or an automatic
+raster trace. Its named groups and geometric paths can be edited directly.
+There are no embedded raster images, external resources, scripts, or linked
+fonts. The lettering is hand-drawn geometry rather than a replacement font.
+The project's icon is unchanged.
 
-The lettering was set in Avenir Next and converted to editable paths with
-HarfBuzz and FontTools. Rendering the saved SVG does **not** need those tools or
-the font. The text remains available in accessible SVG titles and labels. To
-change the wording, replace the relevant lettering group in a vector editor,
-then convert new lettering to paths before saving.
+The PNG intentionally remains the original image. The SVG matches its design,
+but subtle raster texture and edge antialiasing are not pixel-identical. Do not
+overwrite the original PNG with an SVG render merely to synchronize file hashes.
 
-### Export
+### Preview the vector
 
-From the repository root, with [librsvg](https://wiki.gnome.org/Projects/LibRsvg)
-installed (`brew install librsvg` on macOS):
+With [librsvg](https://wiki.gnome.org/Projects/LibRsvg) installed
+(`brew install librsvg` on macOS), render an inspection copy outside the repo:
 
 ```sh
-rsvg-convert --output=docs/media/openallay-banner.png docs/media/openallay-banner.svg
+rsvg-convert --output=/tmp/openallay-banner-vector-preview.png docs/media/openallay-banner.svg
 ```
 
-This exports the native 1600 × 560 canvas. Export the PNG from the SVG after every
-banner change; do not edit the two formats separately. A README-size preview can
-be rendered outside the repository with:
-
-```sh
-rsvg-convert --width=850 --output=/tmp/openallay-banner-preview.png docs/media/openallay-banner.svg
-```
-
-`openallay-icon.png` is a separate, unchanged asset. The banner does not use an
-official Minecraft logo or replace the project icon. Screenshots are kept in
-[`screenshots/`](screenshots/).
+The restored PNG SHA-256 is
+`c1e090a2df701021127022dc76a8ef72989c2089ea51a532da7be8f9a7a14ce3`.
+Its source is the banner in commit `63d4d87`, before the 0.3.0 redesign.
