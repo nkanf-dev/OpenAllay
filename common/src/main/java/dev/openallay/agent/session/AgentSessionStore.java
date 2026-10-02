@@ -17,11 +17,66 @@ public final class AgentSessionStore {
             List<ModelMessage> history,
             List<ContextCheckpoint> checkpoints,
             Progress progress,
+            SteerInbox steers,
             dev.openallay.skill.RetainedSkillContext retainedSkills) {
         public Lease {
             history = List.copyOf(history);
             checkpoints = List.copyOf(checkpoints);
         }
+    }
+
+    public record Steer(UUID messageId, ModelMessage message) {
+        public Steer {
+            java.util.Objects.requireNonNull(messageId, "messageId");
+            java.util.Objects.requireNonNull(message, "message");
+            if (message.role() != dev.openallay.model.ModelRole.USER) {
+                throw new IllegalArgumentException("steer must be a user message");
+            }
+        }
+    }
+
+    /** Owned by one immutable request lease; all access uses the enclosing store lock. */
+    public static final class SteerInbox {
+        private final java.util.LinkedHashMap<UUID, ModelMessage> pending = new java.util.LinkedHashMap<>();
+        private final java.util.Set<UUID> consumed = new java.util.HashSet<>();
+        private boolean sealed;
+    }
+
+    public synchronized ToolResult<Boolean> steer(
+            AgentSessionKey key, UUID requestId, UUID messageId, ModelMessage message) {
+        Steer instruction = new Steer(messageId, message);
+        Session session = sessions.get(key);
+        if (session == null || session.active == null
+                || !session.active.requestId().equals(requestId)
+                || session.active.cancellation().isCancelled()) return new ToolResult.Success<>(false);
+        SteerInbox inbox = session.active.steers();
+        if (inbox.sealed || inbox.consumed.contains(messageId)) return new ToolResult.Success<>(false);
+        inbox.pending.put(instruction.messageId(), instruction.message());
+        return new ToolResult.Success<>(true);
+    }
+
+    public synchronized boolean cancelSteer(AgentSessionKey key, UUID requestId, UUID messageId) {
+        Session session = sessions.get(key);
+        return session != null && session.active != null
+                && session.active.requestId().equals(requestId)
+                && session.active.steers().pending.remove(messageId) != null;
+    }
+
+    public synchronized List<Steer> drainSteers(Lease lease) {
+        Session session = sessions.get(lease.key());
+        if (session == null || session.active != lease || lease.cancellation().isCancelled()
+                || lease.steers().sealed) return List.of();
+        List<Steer> instructions = lease.steers().pending.entrySet().stream()
+                .map(entry -> new Steer(entry.getKey(), entry.getValue())).toList();
+        instructions.forEach(instruction -> lease.steers().consumed.add(instruction.messageId()));
+        lease.steers().pending.clear();
+        return instructions;
+    }
+
+    /** A final response has no next model boundary; remaining instructions belong to follow-up. */
+    public synchronized void sealSteers(Lease lease) {
+        lease.steers().sealed = true;
+        lease.steers().pending.clear();
     }
 
     /** Updated only at complete structural boundaries. */
@@ -87,7 +142,7 @@ public final class AgentSessionStore {
         }
         Lease lease = new Lease(
                 key, requestId, new CancellationSignal(), session.history, session.checkpoints,
-                new Progress(session.history), session.retainedSkills);
+                new Progress(session.history), new SteerInbox(), session.retainedSkills);
         session.active = lease;
         session.latest = lease;
         return new ToolResult.Success<>(lease);
@@ -182,6 +237,8 @@ public final class AgentSessionStore {
                 return false;
             }
             cancelled = session.active;
+            cancelled.steers().sealed = true;
+            cancelled.steers().pending.clear();
         }
         boolean accepted = cancelled.cancellation().cancel(
                 java.util.concurrent.ForkJoinPool.commonPool());

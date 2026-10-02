@@ -36,6 +36,75 @@ final class GuideServiceHistoryWindowTest {
             Instant.parse("2026-07-18T12:00:00Z"), ZoneOffset.UTC);
 
     @Test
+    void cancelDuringRestoredContextLoadPreservesDurablePredecessorSeedAndNextHydration() {
+        WindowHistory history = new WindowHistory(metadata());
+        List<dev.openallay.model.ModelMessage> predecessor = List.of(
+                dev.openallay.model.ModelMessage.userText("earlier player goal"),
+                new dev.openallay.model.ModelMessage(dev.openallay.model.ModelRole.ASSISTANT,
+                        List.of(new dev.openallay.model.ModelContent.Text("earlier safe result"))));
+        history.durableSeed = predecessor;
+        ContextLocal local = new ContextLocal();
+        GuideService service = new GuideService(ACTOR, local, new NoRemote(),
+                (capabilities, correlation) -> new ToolResult.Success<>(
+                        ToolInvocationContext.developmentConsole(correlation)),
+                Runnable::run, CLOCK, new Gson(), SCOPE, history);
+        UUID cancelled = success(service.ask("cancel before source is ready").join());
+        assertEquals(1, history.contexts.size());
+        assertEquals(GuideRequestStatus.CONTEXT_LOADING,
+                service.snapshot().sessions().getFirst().requests().getFirst().status());
+        assertTrue(success(service.cancel().join()));
+        assertEquals(predecessor, history.durableSeed);
+        assertTrue(history.commits.stream().flatMap(commit -> commit.mutations().stream())
+                .noneMatch(dev.openallay.guide.history.GuideHistoryMutation.ReplaceContext.class::isInstance));
+        assertTrue(history.commits.stream().flatMap(commit -> commit.mutations().stream())
+                .filter(dev.openallay.guide.history.GuideHistoryMutation.ReplaceRequestContext.class::isInstance)
+                .map(dev.openallay.guide.history.GuideHistoryMutation.ReplaceRequestContext.class::cast)
+                .anyMatch(row -> row.requestId().equals(cancelled)
+                        && row.messages().getFirst().equals(
+                                dev.openallay.model.ModelMessage.userText("cancel before source is ready"))));
+        assertTrue(local.questions.isEmpty());
+        history.contexts.getFirst().complete(new dev.openallay.guide.history.GuideHistoryContextSeed(
+                "main", predecessor, List.of(), 1));
+        assertTrue(local.questions.isEmpty(), "late source callback cannot revive cancelled work");
+        UUID next = success(service.ask("normal next request").join());
+        assertEquals(2, history.contexts.size());
+        history.contexts.getLast().complete(new dev.openallay.guide.history.GuideHistoryContextSeed(
+                "main", history.durableSeed, List.of(), 1));
+        assertEquals(predecessor, local.hydrated);
+        assertEquals(List.of("normal next request"), local.questions);
+        assertEquals(next, service.snapshot().sessions().getFirst().workingRequestId());
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <T> T success(ToolResult<T> result) {
+        return ((ToolResult.Success<T>) assertInstanceOf(ToolResult.Success.class, result)).value();
+    }
+
+    private static final class ContextLocal implements GuideLocalEndpoint {
+        private List<dev.openallay.model.ModelMessage> hydrated = List.of();
+        private final List<String> questions = new ArrayList<>();
+        @Override public java.util.Set<dev.openallay.context.ContextCapability> requiredContext() {
+            return java.util.Set.of();
+        }
+        @Override public java.util.Optional<GuideContextSpec> contextSpec(String profile) {
+            return java.util.Optional.of(new GuideContextSpec(
+                    new dev.openallay.agent.context.ContextBudget(8_192, 1_024), 256, "test/context"));
+        }
+        @Override public void hydrateContext(UUID actor, String session,
+                List<dev.openallay.model.ModelMessage> messages,
+                List<dev.openallay.agent.context.ContextCheckpoint> checkpoints) { hydrated = messages; }
+        @Override public CompletableFuture<dev.openallay.agent.AgentResult> ask(UUID actor, String session,
+                UUID requestId, String question, ToolInvocationContext context, Consumer<AgentEvent> events) {
+            questions.add(question);
+            events.accept(new AgentEvent.StateChanged(dev.openallay.agent.AgentState.MODEL_WAIT));
+            return new CompletableFuture<>();
+        }
+        @Override public boolean cancel(UUID actor, String session) { return true; }
+        @Override public void clearSession(UUID actor, String session) {}
+        @Override public void clearActor(UUID actor) {}
+    }
+
+    @Test
     void restoredNumericTotalsAreAvailableWithoutPagesAndSurviveSelectionChanges() {
         var usage = new GuideUsageSnapshot(3_000, 200, 900, 100, 7, 7, false, false,
                 new java.math.BigDecimal("0.123456789"), false);
@@ -161,6 +230,9 @@ final class GuideServiceHistoryWindowTest {
     private static final class WindowHistory implements GuideHistoryAccess {
         private final GuideHistoryMetadata metadata;
         private final List<CompletableFuture<GuideHistoryPage>> pages = new ArrayList<>();
+        private final List<CompletableFuture<dev.openallay.guide.history.GuideHistoryContextSeed>> contexts = new ArrayList<>();
+        private final List<GuideHistoryCommit> commits = new ArrayList<>();
+        private List<dev.openallay.model.ModelMessage> durableSeed = List.of();
         private int metadataLoads;
 
         private WindowHistory(GuideHistoryMetadata metadata) { this.metadata = metadata; }
@@ -174,7 +246,19 @@ final class GuideServiceHistoryWindowTest {
             pages.add(result);
             return result;
         }
+        @Override public CompletableFuture<dev.openallay.guide.history.GuideHistoryContextSeed> context(
+                dev.openallay.guide.history.GuideHistoryContextRequest request) {
+            CompletableFuture<dev.openallay.guide.history.GuideHistoryContextSeed> result = new CompletableFuture<>();
+            contexts.add(result);
+            return result;
+        }
         @Override public CompletableFuture<Void> commit(GuideHistoryCommit commit) {
+            commits.add(commit);
+            for (var mutation : commit.mutations()) {
+                if (mutation instanceof dev.openallay.guide.history.GuideHistoryMutation.ReplaceContext replaced) {
+                    durableSeed = replaced.messages();
+                }
+            }
             return CompletableFuture.completedFuture(null);
         }
         @Override public CompletableFuture<Void> delete(GuideHistoryDeleteScope scope) {

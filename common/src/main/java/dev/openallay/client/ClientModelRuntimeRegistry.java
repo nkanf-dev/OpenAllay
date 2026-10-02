@@ -290,6 +290,17 @@ public final class ClientModelRuntimeRegistry implements GuideLocalEndpoint {
     }
 
     @Override
+    public ToolResult<Boolean> steer(
+            UUID actor, String sessionId, UUID requestId, UUID messageId, ModelMessage message) {
+        return sessions.steer(new AgentSessionKey(actor, sessionId), requestId, messageId, message);
+    }
+
+    @Override
+    public boolean cancelSteer(UUID actor, String sessionId, UUID requestId, UUID messageId) {
+        return sessions.cancelSteer(new AgentSessionKey(actor, sessionId), requestId, messageId);
+    }
+
+    @Override
     public boolean cancel(UUID actor, String sessionId, UUID expectedRequestId) {
         return sessions.cancel(new AgentSessionKey(actor, sessionId), expectedRequestId);
     }

@@ -397,7 +397,8 @@ final class GuideServiceForkTest {
         return List.of(ModelMessage.userText(question), new ModelMessage(ModelRole.ASSISTANT, List.of(new ModelContent.Text(answer))));
     }
     @SuppressWarnings("unchecked") private static <T> T success(ToolResult<T> result) {
-        return ((ToolResult.Success<T>) assertInstanceOf(ToolResult.Success.class, result)).value();
+        return ((ToolResult.Success<T>) assertInstanceOf(ToolResult.Success.class, result,
+                () -> "Expected accepted fork/request, got " + result)).value();
     }
     private static void assertCode(String code, ToolResult<?> result) {
         assertEquals(code, ((ToolResult.Failure<?>) assertInstanceOf(ToolResult.Failure.class, result)).code());

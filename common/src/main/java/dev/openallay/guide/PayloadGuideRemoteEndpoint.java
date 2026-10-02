@@ -7,6 +7,8 @@ import dev.openallay.bridge.protocol.ServerAgentEventCodec;
 import dev.openallay.bridge.protocol.ServerAgentEventPayload;
 import dev.openallay.bridge.protocol.ServerAgentRequestPayload;
 import dev.openallay.bridge.protocol.ServerAgentHistoryMessage;
+import dev.openallay.bridge.protocol.ServerAgentSteerPayload;
+import dev.openallay.model.ModelMessage;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -20,6 +22,8 @@ public final class PayloadGuideRemoteEndpoint implements GuideRemoteEndpoint {
         boolean ask(
                 ServerAgentRequestPayload request,
                 Consumer<ServerAgentEventPayload> events);
+
+        default boolean steer(ServerAgentSteerPayload payload) { return false; }
 
         boolean cancel(UUID requestId);
 
@@ -238,6 +242,9 @@ public final class PayloadGuideRemoteEndpoint implements GuideRemoteEndpoint {
             });
             if (!sent) { pending.sent = false; return false; }
             if (requests.get(pending.requestId) != pending) return true;
+            List<Runnable> staged = List.copyOf(pending.staged.values());
+            pending.staged.clear();
+            staged.forEach(payloadWorker::execute);
             return true;
         }
     }
@@ -273,9 +280,19 @@ public final class PayloadGuideRemoteEndpoint implements GuideRemoteEndpoint {
                 if (event instanceof AgentEvent.FinalText || event instanceof AgentEvent.Failed) {
                     if (pending.terminal) return;
                     pending.terminal = true;
+                    pending.operations.clear();
+                    pending.staged.clear();
                 }
                 if (event instanceof AgentEvent.RequestReleased) {
+                    if (pending.steerReads != 0) {
+                        pending.releasePending = true;
+                        pending.operations.clear();
+                        pending.staged.clear();
+                        return;
+                    }
                     requests.remove(pending.requestId, pending);
+                    pending.operations.clear();
+                    pending.staged.clear();
                 }
             }
             pending.consumer.accept(event);
@@ -285,10 +302,14 @@ public final class PayloadGuideRemoteEndpoint implements GuideRemoteEndpoint {
     private static final class RemoteRequest {
         private final UUID requestId;
         private final Consumer<AgentEvent> consumer;
+        private final java.util.Map<UUID, Object> operations = new java.util.HashMap<>();
+        private final java.util.Map<UUID, Runnable> staged = new java.util.LinkedHashMap<>();
         private boolean sent;
         private boolean cancelled;
         private boolean terminal;
         private boolean preparing;
+        private int steerReads;
+        private boolean releasePending;
         private AgentEvent.Failed failure;
 
         private RemoteRequest(UUID requestId, Consumer<AgentEvent> consumer) {
@@ -298,11 +319,143 @@ public final class PayloadGuideRemoteEndpoint implements GuideRemoteEndpoint {
     }
 
     @Override
+    public boolean steer(UUID requestId, UUID messageId, ModelMessage message) {
+        if (message.content().stream().anyMatch(dev.openallay.model.ModelContent.Image.class::isInstance)) {
+            return steer(requestId, messageId, message,
+                    dev.openallay.model.image.ImagePayloadResolver.unavailable());
+        }
+        ServerAgentSteerPayload payload = new ServerAgentSteerPayload(
+                requestId, messageId, ServerAgentSteerPayload.Operation.PUT,
+                ServerAgentHistoryMessage.from(message));
+        synchronized (requestLock) {
+            RemoteRequest pending = requests.get(requestId);
+            if (pending == null || pending.cancelled || pending.terminal) return false;
+            Object operation = new Object();
+            pending.operations.put(messageId, operation);
+            pending.staged.remove(messageId);
+            if (pending.sent) return port.steer(payload);
+            pending.staged.put(messageId, () -> sendSteer(pending, messageId, operation, payload));
+            return true;
+        }
+    }
+
+    @Override
+    public boolean steer(UUID requestId, UUID messageId, ModelMessage message,
+            dev.openallay.model.image.ImagePayloadResolver images) {
+        boolean hasImages = message.content().stream().anyMatch(dev.openallay.model.ModelContent.Image.class::isInstance);
+        if (!hasImages) return steer(requestId, messageId, message);
+        ServerAgentHistoryMessage detached = ServerAgentHistoryMessage.from(message);
+        ServerAgentSteerPayload.validateMessage(detached);
+        synchronized (requestLock) {
+            RemoteRequest pending = requests.get(requestId);
+            if (pending == null || pending.cancelled || pending.terminal) return false;
+            Object operation = new Object();
+            pending.operations.put(messageId, operation);
+            Runnable prepare = () -> {
+                synchronized (requestLock) {
+                    if (!currentOperation(pending, messageId, operation)) return;
+                    pending.steerReads++;
+                }
+                try {
+                    java.util.Map<String, dev.openallay.model.image.ImageReference> references =
+                            new java.util.LinkedHashMap<>();
+                    for (var content : message.content()) {
+                        if (content instanceof dev.openallay.model.ModelContent.Image image) {
+                            var previous = references.putIfAbsent(image.reference().sha256(), image.reference());
+                            if (previous != null && !previous.equals(image.reference())) {
+                                throw new IllegalArgumentException("Conflicting steer image metadata");
+                            }
+                        }
+                    }
+                    List<dev.openallay.bridge.protocol.ServerAgentImageAttachment> attachments =
+                            new java.util.ArrayList<>();
+                    for (var reference : references.values()) {
+                        synchronized (requestLock) {
+                            if (!currentOperation(pending, messageId, operation)) return;
+                        }
+                        attachments.add(dev.openallay.bridge.protocol.ServerAgentImageAttachment.from(
+                                reference, images.read(reference)));
+                    }
+                    sendSteer(pending, messageId, operation, new ServerAgentSteerPayload(
+                            requestId, messageId, ServerAgentSteerPayload.Operation.PUT, detached, attachments));
+                } catch (java.io.IOException | RuntimeException invalid) {
+                    synchronized (requestLock) {
+                        if (currentOperation(pending, messageId, operation)) {
+                            deliver(pending, new AgentEvent.SteerRejected(messageId));
+                        }
+                    }
+                } finally {
+                    finishSteerRead(pending);
+                }
+            };
+            pending.staged.remove(messageId);
+            if (pending.sent) payloadWorker.execute(prepare);
+            else pending.staged.put(messageId, prepare);
+            return true;
+        }
+    }
+
+    @Override
+    public boolean editSteer(UUID requestId, UUID messageId, ModelMessage message,
+            dev.openallay.model.image.ImagePayloadResolver images) {
+        return steer(requestId, messageId, message, images);
+    }
+
+    @Override
+    public boolean editSteer(UUID requestId, UUID messageId, ModelMessage message) {
+        return steer(requestId, messageId, message);
+    }
+
+    @Override
+    public boolean cancelSteer(UUID requestId, UUID messageId) {
+        synchronized (requestLock) {
+            RemoteRequest pending = requests.get(requestId);
+            if (pending == null || pending.cancelled || pending.terminal) return false;
+            pending.operations.remove(messageId);
+            pending.staged.remove(messageId);
+            return !pending.sent || port.steer(new ServerAgentSteerPayload(
+                    requestId, messageId, ServerAgentSteerPayload.Operation.REMOVE, null));
+        }
+    }
+
+    private void sendSteer(RemoteRequest pending, UUID messageId, Object operation,
+            ServerAgentSteerPayload payload) {
+        dispatcher.execute(() -> {
+            synchronized (requestLock) {
+                if (!currentOperation(pending, messageId, operation)) return;
+                try {
+                    if (!port.steer(payload)) deliver(pending, new AgentEvent.SteerRejected(messageId));
+                } catch (RuntimeException invalid) {
+                    deliver(pending, new AgentEvent.SteerRejected(messageId));
+                }
+            }
+        });
+    }
+
+    private void finishSteerRead(RemoteRequest pending) {
+        boolean released;
+        synchronized (requestLock) {
+            pending.steerReads--;
+            released = pending.steerReads == 0 && pending.releasePending
+                    && requests.get(pending.requestId) == pending;
+            if (released) pending.releasePending = false;
+        }
+        if (released) deliver(pending, new AgentEvent.RequestReleased());
+    }
+
+    private boolean currentOperation(RemoteRequest pending, UUID messageId, Object operation) {
+        return requests.get(pending.requestId) == pending && !pending.cancelled && !pending.terminal
+                && pending.operations.get(messageId) == operation;
+    }
+
+    @Override
     public boolean cancel(UUID requestId) {
         synchronized (requestLock) {
             RemoteRequest pending = requests.get(requestId);
             if (pending == null || pending.cancelled || pending.terminal) return false;
             pending.cancelled = true;
+            pending.operations.clear();
+            pending.staged.clear();
             if (!pending.sent) {
                 failPrepared(pending, "agent_cancelled", "Agent request was cancelled");
                 return true;
@@ -316,7 +469,11 @@ public final class PayloadGuideRemoteEndpoint implements GuideRemoteEndpoint {
         List<RemoteRequest> detached;
         synchronized (requestLock) {
             detached = List.copyOf(requests.values());
-            detached.forEach(pending -> pending.cancelled = true);
+            detached.forEach(pending -> {
+                pending.cancelled = true;
+                pending.operations.clear();
+                pending.staged.clear();
+            });
         }
         detached.forEach(pending -> failPrepared(pending, "server_disconnected", "Server connection closed"));
         port.disconnect();

@@ -123,6 +123,16 @@ public interface GuideLocalEndpoint {
                 dev.openallay.agent.AgentRequest.displayText(userInput), context, events);
     }
 
+    default dev.openallay.tool.ToolResult<Boolean> steer(
+            UUID actor, String sessionId, UUID requestId, UUID messageId,
+            dev.openallay.model.ModelMessage message) {
+        return new dev.openallay.tool.ToolResult.Success<>(false);
+    }
+
+    default boolean cancelSteer(UUID actor, String sessionId, UUID requestId, UUID messageId) {
+        return false;
+    }
+
     boolean cancel(UUID actor, String sessionId);
 
     default boolean cancel(UUID actor, String sessionId, UUID expectedRequestId) {

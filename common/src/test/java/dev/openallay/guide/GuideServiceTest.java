@@ -213,6 +213,8 @@ final class GuideServiceTest {
         remote.pending.get(first).accept(new AgentEvent.ContextUpdated(
                 actual, List.of(dev.openallay.model.ModelMessage.userText("first request original"))));
         remote.pending.get(first).accept(new AgentEvent.FinalText("visible answer"));
+        assertEquals("agent_busy", failure(service.ask("not before real cleanup").join()).code());
+        remote.pending.get(first).accept(new AgentEvent.RequestReleased());
 
         UUID next = success(service.ask("next visible question").join());
         service.selectSession("other").join();
@@ -405,6 +407,7 @@ final class GuideServiceTest {
 
     private static final class FakeLocal implements GuideLocalEndpoint {
         private final Map<UUID, Consumer<AgentEvent>> pending = new java.util.HashMap<>();
+        private final Map<UUID, CompletableFuture<AgentResult>> completions = new java.util.HashMap<>();
         private final Set<String> cancelled = new java.util.HashSet<>();
 
         @Override public Set<ContextCapability> requiredContext() { return Set.of(); }
@@ -419,7 +422,9 @@ final class GuideServiceTest {
                 Consumer<AgentEvent> events) {
             pending.put(requestId, events);
             events.accept(new AgentEvent.StateChanged(AgentState.MODEL_WAIT));
-            return new CompletableFuture<>();
+            CompletableFuture<AgentResult> completed = new CompletableFuture<>();
+            completions.put(requestId, completed);
+            return completed;
         }
 
         @Override public boolean cancel(UUID actor, String sessionId) {
@@ -433,6 +438,7 @@ final class GuideServiceTest {
             Consumer<AgentEvent> events = pending.get(request);
             events.accept(new AgentEvent.StateChanged(AgentState.COMPLETED));
             events.accept(new AgentEvent.FinalText(text));
+            completions.get(request).complete(new AgentResult(AgentState.COMPLETED, text, null, null, null));
         }
 
         void completeInterleaved(UUID request) {
@@ -448,6 +454,7 @@ final class GuideServiceTest {
             events.accept(new AgentEvent.ToolCompleted(
                     "call-2", "openallay:inspect_inventory", false, new com.google.gson.JsonObject()));
             events.accept(new AgentEvent.FinalText("final answer"));
+            completions.get(request).complete(new AgentResult(AgentState.COMPLETED, "final answer", null, null, null));
         }
     }
 

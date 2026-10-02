@@ -165,6 +165,7 @@ final class GuideServiceContextLoadTest {
 
     private static final class ContextLocal implements GuideLocalEndpoint {
         private final Map<UUID, Consumer<AgentEvent>> events = new LinkedHashMap<>();
+        private final Map<UUID, CompletableFuture<AgentResult>> completions = new LinkedHashMap<>();
         private final List<String> dispatched = new ArrayList<>();
         private List<ModelMessage> hydrated = List.of();
         @Override public String defaultProfileId() { return "small"; }
@@ -196,12 +197,17 @@ final class GuideServiceContextLoadTest {
             dispatched.add(profileId);
             events.put(requestId, sink);
             sink.accept(new AgentEvent.StateChanged(AgentState.MODEL_WAIT));
-            return new CompletableFuture<>();
+            CompletableFuture<AgentResult> completion = new CompletableFuture<>();
+            completions.put(requestId, completion);
+            return completion;
         }
         @Override public boolean cancel(UUID actor, String sessionId) { return false; }
         @Override public void clearSession(UUID actor, String sessionId) {}
         @Override public void clearActor(UUID actor) {}
-        private void finish(UUID requestId) { events.get(requestId).accept(new AgentEvent.FinalText("done")); }
+        private void finish(UUID requestId) {
+            events.get(requestId).accept(new AgentEvent.FinalText("done"));
+            completions.get(requestId).complete(new AgentResult(AgentState.COMPLETED, "done", null, null, null));
+        }
     }
 
     private static class NoRemote implements GuideRemoteEndpoint {

@@ -123,6 +123,41 @@ final class GuideServiceHistoryTest {
     }
 
     @Test
+    void numericReceiptsRemainBillableBeforeCleanupButReleasedRequestCannotInventNewCalls() {
+        QueuedDispatcher dispatcher = new QueuedDispatcher();
+        QueuedLocal local = new QueuedLocal(dispatcher);
+        FakeHistory history = new FakeHistory();
+        GuideService service = queuedService(local, history, dispatcher);
+        history.metadata.complete(Optional.empty()); dispatcher.runAll();
+        var asking = service.ask("actual numeric owner"); dispatcher.runAll();
+        UUID request = success(asking.join());
+        service.cancel(); dispatcher.runAll();
+        UUID actual = UUID.randomUUID();
+        local.queue(request, new AgentEvent.ModelUsageStarted(actual, "test-model"));
+        local.queue(request, new AgentEvent.ModelUsageObserved(actual, "test-model",
+                new dev.openallay.model.ModelUsage(7, 2, 0)));
+        dispatcher.runAll();
+        assertEquals(7, service.telemetry().sessionUsage().inputTokens());
+        assertEquals(1, service.telemetry().sessionUsage().actualCalls());
+        assertEquals(GuideRequestStatus.CANCELLED, service.snapshot().sessions().getFirst().requests().getFirst().status());
+        local.releaseCancelled(request); dispatcher.runAll();
+        GuideSnapshot released = service.snapshot();
+        int committed = history.commits.size();
+        UUID invented = UUID.randomUUID();
+        local.queue(request, new AgentEvent.ModelUsageStarted(invented, "test-model"));
+        local.queue(request, new AgentEvent.ModelUsageObserved(invented, "test-model",
+                new dev.openallay.model.ModelUsage(999, 99, 0)));
+        local.queue(request, new AgentEvent.ModelUsageObserved(actual, "test-model",
+                new dev.openallay.model.ModelUsage(7, 2, 0)));
+        dispatcher.runAll();
+        assertSame(released, service.snapshot());
+        assertEquals(committed, history.commits.size());
+        assertEquals(7, service.telemetry().sessionUsage().inputTokens());
+        assertEquals(1, service.telemetry().sessionUsage().actualCalls());
+        assertEquals(GuideRequestStatus.CANCELLED, service.snapshot().sessions().getFirst().requests().getFirst().status());
+    }
+
+    @Test
     void persistsSanitizedEventProjectionsAndIgnoresStaleCompletions() {
         FakeHistory history = new FakeHistory();
         FakeLocal local = new FakeLocal();
@@ -320,6 +355,11 @@ final class GuideServiceHistoryTest {
             dispatcher.runAll();
             UUID old = success(asking.join());
             service.cancel();
+            CompletableFuture<ToolResult<UUID>> premature = service.retry(old);
+            dispatcher.runAll();
+            assertFailure(premature.join(), "agent_busy");
+            local.releaseCancelled(old);
+            dispatcher.runAll();
             CompletableFuture<ToolResult<UUID>> retrying = service.retry(old);
             dispatcher.runAll();
             UUID successor = success(retrying.join());
@@ -380,6 +420,8 @@ final class GuideServiceHistoryTest {
             dispatcher.runAll();
             UUID cancelled = success(asking.join());
             service.cancel();
+            dispatcher.runAll();
+            local.releaseCancelled(cancelled);
             dispatcher.runAll();
             UUID successor = null;
             List<ModelMessage> newerActive = List.of(ModelMessage.userText("newer retained active context"));
@@ -493,6 +535,8 @@ final class GuideServiceHistoryTest {
             dispatcher.runAll();
             UUID request = success(asking.join());
             service.cancel();
+            dispatcher.runAll();
+            local.releaseCancelled(request);
             dispatcher.runAll();
             history.completeAllCommits();
             dispatcher.runAll();
@@ -1150,6 +1194,7 @@ final class GuideServiceHistoryTest {
     private static final class QueuedLocal implements GuideLocalEndpoint {
         private final QueuedDispatcher dispatcher;
         private final Map<UUID, Consumer<AgentEvent>> pending = new java.util.LinkedHashMap<>();
+        private final Map<UUID, CompletableFuture<AgentResult>> completions = new java.util.LinkedHashMap<>();
         private final Set<String> contextSessions = new java.util.HashSet<>();
 
         private QueuedLocal(QueuedDispatcher dispatcher) { this.dispatcher = dispatcher; }
@@ -1168,7 +1213,9 @@ final class GuideServiceHistoryTest {
             pending.put(requestId, events);
             contextSessions.add(sessionId);
             queue(requestId, new AgentEvent.StateChanged(AgentState.MODEL_WAIT));
-            return new CompletableFuture<>();
+            CompletableFuture<AgentResult> completion = new CompletableFuture<>();
+            completions.put(requestId, completion);
+            return completion;
         }
         @Override public boolean cancel(UUID actor, String sessionId) { return false; }
         @Override public void clearSession(UUID actor, String sessionId) { contextSessions.remove(sessionId); }
@@ -1177,6 +1224,12 @@ final class GuideServiceHistoryTest {
         private void queue(UUID requestId, AgentEvent event) {
             Consumer<AgentEvent> captured = pending.get(requestId);
             dispatcher.execute(() -> captured.accept(event));
+        }
+
+        /** Cleanup has finished; an already-produced archive callback may still arrive late. */
+        private void releaseCancelled(UUID requestId) {
+            dispatcher.execute(() -> completions.get(requestId).complete(new AgentResult(
+                    AgentState.CANCELLED, null, "agent_cancelled", "Agent request was cancelled", null)));
         }
     }
 
@@ -1283,6 +1336,7 @@ final class GuideServiceHistoryTest {
     private static final class FakeLocal implements GuideLocalEndpoint {
         private final boolean alwaysHasContext;
         private final java.util.Map<UUID, Consumer<AgentEvent>> pending = new java.util.LinkedHashMap<>();
+        private final Map<UUID, CompletableFuture<AgentResult>> completions = new java.util.LinkedHashMap<>();
         private final List<ModelMessage> hydratedMessages = new ArrayList<>();
         private final List<ContextCheckpoint> hydratedCheckpoints = new ArrayList<>();
         private final List<UUID> clearedActors = new ArrayList<>();
@@ -1305,7 +1359,9 @@ final class GuideServiceHistoryTest {
             pending.put(requestId, events);
             contextSessions.add(sessionId);
             events.accept(new AgentEvent.StateChanged(AgentState.MODEL_WAIT));
-            return new CompletableFuture<>();
+            CompletableFuture<AgentResult> completion = new CompletableFuture<>();
+            completions.put(requestId, completion);
+            return completion;
         }
         @Override public boolean cancel(UUID actor, String sessionId) { return true; }
         @Override public void clearSession(UUID actor, String sessionId) {
@@ -1334,6 +1390,7 @@ final class GuideServiceHistoryTest {
 
         private void complete(UUID request, String text) {
             pending.get(request).accept(new AgentEvent.FinalText(text));
+            completions.get(request).complete(new AgentResult(AgentState.COMPLETED, text, null, null, null));
         }
 
         private void compact(UUID request) {

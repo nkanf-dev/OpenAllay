@@ -62,6 +62,17 @@ public final class GuideStateReducer {
             case AgentEvent.ModelUsageObserved ignored -> { return current; }
             case AgentEvent.ContextUpdated ignored -> { return current; }
             case AgentEvent.ContextFinalized ignored -> { return current; }
+            case AgentEvent.SteerRejected ignored -> { return current; }
+            case AgentEvent.SteerApplied applied -> {
+                if (timeline.stream().filter(GuideTimelineEntry.User.class::isInstance)
+                        .map(GuideTimelineEntry.User.class::cast)
+                        .anyMatch(user -> user.messageId().equals(applied.messageId()))) return current;
+                timeline = closeAssistant(current.requestId(), timeline);
+                ArrayList<GuideTimelineEntry> next = new ArrayList<>(timeline);
+                next.add(new GuideTimelineEntry.User(next.size(), applied.messageId(),
+                        GuidePendingMessage.displayText(applied.message())));
+                timeline = List.copyOf(next);
+            }
             case AgentEvent.ContextCompacted ignored ->
                     progress = progress.advance(
                             GuideRequestPhase.COMPACTING,

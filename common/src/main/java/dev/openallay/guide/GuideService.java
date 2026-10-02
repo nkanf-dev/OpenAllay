@@ -56,6 +56,8 @@ public final class GuideService implements GuideHistoryAdministration {
     private final String imageOwnerPrefix = "connection:" + UUID.randomUUID() + ":";
     private final Map<String, List<dev.openallay.model.image.ImageReference>> retainedImages =
             new LinkedHashMap<>();
+    private final Map<UUID, dev.openallay.model.image.ImageInputCapability> requestImageCapabilities =
+            new LinkedHashMap<>();
     private final Set<String> imageImportOwners = java.util.concurrent.ConcurrentHashMap.newKeySet();
     private final Map<String, dev.openallay.model.image.ImageReference> importedImageReferences =
             new java.util.concurrent.ConcurrentHashMap<>();
@@ -67,6 +69,7 @@ public final class GuideService implements GuideHistoryAdministration {
     private final CopyOnWriteArrayList<Consumer<GuideSnapshot>> listeners =
             new CopyOnWriteArrayList<>();
     private volatile GuideSnapshot snapshot;
+    private volatile Map<String, SessionState> publishedSessions = Map.of();
     private volatile GuideTelemetrySnapshot telemetry;
     private String selectedSession = "main";
     private long sessionSelectionGeneration;
@@ -133,6 +136,7 @@ public final class GuideService implements GuideHistoryAdministration {
         persistence = history == null
                 ? GuidePersistenceSnapshot.disabled()
                 : GuidePersistenceSnapshot.loading();
+        publishedSessions = Map.copyOf(sessions);
         snapshot = buildSnapshot();
         if (history != null) {
             startHistoryLoad();
@@ -286,6 +290,25 @@ public final class GuideService implements GuideHistoryAdministration {
         return validateImageCapability(input, snapshot.imageInputCapability(selection));
     }
 
+    private void captureImageCapability(UUID requestId, GuideModelSelection selection) {
+        requestImageCapabilities.put(requestId, snapshot.imageInputCapability(selection));
+    }
+
+    private dev.openallay.model.image.ImageInputCapability capturedImageCapability(UUID requestId) {
+        return requestImageCapabilities.getOrDefault(requestId,
+                dev.openallay.model.image.ImageInputCapability.UNKNOWN);
+    }
+
+    private ToolResult<Boolean> validateCapturedUserInput(
+            dev.openallay.model.ModelMessage input, UUID requestId) {
+        try { dev.openallay.model.ModelMessage.requireUserInput(input); }
+        catch (IllegalArgumentException | NullPointerException invalid) {
+            return new ToolResult.Failure<>("invalid_question", "Enter text or attach an image");
+        }
+        return validateImageCapability(input, requestImageCapabilities.getOrDefault(requestId,
+                dev.openallay.model.image.ImageInputCapability.UNKNOWN));
+    }
+
     private ToolResult<Boolean> validateImageCapability(
             dev.openallay.model.ModelMessage input,
             dev.openallay.model.image.ImageInputCapability capability) {
@@ -337,6 +360,30 @@ public final class GuideService implements GuideHistoryAdministration {
         }, IMAGE_IO);
     }
 
+    /** Pin receipt before acknowledging a queued message or steer. Caller commits state after completion. */
+    private CompletableFuture<Void> transferImageInput(
+            String sessionId, UUID receipt, dev.openallay.model.ModelMessage input) {
+        List<dev.openallay.model.image.ImageReference> references = imageReferences(List.of(input));
+        if (references.isEmpty()) return CompletableFuture.completedFuture(null);
+        if (attachmentStore == null) return CompletableFuture.failedFuture(
+                new java.io.IOException("Image attachments are unavailable on this connection"));
+        String owner = imageOwnerPrefix + "receipt:" + receipt;
+        retainedImages.put(owner, references);
+        return CompletableFuture.runAsync(() -> {
+            try { attachmentStore.retain(actor, owner, references); }
+            catch (java.io.IOException failure) { throw new java.io.UncheckedIOException(failure); }
+        }, IMAGE_IO);
+    }
+
+    private CompletableFuture<Void> retainPendingInput(
+            UUID receipt, dev.openallay.model.ModelMessage input) {
+        return transferImageInput(selectedSession, receipt, input);
+    }
+
+    private CompletableFuture<Void> releasePendingInput(UUID receipt) {
+        return releaseImageInput(receipt);
+    }
+
     private void releaseSessionImageReferences(String sessionId) {
         if (attachmentStore == null) return;
         String owner = imageOwnerPrefix + "session:" + sessionId;
@@ -346,6 +393,16 @@ public final class GuideService implements GuideHistoryAdministration {
         barrier.thenRunAsync(() -> {
             try { attachmentStore.release(actor, owner); }
             catch (java.io.IOException ignored) { /* Preserve files when release cannot be saved. */ }
+        }, IMAGE_IO);
+    }
+
+    private CompletableFuture<Void> releaseImageInput(UUID receipt) {
+        if (attachmentStore == null) return CompletableFuture.completedFuture(null);
+        String owner = imageOwnerPrefix + "receipt:" + receipt;
+        retainedImages.remove(owner);
+        return CompletableFuture.runAsync(() -> {
+            try { attachmentStore.release(actor, owner); }
+            catch (java.io.IOException failure) { throw new java.io.UncheckedIOException(failure); }
         }, IMAGE_IO);
     }
 
@@ -382,29 +439,181 @@ public final class GuideService implements GuideHistoryAdministration {
     }
 
     public CompletableFuture<ToolResult<UUID>> ask(String question) {
-        try { return ask(dev.openallay.model.ModelMessage.userInput(question, List.of())); }
-        catch (IllegalArgumentException invalid) {
-            return CompletableFuture.completedFuture(new ToolResult.Failure<>(
-                    "invalid_arguments", "Question must not be blank"));
-        }
+        return ask(question == null ? null : dev.openallay.model.ModelMessage.userText(question));
     }
 
-    public CompletableFuture<ToolResult<UUID>> ask(dev.openallay.model.ModelMessage input) {
+    public CompletableFuture<ToolResult<UUID>> ask(dev.openallay.model.ModelMessage message) {
+        String sessionId = snapshot.selectedSession();
+        SessionState captured = publishedSessions.get(sessionId);
         CompletableFuture<ToolResult<UUID>> result = new CompletableFuture<>();
-        dispatcher.execute(() -> submit(selectedSession, input, result));
+        dispatcher.execute(() -> {
+            if (captured == null || sessions.get(sessionId) != captured) {
+                result.complete(new ToolResult.Failure<>("invalid_session", "Guide session was closed")); return;
+            }
+            if (rejectStateChange(result)) return;
+            ToolResult<Boolean> valid = validateUserInput(message, captured.modelSelection);
+            if (valid instanceof ToolResult.Failure<Boolean> failure) {
+                result.complete(new ToolResult.Failure<>(failure.code(), failure.message())); return;
+            }
+            UUID receipt = UUID.randomUUID();
+            admitInput(captured, receipt, message, result,
+                    () -> submit(sessionId, message, receipt, result));
+        });
+        return result;
+    }
+
+    public CompletableFuture<ToolResult<UUID>> followUp(String text) {
+        return followUp(text == null ? null : dev.openallay.model.ModelMessage.userText(text));
+    }
+
+    public CompletableFuture<ToolResult<UUID>> followUp(dev.openallay.model.ModelMessage message) {
+        return enqueue(message, false);
+    }
+
+    public CompletableFuture<ToolResult<UUID>> steer(String text) {
+        return steer(text == null ? null : dev.openallay.model.ModelMessage.userText(text));
+    }
+
+    public CompletableFuture<ToolResult<UUID>> steer(dev.openallay.model.ModelMessage message) {
+        return enqueue(message, true);
+    }
+
+    private CompletableFuture<ToolResult<UUID>> enqueue(
+            dev.openallay.model.ModelMessage message, boolean steer) {
+        String sessionId = snapshot.selectedSession();
+        SessionState captured = publishedSessions.get(sessionId);
+        CompletableFuture<ToolResult<UUID>> result = new CompletableFuture<>();
+        dispatcher.execute(() -> {
+            if (rejectStateChange(result)) return;
+            SessionState session = sessions.get(sessionId);
+            if (session == null || session != captured) {
+                result.complete(new ToolResult.Failure<>("invalid_session", "Guide session does not exist"));
+                return;
+            }
+            GuideRequestSnapshot running = session.workingRequest == null ? null : find(session.workingRequest);
+            GuideModelSelection selection = steer && running != null && !running.terminal()
+                    ? running.modelSelection() : session.modelSelection;
+            ToolResult<Boolean> valid = steer && running != null && !running.terminal()
+                    ? validateCapturedUserInput(message, running.requestId())
+                    : validateUserInput(message, selection);
+            if (valid instanceof ToolResult.Failure<Boolean> failure) {
+                result.complete(new ToolResult.Failure<>(failure.code(), failure.message()));
+                return;
+            }
+            UUID id = UUID.randomUUID();
+            session.pendingOrder.put(id, session.nextPendingOrder++);
+            boolean canSteer = steer && running != null && !running.terminal();
+            GuidePendingMessage pending = new GuidePendingMessage(id,
+                    canSteer ? GuidePendingMessage.Kind.STEER : GuidePendingMessage.Kind.FOLLOW_UP,
+                    message, clock.instant(), canSteer ? running.requestId() : null);
+            admitInput(session, id, message, result, () -> {
+                GuidePendingMessage accepted = pending;
+                GuideRequestSnapshot current = pending.requestId() == null ? null : find(pending.requestId());
+                if (current == null || current.terminal()
+                        || !pending.requestId().equals(session.workingRequest)) accepted = pending.followUp();
+                putPendingOrdered(session, accepted);
+                session.pendingReceipts.put(id, id);
+                if (accepted.kind() == GuidePendingMessage.Kind.STEER) {
+                    retainUserInput(accepted.requestId(), accepted.message());
+                }
+                publishWithoutSave();
+                if (accepted.kind() == GuidePendingMessage.Kind.STEER) sendSteer(session, accepted);
+                else drainPending(session);
+                result.complete(new ToolResult.Success<>(id));
+            });
+        });
+        return result;
+    }
+
+    public List<GuidePendingMessage> pendingMessages(String sessionId) {
+        return snapshot.sessions().stream().filter(session -> session.sessionId().equals(sessionId))
+                .map(GuideSessionSnapshot::pendingMessages).findFirst().orElse(List.of());
+    }
+
+    public CompletableFuture<ToolResult<Boolean>> editPending(UUID id, String text) {
+        return editPending(id, text == null ? null : dev.openallay.model.ModelMessage.userText(text));
+    }
+
+    public CompletableFuture<ToolResult<Boolean>> editPending(
+            UUID id, dev.openallay.model.ModelMessage message) {
+        String sessionId = snapshot.selectedSession();
+        CompletableFuture<ToolResult<Boolean>> result = new CompletableFuture<>();
+        dispatcher.execute(() -> {
+            if (rejectStateChange(result)) return;
+            SessionState session = sessions.get(sessionId);
+            GuidePendingMessage pending = session == null ? null : session.pending.get(id);
+            if (pending == null) { result.complete(new ToolResult.Success<>(false)); return; }
+            GuideRequestSnapshot request = pending.requestId() == null ? null : find(pending.requestId());
+            ToolResult<Boolean> valid = pending.kind() == GuidePendingMessage.Kind.STEER && request != null
+                    ? validateCapturedUserInput(message, request.requestId())
+                    : validateUserInput(message, session.modelSelection);
+            if (valid instanceof ToolResult.Failure<Boolean> failure) {
+                result.complete(new ToolResult.Failure<>(failure.code(), failure.message())); return;
+            }
+            // A new receipt retains an edited image until the original receipt can be replaced.
+            UUID transfer = UUID.randomUUID();
+            admitInput(session, transfer, message, result, () -> {
+                GuidePendingMessage current = session.pending.get(id);
+                if (current != pending) {
+                    releaseImageInput(transfer);
+                    result.complete(new ToolResult.Success<>(false)); return;
+                }
+                GuidePendingMessage replacement = pending.withMessage(message);
+                UUID previousReceipt = session.pendingReceipts.put(id, transfer);
+                if (previousReceipt != null) releaseImageInput(previousReceipt);
+                session.pending.put(id, replacement);
+                if (replacement.kind() == GuidePendingMessage.Kind.STEER) {
+                    retainUserInput(replacement.requestId(), message);
+                }
+                publishWithoutSave();
+                if (replacement.kind() == GuidePendingMessage.Kind.STEER) sendSteer(session, replacement);
+                else drainPending(session);
+                result.complete(new ToolResult.Success<>(true));
+            });
+        });
+        return result;
+    }
+
+    public CompletableFuture<ToolResult<Boolean>> cancelPending(UUID id) {
+        String sessionId = snapshot.selectedSession();
+        CompletableFuture<ToolResult<Boolean>> result = new CompletableFuture<>();
+        dispatcher.execute(() -> {
+            if (rejectStateChange(result)) return;
+            SessionState session = sessions.get(sessionId);
+            GuidePendingMessage pending = session == null ? null : session.pending.remove(id);
+            if (pending != null && pending.kind() == GuidePendingMessage.Kind.STEER) {
+                GuideRequestSnapshot request = find(pending.requestId());
+                if (request != null && request.topology() == GuideTopology.SERVER) {
+                    remote.cancelSteer(pending.requestId(), id);
+                } else if (local != null) {
+                    local.cancelSteer(actor, sessionId, pending.requestId(), id);
+                }
+            }
+            if (pending != null) releasePendingReceipt(session, pending.id());
+            publishWithoutSave();
+            result.complete(new ToolResult.Success<>(pending != null));
+        });
         return result;
     }
 
     public CompletableFuture<ToolResult<Boolean>> cancel() {
+        String sessionId = snapshot.selectedSession();
+        SessionState owner = publishedSessions.get(sessionId);
         CompletableFuture<ToolResult<Boolean>> result = new CompletableFuture<>();
         dispatcher.execute(() -> {
             if (rejectStateChange(result)) {
                 return;
             }
-            SessionState session = sessions.get(selectedSession);
+            SessionState session = sessions.get(sessionId);
+            if (session == null || session != owner) {
+                result.complete(new ToolResult.Success<>(false)); return;
+            }
+            boolean hadPending = !session.pending.isEmpty() || !session.admissions.isEmpty();
+            revokePending(session);
             GuideRequestSnapshot active = active(session);
             if (active == null) {
-                result.complete(new ToolResult.Success<>(false));
+                publishWithoutSave();
+                result.complete(new ToolResult.Success<>(hadPending || session.workingRequest != null));
                 return;
             }
             boolean preparingContext = session.preparingContextRequest != null
@@ -417,10 +626,8 @@ public final class GuideService implements GuideHistoryAdministration {
             List<dev.openallay.model.ModelMessage> original = new ArrayList<>(
                     session.originalContext.getOrDefault(active.requestId(), List.of()));
             if (original.isEmpty()) {
-                dev.openallay.model.ModelMessage input = submittedInputs.get(active.requestId());
-                if (input == null) input = dev.openallay.model.ModelMessage.userText(active.userMessage());
-                original.add(input);
-                current.add(input);
+                original.add(userInput(active.requestId()));
+                current.add(userInput(active.requestId()));
             }
             current.add(note);
             original.add(note);
@@ -430,11 +637,13 @@ public final class GuideService implements GuideHistoryAdministration {
                         List.copyOf(session.checkpoints)));
             }
             if (preparingContext) {
-                // The actual predecessor projection is still loading. Keep it durable and
-                // record only this request's known input/end note; no guessed fork boundary.
+                // Durable predecessor context is still being loaded. Do not replace it with
+                // the current question and cancellation note, or archive that as a fork boundary.
                 session.originalContext.put(active.requestId(), List.copyOf(original));
-                if (incrementalHistory) pendingHistoryMutations.add(
-                        new GuideHistoryMutation.ReplaceRequestContext(active.requestId(), original));
+                if (incrementalHistory) {
+                    pendingHistoryMutations.add(new GuideHistoryMutation.ReplaceRequestContext(
+                            active.requestId(), original));
+                }
             } else {
                 apply(active.requestId(), new AgentEvent.ContextUpdated(current, original));
             }
@@ -449,6 +658,7 @@ public final class GuideService implements GuideHistoryAdministration {
                 cancelHistoryContextBarrier(active.requestId());
                 session.contextGeneration++;
                 session.preparingContextRequest = null;
+                releaseRequest(session, active.requestId());
             } else if (active.topology() == GuideTopology.SERVER) {
                 remote.cancel(active.requestId());
             } else if (local != null) {
@@ -579,7 +789,8 @@ public final class GuideService implements GuideHistoryAdministration {
                 .filter(value -> value.requestId().equals(requestId)).findFirst().orElse(null);
         GuideHistoryCursor cutoff = request == null ? null : cursor(source, request);
         if (request == null || !request.terminal() || cutoff == null
-                || pendingCancelledFinalization.containsKey(requestId)) {
+                || pendingCancelledFinalization.containsKey(requestId)
+                || requestId.equals(source.workingRequest)) {
             result.complete(new ToolResult.Failure<>(
                     "fork_boundary_unavailable", "Fork requires a finalized completed request boundary"));
             return;
@@ -806,6 +1017,7 @@ public final class GuideService implements GuideHistoryAdministration {
                 result.complete(new ToolResult.Success<>(false));
                 return;
             }
+            revokePending(session);
             GuideRequestSnapshot active = active(session);
             if (active != null) {
                 if (active.topology() == GuideTopology.SERVER) {
@@ -820,6 +1032,9 @@ public final class GuideService implements GuideHistoryAdministration {
             invalidatePageLoad(session, "history_page_cancelled", "History page request was cancelled");
             session.requests.forEach(request -> cancelHistoryContextBarrier(request.requestId()));
             session.requests.forEach(request -> requestSessions.remove(request.requestId()));
+            session.requestReceipts.values().forEach(this::releaseImageInput);
+            session.requestReceipts.clear();
+            session.requests.forEach(request -> requestImageCapabilities.remove(request.requestId()));
             session.usageCarriers.keySet().forEach(requestSessions::remove);
             session.usageCarriers.clear();
             capturedProjection.removeSession(sessionId);
@@ -940,9 +1155,11 @@ public final class GuideService implements GuideHistoryAdministration {
                 return;
             }
             SessionState session = sessions.get(selectedSession);
-            if (active(session) != null) {
+            revokePending(session);
+            if (active(session) != null || session.workingRequest != null) {
+                publishWithoutSave();
                 result.complete(new ToolResult.Failure<>(
-                        "agent_busy", "Cannot clear a session while its request is active"));
+                        "agent_busy", "Stop the current request before clearing this session"));
                 return;
             }
             invalidatePageLoad(session, "history_page_cancelled", "History page request was cancelled");
@@ -962,6 +1179,7 @@ public final class GuideService implements GuideHistoryAdministration {
             pendingCancelledFinalization.entrySet().removeIf(
                     entry -> entry.getValue().sessionId().equals(session.id));
             session.modelContext = List.of();
+            session.contextGeneration++;
             session.requestSequences.clear();
             session.totalRequests = 0;
             session.nextRequestSequence = 0;
@@ -1000,6 +1218,7 @@ public final class GuideService implements GuideHistoryAdministration {
             }
             select(session, selection);
             publish();
+            drainPending(session);
             result.complete(new ToolResult.Success<>(mode));
         });
         return result;
@@ -1018,8 +1237,10 @@ public final class GuideService implements GuideHistoryAdministration {
                 result.complete(new ToolResult.Failure<>(failure.code(), failure.message()));
                 return;
             }
-            select(sessions.get(selectedSession), selection);
+            SessionState session = sessions.get(selectedSession);
+            select(session, selection);
             publish();
+            drainPending(session);
             result.complete(new ToolResult.Success<>(selection));
         });
         return result;
@@ -1055,6 +1276,7 @@ public final class GuideService implements GuideHistoryAdministration {
     public CompletableFuture<Void> disconnect() {
         CompletableFuture<Void> result = new CompletableFuture<>();
         dispatcher.execute(() -> {
+            sessions.values().forEach(this::revokePending);
             List<GuideRequestSnapshot> activeRequests = sessions.values().stream()
                     .map(GuideService::active)
                     .filter(Objects::nonNull)
@@ -1177,7 +1399,7 @@ public final class GuideService implements GuideHistoryAdministration {
                 || !pendingHistoryMutations.isEmpty()
                 || persistence.state() == GuidePersistenceSnapshot.State.SAVING
                 || !history.activity().idleForDeletion()
-                || sessions.values().stream().anyMatch(session -> active(session) != null)) {
+                || sessions.values().stream().anyMatch(this::requestSessionBusy)) {
             return new GuideFailure("history_delete_busy", "Guide history is busy");
         }
         if (persistence.state() == GuidePersistenceSnapshot.State.LOADING) {
@@ -1223,6 +1445,8 @@ public final class GuideService implements GuideHistoryAdministration {
                 // Durable deletion is already committed; stale model memory cannot block reset.
             }
         }
+        sessions.values().forEach(this::revokePending);
+        requestImageCapabilities.clear();
         requestSessions.clear();
         pendingCancelledFinalization.clear();
         pendingForks.clear();
@@ -1249,31 +1473,204 @@ public final class GuideService implements GuideHistoryAdministration {
         }
     }
 
+    private boolean requestSessionBusy(SessionState session) {
+        return session.workingRequest != null || active(session) != null
+                || !session.pending.isEmpty() || !session.admissions.isEmpty();
+    }
+
+    private <T> void admitInput(
+            SessionState session, UUID receipt, dev.openallay.model.ModelMessage input,
+            CompletableFuture<ToolResult<T>> result, Runnable accepted) {
+        long generation = session.queueGeneration;
+        session.admissions.put(receipt, generation);
+        transferImageInput(session.id, receipt, input).whenComplete((ignored, failure) ->
+                dispatcher.execute(() -> {
+                    if (!session.admissions.containsKey(receipt)) {
+                        releaseImageInput(receipt);
+                        result.complete(new ToolResult.Failure<>("message_cancelled", "Message was cancelled"));
+                        return;
+                    }
+                    session.readyAdmissions.put(receipt, () -> {
+                        if (failure != null || disconnected || sessions.get(session.id) != session
+                                || session.queueGeneration != generation) {
+                            releaseImageInput(receipt);
+                            session.pendingOrder.remove(receipt);
+                            result.complete(new ToolResult.Failure<>(failure != null
+                                    ? "image_attachment_failed" : "message_cancelled",
+                                    failure != null ? "Unable to retain the image attachment" : "Message was cancelled"));
+                            drainPending(session);
+                            return;
+                        }
+                        try { accepted.run(); }
+                        catch (RuntimeException failed) {
+                            releaseImageInput(receipt);
+                            result.complete(new ToolResult.Failure<>("agent_failure", message(failed)));
+                        }
+                        if (result.getNow(null) instanceof ToolResult.Failure<?>) releaseImageInput(receipt);
+                        drainPending(session);
+                    });
+                    drainAdmissions(session);
+                }));
+    }
+
+    private void drainAdmissions(SessionState session) {
+        if (session.drainingAdmissions) return;
+        session.drainingAdmissions = true;
+        try {
+            while (!session.admissions.isEmpty()) {
+                UUID first = session.admissions.keySet().iterator().next();
+                Runnable ready = session.readyAdmissions.remove(first);
+                if (ready == null) break;
+                session.admissions.remove(first);
+                ready.run();
+            }
+        } finally {
+            session.drainingAdmissions = false;
+            drainPending(session);
+        }
+    }
+
+    private void revokePending(SessionState session) {
+        session.queueGeneration++;
+        session.pendingReceipts.values().forEach(this::releaseImageInput);
+        session.admissions.keySet().forEach(this::releaseImageInput);
+        session.pending.clear();
+        session.pendingOrder.clear();
+        session.pendingReceipts.clear();
+        List<Runnable> ready = List.copyOf(session.readyAdmissions.values());
+        session.readyAdmissions.clear();
+        session.admissions.clear();
+        ready.forEach(Runnable::run);
+    }
+
+    private void putPendingOrdered(SessionState session, GuidePendingMessage message) {
+        session.pending.put(message.id(), message);
+        List<GuidePendingMessage> ordered = session.pending.values().stream()
+                .sorted(java.util.Comparator.comparingLong(pending ->
+                        session.pendingOrder.getOrDefault(pending.id(), Long.MAX_VALUE))).toList();
+        session.pending.clear();
+        ordered.forEach(pending -> session.pending.put(pending.id(), pending));
+    }
+
+    private void releasePendingReceipt(SessionState session, UUID id) {
+        session.pendingOrder.remove(id);
+        UUID receipt = session.pendingReceipts.remove(id);
+        if (receipt != null) releaseImageInput(receipt);
+    }
+
+    private void sendSteer(SessionState session, GuidePendingMessage pending) {
+        if (pending.kind() != GuidePendingMessage.Kind.STEER
+                || !pending.requestId().equals(session.workingRequest)
+                || !session.endpointRequests.contains(pending.requestId())) return;
+        GuideRequestSnapshot request = find(pending.requestId());
+        if (request == null || request.terminal()) return;
+        boolean accepted = false;
+        try {
+            if (request.topology() == GuideTopology.SERVER) {
+                accepted = remote.steer(request.requestId(), pending.id(), pending.message(), images(request.requestId()));
+            } else if (local != null) {
+                ToolResult<Boolean> result = local.steer(actor, session.id,
+                        request.requestId(), pending.id(), pending.message());
+                accepted = result instanceof ToolResult.Success<Boolean> success && success.value();
+            }
+        } catch (RuntimeException ignored) {
+            // The player's instruction remains visible and becomes a follow-up after cleanup.
+        }
+        if (!accepted && session.pending.containsKey(pending.id())) {
+            session.pending.put(pending.id(), pending.followUp());
+            publishWithoutSave();
+        }
+    }
+
+    private void releaseRequest(SessionState owner, UUID requestId) {
+        if (disconnected || owner == null || sessions.get(owner.id) != owner
+                || !requestId.equals(owner.workingRequest)) return;
+        GuideRequestSnapshot request = find(requestId);
+        if (request == null && owner.usageCarriers.containsKey(requestId)) {
+            request = capturedProjection.requests.get(requestId);
+        }
+        if (request == null || !request.terminal()) return;
+        if (!releaseUsageOwner(requestId)) return;
+        owner.endpointRequests.remove(requestId);
+        owner.usageCarriers.remove(requestId);
+        if (indexOf(owner, requestId) < 0) requestSessions.remove(requestId);
+        UUID receipt = owner.requestReceipts.remove(requestId);
+        if (receipt != null) releaseImageInput(receipt);
+        owner.workingRequest = null;
+        owner.pending.replaceAll((id, pending) ->
+                requestId.equals(pending.requestId()) ? pending.followUp() : pending);
+        publishWithoutSave();
+        drainPending(owner);
+    }
+
+    private void drainPending(SessionState session) {
+        if (session.drainingPending || disconnected || historyDeletionPending
+                || sessions.get(session.id) != session || session.workingRequest != null
+                || !session.admissions.isEmpty()
+                || active(session) != null) return;
+        session.drainingPending = true;
+        try {
+            while (!session.pending.isEmpty() && session.workingRequest == null
+                    && sessions.get(session.id) == session && !disconnected) {
+                GuidePendingMessage next = session.pending.values().iterator().next();
+                if (next.kind() == GuidePendingMessage.Kind.STEER) {
+                    next = next.followUp();
+                    session.pending.put(next.id(), next);
+                }
+                session.pending.remove(next.id());
+                CompletableFuture<ToolResult<UUID>> dispatched = new CompletableFuture<>();
+                int requestCount = session.requests.size();
+                UUID receipt = session.pendingReceipts.get(next.id());
+                submit(session.id, next.message(), receipt, dispatched);
+                if (session.requests.size() == requestCount
+                        && dispatched.getNow(null) instanceof ToolResult.Failure<UUID> failure) {
+                    // Capability/attachment validation may have changed while queued. Keep the draft.
+                    LinkedHashMap<UUID, GuidePendingMessage> restored = new LinkedHashMap<>();
+                    restored.put(next.id(), next.failed(new GuideFailure(failure.code(), failure.message())));
+                    restored.putAll(session.pending);
+                    session.pending.clear();
+                    session.pending.putAll(restored);
+                    break;
+                }
+                session.pendingReceipts.remove(next.id());
+                session.pendingOrder.remove(next.id());
+            }
+        } finally {
+            session.drainingPending = false;
+            publishWithoutSave();
+        }
+    }
+
+    private void submit(
+            String sessionId, String question, CompletableFuture<ToolResult<UUID>> result) {
+        submit(sessionId, question == null ? null : dev.openallay.model.ModelMessage.userText(question), result);
+    }
+
     private void submit(
             String sessionId, dev.openallay.model.ModelMessage input,
             CompletableFuture<ToolResult<UUID>> result) {
-        if (rejectStateChange(result)) {
-            return;
+        submit(sessionId, input, null, result);
+    }
+
+    private void submit(
+            String sessionId, dev.openallay.model.ModelMessage input, UUID receipt,
+            CompletableFuture<ToolResult<UUID>> result) {
+        if (rejectStateChange(result)) return;
+        SessionState session = sessions.get(sessionId);
+        if (session == null) {
+            result.complete(new ToolResult.Failure<>("invalid_session", "Guide session does not exist")); return;
         }
-        try { dev.openallay.model.ModelMessage.requireUserInput(input); }
-        catch (IllegalArgumentException | NullPointerException invalid) {
-            result.complete(new ToolResult.Failure<>("invalid_arguments", "Enter text or attach an image"));
-            return;
+        ToolResult<Boolean> valid = validateUserInput(input, session.modelSelection);
+        if (valid instanceof ToolResult.Failure<Boolean> failure) {
+            result.complete(new ToolResult.Failure<>(failure.code(), failure.message())); return;
         }
-        String question = dev.openallay.agent.AgentRequest.displayText(input);
-        SessionState session = sessions.computeIfAbsent(
-                sessionId, id -> new SessionState(id, defaultClientSelection()));
-        if (active(session) != null) {
+        String question = GuidePendingMessage.displayText(input);
+        if (active(session) != null || session.workingRequest != null) {
             result.complete(new ToolResult.Failure<>(
-                    "agent_busy", "This guide session already has an active request"));
+                    "agent_busy", "This guide session already has active work"));
             return;
         }
         GuideModelSelection capturedSelection = session.modelSelection;
-        ToolResult<Boolean> valid = validateUserInput(input, capturedSelection);
-        if (valid instanceof ToolResult.Failure<Boolean> failure) {
-            result.complete(new ToolResult.Failure<>(failure.code(), failure.message()));
-            return;
-        }
         GuideTopology topology;
         if (capturedSelection.kind() == GuideModelSelection.Kind.SERVER) {
             if (!remote.serverModelAvailable()) {
@@ -1299,6 +1696,10 @@ public final class GuideService implements GuideHistoryAdministration {
         GuideRequestSnapshot request = GuideRequestSnapshot.start(
                 requestId, sessionId, topology, question, now, capturedSelection);
         session.requests.add(request);
+        submittedInputs.put(requestId, input);
+        if (receipt != null) session.requestReceipts.put(requestId, receipt);
+        captureImageCapability(requestId, capturedSelection);
+        session.workingRequest = requestId;
         session.usage.begin(requestId, capturedSelection, publicModelIdentifier(capturedSelection));
         session.originalContext.put(requestId, List.of());
         long requestSequence = session.nextRequestSequence++;
@@ -1313,8 +1714,7 @@ public final class GuideService implements GuideHistoryAdministration {
         session.messages.add(new GuideMessage(
                 requestId, GuideMessage.Role.USER, question, now));
         requestSessions.put(requestId, sessionId);
-        submittedInputs.put(requestId, input);
-        // The managed bytes stay actor/session-owned through the request and durable context.
+        // Actor/session image retention requires the exact request-owner mapping to exist first.
         retainUserInput(requestId, input);
         publish();
 
@@ -1322,6 +1722,7 @@ public final class GuideService implements GuideHistoryAdministration {
             if (incrementalHistory) {
                 prepareRemoteContext(session, requestId, question);
             } else {
+                session.endpointRequests.add(requestId);
                 if (!remote.askWithContext(
                         requestId,
                         sessionId,
@@ -1332,6 +1733,7 @@ public final class GuideService implements GuideHistoryAdministration {
                     apply(requestId, new AgentEvent.Failed(
                             "capability_unavailable",
                             "The connected server rejected the model request"));
+                    releaseRequest(session, requestId);
                     result.complete(new ToolResult.Failure<>(
                             "capability_unavailable",
                             "The connected server rejected the model request"));
@@ -1440,6 +1842,7 @@ public final class GuideService implements GuideHistoryAdministration {
         }
         boolean accepted;
         try {
+            session.endpointRequests.add(requestId);
             accepted = remote.askWithContext(
                     requestId, sessionId, userInput(requestId), images(requestId), seed.messages(),
                     event -> dispatcher.execute(() -> apply(requestId, event)));
@@ -1450,6 +1853,7 @@ public final class GuideService implements GuideHistoryAdministration {
             apply(requestId, new AgentEvent.Failed(
                     "capability_unavailable",
                     "The connected server rejected the model request"));
+            releaseRequest(session, requestId);
         }
     }
 
@@ -1507,7 +1911,9 @@ public final class GuideService implements GuideHistoryAdministration {
         }
         ToolInvocationContext context =
                 ((ToolResult.Success<ToolInvocationContext>) captured).value();
+        SessionState owner = sessions.get(sessionId);
         try {
+            owner.endpointRequests.add(requestId);
             local.ask(
                             profileId,
                             actor,
@@ -1517,14 +1923,23 @@ public final class GuideService implements GuideHistoryAdministration {
                             images(requestId),
                             context,
                             event -> dispatcher.execute(() -> apply(requestId, event)))
-                    .whenComplete((ignored, throwable) -> dispatcher.execute(() -> {
+                    .whenComplete((completed, throwable) -> dispatcher.execute(() -> {
                         if (throwable != null) failIfActive(requestId, throwable);
-                        // Local runtime completes only after handing off all numeric call receipts.
-                        releaseUsageOwner(requestId);
+                        else {
+                            GuideRequestSnapshot current = find(requestId);
+                            if (current != null && !current.terminal()) {
+                                apply(requestId, completed != null && completed.successful()
+                                        ? new AgentEvent.FinalText(completed.text())
+                                        : new AgentEvent.Failed(completed == null ? "agent_failure" : completed.errorCode(),
+                                                completed == null ? "Agent endpoint ended without a result" : completed.errorMessage()));
+                            }
+                        }
+                        releaseRequest(owner, requestId);
                     }));
         } catch (RuntimeException failure) {
             apply(requestId, new AgentEvent.Failed(
                     "agent_failure", message(failure)));
+            releaseRequest(owner, requestId);
         }
     }
 
@@ -1546,7 +1961,8 @@ public final class GuideService implements GuideHistoryAdministration {
     private void apply(UUID requestId, AgentEvent event) {
         if (disconnected) return;
         if (event instanceof AgentEvent.RequestReleased) {
-            releaseUsageOwner(requestId);
+            String releasedSession = requestSessions.get(requestId);
+            releaseRequest(releasedSession == null ? null : sessions.get(releasedSession), requestId);
             return;
         }
         if (event instanceof AgentEvent.ContextFinalized finalized) {
@@ -1596,7 +2012,37 @@ public final class GuideService implements GuideHistoryAdministration {
             }
             return;
         }
-        if (index < 0 || target.terminal()) return;
+        if (index < 0) return;
+        if (event instanceof AgentEvent.SteerRejected rejected) {
+            GuidePendingMessage pending = session.pending.get(rejected.messageId());
+            if (pending != null && requestId.equals(pending.requestId())) {
+                session.pending.put(pending.id(), pending.followUp());
+                publishWithoutSave();
+            }
+            return;
+        }
+        boolean pendingSteerChanged = false;
+        if (event instanceof AgentEvent.SteerApplied applied) {
+            GuidePendingMessage pending = session.pending.get(applied.messageId());
+            if (pending != null && requestId.equals(pending.requestId())) {
+                if (pending.message().equals(applied.message())) {
+                    session.pending.remove(pending.id());
+                    releasePendingReceipt(session, pending.id());
+                }
+                else session.pending.put(pending.id(), pending.followUp());
+                pendingSteerChanged = true;
+            }
+        }
+        if (target.terminal()) {
+            if (pendingSteerChanged) publishWithoutSave();
+            return;
+        }
+        if (event instanceof AgentEvent.StateChanged changed
+                && changed.state() == dev.openallay.agent.AgentState.PREPARING) {
+            List.copyOf(session.pending.values()).stream()
+                    .filter(pending -> requestId.equals(pending.requestId()))
+                    .forEach(pending -> sendSteer(session, pending));
+        }
         if (event instanceof AgentEvent.ContextUpdated updated) {
             session.modelContext = updated.messages();
             session.originalContext.put(requestId, updated.requestMessages());
@@ -1643,15 +2089,18 @@ public final class GuideService implements GuideHistoryAdministration {
                     after.terminalAt()));
         }
         publish();
+        if (after.terminal() && !session.endpointRequests.contains(requestId)) {
+            releaseRequest(session, requestId);
+        }
     }
 
-    private void releaseUsageOwner(UUID requestId) {
+    private boolean releaseUsageOwner(UUID requestId) {
         String sessionId = requestSessions.get(requestId);
         SessionState session = sessionId == null ? null : sessions.get(sessionId);
-        if (session == null) return;
-        if (!session.usage.release(requestId)) return;
+        if (session == null || !session.usage.release(requestId)) return false;
         session.usageCarriers.remove(requestId);
         if (indexOf(session, requestId) < 0) requestSessions.remove(requestId);
+        return true;
     }
 
     private void failIfActive(UUID requestId, Throwable throwable) {
@@ -1703,6 +2152,7 @@ public final class GuideService implements GuideHistoryAdministration {
     }
 
     private void publishWithoutSave() {
+        publishedSessions = Map.copyOf(sessions);
         snapshot = buildSnapshot();
         telemetry = buildTelemetry();
         for (Consumer<GuideSnapshot> listener : listeners) {
@@ -1722,7 +2172,9 @@ public final class GuideService implements GuideHistoryAdministration {
                         session.requests,
                         session.checkpoints,
                         session.modelSelection,
-                        historyWindow(session)))
+                        historyWindow(session),
+                        List.copyOf(session.pending.values()),
+                        session.workingRequest))
                 .toList();
         GuideModelSelection currentSelection = sessions.get(selectedSession).modelSelection;
         List<GuideClientModelProfile> profiles = local == null ? List.of() : local.profiles();
@@ -2345,6 +2797,18 @@ public final class GuideService implements GuideHistoryAdministration {
         // Unloaded inherited durable messages own earlier ordinals.
         private int messageOrdinalBase;
         private final List<GuideRequestSnapshot> requests = new ArrayList<>();
+        private final Map<UUID, GuidePendingMessage> pending = new LinkedHashMap<>();
+        private final Map<UUID, UUID> pendingReceipts = new LinkedHashMap<>();
+        private final Map<UUID, Long> pendingOrder = new LinkedHashMap<>();
+        private long nextPendingOrder;
+        private final Set<UUID> endpointRequests = new java.util.HashSet<>();
+        private UUID workingRequest;
+        private final Map<UUID, UUID> requestReceipts = new LinkedHashMap<>();
+        private final Map<UUID, Long> admissions = new LinkedHashMap<>();
+        private final Map<UUID, Runnable> readyAdmissions = new LinkedHashMap<>();
+        private boolean drainingAdmissions;
+        private long queueGeneration;
+        private boolean drainingPending;
         private final List<ContextCheckpoint> checkpoints = new ArrayList<>();
         private List<dev.openallay.model.ModelMessage> modelContext = List.of();
         private final Map<UUID, List<dev.openallay.model.ModelMessage>> originalContext =

@@ -9,7 +9,9 @@ public record GuideSessionSnapshot(
         List<GuideRequestSnapshot> requests,
         List<ContextCheckpoint> checkpoints,
         GuideModelSelection modelSelection,
-        GuideHistoryWindowSnapshot historyWindow) {
+        GuideHistoryWindowSnapshot historyWindow,
+        List<GuidePendingMessage> pendingMessages,
+        java.util.UUID workingRequestId) {
     public GuideSessionSnapshot {
         if (sessionId == null || !sessionId.matches("[a-zA-Z0-9_.-]+")) {
             throw new IllegalArgumentException("invalid sessionId");
@@ -17,8 +19,19 @@ public record GuideSessionSnapshot(
         messages = List.copyOf(messages);
         requests = List.copyOf(requests);
         checkpoints = List.copyOf(checkpoints);
+        pendingMessages = List.copyOf(pendingMessages);
         java.util.Objects.requireNonNull(modelSelection, "modelSelection");
         java.util.Objects.requireNonNull(historyWindow, "historyWindow");
+    }
+
+    public GuideSessionSnapshot(
+            String sessionId,
+            List<GuideMessage> messages,
+            List<GuideRequestSnapshot> requests,
+            List<ContextCheckpoint> checkpoints,
+            GuideModelSelection modelSelection,
+            GuideHistoryWindowSnapshot historyWindow) {
+        this(sessionId, messages, requests, checkpoints, modelSelection, historyWindow, List.of(), null);
     }
 
     public GuideSessionSnapshot(

@@ -487,6 +487,7 @@ public final class GuideClientE2EController {
                 request.tools().stream().map(GuideClientE2EController::toolProbe).toList(),
                 request.sources().stream().map(value -> value.evidence()).toList(),
                 request.timeline().stream().map(value -> switch (value) {
+                    case GuideTimelineEntry.User ignored -> "user";
                     case GuideTimelineEntry.Assistant ignored -> "assistant";
                     case GuideTimelineEntry.Tool ignored -> "tool";
                 }).toList(),

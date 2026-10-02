@@ -58,6 +58,24 @@ public interface GuideRemoteEndpoint {
                 dev.openallay.agent.AgentRequest.displayText(userInput), history, events);
     }
 
+    default boolean steer(UUID requestId, UUID messageId, ModelMessage message) { return false; }
+
+    default boolean steer(UUID requestId, UUID messageId, ModelMessage message,
+            dev.openallay.model.image.ImagePayloadResolver images) {
+        return steer(requestId, messageId, message);
+    }
+
+    default boolean editSteer(UUID requestId, UUID messageId, ModelMessage message,
+            dev.openallay.model.image.ImagePayloadResolver images) {
+        return steer(requestId, messageId, message, images);
+    }
+
+    default boolean editSteer(UUID requestId, UUID messageId, ModelMessage message) {
+        return steer(requestId, messageId, message);
+    }
+
+    default boolean cancelSteer(UUID requestId, UUID messageId) { return false; }
+
     boolean cancel(UUID requestId);
 
     void disconnect();

@@ -129,6 +129,10 @@ public final class OpenAllayFabricClient implements ClientModInitializer {
                             java.util.function.Consumer<dev.openallay.bridge.protocol.ServerAgentEventPayload> events) {
                         return bridge.askServer(request, events);
                     }
+                    @Override public boolean steer(
+                            dev.openallay.bridge.protocol.ServerAgentSteerPayload payload) {
+                        return bridge.steerServer(payload);
+                    }
                     @Override public boolean cancel(java.util.UUID requestId) {
                         return bridge.cancelServer(requestId);
                     }

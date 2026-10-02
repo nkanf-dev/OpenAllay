@@ -11,6 +11,7 @@ import dev.openallay.bridge.protocol.ServerAgentEventCodec;
 import dev.openallay.bridge.protocol.ServerAgentEventPayload;
 import dev.openallay.bridge.protocol.ServerAgentHistoryMessage;
 import dev.openallay.bridge.protocol.ServerAgentRequestPayload;
+import dev.openallay.bridge.protocol.ServerAgentSteerPayload;
 import dev.openallay.context.ContextCapability;
 import dev.openallay.context.ToolInvocationContext;
 import dev.openallay.model.ModelContent;
@@ -233,11 +234,116 @@ public final class ServerAgentService {
         return new ToolResult.Success<>(new Accepted(payload.requestId(), payload.sessionId()));
     }
 
+    /** Applies only to the exact live actor/request. PUT replaces an unconsumed inbox entry. */
+    public boolean steer(UUID sender, ServerAgentSteerPayload payload) {
+        Owner owner = active.get(payload.requestId());
+        if (owner != null && owner.actorId().equals(sender)) {
+            synchronized (owner) {
+                if (ownsRequest(sender, payload.requestId())) {
+                    if (payload.operation() == ServerAgentSteerPayload.Operation.REMOVE) {
+                        boolean importing = owner.imports.remove(payload.messageId()) != null;
+                        boolean removed = owner.reserved
+                                ? sessions.cancelSteer(owner.key(), payload.requestId(), payload.messageId())
+                                : owner.inbox.remove(payload.messageId()) != null;
+                        return importing || removed;
+                    }
+                    Object operation = new Object();
+                    owner.imports.put(payload.messageId(), operation);
+                    if (!payload.imageAttachments().isEmpty()) {
+                        // The S2b operation count includes actual imports, even after REMOVE or
+                        // Stop has revoked their tokens. Cleanup cannot race a late store write.
+                        imageOperation(payload.requestId(), owner,
+                                () -> prepareSteer(payload, owner, operation));
+                        return true;
+                    }
+                    return prepareSteer(payload, owner, operation);
+                }
+            }
+        }
+        rejectSteer(sender, payload);
+        return false;
+    }
+
+    private boolean prepareSteer(ServerAgentSteerPayload payload, Owner owner, Object operation) {
+        synchronized (owner) {
+            if (!currentImport(payload, owner, operation)) return false;
+        }
+        ModelMessage message;
+        try {
+            message = owner.runtime().prepareSteer().apply(payload);
+            ServerAgentSteerPayload.validateMessage(ServerAgentHistoryMessage.from(message));
+            List<dev.openallay.model.image.ImageReference> required = imageReferences(List.of(message));
+            if (!required.isEmpty()) {
+                if (images == null) throw new IllegalArgumentException("Server image store is unavailable");
+                java.util.Set<dev.openallay.model.image.ImageReference> retained;
+                synchronized (owner) {
+                    if (!currentImport(payload, owner, operation)) return false;
+                    retained = new java.util.LinkedHashSet<>(owner.allowedImages);
+                    retained.addAll(required);
+                }
+                // Keep store work outside the owner lock. Stop revokes the token immediately;
+                // the tracked image operation keeps all pins alive only until actual cleanup.
+                images.retain(owner.actorId(), requestImageOwner(owner.imageScope, payload.requestId()),
+                        List.copyOf(retained));
+                synchronized (owner) {
+                    if (!currentImport(payload, owner, operation)) return false;
+                    owner.allowedImages.addAll(required);
+                }
+            }
+        } catch (java.io.IOException | RuntimeException invalid) {
+            synchronized (owner) {
+                if (!currentImport(payload, owner, operation)) return false;
+                owner.imports.remove(payload.messageId());
+                rejectSteer(owner.actorId(), payload);
+                return false;
+            }
+        }
+        synchronized (owner) {
+            if (!currentImport(payload, owner, operation)) return false;
+            owner.imports.remove(payload.messageId());
+            boolean accepted;
+            if (!owner.reserved) {
+                owner.inbox.put(payload.messageId(), message);
+                accepted = true;
+            } else {
+                ToolResult<Boolean> result = sessions.steer(
+                        owner.key(), payload.requestId(), payload.messageId(), message);
+                accepted = result instanceof ToolResult.Success<Boolean> success && success.value();
+            }
+            if (!accepted) rejectSteer(owner.actorId(), payload);
+            return accepted;
+        }
+    }
+
+    private boolean currentImport(ServerAgentSteerPayload payload, Owner owner, Object operation) {
+        return ownsRequest(owner.actorId(), payload.requestId())
+                && owner.imports.get(payload.messageId()) == operation;
+    }
+
+    private void rejectSteer(UUID sender, ServerAgentSteerPayload payload) {
+        if (payload.operation() == ServerAgentSteerPayload.Operation.PUT) {
+            events.send(sender, eventCodec.encode(
+                    payload.requestId(), new AgentEvent.SteerRejected(payload.messageId())));
+        }
+    }
+
+    /** Admission check before a loader retains partial steer bytes. It grants no new scope. */
+    public boolean ownsRequest(UUID sender, UUID requestId) {
+        Owner owner = active.get(requestId);
+        if (owner == null || !owner.actorId().equals(sender)) return false;
+        synchronized (owner) {
+            return owns(requestId, owner) && !owner.released && !owner.cleanupStarted && !owner.terminal
+                    && currentScope(owner) && !owner.cancellation().isCancelled();
+        }
+    }
+
     public boolean cancel(UUID sender, UUID requestId) {
         Owner owner = active.get(requestId);
         if (owner == null || !owner.actorId().equals(sender)) return false;
         synchronized (owner) {
             if (!owns(requestId, owner) || owner.terminal) return false;
+            owner.inbox.clear();
+            owner.imports.clear();
             if (!owner.engineStarted) {
                 List<ModelMessage> original = List.of(owner.userInput(),
                         new ModelMessage(ModelRole.ASSISTANT, List.of(new ModelContent.Text(
@@ -280,6 +386,8 @@ public final class ServerAgentService {
                 if (!owns(entry.getKey(), owner)) continue;
                 count++;
                 owner.disconnected = true;
+                owner.inbox.clear();
+                owner.imports.clear();
                 owner.cancellation().cancel();
                 if (!owner.engineStarted) owner.engineFinished = true;
                 cleanup.add(owner.releaseCompletion);
@@ -315,6 +423,28 @@ public final class ServerAgentService {
     }
 
     private void publish(UUID requestId, Owner owner, AgentEvent event) {
+        synchronized (owner) {
+            if (!owner.reserved && event instanceof AgentEvent.StateChanged state
+                    && state.state() == dev.openallay.agent.AgentState.PREPARING) {
+                owner.reserved = true;
+                if (!owns(requestId, owner) || owner.cancellation().isCancelled() || owner.disconnected) {
+                    owner.inbox.clear();
+                    owner.imports.clear();
+                    sessions.cancel(owner.key(), requestId);
+                }
+                // Reserve already exists. Flush synchronously, before any model dispatch or
+                // off-thread S2b event/image retention work can consume this first boundary.
+                for (var pending : owner.inbox.entrySet()) {
+                    ToolResult<Boolean> result = sessions.steer(
+                            owner.key(), requestId, pending.getKey(), pending.getValue());
+                    if (!(result instanceof ToolResult.Success<Boolean> success && success.value())) {
+                        events.send(owner.actorId(), eventCodec.encode(requestId,
+                                new AgentEvent.SteerRejected(pending.getKey())));
+                    }
+                }
+                owner.inbox.clear();
+            }
+        }
         if (images == null) {
             publishPrepared(requestId, owner, event);
         } else {
@@ -333,7 +463,11 @@ public final class ServerAgentService {
                     || event instanceof AgentEvent.ModelUsageObserved;
             if (owner.terminal && !numeric) return;
             if (event instanceof AgentEvent.ModelUsageStarted started) owner.pendingCalls.add(started.callId());
-            if (event instanceof AgentEvent.FinalText || event instanceof AgentEvent.Failed) owner.terminal = true;
+            if (event instanceof AgentEvent.FinalText || event instanceof AgentEvent.Failed) {
+                owner.terminal = true;
+                owner.inbox.clear();
+                owner.imports.clear();
+            }
             try {
                 if (images != null && currentScope(owner)
                         && (event instanceof AgentEvent.ContextUpdated || event instanceof AgentEvent.ContextFinalized)) {
@@ -356,6 +490,8 @@ public final class ServerAgentService {
         if (owner.released || owner.cleanupStarted || !owner.engineFinished
                 || !owner.pendingCalls.isEmpty() || owner.imageOperations != 0) return;
         owner.cleanupStarted = true;
+        owner.inbox.clear();
+        owner.imports.clear();
         synchronized (requestAdmissionLock) { pendingRelease.put(requestId, owner); }
         Runnable cleanup = () -> {
             try {
@@ -443,12 +579,16 @@ public final class ServerAgentService {
     private byte[] readImage(UUID requestId, Owner owner, dev.openallay.model.image.ImageReference reference)
             throws java.io.IOException {
         if (images == null || !currentImagePreparation(requestId, owner)
-                || !owner.requiredImages.contains(reference)) {
+                || !allowedImage(owner, reference)) {
             throw new java.io.IOException("Image is outside this active request's actor and scope");
         }
         byte[] bytes = images.read(owner.actorId(), reference);
         if (!currentImagePreparation(requestId, owner)) throw new java.io.IOException("Image request scope closed");
         return bytes;
+    }
+
+    private boolean allowedImage(Owner owner, dev.openallay.model.image.ImageReference reference) {
+        synchronized (owner) { return owner.allowedImages.contains(reference); }
     }
 
     private boolean currentImagePreparation(UUID requestId, Owner owner) {
@@ -506,11 +646,25 @@ public final class ServerAgentService {
             GameGuideAgent agent,
             AgentToolExecutor tools,
             String systemPrompt,
+            Function<ServerAgentSteerPayload, ModelMessage> prepareSteer,
             Runnable close) {
         public RequestRuntime {
             java.util.Objects.requireNonNull(agent, "agent");
             java.util.Objects.requireNonNull(tools, "tools");
+            java.util.Objects.requireNonNull(prepareSteer, "prepareSteer");
             java.util.Objects.requireNonNull(close, "close");
+        }
+
+        public RequestRuntime(
+                GameGuideAgent agent, AgentToolExecutor tools, String systemPrompt, Runnable close) {
+            this(agent, tools, systemPrompt, payload -> {
+                ModelMessage message = payload.message().toModelMessage();
+                if (!payload.imageAttachments().isEmpty()
+                        || message.content().stream().anyMatch(content -> !(content instanceof ModelContent.Text))) {
+                    throw new IllegalArgumentException("This request runtime cannot prepare steer images");
+                }
+                return message;
+            }, close);
         }
 
         public RequestRuntime(
@@ -527,6 +681,10 @@ public final class ServerAgentService {
         private final dev.openallay.model.CancellationSignal cancellation;
         private final RequestRuntime runtime;
         private final Set<UUID> pendingCalls = new java.util.HashSet<>();
+        private final Map<UUID, ModelMessage> inbox = new java.util.LinkedHashMap<>();
+        private final Map<UUID, Object> imports = new java.util.HashMap<>();
+        private final Set<dev.openallay.model.image.ImageReference> allowedImages = new java.util.LinkedHashSet<>();
+        private boolean reserved;
         private boolean terminal;
         private boolean engineStarted;
         private boolean engineFinished;
@@ -546,6 +704,7 @@ public final class ServerAgentService {
             this.userInput = userInput;
             this.imageScope = imageScope;
             this.requiredImages = List.copyOf(requiredImages);
+            this.allowedImages.addAll(requiredImages);
             this.history = dev.openallay.agent.context.ModelContextCodec.safe(history);
             this.cancellation = cancellation;
             this.runtime = runtime;
@@ -556,5 +715,6 @@ public final class ServerAgentService {
         private List<ModelMessage> history() { return history; }
         private dev.openallay.model.CancellationSignal cancellation() { return cancellation; }
         private RequestRuntime runtime() { return runtime; }
+        private AgentSessionKey key() { return new AgentSessionKey(actorId, sessionId); }
     }
 }

@@ -16,6 +16,7 @@ import dev.openallay.bridge.protocol.ResultChunker;
 import dev.openallay.bridge.protocol.ServerAgentRequestPayload;
 import dev.openallay.bridge.protocol.ServerAgentRequestChunker;
 import dev.openallay.bridge.protocol.ServerAgentCancelPayload;
+import dev.openallay.bridge.protocol.ServerAgentSteerPayload;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -36,6 +37,8 @@ public final class NeoForgeClientBridge {
     private final Map<UUID, Set<UUID>> agentEventIds = new ConcurrentHashMap<>();
     private final Object serverRequestLock = new Object();
     private final ServerAgentRequestChunker requestChunker = new ServerAgentRequestChunker();
+    private final dev.openallay.bridge.protocol.ServerAgentSteerChunker steerChunker =
+            new dev.openallay.bridge.protocol.ServerAgentSteerChunker();
     private final ResultChunker.Reassembler agentEventChunks = new ResultChunker.Reassembler();
     private final java.util.List<Runnable> disconnectListeners =
             new java.util.concurrent.CopyOnWriteArrayList<>();
@@ -138,6 +141,27 @@ public final class NeoForgeClientBridge {
         }
     }
 
+    public boolean steerServer(ServerAgentSteerPayload payload) {
+        synchronized (serverRequestLock) {
+            ServerRequest request = serverRequests.get(payload.requestId());
+            if (request == null || request.cancelled || request.terminal) return false;
+            try {
+                if (payload.operation() == ServerAgentSteerPayload.Operation.REMOVE) {
+                    send("agent_steer", payload);
+                } else {
+                    for (var chunk : steerChunker.split(
+                            payload.requestId(), payload.messageId(), codec.encode(payload),
+                            dev.openallay.bridge.protocol.BridgeProtocol.TRANSPORT_CHUNK_BYTES)) {
+                        send("agent_steer_chunk", chunk);
+                    }
+                }
+                return true;
+            } catch (RuntimeException failure) {
+                return false;
+            }
+        }
+    }
+
     public boolean cancelServer(UUID requestId) {
         boolean cancelled;
         synchronized (serverRequestLock) {
@@ -221,6 +245,7 @@ public final class NeoForgeClientBridge {
         synchronized (serverRequestLock) {
             request = serverRequests.get(event.requestId());
             if (request == null) return;
+            if (terminal) request.terminal = true;
         }
         // Release can dispatch a successor synchronously. Revoke old local tools first.
         if (terminal || released) {

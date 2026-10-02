@@ -30,6 +30,7 @@ import java.util.Set;
 public final class GuideHistoryCodec {
     private final ContextCheckpointCodec checkpoints = new ContextCheckpointCodec();
     private final SemanticDocumentCodec semanticDocuments = new SemanticDocumentCodec();
+    private static final Set<String> USER_FIELDS = Set.of("type", "ordinal", "messageId", "text");
     private static final Set<String> ASSISTANT_FIELDS =
             Set.of("type", "ordinal", "text", "semantic", "streaming", "sources");
     private static final Set<String> TOOL_FIELDS = Set.of(
@@ -186,6 +187,7 @@ public final class GuideHistoryCodec {
 
     private JsonObject encodeEntryObject(GuideTimelineEntry entry) {
         return switch (entry) {
+            case GuideTimelineEntry.User user -> encodeUser(user);
             case GuideTimelineEntry.Assistant assistant -> encodeAssistant(assistant);
             case GuideTimelineEntry.Tool tool -> encodeTool(tool);
         };
@@ -194,11 +196,27 @@ public final class GuideHistoryCodec {
     private GuideTimelineEntry decodeEntryObject(JsonObject object) {
         String type = string(object, "type");
         return switch (type) {
+            case "user" -> decodeUser(object);
             case "assistant" -> decodeAssistant(object);
             case "tool" -> decodeTool(object);
             default -> throw new IllegalArgumentException(
                     "unknown durable timeline entry type " + type);
         };
+    }
+
+    private static JsonObject encodeUser(GuideTimelineEntry.User user) {
+        JsonObject object = new JsonObject();
+        object.addProperty("type", "user");
+        object.addProperty("ordinal", user.ordinal());
+        object.addProperty("messageId", user.messageId().toString());
+        object.addProperty("text", user.text());
+        return object;
+    }
+
+    private static GuideTimelineEntry.User decodeUser(JsonObject object) {
+        requireFields(object, USER_FIELDS, "user timeline entry");
+        return new GuideTimelineEntry.User(integer(object, "ordinal"),
+                java.util.UUID.fromString(string(object, "messageId")), string(object, "text"));
     }
 
     private JsonObject encodeAssistant(GuideTimelineEntry.Assistant assistant) {

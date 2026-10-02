@@ -26,6 +26,56 @@ final class GuideHistoryCodecTest {
             UUID.fromString("849d783f-aa16-4c7f-ac0f-cd41f073c75f");
 
     @Test
+    void roundTripsAppliedUserInstructionsWithExactCurrentShape() {
+        GuideHistoryCodec codec = new GuideHistoryCodec();
+        GuideTimelineEntry.User first = new GuideTimelineEntry.User(
+                0, UUID.fromString("633e01a9-9301-4d52-9f85-4f03a8cb997b"), "Use the north side");
+        GuideTimelineEntry.User second = new GuideTimelineEntry.User(
+                2, UUID.fromString("f839c7cb-8599-4a04-a940-ea0e12a1ce14"), "Use the north side");
+        List<GuideTimelineEntry> timeline = List.of(first,
+                new GuideTimelineEntry.Assistant(1, "I will inspect it.", false, List.of()), second);
+
+        assertEquals(first, codec.decodeEntry(codec.encodeEntry(first)));
+        assertEquals(timeline, codec.decodeTimeline(codec.encodeTimeline(timeline)));
+        JsonObject encoded = JsonParser.parseString(codec.encodeEntry(first)).getAsJsonObject();
+        assertEquals(java.util.Set.of("type", "ordinal", "messageId", "text"), encoded.keySet());
+        assertEquals(first.messageId().toString(), encoded.get("messageId").getAsString());
+        assertEquals(first.text(), encoded.get("text").getAsString());
+    }
+
+    @Test
+    void rejectsPreviousOrMalformedAppliedUserInstructionsWithoutMigration() {
+        GuideHistoryCodec codec = new GuideHistoryCodec();
+        String encoded = codec.encodeEntry(new GuideTimelineEntry.User(0, ACTOR, "Keep this text"));
+        for (String field : List.of("type", "ordinal", "messageId", "text")) {
+            JsonObject missing = JsonParser.parseString(encoded).getAsJsonObject();
+            missing.remove(field);
+            assertThrows(IllegalArgumentException.class, () -> codec.decodeEntry(missing.toString()), field);
+        }
+        for (String field : List.of("queued", "version", "content")) {
+            JsonObject extra = JsonParser.parseString(encoded).getAsJsonObject();
+            extra.addProperty(field, true);
+            assertThrows(IllegalArgumentException.class, () -> codec.decodeEntry(extra.toString()), field);
+        }
+        for (String invalid : List.of("null", "true", "7", "[]", "{}", "\"not-a-uuid\"")) {
+            JsonObject malformed = JsonParser.parseString(encoded).getAsJsonObject();
+            malformed.add("messageId", JsonParser.parseString(invalid));
+            assertThrows(IllegalArgumentException.class, () -> codec.decodeEntry(malformed.toString()), invalid);
+        }
+        JsonObject malformedText = JsonParser.parseString(encoded).getAsJsonObject();
+        malformedText.addProperty("text", false);
+        assertThrows(IllegalArgumentException.class, () -> codec.decodeEntry(malformedText.toString()));
+        JsonObject malformedOrdinal = JsonParser.parseString(encoded).getAsJsonObject();
+        malformedOrdinal.addProperty("ordinal", 0.5);
+        assertThrows(IllegalArgumentException.class, () -> codec.decodeEntry(malformedOrdinal.toString()));
+        malformedOrdinal.addProperty("ordinal", -1);
+        assertThrows(IllegalArgumentException.class, () -> codec.decodeEntry(malformedOrdinal.toString()));
+        malformedOrdinal.addProperty("ordinal", 1);
+        assertThrows(IllegalArgumentException.class,
+                () -> codec.decodeTimeline("[" + malformedOrdinal + "]"));
+    }
+
+    @Test
     void roundTripsStrictCredentialFreeModelSelections() {
         GuideHistoryCodec codec = new GuideHistoryCodec();
 

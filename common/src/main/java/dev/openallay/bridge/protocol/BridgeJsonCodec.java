@@ -43,6 +43,10 @@ public final class BridgeJsonCodec {
             Map.entry(ServerAgentRequestChunkPayload.class,
                     Set.of("requestId", "index", "total", "contentHash", "base64Data")),
             Map.entry(ServerAgentCancelPayload.class, Set.of("requestId")),
+            Map.entry(ServerAgentSteerPayload.class,
+                    Set.of("requestId", "messageId", "operation", "message", "imageAttachments")),
+            Map.entry(ServerAgentSteerChunkPayload.class,
+                    Set.of("requestId", "messageId", "index", "total", "contentHash", "base64Data")),
             Map.entry(ServerAgentEventPayload.class,
                     Set.of("requestId", "eventType", "eventJson", "terminal")),
             Map.entry(ServerAgentEventChunkPayload.class,
@@ -64,6 +68,11 @@ public final class BridgeJsonCodec {
         if (!FIELDS.containsKey(payload.getClass())) {
             throw new IllegalArgumentException("Unsupported bridge payload " + payload.getClass().getName());
         }
+        if (payload instanceof ServerAgentSteerPayload steer) {
+            JsonObject object = gson.toJsonTree(steer).getAsJsonObject();
+            if (steer.message() == null) object.add("message", com.google.gson.JsonNull.INSTANCE);
+            return object.toString();
+        }
         return gson.toJson(payload);
     }
 
@@ -72,9 +81,9 @@ public final class BridgeJsonCodec {
         if (expected == null) {
             throw new IllegalArgumentException("Unsupported bridge payload " + type.getName());
         }
-        if (type == ServerAgentRequestChunkPayload.class) {
+        if (type == ServerAgentRequestChunkPayload.class || type == ServerAgentSteerChunkPayload.class) {
             requireEncodedEnvelope(json, BridgeProtocol.MAX_REQUEST_CHUNK_JSON_BYTES);
-        } else if (type == ServerAgentRequestPayload.class) {
+        } else if (type == ServerAgentRequestPayload.class || type == ServerAgentSteerPayload.class) {
             requireEncodedEnvelope(json, BridgeProtocol.MAX_OPENAI_REQUEST_BYTES);
         }
         rejectDuplicateFields(json);
@@ -97,6 +106,27 @@ public final class BridgeJsonCodec {
             requireInteger(object.get("total"));
             requireText(object.get("contentHash"));
             requireText(object.get("base64Data"));
+        }
+        if (type == ServerAgentSteerChunkPayload.class) {
+            requireText(object.get("requestId"));
+            requireText(object.get("messageId"));
+            requireInteger(object.get("index"));
+            requireInteger(object.get("total"));
+            requireText(object.get("contentHash"));
+            requireText(object.get("base64Data"));
+        }
+        if (type == ServerAgentSteerPayload.class) {
+            requireText(object.get("requestId"));
+            requireText(object.get("messageId"));
+            requireText(object.get("operation"));
+            if (!object.get("message").isJsonNull()) validateHistoryMessage(object.get("message"));
+            JsonElement attachments = object.get("imageAttachments");
+            if (!attachments.isJsonArray()) throw new IllegalArgumentException("Steer attachments must be an array");
+            for (JsonElement item : attachments.getAsJsonArray()) {
+                JsonObject attachment = exactObject(item, Set.of("reference", "base64Data"));
+                validateImageReference(attachment.get("reference"));
+                requireText(attachment.get("base64Data"));
+            }
         }
         if (type == CapabilityPayload.class) {
             requireText(object.get("serverImageInputCapability"));

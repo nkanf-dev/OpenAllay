@@ -111,6 +111,47 @@ final class AgentSessionStoreTest {
         assertEquals(firstHistory, success(store.reserve(key, UUID.randomUUID())).value().history());
     }
 
+    @Test
+    void steerInboxIsRequestScopedEditableOrderedAndNeverReplaysConsumedIds() {
+        AgentSessionStore store = new AgentSessionStore();
+        AgentSessionKey key = new AgentSessionKey(UUID.randomUUID(), "main");
+        UUID requestId = UUID.randomUUID();
+        AgentSessionStore.Lease lease = success(store.reserve(key, requestId)).value();
+        UUID first = UUID.randomUUID();
+        UUID second = UUID.randomUUID();
+        assertEquals(new ToolResult.Success<>(false),
+                store.steer(key, UUID.randomUUID(), first, ModelMessage.userText("wrong request")));
+        assertEquals(new ToolResult.Success<>(true),
+                store.steer(key, requestId, first, ModelMessage.userText("first")));
+        store.steer(key, requestId, second, ModelMessage.userText("second"));
+        store.steer(key, requestId, first, ModelMessage.userText("edited first"));
+        List<AgentSessionStore.Steer> delivered = store.drainSteers(lease);
+        assertEquals(List.of(first, second), delivered.stream().map(AgentSessionStore.Steer::messageId).toList());
+        assertEquals(ModelMessage.userText("edited first"), delivered.getFirst().message());
+        assertTrue(store.drainSteers(lease).isEmpty());
+        assertEquals(new ToolResult.Success<>(false),
+                store.steer(key, requestId, first, ModelMessage.userText("duplicate")));
+        assertFalse(store.cancelSteer(key, requestId, first));
+    }
+
+    @Test
+    void finalTurnSealAndCancellationRevokePendingInstructionsWithoutDraining() {
+        AgentSessionStore store = new AgentSessionStore();
+        AgentSessionKey key = new AgentSessionKey(UUID.randomUUID(), "main");
+        UUID requestId = UUID.randomUUID();
+        AgentSessionStore.Lease lease = success(store.reserve(key, requestId)).value();
+        UUID id = UUID.randomUUID();
+        store.steer(key, requestId, id, ModelMessage.userText("last turn supplement"));
+        store.sealSteers(lease);
+        assertTrue(store.drainSteers(lease).isEmpty());
+        assertEquals(new ToolResult.Success<>(false),
+                store.steer(key, requestId, UUID.randomUUID(), ModelMessage.userText("late")));
+        assertTrue(store.cancel(key, requestId));
+        AgentSessionStore.Lease replacement = success(store.reserve(key, UUID.randomUUID())).value();
+        assertTrue(store.drainSteers(replacement).isEmpty());
+        assertFalse(store.cancelSteer(key, requestId, id));
+    }
+
     @SuppressWarnings("unchecked")
     private static ToolResult.Success<AgentSessionStore.Lease> success(
             ToolResult<AgentSessionStore.Lease> result) {

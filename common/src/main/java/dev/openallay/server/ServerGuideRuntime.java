@@ -145,7 +145,25 @@ public record ServerGuideRuntime(
                             payload.clientToolIds().contains("openallay:load_skill")
                                     ? systemPrompt(payload.skillDocuments(), experimentalCommands)
                                     : systemPrompt(requestSkills, experimentalCommands),
-                            () -> clientTools.close(actor, payload.requestId())));
+                            steer -> {
+                                if (!steer.requestId().equals(payload.requestId())) {
+                                    throw new IllegalArgumentException("Steer runtime request correlation changed");
+                                }
+                                try {
+                                    return importSteerImages(actor, payload.requestId(),
+                                            steer.message().toModelMessage(), steer.imageAttachments(),
+                                            imageStore, config.imageCapability().capability());
+                                } catch (java.io.IOException failure) {
+                                    throw new java.io.UncheckedIOException(failure);
+                                }
+                            },
+                            () -> {
+                                try { clientTools.close(actor, payload.requestId()); }
+                                finally {
+                                    try { imageStore.release(actor, steerImageOwner(payload.requestId())); }
+                                    catch (java.io.IOException ignored) { /* Keep bytes on cleanup failure. */ }
+                                }
+                            }));
                 },
                 sessions,
                 contexts,
@@ -157,6 +175,50 @@ public record ServerGuideRuntime(
                 config.imageCapability().capability());
         return new ToolResult.Success<>(
                 new ServerGuideRuntime(config, service, contextSpec, clientTools));
+    }
+
+    /** Frozen runtime hook for a typed Steer. Call only on the off-thread payload worker. */
+    public static dev.openallay.model.ModelMessage importSteerImages(
+            java.util.UUID actor,
+            java.util.UUID requestId,
+            dev.openallay.model.ModelMessage userInput,
+            java.util.List<dev.openallay.bridge.protocol.ServerAgentImageAttachment> attachments,
+            dev.openallay.model.image.ImageAttachmentStore images,
+            dev.openallay.model.image.ImageInputCapability capturedCapability) throws java.io.IOException {
+        dev.openallay.agent.AgentRequest.validateUserInput(userInput);
+        java.util.Map<String, dev.openallay.model.image.ImageReference> needed = new java.util.LinkedHashMap<>();
+        userInput.content().stream().filter(dev.openallay.model.ModelContent.Image.class::isInstance)
+                .map(dev.openallay.model.ModelContent.Image.class::cast).forEach(image -> {
+                    var previous = needed.putIfAbsent(image.reference().sha256(), image.reference());
+                    if (previous != null && !previous.equals(image.reference())) {
+                        throw new IllegalArgumentException("Conflicting Steer image metadata");
+                    }
+                });
+        if (!needed.isEmpty() && capturedCapability != dev.openallay.model.image.ImageInputCapability.SUPPORTED) {
+            throw new IllegalArgumentException("The captured server model has no confirmed image input support");
+        }
+        java.util.Map<String, dev.openallay.model.image.ImageReference> supplied = new java.util.LinkedHashMap<>();
+        for (var attachment : attachments) {
+            if (supplied.putIfAbsent(attachment.reference().sha256(), attachment.reference()) != null) {
+                throw new IllegalArgumentException("Duplicate Steer image attachment");
+            }
+        }
+        if (!needed.equals(supplied)) {
+            throw new IllegalArgumentException("Steer image attachments must exactly match the message references");
+        }
+        for (var attachment : attachments) {
+            var imported = images.importImage(actor, steerImageOwner(requestId), attachment.bytes());
+            if (!imported.equals(attachment.reference())) {
+                throw new java.io.IOException("Steer image metadata does not match actual image content");
+            }
+        }
+        // The original request's images remain retained. The scoped resolver may now read these
+        // newly uploaded images without acquiring any filesystem or URL authority.
+        return userInput;
+    }
+
+    private static String steerImageOwner(java.util.UUID requestId) {
+        return "server-steer:" + requestId;
     }
 
     static String systemPrompt(

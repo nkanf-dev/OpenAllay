@@ -205,6 +205,7 @@ final class GuideServiceModelSelectionTest {
 
         private void complete(UUID requestId, String answer) {
             pending.get(requestId).accept(new AgentEvent.FinalText(answer));
+            pending.get(requestId).accept(new AgentEvent.RequestReleased());
         }
     }
 
@@ -239,6 +240,7 @@ final class GuideServiceModelSelectionTest {
                         new GuideFailure("invalid_model_config", "context window missing")));
         private final Map<UUID, String> profileByRequest = new LinkedHashMap<>();
         private final Map<UUID, Consumer<AgentEvent>> pending = new LinkedHashMap<>();
+        private final Map<UUID, CompletableFuture<AgentResult>> completions = new LinkedHashMap<>();
 
         @Override public String defaultProfileId() { return "a"; }
         @Override public List<GuideClientModelProfile> profiles() { return profiles; }
@@ -268,7 +270,9 @@ final class GuideServiceModelSelectionTest {
             profileByRequest.put(requestId, profileId);
             pending.put(requestId, events);
             events.accept(new AgentEvent.StateChanged(AgentState.MODEL_WAIT));
-            return new CompletableFuture<>();
+            CompletableFuture<AgentResult> completion = new CompletableFuture<>();
+            completions.put(requestId, completion);
+            return completion;
         }
 
         @Override public boolean cancel(UUID actor, String sessionId) { return true; }
@@ -277,10 +281,12 @@ final class GuideServiceModelSelectionTest {
 
         private void complete(UUID requestId, String text) {
             pending.get(requestId).accept(new AgentEvent.FinalText(text));
+            completions.get(requestId).complete(new AgentResult(AgentState.COMPLETED, text, null, null, null));
         }
 
         private void fail(UUID requestId, String code, String message) {
             pending.get(requestId).accept(new AgentEvent.Failed(code, message));
+            completions.get(requestId).complete(new AgentResult(AgentState.FAILED, null, code, message, null));
         }
 
         private void checkpoint(UUID requestId, ContextCheckpoint checkpoint) {

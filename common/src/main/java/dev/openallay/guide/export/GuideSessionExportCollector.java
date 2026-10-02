@@ -198,6 +198,8 @@ public final class GuideSessionExportCollector {
 
     private static GuideSessionExportSnapshot.Entry projectEntry(GuideTimelineEntry entry) {
         return switch (entry) {
+            case GuideTimelineEntry.User user ->
+                    new GuideSessionExportSnapshot.Entry.User(user.messageId(), user.text());
             case GuideTimelineEntry.Assistant assistant ->
                     new GuideSessionExportSnapshot.Entry.Assistant(
                             assistant.text(), assistant.streaming());

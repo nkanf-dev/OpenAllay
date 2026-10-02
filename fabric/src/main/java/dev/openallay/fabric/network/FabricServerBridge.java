@@ -13,6 +13,7 @@ import dev.openallay.bridge.protocol.ServerAgentRequestPayload;
 import dev.openallay.bridge.protocol.ServerAgentRequestChunkPayload;
 import dev.openallay.bridge.protocol.ServerAgentRequestChunker;
 import dev.openallay.bridge.protocol.ServerAgentCancelPayload;
+import dev.openallay.bridge.protocol.ServerAgentSteerPayload;
 import dev.openallay.bridge.protocol.ServerAgentEventCodec;
 import dev.openallay.bridge.server.ExportedToolPolicy;
 import dev.openallay.bridge.server.RemoteToolServer;
@@ -39,6 +40,8 @@ public final class FabricServerBridge {
     private final ServerAgentEventCodec agentEvents = new ServerAgentEventCodec(gson);
     private final Map<UUID, ServerPlayer> players = new java.util.concurrent.ConcurrentHashMap<>();
     private ServerAgentRequestChunker.Reassembler requestChunks;
+    private final dev.openallay.bridge.protocol.ServerAgentSteerChunker.Reassembler steerChunks =
+            new dev.openallay.bridge.protocol.ServerAgentSteerChunker.Reassembler();
     private RemoteToolServer remoteTools;
     private ToolResult<ServerGuideRuntime> serverGuide =
             new ToolResult.Failure<>("model_not_configured", "Server has not started");
@@ -72,12 +75,47 @@ public final class FabricServerBridge {
         UUID actor = handler.getPlayer().getUUID();
         players.remove(actor);
         if (requestChunks != null) requestChunks.clearActor(actor);
+        steerChunks.clearActor(actor);
         if (remoteTools != null) {
             remoteTools.disconnect(actor);
         }
         if (serverGuide instanceof ToolResult.Success<ServerGuideRuntime> success) {
             success.value().service().disconnect(actor);
             success.value().clientTools().disconnect(actor);
+        }
+    }
+
+    private void receiveSteerChunk(UUID actor, String json) {
+        var chunk = codec.decode(json, dev.openallay.bridge.protocol.ServerAgentSteerChunkPayload.class);
+        if (!ownsRequest(actor, chunk.requestId())) {
+            steerChunks.clearRequest(actor, chunk.requestId());
+            sendAgentEvent(actor, agentEvents.encode(chunk.requestId(),
+                    new dev.openallay.agent.AgentEvent.SteerRejected(chunk.messageId())));
+            return;
+        }
+        steerChunks.accept(actor, chunk).ifPresent(assembled -> {
+            ServerAgentSteerPayload steer = codec.decode(assembled, ServerAgentSteerPayload.class);
+            if (!steer.requestId().equals(chunk.requestId()) || !steer.messageId().equals(chunk.messageId())) {
+                throw new IllegalArgumentException("Server steer correlation changed during assembly");
+            }
+            receiveSteer(actor, steer);
+        });
+    }
+
+    private boolean ownsRequest(UUID actor, UUID requestId) {
+        return serverGuide instanceof ToolResult.Success<ServerGuideRuntime> success
+                && success.value().service().ownsRequest(actor, requestId);
+    }
+
+    private void receiveSteer(UUID actor, ServerAgentSteerPayload steer) {
+        if (steer.operation() == ServerAgentSteerPayload.Operation.REMOVE) {
+            steerChunks.cancel(actor, steer.requestId(), steer.messageId());
+        }
+        if (serverGuide instanceof ToolResult.Success<ServerGuideRuntime> success) {
+            success.value().service().steer(actor, steer);
+        } else if (steer.operation() == ServerAgentSteerPayload.Operation.PUT) {
+            sendAgentEvent(actor, agentEvents.encode(steer.requestId(),
+                    new dev.openallay.agent.AgentEvent.SteerRejected(steer.messageId())));
         }
     }
 
@@ -170,10 +208,14 @@ public final class FabricServerBridge {
                             });
                         }
                     }
+                    case "agent_steer_chunk" -> receiveSteerChunk(actor, packet.json());
+                    case "agent_steer" -> receiveSteer(
+                            actor, codec.decode(packet.json(), ServerAgentSteerPayload.class));
                     case "agent_cancel" -> {
                         if (serverGuide instanceof ToolResult.Success<ServerGuideRuntime> success) {
                             UUID requestId = codec.decode(
                                     packet.json(), ServerAgentCancelPayload.class).requestId();
+                            steerChunks.clearRequest(actor, requestId);
                             boolean assembling = requestChunks.cancel(actor, requestId);
                             if (!success.value().service().cancel(actor, requestId)
                                     && assembling && !success.value().service().hasRequest(actor, requestId)) {
@@ -246,6 +288,7 @@ public final class FabricServerBridge {
 
     private void sendAgentEvent(
             UUID actor, dev.openallay.bridge.protocol.ServerAgentEventPayload event) {
+        if (event.eventType().equals("request_released")) steerChunks.clearRequest(actor, event.requestId());
         UUID eventId = UUID.randomUUID();
         for (var chunk : new dev.openallay.bridge.protocol.ResultChunker().split(
                 eventId,

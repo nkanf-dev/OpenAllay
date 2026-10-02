@@ -12,6 +12,8 @@ public sealed interface AgentEvent
                 AgentEvent.ContextCompacted,
                 AgentEvent.ContextUpdated,
                 AgentEvent.ContextFinalized,
+                AgentEvent.SteerApplied,
+                AgentEvent.SteerRejected,
                 AgentEvent.ModelProgress,
                 AgentEvent.ModelUsageObserved,
                 AgentEvent.ModelUsageStarted,
@@ -67,6 +69,23 @@ public sealed interface AgentEvent
             Objects.requireNonNull(modelIdentifier, "modelIdentifier");
             Objects.requireNonNull(usage, "usage");
         }
+    }
+
+    /** The supplemental user message entered a complete structural model boundary. */
+    record SteerApplied(java.util.UUID messageId, dev.openallay.model.ModelMessage message)
+            implements AgentEvent {
+        public SteerApplied {
+            Objects.requireNonNull(messageId, "messageId");
+            Objects.requireNonNull(message, "message");
+            if (message.role() != dev.openallay.model.ModelRole.USER) {
+                throw new IllegalArgumentException("steer must be a user message");
+            }
+        }
+    }
+
+    /** A sealed/released request cannot accept this instruction; retain it as follow-up. */
+    record SteerRejected(java.util.UUID messageId) implements AgentEvent {
+        public SteerRejected { Objects.requireNonNull(messageId, "messageId"); }
     }
 
     record ModelProgress(ModelEvent event) implements AgentEvent {

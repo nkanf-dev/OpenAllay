@@ -115,6 +115,7 @@ public final class GameGuideAgent {
         LiveAgentTraceRecorder trace = new LiveAgentTraceRecorder(gson, request);
         try {
             transition(AgentState.PREPARING, trace, events);
+            lease.cancellation().throwIfCancelled();
             List<ModelMessage> originalHistory = List.copyOf(lease.history());
             tools.prepareSystem(request.systemPrompt(), lease.retainedSkills());
             List<ModelMessage> restoredView = compactor == null ? originalHistory
@@ -181,6 +182,24 @@ public final class GameGuideAgent {
             LiveAgentTraceRecorder trace,
             Consumer<AgentEvent> events) {
         lease.cancellation().throwIfCancelled();
+        List<AgentSessionStore.Steer> instructions = sessions.drainSteers(lease);
+        if (!instructions.isEmpty()) {
+            List<ModelMessage> updated = new ArrayList<>(messages);
+            List<ModelMessage> original = new ArrayList<>(completeMessages);
+            for (AgentSessionStore.Steer instruction : instructions) {
+                updated.add(instruction.message());
+                original.add(instruction.message());
+            }
+            List<ModelMessage> admitted = dev.openallay.agent.context.ModelContextCodec.safe(updated);
+            List<ModelMessage> complete = dev.openallay.agent.context.ModelContextCodec.safe(original);
+            if (sessions.recordContext(lease, admitted, complete)) {
+                events.accept(new AgentEvent.ContextUpdated(admitted, lease.progress().requestMessages()));
+                instructions.forEach(instruction -> events.accept(
+                        new AgentEvent.SteerApplied(instruction.messageId(), instruction.message())));
+            }
+            return loop(request, lease, admitted, complete, protectedFromIndex,
+                    previousCallOutcomes, trace, events);
+        }
         tools.prepareSystem(request.systemPrompt(), lease.retainedSkills());
         List<ModelMessage> modelView = compactor == null ? messages : compactor.prepareModelView(messages);
         List<ModelMessage> projectedMessages = dev.openallay.agent.context.ModelContextCodec.safe(tools.refreshContext(
@@ -287,6 +306,7 @@ public final class GameGuideAgent {
                     List<ModelMessage> nextCompleteMessages = new ArrayList<>(dispatchCompleteMessages);
                     nextCompleteMessages.add(new ModelMessage(ModelRole.ASSISTANT, turn.content()));
                     if (turn.toolUses().isEmpty()) {
+                        sessions.sealSteers(lease);
                         nextMessages = new ArrayList<>(dev.openallay.agent.context.ModelContextCodec.safe(nextMessages));
                         nextCompleteMessages = new ArrayList<>(dev.openallay.agent.context.ModelContextCodec.safe(nextCompleteMessages));
                         if (turn.text().isBlank()) {
@@ -558,6 +578,7 @@ public final class GameGuideAgent {
             message = cause.getMessage() == null ? cause.getClass().getSimpleName() : cause.getMessage();
             state = AgentState.FAILED;
         }
+        sessions.sealSteers(lease);
         trace.failure(code, message);
         List<ModelMessage> retained = new ArrayList<>(lease.progress().projected());
         List<ModelMessage> original = new ArrayList<>(lease.progress().original());

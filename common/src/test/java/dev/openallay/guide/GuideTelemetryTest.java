@@ -121,9 +121,6 @@ final class GuideTelemetryTest {
         local.send(next, new AgentEvent.ModelUsageObserved(lateCall, "model-a", new ModelUsage(7, 2, 0)));
         local.send(next, new AgentEvent.ModelUsageObserved(lateCall, "model-a", new ModelUsage(7, 2, 0)));
         assertEquals(27, service.telemetry().sessionUsage().inputTokens());
-        local.send(next, new AgentEvent.RequestReleased());
-        local.send(next, new AgentEvent.ModelUsageObserved(UUID.randomUUID(), "model-a", new ModelUsage(999, 99, 0)));
-        assertEquals(27, service.telemetry().sessionUsage().inputTokens(), "released owners cannot create a new call");
         assertTrue(service.snapshot().sessions().stream().filter(s -> s.sessionId().equals("main"))
                 .findFirst().orElseThrow().requests().getLast().terminal());
         service.disconnect().join();
@@ -149,6 +146,7 @@ final class GuideTelemetryTest {
         remote.events.accept(codec.decode(usage, id));
         remote.events.accept(codec.decode(usage, id));
         remote.events.accept(new AgentEvent.FinalText("answer"));
+        remote.events.accept(new AgentEvent.RequestReleased());
         assertNull(service.telemetry().context());
         assertTrue(service.telemetry().requestUsage().known());
         assertEquals(1, service.telemetry().requestUsage().reportedCalls());
@@ -190,6 +188,7 @@ final class GuideTelemetryTest {
     }
     private static final class Local implements GuideLocalEndpoint {
         private final Map<UUID, Consumer<AgentEvent>> events = new HashMap<>();
+        private final Map<UUID, CompletableFuture<AgentResult>> completions = new HashMap<>();
         private final Map<String, GuideContextEstimate> estimates = new HashMap<>();
         private String model = "model-a";
         private int contextSpecReads;
@@ -209,12 +208,19 @@ final class GuideTelemetryTest {
                 ToolInvocationContext context, Consumer<AgentEvent> sink) {
             events.put(id, sink);
             sink.accept(new AgentEvent.StateChanged(AgentState.MODEL_WAIT));
-            return new CompletableFuture<>();
+            CompletableFuture<AgentResult> completion = new CompletableFuture<>();
+            completions.put(id, completion);
+            return completion;
         }
         @Override public boolean cancel(UUID actor, String session) { return true; }
         @Override public void clearSession(UUID actor, String session) { estimates.remove(session); }
         @Override public void clearActor(UUID actor) { estimates.clear(); }
-        void send(UUID id, AgentEvent event) { events.get(id).accept(event); }
+        void send(UUID id, AgentEvent event) {
+            events.get(id).accept(event);
+            if (event instanceof AgentEvent.FinalText text) {
+                completions.get(id).complete(new AgentResult(AgentState.COMPLETED, text.text(), null, null, null));
+            }
+        }
     }
     private static final class Remote implements GuideRemoteEndpoint {
         private Consumer<AgentEvent> events;

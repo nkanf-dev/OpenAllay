@@ -29,7 +29,12 @@ public final class ServerAgentEventCodec {
         String type = type(event);
         boolean terminal = event instanceof AgentEvent.FinalText || event instanceof AgentEvent.Failed;
         String eventJson;
-        if (event instanceof AgentEvent.ContextCompacted compacted) {
+        if (event instanceof AgentEvent.SteerApplied applied) {
+            JsonObject body = new JsonObject();
+            body.addProperty("messageId", applied.messageId().toString());
+            body.add("message", gson.toJsonTree(ServerAgentHistoryMessage.from(applied.message())));
+            eventJson = body.toString();
+        } else if (event instanceof AgentEvent.ContextCompacted compacted) {
             eventJson = checkpoints.encode(compacted.checkpoint());
         } else if (event instanceof AgentEvent.ContextUpdated updated) {
             JsonObject context = new JsonObject();
@@ -74,6 +79,8 @@ public final class ServerAgentEventCodec {
                     new AgentEvent.ContextCompacted(checkpoints.decode(body.toString()));
             case "context_updated" -> readContext(body);
             case "context_finalized" -> readFinalized(body);
+            case "steer_applied" -> readSteerApplied(body);
+            case "steer_rejected" -> new AgentEvent.SteerRejected(readMessageId(body, Set.of("messageId")));
             case "text_delta" -> new AgentEvent.ModelProgress(
                     read(body, Set.of("text"), ModelEvent.TextDelta.class));
             case "reasoning_delta" -> new AgentEvent.ModelProgress(
@@ -164,6 +171,23 @@ public final class ServerAgentEventCodec {
                 gson.fromJson(usage, dev.openallay.model.ModelUsage.class));
     }
 
+    private AgentEvent.SteerApplied readSteerApplied(JsonObject body) {
+        UUID messageId = readMessageId(body, Set.of("messageId", "message"));
+        BridgeJsonCodec.validateHistoryMessage(body.get("message"));
+        ServerAgentHistoryMessage message = gson.fromJson(body.get("message"), ServerAgentHistoryMessage.class);
+        ServerAgentSteerPayload.validateMessage(message);
+        return new AgentEvent.SteerApplied(messageId, message.toModelMessage());
+    }
+
+    private UUID readMessageId(JsonObject body, Set<String> fields) {
+        if (!body.keySet().equals(fields) || body.get("messageId") == null
+                || !body.get("messageId").isJsonPrimitive()
+                || !body.getAsJsonPrimitive("messageId").isString()) {
+            throw new IllegalArgumentException("Server steer event schema mismatch");
+        }
+        return UUID.fromString(body.get("messageId").getAsString());
+    }
+
     private AgentEvent.ContextUpdated readContext(JsonObject body) {
         if (!body.keySet().equals(Set.of("messages", "requestMessages"))) {
             throw new IllegalArgumentException("Server model context schema mismatch");
@@ -242,6 +266,8 @@ public final class ServerAgentEventCodec {
             case AgentEvent.ContextCompacted ignored -> "context_compacted";
             case AgentEvent.ContextUpdated ignored -> "context_updated";
             case AgentEvent.ContextFinalized ignored -> "context_finalized";
+            case AgentEvent.SteerApplied ignored -> "steer_applied";
+            case AgentEvent.SteerRejected ignored -> "steer_rejected";
             case AgentEvent.ToolStarted ignored -> "tool_started";
             case AgentEvent.ToolCompleted ignored -> "tool_completed";
             case AgentEvent.FinalText ignored -> "final_text";

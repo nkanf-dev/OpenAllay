@@ -238,6 +238,12 @@ public final class GuideSessionExporter {
             Set<String> recordedCalls, boolean hasOriginalContext) {
         for (var entry : request.timeline()) {
             switch (entry) {
+                case GuideSessionExportSnapshot.Entry.User user -> {
+                    if (!hasOriginalContext) {
+                        result.append("User (supplemental instruction)\n")
+                                .append(formatText(user.text())).append("\n\n");
+                    }
+                }
                 case GuideSessionExportSnapshot.Entry.Assistant assistant -> {
                     if (!hasOriginalContext) {
                         result.append(assistant.streaming() ? "Assistant (in progress)\n" : "Assistant\n")

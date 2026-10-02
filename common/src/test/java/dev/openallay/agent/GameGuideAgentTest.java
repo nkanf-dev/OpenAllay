@@ -45,6 +45,128 @@ import org.junit.jupiter.api.Test;
 
 final class GameGuideAgentTest {
     @Test
+    void steerWaitsForCompleteOrderedToolResultsWithoutReplayingToolsOrInterruptingModel() throws Exception {
+        QueueModelClient model = new QueueModelClient();
+        CompletableFuture<ModelTurn> first = new CompletableFuture<>();
+        CompletableFuture<ModelTurn> last = new CompletableFuture<>();
+        model.enqueue(first);
+        model.enqueue(last);
+        PendingTools tools = new PendingTools();
+        AgentSessionStore store = new AgentSessionStore();
+        AgentRequest request = request(UUID.randomUUID());
+        List<AgentEvent> events = new ArrayList<>();
+        CompletableFuture<AgentResult> running = new GameGuideAgent(model, tools, store, new Gson())
+                .ask(request, events::add);
+        UUID instructionId = UUID.randomUUID();
+        ModelMessage instruction = ModelMessage.userText("Keep the original goal, but use the north side");
+        assertEquals(new dev.openallay.tool.ToolResult.Success<>(true),
+                store.steer(request.sessionKey(), request.requestId(), instructionId, instruction));
+        assertFalse(first.isDone(), "steer must not abort the committed model call");
+        first.complete(multiToolTurn(new ToolCall("one", 1), new ToolCall("two", 2)));
+        tools.complete(2);
+        assertEquals(1, model.requests.size(), "a partial tool round is not a safe model boundary");
+        tools.complete(1);
+        model.secondRequest.get(2, java.util.concurrent.TimeUnit.SECONDS);
+        assertEquals(2, model.requests.size());
+        List<ModelMessage> next = model.requests.getLast().messages();
+        assertEquals(instruction, next.getLast());
+        List<ModelContent> results = next.get(next.size() - 2).content();
+        assertEquals(List.of("one", "two"), results.stream().map(ModelContent.ToolResult.class::cast)
+                .map(ModelContent.ToolResult::toolUseId).toList());
+        assertEquals(2, tools.pending.size(), "completed tools must never be replayed by steer");
+        assertEquals(1, events.stream().filter(AgentEvent.SteerApplied.class::isInstance).count());
+        last.complete(textTurn("finished revised goal"));
+        assertTrue(running.join().successful());
+        AgentEvent.ContextFinalized original = events.stream().filter(AgentEvent.ContextFinalized.class::isInstance)
+                .map(AgentEvent.ContextFinalized.class::cast).findFirst().orElseThrow();
+        assertTrue(original.requestMessages().contains(instruction));
+    }
+
+    @Test
+    void steerDuringFinalModelTurnIsNotInjectedAfterTheFinalAnswer() {
+        QueueModelClient model = new QueueModelClient();
+        CompletableFuture<ModelTurn> finalTurn = new CompletableFuture<>();
+        model.enqueue(finalTurn);
+        AgentSessionStore store = new AgentSessionStore();
+        AgentRequest request = request(UUID.randomUUID());
+        List<AgentEvent> events = new ArrayList<>();
+        CompletableFuture<AgentResult> running = new GameGuideAgent(model, new FakeTools(), store, new Gson())
+                .ask(request, events::add);
+        UUID id = UUID.randomUUID();
+        store.steer(request.sessionKey(), request.requestId(), id, ModelMessage.userText("arrived during final stream"));
+        finalTurn.complete(textTurn("already final"));
+        assertTrue(running.join().successful());
+        assertEquals(1, model.requests.size());
+        assertFalse(events.stream().anyMatch(AgentEvent.SteerApplied.class::isInstance));
+        assertEquals(new dev.openallay.tool.ToolResult.Success<>(false), store.steer(request.sessionKey(),
+                request.requestId(), UUID.randomUUID(), ModelMessage.userText("sealed late supplement")));
+    }
+
+    @Test
+    void typedImageSteerAtInitialBoundaryKeepsResolverAndNumericUsageOutOfProgress() {
+        var reference = new dev.openallay.model.image.ImageReference(
+                "a".repeat(64), "image/png", 2, 2, 4);
+        byte[] bytes = new byte[] {1, 2, 3, 4};
+        dev.openallay.model.image.ImagePayloadResolver images = value -> {
+            assertEquals(reference, value);
+            return bytes;
+        };
+        AgentSessionStore store = new AgentSessionStore();
+        List<ModelRequest> requests = new ArrayList<>();
+        ModelClient model = (input, events, cancellation) -> {
+            requests.add(input);
+            events.accept(new ModelEvent.AttemptStarted(1, null));
+            return CompletableFuture.completedFuture(textTurn("seen"));
+        };
+        UUID requestId = UUID.randomUUID();
+        UUID actor = UUID.randomUUID();
+        AgentRequest request = new AgentRequest(requestId, actor, "main",
+                ModelMessage.userText("Keep the player goal"), "system",
+                ToolInvocationContext.developmentConsole("image-steer"), true, images);
+        ModelMessage supplement = ModelMessage.userInput("Inspect this image too", List.of(reference));
+        List<AgentEvent> events = new ArrayList<>();
+        AgentResult result = new GameGuideAgent(model, new FakeTools(), store, new Gson())
+                .ask(request, event -> {
+                    events.add(event);
+                    if (event.equals(new AgentEvent.StateChanged(AgentState.PREPARING))) {
+                        store.steer(request.sessionKey(), requestId, UUID.randomUUID(), supplement);
+                    }
+                }).join();
+        assertTrue(result.successful());
+        assertEquals(1, requests.size());
+        assertEquals(supplement, requests.getFirst().messages().getLast());
+        assertTrue(requests.getFirst().images() == images);
+        assertEquals(1, events.stream().filter(AgentEvent.ModelUsageStarted.class::isInstance).count());
+        assertEquals(1, events.stream().filter(AgentEvent.ModelUsageObserved.class::isInstance).count());
+        assertFalse(events.stream().filter(AgentEvent.ModelProgress.class::isInstance)
+                .map(AgentEvent.ModelProgress.class::cast).anyMatch(progress ->
+                        progress.event() instanceof ModelEvent.UsageStarted
+                                || progress.event() instanceof ModelEvent.UsageObserved));
+        assertTrue(store.history(request.sessionKey()).contains(supplement));
+    }
+
+    @Test
+    void initialPreparingReceiptCanSupplySteerWithoutChangingFrozenSystemOrActor() {
+        QueueModelClient model = new QueueModelClient();
+        model.enqueue(CompletableFuture.completedFuture(textTurn("done")));
+        AgentSessionStore store = new AgentSessionStore();
+        AgentRequest request = request(UUID.randomUUID());
+        UUID id = UUID.randomUUID();
+        List<AgentEvent> events = new ArrayList<>();
+        assertTrue(new GameGuideAgent(model, new FakeTools(), store, new Gson()).ask(request, event -> {
+            events.add(event);
+            if (event.equals(new AgentEvent.StateChanged(AgentState.PREPARING))) {
+                store.steer(request.sessionKey(), request.requestId(), id,
+                        ModelMessage.userText("Supplement the player goal; do not change grants"));
+            }
+        }).join().successful());
+        assertEquals(1, model.requests.size());
+        assertEquals(request.systemPrompt(), model.requests.getFirst().systemPrompt());
+        assertEquals(2, model.requests.getFirst().messages().size());
+        assertTrue(events.stream().anyMatch(AgentEvent.SteerApplied.class::isInstance));
+    }
+
+    @Test
     void localEstimateObserverSeesEachExactModelInputWithoutAddingWireEvents() {
         QueueModelClient model = new QueueModelClient();
         model.enqueue(CompletableFuture.completedFuture(toolTurn("estimate_call", 42)));
@@ -808,6 +930,7 @@ final class GameGuideAgentTest {
     private static final class QueueModelClient implements ModelClient {
         private final Deque<CompletableFuture<ModelTurn>> turns = new ArrayDeque<>();
         private final List<ModelRequest> requests = new ArrayList<>();
+        private final CompletableFuture<ModelRequest> secondRequest = new CompletableFuture<>();
 
         void enqueue(CompletableFuture<ModelTurn> turn) {
             turns.add(turn);
@@ -819,6 +942,7 @@ final class GameGuideAgentTest {
                 Consumer<ModelEvent> events,
                 CancellationSignal cancellation) {
             requests.add(request);
+            if (requests.size() == 2) secondRequest.complete(request);
             CompletableFuture<ModelTurn> turn = turns.removeFirst();
             cancellation.onCancel(() -> turn.completeExceptionally(new ModelClientException(
                     new ModelFailure("agent_cancelled", "cancelled", null))));

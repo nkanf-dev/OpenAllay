@@ -5,8 +5,17 @@ import dev.openallay.guide.semantic.SemanticMessageParser;
 import java.util.List;
 
 public sealed interface GuideTimelineEntry
-        permits GuideTimelineEntry.Assistant, GuideTimelineEntry.Tool {
+        permits GuideTimelineEntry.User, GuideTimelineEntry.Assistant, GuideTimelineEntry.Tool {
     int ordinal();
+
+    /** An instruction actually admitted during this request, not a queued draft. */
+    record User(int ordinal, java.util.UUID messageId, String text) implements GuideTimelineEntry {
+        public User {
+            requireOrdinal(ordinal);
+            java.util.Objects.requireNonNull(messageId, "messageId");
+            java.util.Objects.requireNonNull(text, "text");
+        }
+    }
 
     record Assistant(
             int ordinal,

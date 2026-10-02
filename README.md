@@ -124,6 +124,8 @@ copy answers, or export a session. The screen does not pause the game.
 - **Stop** cancels the request; **Retry** starts it again.
 - **Escape** closes the screen without stopping the answer.
 - **Branch sessions (Fork):** create an independent conversation from a completed task without re-running Tools.
+- **Follow-up & Steer:** choose **Follow-up** to run after the current task releases its resources,
+  or **Steer** to add guidance at the next operation boundary. Steer does not interrupt a model call.
 - Open tool details to inspect results. **Debug mode** also shows the submitted
   JavaScript and full input/output.
 

@@ -65,7 +65,14 @@ public record GuideSessionExportSnapshot(
         }
     }
 
-    public sealed interface Entry permits Entry.Assistant, Entry.Tool {
+    public sealed interface Entry permits Entry.User, Entry.Assistant, Entry.Tool {
+        record User(UUID messageId, String text) implements Entry {
+            public User {
+                java.util.Objects.requireNonNull(messageId, "messageId");
+                java.util.Objects.requireNonNull(text, "text");
+            }
+        }
+
         record Assistant(String text, boolean streaming) implements Entry {
             public Assistant { text = text == null ? "" : text; }
         }

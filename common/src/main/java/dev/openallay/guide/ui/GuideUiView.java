@@ -101,6 +101,8 @@ public record GuideUiView(
             rows.add(new GuideUiRow.User(request.requestId(), request.userMessage()));
             for (GuideTimelineEntry entry : request.timeline()) {
                 switch (entry) {
+                    case GuideTimelineEntry.User user -> rows.add(
+                            new GuideUiRow.User(user.messageId(), user.text()));
                     case GuideTimelineEntry.Assistant assistant -> rows.add(
                             new GuideUiRow.Assistant(
                                     request.requestId(),
