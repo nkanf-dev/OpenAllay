@@ -145,12 +145,11 @@ public record GuideUiView(
                 snapshot.modelMode(),
                 snapshot.clientModelAvailable(),
                 snapshot.serverModelAvailable(),
-                active == null
-                        && targetAvailable
+                targetAvailable
                         && snapshot.persistence().state()
                                 != dev.openallay.guide.GuidePersistenceSnapshot.State.LOADING,
-                active != null,
-                retry != null && active == null,
+                active != null || selected.workingRequestId() != null || !selected.pendingMessages().isEmpty(),
+                retry != null && active == null && selected.workingRequestId() == null,
                 active == null ? null : GuideUiProgress.from(active.progress()),
                 sessions,
                 rows,

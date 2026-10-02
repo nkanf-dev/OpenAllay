@@ -48,6 +48,32 @@ final class GuideUiLayoutTest {
     }
 
     @Test
+    void imageAndPendingDraftRowsShareBudgetWithoutCoveringTelemetry() {
+        for (int[] size : new int[][] {{240, 180}, {280, 180}, {320, 240}, {427, 320}, {569, 320}, {900, 500}}) {
+            for (boolean images : new boolean[] {false, true}) {
+                for (int pending : new int[] {0, 1, 4}) {
+                    GuideUiLayout layout = GuideUiLayout.calculate(size[0], size[1], true,
+                            120, 60, 48, 54, true, images, true, pending);
+                    GuideUiLayout.ComposerExtras extras = layout.composerExtras(images, true, pending);
+                    assertInside(layout.composerControls().input(), extras.input());
+                    assertTrue(extras.input().height() >= 24);
+                    for (GuideUiLayout.Rect row : java.util.List.of(extras.images(), extras.footer(), extras.pending())) {
+                        if (row.height() == 0) continue;
+                        assertInside(layout.composerControls().input(), row);
+                        assertFalse(overlap(extras.input(), row));
+                        assertFalse(overlap(layout.telemetry(), row));
+                    }
+                    assertFalse(overlap(extras.images(), extras.footer()));
+                    assertFalse(overlap(extras.images(), extras.pending()));
+                    assertFalse(overlap(extras.footer(), extras.pending()));
+                    assertInside(new GuideUiLayout.Rect(0, 0, size[0], size[1]), layout.telemetry());
+                    assertFalse(overlap(layout.telemetry(), layout.composer()));
+                }
+            }
+        }
+    }
+
+    @Test
     void localizedLabelsWrapControlsRatherThanOverlapTitle() {
         GuideUiLayout layout = GuideUiLayout.calculate(427, 320, false, 150, 72, 60, 66, true);
         assertTrue(layout.header().sessions().y() > layout.header().title().y());

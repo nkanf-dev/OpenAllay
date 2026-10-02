@@ -126,6 +126,7 @@ copy answers, or export a session. The screen does not pause the game.
 - **Branch sessions (Fork):** create an independent conversation from a completed task without re-running Tools.
 - **Follow-up & Steer:** choose **Follow-up** to run after the current task releases its resources,
   or **Steer** to add guidance at the next operation boundary. Steer does not interrupt a model call.
+- **Image inputs:** paste images with **Ctrl/Cmd+V** when using an image-capable model.
 - Open tool details to inspect results. **Debug mode** also shows the submitted
   JavaScript and full input/output.
 

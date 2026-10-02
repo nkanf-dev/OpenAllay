@@ -41,6 +41,18 @@ import org.junit.jupiter.api.Test;
 
 final class OpenAllayScreenProjectionTest {
     @Test
+    void onlyAcceptedPendingEditsMayClearTextAndImages() {
+        assertTrue(OpenAllayScreen.submissionAccepted(false,
+                new dev.openallay.tool.ToolResult.Success<>(UUID.randomUUID())));
+        assertTrue(OpenAllayScreen.submissionAccepted(true,
+                new dev.openallay.tool.ToolResult.Success<>(true)));
+        assertFalse(OpenAllayScreen.submissionAccepted(true,
+                new dev.openallay.tool.ToolResult.Success<>(false)));
+        assertFalse(OpenAllayScreen.submissionAccepted(true,
+                new dev.openallay.tool.ToolResult.Failure<>("pending_missing", "Already consumed")));
+    }
+
+    @Test
     void assistantLabelUsesThePlayerDisplayNameWithoutChangingProductIdentity() {
         GuideDisplayConfig display = new GuideDisplayConfig(
                 false, true, "小羽");
@@ -104,6 +116,18 @@ final class OpenAllayScreenProjectionTest {
     }
 
     @Test
+    void imageCapabilityLabelsUseSelectedMetadataWithoutGuessingProviderNames() {
+        for (var capability : dev.openallay.model.image.ImageInputCapability.values()) {
+            GuideUiModelChoice choice = new GuideUiModelChoice(GuideModelSelection.client("manual"), "Profile",
+                    dev.openallay.guide.ui.ModelOrigin.CLIENT, true, true, true, false, capability, "manual");
+            TranslatableContents label = assertInstanceOf(TranslatableContents.class,
+                    OpenAllayScreen.imageInputLabel(choice).getContents());
+            assertEquals("screen.openallay.settings.models.builtin.image_input." + capability.encoded(), label.getKey());
+            assertEquals(0, label.getArgs().length);
+        }
+    }
+
+    @Test
     void streamingRowMeasurementsNeverShrinkAtOneWidth() {
         OpenAllayScreen.StableRowHeights heights = new OpenAllayScreen.StableRowHeights();
         heights.begin(300);
@@ -126,6 +150,46 @@ final class OpenAllayScreenProjectionTest {
                 true, false, GuideHistoryPageState.LOADING, 12));
         assertFalse(OpenAllayScreen.mayPageHistory(
                 true, false, GuideHistoryPageState.IDLE, 0));
+    }
+
+    @Test
+    void composerAcceptsPendingInputWhileRunningAndKeepsStopAvailableDuringFinalization() {
+        Instant now = Instant.EPOCH;
+        UUID requestId = UUID.randomUUID();
+        GuideRequestSnapshot active = GuideRequestSnapshot.start(requestId, "main", GuideTopology.CLIENT_LOCAL,
+                "task", now);
+        GuideSessionSnapshot running = new GuideSessionSnapshot("main", List.of(), List.of(active), List.of(),
+                GuideModelSelection.client("default"),
+                dev.openallay.guide.GuideHistoryWindowSnapshot.disabled(1), List.of(), requestId);
+        GuideSnapshot activeSnapshot = new GuideSnapshot(UUID.randomUUID(), "main", GuideModelMode.CLIENT,
+                true, false, dev.openallay.guide.GuidePersistenceSnapshot.disabled(), List.of(running), now);
+        var runningView = dev.openallay.guide.ui.GuideUiView.from(activeSnapshot);
+        assertTrue(runningView.canSend());
+        assertTrue(runningView.canCancel());
+        assertFalse(runningView.canRetry());
+
+        GuideRequestSnapshot ended = new GuideRequestSnapshot(requestId, "main", GuideTopology.CLIENT_LOCAL,
+                "task", List.of(), GuideRequestStatus.FAILED, List.of(), ModelUsage.empty(), null,
+                new dev.openallay.guide.GuideFailure("test_failure", "failed"), now, now, now);
+        GuideSessionSnapshot finalizing = new GuideSessionSnapshot("main", List.of(), List.of(ended), List.of(),
+                GuideModelSelection.client("default"),
+                dev.openallay.guide.GuideHistoryWindowSnapshot.disabled(1), List.of(), requestId);
+        GuideSnapshot finalizingSnapshot = new GuideSnapshot(UUID.randomUUID(), "main", GuideModelMode.CLIENT,
+                true, false, dev.openallay.guide.GuidePersistenceSnapshot.disabled(), List.of(finalizing), now);
+        var finalizingView = dev.openallay.guide.ui.GuideUiView.from(finalizingSnapshot);
+        assertTrue(finalizingView.canSend());
+        assertTrue(finalizingView.canCancel());
+        assertFalse(finalizingView.canRetry());
+
+        var pending = new dev.openallay.guide.GuidePendingMessage(UUID.randomUUID(),
+                dev.openallay.guide.GuidePendingMessage.Kind.FOLLOW_UP,
+                dev.openallay.model.ModelMessage.userText("next task"), now, null);
+        GuideSessionSnapshot queuedOnly = new GuideSessionSnapshot("main", List.of(), List.of(), List.of(),
+                GuideModelSelection.client("default"),
+                dev.openallay.guide.GuideHistoryWindowSnapshot.disabled(0), List.of(pending), null);
+        GuideSnapshot queuedSnapshot = new GuideSnapshot(UUID.randomUUID(), "main", GuideModelMode.CLIENT,
+                true, false, dev.openallay.guide.GuidePersistenceSnapshot.disabled(), List.of(queuedOnly), now);
+        assertTrue(dev.openallay.guide.ui.GuideUiView.from(queuedSnapshot).canCancel());
     }
 
     @Test

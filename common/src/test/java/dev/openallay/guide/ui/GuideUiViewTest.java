@@ -39,7 +39,7 @@ final class GuideUiViewTest {
         assertEquals(1, streaming.rows().stream().filter(GuideUiRow.Assistant.class::isInstance).count());
         assertTrue(((GuideUiRow.Assistant) streaming.rows().get(1)).streaming());
         assertTrue(streaming.canCancel());
-        assertFalse(streaming.canSend());
+        assertTrue(streaming.canSend(), "the active task can accept follow-up or steer drafts");
         assertEquals(GuideRequestPhase.MODEL_WAIT, streaming.progress().phase());
         assertEquals("screen.openallay.progress.model_wait",
                 streaming.progress().activityTranslationKey());

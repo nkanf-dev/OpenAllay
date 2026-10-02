@@ -22,6 +22,14 @@ public record GuideUiLayout(
     public static GuideUiLayout calculate(
             int width, int height, boolean detailOpen,
             int titleWidth, int sessionsWidth, int exportWidth, int refreshWidth, boolean settings) {
+        return calculate(width, height, detailOpen, titleWidth, sessionsWidth, exportWidth,
+                refreshWidth, settings, false, false, 0);
+    }
+
+    public static GuideUiLayout calculate(
+            int width, int height, boolean detailOpen,
+            int titleWidth, int sessionsWidth, int exportWidth, int refreshWidth, boolean settings,
+            boolean images, boolean activeMode, int pendingMessages) {
         if (width < 240 || height < 180) throw new IllegalArgumentException("screen is too small");
         int margin = height < 240 ? 4 : 8;
         int available = width - margin * 2;
@@ -29,7 +37,11 @@ public record GuideUiLayout(
                 titleWidth, sessionsWidth, exportWidth, refreshWidth, settings, height < 240);
         int topHeight = header.status().y() + header.status().height() - margin + 2;
         int progressHeight = height < 240 && width < 560 ? 12 : 22;
-        int composerHeight = 68;
+        int desiredComposerHeight = 68 + (images ? 40 : 0)
+                + (activeMode || pendingMessages > 0 ? 20 : 0) + Math.min(2, pendingMessages) * 20;
+        int reservedTop = margin + topHeight + margin + progressHeight + 4 + margin;
+        int composerHeight = Math.max(68, Math.min(desiredComposerHeight,
+                height - margin - (width < 560 ? 18 : 0) - reservedTop - 24));
         boolean narrow = width < 560;
         int railWidth = narrow ? 0 : 128;
         boolean inlineDetail = detailOpen && width >= 760;
@@ -62,6 +74,29 @@ public record GuideUiLayout(
                 header,
                 ComposerControls.calculate(composer));
     }
+
+    /** Shared composer budget. Compact screens use a small image strip and one pending row. */
+    public ComposerExtras composerExtras(boolean images, boolean activeMode, int pendingMessages) {
+        Rect area = composerControls.input();
+        boolean footer = activeMode || pendingMessages > 0;
+        int footerHeight = footer ? 18 : 0;
+        int imageHeight = images ? Math.min(40, Math.max(20, area.height() - footerHeight - 28)) : 0;
+        int pendingHeight = pendingMessages > 0
+                ? Math.min(Math.min(2, pendingMessages - 1) * 20,
+                        Math.max(0, area.height() - footerHeight - imageHeight - 28) / 20 * 20) : 0;
+        int inputHeight = area.height() - footerHeight - imageHeight - pendingHeight
+                - (imageHeight > 0 ? 2 : 0) - (footer ? 2 : 0);
+        Rect input = new Rect(area.x(), area.y(), area.width(), inputHeight);
+        Rect imageStrip = imageHeight == 0 ? Rect.EMPTY
+                : new Rect(area.x(), input.bottom() + 2, area.width(), imageHeight);
+        int footerY = area.bottom() - footerHeight - pendingHeight;
+        Rect footerRect = footer ? new Rect(area.x(), footerY, area.width(), footerHeight) : Rect.EMPTY;
+        Rect pending = pendingHeight == 0 ? Rect.EMPTY
+                : new Rect(area.x(), footerRect.bottom(), area.width(), pendingHeight);
+        return new ComposerExtras(input, imageStrip, footerRect, pending);
+    }
+
+    public record ComposerExtras(Rect input, Rect images, Rect footer, Rect pending) {}
 
     /** Wide: unused lower-left rail space. Narrow: a separate strip below the composer. */
     public Rect telemetry() {
