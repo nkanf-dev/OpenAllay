@@ -56,8 +56,8 @@ at once rather than looking up one item per model turn.
 - “Which resource packs are active, and what are my current video settings?”
 
 Answers can include item icons, ingredient slots, recipe layouts, tables, and
-expandable details. Tool cards show the work performed and its results. Large
-result previews are labeled as samples, separate from the completed calculation.
+expandable details. Tool cards show the work performed and its results, with
+clean expandable previews when datasets are large.
 
 Optional integrations include **JEI**, **REI**, **Patchouli**, and recipe-rich
 mods such as **Farmer's Delight**. The available data depends on your installed
@@ -136,13 +136,11 @@ In **Settings → Models**:
 
 - **Context window and maximum output:** use matched provider metadata or the
   built-in model catalog, or enter your own values. Clear a field to return to
-  automatic values. Unknown limits need a manual value, not a guessed default.
+  automatic values.
 - **Reasoning effort:** leave **Auto · provider default** selected, or request an
-  explicit effort. Auto leaves the choice to the provider; OpenAllay does not know
-  its actual default. Available choices depend on the protocol, and support
-  varies by model and gateway. This setting is not a thinking-token budget.
-- **Reference prices:** compare published token prices, sources, and dates.
-  Your provider's actual rates may differ.
+  explicit effort (supported levels depend on the selected model and provider).
+- **Reference prices:** compare published reference token rates and pricing tiers.
+  Your provider's actual billing may vary.
 
 The chat footer shows a context estimate and budget, reported input/output
 tokens, and estimated cost when available. **An estimate is not a bill.** Missing usage or pricing
@@ -172,7 +170,7 @@ including available mod commands. This is separate from Builder world writes.
 - [Issues](https://github.com/nkanf-dev/OpenAllay/issues) — report a bug or suggest
   an improvement. Include your Minecraft version, loader, and steps to reproduce.
 - [Development guide](docs/development.md) — build from source, contribute, and
-  read the pre-1.0 **Latest Only** policy for internal formats.
+  explore architecture and development guidelines.
 
 OpenAllay is licensed under the [MIT License](LICENSE).
 It is an independent project, not affiliated with or endorsed by Mojang Studios
