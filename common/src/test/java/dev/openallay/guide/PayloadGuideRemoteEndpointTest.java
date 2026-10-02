@@ -74,7 +74,7 @@ final class PayloadGuideRemoteEndpointTest {
     @Test
     void sendsPutEditAndRemoveWithTheSameRequestAndMessageCorrelation() {
         FakePort port = new FakePort();
-        PayloadGuideRemoteEndpoint endpoint = new PayloadGuideRemoteEndpoint(port, new Gson());
+        PayloadGuideRemoteEndpoint endpoint = new PayloadGuideRemoteEndpoint(port, new Gson(), Runnable::run, Runnable::run);
         UUID requestId = UUID.randomUUID();
         UUID messageId = UUID.randomUUID();
         assertTrue(endpoint.ask(requestId, "main", "question", ignored -> {}));
@@ -220,6 +220,64 @@ final class PayloadGuideRemoteEndpointTest {
             readGate.complete(null);
             worker.shutdownNow();
         }
+    }
+
+    @Test
+    void slowImagePutKeepsLaterTextPutBehindItOnTheSamePayloadWorker() throws Exception {
+        FakePort port = new FakePort();
+        java.util.concurrent.ExecutorService worker = java.util.concurrent.Executors.newSingleThreadExecutor();
+        PayloadGuideRemoteEndpoint endpoint = new PayloadGuideRemoteEndpoint(port, new Gson(), worker, Runnable::run);
+        UUID request = UUID.randomUUID(); UUID imageId = UUID.randomUUID(); UUID textId = UUID.randomUUID();
+        endpoint.ask(request, "main", "question", ignored -> {});
+        byte[] bytes = {1, 2, 3};
+        var image = new dev.openallay.model.image.ImageReference(sha256(bytes), "image/png", 1, 1, bytes.length);
+        var first = dev.openallay.model.ModelMessage.userInput("A image", List.of(image));
+        var entered = new java.util.concurrent.CompletableFuture<Void>();
+        var gate = new java.util.concurrent.CompletableFuture<Void>();
+        try {
+            assertTrue(endpoint.steer(request, imageId, first, reference -> {
+                entered.complete(null); gate.join(); return bytes;
+            }));
+            entered.get(5, java.util.concurrent.TimeUnit.SECONDS);
+            assertTrue(endpoint.steer(request, textId, dev.openallay.model.ModelMessage.userText("B text")));
+            assertTrue(port.steers.isEmpty(), "later text must not bypass the earlier image read");
+            gate.complete(null);
+            worker.submit(() -> {}).get(5, java.util.concurrent.TimeUnit.SECONDS);
+            assertEquals(List.of(imageId, textId), port.steers.stream()
+                    .map(dev.openallay.bridge.protocol.ServerAgentSteerPayload::messageId).toList());
+            assertEquals(List.of("A image", "B text"), port.steers.stream()
+                    .map(payload -> payload.message().toModelMessage()).map(dev.openallay.guide.GuidePendingMessage::displayText).toList());
+        } finally { gate.complete(null); worker.shutdownNow(); }
+    }
+
+    @Test
+    void revokedSlowImageDoesNotResurrectAndItsReplacementRemainsAheadOfLaterText() throws Exception {
+        FakePort port = new FakePort();
+        java.util.concurrent.ExecutorService worker = java.util.concurrent.Executors.newSingleThreadExecutor();
+        PayloadGuideRemoteEndpoint endpoint = new PayloadGuideRemoteEndpoint(port, new Gson(), worker, Runnable::run);
+        UUID request = UUID.randomUUID(); UUID imageId = UUID.randomUUID(); UUID textId = UUID.randomUUID();
+        endpoint.ask(request, "main", "question", ignored -> {});
+        byte[] bytes = {1, 2, 3};
+        var image = new dev.openallay.model.image.ImageReference(sha256(bytes), "image/png", 1, 1, bytes.length);
+        var entered = new java.util.concurrent.CompletableFuture<Void>(); var gate = new java.util.concurrent.CompletableFuture<Void>();
+        try {
+            assertTrue(endpoint.steer(request, imageId, dev.openallay.model.ModelMessage.userInput("old A", List.of(image)), reference -> {
+                entered.complete(null); gate.join(); return bytes;
+            }));
+            entered.get(5, java.util.concurrent.TimeUnit.SECONDS);
+            assertTrue(endpoint.cancelSteer(request, imageId));
+            assertTrue(endpoint.editSteer(request, imageId, dev.openallay.model.ModelMessage.userText("new A")));
+            assertTrue(endpoint.steer(request, textId, dev.openallay.model.ModelMessage.userText("B text")));
+            assertEquals(List.of(dev.openallay.bridge.protocol.ServerAgentSteerPayload.Operation.REMOVE),
+                    port.steers.stream().map(dev.openallay.bridge.protocol.ServerAgentSteerPayload::operation).toList());
+            gate.complete(null); worker.submit(() -> {}).get(5, java.util.concurrent.TimeUnit.SECONDS);
+            var puts = port.steers.stream().filter(payload -> payload.operation()
+                    == dev.openallay.bridge.protocol.ServerAgentSteerPayload.Operation.PUT).toList();
+            assertEquals(List.of(imageId, textId), puts.stream().map(
+                    dev.openallay.bridge.protocol.ServerAgentSteerPayload::messageId).toList());
+            assertEquals(List.of("new A", "B text"), puts.stream().map(payload -> payload.message().toModelMessage())
+                    .map(dev.openallay.guide.GuidePendingMessage::displayText).toList());
+        } finally { gate.complete(null); worker.shutdownNow(); }
     }
 
     private static final class FakePort implements PayloadGuideRemoteEndpoint.Port {

@@ -75,6 +75,7 @@ final class ServerSteerBridgeTest {
         assertTrue(service.steer(actor, remove(requestId, removedId)));
         assertFalse(service.steer(actor, remove(requestId, removedId)));
         assertEquals(0, model.requests.size());
+        awaitSteerPreparations();
 
         ready.complete(null);
 
@@ -85,7 +86,9 @@ final class ServerSteerBridgeTest {
                 .map(event -> assertInstanceOf(AgentEvent.SteerApplied.class, codec.decode(event, requestId)))
                 .toList();
         assertEquals(List.of(new AgentEvent.SteerApplied(messageId, ModelMessage.userText("edited"))), applied);
-        assertFalse(service.steer(actor, put(requestId, messageId, "too late")));
+        assertTrue(service.steer(actor, put(requestId, messageId, "too late")),
+                "transport admission is distinct from asynchronous inbox acceptance");
+        awaitSteerPreparations();
         assertInstanceOf(AgentEvent.SteerRejected.class, codec.decode(events.getLast(), requestId));
         assertFalse(service.steer(actor, remove(requestId, messageId)));
         model.pending.getFirst().complete(turn("answer"));
@@ -462,6 +465,104 @@ final class ServerSteerBridgeTest {
             ready.complete(null);
             service.disconnectAsync(actor).get(5, TimeUnit.SECONDS);
         }
+    }
+
+    @Test
+    void slowImagePreparationKeepsTextAndAppliedUserInstructionsInWireOrder() throws Exception {
+        UUID actor = UUID.randomUUID(); UUID request = UUID.randomUUID(); UUID first = UUID.randomUUID(); UUID second = UUID.randomUUID();
+        byte[] bytes = {1, 2, 3};
+        var reference = new dev.openallay.model.image.ImageReference(sha256(bytes), "image/png", 1, 1, bytes.length);
+        ModelMessage image = ModelMessage.userInput("A image", List.of(reference));
+        MemoryImages store = new MemoryImages(actor, reference, bytes);
+        AgentSessionStore sessions = new AgentSessionStore(); EmptyTools tools = new EmptyTools(); PendingModel model = new PendingModel();
+        var ready = new CompletableFuture<Void>(); var entered = new CompletableFuture<Void>(); var gate = new CompletableFuture<Void>();
+        var lastPrepared = new CompletableFuture<Void>(); var released = new CompletableFuture<Void>();
+        List<UUID> preparedOrder = new CopyOnWriteArrayList<>(); List<UUID> appliedOrder = new CopyOnWriteArrayList<>();
+        ServerAgentService service = new ServerAgentService((sender, payload) -> new ToolResult.Success<>(
+                new ServerAgentService.RequestRuntime(new GameGuideAgent(model, tools, sessions, gson), tools, "system", steer -> {
+                    if (steer.messageId().equals(first)) { entered.complete(null); gate.join(); }
+                    preparedOrder.add(steer.messageId());
+                    try {
+                        ModelMessage value = ServerGuideRuntime.importSteerImages(actor, request,
+                                steer.message().toModelMessage(), steer.imageAttachments(), store,
+                                dev.openallay.model.image.ImageInputCapability.SUPPORTED);
+                        if (steer.messageId().equals(second)) lastPrepared.complete(null);
+                        return value;
+                    } catch (java.io.IOException invalid) { throw new java.io.UncheckedIOException(invalid); }
+                }, () -> {})), sessions, (sender, capabilities, id, cancellation) ->
+                CompletableFuture.completedFuture(ToolInvocationContext.developmentConsole(id)), (sender, event) -> {
+                    if (event.eventType().equals("steer_applied")) appliedOrder.add(
+                            assertInstanceOf(AgentEvent.SteerApplied.class, codec.decode(event, request)).messageId());
+                    if (event.eventType().equals("request_released")) released.complete(null);
+                }, gson, "system", cancellation -> ready, store, dev.openallay.model.image.ImageInputCapability.SUPPORTED);
+        try {
+            service.ask(actor, new ServerAgentRequestPayload(request, "main", "goal", false));
+            assertTrue(service.steer(actor, new ServerAgentSteerPayload(request, first, ServerAgentSteerPayload.Operation.PUT,
+                    ServerAgentHistoryMessage.from(image), List.of(dev.openallay.bridge.protocol.ServerAgentImageAttachment.from(reference, bytes)))));
+            entered.get(5, TimeUnit.SECONDS);
+            assertTrue(service.steer(actor, put(request, second, "B text")));
+            assertTrue(preparedOrder.isEmpty(), "B cannot prepare while A's image import owns the worker prefix");
+            gate.complete(null); lastPrepared.get(5, TimeUnit.SECONDS);
+            awaitSteerPreparations();
+            ready.complete(null);
+            assertEquals(List.of(first, second), preparedOrder);
+            assertEquals(List.of(ModelMessage.userText("goal"), image, ModelMessage.userText("B text")), model.requests.getFirst().messages());
+            // Engine preparation publishes applied events through the same existing image worker.
+            model.pending.getFirst().complete(turn("answer")); released.get(5, TimeUnit.SECONDS);
+            assertEquals(List.of(first, second), appliedOrder);
+        } finally { gate.complete(null); ready.complete(null); model.pending.forEach(pending -> pending.complete(turn("cleanup"))); service.disconnectAsync(actor).get(5, TimeUnit.SECONDS); }
+    }
+
+    @Test
+    void removedSlowPreparationCannotReviveAndEditedReplacementPrecedesLaterText() throws Exception {
+        AgentSessionStore sessions = new AgentSessionStore(); EmptyTools tools = new EmptyTools(); PendingModel model = new PendingModel();
+        UUID actor = UUID.randomUUID(); UUID request = UUID.randomUUID(); UUID first = UUID.randomUUID(); UUID second = UUID.randomUUID();
+        var ready = new CompletableFuture<Void>(); var entered = new CompletableFuture<Void>(); var gate = new CompletableFuture<Void>();
+        var released = new CompletableFuture<Void>(); List<UUID> applied = new CopyOnWriteArrayList<>();
+        ServerAgentService service = new ServerAgentService((sender, payload) -> new ToolResult.Success<>(
+                new ServerAgentService.RequestRuntime(new GameGuideAgent(model, tools, sessions, gson), tools, "system", instruction -> {
+                    if (instruction.message().toModelMessage().equals(ModelMessage.userText("old A"))) {
+                        entered.complete(null); gate.join();
+                    }
+                    return instruction.message().toModelMessage();
+                }, () -> {})), sessions, (sender, capabilities, id, cancellation) ->
+                CompletableFuture.completedFuture(ToolInvocationContext.developmentConsole(id)), (sender, event) -> {
+                    if (event.eventType().equals("steer_applied")) applied.add(
+                            assertInstanceOf(AgentEvent.SteerApplied.class, codec.decode(event, request)).messageId());
+                    if (event.eventType().equals("request_released")) released.complete(null);
+                }, gson, "system", cancellation -> ready);
+        try {
+            service.ask(actor, new ServerAgentRequestPayload(request, "main", "goal", false));
+            assertTrue(service.steer(actor, put(request, first, "old A"))); entered.get(5, TimeUnit.SECONDS);
+            assertTrue(service.steer(actor, remove(request, first)));
+            assertTrue(service.steer(actor, put(request, first, "edited A")));
+            assertTrue(service.steer(actor, put(request, second, "B text")));
+            gate.complete(null); awaitSteerPreparations(); ready.complete(null);
+            assertEquals(List.of(ModelMessage.userText("goal"), ModelMessage.userText("edited A"), ModelMessage.userText("B text")),
+                    model.requests.getFirst().messages());
+            assertEquals(List.of(first, second), applied);
+            model.pending.getFirst().complete(turn("answer")); released.get(5, TimeUnit.SECONDS);
+        } finally { gate.complete(null); ready.complete(null); model.pending.forEach(pending -> pending.complete(turn("cleanup"))); service.disconnect(actor); }
+    }
+
+    /** A bounded marker on the existing serial preparation worker, not a delay or poll. */
+    private void awaitSteerPreparations() throws Exception {
+        UUID actor = UUID.randomUUID(); UUID request = UUID.randomUUID();
+        AgentSessionStore sessions = new AgentSessionStore(); EmptyTools tools = new EmptyTools();
+        CompletableFuture<Void> entered = new CompletableFuture<>();
+        CompletableFuture<Void> ready = new CompletableFuture<>();
+        ServerAgentService barrier = new ServerAgentService((sender, payload) -> new ToolResult.Success<>(
+                new ServerAgentService.RequestRuntime(new GameGuideAgent(new PendingModel(), tools, sessions, gson),
+                        tools, "system", instruction -> {
+                            entered.complete(null); return instruction.message().toModelMessage();
+                        }, () -> {})), sessions, (sender, capabilities, id, cancellation) ->
+                CompletableFuture.completedFuture(ToolInvocationContext.developmentConsole(id)),
+                (sender, event) -> {}, gson, "system", cancellation -> ready);
+        try {
+            barrier.ask(actor, new ServerAgentRequestPayload(request, "barrier", "gate", false));
+            assertTrue(barrier.steer(actor, put(request, UUID.randomUUID(), "worker marker")));
+            entered.get(5, TimeUnit.SECONDS);
+        } finally { barrier.cancel(actor, request); ready.complete(null); barrier.disconnect(actor); }
     }
 
     private static final class MemoryImages implements dev.openallay.model.image.ImageAttachmentStore {

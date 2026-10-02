@@ -249,14 +249,12 @@ public final class ServerAgentService {
                     }
                     Object operation = new Object();
                     owner.imports.put(payload.messageId(), operation);
-                    if (!payload.imageAttachments().isEmpty()) {
-                        // The S2b operation count includes actual imports, even after REMOVE or
-                        // Stop has revoked their tokens. Cleanup cannot race a late store write.
-                        imageOperation(payload.requestId(), owner,
-                                () -> prepareSteer(payload, owner, operation));
-                        return true;
-                    }
-                    return prepareSteer(payload, owner, operation);
+                    // Text and image instructions share the existing serial preparation worker.
+                    // A later text PUT cannot pass an earlier image import. The operation count
+                    // also keeps cleanup behind revoked work until its actual preparation settles.
+                    imageOperation(payload.requestId(), owner,
+                            () -> prepareSteer(payload, owner, operation));
+                    return true;
                 }
             }
         }

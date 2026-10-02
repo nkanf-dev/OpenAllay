@@ -320,30 +320,13 @@ public final class PayloadGuideRemoteEndpoint implements GuideRemoteEndpoint {
 
     @Override
     public boolean steer(UUID requestId, UUID messageId, ModelMessage message) {
-        if (message.content().stream().anyMatch(dev.openallay.model.ModelContent.Image.class::isInstance)) {
-            return steer(requestId, messageId, message,
-                    dev.openallay.model.image.ImagePayloadResolver.unavailable());
-        }
-        ServerAgentSteerPayload payload = new ServerAgentSteerPayload(
-                requestId, messageId, ServerAgentSteerPayload.Operation.PUT,
-                ServerAgentHistoryMessage.from(message));
-        synchronized (requestLock) {
-            RemoteRequest pending = requests.get(requestId);
-            if (pending == null || pending.cancelled || pending.terminal) return false;
-            Object operation = new Object();
-            pending.operations.put(messageId, operation);
-            pending.staged.remove(messageId);
-            if (pending.sent) return port.steer(payload);
-            pending.staged.put(messageId, () -> sendSteer(pending, messageId, operation, payload));
-            return true;
-        }
+        return steer(requestId, messageId, message,
+                dev.openallay.model.image.ImagePayloadResolver.unavailable());
     }
 
     @Override
     public boolean steer(UUID requestId, UUID messageId, ModelMessage message,
             dev.openallay.model.image.ImagePayloadResolver images) {
-        boolean hasImages = message.content().stream().anyMatch(dev.openallay.model.ModelContent.Image.class::isInstance);
-        if (!hasImages) return steer(requestId, messageId, message);
         ServerAgentHistoryMessage detached = ServerAgentHistoryMessage.from(message);
         ServerAgentSteerPayload.validateMessage(detached);
         synchronized (requestLock) {
