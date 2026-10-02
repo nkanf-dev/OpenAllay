@@ -2,6 +2,7 @@ package dev.openallay.model.config;
 
 import dev.openallay.agent.context.ContextBudget;
 import dev.openallay.model.tokenizer.ModelTokenEncoding;
+import dev.openallay.model.image.ImageInputCapability;
 import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
@@ -23,7 +24,8 @@ public record ModelProfileDefinition(
         Duration requestTimeout,
         MetadataProvenance metadata,
         ModelReasoningEffort reasoningEffort,
-        ModelTokenEncoding tokenEncoding) {
+        ModelTokenEncoding tokenEncoding,
+        ImageInputCapability imageInputCapabilityOverride) {
     public ModelProfileDefinition {
         if (id == null || !id.matches("[a-zA-Z0-9_.-]+")) {
             throw new IllegalArgumentException("invalid model profile id");
@@ -62,6 +64,18 @@ public record ModelProfileDefinition(
                 || requestTimeout.isZero() || requestTimeout.isNegative()) {
             throw new IllegalArgumentException("model timeouts must be positive");
         }
+    }
+
+    /** Existing callers leave image input to trusted or builtin metadata. */
+    public ModelProfileDefinition(
+            String id, String displayName, boolean enabled, ModelProtocol protocol,
+            URI baseUri, String model, String credentialRef, Integer contextWindowTokens,
+            Integer maxOutputTokens, Duration connectTimeout, Duration requestTimeout,
+            MetadataProvenance metadata, ModelReasoningEffort reasoningEffort,
+            ModelTokenEncoding tokenEncoding) {
+        this(id, displayName, enabled, protocol, baseUri, model, credentialRef,
+                contextWindowTokens, maxOutputTokens, connectTimeout, requestTimeout,
+                metadata, reasoningEffort, tokenEncoding, null);
     }
 
     public ModelProfileDefinition(

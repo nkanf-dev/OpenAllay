@@ -31,7 +31,7 @@
     }
   ],
   "normalized": {
-    "sha256": "311cab5ed5313e5fe90aa5b16b64da25be9395abd3ad55e815bf312d5a7f5501",
+    "sha256": "8c104f1c7edec22cd967d3c941cba1f2aa5c82a1ad9532547e1c95016002ad32",
     "modelCount": 1121,
     "modelsByCapabilitySource": {
       "models-dev": 465,
@@ -50,7 +50,10 @@
       "changes": "Remove generic pricing prose; preserve only material published rate conditions.",
       "changedPricingNoteCount": 921,
       "otherNormalizedFieldsUnchanged": true
-    }
+    },
+    "preImageInputSha256": "6d61d493b10342676c36c00549d53d92d1c2e9283a8769db9b4dbf63e8576ce9",
+    "parentPreImageClaimedSha256": "311cab5ed5313e5fe90aa5b16b64da25be9395abd3ad55e815bf312d5a7f5501",
+    "discrepancyNote": "The base144f646 catalog bytes hash to 6d61d493b10342676c36c00549d53d92d1c2e9283a8769db9b4dbf63e8576ce9. The inherited September 30 snapshot claimed 311cab5ed5313e5fe90aa5b16b64da25be9395abd3ad55e815bf312d5a7f5501. Removing only the image-input fields and the two image-input sources from this catalog reproduces the base catalog bytes exactly. Upstream raw source hashes, model prices, and limits are unchanged."
   },
   "corroboration": [
     {
@@ -124,5 +127,125 @@
       "url": "https://openai.com/index/introducing-gpt-6-sol-and-luna/",
       "httpStatus": 403
     }
-  ]
+  ],
+  "imageInputEnrichment": {
+    "normalizer": "scripts/update-builtin-model-catalog.py:image_input_capability",
+    "join": "Exact provider and upstreamModelId for models-dev; exact catalog entry id for models-dev-canonical. No guessed aliases or multimodal booleans.",
+    "sources": [
+      {
+        "id": "models-dev-image-input",
+        "label": "Models.dev provider image-input modalities",
+        "url": "https://models.dev/api.json",
+        "capturedAt": "2026-10-02T07:28:19Z",
+        "rawSha256": "1290e78c59b72a425cb6c39c1c354a780a4e002605f03c9867f17271c7cb04b9",
+        "rawByteCount": 5293409,
+        "httpStatus": 200
+      },
+      {
+        "id": "models-dev-canonical-image-input",
+        "label": "Models.dev canonical image-input modalities",
+        "url": "https://models.dev/models.json",
+        "capturedAt": "2026-10-02T07:28:18Z",
+        "rawSha256": "5f9f6c5d6e5fe45a2d3ab195e2d4a2813e1876573a3543335f4fbfb6684a54e1",
+        "rawByteCount": 405373,
+        "httpStatus": 200
+      }
+    ],
+    "counts": {
+      "supported": 415,
+      "unsupported": 244,
+      "unknown": 462
+    },
+    "unknownReason": "The 462 OpenRouter rows retain UNKNOWN because their captured raw architecture.input_modalities is not in the repository. No OpenRouter fetch was made for this enrichment.",
+    "evidence": [
+      {
+        "id": "ai21/jamba-large",
+        "source": "models-dev-image-input",
+        "input": [
+          "text"
+        ],
+        "imageInputCapability": "unsupported"
+      },
+      {
+        "id": "ai21/jamba-mini",
+        "source": "models-dev-image-input",
+        "input": [
+          "text"
+        ],
+        "imageInputCapability": "unsupported"
+      },
+      {
+        "id": "aisingapore/gemma-sea-lion-v4-27b-it",
+        "source": "models-dev-canonical-image-input",
+        "input": [
+          "text"
+        ],
+        "imageInputCapability": "unsupported"
+      },
+      {
+        "id": "alibaba/deepseek-v4-flash-0731",
+        "source": "models-dev-image-input",
+        "input": [
+          "text"
+        ],
+        "imageInputCapability": "unsupported"
+      },
+      {
+        "id": "alibaba/glm-5.2",
+        "source": "models-dev-image-input",
+        "input": [
+          "text"
+        ],
+        "imageInputCapability": "unsupported"
+      },
+      {
+        "id": "alibaba/kimi-k3",
+        "source": "models-dev-image-input",
+        "input": [
+          "text",
+          "image"
+        ],
+        "imageInputCapability": "supported"
+      },
+      {
+        "id": "alibaba/qvq-max",
+        "source": "models-dev-image-input",
+        "input": [
+          "text",
+          "image"
+        ],
+        "imageInputCapability": "supported"
+      },
+      {
+        "id": "alibaba/qwen-flash",
+        "source": "models-dev-image-input",
+        "input": [
+          "text"
+        ],
+        "imageInputCapability": "unsupported"
+      },
+      {
+        "id": "openai/gpt-5.4",
+        "source": "models-dev-image-input",
+        "input": [
+          "text",
+          "image",
+          "pdf"
+        ],
+        "imageInputCapability": "supported"
+      },
+      {
+        "id": "anthropic/claude-sonnet-4-5",
+        "source": "models-dev-image-input",
+        "input": [
+          "text",
+          "image",
+          "pdf"
+        ],
+        "imageInputCapability": "supported"
+      }
+    ],
+    "otherModelFieldsUnchanged": true,
+    "normalizedAt": "2026-10-02T07:34:23Z"
+  }
 }

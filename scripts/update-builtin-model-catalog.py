@@ -39,6 +39,7 @@ PRICE_FIELDS = ("input", "output", "cacheRead", "cacheWrite")
 MODEL_FIELDS = {
     "id", "provider", "family", "aliases", "contextWindowTokens",
     "maxOutputTokens", "pricing", "capabilitySource", "pricingSource", "upstreamModelId",
+    "imageInputCapability", "imageInputCapabilitySource",
 }
 SPECIALIZED = re.compile(
     r"(?:embedding|rerank|whisper|transcri|speech|(?:^|[-_/])tts(?:[-_/]|$)|"
@@ -91,6 +92,21 @@ def generation_model(model: dict, *, router=False) -> bool:
     # their explicit published identity instead of treating vector APIs as chat.
     identity = " ".join(str(model.get(key, "")) for key in ("id", "name", "family"))
     return "text" in inputs and "text" in outputs and not SPECIALIZED.search(identity)
+
+
+def image_input_capability(model: dict, *, router=False) -> str:
+    """Only an explicit published input-modality list establishes support."""
+    descriptor = model.get("architecture" if router else "modalities")
+    if descriptor is None:
+        return "unknown"
+    if not isinstance(descriptor, dict):
+        raise ValueError("Malformed model modalities")
+    inputs = descriptor.get("input_modalities" if router else "input")
+    if inputs is None:
+        return "unknown"
+    if not isinstance(inputs, list) or any(not isinstance(item, str) or not item.strip() for item in inputs):
+        raise ValueError("Input modalities must be an array of nonblank strings")
+    return "supported" if "image" in inputs else "unsupported"
 
 
 def family_name(model: dict, fallback="") -> str:
@@ -232,6 +248,8 @@ def catalog_entry(provider: str, upstream: str, model: dict, source: str, *, rou
         "capabilitySource": source,
         "pricingSource": source if rates is not None else None,
         "upstreamModelId": upstream,
+        "imageInputCapability": image_input_capability(model, router=router),
+        "imageInputCapabilitySource": source,
     }
 
 
@@ -344,6 +362,12 @@ def validate_catalog(catalog: dict) -> None:
             raise ValueError("Max output must be positive or null")
         if model["capabilitySource"] not in source_ids:
             raise ValueError("Missing capability source")
+        if model["imageInputCapability"] not in {"supported", "unsupported", "unknown"}:
+            raise ValueError("Image input capability must be supported, unsupported or unknown")
+        image_source = model["imageInputCapabilitySource"]
+        if ((image_source is not None and image_source not in source_ids)
+                or (model["imageInputCapability"] != "unknown" and image_source is None)):
+            raise ValueError("Known image input capability requires a published source")
         price = model["pricing"]
         if price is None:
             if model["pricingSource"] is not None:

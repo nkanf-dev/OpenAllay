@@ -29,7 +29,8 @@ public final class ModelConfigLoader {
             "connectTimeoutSeconds",
             "requestTimeoutSeconds",
             "reasoningEffort",
-            "tokenEncoding");
+            "tokenEncoding",
+            "imageInputCapability");
 
     public ToolResult<ModelConfig> load(Path path, Map<String, String> environment) {
         Objects.requireNonNull(path, "path");
@@ -106,7 +107,14 @@ public final class ModelConfigLoader {
                     object.has("tokenEncoding")
                             ? dev.openallay.model.tokenizer.ModelTokenEncoding.parse(
                                     optionalString(object, "tokenEncoding"))
-                            : dev.openallay.model.tokenizer.ModelTokenEncoding.AUTO));
+                            : dev.openallay.model.tokenizer.ModelTokenEncoding.AUTO,
+                    dev.openallay.model.metadata.ModelImageCapabilityResolution.resolve(
+                            endpoint, modelId,
+                            object.has("imageInputCapability") && !object.get("imageInputCapability").isJsonNull()
+                                    ? dev.openallay.model.image.ImageInputCapability.parse(
+                                            optionalString(object, "imageInputCapability"))
+                                    : null,
+                            Map.of(), BuiltinModelCatalog.bundled().catalog())));
         } catch (RuntimeException exception) {
             return new ToolResult.Failure<>(
                     "invalid_model_config",

@@ -2226,6 +2226,13 @@ public final class ClientSettingsService implements AutoCloseable {
                 endpoint, model, explicit, metadataSnapshot(), BuiltinModelCatalog.bundled().catalog());
     }
 
+    public dev.openallay.model.metadata.ModelImageCapabilityResolution modelImageCapability(
+            java.net.URI endpoint, String model,
+            dev.openallay.model.image.ImageInputCapability explicit) {
+        return dev.openallay.model.metadata.ModelImageCapabilityResolution.resolve(
+                endpoint, model, explicit, metadataSnapshot(), BuiltinModelCatalog.bundled().catalog());
+    }
+
     private Map<ModelMetadata.Key, ModelMetadata> metadataSnapshot() {
         synchronized (lock) {
             return metadata;

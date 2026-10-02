@@ -565,5 +565,19 @@
   "screen.openallay.telemetry.context_unknown": "Context unknown: no matching local request estimate.",
   "screen.openallay.telemetry.partial": "Partial estimate: usage or pricing is missing for some calls. “+” indicates known amount.",
   "screen.openallay.telemetry.session": "Model calls: %s\nEstimated session cost: %s",
-  "screen.openallay.telemetry.price_note": "Estimated from reference prices, not a paid bill. Missing data stays unknown; uncalculated image usage is excluded."
+  "screen.openallay.telemetry.price_note": "Estimated from reference prices, not a paid bill. Missing data stays unknown; uncalculated image usage is excluded.",
+  "screen.openallay.settings.models.image_input": "Image input",
+  "screen.openallay.settings.models.image_input.auto": "Auto · published model metadata",
+  "screen.openallay.settings.models.image_input.supported": "Image input · supported (manual)",
+  "screen.openallay.settings.models.image_input.unsupported": "Image input · unsupported (manual)",
+  "screen.openallay.settings.models.image_input.unknown": "Image input · unknown (manual)",
+  "screen.openallay.settings.models.image_input.description": "Auto uses published input modalities. Use a manual choice for a private gateway alias. Unknown does not allow image requests. This does not change the endpoint or protocol.",
+  "screen.openallay.settings.models.builtin.image_input.supported": "Image input: supported",
+  "screen.openallay.settings.models.builtin.image_input.unsupported": "Image input: unsupported",
+  "screen.openallay.settings.models.builtin.image_input.unknown": "Image input: unknown · no published input-modality evidence",
+  "screen.openallay.settings.models.builtin.image_source.explicit": "Image-input choice: manual profile override",
+  "screen.openallay.settings.models.builtin.image_source.trusted": "Image-input source: trusted provider metadata",
+  "screen.openallay.settings.models.builtin.image_source.builtin": "Image-input source: built-in model reference",
+  "screen.openallay.settings.models.builtin.image_source.unknown": "Image-input source: unavailable",
+  "screen.openallay.settings.models.builtin.image_effective_source": "Image-input evidence: %s · captured %s"
 }

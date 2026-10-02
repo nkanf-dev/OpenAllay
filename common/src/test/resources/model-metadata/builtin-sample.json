@@ -43,7 +43,9 @@
       },
       "capabilitySource": "models-dev",
       "pricingSource": "models-dev",
-      "upstreamModelId": "gpt-6-luna"
+      "upstreamModelId": "gpt-6-luna",
+      "imageInputCapability": "supported",
+      "imageInputCapabilitySource": "models-dev"
     }
   ]
 }

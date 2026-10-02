@@ -2,6 +2,8 @@ package dev.openallay.model.config;
 
 import dev.openallay.agent.context.ContextBudget;
 import dev.openallay.model.tokenizer.ModelTokenEncoding;
+import dev.openallay.model.metadata.ModelImageCapabilityResolution;
+import dev.openallay.model.metadata.BuiltinModelCatalog;
 import java.net.URI;
 import java.time.Duration;
 import java.util.Locale;
@@ -18,10 +20,12 @@ public record ModelConfig(
         Duration connectTimeout,
         Duration requestTimeout,
         ModelReasoningEffort reasoningEffort,
-        ModelTokenEncoding tokenEncoding) {
+        ModelTokenEncoding tokenEncoding,
+        ModelImageCapabilityResolution imageCapability) {
     public ModelConfig {
         Objects.requireNonNull(protocol, "protocol");
         Objects.requireNonNull(tokenEncoding, "tokenEncoding");
+        Objects.requireNonNull(imageCapability, "imageCapability");
         Objects.requireNonNull(reasoningEffort, "reasoningEffort").requireSupported(protocol);
         Objects.requireNonNull(baseUri, "baseUri");
         if (model == null || model.isBlank()) {
@@ -40,6 +44,17 @@ public record ModelConfig(
         validateUri(baseUri);
         String raw = baseUri.toString();
         baseUri = URI.create(raw.endsWith("/") ? raw : raw + "/");
+    }
+
+    public ModelConfig(
+            boolean enabled, ModelProtocol protocol, URI baseUri, String model,
+            SecretValue apiKey, int contextWindowTokens, int maxOutputTokens,
+            Duration connectTimeout, Duration requestTimeout, ModelReasoningEffort reasoningEffort,
+            ModelTokenEncoding tokenEncoding) {
+        this(enabled, protocol, baseUri, model, apiKey, contextWindowTokens,
+                maxOutputTokens, connectTimeout, requestTimeout, reasoningEffort, tokenEncoding,
+                ModelImageCapabilityResolution.resolve(baseUri, model, null, java.util.Map.of(),
+                        BuiltinModelCatalog.bundled().catalog()));
     }
 
     public ModelConfig(

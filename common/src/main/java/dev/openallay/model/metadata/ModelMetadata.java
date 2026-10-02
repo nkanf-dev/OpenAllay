@@ -1,5 +1,6 @@
 package dev.openallay.model.metadata;
 
+import dev.openallay.model.image.ImageInputCapability;
 import java.time.Instant;
 import java.util.Objects;
 
@@ -10,7 +11,8 @@ public record ModelMetadata(
         String canonicalModelId,
         int contextWindowTokens,
         Integer maxOutputTokens,
-        Instant capturedAt) {
+        Instant capturedAt,
+        ImageInputCapability imageInputCapability) {
     public ModelMetadata {
         if (source == null || source.isBlank()
                 || providerModelId == null || providerModelId.isBlank()
@@ -22,6 +24,13 @@ public record ModelMetadata(
             throw new IllegalArgumentException("model metadata limits must be positive");
         }
         Objects.requireNonNull(capturedAt, "capturedAt");
+        Objects.requireNonNull(imageInputCapability, "imageInputCapability");
+    }
+
+    public ModelMetadata(String source, String providerModelId, String canonicalModelId,
+            int contextWindowTokens, Integer maxOutputTokens, Instant capturedAt) {
+        this(source, providerModelId, canonicalModelId, contextWindowTokens, maxOutputTokens,
+                capturedAt, ImageInputCapability.UNKNOWN);
     }
 
     public Key key() {

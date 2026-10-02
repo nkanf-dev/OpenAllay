@@ -9,6 +9,8 @@ import dev.openallay.model.metadata.ModelMetadata;
 import dev.openallay.model.metadata.BuiltinModelCatalog;
 import dev.openallay.model.metadata.ModelContextResolution;
 import dev.openallay.model.metadata.ModelOutputResolution;
+import dev.openallay.model.metadata.ModelImageCapabilityResolution;
+import dev.openallay.model.image.ImageInputCapability;
 import dev.openallay.model.metadata.OpenRouterMetadataResolver;
 import dev.openallay.tool.ToolResult;
 import java.io.IOException;
@@ -42,7 +44,8 @@ public final class ModelProfilesConfigLoader {
             "id", "displayName", "enabled", "protocol", "baseUrl", "model",
             "credentialRef", "connectTimeoutSeconds", "requestTimeoutSeconds");
     private static final Set<String> OPTIONAL_PROFILE_FIELDS =
-            Set.of("contextWindowTokens", "maxOutputTokens", "metadata", "reasoningEffort", "tokenEncoding");
+            Set.of("contextWindowTokens", "maxOutputTokens", "metadata", "reasoningEffort", "tokenEncoding",
+                    "imageInputCapabilityOverride");
     private static final Set<String> METADATA_FIELDS =
             Set.of("source", "upstreamModelId", "capturedAt");
 
@@ -155,22 +158,27 @@ public final class ModelProfilesConfigLoader {
                         : ModelReasoningEffort.AUTO,
                 object.has("tokenEncoding")
                         ? dev.openallay.model.tokenizer.ModelTokenEncoding.parse(string(object, "tokenEncoding"))
-                        : dev.openallay.model.tokenizer.ModelTokenEncoding.AUTO);
+                        : dev.openallay.model.tokenizer.ModelTokenEncoding.AUTO,
+                !object.has("imageInputCapabilityOverride") || object.get("imageInputCapabilityOverride").isJsonNull()
+                        ? null : ImageInputCapability.parse(string(object, "imageInputCapabilityOverride")));
     }
 
     private ResolvedModelProfile resolve(
             ModelProfileDefinition definition,
             CredentialResolver credentials,
             Map<ModelMetadata.Key, ModelMetadata> metadata) {
+        ModelImageCapabilityResolution imageCapability = ModelImageCapabilityResolution.resolve(
+                definition.baseUri(), definition.model(), definition.imageInputCapabilityOverride(),
+                metadata, catalog);
         if (!definition.enabled()) {
-            return failed(definition, "model_disabled", "This model profile is disabled");
+            return failed(definition, imageCapability, "model_disabled", "This model profile is disabled");
         }
         ModelMetadata discovered = trustedMetadata(definition, metadata);
         Integer contextWindow = ModelContextResolution.resolve(definition.baseUri(), definition.model(),
                 definition.contextWindowTokens(), metadata, catalog).contextWindowTokens();
         if (contextWindow == null) {
             return failed(
-                    definition,
+                    definition, imageCapability,
                     "invalid_model_config",
                     "contextWindowTokens is required unless trusted or builtin model metadata resolves it");
         }
@@ -178,7 +186,7 @@ public final class ModelProfilesConfigLoader {
                 definition.maxOutputTokens(), metadata, catalog).maxOutputTokens();
         if (maxOutput == null) {
             return failed(
-                    definition,
+                    definition, imageCapability,
                     "invalid_model_config",
                     "maxOutputTokens is required unless trusted or builtin metadata publishes its maximum");
         }
@@ -187,10 +195,10 @@ public final class ModelProfilesConfigLoader {
             resolvedCredential = credentials.resolve(
                     CredentialReference.parse(definition.credentialRef()));
         } catch (RuntimeException failure) {
-            return failed(definition, "credential_store_unavailable", "Stored credentials are unavailable");
+            return failed(definition, imageCapability, "credential_store_unavailable", "Stored credentials are unavailable");
         }
         if (resolvedCredential instanceof ToolResult.Failure<SecretValue> failure) {
-            return failed(definition, failure.code(), failure.message());
+            return failed(definition, imageCapability, failure.code(), failure.message());
         }
         SecretValue secret = ((ToolResult.Success<SecretValue>) resolvedCredential).value();
         try {
@@ -206,13 +214,14 @@ public final class ModelProfilesConfigLoader {
                             maxOutput,
                             definition.connectTimeout(),
                             definition.requestTimeout(),
-                            definition.reasoningEffort(), definition.tokenEncoding()),
+                            definition.reasoningEffort(), definition.tokenEncoding(), imageCapability),
                     null,
                     discovered == null
                             ? definition.model()
-                            : discovered.canonicalModelId());
+                            : discovered.canonicalModelId(),
+                    imageCapability);
         } catch (RuntimeException failure) {
-            return failed(definition, "invalid_model_config", message(failure));
+            return failed(definition, imageCapability, "invalid_model_config", message(failure));
         }
     }
 
@@ -228,9 +237,11 @@ public final class ModelProfilesConfigLoader {
 
     private static ResolvedModelProfile failed(
             ModelProfileDefinition definition,
+            ModelImageCapabilityResolution imageCapability,
             String code,
             String message) {
-        return new ResolvedModelProfile(definition, null, new GuideFailure(code, message));
+        return new ResolvedModelProfile(definition, null, new GuideFailure(code, message),
+                definition.model(), imageCapability);
     }
 
     private static <T> ToolResult<T> invalid(String message) {

@@ -9,6 +9,7 @@ import com.google.gson.Strictness;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonToken;
 import dev.openallay.guide.GuideFailure;
+import dev.openallay.model.image.ImageInputCapability;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
@@ -50,8 +51,18 @@ public final class BuiltinModelCatalog {
     public record Entry(
             String id, String provider, String family, List<String> aliases,
             int contextWindowTokens, Integer maxOutputTokens, Pricing pricing,
-            String capabilitySource, String pricingSource, String upstreamModelId) {
-        public Entry { aliases = List.copyOf(aliases); }
+            String capabilitySource, String pricingSource, String upstreamModelId,
+            ImageInputCapability imageInputCapability, String imageInputCapabilitySource) {
+        public Entry {
+            aliases = List.copyOf(aliases);
+            java.util.Objects.requireNonNull(imageInputCapability, "imageInputCapability");
+        }
+        public Entry(String id, String provider, String family, List<String> aliases,
+                int contextWindowTokens, Integer maxOutputTokens, Pricing pricing,
+                String capabilitySource, String pricingSource, String upstreamModelId) {
+            this(id, provider, family, aliases, contextWindowTokens, maxOutputTokens, pricing,
+                    capabilitySource, pricingSource, upstreamModelId, ImageInputCapability.UNKNOWN, null);
+        }
     }
     public record Pricing(String currency, String unit, List<Tier> tiers, String note) {
         public Pricing { tiers = List.copyOf(tiers); }
@@ -109,7 +120,7 @@ public final class BuiltinModelCatalog {
                 JsonObject model = object(value);
                 fields(model, "id", "provider", "family", "aliases", "contextWindowTokens",
                         "maxOutputTokens", "pricing", "capabilitySource", "pricingSource",
-                        "upstreamModelId");
+                        "upstreamModelId", "imageInputCapability", "imageInputCapabilitySource");
                 String id = text(model.get("id"), false);
                 if (!ids.add(id.toLowerCase(java.util.Locale.ROOT))) throw invalid();
                 List<String> aliases = new ArrayList<>();
@@ -123,6 +134,11 @@ public final class BuiltinModelCatalog {
                 String pricingSource = nullableText(model.get("pricingSource"));
                 if (!sources.containsKey(capabilitySource)
                         || (pricingSource != null && !sources.containsKey(pricingSource))) throw invalid();
+                String imageSource = nullableText(model.get("imageInputCapabilitySource"));
+                ImageInputCapability imageInput = ImageInputCapability.parse(
+                        text(model.get("imageInputCapability"), false));
+                if ((imageSource != null && !sources.containsKey(imageSource))
+                        || (imageInput != ImageInputCapability.UNKNOWN && imageSource == null)) throw invalid();
                 Pricing pricing = model.get("pricing").isJsonNull()
                         ? null : pricing(object(model.get("pricing")));
                 if ((pricing == null) != (pricingSource == null)) throw invalid();
@@ -133,7 +149,8 @@ public final class BuiltinModelCatalog {
                         model.get("maxOutputTokens").isJsonNull()
                                 ? null : positive(model.get("maxOutputTokens")),
                         pricing, capabilitySource, pricingSource,
-                        text(model.get("upstreamModelId"), false)));
+                        text(model.get("upstreamModelId"), false),
+                        imageInput, imageSource));
             }
             if (models.isEmpty()) throw invalid();
             return new Load(new BuiltinModelCatalog(version, published, sources, models), null);

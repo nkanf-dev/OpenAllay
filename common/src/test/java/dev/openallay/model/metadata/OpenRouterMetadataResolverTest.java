@@ -55,6 +55,28 @@ final class OpenRouterMetadataResolverTest {
     }
 
     @Test
+    void imageInputsUseExactPublishedListAndMissingEvidenceIsUnknown() {
+        for (String inputs : java.util.List.of("[\"text\",\"image\"]", "[\"text\"]", "null")) {
+            String body = RESPONSE.replace("\"context_length\":256000,",
+                    "\"architecture\":{\"input_modalities\":" + inputs + "},\"context_length\":256000,");
+            var resolved = resolver(response(200, body), null)
+                    .resolve(MODEL, null, null, new CancellationSignal()).join();
+            var expected = inputs.contains("image")
+                    ? dev.openallay.model.image.ImageInputCapability.SUPPORTED
+                    : inputs.equals("null") ? dev.openallay.model.image.ImageInputCapability.UNKNOWN
+                    : dev.openallay.model.image.ImageInputCapability.UNSUPPORTED;
+            assertEquals(expected, resolved.metadata().imageInputCapability());
+            assertEquals(CAPTURED, resolved.metadata().capturedAt());
+        }
+        assertEquals(dev.openallay.model.image.ImageInputCapability.UNKNOWN,
+                resolver(response(200, RESPONSE), null)
+                        .resolve(MODEL, null, null, new CancellationSignal()).join()
+                        .metadata().imageInputCapability());
+        assertFailure("metadata_invalid", RESPONSE.replace("\"context_length\":256000,",
+                "\"architecture\":{\"input_modalities\":true},\"context_length\":256000,"));
+    }
+
+    @Test
     void missingOutputLimitIsUnknownAndExplicitValuesWin() {
         String response = """
                 {"data":[{"id":"anthropic/claude-sonnet",

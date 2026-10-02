@@ -9,9 +9,15 @@ public record ServerModelSettingsView(
         String canonicalModelId,
         int contextWindowTokens,
         int maxOutputTokens,
-        int promptAndToolTokens) {
+        int promptAndToolTokens,
+        dev.openallay.model.metadata.ModelImageCapabilityResolution imageCapability) {
     public ServerModelSettingsView {
         canonicalModelId = Objects.requireNonNull(canonicalModelId, "canonicalModelId");
+        Objects.requireNonNull(imageCapability, "imageCapability");
+        if (!available && imageCapability.capability()
+                != dev.openallay.model.image.ImageInputCapability.UNKNOWN) {
+            throw new IllegalArgumentException("Unavailable server model cannot retain image capability");
+        }
         if (available) {
             if (canonicalModelId.isBlank()) {
                 throw new IllegalArgumentException("available server model requires an identity");
@@ -28,6 +34,13 @@ public record ServerModelSettingsView(
             throw new IllegalArgumentException(
                     "unavailable server model cannot retain connection state");
         }
+    }
+
+    public ServerModelSettingsView(
+            boolean available, String canonicalModelId, int contextWindowTokens,
+            int maxOutputTokens, int promptAndToolTokens) {
+        this(available, canonicalModelId, contextWindowTokens, maxOutputTokens, promptAndToolTokens,
+                dev.openallay.model.metadata.ModelImageCapabilityResolution.unknown());
     }
 
     public static ServerModelSettingsView unavailable() {

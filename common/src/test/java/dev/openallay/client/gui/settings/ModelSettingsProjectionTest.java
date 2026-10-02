@@ -56,6 +56,43 @@ final class ModelSettingsProjectionTest {
     }
 
     @Test
+    void serverCardKeepsAdvertisedImageCapabilityAndUnknownIsNotInferredFromModelName() {
+        var local = new ModelProfileDefinition("main", "Main", false, ModelProtocol.OPENAI_CHAT,
+                URI.create("https://provider.example/v1/"), "alias", "env:KEY", 100000, 10000,
+                Duration.ofSeconds(30), Duration.ofSeconds(300), null);
+        var config = new ModelProfilesConfig("main", List.of(local));
+        var locals = ModelProfileSettingsView.from(config,
+                List.of(new ModelProfileSettingsView.Resolution(local, false, false, 100000,
+                        new dev.openallay.guide.GuideFailure("model_disabled", "Disabled"))),
+                java.util.Set.of(), null, null);
+        var image = new dev.openallay.model.metadata.ModelImageCapabilityResolution(
+                dev.openallay.model.image.ImageInputCapability.UNSUPPORTED,
+                dev.openallay.model.metadata.ModelImageCapabilityResolution.Origin.TRUSTED,
+                "explicit", null);
+        var server = new ServerModelSettingsView(true, "server/gpt-5.4", 100000, 10000, 8000, image);
+        var card = ModelSettingsProjection.from(locals, server).models().getLast();
+        assertEquals(image, card.imageCapability());
+        assertEquals(dev.openallay.model.image.ImageInputCapability.UNKNOWN,
+                ModelSettingsProjection.from(locals,
+                        new ServerModelSettingsView(true, "server/gpt-5.4", 100000, 10000, 8000))
+                        .models().getLast().imageCapability().capability());
+    }
+
+    @Test
+    void existingServerCapabilityKeepsItsBudgetWithoutInferringImageSupport() {
+        var capability = new dev.openallay.bridge.protocol.CapabilityPayload(
+                List.of(), true, 100000, 10000, 8000, "server/gpt-5.4");
+        var server = ServerModelSettingsView.from(capability);
+        assertTrue(server.available());
+        assertEquals("server/gpt-5.4", server.canonicalModelId());
+        assertEquals(100000, server.contextWindowTokens());
+        assertEquals(10000, server.maxOutputTokens());
+        assertEquals(8000, server.promptAndToolTokens());
+        assertEquals(dev.openallay.model.image.ImageInputCapability.UNKNOWN,
+                server.imageCapability().capability());
+    }
+
+    @Test
     void automaticOutputCardUsesEffectiveRuntimeAndDisabledNullStaysUnknown() {
         var automatic = new ModelProfileDefinition("luna", "Luna", true,
                 ModelProtocol.OPENAI_CHAT, URI.create("https://provider.example/v1/"),

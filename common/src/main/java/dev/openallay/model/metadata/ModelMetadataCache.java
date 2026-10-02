@@ -4,6 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import dev.openallay.guide.GuideFailure;
+import dev.openallay.model.image.ImageInputCapability;
 import java.io.IOException;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
@@ -24,7 +25,7 @@ public final class ModelMetadataCache {
     private static final Set<String> ROOT_FIELDS = Set.of("entries");
     private static final Set<String> ENTRY_FIELDS = Set.of(
             "source", "providerModelId", "canonicalModelId", "contextWindowTokens",
-            "maxOutputTokens", "capturedAt");
+            "maxOutputTokens", "capturedAt", "imageInputCapability");
 
     public record Snapshot(
             Map<ModelMetadata.Key, ModelMetadata> entries,
@@ -159,6 +160,7 @@ public final class ModelMetadataCache {
                 encoded.addProperty("maxOutputTokens", metadata.maxOutputTokens());
             }
             encoded.addProperty("capturedAt", metadata.capturedAt().toString());
+            encoded.addProperty("imageInputCapability", metadata.imageInputCapability().encoded());
             encodedEntries.add(encoded);
         }
         root.add("entries", encodedEntries);
@@ -185,7 +187,8 @@ public final class ModelMetadataCache {
                     string(encoded, "canonicalModelId"),
                     integer(encoded.get("contextWindowTokens")),
                     maxOutput,
-                    Instant.parse(string(encoded, "capturedAt")));
+                    Instant.parse(string(encoded, "capturedAt")),
+                    ImageInputCapability.parse(string(encoded, "imageInputCapability")));
             if (decoded.put(metadata.key(), metadata) != null) {
                 throw new IllegalArgumentException("duplicate metadata cache key");
             }

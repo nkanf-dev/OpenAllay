@@ -83,6 +83,10 @@ final class BuiltinModelCatalogTest {
                 json.replace("\"contextWindowTokens\":1050000", "\"contextWindowTokens\":0"),
                 json.replace("\"maxOutputTokens\":128000", "\"maxOutputTokens\":1.5"),
                 json.replace("\"capabilitySource\":\"models-dev\"", "\"capabilitySource\":\"missing\""),
+                json.replace("\"imageInputCapability\":\"supported\"", "\"imageInputCapability\":true"),
+                json.replace("\"imageInputCapability\":\"supported\"", "\"imageInputCapability\":\"vision\""),
+                json.replace("\"imageInputCapabilitySource\":\"models-dev\"", "\"imageInputCapabilitySource\":null"),
+                json.replace("\"imageInputCapabilitySource\":\"models-dev\"", "\"imageInputCapabilitySource\":\"missing\""),
                 json.replace("https://models.dev/api.json", "https://models.dev/api.json?key=secret"),
                 json.replace("\"input\":\"0.1\"", "\"input\":\"-1\""),
                 json.replace("\"currency\":\"USD\"", "\"currency\":\"EUR\""))) {

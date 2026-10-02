@@ -332,7 +332,8 @@ public final class ModelSettingsBackend implements ClientSettingsService.ModelAc
                     definition.connectTimeout(),
                     definition.requestTimeout(),
                     definition.metadata(),
-                    definition.reasoningEffort(), definition.tokenEncoding()));
+                    definition.reasoningEffort(), definition.tokenEncoding(),
+                    definition.imageInputCapabilityOverride()));
         }
         if (!found) {
             throw new IllegalArgumentException("replacement profile is unavailable");

@@ -1,6 +1,8 @@
 package dev.openallay.model.config;
 
 import dev.openallay.guide.GuideFailure;
+import dev.openallay.model.metadata.ModelImageCapabilityResolution;
+import dev.openallay.model.metadata.BuiltinModelCatalog;
 import java.net.URI;
 import java.util.Objects;
 
@@ -9,9 +11,11 @@ public record ResolvedModelProfile(
         ModelProfileDefinition definition,
         ModelConfig runtimeConfig,
         GuideFailure failure,
-        String canonicalModelId) {
+        String canonicalModelId,
+        ModelImageCapabilityResolution imageCapability) {
     public ResolvedModelProfile {
         Objects.requireNonNull(definition, "definition");
+        Objects.requireNonNull(imageCapability, "imageCapability");
         if ((runtimeConfig == null) == (failure == null)) {
             throw new IllegalArgumentException(
                     "resolved profile must contain exactly one runtime or failure");
@@ -19,6 +23,17 @@ public record ResolvedModelProfile(
         if (canonicalModelId == null || canonicalModelId.isBlank()) {
             throw new IllegalArgumentException("canonical model ID is required");
         }
+    }
+
+    public ResolvedModelProfile(
+            ModelProfileDefinition definition, ModelConfig runtimeConfig,
+            GuideFailure failure, String canonicalModelId) {
+        this(definition, runtimeConfig, failure, canonicalModelId,
+                runtimeConfig == null
+                        ? ModelImageCapabilityResolution.resolve(definition.baseUri(), definition.model(),
+                                definition.imageInputCapabilityOverride(), java.util.Map.of(),
+                                BuiltinModelCatalog.bundled().catalog())
+                        : runtimeConfig.imageCapability());
     }
 
     public ResolvedModelProfile(
@@ -51,7 +66,8 @@ public record ResolvedModelProfile(
                         : Integer.valueOf(runtimeConfig.maxOutputTokens()),
                 definition.reasoningEffort(),
                 definition.tokenEncoding(),
-                failure);
+                failure,
+                imageCapability);
     }
 
     public record DiagnosticView(
@@ -68,5 +84,6 @@ public record ResolvedModelProfile(
             Integer maxOutputTokens,
             ModelReasoningEffort reasoningEffort,
             dev.openallay.model.tokenizer.ModelTokenEncoding tokenEncoding,
-            GuideFailure failure) {}
+            GuideFailure failure,
+            ModelImageCapabilityResolution imageCapability) {}
 }

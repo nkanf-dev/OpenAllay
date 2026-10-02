@@ -5,6 +5,7 @@ import dev.openallay.model.metadata.BuiltinModelCatalog;
 import dev.openallay.model.config.ModelProtocol;
 import dev.openallay.model.config.ModelReasoningEffort;
 import dev.openallay.model.tokenizer.ModelTokenEncoding;
+import dev.openallay.model.image.ImageInputCapability;
 import dev.openallay.model.catalog.ModelCatalogRequest;
 import dev.openallay.tool.ToolResult;
 import java.net.URI;
@@ -28,11 +29,25 @@ public record ModelProfileDraft(
         String automaticContextWindowTokens,
         String automaticMaxOutputTokens,
         ModelReasoningEffort reasoningEffort,
-        ModelTokenEncoding tokenEncoding) {
+        ModelTokenEncoding tokenEncoding,
+        ImageInputCapability imageInputCapabilityOverride) {
     public ModelProfileDraft {
         Objects.requireNonNull(protocol, "protocol");
         Objects.requireNonNull(reasoningEffort, "reasoningEffort");
         Objects.requireNonNull(tokenEncoding, "tokenEncoding");
+    }
+
+    public ModelProfileDraft(
+            String id, String displayName, boolean enabled, ModelProtocol protocol,
+            String baseUrl, String model, String credentialRef, String contextWindowTokens,
+            String maxOutputTokens, String connectTimeoutSeconds, String requestTimeoutSeconds,
+            ModelProfileDefinition.MetadataProvenance metadata, String automaticContextWindowTokens,
+            String automaticMaxOutputTokens, ModelReasoningEffort reasoningEffort,
+            ModelTokenEncoding tokenEncoding) {
+        this(id, displayName, enabled, protocol, baseUrl, model, credentialRef,
+                contextWindowTokens, maxOutputTokens, connectTimeoutSeconds, requestTimeoutSeconds,
+                metadata, automaticContextWindowTokens, automaticMaxOutputTokens, reasoningEffort,
+                tokenEncoding, null);
     }
 
     public ModelProfileDraft(
@@ -124,7 +139,8 @@ public record ModelProfileDraft(
                         : Integer.toString(definition.maxOutputTokens()),
                 Long.toString(definition.connectTimeout().toSeconds()),
                 Long.toString(definition.requestTimeout().toSeconds()),
-                definition.metadata(), null, null, definition.reasoningEffort(), definition.tokenEncoding())
+                definition.metadata(), null, null, definition.reasoningEffort(), definition.tokenEncoding(),
+                definition.imageInputCapabilityOverride())
                 .autoFill(BuiltinModelCatalog.bundled().catalog());
     }
 
@@ -157,21 +173,24 @@ public record ModelProfileDraft(
                 connectTimeoutSeconds, requestTimeoutSeconds,
                 changed ? null : metadata,
                 changed ? null : automaticContextWindowTokens,
-                changed ? null : automaticMaxOutputTokens, reasoningEffort, tokenEncoding).autoFill(catalog);
+                changed ? null : automaticMaxOutputTokens, reasoningEffort, tokenEncoding,
+                imageInputCapabilityOverride).autoFill(catalog);
     }
 
     /** An actual player edit adopts a manual value; save alone does not. */
     public ModelProfileDraft withContextWindow(String value) {
         return new ModelProfileDraft(id, displayName, enabled, protocol, baseUrl, model,
                 credentialRef, value, maxOutputTokens, connectTimeoutSeconds,
-                requestTimeoutSeconds, metadata, null, automaticMaxOutputTokens, reasoningEffort, tokenEncoding);
+                requestTimeoutSeconds, metadata, null, automaticMaxOutputTokens, reasoningEffort,
+                tokenEncoding, imageInputCapabilityOverride);
     }
 
     /** An actual output edit adopts a manual value. Clearing returns ownership to automatic. */
     public ModelProfileDraft withMaxOutput(String value) {
         return new ModelProfileDraft(id, displayName, enabled, protocol, baseUrl, model,
                 credentialRef, contextWindowTokens, value, connectTimeoutSeconds,
-                requestTimeoutSeconds, metadata, automaticContextWindowTokens, null, reasoningEffort, tokenEncoding);
+                requestTimeoutSeconds, metadata, automaticContextWindowTokens, null, reasoningEffort,
+                tokenEncoding, imageInputCapabilityOverride);
     }
 
     public ModelProfileDraft autoFill(BuiltinModelCatalog catalog) {
@@ -189,7 +208,7 @@ public record ModelProfileDraft(
         return new ModelProfileDraft(id, displayName, enabled, protocol, baseUrl, model,
                 credentialRef, text, maxOutputTokens, connectTimeoutSeconds,
                 requestTimeoutSeconds, metadata, value == null ? null : text,
-                automaticMaxOutputTokens, reasoningEffort, tokenEncoding);
+                automaticMaxOutputTokens, reasoningEffort, tokenEncoding, imageInputCapabilityOverride);
     }
 
     /** Metadata refresh can replace an automatic display value, never an explicit player edit. */
@@ -200,21 +219,29 @@ public record ModelProfileDraft(
         return new ModelProfileDraft(id, displayName, enabled, protocol, baseUrl, model,
                 credentialRef, contextWindowTokens, text, connectTimeoutSeconds,
                 requestTimeoutSeconds, metadata, automaticContextWindowTokens,
-                value == null ? null : text, reasoningEffort, tokenEncoding);
+                value == null ? null : text, reasoningEffort, tokenEncoding, imageInputCapabilityOverride);
     }
 
     public ModelProfileDraft withReasoningEffort(ModelReasoningEffort value) {
         return new ModelProfileDraft(id, displayName, enabled, protocol, baseUrl, model,
                 credentialRef, contextWindowTokens, maxOutputTokens, connectTimeoutSeconds,
                 requestTimeoutSeconds, metadata, automaticContextWindowTokens,
-                automaticMaxOutputTokens, value, tokenEncoding);
+                automaticMaxOutputTokens, value, tokenEncoding, imageInputCapabilityOverride);
     }
 
     public ModelProfileDraft withTokenEncoding(ModelTokenEncoding value) {
         return new ModelProfileDraft(id, displayName, enabled, protocol, baseUrl, model,
                 credentialRef, contextWindowTokens, maxOutputTokens, connectTimeoutSeconds,
                 requestTimeoutSeconds, metadata, automaticContextWindowTokens,
-                automaticMaxOutputTokens, reasoningEffort, value);
+                automaticMaxOutputTokens, reasoningEffort, value, imageInputCapabilityOverride);
+    }
+
+    /** Null restores metadata discovery; an explicit value applies only to this profile. */
+    public ModelProfileDraft withImageInputCapabilityOverride(ImageInputCapability value) {
+        return new ModelProfileDraft(id, displayName, enabled, protocol, baseUrl, model,
+                credentialRef, contextWindowTokens, maxOutputTokens, connectTimeoutSeconds,
+                requestTimeoutSeconds, metadata, automaticContextWindowTokens,
+                automaticMaxOutputTokens, reasoningEffort, tokenEncoding, value);
     }
 
     public boolean dirtyComparedTo(ModelProfileDefinition definition) {
@@ -246,7 +273,7 @@ public record ModelProfileDraft(
                     Duration.ofSeconds(Long.parseLong(
                             requestTimeoutSeconds == null ? "" : requestTimeoutSeconds.trim())),
                     metadata,
-                    reasoningEffort, tokenEncoding);
+                    reasoningEffort, tokenEncoding, imageInputCapabilityOverride);
             return new ToolResult.Success<>(definition);
         } catch (RuntimeException failure) {
             return new ToolResult.Failure<>(

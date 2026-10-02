@@ -57,6 +57,31 @@ class PublicCatalogTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "root schema mismatch"):
                 update.validate_catalog(invalid)
 
+    def test_image_input_requires_published_input_array_not_multimodal_flags(self):
+        self.assertEqual("supported", update.image_input_capability(author()))
+        self.assertEqual("unsupported", update.image_input_capability(
+            author(modalities={"input": ["text"], "output": ["text"]}, multimodal=True)))
+        self.assertEqual("unknown", update.image_input_capability({"multimodal": True}))
+        self.assertEqual("unknown", update.image_input_capability({"modalities": {"output": ["text"]}}))
+        self.assertEqual("supported", update.image_input_capability(router(), router=True))
+        self.assertEqual("unsupported", update.image_input_capability(
+            router(architecture={"input_modalities": ["text"]}), router=True))
+        self.assertEqual("unknown", update.image_input_capability({"architecture": {}}, router=True))
+        for malformed in ("image", True, ["text", False], [""]):
+            with self.assertRaisesRegex(ValueError, "Input modalities"):
+                update.image_input_capability({"modalities": {"input": malformed}})
+        direct, gateway = build()["models"]
+        self.assertEqual("supported", direct["imageInputCapability"])
+        self.assertEqual("models-dev", direct["imageInputCapabilitySource"])
+        self.assertEqual("supported", gateway["imageInputCapability"])
+        self.assertEqual("openrouter", gateway["imageInputCapabilitySource"])
+        for changes in ({"imageInputCapability": True}, {"imageInputCapability": "vision"},
+                        {"imageInputCapabilitySource": "missing"}, {"imageInputCapabilitySource": None}):
+            result = build()
+            result["models"][0].update(changes)
+            with self.assertRaises(ValueError):
+                update.validate_catalog(result)
+
     def test_provider_prices_not_collapsed_and_decimal_units(self):
         result = build()
         direct, gateway = result["models"]

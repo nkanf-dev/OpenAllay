@@ -49,6 +49,9 @@ public final class ModelProfilesConfigWriter {
         if (profile.tokenEncoding() != dev.openallay.model.tokenizer.ModelTokenEncoding.AUTO) {
             encoded.addProperty("tokenEncoding", profile.tokenEncoding().encoded());
         }
+        if (profile.imageInputCapabilityOverride() != null) {
+            encoded.addProperty("imageInputCapabilityOverride", profile.imageInputCapabilityOverride().encoded());
+        }
         if (profile.metadata() != null) {
             JsonObject metadata = new JsonObject();
             metadata.addProperty("source", profile.metadata().source());

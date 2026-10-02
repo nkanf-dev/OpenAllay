@@ -6,6 +6,7 @@ import dev.openallay.client.gui.settings.GeneralSettingsProjection;
 import dev.openallay.client.gui.settings.HistorySettingsProjection;
 import dev.openallay.client.gui.settings.ModelProfileDraft;
 import dev.openallay.client.gui.settings.ModelReasoningSettingsProjection;
+import dev.openallay.client.gui.settings.ModelImageSettingsProjection;
 import dev.openallay.client.gui.settings.BuiltinModelSettingsProjection;
 import dev.openallay.client.gui.settings.ModelSettingsProjection;
 import dev.openallay.client.gui.settings.RecipeSettingsProjection;
@@ -572,6 +573,9 @@ public final class OpenAllaySettingsScreen extends Screen {
                     .selected(card.selectionId().equals(selectedModelSelectionId()))
                     .bounds(x, y, buttonWidth, 22)
                     .build());
+            button.setTooltip(Tooltip.create(Component.translatable(
+                    "screen.openallay.settings.models.builtin.image_input."
+                            + card.imageCapability().capability().encoded())));
             button.active = !card.selectionId().equals(selectedModelSelectionId());
             y += 26;
             if (y > layout.list().bottom() - 50) {
@@ -1197,6 +1201,20 @@ public final class OpenAllaySettingsScreen extends Screen {
         effort.setTooltip(Tooltip.create(reasoningExplanation(reasoning)));
         effort.visible = y >= area.y() + 30 && y + 18 <= area.bottom();
         y += 22;
+        ModelImageSettingsProjection imageInput = new ModelImageSettingsProjection(
+                draft.imageInputCapabilityOverride());
+        Button imageChoice = addRenderableWidget(OpenAllayButton.create(
+                        Component.translatable(imageInput.selectedLabelKey()), ignored -> {
+                            captureDraft();
+                            draft = draft.withImageInputCapabilityOverride(
+                                    new ModelImageSettingsProjection(draft.imageInputCapabilityOverride()).next());
+                            confirmation = Confirmation.NONE;
+                            rebuildWidgets();
+                        })
+                .bounds(inputX, y, inputWidth, 18).build());
+        imageChoice.setTooltip(Tooltip.create(Component.translatable(imageInput.explanationKey())));
+        imageChoice.visible = y >= area.y() + 30 && y + 18 <= area.bottom();
+        y += 22;
         connectTimeout = field(
                 inputX,
                 y,
@@ -1366,6 +1384,7 @@ public final class OpenAllaySettingsScreen extends Screen {
             "screen.openallay.settings.models.context_window",
             "screen.openallay.settings.models.max_output",
             "screen.openallay.settings.models.reasoning_effort",
+            "screen.openallay.settings.models.image_input",
             "screen.openallay.settings.models.connect_timeout",
             "screen.openallay.settings.models.request_timeout"
         };
@@ -3179,7 +3198,8 @@ public final class OpenAllaySettingsScreen extends Screen {
         draft = modelEstimateCache.refresh(draft,
                 dev.openallay.model.metadata.BuiltinModelCatalog.bundled(),
                 this::draftContextResolution,
-                this::draftOutputResolution);
+                this::draftOutputResolution,
+                this::draftImageCapabilityResolution);
     }
 
     private dev.openallay.model.metadata.ModelContextResolution draftContextResolution() {
@@ -3203,6 +3223,15 @@ public final class OpenAllaySettingsScreen extends Screen {
         } catch (RuntimeException invalidDraft) {
             return new dev.openallay.model.metadata.ModelOutputResolution(null,
                     dev.openallay.model.metadata.ModelOutputResolution.Origin.REQUIRED);
+        }
+    }
+
+    private dev.openallay.model.metadata.ModelImageCapabilityResolution draftImageCapabilityResolution() {
+        try {
+            return service.modelImageCapability(java.net.URI.create(draft.baseUrl()), draft.model(),
+                    draft.imageInputCapabilityOverride());
+        } catch (RuntimeException invalidDraft) {
+            return dev.openallay.model.metadata.ModelImageCapabilityResolution.unknown();
         }
     }
 
@@ -3262,7 +3291,7 @@ public final class OpenAllaySettingsScreen extends Screen {
                             ? draft.automaticContextWindowTokens() : null,
                     Objects.equals(maxOutput.getValue(), draft.automaticMaxOutputTokens())
                             ? draft.automaticMaxOutputTokens() : null,
-                    draft.reasoningEffort(), draft.tokenEncoding());
+                    draft.reasoningEffort(), draft.tokenEncoding(), draft.imageInputCapabilityOverride());
         }
         if (section == SettingsSection.GENERAL && assistantName != null) {
             assistantNameDraft = assistantName.getValue();

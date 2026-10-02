@@ -4,6 +4,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import dev.openallay.model.CancellationSignal;
+import dev.openallay.model.image.ImageInputCapability;
 import dev.openallay.model.config.SecretValue;
 import dev.openallay.net.HttpTransport;
 import dev.openallay.net.HttpExchangeRequest;
@@ -167,7 +168,26 @@ public final class OpenRouterMetadataResolver implements ModelMetadataResolver {
                 canonical,
                 contextWindow,
                 maxOutput,
-                clock.instant());
+                clock.instant(),
+                imageInputCapability(match));
+    }
+
+    private static ImageInputCapability imageInputCapability(JsonObject model) {
+        JsonElement architecture = model.get("architecture");
+        if (architecture == null || architecture.isJsonNull()) return ImageInputCapability.UNKNOWN;
+        if (!architecture.isJsonObject()) throw new IllegalArgumentException("architecture");
+        JsonElement inputs = architecture.getAsJsonObject().get("input_modalities");
+        if (inputs == null || inputs.isJsonNull()) return ImageInputCapability.UNKNOWN;
+        if (!inputs.isJsonArray()) throw new IllegalArgumentException("input_modalities");
+        java.util.List<String> modalities = new java.util.ArrayList<>();
+        for (JsonElement input : inputs.getAsJsonArray()) {
+            if (!input.isJsonPrimitive() || !input.getAsJsonPrimitive().isString()
+                    || input.getAsString().isBlank()) {
+                throw new IllegalArgumentException("input_modalities");
+            }
+            modalities.add(input.getAsString());
+        }
+        return ImageInputCapability.fromInputModalities(modalities);
     }
 
     private static String requiredString(JsonObject object, String field) {

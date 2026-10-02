@@ -2,6 +2,7 @@ package dev.openallay.client.gui.settings;
 
 import dev.openallay.settings.model.ModelProfileSettingsView;
 import dev.openallay.settings.model.ServerModelSettingsView;
+import dev.openallay.model.metadata.ModelImageCapabilityResolution;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -35,7 +36,7 @@ public record ModelSettingsProjection(List<ModelCard> models) {
                     profile.definition().id().equals(local.config().defaultProfileId()),
                     profile.failure() == null ? null : profile.failure().code(),
                     profile.effectiveContextWindowTokens(),
-                    profile.effectiveMaxOutputTokens()));
+                    profile.effectiveMaxOutputTokens(), profile.imageCapability()));
         }
         if (server.available()) {
             cards.add(new ModelCard(
@@ -52,7 +53,7 @@ public record ModelSettingsProjection(List<ModelCard> models) {
                     false,
                     null,
                     server.contextWindowTokens(),
-                    server.maxOutputTokens()));
+                    server.maxOutputTokens(), server.imageCapability()));
         }
         return new ModelSettingsProjection(cards);
     }
@@ -76,13 +77,25 @@ public record ModelSettingsProjection(List<ModelCard> models) {
             boolean defaultProfile,
             String failureCode,
             Integer contextWindowTokens,
-            Integer maxOutputTokens) {
+            Integer maxOutputTokens,
+            ModelImageCapabilityResolution imageCapability) {
+        public ModelCard(
+                String selectionId, String profileId, String displayName, String model,
+                Origin origin, boolean editable, boolean testable, boolean deletable,
+                boolean credentialPresent, boolean available, boolean defaultProfile,
+                String failureCode, Integer contextWindowTokens, Integer maxOutputTokens) {
+            this(selectionId, profileId, displayName, model, origin, editable, testable, deletable,
+                    credentialPresent, available, defaultProfile, failureCode, contextWindowTokens,
+                    maxOutputTokens, ModelImageCapabilityResolution.unknown());
+        }
+
         public ModelCard {
             Objects.requireNonNull(selectionId, "selectionId");
             Objects.requireNonNull(profileId, "profileId");
             Objects.requireNonNull(displayName, "displayName");
             Objects.requireNonNull(model, "model");
             Objects.requireNonNull(origin, "origin");
+            Objects.requireNonNull(imageCapability, "imageCapability");
             if (displayName.isBlank() || model.isBlank()) {
                 throw new IllegalArgumentException("model identity must not be blank");
             }

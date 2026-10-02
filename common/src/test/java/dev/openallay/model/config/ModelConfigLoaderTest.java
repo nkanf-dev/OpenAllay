@@ -35,6 +35,24 @@ final class ModelConfigLoaderTest {
     }
 
     @Test
+    void serverImageCapabilityComesFromAnExplicitOverrideNotProtocolGuessing() {
+        String base = "{\"protocol\":\"openai_chat\",\"baseUrl\":\"https://example.test/v1\","
+                + "\"model\":\"unknown-test-model\",\"apiKey\":\"synthetic-test-key\","
+                + "\"contextWindowTokens\":128000,\"maxOutputTokens\":1024";
+        ModelConfig unknown = success(loader.load(new StringReader(base + "}"), Map.of())).value();
+        assertEquals(dev.openallay.model.image.ImageInputCapability.UNKNOWN,
+                unknown.imageCapability().capability());
+        ModelConfig supported = success(loader.load(new StringReader(
+                base + ",\"imageInputCapability\":\"supported\"}"), Map.of())).value();
+        assertEquals(dev.openallay.model.image.ImageInputCapability.SUPPORTED,
+                supported.imageCapability().capability());
+        assertEquals(dev.openallay.model.metadata.ModelImageCapabilityResolution.Origin.EXPLICIT,
+                supported.imageCapability().origin());
+        assertEquals("invalid_model_config", failure(loader.load(new StringReader(
+                base + ",\"imageInputCapability\":true}"), Map.of())).code());
+    }
+
+    @Test
     void environmentOverridesFileAndSecretsNeverRender() {
         ToolResult.Success<ModelConfig> result = success(loader.load(
                 new StringReader("""

@@ -81,7 +81,8 @@ final class ModelMetadataCacheTest {
         String entry = """
                 {"source":"openrouter","providerModelId":"vendor/model",
                  "canonicalModelId":"vendor/model","contextWindowTokens":128000,
-                 "maxOutputTokens":null,"capturedAt":"1970-01-01T00:00:00Z"}
+                 "maxOutputTokens":null,"capturedAt":"1970-01-01T00:00:00Z",
+                 "imageInputCapability":"unknown"}
                 """;
         Files.writeString(path, "{\"entries\":[" + entry + "," + entry + "]}");
         ModelMetadataCache duplicate = new ModelMetadataCache(path);
@@ -118,6 +119,7 @@ final class ModelMetadataCacheTest {
                 "vendor/model-canonical",
                 context,
                 32_000,
-                capturedAt);
+                capturedAt,
+                dev.openallay.model.image.ImageInputCapability.SUPPORTED);
     }
 }

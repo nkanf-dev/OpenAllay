@@ -5,6 +5,8 @@ import dev.openallay.model.config.CredentialReference;
 import dev.openallay.model.config.ModelProfileDefinition;
 import dev.openallay.model.config.ModelProfilesConfig;
 import dev.openallay.model.config.ResolvedModelProfile;
+import dev.openallay.model.metadata.ModelImageCapabilityResolution;
+import dev.openallay.model.metadata.BuiltinModelCatalog;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -53,10 +55,16 @@ public record ModelProfileSettingsView(
                     profile.credentialPresent(),
                     profile.effectiveContextWindowTokens(),
                     profile.effectiveMaxOutputTokens(),
-                    profile.failure()));
+                    profile.failure(),
+                    profile.imageCapability()));
         }
         return new ModelProfileSettingsView(
                 config, views, metadataFailure, connectionResult);
+    }
+
+    private static ModelImageCapabilityResolution automaticImageCapability(ModelProfileDefinition definition) {
+        return ModelImageCapabilityResolution.resolve(definition.baseUri(), definition.model(),
+                definition.imageInputCapabilityOverride(), Map.of(), BuiltinModelCatalog.bundled().catalog());
     }
 
     /** Redacted resolution retained by settings; runtime credentials never enter the snapshot owner. */
@@ -66,13 +74,23 @@ public record ModelProfileSettingsView(
             boolean credentialPresent,
             Integer effectiveContextWindowTokens,
             Integer effectiveMaxOutputTokens,
-            GuideFailure failure) {
+            GuideFailure failure,
+            ModelImageCapabilityResolution imageCapability) {
         public Resolution {
             Objects.requireNonNull(definition, "definition");
+            Objects.requireNonNull(imageCapability, "imageCapability");
             if (available == (failure != null)) {
                 throw new IllegalArgumentException(
                         "available model profiles have no failure and unavailable profiles require one");
             }
+        }
+
+        public Resolution(
+                ModelProfileDefinition definition, boolean available, boolean credentialPresent,
+                Integer effectiveContextWindowTokens, Integer effectiveMaxOutputTokens,
+                GuideFailure failure) {
+            this(definition, available, credentialPresent, effectiveContextWindowTokens,
+                    effectiveMaxOutputTokens, failure, automaticImageCapability(definition));
         }
 
         public Resolution(
@@ -111,7 +129,8 @@ public record ModelProfileSettingsView(
                     profile.runtimeConfig() == null
                             ? profile.definition().maxOutputTokens()
                             : Integer.valueOf(profile.runtimeConfig().maxOutputTokens()),
-                    profile.failure());
+                    profile.failure(),
+                    profile.imageCapability());
         }
     }
 
@@ -121,13 +140,23 @@ public record ModelProfileSettingsView(
             boolean credentialPresent,
             Integer effectiveContextWindowTokens,
             Integer effectiveMaxOutputTokens,
-            GuideFailure failure) {
+            GuideFailure failure,
+            ModelImageCapabilityResolution imageCapability) {
         public Profile {
             Objects.requireNonNull(definition, "definition");
+            Objects.requireNonNull(imageCapability, "imageCapability");
             if (available == (failure != null)) {
                 throw new IllegalArgumentException(
                         "available model profiles have no failure and unavailable profiles require one");
             }
+        }
+
+        public Profile(
+                ModelProfileDefinition definition, boolean available, boolean credentialPresent,
+                Integer effectiveContextWindowTokens, Integer effectiveMaxOutputTokens,
+                GuideFailure failure) {
+            this(definition, available, credentialPresent, effectiveContextWindowTokens,
+                    effectiveMaxOutputTokens, failure, automaticImageCapability(definition));
         }
 
         public Profile(

@@ -565,5 +565,19 @@
   "screen.openallay.telemetry.context_unknown": "上下文未知：暂无匹配的本地请求估算。",
   "screen.openallay.telemetry.partial": "部分调用缺少用量或价格，“+”仅表示已知估算金额。",
   "screen.openallay.telemetry.session": "模型调用：%s 次\n会话估算费用：%s",
-  "screen.openallay.telemetry.price_note": "基于公开单价估算，不代表实际账单。缺失用量保持未知，不含未报告的图片用量。"
+  "screen.openallay.telemetry.price_note": "基于公开单价估算，不代表实际账单。缺失用量保持未知，不含未报告的图片用量。",
+  "screen.openallay.settings.models.image_input": "图片输入",
+  "screen.openallay.settings.models.image_input.auto": "自动 · 模型公开元数据",
+  "screen.openallay.settings.models.image_input.supported": "图片输入 · 支持（手动）",
+  "screen.openallay.settings.models.image_input.unsupported": "图片输入 · 不支持（手动）",
+  "screen.openallay.settings.models.image_input.unknown": "图片输入 · 未知（手动）",
+  "screen.openallay.settings.models.image_input.description": "自动使用已发布的输入模态。私有网关别名可手动选择。未知不会允许发送图片请求。此设置不改变端点或协议。",
+  "screen.openallay.settings.models.builtin.image_input.supported": "图片输入：支持",
+  "screen.openallay.settings.models.builtin.image_input.unsupported": "图片输入：不支持",
+  "screen.openallay.settings.models.builtin.image_input.unknown": "图片输入：未知 · 无已发布的输入模态证据",
+  "screen.openallay.settings.models.builtin.image_source.explicit": "图片输入选择：配置档手动覆盖",
+  "screen.openallay.settings.models.builtin.image_source.trusted": "图片输入来源：受信任的提供商元数据",
+  "screen.openallay.settings.models.builtin.image_source.builtin": "图片输入来源：内置模型参考表",
+  "screen.openallay.settings.models.builtin.image_source.unknown": "图片输入来源：不可用",
+  "screen.openallay.settings.models.builtin.image_effective_source": "图片输入证据：%s · 采集于 %s"
 }

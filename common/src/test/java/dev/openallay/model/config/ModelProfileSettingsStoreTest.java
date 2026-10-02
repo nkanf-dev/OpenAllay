@@ -125,6 +125,59 @@ final class ModelProfileSettingsStoreTest {
         assertFalse(published.get());
     }
 
+    @Test
+    void automaticImageSaveLeavesDiscoveryUnpinnedAndReloadOnlyChangesFutureCapability() throws Exception {
+        var automatic = new ModelProfileDefinition("main", "Main", true, ModelProtocol.OPENAI_CHAT,
+                URI.create("https://openrouter.ai/api/v1/"), "vendor/model", "env:MODEL_KEY",
+                100000, 10000, Duration.ofSeconds(30), Duration.ofSeconds(300), null);
+        var config = new ModelProfilesConfig("main", List.of(automatic));
+        var metadata = new ModelMetadata("openrouter", "vendor/model", "canonical", 100000, 10000,
+                java.time.Instant.EPOCH, dev.openallay.model.image.ImageInputCapability.SUPPORTED);
+        Path target = temporary.resolve("images.json");
+        var store = new ModelProfileSettingsStore(target);
+        var saved = success(store.save(config, Map.of("MODEL_KEY", "fixture-key"),
+                Map.of(metadata.key(), metadata), prepared -> () -> {
+                    assertTrue(Files.exists(target));
+                    assertFalse(read(target).contains("imageInputCapabilityOverride"));
+                    assertEquals(dev.openallay.model.image.ImageInputCapability.SUPPORTED,
+                            prepared.profiles().getFirst().imageCapability().capability());
+                })).value();
+        var captured = saved.profiles().getFirst();
+        var replacement = new ModelMetadata("openrouter", "vendor/model", "canonical", 100000, 10000,
+                java.time.Instant.ofEpochSecond(1), dev.openallay.model.image.ImageInputCapability.UNSUPPORTED);
+        var reloaded = (ToolResult.Success<ModelProfilesConfigLoader.Load>) new ModelProfilesConfigLoader()
+                .load(target, Map.of("MODEL_KEY", "fixture-key"), Map.of(replacement.key(), replacement));
+        assertEquals(dev.openallay.model.image.ImageInputCapability.UNSUPPORTED,
+                reloaded.value().profiles().getFirst().imageCapability().capability());
+        assertEquals(dev.openallay.model.image.ImageInputCapability.SUPPORTED,
+                captured.imageCapability().capability());
+        assertEquals(captured.imageCapability(), captured.runtimeConfig().imageCapability());
+    }
+
+    @Test
+    void failedImageOverrideSaveDoesNotPublishPreparedCapabilityOrReplaceSettings() throws Exception {
+        var manual = new ModelProfileDefinition("main", "Main", true, ModelProtocol.OPENAI_CHAT,
+                URI.create("https://gateway.example/v1/"), "private-alias", "env:MODEL_KEY",
+                100000, 10000, Duration.ofSeconds(30), Duration.ofSeconds(300), null,
+                ModelReasoningEffort.AUTO, dev.openallay.model.tokenizer.ModelTokenEncoding.AUTO,
+                dev.openallay.model.image.ImageInputCapability.SUPPORTED);
+        Path target = temporary.resolve("images.json");
+        Files.writeString(target, "old settings\n");
+        AtomicBoolean published = new AtomicBoolean();
+        var store = new ModelProfileSettingsStore(target, (ignoredPath, ignoredContents) -> {
+            throw new SettingsWriteException();
+        });
+        var result = store.save(new ModelProfilesConfig("main", List.of(manual)),
+                Map.of("MODEL_KEY", "fixture-key"), Map.of(), prepared -> {
+                    assertEquals(dev.openallay.model.image.ImageInputCapability.SUPPORTED,
+                            prepared.profiles().getFirst().imageCapability().capability());
+                    return () -> published.set(true);
+                });
+        assertEquals("settings_write_failed", failure(result).code());
+        assertFalse(published.get());
+        assertEquals("old settings\n", read(target));
+    }
+
     private static String read(Path path) {
         try {
             return Files.readString(path);

@@ -4,6 +4,7 @@ import dev.openallay.model.metadata.BuiltinModelCatalog;
 import dev.openallay.model.metadata.BuiltinModelMatcher;
 import dev.openallay.model.metadata.ModelContextResolution;
 import dev.openallay.model.metadata.ModelOutputResolution;
+import dev.openallay.model.metadata.ModelImageCapabilityResolution;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
@@ -17,6 +18,7 @@ public record BuiltinModelSettingsProjection(List<Line> lines) {
         private ModelProfileDraft draft;
         private ModelContextResolution resolution;
         private ModelOutputResolution outputResolution;
+        private ModelImageCapabilityResolution imageResolution;
         private BuiltinModelCatalog.Load loaded;
         private BuiltinModelSettingsProjection projection = new BuiltinModelSettingsProjection(List.of());
 
@@ -28,17 +30,28 @@ public record BuiltinModelSettingsProjection(List<Line> lines) {
         public ModelProfileDraft refresh(ModelProfileDraft candidate, BuiltinModelCatalog.Load catalog,
                 java.util.function.Supplier<ModelContextResolution> resolve,
                 java.util.function.Supplier<ModelOutputResolution> resolveOutput) {
+            return refresh(candidate, catalog, resolve, resolveOutput,
+                    () -> imageResolution(candidate, catalog));
+        }
+
+        public ModelProfileDraft refresh(ModelProfileDraft candidate, BuiltinModelCatalog.Load catalog,
+                java.util.function.Supplier<ModelContextResolution> resolve,
+                java.util.function.Supplier<ModelOutputResolution> resolveOutput,
+                java.util.function.Supplier<ModelImageCapabilityResolution> resolveImage) {
             ModelContextResolution effective = resolve.get();
             ModelOutputResolution effectiveOutput = resolveOutput.get();
+            ModelImageCapabilityResolution effectiveImage = resolveImage.get();
             ModelProfileDraft updated = candidate.withAutomaticContext(effective.contextWindowTokens())
                     .withAutomaticOutput(effectiveOutput.maxOutputTokens());
             if (!updated.equals(draft) || !effective.equals(resolution)
-                    || !effectiveOutput.equals(outputResolution) || catalog != loaded) {
+                    || !effectiveOutput.equals(outputResolution)
+                    || !effectiveImage.equals(imageResolution) || catalog != loaded) {
                 draft = updated;
                 resolution = effective;
                 outputResolution = effectiveOutput;
+                imageResolution = effectiveImage;
                 loaded = catalog;
-                projection = from(updated, catalog, effective, effectiveOutput);
+                projection = from(updated, catalog, effective, effectiveOutput, effectiveImage);
             }
             return updated;
         }
@@ -80,6 +93,12 @@ public record BuiltinModelSettingsProjection(List<Line> lines) {
                 java.util.Map.of(), loaded.catalog());
     }
 
+    private static ModelImageCapabilityResolution imageResolution(
+            ModelProfileDraft draft, BuiltinModelCatalog.Load loaded) {
+        return ModelImageCapabilityResolution.resolve(null, draft.model(),
+                draft.imageInputCapabilityOverride(), java.util.Map.of(), loaded.catalog());
+    }
+
     private static Integer parseInteger(String text) {
         try { return Integer.valueOf(text.trim()); }
         catch (NumberFormatException invalid) { return null; }
@@ -93,7 +112,24 @@ public record BuiltinModelSettingsProjection(List<Line> lines) {
     public static BuiltinModelSettingsProjection from(ModelProfileDraft draft,
             BuiltinModelCatalog.Load loaded, ModelContextResolution resolution,
             ModelOutputResolution outputResolution) {
+        return from(draft, loaded, resolution, outputResolution, imageResolution(draft, loaded));
+    }
+
+    public static BuiltinModelSettingsProjection from(ModelProfileDraft draft,
+            BuiltinModelCatalog.Load loaded, ModelContextResolution resolution,
+            ModelOutputResolution outputResolution, ModelImageCapabilityResolution imageResolution) {
         List<Line> lines = new ArrayList<>();
+        lines.add(Line.of("image_input." + imageResolution.capability().encoded()));
+        lines.add(Line.of("image_source." + imageResolution.origin().name()
+                .toLowerCase(java.util.Locale.ROOT)));
+        if (imageResolution.source() != null && imageResolution.capturedAt() != null) {
+            var publishedSource = loaded.catalog().sources().get(imageResolution.source());
+            String sourceLabel = publishedSource == null
+                    ? imageResolution.source().equals("openrouter") ? "OpenRouter" : imageResolution.source()
+                    : publishedSource.label();
+            lines.add(Line.of("image_effective_source", sourceLabel, imageResolution.capturedAt().toString()));
+            if (publishedSource != null) lines.add(Line.of("source_url", publishedSource.url().toString()));
+        }
         lines.add(Line.of("context_source." + resolution.origin().name().toLowerCase(java.util.Locale.ROOT)));
         if (resolution.origin() == ModelContextResolution.Origin.TRUSTED
                 && resolution.source() != null && resolution.capturedAt() != null) {
