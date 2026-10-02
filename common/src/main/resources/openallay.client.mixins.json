@@ -1,0 +1,12 @@
+{
+  "required": true,
+  "package": "dev.openallay.client.gui.mixin",
+  "compatibilityLevel": "JAVA_25",
+  "client": [
+    "MultiLineEditBoxAccessor",
+    "MultilineTextFieldAccessor"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

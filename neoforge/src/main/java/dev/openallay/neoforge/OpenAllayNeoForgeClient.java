@@ -16,8 +16,7 @@ import dev.openallay.guide.history.SqliteGuideHistoryStore;
 import dev.openallay.guide.e2e.GuideClientE2EConfig;
 import dev.openallay.guide.e2e.GuideClientE2EController;
 import dev.openallay.client.gui.OpenAllayKeyMappings;
-import dev.openallay.client.gui.OpenAllayScreen;
-import dev.openallay.client.gui.OpenAllaySettingsScreen;
+import dev.openallay.client.gui.GuideClientUiCoordinator;
 import dev.openallay.guide.ui.GuideDisplayRuntime;
 import dev.openallay.settings.ClientSettingsHistoryBinding;
 import dev.openallay.tool.ToolResult;
@@ -176,17 +175,23 @@ public final class OpenAllayNeoForgeClient {
                 new MinecraftGuideHistoryScope(client),
                 imageStore);
         historySettings.bind(services);
+        GuideClientUiCoordinator coordinator = new GuideClientUiCoordinator(client, services,
+                recipeClient, display, settings == null ? null : settings.settings(),
+                configDirectory, dispatcher, clock);
         bridge.onDisconnect(() -> {
+            coordinator.disconnect();
             if (settings != null) settings.settings().clearServerModel();
             services.disconnect();
         });
-        NeoForge.EVENT_BUS.addListener((ClientStoppingEvent event) ->
-                services.shutdown()
+        NeoForge.EVENT_BUS.addListener((ClientStoppingEvent event) -> {
+            coordinator.close();
+            services.shutdown()
                         .handle((ignored, failure) -> null)
                         .thenCompose(ignored -> history.closeAsync())
                         .thenCompose(ignored -> settings == null
                                 ? java.util.concurrent.CompletableFuture.completedFuture(null)
-                                : settings.closeAsync()));
+                                : settings.closeAsync());
+        });
         bridge.onCapabilitiesChanged(() -> {
             if (settings != null) {
                 settings.settings().replaceServerModel(bridge.capabilities());
@@ -197,20 +202,7 @@ public final class OpenAllayNeoForgeClient {
         if (settings != null) {
             settings.settings().replaceServerModel(bridge.capabilities());
         }
-        java.util.function.Consumer<dev.openallay.guide.GuideService> showGuide =
-                new java.util.function.Consumer<>() {
-                    @Override
-                    public void accept(dev.openallay.guide.GuideService service) {
-                        Runnable openSettings = settings == null ? null : () ->
-                                client.gui.setScreen(new OpenAllaySettingsScreen(
-                                        settings.settings(), () -> accept(service)));
-                        client.gui.setScreen(new OpenAllayScreen(
-                                service,
-                                recipeClient,
-                                display,
-                                openSettings));
-                    }
-                };
+        java.util.function.Consumer<dev.openallay.guide.GuideService> showGuide = coordinator::openGuide;
         dev.openallay.guide.GuideScreenOpener screens = service -> {
             showGuide.accept(service);
             return new ToolResult.Success<>(true);
@@ -222,8 +214,12 @@ public final class OpenAllayNeoForgeClient {
                 screens));
         NeoForge.EVENT_BUS.addListener((ClientTickEvent.Post event) -> {
             while (OpenAllayKeyMappings.OPEN_GUIDE.consumeClick()) {
-                if (client.player != null) screens.open(services.forActor(client.player.getUUID()));
+                if (client.player != null && client.level != null
+                        && client.gui.screen() == null && client.gui.overlay() == null) {
+                    screens.open(services.forActor(client.player.getUUID()));
+                }
             }
+            coordinator.tick();
         });
         GuideClientE2EConfig.from(System.getProperties()).ifPresent(config -> {
             String modVersion = ModList.get().getModContainerById("openallay")

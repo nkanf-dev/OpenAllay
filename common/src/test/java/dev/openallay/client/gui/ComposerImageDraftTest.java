@@ -39,24 +39,23 @@ final class ComposerImageDraftTest {
     }
 
     @Test
-    void sessionSwitchBeforeEncodingPreventsImportAndLatePasting() {
+    void sessionSwitchBeforeEncodingKeepsPasteInCapturedSession() {
         var fixture = new Fixture(); fixture.draft.attach("one"); fixture.draft.paste();
         fixture.draft.selectSession("two"); fixture.work.runAll(); fixture.client.runAll();
-        assertTrue(fixture.draft.empty()); assertTrue(fixture.imports.isEmpty());
-        fixture.draft.selectSession("one"); assertTrue(fixture.draft.empty());
+        assertTrue(fixture.draft.empty()); assertEquals(1, fixture.imports.size());
+        fixture.imports.getFirst().complete(new ToolResult.Success<>(IMAGE)); fixture.client.runAll();
+        assertTrue(fixture.draft.empty());
+        fixture.draft.selectSession("one"); assertEquals(List.of(IMAGE), fixture.draft.references());
     }
 
     @Test
-    void closeOrAwayAndBackInvalidateInFlightImportCallbacks() {
-        for (boolean close : new boolean[] {true, false}) {
-            var fixture = new Fixture(); fixture.draft.attach("one"); fixture.draft.paste();
-            fixture.work.runAll(); fixture.client.runAll();
-            if (close) { fixture.draft.detach(); fixture.draft.attach("one"); }
-            else { fixture.draft.observeSession("two"); fixture.draft.observeSession("one"); }
-            fixture.imports.getFirst().complete(new ToolResult.Success<>(IMAGE)); fixture.client.runAll();
-            assertTrue(fixture.draft.empty());
-            assertEquals(List.of(IMAGE), fixture.discardedImports);
-        }
+    void realOwnerDetachInvalidatesInFlightImportCallbacks() {
+        var fixture = new Fixture(); fixture.draft.attach("one"); fixture.draft.paste();
+        fixture.work.runAll(); fixture.client.runAll();
+        fixture.draft.detach(); fixture.draft.attach("one");
+        fixture.imports.getFirst().complete(new ToolResult.Success<>(IMAGE)); fixture.client.runAll();
+        assertTrue(fixture.draft.empty());
+        assertEquals(List.of(IMAGE), fixture.discardedImports);
     }
 
     @Test
@@ -69,7 +68,7 @@ final class ComposerImageDraftTest {
         assertTrue(fixture.draft.accepted(submitted));
         assertEquals(1, fixture.draft.references().size());
         fixture.draft.selectSession("two");
-        assertFalse(fixture.draft.accepted(submitted));
+        assertTrue(fixture.draft.accepted(submitted));
         fixture.draft.selectSession("one"); assertEquals(1, fixture.draft.references().size());
     }
 

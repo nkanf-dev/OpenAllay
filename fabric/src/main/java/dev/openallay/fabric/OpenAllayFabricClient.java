@@ -17,8 +17,7 @@ import dev.openallay.guide.history.SqliteGuideHistoryStore;
 import dev.openallay.guide.e2e.GuideClientE2EConfig;
 import dev.openallay.guide.e2e.GuideClientE2EController;
 import dev.openallay.client.gui.OpenAllayKeyMappings;
-import dev.openallay.client.gui.OpenAllayScreen;
-import dev.openallay.client.gui.OpenAllaySettingsScreen;
+import dev.openallay.client.gui.GuideClientUiCoordinator;
 import dev.openallay.guide.ui.GuideDisplayRuntime;
 import dev.openallay.settings.ClientSettingsHistoryBinding;
 import dev.openallay.tool.ToolResult;
@@ -158,17 +157,23 @@ public final class OpenAllayFabricClient implements ClientModInitializer {
                 new MinecraftGuideHistoryScope(Minecraft.getInstance()),
                 imageStore);
         historySettings.bind(services);
+        GuideClientUiCoordinator ui = new GuideClientUiCoordinator(Minecraft.getInstance(), services,
+                recipeClient, display, settings == null ? null : settings.settings(),
+                configDirectory, dispatcher, clock);
         bridge.onDisconnect(() -> {
+            ui.disconnect();
             if (settings != null) settings.settings().clearServerModel();
             services.disconnect();
         });
-        ClientLifecycleEvents.CLIENT_STOPPING.register(client ->
-                services.shutdown()
+        ClientLifecycleEvents.CLIENT_STOPPING.register(client -> {
+            ui.close();
+            services.shutdown()
                         .handle((ignored, failure) -> null)
                         .thenCompose(ignored -> history.closeAsync())
                         .thenCompose(ignored -> settings == null
                                 ? java.util.concurrent.CompletableFuture.completedFuture(null)
-                                : settings.closeAsync()));
+                                : settings.closeAsync());
+        });
         bridge.onCapabilitiesChanged(() -> {
             if (settings != null) {
                 settings.settings().replaceServerModel(bridge.capabilities());
@@ -179,20 +184,7 @@ public final class OpenAllayFabricClient implements ClientModInitializer {
         if (settings != null) {
             settings.settings().replaceServerModel(bridge.capabilities());
         }
-        java.util.function.Consumer<dev.openallay.guide.GuideService> showGuide =
-                new java.util.function.Consumer<>() {
-                    @Override
-                    public void accept(dev.openallay.guide.GuideService service) {
-                        Runnable openSettings = settings == null ? null : () ->
-                                Minecraft.getInstance().gui.setScreen(new OpenAllaySettingsScreen(
-                                        settings.settings(), () -> accept(service)));
-                        Minecraft.getInstance().gui.setScreen(new OpenAllayScreen(
-                                service,
-                                recipeClient,
-                                display,
-                                openSettings));
-                    }
-                };
+        java.util.function.Consumer<dev.openallay.guide.GuideService> showGuide = ui::openGuide;
         dev.openallay.guide.GuideScreenOpener screens = service -> {
             showGuide.accept(service);
             return new ToolResult.Success<>(true);
@@ -202,11 +194,15 @@ public final class OpenAllayFabricClient implements ClientModInitializer {
                 services,
                 contexts,
                 screens));
-        var openGuide = KeyMappingHelper.registerKeyMapping(OpenAllayKeyMappings.OPEN_GUIDE);
+        KeyMappingHelper.registerKeyMapping(OpenAllayKeyMappings.OPEN_GUIDE);
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            while (openGuide.consumeClick()) {
-                if (client.player != null) screens.open(services.forActor(client.player.getUUID()));
+            while (OpenAllayKeyMappings.OPEN_GUIDE.consumeClick()) {
+                if (client.player != null && client.level != null
+                        && client.gui.screen() == null && client.gui.overlay() == null) {
+                    screens.open(services.forActor(client.player.getUUID()));
+                }
             }
+            ui.tick();
         });
         GuideClientE2EConfig.from(System.getProperties()).ifPresent(config -> {
             String modVersion = FabricLoader.getInstance().getModContainer("openallay")

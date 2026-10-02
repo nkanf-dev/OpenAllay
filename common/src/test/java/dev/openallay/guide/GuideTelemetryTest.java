@@ -46,6 +46,7 @@ final class GuideTelemetryTest {
         assertEquals(1, service.telemetry().sessionUsage().actualCalls());
         assertEquals(500, service.telemetry().sessionUsage().inputTokens());
         assertEquals(40, service.telemetry().sessionUsage().outputTokens());
+        assertEquals(50, service.telemetry().sessionUsage().cacheReadTokens());
         assertEquals(dev.openallay.model.tokenizer.TokenizerMetadata.ImageAccounting.UNKNOWN,
                 service.telemetry().context().imageAccounting(),
                 "provider billing facts do not retroactively invent an offline image estimate");
@@ -66,9 +67,13 @@ final class GuideTelemetryTest {
         assertTrue(refresh.contains("context.imageAccounting()"));
         assertTrue(refresh.contains("screen.openallay.telemetry.text_estimate"));
         assertTrue(refresh.contains("screen.openallay.telemetry.image_unknown"));
-        assertTrue(render.contains("telemetry.context().imageAccounting()"));
-        assertTrue(render.contains("!= dev.openallay.model.tokenizer.TokenizerMetadata.ImageAccounting.UNKNOWN"));
-        assertTrue(render.indexOf("ImageAccounting.UNKNOWN") < render.indexOf("double ratio"));
+        // The current footer is a compact numeric strip. It renders the already-projected text-only
+        // label and never draws a total occupancy bar, for known or unknown image accounting.
+        assertTrue(render.contains("graphics.text(font, telemetryCompact"));
+        assertTrue(refresh.contains("telemetryCompact = Component.translatable(\"screen.openallay.telemetry.compact\", occupancy, cache, cost)"));
+        assertFalse(render.contains("double ratio"));
+        assertFalse(render.contains("estimatedTokens()"));
+        assertFalse(render.contains("inputTokens()"));
         for (String locale : List.of("en_us", "zh_cn")) {
             var labels = com.google.gson.JsonParser.parseString(java.nio.file.Files.readString(root.resolve(
                     "common/src/main/resources/assets/openallay/lang/" + locale + ".json"))).getAsJsonObject();

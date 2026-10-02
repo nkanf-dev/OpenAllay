@@ -3,6 +3,7 @@ package dev.openallay.guide.ui;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.JsonParser;
@@ -42,7 +43,7 @@ final class GuideToolDetailPresenterTest {
     }
 
     @Test
-    void debugResultDoesNotDuplicateCanonicalSourceMetadataOrAlterUnknownToolFields() {
+    void debugResultRetainsRawSourcesAlongsideCanonicalSourceMetadata() {
         String json = """
                 {"status":"success","value":{"resultType":"number","cardinality":1,
                   "viewKind":"SCALAR","preview":42,"complete":true,
@@ -58,7 +59,8 @@ final class GuideToolDetailPresenterTest {
         GuideToolActivity javascript = new GuideToolActivity(original.invocationId(), 0, original.toolId(),
                 original.status(), original.normalized(), original.presentationMessages(), List.of(source));
         var detail = GuideToolDetailPresenter.project(javascript, true);
-        assertFalse(detail.debug().orElseThrow().normalized().getAsJsonObject("value").has("sources"));
+        assertEquals(javascript.normalized(), detail.debug().orElseThrow().normalized());
+        assertEquals(List.of(source), javascript.sources());
         assertEquals(42, detail.debug().orElseThrow().normalized().getAsJsonObject("value").get("preview").getAsInt());
         assertTrue(javascript.normalized().getAsJsonObject("value").has("sources"));
         assertTrue(GuideToolDetailPresenter.project(original, true).debug().orElseThrow()
@@ -74,7 +76,7 @@ final class GuideToolDetailPresenterTest {
                   "source":"return mc.items.filter(item => item.id.includes('sword'));",
                   "title":"比较武器",
                   "description":"比较观察到的攻击伤害",
-                  "handles":[]
+                  "handles":["r_input"]
                 }
                 """).getAsJsonObject();
         GuideToolActivity activity = new GuideToolActivity(
@@ -109,7 +111,13 @@ final class GuideToolDetailPresenterTest {
                 preview.rows().getFirst().get(preview.columns().indexOf("itemId")));
         assertEquals("比较武器", view.intent().title());
         assertEquals("比较观察到的攻击伤害", view.intent().description());
-        assertEquals(List.of("openallay:crafting"), view.invocation().modules());
+        assertEquals(dev.openallay.guide.GuideToolInvocationView.none(), view.invocation());
+        assertFalse(preview.complete());
+        assertEquals(7, preview.omittedRows());
+        assertEquals(0, preview.omittedFields());
+        assertTrue(view.debug().isEmpty());
+        assertFalse(view.toString().contains("r_input"));
+        assertFalse(view.toString().contains("openallay:crafting"));
         assertFalse(view.toString().contains("r_secret"));
         assertFalse(view.toString().contains("internal projection"));
         assertFalse(view.toString().contains("return mc.items"));
@@ -118,6 +126,14 @@ final class GuideToolDetailPresenterTest {
                 view.narration().getFirst().key());
 
         GuideToolDetailView debug = GuideToolDetailPresenter.project(activity, true);
+        assertEquals(activity.invocation(), debug.invocation());
+        assertEquals(List.of("r_input"), debug.invocation().handles());
+        assertEquals(List.of("openallay:crafting"), debug.invocation().modules());
+        assertEquals(view.intent(), debug.intent());
+        assertEquals(view.cards(), debug.cards());
+        assertEquals(view.narration(), debug.narration());
+        assertEquals(activity.invocationArguments(), debug.debug().orElseThrow().invocationArguments());
+        assertEquals(activity.normalized(), debug.debug().orElseThrow().normalized());
         assertEquals(
                 "return mc.items.filter(item => item.id.includes('sword'));",
                 debug.debug().orElseThrow().invocationArguments().get("source").getAsString());
@@ -141,7 +157,12 @@ final class GuideToolDetailPresenterTest {
                   }],
                   "complete":true,"omittedRows":0,"omittedFields":0}}
                 """.formatted("0".repeat(64))), false);
-        assertInstanceOf(GuideDetailCard.Recipe.class, recipe.cards().getFirst());
+        GuideDetailCard.Recipe recipeCard = assertInstanceOf(
+                GuideDetailCard.Recipe.class, recipe.cards().getFirst());
+        assertEquals("minecraft:iron_block", recipeCard.recipe().id());
+        assertEquals("minecraft:recipe_manager", recipeCard.recipe().reference().sourceId());
+        assertEquals(List.of(new GuideRecipeCard.Output("minecraft:iron_block", 1, "Block of Iron")),
+                recipeCard.recipe().outputs());
         assertEquals(List.of(GuideToolMessage.of(GuideToolMessage.Key.ANALYSIS_COMPLETE, "1")),
                 recipe.narration());
         assertEquals(GuideToolStatus.SUCCEEDED, recipe.status());
@@ -152,8 +173,8 @@ final class GuideToolDetailPresenterTest {
                   "resultType":"array","cardinality":2,
                   "fields":["id","displayName"],"viewKind":"ITEM",
                   "preview":[
-                    {"id":"minecraft:apple","displayName":"Apple","kind":"item"},
-                    {"id":"minecraft:bread","displayName":"Bread","kind":"item"}],
+                    {"id":"minecraft:apple","displayName":"Apple","kind":"item","count":64},
+                    {"id":"minecraft:bread","displayName":"Bread","kind":"item","count":2}],
                   "complete":true,"omittedRows":0,"omittedFields":0}}
                 """), false);
         GuideDetailCard.ItemGrid grid = assertInstanceOf(
@@ -161,6 +182,63 @@ final class GuideToolDetailPresenterTest {
         assertEquals(
                 List.of("minecraft:apple", "minecraft:bread"),
                 grid.items().stream().map(GuideItemView::itemId).toList());
+        assertEquals(List.of(64L, 2L), grid.items().stream().map(GuideItemView::count).toList());
+    }
+
+    @Test
+    void restoredInvocationFactsRemainAvailableOnlyInTechnicalProjection() {
+        var invocation = new dev.openallay.guide.GuideToolInvocationView(
+                List.of("r_restored"), List.of("addon:restored"), false);
+        var original = activity("openallay:run_javascript", """
+                {"status":"success","value":{"resultType":"number","cardinality":1,
+                  "viewKind":"SCALAR","preview":42,"complete":true}}
+                """);
+        var restored = new GuideToolActivity(original.invocationId(), original.index(), original.toolId(),
+                original.status(), null, invocation, original.normalized(),
+                original.presentationMessages(), original.sources());
+        GuideToolDetailView normal = GuideToolDetailPresenter.project(restored, false);
+        GuideToolDetailView technical = GuideToolDetailPresenter.project(restored, true);
+
+        assertTrue(normal.invocation().empty());
+        assertFalse(normal.invocation().liveArgumentsAvailable());
+        assertTrue(normal.debug().isEmpty());
+        assertEquals(invocation, technical.invocation());
+        assertNull(technical.debug().orElseThrow().invocationArguments());
+        assertEquals(normal.cards(), technical.cards());
+        assertEquals(normal.narration(), technical.narration());
+    }
+
+    @Test
+    void technicalFieldNamesInPlayerResultsAreNotScannedOrRemoved() {
+        GuideToolDetailView view = GuideToolDetailPresenter.project(activity("openallay:run_javascript", """
+                {"status":"success","value":{"resultType":"object","cardinality":2,
+                  "viewKind":"KEY_VALUE","complete":true,
+                  "preview":{"handles":"player-selected label","modules":"comparison result"}}}
+                """), false);
+        GuideDetailCard.KeyValue card = assertInstanceOf(GuideDetailCard.KeyValue.class, view.cards().getFirst());
+        assertEquals("player-selected label", value(card, "handles"));
+        assertEquals("comparison result", value(card, "modules"));
+    }
+
+    @Test
+    void fullRawValueSurvivesBoundedPlayerPreviewWithoutChangingOriginal() {
+        String fullValue = "player result ".repeat(40) + "🧱";
+        var normalized = JsonParser.parseString("""
+                {"status":"success","value":{"resultType":"string","cardinality":1,
+                  "viewKind":"SCALAR","complete":true}}
+                """).getAsJsonObject();
+        normalized.getAsJsonObject("value").addProperty("preview", fullValue);
+        var activity = new GuideToolActivity("long-result", 0, "openallay:run_javascript",
+                GuideToolStatus.SUCCEEDED, normalized, List.of(), List.of());
+        GuideToolDetailView normal = GuideToolDetailPresenter.project(activity, false);
+        GuideToolDetailView technical = GuideToolDetailPresenter.project(activity, true);
+
+        GuideDetailCard.Text preview = assertInstanceOf(GuideDetailCard.Text.class, normal.cards().getFirst());
+        assertTrue(preview.lines().getFirst().length() < fullValue.length());
+        assertEquals(normal.cards(), technical.cards());
+        assertEquals(fullValue, technical.debug().orElseThrow().normalized()
+                .getAsJsonObject("value").get("preview").getAsString());
+        assertEquals(normalized, activity.normalized());
     }
 
     @Test

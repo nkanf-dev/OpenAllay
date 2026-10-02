@@ -618,5 +618,16 @@
   "openallay.guide.slash.compact_failed": "Could not compact context. Please try again later.",
   "openallay.guide.slash.unknown_slash_command": "Unknown command. Use /compact to compact context, or // to send a literal '/'.",
   "openallay.guide.slash.invalid_slash_arguments": "Use /compact without arguments.",
-  "openallay.guide.slash.attachments_retained": "This command does not send images. Images remain in your draft."
+  "openallay.guide.slash.attachments_retained": "This command does not send images. Images remain in your draft.",
+  "screen.openallay.action.more": "More actions",
+  "screen.openallay.session.new": "New session",
+  "screen.openallay.session.delete": "Delete session…",
+  "screen.openallay.scroll.bottom": "Back to bottom ↓",
+  "screen.openallay.tools.summary": "▶ Tools · %s · failed %s",
+  "screen.openallay.tools.expand": "Expand Tools for this task",
+  "screen.openallay.tools.collapse": "Collapse Tools",
+  "screen.openallay.choice.unavailable": "Choice %s is currently unavailable.",
+  "screen.openallay.model.next_short": "Next ▾ %s",
+  "screen.openallay.pending.edit_invalid": "The queued message is no longer available. Keep this draft and choose Use as new.",
+  "screen.openallay.pending.use_as_new": "Use as new"
 }

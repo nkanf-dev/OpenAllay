@@ -26,7 +26,9 @@ public final class ComposerImageDraft {
     private final Consumer<ImageReference> discardedImport;
     private final Map<String, List<Attachment>> drafts = new LinkedHashMap<>();
     private String session;
-    private long generation;
+    private final Map<String, Long> generations = new LinkedHashMap<>();
+    private long lifetime;
+    private String changedSession;
     private boolean attached;
 
     public ComposerImageDraft(ImageClipboard clipboard, Executor worker, ClientEventDispatcher client,
@@ -52,28 +54,33 @@ public final class ComposerImageDraft {
 
     public void detach() {
         attached = false;
-        invalidatePending();
+        lifetime++;
+        drafts.values().forEach(values -> values.removeIf(Attachment::pending));
     }
 
     public void observeSession(String session) {
-        if (attached && !Objects.equals(this.session, session)) invalidatePending();
+        // Selection is a view concern. A captured paste still belongs to its original session.
     }
 
     public void selectSession(String session) {
         Objects.requireNonNull(session, "session");
         if (session.equals(this.session)) return;
-        invalidatePending();
         this.session = session;
         drafts.computeIfAbsent(session, ignored -> new ArrayList<>());
+        generations.putIfAbsent(session, 0L);
     }
 
     private void invalidatePending() {
-        generation++;
+        if (session != null) generations.merge(session, 1L, Long::sum);
         if (session != null) drafts.getOrDefault(session, List.of()).removeIf(Attachment::pending);
     }
 
     public List<Attachment> attachments() {
-        return session == null ? List.of() : List.copyOf(drafts.get(session));
+        return attachments(session);
+    }
+
+    public List<Attachment> attachments(String session) {
+        return session == null ? List.of() : List.copyOf(drafts.getOrDefault(session, List.of()));
     }
 
     public boolean pending() { return attachments().stream().anyMatch(Attachment::pending); }
@@ -84,10 +91,10 @@ public final class ComposerImageDraft {
 
     public void paste() {
         if (!attached || session == null) return;
-        Scope scope = new Scope(session, generation);
+        Scope scope = new Scope(session, generation(), lifetime);
         UUID id = UUID.randomUUID();
         drafts.get(session).add(new Attachment(id, null, null));
-        changed.accept(Notice.PROCESSING);
+        notifyChanged(session, Notice.PROCESSING);
         ImageClipboard captured;
         try {
             captured = clipboard.capture();
@@ -106,8 +113,8 @@ public final class ComposerImageDraft {
                 ClipboardImageEncoder.Encoded image = ClipboardImageEncoder.encode(read.image());
                 client.execute(() -> {
                     if (!current(scope, id)) return;
-                    replace(id, new Attachment(id, null, image.preview()));
-                    changed.accept(Notice.PROCESSING);
+                    replace(scope.session, id, new Attachment(id, null, image.preview()));
+                    notifyChanged(scope.session, Notice.PROCESSING);
                     // The importer owns actor-scoped asynchronous storage, never the render loop.
                     try {
                         importer.apply(image.png()).whenComplete((result, failure) -> client.execute(() -> {
@@ -121,8 +128,8 @@ public final class ComposerImageDraft {
                                 fail(scope, id, Notice.IMPORT_FAILED);
                                 return;
                             }
-                            replace(id, new Attachment(id, imported.value(), image.preview()));
-                            changed.accept(Notice.READY);
+                            replace(scope.session, id, new Attachment(id, imported.value(), image.preview()));
+                            notifyChanged(scope.session, Notice.READY);
                         }));
                     } catch (RuntimeException failed) {
                         fail(scope, id, Notice.IMPORT_FAILED);
@@ -135,17 +142,18 @@ public final class ComposerImageDraft {
     }
 
     private boolean current(Scope scope, UUID id) {
-        return attached && generation == scope.generation && Objects.equals(session, scope.session)
-                && drafts.get(session).stream().anyMatch(value -> value.id.equals(id));
+        return attached && lifetime == scope.lifetime
+                && generations.getOrDefault(scope.session, -1L) == scope.generation
+                && drafts.getOrDefault(scope.session, List.of()).stream().anyMatch(value -> value.id.equals(id));
     }
 
     private void fail(Scope scope, UUID id, Notice notice) {
         if (!current(scope, id)) return;
-        drafts.get(session).removeIf(value -> value.id.equals(id));
-        changed.accept(notice);
+        drafts.get(scope.session).removeIf(value -> value.id.equals(id));
+        notifyChanged(scope.session, notice);
     }
 
-    private void replace(UUID id, Attachment replacement) {
+    private void replace(String session, UUID id, Attachment replacement) {
         List<Attachment> images = drafts.get(session);
         for (int index = 0; index < images.size(); index++) {
             if (images.get(index).id.equals(id)) { images.set(index, replacement); return; }
@@ -153,7 +161,7 @@ public final class ComposerImageDraft {
     }
 
     public void remove(UUID id) {
-        if (session != null && drafts.get(session).removeIf(value -> value.id.equals(id))) changed.accept(Notice.NONE);
+        if (session != null && drafts.get(session).removeIf(value -> value.id.equals(id))) notifyChanged(session, Notice.NONE);
     }
 
     /** Editing a queued message replaces this draft, invalidating every earlier paste completion. */
@@ -162,23 +170,23 @@ public final class ComposerImageDraft {
         List<Attachment> values = drafts.get(session);
         values.clear();
         references.forEach(reference -> values.add(new Attachment(UUID.randomUUID(), reference, null)));
-        changed.accept(Notice.NONE);
+        notifyChanged(session, Notice.NONE);
     }
 
     public void preview(UUID id, ClipboardImageEncoder.Preview preview) {
         attachments().stream().filter(value -> value.id.equals(id) && value.reference != null)
-                .findFirst().ifPresent(value -> replace(id, new Attachment(id, value.reference, preview)));
+                .findFirst().ifPresent(value -> replace(session, id, new Attachment(id, value.reference, preview)));
     }
 
     public Submission captureSubmission() {
-        return new Submission(session, generation, attachments().stream().map(Attachment::id).toList());
+        return new Submission(session, generation(), attachments().stream().map(Attachment::id).toList());
     }
 
     /** Only an accepted submission can remove its captured images; later additions survive. */
     public boolean accepted(Submission submission) {
-        if (!attached || generation != submission.generation || !Objects.equals(session, submission.session)) return false;
-        drafts.get(session).removeIf(value -> submission.ids.contains(value.id));
-        changed.accept(Notice.NONE);
+        if (!attached || generations.getOrDefault(submission.session, -1L) != submission.generation) return false;
+        drafts.get(submission.session).removeIf(value -> submission.ids.contains(value.id));
+        notifyChanged(submission.session, Notice.NONE);
         return true;
     }
 
@@ -187,7 +195,13 @@ public final class ComposerImageDraft {
                 .filter(Objects::nonNull).distinct().toList();
     }
 
-    public long generation() { return generation; }
+    public long generation() { return generations.getOrDefault(session, 0L); }
+    public String changedSession() { return changedSession; }
+    private void notifyChanged(String session, Notice notice) {
+        changedSession = session;
+        changed.accept(notice);
+    }
+    public void clear() { restore(List.of()); }
     public boolean attached() { return attached; }
     public record Attachment(UUID id, ImageReference reference, ClipboardImageEncoder.Preview preview) {
         public boolean pending() { return reference == null; }
@@ -195,6 +209,6 @@ public final class ComposerImageDraft {
     public record Submission(String session, long generation, List<UUID> ids) {
         public Submission { ids = List.copyOf(ids); }
     }
-    private record Scope(String session, long generation) {}
+    private record Scope(String session, long generation, long lifetime) {}
     public enum Notice { NONE, PROCESSING, READY, CLIPBOARD_UNAVAILABLE, IMPORT_FAILED }
 }

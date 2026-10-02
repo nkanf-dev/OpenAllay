@@ -14,6 +14,22 @@ public final class OpenAllayWidgetTheme {
     public static final int WHITE = 0xFFE8EDF2;
     public static final int MUTED = 0xFF7F8994;
 
+    public static final int PANEL = CHARCOAL;
+    public static final int PANEL_ALT = CHARCOAL_RAISED;
+    public static final int TEXT = WHITE;
+    public static final int MUTED_READABLE = 0xFFA9B3BE;
+    public static final int ERROR = 0xFFFF7D7D;
+    public static final int SUCCESS = MINT;
+    public static final int WARNING = AMBER;
+    public static final int INFO = 0xFF8BBCEB;
+
+    public static final int SPACE_XS = 4;
+    public static final int SPACE_SM = 8;
+    public static final int SPACE_MD = 12;
+    public static final int SPACE_LG = 16;
+    public static final int SPACE_XL = 24;
+    public static final int LINE_HEIGHT = 12;
+
     private OpenAllayWidgetTheme() {}
 
     public static ButtonVisualState buttonState(

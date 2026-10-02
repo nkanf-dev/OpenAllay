@@ -618,5 +618,16 @@
   "openallay.guide.slash.compact_failed": "无法压缩上下文，请稍后重试。",
   "openallay.guide.slash.unknown_slash_command": "未知的快捷命令。输入 /compact 压缩上下文，或输入 // 发送字符 '/'。",
   "openallay.guide.slash.invalid_slash_arguments": "/compact 命令不需要附加参数，请直接输入 /compact。",
-  "openallay.guide.slash.attachments_retained": "当前快捷命令不发送图片，图片仍在输入框草稿中。"
+  "openallay.guide.slash.attachments_retained": "当前快捷命令不发送图片，图片仍在输入框草稿中。",
+  "screen.openallay.action.more": "更多操作",
+  "screen.openallay.session.new": "新建会话",
+  "screen.openallay.session.delete": "删除会话…",
+  "screen.openallay.scroll.bottom": "回到底部 ↓",
+  "screen.openallay.tools.summary": "▶ Tools · %s · 失败 %s",
+  "screen.openallay.tools.expand": "展开本任务 Tools",
+  "screen.openallay.tools.collapse": "折叠 Tools",
+  "screen.openallay.choice.unavailable": "选项 %s 当前不可用。",
+  "screen.openallay.model.next_short": "下次 ▾ %s",
+  "screen.openallay.pending.edit_invalid": "原队列消息已不可编辑。草稿已保留，请选择“作为新消息”。",
+  "screen.openallay.pending.use_as_new": "作为新消息"
 }

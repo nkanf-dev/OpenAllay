@@ -4,6 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import dev.openallay.guide.GuideToolActivity;
+import dev.openallay.guide.GuideToolInvocationView;
 import dev.openallay.guide.GuideToolMessage;
 import dev.openallay.guide.GuideToolPresentation;
 import dev.openallay.guide.GuideToolStatus;
@@ -12,7 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-/** Converts normalized tool activity into the closed player-card vocabulary. */
+/** Converts normalized tool activity into player cards, with opt-in technical detail. */
 public final class GuideToolDetailPresenter {
     private GuideToolDetailPresenter() {}
 
@@ -26,14 +27,14 @@ public final class GuideToolDetailPresenter {
                         activity.invocationId(),
                         activity.toolId(),
                         activity.invocationArguments(),
-                        debugResult(activity, normalized),
+                        normalized,
                         normalized == null && activity.status() == GuideToolStatus.RUNNING
                                 ? "tool is still running" : projection.diagnostic()))
                 : Optional.empty();
         return new GuideToolDetailView(
                 titleKey(activity.toolId()),
                 activity.status(),
-                activity.invocation(),
+                debugMode ? activity.invocation() : GuideToolInvocationView.none(),
                 activity.intent(),
                 projection.cards(),
                 narration,
@@ -43,17 +44,6 @@ public final class GuideToolDetailPresenter {
                         ? Optional.of(new GuideToolDetailView.Failure(
                                 string(normalized, "code"), string(normalized, "message")))
                         : Optional.empty());
-    }
-
-    /** Canonical origin records are displayed separately, not repeated inside debug result JSON. */
-    private static JsonObject debugResult(GuideToolActivity activity, JsonObject normalized) {
-        if (normalized == null) return null;
-        JsonObject result = normalized.deepCopy();
-        if ("run_javascript".equals(toolName(activity.toolId())) && !activity.sources().isEmpty()) {
-            JsonObject value = object(result, "value");
-            if (value != null) value.remove("sources");
-        }
-        return result;
     }
 
     private static Projection projectCards(String toolId, JsonObject normalized) {
