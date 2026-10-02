@@ -58,6 +58,8 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
     private final ModelContextCodec modelContexts = new ModelContextCodec();
     private final FailureInjector failureInjector;
     private final GuideImageOwnership imageOwnership;
+    private final java.util.concurrent.atomic.AtomicBoolean reportedUnsupportedLayout =
+            new java.util.concurrent.atomic.AtomicBoolean();
     // Accessed only under the image ownership lock. Ordinary UI/status work must not decode
     // every historical image repeatedly; failed reconciliation invalidates this scope cache.
     private final Set<GuideHistoryScope> initializedImageScopes = new java.util.HashSet<>();
@@ -817,24 +819,52 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
         }
     }
 
-    private static void ensureLayout(Connection connection, boolean emptyFile) throws SQLException {
+    private void ensureLayout(Connection connection, boolean emptyFile) throws SQLException {
         List<String> tables = applicationTables(connection);
         if (tables.isEmpty() && emptyFile) {
             createLayout(connection);
             return;
         }
-        if (!Set.copyOf(tables).equals(HISTORY_LAYOUT.keySet())) {
-            throw corruptLayout("Guide history database has an unrecognized table set");
+        List<String> differences = new ArrayList<>();
+        Set<String> actualTables = Set.copyOf(tables);
+        Set<String> missingTables = new java.util.TreeSet<>(HISTORY_LAYOUT.keySet());
+        missingTables.removeAll(actualTables);
+        Set<String> extraTables = new java.util.TreeSet<>(actualTables);
+        extraTables.removeAll(HISTORY_LAYOUT.keySet());
+        if (!missingTables.isEmpty() || !extraTables.isEmpty()) {
+            differences.add("tables: missing=" + missingTables + ", extra=" + extraTables);
         }
-        for (Map.Entry<String, List<ColumnSignature>> table : HISTORY_LAYOUT.entrySet()) {
-            if (!tableSignature(connection, table.getKey()).equals(table.getValue())) {
-                throw corruptLayout(
-                        "Guide history table " + table.getKey() + " has an unrecognized structure");
+        for (String table : new java.util.TreeSet<>(HISTORY_LAYOUT.keySet())) {
+            if (!actualTables.contains(table)) continue;
+            List<ColumnSignature> expected = HISTORY_LAYOUT.get(table);
+            List<ColumnSignature> actual = tableSignature(connection, table);
+            if (!actual.equals(expected)) {
+                Set<String> expectedNames = expected.stream().map(ColumnSignature::name)
+                        .collect(java.util.stream.Collectors.toCollection(java.util.TreeSet::new));
+                Set<String> actualNames = actual.stream().map(ColumnSignature::name)
+                        .collect(java.util.stream.Collectors.toCollection(java.util.TreeSet::new));
+                Set<String> missing = new java.util.TreeSet<>(expectedNames);
+                missing.removeAll(actualNames);
+                Set<String> extra = new java.util.TreeSet<>(actualNames);
+                extra.removeAll(expectedNames);
+                differences.add("table " + table + ": columns missing=" + missing + ", extra=" + extra
+                        + ", expected=" + expected + ", actual=" + actual);
             }
-            if (!foreignKeys(connection, table.getKey()).equals(HISTORY_OWNERSHIP.get(table.getKey()))) {
-                throw corruptLayout(
-                        "Guide history table " + table.getKey() + " has unrecognized ownership");
+            List<ForeignKeySignature> ownership = foreignKeys(connection, table);
+            if (!ownership.equals(HISTORY_OWNERSHIP.get(table))) {
+                differences.add("table " + table + ": ownership expected=" + HISTORY_OWNERSHIP.get(table)
+                        + ", actual=" + ownership);
             }
+        }
+        if (!differences.isEmpty()) {
+            // Only schema metadata is logged. Never inspect or print persisted row values
+            // to guess which earlier build wrote a layout that this build does not accept.
+            if (reportedUnsupportedLayout.compareAndSet(false, true)) {
+                dev.openallay.OpenAllayConstants.LOGGER.warn(
+                        "Guide history layout does not match the current build: {}",
+                        String.join("; ", differences));
+            }
+            throw unsupportedLayout();
         }
     }
 
@@ -984,8 +1014,11 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
         return new ColumnSignature(name, type, notNull, primaryKeyPosition, 0);
     }
 
-    private static GuideHistoryException corruptLayout(String message) {
-        return new GuideHistoryException("history_corrupt", message + "; database was not changed");
+    private static GuideHistoryException unsupportedLayout() {
+        return new GuideHistoryException("history_layout_unsupported",
+                "Guide history uses a different database layout; the original database was not changed. "
+                        + "Preserve or archive it and use a matching OpenAllay build to export it "
+                        + "before starting new history.");
     }
 
     private static void createLayout(Connection connection) throws SQLException {

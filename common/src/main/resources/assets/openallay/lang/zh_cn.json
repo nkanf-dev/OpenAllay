@@ -892,5 +892,7 @@
   "screen.openallay.voice.pending": "插入语音 · %s",
   "screen.openallay.voice.short.starting": "准备录音",
   "screen.openallay.voice.short.recording": "录音 %s秒",
-  "screen.openallay.voice.short.transcribing": "正在转写"
+  "screen.openallay.voice.short.transcribing": "正在转写",
+  "openallay.guide.history_layout_unsupported": "当前版本暂无法读取此历史记录格式，现有记录已完整保留。",
+  "screen.openallay.history.layout_unsupported": "现有历史已保留，但记录格式与当前版本不同。"
 }

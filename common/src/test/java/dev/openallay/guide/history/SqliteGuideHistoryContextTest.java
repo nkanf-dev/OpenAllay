@@ -407,7 +407,7 @@ final class SqliteGuideHistoryContextTest {
         GuideHistoryException failure = assertThrows(GuideHistoryException.class,
                 () -> store.context(contextRequest(SCOPE, 4_000)));
 
-        assertEquals("history_corrupt", failure.code());
+        assertEquals("history_layout_unsupported", failure.code());
         assertTrue(Arrays.equals(before, Files.readAllBytes(database)));
     }
 

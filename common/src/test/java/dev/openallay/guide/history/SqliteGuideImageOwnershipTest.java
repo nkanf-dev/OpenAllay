@@ -2,6 +2,7 @@ package dev.openallay.guide.history;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -576,6 +577,154 @@ final class SqliteGuideImageOwnershipTest {
                 branch.page().requests().getFirst().requestId()));
         reopened.commit(new GuideHistoryCommit(scope, List.of(new GuideHistoryMutation.DeleteSession("branch"))));
         assertThrows(IOException.class, () -> images.read(ACTOR, reference));
+    }
+
+    @Test
+    void freshCurrentLayoutLoadsPagesForksAndExportsFullOriginalsAfterReopen() throws Exception {
+        var images = images();
+        byte[] imageBytes = png(0xff2468ac);
+        var reference = images.importImage(ACTOR, imageBytes);
+        var scope = scope("fresh-current-contract.example");
+        var writer = store(images);
+        var usage = new ModelUsage(19, 0, 0, 5, 14,
+                false, false, false, true, true);
+        var bill = new GuideUsageSnapshot(19, 0, 0, 5,
+                1, 1, true, true, new BigDecimal("0.001234"), true);
+        var unknown = new GuideUsageSnapshot(0, 0, 0, 0,
+                1, 0, true, true, null, true);
+        var control = new GuideUsageSnapshot(10, 3, 4, 0,
+                1, 1, false, false, new BigDecimal("0.000900"), false);
+        var arguments = new com.google.gson.JsonObject();
+        arguments.addProperty("source", "return 'quoted original \"value\"';");
+        var outcome = new com.google.gson.JsonObject();
+        outcome.addProperty("text", "original result with \"quotes\" and newlines\nkept");
+        outcome.addProperty("value", 42);
+        List<ModelMessage> original = List.of(
+                new ModelMessage(ModelRole.USER, List.of(new ModelContent.Text("original question"),
+                        new ModelContent.Image(reference))),
+                new ModelMessage(ModelRole.ASSISTANT, List.of(new ModelContent.ToolUse(
+                        "original-tool-id", "openallay:run_javascript", arguments))),
+                new ModelMessage(ModelRole.USER, List.of(new ModelContent.ToolResult(
+                        "original-tool-id", outcome, true))),
+                new ModelMessage(ModelRole.ASSISTANT, List.of(new ModelContent.Text(
+                        "complete original answer " + "tail ".repeat(100)))));
+        var first = new GuideRequestSnapshot(UUID.randomUUID(), "main", GuideTopology.CLIENT_LOCAL,
+                "original question", List.of(new dev.openallay.guide.GuideTimelineEntry.Assistant(
+                        0, "display is not the original transcript", false, List.of())),
+                GuideRequestStatus.COMPLETED, List.of(), usage, null, null, NOW, NOW, NOW,
+                GuideModelSelection.client("default"),
+                GuideRequestSnapshot.legacyProgress(GuideRequestStatus.COMPLETED, null, NOW, NOW), bill, null);
+        var checkpoint = new dev.openallay.agent.context.ContextCheckpoint(UUID.randomUUID(),
+                0, 3, dev.openallay.agent.context.ContextSourceHash.compute(
+                        new com.google.gson.Gson(), original.subList(0, 3)), "test:model", NOW,
+                dev.openallay.agent.context.ContextCheckpoint.Status.SUCCEEDED,
+                "derived summary does not replace originals", null, null, 12);
+        List<GuideHistoryMutation> mutations = new java.util.ArrayList<>(List.of(
+                new GuideHistoryMutation.UpsertPartition("main", NOW),
+                new GuideHistoryMutation.UpsertSession("main", 0, GuideModelSelection.client("default")),
+                new GuideHistoryMutation.UpsertSessionUsage("main", control),
+                new GuideHistoryMutation.UpsertRequest(0, first),
+                new GuideHistoryMutation.UpsertTimelineEntry(first.requestId(), first.timeline().getFirst()),
+                new GuideHistoryMutation.ReplaceRequestContext(first.requestId(), original),
+                new GuideHistoryMutation.ReplaceContext("main", original),
+                new GuideHistoryMutation.AppendCheckpoint("main", checkpoint),
+                new GuideHistoryMutation.CaptureRequestBoundary(first.requestId(), original, List.of(checkpoint))));
+        GuideRequestSnapshot last = first;
+        for (int index = 1; index < 130; index++) {
+            var value = request("main", "later question " + index);
+            var projection = index == 1 ? unknown : GuideUsageSnapshot.empty();
+            last = new GuideRequestSnapshot(value.requestId(), value.sessionId(), value.topology(),
+                    value.userMessage(), value.timeline(), value.status(), value.sources(), value.usage(),
+                    value.retryAfterMillis(), value.failure(), value.createdAt(), value.updatedAt(), value.terminalAt(),
+                    value.modelSelection(), value.progress(), projection, null);
+            mutations.add(new GuideHistoryMutation.UpsertRequest(index, last));
+            mutations.add(new GuideHistoryMutation.ReplaceRequestContext(last.requestId(),
+                    List.of(ModelMessage.userText(last.userMessage()))));
+        }
+        writer.commit(new GuideHistoryCommit(scope, mutations));
+        writer.commit(new GuideHistoryCommit(scope, List.of(
+                new GuideHistoryMutation.AppendCheckpoint("main", checkpoint))));
+        var reopened = store(images);
+        var metadata = reopened.metadata(scope).orElseThrow();
+        assertEquals(130, metadata.sessions().getFirst().requestCount());
+        assertEquals(bill.plus(unknown).plus(control), metadata.sessions().getFirst().usage());
+        assertEquals(control, metadata.sessions().getFirst().controlUsage());
+        var newest = reopened.page(new GuideHistoryPageRequest(scope, "main",
+                GuideHistoryPageRequest.Direction.NEWEST, null, 5));
+        assertEquals(125, newest.first().sequence());
+        assertEquals(last.requestId(), newest.last().requestId());
+        var earlier = reopened.page(new GuideHistoryPageRequest(scope, "main",
+                GuideHistoryPageRequest.Direction.BEFORE, newest.first(), 128));
+        assertEquals(125, earlier.requests().size());
+        assertEquals(usage, earlier.requests().getFirst().usage());
+        assertEquals(bill, earlier.requests().getFirst().usageProjection());
+        assertEquals(unknown, earlier.requests().get(1).usageProjection());
+        var context = reopened.context(new GuideHistoryContextRequest(scope, "main",
+                new dev.openallay.agent.context.ContextBudget(240, 100), 1, "test:model"));
+        assertEquals(original, context.messages(), "a small context budget must not truncate stored originals");
+        assertEquals(List.of(checkpoint), context.checkpoints());
+        assertEquals(original, reopened.requestContext(scope, first.requestId()));
+        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database());
+                var query = connection.createStatement().executeQuery(
+                        "select count(*) from compaction_checkpoints")) {
+            assertTrue(query.next());
+            assertEquals(1, query.getInt(1), "AppendCheckpoint must update a repeated identity, not append it again");
+        }
+        var branch = reopened.fork(new GuideHistoryForkRequest(scope,
+                new GuideHistoryMutation.ForkSession("main", new GuideHistoryCursor(0, first.requestId()),
+                        "branch", 1, GuideModelSelection.client("default"))));
+        var inherited = branch.page().requests().getFirst();
+        assertNotEquals(first.requestId(), inherited.requestId());
+        assertEquals(first.requestId(), inherited.usageOriginRequestId());
+        assertEquals(usage, inherited.usage());
+        assertEquals(bill, branch.session().inheritedUsage());
+        assertEquals(original, reopened.requestContext(scope, inherited.requestId()));
+        assertEquals(original, branch.messages());
+        var repository = new GuideHistoryRepository(reopened);
+        try {
+            var export = new dev.openallay.guide.export.GuideSessionExportCollector(scope, repository)
+                    .collect("main", List.of(), Map.of(), 129, NOW).get(5, java.util.concurrent.TimeUnit.SECONDS);
+            assertEquals(130, export.requests().size(), "export must page beyond its 128-request batch");
+            assertEquals(original, export.requests().getFirst().originalContext());
+            String owner = "export:current-contract";
+            images.retain(ACTOR, owner, List.of(reference));
+            var closes = new AtomicInteger();
+            export = export.withImagePayloadResolver(new dev.openallay.model.image.ImagePayloadResolver() {
+                @Override public byte[] read(ImageReference value) throws IOException {
+                    assertEquals(0, images.collect(ACTOR));
+                    return images.read(ACTOR, value);
+                }
+                @Override public void close() {
+                    try { images.release(ACTOR, owner); }
+                    catch (IOException failure) { throw new java.io.UncheckedIOException(failure); }
+                    closes.incrementAndGet();
+                }
+            });
+            repository.commit(new GuideHistoryCommit(scope, List.of(
+                    new GuideHistoryMutation.UpsertPartition("branch", NOW),
+                    new GuideHistoryMutation.DeleteSession("main")))).get(5, java.util.concurrent.TimeUnit.SECONDS);
+            var published = new dev.openallay.client.gui.export.GuideSessionExporter(temporary).export(export);
+            Path exports = temporary.resolve("openallay/exports");
+            String text = Files.readString(exports.resolve(published.filename()));
+            assertEquals(130, published.requestCount());
+            assertTrue(text.contains(arguments.toString()));
+            assertTrue(text.contains(outcome.toString()));
+            assertTrue(text.contains("Invocation ID: original-tool-id"));
+            assertTrue(text.contains("=== Request 130"));
+            assertTrue(text.contains("later question 129"));
+            assertFalse(text.contains("display is not the original transcript"));
+            assertTrue(text.contains("complete original answer " + "tail ".repeat(100)));
+            assertEquals(1, closes.get());
+            assertArrayEquals(imageBytes, Files.readAllBytes(exports.resolve("images/" + reference.sha256() + ".png")));
+            assertEquals(0, images.collect(ACTOR), "the fork owns its inherited original image independently");
+            repository.commit(new GuideHistoryCommit(scope, List.of(
+                    new GuideHistoryMutation.UpsertPartition("branch", NOW),
+                    new GuideHistoryMutation.ClearSession("branch")))).get(5, java.util.concurrent.TimeUnit.SECONDS);
+            assertThrows(IOException.class, () -> images.read(ACTOR, reference));
+            assertArrayEquals(imageBytes, Files.readAllBytes(exports.resolve("images/" + reference.sha256() + ".png")));
+        } finally {
+            repository.closeAsync().get(5, java.util.concurrent.TimeUnit.SECONDS);
+        }
     }
 
     private void seed(GuideHistoryStore store, GuideHistoryScope scope,

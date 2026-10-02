@@ -76,6 +76,64 @@ final class GuideServiceManagerHistoryTest {
     }
 
     @Test
+    void replacementScopeForkUsesTheDurableDelegateAfterTheDisconnectGate() throws Exception {
+        QueuedDispatcher dispatcher = new QueuedDispatcher();
+        RecordingHistory history = new RecordingHistory();
+        GuideHistoryScope[] selected = {GuideHistoryScope.derive(
+                ACTOR, GuideHistoryScope.Kind.MULTIPLAYER, "before-fork.example")};
+        GuideServiceManager manager = new GuideServiceManager(new IdleLocal(), new IdleRemote(),
+                (capabilities, correlation) -> new ToolResult.Success<>(
+                        ToolInvocationContext.developmentConsole(correlation)),
+                dispatcher, Clock.systemUTC(), new Gson(), history, actor -> selected[0]);
+        manager.forActor(ACTOR);
+        dispatcher.runAll();
+        history.flushGate = new CompletableFuture<>();
+        selected[0] = GuideHistoryScope.derive(
+                ACTOR, GuideHistoryScope.Kind.MULTIPLAYER, "after-fork.example");
+        var request = new GuideRequestSnapshot(UUID.randomUUID(), "main", GuideTopology.CLIENT_LOCAL,
+                "completed", List.of(), GuideRequestStatus.COMPLETED, List.of(),
+                dev.openallay.model.ModelUsage.empty(), null, null,
+                java.time.Instant.EPOCH, java.time.Instant.EPOCH, java.time.Instant.EPOCH);
+        var cursor = new dev.openallay.guide.history.GuideHistoryCursor(0, request.requestId());
+        history.restoredMetadata = new GuideHistoryMetadata(selected[0], "main", List.of(
+                new GuideHistoryMetadata.Session("main", 0, request.modelSelection(), 1, cursor, cursor)),
+                java.time.Instant.EPOCH);
+        GuideService replacement = manager.forActor(ACTOR);
+        dispatcher.runAll();
+        assertEquals(1, history.loads.size());
+        CompletableFuture<ToolResult<String>> tooEarly = replacement.forkSession(
+                "main", UUID.randomUUID(), "not-before-disconnect");
+        dispatcher.runAll();
+        assertFailure(tooEarly.get(2, TimeUnit.SECONDS), "history_loading");
+        assertEquals(0, history.forks.size());
+        dispatcher.armWorkerHandoff();
+        history.flushGate.complete(null);
+        history.secondLoad.get(2, TimeUnit.SECONDS);
+        dispatcher.awaitWorkerHandoff();
+        dispatcher.runAll();
+        assertEquals(GuidePersistenceSnapshot.State.AVAILABLE,
+                replacement.snapshot().persistence().state());
+
+        replacement.requestHistoryWindow("main",
+                dev.openallay.guide.history.GuideHistoryPageRequest.Direction.NEWEST, null, 1);
+        dispatcher.runAll();
+        history.page.complete(new dev.openallay.guide.history.GuideHistoryPage(
+                "main", List.of(request), cursor, cursor, false, false));
+        dispatcher.runAll();
+        CompletableFuture<ToolResult<String>> forking = replacement.forkSession(
+                "main", request.requestId(), "branch");
+        dispatcher.runAll();
+
+        assertEquals(1, history.forks.size(), "scope proxy must not use the unsupported default fork");
+        assertEquals(selected[0], history.forks.getFirst().scope());
+        assertFalse(forking.isDone(), "fork must await the durable delegate's acknowledgement");
+        history.fork.completeExceptionally(new dev.openallay.guide.history.GuideHistoryException(
+                "fork_boundary_unavailable", "controlled delegate failure"));
+        dispatcher.runAll();
+        assertFailure(forking.get(2, TimeUnit.SECONDS), "fork_boundary_unavailable");
+    }
+
+    @Test
     void managerResetUsesCurrentServiceGateAndResetsOnlyAfterCommit() throws Exception {
         RecordingHistory history = new RecordingHistory();
         GuideHistoryScope scope = GuideHistoryScope.derive(
@@ -241,6 +299,12 @@ final class GuideServiceManagerHistoryTest {
         private final List<GuideHistoryScope> loads = new ArrayList<>();
         private final CompletableFuture<Void> reset = new CompletableFuture<>();
         private final CompletableFuture<Void> secondLoad = new CompletableFuture<>();
+        private final CompletableFuture<dev.openallay.guide.history.GuideHistoryPage> page =
+                new CompletableFuture<>();
+        private final List<dev.openallay.guide.history.GuideHistoryForkRequest> forks = new ArrayList<>();
+        private final CompletableFuture<dev.openallay.guide.history.GuideHistoryForkResult> fork =
+                new CompletableFuture<>();
+        private GuideHistoryMetadata restoredMetadata;
         private CompletableFuture<Void> flushGate = CompletableFuture.completedFuture(null);
         private int resetCalls;
 
@@ -249,7 +313,20 @@ final class GuideServiceManagerHistoryTest {
                 GuideHistoryScope scope) {
             loads.add(scope);
             if (loads.size() == 2) secondLoad.complete(null);
-            return CompletableFuture.completedFuture(java.util.Optional.empty());
+            return CompletableFuture.completedFuture(java.util.Optional.ofNullable(restoredMetadata));
+        }
+
+        @Override
+        public CompletableFuture<dev.openallay.guide.history.GuideHistoryPage> page(
+                dev.openallay.guide.history.GuideHistoryPageRequest request) {
+            return page;
+        }
+
+        @Override
+        public CompletableFuture<dev.openallay.guide.history.GuideHistoryForkResult> fork(
+                dev.openallay.guide.history.GuideHistoryForkRequest request) {
+            forks.add(request);
+            return fork;
         }
 
         @Override

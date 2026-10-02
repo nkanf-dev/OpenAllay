@@ -892,5 +892,7 @@
   "screen.openallay.voice.pending": "Insert voice · %s",
   "screen.openallay.voice.short.starting": "Starting",
   "screen.openallay.voice.short.recording": "Rec %ss",
-  "screen.openallay.voice.short.transcribing": "Transcribing"
+  "screen.openallay.voice.short.transcribing": "Transcribing",
+  "openallay.guide.history_layout_unsupported": "This history format cannot be opened by the current build. Existing records are preserved.",
+  "screen.openallay.history.layout_unsupported": "Existing history is preserved, but uses a different format."
 }

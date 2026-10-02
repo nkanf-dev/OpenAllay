@@ -44,8 +44,65 @@ final class SqliteGuideHistoryLayoutTest {
         byte[] before = Files.readAllBytes(database);
         GuideHistoryException failure = assertThrows(GuideHistoryException.class,
                 () -> store(database).metadata(SCOPE));
-        assertEquals("history_corrupt", failure.code());
+        assertEquals("history_layout_unsupported", failure.code());
         assertTrue(Arrays.equals(before, Files.readAllBytes(database)));
+    }
+
+    @Test
+    void previousNineTableTokenLayoutIsUnsupportedWithoutReadingOrChangingItsRows() throws Exception {
+        Path database = temporary.resolve("previous-nine-table-layout.db");
+        store(database).metadata(SCOPE);
+        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
+                var statement = connection.createStatement()) {
+            statement.execute("drop table request_context_boundaries");
+            statement.execute("alter table sessions drop column control_usage_json");
+            statement.execute("drop table requests");
+            statement.execute("""
+                    create table requests(
+                        scope_id text not null, session_id text not null, request_id text not null,
+                        sequence integer not null check(sequence >= 0), topology text not null,
+                        model_selection_json text not null, user_message text not null, status text not null,
+                        input_tokens integer not null, output_tokens integer not null,
+                        cache_read_tokens integer not null, retry_after_millis integer,
+                        failure_code text, failure_message text, created_at text not null,
+                        updated_at text not null, terminal_at text,
+                        primary key(scope_id, request_id), unique(scope_id, session_id, sequence),
+                        foreign key(scope_id, session_id)
+                            references sessions(scope_id, session_id) on delete cascade
+                    )
+                    """);
+            statement.execute("create index requests_order_lookup on requests(scope_id, session_id, sequence)");
+            // Deliberately invalid row JSON proves layout rejection happens before any body codec.
+            statement.execute("insert into partitions values ('" + SCOPE.scopeId() + "', '"
+                    + SCOPE.actorId() + "', 'MULTIPLAYER', 'main', 'NORMAL', '" + NOW + "')");
+            statement.execute("insert into sessions values ('" + SCOPE.scopeId()
+                    + "', 'main', 0, 'row must not be decoded')");
+        }
+        byte[] before = Files.readAllBytes(database);
+        UUID requestId = UUID.fromString("9294bde9-edbb-4cda-92d4-2ff683673c33");
+        var unsupported = store(database);
+        List<Runnable> operations = List.of(
+                () -> unsupported.metadata(SCOPE),
+                () -> unsupported.page(new GuideHistoryPageRequest(SCOPE, "main",
+                        GuideHistoryPageRequest.Direction.NEWEST, null, 1)),
+                () -> unsupported.context(new GuideHistoryContextRequest(SCOPE, "main",
+                        new dev.openallay.agent.context.ContextBudget(4_000, 100), 10, "test:model")),
+                () -> unsupported.requestContext(SCOPE, requestId),
+                () -> unsupported.commit(new GuideHistoryCommit(SCOPE, List.of(
+                        new GuideHistoryMutation.UpsertPartition("main", NOW)))),
+                () -> unsupported.fork(new GuideHistoryForkRequest(SCOPE,
+                        new GuideHistoryMutation.ForkSession("main", new GuideHistoryCursor(0, requestId),
+                                "branch", 1, dev.openallay.guide.GuideModelSelection.client("profile")))),
+                () -> unsupported.delete(GuideHistoryDeleteScope.partition(SCOPE)));
+        for (Runnable operation : operations) {
+            GuideHistoryException failure = assertThrows(GuideHistoryException.class, operation::run);
+            assertEquals("history_layout_unsupported", failure.code());
+            assertTrue(failure.getMessage().contains("original database was not changed"));
+            assertTrue(failure.getMessage().contains("matching OpenAllay build"));
+            assertFalse(failure.getMessage().contains("corrupt"));
+            assertTrue(Arrays.equals(before, Files.readAllBytes(database)));
+            assertFalse(Files.exists(database.resolveSibling("previous-nine-table-layout.db-wal")));
+        }
     }
 
     @Test
@@ -59,7 +116,7 @@ final class SqliteGuideHistoryLayoutTest {
         byte[] before = Files.readAllBytes(database);
         GuideHistoryException failure = assertThrows(GuideHistoryException.class,
                 () -> store(database).metadata(SCOPE));
-        assertEquals("history_corrupt", failure.code());
+        assertEquals("history_layout_unsupported", failure.code());
         assertTrue(Arrays.equals(before, Files.readAllBytes(database)));
         try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
                 var rows = connection.createStatement().executeQuery("""
@@ -113,7 +170,7 @@ final class SqliteGuideHistoryLayoutTest {
         GuideHistoryException failure = assertThrows(GuideHistoryException.class,
                 () -> store(database).metadata(SCOPE));
 
-        assertEquals("history_corrupt", failure.code());
+        assertEquals("history_layout_unsupported", failure.code());
         assertTrue(Arrays.equals(before, Files.readAllBytes(database)));
     }
 
@@ -159,7 +216,7 @@ final class SqliteGuideHistoryLayoutTest {
                 () -> store.delete(new GuideHistoryDeleteScope.Partition(SCOPE)));
         for (Runnable operation : operations) {
             GuideHistoryException failure = assertThrows(GuideHistoryException.class, operation::run);
-            assertEquals("history_corrupt", failure.code());
+            assertEquals("history_layout_unsupported", failure.code());
             assertTrue(failure.getMessage().contains("was not changed"));
             assertTrue(Arrays.equals(before, Files.readAllBytes(database)));
             assertFalse(Files.exists(database.resolveSibling("extra-table.db-wal")));
@@ -204,7 +261,7 @@ final class SqliteGuideHistoryLayoutTest {
             GuideHistoryException failure = assertThrows(GuideHistoryException.class,
                     () -> store.metadata(SCOPE));
 
-            assertEquals("history_corrupt", failure.code());
+            assertEquals("history_layout_unsupported", failure.code());
             assertTrue(Arrays.equals(before, Files.readAllBytes(database)));
         }
     }
@@ -258,8 +315,8 @@ final class SqliteGuideHistoryLayoutTest {
             GuideHistoryException failure = assertThrows(GuideHistoryException.class,
                     () -> store.metadata(SCOPE));
 
-            assertEquals("history_corrupt", failure.code());
-            assertTrue(failure.getMessage().contains("ownership"));
+            assertEquals("history_layout_unsupported", failure.code());
+            assertTrue(failure.getMessage().contains("different database layout"));
             assertTrue(Arrays.equals(before, Files.readAllBytes(database)));
         }
     }

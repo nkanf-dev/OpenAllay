@@ -183,7 +183,7 @@ final class SqliteGuideHistoryStoreTest {
                 GuideHistoryException.class,
                 () -> store(database).metadata(scope("foreign-layout.example")));
 
-        assertEquals("history_corrupt", failure.code());
+        assertEquals("history_layout_unsupported", failure.code());
         try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
                 var statement = connection.createStatement()) {
             assertEquals(1, queryInt(statement, "select count(*) from unrelated_data"));

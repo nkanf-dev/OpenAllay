@@ -196,6 +196,12 @@ public final class GuideServiceManager {
             }
 
             @Override
+            public CompletableFuture<dev.openallay.guide.history.GuideHistoryForkResult> fork(
+                    dev.openallay.guide.history.GuideHistoryForkRequest request) {
+                return disconnected.thenCompose(ignored -> history.fork(request));
+            }
+
+            @Override
             public CompletableFuture<Void> delete(
                     dev.openallay.guide.history.GuideHistoryDeleteScope scope) {
                 return disconnected.thenCompose(ignored -> history.delete(scope));

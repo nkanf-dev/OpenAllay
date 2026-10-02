@@ -79,6 +79,22 @@ final class GuideSessionExportCollectorTest {
     }
 
     @Test
+    void unsupportedLayoutKeepsItsActionableFailureAcrossTheExportBoundary() {
+        var unsupported = new dev.openallay.guide.history.GuideHistoryException(
+                "history_layout_unsupported", "The original database was not changed; preserve it");
+        GuideHistoryAccess history = new PagingHistory(List.of()) {
+            @Override public CompletableFuture<GuideHistoryPage> page(GuideHistoryPageRequest request) {
+                return CompletableFuture.failedFuture(unsupported);
+            }
+        };
+        Throwable failure = org.junit.jupiter.api.Assertions.assertThrows(
+                java.util.concurrent.CompletionException.class,
+                () -> new GuideSessionExportCollector(SCOPE, history)
+                        .collect("main", List.of(), Map.of(), 3, NOW).join()).getCause();
+        org.junit.jupiter.api.Assertions.assertSame(unsupported, failure);
+    }
+
+    @Test
     void nonProgressingEarlierCursorFailsInsteadOfLooping() {
         GuideHistoryPage newest = page(List.of(request(3, "three", true)), 3, 3, true);
         GuideHistoryPage repeated = page(List.of(request(3, "three", true)), 3, 3, true);

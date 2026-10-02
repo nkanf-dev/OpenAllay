@@ -1466,9 +1466,8 @@ public final class GuideService implements GuideHistoryAdministration {
                             if (failure == null) {
                                 captureExportImages(export, result);
                             } else {
-                                result.complete(new ToolResult.Failure<>(
-                                        "history_export_failed",
-                                        "Unable to read the complete guide session for export"));
+                                GuideFailure known = historyFailure(failure, "history_export_failed");
+                                result.complete(new ToolResult.Failure<>(known.code(), known.message()));
                             }
                         }));
             } catch (RuntimeException failure) {

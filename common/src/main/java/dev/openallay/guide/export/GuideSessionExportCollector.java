@@ -213,7 +213,8 @@ public final class GuideSessionExportCollector {
     private static GuideHistoryException exportFailure(Throwable failure) {
         Throwable cause = unwrap(failure);
         return cause instanceof GuideHistoryException historyFailure
-                && historyFailure.code().equals("history_export_failed")
+                && (historyFailure.code().equals("history_export_failed")
+                        || historyFailure.code().equals("history_layout_unsupported"))
                 ? historyFailure
                 : new GuideHistoryException(
                         "history_export_failed",

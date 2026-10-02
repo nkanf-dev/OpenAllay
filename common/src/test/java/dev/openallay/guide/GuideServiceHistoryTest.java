@@ -54,6 +54,21 @@ final class GuideServiceHistoryTest {
             Instant.parse("2026-07-18T07:00:00Z"), ZoneOffset.UTC);
 
     @Test
+    void unsupportedLayoutKeepsItsCodeForHistoryAndExportWithoutSavingReplacementData() {
+        FakeHistory history = new FakeHistory();
+        GuideService service = service(new FakeLocal(), history);
+        var failure = new GuideHistoryException("history_layout_unsupported",
+                "Guide history uses a different layout; the original database was not changed");
+        history.pageFailure = failure;
+        history.metadata.completeExceptionally(failure);
+
+        assertEquals(GuidePersistenceSnapshot.State.UNAVAILABLE, service.snapshot().persistence().state());
+        assertEquals("history_layout_unsupported", service.snapshot().persistence().failure().code());
+        assertFailure(service.captureSelectedSessionForExport().join(), "history_layout_unsupported");
+        assertTrue(history.commits.isEmpty(), "unsupported history must never be replaced by an empty live session");
+    }
+
+    @Test
     void loadsMetadataBeforeAcceptingRequestsAndHydratesActualContextOnlyOnRetry() {
         FakeHistory history = new FakeHistory();
         FakeLocal local = new FakeLocal();
@@ -1244,6 +1259,7 @@ final class GuideServiceHistoryTest {
         private final List<GuideHistoryDeleteScope> deletes = new ArrayList<>();
         private final List<CompletableFuture<Void>> deleteCompletions = new ArrayList<>();
         private GuideHistoryPage recoveredPage;
+        private GuideHistoryException pageFailure;
         private int resetCalls;
         private int flushCalls;
 
@@ -1261,6 +1277,7 @@ final class GuideServiceHistoryTest {
         public CompletableFuture<GuideHistoryPage> page(GuideHistoryPageRequest request) {
             assertEquals(SCOPE, request.scope());
             pageRequests.add(request);
+            if (pageFailure != null) return CompletableFuture.failedFuture(pageFailure);
             return CompletableFuture.completedFuture(recoveredPage == null
                     ? new GuideHistoryPage(request.sessionId(), List.of(), null, null, false, false)
                     : recoveredPage);
