@@ -40,6 +40,63 @@ class VoiceRuntimeTest {
         }
         public List<AudioCapture.Device> devices() { return List.of(new AudioCapture.Device("fake", "Fake")); }
     }
+    @Test void captureBackendPermissionFormatAndDeviceErrorsHaveDistinctSafeCodes() {
+        for (AudioCapture.Failure kind : AudioCapture.Failure.values()) {
+            Draft draft = new Draft(); Queue worker = new Queue(); AtomicInteger transcriptions = new AtomicInteger();
+            AudioCapture.Factory capture = new AudioCapture.Factory() {
+                public AudioCapture open(String device, VoiceCancellation cancellation) throws Exception {
+                    throw new AudioCapture.CaptureException(kind, "untrusted provider detail");
+                }
+                public List<AudioCapture.Device> devices() { return List.of(); }
+            };
+            VoiceRuntime runtime = new VoiceRuntime(draft, capture, config -> (request, cancellation) -> {
+                transcriptions.incrementAndGet(); throw new AssertionError("Failed capture reached recognition");
+            }, () -> VoiceConfig.defaults().withEnabled(true), worker, Runnable::run);
+            runtime.press(); worker.drain();
+            assertEquals(switch (kind) {
+                case DEVICE_UNAVAILABLE -> "microphone_device_unavailable";
+                case BACKEND_UNAVAILABLE -> "microphone_backend_unavailable";
+                case UNSUPPORTED_FORMAT -> "microphone_format_unsupported";
+                case OPEN_FAILED, OPEN_TIMEOUT, OPEN_BUSY -> "microphone_open_failed";
+                case READ_FAILED, DEVICE_DISCONNECTED -> "device_broken";
+            }, runtime.status().code());
+            assertEquals(VoiceRuntime.State.ERROR, runtime.status().state());
+            assertEquals(0, transcriptions.get()); assertEquals("existing", draft.text);
+        }
+        assertEquals("microphone_denied", VoiceRuntime.safeCode(new MacMicrophonePermission.PermissionException(
+                MacMicrophonePermission.Failure.DENIED, "not a device failure")));
+        assertEquals("microphone_launcher_unprepared", VoiceRuntime.safeCode(new MacMicrophonePermission.PermissionException(
+                MacMicrophonePermission.Failure.LAUNCHER_NOT_PREPARED, "not a system-settings fix")));
+        assertEquals("microphone_permission_unavailable", VoiceRuntime.safeCode(new MacMicrophonePermission.PermissionException(
+                MacMicrophonePermission.Failure.CHECK_FAILED, "not a device failure")));
+    }
+
+    @Test void providerCancellationWithoutAnOperationCancellationReportsErrorAndAllowsRetry() {
+        Draft draft = new Draft(); Queue worker = new Queue(); FakeCapture next = new FakeCapture();
+        AtomicInteger openings = new AtomicInteger(), transcriptions = new AtomicInteger();
+        AudioCapture.Factory capture = new AudioCapture.Factory() {
+            public AudioCapture open(String device, VoiceCancellation cancellation) {
+                assertFalse(cancellation.cancelled());
+                if (openings.getAndIncrement() == 0)
+                    throw new java.util.concurrent.CancellationException("Provider cancelled itself");
+                return next.open(device, cancellation);
+            }
+            public List<AudioCapture.Device> devices() { return List.of(); }
+        };
+        VoiceRuntime runtime = new VoiceRuntime(draft, capture, config -> (request, cancellation) -> {
+            transcriptions.incrementAndGet(); return new SpeechToText.Result("retry", "fake-native", null);
+        }, () -> VoiceConfig.defaults().withEnabled(true), worker, Runnable::run);
+        next.onRead = runtime::release;
+        runtime.press(); worker.drain();
+        assertEquals(VoiceRuntime.State.ERROR, runtime.status().state());
+        assertEquals("microphone_open_failed", runtime.status().code());
+        assertEquals(0, transcriptions.get()); assertEquals("existing", draft.text);
+        runtime.press(); worker.drain();
+        assertEquals(2, openings.get()); assertEquals(1, next.closed);
+        assertEquals(1, transcriptions.get()); assertEquals(VoiceRuntime.State.READY, runtime.status().state());
+        assertEquals("existing retry", draft.text);
+    }
+
     @Test void finalTranscriptAppendsToCapturedSessionNeverSendsOrTouchesImages() {
         Draft draft = new Draft(); FakeCapture capture = new FakeCapture(); Queue worker = new Queue();
         AtomicInteger calls = new AtomicInteger();

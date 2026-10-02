@@ -894,5 +894,8 @@
   "screen.openallay.voice.short.recording": "Rec %ss",
   "screen.openallay.voice.short.transcribing": "Transcribing",
   "openallay.guide.history_layout_unsupported": "This history format cannot be opened by the current build. Existing records are preserved.",
-  "screen.openallay.history.layout_unsupported": "Existing history is preserved, but uses a different format."
+  "screen.openallay.history.layout_unsupported": "Existing history is preserved, but uses a different format.",
+  "screen.openallay.settings.voice.status.microphone_backend_unavailable": "The audio runtime cannot record. Check the game or launcher audio setup, then restart.",
+  "screen.openallay.voice.feedback.capture_unavailable": "Audio capture is unavailable in this runtime",
+  "screen.openallay.voice.feedback.action.check_audio_runtime": "Check the game or launcher audio setup, then restart"
 }

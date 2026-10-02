@@ -30,7 +30,7 @@ public final class VoiceClientRuntime implements AutoCloseable {
     private final ExecutorService captureWorker;
     private final VoiceRuntime input;
     private final Settings actions = new Settings();
-    private volatile List<AudioCapture.Device> devices = List.of(new AudioCapture.Device("default", "System default"));
+    private volatile List<AudioCapture.Device> devices = List.of();
     private volatile boolean closed;
     private volatile boolean busy;
     private volatile boolean modelReady;
@@ -54,7 +54,7 @@ public final class VoiceClientRuntime implements AutoCloseable {
         store = new VoiceConfigStore(directory.resolve("voice.json"));
         credentials = new LocalCredentialStore(directory.resolve("voice-credentials.sqlite3"), Clock.systemUTC());
         credentialResolver = dev.openallay.model.config.CredentialResolver.composite(credentials, credentialEnvironment);
-        captures = new JavaSoundCapture();
+        captures = new OpenAlCapture();
         installer = new NativeModelInstaller(directory.resolve("voice-models"));
         ThreadFactory factory = Thread.ofVirtual().name("openallay-voice-", 0).factory();
         settingsWorker = Executors.newSingleThreadExecutor(factory);
@@ -192,7 +192,15 @@ public final class VoiceClientRuntime implements AutoCloseable {
             }).whenComplete((result, failure) -> Arrays.fill(privateCopy, '\0'));
         }
         @Override public CompletableFuture<ToolResult<List<AudioCapture.Device>>> refreshDevices() { return submit(() -> {
-            devices = captures.devices(); return new ToolResult.Success<>(devices);
+            try {
+                devices = captures.devices();
+                code = "idle";
+                return new ToolResult.Success<>(devices);
+            } catch (AudioCapture.CaptureException failure) {
+                devices = List.of();
+                code = VoiceRuntime.safeCode(failure);
+                return new ToolResult.Failure<>(code, "The microphone capture runtime is unavailable");
+            }
         }); }
     }
     @Override public void close() {

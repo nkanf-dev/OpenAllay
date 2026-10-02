@@ -39,6 +39,7 @@ public final class VoiceStatusPresentation {
             case "microphone_permission_unavailable" -> notice("permission_unavailable", "check_launcher", true);
             case "microphone_device_unavailable", "device_broken" -> notice("device_unavailable", "choose_device", true);
             case "microphone_format_unsupported" -> notice("format_unsupported", "choose_device", true);
+            case "microphone_backend_unavailable" -> notice("capture_unavailable", "check_audio_runtime", true);
             case "microphone_open_failed" -> notice("microphone_open_failed", "check_device", true);
             case "model_not_installed" -> notice("model_missing", "install_model", true);
             case "model_invalid", "model_integrity" -> notice("model_invalid", "replace_model", true);

@@ -147,9 +147,9 @@ final class JavaSoundCaptureTest {
     void failedOpenClosesAcquiredLineAndHasTypedCause() {
         FakeLines lines = new FakeLines();
         lines.line.openFailure = new LineUnavailableException("busy");
-        JavaSoundCapture.CaptureException failure = assertThrows(JavaSoundCapture.CaptureException.class,
+        AudioCapture.CaptureException failure = assertThrows(AudioCapture.CaptureException.class,
                 () -> factory(lines).open("fake"));
-        assertEquals(JavaSoundCapture.Failure.OPEN_FAILED, failure.failure());
+        assertEquals(AudioCapture.Failure.OPEN_FAILED, failure.failure());
         assertSame(lines.line.openFailure, failure.getCause());
         assertEquals(0, lines.line.starts);
         assertEquals(1, lines.line.stops);
@@ -160,9 +160,9 @@ final class JavaSoundCaptureTest {
     void failedStartClosesAcquiredLine() {
         FakeLines lines = new FakeLines();
         lines.line.startFailure = new IllegalStateException("unplugged");
-        JavaSoundCapture.CaptureException failure = assertThrows(JavaSoundCapture.CaptureException.class,
+        AudioCapture.CaptureException failure = assertThrows(AudioCapture.CaptureException.class,
                 () -> factory(lines).open("fake"));
-        assertEquals(JavaSoundCapture.Failure.OPEN_FAILED, failure.failure());
+        assertEquals(AudioCapture.Failure.OPEN_FAILED, failure.failure());
         assertEquals(1, lines.line.closes);
     }
 
@@ -170,9 +170,9 @@ final class JavaSoundCaptureTest {
     void wrongProviderFormatIsRejectedWithoutCustomConversion() {
         FakeLines lines = new FakeLines();
         lines.line.reportedFormat = new AudioFormat(48_000, 16, 2, true, false);
-        JavaSoundCapture.CaptureException failure = assertThrows(JavaSoundCapture.CaptureException.class,
+        AudioCapture.CaptureException failure = assertThrows(AudioCapture.CaptureException.class,
                 () -> factory(lines).open("fake"));
-        assertEquals(JavaSoundCapture.Failure.UNSUPPORTED_FORMAT, failure.failure());
+        assertEquals(AudioCapture.Failure.UNSUPPORTED_FORMAT, failure.failure());
         assertEquals(0, lines.line.starts);
         assertEquals(1, lines.line.closes);
     }
@@ -182,9 +182,9 @@ final class JavaSoundCaptureTest {
         FakeLines lines = new FakeLines();
         AudioCapture capture = factory(lines).open("fake");
         lines.line.running = false;
-        JavaSoundCapture.CaptureException failure = assertThrows(JavaSoundCapture.CaptureException.class,
+        AudioCapture.CaptureException failure = assertThrows(AudioCapture.CaptureException.class,
                 () -> capture.read(new byte[4096]));
-        assertEquals(JavaSoundCapture.Failure.DEVICE_DISCONNECTED, failure.failure());
+        assertEquals(AudioCapture.Failure.DEVICE_DISCONNECTED, failure.failure());
         assertEquals(1, lines.line.closes);
         assertEquals(-1, capture.read(new byte[4096]));
         assertEquals(0, lines.line.reads);
@@ -196,9 +196,9 @@ final class JavaSoundCaptureTest {
         AudioCapture capture = factory(lines).open("fake");
         lines.line.availableBytes = 4;
         lines.line.readFailure = new IllegalStateException("broken driver");
-        JavaSoundCapture.CaptureException failure = assertThrows(JavaSoundCapture.CaptureException.class,
+        AudioCapture.CaptureException failure = assertThrows(AudioCapture.CaptureException.class,
                 () -> capture.read(new byte[4096]));
-        assertEquals(JavaSoundCapture.Failure.READ_FAILED, failure.failure());
+        assertEquals(AudioCapture.Failure.READ_FAILED, failure.failure());
         assertSame(lines.line.readFailure, failure.getCause());
         assertEquals(1, lines.line.closes);
     }
@@ -210,9 +210,9 @@ final class JavaSoundCaptureTest {
             AudioCapture capture = factory(lines).open("fake");
             lines.line.availableBytes = 4;
             lines.line.reportedRead = count;
-            JavaSoundCapture.CaptureException failure = assertThrows(JavaSoundCapture.CaptureException.class,
+            AudioCapture.CaptureException failure = assertThrows(AudioCapture.CaptureException.class,
                     () -> capture.read(new byte[4096]));
-            assertEquals(JavaSoundCapture.Failure.READ_FAILED, failure.failure());
+            assertEquals(AudioCapture.Failure.READ_FAILED, failure.failure());
             assertEquals(1, lines.line.closes);
         }
     }
@@ -222,9 +222,9 @@ final class JavaSoundCaptureTest {
         FakeLines lines = new FakeLines();
         AudioCapture capture = factory(lines).open("fake");
         lines.line.availableBytes = -1;
-        JavaSoundCapture.CaptureException failure = assertThrows(JavaSoundCapture.CaptureException.class,
+        AudioCapture.CaptureException failure = assertThrows(AudioCapture.CaptureException.class,
                 () -> capture.read(new byte[4096]));
-        assertEquals(JavaSoundCapture.Failure.READ_FAILED, failure.failure());
+        assertEquals(AudioCapture.Failure.READ_FAILED, failure.failure());
         assertEquals(0, lines.line.reads);
         assertEquals(1, lines.line.closes);
     }
@@ -368,12 +368,12 @@ final class JavaSoundCaptureTest {
         CompletableFuture<AudioCapture> first = asyncOpen(factory, new VoiceCancellation());
         assertTrue(late.entered.await(2, TimeUnit.SECONDS));
         ExecutionException timedOut = assertThrows(ExecutionException.class, () -> first.get(2, TimeUnit.SECONDS));
-        assertEquals(JavaSoundCapture.Failure.OPEN_TIMEOUT,
-                assertInstanceOf(JavaSoundCapture.CaptureException.class, timedOut.getCause()).failure());
+        assertEquals(AudioCapture.Failure.OPEN_TIMEOUT,
+                assertInstanceOf(AudioCapture.CaptureException.class, timedOut.getCause()).failure());
         assertTrue(late.closedGate.await(2, TimeUnit.SECONDS));
-        var busy = assertThrows(JavaSoundCapture.CaptureException.class,
+        var busy = assertThrows(AudioCapture.CaptureException.class,
                 () -> factory.open("busy", new VoiceCancellation()));
-        assertEquals(JavaSoundCapture.Failure.OPEN_BUSY, busy.failure());
+        assertEquals(AudioCapture.Failure.OPEN_BUSY, busy.failure());
         late.allowLateReturn.countDown();
         assertTrue(late.finished.await(2, TimeUnit.SECONDS));
         try (AudioCapture capture = factory.open("after-late", new VoiceCancellation())) {

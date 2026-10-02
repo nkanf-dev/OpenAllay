@@ -1,6 +1,9 @@
 package dev.openallay.client.voice;
 
+import dev.openallay.client.voice.AudioCapture.CaptureException;
+import dev.openallay.client.voice.AudioCapture.Failure;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
@@ -8,14 +11,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.CancellationException;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.time.Duration;
 import java.util.concurrent.locks.LockSupport;
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioSystem;
@@ -25,145 +20,32 @@ import javax.sound.sampled.TargetDataLine;
 
 /** Uses the installed JavaSound provider for capture and any device-format conversion. */
 public final class JavaSoundCapture implements AudioCapture.Factory {
-    public static final String DEFAULT_DEVICE_ID = "default";
+    public static final String DEFAULT_DEVICE_ID = OpenAlCapture.DEFAULT_DEVICE_ID;
     private static final AudioFormat FORMAT = new AudioFormat(16_000, 16, 1, true, false);
     private static final int LINE_BUFFER_BYTES = 6_400;
     private static final int MAX_READ_BYTES = 4_096;
     private static final long EMPTY_READ_PARK_NANOS = 2_000_000L;
     private final LineProvider lines;
-    private final PermissionPreflight permission;
-    private final Semaphore openingSlot = new Semaphore(1);
-    private final long openTimeoutNanos;
+    private final CaptureOpenOwner opening;
 
     /** Does not enumerate devices, load macOS frameworks, or open a microphone. */
     public JavaSoundCapture() {
         this(new SystemLines(), MacMicrophonePermission::checkBeforeOpen);
     }
 
-    JavaSoundCapture(LineProvider lines, PermissionPreflight permission) {
+    JavaSoundCapture(LineProvider lines, CaptureOpenOwner.PermissionPreflight permission) {
         this(lines, permission, Duration.ofSeconds(10));
     }
 
-    JavaSoundCapture(LineProvider lines, PermissionPreflight permission, Duration openTimeout) {
+    JavaSoundCapture(LineProvider lines, CaptureOpenOwner.PermissionPreflight permission, Duration openTimeout) {
         this.lines = Objects.requireNonNull(lines);
-        this.permission = Objects.requireNonNull(permission);
-        if (openTimeout.isZero() || openTimeout.isNegative()) throw new IllegalArgumentException("openTimeout");
-        this.openTimeoutNanos = openTimeout.toNanos();
+        opening = new CaptureOpenOwner(permission, deviceId -> new Session(Objects.requireNonNull(lines.line(
+                deviceId == null || deviceId.isBlank() ? DEFAULT_DEVICE_ID : deviceId))), openTimeout);
     }
 
     @Override
     public AudioCapture open(String deviceId, VoiceCancellation cancellation) throws Exception {
-        Objects.requireNonNull(cancellation).check();
-        long deadline = System.nanoTime() + openTimeoutNanos;
-        // A stuck native provider cannot be forcibly interrupted by Java. Keep at most one
-        // outstanding opener per factory, and fail subsequent attempts within the same deadline.
-        while (!openingSlot.tryAcquire(Math.min(TimeUnit.MILLISECONDS.toNanos(25),
-                Math.max(0, deadline - System.nanoTime())), TimeUnit.NANOSECONDS)) {
-            cancellation.check();
-            if (System.nanoTime() >= deadline) throw new CaptureException(Failure.OPEN_BUSY,
-                    "The previous microphone open has not stopped. Restart the game or select another capture provider.");
-        }
-        Opening opening = new Opening(deviceId, cancellation);
-        boolean transferred = false;
-        try (AutoCloseable hook = cancellation.onCancel(opening::abort)) {
-            opening.thread = Thread.ofVirtual().name("openallay-microphone-open").unstarted(opening::run);
-            opening.thread.start();
-            try {
-                AudioCapture capture = opening.result.get(Math.max(1, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
-                cancellation.check();
-                transferred = true;
-                return capture;
-            } catch (TimeoutException failure) {
-                throw new CaptureException(Failure.OPEN_TIMEOUT,
-                        "Opening the microphone timed out. Check the device and microphone permission.");
-            } catch (ExecutionException failure) {
-                cancellation.check();
-                Throwable cause = failure.getCause();
-                if (cause instanceof Exception exception) throw exception;
-                if (cause instanceof LinkageError linkage) throw new CaptureException(Failure.OPEN_FAILED,
-                        "The JavaSound capture provider could not load.", linkage);
-                throw new CaptureException(Failure.OPEN_FAILED, "Could not open the microphone.");
-            } catch (InterruptedException failure) {
-                Thread.currentThread().interrupt();
-                throw new CancellationException("Microphone open interrupted");
-            }
-        } finally {
-            if (!transferred) opening.abort();
-        }
-    }
-
-    /** Owns permission, line acquisition, open and start before a stream can be transferred. */
-    private final class Opening {
-        private final String deviceId;
-        private final VoiceCancellation cancellation;
-        private final CompletableFuture<AudioCapture> result = new CompletableFuture<>();
-        private final AtomicBoolean aborted = new AtomicBoolean();
-        private final AtomicBoolean closeScheduled = new AtomicBoolean();
-        private final AtomicReference<Session> selected = new AtomicReference<>();
-        private volatile Thread thread;
-        Opening(String deviceId, VoiceCancellation cancellation) {
-            this.deviceId = deviceId; this.cancellation = cancellation;
-        }
-        private void check() {
-            cancellation.check();
-            if (aborted.get()) throw new CancellationException("Microphone open abandoned");
-        }
-        private void abort() {
-            aborted.set(true);
-            result.cancel(false);
-            Thread opener = thread;
-            if (opener != null) opener.interrupt();
-            Session session = selected.get();
-            if (session != null && closeScheduled.compareAndSet(false, true)) {
-                // Never block a client/cancel callback on a provider's stop/close implementation.
-                Thread.ofVirtual().name("openallay-microphone-open-close").start(session::close);
-            }
-        }
-        private void run() {
-            Session session = null;
-            boolean ready = false;
-            Throwable failure = null;
-            try {
-                check();
-                permission.check();
-                check();
-                TargetDataLine line = Objects.requireNonNull(lines.line(
-                        deviceId == null || deviceId.isBlank() ? DEFAULT_DEVICE_ID : deviceId));
-                session = new Session(line);
-                selected.set(session); // Publish the line before any potentially blocking open/start.
-                check();
-                line.open(FORMAT, LINE_BUFFER_BYTES);
-                check();
-                if (!FORMAT.matches(line.getFormat())) throw new CaptureException(Failure.UNSUPPORTED_FORMAT,
-                        "The microphone did not provide 16 kHz mono signed 16-bit PCM.");
-                line.start();
-                check();
-                ready = true;
-            } catch (Exception known) {
-                if (known instanceof CancellationException || aborted.get() || cancellation.cancelled())
-                    failure = new CancellationException("Microphone open cancelled");
-                else if (known instanceof MacMicrophonePermission.PermissionException || known instanceof CaptureException)
-                    failure = known;
-                else failure = new CaptureException(known instanceof IllegalArgumentException
-                                ? Failure.UNSUPPORTED_FORMAT : Failure.OPEN_FAILED,
-                        "Could not open the microphone. Check the selected device and microphone permission.", known);
-            } catch (LinkageError linkage) {
-                failure = new CaptureException(Failure.OPEN_FAILED,
-                        "The JavaSound capture provider could not load.", linkage);
-            } finally {
-                // An abandoned open may finish after close() on an unopened line. Close again
-                // after that late return so it cannot resurrect recording or leak a device.
-                if ((!ready || aborted.get() || cancellation.cancelled()) && session != null) {
-                    closeScheduled.set(true);
-                    if (aborted.get() || cancellation.cancelled()) release(session.line);
-                    else session.close();
-                }
-                openingSlot.release();
-            }
-            if (failure instanceof CancellationException || aborted.get() || cancellation.cancelled()) result.cancel(false);
-            else if (failure != null) result.completeExceptionally(failure);
-            else if (!result.complete(session) && session != null) release(session.line);
-        }
+        return opening.open(deviceId, cancellation);
     }
 
     @Override
@@ -172,44 +54,31 @@ public final class JavaSoundCapture implements AudioCapture.Factory {
         return List.copyOf(lines.devices());
     }
 
-    public enum Failure {
-        DEVICE_UNAVAILABLE, UNSUPPORTED_FORMAT, OPEN_FAILED, OPEN_TIMEOUT, OPEN_BUSY, READ_FAILED, DEVICE_DISCONNECTED
-    }
-
-    public static final class CaptureException extends Exception {
-        private final Failure failure;
-
-        CaptureException(Failure failure, String message) {
-            super(message);
-            this.failure = failure;
-        }
-
-        CaptureException(Failure failure, String message, Throwable cause) {
-            super(message, cause);
-            this.failure = failure;
-        }
-
-        public Failure failure() {
-            return failure;
-        }
-    }
-
-    @FunctionalInterface
-    interface PermissionPreflight {
-        void check() throws Exception;
-    }
-
     interface LineProvider {
         TargetDataLine line(String deviceId) throws Exception;
         List<AudioCapture.Device> devices();
     }
 
-    private static final class Session implements AudioCapture {
+    private static final class Session implements CaptureOpenOwner.Prepared {
         private final TargetDataLine line;
         private final AtomicBoolean closed = new AtomicBoolean();
 
         private Session(TargetDataLine line) {
             this.line = line;
+        }
+
+        @Override
+        public void open() throws Exception {
+            line.open(FORMAT, LINE_BUFFER_BYTES);
+            if (!FORMAT.matches(line.getFormat())) throw new CaptureException(Failure.UNSUPPORTED_FORMAT,
+                    "The microphone did not provide 16 kHz mono signed 16-bit PCM.");
+        }
+
+        @Override public void start() { line.start(); }
+
+        @Override public void closeAfterAbandonedOpen() {
+            closed.set(true);
+            release(line);
         }
 
         @Override

@@ -13,6 +13,16 @@ class VoiceStatusPresentationTest {
         assertTrue(launcher.error());
         assertTrue(denied.error());
     }
+    @Test void missingCaptureProviderIsNotPresentedAsAnUnpluggedMicrophoneOrDeniedPermission() {
+        var backend = VoiceStatusPresentation.describeCode("microphone_backend_unavailable");
+        var device = VoiceStatusPresentation.describeCode("microphone_device_unavailable");
+        var denied = VoiceStatusPresentation.describeCode("microphone_denied");
+        assertTrue(backend.translationKey().endsWith("capture_unavailable"));
+        assertTrue(backend.actionTranslationKey().endsWith("check_audio_runtime"));
+        assertNotEquals(backend.translationKey(), device.translationKey());
+        assertNotEquals(backend.actionTranslationKey(), denied.actionTranslationKey());
+        assertTrue(backend.error());
+    }
     @Test void backendAndCaptureFailuresExplainTheNextSafeAction() {
         assertTrue(VoiceStatusPresentation.describeCode("model_not_installed").actionTranslationKey().endsWith("install_model"));
         assertTrue(VoiceStatusPresentation.describeCode("native_unavailable").actionTranslationKey().endsWith("import_runtime"));

@@ -160,8 +160,13 @@ public final class VoiceRuntime implements VoiceInputActions, AutoCloseable {
                         insertion == Insertion.INSERTED ? "draft_inserted" : insertion == Insertion.PENDING ? "draft_pending" : "draft_rejected",
                         0, result.source(), result.usage());
             });
-        } catch (CancellationException ignored) {
-            // Caller already fenced this operation; no result enters a new session.
+        } catch (CancellationException failure) {
+            // Only the operation's token proves that the caller fenced this result.
+            // A provider cancelling itself must not leave STARTING/RECORDING stuck.
+            if (!op.cancellation.cancelled()) dispatch(op, () -> {
+                operation = null;
+                setStatus(State.ERROR, "microphone_open_failed", 0, "", null);
+            });
         } catch (Exception | LinkageError failure) {
             String code = safeCode(failure);
             dispatch(op, () -> { operation = null; setStatus(State.ERROR, code, 0, "", null); });
@@ -174,7 +179,7 @@ public final class VoiceRuntime implements VoiceInputActions, AutoCloseable {
             if (!closed && operation == op && generation == op.id && !op.cancellation.cancelled()) action.run();
         }});
     }
-    private static String safeCode(Throwable failure) {
+    static String safeCode(Throwable failure) {
         if (failure instanceof MacMicrophonePermission.PermissionException permission) {
             return switch (permission.failure()) {
                 case DENIED, RESTRICTED -> "microphone_denied";
@@ -182,10 +187,11 @@ public final class VoiceRuntime implements VoiceInputActions, AutoCloseable {
                 case CHECK_FAILED -> "microphone_permission_unavailable";
             };
         }
-        if (failure instanceof JavaSoundCapture.CaptureException capture) {
+        if (failure instanceof AudioCapture.CaptureException capture) {
             return switch (capture.failure()) {
                 case DEVICE_DISCONNECTED, READ_FAILED -> "device_broken";
                 case DEVICE_UNAVAILABLE -> "microphone_device_unavailable";
+                case BACKEND_UNAVAILABLE -> "microphone_backend_unavailable";
                 case UNSUPPORTED_FORMAT -> "microphone_format_unsupported";
                 case OPEN_FAILED -> "microphone_open_failed";
                 case OPEN_TIMEOUT, OPEN_BUSY -> "microphone_open_failed";

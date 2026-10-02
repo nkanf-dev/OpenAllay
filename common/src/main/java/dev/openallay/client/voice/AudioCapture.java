@@ -21,7 +21,29 @@ public interface AudioCapture extends AutoCloseable {
         AudioCapture open(String deviceId, VoiceCancellation cancellation) throws Exception;
 
         /** Enumerates devices only for an explicit device-list refresh, on a worker. */
-        List<Device> devices();
+        List<Device> devices() throws CaptureException;
+    }
+
+    enum Failure {
+        DEVICE_UNAVAILABLE, BACKEND_UNAVAILABLE, UNSUPPORTED_FORMAT, OPEN_FAILED,
+        OPEN_TIMEOUT, OPEN_BUSY, READ_FAILED, DEVICE_DISCONNECTED
+    }
+
+    /** Backend-neutral failure. Provider messages never become player-facing status text. */
+    final class CaptureException extends Exception {
+        private final Failure failure;
+
+        CaptureException(Failure failure, String message) {
+            super(message);
+            this.failure = failure;
+        }
+
+        CaptureException(Failure failure, String message, Throwable cause) {
+            super(message, cause);
+            this.failure = failure;
+        }
+
+        public Failure failure() { return failure; }
     }
 
     record Device(String id, String name) {}

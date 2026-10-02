@@ -38,9 +38,9 @@ final class MacMicrophonePermission {
                                         + "that supplies a microphone usage description for the game process, "
                                         + "then restart and try recording. OpenAllay does not modify app bundles.");
                     }
-                    // Only explicit JavaSound open/start may proceed for a prepared host.
+                    // Only explicit capture open/start may proceed for a prepared host.
                     // Do not construct an Objective-C block or request access during startup/listing.
-                    // The HAL provider's first-use permission prompt needs launcher-specific verification.
+                    // The provider's first-use permission prompt needs launcher-specific verification.
                 }
                 case UNKNOWN -> throw new PermissionException(Failure.CHECK_FAILED,
                         "macOS returned an unknown microphone permission status. Restart the game and "
