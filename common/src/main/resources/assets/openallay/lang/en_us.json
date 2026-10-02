@@ -741,5 +741,20 @@
   "screen.openallay.settings.ui.anchor.center_right": "Center right",
   "screen.openallay.settings.ui.anchor.bottom_left": "Bottom left",
   "screen.openallay.settings.ui.anchor.bottom_center": "Bottom center",
-  "screen.openallay.settings.ui.anchor.bottom_right": "Bottom right"
+  "screen.openallay.settings.ui.anchor.bottom_right": "Bottom right",
+  "screen.openallay.notification.cards": "%s new cards",
+  "screen.openallay.notification.completed": "Task completed",
+  "screen.openallay.notification.failed": "Task failed",
+  "screen.openallay.notification.more_tasks": "+%s task results",
+  "screen.openallay.notification.view": "%s: view reply",
+  "screen.openallay.settings.ui.duration": "Notification seconds",
+  "screen.openallay.settings.ui.notification_policy": "When to notify",
+  "screen.openallay.settings.ui.notifications": "Notifications",
+  "screen.openallay.settings.ui.notifications_enabled": "Show game notifications",
+  "screen.openallay.settings.ui.notify_cards": "New card batches",
+  "screen.openallay.settings.ui.notify_failures": "Task failures",
+  "screen.openallay.settings.ui.notify_replies": "Completed replies",
+  "screen.openallay.settings.ui.policy.always": "Always show (including over full view)",
+  "screen.openallay.settings.ui.policy.when_guide_not_visible": "When full view is closed",
+  "screen.openallay.settings.ui.test_notification": "Test local notification"
 }

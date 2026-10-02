@@ -137,6 +137,7 @@ public final class OpenAllaySettingsScreen extends Screen {
     public interface UiActions {
         void editHud(OpenAllaySettingsScreen returnScreen, GuideDisplayConfig draft,
                 java.util.function.Consumer<GuideDisplayConfig> applied);
+        void previewNotification(GuideUiConfig.Notifications config);
     }
 
     public OpenAllaySettingsScreen withUiActions(UiActions actions) {
@@ -558,6 +559,7 @@ public final class OpenAllaySettingsScreen extends Screen {
         int y = area.y() + 34 - uiScroll;
         GuideUiConfig.Fullscreen full = uiDraft.ui().fullscreen();
         GuideUiConfig.Hud hud = uiDraft.ui().hud();
+        GuideUiConfig.Notifications notifications = uiDraft.ui().notifications();
         switch (uiGroup) {
             case FULLSCREEN -> {
                 uiButton("density", enumLabel("density", full.density()), x, y, w, () ->
@@ -658,6 +660,42 @@ public final class OpenAllaySettingsScreen extends Screen {
                         "screen.openallay.settings.ui.actions_unavailable")));
                 y += 26;
             }
+            case NOTIFICATIONS -> {
+                uiToggle("notifications_enabled", notifications.enabled(), x, y, w,
+                        () -> changeNotifications(uiDraft.ui().notifications().withEnabled(!uiDraft.ui().notifications().enabled())));
+                y += 26;
+                uiButton("notification_policy", enumLabel("policy", notifications.policy()), x, y, w,
+                        () -> changeNotifications(uiDraft.ui().notifications().withPolicy(
+                                uiDraft.ui().notifications().policy() == GuideUiConfig.NotificationPolicy.ALWAYS
+                                        ? GuideUiConfig.NotificationPolicy.WHEN_GUIDE_NOT_VISIBLE
+                                        : GuideUiConfig.NotificationPolicy.ALWAYS)));
+                y += 26;
+                uiToggle("notify_replies", uiDraft.ui().notifications().replyCompleted(), x, y, w,
+                        () -> changeNotifications(uiDraft.ui().notifications().withEvents(!uiDraft.ui().notifications().replyCompleted(),
+                                uiDraft.ui().notifications().cardBatches(), uiDraft.ui().notifications().taskFailures())));
+                y += 26;
+                uiToggle("notify_cards", notifications.cardBatches(), x, y, w,
+                        () -> changeNotifications(uiDraft.ui().notifications().withEvents(uiDraft.ui().notifications().replyCompleted(),
+                                !uiDraft.ui().notifications().cardBatches(), uiDraft.ui().notifications().taskFailures())));
+                y += 26;
+                uiToggle("notify_failures", notifications.taskFailures(), x, y, w,
+                        () -> changeNotifications(uiDraft.ui().notifications().withEvents(uiDraft.ui().notifications().replyCompleted(),
+                                uiDraft.ui().notifications().cardBatches(), !uiDraft.ui().notifications().taskFailures())));
+                y += 26;
+                uiSlider("duration", notifications.durationSeconds(), 3, 15, true, x, y, w,
+                        value -> {
+                            uiDraft.preview(uiDraft.ui().withNotifications(uiDraft.ui().notifications()
+                                    .withDurationSeconds((int) Math.round(value))));
+                            updateUiApplyButton();
+                        });
+                y += 26;
+                Button preview = uiButton("test_notification", Component.empty(), x, y, w,
+                        () -> { if (uiActions != null) uiActions.previewNotification(uiDraft.ui().notifications()); });
+                preview.active = uiActions != null;
+                if (uiActions == null) preview.setTooltip(Tooltip.create(Component.translatable(
+                        "screen.openallay.settings.ui.actions_unavailable")));
+                y += 26;
+            }
         }
         uiContentHeight = y + uiScroll - (area.y() + uiControlsInset());
     }
@@ -726,6 +764,11 @@ public final class OpenAllaySettingsScreen extends Screen {
 
     private void changeHud(GuideUiConfig.Hud value) {
         previewHud(value);
+        rebuildWidgets();
+    }
+
+    private void changeNotifications(GuideUiConfig.Notifications value) {
+        uiDraft.preview(uiDraft.ui().withNotifications(value));
         rebuildWidgets();
     }
 

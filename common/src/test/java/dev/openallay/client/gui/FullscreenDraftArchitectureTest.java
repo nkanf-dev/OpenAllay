@@ -22,8 +22,11 @@ final class FullscreenDraftArchitectureTest {
         String screen = source("common/src/main/java/dev/openallay/client/gui/OpenAllayScreen.java");
         assertTrue(coordinator.contains("new OpenAllaySettingsScreen(settings, () -> openGuide(service))"));
         assertTrue(coordinator.contains("new OpenAllayScreen(service, recipes, display, openSettings, owner)"));
-        assertTrue(coordinator.contains("GuideService next = services.current();"));
+        assertTrue(coordinator.contains("binding = services.listenPresentation(new GuidePresentationListener()"),
+                "the shared draft owner binds before live request admission");
+        assertTrue(coordinator.contains("public void bound(GuideService next)"));
         assertTrue(coordinator.contains("if (closed || bound == next) return;"));
+        assertTrue(coordinator.contains("state = GuideClientUiState.create(next, GuideClientUiCoordinator.this.dispatcher);"));
         assertTrue(screen.contains("uiState.captureIntent("));
         assertTrue(screen.contains("uiState.beginIntentSubmission("));
         assertTrue(screen.contains("uiState.completeIntentSubmission("));

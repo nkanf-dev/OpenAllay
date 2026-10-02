@@ -8,7 +8,7 @@ import java.util.Objects;
 /** Only implemented appearance domains; HUD and notification switches are independent. */
 public record UiSettingsProjection(GuideUiConfig config, boolean animationsEnabled, List<Group> groups) {
     public enum Group {
-        FULLSCREEN, HUD;
+        FULLSCREEN, HUD, NOTIFICATIONS;
         public String translationKey() {
             return "screen.openallay.settings.ui." + name().toLowerCase(java.util.Locale.ROOT);
         }

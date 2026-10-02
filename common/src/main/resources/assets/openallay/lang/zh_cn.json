@@ -741,5 +741,20 @@
   "screen.openallay.settings.ui.anchor.center_right": "右侧居中",
   "screen.openallay.settings.ui.anchor.bottom_left": "左下",
   "screen.openallay.settings.ui.anchor.bottom_center": "下方居中",
-  "screen.openallay.settings.ui.anchor.bottom_right": "右下"
+  "screen.openallay.settings.ui.anchor.bottom_right": "右下",
+  "screen.openallay.notification.cards": "%s 张新卡片",
+  "screen.openallay.notification.completed": "任务完成",
+  "screen.openallay.notification.failed": "任务失败",
+  "screen.openallay.notification.more_tasks": "另有 %s 个任务结果",
+  "screen.openallay.notification.view": "%s：查看回复",
+  "screen.openallay.settings.ui.duration": "通知显示秒数",
+  "screen.openallay.settings.ui.notification_policy": "通知时机",
+  "screen.openallay.settings.ui.notifications": "通知",
+  "screen.openallay.settings.ui.notifications_enabled": "显示游戏内通知",
+  "screen.openallay.settings.ui.notify_cards": "产生卡片结果时",
+  "screen.openallay.settings.ui.notify_failures": "任务失败时",
+  "screen.openallay.settings.ui.notify_replies": "回复完成时",
+  "screen.openallay.settings.ui.policy.always": "始终显示（包括主界面打开时）",
+  "screen.openallay.settings.ui.policy.when_guide_not_visible": "未打开主界面时",
+  "screen.openallay.settings.ui.test_notification": "测试本地通知"
 }

@@ -122,17 +122,18 @@ final class ClientArchitectureTest {
 
         String coordinator = Files.readString(root.resolve(
                 "common/src/main/java/dev/openallay/client/gui/GuideClientUiCoordinator.java"));
-        assertEquals(1, occurrences(coordinator, "GuideClientUiState.create(next, dispatcher)"));
-        assertTrue(coordinator.contains("GuideService next = services.current();"));
+        assertEquals(1, occurrences(coordinator, "GuideClientUiState.create(next, GuideClientUiCoordinator.this.dispatcher)"));
+        assertTrue(coordinator.contains("notificationBinding = services.listenPresentation(notifications)"));
+        assertTrue(coordinator.contains("binding = services.listenPresentation(new GuidePresentationListener()"));
         assertTrue(coordinator.contains("if (closed || bound == next) return;"));
-        String guideOpen = coordinator.substring(coordinator.indexOf("public void openGuide("),
-                coordinator.indexOf("public void tick()"));
-        assertTrue(guideOpen.indexOf("bindCurrent()") < guideOpen.indexOf("GuideClientUiState owner = state"));
-        assertTrue(guideOpen.contains("new GuideHudEditorScreen(draft, applied, returnScreen"));
+        assertTrue(coordinator.contains("notifications.tick()"));
+        assertTrue(coordinator.contains("notifications.testNotification(config)"));
+        assertTrue(coordinator.contains(".withNotifications(notifications)"));
+        assertTrue(coordinator.contains("new GuideHudEditorScreen(draft, applied, returnScreen"));
         assertTrue(coordinator.contains("new GuideChatLiteScreen(service, state, display,"));
-        assertTrue(!coordinator.contains("listenPresentation("));
+        assertTrue(!coordinator.contains("bindCurrent()"), "Live notification binding is not a tick identity diff");
         assertTrue(!coordinator.contains("client.voice"));
-        assertTrue(!coordinator.contains("client.presentation"));
+        assertTrue(coordinator.contains("client.presentation"));
         assertTrue(coordinator.contains("GuideClientUiState owner = state;"));
         assertTrue(coordinator.contains("new OpenAllayScreen(service, recipes, display, openSettings, owner)"));
         assertTrue(coordinator.contains("new OpenAllaySettingsScreen(settings, () -> openGuide(service))"));

@@ -4,6 +4,10 @@ import dev.openallay.client.ClientEventDispatcher;
 import dev.openallay.client.gui.hud.GuideChatLiteScreen;
 import dev.openallay.client.gui.hud.GuideHudEditorScreen;
 import dev.openallay.client.gui.hud.GuideHudRenderer;
+import dev.openallay.client.gui.hud.GuideNativeToastPort;
+import dev.openallay.client.presentation.GuideNotificationController;
+import dev.openallay.guide.GuidePresentationEvent;
+import dev.openallay.guide.GuidePresentationListener;
 import dev.openallay.guide.GuideService;
 import dev.openallay.guide.GuideServiceManager;
 import dev.openallay.guide.ui.GuideDisplayConfig;
@@ -20,7 +24,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.server.packs.resources.ReloadableResourceManager;
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
 
-/** Shared draft and passive HUD owner. Explicit views bind the manager's current service. */
+/** Shared client presentation owner. Live sinks bind before the manager admits any task. */
 public final class GuideClientUiCoordinator implements AutoCloseable {
     private final Minecraft minecraft;
     private final GuideServiceManager services;
@@ -30,6 +34,10 @@ public final class GuideClientUiCoordinator implements AutoCloseable {
     private final GuideHudController hud;
     private final GuideHudRenderer renderer;
     private final ClientEventDispatcher dispatcher;
+    private final GuideNotificationController notifications;
+    private final AutoCloseable binding;
+    private final AutoCloseable notificationBinding;
+    private final AutoCloseable settingsBinding;
     private GuideService bound;
     private GuideClientUiState state;
     private boolean closed;
@@ -45,13 +53,32 @@ public final class GuideClientUiCoordinator implements AutoCloseable {
         hud = new GuideHudController(services, display::config);
         renderer = new GuideHudRenderer(minecraft);
         this.dispatcher = Objects.requireNonNull(dispatcher, "dispatcher");
+        notifications = new GuideNotificationController(() -> display.config().ui().notifications(), clock,
+                new GuideNativeToastPort(minecraft));
+        // Both result delivery and draft ownership bind before forActor returns for admission.
+        notificationBinding = services.listenPresentation(notifications);
+        binding = services.listenPresentation(new GuidePresentationListener() {
+            @Override public void bound(GuideService next) {
+                if (closed || bound == next) return;
+                closeState();
+                bound = next;
+                state = GuideClientUiState.create(next, GuideClientUiCoordinator.this.dispatcher);
+            }
+            @Override public void event(GuidePresentationEvent event) {}
+            @Override public void invalidated(UUID generation) {
+                if (bound != null && generation.equals(bound.presentationGeneration())) {
+                    closeState();
+                    hud.disconnect();
+                }
+            }
+        });
+        settingsBinding = settings == null ? () -> {} : settings.listen(ignored -> notifications.settingsChanged());
         if (minecraft.getResourceManager() instanceof ReloadableResourceManager resources) {
             resources.registerReloadListener((ResourceManagerReloadListener) ignored -> renderer.invalidateLayout());
         }
     }
 
     public void openGuide(GuideService service) {
-        bindCurrent();
         if (closed || service != bound || state == null || state.closed()) return;
         GuideClientUiState owner = state;
         Runnable openSettings = settings == null ? null : () -> {
@@ -64,18 +91,22 @@ public final class GuideClientUiCoordinator implements AutoCloseable {
                             minecraft.gui.setScreen(new GuideHudEditorScreen(draft, applied, returnScreen,
                                     () -> valid(service, owner), renderer, hud::view));
                         }
+                        @Override public void previewNotification(dev.openallay.guide.ui.GuideUiConfig.Notifications config) {
+                            if (valid(service, owner)) notifications.testNotification(config);
+                        }
                     });
             minecraft.gui.setScreen(screen);
         };
-        minecraft.gui.setScreen(new OpenAllayScreen(service, recipes, display, openSettings, owner));
+        minecraft.gui.setScreen(new OpenAllayScreen(service, recipes, display, openSettings, owner)
+                .withNotifications(notifications));
     }
 
     /** Client tick only. Disabled passive surfaces never create a GuideService or capture context. */
     public void tick() {
         if (closed) return;
-        bindCurrent();
         if (state != null && bound != null) state.selectSession(bound.snapshot().selectedSession());
         hud.tick();
+        notifications.tick();
         boolean gameplay = minecraft.player != null && minecraft.level != null
                 && minecraft.gui.screen() == null && minecraft.gui.overlay() == null;
         while (OpenAllayKeyMappings.TOGGLE_HUD.consumeClick()) {
@@ -97,7 +128,6 @@ public final class GuideClientUiCoordinator implements AutoCloseable {
         while (OpenAllayKeyMappings.INTERACT_HUD.consumeClick()) {
             if (gameplay) {
                 GuideService service = services.forActor(minecraft.player.getUUID());
-                bindCurrent();
                 if (state != null) minecraft.gui.setScreen(new GuideChatLiteScreen(service, state, display,
                         () -> openGuide(service)));
             }
@@ -110,18 +140,9 @@ public final class GuideClientUiCoordinator implements AutoCloseable {
     }
 
     public void disconnect() {
+        if (bound != null) notifications.invalidated(bound.presentationGeneration());
         closeState();
         hud.disconnect();
-    }
-
-    private void bindCurrent() {
-        GuideService next = services.current();
-        if (closed || bound == next) return;
-        closeState();
-        if (next != null) {
-            bound = next;
-            state = GuideClientUiState.create(next, dispatcher);
-        }
     }
 
     private boolean valid(GuideService service, GuideClientUiState owner) {
@@ -133,10 +154,17 @@ public final class GuideClientUiCoordinator implements AutoCloseable {
         state = null;
         bound = null;
     }
+    private static void close(AutoCloseable resource) {
+        try { resource.close(); } catch (Exception ignored) {}
+    }
     @Override public void close() {
         if (closed) return;
         closed = true;
         disconnect();
         hud.close();
+        notifications.close();
+        close(settingsBinding);
+        close(binding);
+        close(notificationBinding);
     }
 }

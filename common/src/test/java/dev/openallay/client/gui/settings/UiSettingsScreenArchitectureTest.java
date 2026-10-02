@@ -23,7 +23,7 @@ final class UiSettingsScreenArchitectureTest {
         assertEquals(1, apply.split("saveDisplay", -1).length - 1);
         assertTrue(source.contains("withUiActions"));
         assertFalse(source.contains("withVoiceActions"));
-        assertFalse(source.contains("previewNotification"));        assertFalse(source.contains("cycleSection"));
+        assertTrue(source.contains("previewNotification"));        assertFalse(source.contains("cycleSection"));
     }
 
     /** These production blocks contain no literal braces; avoid a later feature's method as an end marker. */

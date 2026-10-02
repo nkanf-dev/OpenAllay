@@ -44,6 +44,7 @@ public final class GuideService implements GuideHistoryAdministration {
     private final ClientEventDispatcher dispatcher;
     private final Clock clock;
     private final GuideStateReducer reducer;
+    private final GuideLivePresentationSource presentation;
     private final GuideHistoryScope historyScope;
     private final GuideHistoryAccess history;
     private final dev.openallay.model.image.ImageAttachmentStore attachmentStore;
@@ -121,6 +122,7 @@ public final class GuideService implements GuideHistoryAdministration {
             dev.openallay.model.image.ImageAttachmentStore attachmentStore) {
         this.attachmentStore = attachmentStore;
         this.actor = Objects.requireNonNull(actor, "actor");
+        this.presentation = new GuideLivePresentationSource(actor);
         this.local = local;
         this.remote = Objects.requireNonNull(remote, "remote");
         this.contexts = Objects.requireNonNull(contexts, "contexts");
@@ -149,6 +151,21 @@ public final class GuideService implements GuideHistoryAdministration {
     public GuideSnapshot snapshot() {
         return snapshot;
     }
+
+    public UUID presentationGeneration() { return presentation.generation(); }
+
+    /** Cached identity only; deletion/recreation of the same session name gets a new owner. */
+    public java.util.Optional<UUID> presentationSessionOwner(String sessionId) {
+        SessionState session = publishedSessions.get(sessionId);
+        return session == null ? java.util.Optional.empty() : java.util.Optional.of(session.presentationOwner);
+    }
+
+    /** Live-only subscription. No initial snapshot, history replay or dispatcher binding gap. */
+    public GuideSubscription subscribePresentation(Consumer<GuidePresentationEvent> listener) {
+        return presentation.subscribe(listener);
+    }
+
+    void invalidatePresentation() { presentation.invalidate(); }
 
     /** Cached numeric state only; safe for a screen tick without capture, history I/O or tokenization. */
     public GuideTelemetrySnapshot telemetry() {
@@ -1393,6 +1410,7 @@ public final class GuideService implements GuideHistoryAdministration {
             session.usageCarriers.keySet().forEach(requestSessions::remove);
             session.usageCarriers.clear();
             capturedProjection.removeSession(sessionId);
+            presentation.discardSession(session.presentationOwner);
             pendingHistoryMutations.add(new GuideHistoryMutation.DeleteSession(sessionId));
             pendingCancelledFinalization.entrySet().removeIf(
                     entry -> entry.getValue().sessionId().equals(sessionId));
@@ -1521,6 +1539,8 @@ public final class GuideService implements GuideHistoryAdministration {
             invalidatePageLoad(session, "history_page_cancelled", "History page request was cancelled");
             session.requests.forEach(request -> requestSessions.remove(request.requestId()));
             capturedProjection.clearSession(session.id);
+            presentation.discardSession(session.presentationOwner);
+            session.presentationOwner = UUID.randomUUID();
             session.requests.clear();
             session.usageCarriers.keySet().forEach(requestSessions::remove);
             session.usageCarriers.clear();
@@ -1630,6 +1650,8 @@ public final class GuideService implements GuideHistoryAdministration {
     }
 
     public CompletableFuture<Void> disconnect() {
+        // Fence presentation before the dispatcher synthesizes disconnect cancellations.
+        invalidatePresentation();
         CompletableFuture<Void> result = new CompletableFuture<>();
         dispatcher.execute(() -> {
             List<ManualCompaction> detachedControls = sessions.values().stream()
@@ -2065,6 +2087,7 @@ public final class GuideService implements GuideHistoryAdministration {
         GuideRequestSnapshot request = GuideRequestSnapshot.start(
                 requestId, sessionId, topology, question, now, capturedSelection);
         session.requests.add(request);
+        presentation.admit(session.presentationOwner, request);
         submittedInputs.put(requestId, input);
         if (receipt != null) session.requestReceipts.put(requestId, receipt);
         captureImageCapability(requestId, capturedSelection);
@@ -2445,6 +2468,7 @@ public final class GuideService implements GuideHistoryAdministration {
         }
         after = after.withUsageProjection(before.usageProjection());
         session.requests.set(index, after);
+        presentation.applied(session.presentationOwner, before, after, event);
         if (after.terminal()) {
             contexts.closeRequest(requestId.toString());
             captureForkBoundary(session, requestId);
@@ -3168,6 +3192,7 @@ public final class GuideService implements GuideHistoryAdministration {
 
     private static final class SessionState {
         private final String id;
+        private UUID presentationOwner = UUID.randomUUID();
         private GuideUsageTracker usage = new GuideUsageTracker();
         private final List<GuideMessage> messages = new ArrayList<>();
         // Unloaded inherited durable messages own earlier ordinals.

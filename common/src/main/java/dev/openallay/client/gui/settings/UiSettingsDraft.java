@@ -48,6 +48,7 @@ public final class UiSettingsDraft {
                 animations = GuideDisplayConfig.defaults().animationsEnabled();
             }
             case HUD -> ui = ui.withHud(GuideUiConfig.Hud.defaults());
+            case NOTIFICATIONS -> ui = ui.withNotifications(GuideUiConfig.Notifications.defaults());
         }
     }
 }

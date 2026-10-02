@@ -23,6 +23,9 @@ public final class GuideServiceManager {
     private final GuideHistoryScopeProvider historyScopes;
     private final dev.openallay.model.image.ImageAttachmentStore attachmentStore;
     private GuideService current;
+    private final java.util.concurrent.CopyOnWriteArrayList<GuidePresentationListener> presentationListeners =
+            new java.util.concurrent.CopyOnWriteArrayList<>();
+    private GuideSubscription presentationSubscription;
 
     public GuideServiceManager(
             GuideLocalEndpoint local,
@@ -72,6 +75,7 @@ public final class GuideServiceManager {
                 || !Objects.equals(current.historyScope(), scope)) {
             GuideHistoryAccess nextHistory = history;
             if (current != null) {
+                invalidatePresentationBinding();
                 CompletableFuture<Void> disconnected = current.disconnect();
                 if (history != null) {
                     nextHistory = afterDisconnect(disconnected);
@@ -81,6 +85,14 @@ public final class GuideServiceManager {
             current = new GuideService(
                     actor, local, remote, contexts, dispatcher, clock, gson, scope, nextHistory,
                     attachmentStore);
+            // Bind synchronously, before this service can be returned for request admission.
+            presentationSubscription = current.subscribePresentation(event -> {
+                for (GuidePresentationListener listener : presentationListeners) {
+                    try { listener.event(event); }
+                    catch (RuntimeException ignored) { /* UI observers cannot fail tasks. */ }
+                }
+            });
+            for (GuidePresentationListener listener : presentationListeners) notifyBound(listener, current);
         }
         return current;
     }
@@ -88,6 +100,7 @@ public final class GuideServiceManager {
     public synchronized CompletableFuture<Void> disconnect() {
         contexts.clearConnectionState();
         if (current != null) {
+            invalidatePresentationBinding();
             CompletableFuture<Void> disconnected = current.disconnect();
             current = null;
             return disconnected;
@@ -102,6 +115,31 @@ public final class GuideServiceManager {
 
     public synchronized GuideService current() {
         return current;
+    }
+
+    /** Register at client initialization, not from HUD tick or snapshot diffs. */
+    public synchronized GuideSubscription listenPresentation(GuidePresentationListener listener) {
+        Objects.requireNonNull(listener, "listener");
+        presentationListeners.add(listener);
+        if (current != null) notifyBound(listener, current);
+        return () -> presentationListeners.remove(listener);
+    }
+
+    private static void notifyBound(GuidePresentationListener listener, GuideService service) {
+        try { listener.bound(service); }
+        catch (RuntimeException ignored) { /* Presentation is not a task admission dependency. */ }
+    }
+
+    private void invalidatePresentationBinding() {
+        if (current == null) return;
+        UUID generation = current.presentationGeneration();
+        current.invalidatePresentation();
+        if (presentationSubscription != null) presentationSubscription.close();
+        presentationSubscription = null;
+        for (GuidePresentationListener listener : presentationListeners) {
+            try { listener.invalidated(generation); }
+            catch (RuntimeException ignored) { /* One owner cannot block another owner's cleanup. */ }
+        }
     }
 
     public synchronized GuideHistorySettingsSnapshot historySettingsSnapshot() {

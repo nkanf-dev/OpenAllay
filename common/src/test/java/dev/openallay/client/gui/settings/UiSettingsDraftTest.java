@@ -65,7 +65,8 @@ final class UiSettingsDraftTest {
     @Test
     void uiPageAlwaysProjectsIndependentControlsEvenWhenBothChannelsAreOff() {
         var projection = UiSettingsProjection.from(GuideDisplayConfig.defaults());
-        assertEquals(List.of(UiSettingsProjection.Group.FULLSCREEN, UiSettingsProjection.Group.HUD), projection.groups());
+        assertEquals(List.of(UiSettingsProjection.Group.FULLSCREEN, UiSettingsProjection.Group.HUD,
+                UiSettingsProjection.Group.NOTIFICATIONS), projection.groups());
         assertFalse(projection.config().hud().enabled());
         assertFalse(projection.config().notifications().enabled());
         assertTrue(projection.animationsEnabled());

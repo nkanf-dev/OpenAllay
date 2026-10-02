@@ -103,10 +103,12 @@ public final class OpenAllayScreen extends Screen {
     private final GuideClientUiState uiState;
     private GuideClientUiState.ViewAttachment attachment;
     private AutoCloseable draftSubscription;
+    private dev.openallay.client.presentation.GuideNotificationController notifications;
     private boolean railVisible;
     private boolean overflowOpen;
     private int sessionScroll;
     private final HashSet<String> expandedToolRequests = new HashSet<>();
+    private final Map<String, GuideUiLayout.Rect> renderedRows = new LinkedHashMap<>();
     private final String imageDraftOwner = UUID.randomUUID().toString();
     private final Map<UUID, Identifier> imageTextures = new LinkedHashMap<>();
     private GuideUiLayout.ComposerExtras composerExtras;
@@ -253,6 +255,11 @@ public final class OpenAllayScreen extends Screen {
         railVisible = projectedDisplay.ui().fullscreen().sessionRailVisible();
     }
 
+    public OpenAllayScreen withNotifications(dev.openallay.client.presentation.GuideNotificationController notifications) {
+        this.notifications = notifications;
+        return this;
+    }
+
     @Override
     protected void init() {
         layout = GuideUiLayout.calculate(width, height, detailOpen(),
@@ -364,6 +371,7 @@ public final class OpenAllayScreen extends Screen {
             try { draftSubscription.close(); } catch (Exception ignored) { }
             draftSubscription = null;
         }
+        if (notifications != null) notifications.clearVisibility(service);
         releaseComposerTextures();
         submittingDraft = false;
     }
@@ -645,6 +653,7 @@ public final class OpenAllayScreen extends Screen {
         renderLocalNotice(graphics, mouseX, mouseY);
         if (sessionOverlay) renderSessions(graphics);
         renderOverflow(graphics, mouseX, mouseY);
+        reportVisibleReceipts();
     }
 
     private void renderTop(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
@@ -811,6 +820,51 @@ public final class OpenAllayScreen extends Screen {
         }
     }
 
+    private void reportVisibleReceipts() {
+        if (notifications == null) return;
+        HashSet<dev.openallay.guide.GuidePresentationEvent.Key> visible = new HashSet<>();
+        HashSet<dev.openallay.guide.GuidePresentationEvent.Key> seen = new HashSet<>();
+        boolean uncovered = !sessionOverlay && !overflowOpen && !modelSelectorOpen && !(detailOpen() && layout.detailOverlay());
+        if (uncovered) {
+            GuideUiLayout.Rect panel = layout.transcript();
+            GuideUiLayout.Rect viewport = new GuideUiLayout.Rect(panel.x(), panel.y() + 7, panel.width(), panel.height() - 14);
+            for (var event : notifications.receipts(service, view.selectedSession())) {
+                if (event.content().isEmpty()) continue;
+                List<GuideUiLayout.Rect> content = event.content().stream().map(ref ->
+                        view.rows().stream().filter(row -> receiptMatchesRow(event, ref, row)).findFirst()
+                                .map(row -> renderedRows.get(ref.contentId().startsWith("node:")
+                                        ? rowId(row) + ":" + ref.contentId() : rowId(row))).orElse(null)).toList();
+                if (content.stream().filter(Objects::nonNull).anyMatch(bounds -> intersects(bounds, viewport))) visible.add(event.key());
+                if (content.stream().allMatch(bounds -> bounds != null && bounds.y() >= viewport.y() && bounds.bottom() <= viewport.bottom())) seen.add(event.key());
+            }
+        }
+        boolean active = minecraft != null && minecraft.isWindowActive();
+        notifications.visible(service, view.selectedSession(), visible, active);
+        if (active) notifications.markSeen(seen);
+    }
+
+    private static boolean receiptMatchesRow(dev.openallay.guide.GuidePresentationEvent event,
+            dev.openallay.guide.GuidePresentationEvent.ContentRef ref, GuideUiRow row) {
+        // Tool transcript rows show summaries, not the original tool cards. Never acknowledge those card refs.
+        if (ref.contentId().startsWith("tool:")) return false;
+        UUID request = switch (row) {
+            case GuideUiRow.Assistant value -> value.requestId();
+            case GuideUiRow.Tool value -> value.requestId();
+            case GuideUiRow.Status value -> value.requestId();
+            default -> null;
+        };
+        int ordinal = switch (row) {
+            case GuideUiRow.Assistant value -> value.ordinal();
+            case GuideUiRow.Tool value -> value.ordinal();
+            case GuideUiRow.Status ignored -> -1;
+            default -> Integer.MIN_VALUE;
+        };
+        if (ref.contentId().equals("reply") && !(row instanceof GuideUiRow.Assistant)) return false;
+        if (ref.contentId().startsWith("node:") && !(row instanceof GuideUiRow.Assistant)) return false;
+        if (ref.timelineOrdinal() == -1 && !(row instanceof GuideUiRow.Status)) return false;
+        return event.key().requestId().equals(request) && ordinal == ref.timelineOrdinal();
+    }
+
     private void refreshTelemetry() {
         var next = service.telemetry();
         if (Objects.equals(telemetry, next)) return;
@@ -949,6 +1003,7 @@ public final class OpenAllayScreen extends Screen {
 
     private void renderTranscript(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         hits.removeIf(hit -> hit.kind() == HitKind.CONTENT);
+        renderedRows.clear();
         GuideUiLayout.Rect area = layout.transcript();
         graphics.fill(area.x(), area.y(), area.x() + area.width(), area.y() + area.height(), panelColor());
         graphics.enableScissor(area.x(), area.y(), area.x() + area.width(), area.y() + area.height());
@@ -967,7 +1022,10 @@ public final class OpenAllayScreen extends Screen {
             for (int index = window.fromIndex(); index < window.toIndexExclusive(); index++) {
                 int y = contentTop - scroll + virtualizer.offset(index);
                 GuideUiRow row = view.rows().get(index);
-                renderRow(graphics, row, area.x() + 9, y, textWidth, mouseX, mouseY);
+                int bottom = renderRow(graphics, row, area.x() + 9, y, textWidth, mouseX, mouseY);
+                if (!(row instanceof GuideUiRow.Tool tool) || toolsExpanded(tool.requestId())) {
+                    renderedRows.put(rowId(row), new GuideUiLayout.Rect(area.x() + 9, y, textWidth, bottom - y));
+                }
             }
         } finally {
             nativeViews.endFrame();
@@ -1039,6 +1097,14 @@ public final class OpenAllayScreen extends Screen {
                                         nativeMouseX,
                                         nativeMouseY,
                                         ticks));
+                int nodeY = y;
+                for (SemanticLayout.Line line : semantic.lines()) {
+                    String nodeKey = rowId(assistant) + ":node:" + line.nodeId();
+                    GuideUiLayout.Rect previous = renderedRows.get(nodeKey);
+                    int top = previous == null ? nodeY : previous.y();
+                    renderedRows.put(nodeKey, new GuideUiLayout.Rect(x + 6, top, width - 6, nodeY + line.height() - top));
+                    nodeY += line.height();
+                }
                 for (MinecraftSemanticRenderer.Hit hit : rendered.hits()) {
                     String focusId = "semantic:" + rowId(assistant) + ":" + hit.intent();
                     hits.add(new Hit(
