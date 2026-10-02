@@ -33,7 +33,7 @@ final class GuideUiConfigTest {
             assertThrows(IllegalArgumentException.class, () -> hud.withPlacement(hud.anchor(), 0, 0, 280, 88, scale));
         for (double alpha : new double[] {-.01, 1.01, Double.NaN, Double.NEGATIVE_INFINITY})
             assertThrows(IllegalArgumentException.class, () -> hud.withBackgroundOpacity(alpha));
-        for (int lines : new int[] {0, 11})
+        for (int lines : new int[] {-1, 81})
             assertThrows(IllegalArgumentException.class, () -> hud.withContent(lines, true, false));
         for (int duration : new int[] {2, 16})
             assertThrows(IllegalArgumentException.class, () -> GuideUiConfig.Notifications.defaults().withDurationSeconds(duration));

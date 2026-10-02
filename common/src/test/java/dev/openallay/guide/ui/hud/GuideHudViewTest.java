@@ -37,6 +37,25 @@ final class GuideHudViewTest {
     }
 
     @Test
+    void previewBudgetSupportsAutoAndEighteenLinesWithoutBecomingAReplyLimit() {
+        assertEquals(18, HUD.maxReplyLines());
+        assertEquals(0, HUD.withContent(0, true, true).maxReplyLines());
+        assertEquals(80, HUD.withContent(80, true, true).maxReplyLines());
+        assertThrows(IllegalArgumentException.class, () -> HUD.withContent(-1, true, true));
+        assertThrows(IllegalArgumentException.class, () -> HUD.withContent(81, true, true));
+        var semantic = dev.openallay.guide.semantic.SemanticDocument.of(java.util.List.of(
+                new dev.openallay.guide.semantic.SemanticBlock.Paragraph("a".repeat(64), java.util.List.of(
+                        new dev.openallay.guide.semantic.SemanticInline.Text("b".repeat(64), "full detail ".repeat(2000))))), java.util.List.of());
+        var assistant = new dev.openallay.guide.ui.GuideUiRow.Assistant(java.util.UUID.randomUUID(), 0,
+                semantic.fallbackText(), semantic, false, java.util.List.of());
+        var view = new GuideHudView(HUD.withContent(1, true, false), "Allay", "main", "tiny preview", "", null, 0,
+                java.util.List.of(assistant), GuideUiConfig.Fullscreen.defaults(), true);
+        assertTrue(view.hasContent());
+        assertEquals(semantic.fallbackText(), ((dev.openallay.guide.ui.GuideUiRow.Assistant) view.rows().getFirst()).text());
+        assertThrows(UnsupportedOperationException.class, () -> view.rows().clear());
+    }
+
+    @Test
     void renderViewCannotCarryOversizedPreviewsOrNegativeTaskCount() {
         assertThrows(IllegalArgumentException.class,
                 () -> new GuideHudView(HUD, "Allay", "main", "x".repeat(513), "", null, 0));

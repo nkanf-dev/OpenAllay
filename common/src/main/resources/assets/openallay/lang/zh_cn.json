@@ -897,5 +897,14 @@
   "screen.openallay.history.layout_unsupported": "现有历史已保留，但记录格式与当前版本不同。",
   "screen.openallay.settings.voice.status.microphone_backend_unavailable": "当前环境缺少音频录音支持，请检查游戏或启动器音频设置后重启。",
   "screen.openallay.voice.feedback.capture_unavailable": "当前环境缺少音频录音支持",
-  "screen.openallay.voice.feedback.action.check_audio_runtime": "请检查游戏或启动器音频设置后重启"
+  "screen.openallay.voice.feedback.action.check_audio_runtime": "请检查游戏或启动器音频设置后重启",
+  "screen.openallay.hud.read": "查看全文：%s",
+  "screen.openallay.hud.pages": "第 %s/%s 页",
+  "screen.openallay.hud.latest": "回到最新",
+  "screen.openallay.hud.back_results": "返回结果",
+  "screen.openallay.hud.scroll_tooltip": "滚动鼠标可阅读完整内容，也可使用 Page Up / Page Down 翻页。",
+  "screen.openallay.settings.more": "更多",
+  "screen.openallay.settings.discard_unsaved": "放弃未保存更改",
+  "screen.openallay.settings.voice.reset": "恢复默认",
+  "screen.openallay.settings.ui.reply_lines.auto": "自动"
 }

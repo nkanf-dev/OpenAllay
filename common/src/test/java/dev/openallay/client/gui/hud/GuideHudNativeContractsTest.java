@@ -28,6 +28,34 @@ class GuideHudNativeContractsTest {
         assertEquals(255, GuideHudRenderer.backgroundColor(1) >>> 24);
         assertEquals(255, GuideHudRenderer.textColor() >>> 24);
     }
+    @Test void compactViewportUsesTypedNativeCardsAndFullScrollRatherThanPreviewLineCaps() throws Exception {
+        String lite = source("common/src/main/java/dev/openallay/client/gui/hud/GuideChatLiteScreen.java");
+        String results = source("common/src/main/java/dev/openallay/client/gui/hud/GuideHudResultRenderer.java");
+        assertTrue(lite.contains("presenter.projectInteractive("));
+        assertTrue(lite.contains("results.scroll().wheel(scrollY)"));
+        assertTrue(lite.contains("GLFW_KEY_PAGE_UP"));
+        assertTrue(lite.contains("GLFW_KEY_PAGE_DOWN"));
+        assertTrue(lite.contains("scrollbarThumbHeight()"));
+        assertTrue(lite.contains("recipes.openExact(value.reference())"));
+        assertFalse(lite.contains("Math.min(6, lines.size())"));
+        assertFalse(lite.contains("font.split(Component.literal(preview)"));
+        assertTrue(results.contains("new MinecraftSemanticRenderer(new MinecraftSemanticResolver())"));
+        assertTrue(results.contains("GuideHudToolCards.project(tool"));
+        assertTrue(results.contains("new NativeDomainViewBinding.Recipe("));
+        assertTrue(results.contains("nativeViews.endFrame()"));
+        assertTrue(results.contains("nativeViews.close()"));
+        assertTrue(results.contains("cachedFont != font"));
+        assertTrue(results.contains("cachedLanguage != language"));
+        assertTrue(results.contains("cachedPresentation"));
+        assertTrue(results.contains("++extractedFrame"));
+        assertTrue(results.contains("boolean painted = nativeRecipe("));
+        assertTrue(results.contains("if (painted && bounds.x() < viewport.right()"));
+        assertTrue(results.contains("paintedRecipes.contains(line.nodeId())"));
+        assertTrue(results.contains("List.copyOf(paintedNodes), lastPaintedText"));
+        assertFalse(results.contains("lastPaintedText = row.layout().narration()"));
+        for (String forbidden : new String[]{"new GuideService", "Files.", "requestHistoryWindow(", "ModelProvider"}) assertFalse(results.contains(forbidden));
+    }
+
     @Test void dualLoaderRegistersOrderedNativeElementsAndNeoBeforeStartup() throws Exception {
         String fabric = source("fabric/src/main/java/dev/openallay/fabric/OpenAllayFabricClient.java");
         String neo = source("neoforge/src/main/java/dev/openallay/neoforge/OpenAllayNeoForgeClient.java");

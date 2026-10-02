@@ -3,6 +3,7 @@ package dev.openallay.guide.ui.hud;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.JsonParser;
@@ -21,6 +22,8 @@ import dev.openallay.guide.semantic.SemanticDocument;
 import dev.openallay.guide.semantic.SemanticInline;
 import dev.openallay.guide.ui.GuideDisplayConfig;
 import dev.openallay.guide.ui.GuideUiConfig;
+import dev.openallay.guide.ui.GuideUiRow;
+import dev.openallay.guide.ui.GuideUiView;
 import dev.openallay.model.ModelUsage;
 import java.time.Instant;
 import java.util.List;
@@ -33,7 +36,7 @@ final class GuideHudPresenterTest {
             GuideUiConfig.Hud.defaults().withEnabled(true));
 
     @Test
-    void selectsLatestCompletedSemanticAssistantWithoutProjectingToolsOrFailures() {
+    void keepsLatestCompletedPreviewSeparateFromLosslessLatestTaskRows() {
         GuideHudPresenter presenter = new GuideHudPresenter();
         GuideToolActivity tool = new GuideToolActivity("private-call", 0, "openallay:inspect_inventory",
                 GuideToolStatus.SUCCEEDED,
@@ -57,8 +60,9 @@ final class GuideHudPresenterTest {
         assertEquals("", view.streamingPreview());
         assertNull(view.progress());
         assertEquals(0, view.otherRunningTasks());
-        assertFalse(view.toString().contains("privateToolResult"));
-        assertFalse(view.toString().contains("raw markdown"));
+        assertEquals(cancelled.requestId(), ((GuideUiRow.Assistant) view.rows().getFirst()).requestId());
+        assertEquals("cancelled partial", ((GuideUiRow.Assistant) view.rows().getFirst()).semantic().fallbackText());
+        assertTrue(view.rows().getLast() instanceof GuideUiRow.Status);
     }
 
     @Test
@@ -97,7 +101,9 @@ final class GuideHudPresenterTest {
         assertEquals("other completed", otherView.latestReply());
         assertEquals(GuideRequestPhase.TOOL_WAIT, otherView.progress().phase());
         assertEquals(1, otherView.otherRunningTasks());
-        assertFalse(otherView.toString().contains("main streaming"));
+        assertTrue(otherView.rows().stream().allMatch(row -> row instanceof GuideUiRow.Assistant assistant
+                ? assistant.requestId().equals(other.requests().getFirst().requestId())
+                : row instanceof GuideUiRow.Tool tool && tool.requestId().equals(otherActive.requestId())));
     }
 
     @Test
@@ -178,6 +184,74 @@ final class GuideHudPresenterTest {
         assertTrue(clusters.codePointCount(0, clusters.length()) <= 512);
         assertEquals("x".repeat(510) + "…",
                 GuideHudPresenter.preview("x".repeat(510) + "e\u0301" + "y".repeat(50)));
+    }
+
+    @Test
+    void interactiveRowsRetainLongReplyToolItemsAndSourceIdentityBeyondPassiveBudgets() {
+        String full = java.util.stream.IntStream.range(0, 60)
+                .mapToObj(index -> "Guide step " + index + ": " + "complete detail ".repeat(20))
+                .collect(java.util.stream.Collectors.joining("\n"));
+        var evidence = new dev.openallay.context.EvidenceMetadata(
+                dev.openallay.context.DataAuthority.CLIENT_VISIBLE,
+                dev.openallay.context.DataCompleteness.PARTIAL, Instant.EPOCH,
+                "minecraft:client_player", "minecraft:client", "26.2", "fabric", java.util.Map.of("minecraft:dimension", "minecraft:overworld"));
+        var source = new dev.openallay.guide.GuideSource("openallay:run_javascript", evidence);
+        GuideToolActivity tool = new GuideToolActivity("items-call", 0, "openallay:run_javascript", GuideToolStatus.SUCCEEDED,
+                JsonParser.parseString("""
+                        {"status":"success","value":{"viewKind":"ITEM","preview":[
+                        {"itemId":"minecraft:diamond","displayName":"Diamond","count":64},
+                        {"itemId":"minecraft:oak_log","displayName":"Oak log","count":128}]}}
+                        """).getAsJsonObject(), List.of(), List.of(source));
+        GuideTimelineEntry.Assistant assistant = new GuideTimelineEntry.Assistant(1, full, semantic(full), false, List.of(source));
+        GuideRequestSnapshot request = request("main", GuideRequestStatus.COMPLETED, 1, 3,
+                List.of(new GuideTimelineEntry.Tool(0, tool), assistant));
+        GuideSnapshot snapshot = snapshot(ACTOR, "main", session("main", request));
+        GuideDisplayConfig tiny = config(CONFIG.ui().hud().withContent(1, false, false));
+        GuideHudPresenter presenter = new GuideHudPresenter();
+        GuideHudView interactive = presenter.projectInteractive(snapshot, tiny);
+        assertEquals(GuideUiView.projectRequestRows(request, tiny).stream()
+                .filter(row -> !(row instanceof GuideUiRow.User)).toList(), interactive.rows());
+        GuideUiRow.Assistant projected = (GuideUiRow.Assistant) interactive.rows().getLast();
+        assertEquals(full, projected.text());
+        assertSame(assistant.semantic(), projected.semantic());
+        assertSame(source, projected.sources().getFirst());
+        assertTrue(projected.semantic().fallbackText().length() > GuideHudView.MAX_PREVIEW_CODE_POINTS);
+        assertEquals(2, ((dev.openallay.guide.ui.GuideDetailCard.ItemGrid)
+                ((GuideUiRow.Tool) interactive.rows().getFirst()).detail().cards().getFirst()).items().size());
+        assertEquals(128, ((dev.openallay.guide.ui.GuideDetailCard.ItemGrid)
+                ((GuideUiRow.Tool) interactive.rows().getFirst()).detail().cards().getFirst()).items().get(1).count());
+        assertSame(interactive, presenter.projectInteractive(snapshot, tiny), "unchanged snapshot does not re-project each frame");
+        assertTrue(presenter.project(snapshot, tiny).rows().isEmpty(), "passive content preference does not trim interactive source");
+        assertEquals(full, assistant.text());
+    }
+
+    @Test
+    void toolStartedAndCompletedKeepOneStableInvocationAndUpdateTypedResult() {
+        UUID requestId = UUID.randomUUID();
+        GuideToolActivity running = new GuideToolActivity("stable-call", 0, "openallay:run_javascript",
+                GuideToolStatus.RUNNING, null, List.of(), List.of());
+        GuideRequestSnapshot started = request("main", GuideRequestStatus.TOOL_WAIT, 1, null,
+                List.of(new GuideTimelineEntry.Tool(0, running)));
+        started = new GuideRequestSnapshot(requestId, started.sessionId(), started.topology(), started.userMessage(),
+                started.timeline(), started.status(), started.sources(), started.usage(), started.retryAfterMillis(), started.failure(),
+                started.createdAt(), started.updatedAt(), started.terminalAt());
+        GuideHudPresenter presenter = new GuideHudPresenter();
+        var first = (GuideUiRow.Tool) presenter.projectInteractive(snapshot(ACTOR, "main", session("main", started)), CONFIG).rows().getFirst();
+        assertEquals(dev.openallay.guide.ui.GuideToolDisplayStatus.RUNNING, first.detail().displayStatus());
+        GuideToolActivity completed = new GuideToolActivity("stable-call", 0, "openallay:run_javascript",
+                GuideToolStatus.SUCCEEDED, JsonParser.parseString("""
+                {"status":"success","value":{"viewKind":"SCALAR","preview":"placed 48 blocks"}}
+                """).getAsJsonObject(), List.of(), List.of());
+        GuideRequestSnapshot ended = new GuideRequestSnapshot(requestId, "main", GuideTopology.CLIENT_LOCAL,
+                "question", List.of(new GuideTimelineEntry.Tool(0, completed)), GuideRequestStatus.COMPLETED,
+                List.of(), ModelUsage.empty(), null, null, Instant.EPOCH.plusSeconds(1), Instant.EPOCH.plusSeconds(3), Instant.EPOCH.plusSeconds(3));
+        GuideHudView next = presenter.projectInteractive(snapshot(ACTOR, "main", session("main", ended)), CONFIG);
+        assertEquals(1, next.rows().size());
+        var last = (GuideUiRow.Tool) next.rows().getFirst();
+        assertEquals(first.requestId(), last.requestId());
+        assertEquals(first.activity().invocationId(), last.activity().invocationId());
+        assertEquals(dev.openallay.guide.ui.GuideToolDisplayStatus.SUCCEEDED, last.detail().displayStatus());
+        assertEquals("placed 48 blocks", ((dev.openallay.guide.ui.GuideDetailCard.Text) last.detail().cards().getFirst()).lines().getFirst());
     }
 
     private static GuideDisplayConfig config(GuideUiConfig.Hud hud) {

@@ -133,7 +133,19 @@ public final class VoiceClientRuntime implements AutoCloseable {
             refreshModelReady();
             return result;
         }
-        @Override public CompletableFuture<ToolResult<VoiceConfig>> update(VoiceConfig candidate) { return submit(() -> saved(candidate)); }
+        @Override public CompletableFuture<ToolResult<VoiceConfig>> update(VoiceConfig candidate) {
+            return update(candidate, null);
+        }
+        @Override public CompletableFuture<ToolResult<VoiceConfig>> update(VoiceConfig candidate, char[] replacement) {
+            Objects.requireNonNull(candidate, "candidate");
+            char[] privateCopy = replacement == null ? null : replacement.clone();
+            if (replacement != null) Arrays.fill(replacement, '\0');
+            return submit(() -> saveCandidate(candidate, store.config(), privateCopy,
+                    runtimeDirectory, credentials, this::saved))
+                    .whenComplete((result, failure) -> {
+                        if (privateCopy != null) Arrays.fill(privateCopy, '\0');
+                    });
+        }
         @Override public CompletableFuture<ToolResult<VoiceConfig>> reload() { return submit(() -> {
             input.cancel(VoiceRuntime.CancelReason.USER);
             ToolResult<VoiceConfig> result = store.reload(); refreshModelReady(); return result;
@@ -176,20 +188,7 @@ public final class VoiceClientRuntime implements AutoCloseable {
         }
         @Override public void cancelDownload() { VoiceCancellation current = download; if (current != null) captureWorker.execute(current::cancel); }
         @Override public CompletableFuture<ToolResult<VoiceConfig>> setApiKey(char[] key) {
-            char[] privateCopy = key.clone(); Arrays.fill(key, '\0');
-            if (closed) { Arrays.fill(privateCopy, '\0'); return CompletableFuture.completedFuture(new ToolResult.Failure<>("voice_closed", "Voice input is closed")); }
-            return submit(() -> {
-                CredentialReference inserted = null;
-                try {
-                    ToolResult<CredentialReference> result = credentials.insert(SecretValue.of(new String(privateCopy)));
-                    if (result instanceof ToolResult.Failure<CredentialReference> failure) return new ToolResult.Failure<>(failure.code(), failure.message());
-                    inserted = ((ToolResult.Success<CredentialReference>) result).value();
-                    ToolResult<VoiceConfig> saved = saved(store.config().withCredential(inserted));
-                    if (saved instanceof ToolResult.Failure<VoiceConfig>) credentials.deleteIfUnreferenced(inserted, java.util.Set.of());
-                    else credentials.collectUnreferenced(java.util.Set.of(inserted));
-                    return saved;
-                } finally { Arrays.fill(privateCopy, '\0'); }
-            }).whenComplete((result, failure) -> Arrays.fill(privateCopy, '\0'));
+            return update(store.config(), Objects.requireNonNull(key, "key"));
         }
         @Override public CompletableFuture<ToolResult<List<AudioCapture.Device>>> refreshDevices() { return submit(() -> {
             try {
@@ -203,6 +202,56 @@ public final class VoiceClientRuntime implements AutoCloseable {
             }
         }); }
     }
+    /** Worker-only candidate transaction. No capture, network, native loading or installation occurs here. */
+    static ToolResult<VoiceConfig> saveCandidate(VoiceConfig candidate, VoiceConfig previous,
+            char[] replacement, Path runtimeDirectory, LocalCredentialStore credentials,
+            java.util.function.Function<VoiceConfig, ToolResult<VoiceConfig>> save) {
+        CredentialReference inserted = null;
+        boolean committed = false;
+        try {
+            boolean changedDirectory = !candidate.nativeModelDirectory().equals(previous.nativeModelDirectory());
+            boolean activatingNative = candidate.enabled() && candidate.backend() == VoiceConfig.Backend.NATIVE
+                    && (!previous.enabled() || previous.backend() != VoiceConfig.Backend.NATIVE);
+            if (candidate.backend() == VoiceConfig.Backend.NATIVE && candidate.enabled()
+                    && candidate.nativeModelDirectory().isEmpty()) {
+                return new ToolResult.Failure<>("model_not_installed",
+                        "Choose a verified voice model directory or disable native voice input");
+            }
+            if (!candidate.nativeModelDirectory().isEmpty() && (changedDirectory || activatingNative)) {
+                try {
+                    NativeModelFiles.validate(Path.of(candidate.nativeModelDirectory()));
+                    NativeRuntimeCatalog.validate(runtimeDirectory);
+                } catch (Exception invalid) {
+                    return new ToolResult.Failure<>("model_invalid",
+                            "The selected model or installed native runtime is invalid; import verified model and runtime files");
+                }
+            }
+            if (replacement != null) {
+                ToolResult<CredentialReference> result = credentials.insert(SecretValue.of(new String(replacement)));
+                if (result instanceof ToolResult.Failure<CredentialReference> failure) {
+                    return new ToolResult.Failure<>(failure.code(), failure.message());
+                }
+                inserted = ((ToolResult.Success<CredentialReference>) result).value();
+            }
+            VoiceConfig submitted = inserted == null ? candidate : candidate.withCredential(inserted);
+            ToolResult<VoiceConfig> result = save.apply(submitted);
+            committed = result instanceof ToolResult.Success<VoiceConfig>;
+            if (committed && !Objects.equals(previous.credential(), submitted.credential())
+                    && previous.credential() != null) {
+                // This store owns only voice refs. Delete only the replaced ref, never unrelated rows.
+                credentials.deleteIfUnreferenced(previous.credential(), submitted.credential() == null
+                        ? java.util.Set.of() : java.util.Set.of(submitted.credential()));
+            }
+            return result;
+        } finally {
+            if (!committed && inserted != null) {
+                credentials.deleteIfUnreferenced(inserted, previous.credential() == null
+                        ? java.util.Set.of() : java.util.Set.of(previous.credential()));
+            }
+            if (replacement != null) Arrays.fill(replacement, '\0');
+        }
+    }
+
     @Override public void close() {
         closed = true;
         input.close();

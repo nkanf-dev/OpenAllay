@@ -174,6 +174,7 @@ final class GuideUiViewTest {
                 Instant.EPOCH.plusSeconds(5));
 
         GuideUiView view = GuideUiView.from(snapshot(request));
+        assertEquals(view.rows(), GuideUiView.projectRequestRows(request, GuideDisplayConfig.defaults()));
 
         assertEquals(
                 List.of(

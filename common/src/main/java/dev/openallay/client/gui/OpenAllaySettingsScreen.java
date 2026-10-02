@@ -5,6 +5,7 @@ import dev.openallay.client.gui.settings.ExtensionSettingsProjection;
 import dev.openallay.client.gui.settings.GeneralSettingsProjection;
 import dev.openallay.client.gui.settings.UiSettingsProjection;
 import dev.openallay.client.gui.settings.UiSettingsDraft;
+import dev.openallay.client.gui.settings.SettingsSaveCoordinator;
 import dev.openallay.guide.ui.GuideDisplayConfig;
 import dev.openallay.guide.ui.GuideUiConfig;
 import dev.openallay.client.voice.VoiceSettingsActions;
@@ -73,6 +74,7 @@ public final class OpenAllaySettingsScreen extends Screen {
 
     private final ClientSettingsService service;
     private final Runnable returnToGuide;
+    private final java.util.concurrent.Executor saveDispatcher;
     private volatile ClientSettingsSnapshot snapshot;
     private AutoCloseable listener;
     private SettingsLayout layout;
@@ -129,11 +131,15 @@ public final class OpenAllaySettingsScreen extends Screen {
     private int modelCatalogPage;
     private long modelCatalogGeneration;
     private final UiSettingsDraft uiDraft;
+    private final SettingsSaveCoordinator editorSave = new SettingsSaveCoordinator();
+    private final java.util.Map<String, String> uiIntegerDrafts = new java.util.HashMap<>();
+    private final java.util.Map<String, EditBox> uiIntegerFields = new java.util.HashMap<>();
     private UiSettingsProjection.Group uiGroup = UiSettingsProjection.Group.FULLSCREEN;
     private int uiScroll;
     private int uiContentHeight;
     private int navigationScroll;
     private boolean sectionMenuOpen;
+    private boolean editorMenuOpen;
     private UiActions uiActions;
     private VoiceSettingsActions voiceActions;
     private VoiceSettingsView voiceView;
@@ -145,6 +151,7 @@ public final class OpenAllaySettingsScreen extends Screen {
     private String voiceHttpUrl = "";
     private String voiceHttpModel = "";
     private String voiceApiKeyDraft = "";
+    private final java.util.Map<String, EditBox> voiceFields = new java.util.HashMap<>();
 
     /** Loader hooks only. Neither preview nor editor entry creates an Agent task. */
     public interface UiActions {
@@ -168,7 +175,13 @@ public final class OpenAllaySettingsScreen extends Screen {
     public OpenAllaySettingsScreen(
             ClientSettingsService service,
             Runnable returnToGuide) {
+        this(service, returnToGuide, null);
+    }
+
+    OpenAllaySettingsScreen(ClientSettingsService service, Runnable returnToGuide,
+            java.util.concurrent.Executor saveDispatcher) {
         super(Component.translatable("screen.openallay.settings.title"));
+        this.saveDispatcher = saveDispatcher == null ? command -> minecraft.execute(command) : saveDispatcher;
         this.service = Objects.requireNonNull(service, "service");
         this.returnToGuide = Objects.requireNonNull(returnToGuide, "returnToGuide");
         this.snapshot = service.snapshot();
@@ -188,6 +201,10 @@ public final class OpenAllaySettingsScreen extends Screen {
 
     @Override
     protected void init() {
+        id = null;
+        assistantName = null;
+        uiIntegerFields.clear();
+        voiceFields.clear();
         layout = SettingsLayout.calculate(width, height, section);
         addHeaderActions();
         if (sectionMenuOpen) {
@@ -196,6 +213,12 @@ public final class OpenAllaySettingsScreen extends Screen {
         }
         if (layout.wide()) {
             addSectionNavigation();
+        }
+        if (editorMenuOpen) {
+            addEditorMenu();
+            addFooterActions();
+            updateEditorSaveControls();
+            return;
         }
         if (section == SettingsSection.MODELS) {
             addModelsPage();
@@ -215,6 +238,7 @@ public final class OpenAllaySettingsScreen extends Screen {
             addAboutPage();
         }
         addFooterActions();
+        updateEditorSaveControls();
     }
 
     @Override
@@ -233,7 +257,7 @@ public final class OpenAllaySettingsScreen extends Screen {
             if (!previous.models().config().equals(next.models().config())
                     || completedReload(
                             previous, next, SettingsOperation.Kind.RELOADING_MODELS)) {
-                if (!selectedServerModel) {
+                if (!selectedServerModel && !editorSave.busy()) {
                     String retained = next.models().profiles().stream()
                             .map(profile -> profile.definition().id())
                             .filter(profileId -> profileId.equals(selectedProfileId))
@@ -249,7 +273,10 @@ public final class OpenAllaySettingsScreen extends Screen {
             if (!previous.display().equals(next.display())
                     || completedReload(
                             previous, next, SettingsOperation.Kind.RELOADING_DISPLAY)) {
-                assistantNameDraft = next.display().assistantName();
+                if (!editorSave.busy()
+                        && assistantNameDraft.equals(previous.display().assistantName())) {
+                    assistantNameDraft = next.display().assistantName();
+                }
                 confirmation = Confirmation.NONE;
             }
             if (!previous.skills().equals(next.skills())) {
@@ -283,6 +310,7 @@ public final class OpenAllaySettingsScreen extends Screen {
                 // Background history/source publications must not rebuild a dragged UI slider.
                 if (section == SettingsSection.UI && !sectionMenuOpen) {
                     updateUiApplyButton();
+                    updateEditorSaveControls();
                 } else {
                     rebuildWidgets();
                     maybeRefreshVisibleCommunity();
@@ -321,9 +349,9 @@ public final class OpenAllaySettingsScreen extends Screen {
     }
 
     @Override
-    public void onClose() {
-        returnToGuide.run();
-    }
+    public void onClose() { done(); }
+
+    private void closeAfterSave() { returnToGuide.run(); }
 
     @Override
     public void tick() {
@@ -471,6 +499,9 @@ public final class OpenAllaySettingsScreen extends Screen {
         }
         if (sectionMenuOpen) {
             renderSectionMenu(graphics);
+        } else if (editorMenuOpen) {
+            graphics.text(font, Component.translatable("screen.openallay.settings.more"),
+                    layout.editor().x() + 8, layout.editor().y() + 9, ACCENT, false);
         } else if (section == SettingsSection.VOICE) {
             renderVoice(graphics);
         } else if (section == SettingsSection.UI) {
@@ -498,6 +529,17 @@ public final class OpenAllaySettingsScreen extends Screen {
 
     private void addHeaderActions() {
         int y = layout.header().y() + 4;
+        boolean hasEditorMenu = section == SettingsSection.UI || section == SettingsSection.VOICE;
+        int moreX = layout.header().right() - (layout.showBack() ? 90 : 28);
+        if (hasEditorMenu) {
+            Button more = addRenderableWidget(OpenAllayButton.create(Component.literal("⋯"), ignored -> {
+                        captureDraft();
+                        editorMenuOpen = !editorMenuOpen;
+                        sectionMenuOpen = false;
+                        rebuildWidgets();
+                    }).bounds(moreX, y, 22, 20).build());
+            more.setTooltip(Tooltip.create(Component.translatable("screen.openallay.settings.more")));
+        }
         if (layout.showBack()) {
             int backX = layout.header().right() - 62;
             addRenderableWidget(OpenAllayButton.create(
@@ -509,13 +551,66 @@ public final class OpenAllaySettingsScreen extends Screen {
             addRenderableWidget(OpenAllayButton.create(
                             Component.translatable(section.translationKey()),
                             ignored -> {
+                                captureDraft();
                                 sectionMenuOpen = !sectionMenuOpen;
+                                editorMenuOpen = false;
                                 navigationScroll = 0;
                                 rebuildWidgets();
                             })
-                    .bounds(sectionX, y, Math.max(50, backX - sectionX - 4), 20)
+                    .bounds(sectionX, y, Math.max(24,
+                            (hasEditorMenu ? moreX : backX) - sectionX - 4), 20)
                     .build());
         }
+    }
+
+    private void addEditorMenu() {
+        int x = layout.editor().x() + 8;
+        int y = layout.editor().y() + 30;
+        int w = Math.max(80, layout.editor().width() - 16);
+        addRenderableWidget(OpenAllayButton.create(
+                        Component.translatable("screen.openallay.settings.discard_unsaved"),
+                        ignored -> discardEditorDraft()).bounds(x, y, w, 20).build());
+        if (section == SettingsSection.VOICE && voiceActions != null) {
+            Button reload = addRenderableWidget(OpenAllayButton.create(
+                            Component.translatable("screen.openallay.settings.voice.reload"), ignored -> {
+                                editorMenuOpen = false;
+                                acceptVoice(voiceActions.reload(), true);
+                            }).bounds(x, y + 26, w, 20).build());
+            reload.active = voiceView != null && !voiceView.busy();
+        }
+    }
+
+    private void discardEditorDraft() {
+        if (editorSave.busy()) return;
+        if (section == SettingsSection.UI) {
+            uiDraft.cancel();
+            uiIntegerDrafts.clear();
+        } else if (section == SettingsSection.VOICE) resetVoiceDraft();
+        editorMenuOpen = false;
+        localNotice = "";
+        if (layout != null) rebuildWidgets();
+    }
+
+    private void resetUiGroup() {
+        if (editorSave.busy()) return;
+        uiDraft.reset(uiGroup);
+        if (uiGroup == UiSettingsProjection.Group.HUD) uiIntegerDrafts.clear();
+        localNotice = "";
+        if (layout != null) rebuildWidgets();
+    }
+
+    private void resetVoiceDefaults() {
+        if (editorSave.busy() || voiceDraft == null) return;
+        captureDraft();
+        VoiceConfig defaults = VoiceConfig.defaults();
+        voiceDraft = new VoiceConfig(defaults.enabled(), defaults.backend(), defaults.deviceId(),
+                defaults.maxClipSeconds(), defaults.language(), defaults.cpuThreads(),
+                voiceDraft.nativeModelDirectory(), defaults.httpBaseUrl(), defaults.httpModel(), voiceDraft.credential());
+        voiceHttpUrl = defaults.httpBaseUrl().toString();
+        voiceHttpModel = defaults.httpModel();
+        // Existing model selection and credential stay available; reset never removes files or keys.
+        localNotice = "";
+        if (layout != null) rebuildWidgets();
     }
 
     private void addSectionNavigation() {
@@ -538,9 +633,18 @@ public final class OpenAllaySettingsScreen extends Screen {
 
     @Override
     public boolean keyPressed(KeyEvent event) {
+        if (editorMenuOpen && event.key() == GLFW.GLFW_KEY_ESCAPE) {
+            editorMenuOpen = false;
+            rebuildWidgets();
+            return true;
+        }
         if (sectionMenuOpen && event.key() == GLFW.GLFW_KEY_ESCAPE) {
             sectionMenuOpen = false;
             rebuildWidgets();
+            return true;
+        }
+        if (event.key() == GLFW.GLFW_KEY_ESCAPE) {
+            done();
             return true;
         }
         return super.keyPressed(event);
@@ -673,7 +777,7 @@ public final class OpenAllaySettingsScreen extends Screen {
                 y += 26;
                 uiToggle("collapsed", hud.collapsed(), x, y, w, () -> changeHud(uiDraft.ui().hud().withCollapsed(!uiDraft.ui().hud().collapsed())));
                 y += 26;
-                uiSlider("reply_lines", hud.maxReplyLines(), 1, 10, true, x, y, w, value -> {
+                uiSlider("reply_lines", hud.maxReplyLines(), 0, 80, true, x, y, w, value -> {
                     GuideUiConfig.Hud current = uiDraft.ui().hud();
                     previewHud(current.withContent((int) Math.round(value), current.showLatestReply(), current.showStreamingPreview()));
                 });
@@ -690,13 +794,7 @@ public final class OpenAllaySettingsScreen extends Screen {
                 uiToggle("hide_screens", hud.hideOnOtherScreens(), x, y, w,
                         () -> changeHud(uiDraft.ui().hud().withVisibility(uiDraft.ui().hud().hideWithDebug(), !uiDraft.ui().hud().hideOnOtherScreens())));
                 y += 26;
-                Button edit = uiButton("edit_hud", Component.empty(), x, y, w, () -> {
-                    if (uiActions != null) uiActions.editHud(this, uiDraft.candidate(snapshot.display()), candidate -> {
-                        uiDraft.preview(candidate.ui());
-                        uiDraft.previewAnimations(candidate.animationsEnabled());
-                        applyUi();
-                    });
-                });
+                Button edit = uiButton("edit_hud", Component.empty(), x, y, w, this::editHud);
                 edit.active = uiActions != null && snapshot.operation().kind() == SettingsOperation.Kind.IDLE;
                 if (uiActions == null) edit.setTooltip(Tooltip.create(Component.translatable(
                         "screen.openallay.settings.ui.actions_unavailable")));
@@ -773,9 +871,10 @@ public final class OpenAllaySettingsScreen extends Screen {
     private void uiInteger(String key, int value, int x, int y, int w, java.util.function.IntConsumer changed) {
         EditBox field = new EditBox(font, x + w / 2, y, w / 2, 20,
                 Component.translatable("screen.openallay.settings.ui." + key));
-        field.setValue(Integer.toString(value));
+        field.setValue(uiIntegerDrafts.getOrDefault(key, Integer.toString(value)));
         field.setMaxLength(6);
         field.setResponder(text -> {
+            uiIntegerDrafts.put(key, text);
             try {
                 changed.accept(Integer.parseInt(text));
                 localNotice = "";
@@ -784,6 +883,7 @@ public final class OpenAllaySettingsScreen extends Screen {
             }
         });
         field.setVisible(uiWidgetVisible(y, 20));
+        uiIntegerFields.put(key, field);
         addRenderableWidget(field);
     }
 
@@ -818,14 +918,74 @@ public final class OpenAllaySettingsScreen extends Screen {
         for (net.minecraft.client.gui.components.events.GuiEventListener child : children()) {
             if (child instanceof Button button && button.getMessage().getString().equals(
                     Component.translatable("screen.openallay.settings.ui.apply").getString())) {
-                button.active = uiDraft.dirty() && snapshot.operation().kind() == SettingsOperation.Kind.IDLE;
+                button.active = !editorSave.busy() && (uiDraft.dirty() || !uiIntegerDrafts.isEmpty())
+                        && snapshot.operation().kind() == SettingsOperation.Kind.IDLE;
             }
         }
     }
 
-    private void applyUi() {
-        localNotice = "";
-        accept(service.saveDisplay(uiDraft.candidate(snapshot.display())));
+    private void applyUi() { saveUi(false); }
+
+    private void saveUi(boolean closeOnSuccess) {
+        captureDraft();
+        if (!validateUiDraft()) return;
+        saveUiCandidate(uiDraft.candidate(snapshot.display()), closeOnSuccess);
+    }
+
+    private void editHud() {
+        if (uiActions == null || editorSave.busy()) return;
+        captureDraft();
+        if (!validateUiDraft()) return;
+        uiActions.editHud(this, uiDraft.candidate(snapshot.display()), this::applyUiCandidate);
+    }
+
+    private void applyUiCandidate(GuideDisplayConfig returned) {
+        if (editorSave.busy()) return;
+        // Freeze all UI fields from the child editor, but keep the latest independently saved General fields.
+        GuideDisplayConfig candidate = service.snapshot().display().withUi(returned.ui())
+                .withAnimationsEnabled(returned.animationsEnabled());
+        uiDraft.adopt(candidate);
+        // These widgets belonged to the removed parent Screen. Synchronize them before service listeners
+        // can capture drafts, and retain the same values if persistence fails and the editor is rebuilt.
+        synchronizeUiInteger("offset_x", candidate.ui().hud().offsetX());
+        synchronizeUiInteger("offset_y", candidate.ui().hud().offsetY());
+        saveUiCandidate(candidate, false);
+    }
+
+    private void synchronizeUiInteger(String key, int value) {
+        String text = Integer.toString(value);
+        uiIntegerDrafts.put(key, text);
+        EditBox field = uiIntegerFields.get(key);
+        if (field != null) field.setValue(text);
+    }
+
+    private void saveUiCandidate(GuideDisplayConfig candidate, boolean closeOnSuccess) {
+        // Candidate-owned saves must never capture or validate stale widgets from the parent Screen.
+        if (candidate.equals(service.snapshot().display())) {
+            if (closeOnSuccess) closeAfterSave();
+            return;
+        }
+        saveEditor(() -> service.saveDisplay(candidate), closeOnSuccess,
+                result -> {
+                    uiDraft.published(snapshot.display());
+                    uiIntegerDrafts.clear();
+                });
+    }
+
+    private boolean validateUiDraft() {
+        try {
+            GuideUiConfig.Hud hud = uiDraft.ui().hud();
+            int x = Integer.parseInt(uiIntegerDrafts.getOrDefault("offset_x",
+                    Integer.toString(hud.offsetX())));
+            int y = Integer.parseInt(uiIntegerDrafts.getOrDefault("offset_y",
+                    Integer.toString(hud.offsetY())));
+            uiDraft.preview(uiDraft.ui().withHud(hud.withPlacement(hud.anchor(), x, y,
+                    hud.width(), hud.height(), hud.scale())));
+            return true;
+        } catch (IllegalArgumentException invalid) {
+            localNotice = Component.translatable("screen.openallay.settings.ui.invalid_range").getString();
+            return false;
+        }
     }
 
     private void renderUi(GuiGraphicsExtractor graphics) {
@@ -898,7 +1058,9 @@ public final class OpenAllaySettingsScreen extends Screen {
 
         @Override
         protected void updateMessage() {
-            String amount = integral ? Long.toString(Math.round(actual()))
+            String amount = key.equals("reply_lines") && Math.round(actual()) == 0
+                    ? Component.translatable("screen.openallay.settings.ui.reply_lines.auto").getString()
+                    : integral ? Long.toString(Math.round(actual()))
                     : String.format(java.util.Locale.ROOT, "%.2f", actual());
             String translationKey = key.startsWith("voice.")
                     ? "screen.openallay.settings." + key
@@ -1014,11 +1176,7 @@ public final class OpenAllaySettingsScreen extends Screen {
             y += 42;
             voiceText("api_key", voiceApiKeyDraft, x, y, w, value -> voiceApiKeyDraft = value, true);
             y += 42;
-            voiceButton("store_api_key", Component.empty(), x, y, w, () -> {
-                char[] key = voiceApiKeyDraft.toCharArray();
-                voiceApiKeyDraft = "";
-                acceptVoice(voiceActions.setApiKey(key), true);
-            });
+            voiceButton("store_api_key", Component.empty(), x, y, w, this::applyVoice);
             y += 26;
             voiceButton("clear_credential", Component.empty(), x, y, w, () -> {
                 voiceDraft = voiceDraft.withCredential(null);
@@ -1057,6 +1215,7 @@ public final class OpenAllaySettingsScreen extends Screen {
         field.setResponder(changed);
         field.setVisible(layout.pageWidgetVisible(y, 34));
         field.active = voiceView != null && !voiceView.busy();
+        voiceFields.put(key, field);
         addRenderableWidget(field);
     }
 
@@ -1084,15 +1243,37 @@ public final class OpenAllaySettingsScreen extends Screen {
         }
     }
 
-    private void applyVoice() {
-        if (voiceActions == null || voiceDraft == null) return;
+    private void applyVoice() { saveVoice(false); }
+
+    private void saveVoice(boolean closeOnSuccess) {
+        if (voiceActions == null || voiceDraft == null) {
+            if (closeOnSuccess) closeAfterSave();
+            return;
+        }
+        captureDraft();
         try {
-            // Model import is its own explicit integrity-checked action, not a path-only save.
-            voiceDraft = voiceDraft.withHttp(java.net.URI.create(voiceHttpUrl), voiceHttpModel);
-            acceptVoice(voiceActions.update(voiceDraft), false);
+            VoiceConfig candidate = voiceDraft.withHttp(java.net.URI.create(voiceHttpUrl), voiceHttpModel);
+            String modelDirectory = voiceModelPath.isBlank() ? ""
+                    : Path.of(voiceModelPath).toAbsolutePath().normalize().toString();
+            candidate = new VoiceConfig(candidate.enabled(), candidate.backend(), candidate.deviceId(),
+                    candidate.maxClipSeconds(), candidate.language(), candidate.cpuThreads(), modelDirectory,
+                    candidate.httpBaseUrl(), candidate.httpModel(), candidate.credential());
+            if (candidate.equals(voiceActions.view().config()) && voiceApiKeyDraft.isBlank()) {
+                if (closeOnSuccess) closeAfterSave();
+                return;
+            }
+            VoiceConfig submitted = candidate;
+            saveEditor(() -> voiceActions.update(submitted, voiceApiKeyDraft.isBlank()
+                            ? null : voiceApiKeyDraft.toCharArray()), closeOnSuccess,
+                    result -> resetVoiceDraft());
         } catch (IllegalArgumentException invalid) {
             localNotice = Component.translatable("screen.openallay.settings.voice.invalid").getString();
         }
+    }
+
+    private String voiceFieldValue(String key, String fallback) {
+        EditBox field = voiceFields.get(key);
+        return field == null ? fallback : field.getValue();
     }
 
     private void acceptVoice(java.util.concurrent.CompletableFuture<? extends ToolResult<?>> future,
@@ -1273,9 +1454,19 @@ public final class OpenAllaySettingsScreen extends Screen {
                 Component.literal(REPOSITORY_URL), contentWidth).size() * 10 + 6;
     }
 
-    private void saveAssistantName(GeneralSettingsProjection general) {
+    private void saveAssistantName(GeneralSettingsProjection general) { saveGeneral(false); }
+
+    private void saveGeneral(boolean closeOnSuccess) {
+        captureDraft();
         try {
-            accept(service.saveDisplay(general.renameAssistant(assistantNameDraft)));
+            GuideDisplayConfig candidate = GeneralSettingsProjection.from(snapshot.display())
+                    .renameAssistant(assistantNameDraft);
+            if (candidate.equals(snapshot.display())) {
+                if (closeOnSuccess) closeAfterSave();
+                return;
+            }
+            saveEditor(() -> service.saveDisplay(candidate), closeOnSuccess,
+                    result -> assistantNameDraft = candidate.assistantName());
         } catch (IllegalArgumentException failure) {
             localNotice = Component.translatable(
                     "screen.openallay.settings.general.assistant_name.invalid").getString();
@@ -2055,13 +2246,13 @@ public final class OpenAllaySettingsScreen extends Screen {
     private List<Action> footerActions() {
         return switch (section) {
             case MODELS -> selectedServerModel
-                    ? List.of(new Action("screen.openallay.settings.done", this::onClose))
+                    ? List.of(new Action("screen.openallay.settings.done", this::done))
                     : modelCatalogOpen ? List.of(
                     new Action("screen.openallay.settings.models.catalog_close", () -> {
                         modelCatalogOpen = false;
                         rebuildWidgets();
                     }),
-                    new Action("screen.openallay.settings.done", this::onClose)) : List.of(
+                    new Action("screen.openallay.settings.done", this::done)) : List.of(
                     new Action("screen.openallay.settings.save", this::saveCurrent),
                     new Action(reloadKey(), this::reloadCurrent),
                     new Action(deleteKey(), this::delete),
@@ -2069,58 +2260,48 @@ public final class OpenAllaySettingsScreen extends Screen {
                     new Action(testKey(), this::testConnection),
                     new Action("screen.openallay.settings.cancel", this::cancel),
                     new Action("screen.openallay.settings.models.refresh", this::refreshMetadata),
-                    new Action("screen.openallay.settings.done", this::onClose));
+                    new Action("screen.openallay.settings.done", this::done));
             case EXTENSIONS -> List.of(
-                    new Action("screen.openallay.settings.done", this::onClose));
+                    new Action("screen.openallay.settings.done", this::done));
             case SKILLS -> List.of(
                     new Action(
                             "screen.openallay.settings.reload",
                             () -> accept(service.reloadSkills(true))),
-                    new Action("screen.openallay.settings.done", this::onClose));
+                    new Action("screen.openallay.settings.done", this::done));
             case UI -> List.of(
                     new Action("screen.openallay.settings.ui.apply", this::applyUi),
-                    new Action("screen.openallay.settings.ui.reset", () -> {
-                        uiDraft.reset(uiGroup);
-                        rebuildWidgets();
-                    }),
-                    new Action("screen.openallay.settings.ui.cancel", () -> {
-                        uiDraft.cancel();
-                        localNotice = "";
-                        rebuildWidgets();
-                    }),
-                    new Action("screen.openallay.settings.done", this::onClose));
+                    new Action("screen.openallay.settings.ui.reset", this::resetUiGroup),
+                    new Action("screen.openallay.settings.done", this::done));
             case VOICE -> voiceActions == null
-                    ? List.of(new Action("screen.openallay.settings.done", this::onClose))
+                    ? List.of(new Action("screen.openallay.settings.done", this::done))
                     : List.of(new Action("screen.openallay.settings.voice.apply", this::applyVoice),
-                            new Action("screen.openallay.settings.voice.discard", () -> {
-                                resetVoiceDraft();
-                                localNotice = "";
-                                rebuildWidgets();
-                            }),
-                            new Action("screen.openallay.settings.voice.reload", () ->
-                                    acceptVoice(voiceActions.reload(), true)),
-                            new Action("screen.openallay.settings.done", this::onClose));
+                            new Action("screen.openallay.settings.voice.reset", this::resetVoiceDefaults),
+                            new Action("screen.openallay.settings.done", this::done));
             case GENERAL -> List.of(
                     new Action(
                             "screen.openallay.settings.reload",
                             () -> accept(service.reloadDisplay())),
-                    new Action("screen.openallay.settings.done", this::onClose));
+                    new Action("screen.openallay.settings.done", this::done));
             case HISTORY, DIAGNOSTICS, ABOUT ->
-                    List.of(new Action("screen.openallay.settings.done", this::onClose));
+                    List.of(new Action("screen.openallay.settings.done", this::done));
         };
     }
 
     private boolean actionEnabled(String key) {
+        if (editorSave.busy()) return false;
         boolean busy = snapshot.operation().kind() != SettingsOperation.Kind.IDLE;
         if (key.startsWith("screen.openallay.settings.voice.")) return voiceView != null && !voiceView.busy();
-        if (key.equals("screen.openallay.settings.ui.apply")) return !busy && uiDraft.dirty();
+        if (key.equals("screen.openallay.settings.ui.apply")) {
+            return !busy && (uiDraft.dirty() || !uiIntegerDrafts.isEmpty());
+        }
         if (key.equals("screen.openallay.settings.cancel")) {
             return snapshot.operation().kind() == SettingsOperation.Kind.TESTING_CONNECTION
                     || snapshot.operation().kind()
                             == SettingsOperation.Kind.FETCHING_MODEL_CATALOG;
         }
         if (key.equals("screen.openallay.settings.done")) {
-            return true;
+            return !busy && (section != SettingsSection.VOICE
+                    || voiceView == null || !voiceView.busy());
         }
         return !busy;
     }
@@ -3370,6 +3551,55 @@ public final class OpenAllaySettingsScreen extends Screen {
                 && next.notice().level() == SettingsNotice.Level.SUCCESS;
     }
 
+    private void done() {
+        if (editorSave.busy() || snapshot.operation().kind() != SettingsOperation.Kind.IDLE
+                || section == SettingsSection.VOICE && voiceView != null && voiceView.busy()) return;
+        captureDraft();
+        confirmation = Confirmation.NONE;
+        switch (section) {
+            case GENERAL -> saveGeneral(true);
+            case MODELS -> {
+                if (selectedServerModel) closeAfterSave();
+                else saveModel(true);
+            }
+            case UI -> saveUi(true);
+            case VOICE -> saveVoice(true);
+            // These pages persist each toggle explicitly; Done is not an install or world action.
+            case EXTENSIONS, SKILLS, HISTORY, DIAGNOSTICS, ABOUT -> closeAfterSave();
+        }
+    }
+
+    private void saveEditor(
+            java.util.function.Supplier<? extends java.util.concurrent.CompletableFuture<? extends ToolResult<?>>> action,
+            boolean closeOnSuccess, java.util.function.Consumer<ToolResult<?>> committed) {
+        editorSave.save(action, saveDispatcher, () -> {
+            localNotice = "";
+            updateEditorSaveControls();
+        }, result -> {
+            snapshot = service.snapshot();
+            if (result instanceof ToolResult.Failure<?> failure) {
+                localNotice = failure.message();
+            } else {
+                localNotice = "";
+                committed.accept(result);
+                if (closeOnSuccess) {
+                    closeAfterSave();
+                    return;
+                }
+            }
+            if (layout != null) rebuildWidgets();
+        });
+    }
+
+    private void updateEditorSaveControls() {
+        if (!editorSave.busy()) return;
+        for (net.minecraft.client.gui.components.events.GuiEventListener child : children()) {
+            if (child instanceof net.minecraft.client.gui.components.AbstractWidget widget) {
+                widget.active = false;
+            }
+        }
+    }
+
     private void saveCurrent() {
         confirmation = Confirmation.NONE;
         if (section == SettingsSection.MODELS) {
@@ -3392,21 +3622,21 @@ public final class OpenAllaySettingsScreen extends Screen {
     }
 
     private void backOrClose() {
-        if (!layout.wide() && section == SettingsSection.SKILLS && narrowSkillDetail) {
+        if (layout != null && !layout.wide() && section == SettingsSection.SKILLS && narrowSkillDetail) {
             narrowSkillDetail = false;
             skillEditing = false;
             skillDraftMarkdown = "";
             rebuildWidgets();
             return;
         }
-        if (!layout.wide()
+        if (layout != null && !layout.wide()
                 && section == SettingsSection.EXTENSIONS
                 && narrowExtensionDetail) {
             narrowExtensionDetail = false;
             rebuildWidgets();
             return;
         }
-        onClose();
+        done();
     }
 
     private Component historyActionLabel(HistorySettingsProjection.ActionRow row) {
@@ -3675,7 +3905,9 @@ public final class OpenAllaySettingsScreen extends Screen {
         skillDraftMarkdown = "";
     }
 
-    private void save() {
+    private void save() { saveModel(false); }
+
+    private void saveModel(boolean closeOnSuccess) {
         captureDraft();
         ToolResult<ModelProfileDefinition> validated = draft.validate();
         if (validated instanceof ToolResult.Failure<ModelProfileDefinition> failure) {
@@ -3692,15 +3924,13 @@ public final class OpenAllaySettingsScreen extends Screen {
                     "screen.openallay.settings.models.invalid").getString();
             return;
         }
-        selectedProfileId = definition.id();
-        SecretValue replacement = pendingApiKey.isBlank()
-                ? null
-                : SecretValue.of(pendingApiKey);
-        pendingApiKey = "";
-        if (apiKey != null) {
-            apiKey.setValue("");
+        if (candidate.equals(snapshot.models().config()) && pendingApiKey.isBlank()) {
+            if (closeOnSuccess) closeAfterSave();
+            return;
         }
-        accept(service.saveModels(candidate, definition.id(), replacement));
+        SecretValue replacement = pendingApiKey.isBlank() ? null : SecretValue.of(pendingApiKey);
+        saveEditor(() -> service.saveModels(candidate, definition.id(), replacement), closeOnSuccess,
+                result -> select(definition.id()));
     }
 
     private void delete() {
@@ -3925,9 +4155,11 @@ public final class OpenAllaySettingsScreen extends Screen {
     }
 
     private void switchSection(SettingsSection replacement) {
+        if (editorSave.busy()) return;
         captureDraft();
         section = replacement;
         sectionMenuOpen = false;
+        editorMenuOpen = false;
         editorScroll = 0;
         pageScroll = 0;
         pageContentHeight = 0;
@@ -4079,9 +4311,20 @@ public final class OpenAllaySettingsScreen extends Screen {
                     Objects.equals(maxOutput.getValue(), draft.automaticMaxOutputTokens())
                             ? draft.automaticMaxOutputTokens() : null,
                     draft.reasoningEffort(), draft.tokenEncoding(), draft.imageInputCapabilityOverride());
+            if (apiKey != null) pendingApiKey = apiKey.getValue();
         }
         if (section == SettingsSection.GENERAL && assistantName != null) {
             assistantNameDraft = assistantName.getValue();
+        }
+        if (section == SettingsSection.UI) {
+            uiIntegerFields.forEach((key, field) -> uiIntegerDrafts.put(key, field.getValue()));
+        }
+        if (section == SettingsSection.VOICE) {
+            voiceModelPath = voiceFieldValue("model_directory", voiceModelPath);
+            voiceRuntimePath = voiceFieldValue("runtime_directory", voiceRuntimePath);
+            voiceHttpUrl = voiceFieldValue("http_url", voiceHttpUrl);
+            voiceHttpModel = voiceFieldValue("http_model", voiceHttpModel);
+            voiceApiKeyDraft = voiceFieldValue("api_key", voiceApiKeyDraft);
         }
         if (section == SettingsSection.SKILLS && skillImportPath != null) {
             skillImportPathDraft = skillImportPath.getValue();
@@ -4168,6 +4411,61 @@ public final class OpenAllaySettingsScreen extends Screen {
             graphics.fill(rect.x(), rect.y(), rect.right(), rect.bottom(), color);
         }
     }
+
+    /** Inert test entry points press the real controls; they never assign drafts or save directly. */
+    public void e2eChooseSection(SettingsSection target) {
+        requireE2eControls();
+        if (section == target) return;
+        if (!layout.wide() && !sectionMenuOpen) e2ePressButton(section.translationKey());
+        e2ePressButton(target.translationKey());
+    }
+
+    public void e2eCycleTheme() {
+        requireE2eControls();
+        if (section != SettingsSection.UI || uiGroup != UiSettingsProjection.Group.FULLSCREEN) {
+            throw new IllegalStateException("Fullscreen UI settings are not open");
+        }
+        e2ePressButton("screen.openallay.settings.ui.theme");
+    }
+
+    public void e2ePressDone() {
+        requireE2eControls();
+        e2ePressButton("screen.openallay.settings.done");
+    }
+
+    public void e2ePressEscape() {
+        requireE2eControls();
+        keyPressed(new KeyEvent(GLFW.GLFW_KEY_ESCAPE, 0, 0));
+    }
+
+    public void e2ePressBack() {
+        requireE2eControls();
+        e2ePressButton("screen.openallay.settings.back");
+    }
+
+    private void e2ePressButton(String translationKey) {
+        String label = Component.translatable(translationKey).getString();
+        for (net.minecraft.client.gui.components.events.GuiEventListener child : children()) {
+            if (child instanceof Button button && button.visible && button.active
+                    && (button.getMessage().getString().equals(label)
+                            || button.getMessage().getString().startsWith(label + " · "))) {
+                button.onPress(new KeyEvent(GLFW.GLFW_KEY_ENTER, 0, 0));
+                return;
+            }
+        }
+        throw new IllegalStateException("Settings control is unavailable: " + translationKey);
+    }
+
+    public E2eSettingsState e2eSettingsState() {
+        requireE2eControls();
+        return new E2eSettingsState(section, layout != null, editorSave.busy(),
+                snapshot.operation().kind(), uiDraft.dirty(),
+                uiDraft.ui().fullscreen().theme(), snapshot.display().ui().fullscreen().theme());
+    }
+
+    public record E2eSettingsState(SettingsSection section, boolean ready, boolean saving,
+            SettingsOperation.Kind operation, boolean uiDirty,
+            GuideUiConfig.Theme previewTheme, GuideUiConfig.Theme savedTheme) {}
 
     /** Screenshot-harness navigation only; inert in every normal client launch. */
     public void e2eOpenExtensions() {

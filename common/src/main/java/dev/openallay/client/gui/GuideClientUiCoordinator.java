@@ -160,7 +160,7 @@ public final class GuideClientUiCoordinator implements AutoCloseable {
             if (gameplay) {
                 GuideService service = services.forActor(minecraft.player.getUUID());
                 if (state != null) minecraft.gui.setScreen(new GuideChatLiteScreen(service, state, display,
-                        () -> openGuide(service), voice.input()));
+                        () -> openGuide(service), voice.input()).withRecipes(recipes));
             }
         }
         boolean physicalDown = OpenAllayKeyMappings.VOICE_PTT.isDown();
@@ -182,6 +182,18 @@ public final class GuideClientUiCoordinator implements AutoCloseable {
                 && minecraft.player != null && minecraft.level != null && !minecraft.gui.hud.isHidden()) {
             GuideVoiceIndicator.extract(graphics, minecraft, voice.input());
         }
+    }
+
+    /** Read-only native extraction receipt. Never binds an actor or creates a service. */
+    public Object e2eHudReceipt() {
+        if (!Boolean.getBoolean("openallay.e2e.enabled")) throw new IllegalStateException("Development probe is disabled");
+        return renderer.resultReceipt();
+    }
+
+    /** Returns the existing settings port. It never opens capture or refreshes devices. */
+    public dev.openallay.client.voice.VoiceSettingsActions e2eVoiceSettings() {
+        if (!Boolean.getBoolean("openallay.e2e.enabled")) throw new IllegalStateException("Development probe is disabled");
+        return voice.settings();
     }
 
     public void disconnect() {

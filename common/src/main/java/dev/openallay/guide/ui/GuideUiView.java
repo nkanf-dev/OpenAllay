@@ -98,38 +98,7 @@ public record GuideUiView(
             case SAVING, DISABLED, AVAILABLE -> { }
         }
         for (GuideRequestSnapshot request : selected.requests()) {
-            rows.add(new GuideUiRow.User(request.requestId(), request.userMessage()));
-            for (GuideTimelineEntry entry : request.timeline()) {
-                switch (entry) {
-                    case GuideTimelineEntry.User user -> rows.add(
-                            new GuideUiRow.User(user.messageId(), user.text()));
-                    case GuideTimelineEntry.Assistant assistant -> rows.add(
-                            new GuideUiRow.Assistant(
-                                    request.requestId(),
-                                    assistant.ordinal(),
-                                    assistant.text(),
-                                    assistant.semantic(),
-                                    assistant.streaming(),
-                                    assistant.sources()));
-                    case GuideTimelineEntry.Tool tool -> rows.add(
-                            new GuideUiRow.Tool(
-                                    request.requestId(),
-                                    tool.ordinal(),
-                                    tool.activity(),
-                                    GuideToolDetailPresenter.project(
-                                            tool.activity(), displayConfig.debugMode())
-                                            .forRequest(request.terminal())));
-                }
-            }
-            if (request.status() == GuideRequestStatus.FAILED
-                    || request.status() == GuideRequestStatus.CANCELLED
-                    || request.status() == GuideRequestStatus.INTERRUPTED) {
-                rows.add(new GuideUiRow.Status(
-                        request.requestId(),
-                        request.status(),
-                        request.failure() == null ? request.status().name() : request.failure().message(),
-                        request.failure()));
-            }
+            rows.addAll(projectRequestRows(request, displayConfig));
         }
         GuideUiModelChoice runningModel = modelChoices.stream()
                 .filter(GuideUiModelChoice::running)
@@ -155,6 +124,47 @@ public record GuideUiView(
                 rows,
                 modelChoices,
                 capability);
+    }
+
+    /** Shared typed projection for native transcript and compact task-result surfaces. */
+    public static List<GuideUiRow> projectRequestRows(
+            GuideRequestSnapshot request, GuideDisplayConfig displayConfig) {
+        java.util.Objects.requireNonNull(request, "request");
+        java.util.Objects.requireNonNull(displayConfig, "displayConfig");
+        List<GuideUiRow> rows = new ArrayList<>();
+        rows.add(new GuideUiRow.User(request.requestId(), request.userMessage()));
+        for (GuideTimelineEntry entry : request.timeline()) {
+            switch (entry) {
+                case GuideTimelineEntry.User user -> rows.add(
+                        new GuideUiRow.User(user.messageId(), user.text()));
+                case GuideTimelineEntry.Assistant assistant -> rows.add(
+                        new GuideUiRow.Assistant(
+                                request.requestId(),
+                                assistant.ordinal(),
+                                assistant.text(),
+                                assistant.semantic(),
+                                assistant.streaming(),
+                                assistant.sources()));
+                case GuideTimelineEntry.Tool tool -> rows.add(
+                        new GuideUiRow.Tool(
+                                request.requestId(),
+                                tool.ordinal(),
+                                tool.activity(),
+                                GuideToolDetailPresenter.project(
+                                        tool.activity(), displayConfig.debugMode())
+                                        .forRequest(request.terminal())));
+            }
+        }
+        if (request.status() == GuideRequestStatus.FAILED
+                || request.status() == GuideRequestStatus.CANCELLED
+                || request.status() == GuideRequestStatus.INTERRUPTED) {
+            rows.add(new GuideUiRow.Status(
+                    request.requestId(),
+                    request.status(),
+                    request.failure() == null ? request.status().name() : request.failure().message(),
+                    request.failure()));
+        }
+        return List.copyOf(rows);
     }
 
     private static List<GuideUiModelChoice> modelChoices(

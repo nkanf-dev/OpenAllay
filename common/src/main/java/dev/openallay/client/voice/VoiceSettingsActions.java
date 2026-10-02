@@ -10,6 +10,8 @@ public interface VoiceSettingsActions {
     /** Stable managed runtime root containing installed license and source notices. */
     Path runtimeNoticesDirectory();
     CompletableFuture<ToolResult<VoiceConfig>> update(VoiceConfig candidate);
+    /** Saves the whole candidate and optional replacement together. Takes and clears the supplied chars. */
+    CompletableFuture<ToolResult<VoiceConfig>> update(VoiceConfig candidate, char[] replacement);
     CompletableFuture<ToolResult<VoiceConfig>> reload();
     CompletableFuture<ToolResult<VoiceConfig>> importModel(Path directory);
     CompletableFuture<ToolResult<VoiceConfig>> importRuntime(Path directory);

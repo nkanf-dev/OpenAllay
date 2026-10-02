@@ -101,7 +101,7 @@ final class GuideDisplayConfigLoaderTest {
             {"hud", "height", 44, 240, true},
             {"hud", "scale", .75, 1.75, false},
             {"hud", "backgroundOpacity", 0, 1, false},
-            {"hud", "maxReplyLines", 1, 10, true},
+            {"hud", "maxReplyLines", 0, 80, true},
             {"notifications", "durationSeconds", 3, 15, true}
         };
         for (Object[] row : ranges) {

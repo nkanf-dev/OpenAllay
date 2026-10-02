@@ -24,16 +24,35 @@ public final class UiSettingsDraft {
     public void preview(GuideUiConfig value) { ui = Objects.requireNonNull(value, "ui"); }
     public void previewAnimations(boolean value) { animations = value; }
 
-    /** Service publication may change nickname/debug; never overwrite a dirty preview. */
-    public void published(GuideDisplayConfig next) {
-        boolean retain = dirty();
-        committed = Objects.requireNonNull(next, "next");
-        if (!retain) cancel();
+    /** A child editor's complete UI candidate is authoritative, not input from removed parent widgets. */
+    public void adopt(GuideDisplayConfig candidate) {
+        Objects.requireNonNull(candidate, "candidate");
+        ui = candidate.ui();
+        animations = candidate.animationsEnabled();
     }
 
-    /** Build Apply from the latest general fields, not from an old full config snapshot. */
+    /** Merge each clean group from publication without overwriting another group's dirty preview. */
+    public void published(GuideDisplayConfig next) {
+        next = Objects.requireNonNull(next, "next");
+        ui = new GuideUiConfig(
+                ui.fullscreen().equals(committed.ui().fullscreen()) ? next.ui().fullscreen() : ui.fullscreen(),
+                ui.hud().equals(committed.ui().hud()) ? next.ui().hud() : ui.hud(),
+                ui.notifications().equals(committed.ui().notifications())
+                        ? next.ui().notifications() : ui.notifications());
+        if (animations == committed.animationsEnabled()) animations = next.animationsEnabled();
+        committed = next;
+    }
+
+    /** Save only changed groups over the latest general fields and unrelated UI groups. */
     public GuideDisplayConfig candidate(GuideDisplayConfig latest) {
-        return Objects.requireNonNull(latest, "latest").withUi(ui).withAnimationsEnabled(animations);
+        Objects.requireNonNull(latest, "latest");
+        GuideUiConfig candidate = new GuideUiConfig(
+                ui.fullscreen().equals(committed.ui().fullscreen()) ? latest.ui().fullscreen() : ui.fullscreen(),
+                ui.hud().equals(committed.ui().hud()) ? latest.ui().hud() : ui.hud(),
+                ui.notifications().equals(committed.ui().notifications())
+                        ? latest.ui().notifications() : ui.notifications());
+        return latest.withUi(candidate).withAnimationsEnabled(animations == committed.animationsEnabled()
+                ? latest.animationsEnabled() : animations);
     }
 
     public void cancel() {

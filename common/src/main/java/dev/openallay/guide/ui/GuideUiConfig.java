@@ -55,7 +55,7 @@ public record GuideUiConfig(Fullscreen fullscreen, Hud hud, Notifications notifi
         }
 
         public static Fullscreen defaults() {
-            return new Fullscreen(Density.COMFORTABLE, true, true, Theme.CHARCOAL);
+            return new Fullscreen(Density.COMFORTABLE, true, false, Theme.CHARCOAL);
         }
     }
 
@@ -80,12 +80,13 @@ public record GuideUiConfig(Fullscreen fullscreen, Hud hud, Notifications notifi
             range("height", height, MIN_HEIGHT, MAX_HEIGHT);
             range("scale", scale, MIN_SCALE, MAX_SCALE);
             range("backgroundOpacity", backgroundOpacity, 0, 1);
-            range("maxReplyLines", maxReplyLines, 1, 10);
+            // 0 means AUTO. This is a passive viewport budget, never a content limit.
+            range("maxReplyLines", maxReplyLines, 0, 80);
         }
 
         public static Hud defaults() {
-            return new Hud(false, Anchor.TOP_LEFT, 12, 12, 280, 88, 1, .78,
-                    false, 3, true, false, true, true);
+            return new Hud(false, Anchor.TOP_LEFT, 12, 12, 320, 240, 1, .78,
+                    false, 18, true, false, true, true);
         }
 
         public Hud withEnabled(boolean value) {

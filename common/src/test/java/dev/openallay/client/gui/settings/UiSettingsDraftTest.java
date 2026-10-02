@@ -63,6 +63,55 @@ final class UiSettingsDraftTest {
     }
 
     @Test
+    void latestPublicationAndCandidatePreserveCleanGroupsBesideADirtyTheme() {
+        var saved = GuideDisplayConfig.defaults();
+        var draft = new UiSettingsDraft(saved);
+        draft.preview(saved.ui().withFullscreen(new GuideUiConfig.Fullscreen(
+                saved.ui().fullscreen().density(), true, false, GuideUiConfig.Theme.MINT)));
+        var latest = saved.withAssistantName("Latest name").withDebugMode(true).withAnimationsEnabled(false)
+                .withUi(saved.ui().withHud(saved.ui().hud().withEnabled(true))
+                        .withNotifications(saved.ui().notifications().withEnabled(true)));
+        var candidate = draft.candidate(latest);
+        assertEquals(GuideUiConfig.Theme.MINT, candidate.ui().fullscreen().theme());
+        assertEquals(latest.ui().hud(), candidate.ui().hud());
+        assertEquals(latest.ui().notifications(), candidate.ui().notifications());
+        assertEquals("Latest name", candidate.assistantName());
+        assertTrue(candidate.debugMode());
+        assertFalse(candidate.animationsEnabled());
+        draft.published(latest);
+        assertTrue(draft.dirty());
+        assertEquals(candidate, draft.candidate(latest));
+        draft.published(candidate);
+        assertFalse(draft.dirty());
+    }
+
+    @Test
+    void childEditorAdoptsFullDraggedCandidateWhileKeepingLatestIndependentGeneralFields() {
+        var saved = GuideDisplayConfig.defaults();
+        var draft = new UiSettingsDraft(saved);
+        var dirtyUi = saved.ui().withFullscreen(new GuideUiConfig.Fullscreen(
+                GuideUiConfig.Density.COMPACT, false, false, GuideUiConfig.Theme.MINT))
+                .withNotifications(saved.ui().notifications().withEnabled(true));
+        draft.preview(dirtyUi);
+        var returned = draft.candidate(saved).withUi(dirtyUi.withHud(dirtyUi.hud().withPlacement(
+                GuideUiConfig.Anchor.BOTTOM_RIGHT, -123, -45, 360, 200, 1.25)));
+        draft.adopt(returned);
+        var latest = saved.withAssistantName("Latest player name").withDebugMode(true);
+        var frozen = draft.candidate(latest);
+        assertEquals(returned.ui(), frozen.ui());
+        assertEquals("Latest player name", frozen.assistantName());
+        assertTrue(frozen.debugMode());
+        assertEquals(-123, frozen.ui().hud().offsetX());
+        assertEquals(-45, frozen.ui().hud().offsetY());
+        draft.published(saved); // Failed save keeps the dragged candidate in memory.
+        assertTrue(draft.dirty());
+        assertEquals(returned.ui(), draft.ui());
+        draft.published(frozen); // Only the save publication commits it.
+        assertFalse(draft.dirty());
+        assertEquals(returned.ui(), draft.ui());
+    }
+
+    @Test
     void uiPageAlwaysProjectsIndependentControlsEvenWhenBothChannelsAreOff() {
         var projection = UiSettingsProjection.from(GuideDisplayConfig.defaults());
         assertEquals(List.of(UiSettingsProjection.Group.FULLSCREEN, UiSettingsProjection.Group.HUD,

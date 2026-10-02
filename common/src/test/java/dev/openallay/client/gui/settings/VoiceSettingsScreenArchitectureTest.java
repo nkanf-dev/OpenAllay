@@ -16,8 +16,9 @@ final class VoiceSettingsScreenArchitectureTest {
         assertTrue(voice.contains("voiceActions.downloadDefaultModel()"));
         assertTrue(voice.contains("voiceActions::cancelDownload"));
         assertTrue(voice.contains("voiceActions.refreshDevices()"));
-        assertTrue(voice.contains("voiceActions.update(voiceDraft)"));
-        assertTrue(voice.contains("voiceActions.setApiKey(key)"));
+        assertTrue(voice.contains("voiceActions.update(submitted, voiceApiKeyDraft.isBlank()"));
+        assertTrue(voice.contains("voiceApiKeyDraft.toCharArray()"));
+        assertTrue(voice.contains("voiceButton(\"store_api_key\", Component.empty(), x, y, w, this::applyVoice)"));
         assertTrue(voice.contains("net.minecraft.util.Util.getPlatform().openPath(voiceActions.runtimeNoticesDirectory())"));
         assertFalse(voice.contains("saveDisplay"));
         assertFalse(voice.contains("ProcessBuilder"));
