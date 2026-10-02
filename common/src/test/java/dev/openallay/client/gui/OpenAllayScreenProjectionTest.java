@@ -153,6 +153,25 @@ final class OpenAllayScreenProjectionTest {
     }
 
     @Test
+    void compactCompletionPreservesExactTokenBudgetParameters() {
+        var checkpoint = new dev.openallay.agent.context.ContextCheckpoint(UUID.randomUUID(), 0, 2,
+                "a".repeat(64), "test-model", Instant.EPOCH,
+                dev.openallay.agent.context.ContextCheckpoint.Status.SUCCEEDED, "summary", null, null, 120);
+        var result = new dev.openallay.guide.GuideCompactResult(
+                dev.openallay.guide.GuideCompactResult.Status.COMPACTED, 1000, 120, 2000, checkpoint);
+        Component notice = OpenAllayScreen.slashCompletionNotice(
+                new dev.openallay.guide.composer.SlashCommandDispatcher.Completion(true, "compact_completed", result));
+        TranslatableContents translation = assertInstanceOf(TranslatableContents.class, notice.getContents());
+        assertEquals("openallay.guide.slash.compact_completed", translation.getKey());
+        assertEquals(List.of(1000, 120, 2000), List.of(translation.getArgs()));
+        Component failure = OpenAllayScreen.slashCompletionNotice(
+                new dev.openallay.guide.composer.SlashCommandDispatcher.Completion(false, "compact_busy", null));
+        TranslatableContents failureTranslation = assertInstanceOf(TranslatableContents.class, failure.getContents());
+        assertEquals("openallay.guide.slash.compact_busy", failureTranslation.getKey());
+        assertEquals(0, failureTranslation.getArgs().length);
+    }
+
+    @Test
     void composerAcceptsPendingInputWhileRunningAndKeepsStopAvailableDuringFinalization() {
         Instant now = Instant.EPOCH;
         UUID requestId = UUID.randomUUID();

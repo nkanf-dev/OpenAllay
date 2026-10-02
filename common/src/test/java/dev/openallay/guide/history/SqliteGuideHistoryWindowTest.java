@@ -44,6 +44,33 @@ final class SqliteGuideHistoryWindowTest {
     @TempDir Path temporary;
 
     @Test
+    void standaloneControlUsageRestoresOnceAlongsideRequestQuotesAndClearsWithSession() {
+        SqliteGuideHistoryStore store = store(temporary.resolve("control-usage.db"));
+        GuideHistoryFixture original = partition(1, false, true);
+        GuideHistoryFixture.seed(store, original);
+        var quote = new dev.openallay.guide.GuideUsageSnapshot(100, 5, 25, 0, 1, 1, false, false,
+                new java.math.BigDecimal("0.123"), false);
+        var control = new dev.openallay.guide.GuideUsageSnapshot(200, 10, 0, 0, 2, 1, true, true,
+                new java.math.BigDecimal("0.456"), true);
+        GuideRequestSnapshot request = original.sessions().getFirst().requests().getFirst().withUsageProjection(quote);
+        store.commit(new GuideHistoryCommit(SCOPE, List.of(
+                new GuideHistoryMutation.UpsertRequest(0, request),
+                new GuideHistoryMutation.UpsertSessionUsage("main", control))));
+        var metadata = store.metadata(SCOPE).orElseThrow().sessions().getFirst();
+        assertEquals(3, metadata.usage().actualCalls());
+        assertEquals(300, metadata.usage().inputTokens());
+        assertEquals(0, new java.math.BigDecimal("0.579").compareTo(metadata.usage().estimatedUsd()));
+        assertEquals(control, metadata.controlUsage());
+        assertTrue(metadata.usage().costIncomplete());
+        store.commit(new GuideHistoryCommit(SCOPE, List.of(new GuideHistoryMutation.UpsertSession(
+                "main", 0, GuideModelSelection.client("changed-profile")))));
+        assertEquals(control, store.metadata(SCOPE).orElseThrow().sessions().getFirst().controlUsage());
+        store.commit(new GuideHistoryCommit(SCOPE, List.of(new GuideHistoryMutation.ClearSession("main"))));
+        assertEquals(dev.openallay.guide.GuideUsageSnapshot.empty(),
+                store.metadata(SCOPE).orElseThrow().sessions().getFirst().usage());
+    }
+
+    @Test
     void completeSessionUsageRestoresWithoutReadingPagesOrRepricingAndSeparatesInheritance() {
         Path database = temporary.resolve("usage.db");
         SqliteGuideHistoryStore store = store(database);

@@ -105,10 +105,56 @@ public final class AgentSessionStore {
 
     public record Status(boolean active, UUID requestId, int historyMessages) {}
 
+    /** Exclusive idle control reservation. Preparing a summary never changes actual context. */
+    public record ControlLease(AgentSessionKey key, UUID controlId, CancellationSignal cancellation,
+            List<ModelMessage> history) {
+        public ControlLease { history = List.copyOf(history); }
+    }
+
+    public synchronized ToolResult<ControlLease> reserveControl(AgentSessionKey key, UUID controlId,
+            List<ModelMessage> durableSeed) {
+        Session session = sessions.computeIfAbsent(key, ignored -> new Session());
+        if (session.active != null || session.control != null) {
+            return new ToolResult.Failure<>("compact_busy",
+                    "Wait for the current request to finish before using /compact");
+        }
+        List<ModelMessage> actual = session.history.isEmpty() && durableSeed != null
+                ? durableSeed : session.history;
+        ControlLease lease = new ControlLease(key, controlId, new CancellationSignal(),
+                dev.openallay.agent.context.ModelContextCodec.safe(actual));
+        // An idle control is a successor ownership epoch. A detached cancelled worker must
+        // never replace the source while preparing, or overwrite its later published projection.
+        session.latest = null;
+        session.control = lease;
+        return new ToolResult.Success<>(lease);
+    }
+
+    public synchronized boolean ownsControl(ControlLease lease) {
+        Session session = sessions.get(lease.key());
+        return session != null && session.control == lease && !lease.cancellation().isCancelled();
+    }
+
+    /** Publish only after the service's prepared durable write and generation fence succeeded. */
+    public synchronized boolean publishControl(ControlLease lease, List<ModelMessage> projection) {
+        if (!ownsControl(lease)) return false;
+        Session session = sessions.get(lease.key());
+        session.history = dev.openallay.agent.context.ModelContextCodec.safe(projection);
+        session.checkpoints = List.of();
+        session.retainedSkills = new dev.openallay.skill.RetainedSkillContext();
+        session.control = null;
+        return true;
+    }
+
+    public synchronized void releaseControl(ControlLease lease) {
+        Session session = sessions.get(lease.key());
+        if (session != null && session.control == lease) session.control = null;
+    }
+
     private static final class Session {
         private List<ModelMessage> history = List.of();
         private List<ContextCheckpoint> checkpoints = List.of();
         private Lease active;
+        private ControlLease control;
         private Lease latest;
         private dev.openallay.skill.RetainedSkillContext retainedSkills =
                 new dev.openallay.skill.RetainedSkillContext();
@@ -131,9 +177,9 @@ public final class AgentSessionStore {
             List<ModelMessage> replacementHistory,
             List<ContextCheckpoint> replacementCheckpoints) {
         Session session = sessions.computeIfAbsent(key, ignored -> new Session());
-        if (session.active != null) {
+        if (session.active != null || session.control != null) {
             return new ToolResult.Failure<>(
-                    "agent_busy", "An Agent request is already active in this session");
+                    "agent_busy", "An Agent request or context control is already active in this session");
         }
         if (replacementHistory != null) {
             session.history = List.copyOf(replacementHistory);
@@ -169,7 +215,8 @@ public final class AgentSessionStore {
     /** A detached cancelled worker may finalize only while no successor lease was submitted. */
     public synchronized boolean finalizeCancelled(Lease lease, List<ModelMessage> history) {
         Session session = sessions.get(lease.key());
-        if (session == null || session.latest != lease || session.active != null) return false;
+        if (session == null || session.latest != lease || session.active != null
+                || session.control != null) return false;
         session.history = List.copyOf(history);
         pruneCheckpointIndex(session);
         return true;
@@ -215,8 +262,8 @@ public final class AgentSessionStore {
             List<ModelMessage> history,
             List<ContextCheckpoint> checkpoints) {
         Session session = sessions.computeIfAbsent(key, ignored -> new Session());
-        if (session.active != null) {
-            throw new IllegalStateException("cannot hydrate an active Agent session");
+        if (session.active != null || session.control != null) {
+            throw new IllegalStateException("cannot hydrate an active Agent session or context control");
         }
         session.history = List.copyOf(history);
         session.checkpoints = List.copyOf(checkpoints);
@@ -264,6 +311,9 @@ public final class AgentSessionStore {
         Session session = sessions.remove(key);
         if (session != null && session.active != null) {
             session.active.cancellation().cancel(java.util.concurrent.ForkJoinPool.commonPool());
+        }
+        if (session != null && session.control != null) {
+            session.control.cancellation().cancel(java.util.concurrent.ForkJoinPool.commonPool());
         }
     }
 

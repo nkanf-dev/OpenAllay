@@ -53,6 +53,39 @@ public interface GuideLocalEndpoint {
         return Optional.empty();
     }
 
+    /** Available only for a local endpoint with a captured, known context budget. */
+    default boolean compactAvailable(String profileId) { return false; }
+
+    /** Exact local profile/capability state, not merely the model name. */
+    default Object compactIdentity(String profileId) { return null; }
+
+    /** Prepare only. The caller must save the durable projection before publication. */
+    default CompletableFuture<dev.openallay.tool.ToolResult<GuidePreparedCompaction>> prepareCompaction(
+            String profileId,
+            UUID actor,
+            String sessionId,
+            UUID controlId,
+            List<dev.openallay.model.ModelMessage> durableSeed,
+            dev.openallay.model.CancellationSignal cancellation,
+            Consumer<AgentEvent> usage) {
+        return prepareCompaction(profileId, actor, sessionId, controlId, durableSeed, cancellation,
+                dev.openallay.model.image.ImagePayloadResolver.unavailable(), usage);
+    }
+
+    /** Image access is request-only and bound to the captured player's actual source references. */
+    default CompletableFuture<dev.openallay.tool.ToolResult<GuidePreparedCompaction>> prepareCompaction(
+            String profileId,
+            UUID actor,
+            String sessionId,
+            UUID controlId,
+            List<dev.openallay.model.ModelMessage> durableSeed,
+            dev.openallay.model.CancellationSignal cancellation,
+            dev.openallay.model.image.ImagePayloadResolver images,
+            Consumer<AgentEvent> usage) {
+        return CompletableFuture.completedFuture(new dev.openallay.tool.ToolResult.Failure<>(
+                "compact_unavailable", "Manual compaction is unavailable for this model endpoint"));
+    }
+
     /** True only when this scoped session already has actual runtime model context. */
     default boolean hasContext(UUID actor, String sessionId) { return false; }
 

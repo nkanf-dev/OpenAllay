@@ -14,6 +14,35 @@ import org.junit.jupiter.api.Test;
 
 final class GuideUsageTrackerTest {
     @Test
+    void standaloneControlsCountSessionAndPersistSeparatelyWithoutChangingLatestRequest() {
+        GuideUsageTracker tracker = tracker();
+        UUID latest = tracker.requestId();
+        GuideModelSelection selected = tracker.selection();
+        UUID control = UUID.randomUUID();
+        UUID call = UUID.randomUUID();
+        tracker.registerControl(control, GuideModelSelection.client("other"), "unpriced");
+        tracker.accept(control, new AgentEvent.ModelUsageStarted(call, "unpriced"));
+        assertEquals(latest, tracker.requestId());
+        assertEquals(selected, tracker.selection());
+        assertEquals(0, tracker.requestSnapshot().actualCalls());
+        assertEquals(1, tracker.controlSnapshot().actualCalls());
+        assertEquals(1, tracker.sessionSnapshot().actualCalls());
+        assertNull(tracker.controlSnapshot().estimatedUsd());
+        tracker.accept(control, new AgentEvent.ModelUsageObserved(call, "unpriced", new ModelUsage(100, 5, 0)));
+        tracker.finishControl(control);
+        assertEquals(1, tracker.controlSnapshot().actualCalls());
+        assertEquals(100, tracker.controlSnapshot().inputTokens());
+        assertEquals(1, tracker.sessionSnapshot().actualCalls());
+        assertEquals(0, tracker.requestSnapshot().actualCalls());
+        var own = tracker.sessionSnapshot();
+        var controls = tracker.controlSnapshot();
+        GuideUsageTracker restored = tracker();
+        restored.restore(own, GuideUsageSnapshot.empty(), controls);
+        assertEquals(own, restored.sessionSnapshot());
+        assertEquals(controls, restored.controlSnapshot());
+    }
+
+    @Test
     void pendingStartsPersistUnknownWithoutCountingAndSealedIdsIgnoreDuplicateLateStarts() {
         GuideUsageTracker tracker = tracker();
         UUID call = UUID.randomUUID();

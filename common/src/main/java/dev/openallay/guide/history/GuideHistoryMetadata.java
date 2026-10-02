@@ -32,26 +32,34 @@ public record GuideHistoryMetadata(
             GuideHistoryCursor last,
             GuideUsageSnapshot usage,
             GuideUsageSnapshot inheritedUsage,
+            GuideUsageSnapshot controlUsage,
             int messageCount) {
         public Session(String sessionId, int ordinal, GuideModelSelection modelSelection,
                 long requestCount, GuideHistoryCursor first, GuideHistoryCursor last) {
             this(sessionId, ordinal, modelSelection, requestCount, first, last,
                     requestCount == 0 ? GuideUsageSnapshot.empty() : GuideUsageSnapshot.unknown(),
-                    GuideUsageSnapshot.empty(), 0);
+                    GuideUsageSnapshot.empty(), GuideUsageSnapshot.empty(), 0);
         }
 
         public Session(String sessionId, int ordinal, GuideModelSelection modelSelection,
                 long requestCount, GuideHistoryCursor first, GuideHistoryCursor last, int messageCount) {
             this(sessionId, ordinal, modelSelection, requestCount, first, last,
                     requestCount == 0 ? GuideUsageSnapshot.empty() : GuideUsageSnapshot.unknown(),
-                    GuideUsageSnapshot.empty(), messageCount);
+                    GuideUsageSnapshot.empty(), GuideUsageSnapshot.empty(), messageCount);
         }
 
         public Session(String sessionId, int ordinal, GuideModelSelection modelSelection,
                 long requestCount, GuideHistoryCursor first, GuideHistoryCursor last,
                 GuideUsageSnapshot usage, GuideUsageSnapshot inheritedUsage) {
             this(sessionId, ordinal, modelSelection, requestCount, first, last,
-                    usage, inheritedUsage, 0);
+                    usage, inheritedUsage, GuideUsageSnapshot.empty(), 0);
+        }
+
+        public Session(String sessionId, int ordinal, GuideModelSelection modelSelection,
+                long requestCount, GuideHistoryCursor first, GuideHistoryCursor last,
+                GuideUsageSnapshot usage, GuideUsageSnapshot inheritedUsage, GuideUsageSnapshot controlUsage) {
+            this(sessionId, ordinal, modelSelection, requestCount, first, last,
+                    usage, inheritedUsage, controlUsage, 0);
         }
 
         public Session {
@@ -64,6 +72,7 @@ public record GuideHistoryMetadata(
             java.util.Objects.requireNonNull(modelSelection, "modelSelection");
             java.util.Objects.requireNonNull(usage, "usage");
             java.util.Objects.requireNonNull(inheritedUsage, "inheritedUsage");
+            java.util.Objects.requireNonNull(controlUsage, "controlUsage");
             if (requestCount == 0 ? first != null || last != null : first == null || last == null) {
                 throw new IllegalArgumentException("session cursor metadata is inconsistent");
             }

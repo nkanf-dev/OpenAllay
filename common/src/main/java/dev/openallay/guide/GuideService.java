@@ -72,6 +72,9 @@ public final class GuideService implements GuideHistoryAdministration {
     private volatile Map<String, SessionState> publishedSessions = Map.of();
     private volatile GuideTelemetrySnapshot telemetry;
     private String selectedSession = "main";
+    private String compactSelectedSession = "main";
+    private GuideModelSelection compactSelectedModel;
+    private long compactSelectionEpoch;
     private long sessionSelectionGeneration;
     private final Map<String, UUID> pendingForks = new LinkedHashMap<>();
     private GuidePersistenceSnapshot persistence;
@@ -438,6 +441,350 @@ public final class GuideService implements GuideHistoryAdministration {
         return input;
     }
 
+    public boolean compactAvailable() {
+        GuideModelSelection selected = snapshot.modelSelection();
+        return !disconnected && local != null && selected.kind() == GuideModelSelection.Kind.CLIENT
+                && local.compactAvailable(selected.profileId());
+    }
+
+    public CompletableFuture<ToolResult<GuideCompactResult>> compactSelectedSession() {
+        String selected = snapshot.selectedSession();
+        SessionState captured = publishedSessions.get(selected);
+        CompletableFuture<ToolResult<GuideCompactResult>> result = new CompletableFuture<>();
+        dispatcher.execute(() -> {
+            if (captured == null || sessions.get(selected) != captured || !selected.equals(selectedSession)) {
+                result.complete(new ToolResult.Failure<>("compact_stale", "The selected session changed")); return;
+            }
+            startManualCompaction(result);
+        });
+        return result;
+    }
+
+    private void startManualCompaction(CompletableFuture<ToolResult<GuideCompactResult>> result) {
+        if (rejectStateChange(result)) return;
+        fenceManualCompactionSelection();
+        SessionState session = sessions.get(selectedSession);
+        if (session == null || requestSessionBusy(session)) {
+            result.complete(new ToolResult.Failure<>("compact_busy",
+                    "Wait for the current request and queued messages to finish before using /compact"));
+            return;
+        }
+        GuideModelSelection selection = session.modelSelection;
+        if (local == null || selection.kind() != GuideModelSelection.Kind.CLIENT
+                || !local.compactAvailable(selection.profileId())) {
+            result.complete(new ToolResult.Failure<>("compact_unavailable",
+                    "Manual compaction is available only with a configured client model"));
+            return;
+        }
+        Object endpoint;
+        try { endpoint = local.compactIdentity(selection.profileId()); }
+        catch (RuntimeException unavailable) {
+            result.complete(new ToolResult.Failure<>("compact_unavailable", "The selected model is unavailable"));
+            return;
+        }
+        ManualCompaction control = new ManualCompaction(UUID.randomUUID(), session, selection,
+                compactSelectionEpoch, session.contextGeneration, endpoint, result);
+        session.manualCompaction = control;
+        session.usage.registerControl(control.id, selection, publicModelIdentifier(selection));
+        publishWithoutSave();
+        CompletableFuture<GuideHistoryContextSeed> source;
+        if (local.hasContext(actor, session.id) || !incrementalHistory) {
+            source = CompletableFuture.completedFuture(new GuideHistoryContextSeed(
+                    session.id, session.modelContext, session.checkpoints, 0));
+        } else {
+            GuideContextSpec spec;
+            try { spec = local.contextSpec(selection.profileId()).orElse(null); }
+            catch (RuntimeException unavailable) { spec = null; }
+            if (spec == null) {
+                finishManualCompaction(control, null, "compact_unavailable", "The selected model budget is unavailable");
+                return;
+            }
+            try {
+                source = readHistoryContext(new GuideHistoryContextRequest(historyScope, session.id,
+                        spec.budget(), spec.promptAndToolTokens(), spec.canonicalModelId(), spec.estimator()), control.id);
+            } catch (RuntimeException failed) {
+                finishManualCompaction(control, null, "compact_failed", "Unable to prepare retained context");
+                return;
+            }
+        }
+        source.whenComplete((seed, failure) -> dispatcher.execute(() -> {
+            if (!manualCompactionCurrent(control)) {
+                finishManualCompaction(control, null, "compact_stale", "The selected session or model changed");
+                return;
+            }
+            if (failure != null || seed == null || !session.id.equals(seed.sessionId())) {
+                finishManualCompaction(control, null, "compact_failed", "Unable to prepare retained context");
+                return;
+            }
+            control.original = seed.messages();
+            CompletableFuture<ToolResult<GuidePreparedCompaction>> preparing;
+            try {
+                control.preparing = true;
+                preparing = local.prepareCompaction(selection.profileId(), actor, session.id, control.id,
+                        seed.messages(), control.cancellation, manualImages(seed.messages()),
+                        event -> dispatcher.execute(() -> observeManualCompactionUsage(control, event)));
+            } catch (RuntimeException failed) {
+                control.preparing = false;
+                finishManualCompaction(control, null, "compact_failed", "Unable to prepare a conversation summary");
+                return;
+            }
+            preparing.whenComplete((prepared, error) -> dispatcher.execute(() -> {
+                control.preparing = false;
+                if (error != null || prepared == null) {
+                    finishManualCompaction(control, null, control.cancellation.isCancelled()
+                            ? "compact_cancelled" : "compact_failed", "Manual compaction did not complete");
+                } else if (prepared instanceof ToolResult.Failure<GuidePreparedCompaction> rejected) {
+                    finishManualCompaction(control, null, rejected.code(), rejected.message());
+                } else {
+                    GuidePreparedCompaction value = ((ToolResult.Success<GuidePreparedCompaction>) prepared).value();
+                    if (control.result.isDone()) {
+                        value.close();
+                        if (control.session.manualCompaction == control) control.session.manualCompaction = null;
+                        control.session.usage.finishControl(control.id);
+                        control.settled.complete(null);
+                        if (!disconnected && sessions.get(control.session.id) == control.session) {
+                            publish();
+                            drainPending(control.session);
+                        }
+                    } else saveManualCompaction(control, value);
+                }
+            }));
+        }));
+    }
+
+    private dev.openallay.model.image.ImagePayloadResolver manualImages(
+            List<dev.openallay.model.ModelMessage> source) {
+        // The endpoint may have a newer retained projection than the GUI's context copy.
+        // Store authorization binds reads to this actor; callers cannot provide paths or URLs.
+        if (attachmentStore == null) return dev.openallay.model.image.ImagePayloadResolver.unavailable();
+        return reference -> attachmentStore.read(actor, reference);
+    }
+
+    private void observeManualCompactionUsage(ManualCompaction control, AgentEvent event) {
+        // Real summary calls are billable even when their prepared projection is later cancelled.
+        if (!disconnected && sessions.get(control.session.id) == control.session
+                && (event instanceof AgentEvent.ModelUsageStarted || event instanceof AgentEvent.ModelUsageObserved)) {
+            if (control.session.usage.accept(control.id, event)) publish();
+        }
+    }
+
+    private boolean manualCompactionCurrent(ManualCompaction control) {
+        if (disconnected || sessions.get(control.session.id) != control.session
+                || control.session.manualCompaction != control || control.cancellation.isCancelled()
+                || !selectedSession.equals(control.session.id)
+                || !control.selection.equals(control.session.modelSelection)
+                || compactSelectionEpoch != control.selectionEpoch
+                || control.session.contextGeneration != control.contextGeneration
+                || control.session.nextRequestSequence != control.historySequence
+                || control.session.modelContext != control.initialContext) return false;
+        try { return local.compactIdentity(control.selection.profileId()) == control.endpoint; }
+        catch (RuntimeException unavailable) { return false; }
+    }
+
+    private void saveManualCompaction(ManualCompaction control, GuidePreparedCompaction prepared) {
+        control.prepared = prepared;
+        control.original = prepared.source();
+        if (!manualCompactionCurrent(control) || !prepared.current()) {
+            finishManualCompaction(control, null, "compact_stale", "The selected session or model changed");
+            return;
+        }
+        if (prepared.outcome().status() == GuideCompactResult.Status.NOT_NEEDED) {
+            finishManualCompaction(control, prepared.outcome(), null, null);
+            return;
+        }
+        if (history == null) {
+            publishManualCompaction(control);
+            return;
+        }
+        scheduleHistorySave();
+        drainHistoryWrites().whenComplete((ignored, failure) -> dispatcher.execute(() -> {
+            if (failure != null || !manualCompactionCurrent(control) || !prepared.current()) {
+                finishManualCompaction(control, null, failure == null ? "compact_stale" : "compact_failed",
+                        failure == null ? "The selected session or model changed" : "Unable to save the prepared summary");
+                return;
+            }
+            GuideHistoryCommit commit = new GuideHistoryCommit(historyScope, List.of(
+                    new GuideHistoryMutation.ReplaceContext(control.session.id, prepared.projection()),
+                    new GuideHistoryMutation.AppendCheckpoint(control.session.id,
+                            prepared.outcome().checkpoint())));
+            control.saving = true;
+            try {
+                history.commit(commit).whenComplete((saved, error) -> dispatcher.execute(() -> {
+                    control.saving = false;
+                    if (error != null) {
+                        finishManualCompaction(control, null, "compact_failed", "Unable to save the prepared summary");
+                    } else if (!manualCompactionCurrent(control) || !prepared.current()) {
+                        // A detached write must not turn into the next request's context.
+                        restoreManualCompaction(control);
+                    } else {
+                        durableProjection.acknowledge(commit.mutations());
+                        capturedProjection.acknowledge(commit.mutations());
+                        publishManualCompaction(control);
+                    }
+                }));
+            } catch (RuntimeException error) {
+                control.saving = false;
+                finishManualCompaction(control, null, "compact_failed", "Unable to save the prepared summary");
+            }
+        }));
+    }
+
+    private void restoreManualCompaction(ManualCompaction control) {
+        if ((!control.detachedOnDisconnect && (disconnected || sessions.get(control.session.id) != control.session))
+                || control.session.contextGeneration != control.contextGeneration
+                || control.session.nextRequestSequence != control.historySequence
+                || control.session.modelContext != control.initialContext) {
+            // A clear/delete/new context owns its later durable mutation. Disconnect does not.
+            finishManualCompaction(control, null, "compact_stale", "The selected session or model changed");
+            return;
+        }
+        ContextCheckpoint preparedCheckpoint = control.prepared.outcome().checkpoint();
+        ContextCheckpoint discarded = new ContextCheckpoint(preparedCheckpoint.checkpointId(),
+                preparedCheckpoint.sourceFromIndex(), preparedCheckpoint.sourceToIndexExclusive(),
+                preparedCheckpoint.sourceHash(), preparedCheckpoint.modelIdentifier(), preparedCheckpoint.createdAt(),
+                ContextCheckpoint.Status.FAILED, null, "compact_stale",
+                "The prepared summary was not published because its control snapshot changed",
+                control.prepared.outcome().beforeTokens());
+        GuideHistoryCommit restore = new GuideHistoryCommit(historyScope, List.of(
+                new GuideHistoryMutation.ReplaceContext(control.session.id, control.original),
+                new GuideHistoryMutation.AppendCheckpoint(control.session.id, discarded)));
+        control.saving = true;
+        try {
+            history.commit(restore).whenComplete((ignored, failure) -> dispatcher.execute(() -> {
+                control.saving = false;
+                if (failure == null) {
+                    if (!disconnected && sessions.get(control.session.id) == control.session) {
+                        durableProjection.acknowledge(restore.mutations());
+                        capturedProjection.acknowledge(restore.mutations());
+                    }
+                } else if (control.detachedOnDisconnect) {
+                    control.settled.completeExceptionally(failure);
+                } else {
+                    retryManualCompactionRestore(control, restore);
+                    return;
+                }
+                finishManualCompaction(control, null, failure == null ? "compact_stale" : "compact_failed",
+                        failure == null ? "The selected session or model changed" : "Unable to restore retained context");
+            }));
+        } catch (RuntimeException failure) {
+            control.saving = false;
+            if (control.detachedOnDisconnect) {
+                control.settled.completeExceptionally(failure);
+                finishManualCompaction(control, null, "compact_failed", "Unable to restore retained context");
+            } else {
+                retryManualCompactionRestore(control, restore);
+            }
+        }
+    }
+
+    private void retryManualCompactionRestore(ManualCompaction control, GuideHistoryCommit restore) {
+        control.saving = true;
+        pendingHistoryMutations.addAll(restore.mutations());
+        scheduleHistorySave();
+        drainHistoryWrites().whenComplete((ignored, failure) -> dispatcher.execute(() -> {
+            if (failure != null) {
+                // An unacknowledged compensation still owns the control lease. Do not allow a
+                // successor to read the unpublished summary as if rollback had succeeded.
+                control.settled.completeExceptionally(failure);
+                control.result.complete(new ToolResult.Failure<>("compact_failed", "Unable to restore retained context"));
+                return;
+            }
+            control.saving = false;
+            finishManualCompaction(control, null, "compact_stale", "The selected session or model changed");
+        }));
+    }
+
+    private void publishManualCompaction(ManualCompaction control) {
+        if (!manualCompactionCurrent(control) || !control.prepared.current() || !control.prepared.publish()) {
+            if (history != null) restoreManualCompaction(control);
+            else finishManualCompaction(control, null, "compact_stale", "The selected session or model changed");
+            return;
+        }
+        control.session.modelContext = control.prepared.projection();
+        control.session.contextGeneration++;
+        control.session.checkpoints.add(control.prepared.outcome().checkpoint());
+        finishManualCompaction(control, control.prepared.outcome(), null, null);
+    }
+
+    private void finishManualCompaction(ManualCompaction control, GuideCompactResult outcome,
+            String code, String message) {
+        if (control.saving) return;
+        if (control.prepared != null) control.prepared.close();
+        cancelHistoryContextBarrier(control.id);
+        if (!control.preparing && control.session.manualCompaction == control) {
+            control.session.manualCompaction = null;
+        }
+        if (!control.preparing) {
+            control.session.usage.finishControl(control.id);
+            control.settled.complete(null);
+        }
+        if (outcome != null) control.result.complete(new ToolResult.Success<>(outcome));
+        else {
+            String publicCode = Set.of("compact_busy", "compact_unavailable", "compact_cancelled",
+                    "compact_stale", "compact_failed").contains(code) ? code : "compact_failed";
+            control.result.complete(new ToolResult.Failure<>(publicCode, message));
+        }
+        if (!disconnected && sessions.get(control.session.id) == control.session) {
+            publish();
+            drainPending(control.session);
+        }
+    }
+
+    private boolean cancelManualCompaction(SessionState session) {
+        ManualCompaction control = session.manualCompaction;
+        if (control == null) return false;
+        control.cancellation.cancel(java.util.concurrent.ForkJoinPool.commonPool());
+        if (!control.saving) finishManualCompaction(control, null, "compact_cancelled", "Manual compaction was cancelled");
+        return true;
+    }
+
+    private void fenceManualCompactionSelection() {
+        SessionState selected = sessions.get(selectedSession);
+        GuideModelSelection selection = selected == null ? null : selected.modelSelection;
+        if (!Objects.equals(compactSelectedSession, selectedSession)
+                || !Objects.equals(compactSelectedModel, selection)) {
+            compactSelectedSession = selectedSession;
+            compactSelectedModel = selection;
+            compactSelectionEpoch++;
+            sessions.values().forEach(session -> {
+                ManualCompaction control = session.manualCompaction;
+                if (control != null && !manualCompactionCurrent(control)) cancelManualCompaction(session);
+            });
+        }
+    }
+
+    private static final class ManualCompaction {
+        private final UUID id;
+        private final SessionState session;
+        private final GuideModelSelection selection;
+        private final long selectionEpoch;
+        private final long contextGeneration;
+        private final Object endpoint;
+        private final long historySequence;
+        private final List<dev.openallay.model.ModelMessage> initialContext;
+        private final CompletableFuture<ToolResult<GuideCompactResult>> result;
+        private final dev.openallay.model.CancellationSignal cancellation = new dev.openallay.model.CancellationSignal();
+        private List<dev.openallay.model.ModelMessage> original = List.of();
+        private GuidePreparedCompaction prepared;
+        private boolean preparing;
+        private boolean saving;
+        private boolean detachedOnDisconnect;
+        private final CompletableFuture<Void> settled = new CompletableFuture<>();
+        private ManualCompaction(UUID id, SessionState session, GuideModelSelection selection,
+                long selectionEpoch, long contextGeneration, Object endpoint,
+                CompletableFuture<ToolResult<GuideCompactResult>> result) {
+            this.id = id;
+            this.session = session;
+            this.selection = selection;
+            this.selectionEpoch = selectionEpoch;
+            this.contextGeneration = contextGeneration;
+            this.endpoint = endpoint;
+            this.historySequence = session.nextRequestSequence;
+            this.initialContext = session.modelContext;
+            this.result = result;
+        }
+    }
+
     public CompletableFuture<ToolResult<UUID>> ask(String question) {
         return ask(question == null ? null : dev.openallay.model.ModelMessage.userText(question));
     }
@@ -610,6 +957,10 @@ public final class GuideService implements GuideHistoryAdministration {
             }
             boolean hadPending = !session.pending.isEmpty() || !session.admissions.isEmpty();
             revokePending(session);
+            if (cancelManualCompaction(session)) {
+                publishWithoutSave();
+                result.complete(new ToolResult.Success<>(true)); return;
+            }
             GuideRequestSnapshot active = active(session);
             if (active == null) {
                 publishWithoutSave();
@@ -790,7 +1141,8 @@ public final class GuideService implements GuideHistoryAdministration {
         GuideHistoryCursor cutoff = request == null ? null : cursor(source, request);
         if (request == null || !request.terminal() || cutoff == null
                 || pendingCancelledFinalization.containsKey(requestId)
-                || requestId.equals(source.workingRequest)) {
+                || requestId.equals(source.workingRequest)
+                || source.manualCompaction != null) {
             result.complete(new ToolResult.Failure<>(
                     "fork_boundary_unavailable", "Fork requires a finalized completed request boundary"));
             return;
@@ -911,7 +1263,7 @@ public final class GuideService implements GuideHistoryAdministration {
         boolean sourceUnchanged = sessions.get(source.id) == source && source.forkEpoch == sourceEpoch;
         SessionState target = new SessionState(fork.session().sessionId(), fork.session().modelSelection());
         target.totalRequests = fork.session().requestCount();
-        target.usage.restore(fork.session().usage(), fork.session().inheritedUsage());
+        target.usage.restore(fork.session().usage(), fork.session().inheritedUsage(), fork.session().controlUsage());
         target.firstAvailable = fork.session().first();
         target.lastAvailable = fork.session().last();
         target.nextRequestSequence = fork.session().last().sequence() + 1;
@@ -926,6 +1278,7 @@ public final class GuideService implements GuideHistoryAdministration {
         }
         for (DurableProjection projection : List.of(capturedProjection, durableProjection)) {
             projection.sessions.put(target.id, new SessionProjection(fork.session().ordinal(), target.modelSelection));
+            projection.controlUsage.put(target.id, fork.session().controlUsage());
             for (int index = 0; index < target.checkpoints.size(); index++) {
                 projection.checkpoints.put(new CheckpointKey(target.id, index), target.checkpoints.get(index));
                 projection.checkpointPayloads.put(target.checkpoints.get(index).checkpointId(), target.checkpoints.get(index));
@@ -980,7 +1333,8 @@ public final class GuideService implements GuideHistoryAdministration {
         return new GuideHistoryForkResult(new GuideHistoryMetadata.Session(mutation.sessionId(), mutation.ordinal(),
                 mutation.modelSelection(), inherited.size(), cursors.getFirst(), cursors.getLast(),
                 GuideUsageSnapshot.empty(), inherited.stream().map(GuideRequestSnapshot::usageProjection)
-                        .reduce(GuideUsageSnapshot.empty(), GuideUsageSnapshot::plus), inheritedMessageCount),
+                        .reduce(GuideUsageSnapshot.empty(), GuideUsageSnapshot::plus),
+                GuideUsageSnapshot.empty(), inheritedMessageCount),
                 new GuideHistoryPage(mutation.sessionId(), inherited, cursors.getFirst(), cursors.getLast(), false, false),
                 boundary.messages(), boundary.checkpoints().stream().map(checkpoint ->
                         new ContextCheckpoint(UUID.randomUUID(), checkpoint.sourceFromIndex(),
@@ -1018,6 +1372,7 @@ public final class GuideService implements GuideHistoryAdministration {
                 return;
             }
             revokePending(session);
+            cancelManualCompaction(session);
             GuideRequestSnapshot active = active(session);
             if (active != null) {
                 if (active.topology() == GuideTopology.SERVER) {
@@ -1156,6 +1511,7 @@ public final class GuideService implements GuideHistoryAdministration {
             }
             SessionState session = sessions.get(selectedSession);
             revokePending(session);
+            cancelManualCompaction(session);
             if (active(session) != null || session.workingRequest != null) {
                 publishWithoutSave();
                 result.complete(new ToolResult.Failure<>(
@@ -1276,7 +1632,11 @@ public final class GuideService implements GuideHistoryAdministration {
     public CompletableFuture<Void> disconnect() {
         CompletableFuture<Void> result = new CompletableFuture<>();
         dispatcher.execute(() -> {
+            List<ManualCompaction> detachedControls = sessions.values().stream()
+                    .map(session -> session.manualCompaction).filter(Objects::nonNull).toList();
+            detachedControls.forEach(control -> control.detachedOnDisconnect = true);
             sessions.values().forEach(this::revokePending);
+            sessions.values().forEach(this::cancelManualCompaction);
             List<GuideRequestSnapshot> activeRequests = sessions.values().stream()
                     .map(GuideService::active)
                     .filter(Objects::nonNull)
@@ -1290,10 +1650,16 @@ public final class GuideService implements GuideHistoryAdministration {
                 apply(active.requestId(), new AgentEvent.Failed(
                         "agent_cancelled", "Agent request was cancelled by disconnect"));
             }
-            CompletableFuture<Void> durable = history != null && allowHistoryWrites
+            CompletableFuture<Void> controlsSettled = CompletableFuture.allOf(detachedControls.stream()
+                    .map(control -> control.settled).toArray(CompletableFuture[]::new));
+            CompletableFuture<Void> ordinaryWrites = history != null && allowHistoryWrites
                     ? drainHistoryWrites().handle((ignored, failure) -> null)
-                            .thenCompose(ignored -> history.flush())
                     : CompletableFuture.completedFuture(null);
+            // A saved but unpublished summary owns a compensation write even after disconnect.
+            // Wait for its real acknowledgement before flush and image-owner cleanup.
+            CompletableFuture<Void> durable = CompletableFuture.allOf(ordinaryWrites, controlsSettled)
+                    .thenCompose(ignored -> history != null && allowHistoryWrites
+                            ? history.flush() : CompletableFuture.completedFuture(null));
             sessions.values().forEach(session -> invalidatePageLoad(
                     session, "history_page_cancelled", "History page request was cancelled by disconnect"));
             historyWriteBarriers.stream().map(HistoryWriteBarrier::requestId)
@@ -1304,8 +1670,7 @@ public final class GuideService implements GuideHistoryAdministration {
             retainedImages.keySet().stream().filter(owner -> !owner.contains(":export:"))
                     .forEach(transientImageOwners::add);
             // Export snapshots carry their own lease and can finish after this connection closes.
-            CompletableFuture<Void> imageCleanup = durable.handle((ignored, failure) -> null)
-                    .thenRunAsync(() -> {
+            CompletableFuture<Void> imageCleanup = durable.thenRunAsync(() -> {
                         if (attachmentStore == null) return;
                         for (String owner : transientImageOwners) {
                             try { attachmentStore.release(actor, owner); }
@@ -1322,7 +1687,10 @@ public final class GuideService implements GuideHistoryAdministration {
             sessions.put("main", new SessionState("main", defaultClientSelection()));
             selectedSession = "main";
             publishWithoutSave();
-            imageCleanup.handle((ignored, failure) -> null).thenRun(() -> result.complete(null));
+            imageCleanup.whenComplete((ignored, failure) -> {
+                if (failure == null) result.complete(null);
+                else result.completeExceptionally(failure);
+            });
         });
         return result;
     }
@@ -1446,6 +1814,7 @@ public final class GuideService implements GuideHistoryAdministration {
             }
         }
         sessions.values().forEach(this::revokePending);
+        sessions.values().forEach(this::cancelManualCompaction);
         requestImageCapabilities.clear();
         requestSessions.clear();
         pendingCancelledFinalization.clear();
@@ -1474,7 +1843,7 @@ public final class GuideService implements GuideHistoryAdministration {
     }
 
     private boolean requestSessionBusy(SessionState session) {
-        return session.workingRequest != null || active(session) != null
+        return session.workingRequest != null || active(session) != null || session.manualCompaction != null
                 || !session.pending.isEmpty() || !session.admissions.isEmpty();
     }
 
@@ -1606,7 +1975,7 @@ public final class GuideService implements GuideHistoryAdministration {
     private void drainPending(SessionState session) {
         if (session.drainingPending || disconnected || historyDeletionPending
                 || sessions.get(session.id) != session || session.workingRequest != null
-                || !session.admissions.isEmpty()
+                || !session.admissions.isEmpty() || session.manualCompaction != null
                 || active(session) != null) return;
         session.drainingPending = true;
         try {
@@ -1665,7 +2034,7 @@ public final class GuideService implements GuideHistoryAdministration {
             result.complete(new ToolResult.Failure<>(failure.code(), failure.message())); return;
         }
         String question = GuidePendingMessage.displayText(input);
-        if (active(session) != null || session.workingRequest != null) {
+        if (active(session) != null || session.workingRequest != null || session.manualCompaction != null) {
             result.complete(new ToolResult.Failure<>(
                     "agent_busy", "This guide session already has active work"));
             return;
@@ -2152,6 +2521,7 @@ public final class GuideService implements GuideHistoryAdministration {
     }
 
     private void publishWithoutSave() {
+        fenceManualCompactionSelection();
         publishedSessions = Map.copyOf(sessions);
         snapshot = buildSnapshot();
         telemetry = buildTelemetry();
@@ -2258,7 +2628,7 @@ public final class GuideService implements GuideHistoryAdministration {
             SessionState session = new SessionState(snapshot.sessionId(), restored);
             session.totalRequests = snapshot.requestCount();
             session.messageOrdinalBase = snapshot.messageCount();
-            session.usage.restore(snapshot.usage(), snapshot.inheritedUsage());
+            session.usage.restore(snapshot.usage(), snapshot.inheritedUsage(), snapshot.controlUsage());
             session.firstAvailable = snapshot.first();
             session.lastAvailable = snapshot.last();
             session.hasEarlier = snapshot.requestCount() > 0;
@@ -2270,6 +2640,8 @@ public final class GuideService implements GuideHistoryAdministration {
                     snapshot.ordinal(), snapshot.modelSelection());
             durableProjection.sessions.put(session.id, projection);
             capturedProjection.sessions.put(session.id, projection);
+            durableProjection.controlUsage.put(session.id, snapshot.controlUsage());
+            capturedProjection.controlUsage.put(session.id, snapshot.controlUsage());
         }
         selectedSession = metadata.selectedSession();
         durableProjection.selectedSession = selectedSession;
@@ -2565,6 +2937,10 @@ public final class GuideService implements GuideHistoryAdministration {
                 mutations.add(new GuideHistoryMutation.UpsertSession(
                         session.id, projected.ordinal(), session.modelSelection));
             }
+            GuideUsageSnapshot controls = session.usage.controlSnapshot();
+            if (!controls.equals(capturedProjection.controlUsage.get(session.id))) {
+                mutations.add(new GuideHistoryMutation.UpsertSessionUsage(session.id, controls));
+            }
             for (GuideRequestSnapshot original : session.requests) {
                 Long sequence = session.requestSequences.get(original.requestId());
                 if (sequence == null) continue;
@@ -2803,6 +3179,7 @@ public final class GuideService implements GuideHistoryAdministration {
         private long nextPendingOrder;
         private final Set<UUID> endpointRequests = new java.util.HashSet<>();
         private UUID workingRequest;
+        private ManualCompaction manualCompaction;
         private final Map<UUID, UUID> requestReceipts = new LinkedHashMap<>();
         private final Map<UUID, Long> admissions = new LinkedHashMap<>();
         private final Map<UUID, Runnable> readyAdmissions = new LinkedHashMap<>();
@@ -2920,6 +3297,7 @@ public final class GuideService implements GuideHistoryAdministration {
         private String sessionOf(GuideHistoryMutation mutation) {
             return switch (mutation) {
                 case GuideHistoryMutation.UpsertSession row -> row.sessionId();
+                case GuideHistoryMutation.UpsertSessionUsage row -> row.sessionId();
                 case GuideHistoryMutation.UpsertMessage row -> row.sessionId();
                 case GuideHistoryMutation.ReplaceContext row -> row.sessionId();
                 case GuideHistoryMutation.UpsertCheckpoint row -> row.sessionId();
@@ -2949,6 +3327,8 @@ public final class GuideService implements GuideHistoryAdministration {
                 case GuideHistoryMutation.UpsertPartition ignored ->
                         new MutationKey(mutation.getClass(), "partition", 0);
                 case GuideHistoryMutation.UpsertSession row ->
+                        new MutationKey(mutation.getClass(), row.sessionId(), 0);
+                case GuideHistoryMutation.UpsertSessionUsage row ->
                         new MutationKey(mutation.getClass(), row.sessionId(), 0);
                 case GuideHistoryMutation.UpsertRequest row ->
                         new MutationKey(mutation.getClass(), row.request().requestId(), 0);
@@ -2999,6 +3379,7 @@ public final class GuideService implements GuideHistoryAdministration {
     private static final class DurableProjection {
         private String selectedSession;
         private final Map<String, SessionProjection> sessions = new LinkedHashMap<>();
+        private final Map<String, GuideUsageSnapshot> controlUsage = new LinkedHashMap<>();
         private final Map<UUID, GuideRequestSnapshot> requests = new LinkedHashMap<>();
         private final Map<TimelineKey, GuideTimelineEntry> timeline = new LinkedHashMap<>();
         private final Map<UUID, List<GuideSource>> sources = new LinkedHashMap<>();
@@ -3013,6 +3394,8 @@ public final class GuideService implements GuideHistoryAdministration {
                     case GuideHistoryMutation.UpsertPartition row -> selectedSession = row.selectedSession();
                     case GuideHistoryMutation.UpsertSession row -> sessions.put(
                             row.sessionId(), new SessionProjection(row.ordinal(), row.modelSelection()));
+                    case GuideHistoryMutation.UpsertSessionUsage row -> controlUsage.put(
+                            row.sessionId(), row.controlUsage());
                     case GuideHistoryMutation.UpsertRequest row -> requests.put(
                             row.request().requestId(), row.request());
                     case GuideHistoryMutation.UpsertTimelineEntry row -> timeline.put(
@@ -3043,6 +3426,7 @@ public final class GuideService implements GuideHistoryAdministration {
         private void clear() {
             selectedSession = null;
             sessions.clear();
+            controlUsage.clear();
             requests.clear();
             timeline.clear();
             sources.clear();
@@ -3053,6 +3437,7 @@ public final class GuideService implements GuideHistoryAdministration {
         }
 
         private void clearSession(String sessionId) {
+            controlUsage.remove(sessionId);
             Set<UUID> ids = requests.values().stream()
                     .filter(row -> row.sessionId().equals(sessionId))
                     .map(GuideRequestSnapshot::requestId)

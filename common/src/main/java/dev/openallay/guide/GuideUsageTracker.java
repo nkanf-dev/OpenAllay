@@ -16,8 +16,10 @@ final class GuideUsageTracker {
     private final Map<UUID, String> requestModels = new LinkedHashMap<>();
     private final Set<UUID> calls = new HashSet<>();
     private final Map<UUID, UUID> pendingCalls = new LinkedHashMap<>();
+    private final Set<UUID> controls = new HashSet<>();
     private GuideUsageSnapshot session = GuideUsageSnapshot.empty();
     private GuideUsageSnapshot inherited = GuideUsageSnapshot.empty();
+    private GuideUsageSnapshot control = GuideUsageSnapshot.empty();
     private UUID requestId;
     private GuideModelSelection selection;
     private String modelIdentifier;
@@ -31,8 +33,34 @@ final class GuideUsageTracker {
     }
 
     void restore(GuideUsageSnapshot own, GuideUsageSnapshot reference) {
+        restore(own, reference, GuideUsageSnapshot.empty());
+    }
+
+    void restore(GuideUsageSnapshot own, GuideUsageSnapshot reference, GuideUsageSnapshot standalone) {
         session = java.util.Objects.requireNonNull(own, "own usage");
         inherited = java.util.Objects.requireNonNull(reference, "inherited usage");
+        control = java.util.Objects.requireNonNull(standalone, "control usage");
+    }
+
+    void registerControl(UUID owner, GuideModelSelection selected, String model) {
+        java.util.Objects.requireNonNull(owner, "control owner");
+        java.util.Objects.requireNonNull(selected, "selection");
+        controls.add(owner);
+        requests.put(owner, GuideUsageSnapshot.empty());
+        requestModels.put(owner, model);
+    }
+
+    void finishControl(UUID owner) {
+        if (controls.contains(owner) && !pendingCalls.containsValue(owner)) {
+            controls.remove(owner);
+            requestModels.remove(owner);
+            requests.remove(owner);
+        }
+    }
+
+    GuideUsageSnapshot controlSnapshot() {
+        int pending = (int) pendingCalls.values().stream().filter(controls::contains).count();
+        return pending == 0 ? control : control.pending(pending);
     }
 
     UUID requestId() { return requestId; }
@@ -63,6 +91,7 @@ final class GuideUsageTracker {
         requests.merge(owner, delta, GuideUsageSnapshot::plus);
         pendingCalls.remove(observed.callId());
         session = session.plus(delta);
+        if (controls.contains(owner)) control = control.plus(delta);
         return true;
     }
 

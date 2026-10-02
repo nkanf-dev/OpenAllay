@@ -127,6 +127,8 @@ copy answers, or export a session. The screen does not pause the game.
 - **Follow-up & Steer:** choose **Follow-up** to run after the current task releases its resources,
   or **Steer** to add guidance at the next operation boundary. Steer does not interrupt a model call.
 - **Image inputs:** paste images with **Ctrl/Cmd+V** when using an image-capable model.
+- **Manual compaction:** when the conversation is idle, enter `/compact` to summarize older context
+  with your client-configured model. Server models do not support this command yet. Use `//` to send a literal `/`.
 - Open tool details to inspect results. **Debug mode** also shows the submitted
   JavaScript and full input/output.
 

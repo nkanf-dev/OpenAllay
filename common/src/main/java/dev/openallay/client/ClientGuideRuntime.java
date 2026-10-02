@@ -25,6 +25,15 @@ import dev.openallay.capability.ClientCapabilitySnapshot;
 import dev.openallay.context.ToolInvocationContext;
 import dev.openallay.guide.GuideLocalEndpoint;
 import dev.openallay.guide.GuideContextSpec;
+import dev.openallay.guide.GuideCompactResult;
+import dev.openallay.guide.GuidePreparedCompaction;
+import dev.openallay.model.CancellationSignal;
+import dev.openallay.model.ModelClientException;
+import dev.openallay.model.ModelContent;
+import dev.openallay.model.ModelEvent;
+import dev.openallay.model.ModelRole;
+import dev.openallay.model.image.ImagePayloadResolver;
+import dev.openallay.skill.RetainedSkillContext;
 import dev.openallay.model.ModelClient;
 import dev.openallay.model.ModelMessage;
 import dev.openallay.model.scheduling.ModelRequestScheduler;
@@ -51,6 +60,7 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
     private final Gson gson;
     private final AgentToolExecutor extension;
     private final Map<UUID, String> selectedSessions;
+    private final PromptModes promptModes;
 
     public ClientGuideRuntime(
             OpenAllayRuntime runtime,
@@ -126,7 +136,8 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
                 extension,
                 traces,
                 capabilities,
-                new ConcurrentHashMap<>());
+                new ConcurrentHashMap<>(),
+                null);
     }
 
     private ClientGuideRuntime(
@@ -137,7 +148,8 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
             AgentToolExecutor extension,
             LiveTraceStore traces,
             ClientCapabilitySnapshot capabilities,
-            Map<UUID, String> selectedSessions) {
+            Map<UUID, String> selectedSessions,
+            PromptModes promptModes) {
         this.endpoint = Objects.requireNonNull(endpoint, "endpoint");
         this.sessions = Objects.requireNonNull(sessions, "sessions");
         this.dispatcher = Objects.requireNonNull(dispatcher, "dispatcher");
@@ -146,6 +158,7 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
         this.gson = Objects.requireNonNull(gson, "gson");
         this.extension = extension;
         this.selectedSessions = Objects.requireNonNull(selectedSessions, "selectedSessions");
+        this.promptModes = promptModes;
         LocalAgentToolExecutor local = new LocalAgentToolExecutor(capabilities.localTools(), gson);
         toolExecutor = extension == null
                 ? local
@@ -158,6 +171,7 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
                     synchronized (sessions) {
                         AgentSessionStore.Status status = sessions.status(request.sessionKey());
                         if (status.active() && request.requestId().equals(status.requestId())) {
+                            if (promptModes != null) endpoint.promptModes().put(request.sessionKey(), promptModes);
                             endpoint.estimates().put(request.sessionKey(),
                                     new dev.openallay.guide.GuideContextEstimate(
                                             request.requestId(), tokens,
@@ -174,6 +188,10 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
     }
 
     ClientGuideRuntime withCapabilities(ClientCapabilitySnapshot replacement) {
+        return withCapabilities(replacement, promptModes);
+    }
+
+    private ClientGuideRuntime withCapabilities(ClientCapabilitySnapshot replacement, PromptModes modes) {
         return new ClientGuideRuntime(
                 endpoint,
                 sessions,
@@ -182,7 +200,8 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
                 extension,
                 traces,
                 replacement,
-                selectedSessions);
+                selectedSessions,
+                modes);
     }
 
     @Override
@@ -193,13 +212,16 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
 
     void clearContextEstimate(UUID actor, String sessionId) {
         synchronized (sessions) {
-            endpoint.estimates().remove(new AgentSessionKey(actor, sessionId));
+            AgentSessionKey key = new AgentSessionKey(actor, sessionId);
+            endpoint.estimates().remove(key);
+            endpoint.promptModes().remove(key);
         }
     }
 
     void clearContextEstimates(UUID actor) {
         synchronized (sessions) {
             endpoint.estimates().keySet().removeIf(key -> key.actorId().equals(actor));
+            endpoint.promptModes().keySet().removeIf(key -> key.actorId().equals(actor));
         }
     }
 
@@ -244,6 +266,269 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
         } finally {
             captured.closeSkillContext(correlation);
         }
+    }
+
+    @Override
+    public boolean compactAvailable(String profileId) {
+        return defaultProfileId().equals(profileId) && endpoint.compactor() != null;
+    }
+
+    @Override
+    public Object compactIdentity(String profileId) {
+        return compactAvailable(profileId) ? this : null;
+    }
+
+    @Override
+    public CompletableFuture<ToolResult<GuidePreparedCompaction>> prepareCompaction(
+            String profileId,
+            UUID actor,
+            String sessionId,
+            UUID controlId,
+            List<ModelMessage> durableSeed,
+            CancellationSignal cancellation,
+            ImagePayloadResolver images,
+            Consumer<AgentEvent> usage) {
+        return prepareCompaction(profileId, actor, sessionId, controlId, durableSeed, cancellation,
+                images, usage, null);
+    }
+
+    /** The registry supplies the selected profile's exact externally resolved image capability. */
+    CompletableFuture<ToolResult<GuidePreparedCompaction>> prepareCompaction(
+            String profileId,
+            UUID actor,
+            String sessionId,
+            UUID controlId,
+            List<ModelMessage> durableSeed,
+            CancellationSignal cancellation,
+            ImagePayloadResolver images,
+            Consumer<AgentEvent> usage,
+            dev.openallay.model.image.ImageInputCapability imageCapability) {
+        if (!compactAvailable(profileId)) {
+            return CompletableFuture.completedFuture(new ToolResult.Failure<>(
+                    "compact_unavailable", "Manual compaction requires a local model with a known context budget"));
+        }
+        Objects.requireNonNull(cancellation, "cancellation");
+        Objects.requireNonNull(images, "images");
+        Objects.requireNonNull(usage, "usage");
+        if (cancellation.isCancelled()) return CompletableFuture.completedFuture(
+                new ToolResult.Failure<>("compact_cancelled", "Manual compaction was cancelled"));
+        ToolResult<AgentSessionStore.ControlLease> reservation = sessions.reserveControl(
+                new AgentSessionKey(actor, sessionId), controlId, durableSeed);
+        if (reservation instanceof ToolResult.Failure<AgentSessionStore.ControlLease> failure) {
+            return CompletableFuture.completedFuture(new ToolResult.Failure<>(failure.code(), failure.message()));
+        }
+        AgentSessionStore.ControlLease lease =
+                ((ToolResult.Success<AgentSessionStore.ControlLease>) reservation).value();
+        PromptModes modes = endpoint.promptModes().getOrDefault(lease.key(), new PromptModes(false, false));
+        ClientGuideRuntime captured = withCapabilities(capabilities.forRequest(
+                modes.unrestrictedJavascript(), modes.commandsAvailable()), modes);
+        AgentToolExecutor capturedTools = captured.toolExecutor;
+        ManualCompactionScope scope = new ManualCompactionScope(lease, cancellation, usage, capturedTools);
+        try {
+            lease.cancellation().throwIfCancelled();
+            if (imageCapability != null
+                    && imageCapability != dev.openallay.model.image.ImageInputCapability.SUPPORTED
+                    && lease.history().stream().flatMap(message -> message.content().stream())
+                            .anyMatch(ModelContent.Image.class::isInstance)) {
+                scope.finishPreparation();
+                scope.close();
+                return CompletableFuture.completedFuture(new ToolResult.Failure<>(
+                        imageCapability == dev.openallay.model.image.ImageInputCapability.UNKNOWN
+                                ? "image_input_unknown" : "image_input_unsupported",
+                        "The selected model has no confirmed image input support"));
+            }
+            ContextCompactor compactor = endpoint.compactor();
+            List<dev.openallay.model.ModelToolDefinition> definitions = List.copyOf(capturedTools.definitions());
+            // This index is private to preparation. It never touches the session's retained facts.
+            RetainedSkillContext retained = new RetainedSkillContext();
+            String system = capturedTools.skillSystemPrompt(captured.systemPrompt(
+                    modes.unrestrictedJavascript(), modes.commandsAvailable()));
+            capturedTools.prepareSystem(system, retained);
+            List<ModelMessage> source = dev.openallay.agent.context.ModelContextCodec.safe(
+                    capturedTools.refreshContext(lease.history(), retained));
+            java.util.function.Function<List<ModelMessage>, String> prompt = candidate -> {
+                lease.cancellation().throwIfCancelled();
+                capturedTools.prepareContext(scope.correlationId, candidate, retained);
+                String facts = capturedTools.skillManifest(scope.correlationId);
+                return facts.isBlank() ? system : system + "\n" + facts;
+            };
+            int before = compactor.estimateTokens(prompt.apply(source), source, definitions);
+            if (source.isEmpty()) {
+                scope.finishPreparation();
+                return CompletableFuture.completedFuture(new ToolResult.Success<>(new PreparedManualCompaction(
+                        scope, new GuideCompactResult(GuideCompactResult.Status.NOT_NEEDED,
+                                before, before, compactor.inputTokenBudget(), null), lease.history())));
+            }
+            // Do not run prepareModelView/fitResults over the retained recent turn. The manual
+            // compactor bounds only its older summary input, and retains this suffix as real data.
+            return compactor.compactManually(prompt, source, protectedTurnStart(source),
+                            definitions, lease.key().schedulingKey(), lease.cancellation(),
+                            images, scope::observeUsage)
+                    .handle((result, failure) -> {
+                        try {
+                            if (failure != null) return ClientGuideRuntime.<GuidePreparedCompaction>compactFailure(
+                                    failure, lease.cancellation());
+                            if (!sessions.ownsControl(lease)) return new ToolResult.Failure<GuidePreparedCompaction>(
+                                    "compact_cancelled", "Manual compaction was cancelled");
+                            if (!result.successful()) return new ToolResult.Failure<GuidePreparedCompaction>(
+                                    result.failureCode(), result.failureMessage());
+                            boolean compacted = result.checkpoint() != null;
+                            List<ModelMessage> projection = compacted
+                                    ? result.projection().messages() : lease.history();
+                            int after = compacted ? compactor.estimateTokens(
+                                    prompt.apply(projection), projection, definitions) : before;
+                            GuideCompactResult outcome = new GuideCompactResult(compacted
+                                    ? GuideCompactResult.Status.COMPACTED : GuideCompactResult.Status.NOT_NEEDED,
+                                    before, after, compactor.inputTokenBudget(), result.checkpoint());
+                            return new ToolResult.Success<GuidePreparedCompaction>(
+                                    new PreparedManualCompaction(scope, outcome, projection));
+                        } catch (Throwable preparationFailure) {
+                            return ClientGuideRuntime.<GuidePreparedCompaction>compactFailure(
+                                    preparationFailure, lease.cancellation());
+                        } finally {
+                            scope.finishPreparation();
+                        }
+                    }).thenApply(result -> {
+                        if (result instanceof ToolResult.Failure<GuidePreparedCompaction>) scope.close();
+                        return result;
+                    });
+        } catch (Throwable failure) {
+            scope.finishPreparation();
+            scope.close();
+            return CompletableFuture.completedFuture(compactFailure(failure, lease.cancellation()));
+        }
+    }
+
+    /** Keep the latest actual question and at least the newest completed question/reply turn. */
+    private static int protectedTurnStart(List<ModelMessage> messages) {
+        int latestQuestion = -1;
+        int latestCompleted = -1;
+        for (int index = 0; index < messages.size(); index++) {
+            ModelMessage message = messages.get(index);
+            if (realQuestion(message)) latestQuestion = index;
+            if (latestQuestion >= 0 && message.role() == ModelRole.ASSISTANT
+                    && message.content().stream().noneMatch(ModelContent.ToolUse.class::isInstance)
+                    && message.content().stream().anyMatch(ModelContent.Text.class::isInstance)) {
+                latestCompleted = latestQuestion;
+            }
+        }
+        if (latestQuestion < 0) return 0;
+        return latestCompleted < 0 ? latestQuestion : Math.min(latestQuestion, latestCompleted);
+    }
+
+    private static boolean realQuestion(ModelMessage message) {
+        if (message.role() != ModelRole.USER || message.content().stream().anyMatch(
+                ModelContent.ToolResult.class::isInstance)) return false;
+        if (message.content().getFirst() instanceof ModelContent.Text text
+                && text.text().startsWith("[OpenAllay derived conversation memory; NOT factual evidence]\n")) {
+            return false;
+        }
+        return message.content().stream().anyMatch(item -> item instanceof ModelContent.Text
+                || item instanceof ModelContent.Image);
+    }
+
+    private static <T> ToolResult<T> compactFailure(Throwable failure, CancellationSignal cancellation) {
+        while ((failure instanceof java.util.concurrent.CompletionException
+                || failure instanceof java.util.concurrent.ExecutionException) && failure.getCause() != null) {
+            failure = failure.getCause();
+        }
+        if (cancellation.isCancelled()) return new ToolResult.Failure<>(
+                "compact_cancelled", "Manual compaction was cancelled");
+        if (failure instanceof ModelClientException model) return new ToolResult.Failure<>(
+                model.failure().code(), model.failure().message());
+        return new ToolResult.Failure<>("compact_failed", "Manual compaction could not prepare a valid summary");
+    }
+
+    /** Only Skill bindings are scoped here. No Tool execution or request resource capture occurs. */
+    private final class ManualCompactionScope implements AutoCloseable {
+        private final AgentSessionStore.ControlLease lease;
+        private final Consumer<AgentEvent> usage;
+        private final AgentToolExecutor capturedTools;
+        private final String correlationId;
+        private boolean finishedPreparation;
+        private boolean closed;
+
+        private ManualCompactionScope(AgentSessionStore.ControlLease lease,
+                CancellationSignal cancellation, Consumer<AgentEvent> usage, AgentToolExecutor capturedTools) {
+            this.lease = lease;
+            this.usage = usage;
+            this.capturedTools = capturedTools;
+            correlationId = "manual-compact-" + lease.controlId();
+            lease.cancellation().onCancel(this::close);
+            cancellation.onCancel(lease.cancellation()::cancel);
+        }
+
+        private void observeUsage(ModelEvent event) {
+            AgentEvent forwarded;
+            if (event instanceof ModelEvent.UsageStarted started) forwarded = new AgentEvent.ModelUsageStarted(
+                    started.callId(), started.modelIdentifier());
+            else if (event instanceof ModelEvent.UsageObserved observed) forwarded = new AgentEvent.ModelUsageObserved(
+                    observed.callId(), observed.modelIdentifier(), observed.usage());
+            else return;
+            usage.accept(forwarded);
+        }
+
+        private synchronized void finishPreparation() {
+            if (!finishedPreparation) {
+                finishedPreparation = true;
+                try {
+                    capturedTools.closeSkillContext(correlationId);
+                } catch (RuntimeException ignored) {
+                    // Cleanup must not strand an otherwise released control reservation.
+                }
+            }
+        }
+
+        @Override
+        public void close() {
+            synchronized (sessions) {
+                if (closed) return;
+                closed = true;
+                sessions.releaseControl(lease);
+            }
+        }
+    }
+
+    private final class PreparedManualCompaction implements GuidePreparedCompaction {
+        private final ManualCompactionScope scope;
+        private final GuideCompactResult outcome;
+        private final List<ModelMessage> projection;
+
+        private PreparedManualCompaction(ManualCompactionScope scope,
+                GuideCompactResult outcome, List<ModelMessage> projection) {
+            this.scope = scope;
+            this.outcome = outcome;
+            this.projection = List.copyOf(projection);
+        }
+
+        @Override public GuideCompactResult outcome() { return outcome; }
+        @Override public List<ModelMessage> source() { return scope.lease.history(); }
+        @Override public List<ModelMessage> projection() { return projection; }
+
+        @Override
+        public boolean current() {
+            synchronized (sessions) {
+                return !scope.closed && sessions.ownsControl(scope.lease);
+            }
+        }
+
+        @Override
+        public boolean publish() {
+            synchronized (sessions) {
+                if (!current()) return false;
+                if (outcome.status() == GuideCompactResult.Status.COMPACTED) {
+                    if (!sessions.publishControl(scope.lease, projection)) return false;
+                    endpoint.estimates().computeIfPresent(scope.lease.key(), (key, previous) ->
+                            new dev.openallay.guide.GuideContextEstimate(previous.requestId(),
+                                    outcome.afterTokens(), endpoint.contextBudget(), endpoint.modelIdentifier(),
+                                    endpoint.estimator().imageAccounting(projection)));
+                } else sessions.releaseControl(scope.lease);
+                scope.closed = true;
+                return true;
+            }
+        }
+
+        @Override public void close() { scope.close(); }
     }
 
     @Override
@@ -296,14 +581,15 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
             ToolInvocationContext context,
             Consumer<AgentEvent> events) {
         ClientCapabilitySnapshot requestCapabilities = capabilities.forRequest(context);
-        ClientGuideRuntime requestRuntime = withCapabilities(requestCapabilities);
+        PromptModes modes = new PromptModes(context.unrestrictedJavascript(),
+                requestCapabilities.commandCapabilityAvailable(context.correlationId()));
+        ClientGuideRuntime requestRuntime = withCapabilities(requestCapabilities, modes);
         AgentRequest request = new AgentRequest(
                 requestId,
                 actor,
                 session,
                 userInput,
-                requestRuntime.systemPrompt(context.unrestrictedJavascript(),
-                        requestCapabilities.commandCapabilityAvailable(context.correlationId())),
+                requestRuntime.systemPrompt(modes.unrestrictedJavascript(), modes.commandsAvailable()),
                 context,
                 true,
                 images);
@@ -427,7 +713,7 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
                 modelIdentifier,
                 Clock.systemUTC());
         return new EndpointRuntime(scheduler, compactor, estimator, contextBudget, modelIdentifier,
-                new ConcurrentHashMap<>());
+                new ConcurrentHashMap<>(), new ConcurrentHashMap<>());
     }
 
     private static ClientCapabilitySnapshot defaultCapabilities(OpenAllayRuntime runtime) {
@@ -441,11 +727,15 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
         throw new IllegalStateException(failure.code() + ": " + failure.message());
     }
 
+    /** Optional guidance modes from an actual admitted request, never from a new resource capture. */
+    private record PromptModes(boolean unrestrictedJavascript, boolean commandsAvailable) {}
+
     private record EndpointRuntime(
             ModelRequestScheduler scheduler,
             ContextCompactor compactor,
             ContextTokenEstimator estimator,
             ContextBudget contextBudget,
             String modelIdentifier,
-            Map<AgentSessionKey, dev.openallay.guide.GuideContextEstimate> estimates) {}
+            Map<AgentSessionKey, dev.openallay.guide.GuideContextEstimate> estimates,
+            Map<AgentSessionKey, PromptModes> promptModes) {}
 }

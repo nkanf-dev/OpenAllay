@@ -607,5 +607,16 @@
   "screen.openallay.pending.cancel": "取消待处理消息",
   "screen.openallay.pending.waiting": "暂存在 OpenAllay，尚未发送到提供商：%s",
   "screen.openallay.pending.draft_not_empty": "请先发送或清空当前草稿，再编辑待处理消息。",
-  "screen.openallay.pending.already_consumed": "这条待处理消息已发送或取消。编辑内容保留为新草稿。"
+  "screen.openallay.pending.already_consumed": "这条待处理消息已发送或取消。编辑内容保留为新草稿。",
+  "openallay.guide.slash.compact.help": "/compact — 压缩较早的上下文。输入 // 可发送普通的 /。",
+  "openallay.guide.slash.compact_completed": "上下文已压缩：%s → %s tokens（预算 %s）。",
+  "openallay.guide.slash.compact_not_needed": "当前没有需要压缩的历史上下文。",
+  "openallay.guide.slash.compact_busy": "请等待当前请求和待处理消息完成后，再使用 /compact。草稿已保留。",
+  "openallay.guide.slash.compact_unavailable": "手动压缩需要使用已配置的客户端模型，暂不支持服务器共享模型。草稿已保留。",
+  "openallay.guide.slash.compact_cancelled": "压缩已取消。上下文和草稿已保留。",
+  "openallay.guide.slash.compact_stale": "会话或模型已更改，请重试 /compact。草稿已保留。",
+  "openallay.guide.slash.compact_failed": "无法压缩上下文。上下文和草稿已保留。",
+  "openallay.guide.slash.unknown_slash_command": "未知的快捷命令。输入 /compact 进行上下文压缩，或输入 // 发送普通的 /。草稿已保留。",
+  "openallay.guide.slash.invalid_slash_arguments": "/compact 命令不需要参数，请直接输入 /compact。草稿已保留。",
+  "openallay.guide.slash.attachments_retained": "图片已保留在草稿中，此命令未发送图片。"
 }

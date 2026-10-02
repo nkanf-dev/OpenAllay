@@ -7,6 +7,7 @@ import dev.openallay.guide.GuideModelSelection;
 import dev.openallay.guide.GuideRequestSnapshot;
 import dev.openallay.guide.GuideSource;
 import dev.openallay.guide.GuideTimelineEntry;
+import dev.openallay.guide.GuideUsageSnapshot;
 import dev.openallay.model.ModelMessage;
 import java.time.Instant;
 import java.util.List;
@@ -16,6 +17,7 @@ import java.util.UUID;
 public sealed interface GuideHistoryMutation permits
         GuideHistoryMutation.UpsertPartition,
         GuideHistoryMutation.UpsertSession,
+        GuideHistoryMutation.UpsertSessionUsage,
         GuideHistoryMutation.UpsertRequest,
         GuideHistoryMutation.UpsertMessage,
         GuideHistoryMutation.UpsertTimelineEntry,
@@ -46,6 +48,14 @@ public sealed interface GuideHistoryMutation permits
             requireSession(sessionId);
             if (ordinal < 0) throw new IllegalArgumentException("session ordinal is invalid");
             java.util.Objects.requireNonNull(modelSelection, "modelSelection");
+        }
+    }
+
+    /** Standalone session controls, separate from request usage to avoid double counting. */
+    record UpsertSessionUsage(String sessionId, GuideUsageSnapshot controlUsage) implements GuideHistoryMutation {
+        public UpsertSessionUsage {
+            requireSession(sessionId);
+            java.util.Objects.requireNonNull(controlUsage, "controlUsage");
         }
     }
 

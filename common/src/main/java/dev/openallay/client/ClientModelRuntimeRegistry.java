@@ -18,6 +18,9 @@ import dev.openallay.guide.GuideFailure;
 import dev.openallay.guide.GuideContextSpec;
 import dev.openallay.guide.GuideLocalEndpoint;
 import dev.openallay.guide.GuideModelProfileException;
+import dev.openallay.guide.GuidePreparedCompaction;
+import dev.openallay.model.CancellationSignal;
+import dev.openallay.model.image.ImagePayloadResolver;
 import dev.openallay.model.ModelClient;
 import dev.openallay.model.ModelMessage;
 import dev.openallay.model.config.ModelProfilesConfig;
@@ -208,6 +211,82 @@ public final class ClientModelRuntimeRegistry implements GuideLocalEndpoint {
         } catch (GuideModelProfileException unavailable) {
             return java.util.Optional.empty();
         }
+    }
+
+    @Override
+    public boolean compactAvailable(String profileId) {
+        State captured = state.get();
+        try {
+            ClientGuideRuntime selected = runtime(captured, profileId);
+            return selected.compactAvailable(selected.defaultProfileId());
+        } catch (GuideModelProfileException unavailable) {
+            return false;
+        }
+    }
+
+    @Override
+    public Object compactIdentity(String profileId) {
+        State captured = state.get();
+        try {
+            ClientGuideRuntime selected = runtime(captured, profileId);
+            return selected.compactAvailable(selected.defaultProfileId()) ? captured : null;
+        } catch (GuideModelProfileException unavailable) {
+            return null;
+        }
+    }
+
+    @Override
+    public CompletableFuture<ToolResult<GuidePreparedCompaction>> prepareCompaction(
+            String profileId,
+            UUID actor,
+            String sessionId,
+            UUID controlId,
+            List<ModelMessage> durableSeed,
+            CancellationSignal cancellation,
+            ImagePayloadResolver images,
+            Consumer<AgentEvent> usage) {
+        State captured = state.get();
+        ClientGuideRuntime selected;
+        try {
+            selected = runtime(captured, profileId);
+        } catch (GuideModelProfileException unavailable) {
+            return CompletableFuture.completedFuture(new ToolResult.Failure<>(
+                    unavailable.code(), unavailable.getMessage()));
+        }
+        GuideClientModelProfile profile = captured.profiles().stream()
+                .filter(value -> value.id().equals(profileId)).findFirst().orElseThrow();
+        return selected.prepareCompaction(selected.defaultProfileId(), actor, sessionId, controlId,
+                        durableSeed, cancellation, images, usage, profile.imageInputCapability())
+                .thenApply(result -> {
+                    if (result instanceof ToolResult.Failure<GuidePreparedCompaction>) return result;
+                    GuidePreparedCompaction prepared =
+                            ((ToolResult.Success<GuidePreparedCompaction>) result).value();
+                    synchronized (this) {
+                        if (state.get() != captured || !prepared.current()) {
+                            prepared.close();
+                            return new ToolResult.Failure<GuidePreparedCompaction>(
+                                    "compact_stale", "The selected model or session changed during manual compaction");
+                        }
+                    }
+                    return new ToolResult.Success<GuidePreparedCompaction>(new GuidePreparedCompaction() {
+                        @Override public dev.openallay.guide.GuideCompactResult outcome() {
+                            return prepared.outcome();
+                        }
+                        @Override public List<ModelMessage> source() { return prepared.source(); }
+                        @Override public List<ModelMessage> projection() { return prepared.projection(); }
+                        @Override public boolean current() {
+                            synchronized (ClientModelRuntimeRegistry.this) {
+                                return state.get() == captured && prepared.current();
+                            }
+                        }
+                        @Override public boolean publish() {
+                            synchronized (ClientModelRuntimeRegistry.this) {
+                                return state.get() == captured && prepared.publish();
+                            }
+                        }
+                        @Override public void close() { prepared.close(); }
+                    });
+                });
     }
 
     @Override

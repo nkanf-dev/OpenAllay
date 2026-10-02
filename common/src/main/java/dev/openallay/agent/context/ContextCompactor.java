@@ -340,15 +340,24 @@ public final class ContextCompactor {
                 Math.max(1, protectedFromIndex), "fixed_context_over_budget",
                 "Protected question, tool arguments, errors and minimum result projections exceed "
                         + "the configured model input budget", originalEstimate));
-        final int end = prefixEnd;
-        final int target = summaryTarget;
-        List<ModelMessage> suffix = List.copyOf(minimum.subList(end, minimum.size()));
-        List<ModelContent.Image> retainedImages = imageBlocks(minimum.subList(0, end));
-        List<ContextStructure.Unit> historyUnits = ContextStructure.units(minimum.subList(0, end));
+        List<ModelMessage> suffix = List.copyOf(minimum.subList(prefixEnd, minimum.size()));
+        return compactPrefix(promptForProjection, source, prefixEnd,
+                minimum.subList(0, prefixEnd), suffix, requestTools, summaryTarget,
+                schedulingKey, cancellation, images, usageObserver, originalEstimate, false);
+    }
+
+    private CompletableFuture<Result> compactPrefix(
+            java.util.function.Function<List<ModelMessage>, String> promptForProjection,
+            List<ModelMessage> source, int end, List<ModelMessage> history, List<ModelMessage> suffix,
+            List<ModelToolDefinition> requestTools, int target, String schedulingKey,
+            CancellationSignal cancellation, ImagePayloadResolver images,
+            Consumer<ModelEvent> usageObserver, int originalEstimate, boolean manual) {
+        List<ModelContent.Image> retainedImages = imageBlocks(history);
+        List<ContextStructure.Unit> historyUnits = ContextStructure.units(history);
         List<String> serializedUnits = historyUnits.stream().map(unit ->
                 gson.toJson(ContextStructure.summarySafe(unit.messages()))).toList();
         return summarizeChunks(historyUnits, serializedUnits, 0, null, target, schedulingKey, cancellation,
-                        promptForProjection, retainedImages, suffix, requestTools, images, usageObserver)
+                        promptForProjection, retainedImages, suffix, requestTools, images, usageObserver, manual)
                 .handle((summary, throwable) -> {
                     cancellation.throwIfCancelled();
                     if (throwable != null) {
@@ -362,6 +371,9 @@ public final class ContextCompactor {
                     if (estimate > inputTokenBudget()) return failure(source, end,
                             "summary_output_over_budget", "Summary did not fit its admitted target", estimate);
                     cancellation.throwIfCancelled();
+                    if (manual && estimate >= originalEstimate) {
+                        return originalProjection(source, originalEstimate);
+                    }
                     ContextCheckpoint checkpoint = new ContextCheckpoint(UUID.randomUUID(), 0, end,
                             ContextSourceHash.compute(gson, source.subList(0, end)), modelIdentifier,
                             clock.instant(), ContextCheckpoint.Status.SUCCEEDED, summary.toString(),
@@ -371,13 +383,118 @@ public final class ContextCompactor {
                 });
     }
 
+    /** Force a real older-history summary even when the original request is already under budget. */
+    public CompletableFuture<Result> compactManually(
+            java.util.function.Function<List<ModelMessage>, String> promptForProjection,
+            List<ModelMessage> messages, int protectedFromIndex, List<ModelToolDefinition> tools,
+            String schedulingKey, CancellationSignal cancellation) {
+        return compactManually(promptForProjection, messages, protectedFromIndex, tools,
+                schedulingKey, cancellation, ImagePayloadResolver.unavailable(), ignored -> {});
+    }
+
+    public CompletableFuture<Result> compactManually(
+            java.util.function.Function<List<ModelMessage>, String> promptForProjection,
+            List<ModelMessage> messages, int protectedFromIndex, List<ModelToolDefinition> tools,
+            String schedulingKey, CancellationSignal cancellation, ImagePayloadResolver images) {
+        return compactManually(promptForProjection, messages, protectedFromIndex, tools,
+                schedulingKey, cancellation, images, ignored -> {});
+    }
+
+    public CompletableFuture<Result> compactManually(
+            java.util.function.Function<List<ModelMessage>, String> promptForProjection,
+            List<ModelMessage> messages, int protectedFromIndex, List<ModelToolDefinition> tools,
+            String schedulingKey, CancellationSignal cancellation, Consumer<ModelEvent> usageObserver) {
+        return compactManually(promptForProjection, messages, protectedFromIndex, tools,
+                schedulingKey, cancellation, ImagePayloadResolver.unavailable(), usageObserver);
+    }
+
+    /** Images remain native visual input; the exact recent suffix is never result-clipped. */
+    public CompletableFuture<Result> compactManually(
+            java.util.function.Function<List<ModelMessage>, String> promptForProjection,
+            List<ModelMessage> messages, int protectedFromIndex, List<ModelToolDefinition> tools,
+            String schedulingKey, CancellationSignal cancellation,
+            ImagePayloadResolver images, Consumer<ModelEvent> usageObserver) {
+        Objects.requireNonNull(promptForProjection, "promptForProjection");
+        Objects.requireNonNull(images, "images");
+        Objects.requireNonNull(usageObserver, "usageObserver");
+        cancellation.throwIfCancelled();
+        List<ModelMessage> source = List.copyOf(messages);
+        List<ModelToolDefinition> requestTools = List.copyOf(tools);
+        List<ContextStructure.Unit> units = ContextStructure.units(source);
+        ContextStructure.requireBoundary(units, protectedFromIndex, source.size());
+        List<ModelMessage> safe = ModelContextCodec.safe(source);
+        int originalEstimate = estimateProjection(promptForProjection, safe, requestTools);
+        int protectedEnd = protectedFromIndex;
+        if (!units.isEmpty()) {
+            // Always keep at least one complete unit and the latest real user turn, even if a
+            // caller supplies the end of history. A derived-memory message is not a new turn.
+            protectedEnd = Math.min(protectedEnd, units.getLast().fromIndex());
+            for (int index = units.size() - 1; index >= 0; index--) {
+                ContextStructure.Unit unit = units.get(index);
+                ModelMessage first = unit.messages().getFirst();
+                if (!unit.toolExchange() && first.role() == ModelRole.USER && !derivedMemory(first)) {
+                    protectedEnd = Math.min(protectedEnd, unit.fromIndex());
+                    break;
+                }
+            }
+        }
+        int prefixEnd = -1;
+        int summaryTarget = 0;
+        boolean substantive = false;
+        JsonObject empty = emptySummary();
+        for (ContextStructure.Unit unit : units) {
+            if (unit.toIndexExclusive() > protectedEnd) break;
+            substantive |= substantive(unit);
+            if (!substantive) continue;
+            int end = unit.toIndexExclusive();
+            List<ModelMessage> candidate = summarized(empty, imageBlocks(source.subList(0, end)),
+                    ModelContextCodec.safe(source.subList(end, source.size())));
+            int estimate = estimateProjection(promptForProjection, candidate, requestTools);
+            if (estimate >= originalEstimate || estimate > inputTokenBudget()) continue;
+            prefixEnd = end;
+            summaryTarget = Math.min(budget.maxOutputTokens(), Math.max(1,
+                    inputTokenBudget() - estimate + estimator.estimateText(empty.toString())));
+            // The command summarizes all eligible older units, not just enough to admit a request.
+        }
+        if (prefixEnd < 1) return CompletableFuture.completedFuture(
+                originalProjection(source, originalEstimate));
+        List<ModelMessage> suffix = ModelContextCodec.safe(source.subList(prefixEnd, source.size()));
+        List<ModelMessage> history = ModelContextCodec.safe(boundResults(
+                source.subList(0, prefixEnd), MINIMUM_RESULT_BYTES, true));
+        return compactPrefix(promptForProjection, source, prefixEnd, history, suffix, requestTools,
+                summaryTarget, schedulingKey, cancellation, images, usageObserver, originalEstimate, true);
+    }
+
+    private static boolean derivedMemory(ModelMessage message) {
+        return !message.content().isEmpty() && message.content().getFirst() instanceof ModelContent.Text text
+                && text.text().startsWith(DERIVED_PREFIX);
+    }
+
+    private static boolean substantive(ContextStructure.Unit unit) {
+        for (ModelMessage message : unit.messages()) {
+            if (derivedMemory(message)) continue;
+            for (ModelContent content : message.content()) {
+                if (content instanceof ModelContent.Text text && !text.text().isBlank()) return true;
+                if (content instanceof ModelContent.ToolUse || content instanceof ModelContent.ToolResult
+                        || content instanceof ModelContent.Image) return true;
+            }
+        }
+        return false;
+    }
+
+    private Result originalProjection(List<ModelMessage> source, int estimate) {
+        return new Result(new ContextProjection(ModelContextCodec.safe(source),
+                ContextProjection.Kind.ORIGINAL, estimate), null, null, null);
+    }
+
     /** Every iteration consumes complete units. Oversized output has one targeted retry only. */
     private CompletableFuture<JsonObject> summarizeChunks(List<ContextStructure.Unit> units,
             List<String> serialized, int from, JsonObject prior, int target, String schedulingKey,
             CancellationSignal cancellation,
             java.util.function.Function<List<ModelMessage>, String> finalPrompt,
             List<ModelContent.Image> retainedImages, List<ModelMessage> suffix,
-            List<ModelToolDefinition> tools, ImagePayloadResolver images, Consumer<ModelEvent> usageObserver) {
+            List<ModelToolDefinition> tools, ImagePayloadResolver images,
+            Consumer<ModelEvent> usageObserver, boolean enforceOutputLimit) {
         cancellation.throwIfCancelled();
         String summarySystem = SUMMARY_SYSTEM + "\nBudget: " + target + " output tokens.";
         // Additive text costs are a planning hint, never admission proof. Native token merges and
@@ -437,11 +554,12 @@ public final class ContextCompactor {
                     summaryInput(nextPayload, unitImages(units, following, following + 1))), List.of())
                     <= inputTokenBudget();
         };
-        return summarizeAdmitted(admitted, cancellation, fits, false, usageObserver).thenCompose(summary -> {
+        return summarizeAdmitted(admitted, cancellation, fits, false, usageObserver, enforceOutputLimit)
+                .thenCompose(summary -> {
             cancellation.throwIfCancelled();
             if (following == units.size()) return CompletableFuture.completedFuture(summary);
             return summarizeChunks(units, serialized, following, summary, target, schedulingKey, cancellation,
-                    finalPrompt, retainedImages, suffix, tools, images, usageObserver);
+                    finalPrompt, retainedImages, suffix, tools, images, usageObserver, enforceOutputLimit);
         });
     }
 
@@ -459,7 +577,7 @@ public final class ContextCompactor {
 
     private CompletableFuture<JsonObject> summarizeAdmitted(ModelRequest admitted,
             CancellationSignal cancellation, java.util.function.Predicate<JsonObject> fits,
-            boolean targetedRetry, Consumer<ModelEvent> usageObserver) {
+            boolean targetedRetry, Consumer<ModelEvent> usageObserver, boolean enforceOutputLimit) {
         cancellation.throwIfCancelled();
         if (estimateTokens(admitted.systemPrompt(), admitted.messages(), admitted.tools())
                 > inputTokenBudget()) return CompletableFuture.failedFuture(new ModelClientException(
@@ -478,7 +596,8 @@ public final class ContextCompactor {
                                 new dev.openallay.model.ModelFailure("summary_malformed",
                                         "Summary response did not match schema", null)));
                     }
-                    if (fits.test(summary)) return CompletableFuture.completedFuture(summary);
+                    if ((!enforceOutputLimit || estimator.estimateText(turn.text()) <= admitted.maxOutputTokens())
+                            && fits.test(summary)) return CompletableFuture.completedFuture(summary);
                     if (targetedRetry) return CompletableFuture.failedFuture(new ModelClientException(
                             new dev.openallay.model.ModelFailure("summary_output_over_budget",
                                     "Summary exceeded its target after one bounded retry", null)));
@@ -497,7 +616,7 @@ public final class ContextCompactor {
                                     new ModelClientException(new dev.openallay.model.ModelFailure(
                                             "summary_retry_input_over_budget",
                                             "Targeted summary retry cannot fit the configured input budget", null)));
-                    return summarizeAdmitted(retry, cancellation, fits, true, usageObserver);
+                    return summarizeAdmitted(retry, cancellation, fits, true, usageObserver, enforceOutputLimit);
                 });
     }
 

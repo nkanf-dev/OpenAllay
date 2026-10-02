@@ -52,7 +52,7 @@ final class SqliteGuideHistoryStoreTest {
                 Map.entry("partitions", Set.of("scope_id", "actor_id", "connection_kind",
                         "selected_session", "capture_mode", "updated_at")),
                 Map.entry("sessions", Set.of("scope_id", "session_id", "ordinal",
-                        "model_selection_json")),
+                        "model_selection_json", "control_usage_json")),
                 Map.entry("requests", Set.of("scope_id", "session_id", "request_id", "sequence",
                         "topology", "model_selection_json", "user_message", "status",
                         "model_usage_json", "usage_projection_json", "usage_origin_request_id",

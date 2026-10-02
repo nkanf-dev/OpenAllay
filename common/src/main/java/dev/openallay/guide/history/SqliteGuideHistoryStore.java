@@ -100,7 +100,7 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
             header = readHeader(connection, scope);
             List<GuideHistoryMetadata.Session> sessions = new ArrayList<>();
             try (PreparedStatement query = connection.prepareStatement("""
-                    select s.session_id, s.ordinal, s.model_selection_json,
+                    select s.session_id, s.ordinal, s.model_selection_json, s.control_usage_json,
                            count(r.request_id) as request_count,
                            min(r.sequence) as first_sequence,
                            max(r.sequence) as last_sequence,
@@ -110,7 +110,7 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
                     left join requests r
                       on r.scope_id = s.scope_id and r.session_id = s.session_id
                     where s.scope_id = ?
-                    group by s.session_id, s.ordinal, s.model_selection_json
+                    group by s.session_id, s.ordinal, s.model_selection_json, s.control_usage_json
                     order by s.ordinal
                     """)) {
                 query.setString(1, scope.scopeId());
@@ -130,8 +130,10 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
                                 lastSequence == null ? null : cursor(
                                         connection, scope.scopeId(),
                                         result.getString("session_id"), lastSequence),
-                                sessionUsage(connection, scope.scopeId(), result.getString("session_id"), false),
+                                sessionUsage(connection, scope.scopeId(), result.getString("session_id"), false)
+                                        .plus(codec.decodeUsageProjection(result.getString("control_usage_json"))),
                                 sessionUsage(connection, scope.scopeId(), result.getString("session_id"), true),
+                                codec.decodeUsageProjection(result.getString("control_usage_json")),
                                 result.getInt("message_count")));
                     }
                 }
@@ -489,7 +491,7 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
         return new GuideHistoryForkResult(new GuideHistoryMetadata.Session(
                 fork.sessionId(), ordinal, fork.modelSelection(), source.size(), first, last,
                 GuideUsageSnapshot.empty(), sessionUsage(connection, scopeId, fork.sessionId(), true),
-                messageOrdinal),
+                GuideUsageSnapshot.empty(), messageOrdinal),
                 page, boundary.messages(), copied, messageOrdinal);
     }
 
@@ -671,6 +673,7 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
         return switch (mutation) {
             case GuideHistoryMutation.UpsertPartition ignored -> false;
             case GuideHistoryMutation.UpsertSession ignored -> false;
+            case GuideHistoryMutation.UpsertSessionUsage ignored -> false;
             case GuideHistoryMutation.UpsertRequest ignored -> false;
             case GuideHistoryMutation.UpsertMessage ignored -> false;
             case GuideHistoryMutation.UpsertTimelineEntry ignored -> false;
@@ -912,7 +915,8 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
                 column("scope_id", "TEXT", true, 1),
                 column("session_id", "TEXT", true, 2),
                 column("ordinal", "INTEGER", true, 0),
-                column("model_selection_json", "TEXT", true, 0)));
+                column("model_selection_json", "TEXT", true, 0),
+                column("control_usage_json", "TEXT", true, 0)));
         tables.put("requests", columns(
                 column("scope_id", "TEXT", true, 1),
                 column("session_id", "TEXT", true, 0),
@@ -1016,6 +1020,7 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
                         session_id text not null,
                         ordinal integer not null check(ordinal >= 0),
                         model_selection_json text not null,
+                        control_usage_json text not null,
                         primary key(scope_id, session_id),
                         unique(scope_id, ordinal),
                         foreign key(scope_id) references partitions(scope_id) on delete cascade
@@ -1210,8 +1215,8 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
             }
             case GuideHistoryMutation.UpsertSession session -> {
                 try (PreparedStatement statement = connection.prepareStatement("""
-                        insert into sessions(scope_id, session_id, ordinal, model_selection_json)
-                        values (?, ?, ?, ?)
+                        insert into sessions(scope_id, session_id, ordinal, model_selection_json, control_usage_json)
+                        values (?, ?, ?, ?, ?)
                         on conflict(scope_id, session_id) do update set
                             ordinal = excluded.ordinal,
                             model_selection_json = excluded.model_selection_json
@@ -1220,7 +1225,18 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
                     statement.setString(2, session.sessionId());
                     statement.setInt(3, session.ordinal());
                     statement.setString(4, codec.encodeModelSelection(session.modelSelection()));
+                    statement.setString(5, codec.encodeUsageProjection(GuideUsageSnapshot.empty()));
                     statement.executeUpdate();
+                }
+            }
+            case GuideHistoryMutation.UpsertSessionUsage usage -> {
+                try (PreparedStatement statement = connection.prepareStatement("""
+                        update sessions set control_usage_json = ? where scope_id = ? and session_id = ?
+                        """)) {
+                    statement.setString(1, codec.encodeUsageProjection(usage.controlUsage()));
+                    statement.setString(2, scopeId);
+                    statement.setString(3, usage.sessionId());
+                    if (statement.executeUpdate() != 1) throw new IllegalArgumentException("Session usage owner is absent");
                 }
             }
             case GuideHistoryMutation.UpsertRequest request ->
@@ -1354,6 +1370,8 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
                 }
             }
             case GuideHistoryMutation.ClearSession session -> {
+                applyMutation(connection, scope, new GuideHistoryMutation.UpsertSessionUsage(
+                        session.sessionId(), GuideUsageSnapshot.empty()));
                 for (String table : List.of("messages", "compaction_checkpoints", "model_context")) {
                     try (PreparedStatement statement = connection.prepareStatement(
                             "delete from " + table + " where scope_id = ? and session_id = ?")) {

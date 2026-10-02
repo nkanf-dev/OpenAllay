@@ -2363,8 +2363,30 @@ public final class OpenAllayScreen extends Screen {
 
     private void submit() {
         synchronizeComposerSession();
-        if (composer == null || submittingDraft || minecraft.player == null || composerImages.pending()) return;
-        String question = composer.getValue().trim();
+        if (composer == null || submittingDraft || minecraft.player == null) return;
+        String commandText = composer.getValue();
+        long commandRevision = textDraftRevision;
+        ComposerImageDraft.Submission commandScope = composerImages.captureSubmission();
+        var dispatch = dev.openallay.guide.composer.SlashCommandDispatcher.dispatch(commandText, service,
+                completion -> minecraft.execute(() -> {
+                    synchronizeComposerSession();
+                    if (!composerImages.attached() || commandScope.generation() != composerImages.generation()
+                            || !commandScope.session().equals(view.selectedSession())) return;
+                    notice = slashCompletionNotice(completion).getString();
+                    if (completion.successful()) {
+                        if (textDraftRevision == commandRevision && composer.getValue().equals(commandText)) {
+                            draft = "";
+                            composer.setValue("");
+                        }
+                        // Local controls never submit or clear attached images.
+                        if (!composerImages.empty()) notice += " · " + Component.translatable(
+                                "openallay.guide.slash.attachments_retained").getString();
+                    }
+                    updateControls();
+                }));
+        if (dispatch.handled()) return;
+        if (composerImages.pending()) return;
+        String question = dispatch.normalizedText().trim();
         if (question.isEmpty() && composerImages.empty()) return;
         if (!composerImages.empty() && view.selectedImageInputCapability() != ImageInputCapability.SUPPORTED) {
             notice = Component.translatable("screen.openallay.image.model_unsupported").getString();
@@ -2409,6 +2431,13 @@ public final class OpenAllayScreen extends Screen {
             updateControls();
         }));
         updateControls();
+    }
+
+    static Component slashCompletionNotice(dev.openallay.guide.composer.SlashCommandDispatcher.Completion completion) {
+        return completion.successful() && "compact_completed".equals(completion.code()) && completion.result() != null
+                ? Component.translatable("openallay.guide.slash.compact_completed", completion.result().beforeTokens(),
+                        completion.result().afterTokens(), completion.result().inputBudget())
+                : Component.translatable("openallay.guide.slash." + completion.code());
     }
 
     static boolean submissionAccepted(boolean editing, ToolResult<?> result) {
@@ -2656,16 +2685,23 @@ public final class OpenAllayScreen extends Screen {
         boolean inWorld = minecraft.player != null;
         boolean active = composerRequestActive();
         boolean content = !draft.trim().isEmpty() || !composerImages.empty();
+        boolean localControl = dev.openallay.guide.composer.SlashCommandParser.parse(draft).kind()
+                != dev.openallay.guide.composer.SlashCommandParser.Kind.TEXT;
         boolean imageCapable = composerImages.references().isEmpty()
                 || view.selectedImageInputCapability() == ImageInputCapability.SUPPORTED;
-        send.active = inWorld && !submittingDraft && (editingPending != null || active || view.canSend())
-                && content && imageCapable && !composerImages.pending();
-        send.setMessage(Component.translatable(editingPending != null ? "screen.openallay.pending.save"
+        send.active = inWorld && !submittingDraft && (localControl
+                || (editingPending != null || active || view.canSend()) && content
+                        && imageCapable && !composerImages.pending());
+        send.setMessage(Component.translatable(localControl ? "screen.openallay.action.send"
+                : editingPending != null ? "screen.openallay.pending.save"
                 : active ? steerMode ? "screen.openallay.pending.steer" : "screen.openallay.pending.follow_up"
                 : "screen.openallay.action.send"));
-        String submitHelp = !imageCapable ? "screen.openallay.image.model_unsupported"
-                : composerImages.pending() ? "screen.openallay.image.processing"
+        String submitHelp = !localControl && !imageCapable ? "screen.openallay.image.model_unsupported"
+                : !localControl && composerImages.pending() ? "screen.openallay.image.processing"
                 : "screen.openallay.composer.submit_description";
+        if (service.compactAvailable() && !dev.openallay.guide.composer.SlashCommandParser.suggestions(draft).isEmpty()) {
+            submitHelp = "openallay.guide.slash.compact.help";
+        }
         send.setTooltip(Tooltip.create(Component.translatable(submitHelp)));
         stop.active = view.canCancel();
         retry.active = view.canRetry();
