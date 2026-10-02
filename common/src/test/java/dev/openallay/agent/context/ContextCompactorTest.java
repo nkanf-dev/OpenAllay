@@ -39,6 +39,58 @@ final class ContextCompactorTest {
             """;
 
     @Test
+    void summaryRetryReceiptsStayWithTheirRequestObserver() {
+        java.util.concurrent.atomic.AtomicInteger calls = new java.util.concurrent.atomic.AtomicInteger();
+        List<ModelRequest> requests = new ArrayList<>();
+        ModelClient model = (request, events, cancellation) -> {
+            requests.add(request);
+            int call = calls.incrementAndGet();
+            JsonObject oversized = JsonParser.parseString(SUMMARY).getAsJsonObject();
+            com.google.gson.JsonArray goals = new com.google.gson.JsonArray();
+            goals.add("x".repeat(4000));
+            oversized.add("goals", goals);
+            ModelUsage usage = new ModelUsage(call * 10, call, 0);
+            events.accept(new ModelEvent.UsageUpdate(usage));
+            events.accept(new ModelEvent.UsageUpdate(usage));
+            return CompletableFuture.completedFuture(new ModelTurn("provider", "actual-summary-model",
+                    List.of(new ModelContent.Text(call == 1 ? oversized.toString() : SUMMARY)),
+                    "end_turn", usage));
+        };
+        ContextCompactor compactor = new ContextCompactor(model, new Gson(),
+                new Utf8ContextTokenEstimator(), new ContextBudget(1_200, 100),
+                "captured-summary-model", Clock.fixed(Instant.EPOCH, ZoneOffset.UTC));
+        List<ModelMessage> messages = List.of(ModelMessage.userText("a".repeat(500)),
+                ModelMessage.userText("b".repeat(500)), ModelMessage.userText("current"));
+        List<ModelEvent.UsageObserved> first = new ArrayList<>();
+        List<ModelEvent.UsageObserved> second = new ArrayList<>();
+        List<ModelEvent.UsageStarted> starts = new ArrayList<>();
+        var result = compactor.compact(ignored -> "system", messages, 2, List.of(), false,
+                "actor:first", new CancellationSignal(), event -> {
+                    if (event instanceof ModelEvent.UsageObserved usage) first.add(usage);
+                    else if (event instanceof ModelEvent.UsageStarted started) starts.add(started);
+                    else throw new AssertionError("Summary observer must receive only numeric lifecycle");
+                }).join();
+        assertTrue(result.successful());
+        assertTrue(first.size() >= 2, "oversized summary must have its own retry receipt");
+        assertEquals(calls.get(), first.size());
+        assertEquals(starts.stream().map(ModelEvent.UsageStarted::callId).toList(),
+                first.stream().map(ModelEvent.UsageObserved::callId).toList());
+        assertEquals(first.size(), first.stream().map(ModelEvent.UsageObserved::callId).distinct().count());
+        assertTrue(first.stream().allMatch(receipt -> receipt.modelIdentifier().equals("actual-summary-model")));
+        assertTrue(requests.stream().allMatch(request -> request.sessionKey().equals("actor:first")));
+        int sealed = first.size();
+        compactor.compact(ignored -> "system", messages, 2, List.of(), false,
+                "actor:second", new CancellationSignal(), event -> {
+                    if (event instanceof ModelEvent.UsageObserved usage) second.add(usage);
+                }).join();
+        assertEquals(sealed, first.size());
+        assertFalse(second.isEmpty());
+        assertEquals(calls.get(), first.size() + second.size());
+        assertTrue(second.stream().noneMatch(later -> first.stream().anyMatch(
+                earlier -> earlier.callId().equals(later.callId()))));
+    }
+
+    @Test
     void returnsOriginalProjectionWithoutCallingModelWhenItFits() {
         FakeModel model = new FakeModel(textTurn(SUMMARY));
         ContextCompactor.Result result = compactor(model, new ContextBudget(10_000, 100))
@@ -266,8 +318,12 @@ final class ContextCompactorTest {
         CancellationSignal cancellation = new CancellationSignal();
         assertTrue(compactor.requiresCompaction("system", messages, List.of()));
 
+        List<ModelEvent.UsageObserved> receipts = new ArrayList<>();
         CompletableFuture<ContextCompactor.Result> running = compactor.compact(
-                "system", messages, 2, List.of(), true, "actor:noncooperative-summary", cancellation);
+                ignored -> "system", messages, 2, List.of(), true, "actor:noncooperative-summary",
+                cancellation, event -> {
+                    if (event instanceof ModelEvent.UsageObserved usage) receipts.add(usage);
+                });
         java.util.concurrent.atomic.AtomicInteger successfulResults =
                 new java.util.concurrent.atomic.AtomicInteger();
         running.thenAccept(result -> {
@@ -286,7 +342,11 @@ final class ContextCompactorTest {
         assertEquals("agent_cancelled", ((ModelClientException) failure.getCause()).failure().code());
         assertEquals(0, successfulResults.get());
 
+        assertEquals(1, receipts.size());
+        assertEquals("test-model", receipts.getFirst().modelIdentifier());
+        assertFalse(receipts.getFirst().usage().reported());
         assertTrue(rawSummary.complete(textTurn(SUMMARY)));
+        assertEquals(1, receipts.size());
         java.util.concurrent.CompletionException lateFailure = assertThrows(
                 java.util.concurrent.CompletionException.class, running::join);
         assertEquals("agent_cancelled", ((ModelClientException) lateFailure.getCause()).failure().code());

@@ -47,13 +47,9 @@ final class OpenAiStreamAccumulator {
         }
         if (root.has("usage") && !root.get("usage").isJsonNull()) {
             JsonObject value = root.getAsJsonObject("usage");
-            usageReported = OpenAiJsonCodec.hasUsageCounts(value);
-            JsonElement details = value.get("prompt_tokens_details");
-            usage = new ModelUsage(
-                    number(value, "prompt_tokens"),
-                    number(value, "completion_tokens"),
-                    details == null || details.isJsonNull()
-                            ? 0 : number(details.getAsJsonObject(), "cached_tokens"));
+            usageReported = true;
+            usage = OpenAiJsonCodec.parseUsage(value);
+            events.accept(new ModelEvent.UsageUpdate(usage));
         }
         if (!root.has("choices") || root.getAsJsonArray("choices").isEmpty()) {
             return;
@@ -139,11 +135,6 @@ final class OpenAiStreamAccumulator {
             target.append(value);
             event.accept(value);
         }
-    }
-
-    private static long number(JsonObject object, String field) {
-        return object != null && object.has(field) && !object.get(field).isJsonNull()
-                ? object.get(field).getAsLong() : 0;
     }
 
     private static final class Tool {

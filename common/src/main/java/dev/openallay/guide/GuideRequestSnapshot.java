@@ -20,7 +20,9 @@ public record GuideRequestSnapshot(
         Instant updatedAt,
         Instant terminalAt,
         GuideModelSelection modelSelection,
-        GuideRequestProgress progress) {
+        GuideRequestProgress progress,
+        GuideUsageSnapshot usageProjection,
+        UUID usageOriginRequestId) {
     public GuideRequestSnapshot {
         java.util.Objects.requireNonNull(requestId, "requestId");
         if (sessionId == null || !sessionId.matches("[a-zA-Z0-9_.-]+")) {
@@ -46,6 +48,7 @@ public record GuideRequestSnapshot(
         java.util.Objects.requireNonNull(updatedAt, "updatedAt");
         java.util.Objects.requireNonNull(modelSelection, "modelSelection");
         java.util.Objects.requireNonNull(progress, "progress");
+        java.util.Objects.requireNonNull(usageProjection, "usageProjection");
         if (!progress.requestStartedAt().equals(createdAt)) {
             throw new IllegalArgumentException("request progress must share createdAt");
         }
@@ -57,6 +60,23 @@ public record GuideRequestSnapshot(
                 && topology == GuideTopology.SERVER) {
             throw new IllegalArgumentException("client model selection cannot use server topology");
         }
+    }
+
+    public GuideRequestSnapshot(
+            UUID requestId, String sessionId, GuideTopology topology, String userMessage,
+            List<GuideTimelineEntry> timeline, GuideRequestStatus status, List<GuideSource> sources,
+            ModelUsage usage, Long retryAfterMillis, GuideFailure failure,
+            Instant createdAt, Instant updatedAt, Instant terminalAt,
+            GuideModelSelection modelSelection, GuideRequestProgress progress) {
+        this(requestId, sessionId, topology, userMessage, timeline, status, sources, usage,
+                retryAfterMillis, failure, createdAt, updatedAt, terminalAt, modelSelection,
+                progress, GuideUsageSnapshot.empty(), null);
+    }
+
+    public GuideRequestSnapshot withUsageProjection(GuideUsageSnapshot projection) {
+        return new GuideRequestSnapshot(requestId, sessionId, topology, userMessage, timeline,
+                status, sources, usage, retryAfterMillis, failure, createdAt, updatedAt, terminalAt,
+                modelSelection, progress, projection, usageOriginRequestId);
     }
 
     public GuideRequestSnapshot(
@@ -189,7 +209,7 @@ public record GuideRequestSnapshot(
                 .toList();
     }
 
-    private static GuideRequestProgress legacyProgress(
+    public static GuideRequestProgress legacyProgress(
             GuideRequestStatus status,
             Long retryAfterMillis,
             Instant createdAt,

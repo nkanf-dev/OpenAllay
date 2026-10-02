@@ -217,15 +217,15 @@ public final class NeoForgeClientBridge {
     private void receiveAgentEvent(ServerAgentEventPayload event) {
         ServerRequest request;
         boolean terminal = event.terminal();
+        boolean released = "request_released".equals(event.eventType());
         synchronized (serverRequestLock) {
             request = serverRequests.get(event.requestId());
-            if (request == null) {
-                return;
-            }
-            if (terminal && !request.cancelled) {
-                serverRequests.remove(event.requestId());
-                clearAgentEventChunksLocked(event.requestId());
-            }
+            if (request == null) return;
+        }
+        // Release can dispatch a successor synchronously. Revoke old local tools first.
+        if (terminal || released) {
+            ClientToolExecutionEndpoint endpoint = clientTools;
+            if (endpoint != null) endpoint.close(event.requestId());
         }
         try {
             request.events.accept(event);
@@ -233,15 +233,10 @@ public final class NeoForgeClientBridge {
             synchronized (serverRequestLock) {
                 if ("context_finalized".equals(event.eventType())) request.contextFinalized = true;
                 if (terminal) request.terminal = true;
-                // Cancellation closes tools now, but context handoff must outlive terminal delivery.
-                if (request.cancelled && request.contextFinalized && request.terminal
-                        && serverRequests.remove(event.requestId(), request)) {
+                // Terminal UI must not discard a later actual-call usage receipt.
+                if (released && serverRequests.remove(event.requestId(), request)) {
                     clearAgentEventChunksLocked(event.requestId());
                 }
-            }
-            if (terminal) {
-                ClientToolExecutionEndpoint endpoint = clientTools;
-                if (endpoint != null) endpoint.close(event.requestId());
             }
         }
     }

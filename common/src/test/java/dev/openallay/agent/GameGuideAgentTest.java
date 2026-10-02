@@ -89,6 +89,18 @@ final class GameGuideAgentTest {
         assertEquals("铁锭事实是 42。", result.text());
         assertEquals(1, tools.invocations.get());
         assertEquals(2, model.requests.size());
+        var receipts = events.stream().filter(AgentEvent.ModelUsageObserved.class::isInstance)
+                .map(AgentEvent.ModelUsageObserved.class::cast).toList();
+        assertEquals(2, receipts.size());
+        assertEquals(events.stream().filter(AgentEvent.ModelUsageStarted.class::isInstance)
+                        .map(AgentEvent.ModelUsageStarted.class::cast)
+                        .map(AgentEvent.ModelUsageStarted::callId).toList(),
+                receipts.stream().map(AgentEvent.ModelUsageObserved::callId).toList());
+        assertEquals("test-model", receipts.getFirst().modelIdentifier());
+        assertEquals("test-model", receipts.getLast().modelIdentifier());
+        assertFalse(receipts.getFirst().callId().equals(receipts.getLast().callId()));
+        assertFalse(receipts.getFirst().usage().reported());
+        assertTrue(events.indexOf(receipts.getLast()) < events.indexOf(new AgentEvent.FinalText("铁锭事实是 42。")));
         ModelMessage toolResults = model.requests.get(1).messages().getLast();
         assertTrue(toolResults.content().getFirst() instanceof ModelContent.ToolResult);
         assertTrue(result.trace().events().stream().anyMatch(event -> event.type().equals("tool_result")));

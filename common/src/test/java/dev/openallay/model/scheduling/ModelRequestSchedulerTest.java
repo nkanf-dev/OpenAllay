@@ -33,6 +33,54 @@ import org.junit.jupiter.api.Test;
 
 final class ModelRequestSchedulerTest {
     @Test
+    void retriesEachSealDistinctUsageReceiptWithoutTreatingMetadataAsProgress() throws Exception {
+        AtomicInteger calls = new AtomicInteger();
+        List<ModelEvent> events = new java.util.concurrent.CopyOnWriteArrayList<>();
+        ModelRequestScheduler scheduler = new ModelRequestScheduler((request, sink, cancellation) -> {
+            if (calls.incrementAndGet() == 1) return CompletableFuture.failedFuture(
+                    new ModelUpstreamException(502, null));
+            sink.accept(new ModelEvent.UsageUpdate(new ModelUsage(8, 2, 0)));
+            return CompletableFuture.completedFuture(new ModelTurn("provider", "actual-model",
+                    List.of(new ModelContent.Text("done")), "end_turn", new ModelUsage(8, 2, 0)));
+        }, Duration.ZERO, 2);
+        assertEquals("done", scheduler.complete(request("scope"), events::add,
+                new CancellationSignal()).get(2, TimeUnit.SECONDS).text());
+        var receipts = events.stream().filter(ModelEvent.UsageObserved.class::isInstance)
+                .map(ModelEvent.UsageObserved.class::cast).toList();
+        assertEquals(2, calls.get());
+        assertEquals(2, receipts.size());
+        assertFalse(receipts.getFirst().usage().reported());
+        assertTrue(receipts.getLast().usage().reported());
+        assertFalse(receipts.getFirst().callId().equals(receipts.getLast().callId()));
+    }
+
+    @Test
+    void rateLimitedAttemptCountsButNeverDispatchedQueuedCancellationDoesNot() {
+        AtomicInteger calls = new AtomicInteger();
+        ModelRequestScheduler scheduler = new ModelRequestScheduler((request, sink, cancellation) -> {
+            calls.incrementAndGet();
+            return CompletableFuture.failedFuture(new ModelRateLimitException("limited", Duration.ofHours(1)));
+        });
+        CancellationSignal first = new CancellationSignal();
+        List<ModelEvent> firstEvents = new ArrayList<>();
+        var one = scheduler.complete(request("one"), firstEvents::add, first);
+        CancellationSignal queued = new CancellationSignal();
+        List<ModelEvent> queuedEvents = new ArrayList<>();
+        var two = scheduler.complete(request("two"), queuedEvents::add, queued);
+        queued.cancel();
+        first.cancel();
+        assertTrue(one.isCompletedExceptionally());
+        assertTrue(two.isCompletedExceptionally());
+        assertEquals(1, calls.get());
+        assertEquals(0, scheduler.queuedRequests());
+        assertEquals(1, firstEvents.stream().filter(ModelEvent.UsageObserved.class::isInstance).count());
+        assertTrue(queuedEvents.isEmpty());
+        ModelEvent.UsageObserved receipt = firstEvents.stream().filter(ModelEvent.UsageObserved.class::isInstance)
+                .map(ModelEvent.UsageObserved.class::cast).findFirst().orElseThrow();
+        assertFalse(receipt.usage().reported());
+    }
+
+    @Test
     void dispatchesDifferentSessionsWithoutAnArtificialConcurrencyCap() {
         AtomicInteger calls = new AtomicInteger();
         ModelClient delegate = (request, events, cancellation) -> {

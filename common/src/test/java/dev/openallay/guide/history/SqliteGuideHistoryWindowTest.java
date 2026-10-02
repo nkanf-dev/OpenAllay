@@ -44,6 +44,40 @@ final class SqliteGuideHistoryWindowTest {
     @TempDir Path temporary;
 
     @Test
+    void completeSessionUsageRestoresWithoutReadingPagesOrRepricingAndSeparatesInheritance() {
+        Path database = temporary.resolve("usage.db");
+        SqliteGuideHistoryStore store = store(database);
+        GuideHistoryFixture original = partition(3, false, true);
+        GuideHistoryFixture.seed(store, original);
+        var quote = new dev.openallay.guide.GuideUsageSnapshot(100, 5, 25, 10, 2, 2, false, false,
+                new java.math.BigDecimal("0.123456789"), false);
+        GuideRequestSnapshot first = original.sessions().getFirst().requests().getFirst().withUsageProjection(quote);
+        GuideRequestSnapshot source = original.sessions().getFirst().requests().get(1);
+        GuideRequestSnapshot inherited = new GuideRequestSnapshot(source.requestId(), source.sessionId(),
+                source.topology(), source.userMessage(), source.timeline(), source.status(), source.sources(),
+                source.usage(), source.retryAfterMillis(), source.failure(), source.createdAt(), source.updatedAt(),
+                source.terminalAt(), source.modelSelection(), source.progress(), quote, first.requestId());
+        GuideRequestSnapshot last = original.sessions().getFirst().requests().getLast()
+                .withUsageProjection(dev.openallay.guide.GuideUsageSnapshot.unknown());
+        store.commit(new GuideHistoryCommit(SCOPE, List.of(
+                new GuideHistoryMutation.UpsertRequest(0, first),
+                new GuideHistoryMutation.UpsertRequest(1, inherited),
+                new GuideHistoryMutation.UpsertRequest(2, last))));
+        var metadata = store(database).metadata(SCOPE).orElseThrow().sessions().getFirst();
+        assertEquals(3, metadata.requestCount());
+        assertEquals(2, metadata.usage().actualCalls());
+        assertEquals(100, metadata.usage().inputTokens());
+        assertEquals(quote.estimatedUsd(), metadata.usage().estimatedUsd());
+        assertTrue(metadata.usage().costIncomplete());
+        assertEquals(quote, metadata.inheritedUsage());
+        var page = store.page(new GuideHistoryPageRequest(SCOPE, "main",
+                GuideHistoryPageRequest.Direction.NEWEST, null, 1));
+        assertEquals(1, page.requests().size());
+        assertEquals(dev.openallay.guide.GuideUsageSnapshot.unknown(), page.requests().getFirst().usageProjection());
+        assertEquals(metadata.usage(), store(database).metadata(SCOPE).orElseThrow().sessions().getFirst().usage());
+    }
+
+    @Test
     void metadataPagesAndContextUseIndependentBoundaries() throws Exception {
         Path database = temporary.resolve("history.db");
         SqliteGuideHistoryStore store = store(database);

@@ -13,11 +13,17 @@ public sealed interface AgentEvent
                 AgentEvent.ContextUpdated,
                 AgentEvent.ContextFinalized,
                 AgentEvent.ModelProgress,
+                AgentEvent.ModelUsageObserved,
+                AgentEvent.ModelUsageStarted,
+                AgentEvent.RequestReleased,
                 AgentEvent.ToolStarted,
                 AgentEvent.ToolCompleted,
                 AgentEvent.FinalText,
                 AgentEvent.Failed {
     record StateChanged(AgentState state) implements AgentEvent {}
+
+    /** Actual request cleanup and all dispatched call receipts have finished. */
+    record RequestReleased() implements AgentEvent {}
 
     record ContextCompacted(ContextCheckpoint checkpoint) implements AgentEvent {
         public ContextCompacted {
@@ -42,6 +48,24 @@ public sealed interface AgentEvent
         public ContextFinalized {
             messages = dev.openallay.agent.context.ModelContextCodec.safe(messages);
             requestMessages = dev.openallay.agent.context.ModelContextCodec.safe(requestMessages);
+        }
+    }
+
+    /** Actual dispatched call, including summary calls. Never emitted for local preflight failure. */
+    record ModelUsageStarted(java.util.UUID callId, String modelIdentifier) implements AgentEvent {
+        public ModelUsageStarted {
+            Objects.requireNonNull(callId, "callId");
+            Objects.requireNonNull(modelIdentifier, "modelIdentifier");
+        }
+    }
+
+    /** One immutable provider-attempt receipt; no response text or private reasoning. */
+    record ModelUsageObserved(java.util.UUID callId, String modelIdentifier,
+            dev.openallay.model.ModelUsage usage) implements AgentEvent {
+        public ModelUsageObserved {
+            Objects.requireNonNull(callId, "callId");
+            Objects.requireNonNull(modelIdentifier, "modelIdentifier");
+            Objects.requireNonNull(usage, "usage");
         }
     }
 

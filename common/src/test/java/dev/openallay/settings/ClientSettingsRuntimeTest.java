@@ -486,6 +486,10 @@ final class ClientSettingsRuntimeTest {
                 @Override public java.util.Set<dev.openallay.context.ContextCapability> requiredContext() {
                     return java.util.Set.of();
                 }
+                @Override public List<dev.openallay.guide.GuideClientModelProfile> profiles() {
+                    return List.of(new dev.openallay.guide.GuideClientModelProfile(
+                            defaultProfileId(), "Client model", true, true, "test-model", null));
+                }
                 @Override public java.util.Optional<dev.openallay.guide.GuideContextSpec> contextSpec(String profileId) {
                     return java.util.Optional.of(new dev.openallay.guide.GuideContextSpec(
                             new dev.openallay.agent.context.ContextBudget(64_000, 4_096), 1_000, "test-model"));
@@ -498,7 +502,9 @@ final class ClientSettingsRuntimeTest {
                         UUID actorId, String sessionId, UUID requestId, String question,
                         dev.openallay.context.ToolInvocationContext context,
                         java.util.function.Consumer<dev.openallay.agent.AgentEvent> events) {
-                    estimate = new dev.openallay.guide.GuideContextEstimate(requestId, 777);
+                    var captured = contextSpec(defaultProfileId()).orElseThrow();
+                    estimate = new dev.openallay.guide.GuideContextEstimate(
+                            requestId, 777, captured.budget(), captured.canonicalModelId());
                     events.accept(new dev.openallay.agent.AgentEvent.FinalText("done"));
                     return java.util.concurrent.CompletableFuture.completedFuture(new dev.openallay.agent.AgentResult(
                             dev.openallay.agent.AgentState.COMPLETED, "done", null, null, null));

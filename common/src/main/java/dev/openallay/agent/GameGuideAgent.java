@@ -61,12 +61,21 @@ public final class GameGuideAgent {
             ContextCompactor compactor,
             java.util.function.BiConsumer<AgentRequest, Integer> contextEstimates) {
         this.contextEstimates = Objects.requireNonNull(contextEstimates, "contextEstimates");
-        this.model = Objects.requireNonNull(model, "model");
+        this.model = dev.openallay.model.ObservingModelClient.observe(model);
         this.tools = Objects.requireNonNull(tools, "tools");
         this.sessions = Objects.requireNonNull(sessions, "sessions");
         this.gson = Objects.requireNonNull(gson, "gson");
         this.compactor = compactor;
         canonicalizer = new ToolResultNormalizer(gson);
+    }
+
+    private static void emitModelUsage(Consumer<AgentEvent> events, ModelEvent event) {
+        if (event instanceof ModelEvent.UsageObserved usage) {
+            events.accept(new AgentEvent.ModelUsageObserved(
+                    usage.callId(), usage.modelIdentifier(), usage.usage()));
+        } else if (event instanceof ModelEvent.UsageStarted started) {
+            events.accept(new AgentEvent.ModelUsageStarted(started.callId(), started.modelIdentifier()));
+        }
     }
 
     public CompletableFuture<AgentResult> ask(
@@ -190,7 +199,8 @@ public final class GameGuideAgent {
                             tools.definitions(),
                             request.stream(),
                             request.sessionKey().schedulingKey(),
-                            lease.cancellation())
+                            lease.cancellation(),
+                            usage -> emitModelUsage(events, usage))
                     .thenCompose(result -> {
                         if (result.checkpoint() != null) {
                             sessions.recordCheckpoint(lease, result.checkpoint());
@@ -254,7 +264,10 @@ public final class GameGuideAgent {
         return lease.cancellation().observe(model.complete(
                         modelRequest,
                         event -> {
-                            if (!lease.cancellation().isCancelled()) {
+                            if (event instanceof ModelEvent.UsageObserved
+                                    || event instanceof ModelEvent.UsageStarted) {
+                                emitModelUsage(events, event);
+                            } else if (!lease.cancellation().isCancelled()) {
                                 events.accept(new AgentEvent.ModelProgress(event));
                             }
                         },

@@ -21,8 +21,12 @@ final class AnthropicStreamAccumulator {
     private long inputTokens;
     private long outputTokens;
     private long cacheReadTokens;
+    private long cacheWriteTokens;
     private boolean inputReported;
     private boolean outputReported;
+    private boolean cacheReadReported;
+    private boolean cacheWriteReported;
+    private boolean usageReported;
 
     AnthropicStreamAccumulator(Consumer<ModelEvent> events) {
         this.events = events;
@@ -56,8 +60,9 @@ final class AnthropicStreamAccumulator {
         for (Block block : blocks.values()) {
             content.add(block.toContent());
         }
-        ModelUsage usage = new ModelUsage(inputTokens, outputTokens, cacheReadTokens);
-        if (inputReported && outputReported) events.accept(new ModelEvent.UsageUpdate(usage));
+        ModelUsage usage = ModelUsage.anthropic(inputTokens, inputReported, outputTokens, outputReported,
+                cacheReadTokens, cacheReadReported, cacheWriteTokens, cacheWriteReported);
+        if (usageReported) events.accept(new ModelEvent.UsageUpdate(usage));
         events.accept(new ModelEvent.MessageComplete(stopReason));
         return new ModelTurn("anthropic_messages", model, content, stopReason, usage);
     }
@@ -65,11 +70,7 @@ final class AnthropicStreamAccumulator {
     private void messageStart(JsonObject message) {
         model = message.get("model").getAsString();
         JsonObject usage = optionalUsage(message);
-        if (usage != null) {
-            inputReported = AnthropicJsonCodec.hasCount(usage, "input_tokens");
-            inputTokens = value(usage, "input_tokens");
-            cacheReadTokens = value(usage, "cache_read_input_tokens");
-        }
+        mergeUsage(usage);
     }
 
     private void blockStart(int index, JsonObject content) {
@@ -124,10 +125,31 @@ final class AnthropicStreamAccumulator {
             stopReason = delta.get("stop_reason").getAsString();
         }
         JsonObject usage = optionalUsage(root);
-        if (usage != null) {
-            outputReported = AnthropicJsonCodec.hasCount(usage, "output_tokens");
+        mergeUsage(usage);
+    }
+
+    private void mergeUsage(JsonObject usage) {
+        if (usage == null) return;
+        usageReported = true;
+        if (AnthropicJsonCodec.hasCount(usage, "input_tokens")) {
+            inputReported = true;
+            inputTokens = value(usage, "input_tokens");
+        }
+        if (AnthropicJsonCodec.hasCount(usage, "output_tokens")) {
+            outputReported = true;
             outputTokens = value(usage, "output_tokens");
         }
+        if (AnthropicJsonCodec.hasCount(usage, "cache_read_input_tokens")) {
+            cacheReadReported = true;
+            cacheReadTokens = value(usage, "cache_read_input_tokens");
+        }
+        if (AnthropicJsonCodec.hasCount(usage, "cache_creation_input_tokens")) {
+            cacheWriteReported = true;
+            cacheWriteTokens = value(usage, "cache_creation_input_tokens");
+        }
+        events.accept(new ModelEvent.UsageUpdate(ModelUsage.anthropic(
+                inputTokens, inputReported, outputTokens, outputReported,
+                cacheReadTokens, cacheReadReported, cacheWriteTokens, cacheWriteReported)));
     }
 
     private Block requiredBlock(int index) {
@@ -144,7 +166,7 @@ final class AnthropicStreamAccumulator {
     }
 
     private static long value(JsonObject object, String field) {
-        return AnthropicJsonCodec.hasCount(object, field) ? object.get(field).getAsLong() : 0;
+        return AnthropicJsonCodec.hasCount(object, field) ? object.get(field).getAsBigDecimal().longValueExact() : 0;
     }
 
     private static final class Block {

@@ -288,13 +288,18 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
                         requestCapabilities.commandCapabilityAvailable(context.correlationId())),
                 context,
                 true);
-        return requestRuntime.agent.ask(request, event ->
-                    dispatcher.execute(() -> events.accept(event)))
-                .thenApply(result -> {
+        dev.openallay.agent.ModelCallReceipts receipts = new dev.openallay.agent.ModelCallReceipts();
+        return receipts.after(requestRuntime.agent.ask(request, event ->
+                    receipts.accept(event, received -> dispatcher.execute(() -> events.accept(received)))))
+                .thenCompose(result -> {
                     if (result.trace() != null) {
                         traces.record(result.trace());
                     }
-                    return result;
+                    // Model events enqueue a second hop in GuideService. Complete on the same
+                    // dispatcher after their first hop so numeric application precedes cleanup.
+                    CompletableFuture<AgentResult> handedOff = new CompletableFuture<>();
+                    dispatcher.execute(() -> handedOff.complete(result));
+                    return handedOff;
                 });
     }
 
@@ -382,7 +387,8 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
             ContextBudget contextBudget,
             String modelIdentifier, ContextTokenEstimator estimator) {
         Objects.requireNonNull(estimator, "estimator");
-        ModelRequestScheduler scheduler = new ModelRequestScheduler(model);
+        ModelRequestScheduler scheduler = new ModelRequestScheduler(
+                dev.openallay.model.ObservingModelClient.observe(model, modelIdentifier == null ? "" : modelIdentifier));
         ContextCompactor compactor = contextBudget == null ? null : new ContextCompactor(
                 scheduler,
                 gson,

@@ -46,10 +46,12 @@ final class ClientArchitectureTest {
                 queued::add);
         List<AgentEvent> delivered = new ArrayList<>();
 
-        runtime.ask(UUID.randomUUID(), "question",
-                dev.openallay.context.ToolInvocationContext.developmentConsole("test"), delivered::add).join();
+        var completed = runtime.ask(UUID.randomUUID(), "question",
+                dev.openallay.context.ToolInvocationContext.developmentConsole("test"), delivered::add);
         assertEquals(0, delivered.size());
-        queued.forEach(Runnable::run);
+        assertTrue(!completed.isDone(), "completion waits for queued event handoff");
+        for (int i = 0; i < queued.size(); i++) queued.get(i).run();
+        completed.join();
         assertTrue(delivered.stream().anyMatch(event -> event instanceof AgentEvent.ContextUpdated));
         assertTrue(delivered.stream().anyMatch(event -> event instanceof AgentEvent.FinalText));
         assertTrue(delivered.stream().anyMatch(event -> event instanceof AgentEvent.ModelProgress));

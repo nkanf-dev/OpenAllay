@@ -71,7 +71,8 @@ public record ServerGuideRuntime(
             case ANTHROPIC_MESSAGES -> new AnthropicMessagesClient(config, gson);
             case OPENAI_CHAT -> new OpenAiChatClient(config, gson);
         };
-        ModelRequestScheduler scheduled = new ModelRequestScheduler(raw);
+        ModelRequestScheduler scheduled = new ModelRequestScheduler(
+                dev.openallay.model.ObservingModelClient.observe(raw, config.model()));
         LocalAgentToolExecutor tools = new LocalAgentToolExecutor(runtime.tools(), gson);
         AgentSessionStore sessions = new AgentSessionStore();
         var estimator = ModelContextTokenEstimator.create(config.protocol(), config.model(), config.tokenEncoding());

@@ -27,8 +27,7 @@ final class OpenAiStreamAccumulatorTest {
             OpenAiStreamAccumulator accumulator = new OpenAiStreamAccumulator(events::add);
             accumulator.accept(event(response));
             accumulator.finish();
-            boolean complete = raw.contains("\"completion_tokens\":0") || raw.contains("\"prompt_tokens\":9");
-            assertEquals(complete, events.stream().anyMatch(ModelEvent.UsageUpdate.class::isInstance));
+            assertEquals(!raw.equals("null"), events.stream().anyMatch(ModelEvent.UsageUpdate.class::isInstance));
         }
     }
 
@@ -79,6 +78,9 @@ final class OpenAiStreamAccumulatorTest {
             assertEquals(7, turn.usage().inputTokens());
             assertEquals(2, turn.usage().outputTokens());
             assertEquals(0, turn.usage().cacheReadTokens());
+            assertTrue(turn.usage().inputKnown());
+            assertTrue(!turn.usage().cacheReadKnown());
+            assertTrue(!turn.usage().uncachedInputKnown());
         }
     }
 

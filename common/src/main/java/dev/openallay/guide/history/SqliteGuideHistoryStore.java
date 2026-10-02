@@ -13,6 +13,7 @@ import dev.openallay.guide.GuideRequestStatus;
 import dev.openallay.guide.GuideSource;
 import dev.openallay.guide.GuideTimelineEntry;
 import dev.openallay.guide.GuideTopology;
+import dev.openallay.guide.GuideUsageSnapshot;
 import dev.openallay.model.ModelContent;
 import dev.openallay.model.ModelMessage;
 import dev.openallay.model.ModelRole;
@@ -109,7 +110,9 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
                                         result.getString("session_id"), firstSequence),
                                 lastSequence == null ? null : cursor(
                                         connection, scope.scopeId(),
-                                        result.getString("session_id"), lastSequence)));
+                                        result.getString("session_id"), lastSequence),
+                                sessionUsage(connection, scope.scopeId(), result.getString("session_id"), false),
+                                sessionUsage(connection, scope.scopeId(), result.getString("session_id"), true)));
                     }
                 }
             }
@@ -122,6 +125,22 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
             throw new GuideHistoryException(
                     "history_corrupt", "Guide history metadata is malformed", malformed);
         }
+    }
+
+    private GuideUsageSnapshot sessionUsage(
+            Connection connection, String scopeId, String sessionId, boolean inherited) throws SQLException {
+        GuideUsageSnapshot total = GuideUsageSnapshot.empty();
+        try (PreparedStatement query = connection.prepareStatement("""
+                select usage_projection_json from requests
+                where scope_id = ? and session_id = ? and
+                """ + (inherited ? "usage_origin_request_id is not null" : "usage_origin_request_id is null"))) {
+            query.setString(1, scopeId);
+            query.setString(2, sessionId);
+            try (ResultSet result = query.executeQuery()) {
+                while (result.next()) total = total.plus(codec.decodeUsageProjection(result.getString(1)));
+            }
+        }
+        return total;
     }
 
     @Override
@@ -479,9 +498,9 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
                 column("model_selection_json", "TEXT", true, 0),
                 column("user_message", "TEXT", true, 0),
                 column("status", "TEXT", true, 0),
-                column("input_tokens", "INTEGER", true, 0),
-                column("output_tokens", "INTEGER", true, 0),
-                column("cache_read_tokens", "INTEGER", true, 0),
+                column("model_usage_json", "TEXT", true, 0),
+                column("usage_projection_json", "TEXT", true, 0),
+                column("usage_origin_request_id", "TEXT", false, 0),
                 column("retry_after_millis", "INTEGER", false, 0),
                 column("failure_code", "TEXT", false, 0),
                 column("failure_message", "TEXT", false, 0),
@@ -583,9 +602,9 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
                         model_selection_json text not null,
                         user_message text not null,
                         status text not null,
-                        input_tokens integer not null check(input_tokens >= 0),
-                        output_tokens integer not null check(output_tokens >= 0),
-                        cache_read_tokens integer not null check(cache_read_tokens >= 0),
+                        model_usage_json text not null,
+                        usage_projection_json text not null,
+                        usage_origin_request_id text,
                         retry_after_millis integer,
                         failure_code text,
                         failure_message text,
@@ -886,7 +905,7 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
                 insert into requests(
                     scope_id, session_id, request_id, sequence, topology,
                     model_selection_json, user_message, status,
-                    input_tokens, output_tokens, cache_read_tokens,
+                    model_usage_json, usage_projection_json, usage_origin_request_id,
                     retry_after_millis, failure_code, failure_message,
                     created_at, updated_at, terminal_at)
                 values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -897,9 +916,9 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
                     model_selection_json = excluded.model_selection_json,
                     user_message = excluded.user_message,
                     status = excluded.status,
-                    input_tokens = excluded.input_tokens,
-                    output_tokens = excluded.output_tokens,
-                    cache_read_tokens = excluded.cache_read_tokens,
+                    model_usage_json = excluded.model_usage_json,
+                    usage_projection_json = excluded.usage_projection_json,
+                    usage_origin_request_id = excluded.usage_origin_request_id,
                     retry_after_millis = excluded.retry_after_millis,
                     failure_code = excluded.failure_code,
                     failure_message = excluded.failure_message,
@@ -915,9 +934,10 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
             statement.setString(6, codec.encodeModelSelection(request.modelSelection()));
             statement.setString(7, request.userMessage());
             statement.setString(8, request.status().name());
-            statement.setLong(9, request.usage().inputTokens());
-            statement.setLong(10, request.usage().outputTokens());
-            statement.setLong(11, request.usage().cacheReadTokens());
+            statement.setString(9, codec.encodeModelUsage(request.usage()));
+            statement.setString(10, codec.encodeUsageProjection(request.usageProjection()));
+            statement.setString(11, request.usageOriginRequestId() == null
+                    ? null : request.usageOriginRequestId().toString());
             nullableLong(statement, 12, request.retryAfterMillis());
             statement.setString(13, request.failure() == null ? null : request.failure().code());
             statement.setString(14, request.failure() == null ? null : request.failure().message());
@@ -1060,7 +1080,7 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
         return """
                 select sequence, session_id, request_id, topology, user_message, status,
                        model_selection_json,
-                       input_tokens, output_tokens, cache_read_tokens,
+                       model_usage_json, usage_projection_json, usage_origin_request_id,
                        retry_after_millis, failure_code, failure_message,
                        created_at, updated_at, terminal_at
                 """;
@@ -1086,16 +1106,21 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
                 readTimeline(connection, scopeId, requestId),
                 GuideRequestStatus.valueOf(result.getString("status")),
                 readSources(connection, scopeId, requestId),
-                new ModelUsage(
-                        result.getLong("input_tokens"),
-                        result.getLong("output_tokens"),
-                        result.getLong("cache_read_tokens")),
+                codec.decodeModelUsage(result.getString("model_usage_json")),
                 nullableLong(result, "retry_after_millis"),
                 failure,
                 Instant.parse(result.getString("created_at")),
                 Instant.parse(result.getString("updated_at")),
                 nullableInstant(result.getString("terminal_at")),
-                codec.decodeModelSelection(result.getString("model_selection_json")));
+                codec.decodeModelSelection(result.getString("model_selection_json")),
+                GuideRequestSnapshot.legacyProgress(
+                        GuideRequestStatus.valueOf(result.getString("status")),
+                        nullableLong(result, "retry_after_millis"),
+                        Instant.parse(result.getString("created_at")),
+                        Instant.parse(result.getString("updated_at"))),
+                codec.decodeUsageProjection(result.getString("usage_projection_json")),
+                result.getString("usage_origin_request_id") == null ? null
+                        : UUID.fromString(result.getString("usage_origin_request_id")));
         return new SequencedRequest(new GuideHistoryCursor(sequence, requestId), request);
     }
 

@@ -25,6 +25,26 @@ final class AnthropicJsonCodecTest {
     private final AnthropicJsonCodec codec = new AnthropicJsonCodec(new Gson());
 
     @Test
+    void normalizesCacheReadsAndWritesIntoTotalInputAndKeepsPresence() {
+        var usage = codec.parseUsage(JsonParser.parseString("""
+                {"input_tokens":100,"output_tokens":5,"cache_read_input_tokens":50,"cache_creation_input_tokens":25}
+                """).getAsJsonObject());
+        assertEquals(175, usage.inputTokens());
+        assertEquals(100, usage.uncachedInputTokens());
+        assertEquals(50, usage.cacheReadTokens());
+        assertEquals(25, usage.cacheWriteTokens());
+        assertTrue(usage.complete());
+        var missing = codec.parseUsage(JsonParser.parseString("""
+                {"input_tokens":100,"output_tokens":5}
+                """).getAsJsonObject());
+        assertFalse(missing.inputKnown());
+        assertTrue(missing.uncachedInputKnown());
+        assertFalse(missing.cacheReadKnown());
+        assertFalse(missing.cacheWriteKnown());
+        assertFalse(codec.parseUsage(null).reported());
+    }
+
+    @Test
     void mapsQualifiedHistoryAndResultPairsWithoutChangingDurableIds() {
         String providerId = "toolu_" + "x".repeat(24);
         String restoredId = "00000000-0000-0000-0000-000000000001:" + providerId;

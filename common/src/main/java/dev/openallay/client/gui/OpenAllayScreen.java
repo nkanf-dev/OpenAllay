@@ -604,17 +604,16 @@ public final class OpenAllayScreen extends Screen {
                 ? "~" + compactTokens(context.estimatedTokens()) + "/" + compactTokens(context.budget().inputTokens())
                 : unknown;
         telemetryContext = Component.literal(occupancy);
-        var usage = telemetry.requestUsage();
-        String input = usage.known() ? compactTokens(usage.inputTokens()) : unknown;
-        String output = usage.known() ? compactTokens(usage.outputTokens()) : unknown;
-        String partial = usage.known() && usage.incomplete() ? "+" : "";
-        telemetryInput = Component.translatable("screen.openallay.telemetry.input", input + partial);
-        telemetryOutput = Component.translatable("screen.openallay.telemetry.output", output + partial);
+        var usage = telemetry.sessionUsage();
+        var rate = usage.cacheHitRate();
+        String cache = rate == null ? unknown : rate.movePointRight(2)
+                .setScale(1, java.math.RoundingMode.HALF_UP).toPlainString() + "%";
+        telemetryInput = Component.translatable("screen.openallay.telemetry.cache", cache);
         String cost = usage.estimatedUsd() == null ? unknown : "~$" + usage.estimatedUsd()
                 .setScale(5, java.math.RoundingMode.HALF_UP).toPlainString();
+        if (usage.costIncomplete() && usage.estimatedUsd() != null) cost += "+";
         telemetryCost = Component.translatable("screen.openallay.telemetry.cost", cost);
-        telemetryCompact = Component.translatable("screen.openallay.telemetry.compact",
-                occupancy, input + partial, output + partial, cost);
+        telemetryCompact = Component.translatable("screen.openallay.telemetry.compact", occupancy, cache, cost);
         MutableComponent detail = Component.translatable("screen.openallay.telemetry.latest");
         detail.append("\n").append(contextKnown
                 ? Component.translatable("screen.openallay.telemetry.budget",
@@ -622,15 +621,21 @@ public final class OpenAllayScreen extends Screen {
                         context.budget().contextWindowTokens(), context.budget().reservedTokens(),
                         context.budget().maxOutputTokens())
                 : Component.translatable("screen.openallay.telemetry.context_unknown"));
-        detail.append("\n").append(Component.translatable("screen.openallay.telemetry.request",
-                usage.known() ? Long.toString(usage.inputTokens()) : unknown,
-                usage.known() ? Long.toString(usage.outputTokens()) : unknown,
-                cost));
-        if (usage.incomplete()) detail.append("\n").append(
+        detail.append("\n").append(Component.translatable("screen.openallay.telemetry.session",
+                usage.actualCalls(), cost));
+        detail.append("\n").append(Component.translatable("screen.openallay.telemetry.cache_detail",
+                cache, usage.cacheReadTokens(), usage.inputTokens()));
+        if (usage.costIncomplete()) detail.append("\n").append(
                 Component.translatable("screen.openallay.telemetry.partial"));
-        var session = telemetry.sessionUsage();
-        if (session.known()) detail.append("\n").append(Component.translatable(
-                "screen.openallay.telemetry.session", session.inputTokens(), session.outputTokens()));
+        if (usage.cacheIncomplete()) detail.append("\n").append(
+                Component.translatable("screen.openallay.telemetry.cache_unknown"));
+        var inherited = telemetry.inheritedUsage();
+        if (inherited.actualCalls() > 0) {
+            String reference = inherited.estimatedUsd() == null ? unknown : "~$" + inherited.estimatedUsd()
+                    .setScale(5, java.math.RoundingMode.HALF_UP).toPlainString();
+            if (inherited.costIncomplete() && inherited.estimatedUsd() != null) reference += "+";
+            detail.append("\n").append(Component.translatable("screen.openallay.telemetry.inherited", reference));
+        }
         detail.append("\n").append(Component.translatable("screen.openallay.telemetry.price_note"));
         telemetryTooltip = detail;
     }
@@ -660,9 +665,8 @@ public final class OpenAllayScreen extends Screen {
                 graphics.fill(x, y + 25, x + (int) (barWidth * ratio), y + 28,
                         ratio >= 0.9 ? 0xFFFFD479 : ACCENT);
             }
-            graphics.text(font, telemetryInput, x, y + 35, MUTED, false);
-            graphics.text(font, telemetryOutput, x, y + 47, MUTED, false);
-            graphics.text(font, telemetryCost, x, y + 61, MUTED, false);
+            graphics.text(font, telemetryCost, x, y + 39, MUTED, false);
+            graphics.text(font, telemetryInput, x, y + 55, MUTED, false);
         }
         graphics.disableScissor();
         if (area.contains(mouseX, mouseY) && !modelSelectorOpen) {

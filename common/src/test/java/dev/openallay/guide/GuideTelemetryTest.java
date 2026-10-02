@@ -34,7 +34,7 @@ final class GuideTelemetryTest {
         assertNull(service.telemetry().context());
         local.estimates.put("main", new GuideContextEstimate(first, 321, new ContextBudget(10_000, 1_000), "model-a"));
         local.send(first, new AgentEvent.ModelProgress(new ModelEvent.AttemptStarted(1, null)));
-        local.send(first, new AgentEvent.ModelProgress(new ModelEvent.UsageUpdate(new ModelUsage(20, 4, 0))));
+        local.send(first, new AgentEvent.ModelUsageObserved(UUID.randomUUID(), "model-a", new ModelUsage(20, 4, 0)));
         local.send(first, new AgentEvent.ModelProgress(new ModelEvent.MessageComplete("stop")));
         local.send(first, new AgentEvent.FinalText("answer"));
         assertEquals(321, service.telemetry().context().estimatedTokens());
@@ -48,11 +48,13 @@ final class GuideTelemetryTest {
         service.selectSession("main").join();
         assertEquals(first, service.telemetry().requestId());
         service.setModelSelection(GuideModelSelection.client("other")).join();
-        assertUnknown(service);
+        assertEquals(20, service.telemetry().sessionUsage().inputTokens());
+        assertNull(service.telemetry().context());
         service.setModelSelection(GuideModelSelection.client("default")).join();
         local.model = "replacement-model";
         service.refreshCapabilities().join();
-        assertUnknown(service);
+        assertEquals(20, service.telemetry().sessionUsage().inputTokens());
+        assertNull(service.telemetry().context());
         local.model = "model-a";
         service.refreshCapabilities().join();
         UUID next = ask(service);
@@ -62,7 +64,16 @@ final class GuideTelemetryTest {
         assertEquals(20, service.telemetry().sessionUsage().inputTokens());
         service.cancel().join();
         local.send(next, new AgentEvent.ModelProgress(new ModelEvent.UsageUpdate(new ModelUsage(999, 99, 0))));
-        assertFalse(service.telemetry().requestUsage().known());
+        assertFalse(service.telemetry().requestUsage().known(), "late ordinary progress cannot reopen or bill");
+        UUID lateCall = UUID.randomUUID();
+        local.send(next, new AgentEvent.ModelUsageObserved(lateCall, "model-a", new ModelUsage(7, 2, 0)));
+        local.send(next, new AgentEvent.ModelUsageObserved(lateCall, "model-a", new ModelUsage(7, 2, 0)));
+        assertEquals(27, service.telemetry().sessionUsage().inputTokens());
+        local.send(next, new AgentEvent.RequestReleased());
+        local.send(next, new AgentEvent.ModelUsageObserved(UUID.randomUUID(), "model-a", new ModelUsage(999, 99, 0)));
+        assertEquals(27, service.telemetry().sessionUsage().inputTokens(), "released owners cannot create a new call");
+        assertTrue(service.snapshot().sessions().stream().filter(s -> s.sessionId().equals("main"))
+                .findFirst().orElseThrow().requests().getLast().terminal());
         service.disconnect().join();
         assertUnknown(service);
     }
@@ -81,6 +92,10 @@ final class GuideTelemetryTest {
             var encoded = codec.encode(id, new AgentEvent.ModelProgress(event));
             remote.events.accept(codec.decode(encoded, id));
         }
+        UUID call = UUID.randomUUID();
+        var usage = codec.encode(id, new AgentEvent.ModelUsageObserved(call, "unknown-model", new ModelUsage(0, 0, 0)));
+        remote.events.accept(codec.decode(usage, id));
+        remote.events.accept(codec.decode(usage, id));
         remote.events.accept(new AgentEvent.FinalText("answer"));
         assertNull(service.telemetry().context());
         assertTrue(service.telemetry().requestUsage().known());
@@ -101,7 +116,7 @@ final class GuideTelemetryTest {
         var submitted = service.ask("question");
         while (!queue.isEmpty()) queue.removeFirst().run();
         UUID id = ((ToolResult.Success<UUID>) submitted.join()).value();
-        local.send(id, new AgentEvent.ModelProgress(new ModelEvent.UsageUpdate(new ModelUsage(7, 2, 0))));
+        local.send(id, new AgentEvent.ModelUsageObserved(UUID.randomUUID(), "model-a", new ModelUsage(7, 2, 0)));
         local.send(id, new AgentEvent.ModelProgress(new ModelEvent.MessageComplete("stop")));
         assertFalse(service.telemetry().requestUsage().known());
         while (!queue.isEmpty()) queue.removeFirst().run();
@@ -111,7 +126,7 @@ final class GuideTelemetryTest {
     private static void assertUnknown(GuideService service) {
         assertNull(service.telemetry().context());
         assertFalse(service.telemetry().requestUsage().known());
-        assertNull(service.telemetry().requestUsage().estimatedUsd());
+        assertEquals(0, service.telemetry().requestUsage().actualCalls());
     }
     private static UUID ask(GuideService service) {
         return ((ToolResult.Success<UUID>) service.ask("question").join()).value();

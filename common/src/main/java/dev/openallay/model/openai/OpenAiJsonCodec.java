@@ -87,7 +87,7 @@ public final class OpenAiJsonCodec {
         List<ModelContent> content = decodeAssistant(message, events);
         JsonObject usageObject = optionalObject(root, "usage");
         ModelUsage usage = parseUsage(usageObject);
-        if (hasUsageCounts(usageObject)) events.accept(new ModelEvent.UsageUpdate(usage));
+        if (usageObject != null) events.accept(new ModelEvent.UsageUpdate(usage));
         events.accept(new ModelEvent.MessageComplete(stopReason));
         return new ModelTurn("openai_chat", model, content, stopReason, usage);
     }
@@ -183,17 +183,17 @@ public final class OpenAiJsonCodec {
                 && object.has("completion_tokens") && !object.get("completion_tokens").isJsonNull();
     }
 
-    private static ModelUsage parseUsage(JsonObject object) {
-        if (object == null) {
-            return ModelUsage.empty();
-        }
-        long cached = 0;
+    static ModelUsage parseUsage(JsonObject object) {
+        if (object == null) return ModelUsage.empty();
         JsonObject details = optionalObject(object, "prompt_tokens_details");
-        if (details != null) {
-            cached = value(details, "cached_tokens");
-        }
-        return new ModelUsage(
-                value(object, "prompt_tokens"), value(object, "completion_tokens"), cached);
+        return ModelUsage.openAi(
+                value(object, "prompt_tokens"), hasCount(object, "prompt_tokens"),
+                value(object, "completion_tokens"), hasCount(object, "completion_tokens"),
+                details == null ? 0 : value(details, "cached_tokens"), hasCount(details, "cached_tokens"));
+    }
+
+    private static boolean hasCount(JsonObject object, String field) {
+        return object != null && object.has(field) && !object.get(field).isJsonNull();
     }
 
     private static JsonObject optionalObject(JsonObject object, String field) {
@@ -203,7 +203,7 @@ public final class OpenAiJsonCodec {
 
     private static long value(JsonObject object, String field) {
         return object.has(field) && !object.get(field).isJsonNull()
-                ? object.get(field).getAsLong()
+                ? object.get(field).getAsBigDecimal().longValueExact()
                 : 0;
     }
 

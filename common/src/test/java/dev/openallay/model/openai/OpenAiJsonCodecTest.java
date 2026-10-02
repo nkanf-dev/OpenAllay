@@ -39,8 +39,7 @@ final class OpenAiJsonCodecTest {
             response.add("usage", JsonParser.parseString(raw));
             List<ModelEvent> events = new ArrayList<>();
             codec.parseTurn(response.toString(), events::add);
-            boolean complete = raw.contains("\"completion_tokens\":0") || raw.contains("\"prompt_tokens\":9");
-            assertEquals(complete, events.stream().anyMatch(ModelEvent.UsageUpdate.class::isInstance));
+            assertEquals(!raw.equals("null"), events.stream().anyMatch(ModelEvent.UsageUpdate.class::isInstance));
         }
     }
 
@@ -89,6 +88,9 @@ final class OpenAiJsonCodecTest {
             assertEquals(7, turn.usage().inputTokens());
             assertEquals(2, turn.usage().outputTokens());
             assertEquals(0, turn.usage().cacheReadTokens());
+            assertTrue(turn.usage().inputKnown());
+            assertTrue(!turn.usage().cacheReadKnown());
+            assertTrue(!turn.usage().uncachedInputKnown());
         }
     }
 

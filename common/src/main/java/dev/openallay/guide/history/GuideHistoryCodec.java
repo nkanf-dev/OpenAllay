@@ -10,6 +10,8 @@ import dev.openallay.context.DataAuthority;
 import dev.openallay.context.DataCompleteness;
 import dev.openallay.context.EvidenceMetadata;
 import dev.openallay.guide.GuideSource;
+import dev.openallay.guide.GuideUsageSnapshot;
+import dev.openallay.model.ModelUsage;
 import dev.openallay.guide.GuideModelSelection;
 import dev.openallay.guide.GuideTimelineEntry;
 import dev.openallay.guide.GuideToolActivity;
@@ -68,6 +70,77 @@ public final class GuideHistoryCodec {
                 yield GuideModelSelection.server();
             }
         };
+    }
+
+    /** Exact current shape; no missing presence flags are silently interpreted as zero. */
+    public String encodeModelUsage(ModelUsage usage) {
+        JsonObject encoded = new JsonObject();
+        encoded.addProperty("inputTokens", usage.inputTokens());
+        encoded.addProperty("outputTokens", usage.outputTokens());
+        encoded.addProperty("cacheReadTokens", usage.cacheReadTokens());
+        encoded.addProperty("cacheWriteTokens", usage.cacheWriteTokens());
+        encoded.addProperty("uncachedInputTokens", usage.uncachedInputTokens());
+        encoded.addProperty("inputKnown", usage.inputKnown());
+        encoded.addProperty("outputKnown", usage.outputKnown());
+        encoded.addProperty("cacheReadKnown", usage.cacheReadKnown());
+        encoded.addProperty("cacheWriteKnown", usage.cacheWriteKnown());
+        encoded.addProperty("uncachedInputKnown", usage.uncachedInputKnown());
+        return encoded.toString();
+    }
+
+    public ModelUsage decodeModelUsage(String json) {
+        JsonObject encoded = object(JsonParser.parseString(json), "model usage");
+        requireFields(encoded, Set.of("inputTokens", "outputTokens", "cacheReadTokens", "cacheWriteTokens",
+                "uncachedInputTokens", "inputKnown", "outputKnown", "cacheReadKnown", "cacheWriteKnown",
+                "uncachedInputKnown"), "model usage");
+        return new ModelUsage(longInteger(encoded, "inputTokens"), longInteger(encoded, "outputTokens"),
+                longInteger(encoded, "cacheReadTokens"), longInteger(encoded, "cacheWriteTokens"),
+                longInteger(encoded, "uncachedInputTokens"), bool(encoded, "inputKnown"),
+                bool(encoded, "outputKnown"), bool(encoded, "cacheReadKnown"), bool(encoded, "cacheWriteKnown"),
+                bool(encoded, "uncachedInputKnown"));
+    }
+
+    public String encodeUsageProjection(GuideUsageSnapshot usage) {
+        JsonObject encoded = new JsonObject();
+        encoded.addProperty("inputTokens", usage.inputTokens());
+        encoded.addProperty("outputTokens", usage.outputTokens());
+        encoded.addProperty("cacheReadTokens", usage.cacheReadTokens());
+        encoded.addProperty("cacheWriteTokens", usage.cacheWriteTokens());
+        encoded.addProperty("actualCalls", usage.actualCalls());
+        encoded.addProperty("reportedCalls", usage.reportedCalls());
+        encoded.addProperty("incomplete", usage.incomplete());
+        encoded.addProperty("cacheIncomplete", usage.cacheIncomplete());
+        encoded.addProperty("estimatedUsd", usage.estimatedUsd());
+        encoded.addProperty("costIncomplete", usage.costIncomplete());
+        return encoded.toString();
+    }
+
+    public GuideUsageSnapshot decodeUsageProjection(String json) {
+        JsonObject encoded = object(JsonParser.parseString(json), "usage projection");
+        requireFields(encoded, Set.of("inputTokens", "outputTokens", "cacheReadTokens", "cacheWriteTokens",
+                "actualCalls", "reportedCalls", "incomplete", "cacheIncomplete", "estimatedUsd",
+                "costIncomplete"), "usage projection");
+        JsonElement price = encoded.get("estimatedUsd");
+        if (!price.isJsonNull() && (!price.isJsonPrimitive() || !price.getAsJsonPrimitive().isNumber())) {
+            throw new IllegalArgumentException("estimatedUsd must be a decimal or null");
+        }
+        return new GuideUsageSnapshot(longInteger(encoded, "inputTokens"), longInteger(encoded, "outputTokens"),
+                longInteger(encoded, "cacheReadTokens"), longInteger(encoded, "cacheWriteTokens"),
+                integer(encoded, "actualCalls"), integer(encoded, "reportedCalls"), bool(encoded, "incomplete"),
+                bool(encoded, "cacheIncomplete"), price.isJsonNull() ? null : price.getAsBigDecimal(),
+                bool(encoded, "costIncomplete"));
+    }
+
+    private static long longInteger(JsonObject object, String field) {
+        JsonElement value = object.get(field);
+        if (value == null || !value.isJsonPrimitive() || !value.getAsJsonPrimitive().isNumber()) {
+            throw new IllegalArgumentException(field + " must be an integer");
+        }
+        try {
+            return value.getAsBigDecimal().longValueExact();
+        } catch (ArithmeticException | NumberFormatException failure) {
+            throw new IllegalArgumentException(field + " must be an integer", failure);
+        }
     }
 
     public String encodeCheckpoint(ContextCheckpoint checkpoint) {

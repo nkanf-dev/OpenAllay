@@ -214,13 +214,13 @@ final class ServerCancellationCorrelationTest {
             assertEquals(0, service.activeRequests());
             assertEquals(0, router.activeRequests());
             assertEquals(1, requestCloses.get());
-            assertEquals(List.of("context_finalized", "failed"),
+            assertEquals(List.of("context_finalized", "failed", "request_released"),
                     events.stream().map(ServerAgentEventPayload::eventType).toList());
             ServerAgentEventCodec codec = new ServerAgentEventCodec(gson);
             AgentEvent.ContextFinalized finalized = assertInstanceOf(AgentEvent.ContextFinalized.class,
                     codec.decode(events.getFirst(), requestId));
             AgentEvent.Failed failed = assertInstanceOf(AgentEvent.Failed.class,
-                    codec.decode(events.getLast(), requestId));
+                    codec.decode(events.get(1), requestId));
             List<ModelMessage> expectedOriginal = List.of(ModelMessage.userText(question),
                     new ModelMessage(ModelRole.ASSISTANT, List.of(new ModelContent.Text(
                             "[OpenAllay request ended: agent_cancelled] Agent request was cancelled"))));
@@ -230,14 +230,15 @@ final class ServerCancellationCorrelationTest {
             assertEquals(expectedOriginal, finalized.requestMessages());
             assertEquals("agent_cancelled", failed.code());
             assertFalse(events.getFirst().terminal());
-            assertTrue(events.getLast().terminal());
+            assertTrue(events.get(1).terminal());
+            assertFalse(events.getLast().terminal());
 
             assertFalse(service.cancel(actor, requestId));
-            assertEquals(2, events.size(), "duplicate cancellation must not finalize or fail twice");
+            assertEquals(3, events.size(), "duplicate cancellation must not finalize, fail or release twice");
             assertEquals(1, requestCloses.get());
             pendingCapture.complete(ToolInvocationContext.developmentConsole(actor + "/" + requestId));
             assertEquals(0, modelCalls.get(), "late capture must not dispatch the cancelled request");
-            assertEquals(2, events.size());
+            assertEquals(3, events.size());
             assertEquals(1, captures.get());
             assertEquals(1, requestCloses.get());
             assertEquals(0, service.activeRequests());

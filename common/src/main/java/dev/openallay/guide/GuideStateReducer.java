@@ -57,6 +57,9 @@ public final class GuideStateReducer {
                 progress = progress.advance(
                         phase(changed.state()), now, progress.attempt(), null, null);
             }
+            case AgentEvent.RequestReleased ignored -> { return current; }
+            case AgentEvent.ModelUsageStarted ignored -> { return current; }
+            case AgentEvent.ModelUsageObserved ignored -> { return current; }
             case AgentEvent.ContextUpdated ignored -> { return current; }
             case AgentEvent.ContextFinalized ignored -> { return current; }
             case AgentEvent.ContextCompacted ignored ->
@@ -167,6 +170,8 @@ public final class GuideStateReducer {
                                 null,
                                 progress.deadlineAt());
                     }
+                    case ModelEvent.UsageStarted ignored -> { return current; }
+                    case ModelEvent.UsageObserved ignored -> { return current; }
                     case ModelEvent.UsageUpdate update -> {
                         usage = update.usage();
                         progress = progress.advance(

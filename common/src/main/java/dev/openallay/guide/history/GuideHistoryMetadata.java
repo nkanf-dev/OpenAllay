@@ -1,6 +1,7 @@
 package dev.openallay.guide.history;
 
 import dev.openallay.guide.GuideModelSelection;
+import dev.openallay.guide.GuideUsageSnapshot;
 import java.time.Instant;
 import java.util.List;
 
@@ -28,7 +29,16 @@ public record GuideHistoryMetadata(
             GuideModelSelection modelSelection,
             long requestCount,
             GuideHistoryCursor first,
-            GuideHistoryCursor last) {
+            GuideHistoryCursor last,
+            GuideUsageSnapshot usage,
+            GuideUsageSnapshot inheritedUsage) {
+        public Session(String sessionId, int ordinal, GuideModelSelection modelSelection,
+                long requestCount, GuideHistoryCursor first, GuideHistoryCursor last) {
+            this(sessionId, ordinal, modelSelection, requestCount, first, last,
+                    requestCount == 0 ? GuideUsageSnapshot.empty() : GuideUsageSnapshot.unknown(),
+                    GuideUsageSnapshot.empty());
+        }
+
         public Session {
             if (sessionId == null || !sessionId.matches("[a-zA-Z0-9_.-]+")) {
                 throw new IllegalArgumentException("invalid session ID");
@@ -37,6 +47,8 @@ public record GuideHistoryMetadata(
                 throw new IllegalArgumentException("session metadata count is invalid");
             }
             java.util.Objects.requireNonNull(modelSelection, "modelSelection");
+            java.util.Objects.requireNonNull(usage, "usage");
+            java.util.Objects.requireNonNull(inheritedUsage, "inheritedUsage");
             if (requestCount == 0 ? first != null || last != null : first == null || last == null) {
                 throw new IllegalArgumentException("session cursor metadata is inconsistent");
             }

@@ -33,32 +33,120 @@ import org.junit.jupiter.api.Test;
 
 final class ServerAgentServiceTest {
     @Test
-    void sameSessionIsBusyButDifferentSessionsForOnePlayerRunConcurrently() {
+    void scheduledCancellationKeepsOwnerUntilPartialUsageReceiptIsDelivered() throws Exception {
+        Gson gson = new Gson();
+        AgentSessionStore sessions = new AgentSessionStore();
+        AgentToolExecutor tools = new EmptyTools();
+        CompletableFuture<Runnable> queuedReceipt = new CompletableFuture<>();
+        CompletableFuture<Void> terminal = new CompletableFuture<>();
+        CompletableFuture<Void> released = new CompletableFuture<>();
+        CompletableFuture<ModelTurn> raw = new CompletableFuture<>();
+        ModelUsage partial = ModelUsage.openAi(17, true, 0, false, 0, false);
+        ModelClient provider = (request, sink, cancellation) -> {
+            sink.accept(new ModelEvent.UsageUpdate(partial));
+            return raw;
+        };
+        var scheduler = new dev.openallay.model.scheduling.ModelRequestScheduler(provider);
+        // Model an asynchronous handoff of a real scheduler/observer receipt, not a fabricated event.
+        ModelClient delayedReceipt = new ModelClient() {
+            @Override public boolean observesUsage() { return true; }
+            @Override public CompletableFuture<ModelTurn> complete(ModelRequest request,
+                    Consumer<ModelEvent> sink, CancellationSignal cancellation) {
+                return scheduler.complete(request, event -> {
+                    if (event instanceof ModelEvent.UsageObserved) {
+                        queuedReceipt.complete(() -> sink.accept(event));
+                    } else sink.accept(event);
+                }, cancellation);
+            }
+        };
+        List<ServerAgentEventPayload> received = new java.util.concurrent.CopyOnWriteArrayList<>();
+        java.util.concurrent.atomic.AtomicInteger closes = new java.util.concurrent.atomic.AtomicInteger();
+        UUID actor = UUID.randomUUID();
+        UUID requestId = UUID.randomUUID();
+        ServerAgentService service = new ServerAgentService(
+                (sender, payload) -> new ToolResult.Success<>(new ServerAgentService.RequestRuntime(
+                        new GameGuideAgent(delayedReceipt, tools, sessions, gson), tools, closes::incrementAndGet)),
+                sessions, (sender, capabilities, id, cancellation) -> CompletableFuture.completedFuture(
+                        ToolInvocationContext.developmentConsole(id)),
+                (sender, event) -> {
+                    assertEquals(actor, sender);
+                    assertEquals(requestId, event.requestId());
+                    received.add(event);
+                    if (event.terminal()) terminal.complete(null);
+                    if (event.eventType().equals("request_released")) released.complete(null);
+                }, gson, "system", cancellation -> CompletableFuture.completedFuture(null));
+        try {
+            service.ask(actor, request(requestId, "receipt-gap"));
+            org.junit.jupiter.api.Assertions.assertTrue(service.cancel(actor, requestId));
+            terminal.get(5, java.util.concurrent.TimeUnit.SECONDS);
+            Runnable deliverReceipt = queuedReceipt.get(5, java.util.concurrent.TimeUnit.SECONDS);
+            assertEquals(1, received.stream().filter(ServerAgentEventPayload::terminal).count());
+            assertEquals(0, received.stream().filter(event -> event.eventType().equals("model_usage_observed")).count());
+            org.junit.jupiter.api.Assertions.assertFalse(released.isDone());
+            assertEquals(0, closes.get());
+            assertEquals(1, service.activeRequests());
+            deliverReceipt.run();
+            released.get(5, java.util.concurrent.TimeUnit.SECONDS);
+            var codec = new dev.openallay.bridge.protocol.ServerAgentEventCodec(gson);
+            var receipt = received.stream().filter(event -> event.eventType().equals("model_usage_observed"))
+                    .map(event -> (dev.openallay.agent.AgentEvent.ModelUsageObserved) codec.decode(event, requestId))
+                    .toList();
+            assertEquals(1, receipt.size());
+            assertEquals(partial, receipt.getFirst().usage());
+            assertEquals("request_released", received.getLast().eventType());
+            assertEquals(1, closes.get());
+            assertEquals(0, service.activeRequests());
+            int sealed = received.size();
+            raw.complete(turn("late provider answer"));
+            assertEquals(sealed, received.size());
+        } finally {
+            queuedReceipt.thenAccept(Runnable::run);
+            service.disconnect(actor);
+        }
+    }
+
+    @Test
+    void sameSessionIsBusyButDifferentSessionsForOnePlayerRunConcurrently() throws Exception {
         PendingModel model = new PendingModel();
         AgentSessionStore sessions = new AgentSessionStore();
         AgentToolExecutor tools = new EmptyTools();
-        List<ServerAgentEventPayload> events = new ArrayList<>();
+        List<ServerAgentEventPayload> events = new java.util.concurrent.CopyOnWriteArrayList<>();
+        java.util.concurrent.CountDownLatch released = new java.util.concurrent.CountDownLatch(3);
         ServerAgentService service = new ServerAgentService(
                 new GameGuideAgent(model, tools, sessions, new Gson()),
                 tools,
                 sessions,
                 (actor, capabilities, id, cancellation) -> CompletableFuture.completedFuture(
                         ToolInvocationContext.developmentConsole(id)),
-                (actor, event) -> events.add(event),
+                (actor, event) -> {
+                    events.add(event);
+                    if (event.eventType().equals("request_released")) released.countDown();
+                },
                 new Gson(),
                 "system");
         UUID actor = UUID.randomUUID();
         UUID firstId = UUID.randomUUID();
+        UUID busyId = UUID.randomUUID();
+        UUID otherId = UUID.randomUUID();
 
         assertInstanceOf(ToolResult.Success.class, service.ask(actor, request(firstId, "main")));
-        assertInstanceOf(ToolResult.Success.class, service.ask(actor, request(UUID.randomUUID(), "main")));
-        assertInstanceOf(ToolResult.Success.class, service.ask(actor, request(UUID.randomUUID(), "other")));
+        assertInstanceOf(ToolResult.Success.class, service.ask(actor, request(busyId, "main")));
+        assertInstanceOf(ToolResult.Success.class, service.ask(actor, request(otherId, "other")));
         assertEquals(2, model.pending.size());
         assertEquals(2, service.activeRequests());
 
         model.pending.get("main").complete(turn("main answer"));
         model.pending.get("other").complete(turn("other answer"));
+        org.junit.jupiter.api.Assertions.assertTrue(released.await(5, java.util.concurrent.TimeUnit.SECONDS),
+                "Each accepted request must release after actual cleanup and numeric receipts");
         assertEquals(0, service.activeRequests());
+        assertEquals(Set.of(firstId, busyId, otherId), events.stream()
+                .filter(event -> event.eventType().equals("request_released"))
+                .map(ServerAgentEventPayload::requestId).collect(java.util.stream.Collectors.toSet()));
+        assertEquals(3, events.stream().filter(event -> event.eventType().equals("request_released")).count());
+        assertEquals(2, events.stream().filter(event -> event.eventType().equals("model_usage_observed")).count());
+        assertEquals(0, events.stream().filter(event -> event.requestId().equals(busyId)
+                && event.eventType().equals("model_usage_started")).count());
         assertEquals(3, events.stream().filter(ServerAgentEventPayload::terminal).count());
         assertEquals(1, events.stream().filter(event -> event.eventJson().contains("agent_busy")).count());
     }

@@ -142,10 +142,11 @@ In **Settings → Models**:
 - **Reference prices:** compare published reference token rates and pricing tiers.
   Your provider's actual billing may vary.
 
-The chat footer shows a context estimate and budget, reported input/output
-tokens, and estimated cost when available. **An estimate is not a bill.** Missing usage or pricing
-stays unknown, not zero. Provider rates, caching, and reasoning charges can
-change the amount you pay.
+The chat footer shows the context estimate and budget, cumulative session cost,
+and cache hit rate when available. Session totals include actual model and automatic
+summary calls, including restored request history. **An estimate is not a bill.**
+Missing usage or pricing stays unknown or partial, not zero. Provider rates and
+unreported extra charges can change the amount you pay.
 
 OpenAllay is free and open source. Model providers may charge for API use.
 

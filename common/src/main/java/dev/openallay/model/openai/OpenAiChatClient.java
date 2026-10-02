@@ -29,6 +29,9 @@ public final class OpenAiChatClient implements ModelClient {
     }
 
     @Override
+    public boolean reportsAttemptStarted() { return true; }
+
+    @Override
     public CompletableFuture<ModelTurn> complete(
             ModelRequest request,
             Consumer<ModelEvent> events,

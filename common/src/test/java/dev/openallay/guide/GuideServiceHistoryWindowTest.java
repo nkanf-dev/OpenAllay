@@ -36,6 +36,28 @@ final class GuideServiceHistoryWindowTest {
             Instant.parse("2026-07-18T12:00:00Z"), ZoneOffset.UTC);
 
     @Test
+    void restoredNumericTotalsAreAvailableWithoutPagesAndSurviveSelectionChanges() {
+        var usage = new GuideUsageSnapshot(3_000, 200, 900, 100, 7, 7, false, false,
+                new java.math.BigDecimal("0.123456789"), false);
+        var inherited = new GuideUsageSnapshot(8_000, 400, 1_000, 0, 9, 9, false, false,
+                new java.math.BigDecimal("0.654321"), false);
+        var base = metadata();
+        var row = base.sessions().getFirst();
+        WindowHistory history = new WindowHistory(new GuideHistoryMetadata(SCOPE, "main",
+                List.of(new GuideHistoryMetadata.Session(row.sessionId(), row.ordinal(), row.modelSelection(),
+                        row.requestCount(), row.first(), row.last(), usage, inherited)), CLOCK.instant()));
+        GuideService service = service(history);
+        assertEquals(usage, service.telemetry().sessionUsage());
+        assertEquals(inherited, service.telemetry().inheritedUsage());
+        assertTrue(history.pages.isEmpty());
+        service.selectSession("other").join();
+        service.selectSession("main").join();
+        assertEquals(usage, service.telemetry().sessionUsage());
+        assertEquals(0, usage.estimatedUsd().compareTo(service.telemetry().sessionUsage().estimatedUsd()));
+        assertTrue(history.pages.isEmpty());
+    }
+
+    @Test
     void startupLoadsOnlyMetadataAndPublishesCountsWithoutBodies() {
         WindowHistory history = new WindowHistory(metadata());
         GuideService service = service(history);

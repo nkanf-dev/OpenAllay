@@ -11,6 +11,7 @@ import dev.openallay.model.CancellationSignal;
 import dev.openallay.model.ModelClient;
 import dev.openallay.model.ModelClientException;
 import dev.openallay.model.ModelContent;
+import dev.openallay.model.ModelEvent;
 import dev.openallay.model.ModelMessage;
 import dev.openallay.model.ModelRequest;
 import dev.openallay.model.ModelToolDefinition;
@@ -22,6 +23,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 
 /** One configured budget owns every active projection and summary request. */
 public final class ContextCompactor {
@@ -66,7 +68,7 @@ public final class ContextCompactor {
 
     public ContextCompactor(ModelClient model, Gson gson, ContextTokenEstimator estimator,
                             ContextBudget budget, String modelIdentifier, Clock clock) {
-        this.model = Objects.requireNonNull(model, "model");
+        Objects.requireNonNull(model, "model");
         this.gson = Objects.requireNonNull(gson, "gson");
         this.estimator = Objects.requireNonNull(estimator, "estimator");
         this.budget = Objects.requireNonNull(budget, "budget");
@@ -74,6 +76,7 @@ public final class ContextCompactor {
             throw new IllegalArgumentException("modelIdentifier is required");
         }
         this.modelIdentifier = modelIdentifier;
+        this.model = dev.openallay.model.ObservingModelClient.observe(model, modelIdentifier);
         this.clock = Objects.requireNonNull(clock, "clock");
     }
 
@@ -265,6 +268,17 @@ public final class ContextCompactor {
             java.util.function.Function<List<ModelMessage>, String> promptForProjection,
             List<ModelMessage> messages, int protectedFromIndex, List<ModelToolDefinition> tools,
             boolean stream, String schedulingKey, CancellationSignal cancellation) {
+        return compact(promptForProjection, messages, protectedFromIndex, tools, stream,
+                schedulingKey, cancellation, ignored -> {});
+    }
+
+    /** The observer belongs to this exact request, including all summary chunks and retries. */
+    public CompletableFuture<Result> compact(
+            java.util.function.Function<List<ModelMessage>, String> promptForProjection,
+            List<ModelMessage> messages, int protectedFromIndex, List<ModelToolDefinition> tools,
+            boolean stream, String schedulingKey, CancellationSignal cancellation,
+            Consumer<ModelEvent> usageObserver) {
+        Objects.requireNonNull(usageObserver, "usageObserver");
         cancellation.throwIfCancelled();
         List<ModelMessage> source = List.copyOf(messages);
         List<ModelToolDefinition> requestTools = List.copyOf(tools);
@@ -303,7 +317,7 @@ public final class ContextCompactor {
         List<String> serializedUnits = historyUnits.stream().map(unit ->
                 gson.toJson(ContextStructure.summarySafe(unit.messages()))).toList();
         return summarizeChunks(historyUnits, serializedUnits, 0, null, target, schedulingKey, cancellation,
-                        promptForProjection, suffix, requestTools)
+                        promptForProjection, suffix, requestTools, usageObserver)
                 .handle((summary, throwable) -> {
                     cancellation.throwIfCancelled();
                     if (throwable != null) {
@@ -331,7 +345,8 @@ public final class ContextCompactor {
             List<String> serialized, int from, JsonObject prior, int target, String schedulingKey,
             CancellationSignal cancellation,
             java.util.function.Function<List<ModelMessage>, String> finalPrompt,
-            List<ModelMessage> suffix, List<ModelToolDefinition> tools) {
+            List<ModelMessage> suffix, List<ModelToolDefinition> tools,
+            Consumer<ModelEvent> usageObserver) {
         cancellation.throwIfCancelled();
         String summarySystem = SUMMARY_SYSTEM + "\nBudget: " + target + " output tokens.";
         // Additive text costs are a planning hint, never admission proof. Native token merges and
@@ -387,11 +402,11 @@ public final class ContextCompactor {
                     ModelMessage.userText(DERIVED_PREFIX + summary),
                     ModelMessage.userText(nextPayload)), List.of()) <= inputTokenBudget();
         };
-        return summarizeAdmitted(admitted, cancellation, fits, false).thenCompose(summary -> {
+        return summarizeAdmitted(admitted, cancellation, fits, false, usageObserver).thenCompose(summary -> {
             cancellation.throwIfCancelled();
             if (following == units.size()) return CompletableFuture.completedFuture(summary);
             return summarizeChunks(units, serialized, following, summary, target, schedulingKey, cancellation,
-                    finalPrompt, suffix, tools);
+                    finalPrompt, suffix, tools, usageObserver);
         });
     }
 
@@ -409,13 +424,16 @@ public final class ContextCompactor {
 
     private CompletableFuture<JsonObject> summarizeAdmitted(ModelRequest admitted,
             CancellationSignal cancellation, java.util.function.Predicate<JsonObject> fits,
-            boolean targetedRetry) {
+            boolean targetedRetry, Consumer<ModelEvent> usageObserver) {
         cancellation.throwIfCancelled();
         if (estimateTokens(admitted.systemPrompt(), admitted.messages(), admitted.tools())
                 > inputTokenBudget()) return CompletableFuture.failedFuture(new ModelClientException(
                         new dev.openallay.model.ModelFailure("summary_input_over_budget",
                                 "Final summary request exceeds the configured input budget", null)));
-        return cancellation.observe(model.complete(admitted, ignored -> {}, cancellation))
+        return cancellation.observe(model.complete(admitted, event -> {
+                    if (event instanceof ModelEvent.UsageObserved
+                            || event instanceof ModelEvent.UsageStarted) usageObserver.accept(event);
+                }, cancellation))
                 .thenCompose(turn -> {
                     cancellation.throwIfCancelled();
                     JsonObject summary;
@@ -444,7 +462,7 @@ public final class ContextCompactor {
                                     new ModelClientException(new dev.openallay.model.ModelFailure(
                                             "summary_retry_input_over_budget",
                                             "Targeted summary retry cannot fit the configured input budget", null)));
-                    return summarizeAdmitted(retry, cancellation, fits, true);
+                    return summarizeAdmitted(retry, cancellation, fits, true, usageObserver);
                 });
     }
 

@@ -89,9 +89,7 @@ public final class AnthropicJsonCodec {
         JsonObject usageObject = usageValue == null || usageValue.isJsonNull()
                 ? null : usageValue.getAsJsonObject();
         ModelUsage usage = parseUsage(usageObject);
-        if (hasCount(usageObject, "input_tokens") && hasCount(usageObject, "output_tokens")) {
-            events.accept(new ModelEvent.UsageUpdate(usage));
-        }
+        if (usageObject != null) events.accept(new ModelEvent.UsageUpdate(usage));
         events.accept(new ModelEvent.MessageComplete(stopReason));
         return new ModelTurn("anthropic_messages", model, content, stopReason, usage);
     }
@@ -104,10 +102,11 @@ public final class AnthropicJsonCodec {
         if (object == null) {
             return ModelUsage.empty();
         }
-        return new ModelUsage(
-                longValue(object, "input_tokens"),
-                longValue(object, "output_tokens"),
-                longValue(object, "cache_read_input_tokens"));
+        return ModelUsage.anthropic(
+                longValue(object, "input_tokens"), hasCount(object, "input_tokens"),
+                longValue(object, "output_tokens"), hasCount(object, "output_tokens"),
+                longValue(object, "cache_read_input_tokens"), hasCount(object, "cache_read_input_tokens"),
+                longValue(object, "cache_creation_input_tokens"), hasCount(object, "cache_creation_input_tokens"));
     }
 
     private JsonObject encodeContent(ModelContent block, ProviderToolIds toolIds) {
@@ -181,7 +180,7 @@ public final class AnthropicJsonCodec {
 
     private static long longValue(JsonObject object, String field) {
         return object.has(field) && !object.get(field).isJsonNull()
-                ? object.get(field).getAsLong()
+                ? object.get(field).getAsBigDecimal().longValueExact()
                 : 0;
     }
 }

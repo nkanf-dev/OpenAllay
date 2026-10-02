@@ -8,6 +8,8 @@ public sealed interface ModelEvent
                 ModelEvent.ReasoningDelta,
                 ModelEvent.ToolUseComplete,
                 ModelEvent.UsageUpdate,
+                ModelEvent.UsageObserved,
+                ModelEvent.UsageStarted,
                 ModelEvent.AttemptStarted,
                 ModelEvent.ResponseStarted,
                 ModelEvent.RateLimited,
@@ -37,6 +39,24 @@ public sealed interface ModelEvent
     }
 
     record UsageUpdate(ModelUsage usage) implements ModelEvent {}
+
+    /** Numeric lifecycle boundary sharing its identity with the eventual usage receipt. */
+    record UsageStarted(java.util.UUID callId, String modelIdentifier) implements ModelEvent {
+        public UsageStarted {
+            Objects.requireNonNull(callId, "callId");
+            Objects.requireNonNull(modelIdentifier, "modelIdentifier");
+        }
+    }
+
+    /** Counts-only receipt for one actual provider attempt, not a streamed usage delta. */
+    record UsageObserved(java.util.UUID callId, String modelIdentifier, ModelUsage usage)
+            implements ModelEvent {
+        public UsageObserved {
+            Objects.requireNonNull(callId, "callId");
+            Objects.requireNonNull(modelIdentifier, "modelIdentifier");
+            Objects.requireNonNull(usage, "usage");
+        }
+    }
 
     /** Redacted lifecycle boundary. The relative attempt budget may be unavailable. */
     record AttemptStarted(int attempt, Long attemptTimeoutMillis) implements ModelEvent {

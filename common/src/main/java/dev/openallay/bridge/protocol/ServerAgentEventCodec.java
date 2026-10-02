@@ -79,6 +79,9 @@ public final class ServerAgentEventCodec {
                     read(body, Set.of("text"), ModelEvent.ReasoningDelta.class));
             case "tool_use_complete" -> new AgentEvent.ModelProgress(
                     read(body, Set.of("id", "name", "input"), ModelEvent.ToolUseComplete.class));
+            case "request_released" -> read(body, Set.of(), AgentEvent.RequestReleased.class);
+            case "model_usage_started" -> readUsageStarted(body);
+            case "model_usage_observed" -> readUsageObserved(body);
             case "usage" -> new AgentEvent.ModelProgress(
                     read(body, Set.of("usage"), ModelEvent.UsageUpdate.class));
             case "model_attempt_started" -> new AgentEvent.ModelProgress(
@@ -105,6 +108,59 @@ public final class ServerAgentEventCodec {
             throw new IllegalArgumentException("Server Agent event terminal flag is inconsistent");
         }
         return event;
+    }
+
+    private AgentEvent.ModelUsageStarted readUsageStarted(JsonObject body) {
+        if (!body.keySet().equals(Set.of("callId", "modelIdentifier"))
+                || !body.get("callId").isJsonPrimitive()
+                || !body.getAsJsonPrimitive("callId").isString()
+                || !body.get("modelIdentifier").isJsonPrimitive()
+                || !body.getAsJsonPrimitive("modelIdentifier").isString()) {
+            throw new IllegalArgumentException("Server model usage start schema mismatch");
+        }
+        return new AgentEvent.ModelUsageStarted(UUID.fromString(body.get("callId").getAsString()),
+                body.get("modelIdentifier").getAsString());
+    }
+
+    private AgentEvent.ModelUsageObserved readUsageObserved(JsonObject body) {
+        if (!body.keySet().equals(Set.of("callId", "modelIdentifier", "usage"))
+                || !body.get("callId").isJsonPrimitive()
+                || !body.getAsJsonPrimitive("callId").isString()
+                || !body.get("modelIdentifier").isJsonPrimitive()
+                || !body.getAsJsonPrimitive("modelIdentifier").isString()
+                || !body.get("usage").isJsonObject()) {
+            throw new IllegalArgumentException("Server model usage receipt schema mismatch");
+        }
+        JsonObject usage = body.getAsJsonObject("usage");
+        Set<String> counts = Set.of("inputTokens", "outputTokens", "cacheReadTokens",
+                "cacheWriteTokens", "uncachedInputTokens");
+        Set<String> known = Set.of("inputKnown", "outputKnown", "cacheReadKnown",
+                "cacheWriteKnown", "uncachedInputKnown");
+        java.util.HashSet<String> fields = new java.util.HashSet<>(counts);
+        fields.addAll(known);
+        if (!usage.keySet().equals(fields)) {
+            throw new IllegalArgumentException("Server model usage fields mismatch");
+        }
+        for (String field : counts) {
+            if (!usage.get(field).isJsonPrimitive() || !usage.getAsJsonPrimitive(field).isNumber()) {
+                throw new IllegalArgumentException("Server model usage count must be an integer");
+            }
+            try {
+                if (usage.get(field).getAsBigDecimal().longValueExact() < 0) {
+                    throw new IllegalArgumentException("Server model usage count must be nonnegative");
+                }
+            } catch (ArithmeticException invalid) {
+                throw new IllegalArgumentException("Server model usage count is invalid", invalid);
+            }
+        }
+        for (String field : known) {
+            if (!usage.get(field).isJsonPrimitive() || !usage.getAsJsonPrimitive(field).isBoolean()) {
+                throw new IllegalArgumentException("Server model usage presence must be boolean");
+            }
+        }
+        return new AgentEvent.ModelUsageObserved(UUID.fromString(body.get("callId").getAsString()),
+                body.get("modelIdentifier").getAsString(),
+                gson.fromJson(usage, dev.openallay.model.ModelUsage.class));
     }
 
     private AgentEvent.ContextUpdated readContext(JsonObject body) {
@@ -189,11 +245,18 @@ public final class ServerAgentEventCodec {
             case AgentEvent.ToolCompleted ignored -> "tool_completed";
             case AgentEvent.FinalText ignored -> "final_text";
             case AgentEvent.Failed ignored -> "failed";
+            case AgentEvent.RequestReleased ignored -> "request_released";
+            case AgentEvent.ModelUsageStarted ignored -> "model_usage_started";
+            case AgentEvent.ModelUsageObserved ignored -> "model_usage_observed";
             case AgentEvent.ModelProgress progress -> switch (progress.event()) {
                 case ModelEvent.TextDelta ignored -> "text_delta";
                 case ModelEvent.ReasoningDelta ignored -> "reasoning_delta";
                 case ModelEvent.ToolUseComplete ignored -> "tool_use_complete";
                 case ModelEvent.UsageUpdate ignored -> "usage";
+                case ModelEvent.UsageStarted ignored -> throw new IllegalArgumentException(
+                        "Usage starts must use AgentEvent.ModelUsageStarted");
+                case ModelEvent.UsageObserved ignored -> throw new IllegalArgumentException(
+                        "Usage receipts must use AgentEvent.ModelUsageObserved");
                 case ModelEvent.AttemptStarted ignored -> "model_attempt_started";
                 case ModelEvent.ResponseStarted ignored -> "model_response_started";
                 case ModelEvent.RateLimited ignored -> "rate_limited";

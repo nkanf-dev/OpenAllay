@@ -115,7 +115,9 @@ public final class ServerAgentService {
             runtime.close().run();
             return new ToolResult.Failure<>("duplicate_request", "Request ID is already active");
         }
-        dispatchReady.apply(owner.cancellation())
+        CompletableFuture<?> work;
+        try {
+            work = dispatchReady.apply(owner.cancellation())
                 .thenCompose(ignored -> {
                     if (!owns(payload.requestId(), owner) || owner.cancellation().isCancelled()) {
                         return CompletableFuture.completedFuture(null);
@@ -131,6 +133,12 @@ public final class ServerAgentService {
                             || !owns(payload.requestId(), owner)
                             || owner.cancellation().isCancelled()) {
                         return CompletableFuture.completedFuture(null);
+                    }
+                    synchronized (owner) {
+                        if (!owns(payload.requestId(), owner) || owner.cancellation().isCancelled()) {
+                            return CompletableFuture.completedFuture(null);
+                        }
+                        owner.engineStarted = true;
                     }
                     AgentRequest request = new AgentRequest(
                             payload.requestId(),
@@ -151,81 +159,105 @@ public final class ServerAgentService {
                             : runtime.agent().askWithHistory(request, restored,
                                     event -> publish(payload.requestId(), owner, event));
                 })
-                .exceptionally(throwable -> {
-                    publishFailure(payload.requestId(), owner, throwable);
-                    return null;
-                });
+                ;
+        } catch (RuntimeException failure) {
+            work = CompletableFuture.failedFuture(failure);
+        }
+        work.whenComplete((result, failure) -> {
+            try {
+                if (failure != null) publishFailure(payload.requestId(), owner, failure);
+            } finally {
+                synchronized (owner) {
+                    owner.engineFinished = true;
+                    releaseIfFinished(payload.requestId(), owner);
+                }
+            }
+        });
         return new ToolResult.Success<>(new Accepted(payload.requestId(), payload.sessionId()));
     }
 
     public boolean cancel(UUID sender, UUID requestId) {
         Owner owner = active.get(requestId);
-        if (owner == null || !owner.actorId().equals(sender)) {
-            return false;
-        }
-        boolean cancelledBeforeCapture = owner.cancellation().cancel();
-        boolean cancelledAgent = sessions.cancel(
-                new AgentSessionKey(sender, owner.sessionId()), requestId);
-        if (cancelledBeforeCapture || cancelledAgent) {
-            if (!cancelledAgent) {
+        if (owner == null || !owner.actorId().equals(sender)) return false;
+        synchronized (owner) {
+            if (!owns(requestId, owner) || owner.terminal) return false;
+            if (!owner.engineStarted) {
                 List<ModelMessage> original = List.of(ModelMessage.userText(owner.question()),
-                        new ModelMessage(dev.openallay.model.ModelRole.ASSISTANT,
-                                List.of(new dev.openallay.model.ModelContent.Text(
-                                        "[OpenAllay request ended: agent_cancelled] Agent request was cancelled"))));
+                        new ModelMessage(ModelRole.ASSISTANT, List.of(new ModelContent.Text(
+                                "[OpenAllay request ended: agent_cancelled] Agent request was cancelled"))));
                 List<ModelMessage> projected = new java.util.ArrayList<>(owner.history());
                 projected.addAll(original);
                 publish(requestId, owner, new AgentEvent.ContextFinalized(projected, original));
-                publish(requestId, owner, new AgentEvent.Failed(
-                        "agent_cancelled", "Agent request was cancelled"));
+                publish(requestId, owner, new AgentEvent.Failed("agent_cancelled", "Agent request was cancelled"));
+                owner.cancellation().cancel();
+                owner.engineFinished = true;
+                releaseIfFinished(requestId, owner);
+                return true;
             }
-            return true;
+            boolean beforeCapture = owner.cancellation().cancel();
+            boolean agent = sessions.cancel(new AgentSessionKey(sender, owner.sessionId()), requestId);
+            return beforeCapture || agent;
         }
-        return false;
     }
 
     public int disconnect(UUID sender) {
-        long count = active.values().stream().filter(owner -> owner.actorId().equals(sender)).count();
-        active.entrySet().removeIf(entry -> {
-            if (entry.getValue().actorId().equals(sender)) {
-                entry.getValue().cancellation().cancel();
-                entry.getValue().runtime().close().run();
-                return true;
+        int count = 0;
+        for (var entry : active.entrySet()) {
+            Owner owner = entry.getValue();
+            if (!owner.actorId().equals(sender)) continue;
+            synchronized (owner) {
+                if (!owns(entry.getKey(), owner)) continue;
+                count++;
+                owner.disconnected = true;
+                owner.cancellation().cancel();
+                if (!owner.engineStarted) owner.engineFinished = true;
+                releaseIfFinished(entry.getKey(), owner);
             }
-            return false;
-        });
+        }
         sessions.clearActor(sender);
-        return Math.toIntExact(count);
+        return count;
     }
 
     public int activeRequests() {
-        return active.size();
+        return (int) active.values().stream().filter(owner -> !owner.disconnected).count();
     }
 
     private void publish(UUID requestId, Owner owner, AgentEvent event) {
-        if (!owns(requestId, owner)) {
-            return;
-        }
-        boolean terminal = event instanceof AgentEvent.FinalText || event instanceof AgentEvent.Failed;
-        events.send(owner.actorId(), eventCodec.encode(requestId, event));
-        if (terminal) {
-            if (active.remove(requestId, owner)) {
-                owner.runtime().close().run();
+        synchronized (owner) {
+            if (!owns(requestId, owner) || owner.released) return;
+            boolean numeric = event instanceof AgentEvent.ModelUsageStarted
+                    || event instanceof AgentEvent.ModelUsageObserved;
+            if (owner.terminal && !numeric) return;
+            if (event instanceof AgentEvent.ModelUsageStarted started) owner.pendingCalls.add(started.callId());
+            if (event instanceof AgentEvent.FinalText || event instanceof AgentEvent.Failed) owner.terminal = true;
+            try {
+                if (!owner.disconnected) events.send(owner.actorId(), eventCodec.encode(requestId, event));
+            } finally {
+                if (event instanceof AgentEvent.ModelUsageObserved observed) owner.pendingCalls.remove(observed.callId());
+                releaseIfFinished(requestId, owner);
             }
+        }
+    }
+
+    private void releaseIfFinished(UUID requestId, Owner owner) {
+        if (owner.released || !owner.engineFinished || !owner.pendingCalls.isEmpty()) return;
+        owner.released = true;
+        active.remove(requestId, owner);
+        try {
+            owner.runtime().close().run();
+        } finally {
+            if (!owner.disconnected) events.send(owner.actorId(), eventCodec.encode(requestId,
+                    new AgentEvent.RequestReleased()));
         }
     }
 
     private void publishFailure(UUID requestId, Owner owner, Throwable throwable) {
-        if (!active.remove(requestId, owner)) {
-            return;
-        }
-        owner.runtime().close().run();
         Throwable cause = throwable;
         while (cause instanceof java.util.concurrent.CompletionException && cause.getCause() != null) {
             cause = cause.getCause();
         }
         String message = cause.getMessage() == null ? cause.getClass().getSimpleName() : cause.getMessage();
-        AgentEvent.Failed failed = new AgentEvent.Failed("server_agent_failure", message);
-        events.send(owner.actorId(), eventCodec.encode(requestId, failed));
+        publish(requestId, owner, new AgentEvent.Failed("server_agent_failure", message));
     }
 
     private boolean owns(UUID requestId, Owner owner) {
@@ -251,15 +283,34 @@ public final class ServerAgentService {
         }
     }
 
-    private record Owner(
-            UUID actorId,
-            String sessionId,
-            String question,
-            List<ModelMessage> history,
-            dev.openallay.model.CancellationSignal cancellation,
-            RequestRuntime runtime) {
-        private Owner {
-            history = dev.openallay.agent.context.ModelContextCodec.safe(history);
+    private static final class Owner {
+        private final UUID actorId;
+        private final String sessionId;
+        private final String question;
+        private final List<ModelMessage> history;
+        private final dev.openallay.model.CancellationSignal cancellation;
+        private final RequestRuntime runtime;
+        private final Set<UUID> pendingCalls = new java.util.HashSet<>();
+        private boolean terminal;
+        private boolean engineStarted;
+        private boolean engineFinished;
+        private boolean released;
+        private boolean disconnected;
+
+        private Owner(UUID actorId, String sessionId, String question, List<ModelMessage> history,
+                dev.openallay.model.CancellationSignal cancellation, RequestRuntime runtime) {
+            this.actorId = actorId;
+            this.sessionId = sessionId;
+            this.question = question;
+            this.history = dev.openallay.agent.context.ModelContextCodec.safe(history);
+            this.cancellation = cancellation;
+            this.runtime = runtime;
         }
+        private UUID actorId() { return actorId; }
+        private String sessionId() { return sessionId; }
+        private String question() { return question; }
+        private List<ModelMessage> history() { return history; }
+        private dev.openallay.model.CancellationSignal cancellation() { return cancellation; }
+        private RequestRuntime runtime() { return runtime; }
     }
 }

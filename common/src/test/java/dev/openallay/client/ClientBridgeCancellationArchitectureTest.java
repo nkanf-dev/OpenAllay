@@ -18,8 +18,11 @@ final class ClientBridgeCancellationArchitectureTest {
             String source = Files.readString(bridge);
             String cancel = block(source, "public boolean cancelServer(UUID requestId)");
             assertTrue(source.contains("Map<UUID, ServerRequest> serverRequests"), bridge::toString);
-            assertTrue(source.contains(
-                    "serverRequests.put(request.requestId(), new ServerRequest(events))"),
+            String ask = block(source, "public boolean askServer(");
+            assertTrue(ask.contains("new ServerRequest(events)"), bridge::toString);
+            assertTrue(ask.contains("serverRequests.put(request.requestId()")
+                    || ask.contains("serverRequests.putIfAbsent(request.requestId()"), bridge::toString);
+            assertTrue(ask.indexOf("serverRequests.put") < ask.indexOf("requestChunker.split("),
                     bridge::toString);
             assertTrue(cancel.contains("ServerRequest request = serverRequests.get(requestId)"),
                     bridge::toString);
@@ -36,7 +39,7 @@ final class ClientBridgeCancellationArchitectureTest {
     }
 
     @Test
-    void bothLoadersDrainCancelledCallbacksOnlyAfterFinalHandoffAndTerminalDelivery()
+    void bothLoadersKeepCancelledCallbacksThroughUsageAndDrainOnlyAfterActualRelease()
             throws Exception {
         List<Path> bridges = clientBridges();
         String fabric = Files.readString(bridges.get(0));
@@ -54,24 +57,29 @@ final class ClientBridgeCancellationArchitectureTest {
             String source = Files.readString(bridge);
             String receive = block(source,
                     "private void receiveAgentEvent(ServerAgentEventPayload event)");
-            assertTrue(receive.contains("if (terminal && !request.cancelled)"), bridge::toString);
+            assertTrue(receive.contains("boolean released = \"request_released\".equals(event.eventType())"),
+                    bridge::toString);
+            assertTrue(receive.contains("request = serverRequests.get(event.requestId())"), bridge::toString);
             assertTrue(receive.contains("request.events.accept(event)"), bridge::toString);
-            assertTrue(receive.contains(
-                    "if (\"context_finalized\".equals(event.eventType())) request.contextFinalized = true"),
-                    bridge::toString);
             assertTrue(receive.contains("if (terminal) request.terminal = true"), bridge::toString);
-            assertTrue(receive.contains(
-                    "request.cancelled && request.contextFinalized && request.terminal"),
-                    bridge::toString);
+            // Terminal UI and cancellation do not discard a later actual usage receipt. Removal
+            // is guarded by the real release event, never by the terminal/context flags.
+            assertTrue(receive.contains("if (released)")
+                    || receive.contains("if (released && serverRequests.remove"), bridge::toString);
             assertTrue(receive.contains("serverRequests.remove(event.requestId(), request)"),
                     bridge::toString);
-            assertTrue(receive.indexOf("request.events.accept(event)")
-                    < receive.indexOf("request.contextFinalized = true"), bridge::toString);
-            assertTrue(receive.indexOf("request.events.accept(event)")
-                    < receive.indexOf("request.terminal = true"), bridge::toString);
-            assertTrue(receive.indexOf("serverRequests.remove(event.requestId(), request)")
-                    < receive.lastIndexOf("clearAgentEventChunksLocked(event.requestId())"),
+            assertFalse(receive.contains("request.cancelled && request.contextFinalized && request.terminal"),
                     bridge::toString);
+            assertFalse(receive.contains("if (terminal && !request.cancelled)"), bridge::toString);
+            assertTrue(receive.indexOf("request.events.accept(event)")
+                    < receive.indexOf("serverRequests.remove(event.requestId(), request)"), bridge::toString);
+            assertTrue(receive.indexOf("serverRequests.remove(event.requestId(), request)")
+                    < receive.lastIndexOf("clearAgentEventChunksLocked(event.requestId())"), bridge::toString);
+            assertTrue(receive.contains("if (terminal || released)"), bridge::toString);
+            // Released can synchronously dispatch the next request. Its old tool scope must
+            // already be closed when the callback runs; callback cleanup cannot race it.
+            assertTrue(receive.indexOf("endpoint.close(event.requestId())")
+                    < receive.indexOf("request.events.accept(event)"), bridge::toString);
             String chunk = block(source,
                     "private void receiveAgentEventChunk(ServerAgentEventChunkPayload chunk)");
             assertTrue(chunk.contains("serverRequests.containsKey(chunk.requestId())"),

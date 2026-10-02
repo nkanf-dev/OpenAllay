@@ -124,19 +124,15 @@ public final class GuideService implements GuideHistoryAdministration {
     }
 
     private GuideTelemetrySnapshot buildTelemetry() {
-        GuideTelemetrySnapshot unknown = GuideTelemetrySnapshot.unknown(
-                snapshot.selectedSession(), snapshot.modelSelection());
-        if (disconnected) return unknown;
         SessionState selected = sessions.get(snapshot.selectedSession());
-        if (selected == null || selected.requests.isEmpty()) return unknown;
-        GuideRequestSnapshot latest = selected.requests.getLast();
+        if (selected == null) return GuideTelemetrySnapshot.unknown(
+                snapshot.selectedSession(), snapshot.modelSelection());
         GuideUsageTracker usage = selected.usage;
-        if (!latest.requestId().equals(usage.requestId())
-                || !snapshot.modelSelection().equals(usage.selection())) return unknown;
-        String currentModel = publicModelIdentifier(snapshot.modelSelection());
-        if (!Objects.equals(currentModel, usage.modelIdentifier())) return unknown;
-        return new GuideTelemetrySnapshot(selected.id, usage.selection(), usage.requestId(),
-                contextEstimate().orElse(null), usage.requestSnapshot(), usage.sessionSnapshot());
+        GuideRequestSnapshot latest = selected.requests.isEmpty() ? null : selected.requests.getLast();
+        GuideUsageSnapshot requestUsage = latest == null ? GuideUsageSnapshot.empty() : latest.usageProjection();
+        return new GuideTelemetrySnapshot(selected.id, snapshot.modelSelection(),
+                latest == null ? null : latest.requestId(), contextEstimate().orElse(null),
+                requestUsage, usage.sessionSnapshot(), usage.inheritedSnapshot());
     }
 
     private String publicModelIdentifier(GuideModelSelection selection) {
@@ -162,7 +158,8 @@ public final class GuideService implements GuideHistoryAdministration {
             return java.util.Optional.empty();
         }
         return local.contextEstimate(selected.modelSelection().profileId(), actor, selected.sessionId())
-                .filter(estimate -> estimate.requestId().equals(request.requestId()));
+                .filter(estimate -> estimate.requestId().equals(request.requestId())
+                        && Objects.equals(estimate.modelIdentifier(), publicModelIdentifier(selected.modelSelection())));
     }
 
     public GuideSubscription subscribe(Consumer<GuideSnapshot> listener) {
@@ -213,6 +210,11 @@ public final class GuideService implements GuideHistoryAdministration {
             apply(active.requestId(), new AgentEvent.ContextUpdated(current, original));
             apply(active.requestId(), new AgentEvent.Failed(
                     "agent_cancelled", "Agent request was cancelled"));
+            if (!preparingContext) {
+                GuideRequestSnapshot cancelled = find(active.requestId());
+                session.usageCarriers.put(active.requestId(), new UsageCarrier(
+                        Objects.requireNonNull(session.requestSequences.get(active.requestId())), cancelled.usageProjection()));
+            }
             if (preparingContext) {
                 cancelHistoryContextBarrier(active.requestId());
                 session.contextGeneration++;
@@ -292,6 +294,8 @@ public final class GuideService implements GuideHistoryAdministration {
             invalidatePageLoad(session, "history_page_cancelled", "History page request was cancelled");
             session.requests.forEach(request -> cancelHistoryContextBarrier(request.requestId()));
             session.requests.forEach(request -> requestSessions.remove(request.requestId()));
+            session.usageCarriers.keySet().forEach(requestSessions::remove);
+            session.usageCarriers.clear();
             capturedProjection.removeSession(sessionId);
             pendingHistoryMutations.add(new GuideHistoryMutation.DeleteSession(sessionId));
             pendingCancelledFinalization.entrySet().removeIf(
@@ -377,6 +381,8 @@ public final class GuideService implements GuideHistoryAdministration {
             session.requests.forEach(request -> requestSessions.remove(request.requestId()));
             capturedProjection.clearSession(session.id);
             session.requests.clear();
+            session.usageCarriers.keySet().forEach(requestSessions::remove);
+            session.usageCarriers.clear();
             session.usage = new GuideUsageTracker();
             session.messages.clear();
             session.checkpoints.clear();
@@ -910,11 +916,11 @@ public final class GuideService implements GuideHistoryAdministration {
                             question,
                             context,
                             event -> dispatcher.execute(() -> apply(requestId, event)))
-                    .whenComplete((ignored, throwable) -> {
-                        if (throwable != null) {
-                            dispatcher.execute(() -> failIfActive(requestId, throwable));
-                        }
-                    });
+                    .whenComplete((ignored, throwable) -> dispatcher.execute(() -> {
+                        if (throwable != null) failIfActive(requestId, throwable);
+                        // Local runtime completes only after handing off all numeric call receipts.
+                        releaseUsageOwner(requestId);
+                    }));
         } catch (RuntimeException failure) {
             apply(requestId, new AgentEvent.Failed(
                     "agent_failure", message(failure)));
@@ -932,10 +938,16 @@ public final class GuideService implements GuideHistoryAdministration {
                 request.requestId(), request.sessionId(), request.topology(), request.userMessage(),
                 request.timeline(), status, request.sources(), request.usage(),
                 request.retryAfterMillis(), request.failure(), request.createdAt(),
-                progress.lastProgressAt(), request.terminalAt(), request.modelSelection(), progress);
+                progress.lastProgressAt(), request.terminalAt(), request.modelSelection(), progress,
+                request.usageProjection(), request.usageOriginRequestId());
     }
 
     private void apply(UUID requestId, AgentEvent event) {
+        if (disconnected) return;
+        if (event instanceof AgentEvent.RequestReleased) {
+            releaseUsageOwner(requestId);
+            return;
+        }
         if (event instanceof AgentEvent.ContextFinalized finalized) {
             CancelledFinalization pending = pendingCancelledFinalization.remove(requestId);
             if (disconnected || pending == null) return;
@@ -959,11 +971,30 @@ public final class GuideService implements GuideHistoryAdministration {
         String sessionId = requestSessions.get(requestId);
         if (sessionId == null) return;
         SessionState session = sessions.get(sessionId);
+        if (session == null) return;
         int index = indexOf(session, requestId);
-        if (index < 0) return;
-        GuideRequestSnapshot target = session.requests.get(index);
-        if (target.terminal()) return;
-        if (requestId.equals(session.usage.requestId())) session.usage.accept(event);
+        UsageCarrier carrier = session.usageCarriers.get(requestId);
+        if (index < 0 && carrier == null) return;
+        GuideRequestSnapshot target = index >= 0 ? session.requests.get(index)
+                : capturedProjection.requests.get(requestId);
+        if (target == null) return;
+        // Numeric source observations may finish after visible cancellation. They update only cost.
+        if (event instanceof AgentEvent.ModelUsageObserved || event instanceof AgentEvent.ModelUsageStarted) {
+            if (target.usageOriginRequestId() != null) return;
+            if (session.usage.accept(requestId, event)) {
+                GuideRequestSnapshot charged = target.withUsageProjection(session.usage.requestSnapshot(requestId));
+                if (index >= 0) session.requests.set(index, charged);
+                if (carrier != null) {
+                    session.usageCarriers.put(requestId, new UsageCarrier(carrier.sequence(), charged.usageProjection()));
+                }
+                if (index < 0 && incrementalHistory) {
+                    pendingHistoryMutations.add(new GuideHistoryMutation.UpsertRequest(carrier.sequence(), charged));
+                }
+                publish();
+            }
+            return;
+        }
+        if (index < 0 || target.terminal()) return;
         if (event instanceof AgentEvent.ContextUpdated updated) {
             session.modelContext = updated.messages();
             session.originalContext.put(requestId, updated.requestMessages());
@@ -986,6 +1017,7 @@ public final class GuideService implements GuideHistoryAdministration {
         if (before == after) {
             return;
         }
+        after = after.withUsageProjection(before.usageProjection());
         session.requests.set(index, after);
         if (after.terminal()) contexts.closeRequest(requestId.toString());
         if (after.status() == GuideRequestStatus.COMPLETED
@@ -997,6 +1029,15 @@ public final class GuideService implements GuideHistoryAdministration {
                     after.terminalAt()));
         }
         publish();
+    }
+
+    private void releaseUsageOwner(UUID requestId) {
+        String sessionId = requestSessions.get(requestId);
+        SessionState session = sessionId == null ? null : sessions.get(sessionId);
+        if (session == null) return;
+        if (!session.usage.release(requestId)) return;
+        session.usageCarriers.remove(requestId);
+        if (indexOf(session, requestId) < 0) requestSessions.remove(requestId);
     }
 
     private void failIfActive(UUID requestId, Throwable throwable) {
@@ -1148,6 +1189,7 @@ public final class GuideService implements GuideHistoryAdministration {
                     ? defaultClientSelection() : snapshot.modelSelection();
             SessionState session = new SessionState(snapshot.sessionId(), restored);
             session.totalRequests = snapshot.requestCount();
+            session.usage.restore(snapshot.usage(), snapshot.inheritedUsage());
             session.firstAvailable = snapshot.first();
             session.lastAvailable = snapshot.last();
             session.hasEarlier = snapshot.requestCount() > 0;
@@ -1287,7 +1329,7 @@ public final class GuideService implements GuideHistoryAdministration {
         session.requests.clear();
         session.requests.addAll(unique.values());
         previous.keySet().stream()
-                .filter(requestId -> !unique.containsKey(requestId))
+                .filter(requestId -> !unique.containsKey(requestId) && !session.usageCarriers.containsKey(requestId))
                 .forEach(requestSessions::remove);
         page.requests().forEach(request -> requestSessions.put(request.requestId(), session.id));
         if (page.first() != null) {
@@ -1505,7 +1547,10 @@ public final class GuideService implements GuideHistoryAdministration {
                 request.requestId(), request.sessionId(), request.topology(), request.userMessage(),
                 List.of(), request.status(), List.of(), request.usage(),
                 request.retryAfterMillis(), request.failure(), request.createdAt(),
-                request.updatedAt(), request.terminalAt(), request.modelSelection());
+                request.updatedAt(), request.terminalAt(), request.modelSelection(),
+                GuideRequestSnapshot.legacyProgress(request.status(), request.retryAfterMillis(),
+                        request.createdAt(), request.updatedAt()),
+                request.usageProjection(), request.usageOriginRequestId());
     }
 
     private void finishHistorySave(HistoryWrite batch, Throwable failure) {
@@ -1565,7 +1610,10 @@ public final class GuideService implements GuideHistoryAdministration {
                 request.createdAt(),
                 request.updatedAt(),
                 request.terminalAt(),
-                request.modelSelection());
+                request.modelSelection(),
+                GuideRequestSnapshot.legacyProgress(request.status(), request.retryAfterMillis(),
+                        request.createdAt(), request.updatedAt()),
+                request.usageProjection(), request.usageOriginRequestId());
     }
 
     private <T> boolean rejectStateChange(CompletableFuture<ToolResult<T>> result) {
@@ -1682,6 +1730,8 @@ public final class GuideService implements GuideHistoryAdministration {
         private long totalRequests;
         private long nextRequestSequence;
         private final Map<UUID, Long> requestSequences = new LinkedHashMap<>();
+        // Only numeric projections of visibly cancelled in-flight owners; no retained bodies.
+        private final Map<UUID, UsageCarrier> usageCarriers = new LinkedHashMap<>();
         private GuideHistoryCursor firstAvailable;
         private GuideHistoryCursor lastAvailable;
         private GuideHistoryCursor firstLoaded;
@@ -1707,6 +1757,7 @@ public final class GuideService implements GuideHistoryAdministration {
     }
 
     private record CancelledFinalization(String sessionId, long sequence) {}
+    private record UsageCarrier(long sequence, GuideUsageSnapshot usage) {}
 
     private record PageKey(
             GuideHistoryPageRequest.Direction direction,

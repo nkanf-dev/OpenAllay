@@ -22,6 +22,60 @@ final class ServerAgentEventCodecTest {
     private final ServerAgentEventCodec codec = new ServerAgentEventCodec(new Gson());
 
     @Test
+    void actualCallStartRoundTripsStrictIdentityOnly() {
+        UUID request = UUID.randomUUID();
+        AgentEvent.ModelUsageStarted original = new AgentEvent.ModelUsageStarted(UUID.randomUUID(), "model");
+        ServerAgentEventPayload encoded = codec.encode(request, original);
+        assertEquals("model_usage_started", encoded.eventType());
+        assertEquals(false, encoded.terminal());
+        assertEquals(original, codec.decode(encoded, request));
+        JsonObject body = JsonParser.parseString(encoded.eventJson()).getAsJsonObject();
+        assertEquals(Set.of("callId", "modelIdentifier"), body.keySet());
+        body.addProperty("unknown", true);
+        assertThrows(IllegalArgumentException.class, () -> codec.decode(new ServerAgentEventPayload(
+                request, encoded.eventType(), body.toString(), false), request));
+    }
+
+    @Test
+    void actualCallReceiptRoundTripsCountsOnlyWithStrictKnownBitsAndRequestIdentity() {
+        UUID request = UUID.randomUUID();
+        AgentEvent.ModelUsageObserved original = new AgentEvent.ModelUsageObserved(
+                UUID.randomUUID(), "actual-model", ModelUsage.openAi(12, true, 0, false, 0, false));
+        ServerAgentEventPayload encoded = codec.encode(request, original);
+        assertEquals("model_usage_observed", encoded.eventType());
+        assertEquals(false, encoded.terminal());
+        assertEquals(original, codec.decode(encoded, request));
+        JsonObject body = JsonParser.parseString(encoded.eventJson()).getAsJsonObject();
+        assertEquals(Set.of("callId", "modelIdentifier", "usage"), body.keySet());
+        assertEquals(Set.of("inputTokens", "outputTokens", "cacheReadTokens", "cacheWriteTokens",
+                "uncachedInputTokens", "inputKnown", "outputKnown", "cacheReadKnown",
+                "cacheWriteKnown", "uncachedInputKnown"), body.getAsJsonObject("usage").keySet());
+        assertThrows(IllegalArgumentException.class, () -> codec.decode(encoded, UUID.randomUUID()));
+        assertThrows(IllegalArgumentException.class, () -> codec.decode(new ServerAgentEventPayload(
+                request, encoded.eventType(), encoded.eventJson(), true), request));
+        for (String field : List.copyOf(body.getAsJsonObject("usage").keySet())) {
+            JsonObject missing = body.deepCopy();
+            missing.getAsJsonObject("usage").remove(field);
+            assertThrows(IllegalArgumentException.class, () -> codec.decode(new ServerAgentEventPayload(
+                    request, encoded.eventType(), missing.toString(), false), request));
+        }
+        for (String bad : List.of("\"12\"", "1.5", "-1", "9223372036854775808", "null")) {
+            JsonObject invalid = body.deepCopy();
+            invalid.getAsJsonObject("usage").add("inputTokens", JsonParser.parseString(bad));
+            assertThrows(IllegalArgumentException.class, () -> codec.decode(new ServerAgentEventPayload(
+                    request, encoded.eventType(), invalid.toString(), false), request));
+        }
+        JsonObject invalidKnown = body.deepCopy();
+        invalidKnown.getAsJsonObject("usage").addProperty("inputKnown", "true");
+        assertThrows(IllegalArgumentException.class, () -> codec.decode(new ServerAgentEventPayload(
+                request, encoded.eventType(), invalidKnown.toString(), false), request));
+        JsonObject extra = body.deepCopy();
+        extra.addProperty("providerBody", "not permitted");
+        assertThrows(IllegalArgumentException.class, () -> codec.decode(new ServerAgentEventPayload(
+                request, encoded.eventType(), extra.toString(), false), request));
+    }
+
+    @Test
     void truthfulContextRoundTripsOriginalProgramsPlaintextErrorsAndStrictShape() {
         UUID request = UUID.randomUUID();
         JsonObject input = new JsonObject();

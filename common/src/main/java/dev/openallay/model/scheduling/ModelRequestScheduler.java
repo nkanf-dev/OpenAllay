@@ -43,7 +43,7 @@ public final class ModelRequestScheduler implements ModelClient {
     }
 
     ModelRequestScheduler(ModelClient delegate, Duration transportRetryDelay, int transportRetries) {
-        this.delegate = java.util.Objects.requireNonNull(delegate, "delegate");
+        this.delegate = dev.openallay.model.ObservingModelClient.observe(delegate);
         this.transportRetryDelay = java.util.Objects.requireNonNull(
                 transportRetryDelay, "transportRetryDelay");
         if (transportRetryDelay.isNegative() || transportRetries < 0) {
@@ -51,6 +51,9 @@ public final class ModelRequestScheduler implements ModelClient {
         }
         this.transportRetries = transportRetries;
     }
+
+    @Override
+    public boolean observesUsage() { return true; }
 
     @Override
     public CompletableFuture<ModelTurn> complete(
@@ -162,6 +165,13 @@ public final class ModelRequestScheduler implements ModelClient {
         delegate.complete(
                         pending.request,
                         event -> {
+                            if (event instanceof ModelEvent.UsageObserved
+                                    || event instanceof ModelEvent.UsageStarted) {
+                                // Receipts remain request-scoped after cancellation/deadline expiry.
+                                // They are not response progress and must not disable safe retries.
+                                pending.events.accept(event);
+                                return;
+                            }
                             if (pending.recoveryDeadlineNanos != 0
                                     && pending.recoveryDeadlineNanos - System.nanoTime() <= 0) {
                                 expireRecovery(pending);

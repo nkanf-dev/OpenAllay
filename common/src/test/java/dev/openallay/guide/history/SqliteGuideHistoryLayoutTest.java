@@ -31,6 +31,23 @@ final class SqliteGuideHistoryLayoutTest {
     @TempDir Path temporary;
 
     @Test
+    void oldTokenOnlyRequestShapeIsRejectedWithoutResettingTheDatabase() throws Exception {
+        Path database = temporary.resolve("old-token-shape.db");
+        store(database).metadata(SCOPE);
+        try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
+                var statement = connection.createStatement()) {
+            statement.execute("alter table requests rename column model_usage_json to input_tokens");
+            statement.execute("alter table requests rename column usage_projection_json to output_tokens");
+            statement.execute("alter table requests rename column usage_origin_request_id to cache_read_tokens");
+        }
+        byte[] before = Files.readAllBytes(database);
+        GuideHistoryException failure = assertThrows(GuideHistoryException.class,
+                () -> store(database).metadata(SCOPE));
+        assertEquals("history_corrupt", failure.code());
+        assertTrue(Arrays.equals(before, Files.readAllBytes(database)));
+    }
+
+    @Test
     void missingAndZeroLengthFilesCreateOnlyCurrentTables() throws Exception {
         for (boolean exists : List.of(false, true)) {
             Path database = temporary.resolve(exists ? "empty.db" : "missing.db");
