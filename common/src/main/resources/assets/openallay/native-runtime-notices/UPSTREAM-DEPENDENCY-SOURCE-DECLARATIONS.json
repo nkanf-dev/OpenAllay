@@ -1,0 +1,599 @@
+[
+  {
+    "path": "cmake/asio.cmake",
+    "source_url": "https://github.com/k2-fsa/sherpa-onnx/blob/v1.13.8/cmake/asio.cmake",
+    "literal_urls": [
+      "https://github.com/chriskohlhoff/asio/archive/refs/tags/asio-1-24-0.tar.gz",
+      "https://hf-mirror.com/csukuangfj/sherpa-onnx-cmake-deps/resolve/main/asio-asio-1-24-0.tar.gz"
+    ],
+    "literal_hashes": [
+      "cbcaaba0f66722787b1a7c33afe1befb3a012b5af3ad7da7ff0f6b8c9b7a8a5b"
+    ],
+    "note": "upstream source declaration, not proof that all listed optional dependencies are linked in stock artifact"
+  },
+  {
+    "path": "cmake/cargs.cmake",
+    "source_url": "https://github.com/k2-fsa/sherpa-onnx/blob/v1.13.8/cmake/cargs.cmake",
+    "literal_urls": [
+      "https://github.com/likle/cargs/archive/refs/tags/v1.0.3.tar.gz",
+      "https://hf-mirror.com/csukuangfj/sherpa-onnx-cmake-deps/resolve/main/cargs-1.0.3.tar.gz"
+    ],
+    "literal_hashes": [
+      "ddba25bd35e9c6c75bc706c126001b8ce8e084d40ef37050e6aa6963e836eb8b"
+    ],
+    "note": "upstream source declaration, not proof that all listed optional dependencies are linked in stock artifact"
+  },
+  {
+    "path": "cmake/eigen.cmake",
+    "source_url": "https://github.com/k2-fsa/sherpa-onnx/blob/v1.13.8/cmake/eigen.cmake",
+    "literal_urls": [
+      "https://gitlab.com/libeigen/eigen/-/archive/5.0.1/eigen-5.0.1.tar.gz"
+    ],
+    "literal_hashes": [
+      "e9c326dc8c05cd1e044c71f30f1b2e34a6161a3b6ecf445d56b53ff1669e3dec"
+    ],
+    "note": "upstream source declaration, not proof that all listed optional dependencies are linked in stock artifact"
+  },
+  {
+    "path": "cmake/espeak-ng-for-piper.cmake",
+    "source_url": "https://github.com/k2-fsa/sherpa-onnx/blob/v1.13.8/cmake/espeak-ng-for-piper.cmake",
+    "literal_urls": [
+      "https://github.com/csukuangfj/espeak-ng/archive/ed530aa113046142eb5115cf2fc9157854d0ffe1.zip"
+    ],
+    "literal_hashes": [
+      "e4e262cbe34f7fe21f91f1ba3397f2728e1f30eafbae7853f2b753a9ed13f0dd"
+    ],
+    "note": "upstream source declaration, not proof that all listed optional dependencies are linked in stock artifact"
+  },
+  {
+    "path": "cmake/googletest.cmake",
+    "source_url": "https://github.com/k2-fsa/sherpa-onnx/blob/v1.13.8/cmake/googletest.cmake",
+    "literal_urls": [
+      "https://github.com/google/googletest/archive/refs/tags/v1.13.0.tar.gz",
+      "https://hf-mirror.com/csukuangfj/sherpa-onnx-cmake-deps/resolve/main/googletest-1.13.0.tar.gz"
+    ],
+    "literal_hashes": [
+      "ad7fdba11ea011c1d925b3289cf4af2c66a352e18d4c7264392fead75e919363"
+    ],
+    "note": "upstream source declaration, not proof that all listed optional dependencies are linked in stock artifact"
+  },
+  {
+    "path": "cmake/hclust-cpp.cmake",
+    "source_url": "https://github.com/k2-fsa/sherpa-onnx/blob/v1.13.8/cmake/hclust-cpp.cmake",
+    "literal_urls": [
+      "https://github.com/csukuangfj/hclust-cpp/archive/refs/tags/2026-02-25.tar.gz",
+      "https://hf-mirror.com/csukuangfj/sherpa-onnx-cmake-deps/resolve/main/hclust-cpp-2026-02-25.tar.gz"
+    ],
+    "literal_hashes": [
+      "8f14e024c709d73afb40ae69cb22de4b73dba67cbce40f2e518813da8139ab56"
+    ],
+    "note": "upstream source declaration, not proof that all listed optional dependencies are linked in stock artifact"
+  },
+  {
+    "path": "cmake/json.cmake",
+    "source_url": "https://github.com/k2-fsa/sherpa-onnx/blob/v1.13.8/cmake/json.cmake",
+    "literal_urls": [
+      "https://github.com/nlohmann/json/archive/refs/tags/v3.12.0.tar.gz",
+      "https://hf-mirror.com/csukuangfj/sherpa-onnx-cmake-deps/resolve/main/json-3.12.0.tar.gz"
+    ],
+    "literal_hashes": [
+      "4b92eb0c06d10683f7447ce9406cb97cd4b453be18d7279320f7b2f025c10187"
+    ],
+    "note": "upstream source declaration, not proof that all listed optional dependencies are linked in stock artifact"
+  },
+  {
+    "path": "cmake/kaldi-decoder.cmake",
+    "source_url": "https://github.com/k2-fsa/sherpa-onnx/blob/v1.13.8/cmake/kaldi-decoder.cmake",
+    "literal_urls": [
+      "https://github.com/k2-fsa/kaldi-decoder/archive/refs/tags/v0.3.0.tar.gz"
+    ],
+    "literal_hashes": [
+      "b9f34cfb4fd3b1344100eead79ef4d37aa15962274b9e3056de345021f76a1b0"
+    ],
+    "note": "upstream source declaration, not proof that all listed optional dependencies are linked in stock artifact"
+  },
+  {
+    "path": "cmake/kaldi-native-fbank.cmake",
+    "source_url": "https://github.com/k2-fsa/sherpa-onnx/blob/v1.13.8/cmake/kaldi-native-fbank.cmake",
+    "literal_urls": [
+      "https://github.com/csukuangfj/kaldi-native-fbank/archive/refs/tags/v1.22.3.tar.gz",
+      "https://hf-mirror.com/csukuangfj/sherpa-ncnn-cmake-deps/resolve/main/kaldi-native-fbank-1.22.3.tar.gz"
+    ],
+    "literal_hashes": [
+      "9176cc66fc7ce1edf85cf355b06e320c57db6297df74277f575183468893cf61"
+    ],
+    "note": "upstream source declaration, not proof that all listed optional dependencies are linked in stock artifact"
+  },
+  {
+    "path": "cmake/onnxruntime-android-aarch64-static.cmake",
+    "source_url": "https://github.com/k2-fsa/sherpa-onnx/blob/v1.13.8/cmake/onnxruntime-android-aarch64-static.cmake",
+    "literal_urls": [
+      "https://github.com/csukuangfj/onnxruntime-libs/releases/download/v1.28.2/onnxruntime-android-arm64-v8a-static_lib-1.28.2.zip"
+    ],
+    "literal_hashes": [
+      "bc68410f35f13df82c260830bf476ee5565f5efd0ec7622297829a929613c6c0"
+    ],
+    "note": "upstream source declaration, not proof that all listed optional dependencies are linked in stock artifact"
+  },
+  {
+    "path": "cmake/onnxruntime-android-aarch64.cmake",
+    "source_url": "https://github.com/k2-fsa/sherpa-onnx/blob/v1.13.8/cmake/onnxruntime-android-aarch64.cmake",
+    "literal_urls": [
+      "https://github.com/csukuangfj/onnxruntime-libs/releases/download/v1.28.2/onnxruntime-android-1.28.2.zip"
+    ],
+    "literal_hashes": [
+      "01518867f78241138b6aa25925802e843a4fa9085af8d303d49e35bbb52aff4d"
+    ],
+    "note": "upstream source declaration, not proof that all listed optional dependencies are linked in stock artifact"
+  },
+  {
+    "path": "cmake/onnxruntime-android-arm-static.cmake",
+    "source_url": "https://github.com/k2-fsa/sherpa-onnx/blob/v1.13.8/cmake/onnxruntime-android-arm-static.cmake",
+    "literal_urls": [
+      "https://github.com/csukuangfj/onnxruntime-libs/releases/download/v1.28.2/onnxruntime-android-armeabi-v7a-static_lib-1.28.2.zip"
+    ],
+    "literal_hashes": [
+      "21f8aaab5d536f397a11deeedc09c2ceecc740b45332d8a946c358e7717b5f18"
+    ],
+    "note": "upstream source declaration, not proof that all listed optional dependencies are linked in stock artifact"
+  },
+  {
+    "path": "cmake/onnxruntime-android-arm.cmake",
+    "source_url": "https://github.com/k2-fsa/sherpa-onnx/blob/v1.13.8/cmake/onnxruntime-android-arm.cmake",
+    "literal_urls": [
+      "https://github.com/csukuangfj/onnxruntime-libs/releases/download/v1.28.2/onnxruntime-android-1.28.2.zip"
+    ],
+    "literal_hashes": [
+      "01518867f78241138b6aa25925802e843a4fa9085af8d303d49e35bbb52aff4d"
+    ],
+    "note": "upstream source declaration, not proof that all listed optional dependencies are linked in stock artifact"
+  },
+  {
+    "path": "cmake/onnxruntime-android-i686-static.cmake",
+    "source_url": "https://github.com/k2-fsa/sherpa-onnx/blob/v1.13.8/cmake/onnxruntime-android-i686-static.cmake",
+    "literal_urls": [
+      "https://github.com/csukuangfj/onnxruntime-libs/releases/download/v1.28.2/onnxruntime-android-x86-static_lib-1.28.2.zip"
+    ],
+    "literal_hashes": [
+      "8228edb42e8f9949a61c78a5e8b9adba7f3f90517d79d687ac070b907ef0bf1c"
+    ],
+    "note": "upstream source declaration, not proof that all listed optional dependencies are linked in stock artifact"
+  },
+  {
+    "path": "cmake/onnxruntime-android-i686.cmake",
+    "source_url": "https://github.com/k2-fsa/sherpa-onnx/blob/v1.13.8/cmake/onnxruntime-android-i686.cmake",
+    "literal_urls": [
+      "https://github.com/csukuangfj/onnxruntime-libs/releases/download/v1.28.2/onnxruntime-android-1.28.2.zip"
+    ],
+    "literal_hashes": [
+      "01518867f78241138b6aa25925802e843a4fa9085af8d303d49e35bbb52aff4d"
+    ],
+    "note": "upstream source declaration, not proof that all listed optional dependencies are linked in stock artifact"
+  },
+  {
+    "path": "cmake/onnxruntime-android-x86_64-static.cmake",
+    "source_url": "https://github.com/k2-fsa/sherpa-onnx/blob/v1.13.8/cmake/onnxruntime-android-x86_64-static.cmake",
+    "literal_urls": [
+      "https://github.com/csukuangfj/onnxruntime-libs/releases/download/v1.28.2/onnxruntime-android-x86_64-static_lib-1.28.2.zip"
+    ],
+    "literal_hashes": [
+      "f49dbf456ffe71dd417afb2123ef15202f8f57a4b2a05f12af1cf71f55448137"
+    ],
+    "note": "upstream source declaration, not proof that all listed optional dependencies are linked in stock artifact"
+  },
+  {
+    "path": "cmake/onnxruntime-android-x86_64.cmake",
+    "source_url": "https://github.com/k2-fsa/sherpa-onnx/blob/v1.13.8/cmake/onnxruntime-android-x86_64.cmake",
+    "literal_urls": [
+      "https://github.com/csukuangfj/onnxruntime-libs/releases/download/v1.28.2/onnxruntime-android-1.28.2.zip"
+    ],
+    "literal_hashes": [
+      "01518867f78241138b6aa25925802e843a4fa9085af8d303d49e35bbb52aff4d"
+    ],
+    "note": "upstream source declaration, not proof that all listed optional dependencies are linked in stock artifact"
+  },
+  {
+    "path": "cmake/onnxruntime-linux-aarch64-gpu.cmake",
+    "source_url": "https://github.com/k2-fsa/sherpa-onnx/blob/v1.13.8/cmake/onnxruntime-linux-aarch64-gpu.cmake",
+    "literal_urls": [
+      "https://github.com/csukuangfj/onnxruntime-libs/releases/download/v${v}/onnxruntime-linux-aarch64-gpu-${v}.tar.bz2",
+      "https://github.com/csukuangfj/onnxruntime-libs/releases/download/v1.18.0/onnxruntime-linux-aarch64-gpu-cuda12.2-cudnn8.9.4-trt8.6.2-1.18.0.tar.bz2",
+      "https://github.com/csukuangfj/onnxruntime-libs/releases/download/v1.18.1/onnxruntime-linux-aarch64-gpu-cuda12-1.18.1.tar.bz2"
+    ],
+    "literal_hashes": [
+      "1e91064ec13a6fabb6b670da8a2da4f369c1dbd50a5be77a879b2473e7afc0a6",
+      "36eded935551e23aead09d4173bdf0bd1e7b01fdec15d77f97d6e34029aa60d7",
+      "4c09d5acf2c2682b4eab1dc2f1ad98fc1fde5f5f1960063e337983ba59379a4b",
+      "da437a69be982fc28ca7d60d0c5ccce2f48d027fa888cc76458cdc05410f4e2d"
+    ],
+    "note": "upstream source declaration, not proof that all listed optional dependencies are linked in stock artifact"
+  },
+  {
+    "path": "cmake/onnxruntime-linux-aarch64-static.cmake",
+    "source_url": "https://github.com/k2-fsa/sherpa-onnx/blob/v1.13.8/cmake/onnxruntime-linux-aarch64-static.cmake",
+    "literal_urls": [
+      "https://github.com/csukuangfj/onnxruntime-libs/releases/download/v1.28.2/onnxruntime-linux-aarch64-static_lib-1.28.2-glibc2_17.zip"
+    ],
+    "literal_hashes": [
+      "fba13fa68dbc9305512869bfa74f53a15e7af983c44ba8a9cbecbce5c21b33b3"
+    ],
+    "note": "upstream source declaration, not proof that all listed optional dependencies are linked in stock artifact"
+  },
+  {
+    "path": "cmake/onnxruntime-linux-aarch64.cmake",
+    "source_url": "https://github.com/k2-fsa/sherpa-onnx/blob/v1.13.8/cmake/onnxruntime-linux-aarch64.cmake",
+    "literal_urls": [
+      "https://github.com/csukuangfj/onnxruntime-libs/releases/download/v1.28.2/onnxruntime-linux-aarch64-glibc2_17-Release-1.28.2.zip"
+    ],
+    "literal_hashes": [
+      "28083273643f40fa6477ef9d53986fe216304710c4b1c743b217a4effd016339"
+    ],
+    "note": "upstream source declaration, not proof that all listed optional dependencies are linked in stock artifact"
+  },
+  {
+    "path": "cmake/onnxruntime-linux-arm-static.cmake",
+    "source_url": "https://github.com/k2-fsa/sherpa-onnx/blob/v1.13.8/cmake/onnxruntime-linux-arm-static.cmake",
+    "literal_urls": [
+      "https://github.com/csukuangfj/onnxruntime-libs/releases/download/v1.28.2/onnxruntime-linux-arm-static_lib-1.28.2.zip"
+    ],
+    "literal_hashes": [
+      "eb1f0bda3fe8c896bd371423fedbff0ebd22397563c345bd558060aea8334186"
+    ],
+    "note": "upstream source declaration, not proof that all listed optional dependencies are linked in stock artifact"
+  },
+  {
+    "path": "cmake/onnxruntime-linux-arm.cmake",
+    "source_url": "https://github.com/k2-fsa/sherpa-onnx/blob/v1.13.8/cmake/onnxruntime-linux-arm.cmake",
+    "literal_urls": [
+      "https://github.com/csukuangfj/onnxruntime-libs/releases/download/v1.28.2/onnxruntime-linux-arm-1.28.2.zip"
+    ],
+    "literal_hashes": [
+      "a8b4a3f1c338798c52d15c6b10b5eed0174cc3f485059948ac3ef456e824d342"
+    ],
+    "note": "upstream source declaration, not proof that all listed optional dependencies are linked in stock artifact"
+  },
+  {
+    "path": "cmake/onnxruntime-linux-riscv64-spacemit.cmake",
+    "source_url": "https://github.com/k2-fsa/sherpa-onnx/blob/v1.13.8/cmake/onnxruntime-linux-riscv64-spacemit.cmake",
+    "literal_urls": [
+      "https://github.com/spacemit-com/onnxruntime/releases/download/${onnxruntime_version}/${onnxruntime_pkg_name}"
+    ],
+    "literal_hashes": [
+      "bebcdfb7df6b49eefa3863afcd85a3da2aa83c3ae9252d7d856188c38a70b0e6"
+    ],
+    "note": "upstream source declaration, not proof that all listed optional dependencies are linked in stock artifact"
+  },
+  {
+    "path": "cmake/onnxruntime-linux-riscv64-static.cmake",
+    "source_url": "https://github.com/k2-fsa/sherpa-onnx/blob/v1.13.8/cmake/onnxruntime-linux-riscv64-static.cmake",
+    "literal_urls": [
+      "https://github.com/csukuangfj/onnxruntime-libs/releases/download/v1.18.0/onnxruntime-linux-riscv64-static_lib-1.18.0.zip"
+    ],
+    "literal_hashes": [
+      "77ecc51d8caf0953755db6edcdec2fc03bce3f6d379bedd635be50bb95f88da5"
+    ],
+    "note": "upstream source declaration, not proof that all listed optional dependencies are linked in stock artifact"
+  },
+  {
+    "path": "cmake/onnxruntime-linux-riscv64.cmake",
+    "source_url": "https://github.com/k2-fsa/sherpa-onnx/blob/v1.13.8/cmake/onnxruntime-linux-riscv64.cmake",
+    "literal_urls": [
+      "https://github.com/csukuangfj/onnxruntime-libs/releases/download/v1.14.1/onnxruntime-linux-riscv64-glibc2_17-Release-1.14.1.zip"
+    ],
+    "literal_hashes": [
+      "c2cbc5af081ff82f46640befd85433811486daaf28e702163c6e4e75020fde81"
+    ],
+    "note": "upstream source declaration, not proof that all listed optional dependencies are linked in stock artifact"
+  },
+  {
+    "path": "cmake/onnxruntime-linux-x86_64-gpu.cmake",
+    "source_url": "https://github.com/k2-fsa/sherpa-onnx/blob/v1.13.8/cmake/onnxruntime-linux-x86_64-gpu.cmake",
+    "literal_urls": [
+      "https://github.com/csukuangfj/onnxruntime-libs/releases/download/v1.28.2/onnxruntime-linux-x64-gpu_cuda12-1.28.2-patched.zip"
+    ],
+    "literal_hashes": [
+      "3417d0d4bf608e2532928eb1e8d6c9383b28ba449f0d02f0493e21501ab0bc74"
+    ],
+    "note": "upstream source declaration, not proof that all listed optional dependencies are linked in stock artifact"
+  },
+  {
+    "path": "cmake/onnxruntime-linux-x86_64-static.cmake",
+    "source_url": "https://github.com/k2-fsa/sherpa-onnx/blob/v1.13.8/cmake/onnxruntime-linux-x86_64-static.cmake",
+    "literal_urls": [
+      "https://github.com/csukuangfj/onnxruntime-libs/releases/download/v1.28.2/onnxruntime-linux-x64-static_lib-1.28.2-glibc2_17.zip"
+    ],
+    "literal_hashes": [
+      "2dada92465b40a16fb5011956d93eaf90e3091cf621a953e5371a5e6a687794e"
+    ],
+    "note": "upstream source declaration, not proof that all listed optional dependencies are linked in stock artifact"
+  },
+  {
+    "path": "cmake/onnxruntime-linux-x86_64.cmake",
+    "source_url": "https://github.com/k2-fsa/sherpa-onnx/blob/v1.13.8/cmake/onnxruntime-linux-x86_64.cmake",
+    "literal_urls": [
+      "https://github.com/csukuangfj/onnxruntime-libs/releases/download/v1.28.2/onnxruntime-linux-x64-glibc2_17-Release-1.28.2.zip"
+    ],
+    "literal_hashes": [
+      "c4f8994d56191d9d2c92a961b39fe790459f2c5d155f912b239506ea31359534"
+    ],
+    "note": "upstream source declaration, not proof that all listed optional dependencies are linked in stock artifact"
+  },
+  {
+    "path": "cmake/onnxruntime-osx-arm64-static.cmake",
+    "source_url": "https://github.com/k2-fsa/sherpa-onnx/blob/v1.13.8/cmake/onnxruntime-osx-arm64-static.cmake",
+    "literal_urls": [
+      "https://github.com/csukuangfj/onnxruntime-libs/releases/download/v1.28.2/onnxruntime-osx-arm64-static_lib-1.28.2.zip"
+    ],
+    "literal_hashes": [
+      "bf6e35dc9440d2899c3d21f52b1045fb99176a6ae822281b7245c5418cc338ab"
+    ],
+    "note": "upstream source declaration, not proof that all listed optional dependencies are linked in stock artifact"
+  },
+  {
+    "path": "cmake/onnxruntime-osx-arm64.cmake",
+    "source_url": "https://github.com/k2-fsa/sherpa-onnx/blob/v1.13.8/cmake/onnxruntime-osx-arm64.cmake",
+    "literal_urls": [
+      "https://github.com/csukuangfj/onnxruntime-libs/releases/download/v1.28.2/onnxruntime-osx-arm64-1.28.2.zip"
+    ],
+    "literal_hashes": [
+      "d9e5c0c79929e201f5b8eb095e6809a91ce78be9866a1bca0dfab7e20b40ae40"
+    ],
+    "note": "upstream source declaration, not proof that all listed optional dependencies are linked in stock artifact"
+  },
+  {
+    "path": "cmake/onnxruntime-osx-universal-static.cmake",
+    "source_url": "https://github.com/k2-fsa/sherpa-onnx/blob/v1.13.8/cmake/onnxruntime-osx-universal-static.cmake",
+    "literal_urls": [
+      "https://github.com/csukuangfj/onnxruntime-libs/releases/download/v1.28.2/onnxruntime-osx-universal2-static_lib-1.28.2.zip"
+    ],
+    "literal_hashes": [
+      "6e75881bd42d7679581a72b77b2c290ad0b9296bb6c72bfb087b9777f532d5ea"
+    ],
+    "note": "upstream source declaration, not proof that all listed optional dependencies are linked in stock artifact"
+  },
+  {
+    "path": "cmake/onnxruntime-osx-universal.cmake",
+    "source_url": "https://github.com/k2-fsa/sherpa-onnx/blob/v1.13.8/cmake/onnxruntime-osx-universal.cmake",
+    "literal_urls": [
+      "https://github.com/csukuangfj/onnxruntime-libs/releases/download/v1.28.2/onnxruntime-osx-universal2-1.28.2.zip"
+    ],
+    "literal_hashes": [
+      "b5033fb68b907fb31b80f9735f4d97270de5a1958f3234f5ffd09ee6ae0d0191"
+    ],
+    "note": "upstream source declaration, not proof that all listed optional dependencies are linked in stock artifact"
+  },
+  {
+    "path": "cmake/onnxruntime-osx-x86_64-static.cmake",
+    "source_url": "https://github.com/k2-fsa/sherpa-onnx/blob/v1.13.8/cmake/onnxruntime-osx-x86_64-static.cmake",
+    "literal_urls": [
+      "https://github.com/csukuangfj/onnxruntime-libs/releases/download/v1.28.2/onnxruntime-osx-x86_64-static_lib-1.28.2.zip"
+    ],
+    "literal_hashes": [
+      "cf879fe1fae47078d84fea4d8d4f8d5e38da813c9c3890dd5cc2ff28524c71c8"
+    ],
+    "note": "upstream source declaration, not proof that all listed optional dependencies are linked in stock artifact"
+  },
+  {
+    "path": "cmake/onnxruntime-osx-x86_64.cmake",
+    "source_url": "https://github.com/k2-fsa/sherpa-onnx/blob/v1.13.8/cmake/onnxruntime-osx-x86_64.cmake",
+    "literal_urls": [
+      "https://github.com/csukuangfj/onnxruntime-libs/releases/download/v1.28.2/onnxruntime-osx-x86_64-1.28.2.zip"
+    ],
+    "literal_hashes": [
+      "cef42f2a4fca3b23dd16914ead36229adc7d5c119d563aaa12cc5d1e9177f93d"
+    ],
+    "note": "upstream source declaration, not proof that all listed optional dependencies are linked in stock artifact"
+  },
+  {
+    "path": "cmake/onnxruntime-wasm-simd.cmake",
+    "source_url": "https://github.com/k2-fsa/sherpa-onnx/blob/v1.13.8/cmake/onnxruntime-wasm-simd.cmake",
+    "literal_urls": [
+      "https://github.com/csukuangfj/onnxruntime-libs/releases/download/v1.28.2/onnxruntime-wasm-static_lib-simd-1.28.2.zip"
+    ],
+    "literal_hashes": [
+      "88688849b67fed9ca0e9fb2bf92ce19a5def9e8c2c8c2df34eb235d25893232a"
+    ],
+    "note": "upstream source declaration, not proof that all listed optional dependencies are linked in stock artifact"
+  },
+  {
+    "path": "cmake/onnxruntime-win-arm64-static.cmake",
+    "source_url": "https://github.com/k2-fsa/sherpa-onnx/blob/v1.13.8/cmake/onnxruntime-win-arm64-static.cmake",
+    "literal_urls": [
+      "https://github.com/csukuangfj/onnxruntime-libs/releases/download/v1.28.2/${onnxruntime_filename}"
+    ],
+    "literal_hashes": [
+      "11d848daaa69d4cbbd0253d05e62f39096721806f3a1b7fd4be0c54f0120399b",
+      "27d2895e9b2cad58570413a5a8a0455a33ad6b30199d306b8c7d79dae58ae2ac",
+      "29c41eab7be33c460059d584d2de2bf9acfb4b0494d2f3795daf64c0583cddad",
+      "330a6df71e9d13f04c83e1ea6ed248d32a1bc0b21802180549808eb312cd863c",
+      "36d4ba2c6db47aa6ae143c704e451f17838582ff2ccf72dc29d6c97087630add",
+      "544b3d6fa3d21571a7b1744c3cc32cdf4438416e39f713eb75183a62f8d8fe21",
+      "5b78b36c2efd0c4fdc91df08fc28515c8aa029e28bad2f8a965cba2768dfaebb",
+      "8ab055590366c7d9dae27f9580fa5aa82e429781fc75dd9c8a35fb29c484018e"
+    ],
+    "note": "upstream source declaration, not proof that all listed optional dependencies are linked in stock artifact"
+  },
+  {
+    "path": "cmake/onnxruntime-win-arm64.cmake",
+    "source_url": "https://github.com/k2-fsa/sherpa-onnx/blob/v1.13.8/cmake/onnxruntime-win-arm64.cmake",
+    "literal_urls": [
+      "https://github.com/csukuangfj/onnxruntime-libs/releases/download/v1.28.2/${onnxruntime_filename}"
+    ],
+    "literal_hashes": [
+      "08771cf4fa2229b4b6240e1dfea240953cb546ff05e2bb0ff6597028ab04104d",
+      "212e423ac1bfeb5d4b32dea3d2bb4cfbf471c15db72021db55aac1dd1d67c0ba",
+      "3cbbee948a70c116627b3df80208184762d993e52da2e8ad0e923a2bb333f184",
+      "3e722ee4a85098f6184e7f27a017ecf5de7f4157b36132788432651de6ce7fa4",
+      "59877bc38b2c1eed1375597b9da2403b314b1103693d1dd0397c00cbcad1c1ab",
+      "82b68e70358030dcbe0901d3435db3398a6e34ef46e45f071088f94104062ef1",
+      "c1149f620e05e66aad4cb1f53d41bc031b06867aa26a523c38681197752db006",
+      "d7e3e0d7deaeffbd1eaf22666695285f6e1b9d3700f9295744e6970fba0c7bfc"
+    ],
+    "note": "upstream source declaration, not proof that all listed optional dependencies are linked in stock artifact"
+  },
+  {
+    "path": "cmake/onnxruntime-win-x64-directml.cmake",
+    "source_url": "https://github.com/k2-fsa/sherpa-onnx/blob/v1.13.8/cmake/onnxruntime-win-x64-directml.cmake",
+    "literal_urls": [
+      "https://globalcdn.nuget.org/packages/microsoft.ml.onnxruntime.directml.1.14.1.nupkg",
+      "https://www.nuget.org/api/v2/package/Microsoft.AI.DirectML/1.15.0"
+    ],
+    "literal_hashes": [
+      "10d175f8e97447712b3680e3ac020bbb8eafdf651332b48f09ffee2eec801c23",
+      "c8ae7623385b19cd5de968d0df5383e13b97d1b3a6771c9177eac15b56013a5a"
+    ],
+    "note": "upstream source declaration, not proof that all listed optional dependencies are linked in stock artifact"
+  },
+  {
+    "path": "cmake/onnxruntime-win-x64-gpu.cmake",
+    "source_url": "https://github.com/k2-fsa/sherpa-onnx/blob/v1.13.8/cmake/onnxruntime-win-x64-gpu.cmake",
+    "literal_urls": [
+      "https://github.com/microsoft/onnxruntime/releases/download/v1.28.2/onnxruntime-win-x64-gpu_cuda12-1.28.2.zip"
+    ],
+    "literal_hashes": [
+      "5b5ceb06e90405c7de9acdaf5aa06d288768e6a1e5dc54337281e09c03fc60f9"
+    ],
+    "note": "upstream source declaration, not proof that all listed optional dependencies are linked in stock artifact"
+  },
+  {
+    "path": "cmake/onnxruntime-win-x64-static.cmake",
+    "source_url": "https://github.com/k2-fsa/sherpa-onnx/blob/v1.13.8/cmake/onnxruntime-win-x64-static.cmake",
+    "literal_urls": [
+      "https://github.com/csukuangfj/onnxruntime-libs/releases/download/v1.28.2/${onnxruntime_filename}"
+    ],
+    "literal_hashes": [
+      "207e850601383cec0e0d0e96f9f6261290af6669f4ad3216361e997029862711",
+      "4708ce2491814ab42d0ae7f3bc32792daab31dc838be18c629ce0c27ba99046a",
+      "50cabc7270c47139ff4ee0176c237d9b876294ad9aa926cfb2d58eeb45d31210",
+      "6fdf64a246ff8c46a303f84b7514e94eda63ae8fefa94491b157f9c14449dbaa",
+      "77c6cc2a419828f450a570851d7d6d2385523c411dbe858f841a4c7338a78881",
+      "b9b947837a1e49778048521d27539913ebd9effa01758a28f32b20f0ec2a2321",
+      "cb2372daf5e33855d3713caa4db342e276ac3a33e6f304404fe45bb208122c93",
+      "dbf096aa2d7a43c0050d88c73850f071f333e1117a70bd98056497c733e96afe"
+    ],
+    "note": "upstream source declaration, not proof that all listed optional dependencies are linked in stock artifact"
+  },
+  {
+    "path": "cmake/onnxruntime-win-x64.cmake",
+    "source_url": "https://github.com/k2-fsa/sherpa-onnx/blob/v1.13.8/cmake/onnxruntime-win-x64.cmake",
+    "literal_urls": [
+      "https://github.com/csukuangfj/onnxruntime-libs/releases/download/v1.28.2/${onnxruntime_filename}"
+    ],
+    "literal_hashes": [
+      "3a3bf54108956923750641874ebb7f60ad3fb74bf49b2166c6db9784524083a3",
+      "496843f700a77a85019dd0bd932b2faf3c086a862f78502a5109e41455a482a4",
+      "5176239d9bc0f61d13764d751601cd7b5b8d35d9f4e4ab914fafae8a8effc1f4",
+      "8afb2928ee97cac913be27d452c2a0898ffc13992c3c387e295e67ba0e297575",
+      "9edb8547a903d2f0a943f72621ff48ce64ec7f1945714b70b06959203832e86e",
+      "cb6ca3b84e39552170a806ca83c7f90d88846105e26b503d1fe587cd16111551",
+      "cd7f757f7a38ce14238bc9198bee197a9430b42ec3ecadea3408dd2e832eb02e",
+      "cdb3c68e317db991f85504e0f0ce5959528fba2c240b6c22e93366e80b3d2d58"
+    ],
+    "note": "upstream source declaration, not proof that all listed optional dependencies are linked in stock artifact"
+  },
+  {
+    "path": "cmake/onnxruntime-win-x86-static.cmake",
+    "source_url": "https://github.com/k2-fsa/sherpa-onnx/blob/v1.13.8/cmake/onnxruntime-win-x86-static.cmake",
+    "literal_urls": [
+      "https://github.com/csukuangfj/onnxruntime-libs/releases/download/v1.28.2/${onnxruntime_filename}"
+    ],
+    "literal_hashes": [
+      "1d82e7bac5df9d1d1ece159344aba1f2f77e88c8391f05ebec9e0df15595cc20",
+      "2047a531fa1a23ae7ff627036cd1503446204201cc3f8f5738485b19528148b8",
+      "44505216c815642a42c663495989307dee72d6faa0c0c2e8a6e67b670fcf79e1",
+      "45a1a50597adf2ec1152480a68e48ede9d0703a14e00a1b601f341d61a57f13a",
+      "65265d7cc23c01a73d1640a8c00943016bae20efd34b943780e246aff8f28caa",
+      "89a99af7a97b485643e73428d4ad9050b16324a972de9fa567331e432e382a8e",
+      "af8df8749a1f8974b47f7bfb4eb8a56d3cf78f051ab37949cca73bda571365e9",
+      "dc3548cfa1acb6798a612cab130afc96430869b9a0fb5e712734a46e5d9b845b"
+    ],
+    "note": "upstream source declaration, not proof that all listed optional dependencies are linked in stock artifact"
+  },
+  {
+    "path": "cmake/onnxruntime-win-x86.cmake",
+    "source_url": "https://github.com/k2-fsa/sherpa-onnx/blob/v1.13.8/cmake/onnxruntime-win-x86.cmake",
+    "literal_urls": [
+      "https://github.com/csukuangfj/onnxruntime-libs/releases/download/v1.28.2/${onnxruntime_filename}"
+    ],
+    "literal_hashes": [
+      "3c4f2835f8db36d4bcfc28046e9f2bfb34c6f7898e7f4d13d0702a5ca3d94b35",
+      "57ebba984a29115d8a0d5376561b478b605598ee4312e6b065aa5694696cd6c2",
+      "6c0fe3c64bef1f8e23311fc88d5986ff605cb7b0fd4db46b3b76806641c57165",
+      "78c8c5bdaa2a1a360caf29de8a8bb757bdda03cfc67361c1120c20de28e5fbd8",
+      "829e8c7c48d22475b5dfd6ac2a27ebb687a2bcbf82656d67183f5028692142f5",
+      "8ed3ec331c54d15e490a442f52b521d20ad8860f8725271c4c77813e10ab8065",
+      "c3ecc23edcd6842a95e542301e1046ea21bc048cb2db190daa6baef48be07a62",
+      "fee997dfc046635f3e20824d25c867527a811e3f5bbd6614c29c5ad69d6ad4af"
+    ],
+    "note": "upstream source declaration, not proof that all listed optional dependencies are linked in stock artifact"
+  },
+  {
+    "path": "cmake/openfst.cmake",
+    "source_url": "https://github.com/k2-fsa/sherpa-onnx/blob/v1.13.8/cmake/openfst.cmake",
+    "literal_urls": [
+      "https://github.com/csukuangfj/openfst/archive/refs/tags/v1.8.5-2026-07-09.tar.gz"
+    ],
+    "literal_hashes": [
+      "2ff712a32952fcb01d351121a6bc8ccf4fdc6b2aa06ce8df2b3095dedd518c0e"
+    ],
+    "note": "upstream source declaration, not proof that all listed optional dependencies are linked in stock artifact"
+  },
+  {
+    "path": "cmake/piper-phonemize.cmake",
+    "source_url": "https://github.com/k2-fsa/sherpa-onnx/blob/v1.13.8/cmake/piper-phonemize.cmake",
+    "literal_urls": [
+      "https://github.com/csukuangfj/piper-phonemize/archive/f3ff95afc03640bc1399e113e83361192a2fafb4.zip"
+    ],
+    "literal_hashes": [
+      "d9cca4e2bdc7d6dd8dffb96a4668283dbd3f77a9c194a3e530c1e8eba9406a5d"
+    ],
+    "note": "upstream source declaration, not proof that all listed optional dependencies are linked in stock artifact"
+  },
+  {
+    "path": "cmake/portaudio.cmake",
+    "source_url": "https://github.com/k2-fsa/sherpa-onnx/blob/v1.13.8/cmake/portaudio.cmake",
+    "literal_urls": [
+      "https://hf-mirror.com/csukuangfj/sherpa-onnx-cmake-deps/resolve/main/pa_stable_v190700_20210406.tgz"
+    ],
+    "literal_hashes": [
+      "47efbf42c77c19a05d22e627d42873e991ec0c1357219c0d74ce6a2948cb2def"
+    ],
+    "note": "upstream source declaration, not proof that all listed optional dependencies are linked in stock artifact"
+  },
+  {
+    "path": "cmake/pybind11.cmake",
+    "source_url": "https://github.com/k2-fsa/sherpa-onnx/blob/v1.13.8/cmake/pybind11.cmake",
+    "literal_urls": [
+      "https://github.com/pybind/pybind11/archive/refs/tags/v3.0.0.tar.gz",
+      "https://hf-mirror.com/csukuangfj/sherpa-onnx-cmake-deps/resolve/main/pybind11-3.0.0.tar.gz"
+    ],
+    "literal_hashes": [
+      "453b1a3e2b266c3ae9da872411cadb6d693ac18063bd73226d96cfb7015a200c"
+    ],
+    "note": "upstream source declaration, not proof that all listed optional dependencies are linked in stock artifact"
+  },
+  {
+    "path": "cmake/simple-sentencepiece.cmake",
+    "source_url": "https://github.com/k2-fsa/sherpa-onnx/blob/v1.13.8/cmake/simple-sentencepiece.cmake",
+    "literal_urls": [
+      "https://github.com/pkufool/simple-sentencepiece/archive/refs/tags/v0.7.tar.gz",
+      "https://hf-mirror.com/csukuangfj/sherpa-onnx-cmake-deps/resolve/main/simple-sentencepiece-0.7.tar.gz"
+    ],
+    "literal_hashes": [
+      "1748a822060a35baa9f6609f84efc8eb54dc0e74b9ece3d82367b7119fdc75af"
+    ],
+    "note": "upstream source declaration, not proof that all listed optional dependencies are linked in stock artifact"
+  },
+  {
+    "path": "cmake/websocketpp.cmake",
+    "source_url": "https://github.com/k2-fsa/sherpa-onnx/blob/v1.13.8/cmake/websocketpp.cmake",
+    "literal_urls": [
+      "https://github.com/zaphoyd/websocketpp/archive/b9aeec6eaf3d5610503439b4fae3581d9aff08e8.zip",
+      "https://hf-mirror.com/csukuangfj/sherpa-onnx-cmake-deps/resolve/main/websocketpp-b9aeec6eaf3d5610503439b4fae3581d9aff08e8.zip"
+    ],
+    "literal_hashes": [
+      "1385135ede8191a7fbef9ec8099e3c5a673d48df0c143958216cd1690567f583"
+    ],
+    "note": "upstream source declaration, not proof that all listed optional dependencies are linked in stock artifact"
+  }
+]

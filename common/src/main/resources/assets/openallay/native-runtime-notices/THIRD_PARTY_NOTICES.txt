@@ -1,0 +1,24 @@
+OpenAllay local ASR runtime notices
+
+This directory contains the product-pinned sherpa-onnx 1.13.8 JVM and native jars.
+The official stock native jar includes ONNX Runtime and statically linked
+Piper phonemization / eSpeak NG code, including code licensed under GPL v3.
+Using only ASR entry points does not remove code from the official stock binary.
+
+The full license texts are retained in this directory:
+- SHERPA-APACHE-2.0.txt: sherpa-onnx Apache License 2.0.
+- GPL3.txt: eSpeak NG GNU General Public License version 3.
+- PIPER-MIT.txt: Piper phonemize MIT License.
+- ONNXRUNTIME-MIT.txt: ONNX Runtime MIT License.
+- ONNXRUNTIME-ThirdPartyNotices.txt: ONNX Runtime bundled third-party notices.
+
+SOURCES.json records exact pinned engine archives, eSpeak/Piper dependency
+commits, official runtime jar hashes, and platform-specific vendor ORT bundles.
+README-SOURCE.txt identifies the matching upstream build instructions and states
+which binary-source provenance has and has not been established.
+
+These notices are not a legal determination or a written source offer.
+A link to a source repository alone is not a claim of complete corresponding
+source. Anyone redistributing these binaries must meet all applicable license
+requirements. The player model license is separate and remains in its model
+directory. These resources do not choose executable files or model behavior.

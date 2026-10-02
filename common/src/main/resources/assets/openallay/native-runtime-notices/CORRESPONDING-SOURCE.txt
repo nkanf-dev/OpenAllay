@@ -1,0 +1,26 @@
+Source inventory scope and limitations
+
+SOURCES.json pins the stock sherpa-onnx 1.13.8 engine source archive, official JVM
+and native jars, eSpeak/Piper source archives, and per-platform ORT vendor bundles.
+UPSTREAM-DEPENDENCY-SOURCE-DECLARATIONS.json retains source URL/hash declarations
+read from the matching engine archive's CMake files. These declarations are not
+a linked binary inventory. Optional dependency declarations do not prove linkage.
+
+The ASR-DEPENDENCY-* license copies were inspected in the independently built
+macOS ARM64 ASR-only package. They identify known source/build dependencies and
+retain their full license texts. Their presence here does not claim that every
+stock CPU jar links every listed component, or that optional stock components
+have all been inventoried.
+
+GPL3.txt applies to eSpeak NG contained in official stock JNI. The exact eSpeak
+and Piper dependency revisions are pinned in SOURCES.json. The engine's source
+archive includes build recipes and its dependency scripts. The source files and
+metadata are source references, not a written source offer or certification of
+complete corresponding source. Applicable redistribution obligations must be
+satisfied under the actual distribution arrangement.
+
+The macOS ARM64 ORT vendor bundle's GIT_COMMIT_ID was inspected and is recorded.
+Other five platform vendor source commit identities were not read from their
+bundles. Their declared version and binary archive hashes are retained without
+promoting one platform's source fact to all six. No general all-platform source
+reproduction or complete-license-inventory claim is made by this collection.

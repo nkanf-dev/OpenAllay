@@ -1,0 +1,125 @@
+{
+  "runtime": "sherpa-onnx official stock JNI1.13.8 CPU",
+  "runtime_artifacts": [
+    {
+      "name": "sherpa-onnx-jvm-1.13.8.jar",
+      "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.13.8/sherpa-onnx-jvm-1.13.8.jar",
+      "size": 187490,
+      "sha256": "77b7b047fade4eadada96b568eb92615049aaf1dc317c7244e46c1ea38b9a63b"
+    },
+    {
+      "name": "sherpa-onnx-native-lib-linux-aarch64-1.13.8.jar",
+      "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.13.8/sherpa-onnx-native-lib-linux-aarch64-1.13.8.jar",
+      "size": 13224859,
+      "sha256": "5123d2e48ae1a7ce82ba89ce153906c651bf418a63db2f7dff82265e6d49c104"
+    },
+    {
+      "name": "sherpa-onnx-native-lib-linux-x64-1.13.8.jar",
+      "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.13.8/sherpa-onnx-native-lib-linux-x64-1.13.8.jar",
+      "size": 10515871,
+      "sha256": "30c93b59381113f9c20aedbbf9fc1ad399158f6bc03dddc0f8934a6e28e069ba"
+    },
+    {
+      "name": "sherpa-onnx-native-lib-osx-aarch64-1.13.8.jar",
+      "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.13.8/sherpa-onnx-native-lib-osx-aarch64-1.13.8.jar",
+      "size": 9460832,
+      "sha256": "42e272180c8836127f024f3335d7afcdfb30fe0164b78330d5d449034e34ce34"
+    },
+    {
+      "name": "sherpa-onnx-native-lib-osx-x64-1.13.8.jar",
+      "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.13.8/sherpa-onnx-native-lib-osx-x64-1.13.8.jar",
+      "size": 10782466,
+      "sha256": "9190c28951d85efdbd376bae6b6dff12993311ad605945289e8459bf9c886a96"
+    },
+    {
+      "name": "sherpa-onnx-native-lib-win-arm64-1.13.8.jar",
+      "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.13.8/sherpa-onnx-native-lib-win-arm64-1.13.8.jar",
+      "size": 7889954,
+      "sha256": "986660bef51f0ca4f5635b763c172c64bb056eabebcd319f42185d7b23337fb8"
+    },
+    {
+      "name": "sherpa-onnx-native-lib-win-x64-1.13.8.jar",
+      "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.13.8/sherpa-onnx-native-lib-win-x64-1.13.8.jar",
+      "size": 8277046,
+      "sha256": "33fbdbd5410e9ba9bdda94aa164ec8f7825bb49246420d8ce9bdd88219d97039"
+    }
+  ],
+  "source": {
+    "tag": "v1.13.8",
+    "source_url": "https://codeload.github.com/k2-fsa/sherpa-onnx/zip/refs/tags/v1.13.8",
+    "source_sha256": "b63b7613812346f2d1396a3a7f94accd47539e3dadc3ea385ba6474c70ab9897",
+    "license_url": "https://raw.githubusercontent.com/k2-fsa/sherpa-onnx/v1.13.8/LICENSE",
+    "bytes": 15384893,
+    "build_recipe_paths": [
+      ".github/workflows/run-java-test.yaml",
+      "sherpa-onnx/java-api/pom.xml",
+      "cmake/espeak-ng-for-piper.cmake",
+      "cmake/piper-phonemize.cmake",
+      "cmake/onnxruntime-*.cmake"
+    ]
+  },
+  "espeak": {
+    "commit": "ed530aa113046142eb5115cf2fc9157854d0ffe1",
+    "source_url": "https://github.com/csukuangfj/espeak-ng/archive/ed530aa113046142eb5115cf2fc9157854d0ffe1.zip",
+    "source_sha256": "e4e262cbe34f7fe21f91f1ba3397f2728e1f30eafbae7853f2b753a9ed13f0dd",
+    "license_url": "https://raw.githubusercontent.com/csukuangfj/espeak-ng/ed530aa113046142eb5115cf2fc9157854d0ffe1/COPYING"
+  },
+  "piper": {
+    "commit": "f3ff95afc03640bc1399e113e83361192a2fafb4",
+    "source_url": "https://github.com/csukuangfj/piper-phonemize/archive/f3ff95afc03640bc1399e113e83361192a2fafb4.zip",
+    "source_sha256": "d9cca4e2bdc7d6dd8dffb96a4668283dbd3f77a9c194a3e530c1e8eba9406a5d",
+    "license_url": "https://raw.githubusercontent.com/csukuangfj/piper-phonemize/f3ff95afc03640bc1399e113e83361192a2fafb4/LICENSE.md"
+  },
+  "onnxruntime": {
+    "osx-aarch64": {
+      "version": "1.28.2",
+      "vendor_archive_url": "https://github.com/csukuangfj/onnxruntime-libs/releases/download/v1.28.2/onnxruntime-osx-arm64-1.28.2.zip",
+      "vendor_archive_sha256": "d9e5c0c79929e201f5b8eb095e6809a91ce78be9866a1bca0dfab7e20b40ae40",
+      "source_provenance": "GIT_COMMIT_ID and VERSION_NUMBER read from pinned vendor archive; complete corresponding-source/build reproducibility not asserted.",
+      "source_commit": "33ca9628233dc8f002435e868d4c2e9f82766ca1",
+      "source_url": "https://github.com/microsoft/onnxruntime/tree/33ca9628233dc8f002435e868d4c2e9f82766ca1",
+      "vendor_build_recipes": "https://github.com/csukuangfj/onnxruntime-libs/tree/v1.28.2/.github/workflows"
+    },
+    "osx-x64": {
+      "version": "1.28.2",
+      "vendor_archive_url": "https://github.com/csukuangfj/onnxruntime-libs/releases/download/v1.28.2/onnxruntime-osx-x86_64-1.28.2.zip",
+      "vendor_archive_sha256": "cef42f2a4fca3b23dd16914ead36229adc7d5c119d563aaa12cc5d1e9177f93d",
+      "source_provenance": "vendor release source exact commit/build recipe not yet established; matching LICENSE/ThirdPartyNotices text inspected from official vendor zip"
+    },
+    "linux-x64": {
+      "version": "1.28.2",
+      "vendor_archive_url": "https://github.com/csukuangfj/onnxruntime-libs/releases/download/v1.28.2/onnxruntime-linux-x64-glibc2_17-Release-1.28.2.zip",
+      "vendor_archive_sha256": "c4f8994d56191d9d2c92a961b39fe790459f2c5d155f912b239506ea31359534",
+      "source_provenance": "vendor release source exact commit/build recipe not yet established; matching LICENSE/ThirdPartyNotices text inspected from official vendor zip"
+    },
+    "linux-aarch64": {
+      "version": "1.28.2",
+      "vendor_archive_url": "https://github.com/csukuangfj/onnxruntime-libs/releases/download/v1.28.2/onnxruntime-linux-aarch64-glibc2_17-Release-1.28.2.zip",
+      "vendor_archive_sha256": "28083273643f40fa6477ef9d53986fe216304710c4b1c743b217a4effd016339",
+      "source_provenance": "vendor release source exact commit/build recipe not yet established; matching LICENSE/ThirdPartyNotices text inspected from official vendor zip"
+    },
+    "win-x64": {
+      "version": "1.28.2",
+      "vendor_archive_url": "https://github.com/csukuangfj/onnxruntime-libs/releases/download/v1.28.2/onnxruntime-win-x64-MT-Release-1.28.2.tar.bz2",
+      "vendor_archive_sha256": "cd7f757f7a38ce14238bc9198bee197a9430b42ec3ecadea3408dd2e832eb02e",
+      "source_provenance": "vendor release source exact commit/build recipe not yet established; matching LICENSE/ThirdPartyNotices text inspected from official vendor zip"
+    },
+    "win-arm64": {
+      "version": "1.28.2",
+      "vendor_archive_url": "https://github.com/csukuangfj/onnxruntime-libs/releases/download/v1.28.2/onnxruntime-win-arm64-MT-Release-1.28.2.tar.bz2",
+      "vendor_archive_sha256": "59877bc38b2c1eed1375597b9da2403b314b1103693d1dd0397c00cbcad1c1ab",
+      "source_provenance": "vendor release source exact commit/build recipe not yet established; matching LICENSE/ThirdPartyNotices text inspected from official vendor zip"
+    }
+  },
+  "inspected_ort_vendor_bundle": {
+    "platform": "osx-aarch64",
+    "version": "1.28.2",
+    "git_commit_id": "33ca9628233dc8f002435e868d4c2e9f82766ca1",
+    "license_sha256": "2f07c72751aed99790b8a4869cf2311df85a860b22ded05fa22803587a48922c",
+    "third_party_notices_sha256": "0e07b95f3a8d6230037707c5c4a2b554d12c4cb67369669ac255635528ffcee2"
+  },
+  "provenance_limit": "Exact stock engine source and dependency declarations are pinned. ORT vendor build recipes/full all-platform binary-source correspondence not independently established. Metadata and repository links are not a complete-corresponding-source certification or written source offer.",
+  "source_verified_platforms": [
+    "osx-aarch64"
+  ]
+}
