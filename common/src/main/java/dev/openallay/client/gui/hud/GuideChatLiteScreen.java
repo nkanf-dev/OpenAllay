@@ -156,16 +156,17 @@ public final class GuideChatLiteScreen extends Screen {
     private void submit() {
         if (submitting || state.closed() || composer == null || state.intentSubmissionInFlight(session)) return;
         String text = state.readText(session);
-        if (text.isBlank() && (!state.intent(session).editing() || state.images().empty())) return;
-        GuideClientUiState.Insertion captured = state.captureInsertion(session);
-        SlashCommandDispatcher.Dispatch dispatch = SlashCommandDispatcher.dispatch(text, service, completion -> minecraft.execute(() -> {
-            if (state.closed()) return;
-            notice = Component.translatable("openallay.guide.slash." + completion.code()).getString();
-            if (completion.successful()) state.clearAcceptedText(captured, text);
-        }));
-        if (dispatch.handled()) return;
         GuideClientUiState.IntentCapture intentCapture = state.captureIntent(session);
         GuideClientUiState.DraftIntent intent = intentCapture.intent();
+        if (text.isBlank() && (!intent.editing() || state.images().empty())) return;
+        GuideClientUiState.Insertion captured = state.captureInsertion(session);
+        SlashCommandDispatcher.Dispatch dispatch = dispatchDraft(text, intent,
+                ordinaryText -> SlashCommandDispatcher.dispatch(ordinaryText, service, completion -> minecraft.execute(() -> {
+                    if (state.closed()) return;
+                    notice = Component.translatable("openallay.guide.slash." + completion.code()).getString();
+                    if (completion.successful()) state.clearAcceptedText(captured, text);
+                })));
+        if (dispatch.handled()) return;
         var selected = service.snapshot().sessions().stream().filter(value -> value.sessionId().equals(session)).findFirst().orElse(null);
         boolean active = selected != null && (selected.workingRequestId() != null
                 || selected.requests().stream().anyMatch(request -> !request.terminal()));
@@ -218,6 +219,13 @@ public final class GuideChatLiteScreen extends Screen {
                 submitting = false;
             }
         }));
+    }
+
+    /** A captured queued edit is literal message content, never a local composer command. */
+    static SlashCommandDispatcher.Dispatch dispatchDraft(String text, GuideClientUiState.DraftIntent intent,
+            java.util.function.Function<String, SlashCommandDispatcher.Dispatch> ordinaryDispatch) {
+        if (intent.editing()) return new SlashCommandDispatcher.Dispatch(false, true, text);
+        return ordinaryDispatch.apply(text);
     }
 
     enum Route { ASK, FOLLOW_UP, STEER, EDIT_PENDING, BLOCKED }
