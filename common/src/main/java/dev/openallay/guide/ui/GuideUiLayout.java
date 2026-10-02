@@ -12,11 +12,13 @@ public record GuideUiLayout(
         Rect composer,
         Rect detail,
         boolean detailOverlay,
+        Rect telemetry,
         Header header,
         ComposerControls composerControls) {
     private static final int MIN_TRANSCRIPT_HEIGHT = 54; // Four 10 px lines plus viewport padding.
     private static final int NOTICE_HEIGHT = 10;
     private static final int TELEMETRY_HEIGHT = 14;
+    private static final int TELEMETRY_CARD_HEIGHT = 80;
 
     public static GuideUiLayout calculate(int width, int height, boolean detailOpen) {
         return calculate(width, height, detailOpen, true);
@@ -49,10 +51,9 @@ public record GuideUiLayout(
         if (width < 240 || height < 180) throw new IllegalArgumentException("screen is too small");
         int margin = height < 240 ? 4 : 8;
         int available = width - margin * 2;
-        Header header = Header.calculate(margin, margin, available,
-                titleWidth, sessionsWidth, settings);
-        Rect topBar = new Rect(margin, margin, available, 24);
-        int bodyTop = topBar.bottom() + 2;
+        boolean narrow = width < 560;
+        int railWidth = narrow || !showRail ? 0 : 128;
+        boolean telemetryCard = railWidth > 0 && height >= 240 && (!detailOpen || width >= 760);
         int progressHeight = activeMode ? (height < 240 ? 12 : 22) : 0;
         boolean footer = activeMode || pendingMessages > 0;
         // On short screens attachments and the queue remain compact summaries.
@@ -60,15 +61,20 @@ public record GuideUiLayout(
                 ? Math.min(68, 44 + (images ? 14 : 0) + (footer ? 14 : 0))
                 : 44 + (images ? 42 : 0) + (footer ? 20 : 0)
                         + Math.min(2, Math.max(0, pendingMessages - 1)) * 20;
-        int composerBottom = height - margin - TELEMETRY_HEIGHT - 2;
+        int composerBottom = height - margin - (telemetryCard ? 0 : TELEMETRY_HEIGHT + 2);
+        int minimumComposerHeight = Math.max(44, 24 + (images ? 14 : 0) + (footer ? 14 : 0));
+        boolean stackedHeaderAllowed = composerBottom - (margin + 40 + 2) - MIN_TRANSCRIPT_HEIGHT
+                - progressHeight - NOTICE_HEIGHT - 2 >= minimumComposerHeight;
+        Header header = Header.calculate(margin, margin, available,
+                titleWidth, sessionsWidth, settings, stackedHeaderAllowed);
+        Rect topBar = new Rect(margin, margin, available, header.height());
+        int bodyTop = topBar.bottom() + 2;
         int composerBudget = composerBottom - bodyTop - MIN_TRANSCRIPT_HEIGHT
                 - progressHeight - NOTICE_HEIGHT - 2;
         int composerHeight = Math.min(desiredComposerHeight, composerBudget);
         int composerTop = composerBottom - composerHeight;
         int progressTop = composerTop - NOTICE_HEIGHT - progressHeight;
         int bodyHeight = progressTop - 2 - bodyTop;
-        boolean narrow = width < 560;
-        int railWidth = narrow || !showRail ? 0 : 128;
         boolean inlineDetail = detailOpen && width >= 760;
         int detailWidth = inlineDetail ? 220 : 0;
         int transcriptLeft = margin + railWidth + (railWidth == 0 ? 0 : margin);
@@ -81,15 +87,22 @@ public record GuideUiLayout(
                         ? new Rect(width - margin - detailWidth, bodyTop, detailWidth, bodyHeight)
                         : new Rect((width - overlayWidth) / 2, bodyTop, overlayWidth, bodyHeight);
         Rect composer = new Rect(transcriptLeft, composerTop, transcript.width(), composerHeight);
+        int telemetryBubbleWidth = Math.min(180, composer.width());
+        Rect telemetry = telemetryCard
+                ? new Rect(margin, composerBottom - TELEMETRY_CARD_HEIGHT, railWidth, TELEMETRY_CARD_HEIGHT)
+                : new Rect(composer.right() - telemetryBubbleWidth, composer.bottom() + 2,
+                        telemetryBubbleWidth, TELEMETRY_HEIGHT);
+        int railBottom = telemetryCard ? Math.min(transcript.bottom(), telemetry.y() - 2) : transcript.bottom();
         return new GuideUiLayout(
                 narrow,
                 topBar,
-                railWidth == 0 ? Rect.EMPTY : new Rect(margin, bodyTop, railWidth, bodyHeight),
+                railWidth == 0 ? Rect.EMPTY : new Rect(margin, bodyTop, railWidth, railBottom - bodyTop),
                 transcript,
                 new Rect(transcriptLeft, progressTop, transcript.width(), progressHeight),
                 composer,
                 detail,
                 detailOpen && !inlineDetail,
+                telemetry,
                 header,
                 ComposerControls.calculate(composer, activeMode));
     }
@@ -131,35 +144,45 @@ public record GuideUiLayout(
         return new Rect(composer.x(), composer.y() - NOTICE_HEIGHT, composer.width(), NOTICE_HEIGHT);
     }
 
-    /** Usage stays visible in one strip, independent of the session rail. */
-    public Rect telemetry() {
-        return new Rect(composer.x(), composer.bottom() + 2, composer.width(), TELEMETRY_HEIGHT);
+    /** A full card occupies the lower-left rail; small or rail-free screens use a right-aligned bubble. */
+    public boolean telemetryCard() {
+        return telemetry.height() == TELEMETRY_CARD_HEIGHT;
     }
 
     public record Header(
             Rect title, Rect status, Rect sessions, Rect create, Rect delete,
-            Rect export, Rect model, Rect refresh, Rect settings, Rect overflow) {
+            Rect export, Rect model, Rect refresh, Rect settings, Rect overflow, int height) {
         static Header calculate(
-                int x, int y, int width, int titleWidth, int sessionsWidth, boolean settings) {
+                int x, int y, int width, int titleWidth, int sessionsWidth,
+                boolean settings, boolean stackedAllowed) {
             int settingsWidth = settings ? 20 : 0;
             int overflowWidth = 20;
             int gaps = settings ? 12 : 8;
-            int sessions = Math.min(96, Math.max(48, sessionsWidth));
-            int modelWidth = Math.min(128, width - sessions - settingsWidth - overflowWidth - gaps);
-            int total = sessions + modelWidth + settingsWidth + overflowWidth + gaps;
+            int fixedControls = settingsWidth + overflowWidth + gaps;
+            int minimumControls = 20 + 20 + fixedControls;
+            int wantedTitle = Math.max(1, titleWidth);
+            // The name owns its width before the model label or secondary controls.
+            // A second row is bounded and admitted only by the shared body/input budget.
+            boolean stacked = stackedAllowed && wantedTitle + 8 + minimumControls > width;
+            int visibleTitleWidth = Math.min(wantedTitle, width - (stacked ? 8 : minimumControls + 8));
+            int controlBudget = stacked ? width : width - visibleTitleWidth - 8;
+            int sessions = Math.min(Math.min(96, Math.max(48, sessionsWidth)),
+                    controlBudget - fixedControls - 20);
+            int modelWidth = Math.min(128, controlBudget - fixedControls - sessions);
+            int total = sessions + modelWidth + fixedControls;
             int cursor = x + width - total;
-            int titleAvailable = Math.max(0, cursor - x - 10);
-            int visibleTitleWidth = titleAvailable < 32 ? 0 : Math.min(Math.max(0, titleWidth), titleAvailable);
-            Rect title = new Rect(x + 2, y + 6, visibleTitleWidth, 12);
-            Rect sessionsRect = new Rect(cursor, y + 2, sessions, 20);
+            int controlsY = y + (stacked ? 18 : 2);
+            int headerHeight = stacked ? 40 : 24;
+            Rect title = new Rect(x + 4, y + (stacked ? 4 : 6), visibleTitleWidth, 12);
+            Rect sessionsRect = new Rect(cursor, controlsY, sessions, 20);
             cursor = sessionsRect.right() + 4;
-            Rect model = new Rect(cursor, y + 2, modelWidth, 20);
+            Rect model = new Rect(cursor, controlsY, modelWidth, 20);
             cursor = model.right() + 4;
-            Rect overflow = new Rect(cursor, y + 2, overflowWidth, 20);
+            Rect overflow = new Rect(cursor, controlsY, overflowWidth, 20);
             cursor = overflow.right() + 4;
-            Rect settingsRect = settings ? new Rect(cursor, y + 2, settingsWidth, 20) : Rect.EMPTY;
-            return new Header(title, new Rect(x, y + 22, width, 0), sessionsRect,
-                    Rect.EMPTY, Rect.EMPTY, Rect.EMPTY, model, Rect.EMPTY, settingsRect, overflow);
+            Rect settingsRect = settings ? new Rect(cursor, controlsY, settingsWidth, 20) : Rect.EMPTY;
+            return new Header(title, new Rect(x, y + headerHeight - 2, width, 0), sessionsRect,
+                    Rect.EMPTY, Rect.EMPTY, Rect.EMPTY, model, Rect.EMPTY, settingsRect, overflow, headerHeight);
         }
 
         public List<Rect> controls() {

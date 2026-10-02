@@ -44,12 +44,13 @@ final class GuideUiLayoutTest {
     }
 
     @Test
-    void secondaryHeaderActionsMoveToOverflowWithoutGrowingTheHeader() {
+    void secondaryHeaderActionsStayInOverflowWhileTheNameOwnsItsBudget() {
         for (int[] size : new int[][] {{240, 180}, {320, 240}, {427, 320}, {900, 500}}) {
             GuideUiLayout layout = GuideUiLayout.calculate(size[0], size[1], false,
                     220, 180, 160, 180, true);
             GuideUiLayout.Header header = layout.header();
-            assertTrue(layout.topBar().height() <= 32);
+            assertTrue(layout.topBar().height() <= 40);
+            assertEquals(220, header.title().width());
             assertEquals(GuideUiLayout.Rect.EMPTY, header.create());
             assertEquals(GuideUiLayout.Rect.EMPTY, header.delete());
             assertEquals(GuideUiLayout.Rect.EMPTY, header.export());
@@ -63,25 +64,62 @@ final class GuideUiLayoutTest {
             }
         }
         GuideUiLayout compact = GuideUiLayout.calculate(240, 180, false);
-        assertEquals(0, compact.header().title().width());
+        assertEquals(120, compact.header().title().width());
         assertTrue(GuideUiLayout.calculate(900, 500, false).header().title().width() > 0);
     }
 
     @Test
-    void telemetryAlwaysUsesOneFourteenPixelStripBelowComposer() {
-        for (int[] size : new int[][] {{240, 180}, {280, 180}, {280, 240}, {320, 240}, {559, 320}, {560, 320}, {900, 500}}) {
+    void telemetryRestoresTheFullLowerLeftCardAndFallsBackWithoutCoveringContent() {
+        for (int[] size : new int[][] {{240, 180}, {280, 180}, {280, 240}, {320, 240}, {559, 320},
+                {560, 180}, {560, 240}, {560, 320}, {900, 500}}) {
             for (boolean showRail : new boolean[] {false, true}) {
-                GuideUiLayout layout = GuideUiLayout.calculate(size[0], size[1], true, showRail);
-                GuideUiLayout.Rect telemetry = layout.telemetry();
-                assertInside(new GuideUiLayout.Rect(0, 0, size[0], size[1]), telemetry);
-                assertEquals(14, telemetry.height());
-                assertEquals(layout.composer().x(), telemetry.x());
-                assertEquals(layout.composer().width(), telemetry.width());
-                assertTrue(telemetry.y() >= layout.composer().bottom());
-                for (GuideUiLayout.Rect region : List.of(layout.composer(), layout.progress(),
-                        layout.composerNotice(), layout.transcript(), layout.sessionRail(), layout.detail())) {
-                    assertFalse(overlap(telemetry, region));
+                for (boolean active : new boolean[] {false, true}) {
+                    GuideUiLayout layout = GuideUiLayout.calculate(size[0], size[1], true,
+                            120, 60, 48, 54, true, true, active, 4, showRail);
+                    GuideUiLayout.Rect telemetry = layout.telemetry();
+                    assertInside(new GuideUiLayout.Rect(0, 0, size[0], size[1]), telemetry);
+                    boolean card = size[0] >= 760 && size[1] >= 240 && showRail;
+                    assertEquals(card, layout.telemetryCard());
+                    assertEquals(card ? 80 : 14, telemetry.height());
+                    if (card) {
+                        assertEquals(layout.sessionRail().x(), telemetry.x());
+                        assertEquals(layout.sessionRail().width(), telemetry.width());
+                        assertEquals(layout.composer().bottom(), telemetry.bottom());
+                        assertTrue(layout.sessionRail().bottom() + 2 <= telemetry.y());
+                        assertTrue(telemetry.right() < layout.transcript().x());
+                    } else {
+                        assertEquals(layout.composer().right(), telemetry.right());
+                        assertEquals(Math.min(180, layout.composer().width()), telemetry.width());
+                        assertTrue(telemetry.width() < layout.composer().width());
+                        assertTrue(telemetry.y() >= layout.composer().bottom());
+                    }
+                    for (GuideUiLayout.Rect region : List.of(layout.topBar(), layout.composer(), layout.progress(),
+                            layout.composerNotice(), layout.transcript(), layout.sessionRail(), layout.detail())) {
+                        assertFalse(overlap(telemetry, region));
+                    }
+                    assertReadableTranscript(layout);
                 }
+            }
+        }
+    }
+
+    @Test
+    void normalWideIdleAndActiveScreensKeepAllThreeTelemetryRowsBelowTheRail() {
+        for (int[] size : new int[][] {{560, 240}, {569, 320}, {900, 500}}) {
+            for (boolean active : new boolean[] {false, true}) {
+                GuideUiLayout layout = GuideUiLayout.calculate(size[0], size[1], false,
+                        130, 60, 48, 54, true, true, active, 4);
+                GuideUiLayout.Rect card = layout.telemetry();
+                assertTrue(layout.telemetryCard());
+                assertEquals(80, card.height());
+                assertTrue(card.y() + 7 + 55 + 9 <= card.bottom(), "cost row retains native 9px text height");
+                assertEquals(layout.topBar().x(), card.x());
+                assertEquals(128, card.width());
+                assertTrue(card.x() < layout.composer().x());
+                assertTrue(layout.sessionRail().bottom() + 2 <= card.y());
+                for (GuideUiLayout.Rect region : List.of(layout.transcript(), layout.composer(), layout.composerNotice(),
+                        layout.progress(), layout.sessionRail())) assertFalse(overlap(card, region));
+                assertReadableTranscript(layout);
             }
         }
     }
@@ -139,6 +177,70 @@ final class GuideUiLayoutTest {
     }
 
     @Test
+    void styledNamesTakePriorityAtEveryScaleWithoutStealingFourTranscriptLines() {
+        // Fixture widths are explicit fake-font inputs, not measurements of a screenshot.
+        for (int[] size : new int[][] {{240, 180}, {320, 240}, {427, 320}, {900, 500}}) {
+            for (int titleWidth : new int[] {120, 130, 156, 220, 900}) {
+                for (int sessionsWidth : new int[] {36, 60, 180}) {
+                    for (boolean settings : new boolean[] {false, true}) {
+                        for (boolean images : new boolean[] {false, true}) {
+                            for (boolean active : new boolean[] {false, true}) {
+                                for (int pending : new int[] {0, 4}) {
+                                    GuideUiLayout layout = GuideUiLayout.calculate(size[0], size[1], true,
+                                            titleWidth, sessionsWidth, 48, 54, settings, images, active, pending);
+                                    GuideUiLayout.Header header = layout.header();
+                                    assertTrue(header.title().width() > 0, "names never silently disappear");
+                                    assertTrue(header.height() == 24 || header.height() == 40);
+                                    assertEquals(header.height(), layout.topBar().height());
+                                    assertInside(layout.topBar(), header.title());
+                                    // A 120px normal label with a 10px bold advance must remain complete.
+                                    if (titleWidth <= 130) assertEquals(titleWidth, header.title().width());
+                                    if (titleWidth == 220 && size[1] >= 240) assertEquals(titleWidth, header.title().width());
+                                    for (GuideUiLayout.Rect control : header.controls()) {
+                                        assertTrue(control.width() >= 20 && control.height() == 20);
+                                        assertInside(layout.topBar(), control);
+                                        assertFalse(overlap(header.title(), control));
+                                        for (GuideUiLayout.Rect other : header.controls()) {
+                                            if (control != other) assertFalse(overlap(control, other));
+                                        }
+                                    }
+                                    assertReadableTranscript(layout);
+                                    GuideUiLayout.ComposerExtras extras = layout.composerExtras(images, active, pending);
+                                    assertTrue(extras.input().height() >= 24);
+                                    if (images) assertTrue(extras.images().height() >= 12);
+                                    if (active || pending > 0) assertTrue(extras.footer().height() >= 12);
+                                    if (active) assertInside(layout.composer(), layout.composerControls().stop());
+                                    assertInside(new GuideUiLayout.Rect(0, 0, size[0], size[1]), layout.telemetry());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    void secondaryRowRequiresEnoughNativeHeightForInputAttachmentsAndStop() {
+        GuideUiLayout room = GuideUiLayout.calculate(240, 180, false,
+                220, 60, 48, 54, true, false, false, 0);
+        assertEquals(40, room.topBar().height());
+        assertEquals(220, room.header().title().width());
+        assertTrue(room.header().sessions().y() >= room.header().title().bottom() + 2);
+        GuideUiLayout busy = GuideUiLayout.calculate(240, 180, false,
+                220, 60, 48, 54, true, true, true, 4);
+        assertEquals(24, busy.topBar().height());
+        assertTrue(busy.header().title().width() >= 130);
+        assertTrue(busy.header().title().width() < 220);
+        assertEquals(20, busy.header().model().width());
+        assertEquals(20, busy.header().sessions().width());
+        assertReadableTranscript(room);
+        assertReadableTranscript(busy);
+        assertTrue(busy.composerExtras(true, true, 4).input().height() >= 24);
+        assertInside(busy.composer(), busy.composerControls().stop());
+    }
+
+    @Test
     void progressAndStopExistOnlyForAnActiveRequest() {
         GuideUiLayout idle = GuideUiLayout.calculate(240, 180, false);
         GuideUiLayout active = GuideUiLayout.calculate(240, 180, false,
@@ -190,7 +292,7 @@ final class GuideUiLayoutTest {
     }
 
     @Test
-    void hidingTheWideRailReturnsItsWidthWithoutChangingVerticalBudget() {
+    void hidingTheWideRailReturnsItsWidthAndUsesTheCompactTelemetryBudget() {
         GuideUiLayout shown = GuideUiLayout.calculate(900, 500, true,
                 120, 60, 48, 54, true, true, true, 4, true);
         GuideUiLayout hidden = GuideUiLayout.calculate(900, 500, true,
@@ -199,8 +301,10 @@ final class GuideUiLayoutTest {
         assertEquals(GuideUiLayout.Rect.EMPTY, hidden.sessionRail());
         assertTrue(hidden.transcript().width() > shown.transcript().width());
         assertEquals(shown.transcript().y(), hidden.transcript().y());
-        assertEquals(shown.transcript().height(), hidden.transcript().height());
-        assertEquals(shown.detail(), hidden.detail());
+        assertEquals(shown.transcript().height() - 16, hidden.transcript().height());
+        assertEquals(shown.detail().width(), hidden.detail().width());
+        assertTrue(shown.telemetryCard());
+        assertFalse(hidden.telemetryCard());
         assertEquals(hidden.transcript().width(), hidden.composer().width());
         assertReadableTranscript(hidden);
     }

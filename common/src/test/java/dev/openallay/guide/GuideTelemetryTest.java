@@ -53,7 +53,7 @@ final class GuideTelemetryTest {
     }
 
     @Test
-    void imageUnknownFooterLabelsTextOnlyAndDoesNotRenderATotalOccupancyBar() throws Exception {
+    void imageUnknownLabelsTextOnlyWhileOnlyKnownAccountingCanRenderTheTotalWindowBar() throws Exception {
         java.nio.file.Path current = java.nio.file.Path.of("").toAbsolutePath().normalize();
         java.nio.file.Path root = current.getFileName() != null
                 && current.getFileName().toString().equals("common") ? current.getParent() : current;
@@ -62,18 +62,30 @@ final class GuideTelemetryTest {
         String refresh = screen.substring(screen.indexOf("private void refreshTelemetry()"),
                 screen.indexOf("static String compactTokens"));
         String render = screen.substring(screen.indexOf("private void renderTelemetry("),
-                screen.indexOf("private void renderTelemetry(") + screen.substring(
-                        screen.indexOf("private void renderTelemetry(")).indexOf("graphics.disableScissor();"));
+                screen.indexOf("private boolean telemetryImageBarEligible()"));
+        String eligible = screen.substring(screen.indexOf("private boolean telemetryImageBarEligible()"),
+                screen.indexOf("private void renderProgress("));
         assertTrue(refresh.contains("context.imageAccounting()"));
         assertTrue(refresh.contains("screen.openallay.telemetry.text_estimate"));
         assertTrue(refresh.contains("screen.openallay.telemetry.image_unknown"));
-        // The current footer is a compact numeric strip. It renders the already-projected text-only
-        // label and never draws a total occupancy bar, for known or unknown image accounting.
+        // Compact bubbles retain the text-only label. The restored native card admits both
+        // the total-window track and its fill only under the same known-accounting predicate.
         assertTrue(render.contains("graphics.text(font, telemetryCompact"));
+        assertTrue(render.contains("graphics.text(font, telemetryContext"));
         assertTrue(refresh.contains("telemetryCompact = Component.translatable(\"screen.openallay.telemetry.compact\", occupancy, cache, cost)"));
-        assertFalse(render.contains("double ratio"));
-        assertFalse(render.contains("estimatedTokens()"));
-        assertFalse(render.contains("inputTokens()"));
+        int knownGuard = render.indexOf("if (telemetryImageBarEligible())");
+        int barTrack = render.indexOf("graphics.fill(x, y + 25");
+        int ratio = render.indexOf("double ratio");
+        assertTrue(knownGuard >= 0 && barTrack > knownGuard && ratio > barTrack);
+        assertTrue(eligible.contains("telemetry.context() != null && telemetry.context().budget() != null"));
+        assertTrue(eligible.contains("telemetry.context().imageAccounting()"));
+        assertTrue(eligible.contains("!= dev.openallay.model.tokenizer.TokenizerMetadata.ImageAccounting.UNKNOWN"));
+        assertTrue(render.contains("/ telemetry.context().budget().contextWindowTokens()"));
+        assertTrue(refresh.contains("compactTokens(context.budget().contextWindowTokens())"));
+        assertTrue(refresh.contains("context.budget().inputTokens()"));
+        assertTrue(refresh.contains("context.budget().reservedTokens()"));
+        assertTrue(refresh.contains("context.budget().maxOutputTokens()"));
+        assertFalse(refresh.contains("contextSpec("), "native telemetry must reuse captured estimates");
         for (String locale : List.of("en_us", "zh_cn")) {
             var labels = com.google.gson.JsonParser.parseString(java.nio.file.Files.readString(root.resolve(
                     "common/src/main/resources/assets/openallay/lang/" + locale + ".json"))).getAsJsonObject();
