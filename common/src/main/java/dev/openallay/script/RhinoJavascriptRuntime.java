@@ -299,18 +299,7 @@ public final class RhinoJavascriptRuntime {
     }
 
     private static void installJavaBridge(Context context, ScriptableObject scope) {
-        BaseFunction type = new BaseFunction(scope, ScriptableObject.getFunctionPrototype(scope, context)) {
-            @Override public Object call(Context cx, Scriptable callScope, Scriptable thisObject, Object[] args) {
-                if (args.length != 1) throw new JavascriptExecutionException("javascript_class_invalid", "Java.type requires one class name");
-                String name = cx.toString(args[0]);
-                try { return context.wrapJavaClass(scope, Class.forName(name, true, cx.getApplicationClassLoader())); }
-                catch (ClassNotFoundException e) { throw new JavascriptExecutionException("javascript_class_unavailable", "Java class is unavailable: " + name); }
-            }
-            @Override public String getFunctionName() { return "type"; }
-        };
-        ScriptableObject java = (ScriptableObject) context.newObject(scope);
-        ScriptableObject.defineProperty(java, "type", type, ScriptableObject.READONLY | ScriptableObject.PERMANENT, context);
-        defineGlobal(context, scope, "Java", java);
+        defineGlobal(context, scope, "Java", UnrestrictedJavaAccess.bind(context, scope));
     }
 
     private static void installHelpers(Context context, ScriptableObject scope) {
