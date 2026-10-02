@@ -42,13 +42,18 @@ public final class GuideCommandFacade {
             if (request == null) return;
             for (GuideToolActivity tool : request.tools()) {
                 if (seenTools.add(tool.invocationId())) {
-                    notices.accept(GuideNotice.info("查询 " + tool.toolId()));
+                    GuideToolIntent intent = tool.intent();
+                    String actionText = (intent != null && !intent.empty() && !intent.title().isBlank())
+                            ? "正在执行：" + intent.title()
+                            : "正在执行操作……";
+                    notices.accept(GuideNotice.info(actionText));
                 }
             }
             if (request.status() == GuideRequestStatus.RATE_LIMITED
                     && seenStatus[0] != GuideRequestStatus.RATE_LIMITED) {
+                long seconds = Math.max(1, Math.round(request.retryAfterMillis() / 1000.0));
                 notices.accept(GuideNotice.info(
-                        "模型限流，约 " + request.retryAfterMillis() + "ms 后重试"));
+                        "请求过于频繁，约 " + seconds + " 秒后自动重试……"));
             }
             if (request.terminal()) {
                 if (request.status() == GuideRequestStatus.COMPLETED) {
@@ -163,11 +168,11 @@ public final class GuideCommandFacade {
     public void status(UUID actor, Consumer<GuideNotice> notices) {
         GuideSnapshot snapshot = services.forActor(actor).snapshot();
         notices.accept(GuideNotice.info(
-                "客户端模型 " + snapshot.clientModelAvailable()
-                        + "；当前会话 " + snapshot.selectedSession()
-                        + "；知识文档 " + runtime.knowledge().snapshot().documents().size()
-                        + "；服务端模型 " + snapshot.serverModelAvailable()
-                        + "；当前模式 " + snapshot.modelMode().name().toLowerCase()));
+                "客户端模型: " + (snapshot.clientModelAvailable() ? "已就绪" : "未配置")
+                        + "；当前会话: " + snapshot.selectedSession()
+                        + "；已加载文档: " + runtime.knowledge().snapshot().documents().size()
+                        + "；服务端模型: " + (snapshot.serverModelAvailable() ? "可用" : "未连接")
+                        + "；运行模式: " + snapshot.modelMode().name().toLowerCase()));
     }
 
     public void skills(Consumer<GuideNotice> notices) {

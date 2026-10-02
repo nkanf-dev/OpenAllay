@@ -264,14 +264,14 @@ final class GuideToolPresentationTest {
         JsonObject english = language("en_us");
         JsonObject chinese = language("zh_cn");
         String previewKey = GuideToolMessage.Key.ANALYSIS_PREVIEW.translationKey();
-        assertEquals("Calculation complete · total items: 5 · preview items: 1 (sample only)",
+        assertEquals("Execution complete",
                 english.get(previewKey).getAsString().formatted("1", "5"));
-        assertEquals("计算完成 · 总结果 5 项 · 预览 1 项（仅展示样本）",
+        assertEquals("执行完成",
                 chinese.get(previewKey).getAsString().formatted("1", "5"));
         String fieldsKey = GuideToolMessage.Key.ANALYSIS_FIELDS_PREVIEW.translationKey();
-        assertEquals("Calculation complete · total: 5 top-level fields · preview: 5 fields (sampled values)",
+        assertEquals("Execution complete",
                 english.get(fieldsKey).getAsString().formatted("5", "5"));
-        assertEquals("计算完成 · 结果共 5 个顶层字段 · 预览 5 个字段（字段值仅展示样本）",
+        assertEquals("执行完成",
                 chinese.get(fieldsKey).getAsString().formatted("5", "5"));
         for (JsonObject locale : List.of(english, chinese)) {
             assertTrue(!locale.get(previewKey).getAsString().contains("/"));
