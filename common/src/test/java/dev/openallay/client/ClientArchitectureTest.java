@@ -102,8 +102,8 @@ final class ClientArchitectureTest {
             assertTrue(source.contains("recipeClient, display, settings == null ? null : settings.settings()"),
                     entrypoint::toString);
             assertTrue(source.indexOf("new GuideClientUiCoordinator(") < source.indexOf("new GuideCommandFacade("),
-                    "The shared fullscreen owner is installed before command opening: " + entrypoint);
-            assertTrue(!source.contains("new OpenAllayScreen("), "No loader-local fullscreen draft owner");
+                    "Presentation binds before command/task admission: " + entrypoint);
+            assertTrue(!source.contains("new OpenAllayScreen("), "Screen ownership stays in the shared coordinator");
             assertTrue(!source.contains("new GuideClientUiState("), "No loader-local draft owner");
             assertTrue(
                     source.contains("settings.settings().replaceServerModel(bridge.capabilities())"),
@@ -125,11 +125,21 @@ final class ClientArchitectureTest {
         assertEquals(1, occurrences(coordinator, "GuideClientUiState.create(next, dispatcher)"));
         assertTrue(coordinator.contains("GuideService next = services.current();"));
         assertTrue(coordinator.contains("if (closed || bound == next) return;"));
+        String guideOpen = coordinator.substring(coordinator.indexOf("public void openGuide("),
+                coordinator.indexOf("public void tick()"));
+        assertTrue(guideOpen.indexOf("bindCurrent()") < guideOpen.indexOf("GuideClientUiState owner = state"));
+        assertTrue(guideOpen.contains("new GuideHudEditorScreen(draft, applied, returnScreen"));
+        assertTrue(coordinator.contains("new GuideChatLiteScreen(service, state, display,"));
+        assertTrue(!coordinator.contains("listenPresentation("));
+        assertTrue(!coordinator.contains("client.voice"));
+        assertTrue(!coordinator.contains("client.presentation"));
         assertTrue(coordinator.contains("GuideClientUiState owner = state;"));
         assertTrue(coordinator.contains("new OpenAllayScreen(service, recipes, display, openSettings, owner)"));
         assertTrue(coordinator.contains("new OpenAllaySettingsScreen(settings, () -> openGuide(service))"));
+        assertTrue(coordinator.contains("settings.saveDisplay(current.withUi(current.ui().withHud("));
+        assertTrue(coordinator.contains("settings::saveDisplay"));
+        assertTrue(coordinator.contains("renderer.extractRenderState(graphics, hud.view())"));
         assertTrue(!coordinator.contains("new GuideService("));
-        assertTrue(!coordinator.contains("forActor("));
         assertTrue(!coordinator.contains("new GuideDisplayRuntime("));
         assertTrue(!coordinator.contains("new ClientSettingsRuntime("));
         String closeState = coordinator.substring(coordinator.indexOf("private void closeState()"));
@@ -137,16 +147,22 @@ final class ClientArchitectureTest {
         assertTrue(closeState.indexOf("state.close()") < closeState.indexOf("bound = null"));
 
         String fabricClient = Files.readString(entrypoints.getFirst());
+        assertTrue(fabricClient.contains("HudElementRegistry.attachElementBefore(VanillaHudElements.CHAT"));
         assertTrue(fabricClient.contains("ui::openGuide"));
         assertTrue(fabricClient.contains("ui.tick()"));
         assertTrue(fabricClient.contains("ui.disconnect()"));
         assertTrue(fabricClient.contains("ui.close()"));
         String neoForgeClient = Files.readString(entrypoints.get(1));
+        assertTrue(neoForgeClient.contains("ClientStartedEvent"));
+        assertTrue(neoForgeClient.contains("RegisterGuiLayersEvent"));
+        assertTrue(neoForgeClient.contains("VanillaGuiLayers.CHAT"));
+        assertTrue(neoForgeClient.indexOf("modBus.addListener((RegisterGuiLayersEvent")
+                < neoForgeClient.indexOf("private static void start("));
+        assertTrue(neoForgeClient.contains("if (current != null) current.extractRenderState(graphics)"));
         assertTrue(neoForgeClient.contains("coordinator::openGuide"));
         assertTrue(neoForgeClient.contains("coordinator.tick()"));
         assertTrue(neoForgeClient.contains("coordinator.disconnect()"));
         assertTrue(neoForgeClient.contains("coordinator.close()"));
-        assertTrue(neoForgeClient.contains("ClientStartedEvent"));
         assertTrue(neoForgeClient.contains("start(runtime, bridge, event.getClient())"));
         assertTrue(neoForgeClient.indexOf("new MinecraftGuideHistoryScope(client)")
                 > neoForgeClient.indexOf("ClientStartedEvent"));

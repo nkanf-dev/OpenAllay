@@ -42,6 +42,23 @@ public record SettingsLayout(
                 true, false, header, content, navigation, list, editor, footer);
     }
 
+    /** Single-page sections use all space beside navigation, with no empty list column. */
+    public static SettingsLayout calculate(int width, int height, SettingsSection section) {
+        SettingsLayout layout = calculate(width, height);
+        boolean needsList = section == SettingsSection.MODELS || section == SettingsSection.EXTENSIONS
+                || section == SettingsSection.SKILLS;
+        if (!layout.wide() || needsList) return layout;
+        Rect editor = new Rect(layout.navigation().right() + 6, layout.content().y(),
+                layout.content().right() - layout.navigation().right() - 6, layout.content().height());
+        Rect absent = new Rect(editor.x(), editor.y(), 0, editor.height());
+        return new SettingsLayout(true, false, layout.header(), layout.content(),
+                layout.navigation(), absent, editor, layout.footer());
+    }
+
+    public int maximumNavigationScroll(int sectionCount) {
+        return Math.max(0, 16 + sectionCount * 24 - navigation.height());
+    }
+
     /** Scroll calculations use only the editor viewport; the footer is never part of the page. */
     public int maximumPageScroll(int contentHeight) {
         return Math.max(0, contentHeight - editor.height() + 8);

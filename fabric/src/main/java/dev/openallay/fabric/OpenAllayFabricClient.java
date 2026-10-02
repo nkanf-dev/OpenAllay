@@ -18,6 +18,9 @@ import dev.openallay.guide.e2e.GuideClientE2EConfig;
 import dev.openallay.guide.e2e.GuideClientE2EController;
 import dev.openallay.client.gui.OpenAllayKeyMappings;
 import dev.openallay.client.gui.GuideClientUiCoordinator;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
+import net.minecraft.resources.Identifier;
 import dev.openallay.guide.ui.GuideDisplayRuntime;
 import dev.openallay.settings.ClientSettingsHistoryBinding;
 import dev.openallay.tool.ToolResult;
@@ -160,6 +163,9 @@ public final class OpenAllayFabricClient implements ClientModInitializer {
         GuideClientUiCoordinator ui = new GuideClientUiCoordinator(Minecraft.getInstance(), services,
                 recipeClient, display, settings == null ? null : settings.settings(),
                 configDirectory, dispatcher, clock);
+        HudElementRegistry.attachElementBefore(VanillaHudElements.CHAT,
+                Identifier.fromNamespaceAndPath("openallay", "guide_hud"),
+                (graphics, deltaTracker) -> ui.extractRenderState(graphics));
         bridge.onDisconnect(() -> {
             ui.disconnect();
             if (settings != null) settings.settings().clearServerModel();
@@ -194,7 +200,7 @@ public final class OpenAllayFabricClient implements ClientModInitializer {
                 services,
                 contexts,
                 screens));
-        KeyMappingHelper.registerKeyMapping(OpenAllayKeyMappings.OPEN_GUIDE);
+        OpenAllayKeyMappings.all().forEach(KeyMappingHelper::registerKeyMapping);
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             while (OpenAllayKeyMappings.OPEN_GUIDE.consumeClick()) {
                 if (client.player != null && client.level != null

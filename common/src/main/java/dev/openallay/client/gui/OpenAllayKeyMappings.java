@@ -11,5 +11,18 @@ public final class OpenAllayKeyMappings {
     public static final KeyMapping OPEN_GUIDE = new KeyMapping(
             "key.openallay.open_guide", InputConstants.KEY_K, CATEGORY);
 
+    // These actions are deliberately unbound. Players choose conflict-free keys in Controls.
+    public static final KeyMapping TOGGLE_HUD = unbound("key.openallay.toggle_hud");
+    public static final KeyMapping EDIT_HUD = unbound("key.openallay.edit_hud");
+    public static final KeyMapping INTERACT_HUD = unbound("key.openallay.interact_hud");
+
+    public static java.util.List<KeyMapping> all() {
+        return java.util.List.of(OPEN_GUIDE, TOGGLE_HUD, EDIT_HUD, INTERACT_HUD);
+    }
+
+    private static KeyMapping unbound(String name) {
+        return new KeyMapping(name, InputConstants.Type.KEYSYM, InputConstants.UNKNOWN.getValue(), CATEGORY);
+    }
+
     private OpenAllayKeyMappings() {}
 }

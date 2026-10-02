@@ -17,6 +17,8 @@ import dev.openallay.guide.e2e.GuideClientE2EConfig;
 import dev.openallay.guide.e2e.GuideClientE2EController;
 import dev.openallay.client.gui.OpenAllayKeyMappings;
 import dev.openallay.client.gui.GuideClientUiCoordinator;
+import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
+import net.minecraft.resources.Identifier;
 import dev.openallay.guide.ui.GuideDisplayRuntime;
 import dev.openallay.settings.ClientSettingsHistoryBinding;
 import dev.openallay.tool.ToolResult;
@@ -39,6 +41,9 @@ public final class OpenAllayNeoForgeClient {
     private static final java.util.concurrent.atomic.AtomicBoolean STARTED =
             new java.util.concurrent.atomic.AtomicBoolean();
 
+    // Installed before ClientStartedEvent; the stable layer resolves the later runtime.
+    private static volatile GuideClientUiCoordinator ui;
+
     private OpenAllayNeoForgeClient() {}
 
     public static void initialize(OpenAllayRuntime runtime, IEventBus modBus) {
@@ -54,8 +59,15 @@ public final class OpenAllayNeoForgeClient {
         bridge.register(modBus);
         modBus.addListener((RegisterKeyMappingsEvent event) -> {
             event.registerCategory(OpenAllayKeyMappings.CATEGORY);
-            event.register(OpenAllayKeyMappings.OPEN_GUIDE);
+            OpenAllayKeyMappings.all().forEach(event::register);
         });
+        modBus.addListener((RegisterGuiLayersEvent event) -> event.registerBelow(
+                net.neoforged.neoforge.client.gui.VanillaGuiLayers.CHAT,
+                Identifier.fromNamespaceAndPath("openallay", "guide_hud"),
+                (graphics, deltaTracker) -> {
+                    GuideClientUiCoordinator current = ui;
+                    if (current != null) current.extractRenderState(graphics);
+                }));
         NeoForge.EVENT_BUS.addListener((ClientStartedEvent event) ->
                 start(runtime, bridge, event.getClient()));
     }
@@ -178,6 +190,7 @@ public final class OpenAllayNeoForgeClient {
         GuideClientUiCoordinator coordinator = new GuideClientUiCoordinator(client, services,
                 recipeClient, display, settings == null ? null : settings.settings(),
                 configDirectory, dispatcher, clock);
+        ui = coordinator;
         bridge.onDisconnect(() -> {
             coordinator.disconnect();
             if (settings != null) settings.settings().clearServerModel();
@@ -185,6 +198,7 @@ public final class OpenAllayNeoForgeClient {
         });
         NeoForge.EVENT_BUS.addListener((ClientStoppingEvent event) -> {
             coordinator.close();
+            ui = null;
             services.shutdown()
                         .handle((ignored, failure) -> null)
                         .thenCompose(ignored -> history.closeAsync())

@@ -3,6 +3,13 @@ package dev.openallay.client.gui;
 import dev.openallay.client.gui.settings.DiagnosticsSettingsProjection;
 import dev.openallay.client.gui.settings.ExtensionSettingsProjection;
 import dev.openallay.client.gui.settings.GeneralSettingsProjection;
+import dev.openallay.client.gui.settings.UiSettingsProjection;
+import dev.openallay.client.gui.settings.UiSettingsDraft;
+import dev.openallay.guide.ui.GuideDisplayConfig;
+import dev.openallay.guide.ui.GuideUiConfig;
+import net.minecraft.client.gui.components.AbstractSliderButton;
+import net.minecraft.client.input.KeyEvent;
+import org.lwjgl.glfw.GLFW;
 import dev.openallay.client.gui.settings.HistorySettingsProjection;
 import dev.openallay.client.gui.settings.ModelProfileDraft;
 import dev.openallay.client.gui.settings.ModelReasoningSettingsProjection;
@@ -118,6 +125,24 @@ public final class OpenAllaySettingsScreen extends Screen {
     private boolean modelCatalogOpen;
     private int modelCatalogPage;
     private long modelCatalogGeneration;
+    private final UiSettingsDraft uiDraft;
+    private UiSettingsProjection.Group uiGroup = UiSettingsProjection.Group.FULLSCREEN;
+    private int uiScroll;
+    private int uiContentHeight;
+    private int navigationScroll;
+    private boolean sectionMenuOpen;
+    private UiActions uiActions;
+
+    /** Loader hooks only. Neither preview nor editor entry creates an Agent task. */
+    public interface UiActions {
+        void editHud(OpenAllaySettingsScreen returnScreen, GuideDisplayConfig draft,
+                java.util.function.Consumer<GuideDisplayConfig> applied);
+    }
+
+    public OpenAllaySettingsScreen withUiActions(UiActions actions) {
+        uiActions = Objects.requireNonNull(actions, "actions");
+        return this;
+    }
 
     public OpenAllaySettingsScreen(
             ClientSettingsService service,
@@ -127,6 +152,7 @@ public final class OpenAllaySettingsScreen extends Screen {
         this.returnToGuide = Objects.requireNonNull(returnToGuide, "returnToGuide");
         this.snapshot = service.snapshot();
         assistantNameDraft = snapshot.display().assistantName();
+        uiDraft = new UiSettingsDraft(snapshot.display());
         selectedSkillName = snapshot.skills().skills().isEmpty()
                 ? null
                 : snapshot.skills().skills().getFirst().metadata().name();
@@ -141,8 +167,12 @@ public final class OpenAllaySettingsScreen extends Screen {
 
     @Override
     protected void init() {
-        layout = SettingsLayout.calculate(width, height);
+        layout = SettingsLayout.calculate(width, height, section);
         addHeaderActions();
+        if (sectionMenuOpen) {
+            addSectionMenu();
+            return;
+        }
         if (layout.wide()) {
             addSectionNavigation();
         }
@@ -152,6 +182,8 @@ public final class OpenAllaySettingsScreen extends Screen {
             addExtensionsPage();
         } else if (section == SettingsSection.SKILLS) {
             addSkillsPage();
+        } else if (section == SettingsSection.UI) {
+            addUiPage();
         } else if (section == SettingsSection.GENERAL) {
             addGeneralPage();
         } else if (section == SettingsSection.HISTORY) {
@@ -170,6 +202,7 @@ public final class OpenAllaySettingsScreen extends Screen {
             }
             ClientSettingsSnapshot previous = snapshot;
             snapshot = next;
+            uiDraft.published(next.display());
             refreshAutomaticContext();
             if (previous.generation() != next.generation()) {
                 historyConfirmation = null;
@@ -224,8 +257,13 @@ public final class OpenAllaySettingsScreen extends Screen {
                 selectedExtensionId = cards.isEmpty() ? null : cards.getFirst().id();
             }
             if (layout != null) {
-                rebuildWidgets();
-                maybeRefreshVisibleCommunity();
+                // Background history/source publications must not rebuild a dragged UI slider.
+                if (section == SettingsSection.UI && !sectionMenuOpen) {
+                    updateUiApplyButton();
+                } else {
+                    rebuildWidgets();
+                    maybeRefreshVisibleCommunity();
+                }
             }
         });
     }
@@ -289,6 +327,28 @@ public final class OpenAllaySettingsScreen extends Screen {
             double mouseY,
             double scrollX,
             double scrollY) {
+        if ((layout.wide() && layout.navigation().contains(mouseX, mouseY)) || sectionMenuOpen) {
+            int maximum = sectionMenuOpen
+                    ? Math.max(0, SettingsSection.topLevel().size() - sectionMenuRows())
+                    : layout.maximumNavigationScroll(SettingsSection.topLevel().size());
+            int next = net.minecraft.util.Mth.clamp(navigationScroll
+                    - (int) Math.round(scrollY * (sectionMenuOpen ? 1 : 24)), 0, maximum);
+            if (next != navigationScroll) {
+                navigationScroll = next;
+                rebuildWidgets();
+            }
+            return true;
+        }
+        if (section == SettingsSection.UI && layout.editor().contains(mouseX, mouseY)) {
+            int maximum = Math.max(0, uiContentHeight - Math.max(1,
+                    layout.editor().height() - uiControlsInset()));
+            int next = net.minecraft.util.Mth.clamp(uiScroll - (int) Math.round(scrollY * 24), 0, maximum);
+            if (next != uiScroll) {
+                uiScroll = next;
+                rebuildWidgets();
+            }
+            return true;
+        }
         if (section == SettingsSection.MODELS && layout.editor().contains(mouseX, mouseY)) {
             if (modelCatalogOpen) {
                 int pageSize = modelCatalogPageSize();
@@ -368,7 +428,11 @@ public final class OpenAllaySettingsScreen extends Screen {
         if (layout.wide()) {
             panel(graphics, layout.navigation(), PANEL_ALT);
         }
-        if (section == SettingsSection.MODELS) {
+        if (sectionMenuOpen) {
+            renderSectionMenu(graphics);
+        } else if (section == SettingsSection.UI) {
+            renderUi(graphics);
+        } else if (section == SettingsSection.MODELS) {
             renderModels(graphics);
         } else if (section == SettingsSection.EXTENSIONS) {
             renderExtensions(graphics);
@@ -401,7 +465,11 @@ public final class OpenAllaySettingsScreen extends Screen {
             int sectionX = layout.header().x() + 90;
             addRenderableWidget(OpenAllayButton.create(
                             Component.translatable(section.translationKey()),
-                            ignored -> cycleSection())
+                            ignored -> {
+                                sectionMenuOpen = !sectionMenuOpen;
+                                navigationScroll = 0;
+                                rebuildWidgets();
+                            })
                     .bounds(sectionX, y, Math.max(50, backX - sectionX - 4), 20)
                     .build());
         }
@@ -409,7 +477,7 @@ public final class OpenAllaySettingsScreen extends Screen {
 
     private void addSectionNavigation() {
         int x = layout.navigation().x() + 6;
-        int y = layout.navigation().y() + 8;
+        int y = layout.navigation().y() + 8 - navigationScroll;
         int buttonWidth = layout.navigation().width() - 12;
         for (SettingsSection candidate : SettingsSection.topLevel()) {
             Button button = addRenderableWidget(OpenAllayButton.create(
@@ -419,8 +487,340 @@ public final class OpenAllaySettingsScreen extends Screen {
                     .bounds(x, y, buttonWidth, 20)
                     .build());
             button.active = candidate != section;
+            button.visible = y >= layout.navigation().y()
+                    && y + 20 <= layout.navigation().bottom();
             y += 24;
         }
+    }
+
+    @Override
+    public boolean keyPressed(KeyEvent event) {
+        if (sectionMenuOpen && event.key() == GLFW.GLFW_KEY_ESCAPE) {
+            sectionMenuOpen = false;
+            rebuildWidgets();
+            return true;
+        }
+        return super.keyPressed(event);
+    }
+
+    private int sectionMenuRows() {
+        return Math.max(1, (layout.content().height() - 26) / 24);
+    }
+
+    private void addSectionMenu() {
+        SettingsLayout.Rect area = layout.content();
+        int rows = sectionMenuRows();
+        List<SettingsSection> sections = SettingsSection.topLevel();
+        int maximum = Math.max(0, sections.size() - rows);
+        navigationScroll = net.minecraft.util.Mth.clamp(navigationScroll, 0, maximum);
+        for (int index = navigationScroll; index < Math.min(sections.size(), navigationScroll + rows); index++) {
+            SettingsSection candidate = sections.get(index);
+            addRenderableWidget(OpenAllayButton.create(Component.translatable(candidate.translationKey()),
+                            ignored -> switchSection(candidate))
+                    .selected(candidate == section)
+                    .bounds(area.x() + 6, area.y() + 4 + (index - navigationScroll) * 24,
+                            area.width() - 12, 20).build());
+        }
+        Button previous = addRenderableWidget(OpenAllayButton.create(
+                        Component.translatable("screen.openallay.settings.navigation.previous"), ignored -> {
+                            navigationScroll = Math.max(0, navigationScroll - rows);
+                            rebuildWidgets();
+                        }).bounds(area.x() + 6, area.bottom() - 22, (area.width() - 16) / 2, 20).build());
+        previous.active = navigationScroll > 0;
+        Button next = addRenderableWidget(OpenAllayButton.create(
+                        Component.translatable("screen.openallay.settings.navigation.next"), ignored -> {
+                            navigationScroll = Math.min(maximum, navigationScroll + rows);
+                            rebuildWidgets();
+                        }).bounds(area.x() + 10 + (area.width() - 16) / 2, area.bottom() - 22,
+                                (area.width() - 16) / 2, 20).build());
+        next.active = navigationScroll < maximum;
+    }
+
+    private void renderSectionMenu(GuiGraphicsExtractor graphics) {
+        graphics.text(font, Component.translatable("screen.openallay.settings.navigation.choose"),
+                layout.footer().x() + 8, layout.footer().y() + 9, MUTED, false);
+    }
+
+    private void addUiPage() {
+        SettingsLayout.Rect area = layout.editor();
+        int tabWidth = (area.width() - 14) / UiSettingsProjection.Group.values().length;
+        int index = 0;
+        for (UiSettingsProjection.Group group : UiSettingsProjection.Group.values()) {
+            addRenderableWidget(OpenAllayButton.create(Component.translatable(group.translationKey()), ignored -> {
+                        uiGroup = group;
+                        uiScroll = 0;
+                        rebuildWidgets();
+                    }).selected(group == uiGroup)
+                    .bounds(area.x() + 6 + index++ * (tabWidth + 2), area.y() + 4, tabWidth, 20).build());
+        }
+        int x = area.x() + 10;
+        int w = Math.max(120, area.width() - 20);
+        int y = area.y() + 34 - uiScroll;
+        GuideUiConfig.Fullscreen full = uiDraft.ui().fullscreen();
+        GuideUiConfig.Hud hud = uiDraft.ui().hud();
+        switch (uiGroup) {
+            case FULLSCREEN -> {
+                uiButton("density", enumLabel("density", full.density()), x, y, w, () ->
+                        changeFull(new GuideUiConfig.Fullscreen(full.density() == GuideUiConfig.Density.COMPACT
+                                ? GuideUiConfig.Density.COMFORTABLE : GuideUiConfig.Density.COMPACT,
+                                full.sessionRailVisible(), full.toolsCollapsed(), full.theme())));
+                y += 26;
+                uiToggle("session_rail", full.sessionRailVisible(), x, y, w, () ->
+                        changeFull(new GuideUiConfig.Fullscreen(full.density(), !full.sessionRailVisible(),
+                                full.toolsCollapsed(), full.theme())));
+                y += 26;
+                uiToggle("tools_fold", full.toolsCollapsed(), x, y, w, () ->
+                        changeFull(new GuideUiConfig.Fullscreen(full.density(), full.sessionRailVisible(),
+                                !full.toolsCollapsed(), full.theme())));
+                y += 26;
+                uiButton("theme", enumLabel("theme", full.theme()), x, y, w, () ->
+                        changeFull(new GuideUiConfig.Fullscreen(full.density(), full.sessionRailVisible(),
+                                full.toolsCollapsed(), full.theme() == GuideUiConfig.Theme.CHARCOAL
+                                        ? GuideUiConfig.Theme.MINT : GuideUiConfig.Theme.CHARCOAL)));
+                y += 26;
+                uiToggle("animations", uiDraft.animationsEnabled(), x, y, w, () -> {
+                    uiDraft.previewAnimations(!uiDraft.animationsEnabled());
+                    rebuildWidgets();
+                });
+                y += 26;
+            }
+            case HUD -> {
+                y = area.y() + uiControlsInset() - uiScroll;
+                uiToggle("hud_enabled", hud.enabled(), x, y, w, () -> changeHud(uiDraft.ui().hud().withEnabled(!uiDraft.ui().hud().enabled())));
+                y += 26;
+                uiButton("anchor", enumLabel("anchor", hud.anchor()), x, y, w, () -> {
+                    GuideUiConfig.Anchor[] anchors = GuideUiConfig.Anchor.values();
+                    GuideUiConfig.Hud current = uiDraft.ui().hud();
+                    changeHud(current.withPlacement(anchors[(current.anchor().ordinal() + 1) % anchors.length],
+                            current.offsetX(), current.offsetY(), current.width(), current.height(), current.scale()));
+                });
+                y += 26;
+                uiInteger("offset_x", hud.offsetX(), x, y, w, value -> previewHud(uiDraft.ui().hud().withPlacement(
+                        uiDraft.ui().hud().anchor(), value, uiDraft.ui().hud().offsetY(),
+                        uiDraft.ui().hud().width(), uiDraft.ui().hud().height(), uiDraft.ui().hud().scale())));
+                y += 26;
+                uiInteger("offset_y", hud.offsetY(), x, y, w, value -> previewHud(uiDraft.ui().hud().withPlacement(
+                        uiDraft.ui().hud().anchor(), uiDraft.ui().hud().offsetX(), value,
+                        uiDraft.ui().hud().width(), uiDraft.ui().hud().height(), uiDraft.ui().hud().scale())));
+                y += 26;
+                uiSlider("width", hud.width(), 160, 480, true, x, y, w, value -> {
+                    GuideUiConfig.Hud current = uiDraft.ui().hud();
+                    previewHud(current.withPlacement(current.anchor(), current.offsetX(), current.offsetY(),
+                            (int) Math.round(value), current.height(), current.scale()));
+                });
+                y += 26;
+                uiSlider("height", hud.height(), 44, 240, true, x, y, w, value -> {
+                    GuideUiConfig.Hud current = uiDraft.ui().hud();
+                    previewHud(current.withPlacement(current.anchor(), current.offsetX(), current.offsetY(),
+                            current.width(), (int) Math.round(value), current.scale()));
+                });
+                y += 26;
+                uiSlider("scale", hud.scale(), .75, 1.75, false, x, y, w, value -> {
+                    GuideUiConfig.Hud current = uiDraft.ui().hud();
+                    previewHud(current.withPlacement(current.anchor(), current.offsetX(), current.offsetY(),
+                            current.width(), current.height(), Math.round(value * 100) / 100.0));
+                });
+                y += 26;
+                uiSlider("opacity", hud.backgroundOpacity(), 0, 1, false, x, y, w,
+                        value -> previewHud(uiDraft.ui().hud().withBackgroundOpacity(Math.round(value * 100) / 100.0)));
+                y += 26;
+                uiButton("opacity_reset", Component.empty(), x, y, w,
+                        () -> changeHud(uiDraft.ui().hud().withBackgroundOpacity(GuideUiConfig.Hud.defaults().backgroundOpacity())));
+                y += 26;
+                uiToggle("collapsed", hud.collapsed(), x, y, w, () -> changeHud(uiDraft.ui().hud().withCollapsed(!uiDraft.ui().hud().collapsed())));
+                y += 26;
+                uiSlider("reply_lines", hud.maxReplyLines(), 1, 10, true, x, y, w, value -> {
+                    GuideUiConfig.Hud current = uiDraft.ui().hud();
+                    previewHud(current.withContent((int) Math.round(value), current.showLatestReply(), current.showStreamingPreview()));
+                });
+                y += 26;
+                uiToggle("latest_reply", hud.showLatestReply(), x, y, w,
+                        () -> changeHud(uiDraft.ui().hud().withContent(uiDraft.ui().hud().maxReplyLines(), !uiDraft.ui().hud().showLatestReply(), uiDraft.ui().hud().showStreamingPreview())));
+                y += 26;
+                uiToggle("streaming", hud.showStreamingPreview(), x, y, w,
+                        () -> changeHud(uiDraft.ui().hud().withContent(uiDraft.ui().hud().maxReplyLines(), uiDraft.ui().hud().showLatestReply(), !uiDraft.ui().hud().showStreamingPreview())));
+                y += 26;
+                uiToggle("hide_debug", hud.hideWithDebug(), x, y, w,
+                        () -> changeHud(uiDraft.ui().hud().withVisibility(!uiDraft.ui().hud().hideWithDebug(), uiDraft.ui().hud().hideOnOtherScreens())));
+                y += 26;
+                uiToggle("hide_screens", hud.hideOnOtherScreens(), x, y, w,
+                        () -> changeHud(uiDraft.ui().hud().withVisibility(uiDraft.ui().hud().hideWithDebug(), !uiDraft.ui().hud().hideOnOtherScreens())));
+                y += 26;
+                Button edit = uiButton("edit_hud", Component.empty(), x, y, w, () -> {
+                    if (uiActions != null) uiActions.editHud(this, uiDraft.candidate(snapshot.display()), candidate -> {
+                        uiDraft.preview(candidate.ui());
+                        uiDraft.previewAnimations(candidate.animationsEnabled());
+                        applyUi();
+                    });
+                });
+                edit.active = uiActions != null && snapshot.operation().kind() == SettingsOperation.Kind.IDLE;
+                if (uiActions == null) edit.setTooltip(Tooltip.create(Component.translatable(
+                        "screen.openallay.settings.ui.actions_unavailable")));
+                y += 26;
+            }
+        }
+        uiContentHeight = y + uiScroll - (area.y() + uiControlsInset());
+    }
+
+    private Button uiButton(String key, Component value, int x, int y, int w, Runnable action) {
+        Component label = Component.translatable("screen.openallay.settings.ui." + key);
+        if (!value.getString().isBlank()) label = label.copy().append(" · ").append(value);
+        Button button = addRenderableWidget(OpenAllayButton.create(label, ignored -> action.run())
+                .bounds(x, y, w, 20).build());
+        button.visible = uiWidgetVisible(y, 20);
+        return button;
+    }
+
+    private void uiToggle(String key, boolean enabled, int x, int y, int w, Runnable action) {
+        uiButton(key, Component.translatable("screen.openallay.settings.ui." + (enabled ? "on" : "off")),
+                x, y, w, action);
+    }
+
+    private Component enumLabel(String kind, Enum<?> value) {
+        return Component.translatable("screen.openallay.settings.ui." + kind + "."
+                + value.name().toLowerCase(java.util.Locale.ROOT));
+    }
+
+    private int uiControlsInset() {
+        return uiGroup == UiSettingsProjection.Group.HUD
+                ? Math.min(100, Math.max(34, layout.editor().height() - 24)) : 34;
+    }
+
+    private boolean uiWidgetVisible(int y, int h) {
+        return y >= layout.editor().y() + uiControlsInset() && y + h <= layout.editor().bottom();
+    }
+
+    private void uiInteger(String key, int value, int x, int y, int w, java.util.function.IntConsumer changed) {
+        EditBox field = new EditBox(font, x + w / 2, y, w / 2, 20,
+                Component.translatable("screen.openallay.settings.ui." + key));
+        field.setValue(Integer.toString(value));
+        field.setMaxLength(6);
+        field.setResponder(text -> {
+            try {
+                changed.accept(Integer.parseInt(text));
+                localNotice = "";
+            } catch (IllegalArgumentException invalid) {
+                localNotice = Component.translatable("screen.openallay.settings.ui.invalid_range").getString();
+            }
+        });
+        field.setVisible(uiWidgetVisible(y, 20));
+        addRenderableWidget(field);
+    }
+
+    private void uiSlider(String key, double value, double minimum, double maximum, boolean integral,
+            int x, int y, int w, java.util.function.DoubleConsumer changed) {
+        UiSlider slider = new UiSlider(x, y, w, key, value, minimum, maximum, integral, changed);
+        slider.visible = uiWidgetVisible(y, 20);
+        addRenderableWidget(slider);
+    }
+
+    private void changeFull(GuideUiConfig.Fullscreen value) {
+        uiDraft.preview(uiDraft.ui().withFullscreen(value));
+        rebuildWidgets();
+    }
+
+    private void previewHud(GuideUiConfig.Hud value) {
+        uiDraft.preview(uiDraft.ui().withHud(value));
+        updateUiApplyButton();
+    }
+
+    private void changeHud(GuideUiConfig.Hud value) {
+        previewHud(value);
+        rebuildWidgets();
+    }
+
+    private void updateUiApplyButton() {
+        for (net.minecraft.client.gui.components.events.GuiEventListener child : children()) {
+            if (child instanceof Button button && button.getMessage().getString().equals(
+                    Component.translatable("screen.openallay.settings.ui.apply").getString())) {
+                button.active = uiDraft.dirty() && snapshot.operation().kind() == SettingsOperation.Kind.IDLE;
+            }
+        }
+    }
+
+    private void applyUi() {
+        localNotice = "";
+        accept(service.saveDisplay(uiDraft.candidate(snapshot.display())));
+    }
+
+    private void renderUi(GuiGraphicsExtractor graphics) {
+        SettingsLayout.Rect area = layout.editor();
+        int x = area.x() + 10;
+        int y = area.y() + uiControlsInset() - uiScroll;
+        int w = Math.max(120, area.width() - 20);
+        graphics.enableScissor(area.x(), area.y() + 30, area.right(), area.bottom());
+        if (uiGroup == UiSettingsProjection.Group.HUD) {
+            int previewY = area.y() + 32;
+            GuideUiConfig.Hud hud = uiDraft.ui().hud();
+            int previewHeight = Math.max(0, uiControlsInset() - 36);
+            graphics.fill(x, previewY, x + w, previewY + previewHeight, 0xFF52645D);
+            for (int stripe = 0; stripe < w; stripe += 20) {
+                graphics.fill(x + stripe, previewY, Math.min(x + w, x + stripe + 10), previewY + previewHeight, 0xFF809786);
+            }
+            graphics.enableScissor(x, Math.max(area.y() + 30, previewY), x + w,
+                    Math.min(area.bottom(), previewY + previewHeight));
+            graphics.pose().pushMatrix();
+            try {
+                graphics.pose().translate(x + 4, previewY + 4);
+                graphics.pose().scale((float) hud.scale(), (float) hud.scale());
+                graphics.fill(0, 0, hud.width(), hud.collapsed() ? 24 : hud.height(), hud.backgroundArgb(0x181B22));
+                graphics.text(font, Component.translatable("screen.openallay.settings.ui.preview_title"),
+                        6, 6, hud.textArgb(0xE8EDF2), false);
+                if (!hud.collapsed()) graphics.text(font, Component.translatable("screen.openallay.settings.ui.preview_reply"),
+                        6, 20, hud.textArgb(0xE8EDF2), false);
+            } finally {
+                graphics.pose().popMatrix();
+                graphics.disableScissor();
+            }
+            for (int index = 0; index < 2; index++) {
+                int fieldY = y + 52 + index * 26;
+                if (uiWidgetVisible(fieldY, 20)) graphics.text(font, Component.translatable(
+                                "screen.openallay.settings.ui." + (index == 0 ? "offset_x" : "offset_y")),
+                        x, fieldY + 6, MUTED, false);
+            }
+        }
+        graphics.disableScissor();
+        if (uiContentHeight > area.height() - uiControlsInset()) {
+            int trackTop = area.y() + uiControlsInset();
+            int trackHeight = Math.max(1, area.height() - uiControlsInset() - 2);
+            int maximum = Math.max(1, uiContentHeight - (area.height() - uiControlsInset()));
+            int thumb = Math.max(6, trackHeight * Math.max(1, area.height() - uiControlsInset()) / uiContentHeight);
+            int top = trackTop + (trackHeight - thumb) * uiScroll / maximum;
+            graphics.fill(area.right() - 4, trackTop, area.right() - 2, area.bottom() - 2, 0xFF39424D);
+            graphics.fill(area.right() - 4, top, area.right() - 2, top + thumb, ACCENT);
+        }
+    }
+
+    private static final class UiSlider extends AbstractSliderButton {
+        private final String key;
+        private final double minimum;
+        private final double maximum;
+        private final boolean integral;
+        private final java.util.function.DoubleConsumer changed;
+
+        private UiSlider(int x, int y, int width, String key, double initial,
+                double minimum, double maximum, boolean integral, java.util.function.DoubleConsumer changed) {
+            super(x, y, width, 20, Component.empty(), (initial - minimum) / (maximum - minimum));
+            this.key = key;
+            this.minimum = minimum;
+            this.maximum = maximum;
+            this.integral = integral;
+            this.changed = changed;
+            updateMessage();
+        }
+
+        private double actual() { return minimum + value * (maximum - minimum); }
+
+        @Override
+        protected void updateMessage() {
+            String amount = integral ? Long.toString(Math.round(actual()))
+                    : String.format(java.util.Locale.ROOT, "%.2f", actual());
+            String translationKey = "screen.openallay.settings.ui." + key;
+            setMessage(Component.translatable(translationKey).copy().append(" · " + amount));
+        }
+
+        @Override
+        protected void applyValue() { changed.accept(actual()); }
     }
 
     private void addModelsPage() {
@@ -1318,6 +1718,18 @@ public final class OpenAllaySettingsScreen extends Screen {
                             "screen.openallay.settings.reload",
                             () -> accept(service.reloadSkills(true))),
                     new Action("screen.openallay.settings.done", this::onClose));
+            case UI -> List.of(
+                    new Action("screen.openallay.settings.ui.apply", this::applyUi),
+                    new Action("screen.openallay.settings.ui.reset", () -> {
+                        uiDraft.reset(uiGroup);
+                        rebuildWidgets();
+                    }),
+                    new Action("screen.openallay.settings.ui.cancel", () -> {
+                        uiDraft.cancel();
+                        localNotice = "";
+                        rebuildWidgets();
+                    }),
+                    new Action("screen.openallay.settings.done", this::onClose));
             case GENERAL -> List.of(
                     new Action(
                             "screen.openallay.settings.reload",
@@ -1330,6 +1742,7 @@ public final class OpenAllaySettingsScreen extends Screen {
 
     private boolean actionEnabled(String key) {
         boolean busy = snapshot.operation().kind() != SettingsOperation.Kind.IDLE;
+        if (key.equals("screen.openallay.settings.ui.apply")) return !busy && uiDraft.dirty();
         if (key.equals("screen.openallay.settings.cancel")) {
             return snapshot.operation().kind() == SettingsOperation.Kind.TESTING_CONNECTION
                     || snapshot.operation().kind()
@@ -2565,13 +2978,15 @@ public final class OpenAllaySettingsScreen extends Screen {
         if (message.isBlank()) {
             return;
         }
-        graphics.text(
-                font,
-                message,
-                layout.header().x() + 150,
-                layout.header().y() + 10,
-                color,
-                false);
+        boolean localPage = section == SettingsSection.UI;
+        int x = localPage ? layout.footer().x() + 8 : layout.header().x() + 150;
+        int right = localPage ? layout.footer().right() - 8
+                : layout.header().right() - (layout.showBack() ? 66 : 8);
+        int y = localPage ? layout.footer().y() + 32 : layout.header().y() + 10;
+        if (right <= x) return;
+        graphics.enableScissor(x, y, right, y + 10);
+        graphics.text(font, message, x, y, color, false);
+        graphics.disableScissor();
     }
 
     private static boolean completedReload(
@@ -3141,6 +3556,7 @@ public final class OpenAllaySettingsScreen extends Screen {
     private void switchSection(SettingsSection replacement) {
         captureDraft();
         section = replacement;
+        sectionMenuOpen = false;
         editorScroll = 0;
         pageScroll = 0;
         pageContentHeight = 0;
@@ -3330,10 +3746,6 @@ public final class OpenAllaySettingsScreen extends Screen {
         rebuildWidgets();
     }
 
-    private void cycleSection() {
-        List<SettingsSection> sections = SettingsSection.topLevel();
-        switchSection(sections.get((sections.indexOf(section) + 1) % sections.size()));
-    }
 
     private Component protocolLabel() {
         return Component.translatable(
@@ -3483,6 +3895,7 @@ public final class OpenAllaySettingsScreen extends Screen {
                 SettingsSection.topLevel(),
                 cards,
                 GeneralSettingsProjection.from(snapshot.display()),
+                UiSettingsProjection.from(snapshot.display()),
                 RecipeSettingsProjection.from(
                         snapshot.recipes(),
                         snapshot.recipes().config(),
@@ -3511,6 +3924,7 @@ public final class OpenAllaySettingsScreen extends Screen {
             List<SettingsSection> sections,
             List<ModelSettingsProjection.ModelCard> models,
             GeneralSettingsProjection general,
+            UiSettingsProjection ui,
             RecipeSettingsProjection recipes,
             SkillSettingsProjection skills,
             ExtensionSettingsProjection extensions,
@@ -3522,6 +3936,7 @@ public final class OpenAllaySettingsScreen extends Screen {
             sections = List.copyOf(sections);
             models = List.copyOf(models);
             Objects.requireNonNull(general, "general");
+            Objects.requireNonNull(ui, "ui");
             Objects.requireNonNull(recipes, "recipes");
             Objects.requireNonNull(skills, "skills");
             Objects.requireNonNull(extensions, "extensions");

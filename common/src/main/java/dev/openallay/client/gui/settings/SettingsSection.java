@@ -5,6 +5,7 @@ import java.util.List;
 /** Stable top-level native settings navigation. */
 public enum SettingsSection {
     GENERAL("screen.openallay.settings.general"),
+    UI("screen.openallay.settings.ui"),
     MODELS("screen.openallay.settings.models"),
     EXTENSIONS("screen.openallay.settings.extensions"),
     SKILLS("screen.openallay.settings.skills"),

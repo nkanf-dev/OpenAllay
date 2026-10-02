@@ -12,6 +12,7 @@ final class SettingsLayoutTest {
     void topLevelSectionsSeparateExtensionsAndSkillsWithoutRecipes() {
         assertEquals(List.of(
                         SettingsSection.GENERAL,
+                        SettingsSection.UI,
                         SettingsSection.MODELS,
                         SettingsSection.EXTENSIONS,
                         SettingsSection.SKILLS,
@@ -37,6 +38,23 @@ final class SettingsLayoutTest {
             assertFalse(layout.pageWidgetVisible(layout.editor().bottom() - 10, 20));
             assertEquals(0, layout.maximumPageScroll(20));
         }
+    }
+
+    @Test
+    void singlePagesDoNotWasteAnEmptyListAndNavigationScrollReachesEightCategories() {
+        for (SettingsSection section : List.of(SettingsSection.GENERAL, SettingsSection.UI,
+                SettingsSection.ABOUT, SettingsSection.HISTORY, SettingsSection.DIAGNOSTICS)) {
+            SettingsLayout layout = SettingsLayout.calculate(900, 180, section);
+            assertEquals(0, layout.list().width());
+            assertEquals(layout.navigation().right() + 6, layout.editor().x());
+            assertEquals(layout.content().right(), layout.editor().right());
+            assertTrue(layout.maximumNavigationScroll(SettingsSection.topLevel().size()) > 0);
+            int lastRow = layout.navigation().y() + 8 + (SettingsSection.topLevel().size() - 1) * 24
+                    - layout.maximumNavigationScroll(SettingsSection.topLevel().size());
+            assertTrue(lastRow + 20 <= layout.navigation().bottom());
+            assertEquals(layout.content().bottom(), layout.footer().y());
+        }
+        assertTrue(SettingsLayout.calculate(900, 500, SettingsSection.MODELS).list().width() > 0);
     }
 
     @Test
