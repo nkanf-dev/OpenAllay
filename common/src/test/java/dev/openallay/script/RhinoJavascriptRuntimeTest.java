@@ -48,7 +48,7 @@ final class RhinoJavascriptRuntimeTest {
     @Test
     void bundledJavaExamplesRunWithStaticInstanceAndCollectionCalls() throws IOException {
         String root = "assets/openallay/openallay_skills/unrestricted-javascript/";
-        int examples = 0;
+        var observedExamples = new java.util.HashSet<String>();
         for (String file : List.of("SKILL.md", "references/java-jvm.md")) {
             String document;
             try (var input = getClass().getClassLoader().getResourceAsStream(root + file)) {
@@ -56,21 +56,77 @@ final class RhinoJavascriptRuntimeTest {
             }
             int offset = 0;
             while ((offset = document.indexOf("```javascript\n", offset)) >= 0) {
-                examples++;
                 int start = offset + "```javascript\n".length();
                 int end = document.indexOf("\n```", start);
                 assertTrue(end >= start, "JavaScript example must have a closing fence");
-                var result = new RhinoJavascriptRuntime().execute(document.substring(start, end),
+                String source = document.substring(start, end);
+                var result = new RhinoJavascriptRuntime().execute(source,
                         Map.of(), Map.of(), Map.of(), new CancellationSignal(), null, null, true).value();
-                if (result.isJsonPrimitive()) assertTrue(result.getAsString().startsWith("Java "));
-                else if (result.getAsJsonObject().has("values")) {
-                    assertEquals(2, result.getAsJsonObject().get("size").getAsInt());
-                    assertEquals(JsonParser.parseString("[\"stone\",\"dirt\"]"), result.getAsJsonObject().get("values"));
-                } else assertEquals("config", result.getAsJsonObject().get("name").getAsString());
+                if (result.isJsonPrimitive()) {
+                    assertEquals("Java 2", result.getAsString());
+                    observedExamples.add("varargs");
+                } else if (result.getAsJsonObject().has("text")) {
+                    assertEquals(JsonParser.parseString("{\"text\":\"Java 2\",\"length\":6}"), result);
+                    observedExamples.add("exact-overloads");
+                } else if (result.getAsJsonObject().has("value")) {
+                    assertEquals(JsonParser.parseString("{\"name\":\"java.io.StreamTokenizer\",\"value\":2}"), result);
+                    observedExamples.add("selected-field");
+                } else {
+                    var info = result.getAsJsonObject();
+                    assertEquals(java.util.Set.of("name", "module", "fields", "methods"), info.keySet());
+                    assertEquals("java.util.ArrayList", info.get("name").getAsString());
+                    assertEquals(JsonParser.parseString("""
+                            {"name":"java.base","named":true,"automatic":false,
+                             "packageName":"java.util","packageOpenToBridge":false}
+                            """), info.get("module"));
+                    var expectedFields = new com.google.gson.JsonArray();
+                    java.util.Arrays.stream(java.util.ArrayList.class.getDeclaredFields())
+                            .filter(field -> field.getName().equals("size") || field.getName().equals("elementData"))
+                            .sorted(java.util.Comparator.comparing(java.lang.reflect.Field::getName))
+                            .forEach(field -> {
+                                var expected = new com.google.gson.JsonObject();
+                                expected.addProperty("name", field.getName());
+                                expected.addProperty("declaringClass", "java.util.ArrayList");
+                                expected.addProperty("type", field.getType().getTypeName());
+                                expected.addProperty("modifiers", java.lang.reflect.Modifier.toString(field.getModifiers()));
+                                expected.addProperty("modifierBits", field.getModifiers());
+                                expected.addProperty("static", java.lang.reflect.Modifier.isStatic(field.getModifiers()));
+                                expected.addProperty("final", java.lang.reflect.Modifier.isFinal(field.getModifiers()));
+                                expected.addProperty("synthetic", field.isSynthetic());
+                                expectedFields.add(expected);
+                            });
+                    assertEquals(expectedFields, info.get("fields"));
+                    var expectedMethods = new com.google.gson.JsonArray();
+                    java.util.Arrays.stream(java.util.ArrayList.class.getDeclaredMethods())
+                            .filter(method -> java.util.Set.of("add", "get", "size").contains(method.getName()))
+                            .sorted(java.util.Comparator.comparing(java.lang.reflect.Method::getName)
+                                    .thenComparing(method -> java.util.Arrays.toString(method.getParameterTypes()))
+                                    .thenComparing(method -> method.getReturnType().getName()))
+                            .forEach(method -> {
+                                var expected = new com.google.gson.JsonObject();
+                                expected.addProperty("name", method.getName());
+                                expected.addProperty("declaringClass", "java.util.ArrayList");
+                                var parameterTypes = new com.google.gson.JsonArray();
+                                for (Class<?> type : method.getParameterTypes()) parameterTypes.add(type.getTypeName());
+                                expected.add("parameterTypes", parameterTypes);
+                                expected.addProperty("returnType", method.getReturnType().getTypeName());
+                                expected.addProperty("modifiers", java.lang.reflect.Modifier.toString(method.getModifiers()));
+                                expected.addProperty("modifierBits", method.getModifiers());
+                                expected.addProperty("static", java.lang.reflect.Modifier.isStatic(method.getModifiers()));
+                                expected.addProperty("varArgs", method.isVarArgs());
+                                expected.addProperty("bridge", method.isBridge());
+                                expected.addProperty("synthetic", method.isSynthetic());
+                                expectedMethods.add(expected);
+                            });
+                    assertEquals(expectedMethods, info.get("methods"));
+                    assertFalse(info.toString().contains("[Ljava.lang.Object;@"), "Metadata must not contain field values");
+                    observedExamples.add("filtered-metadata");
+                }
                 offset = end + 4;
             }
         }
-        assertEquals(4, examples);
+        assertEquals(java.util.Set.of("exact-overloads", "filtered-metadata", "selected-field", "varargs"), observedExamples,
+                "All documented generic operations must run; extra runnable examples are also evaluated");
     }
 
     @Test

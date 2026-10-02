@@ -5,27 +5,32 @@ metadata:
   openallay/version: "0.2.2"
 allowed-tools: "openallay:run_javascript"
 ---
-Use `Java.type("fully.qualified.ClassName")` to resolve an available Java class.
-Call static methods on that class. Construct instances with `new`, then call
-instance methods on the object. For example:
+Use `Java.type("fully.qualified.ClassName")` for an available class.
+Direct public calls and `new` still work. For exact overloads, constructors, or
+non-public members, use the native access methods:
 
 ```javascript
-var System = Java.type("java.lang.System");
-var StringJoiner = Java.type("java.util.StringJoiner");
-var text = new StringJoiner(" ");
-text.add("Java");
-text.add(System.getProperty("java.version"));
-return String(text.toString());
+var builder = Java.construct(Java.type("java.lang.StringBuilder"), ["int"], [16]);
+Java.invoke(builder, "append", ["java.lang.String"], ["Java "]);
+Java.invoke(builder, "append", ["int"], [2]);
+return {
+  text: String(Java.invoke(builder, "toString", [], [])),
+  length: Number(Java.invoke(builder, "length", [], []))
+};
 ```
 
-This mode removes the default isolated execution limits; it does not change the
-model-facing result view.
-Return explicit JSON-friendly values rather than raw Java objects.
-Use `references/java-jvm.md` when Java collection, array, file, or JVM details are needed.
+Use `Java.classOf(value)` for the actual class, not `.class` or a guest
+`getClass()` call. `Java.inspect(target)` returns detached member metadata;
+select the needed members before returning it. `Java.get` and `Java.set`
+access fields. `Java.invoke` and `Java.construct` take exact parameter types and
+an argument array. See `references/java-jvm.md` for selectors, arrays, and examples.
 
-Scripts run on a worker. Schedule live game operations on their owning thread.
-Class names, mapped members, and mod APIs vary by installation; inspect available
-classes and members as needed.
+The existing unrestricted setting enables this surface; no extra private-access
+setting is needed. This native surface does not change the
+model-facing result view. Return explicit JSON-friendly values rather than raw
+Java objects.
 
-Side effects are not rolled back by cancellation or later errors.
-Blocking Java calls may not stop promptly.
+Scripts run on a worker; live game operations must run on their actual
+owning thread. This bridge does not schedule them. Class names and members depend on
+the installed runtime. Cancellation does not roll back side effects or guarantee
+that blocking Java calls stop promptly.
