@@ -90,6 +90,16 @@ public final class GuideClientE2EController {
     private boolean cancelOnToolStartRequested;
     private boolean cancelOnToolStartPending;
     private boolean cancelOnToolStartAccepted;
+    private GuideGraphicalRegressionProbe graphicalProbe;
+    private java.util.function.Consumer<GuideService> graphicalOpenGuide;
+    private Supplier<Object> graphicalHudReceipt;
+    private Supplier<dev.openallay.client.voice.VoiceSettingsActions> graphicalVoiceSettings;
+    private String graphicalFreshWorldName;
+    private net.minecraft.client.server.IntegratedServer graphicalSeedServer;
+    private boolean graphicalRecipeSeedAdmitted;
+    private boolean graphicalRecipeSeedReady;
+    private Set<Integer> graphicalSeedDisplays = Set.of();
+    private com.google.gson.JsonObject graphicalRecipeSeedReceipt;
 
     public GuideClientE2EController(
             GuideClientE2EConfig config,
@@ -162,6 +172,17 @@ public final class GuideClientE2EController {
         this.traceLookup = traceLookup;
     }
 
+    /** Loader-owned real UI capabilities; inert unless the explicit graphical scenario is selected. */
+    public void attachGraphicalProbe(
+            java.util.function.Consumer<GuideService> openGuide,
+            Supplier<Object> hudReceipt,
+            Supplier<dev.openallay.client.voice.VoiceSettingsActions> voiceSettings) {
+        if (started) throw new IllegalStateException("Graphical probe must attach before startup");
+        graphicalOpenGuide = java.util.Objects.requireNonNull(openGuide, "openGuide");
+        graphicalHudReceipt = java.util.Objects.requireNonNull(hudReceipt, "hudReceipt");
+        graphicalVoiceSettings = java.util.Objects.requireNonNull(voiceSettings, "voiceSettings");
+    }
+
     /** Runs opt-in startup lifecycle and starts the request once a real client player exists. */
     public void tick(UUID actor) {
         if (finished) {
@@ -175,6 +196,10 @@ public final class GuideClientE2EController {
             return;
         }
         if (started) {
+            if (graphicalProbe != null) {
+                graphicalProbe.tick();
+                return;
+            }
             long timeoutSeconds = Long.getLong("openallay.e2e.timeoutSeconds", 300L);
             if (Duration.between(startedAt, Instant.now()).toSeconds() > timeoutSeconds) {
                 failWithoutRequest("harness_timeout", "Real-client acceptance exceeded its elapsed timeout");
@@ -222,6 +247,7 @@ public final class GuideClientE2EController {
             failWithoutRequest(readiness.code(), readiness.message());
             return;
         }
+        if (!tickGraphicalRecipePrecondition(actor)) return;
         started = true;
         startedAt = Instant.now();
         subscription = service.subscribe(this::observe);
@@ -241,6 +267,186 @@ public final class GuideClientE2EController {
         } else {
             selectSession(service);
         }
+    }
+
+    /** Setup-only native recipe unlock; never a model Tool, inventory grant, or accepted UI action. */
+    private boolean tickGraphicalRecipePrecondition(UUID actor) {
+        if (!"ui-manual-regressions".equals(config.scenario())) return true;
+        var client = net.minecraft.client.Minecraft.getInstance();
+        if (graphicalRecipeSeedReceipt == null) {
+            graphicalRecipeSeedReceipt = new com.google.gson.JsonObject();
+            graphicalRecipeSeedReceipt.addProperty("purpose", "isolated-fresh-world-test-bootstrap-only");
+            graphicalRecipeSeedReceipt.addProperty("modelToolAction", false);
+            graphicalRecipeSeedReceipt.addProperty("acceptedUiAction", false);
+            graphicalRecipeSeedReceipt.addProperty("inventoryGranted", false);
+            graphicalRecipeSeedReceipt.addProperty("commandsUsed", false);
+            graphicalRecipeSeedReceipt.addProperty("outcome", "WAITING");
+        }
+        try {
+            var server = client.getSingleplayerServer();
+            requireGraphicalSeedWorld(server);
+            if (client.player == null || client.level == null || !actor.equals(client.player.getUUID()))
+                throw new IllegalStateException("Fresh-world client player differs from the tested actor");
+            if (!graphicalRecipeSeedAdmitted) {
+                graphicalSeedServer = server;
+                graphicalRecipeSeedReceipt.addProperty("worldName", graphicalFreshWorldName);
+                graphicalRecipeSeedReceipt.addProperty("actorId", actor.toString());
+                graphicalRecipeSeedReceipt.addProperty("commandsAllowedBefore", false);
+                graphicalRecipeSeedReceipt.add("clientBefore", graphicalRecipeBookReceipt(client));
+                graphicalRecipeSeedReceipt.add("captureBefore", graphicalRecipeCaptureReceipt(client));
+                graphicalRecipeSeedAdmitted = true;
+                graphicalRecipeSeedReceipt.addProperty("admissions", 1);
+                server.execute(() -> awardGraphicalSeedRecipe(actor, client, server));
+                return false;
+            }
+            if (graphicalSeedDisplays.isEmpty()) return false;
+            var context = net.minecraft.world.item.crafting.display.SlotDisplayContext.fromLevel(client.level);
+            boolean synchronizedOutput = client.player.getRecipeBook().getCollections().stream()
+                    .flatMap(collection -> collection.getRecipes().stream())
+                    .anyMatch(entry -> graphicalSeedDisplays.contains(entry.id().index())
+                            && entry.resultItems(context).stream().anyMatch(GuideClientE2EController::positiveIronBlock));
+            if (!synchronizedOutput) return false;
+            if (!graphicalRecipeSeedReady) {
+                var capture = graphicalRecipeCaptureReceipt(client);
+                if (capture.getAsJsonArray("selectedRecipes").isEmpty()) return false;
+                graphicalRecipeSeedReceipt.add("clientAfter", graphicalRecipeBookReceipt(client));
+                graphicalRecipeSeedReceipt.add("captureAfter", capture);
+                graphicalRecipeSeedReceipt.addProperty("commandsAllowedAfter", false);
+                graphicalRecipeSeedReceipt.addProperty("synchronizedAt", Instant.now().toString());
+                graphicalRecipeSeedReceipt.addProperty("outcome", "READY");
+                graphicalRecipeSeedReady = true;
+            }
+            return true;
+        } catch (RuntimeException failure) {
+            failGraphicalRecipePrecondition(failure);
+            return false;
+        }
+    }
+
+    private void requireGraphicalSeedWorld(net.minecraft.client.server.IntegratedServer server) {
+        var client = net.minecraft.client.Minecraft.getInstance();
+        String create = System.getProperty("openallay.e2e.createWorld", "");
+        if (!Boolean.getBoolean(GuideClientE2EConfig.ENABLED)
+                || !"ui-manual-regressions".equals(config.scenario())
+                || !worldLaunchStarted || graphicalFreshWorldName == null
+                || !graphicalFreshWorldName.equals(create)
+                || !System.getProperty("openallay.e2e.resumeWorld", "").isBlank()
+                || server == null || server != client.getSingleplayerServer()
+                || (graphicalSeedServer != null && server != graphicalSeedServer)
+                || server.isPublished()
+                || !graphicalFreshWorldName.equals(server.getWorldData().getLevelName())
+                || server.getWorldData().isAllowCommands()
+                || server.getWorldData().getGameType() != net.minecraft.world.level.GameType.SURVIVAL
+                || !server.getWorldData().isFlatWorld()
+                || !server.getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT).toAbsolutePath().normalize()
+                        .equals(client.gameDirectory.toPath().resolve("saves").resolve(graphicalFreshWorldName)
+                                .toAbsolutePath().normalize()))
+            throw new IllegalStateException("Recipe bootstrap requires this controller's fresh isolated commands-off survival world");
+    }
+
+    private void awardGraphicalSeedRecipe(UUID actor, net.minecraft.client.Minecraft client,
+            net.minecraft.client.server.IntegratedServer server) {
+        if (finished) return;
+        try {
+            requireGraphicalSeedWorld(server);
+            if (!server.isSameThread()) throw new IllegalStateException("Recipe bootstrap is not on the server owner thread");
+            var player = server.getPlayerList().getPlayer(actor);
+            if (player == null || player.gameMode() != net.minecraft.world.level.GameType.SURVIVAL
+                    || player.level().getSeed() != 17L)
+                throw new IllegalStateException("Native bootstrap player or fresh-world seed differs from setup");
+            var manager = server.getRecipeManager();
+            var holder = manager.getRecipes().stream()
+                    .filter(recipe -> "minecraft:iron_block".equals(recipe.id().identifier().toString()))
+                    .findFirst().orElseThrow(() -> new IllegalStateException("Exact native iron-block recipe is unavailable"));
+            List<net.minecraft.world.item.crafting.display.RecipeDisplayEntry> displays = new ArrayList<>();
+            manager.listDisplaysForRecipe(holder.id(), displays::add);
+            var context = net.minecraft.world.item.crafting.display.SlotDisplayContext.fromLevel(player.level());
+            var positiveDisplays = displays.stream()
+                    .filter(entry -> entry.resultItems(context).stream().anyMatch(GuideClientE2EController::positiveIronBlock))
+                    .toList();
+            if (positiveDisplays.isEmpty()) throw new IllegalStateException("Exact native holder has no positive iron-block output");
+            var receipt = new com.google.gson.JsonObject();
+            receipt.addProperty("api", "ServerPlayer.awardRecipes");
+            receipt.addProperty("ownerThread", server.isSameThread());
+            receipt.addProperty("recipeHolderId", holder.id().identifier().toString());
+            receipt.addProperty("nativeRecipeClass", holder.value().getClass().getName());
+            receipt.addProperty("knownBefore", player.getRecipeBook().contains(holder.id()));
+            receipt.add("displayIndexes", gson.toJsonTree(positiveDisplays.stream().map(entry -> entry.id().index()).toList()));
+            receipt.add("positiveOutputs", gson.toJsonTree(positiveDisplays.stream()
+                    .flatMap(entry -> entry.resultItems(context).stream())
+                    .filter(GuideClientE2EController::positiveIronBlock)
+                    .map(stack -> Map.of("itemId", "minecraft:iron_block", "count", stack.getCount())).toList()));
+            receipt.addProperty("awardedDisplayCount", player.awardRecipes(List.of(holder)));
+            receipt.addProperty("knownAfter", player.getRecipeBook().contains(holder.id()));
+            receipt.addProperty("commandsAllowedAfter", server.getWorldData().isAllowCommands());
+            if (!receipt.get("knownAfter").getAsBoolean() || server.getWorldData().isAllowCommands())
+                throw new IllegalStateException("Native recipe award did not preserve bootstrap preconditions");
+            var indexes = Set.copyOf(positiveDisplays.stream().map(entry -> entry.id().index()).toList());
+            client.execute(() -> {
+                if (finished) return;
+                graphicalRecipeSeedReceipt.add("serverAward", receipt);
+                graphicalSeedDisplays = indexes;
+            });
+        } catch (RuntimeException failure) {
+            client.execute(() -> { if (!finished) failGraphicalRecipePrecondition(failure); });
+        }
+    }
+
+    private static boolean positiveIronBlock(net.minecraft.world.item.ItemStack stack) {
+        return !stack.isEmpty() && stack.getCount() > 0
+                && "minecraft:iron_block".equals(net.minecraft.core.registries.BuiltInRegistries.ITEM
+                        .getKey(stack.getItem()).toString());
+    }
+
+    private com.google.gson.JsonObject graphicalRecipeBookReceipt(net.minecraft.client.Minecraft client) {
+        var collections = client.player.getRecipeBook().getCollections();
+        var context = net.minecraft.world.item.crafting.display.SlotDisplayContext.fromLevel(client.level);
+        var entries = collections.stream().flatMap(collection -> collection.getRecipes().stream())
+                .collect(java.util.stream.Collectors.toMap(entry -> entry.id().index(), entry -> entry, (first, ignored) -> first));
+        var receipt = new com.google.gson.JsonObject();
+        receipt.addProperty("collectionCount", collections.size());
+        receipt.addProperty("displayCount", entries.size());
+        receipt.addProperty("positiveIronDisplayCount", entries.values().stream()
+                .filter(entry -> entry.resultItems(context).stream().anyMatch(GuideClientE2EController::positiveIronBlock)).count());
+        receipt.addProperty("positiveIronResultCount", entries.values().stream()
+                .flatMap(entry -> entry.resultItems(context).stream()).filter(GuideClientE2EController::positiveIronBlock).count());
+        return receipt;
+    }
+
+    private com.google.gson.JsonObject graphicalRecipeCaptureReceipt(net.minecraft.client.Minecraft client) {
+        if (clientSettings == null) throw new IllegalStateException("Actual recipe capture settings are unavailable");
+        var runtime = dev.openallay.recipe.config.RecipeClientRuntime.defaults();
+        runtime.replace(clientSettings.snapshot().recipes().config());
+        var capture = new dev.openallay.client.context.ClientContextCapture(gson,
+                dev.openallay.platform.PlatformServices.load(), runtime).capture(client,
+                Set.of(dev.openallay.context.ContextCapability.RECIPES), "e2e-native-recipe-bootstrap");
+        var recipes = capture.recipes().orElseThrow().recipes();
+        var positive = recipes.stream()
+                .filter(recipe -> "minecraft:client_recipe_book".equals(recipe.reference().sourceId())
+                        && recipe.unlockState() == dev.openallay.recipe.RecipeUnlockState.UNLOCKED
+                        && recipe.evidence().authority() == dev.openallay.context.DataAuthority.CLIENT_VISIBLE
+                        && recipe.outputs().stream().anyMatch(output -> output.stack().count() > 0
+                                && "minecraft:iron_block".equals(output.stack().itemId())))
+                .toList();
+        var receipt = new com.google.gson.JsonObject();
+        receipt.addProperty("capturedAt", capture.capturedAt().toString());
+        receipt.addProperty("recipeCount", recipes.size());
+        receipt.addProperty("positiveUnlockedIronRecipeCount", positive.size());
+        receipt.add("selectedRecipes", gson.toJsonTree(positive.stream()
+                .filter(recipe -> graphicalSeedDisplays.stream().anyMatch(index -> recipe.id()
+                        .equals("openallay:client_recipe_display/" + index)))
+                .map(recipe -> Map.of("reference", recipe.reference(), "unlockState", recipe.unlockState(),
+                        "evidence", recipe.evidence(), "positiveOutputs", recipe.outputs().stream()
+                                .filter(output -> output.stack().count() > 0
+                                        && "minecraft:iron_block".equals(output.stack().itemId())).toList()))
+                .toList()));
+        return receipt;
+    }
+
+    private void failGraphicalRecipePrecondition(RuntimeException failure) {
+        graphicalRecipeSeedReceipt.addProperty("outcome", "FAILED");
+        graphicalRecipeSeedReceipt.addProperty("failure", failure.toString());
+        failWithoutRequest("native_recipe_precondition_failed", failure.toString());
     }
 
     private GuideBuilderE2EProbe.Anchor selectBuilderAnchor(GuideBuilderE2EProbe.Anchor anchor) throws IOException {
@@ -322,6 +528,22 @@ public final class GuideClientE2EController {
         if (client.gui.overlay() != null
                 || !(client.gui.screen() instanceof net.minecraft.client.gui.screens.TitleScreen)) return;
         worldLaunchStarted = true;
+        if ("ui-manual-regressions".equals(config.scenario())) {
+            if (create.isBlank() || !resume.isBlank()) {
+                failWithoutRequest("fresh_world_required", "Graphical acceptance requires a new disposable world");
+                return;
+            }
+            var saves = client.gameDirectory.toPath().resolve("saves");
+            try (var savedWorlds = Files.isDirectory(saves) ? Files.list(saves) : java.util.stream.Stream.<java.nio.file.Path>empty()) {
+                if (savedWorlds.findAny().isPresent()) {
+                    failWithoutRequest("fresh_world_required", "Graphical acceptance requires an empty isolated saves directory");
+                    return;
+                }
+            } catch (IOException failure) {
+                failWithoutRequest("fresh_world_required", "Unable to verify the isolated saves directory");
+                return;
+            }
+        }
         boolean existing = Files.isDirectory(client.gameDirectory.toPath().resolve("saves").resolve(name));
         if (!name.matches("openallay-builder-[a-zA-Z0-9_.-]+")
                 || (!create.isBlank() && (!resume.isBlank() || existing))
@@ -344,6 +566,7 @@ public final class GuideClientE2EController {
                 registries -> registries.lookupOrThrow(net.minecraft.core.registries.Registries.WORLD_PRESET)
                         .getOrThrow(net.minecraft.world.level.levelgen.presets.WorldPresets.FLAT)
                         .value().createWorldDimensions(), client.gui.screen());
+        if ("ui-manual-regressions".equals(config.scenario())) graphicalFreshWorldName = name;
     }
 
     public boolean finished() {
@@ -355,6 +578,26 @@ public final class GuideClientE2EController {
             if (mode instanceof ToolResult.Failure<?> failure) {
                 failWithoutRequest(failure.code(), failure.message());
             } else {
+                if ("ui-manual-regressions".equals(config.scenario())) {
+                    net.minecraft.client.Minecraft.getInstance().execute(() -> {
+                        if (clientSettings == null || graphicalOpenGuide == null) {
+                            failWithoutRequest("graphical_probe_unattached", "The actual client UI is unavailable");
+                            return;
+                        }
+                        try {
+                            graphicalProbe = new GuideGraphicalRegressionProbe(config, loader, gameVersion, modVersion,
+                                    service, clientSettings, gson, graphicalOpenGuide, graphicalHudReceipt,
+                                    graphicalVoiceSettings, traceLookup, report -> {
+                                        finish(gson.toJson(report));
+                                        if (!config.shutdownAfterReport()
+                                                && Boolean.getBoolean("openallay.e2e.shutdownAfterScreenshots")) shutdown.run();
+                                    });
+                        } catch (RuntimeException failure) {
+                            failWithoutRequest("graphical_probe_start_failed", failure.toString());
+                        }
+                    });
+                    return;
+                }
                 remainingHistorySeeds = config.historySeedRequests();
                 if (remainingHistorySeeds > 0) {
                     seedingHistory = true;
@@ -1026,6 +1269,11 @@ public final class GuideClientE2EController {
         if (finished) return;
         finished = true;
         if (subscription != null) subscription.close();
+        if (graphicalRecipeSeedReceipt != null) {
+            var retained = com.google.gson.JsonParser.parseString(report).getAsJsonObject();
+            retained.add("testBootstrapSeed", graphicalRecipeSeedReceipt);
+            report = gson.toJson(retained);
+        }
         try {
             writeAtomically(config.reportPath(), report + System.lineSeparator());
         } catch (IOException exception) {

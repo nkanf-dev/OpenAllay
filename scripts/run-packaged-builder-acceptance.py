@@ -32,8 +32,8 @@ MOD_VERSION = "0.2.3"
 WORLD_PREFIX = "openallay-builder-"
 SCENARIOS = ("builder-disabled", "builder-acceptance", "builder-reload",
              "builder-partial", "builder-cancel", "builder-live", "builder-live-copy", "builder-live-undo",
-             "ui-stop", "ui-provider-failure")
-UI_OUTCOMES = {"ui-stop": "CANCELLED", "ui-provider-failure": "FAILED"}
+             "ui-stop", "ui-provider-failure", "ui-manual-regressions")
+UI_OUTCOMES = {"ui-stop": "CANCELLED", "ui-provider-failure": "FAILED", "ui-manual-regressions": "COMPLETED"}
 REPO = Path(__file__).resolve().parents[1]
 
 
@@ -295,6 +295,21 @@ def fixture_model_config(port):
         "connectTimeoutSeconds": 10, "requestTimeoutSeconds": 120}]}
 
 
+def fixture_display_config():
+    """Exact current GuideDisplayConfig/GuideUiConfig defaults, no historical shape."""
+    return {"debugMode": False, "animationsEnabled": True, "assistantName": "OpenAllay",
+            "ui": {
+                "fullscreen": {"density": "COMFORTABLE", "sessionRailVisible": True,
+                               "toolsCollapsed": False, "theme": "CHARCOAL"},
+                "hud": {"enabled": False, "anchor": "TOP_LEFT", "offsetX": 12, "offsetY": 12,
+                        "width": 320, "height": 240, "scale": 1, "backgroundOpacity": 0.78,
+                        "collapsed": False, "maxReplyLines": 18, "showLatestReply": True,
+                        "showStreamingPreview": False, "hideWithDebug": True, "hideOnOtherScreens": True},
+                "notifications": {"enabled": False, "policy": "WHEN_GUIDE_NOT_VISIBLE",
+                                  "replyCompleted": True, "cardBatches": True,
+                                  "taskFailures": True, "durationSeconds": 6}}}
+
+
 def write_json(path, value):
     Path(path).write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
@@ -327,6 +342,8 @@ def prepare(args, repo=REPO):
         raise ValueError("--cancel-on-tool-start is allowed only for ui-stop")
     if args.scenario == "ui-stop" and not args.cancel_on_tool_start:
         raise ValueError("ui-stop requires explicit --cancel-on-tool-start")
+    if args.scenario == "ui-manual-regressions" and args.model_config:
+        raise ValueError("Graphical regression uses the local deterministic fixture, never an external provider config")
     if args.scenario.startswith("builder-live") and (not args.question or not args.model_config):
         raise ValueError("Live acceptance requires an explicit ordinary provider question and environment-reference model config")
     if args.professional_screenshots and (not args.screenshot_manual_profile or not args.screenshot_automatic_profile):
@@ -423,10 +440,13 @@ def prepare(args, repo=REPO):
     write_json(config / "models.json", models)
     write_json(config / "unrestricted-javascript.json", {"enabled": args.enable_unrestricted})
     write_json(config / "experimental-commands.json", {"enabled": False})
-    write_json(config / "display.json", {"debugMode": True,
-                                         "animationsEnabled": True, "assistantName": "OpenAllay"})
+    write_json(config / "display.json", fixture_display_config())
     fps = 10 if args.low_impact else 30
-    (game / "options.txt").write_text("onboardAccessibility:false\njoinedFirstServer:true\nrenderDistance:4\nsimulationDistance:5\nmaxFps:" + str(fps) + "\npauseOnLostFocus:false\n", encoding="utf-8")
+    graphical = args.scenario == "ui-manual-regressions"
+    options = "onboardAccessibility:false\njoinedFirstServer:true\nrenderDistance:4\nsimulationDistance:5\nmaxFps:" + str(fps) + "\npauseOnLostFocus:false\n"
+    if graphical:
+        options += "lang:zh_cn\nguiScale:1\n"
+    (game / "options.txt").write_text(options, encoding="utf-8")
     world = WORLD_PREFIX + loader + "-" + run_id
     values = {"natives_directory": output / "natives", "launcher_name": "OpenAllayPackagedAcceptance",
               "launcher_version": "1", "classpath": os.pathsep.join(classpath),
@@ -435,7 +455,7 @@ def prepare(args, repo=REPO):
               "assets_index_name": vanilla["assetIndex"]["id"],
               "auth_uuid": offline_uuid("BuilderProbe"),
               "auth_access_token": "0", "clientid": "", "auth_xuid": "", "version_type": "release",
-              "resolution_width": "854" if args.low_impact else "1100",
+              "resolution_width": "850" if graphical else "854" if args.low_impact else "1100",
               "resolution_height": "480" if args.low_impact else "700"}
     if not re.fullmatch(r"[A-Za-z0-9_]{1,16}", values["auth_player_name"]):
         raise ValueError("Synthetic Minecraft username must contain 1 to 16 simple characters")
@@ -629,7 +649,18 @@ def validate_ui_capture(manifest):
         stop = report.get("actualStop", {})
         if not all(stop.get(field) is True for field in ("requested", "accepted", "terminalCancelled", "pendingToolHasNoNormalizedResult")):
             raise ValueError("UI stop evidence did not retain an accepted real cancellation")
-    validate_final_screenshot(manifest)
+    if manifest["scenario"] == "ui-manual-regressions":
+        frames = report.get("nativeFrames", [])
+        if not frames or report.get("themeChangeCount", 0) < 4 or report.get("interactKeyRestored") is not True:
+            raise ValueError("Native graphical report lacks repeated theme frames or restored interaction key")
+        for frame in frames:
+            path = Path(frame["path"])
+            if not path.is_file() or digest(path) != frame["sha256"] or frame.get("source") != "native-mainRenderTarget":
+                raise ValueError("Native graphical frame is missing or changed")
+        if report.get("microphoneCaptureAttempted") is not False or not report.get("export", {}).get("containsCurrentQuestionAndAnswer"):
+            raise ValueError("Native graphical report lacks actual export or microphone no-capture proof")
+    else:
+        validate_final_screenshot(manifest)
     return report
 
 
@@ -667,8 +698,16 @@ def launch_prepared(path, repo=REPO):
     if actual != expected:
         raise ValueError("Prepared game files changed; prepare a new reviewed run")
     models = validate_model_config(game / "config/openallay/models.json")
+    launch_environment = os.environ.copy()
+    if manifest["scenario"] == "ui-manual-regressions":
+        if any(profile.get("enabled") and (profile.get("model") != "openallay-e2e-fixture"
+                or urlsplit(profile.get("baseUrl", "")).hostname != "127.0.0.1"
+                or profile.get("credentialRef") != "env:OPENALLAY_E2E_FIXTURE_KEY")
+                for profile in models["profiles"]):
+            raise ValueError("Graphical acceptance can use only the deterministic loopback fixture")
+        launch_environment["OPENALLAY_E2E_FIXTURE_KEY"] = "openallay-local-fixture-not-a-secret"
     for profile in models["profiles"]:
-        if profile.get("enabled") and not os.environ.get(profile["credentialRef"].removeprefix("env:")):
+        if profile.get("enabled") and not launch_environment.get(profile["credentialRef"].removeprefix("env:")):
             raise ValueError("An enabled acceptance profile has no credential in its referenced environment variable")
     # The runtime command contains only the synthetic Minecraft token '0'. Provider
     # secrets stay in environment variables and are never serialized or printed.
@@ -685,7 +724,7 @@ def launch_prepared(path, repo=REPO):
     with (output / "client.log").open("wb") as log:
         try:
             process = subprocess.Popen(manifest["command"], cwd=game, stdout=log, stderr=subprocess.STDOUT,
-                                       start_new_session=True)
+                                       start_new_session=True, env=launch_environment)
             manifest["clientPid"] = process.pid
             write_json(output / "launch.json", manifest)
             exit_code = process.wait(timeout=manifest.get("wallTimeoutSeconds", 600))

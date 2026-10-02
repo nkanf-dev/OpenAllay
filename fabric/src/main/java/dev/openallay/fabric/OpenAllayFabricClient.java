@@ -225,6 +225,7 @@ public final class OpenAllayFabricClient implements ClientModInitializer {
                     contexts::recipeProviderReadiness,
                     settings == null ? null : settings.settings(),
                     modelRegistry == null ? null : modelRegistry::encodedTrace);
+            controller.attachGraphicalProbe(ui::openGuide, ui::e2eHudReceipt, ui::e2eVoiceSettings);
             ClientTickEvents.END_CLIENT_TICK.register(client -> {
                 controller.tick(client.player == null ? null : client.player.getUUID());
             });

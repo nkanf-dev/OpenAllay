@@ -250,6 +250,7 @@ public final class OpenAllayNeoForgeClient {
                     contexts::recipeProviderReadiness,
                     settings == null ? null : settings.settings(),
                     modelRegistry == null ? null : modelRegistry::encodedTrace);
+            controller.attachGraphicalProbe(ui::openGuide, ui::e2eHudReceipt, ui::e2eVoiceSettings);
             NeoForge.EVENT_BUS.addListener((ClientTickEvent.Post event) -> {
                 controller.tick(client.player == null ? null : client.player.getUUID());
             });

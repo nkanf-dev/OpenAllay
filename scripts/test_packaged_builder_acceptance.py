@@ -33,6 +33,28 @@ class PackagedBuilderLauncherTests(unittest.TestCase):
         self.assertEqual(Path("net/neoforged/neoforge/26.2.0.25-beta/neoforge-26.2.0.25-beta-universal.jar"),
                          launcher.maven_path("net.neoforged:neoforge:26.2.0.25-beta:universal"))
 
+    def test_display_fixture_has_exact_current_nested_ui_shape_and_defaults(self):
+        display = launcher.fixture_display_config()
+        self.assertEqual({"debugMode", "animationsEnabled", "assistantName", "ui"}, set(display))
+        self.assertFalse(display["debugMode"])
+        ui = display["ui"]
+        self.assertEqual({"fullscreen", "hud", "notifications"}, set(ui))
+        self.assertEqual({"density", "sessionRailVisible", "toolsCollapsed", "theme"}, set(ui["fullscreen"]))
+        self.assertEqual({"density": "COMFORTABLE", "sessionRailVisible": True,
+                          "toolsCollapsed": False, "theme": "CHARCOAL"}, ui["fullscreen"])
+        self.assertEqual({"enabled", "anchor", "offsetX", "offsetY", "width", "height", "scale",
+                          "backgroundOpacity", "collapsed", "maxReplyLines", "showLatestReply",
+                          "showStreamingPreview", "hideWithDebug", "hideOnOtherScreens"}, set(ui["hud"]))
+        self.assertEqual(320, ui["hud"]["width"])
+        self.assertEqual(240, ui["hud"]["height"])
+        self.assertEqual(18, ui["hud"]["maxReplyLines"])
+        self.assertFalse(ui["hud"]["enabled"])
+        self.assertEqual({"enabled", "policy", "replyCompleted", "cardBatches", "taskFailures", "durationSeconds"},
+                         set(ui["notifications"]))
+        self.assertFalse(ui["notifications"]["enabled"])
+        self.assertNotIn("version", display)
+        self.assertNotIn("schemaVersion", display)
+
     def test_model_configuration_rejects_embedded_credentials_and_url_queries(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "model.json"
@@ -140,7 +162,7 @@ class PackagedBuilderLauncherTests(unittest.TestCase):
             config = output / "game/config/openallay"
             self.assertEqual({"enabled": False}, json.loads((config / "unrestricted-javascript.json").read_text()))
             self.assertEqual({"enabled": False}, json.loads((config / "experimental-commands.json").read_text()))
-            self.assertEqual({"debugMode": True, "animationsEnabled": True, "assistantName": "OpenAllay"},
+            self.assertEqual(launcher.fixture_display_config(),
                              json.loads((config / "display.json").read_text()))
             self.assertEqual({"defaultProfileId", "profiles"}, set(json.loads((config / "models.json").read_text())))
             self.assertNotIn("schemaVersion", manifest)
@@ -616,6 +638,31 @@ class PackagedBuilderLauncherTests(unittest.TestCase):
                                                  "--scenario", "builder-reload", "--enable-unrestricted", "--jar", str(replacement)])
             _, manifest = launcher.prepare_resume(args, repo)
             self.assertEqual("0.2.3", manifest["packagedArtifact"]["modVersion"])
+
+    def test_manual_graphical_report_requires_real_frame_hash_and_restore(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            frame = root / "native.png"
+            frame.write_bytes(b"native-frame-test")
+            report_path = root / "report.json"
+            manifest = {"report": str(report_path), "scenario": "ui-manual-regressions"}
+            report = {"outcome": "COMPLETED", "themeChangeCount": 4, "interactKeyRestored": True,
+                      "microphoneCaptureAttempted": False,
+                      "export": {"containsCurrentQuestionAndAnswer": True},
+                      "nativeFrames": [{"path": str(frame), "sha256": launcher.digest(frame),
+                                        "source": "native-mainRenderTarget"}]}
+            launcher.write_json(report_path, report)
+            self.assertEqual(report, launcher.validate_ui_capture(manifest))
+            for key, value in (("themeChangeCount", 3), ("interactKeyRestored", False),
+                               ("microphoneCaptureAttempted", True)):
+                invalid = {**report, key: value}
+                launcher.write_json(report_path, invalid)
+                with self.assertRaises(ValueError):
+                    launcher.validate_ui_capture(manifest)
+            launcher.write_json(report_path, report)
+            frame.write_bytes(b"changed-native-frame-test")
+            with self.assertRaisesRegex(ValueError, "changed"):
+                launcher.validate_ui_capture(manifest)
 
     def test_ui_stop_rejects_missing_or_false_pending_tool_fact(self):
         with tempfile.TemporaryDirectory() as directory:
