@@ -218,7 +218,9 @@ public final class ClientModelRuntimeRegistry implements GuideLocalEndpoint {
             String question,
             ToolInvocationContext context,
             Consumer<AgentEvent> events) {
-        return ask(defaultProfileId(), actor, sessionId, requestId, question, context, events);
+        State captured = state.get();
+        return ask(captured, captured.defaultProfileId(), actor, sessionId, requestId,
+                ModelMessage.userText(question), dev.openallay.agent.AgentRequest.unavailableImages(), context, events);
     }
 
     @Override
@@ -230,14 +232,56 @@ public final class ClientModelRuntimeRegistry implements GuideLocalEndpoint {
             String question,
             ToolInvocationContext context,
             Consumer<AgentEvent> events) {
+        return ask(profileId, actor, sessionId, requestId, ModelMessage.userText(question),
+                dev.openallay.agent.AgentRequest.unavailableImages(), context, events);
+    }
+
+    @Override
+    public CompletableFuture<AgentResult> ask(
+            UUID actor, String sessionId, UUID requestId, ModelMessage userInput,
+            dev.openallay.model.image.ImagePayloadResolver images,
+            ToolInvocationContext context, Consumer<AgentEvent> events) {
         State captured = state.get();
-        ClientGuideRuntime runtime;
+        return ask(captured, captured.defaultProfileId(), actor, sessionId,
+                requestId, userInput, images, context, events);
+    }
+
+    @Override
+    public CompletableFuture<AgentResult> ask(
+            String profileId, UUID actor, String sessionId, UUID requestId,
+            ModelMessage userInput, dev.openallay.model.image.ImagePayloadResolver images,
+            ToolInvocationContext context, Consumer<AgentEvent> events) {
+        return ask(state.get(), profileId, actor, sessionId, requestId, userInput, images, context, events);
+    }
+
+    private CompletableFuture<AgentResult> ask(
+            State captured, String profileId, UUID actor, String sessionId, UUID requestId,
+            ModelMessage userInput, dev.openallay.model.image.ImagePayloadResolver images,
+            ToolInvocationContext context, Consumer<AgentEvent> events) {
         try {
-            runtime = runtime(captured, profileId);
+            dev.openallay.agent.AgentRequest.validateUserInput(userInput);
+            ClientGuideRuntime selected = runtime(captured, profileId);
+            GuideClientModelProfile profile = captured.profiles().stream()
+                    .filter(value -> value.id().equals(profileId)).findFirst().orElseThrow();
+            boolean containsImages = hasImages(List.of(userInput))
+                    || hasImages(sessions.history(new AgentSessionKey(actor, sessionId)));
+            if (containsImages
+                    && profile.imageInputCapability()
+                            != dev.openallay.model.image.ImageInputCapability.SUPPORTED) {
+                throw new GuideModelProfileException(
+                        profile.imageInputCapability() == dev.openallay.model.image.ImageInputCapability.UNKNOWN
+                                ? "image_input_unknown" : "image_input_unsupported",
+                        "The selected model has no confirmed image input support. Select an image-capable model or remove images from this conversation.");
+            }
+            return selected.ask(actor, sessionId, requestId, userInput, images, context, events);
         } catch (GuideModelProfileException failure) {
             return CompletableFuture.failedFuture(failure);
         }
-        return runtime.ask(actor, sessionId, requestId, question, context, events);
+    }
+
+    private static boolean hasImages(List<ModelMessage> messages) {
+        return messages.stream().flatMap(message -> message.content().stream())
+                .anyMatch(dev.openallay.model.ModelContent.Image.class::isInstance);
     }
 
     @Override
@@ -293,7 +337,11 @@ public final class ClientModelRuntimeRegistry implements GuideLocalEndpoint {
                     profile.definition().enabled(),
                     profile.available(),
                     profile.canonicalModelId(),
-                    failure));
+                    failure,
+                    profile.imageCapability().capability(),
+                    profile.imageCapability().origin().name().toLowerCase(java.util.Locale.ROOT)
+                            + (profile.imageCapability().source() == null
+                                    ? "" : ":" + profile.imageCapability().source())));
             if (profile.available()) {
                 ModelClient model = Objects.requireNonNull(
                         factory.apply(profile), "model factory result");

@@ -15,6 +15,7 @@ import dev.openallay.model.ModelToolDefinition;
 import dev.openallay.model.anthropic.AnthropicJsonCodec;
 import dev.openallay.model.config.ModelProtocol;
 import dev.openallay.model.openai.OpenAiJsonCodec;
+import dev.openallay.model.image.ImageReference;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -138,6 +139,44 @@ final class ModelContextTokenEstimatorTest {
         var budget = new ContextBudget(128_000, 8_192);
         assertEquals(111_616, budget.inputTokens());
         assertEquals(16_384, budget.reservedTokens());
+    }
+
+    @Test
+    void imageInputCountsOnlyMetadataFramingAndLabelsTheMissingImageCostUnknown() {
+        var gson = new Gson();
+        var image = new ImageReference("a".repeat(64), "image/png", 8_000, 8_000, 5_000_000);
+        var messages = List.of(ModelMessage.userInput("look at this", List.of(image)));
+        for (ModelProtocol protocol : ModelProtocol.values()) {
+            var tokenizer = estimator(protocol, "opaque", ModelTokenEncoding.O200K_BASE);
+            var nativeInput = protocol == ModelProtocol.OPENAI_CHAT
+                    ? new OpenAiJsonCodec(gson).contextInput("System", messages, List.of())
+                    : new AnthropicJsonCodec(gson).contextInput("System", messages, List.of());
+            assertEquals(tokenizer.estimateText(gson.toJson(nativeInput)),
+                    tokenizer.estimate("System", messages, List.of()));
+            assertTrue(tokenizer.estimate("System", messages, List.of()) < 200);
+            assertEquals(TokenizerMetadata.ImageAccounting.UNKNOWN,
+                    tokenizer.imageAccounting(messages));
+            assertEquals(TokenizerMetadata.ImageAccounting.UNKNOWN,
+                    tokenizer.metadata().imageAccounting());
+            assertEquals("unknown", tokenizer.imageAccounting(messages).encoded());
+            assertEquals(TokenizerMetadata.ImageAccounting.TEXT_ONLY,
+                    tokenizer.imageAccounting(List.of(ModelMessage.userText("only text"))));
+            assertEquals("text_only", tokenizer.imageAccounting(List.of()).encoded());
+            assertFalse(gson.toJson(nativeInput).contains("base64"));
+            assertFalse(gson.toJson(nativeInput).contains(image.sha256()));
+        }
+    }
+
+    @Test
+    void imageBytesAndPixelCountDoNotInventGenericTokenCostsOrTriggerProviderValidationOffline() {
+        var giant = new ImageReference("b".repeat(64), "image/jpeg",
+                Integer.MAX_VALUE, Integer.MAX_VALUE, Long.MAX_VALUE);
+        for (ModelProtocol protocol : ModelProtocol.values()) {
+            var tokenizer = estimator(protocol, "opaque", ModelTokenEncoding.O200K_BASE);
+            int estimate = assertDoesNotThrow(() -> tokenizer.estimate("System",
+                    List.of(ModelMessage.userInput(null, List.of(giant))), List.of()));
+            assertTrue(estimate > 0 && estimate < 200);
+        }
     }
 
     private static ModelContextTokenEstimator estimator(

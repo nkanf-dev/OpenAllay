@@ -102,8 +102,8 @@ public final class GameGuideAgent {
             Consumer<AgentEvent> rawEvents,
             ToolResult<AgentSessionStore.Lease> reservation) {
         AgentRequest request = new AgentRequest(rawRequest.requestId(), rawRequest.actorId(), rawRequest.sessionId(),
-                rawRequest.userMessage(), tools.skillSystemPrompt(rawRequest.systemPrompt()),
-                rawRequest.context(), rawRequest.stream());
+                rawRequest.userInput(), tools.skillSystemPrompt(rawRequest.systemPrompt()),
+                rawRequest.context(), rawRequest.stream(), rawRequest.images());
         Consumer<AgentEvent> events = rawEvents;
         if (reservation instanceof ToolResult.Failure<AgentSessionStore.Lease> failure) {
             events.accept(new AgentEvent.Failed(failure.code(), failure.message()));
@@ -122,7 +122,7 @@ public final class GameGuideAgent {
             List<ModelMessage> messages = new ArrayList<>(dev.openallay.agent.context.ModelContextCodec.safe(tools.refreshContext(
                     restoredView, lease.retainedSkills())));
             int protectedFromIndex = messages.size();
-            ModelMessage question = ModelMessage.userText(request.userMessage());
+            ModelMessage question = request.userInput();
             messages.add(question);
             List<ModelMessage> complete = new ArrayList<>(originalHistory);
             complete.add(question);
@@ -200,6 +200,7 @@ public final class GameGuideAgent {
                             request.stream(),
                             request.sessionKey().schedulingKey(),
                             lease.cancellation(),
+                            request.images(),
                             usage -> emitModelUsage(events, usage))
                     .thenCompose(result -> {
                         if (result.checkpoint() != null) {
@@ -244,7 +245,9 @@ public final class GameGuideAgent {
                 projectedMessages,
                 tools.definitions(),
                 request.stream(),
-                request.sessionKey().schedulingKey());
+                request.sessionKey().schedulingKey(),
+                null,
+                request.images());
         lease.cancellation().throwIfCancelled();
         int estimatedTokens = compactor == null
                 ? dev.openallay.model.tokenizer.ModelContextTokenEstimator.conservative().estimate(

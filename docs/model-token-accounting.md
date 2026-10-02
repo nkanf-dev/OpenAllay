@@ -20,7 +20,7 @@ JTokkit 1.1.0's model registry predates GPT-4.1 and GPT-5. Its broad `gpt-4` pre
 
 `estimateText` uses JTokkit's `countTokensOrdinary`. Ordinary mode treats special-token-looking strings as text. For a supported, selected encoding this is an exact plain-text BPE count.
 
-Request estimates tokenize the complete provider-native context-input JSON. HTTP request encoding and token budgeting use the same codec projection. This covers roles, text, reasoning, tool-call IDs, JSON arguments, tool results, tool names/descriptions, schemas, and their serialized shape. Model name, streaming flags and output limits are transport controls, not context content.
+Request estimates tokenize the provider-native text and framing projection. This covers roles, text, reasoning, tool-call IDs, JSON arguments, tool results, tool names/descriptions, schemas, and their serialized shape. Image blocks use an offline reference projection. Image bytes and Base64 are never fed to BPE. Image Token accounting remains unknown, so the UI labels mixed text/image estimates as text-only and does not show them as exact total occupancy. Model name, streaming flags and output limits are transport controls, not context content.
 
 One endpoint estimator is shared by compaction, Agent admission/diagnostics, prompt/tool reservations, and local history accounting. Remote history preload uses a labelled surrogate until the server owns final admission.
 

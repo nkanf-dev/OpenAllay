@@ -18,9 +18,13 @@ import dev.openallay.model.ModelRequest;
 import dev.openallay.model.ModelRole;
 import dev.openallay.model.ModelTurn;
 import dev.openallay.model.ModelUsage;
+import dev.openallay.model.ModelToolDefinition;
+import dev.openallay.model.image.ImageReference;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.time.Instant;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -130,8 +134,16 @@ final class LiveTraceStoreTest {
     @Test
     void recorderExcludesTypedTurnReasoningAndPreservesSafeRequestAndOrdinaryReasoningFields() throws Exception {
         Gson gson = new Gson();
+        ImageReference reference = new ImageReference("a".repeat(64), "image/png", 2, 3, 96);
+        java.util.concurrent.atomic.AtomicInteger reads = new java.util.concurrent.atomic.AtomicInteger();
+        String resolverState = "resolver-only-binary-state";
+        dev.openallay.model.image.ImagePayloadResolver resolver = image -> {
+            reads.incrementAndGet();
+            throw new IOException(resolverState);
+        };
+        ModelMessage userInput = ModelMessage.userInput("player token=synthetic-player-token", List.of(reference));
         AgentRequest request = new AgentRequest(UUID.randomUUID(), UUID.randomUUID(), "main",
-                "player token=synthetic-player-token", "system prompt",
+                userInput, resolver, "system prompt",
                 ToolInvocationContext.developmentConsole("trace-private-reasoning"), false);
         LiveAgentTraceRecorder recorder = new LiveAgentTraceRecorder(gson, request);
         JsonObject input = new JsonObject();
@@ -143,7 +155,7 @@ final class LiveTraceStoreTest {
         ModelMessage reasoningOnly = new ModelMessage(ModelRole.ASSISTANT,
                 List.of(new ModelContent.Reasoning("request-only-private-thought", "request-only-private-signature")));
         List<ModelMessage> messages = List.of(
-                ModelMessage.userText(request.userMessage()),
+                userInput,
                 reasoningOnly,
                 new ModelMessage(ModelRole.ASSISTANT, List.of(
                         new ModelContent.Reasoning("request-private-thought", "request-private-signature"), use)),
@@ -151,8 +163,10 @@ final class LiveTraceStoreTest {
         List<ModelContent> turnContent = List.of(
                 new ModelContent.Reasoning("turn-private-thought", "turn-private-signature"),
                 new ModelContent.Text("visible answer token=synthetic-output-token"), use);
+        ModelToolDefinition tool = new ModelToolDefinition("openallay__run_javascript", "Run source",
+                JsonParser.parseString("{\"type\":\"object\"}").getAsJsonObject());
         ModelRequest modelRequest = new ModelRequest("system prompt", ModelContextCodec.safe(messages),
-                List.of(), false, "main");
+                List.of(tool), false, "main", 192, resolver);
         ModelTurn modelTurn = new ModelTurn("provider", "model", turnContent, "tool_use", ModelUsage.empty());
         recorder.modelRequest(modelRequest);
         recorder.modelTurn(modelTurn);
@@ -172,10 +186,32 @@ final class LiveTraceStoreTest {
         assertEquals(request.userMessage(), events.get(0).getAsJsonObject().getAsJsonObject("payload")
                 .get("userMessage").getAsString());
         JsonObject encodedRequest = events.get(1).getAsJsonObject().getAsJsonObject("payload");
-        assertEquals(gson.toJsonTree(modelRequest), encodedRequest,
-                "the recorder must preserve every field of the actual structurally safe model request");
+        JsonObject expectedRequest = modelFacingPayload(modelRequest);
+        assertEquals(expectedRequest, encodedRequest,
+                "the recorder must preserve every model-facing field without the request-only resolver");
+        assertEquals(Set.of("systemPrompt", "messages", "tools", "stream", "sessionKey", "maxOutputTokens"),
+                encodedRequest.keySet());
+        JsonObject encodedReference = encodedRequest.getAsJsonArray("messages").get(0).getAsJsonObject()
+                .getAsJsonArray("content").get(1).getAsJsonObject().getAsJsonObject("reference");
+        JsonObject expectedReference = new JsonObject();
+        expectedReference.addProperty("sha256", reference.sha256());
+        expectedReference.addProperty("mimeType", reference.mimeType());
+        expectedReference.addProperty("width", reference.width());
+        expectedReference.addProperty("height", reference.height());
+        expectedReference.addProperty("byteSize", reference.byteSize());
+        assertEquals(expectedReference, encodedReference);
+        assertEquals(Set.of("sha256", "mimeType", "width", "height", "byteSize"), encodedReference.keySet());
+        assertEquals(192, encodedRequest.get("maxOutputTokens").getAsInt());
+        assertEquals(gson.toJsonTree(userInput), events.get(0).getAsJsonObject()
+                .getAsJsonObject("payload").get("userInput"));
+        assertFalse(encodedRequest.has("images"));
+        assertFalse(encoded.contains(resolverState));
+        assertFalse(encoded.contains("$$Lambda"));
+        assertFalse(encoded.contains("base64"));
+        assertFalse(encoded.contains("data:image/"));
+        assertEquals(0, reads.get(), "trace recording and persistence must never read image bytes");
         List<ModelMessage> expectedMessages = List.of(
-                ModelMessage.userText(request.userMessage()),
+                userInput,
                 new ModelMessage(ModelRole.ASSISTANT, List.of(use)),
                 new ModelMessage(ModelRole.USER, List.of(result)));
         assertEquals(expectedMessages, modelRequest.messages());
@@ -191,6 +227,20 @@ final class LiveTraceStoreTest {
                 "the safe boundary must not mutate the source messages");
         assertEquals(turnContent, modelTurn.content(), "recording must not mutate the live model turn");
         assertEquals(encoded, Files.readString(temporary.resolve(trace.requestId() + ".json")));
+    }
+
+    private static JsonObject modelFacingPayload(ModelRequest request) {
+        Gson gson = new Gson();
+        JsonObject payload = new JsonObject();
+        payload.addProperty("systemPrompt", request.systemPrompt());
+        payload.add("messages", gson.toJsonTree(request.messages()));
+        payload.add("tools", gson.toJsonTree(request.tools()));
+        payload.addProperty("stream", request.stream());
+        payload.addProperty("sessionKey", request.sessionKey());
+        if (request.maxOutputTokens() != null) {
+            payload.addProperty("maxOutputTokens", request.maxOutputTokens());
+        }
+        return payload;
     }
 
     private static LiveAgentTrace trace(JsonObject payload) {

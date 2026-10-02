@@ -224,6 +224,14 @@ public final class AgentSessionStore {
                 .toList();
     }
 
+    /** Immutable actor/session-scoped snapshot of the actual current context. */
+    public synchronized List<ModelMessage> history(AgentSessionKey key) {
+        Session session = sessions.get(key);
+        if (session == null) return List.of();
+        return List.copyOf(session.active == null
+                ? session.history : session.active.progress().projected());
+    }
+
     public synchronized boolean hasContext(AgentSessionKey key) {
         Session session = sessions.get(key);
         return session != null && !session.history.isEmpty();

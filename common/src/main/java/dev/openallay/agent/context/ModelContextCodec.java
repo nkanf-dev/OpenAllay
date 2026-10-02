@@ -27,6 +27,15 @@ public final class ModelContextCodec {
                         value.addProperty("type", "text");
                         value.addProperty("text", text.text());
                     }
+                    case ModelContent.Image image -> {
+                        value.addProperty("type", "image");
+                        var reference = image.reference();
+                        value.addProperty("sha256", reference.sha256());
+                        value.addProperty("mimeType", reference.mimeType());
+                        value.addProperty("width", reference.width());
+                        value.addProperty("height", reference.height());
+                        value.addProperty("byteSize", reference.byteSize());
+                    }
                     case ModelContent.ToolUse use -> {
                         value.addProperty("type", "tool_use");
                         value.addProperty("id", use.id());
@@ -66,6 +75,14 @@ public final class ModelContextCodec {
                     case "text" -> {
                         fields(item, Set.of("type", "text"));
                         content.add(new ModelContent.Text(text(item, "text")));
+                    }
+                    case "image" -> {
+                        fields(item, Set.of("type", "sha256", "mimeType", "width", "height", "byteSize"));
+                        content.add(new ModelContent.Image(new dev.openallay.model.image.ImageReference(
+                                text(item, "sha256"), text(item, "mimeType"),
+                                Math.toIntExact(positiveInteger(item, "width")),
+                                Math.toIntExact(positiveInteger(item, "height")),
+                                positiveInteger(item, "byteSize"))));
                     }
                     case "tool_use" -> {
                         fields(item, Set.of("type", "id", "name", "input"));
@@ -115,6 +132,20 @@ public final class ModelContextCodec {
             throw new IllegalArgumentException("model context value must be an array");
         }
         return value.getAsJsonArray();
+    }
+
+    private static long positiveInteger(JsonObject value, String field) {
+        JsonElement number = value.get(field);
+        if (number == null || !number.isJsonPrimitive()
+                || !number.getAsJsonPrimitive().isNumber()
+                || !number.getAsString().matches("[1-9][0-9]*")) {
+            throw new IllegalArgumentException("model context " + field + " must be a positive integer");
+        }
+        try {
+            return Long.parseLong(number.getAsString());
+        } catch (NumberFormatException invalid) {
+            throw new IllegalArgumentException("model context " + field + " is out of range", invalid);
+        }
     }
 
     private static String text(JsonObject value, String field) {

@@ -15,10 +15,16 @@ import dev.openallay.model.ModelTurn;
 import dev.openallay.model.ModelUsage;
 import dev.openallay.model.ProviderToolIds;
 import dev.openallay.model.config.ModelConfig;
+import dev.openallay.model.image.ImageReference;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 public final class AnthropicJsonCodec {
     private final Gson gson;
@@ -27,8 +33,25 @@ public final class AnthropicJsonCodec {
         this.gson = Objects.requireNonNull(gson, "gson");
     }
 
+    // Direct Claude API vision facts, checked 2026-10-02:
+    // https://platform.claude.com/docs/en/build-with-claude/vision
+    // "100 per request ... for models with a 200k-token context window";
+    // "600 per request ... for all other models". Use the API-wide maximum here:
+    // config.contextWindowTokens is a user-overridable budget, not published model capability.
+    // For >20 images the API applies a stricter dimension limit; the documented
+    // 2000px cross-platform recommendation is not an exact direct-API threshold.
+    private static final int MAX_IMAGES = 600;
+    // "10 MB (base64-encoded) when using the Claude API directly."
+    // Partner platforms have different limits; do not infer them from protocol.
+    private static final long MAX_ENCODED_IMAGE_BYTES = 10_000_000;
+    private static final int MAX_IMAGE_DIMENSION = 8_000;
+    // Application decimal-byte guard within the published 32 MB standard request limit.
+    private static final long MAX_REQUEST_BYTES = 32_000_000;
+
     public String requestBody(ModelConfig config, ModelRequest request) {
-        JsonObject root = contextInput(request.systemPrompt(), request.messages(), request.tools());
+        validateImages(request.messages());
+        JsonObject root = contextInput(request.systemPrompt(), request.messages(), request.tools(),
+                image -> encodeImage(request, image));
         root.addProperty("model", config.model());
         root.addProperty("max_tokens", request.effectiveMaxOutputTokens(config.maxOutputTokens()));
         root.addProperty("stream", request.stream());
@@ -37,12 +60,27 @@ public final class AnthropicJsonCodec {
             outputConfig.addProperty("effort", config.reasoningEffort().encoded());
             root.add("output_config", outputConfig);
         }
-        return gson.toJson(root);
+        String body = gson.toJson(root);
+        if (body.getBytes(StandardCharsets.UTF_8).length > MAX_REQUEST_BYTES) {
+            throw new IllegalArgumentException("Anthropic request exceeds 32,000,000 bytes");
+        }
+        return body;
     }
 
-    /** Provider-native input shape shared by HTTP encoding and offline token budgeting. */
+    /**
+     * Offline native framing with image metadata only. It never reads a payload
+     * or counts binary/Base64 as text; image token costs remain unknown.
+     */
     public JsonObject contextInput(
             String systemPrompt, List<ModelMessage> inputMessages, List<ModelToolDefinition> inputTools) {
+        return contextInput(systemPrompt, inputMessages, inputTools, AnthropicJsonCodec::imagePlaceholder);
+    }
+
+    private JsonObject contextInput(
+            String systemPrompt,
+            List<ModelMessage> inputMessages,
+            List<ModelToolDefinition> inputTools,
+            Function<ImageReference, JsonObject> imageEncoder) {
         JsonObject root = new JsonObject();
         root.addProperty("system", systemPrompt);
         JsonArray messages = new JsonArray();
@@ -52,7 +90,7 @@ public final class AnthropicJsonCodec {
             encoded.addProperty("role", message.role() == ModelRole.USER ? "user" : "assistant");
             JsonArray content = new JsonArray();
             for (ModelContent block : message.content()) {
-                content.add(encodeContent(block, toolIds));
+                content.add(encodeContent(block, toolIds, imageEncoder));
             }
             encoded.add("content", content);
             messages.add(encoded);
@@ -109,12 +147,18 @@ public final class AnthropicJsonCodec {
                 longValue(object, "cache_creation_input_tokens"), hasCount(object, "cache_creation_input_tokens"));
     }
 
-    private JsonObject encodeContent(ModelContent block, ProviderToolIds toolIds) {
+    private JsonObject encodeContent(
+            ModelContent block,
+            ProviderToolIds toolIds,
+            Function<ImageReference, JsonObject> imageEncoder) {
         JsonObject encoded = new JsonObject();
         switch (block) {
             case ModelContent.Text text -> {
                 encoded.addProperty("type", "text");
                 encoded.addProperty("text", text.text());
+            }
+            case ModelContent.Image image -> {
+                return imageEncoder.apply(image.reference());
             }
             case ModelContent.Reasoning reasoning -> {
                 encoded.addProperty("type", "thinking");
@@ -137,6 +181,71 @@ public final class AnthropicJsonCodec {
             }
         }
         return encoded;
+    }
+
+    private static void validateImages(List<ModelMessage> messages) {
+        int count = 0;
+        long encodedBytes = 0;
+        for (ModelMessage message : messages) {
+            for (ModelContent block : message.content()) {
+                if (!(block instanceof ModelContent.Image image)) continue;
+                ImageReference reference = image.reference();
+                if (++count > MAX_IMAGES) {
+                    throw new IllegalArgumentException("Anthropic request exceeds 600 images");
+                }
+                if (!reference.mimeType().equals("image/png")
+                        && !reference.mimeType().equals("image/jpeg")) {
+                    throw new IllegalArgumentException("Anthropic image must be PNG or JPEG");
+                }
+                // This early raw-byte bound also prevents long overflow before Base64 length math.
+                if (reference.byteSize() > MAX_ENCODED_IMAGE_BYTES) {
+                    throw new IllegalArgumentException("Anthropic image exceeds 10,000,000 Base64 bytes");
+                }
+                long base64Bytes = 4 * ((reference.byteSize() + 2) / 3);
+                if (base64Bytes > MAX_ENCODED_IMAGE_BYTES) {
+                    throw new IllegalArgumentException("Anthropic image exceeds 10,000,000 Base64 bytes");
+                }
+                if (reference.width() > MAX_IMAGE_DIMENSION || reference.height() > MAX_IMAGE_DIMENSION) {
+                    throw new IllegalArgumentException("Anthropic image dimension exceeds 8,000 pixels");
+                }
+                encodedBytes += base64Bytes;
+                if (encodedBytes > MAX_REQUEST_BYTES) {
+                    throw new IllegalArgumentException("Anthropic image payload exceeds 32,000,000 bytes");
+                }
+            }
+        }
+    }
+
+    private static JsonObject encodeImage(ModelRequest request, ImageReference reference) {
+        byte[] bytes;
+        try {
+            bytes = Objects.requireNonNull(request.images().read(reference), "image bytes");
+        } catch (IOException failure) {
+            throw new UncheckedIOException("Anthropic image payload is unavailable", failure);
+        }
+        if (bytes.length != reference.byteSize()) {
+            throw new IllegalArgumentException("Image payload byte size does not match its reference");
+        }
+        JsonObject source = new JsonObject();
+        source.addProperty("type", "base64");
+        source.addProperty("media_type", reference.mimeType());
+        source.addProperty("data", Base64.getEncoder().encodeToString(bytes));
+        JsonObject part = new JsonObject();
+        part.addProperty("type", "image");
+        part.add("source", source);
+        return part;
+    }
+
+    private static JsonObject imagePlaceholder(ImageReference reference) {
+        JsonObject metadata = new JsonObject();
+        metadata.addProperty("media_type", reference.mimeType());
+        metadata.addProperty("width", reference.width());
+        metadata.addProperty("height", reference.height());
+        metadata.addProperty("byte_size", reference.byteSize());
+        JsonObject part = new JsonObject();
+        part.addProperty("type", "image");
+        part.add("source", metadata);
+        return part;
     }
 
     private ModelContent decodeContent(JsonObject object) {
@@ -167,6 +276,8 @@ public final class AnthropicJsonCodec {
                 events.accept(new ModelEvent.ReasoningDelta(reasoning.text()));
             case ModelContent.ToolUse toolUse -> events.accept(new ModelEvent.ToolUseComplete(
                     toolUse.id(), toolUse.name(), toolUse.input()));
+            case ModelContent.Image ignored -> throw new IllegalArgumentException(
+                    "Anthropic image blocks are input-only");
             case ModelContent.ToolResult ignored -> {}
         }
     }

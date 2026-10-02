@@ -12,16 +12,27 @@ public record ServerAgentHistoryContent(
         String toolUseId,
         String toolName,
         String json,
-        Boolean error) {
+        Boolean error,
+        dev.openallay.model.image.ImageReference image) {
     public enum Kind {
         TEXT,
+        IMAGE,
         TOOL_USE,
         TOOL_RESULT
     }
 
     public ServerAgentHistoryContent {
         java.util.Objects.requireNonNull(kind, "kind");
+        if (kind != Kind.IMAGE && image != null) {
+            throw new IllegalArgumentException("Image metadata belongs only to image history content");
+        }
         switch (kind) {
+            case IMAGE -> {
+                if (image == null || text != null || toolUseId != null || toolName != null
+                        || json != null || error != null) {
+                    throw new IllegalArgumentException("Malformed image history content");
+                }
+            }
             case TEXT -> {
                 if (text == null || toolUseId != null || toolName != null
                         || json != null || error != null) {
@@ -45,8 +56,15 @@ public record ServerAgentHistoryContent(
         }
     }
 
+    public ServerAgentHistoryContent(
+            Kind kind, String text, String toolUseId, String toolName, String json, Boolean error) {
+        this(kind, text, toolUseId, toolName, json, error, null);
+    }
+
     public static ServerAgentHistoryContent from(ModelContent content) {
         return switch (content) {
+            case ModelContent.Image value -> new ServerAgentHistoryContent(
+                    Kind.IMAGE, null, null, null, null, null, value.reference());
             case ModelContent.Text value -> new ServerAgentHistoryContent(
                     Kind.TEXT, value.text(), null, null, null, null);
             case ModelContent.ToolUse value -> new ServerAgentHistoryContent(
@@ -61,6 +79,7 @@ public record ServerAgentHistoryContent(
 
     public ModelContent toModelContent() {
         return switch (kind) {
+            case IMAGE -> new ModelContent.Image(image);
             case TEXT -> new ModelContent.Text(text);
             case TOOL_USE -> new ModelContent.ToolUse(
                     toolUseId, toolName, JsonParser.parseString(json).getAsJsonObject());

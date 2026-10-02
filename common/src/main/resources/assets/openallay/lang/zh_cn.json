@@ -579,5 +579,7 @@
   "screen.openallay.settings.models.builtin.image_source.trusted": "图片输入来源：受信任的提供商元数据",
   "screen.openallay.settings.models.builtin.image_source.builtin": "图片输入来源：内置模型参考表",
   "screen.openallay.settings.models.builtin.image_source.unknown": "图片输入来源：不可用",
-  "screen.openallay.settings.models.builtin.image_effective_source": "图片输入证据：%s · 采集于 %s"
+  "screen.openallay.settings.models.builtin.image_effective_source": "图片输入证据：%s · 采集于 %s",
+  "screen.openallay.telemetry.image_unknown": "仅估算文本 Token；图片 Token 暂未计入。",
+  "screen.openallay.telemetry.text_estimate": "文本估算 %s"
 }

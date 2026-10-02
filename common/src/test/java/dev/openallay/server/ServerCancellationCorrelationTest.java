@@ -65,6 +65,9 @@ final class ServerCancellationCorrelationTest {
         CompletableFuture<Void> releaseOldCleanup = new CompletableFuture<>();
         CompletableFuture<Void> oldOwnerClosed = new CompletableFuture<>();
         CompletableFuture<Void> newOwnerClosed = new CompletableFuture<>();
+        CompletableFuture<Void> oldReleased = new CompletableFuture<>();
+        CompletableFuture<Void> newReleased = new CompletableFuture<>();
+        List<ServerAgentEventPayload> received = new java.util.concurrent.CopyOnWriteArrayList<>();
         Map<String, CancellationSignal> captureSignals = new ConcurrentHashMap<>();
         ServerAgentService service = new ServerAgentService(
                 (sender, payload) -> {
@@ -88,7 +91,13 @@ final class ServerCancellationCorrelationTest {
                     return CompletableFuture.completedFuture(
                             ToolInvocationContext.developmentConsole(correlationId));
                 },
-                (sender, event) -> {},
+                (sender, event) -> {
+                    assertEquals(actor, sender);
+                    received.add(event);
+                    if (event.eventType().equals("request_released")) {
+                        (event.requestId().equals(oldId) ? oldReleased : newReleased).complete(null);
+                    }
+                },
                 gson,
                 "system",
                 cancellation -> CompletableFuture.completedFuture(null));
@@ -103,10 +112,25 @@ final class ServerCancellationCorrelationTest {
             assertFalse(model.raw.get("first question").isDone(), "raw provider ignores cancellation");
             assertTrue(model.signals.get("first question").isCancelled());
 
+            ToolResult.Failure<?> busy = assertInstanceOf(ToolResult.Failure.class, service.ask(actor,
+                    new ServerAgentRequestPayload(newId, "main", "retry question", false)));
+            assertEquals("agent_busy", busy.code(), "a cancelled owner remains admitted until actual cleanup");
+            assertFalse(model.raw.containsKey("retry question"));
+            assertFalse(captureSignals.containsKey(actor + "/" + newId));
+            assertFalse(service.hasRequest(actor, newId), "busy rejection reserves no successor nonce");
+            assertEquals(0, received.stream().filter(event -> event.requestId().equals(newId)).count(),
+                    "direct busy rejection emits no fabricated numeric or release events");
+            assertFalse(oldReleased.isDone(), "runtime cleanup must finish before RequestReleased");
+            releaseOldCleanup.complete(null);
+            oldReleased.get(5, TimeUnit.SECONDS);
+            assertTrue(oldOwnerClosed.isDone());
+            assertEquals(0, service.activeRequests());
+            assertEquals("request_released", received.getLast().eventType());
+
             assertInstanceOf(ToolResult.Success.class, service.ask(actor,
                     new ServerAgentRequestPayload(newId, "main", "retry question", false)));
             assertEquals(newId, sessions.status(key).requestId());
-            assertEquals(2, service.activeRequests());
+            assertEquals(1, service.activeRequests());
             CancellationSignal retrySignal = model.signals.get("retry question");
             assertFalse(retrySignal.isCancelled());
             assertFalse(captureSignals.get(actor + "/" + newId).isCancelled());
@@ -118,18 +142,29 @@ final class ServerCancellationCorrelationTest {
             assertEquals(newId, sessions.status(key).requestId());
             assertFalse(model.raw.get("retry question").isDone());
 
-            releaseOldCleanup.complete(null);
-            oldOwnerClosed.get(5, TimeUnit.SECONDS);
+            assertTrue(oldReleased.isDone(), "the successor is admitted only after the old release fence");
             assertEquals(1, service.activeRequests());
             assertEquals(newId, sessions.status(key).requestId());
             assertFalse(retrySignal.isCancelled());
+            long oldEvents = received.stream().filter(event -> event.requestId().equals(oldId)).count();
             model.raw.get("first question").complete(turn("late old answer"));
+            assertEquals(oldEvents, received.stream().filter(event -> event.requestId().equals(oldId)).count(),
+                    "released old correlation must not reopen when the ignored provider finally answers");
             assertEquals(newId, sessions.status(key).requestId());
             assertFalse(retrySignal.isCancelled());
             model.raw.get("retry question").complete(turn("retry answer"));
-            newOwnerClosed.get(5, TimeUnit.SECONDS);
+            newReleased.get(5, TimeUnit.SECONDS);
+            assertTrue(newOwnerClosed.isDone());
             assertEquals(0, service.activeRequests());
             assertFalse(sessions.status(key).active());
+            for (UUID id : Set.of(oldId, newId)) {
+                List<ServerAgentEventPayload> owned = received.stream()
+                        .filter(event -> event.requestId().equals(id)).toList();
+                assertEquals("request_released", owned.getLast().eventType());
+                assertEquals(1, owned.stream().filter(event -> event.eventType().equals("model_usage_started")).count());
+                assertEquals(1, owned.stream().filter(event -> event.eventType().equals("model_usage_observed")).count());
+                assertEquals(1, owned.stream().filter(event -> event.eventType().equals("request_released")).count());
+            }
         } finally {
             releaseOldCleanup.complete(null);
             model.raw.values().forEach(raw -> raw.complete(turn("cleanup answer")));

@@ -12,6 +12,14 @@ public interface GuideRemoteEndpoint {
 
     boolean serverToolsAvailable();
 
+    default dev.openallay.model.image.ImageInputCapability imageInputCapability() {
+        return dev.openallay.model.image.ImageInputCapability.UNKNOWN;
+    }
+
+    default String imageInputCapabilitySource() {
+        return "unknown";
+    }
+
     default Optional<GuideContextSpec> contextSpec() {
         return Optional.empty();
     }
@@ -26,6 +34,28 @@ public interface GuideRemoteEndpoint {
             List<ModelMessage> history,
             Consumer<AgentEvent> events) {
         return ask(requestId, sessionId, question, events);
+    }
+
+    default boolean ask(
+            UUID requestId, String sessionId, ModelMessage userInput,
+            dev.openallay.model.image.ImagePayloadResolver images, Consumer<AgentEvent> events) {
+        return askWithContext(requestId, sessionId, userInput, images, List.of(), events);
+    }
+
+    default boolean askWithContext(
+            UUID requestId, String sessionId, ModelMessage userInput,
+            dev.openallay.model.image.ImagePayloadResolver images, List<ModelMessage> history,
+            Consumer<AgentEvent> events) {
+        dev.openallay.agent.AgentRequest.validateUserInput(userInput);
+        boolean containsImages = java.util.stream.Stream.concat(history.stream(), java.util.stream.Stream.of(userInput))
+                .flatMap(message -> message.content().stream())
+                .anyMatch(dev.openallay.model.ModelContent.Image.class::isInstance);
+        if (containsImages) {
+            throw new GuideModelProfileException(
+                    "image_input_unsupported", "This remote endpoint does not support typed image input");
+        }
+        return askWithContext(requestId, sessionId,
+                dev.openallay.agent.AgentRequest.displayText(userInput), history, events);
     }
 
     boolean cancel(UUID requestId);

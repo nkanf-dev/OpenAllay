@@ -15,6 +15,10 @@ public record ServerAgentHistoryMessage(Role role, List<ServerAgentHistoryConten
         content = List.copyOf(content);
         if (content.isEmpty()) throw new IllegalArgumentException(
                 "Server Agent history content must not be empty");
+        if (role != Role.USER && content.stream().anyMatch(block ->
+                block.kind() == ServerAgentHistoryContent.Kind.IMAGE)) {
+            throw new IllegalArgumentException("Image history content must belong to a user message");
+        }
     }
 
     public ServerAgentHistoryMessage(Role role, String text) {

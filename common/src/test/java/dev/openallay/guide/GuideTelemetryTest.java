@@ -26,6 +26,58 @@ import org.junit.jupiter.api.Test;
 
 final class GuideTelemetryTest {
     @Test
+    void unknownImageCostPreservesTextEstimateAndActualFeeReceiptsWithoutClaimingTotal() {
+        Local local = new Local();
+        GuideService service = service(local, new Remote());
+        UUID request = ask(service);
+        var capturedBudget = new ContextBudget(10_000, 1_000);
+        local.estimates.put("main", new GuideContextEstimate(request, 321, capturedBudget, "model-a",
+                dev.openallay.model.tokenizer.TokenizerMetadata.ImageAccounting.UNKNOWN));
+        local.send(request, new AgentEvent.ModelProgress(new ModelEvent.AttemptStarted(1, null)));
+        GuideContextEstimate estimate = service.telemetry().context();
+        assertNotNull(estimate);
+        assertEquals(321, estimate.estimatedTokens());
+        assertEquals(capturedBudget, estimate.budget());
+        assertEquals(dev.openallay.model.tokenizer.TokenizerMetadata.ImageAccounting.UNKNOWN,
+                estimate.imageAccounting());
+        UUID call = UUID.randomUUID();
+        local.send(request, new AgentEvent.ModelUsageStarted(call, "model-a"));
+        local.send(request, new AgentEvent.ModelUsageObserved(call, "model-a", new ModelUsage(500, 40, 50)));
+        assertEquals(1, service.telemetry().sessionUsage().actualCalls());
+        assertEquals(500, service.telemetry().sessionUsage().inputTokens());
+        assertEquals(40, service.telemetry().sessionUsage().outputTokens());
+        assertEquals(dev.openallay.model.tokenizer.TokenizerMetadata.ImageAccounting.UNKNOWN,
+                service.telemetry().context().imageAccounting(),
+                "provider billing facts do not retroactively invent an offline image estimate");
+    }
+
+    @Test
+    void imageUnknownFooterLabelsTextOnlyAndDoesNotRenderATotalOccupancyBar() throws Exception {
+        java.nio.file.Path current = java.nio.file.Path.of("").toAbsolutePath().normalize();
+        java.nio.file.Path root = current.getFileName() != null
+                && current.getFileName().toString().equals("common") ? current.getParent() : current;
+        String screen = java.nio.file.Files.readString(root.resolve(
+                "common/src/main/java/dev/openallay/client/gui/OpenAllayScreen.java"));
+        String refresh = screen.substring(screen.indexOf("private void refreshTelemetry()"),
+                screen.indexOf("static String compactTokens"));
+        String render = screen.substring(screen.indexOf("private void renderTelemetry("),
+                screen.indexOf("private void renderTelemetry(") + screen.substring(
+                        screen.indexOf("private void renderTelemetry(")).indexOf("graphics.disableScissor();"));
+        assertTrue(refresh.contains("context.imageAccounting()"));
+        assertTrue(refresh.contains("screen.openallay.telemetry.text_estimate"));
+        assertTrue(refresh.contains("screen.openallay.telemetry.image_unknown"));
+        assertTrue(render.contains("telemetry.context().imageAccounting()"));
+        assertTrue(render.contains("!= dev.openallay.model.tokenizer.TokenizerMetadata.ImageAccounting.UNKNOWN"));
+        assertTrue(render.indexOf("ImageAccounting.UNKNOWN") < render.indexOf("double ratio"));
+        for (String locale : List.of("en_us", "zh_cn")) {
+            var labels = com.google.gson.JsonParser.parseString(java.nio.file.Files.readString(root.resolve(
+                    "common/src/main/resources/assets/openallay/lang/" + locale + ".json"))).getAsJsonObject();
+            assertTrue(labels.get("screen.openallay.telemetry.text_estimate").getAsString().contains("%s"));
+            assertFalse(labels.get("screen.openallay.telemetry.image_unknown").getAsString().isBlank());
+        }
+    }
+
+    @Test
     void selectedSessionRequestAndModelOwnCachedContextAndCounts() {
         Local local = new Local();
         GuideService service = service(local, new Remote());

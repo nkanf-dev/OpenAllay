@@ -1,0 +1,239 @@
+package dev.openallay.agent.context;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import dev.openallay.model.CancellationSignal;
+import dev.openallay.model.ModelClient;
+import dev.openallay.model.ModelContent;
+import dev.openallay.model.ModelMessage;
+import dev.openallay.model.ModelRequest;
+import dev.openallay.model.ModelRole;
+import dev.openallay.model.ModelToolDefinition;
+import dev.openallay.model.ModelTurn;
+import dev.openallay.model.ModelUsage;
+import dev.openallay.model.anthropic.AnthropicJsonCodec;
+import dev.openallay.model.config.ModelConfig;
+import dev.openallay.model.config.ModelProtocol;
+import dev.openallay.model.config.SecretValue;
+import dev.openallay.model.image.ImagePayloadResolver;
+import dev.openallay.model.image.ImageReference;
+import dev.openallay.model.openai.OpenAiJsonCodec;
+import dev.openallay.model.tokenizer.TokenizerMetadata;
+import java.io.IOException;
+import java.net.URI;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicInteger;
+import org.junit.jupiter.api.Test;
+
+final class ContextCompactorImageTest {
+    private static final Gson GSON = new Gson();
+    private static final String SUMMARY = """
+            {"goals":[],"preferences":[],"completedTopics":[],"currentTasks":[],
+             "decisions":[],"unresolvedQuestions":[],"evidenceReferences":[]}
+            """;
+    private static final ImageReference PNG =
+            new ImageReference("a".repeat(64), "image/png", 32, 24, 6);
+    private static final ImageReference JPEG =
+            new ImageReference("b".repeat(64), "image/jpeg", 48, 32, 6);
+    private static final List<ImageReference> PREFIX_IMAGES = List.of(PNG, JPEG, PNG);
+
+    @Test
+    void nativeSummaryChunksAndFinalProjectionKeepActualImagesIncludingRepeatedReferences() {
+        var requests = new ArrayList<ModelRequest>();
+        var reads = new ArrayList<ImageReference>();
+        ImagePayloadResolver resolver = image -> {
+            reads.add(image);
+            return new byte[(int) image.byteSize()];
+        };
+        ModelClient model = (request, events, cancellation) -> {
+            requests.add(request);
+            assertSame(resolver, request.images());
+            assertEquals(ModelRole.USER, request.messages().getLast().role());
+            // A real provider codec must resolve actual image input, not just JSON-as-text metadata.
+            assertDoesNotThrow(() -> new OpenAiJsonCodec(GSON).requestBody(config(ModelProtocol.OPENAI_CHAT), request));
+            return CompletableFuture.completedFuture(textTurn(SUMMARY));
+        };
+        var compactor = compactor(model);
+        List<ModelMessage> source = source();
+        assertTrue(compactor.requiresCompaction("system", source, List.of()));
+        ContextCompactor.Result result = compactor.compact("system", source, 2, List.of(),
+                true, "actor:images", new CancellationSignal(), resolver).join();
+
+        assertTrue(result.successful(), result.failureMessage());
+        assertEquals(ContextProjection.Kind.SUMMARIZED, result.projection().kind());
+        assertEquals(2, result.checkpoint().sourceToIndexExclusive());
+        assertEquals(2, requests.size(), "complete image-bearing source units require separate admitted chunks");
+        assertEquals(List.of(PNG, JPEG), images(requests.getFirst().messages()));
+        assertEquals(PREFIX_IMAGES, images(requests.getLast().messages()),
+                "later chunks carry prior actual images as well as their own unit's images");
+        assertEquals(List.of(PNG, JPEG, PNG, JPEG, PNG), reads);
+        for (ModelRequest request : requests) {
+            assertEquals("actor:images", request.sessionKey());
+            assertFalse(request.stream());
+            assertNotNull(request.maxOutputTokens());
+            assertEquals(TokenizerMetadata.ImageAccounting.UNKNOWN,
+                    compactor.estimator().imageAccounting(request.messages()));
+            assertTrue(compactor.estimateTokens(request.systemPrompt(), request.messages(), List.of())
+                    <= compactor.inputTokenBudget());
+        }
+        String firstSource = ((ModelContent.Text) requests.getFirst().messages()
+                .getLast().content().getFirst()).text();
+        assertTrue(firstSource.contains(PNG.sha256()), "source hashing and summary text still contain metadata");
+        assertFalse(firstSource.contains("base64"));
+        assertEquals(PREFIX_IMAGES, images(result.projection().messages()));
+        assertEquals(source.getLast(), result.projection().messages().getLast());
+        assertEquals(ModelRole.USER, result.projection().messages().getFirst().role());
+        assertEquals(new ModelContent.Text("[OpenAllay derived conversation memory; NOT factual evidence]\n"
+                        + JsonParser.parseString(SUMMARY)),
+                result.projection().messages().getFirst().content().getFirst());
+        assertEquals(result.projection().messages(), ModelContextCodec.safe(result.projection().messages()));
+        assertTrue(compactor.matches(result.checkpoint(), source));
+    }
+
+    @Test
+    void targetedSummaryRetryKeepsScopedResolverAndTheSameNativeImageBlocks() {
+        var requests = new ArrayList<ModelRequest>();
+        var reads = new AtomicInteger();
+        ImagePayloadResolver resolver = image -> { reads.incrementAndGet(); return new byte[6]; };
+        JsonObject overlong = JsonParser.parseString(SUMMARY).getAsJsonObject();
+        overlong.getAsJsonArray("goals").add("oversized".repeat(1_000));
+        ModelClient model = (request, events, cancellation) -> {
+            requests.add(request);
+            assertSame(resolver, request.images());
+            assertDoesNotThrow(() -> new AnthropicJsonCodec(GSON)
+                    .requestBody(config(ModelProtocol.ANTHROPIC_MESSAGES), request));
+            return CompletableFuture.completedFuture(textTurn(
+                    requests.size() == 1 ? overlong.toString() : SUMMARY));
+        };
+        var result = compactor(model).compact("system", source(), 2, List.of(),
+                true, "actor:retry", new CancellationSignal(), resolver).join();
+
+        assertTrue(result.successful(), result.failureMessage());
+        assertEquals(3, requests.size());
+        assertEquals(requests.getFirst().messages(), requests.get(1).messages());
+        assertEquals(requests.getFirst().maxOutputTokens(), requests.get(1).maxOutputTokens());
+        assertTrue(requests.get(1).systemPrompt().contains("previous memory exceeded"));
+        assertEquals(List.of(PNG, JPEG), images(requests.get(1).messages()));
+        assertEquals(PREFIX_IMAGES, images(result.projection().messages()));
+        assertEquals(7, reads.get());
+    }
+
+    @Test
+    void persistedProjectionAndRestoredCheckpointReuseRetainOldImagesForTheNextQuestion() {
+        ModelClient model = (request, events, cancellation) ->
+                CompletableFuture.completedFuture(textTurn(SUMMARY));
+        var compactor = compactor(model);
+        var source = source();
+        var result = compactor.compact("system", source, 2, List.of(), true,
+                "actor:restore", new CancellationSignal(), image -> new byte[6]).join();
+        assertTrue(result.successful(), result.failureMessage());
+        var contextCodec = new ModelContextCodec();
+        var projectedRestored = contextCodec.decode(contextCodec.encode(result.projection().messages()));
+        assertEquals(result.projection().messages(), projectedRestored);
+        assertEquals(PREFIX_IMAGES, images(projectedRestored));
+
+        // Checkpoint reuse hydrates image blocks from durable original prefix, never summary text.
+        var checkpointCodec = new ContextCheckpointCodec();
+        var checkpoint = checkpointCodec.decode(checkpointCodec.encode(result.checkpoint()));
+        var originalRestored = new ArrayList<>(contextCodec.decode(contextCodec.encode(source)));
+        originalRestored.add(ModelMessage.userText("What is shown in the old images?"));
+        var reused = compactor.reuse(checkpoint, "system", originalRestored,
+                source.size(), List.of()).orElseThrow();
+        assertEquals(PREFIX_IMAGES, images(reused.messages()));
+        assertEquals(originalRestored.getLast(), reused.messages().getLast());
+        assertEquals(reused.messages(), ModelContextCodec.safe(reused.messages()));
+        assertEquals(TokenizerMetadata.ImageAccounting.UNKNOWN,
+                compactor.estimator().imageAccounting(reused.messages()));
+        for (ModelProtocol protocol : ModelProtocol.values()) {
+            var reads = new ArrayList<ImageReference>();
+            var request = new ModelRequest("system", reused.messages(), List.of(), false,
+                    "actor:restore", null, image -> { reads.add(image); return new byte[6]; });
+            String body = protocol == ModelProtocol.OPENAI_CHAT
+                    ? new OpenAiJsonCodec(GSON).requestBody(config(protocol), request)
+                    : new AnthropicJsonCodec(GSON).requestBody(config(protocol), request);
+            assertEquals(PREFIX_IMAGES, reads);
+            assertTrue(body.contains(protocol == ModelProtocol.OPENAI_CHAT ? "data:image/png;base64," : "\"type\":\"base64\""));
+        }
+    }
+
+    @Test
+    void missingHistoricalImageCannotPublishSuccessfulPlaceholderOnlySummary() {
+        var requests = new ArrayList<ModelRequest>();
+        ModelClient model = (request, events, cancellation) -> {
+            requests.add(request);
+            try {
+                new OpenAiJsonCodec(GSON).requestBody(config(ModelProtocol.OPENAI_CHAT), request);
+                return CompletableFuture.completedFuture(textTurn(SUMMARY));
+            } catch (RuntimeException failure) {
+                return CompletableFuture.failedFuture(failure);
+            }
+        };
+        var result = compactor(model).compact("system", source(), 2, List.of(), true,
+                "actor:missing", new CancellationSignal(), image -> {
+                    throw new IOException("Historical image payload is unavailable");
+                }).join();
+        assertFalse(result.successful());
+        assertEquals(ContextCheckpoint.Status.FAILED, result.checkpoint().status());
+        assertEquals("summary_failure", result.checkpoint().failureCode());
+        assertNull(result.projection());
+        assertEquals(1, requests.size());
+        assertEquals(List.of(PNG, JPEG), images(requests.getFirst().messages()));
+    }
+
+    private static List<ModelMessage> source() {
+        return List.of(ModelMessage.userInput("a".repeat(600), List.of(PNG, JPEG)),
+                ModelMessage.userInput("b".repeat(600), List.of(PNG)),
+                ModelMessage.userText("current:" + "c".repeat(1_300)));
+    }
+
+    private static List<ImageReference> images(List<ModelMessage> messages) {
+        return messages.stream().flatMap(message -> message.content().stream())
+                .filter(ModelContent.Image.class::isInstance)
+                .map(ModelContent.Image.class::cast).map(ModelContent.Image::reference).toList();
+    }
+
+    private static ContextCompactor compactor(ModelClient model) {
+        return new ContextCompactor(model, GSON, new CharacterFixtureEstimator(),
+                new ContextBudget(2_800, 400), "test-model", Clock.fixed(Instant.EPOCH, ZoneOffset.UTC));
+    }
+
+    private static ModelTurn textTurn(String text) {
+        return new ModelTurn("test", "test-model", List.of(new ModelContent.Text(text)),
+                "end_turn", ModelUsage.empty());
+    }
+
+    private static ModelConfig config(ModelProtocol protocol) {
+        return new ModelConfig(true, protocol, URI.create("https://example.invalid/v1/"),
+                "compatible-model", SecretValue.of("test-secret"), 128_000, 400,
+                Duration.ofSeconds(5), Duration.ofSeconds(10));
+    }
+
+    /** Deterministic text/framing fixture; it does not invent any visual token cost. */
+    private static final class CharacterFixtureEstimator implements ContextTokenEstimator {
+        @Override
+        public int estimate(String systemPrompt, List<ModelMessage> messages, List<ModelToolDefinition> tools) {
+            int estimate = systemPrompt.length();
+            for (ModelMessage message : messages) {
+                estimate += 10;
+                for (ModelContent content : message.content()) {
+                    estimate += content instanceof ModelContent.Text text ? text.text().length() : 8;
+                }
+            }
+            return estimate;
+        }
+
+        @Override
+        public int estimateText(String text) {
+            return text.length();
+        }
+    }
+}

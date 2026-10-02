@@ -55,7 +55,11 @@ public record ServerModelSettingsView(
                         capability.serverCanonicalModelId(),
                         capability.serverContextWindowTokens(),
                         capability.serverMaxOutputTokens(),
-                        capability.serverPromptAndToolTokens())
+                        capability.serverPromptAndToolTokens(),
+                        new dev.openallay.model.metadata.ModelImageCapabilityResolution(
+                                capability.serverImageInputCapability(),
+                                dev.openallay.model.metadata.ModelImageCapabilityResolution.Origin.TRUSTED,
+                                capability.serverImageInputCapabilitySource(), null))
                 : unavailable();
     }
 }

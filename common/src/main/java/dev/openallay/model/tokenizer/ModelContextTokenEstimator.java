@@ -18,8 +18,10 @@ import java.util.Objects;
 /**
  * Offline JTokkit BPE accounting. Plain text counts are exact for the selected
  * encoding; provider input JSON is a conservative framing estimate, not an API
- * token-count result. Unknown models use the larger supported BPE count. That
- * surrogate is not a proven upper bound for an unpublished tokenizer.
+ * token-count result. Image metadata/framing is included, but image token costs
+ * remain UNKNOWN: no payload is read and no binary/Base64 is treated as text.
+ * Unknown models use the larger supported BPE count. That surrogate is not a
+ * proven upper bound for an unpublished tokenizer.
  */
 public final class ModelContextTokenEstimator implements ContextTokenEstimator {
     private static final EncodingRegistry ENCODINGS = Encodings.newLazyEncodingRegistry();
@@ -81,7 +83,8 @@ public final class ModelContextTokenEstimator implements ContextTokenEstimator {
             case ANTHROPIC_MESSAGES -> anthropic.contextInput(systemPrompt, detachedMessages, detachedTools);
         };
         // Includes role/content fields, tool-call IDs/arguments, tool-result JSON,
-        // reasoning and the full tool schemas using the same projection as HTTP.
+        // reasoning and full tool schemas. Image blocks are metadata placeholders,
+        // not the HTTP Base64 payload and not an estimate of image token costs.
         return estimateText(gson.toJson(input));
     }
 

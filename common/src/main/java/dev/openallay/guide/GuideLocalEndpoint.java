@@ -85,6 +85,44 @@ public interface GuideLocalEndpoint {
         return ask(actor, sessionId, requestId, question, context, events);
     }
 
+    /** Typed input must never be silently reduced to a text label. */
+    default CompletableFuture<AgentResult> ask(
+            UUID actor,
+            String sessionId,
+            UUID requestId,
+            dev.openallay.model.ModelMessage userInput,
+            dev.openallay.model.image.ImagePayloadResolver images,
+            ToolInvocationContext context,
+            Consumer<AgentEvent> events) {
+        dev.openallay.agent.AgentRequest.validateUserInput(userInput);
+        if (userInput.content().stream().anyMatch(
+                dev.openallay.model.ModelContent.Image.class::isInstance)) {
+            return CompletableFuture.failedFuture(new GuideModelProfileException(
+                    "image_input_unsupported", "This client model endpoint does not support image input"));
+        }
+        return ask(actor, sessionId, requestId,
+                dev.openallay.agent.AgentRequest.displayText(userInput), context, events);
+    }
+
+    default CompletableFuture<AgentResult> ask(
+            String profileId,
+            UUID actor,
+            String sessionId,
+            UUID requestId,
+            dev.openallay.model.ModelMessage userInput,
+            dev.openallay.model.image.ImagePayloadResolver images,
+            ToolInvocationContext context,
+            Consumer<AgentEvent> events) {
+        dev.openallay.agent.AgentRequest.validateUserInput(userInput);
+        if (userInput.content().stream().anyMatch(
+                dev.openallay.model.ModelContent.Image.class::isInstance)) {
+            return CompletableFuture.failedFuture(new GuideModelProfileException(
+                    "image_input_unsupported", "This client model endpoint does not support image input"));
+        }
+        return ask(profileId, actor, sessionId, requestId,
+                dev.openallay.agent.AgentRequest.displayText(userInput), context, events);
+    }
+
     boolean cancel(UUID actor, String sessionId);
 
     default boolean cancel(UUID actor, String sessionId, UUID expectedRequestId) {

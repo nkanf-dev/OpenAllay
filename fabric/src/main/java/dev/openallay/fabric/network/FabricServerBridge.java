@@ -38,8 +38,7 @@ public final class FabricServerBridge {
     private final Gson gson = new Gson();
     private final ServerAgentEventCodec agentEvents = new ServerAgentEventCodec(gson);
     private final Map<UUID, ServerPlayer> players = new java.util.concurrent.ConcurrentHashMap<>();
-    private final ServerAgentRequestChunker.Reassembler requestChunks =
-            new ServerAgentRequestChunker.Reassembler();
+    private ServerAgentRequestChunker.Reassembler requestChunks;
     private RemoteToolServer remoteTools;
     private ToolResult<ServerGuideRuntime> serverGuide =
             new ToolResult.Failure<>("model_not_configured", "Server has not started");
@@ -72,7 +71,7 @@ public final class FabricServerBridge {
             MinecraftServer server) {
         UUID actor = handler.getPlayer().getUUID();
         players.remove(actor);
-        requestChunks.clearActor(actor);
+        if (requestChunks != null) requestChunks.clearActor(actor);
         if (remoteTools != null) {
             remoteTools.disconnect(actor);
         }
@@ -119,7 +118,13 @@ public final class FabricServerBridge {
                             dev.openallay.bridge.protocol.ClientToolCancelPayload payload) {
                         send(actor, "client_tool_cancel", payload);
                     }
-                });
+                },
+                server.getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT)
+                        .resolve("openallay/images"));
+        requestChunks = new ServerAgentRequestChunker.Reassembler(
+                serverGuide instanceof ToolResult.Success<ServerGuideRuntime> imageRuntime
+                        ? imageRuntime.value().requestBodyLimit()
+                        : dev.openallay.bridge.protocol.BridgeProtocol.MAX_OPENAI_REQUEST_BYTES);
         if (serverGuide instanceof ToolResult.Failure<ServerGuideRuntime> failure) {
             dev.openallay.OpenAllayConstants.LOGGER.info(
                     "Fabric server model is not advertised ({}): {}",
@@ -153,11 +158,14 @@ public final class FabricServerBridge {
                                 ToolResult<ServerAgentService.Accepted> accepted =
                                         success.value().service().ask(actor, request);
                                 if (accepted instanceof ToolResult.Failure<
-                                        ServerAgentService.Accepted> failure) {
+                                        ServerAgentService.Accepted> failure
+                                        && !success.value().service().hasRequest(actor, request.requestId())) {
                                     sendAgentEvent(actor, agentEvents.encode(
                                             request.requestId(),
                                             new dev.openallay.agent.AgentEvent.Failed(
                                                     failure.code(), failure.message())));
+                                    sendAgentEvent(actor, agentEvents.encode(request.requestId(),
+                                            new dev.openallay.agent.AgentEvent.RequestReleased()));
                                 }
                             });
                         }
@@ -166,8 +174,14 @@ public final class FabricServerBridge {
                         if (serverGuide instanceof ToolResult.Success<ServerGuideRuntime> success) {
                             UUID requestId = codec.decode(
                                     packet.json(), ServerAgentCancelPayload.class).requestId();
-                            requestChunks.cancel(actor, requestId);
-                            success.value().service().cancel(actor, requestId);
+                            boolean assembling = requestChunks.cancel(actor, requestId);
+                            if (!success.value().service().cancel(actor, requestId)
+                                    && assembling && !success.value().service().hasRequest(actor, requestId)) {
+                                sendAgentEvent(actor, agentEvents.encode(requestId,
+                                        new dev.openallay.agent.AgentEvent.Failed("agent_cancelled", "Agent request was cancelled")));
+                                sendAgentEvent(actor, agentEvents.encode(requestId,
+                                        new dev.openallay.agent.AgentEvent.RequestReleased()));
+                            }
                         }
                     }
                     case "client_tool_result" -> {
@@ -182,6 +196,20 @@ public final class FabricServerBridge {
                     default -> throw new IllegalArgumentException("Unknown bridge packet " + packet.kind());
                 }
             } catch (RuntimeException failure) {
+                if ("agent_request_chunk".equals(packet.kind())) {
+                    BridgeFrameCorrelation.read(packet.json()).ifPresent(requestId -> {
+                        if (requestChunks != null) requestChunks.cancel(actor, requestId);
+                        if (serverGuide instanceof ToolResult.Success<ServerGuideRuntime> success
+                                && !success.value().service().hasRequest(actor, requestId)) {
+                            sendAgentEvent(actor, agentEvents.encode(requestId,
+                                    new dev.openallay.agent.AgentEvent.Failed(
+                                            "server_protocol_error", "The server rejected this malformed request")));
+                            sendAgentEvent(actor, agentEvents.encode(requestId,
+                                    new dev.openallay.agent.AgentEvent.RequestReleased()));
+                        }
+                    });
+                }
+
                 dev.openallay.OpenAllayConstants.LOGGER.warn(
                         "Rejected Fabric bridge packet {} from {}: {}",
                         packet.kind(), actor, failure.getMessage());
@@ -201,7 +229,10 @@ public final class FabricServerBridge {
                 tools,
                 serverGuide instanceof ToolResult.Success<ServerGuideRuntime> success
                         ? java.util.Optional.of(success.value().contextSpec())
-                        : java.util.Optional.empty());
+                        : java.util.Optional.empty(),
+                serverGuide instanceof ToolResult.Success<ServerGuideRuntime> imageRuntime
+                        ? imageRuntime.value().imageCapability()
+                        : dev.openallay.model.metadata.ModelImageCapabilityResolution.unknown());
     }
 
     private boolean send(UUID actor, String kind, Object payload) {

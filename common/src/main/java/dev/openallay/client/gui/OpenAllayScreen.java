@@ -600,9 +600,13 @@ public final class OpenAllayScreen extends Screen {
         String unknown = Component.translatable("screen.openallay.telemetry.unknown").getString();
         var context = telemetry.context();
         boolean contextKnown = context != null && context.budget() != null;
+        boolean imageUnknown = contextKnown && context.imageAccounting()
+                == dev.openallay.model.tokenizer.TokenizerMetadata.ImageAccounting.UNKNOWN;
         String occupancy = contextKnown
                 ? "~" + compactTokens(context.estimatedTokens()) + "/" + compactTokens(context.budget().inputTokens())
                 : unknown;
+        if (imageUnknown) occupancy = Component.translatable(
+                "screen.openallay.telemetry.text_estimate", occupancy).getString();
         telemetryContext = Component.literal(occupancy);
         var usage = telemetry.sessionUsage();
         var rate = usage.cacheHitRate();
@@ -621,6 +625,8 @@ public final class OpenAllayScreen extends Screen {
                         context.budget().contextWindowTokens(), context.budget().reservedTokens(),
                         context.budget().maxOutputTokens())
                 : Component.translatable("screen.openallay.telemetry.context_unknown"));
+        if (imageUnknown) detail.append("\n").append(
+                Component.translatable("screen.openallay.telemetry.image_unknown"));
         detail.append("\n").append(Component.translatable("screen.openallay.telemetry.session",
                 usage.actualCalls(), cost));
         detail.append("\n").append(Component.translatable("screen.openallay.telemetry.cache_detail",
@@ -659,7 +665,9 @@ public final class OpenAllayScreen extends Screen {
             graphics.text(font, telemetryContext, x, y + 12, TEXT, false);
             int barWidth = Math.max(1, area.width() - 14);
             graphics.fill(x, y + 25, x + barWidth, y + 28, 0xFF3E4753);
-            if (telemetry != null && telemetry.context() != null && telemetry.context().budget() != null) {
+            if (telemetry != null && telemetry.context() != null && telemetry.context().budget() != null
+                    && telemetry.context().imageAccounting()
+                    != dev.openallay.model.tokenizer.TokenizerMetadata.ImageAccounting.UNKNOWN) {
                 double ratio = Math.min(1, (double) telemetry.context().estimatedTokens()
                         / telemetry.context().budget().inputTokens());
                 graphics.fill(x, y + 25, x + (int) (barWidth * ratio), y + 28,

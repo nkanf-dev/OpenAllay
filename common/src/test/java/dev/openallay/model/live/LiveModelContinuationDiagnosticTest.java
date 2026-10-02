@@ -15,7 +15,9 @@ import dev.openallay.model.CancellationSignal;
 import dev.openallay.model.ModelClientException;
 import dev.openallay.model.ModelContent;
 import dev.openallay.model.ModelEvent;
+import dev.openallay.model.ModelMessage;
 import dev.openallay.model.ModelRequest;
+import dev.openallay.model.ModelToolDefinition;
 import dev.openallay.model.ModelTurn;
 import dev.openallay.model.ProviderModelClients;
 import dev.openallay.model.config.ModelProfilesConfigLoader;
@@ -24,6 +26,7 @@ import dev.openallay.tool.ToolResult;
 import java.io.Reader;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -123,39 +126,40 @@ final class LiveModelContinuationDiagnosticTest {
         }
         JsonDeserializer<ModelContent> content = (json, type, context) -> {
             JsonObject block = json.getAsJsonObject();
-            if (block.has("toolUseId")) {
+            Set<String> fields = block.keySet();
+            if (fields.equals(Set.of("toolUseId", "value", "error"))) {
                 return context.deserialize(block, ModelContent.ToolResult.class);
             }
-            if (block.has("id") && block.has("name") && block.has("input")) {
+            if (fields.equals(Set.of("id", "name", "input"))) {
                 return context.deserialize(block, ModelContent.ToolUse.class);
             }
-            if (block.has("text") && block.has("signature")) {
-                return context.deserialize(block, ModelContent.Reasoning.class);
+            if (fields.equals(Set.of("reference"))) {
+                return context.deserialize(block, ModelContent.Image.class);
             }
-            if (block.keySet().equals(Set.of("text"))) {
+            if (fields.equals(Set.of("text"))) {
                 return context.deserialize(block, ModelContent.Text.class);
             }
             throw new IllegalArgumentException("unsupported retained content shape");
         };
         Gson gson = new GsonBuilder().registerTypeAdapter(ModelContent.class, content).create();
-        ModelRequest request = gson.fromJson(payload, ModelRequest.class);
-        // Gson omits a null reasoning signature. Reject ambiguous assistant text-only blocks.
-        for (JsonElement message : payload.getAsJsonArray("messages")) {
-            JsonObject encodedMessage = message.getAsJsonObject();
-            if ("ASSISTANT".equals(encodedMessage.get("role").getAsString())) {
-                for (JsonElement block : encodedMessage.getAsJsonArray("content")) {
-                    if (block.getAsJsonObject().keySet().equals(Set.of("text"))) {
-                        throw new IllegalArgumentException("retained assistant content type is ambiguous");
-                    }
-                }
-            }
-        }
-        // LiveAgentTraceRecorder writes Gson.toJsonTree(ModelRequest). Require an exact round trip.
-        if (!new Gson().toJsonTree(request).equals(payload)) {
+        RetainedRequest retained = gson.fromJson(payload, RetainedRequest.class);
+        // The trace contains only model-facing fields, not the request-only image resolver.
+        ModelRequest request = new ModelRequest(retained.systemPrompt(), retained.messages(),
+                retained.tools(), retained.stream(), retained.sessionKey(), retained.maxOutputTokens());
+        // Require the exact current DTO shape, including every message and tool definition.
+        if (!new Gson().toJsonTree(retained).equals(payload)) {
             throw new IllegalArgumentException("retained request did not round-trip exactly");
         }
         return request;
     }
+
+    private record RetainedRequest(
+            String systemPrompt,
+            List<ModelMessage> messages,
+            List<ModelToolDefinition> tools,
+            boolean stream,
+            String sessionKey,
+            Integer maxOutputTokens) {}
 
     private static String required(Map<String, String> environment, String name) {
         String value = environment.get(name);

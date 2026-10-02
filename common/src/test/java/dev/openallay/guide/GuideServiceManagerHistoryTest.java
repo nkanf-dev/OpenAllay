@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import org.junit.jupiter.api.Test;
 
@@ -31,7 +33,7 @@ final class GuideServiceManagerHistoryTest {
             UUID.fromString("77a70151-0279-4ee6-a6b9-b15c24d08f05");
 
     @Test
-    void waitsForPreviousDisconnectBeforeLoadingReplacementScope() {
+    void waitsForPreviousDisconnectBeforeLoadingReplacementScope() throws Exception {
         QueuedDispatcher dispatcher = new QueuedDispatcher();
         RecordingHistory history = new RecordingHistory();
         GuideHistoryScope first = GuideHistoryScope.derive(
@@ -52,6 +54,7 @@ final class GuideServiceManagerHistoryTest {
 
         manager.forActor(ACTOR);
         assertEquals(List.of(first), history.loads);
+        history.flushGate = new CompletableFuture<>();
         selected[0] = second;
 
         GuideService replacement = manager.forActor(ACTOR);
@@ -60,11 +63,20 @@ final class GuideServiceManagerHistoryTest {
                 replacement.snapshot().persistence().state());
         assertEquals(List.of(first), history.loads);
         dispatcher.runAll();
+        assertEquals(List.of(first), history.loads, "old durable flush must complete before the replacement loads");
+        assertFalse(history.secondLoad.isDone());
+        dispatcher.armWorkerHandoff();
+        history.flushGate.complete(null);
+        history.secondLoad.get(2, TimeUnit.SECONDS);
+        dispatcher.awaitWorkerHandoff();
+        dispatcher.runAll();
         assertEquals(List.of(first, second), history.loads);
+        assertEquals(GuidePersistenceSnapshot.State.AVAILABLE,
+                replacement.snapshot().persistence().state());
     }
 
     @Test
-    void managerResetUsesCurrentServiceGateAndResetsOnlyAfterCommit() {
+    void managerResetUsesCurrentServiceGateAndResetsOnlyAfterCommit() throws Exception {
         RecordingHistory history = new RecordingHistory();
         GuideHistoryScope scope = GuideHistoryScope.derive(
                 ACTOR, GuideHistoryScope.Kind.MULTIPLAYER, "reset.example");
@@ -79,23 +91,25 @@ final class GuideServiceManagerHistoryTest {
                 history,
                 actor -> scope);
         GuideService service = manager.forActor(ACTOR);
-        service.selectSession("other").join();
+        service.selectSession("other").get(2, TimeUnit.SECONDS);
 
         CompletableFuture<ToolResult<Boolean>> resetting = manager.resetHistoryDatabase();
 
         assertEquals(1, history.resetCalls);
         assertFalse(resetting.isDone());
-        assertFailure(service.ask("during reset").join(), "history_delete_busy");
+        assertFailure(service.ask("during reset").get(2, TimeUnit.SECONDS), "history_delete_busy");
         history.reset.complete(null);
 
-        assertInstanceOf(ToolResult.Success.class, resetting.join());
+        ToolResult.Success<?> resetResult = assertInstanceOf(ToolResult.Success.class,
+                resetting.get(2, TimeUnit.SECONDS));
+        assertEquals(Boolean.TRUE, resetResult.value());
         assertEquals(List.of("main"), service.snapshot().sessions().stream()
                 .map(GuideSessionSnapshot::sessionId).toList());
         assertTrue(service.snapshot().sessions().getFirst().requests().isEmpty());
     }
 
     @Test
-    void managerResetWithoutCurrentServiceIsUnavailable() {
+    void managerResetWithoutCurrentServiceIsUnavailable() throws Exception {
         GuideServiceManager manager = new GuideServiceManager(
                 new IdleLocal(),
                 new IdleRemote(),
@@ -105,7 +119,7 @@ final class GuideServiceManagerHistoryTest {
                 Clock.systemUTC(),
                 new Gson());
 
-        assertFailure(manager.resetHistoryDatabase().join(), "history_unavailable");
+        assertFailure(manager.resetHistoryDatabase().get(2, TimeUnit.SECONDS), "history_unavailable");
     }
 
     @Test
@@ -139,7 +153,7 @@ final class GuideServiceManagerHistoryTest {
     }
 
     @Test
-    void connectionScopeChangesInvalidatePublishedContextSourcesBeforeNewActorReadsThem() {
+    void connectionScopeChangesInvalidatePublishedContextSourcesBeforeNewActorReadsThem() throws Exception {
         var knowledge = new dev.openallay.knowledge.KnowledgeRegistry();
         int[] clears = {0};
         GuideContextProvider contexts = new GuideContextProvider() {
@@ -172,10 +186,10 @@ final class GuideServiceManagerHistoryTest {
         manager.forActor(ACTOR);
         assertEquals(2, clears[0]);
         assertFalse(knowledge.sourceSnapshot().loaded());
-        manager.disconnect().join();
+        manager.disconnect().get(2, TimeUnit.SECONDS);
         assertEquals(3, clears[0]);
         assertFalse(knowledge.sourceSnapshot().loaded());
-        manager.disconnect().join();
+        manager.disconnect().get(2, TimeUnit.SECONDS);
         assertEquals(4, clears[0]);
     }
 
@@ -186,15 +200,39 @@ final class GuideServiceManagerHistoryTest {
 
     private static final class QueuedDispatcher implements dev.openallay.client.ClientEventDispatcher {
         private final ArrayDeque<Runnable> queued = new ArrayDeque<>();
+        private final Thread owner = Thread.currentThread();
+        private volatile CountDownLatch workerHandoff;
 
         @Override
         public void execute(Runnable event) {
-            queued.add(event);
+            synchronized (queued) {
+                queued.add(event);
+            }
+            CountDownLatch handoff = workerHandoff;
+            if (Thread.currentThread() != owner && handoff != null) {
+                handoff.countDown();
+            }
+        }
+
+        private void armWorkerHandoff() {
+            assertTrue(workerHandoff == null || workerHandoff.getCount() == 0,
+                    "the previous worker handoff must complete before rearming");
+            workerHandoff = new CountDownLatch(1);
+        }
+
+        private void awaitWorkerHandoff() throws InterruptedException {
+            assertTrue(workerHandoff.await(2, TimeUnit.SECONDS),
+                    "the cleanup worker must enqueue the replacement history completion");
         }
 
         private void runAll() {
-            while (!queued.isEmpty()) {
-                queued.remove().run();
+            while (true) {
+                Runnable event;
+                synchronized (queued) {
+                    if (queued.isEmpty()) return;
+                    event = queued.remove();
+                }
+                event.run();
             }
         }
     }
@@ -202,12 +240,15 @@ final class GuideServiceManagerHistoryTest {
     private static final class RecordingHistory implements GuideHistoryAccess {
         private final List<GuideHistoryScope> loads = new ArrayList<>();
         private final CompletableFuture<Void> reset = new CompletableFuture<>();
+        private final CompletableFuture<Void> secondLoad = new CompletableFuture<>();
+        private CompletableFuture<Void> flushGate = CompletableFuture.completedFuture(null);
         private int resetCalls;
 
         @Override
         public CompletableFuture<java.util.Optional<GuideHistoryMetadata>> metadata(
                 GuideHistoryScope scope) {
             loads.add(scope);
+            if (loads.size() == 2) secondLoad.complete(null);
             return CompletableFuture.completedFuture(java.util.Optional.empty());
         }
 
@@ -230,7 +271,7 @@ final class GuideServiceManagerHistoryTest {
 
         @Override
         public CompletableFuture<Void> flush() {
-            return CompletableFuture.completedFuture(null);
+            return flushGate;
         }
 
         @Override

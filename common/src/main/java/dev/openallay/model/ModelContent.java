@@ -2,16 +2,25 @@ package dev.openallay.model;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import dev.openallay.model.image.ImageReference;
 import java.util.Objects;
 
 public sealed interface ModelContent
         permits ModelContent.Text,
+                ModelContent.Image,
                 ModelContent.Reasoning,
                 ModelContent.ToolUse,
                 ModelContent.ToolResult {
     record Text(String text) implements ModelContent {
         public Text {
             Objects.requireNonNull(text, "text");
+        }
+    }
+
+    /** A managed image reference, never a path, URL or binary payload. */
+    record Image(ImageReference reference) implements ModelContent {
+        public Image {
+            Objects.requireNonNull(reference, "reference");
         }
     }
 

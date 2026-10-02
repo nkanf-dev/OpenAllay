@@ -10,8 +10,18 @@ public record GuideUiModelChoice(
         boolean editable,
         boolean available,
         boolean selected,
-        boolean running) {
+        boolean running,
+        dev.openallay.model.image.ImageInputCapability imageInput,
+        String imageInputSource) {
+    public GuideUiModelChoice(
+            GuideModelSelection selection, String displayName, ModelOrigin origin,
+            boolean editable, boolean available, boolean selected, boolean running) {
+        this(selection, displayName, origin, editable, available, selected, running,
+                dev.openallay.model.image.ImageInputCapability.UNKNOWN, null);
+    }
+
     public GuideUiModelChoice {
+        java.util.Objects.requireNonNull(imageInput, "imageInput");
         java.util.Objects.requireNonNull(selection, "selection");
         if (displayName == null || displayName.isBlank()) {
             throw new IllegalArgumentException("model choice display name must not be blank");

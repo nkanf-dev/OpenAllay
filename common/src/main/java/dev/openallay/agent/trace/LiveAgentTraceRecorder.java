@@ -23,6 +23,7 @@ public final class LiveAgentTraceRecorder {
         this.request = request;
         JsonObject initial = new JsonObject();
         initial.addProperty("userMessage", request.userMessage());
+        initial.add("userInput", gson.toJsonTree(request.userInput()));
         add("request", initial);
     }
 
@@ -41,7 +42,17 @@ public final class LiveAgentTraceRecorder {
     }
 
     public synchronized void modelRequest(ModelRequest request) {
-        add("model_request", gson.toJsonTree(request));
+        // Do not serialize the request-only resolver. It may close over scoped stores or runtime state.
+        JsonObject payload = new JsonObject();
+        payload.addProperty("systemPrompt", request.systemPrompt());
+        payload.add("messages", gson.toJsonTree(request.messages()));
+        payload.add("tools", gson.toJsonTree(request.tools()));
+        payload.addProperty("stream", request.stream());
+        payload.addProperty("sessionKey", request.sessionKey());
+        if (request.maxOutputTokens() != null) {
+            payload.addProperty("maxOutputTokens", request.maxOutputTokens());
+        }
+        add("model_request", payload);
     }
 
     public synchronized void toolCall(String toolId, JsonObject arguments) {

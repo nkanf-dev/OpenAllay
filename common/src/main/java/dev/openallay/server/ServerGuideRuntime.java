@@ -24,6 +24,21 @@ public record ServerGuideRuntime(
         ServerAgentService service,
         dev.openallay.guide.GuideContextSpec contextSpec,
         PlayerClientToolRouter clientTools) {
+    public dev.openallay.model.metadata.ModelImageCapabilityResolution imageCapability() {
+        return config.imageCapability();
+    }
+
+    /** Application bridge JSON envelope selected by the captured runtime protocol.
+     * Wire history/Skill metadata and native provider bodies have different overhead;
+     * this cap does not claim that the two encodings have the same byte size.
+     */
+    public int requestBodyLimit() {
+        return switch (config.protocol()) {
+            case ANTHROPIC_MESSAGES -> dev.openallay.bridge.protocol.BridgeProtocol.MAX_ANTHROPIC_REQUEST_BYTES;
+            case OPENAI_CHAT -> dev.openallay.bridge.protocol.BridgeProtocol.MAX_OPENAI_REQUEST_BYTES;
+        };
+    }
+
     public static ToolResult<ServerGuideRuntime> create(
             OpenAllayRuntime runtime,
             Path configPath,
@@ -58,6 +73,18 @@ public record ServerGuideRuntime(
             ServerAgentService.ContextProvider contexts,
             ServerGuideEvents events,
             PlayerClientToolRouter.Transport clientToolTransport) {
+        return create(runtime, configPath, environment, contexts, events, clientToolTransport,
+                configPath.toAbsolutePath().normalize().getParent().resolve("image-store"));
+    }
+
+    public static ToolResult<ServerGuideRuntime> create(
+            OpenAllayRuntime runtime,
+            Path configPath,
+            Map<String, String> environment,
+            ServerAgentService.ContextProvider contexts,
+            ServerGuideEvents events,
+            PlayerClientToolRouter.Transport clientToolTransport,
+            Path worldImageDirectory) {
         ToolResult<ModelConfig> loaded = new ModelConfigLoader().load(configPath, environment);
         if (loaded instanceof ToolResult.Failure<ModelConfig> failure) {
             return new ToolResult.Failure<>(failure.code(), failure.message());
@@ -87,6 +114,8 @@ public record ServerGuideRuntime(
         dev.openallay.guide.GuideContextSpec contextSpec =
                 new dev.openallay.guide.GuideContextSpec(
                         config.contextBudget(), promptAndTools, config.model(), estimator);
+        dev.openallay.model.image.ImageAttachmentStore imageStore =
+                new dev.openallay.model.image.FileImageAttachmentStore(worldImageDirectory);
         ServerAgentService service = new ServerAgentService(
                 (actor, payload) -> {
                     boolean experimentalCommands = payload.clientToolIds().contains(
@@ -123,7 +152,9 @@ public record ServerGuideRuntime(
                 events,
                 gson,
                 prompt,
-                scheduled::awaitReady);
+                scheduled::awaitReady,
+                imageStore,
+                config.imageCapability().capability());
         return new ToolResult.Success<>(
                 new ServerGuideRuntime(config, service, contextSpec, clientTools));
     }

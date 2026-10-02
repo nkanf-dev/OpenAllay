@@ -18,6 +18,8 @@ import dev.openallay.model.ModelContent;
 import dev.openallay.model.ModelMessage;
 import dev.openallay.model.ModelRole;
 import dev.openallay.model.ModelUsage;
+import dev.openallay.model.image.ImageAttachmentStore;
+import dev.openallay.model.image.ImageReference;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -55,26 +57,41 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
     private final GuideHistoryCodec codec;
     private final ModelContextCodec modelContexts = new ModelContextCodec();
     private final FailureInjector failureInjector;
+    private final GuideImageOwnership imageOwnership;
+    // Accessed only under the image ownership lock. Ordinary UI/status work must not decode
+    // every historical image repeatedly; failed reconciliation invalidates this scope cache.
+    private final Set<GuideHistoryScope> initializedImageScopes = new java.util.HashSet<>();
 
     public SqliteGuideHistoryStore(Path database, Clock clock, GuideHistoryCodec codec) {
-        this(database, clock, codec, ignored -> {});
+        this(database, clock, codec, null, ignored -> {});
+    }
+
+    public SqliteGuideHistoryStore(
+            Path database, Clock clock, GuideHistoryCodec codec, ImageAttachmentStore images) {
+        this(database, clock, codec, images, ignored -> {});
     }
 
     SqliteGuideHistoryStore(
-            Path database,
-            Clock clock,
-            GuideHistoryCodec codec,
-            FailureInjector failureInjector) {
+            Path database, Clock clock, GuideHistoryCodec codec, FailureInjector failureInjector) {
+        this(database, clock, codec, null, failureInjector);
+    }
+
+    SqliteGuideHistoryStore(
+            Path database, Clock clock, GuideHistoryCodec codec,
+            ImageAttachmentStore images, FailureInjector failureInjector) {
         this.database = Objects.requireNonNull(database, "database").toAbsolutePath().normalize();
         this.clock = Objects.requireNonNull(clock, "clock");
         this.codec = Objects.requireNonNull(codec, "codec");
         this.failureInjector = Objects.requireNonNull(failureInjector, "failureInjector");
+        this.imageOwnership = new GuideImageOwnership(this.database, images);
     }
 
     @Override
     public Optional<GuideHistoryMetadata> metadata(GuideHistoryScope scope) {
         Objects.requireNonNull(scope, "scope");
-        try (Connection connection = open()) {
+        try (GuideImageOwnership.Guard ignored = imageOwnership.lock();
+                Connection connection = open()) {
+            ensureImageOwnership(connection, scope);
             PartitionHeader header = readHeader(connection, scope);
             if (header == null) {
                 return Optional.empty();
@@ -118,7 +135,7 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
             }
             return Optional.of(new GuideHistoryMetadata(
                     scope, header.selectedSession, sessions, header.updatedAt));
-        } catch (SQLException failure) {
+        } catch (SQLException | IOException failure) {
             throw new GuideHistoryException(
                     "history_metadata_failed", "Unable to load guide history metadata", failure);
         } catch (IllegalArgumentException | JsonParseException malformed) {
@@ -146,7 +163,9 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
     @Override
     public GuideHistoryPage page(GuideHistoryPageRequest request) {
         Objects.requireNonNull(request, "request");
-        try (Connection connection = open()) {
+        try (GuideImageOwnership.Guard ignored = imageOwnership.lock();
+                Connection connection = open()) {
+            ensureImageOwnership(connection, request.scope());
             List<SequencedRequest> loaded = readPage(connection, request);
             List<GuideRequestSnapshot> snapshots = loaded.stream()
                     .map(SequencedRequest::request).toList();
@@ -160,7 +179,7 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
                     "sequence > ?", last.sequence());
             return new GuideHistoryPage(
                     request.sessionId(), snapshots, first, last, hasEarlier, hasLater);
-        } catch (SQLException failure) {
+        } catch (SQLException | IOException failure) {
             throw new GuideHistoryException(
                     "history_page_failed", "Unable to load a guide history page", failure);
         } catch (IllegalArgumentException | JsonParseException malformed) {
@@ -172,7 +191,9 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
     @Override
     public GuideHistoryContextSeed context(GuideHistoryContextRequest request) {
         Objects.requireNonNull(request, "request");
-        try (Connection connection = open()) {
+        try (GuideImageOwnership.Guard ignored = imageOwnership.lock();
+                Connection connection = open()) {
+            ensureImageOwnership(connection, request.scope());
             if (readHeader(connection, request.scope()) == null) {
                 return new GuideHistoryContextSeed(request.sessionId(), List.of(), List.of(), 0);
             }
@@ -188,7 +209,7 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
                     request.modelIdentifier(), messages);
             return new GuideHistoryContextSeed(
                     request.sessionId(), messages, checkpoints, estimated);
-        } catch (SQLException failure) {
+        } catch (SQLException | IOException failure) {
             throw new GuideHistoryException(
                     "history_context_failed", "Unable to prepare guide history context", failure);
         } catch (IllegalArgumentException | JsonParseException malformed) {
@@ -201,12 +222,14 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
     public List<ModelMessage> requestContext(GuideHistoryScope scope, UUID requestId) {
         Objects.requireNonNull(scope, "scope");
         Objects.requireNonNull(requestId, "requestId");
-        try (Connection connection = open()) {
+        try (GuideImageOwnership.Guard ignored = imageOwnership.lock();
+                Connection connection = open()) {
+            ensureImageOwnership(connection, scope);
             if (readHeader(connection, scope) == null) {
                 return List.of();
             }
             return readRequestContext(connection, scope.scopeId(), requestId);
-        } catch (SQLException failure) {
+        } catch (SQLException | IOException failure) {
             throw new GuideHistoryException(
                     "history_context_failed", "Unable to load original guide request context", failure);
         } catch (IllegalArgumentException | JsonParseException malformed) {
@@ -247,32 +270,78 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
     @Override
     public void commit(GuideHistoryCommit commit) {
         Objects.requireNonNull(commit, "commit");
-        try (Connection connection = open()) {
+        boolean durable = false;
+        try (GuideImageOwnership.Guard ignored = imageOwnership.lock();
+                Connection connection = open()) {
+            boolean ownershipChanges = commit.mutations().stream()
+                    .anyMatch(SqliteGuideHistoryStore::changesImageOwnership);
+            List<ImageReference> pending = new ArrayList<>();
+            if (ownershipChanges) {
+                reconcileScope(connection, commit.scope());
+                pending.addAll(GuideImageOwnership.references(
+                        readImageOwners(connection, commit.scope().scopeId())));
+                for (GuideHistoryMutation mutation : commit.mutations()) {
+                    if (mutation instanceof GuideHistoryMutation.ReplaceContext context) {
+                        pending.addAll(GuideImageOwnership.references(context.messages()));
+                    } else if (mutation instanceof GuideHistoryMutation.ReplaceRequestContext context) {
+                        pending.addAll(GuideImageOwnership.references(context.messages()));
+                    }
+                }
+                // Verify and pin both existing and incoming assets before any SQL mutation.
+                // The complete post-mutation owners are checked again before durable commit.
+                imageOwnership.pin(commit.scope(), pending);
+            } else {
+                ensureImageOwnership(connection, commit.scope());
+            }
             connection.setAutoCommit(false);
             try {
                 for (GuideHistoryMutation mutation : commit.mutations()) {
                     applyMutation(connection, commit.scope(), mutation);
                 }
+                if (ownershipChanges) {
+                    pending.addAll(GuideImageOwnership.references(
+                            readImageOwners(connection, commit.scope().scopeId())));
+                    imageOwnership.pin(commit.scope(), pending);
+                }
                 failureInjector.beforeCommit(Mutation.COMMIT);
                 connection.commit();
-            } catch (SQLException | RuntimeException failure) {
-                rollback(connection, failure);
-                if (failure instanceof GuideHistoryException known) {
-                    throw known;
+                durable = true;
+            } catch (SQLException | IOException | RuntimeException failure) {
+                if (rollback(connection, failure) && ownershipChanges) {
+                    recoverPinsAfterRollback(connection, commit.scope(), failure);
                 }
+                if (failure instanceof GuideHistoryException known) throw known;
                 throw new GuideHistoryException(
                         "history_write_failed", "Unable to commit durable guide history", failure);
             }
-        } catch (SQLException failure) {
+            // Filesystem and SQLite commits are not atomic. From this point the batch is
+            // durable, so an IO failure must never report rollback or invite a batch retry.
+            boolean removed = commit.mutations().stream().anyMatch(mutation ->
+                    mutation instanceof GuideHistoryMutation.DeleteSession
+                            || mutation instanceof GuideHistoryMutation.ClearSession);
+            if (ownershipChanges) finishDurableImages(connection, List.of(commit.scope()), removed);
+        } catch (SQLException | IOException failure) {
+            if (durable) return; // Closing a durable JDBC transaction is not a failed commit.
             throw new GuideHistoryException(
                     "history_write_failed", "Unable to commit durable guide history", failure);
+        } catch (IllegalArgumentException | JsonParseException malformed) {
+            if (durable) return;
+            throw new GuideHistoryException(
+                    "history_corrupt", "Guide history context is malformed; database was not changed", malformed);
         }
     }
 
     @Override
     public void delete(GuideHistoryDeleteScope scope) {
         Objects.requireNonNull(scope, "scope");
-        try (Connection connection = open()) {
+        boolean durable = false;
+        try (GuideImageOwnership.Guard ignored = imageOwnership.lock();
+                Connection connection = open()) {
+            List<GuideHistoryScope> affected = switch (scope) {
+                case GuideHistoryDeleteScope.Partition partition -> List.of(partition.scope());
+                case GuideHistoryDeleteScope.Actor actor -> readScopes(connection).stream()
+                        .filter(existing -> existing.actorId().equals(actor.actorId())).toList();
+            };
             connection.setAutoCommit(false);
             try {
                 switch (scope) {
@@ -283,21 +352,32 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
                 }
                 failureInjector.beforeCommit(Mutation.DELETE);
                 connection.commit();
+                durable = true;
             } catch (SQLException | RuntimeException failure) {
                 rollback(connection, failure);
                 throw deleteFailure(failure);
             }
+            finishDurableImages(connection, affected, true);
         } catch (SQLException | RuntimeException failure) {
-            if (failure instanceof GuideHistoryException historyFailure) {
-                throw historyFailure;
-            }
+            if (durable) return;
+            if (failure instanceof GuideHistoryException historyFailure) throw historyFailure;
             throw deleteFailure(failure);
         }
     }
 
     @Override
     public void resetDatabase() {
-        try (Connection connection = openRaw()) {
+        boolean durable = false;
+        try (GuideImageOwnership.Guard ignored = imageOwnership.lock();
+                Connection connection = openRaw()) {
+            // Reset is explicit and may repair a foreign layout. An unreadable ownership
+            // header leaves image bytes retained rather than guessing which actor owns them.
+            List<GuideHistoryScope> affected;
+            try {
+                affected = readScopes(connection);
+            } catch (SQLException | IllegalArgumentException unreadable) {
+                affected = List.of();
+            }
             try (Statement statement = connection.createStatement()) {
                 statement.execute("pragma foreign_keys=off");
             }
@@ -311,16 +391,118 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
                 createLayoutObjects(connection);
                 failureInjector.beforeCommit(Mutation.RESET);
                 connection.commit();
+                durable = true;
             } catch (SQLException | RuntimeException failure) {
                 rollback(connection, failure);
                 throw deleteFailure(failure);
             }
+            finishDurableImages(connection, affected, true);
         } catch (SQLException | RuntimeException failure) {
+            if (durable) return;
             if (failure instanceof GuideHistoryException historyFailure
-                    && historyFailure.code().equals("history_delete_failed")) {
-                throw historyFailure;
-            }
+                    && historyFailure.code().equals("history_delete_failed")) throw historyFailure;
             throw deleteFailure(failure);
+        }
+    }
+
+    /** Complete contexts, not paginated UI requests, determine durable image ownership. */
+    private Map<String, List<ImageReference>> readImageOwners(Connection connection, String scopeId)
+            throws SQLException {
+        Map<String, List<ImageReference>> owners = new LinkedHashMap<>();
+        try (PreparedStatement query = connection.prepareStatement("""
+                select 'session:' || session_id as owner, payload_json
+                from model_context where scope_id = ?
+                union all
+                select 'request:' || request_id as owner, payload_json
+                from request_model_context where scope_id = ?
+                """)) {
+            query.setString(1, scopeId);
+            query.setString(2, scopeId);
+            try (ResultSet result = query.executeQuery()) {
+                while (result.next()) {
+                    List<ImageReference> refs = GuideImageOwnership.references(
+                            modelContexts.decode(result.getString("payload_json")));
+                    if (!refs.isEmpty()) owners.put(result.getString("owner"), refs);
+                }
+            }
+        }
+        return Map.copyOf(owners);
+    }
+
+    private static boolean changesImageOwnership(GuideHistoryMutation mutation) {
+        return switch (mutation) {
+            case GuideHistoryMutation.UpsertPartition ignored -> false;
+            case GuideHistoryMutation.UpsertSession ignored -> false;
+            case GuideHistoryMutation.UpsertRequest ignored -> false;
+            case GuideHistoryMutation.UpsertMessage ignored -> false;
+            case GuideHistoryMutation.UpsertTimelineEntry ignored -> false;
+            case GuideHistoryMutation.ReplaceRequestSources ignored -> false;
+            case GuideHistoryMutation.UpsertCheckpoint ignored -> false;
+            case GuideHistoryMutation.ReplaceContext ignored -> true;
+            case GuideHistoryMutation.ReplaceRequestContext ignored -> true;
+            case GuideHistoryMutation.DeleteSession ignored -> true;
+            case GuideHistoryMutation.ClearSession ignored -> true;
+        };
+    }
+
+    private void ensureImageOwnership(Connection connection, GuideHistoryScope scope)
+            throws SQLException, IOException {
+        if (imageOwnership.enabled() && !initializedImageScopes.contains(scope)) {
+            reconcileScope(connection, scope);
+        }
+    }
+
+    private void reconcileScope(Connection connection, GuideHistoryScope scope)
+            throws SQLException, IOException {
+        if (!imageOwnership.enabled()) return;
+        initializedImageScopes.remove(scope);
+        readHeader(connection, scope); // Validate actor authorization before resolving bytes.
+        imageOwnership.reconcile(scope, readImageOwners(connection, scope.scopeId()));
+        initializedImageScopes.add(scope);
+    }
+
+    private static List<GuideHistoryScope> readScopes(Connection connection) throws SQLException {
+        List<GuideHistoryScope> scopes = new ArrayList<>();
+        try (Statement query = connection.createStatement();
+                ResultSet result = query.executeQuery(
+                        "select scope_id, actor_id, connection_kind from partitions")) {
+            while (result.next()) scopes.add(new GuideHistoryScope(
+                    UUID.fromString(result.getString("actor_id")),
+                    GuideHistoryScope.Kind.valueOf(result.getString("connection_kind")),
+                    result.getString("scope_id")));
+        }
+        return List.copyOf(scopes);
+    }
+
+    private void recoverPinsAfterRollback(
+            Connection connection, GuideHistoryScope scope, Throwable failure) {
+        try {
+            reconcileScope(connection, scope);
+        } catch (SQLException | IOException | RuntimeException recovery) {
+            failure.addSuppressed(recovery); // Keep pending pins if SQLite truth cannot be verified.
+        }
+    }
+
+    private void finishDurableImages(
+            Connection connection, List<GuideHistoryScope> changed, boolean collect) {
+        if (!imageOwnership.enabled()) return;
+        try {
+            // Reconcile surviving actor scopes as well before any collection. Each namespace
+            // is independent, so deleting one partition cannot release another partition.
+            Set<UUID> actors = changed.stream().map(GuideHistoryScope::actorId)
+                    .collect(java.util.stream.Collectors.toSet());
+            List<GuideHistoryScope> scopes = new ArrayList<>(changed);
+            if (collect) scopes.addAll(readScopes(connection).stream()
+                    .filter(scope -> actors.contains(scope.actorId())).toList());
+            for (GuideHistoryScope scope : new java.util.LinkedHashSet<>(scopes)) {
+                reconcileScope(connection, scope);
+            }
+            if (collect) for (UUID actor : actors) imageOwnership.collect(actor);
+        } catch (SQLException | IOException | RuntimeException conservativeRetention) {
+            initializedImageScopes.removeAll(changed);
+            // The SQL commit already succeeded. Keep write pins/old owners, do not collect,
+            // and retry reconciliation on the next image-enabled operation. This is durable
+            // success, not a rollback; replaying the batch may corrupt durable history.
         }
     }
 
@@ -1165,7 +1347,7 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
     }
 
     private void recoverInterruptedRows(Connection connection, GuideHistoryScope scope)
-            throws SQLException {
+            throws SQLException, IOException {
         boolean autoCommit = connection.getAutoCommit();
         connection.setAutoCommit(false);
         Instant recoveredAt = clock.instant();
@@ -1194,6 +1376,9 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
                 connection.commit();
                 return;
             }
+            List<ImageReference> pending = GuideImageOwnership.references(
+                    readImageOwners(connection, scope.scopeId()));
+            imageOwnership.pin(scope, pending);
             boolean changed = false;
             for (InterruptedRequest request : active) {
                 // Claim only still-active rows. Recovery never changes a terminal request.
@@ -1272,8 +1457,9 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
                 failureInjector.beforeCommit(Mutation.RECOVER);
             }
             connection.commit();
-        } catch (SQLException | RuntimeException failure) {
-            rollback(connection, failure);
+            finishDurableImages(connection, List.of(scope), false);
+        } catch (SQLException | IOException | RuntimeException failure) {
+            if (rollback(connection, failure)) recoverPinsAfterRollback(connection, scope, failure);
             throw failure;
         } finally {
             connection.setAutoCommit(autoCommit);
@@ -1393,11 +1579,13 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
         return value;
     }
 
-    private static void rollback(Connection connection, Throwable original) {
+    private static boolean rollback(Connection connection, Throwable original) {
         try {
             connection.rollback();
+            return true;
         } catch (SQLException rollbackFailure) {
             original.addSuppressed(rollbackFailure);
+            return false;
         }
     }
 

@@ -134,11 +134,15 @@ public final class OpenAllayFabricClient implements ClientModInitializer {
                     }
                     @Override public void disconnect() { bridge.disconnectState(); }
                 },
-                gson);
+                gson,
+                dispatcher);
+        dev.openallay.model.image.ImageAttachmentStore imageStore =
+                new dev.openallay.model.image.FileImageAttachmentStore(
+                        FabricLoader.getInstance().getConfigDir().resolve("openallay/images"));
         GuideHistoryRepository history = new GuideHistoryRepository(new SqliteGuideHistoryStore(
                 FabricLoader.getInstance().getConfigDir().resolve("openallay/history.sqlite3"),
                 clock,
-                new GuideHistoryCodec()));
+                new GuideHistoryCodec(), imageStore));
         GuideServiceManager services = new GuideServiceManager(
                 local,
                 remote,
@@ -147,7 +151,8 @@ public final class OpenAllayFabricClient implements ClientModInitializer {
                 clock,
                 gson,
                 history,
-                new MinecraftGuideHistoryScope(Minecraft.getInstance()));
+                new MinecraftGuideHistoryScope(Minecraft.getInstance()),
+                imageStore);
         historySettings.bind(services);
         bridge.onDisconnect(() -> {
             if (settings != null) settings.settings().clearServerModel();

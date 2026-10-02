@@ -5,6 +5,7 @@ import dev.openallay.guide.GuideRequestStatus;
 import dev.openallay.guide.GuideToolStatus;
 import dev.openallay.model.ModelContent;
 import dev.openallay.model.ModelMessage;
+import dev.openallay.model.image.ImagePayloadResolver;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -13,13 +14,31 @@ import java.util.UUID;
 public record GuideSessionExportSnapshot(
         String sessionId,
         List<Request> requests,
-        Instant capturedAt) {
+        Instant capturedAt,
+        ImagePayloadResolver imagePayloadResolver) implements AutoCloseable {
+    /** Existing text-only captures never gain implicit access to managed image bytes. */
+    public GuideSessionExportSnapshot(String sessionId, List<Request> requests, Instant capturedAt) {
+        this(sessionId, requests, capturedAt, ImagePayloadResolver.unavailable());
+    }
+
     public GuideSessionExportSnapshot {
         if (sessionId == null || !sessionId.matches("[a-zA-Z0-9_.-]+")) {
             throw new IllegalArgumentException("invalid export session ID");
         }
         requests = List.copyOf(requests);
         java.util.Objects.requireNonNull(capturedAt, "capturedAt");
+        java.util.Objects.requireNonNull(imagePayloadResolver, "imagePayloadResolver");
+    }
+
+    /** Adds request-scoped binary access without changing the captured transcript. */
+    public GuideSessionExportSnapshot withImagePayloadResolver(ImagePayloadResolver resolver) {
+        return new GuideSessionExportSnapshot(sessionId, requests, capturedAt, resolver);
+    }
+
+    /** Releases a retained capture even when the player does not write an export. */
+    @Override
+    public void close() {
+        imagePayloadResolver.close();
     }
 
     public record Request(

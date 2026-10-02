@@ -58,6 +58,7 @@ public final class ServerAgentEventCodec {
         }
         JsonObject body;
         try {
+            BridgeJsonCodec.rejectDuplicateFields(payload.eventJson());
             var parsed = JsonParser.parseString(payload.eventJson());
             if (!parsed.isJsonObject()) {
                 throw new IllegalArgumentException("Server Agent event body must be an object");

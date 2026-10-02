@@ -1,5 +1,6 @@
 package dev.openallay.client.gui.export;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -14,11 +15,19 @@ import dev.openallay.guide.export.GuideSessionExportSnapshot;
 import dev.openallay.model.ModelContent;
 import dev.openallay.model.ModelMessage;
 import dev.openallay.model.ModelRole;
+import dev.openallay.model.image.FileImageAttachmentStore;
+import dev.openallay.model.image.ImageReference;
+import dev.openallay.model.image.ImagePayloadResolver;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
+import javax.imageio.ImageIO;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -192,6 +201,244 @@ final class GuideSessionExporterTest {
                 UUID.randomUUID(), NOW, GuideRequestStatus.COMPLETED, "question", List.of(),
                 List.of(new ModelMessage(ModelRole.ASSISTANT,
                         List.of(new ModelContent.Reasoning("private reasoning", null)))), null));
+    }
+
+    @Test
+    void exportsUniqueVerifiedImagesPermanentlyWithMetadataOnlyText(@TempDir Path game)
+            throws Exception {
+        UUID actor = UUID.randomUUID();
+        FileImageAttachmentStore images = new FileImageAttachmentStore(game.resolve("managed-images"));
+        byte[] bytes = png(0xff2367ab);
+        ImageReference reference = images.importImage(actor, bytes);
+        AtomicInteger reads = new AtomicInteger();
+        var snapshot = imageSnapshot(List.of(reference, reference)).withImagePayloadResolver(ref -> {
+            reads.incrementAndGet();
+            return images.read(actor, ref);
+        });
+
+        var exported = new GuideSessionExporter(game).export(snapshot);
+        Path root = game.resolve("openallay/exports");
+        Path image = root.resolve("images").resolve(reference.sha256() + ".png");
+        String text = Files.readString(root.resolve(exported.filename()));
+        assertEquals(2, reads.get()); // One unique asset in each bounded-memory pass.
+        assertArrayEquals(bytes, Files.readAllBytes(image));
+        assertTrue(text.contains("IMAGE\nMIME: image/png\nDimensions: 4x3\nBytes: " + bytes.length));
+        assertTrue(text.contains("SHA-256: " + reference.sha256()));
+        assertTrue(text.contains("File: images/" + reference.sha256() + ".png"));
+        assertFalse(text.contains(java.util.Base64.getEncoder().encodeToString(bytes)));
+        assertEquals(1, images.collect(actor));
+        assertArrayEquals(bytes, Files.readAllBytes(image)); // Exported copies are never managed GC targets.
+    }
+
+    @Test
+    void imageExportWithoutScopedResolverFailsBeforeCreatingFiles(@TempDir Path game)
+            throws Exception {
+        UUID actor = UUID.randomUUID();
+        var images = new FileImageAttachmentStore(game.resolve("managed-images"));
+        var reference = images.importImage(actor, png(0xffabcdef));
+
+        assertThrows(GuideSessionExportException.class,
+                () -> new GuideSessionExporter(game).export(imageSnapshot(List.of(reference))));
+        assertFalse(Files.exists(game.resolve("openallay")));
+    }
+
+    @Test
+    void missingLaterImageFailsAllAssetPreflightWithoutPublishingEarlierImages(@TempDir Path game)
+            throws Exception {
+        UUID actor = UUID.randomUUID();
+        var images = new FileImageAttachmentStore(game.resolve("managed-images"));
+        var first = images.importImage(actor, png(0xff123456));
+        var second = images.importImage(actor, png(0xffabcdef));
+        Files.delete(game.resolve("managed-images").resolve(actor.toString()).resolve(second.sha256()));
+        var snapshot = imageSnapshot(List.of(first, second))
+                .withImagePayloadResolver(ref -> images.read(actor, ref));
+
+        assertThrows(GuideSessionExportException.class,
+                () -> new GuideSessionExporter(game).export(snapshot));
+        assertFalse(Files.exists(game.resolve("openallay")));
+    }
+
+    @Test
+    void wrongActorAndCorruptPayloadFailBeforePublication(@TempDir Path game) throws Exception {
+        UUID actor = UUID.randomUUID();
+        var images = new FileImageAttachmentStore(game.resolve("managed-images"));
+        var bytes = png(0xff123456);
+        var reference = images.importImage(actor, bytes);
+        var wrongActor = imageSnapshot(List.of(reference))
+                .withImagePayloadResolver(ref -> images.read(UUID.randomUUID(), ref));
+        assertThrows(GuideSessionExportException.class,
+                () -> new GuideSessionExporter(game).export(wrongActor));
+        var corrupt = imageSnapshot(List.of(reference)).withImagePayloadResolver(ref -> new byte[] {1});
+        assertThrows(GuideSessionExportException.class,
+                () -> new GuideSessionExporter(game).export(corrupt));
+        assertFalse(Files.exists(game.resolve("openallay")));
+    }
+
+    @Test
+    void rejectsImageDirectorySymlinkWithoutPublishingText(@TempDir Path game) throws Exception {
+        UUID actor = UUID.randomUUID();
+        var images = new FileImageAttachmentStore(game.resolve("managed-images"));
+        var reference = images.importImage(actor, png(0xff123456));
+        Path root = Files.createDirectories(game.resolve("openallay/exports"));
+        Path outside = Files.createDirectory(game.resolve("outside"));
+        try {
+            Files.createSymbolicLink(root.resolve("images"), outside);
+        } catch (UnsupportedOperationException unsupported) {
+            return;
+        }
+        var snapshot = imageSnapshot(List.of(reference))
+                .withImagePayloadResolver(ref -> images.read(actor, ref));
+        assertThrows(GuideSessionExportException.class,
+                () -> new GuideSessionExporter(game).export(snapshot));
+        try (var paths = Files.list(outside)) { assertEquals(0, paths.count()); }
+        try (var paths = Files.list(root)) { assertEquals(1, paths.count()); }
+    }
+
+    @Test
+    void closesSnapshotLeaseAfterSuccessfulAndFailedImageExports(@TempDir Path game)
+            throws Exception {
+        UUID actor = UUID.randomUUID();
+        var images = new FileImageAttachmentStore(game.resolve("managed-images"));
+        var reference = images.importImage(actor, png(0xff123456));
+        AtomicInteger closes = new AtomicInteger();
+        var resolver = new dev.openallay.model.image.ImagePayloadResolver() {
+            @Override public byte[] read(ImageReference ref) throws IOException {
+                return images.read(actor, ref);
+            }
+            @Override public void close() { closes.incrementAndGet(); }
+        };
+        new GuideSessionExporter(game).export(imageSnapshot(List.of(reference))
+                .withImagePayloadResolver(resolver));
+        assertEquals(1, closes.get());
+        var failedResolver = new dev.openallay.model.image.ImagePayloadResolver() {
+            @Override public byte[] read(ImageReference ref) throws IOException {
+                throw new IOException("injected missing image");
+            }
+            @Override public void close() { closes.incrementAndGet(); }
+        };
+        assertThrows(GuideSessionExportException.class,
+                () -> new GuideSessionExporter(game).export(imageSnapshot(List.of(reference))
+                        .withImagePayloadResolver(failedResolver)));
+        assertEquals(2, closes.get());
+    }
+
+    @Test
+    void retainedSnapshotLeaseKeepsManagedBytesUntilPermanentCopiesExist(@TempDir Path game)
+            throws Exception {
+        UUID actor = UUID.randomUUID();
+        var images = new FileImageAttachmentStore(game.resolve("managed-images"));
+        byte[] bytes = png(0xff123456);
+        String owner = "export:" + UUID.randomUUID();
+        var reference = images.importImage(actor, owner, bytes);
+        AtomicInteger reads = new AtomicInteger();
+        AtomicInteger closes = new AtomicInteger();
+        ImagePayloadResolver lease = new ImagePayloadResolver() {
+            @Override public byte[] read(ImageReference ref) throws IOException {
+                // Collection can run between the export's preflight and publication passes.
+                assertEquals(0, images.collect(actor));
+                reads.incrementAndGet();
+                return images.read(actor, ref);
+            }
+            @Override public void close() {
+                try { images.release(actor, owner); }
+                catch (IOException failure) { throw new java.io.UncheckedIOException(failure); }
+                closes.incrementAndGet();
+            }
+        };
+        var snapshot = imageSnapshot(List.of(reference)).withImagePayloadResolver(lease);
+        var exported = new GuideSessionExporter(game).export(snapshot);
+        assertEquals(2, reads.get());
+        assertEquals(1, closes.get());
+        assertEquals(1, images.collect(actor));
+        Path root = game.resolve("openallay/exports");
+        assertArrayEquals(bytes, Files.readAllBytes(root.resolve("images/" + reference.sha256() + ".png")));
+        assertTrue(Files.readString(root.resolve(exported.filename()))
+                .contains("File: images/" + reference.sha256() + ".png"));
+    }
+
+    @Test
+    void unusedSnapshotCanReleaseItsLeaseWithoutWritingFiles(@TempDir Path game) throws Exception {
+        UUID actor = UUID.randomUUID();
+        var images = new FileImageAttachmentStore(game.resolve("managed-images"));
+        String owner = "export:" + UUID.randomUUID();
+        var reference = images.importImage(actor, owner, png(0xff123456));
+        ImagePayloadResolver lease = new ImagePayloadResolver() {
+            @Override public byte[] read(ImageReference ref) throws IOException {
+                return images.read(actor, ref);
+            }
+            @Override public void close() {
+                try { images.release(actor, owner); }
+                catch (IOException failure) { throw new java.io.UncheckedIOException(failure); }
+            }
+        };
+        var snapshot = imageSnapshot(List.of(reference)).withImagePayloadResolver(lease);
+        assertEquals(0, images.collect(actor));
+        snapshot.close();
+        assertEquals(1, images.collect(actor));
+        assertFalse(Files.exists(game.resolve("openallay")));
+    }
+
+    @Test
+    void leaseReleaseFailureDoesNotReportFalseFailureAfterPublication(@TempDir Path game)
+            throws Exception {
+        UUID actor = UUID.randomUUID();
+        var images = new FileImageAttachmentStore(game.resolve("managed-images"));
+        var reference = images.importImage(actor, png(0xff123456));
+        var resolver = new ImagePayloadResolver() {
+            @Override public byte[] read(ImageReference ref) throws IOException {
+                return images.read(actor, ref);
+            }
+            @Override public void close() { throw new IllegalStateException("injected lease release failure"); }
+        };
+        var exported = new GuideSessionExporter(game).export(imageSnapshot(List.of(reference))
+                .withImagePayloadResolver(resolver));
+        assertTrue(Files.isRegularFile(game.resolve("openallay/exports").resolve(exported.filename())));
+        assertArrayEquals(png(0xff123456), Files.readAllBytes(game.resolve("openallay/exports/images")
+                .resolve(reference.sha256() + ".png")));
+    }
+
+    @Test
+    void repeatedHashWithDifferentMetadataFailsBeforeFilesAndClosesLease(@TempDir Path game)
+            throws Exception {
+        UUID actor = UUID.randomUUID();
+        var images = new FileImageAttachmentStore(game.resolve("managed-images"));
+        var reference = images.importImage(actor, png(0xff123456));
+        var different = new ImageReference(reference.sha256(), reference.mimeType(),
+                reference.width() + 1, reference.height(), reference.byteSize());
+        AtomicInteger reads = new AtomicInteger();
+        AtomicInteger closes = new AtomicInteger();
+        var resolver = new ImagePayloadResolver() {
+            @Override public byte[] read(ImageReference ref) throws IOException {
+                reads.incrementAndGet();
+                return images.read(actor, ref);
+            }
+            @Override public void close() { closes.incrementAndGet(); }
+        };
+        assertThrows(GuideSessionExportException.class, () -> new GuideSessionExporter(game)
+                .export(imageSnapshot(List.of(reference, different)).withImagePayloadResolver(resolver)));
+        assertEquals(0, reads.get());
+        assertEquals(1, closes.get());
+        assertFalse(Files.exists(game.resolve("openallay")));
+    }
+
+    private static GuideSessionExportSnapshot imageSnapshot(List<ImageReference> references) {
+        List<ModelContent> content = new java.util.ArrayList<>();
+        content.add(new ModelContent.Text("look"));
+        references.forEach(reference -> content.add(new ModelContent.Image(reference)));
+        return new GuideSessionExportSnapshot("main", List.of(new GuideSessionExportSnapshot.Request(
+                UUID.randomUUID(), NOW, GuideRequestStatus.COMPLETED, "look", List.of(),
+                List.of(new ModelMessage(ModelRole.USER, content)), null)), NOW);
+    }
+
+    private static byte[] png(int color) throws IOException {
+        BufferedImage image = new BufferedImage(4, 3, BufferedImage.TYPE_INT_RGB);
+        for (int y = 0; y < image.getHeight(); y++) {
+            for (int x = 0; x < image.getWidth(); x++) image.setRGB(x, y, color);
+        }
+        var output = new ByteArrayOutputStream();
+        ImageIO.write(image, "png", output);
+        image.flush();
+        return output.toByteArray();
     }
 
     private static GuideSessionExportSnapshot snapshot(String user, String assistant) {

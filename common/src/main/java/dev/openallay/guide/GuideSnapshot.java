@@ -17,8 +17,34 @@ public record GuideSnapshot(
         Instant updatedAt,
         GuideModelSelection modelSelection,
         List<GuideClientModelProfile> clientProfiles,
-        Optional<GuideContextSpec> serverModel) {
+        Optional<GuideContextSpec> serverModel,
+        dev.openallay.model.image.ImageInputCapability serverImageInputCapability,
+        String serverImageInputSource) {
+    public GuideSnapshot(
+            UUID actorId, String selectedSession, GuideModelMode modelMode,
+            boolean clientModelAvailable, boolean serverModelAvailable,
+            GuidePersistenceSnapshot persistence, List<GuideSessionSnapshot> sessions,
+            Instant updatedAt, GuideModelSelection modelSelection,
+            List<GuideClientModelProfile> clientProfiles, Optional<GuideContextSpec> serverModel) {
+        this(actorId, selectedSession, modelMode, clientModelAvailable, serverModelAvailable,
+                persistence, sessions, updatedAt, modelSelection, clientProfiles, serverModel,
+                dev.openallay.model.image.ImageInputCapability.UNKNOWN, null);
+    }
+
+    public dev.openallay.model.image.ImageInputCapability imageInputCapability(
+            GuideModelSelection selection) {
+        if (selection.kind() == GuideModelSelection.Kind.SERVER) return serverImageInputCapability;
+        return clientProfiles.stream().filter(profile -> profile.id().equals(selection.profileId()))
+                .map(GuideClientModelProfile::imageInputCapability).findFirst()
+                .orElse(dev.openallay.model.image.ImageInputCapability.UNKNOWN);
+    }
+
+    public dev.openallay.model.image.ImageInputCapability selectedImageInputCapability() {
+        return imageInputCapability(modelSelection);
+    }
+
     public GuideSnapshot {
+        java.util.Objects.requireNonNull(serverImageInputCapability, "serverImageInputCapability");
         java.util.Objects.requireNonNull(actorId, "actorId");
         if (selectedSession == null || selectedSession.isBlank()) {
             throw new IllegalArgumentException("selectedSession must not be blank");

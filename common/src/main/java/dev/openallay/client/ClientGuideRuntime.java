@@ -162,7 +162,12 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
                                     new dev.openallay.guide.GuideContextEstimate(
                                             request.requestId(), tokens,
                                             endpoint.contextBudget(), endpoint.contextBudget() == null
-                                                    ? null : endpoint.modelIdentifier()));
+                                                    ? null : endpoint.modelIdentifier(),
+                                            endpoint.estimator().imageAccounting(
+                                                    java.util.stream.Stream.concat(
+                                                            sessions.history(request.sessionKey()).stream(),
+                                                            java.util.stream.Stream.of(request.userInput()))
+                                                            .toList())));
                         }
                     }
                 });
@@ -277,17 +282,31 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
             String question,
             ToolInvocationContext context,
             Consumer<AgentEvent> events) {
+        return ask(actor, session, requestId, ModelMessage.userText(question),
+                AgentRequest.unavailableImages(), context, events);
+    }
+
+    @Override
+    public CompletableFuture<AgentResult> ask(
+            UUID actor,
+            String session,
+            UUID requestId,
+            ModelMessage userInput,
+            dev.openallay.model.image.ImagePayloadResolver images,
+            ToolInvocationContext context,
+            Consumer<AgentEvent> events) {
         ClientCapabilitySnapshot requestCapabilities = capabilities.forRequest(context);
         ClientGuideRuntime requestRuntime = withCapabilities(requestCapabilities);
         AgentRequest request = new AgentRequest(
                 requestId,
                 actor,
                 session,
-                question,
+                userInput,
                 requestRuntime.systemPrompt(context.unrestrictedJavascript(),
                         requestCapabilities.commandCapabilityAvailable(context.correlationId())),
                 context,
-                true);
+                true,
+                images);
         dev.openallay.agent.ModelCallReceipts receipts = new dev.openallay.agent.ModelCallReceipts();
         return receipts.after(requestRuntime.agent.ask(request, event ->
                     receipts.accept(event, received -> dispatcher.execute(() -> events.accept(received)))))

@@ -15,10 +15,16 @@ import dev.openallay.model.ModelTurn;
 import dev.openallay.model.ModelUsage;
 import dev.openallay.model.ProviderToolIds;
 import dev.openallay.model.config.ModelConfig;
+import dev.openallay.model.image.ImageReference;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 public final class OpenAiJsonCodec {
     private final Gson gson;
@@ -27,20 +33,43 @@ public final class OpenAiJsonCodec {
         this.gson = Objects.requireNonNull(gson, "gson");
     }
 
+    // Published image-input/request limits, not model token costs.
+    // https://platform.openai.com/docs/guides/images-vision
+    private static final int MAX_IMAGES = 500;
+    // Application decimal-byte guard within the published 50 MB image-input request limit.
+    private static final long MAX_REQUEST_BYTES = 50_000_000;
+
     public String requestBody(ModelConfig config, ModelRequest request) {
-        JsonObject root = contextInput(request.systemPrompt(), request.messages(), request.tools());
+        validateImages(request.messages());
+        JsonObject root = contextInput(request.systemPrompt(), request.messages(), request.tools(),
+                image -> encodeImage(request, image));
         root.addProperty("model", config.model());
         root.addProperty("max_completion_tokens", request.effectiveMaxOutputTokens(config.maxOutputTokens()));
         root.addProperty("stream", request.stream());
         if (config.reasoningEffort() != dev.openallay.model.config.ModelReasoningEffort.AUTO) {
             root.addProperty("reasoning_effort", config.reasoningEffort().encoded());
         }
-        return gson.toJson(root);
+        String body = gson.toJson(root);
+        if (body.getBytes(StandardCharsets.UTF_8).length > MAX_REQUEST_BYTES) {
+            throw new IllegalArgumentException("OpenAI request exceeds 50,000,000 bytes");
+        }
+        return body;
     }
 
-    /** Provider-native input shape shared by HTTP encoding and offline token budgeting. */
+    /**
+     * Offline native framing. Images use metadata placeholders: no payload is
+     * resolved or Base64 counted as text, and the image token cost is unknown.
+     */
     public JsonObject contextInput(
             String systemPrompt, List<ModelMessage> inputMessages, List<ModelToolDefinition> inputTools) {
+        return contextInput(systemPrompt, inputMessages, inputTools, OpenAiJsonCodec::imagePlaceholder);
+    }
+
+    private JsonObject contextInput(
+            String systemPrompt,
+            List<ModelMessage> inputMessages,
+            List<ModelToolDefinition> inputTools,
+            Function<ImageReference, JsonObject> imageEncoder) {
         JsonObject root = new JsonObject();
         JsonArray messages = new JsonArray();
         JsonObject system = new JsonObject();
@@ -49,7 +78,7 @@ public final class OpenAiJsonCodec {
         messages.add(system);
         ProviderToolIds toolIds = ProviderToolIds.forOpenAiChat(inputMessages);
         for (ModelMessage message : inputMessages) {
-            encodeMessage(message, messages, toolIds);
+            encodeMessage(message, messages, toolIds, imageEncoder);
         }
         root.add("messages", messages);
         if (!inputTools.isEmpty()) {
@@ -93,7 +122,10 @@ public final class OpenAiJsonCodec {
     }
 
     private void encodeMessage(
-            ModelMessage message, JsonArray output, ProviderToolIds toolIds) {
+            ModelMessage message,
+            JsonArray output,
+            ProviderToolIds toolIds,
+            Function<ImageReference, JsonObject> imageEncoder) {
         List<ModelContent.ToolResult> results = message.content().stream()
                 .filter(ModelContent.ToolResult.class::isInstance)
                 .map(ModelContent.ToolResult.class::cast)
@@ -111,18 +143,34 @@ public final class OpenAiJsonCodec {
 
         JsonObject encoded = new JsonObject();
         encoded.addProperty("role", message.role() == ModelRole.USER ? "user" : "assistant");
+        boolean multipart = message.content().stream().anyMatch(ModelContent.Image.class::isInstance);
+        JsonArray parts = new JsonArray();
         StringBuilder text = new StringBuilder();
         StringBuilder reasoning = new StringBuilder();
         JsonArray toolCalls = new JsonArray();
         for (ModelContent block : message.content()) {
             switch (block) {
-                case ModelContent.Text value -> text.append(value.text());
+                case ModelContent.Text value -> {
+                    if (multipart) {
+                        JsonObject part = new JsonObject();
+                        part.addProperty("type", "text");
+                        part.addProperty("text", value.text());
+                        parts.add(part);
+                    } else {
+                        text.append(value.text());
+                    }
+                }
+                case ModelContent.Image value -> parts.add(imageEncoder.apply(value.reference()));
                 case ModelContent.Reasoning value -> reasoning.append(value.text());
                 case ModelContent.ToolUse value -> toolCalls.add(encodeToolCall(value, toolIds));
                 case ModelContent.ToolResult ignored -> throw new IllegalStateException();
             }
         }
-        encoded.addProperty("content", text.isEmpty() ? null : text.toString());
+        if (multipart) {
+            encoded.add("content", parts);
+        } else {
+            encoded.addProperty("content", text.isEmpty() ? null : text.toString());
+        }
         if (!reasoning.isEmpty()) {
             encoded.addProperty("reasoning_content", reasoning.toString());
         }
@@ -130,6 +178,62 @@ public final class OpenAiJsonCodec {
             encoded.add("tool_calls", toolCalls);
         }
         output.add(encoded);
+    }
+
+    private static void validateImages(List<ModelMessage> messages) {
+        int count = 0;
+        long encodedBytes = 0;
+        for (ModelMessage message : messages) {
+            for (ModelContent block : message.content()) {
+                if (!(block instanceof ModelContent.Image image)) continue;
+                ImageReference reference = image.reference();
+                if (++count > MAX_IMAGES) {
+                    throw new IllegalArgumentException("OpenAI request exceeds 500 images");
+                }
+                if (!reference.mimeType().equals("image/png")
+                        && !reference.mimeType().equals("image/jpeg")) {
+                    throw new IllegalArgumentException("OpenAI image must be PNG or JPEG");
+                }
+                if (reference.byteSize() > MAX_REQUEST_BYTES) {
+                    throw new IllegalArgumentException("OpenAI image exceeds request byte limit");
+                }
+                encodedBytes += 4 * ((reference.byteSize() + 2) / 3);
+                if (encodedBytes > MAX_REQUEST_BYTES) {
+                    throw new IllegalArgumentException("OpenAI image payload exceeds 50,000,000 bytes");
+                }
+            }
+        }
+    }
+
+    private static JsonObject encodeImage(ModelRequest request, ImageReference reference) {
+        byte[] bytes;
+        try {
+            bytes = Objects.requireNonNull(request.images().read(reference), "image bytes");
+        } catch (IOException failure) {
+            throw new UncheckedIOException("OpenAI image payload is unavailable", failure);
+        }
+        if (bytes.length != reference.byteSize()) {
+            throw new IllegalArgumentException("Image payload byte size does not match its reference");
+        }
+        JsonObject imageUrl = new JsonObject();
+        imageUrl.addProperty("url", "data:" + reference.mimeType() + ";base64,"
+                + Base64.getEncoder().encodeToString(bytes));
+        JsonObject part = new JsonObject();
+        part.addProperty("type", "image_url");
+        part.add("image_url", imageUrl);
+        return part;
+    }
+
+    private static JsonObject imagePlaceholder(ImageReference reference) {
+        JsonObject metadata = new JsonObject();
+        metadata.addProperty("media_type", reference.mimeType());
+        metadata.addProperty("width", reference.width());
+        metadata.addProperty("height", reference.height());
+        metadata.addProperty("byte_size", reference.byteSize());
+        JsonObject part = new JsonObject();
+        part.addProperty("type", "image_url");
+        part.add("image_url", metadata);
+        return part;
     }
 
     private JsonObject encodeToolCall(ModelContent.ToolUse tool, ProviderToolIds toolIds) {

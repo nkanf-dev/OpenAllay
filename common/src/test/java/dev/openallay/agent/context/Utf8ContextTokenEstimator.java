@@ -49,6 +49,11 @@ public final class Utf8ContextTokenEstimator implements ContextTokenEstimator {
     private static long contentBytes(ModelContent content) {
         return switch (content) {
             case ModelContent.Text text -> bytes("text") + bytes(text.text());
+            case ModelContent.Image image -> bytes("image")
+                    + bytes(image.reference().mimeType())
+                    + bytes(Integer.toString(image.reference().width()))
+                    + bytes(Integer.toString(image.reference().height()))
+                    + bytes(Long.toString(image.reference().byteSize()));
             case ModelContent.Reasoning reasoning -> bytes("reasoning")
                     + bytes(reasoning.text())
                     + bytes(reasoning.signature() == null ? "" : reasoning.signature());

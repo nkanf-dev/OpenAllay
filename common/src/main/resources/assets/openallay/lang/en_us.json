@@ -579,5 +579,7 @@
   "screen.openallay.settings.models.builtin.image_source.trusted": "Image-input source: trusted provider metadata",
   "screen.openallay.settings.models.builtin.image_source.builtin": "Image-input source: built-in model reference",
   "screen.openallay.settings.models.builtin.image_source.unknown": "Image-input source: unavailable",
-  "screen.openallay.settings.models.builtin.image_effective_source": "Image-input evidence: %s · captured %s"
+  "screen.openallay.settings.models.builtin.image_effective_source": "Image-input evidence: %s · captured %s",
+  "screen.openallay.telemetry.image_unknown": "Text tokens estimated only; image tokens are not yet included.",
+  "screen.openallay.telemetry.text_estimate": "Text %s"
 }

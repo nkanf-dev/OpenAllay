@@ -24,7 +24,8 @@ final class BridgeJsonCodecTest {
 
         assertExactPayloadShape(codec, new CapabilityPayload(List.of(), false, 0, 0, 0, ""),
                 Set.of("remoteTools", "serverModel", "serverContextWindowTokens",
-                        "serverMaxOutputTokens", "serverPromptAndToolTokens", "serverCanonicalModelId"));
+                        "serverMaxOutputTokens", "serverPromptAndToolTokens", "serverCanonicalModelId",
+                        "serverImageInputCapability", "serverImageInputCapabilitySource"));
         assertExactPayloadShape(codec,
                 new RemoteToolCallPayload(invocationId, "main", "test:read", "{}"),
                 Set.of("correlationId", "sessionId", "toolId", "argumentsJson"));
@@ -36,7 +37,8 @@ final class BridgeJsonCodecTest {
                 Set.of("requestId"));
         assertExactPayloadShape(codec,
                 new ServerAgentRequestPayload(requestId, "main", "question", true),
-                Set.of("requestId", "sessionId", "question", "stream", "history", "clientToolIds", "skillDocuments"));
+                Set.of("requestId", "sessionId", "question", "stream", "history", "clientToolIds",
+                        "skillDocuments", "userInput", "imageAttachments"));
         assertExactPayloadShape(codec,
                 new ClientToolCallPayload(requestId, invocationId, "main", "test:read", "{}"),
                 Set.of("requestId", "invocationId", "sessionId", "toolId", "argumentsJson"));

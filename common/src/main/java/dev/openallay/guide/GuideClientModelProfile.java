@@ -7,8 +7,18 @@ public record GuideClientModelProfile(
         boolean enabled,
         boolean available,
         String modelIdentifier,
-        GuideFailure failure) {
+        GuideFailure failure,
+        dev.openallay.model.image.ImageInputCapability imageInputCapability,
+        String imageInputSource) {
+    public GuideClientModelProfile(
+            String id, String displayName, boolean enabled, boolean available,
+            String modelIdentifier, GuideFailure failure) {
+        this(id, displayName, enabled, available, modelIdentifier, failure,
+                dev.openallay.model.image.ImageInputCapability.UNKNOWN, null);
+    }
+
     public GuideClientModelProfile {
+        java.util.Objects.requireNonNull(imageInputCapability, "imageInputCapability");
         if (id == null || !id.matches("[a-zA-Z0-9_.-]+")) {
             throw new IllegalArgumentException("invalid model profile id");
         }

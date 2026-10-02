@@ -12,6 +12,14 @@ public final class ServerModelCapabilityProjection {
     public static CapabilityPayload from(
             List<CapabilityPayload.RemoteToolCapability> tools,
             Optional<GuideContextSpec> serverModel) {
+        return from(tools, serverModel, dev.openallay.model.metadata.ModelImageCapabilityResolution.unknown());
+    }
+
+    public static CapabilityPayload from(
+            List<CapabilityPayload.RemoteToolCapability> tools,
+            Optional<GuideContextSpec> serverModel,
+            dev.openallay.model.metadata.ModelImageCapabilityResolution imageCapability) {
+        java.util.Objects.requireNonNull(imageCapability, "imageCapability");
         List<CapabilityPayload.RemoteToolCapability> detached = List.copyOf(tools);
         if (serverModel.isEmpty()) {
             return new CapabilityPayload(
@@ -24,6 +32,9 @@ public final class ServerModelCapabilityProjection {
                 spec.budget().contextWindowTokens(),
                 spec.budget().maxOutputTokens(),
                 spec.promptAndToolTokens(),
-                spec.canonicalModelId());
+                spec.canonicalModelId(),
+                imageCapability.capability(),
+                imageCapability.origin().name().toLowerCase(java.util.Locale.ROOT)
+                        + (imageCapability.source() == null ? "" : ":" + imageCapability.source()));
     }
 }

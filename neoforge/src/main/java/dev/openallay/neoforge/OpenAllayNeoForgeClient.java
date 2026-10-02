@@ -152,11 +152,15 @@ public final class OpenAllayNeoForgeClient {
                     }
                     @Override public void disconnect() { bridge.disconnectState(); }
                 },
-                gson);
+                gson,
+                dispatcher);
+        dev.openallay.model.image.ImageAttachmentStore imageStore =
+                new dev.openallay.model.image.FileImageAttachmentStore(
+                        FMLPaths.CONFIGDIR.get().resolve("openallay/images"));
         GuideHistoryRepository history = new GuideHistoryRepository(new SqliteGuideHistoryStore(
                 FMLPaths.CONFIGDIR.get().resolve("openallay/history.sqlite3"),
                 clock,
-                new GuideHistoryCodec()));
+                new GuideHistoryCodec(), imageStore));
         GuideServiceManager services = new GuideServiceManager(
                 local,
                 remote,
@@ -165,7 +169,8 @@ public final class OpenAllayNeoForgeClient {
                 clock,
                 gson,
                 history,
-                new MinecraftGuideHistoryScope(client));
+                new MinecraftGuideHistoryScope(client),
+                imageStore);
         historySettings.bind(services);
         bridge.onDisconnect(() -> {
             if (settings != null) settings.settings().clearServerModel();

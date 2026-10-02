@@ -1,0 +1,127 @@
+package dev.openallay.bridge.protocol;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import dev.openallay.model.ModelContent;
+import dev.openallay.model.ModelMessage;
+import dev.openallay.model.ModelRole;
+import dev.openallay.model.image.ImageReference;
+import java.util.List;
+import java.util.UUID;
+import org.junit.jupiter.api.Test;
+
+final class BridgeImagePayloadTest {
+    private static final byte[] BYTES = java.util.Base64.getDecoder().decode(
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a9ZkAAAAASUVORK5CYII=");
+    private static final ImageReference REFERENCE = new ImageReference(
+            ResultChunker.sha256(BYTES), "image/png", 1, 1, BYTES.length);
+
+    @Test
+    void imageOnlyUserInputAndHistoryRoundTripWithMetadataOnlyReferences() {
+        var image = imageMessage();
+        var history = List.of(ServerAgentHistoryMessage.from(image));
+        var attachment = ServerAgentImageAttachment.from(REFERENCE, BYTES);
+        var payload = new ServerAgentRequestPayload(UUID.randomUUID(), "main", image, true,
+                history, List.of(attachment));
+        var codec = new BridgeJsonCodec();
+
+        String encoded = codec.encode(payload);
+        assertEquals(payload, codec.decode(encoded, ServerAgentRequestPayload.class));
+        historyOnlyImageRequiresTheSameExactAttachmentClosure();
+        JsonObject object = JsonParser.parseString(encoded).getAsJsonObject();
+        JsonObject input = object.getAsJsonObject("userInput");
+        assertEquals(image, payload.userInput().toModelMessage());
+        assertEquals("[Image]", payload.question());
+        assertTrue(!input.toString().contains("base64Data"));
+        assertEquals(java.util.Set.of("role", "content"), input.keySet());
+        JsonObject block = input.getAsJsonArray("content").get(0).getAsJsonObject();
+        assertEquals(java.util.Set.of("kind", "image"), block.keySet());
+        assertEquals(java.util.Set.of("sha256", "mimeType", "width", "height", "byteSize"),
+                block.getAsJsonObject("image").keySet());
+        assertEquals(java.util.Set.of("reference", "base64Data"), object.getAsJsonArray("imageAttachments")
+                .get(0).getAsJsonObject().keySet());
+        assertEquals(REFERENCE, attachment.reference());
+        org.junit.jupiter.api.Assertions.assertArrayEquals(BYTES, attachment.bytes());
+        assertEquals(1, payload.imageAttachments().size(), "duplicate use of one image needs one attachment");
+        assertThrows(IllegalArgumentException.class, () -> codec.decode(
+                encoded.replace("\"mimeType\":\"image/png\"", "\"mimeType\":\"image/png\",\"path\":\"/tmp/image.png\""),
+                ServerAgentRequestPayload.class));
+        assertThrows(IllegalArgumentException.class, () -> codec.decode(
+                encoded.replace("\"width\":1", "\"width\":\"1\""), ServerAgentRequestPayload.class));
+    }
+
+    @Test
+    void missingExtraDuplicateAndConflictingAttachmentsAreRejected() {
+        attachmentHashAndCanonicalBase64AreValidatedWithoutChangingMetadata();
+        var image = imageMessage();
+        var attachment = ServerAgentImageAttachment.from(REFERENCE, BYTES);
+        assertThrows(IllegalArgumentException.class, () -> new ServerAgentRequestPayload(
+                UUID.randomUUID(), "main", image, true, List.of(), List.of()));
+        assertThrows(IllegalArgumentException.class, () -> new ServerAgentRequestPayload(
+                UUID.randomUUID(), "main", ModelMessage.userText("text"), true,
+                List.of(), List.of(attachment)));
+        assertThrows(IllegalArgumentException.class, () -> new ServerAgentRequestPayload(
+                UUID.randomUUID(), "main", image, true, List.of(), List.of(attachment, attachment)));
+        ImageReference conflicting = new ImageReference(REFERENCE.sha256(), "image/png", 2, 1, BYTES.length);
+        assertThrows(IllegalArgumentException.class, () -> new ServerAgentRequestPayload(
+                UUID.randomUUID(), "main", image, true,
+                List.of(ServerAgentHistoryMessage.from(new ModelMessage(ModelRole.USER,
+                        List.of(new ModelContent.Image(conflicting))))), List.of(attachment)));
+    }
+
+    @Test
+    void oldRequestShapeAndStringOrUrlImageInputsAreNotAccepted() {
+        var codec = new BridgeJsonCodec();
+        var payload = new ServerAgentRequestPayload(UUID.randomUUID(), "main", "question", true);
+        JsonObject current = JsonParser.parseString(codec.encode(payload)).getAsJsonObject();
+        current.remove("userInput");
+        assertThrows(IllegalArgumentException.class,
+                () -> codec.decode(current.toString(), ServerAgentRequestPayload.class));
+        JsonObject imageRequest = JsonParser.parseString(codec.encode(new ServerAgentRequestPayload(
+                UUID.randomUUID(), "main", imageMessage(), true, List.of(),
+                List.of(ServerAgentImageAttachment.from(REFERENCE, BYTES))))).getAsJsonObject();
+        imageRequest.getAsJsonObject("userInput").getAsJsonArray("content").get(0)
+                .getAsJsonObject().addProperty("image", "https://example.test/image.png");
+        assertThrows(IllegalArgumentException.class,
+                () -> codec.decode(imageRequest.toString(), ServerAgentRequestPayload.class));
+    }
+
+    private void historyOnlyImageRequiresTheSameExactAttachmentClosure() {
+        var history = List.of(ServerAgentHistoryMessage.from(imageMessage()));
+        var attachment = ServerAgentImageAttachment.from(REFERENCE, BYTES);
+        var request = new ServerAgentRequestPayload(UUID.randomUUID(), "main",
+                ModelMessage.userText("follow up"), true, history, List.of(attachment));
+        var codec = new BridgeJsonCodec();
+        assertEquals(request, codec.decode(codec.encode(request), ServerAgentRequestPayload.class));
+        assertEquals(List.of(REFERENCE), request.imageAttachments().stream()
+                .map(ServerAgentImageAttachment::reference).toList());
+        assertThrows(IllegalArgumentException.class, () -> new ServerAgentRequestPayload(UUID.randomUUID(),
+                "main", ModelMessage.userText("follow up"), true, history, List.of()));
+        JsonObject wire = JsonParser.parseString(codec.encode(request)).getAsJsonObject();
+        wire.addProperty("question", "changed display");
+        assertThrows(IllegalArgumentException.class,
+                () -> codec.decode(wire.toString(), ServerAgentRequestPayload.class));
+    }
+
+    private void attachmentHashAndCanonicalBase64AreValidatedWithoutChangingMetadata() {
+        var wrongHash = new ImageReference("a".repeat(64), "image/png", 1, 1, BYTES.length);
+        var attachment = ServerAgentImageAttachment.from(wrongHash, BYTES);
+        assertThrows(IllegalArgumentException.class, attachment::bytes);
+        String encoded = java.util.Base64.getEncoder().encodeToString(BYTES);
+        assertThrows(IllegalArgumentException.class, () -> new ServerAgentImageAttachment(REFERENCE,
+                encoded.substring(0, encoded.length() - 1)));
+        assertThrows(IllegalArgumentException.class, () -> new ServerAgentImageAttachment(REFERENCE,
+                "-" + encoded.substring(1)));
+        var oneByte = new ImageReference(ResultChunker.sha256(new byte[] {1}), "image/png", 1, 1, 1);
+        assertThrows(IllegalArgumentException.class, () -> new ServerAgentImageAttachment(oneByte, "AR=="));
+        assertThrows(IllegalArgumentException.class, () -> new ServerAgentImageAttachment(oneByte, "AQ=A"));
+    }
+
+    private static ModelMessage imageMessage() {
+        return new ModelMessage(ModelRole.USER, List.of(new ModelContent.Image(REFERENCE)));
+    }
+}

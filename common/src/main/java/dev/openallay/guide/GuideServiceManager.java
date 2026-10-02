@@ -21,6 +21,7 @@ public final class GuideServiceManager {
     private final Gson gson;
     private final GuideHistoryAccess history;
     private final GuideHistoryScopeProvider historyScopes;
+    private final dev.openallay.model.image.ImageAttachmentStore attachmentStore;
     private GuideService current;
 
     public GuideServiceManager(
@@ -42,6 +43,15 @@ public final class GuideServiceManager {
             Gson gson,
             GuideHistoryAccess history,
             GuideHistoryScopeProvider historyScopes) {
+        this(local, remote, contexts, dispatcher, clock, gson, history, historyScopes, null);
+    }
+
+    public GuideServiceManager(
+            GuideLocalEndpoint local, GuideRemoteEndpoint remote, GuideContextProvider contexts,
+            ClientEventDispatcher dispatcher, Clock clock, Gson gson, GuideHistoryAccess history,
+            GuideHistoryScopeProvider historyScopes,
+            dev.openallay.model.image.ImageAttachmentStore attachmentStore) {
+        this.attachmentStore = attachmentStore;
         this.local = local;
         this.remote = Objects.requireNonNull(remote, "remote");
         this.contexts = Objects.requireNonNull(contexts, "contexts");
@@ -69,7 +79,8 @@ public final class GuideServiceManager {
             }
             contexts.clearConnectionState();
             current = new GuideService(
-                    actor, local, remote, contexts, dispatcher, clock, gson, scope, nextHistory);
+                    actor, local, remote, contexts, dispatcher, clock, gson, scope, nextHistory,
+                    attachmentStore);
         }
         return current;
     }

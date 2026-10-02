@@ -8,9 +8,18 @@ public record CapabilityPayload(
         int serverContextWindowTokens,
         int serverMaxOutputTokens,
         int serverPromptAndToolTokens,
-        String serverCanonicalModelId) {
+        String serverCanonicalModelId,
+        dev.openallay.model.image.ImageInputCapability serverImageInputCapability,
+        String serverImageInputCapabilitySource) {
     public CapabilityPayload {
         remoteTools = List.copyOf(remoteTools);
+        java.util.Objects.requireNonNull(serverImageInputCapability, "serverImageInputCapability");
+        if (serverImageInputCapabilitySource == null || serverImageInputCapabilitySource.isBlank()) {
+            throw new IllegalArgumentException("Server image capability source is required");
+        }
+        if (!serverModel && serverImageInputCapability != dev.openallay.model.image.ImageInputCapability.UNKNOWN) {
+            throw new IllegalArgumentException("Unavailable server model cannot advertise image support");
+        }
         if (serverModel) {
             if (serverCanonicalModelId == null || serverCanonicalModelId.isBlank()) {
                 throw new IllegalArgumentException("Server model context capability is required");
@@ -27,6 +36,15 @@ public record CapabilityPayload(
                 || serverCanonicalModelId == null || !serverCanonicalModelId.isEmpty()) {
             throw new IllegalArgumentException("Unavailable server model cannot advertise a budget");
         }
+    }
+
+    public CapabilityPayload(
+            List<RemoteToolCapability> remoteTools, boolean serverModel,
+            int serverContextWindowTokens, int serverMaxOutputTokens,
+            int serverPromptAndToolTokens, String serverCanonicalModelId) {
+        this(remoteTools, serverModel, serverContextWindowTokens, serverMaxOutputTokens,
+                serverPromptAndToolTokens, serverCanonicalModelId,
+                dev.openallay.model.image.ImageInputCapability.UNKNOWN, "unknown");
     }
 
     public record RemoteToolCapability(String id, String description, String inputSchemaJson) {

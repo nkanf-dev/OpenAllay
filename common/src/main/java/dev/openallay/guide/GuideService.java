@@ -44,6 +44,21 @@ public final class GuideService implements GuideHistoryAdministration {
     private final GuideStateReducer reducer;
     private final GuideHistoryScope historyScope;
     private final GuideHistoryAccess history;
+    private final dev.openallay.model.image.ImageAttachmentStore attachmentStore;
+    private static final java.util.concurrent.ExecutorService IMAGE_IO =
+            java.util.concurrent.Executors.newSingleThreadExecutor(runnable -> {
+                Thread thread = new Thread(runnable, "openallay-image-artifacts");
+                thread.setDaemon(true);
+                return thread;
+            });
+    private final String imageOwnerPrefix = "connection:" + UUID.randomUUID() + ":";
+    private final Map<String, List<dev.openallay.model.image.ImageReference>> retainedImages =
+            new LinkedHashMap<>();
+    private final Set<String> imageImportOwners = java.util.concurrent.ConcurrentHashMap.newKeySet();
+    private final Map<String, dev.openallay.model.image.ImageReference> importedImageReferences =
+            new java.util.concurrent.ConcurrentHashMap<>();
+    private final Set<String> imageDraftOwners = java.util.concurrent.ConcurrentHashMap.newKeySet();
+    private final Map<UUID, dev.openallay.model.ModelMessage> submittedInputs = new LinkedHashMap<>();
     private final Map<String, SessionState> sessions = new LinkedHashMap<>();
     private final Map<UUID, String> requestSessions = new LinkedHashMap<>();
     private final Map<UUID, CancelledFinalization> pendingCancelledFinalization = new LinkedHashMap<>();
@@ -55,7 +70,7 @@ public final class GuideService implements GuideHistoryAdministration {
     private GuidePersistenceSnapshot persistence;
     private boolean allowHistoryWrites;
     private boolean historyDeletionPending;
-    private boolean disconnected;
+    private volatile boolean disconnected;
     private boolean incrementalHistory;
     private final DurableProjection durableProjection = new DurableProjection();
     // Captured rows suppress duplicate deltas; only successful writes enter durableProjection.
@@ -86,6 +101,15 @@ public final class GuideService implements GuideHistoryAdministration {
             Gson gson,
             GuideHistoryScope historyScope,
             GuideHistoryAccess history) {
+        this(actor, local, remote, contexts, dispatcher, clock, gson, historyScope, history, null);
+    }
+
+    public GuideService(
+            UUID actor, GuideLocalEndpoint local, GuideRemoteEndpoint remote,
+            GuideContextProvider contexts, ClientEventDispatcher dispatcher, Clock clock, Gson gson,
+            GuideHistoryScope historyScope, GuideHistoryAccess history,
+            dev.openallay.model.image.ImageAttachmentStore attachmentStore) {
+        this.attachmentStore = attachmentStore;
         this.actor = Objects.requireNonNull(actor, "actor");
         this.local = local;
         this.remote = Objects.requireNonNull(remote, "remote");
@@ -171,9 +195,199 @@ public final class GuideService implements GuideHistoryAdministration {
         return () -> listeners.remove(listener);
     }
 
+    /** Encoded PNG/JPEG bytes only. Decoding and managed file I/O never run on the client owner thread. */
+    public CompletableFuture<ToolResult<dev.openallay.model.image.ImageReference>> importImage(
+            byte[] encodedImage) {
+        if (attachmentStore == null || disconnected) return CompletableFuture.completedFuture(new ToolResult.Failure<>(
+                "image_store_unavailable", "Image attachments are unavailable on this connection"));
+        Objects.requireNonNull(encodedImage, "encodedImage");
+        byte[] captured = encodedImage.clone();
+        String owner = imageOwnerPrefix + "import:" + UUID.randomUUID();
+        imageImportOwners.add(owner);
+        return imageOperation(() -> {
+            if (disconnected) {
+                imageImportOwners.remove(owner);
+                throw new java.io.IOException("Image connection is closed");
+            }
+            var reference = attachmentStore.importImage(actor, owner, captured);
+            importedImageReferences.put(owner, reference);
+            return reference;
+        });
+    }
+
+    public CompletableFuture<ToolResult<Boolean>> releaseImportedImage(
+            dev.openallay.model.image.ImageReference reference) {
+        if (attachmentStore == null) return CompletableFuture.completedFuture(new ToolResult.Success<>(false));
+        return imageOperation(() -> {
+            for (var entry : List.copyOf(importedImageReferences.entrySet())) {
+                if (entry.getValue().equals(reference)) {
+                    attachmentStore.release(actor, entry.getKey());
+                    importedImageReferences.remove(entry.getKey(), entry.getValue());
+                    imageImportOwners.remove(entry.getKey());
+                }
+            }
+            return true;
+        });
+    }
+
+    public CompletableFuture<ToolResult<byte[]>> readImage(
+            dev.openallay.model.image.ImageReference reference) {
+        if (attachmentStore == null) return CompletableFuture.completedFuture(new ToolResult.Failure<>(
+                "image_store_unavailable", "Image attachments are unavailable on this connection"));
+        return imageOperation(() -> attachmentStore.read(actor, reference));
+    }
+
+    public CompletableFuture<ToolResult<Boolean>> retainDraftImages(
+            String owner, List<dev.openallay.model.image.ImageReference> references) {
+        if (owner == null || owner.isBlank()) return CompletableFuture.completedFuture(
+                new ToolResult.Failure<>("invalid_image_owner", "Image draft owner is required"));
+        List<dev.openallay.model.image.ImageReference> captured = List.copyOf(references);
+        if (attachmentStore == null) return CompletableFuture.completedFuture(new ToolResult.Failure<>(
+                "image_store_unavailable", "Image attachments are unavailable on this connection"));
+        imageDraftOwners.add(imageOwnerPrefix + "draft:" + owner);
+        return imageOperation(() -> {
+            attachmentStore.retain(actor, imageOwnerPrefix + "draft:" + owner, captured);
+            // Publish the durable draft pin before removing the short import lease.
+            for (var entry : List.copyOf(importedImageReferences.entrySet())) {
+                if (captured.contains(entry.getValue())) {
+                    attachmentStore.release(actor, entry.getKey());
+                    importedImageReferences.remove(entry.getKey(), entry.getValue());
+                    imageImportOwners.remove(entry.getKey());
+                }
+            }
+            return true;
+        });
+    }
+
+    public CompletableFuture<ToolResult<Boolean>> releaseDraftImages(String owner) {
+        if (attachmentStore == null) return CompletableFuture.completedFuture(new ToolResult.Success<>(false));
+        imageDraftOwners.remove(imageOwnerPrefix + "draft:" + owner);
+        return imageOperation(() -> {
+            attachmentStore.release(actor, imageOwnerPrefix + "draft:" + owner);
+            return true;
+        });
+    }
+
+    /** Reject unsupported typed input without changing the selected provider or losing a draft. */
+    public ToolResult<Boolean> validateUserInput(
+            dev.openallay.model.ModelMessage input, GuideModelSelection selection) {
+        try {
+            dev.openallay.model.ModelMessage.requireUserInput(input);
+        } catch (IllegalArgumentException | NullPointerException invalid) {
+            return new ToolResult.Failure<>("invalid_question", "Enter text or attach an image");
+        }
+        boolean images = input.content().stream()
+                .anyMatch(dev.openallay.model.ModelContent.Image.class::isInstance);
+        if (!images) return new ToolResult.Success<>(true);
+        return validateImageCapability(input, snapshot.imageInputCapability(selection));
+    }
+
+    private ToolResult<Boolean> validateImageCapability(
+            dev.openallay.model.ModelMessage input,
+            dev.openallay.model.image.ImageInputCapability capability) {
+        if (input.content().stream().noneMatch(dev.openallay.model.ModelContent.Image.class::isInstance)) {
+            return new ToolResult.Success<>(true);
+        }
+        if (capability != dev.openallay.model.image.ImageInputCapability.SUPPORTED) {
+            return new ToolResult.Failure<>(capability == dev.openallay.model.image.ImageInputCapability.UNKNOWN
+                    ? "image_model_unknown" : "image_model_unsupported",
+                    capability == dev.openallay.model.image.ImageInputCapability.UNKNOWN
+                            ? "Image input is not confirmed for this model. Choose a supported model or set its image capability in model settings."
+                            : "This model does not support image input. Choose a supported model; your draft is kept.");
+        }
+        if (attachmentStore == null) return new ToolResult.Failure<>(
+                "image_store_unavailable", "Image attachments are unavailable on this connection");
+        return new ToolResult.Success<>(true);
+    }
+
+    /** Freezes actor scope. No caller can select a filesystem path or another player's image. */
+    private dev.openallay.model.image.ImagePayloadResolver images(UUID requestId) {
+        if (attachmentStore == null) return dev.openallay.model.image.ImagePayloadResolver.unavailable();
+        String session = requestSessions.get(requestId);
+        if (session == null) throw new IllegalArgumentException("Image request owner is unavailable");
+        CompletableFuture<Void> retained = retainUserInput(requestId, userInput(requestId));
+        return reference -> {
+            try { retained.join(); }
+            catch (java.util.concurrent.CompletionException failure) {
+                throw new java.io.IOException("Unable to retain image attachments", failure);
+            }
+            return attachmentStore.read(actor, reference);
+        };
+    }
+
+    /** Retain this session input before normal ask dispatch may release its import lease. */
+    private CompletableFuture<Void> retainUserInput(
+            UUID requestId, dev.openallay.model.ModelMessage input) {
+        if (attachmentStore == null) return CompletableFuture.completedFuture(null);
+        String session = requestSessions.get(requestId);
+        if (session == null) throw new IllegalArgumentException("Image request owner is unavailable");
+        List<dev.openallay.model.image.ImageReference> initial = imageReferences(List.of(input));
+        String owner = imageOwnerPrefix + "session:" + session;
+        List<dev.openallay.model.image.ImageReference> union = new ArrayList<>(
+                retainedImages.getOrDefault(owner, List.of()));
+        for (var reference : initial) if (!union.contains(reference)) union.add(reference);
+        retainedImages.put(owner, List.copyOf(union));
+        return CompletableFuture.runAsync(() -> {
+            try { attachmentStore.retain(actor, owner, union); }
+            catch (java.io.IOException failure) { throw new java.io.UncheckedIOException(failure); }
+        }, IMAGE_IO);
+    }
+
+    private void releaseSessionImageReferences(String sessionId) {
+        if (attachmentStore == null) return;
+        String owner = imageOwnerPrefix + "session:" + sessionId;
+        retainedImages.remove(owner);
+        CompletableFuture<Void> barrier = history != null && allowHistoryWrites
+                ? drainHistoryWrites() : CompletableFuture.completedFuture(null);
+        barrier.thenRunAsync(() -> {
+            try { attachmentStore.release(actor, owner); }
+            catch (java.io.IOException ignored) { /* Preserve files when release cannot be saved. */ }
+        }, IMAGE_IO);
+    }
+
+    private static List<dev.openallay.model.image.ImageReference> imageReferences(
+            List<dev.openallay.model.ModelMessage> messages) {
+        return messages.stream().flatMap(message -> message.content().stream())
+                .filter(dev.openallay.model.ModelContent.Image.class::isInstance)
+                .map(dev.openallay.model.ModelContent.Image.class::cast)
+                .map(dev.openallay.model.ModelContent.Image::reference).distinct().toList();
+    }
+
+    private <T> CompletableFuture<ToolResult<T>> imageOperation(ImageOperation<T> action) {
+        CompletableFuture<ToolResult<T>> result = new CompletableFuture<>();
+        IMAGE_IO.execute(() -> {
+            ToolResult<T> value;
+            try { value = new ToolResult.Success<>(action.run()); }
+            catch (java.io.IOException | IllegalArgumentException failure) {
+                value = new ToolResult.Failure<>("image_attachment_failed",
+                        "Unable to read or store the image attachment: " + failure.getMessage());
+            }
+            ToolResult<T> completed = value;
+            dispatcher.execute(() -> result.complete(completed));
+        });
+        return result;
+    }
+
+    @FunctionalInterface
+    private interface ImageOperation<T> { T run() throws java.io.IOException; }
+
+    public dev.openallay.model.ModelMessage userInput(UUID requestId) {
+        dev.openallay.model.ModelMessage input = submittedInputs.get(requestId);
+        if (input == null) throw new IllegalArgumentException("Request input is unavailable");
+        return input;
+    }
+
     public CompletableFuture<ToolResult<UUID>> ask(String question) {
+        try { return ask(dev.openallay.model.ModelMessage.userInput(question, List.of())); }
+        catch (IllegalArgumentException invalid) {
+            return CompletableFuture.completedFuture(new ToolResult.Failure<>(
+                    "invalid_arguments", "Question must not be blank"));
+        }
+    }
+
+    public CompletableFuture<ToolResult<UUID>> ask(dev.openallay.model.ModelMessage input) {
         CompletableFuture<ToolResult<UUID>> result = new CompletableFuture<>();
-        dispatcher.execute(() -> submit(selectedSession, question, result));
+        dispatcher.execute(() -> submit(selectedSession, input, result));
         return result;
     }
 
@@ -198,8 +412,10 @@ public final class GuideService implements GuideHistoryAdministration {
             List<dev.openallay.model.ModelMessage> original = new ArrayList<>(
                     session.originalContext.getOrDefault(active.requestId(), List.of()));
             if (original.isEmpty()) {
-                original.add(dev.openallay.model.ModelMessage.userText(active.userMessage()));
-                current.add(dev.openallay.model.ModelMessage.userText(active.userMessage()));
+                dev.openallay.model.ModelMessage input = submittedInputs.get(active.requestId());
+                if (input == null) input = dev.openallay.model.ModelMessage.userText(active.userMessage());
+                original.add(input);
+                current.add(input);
             }
             current.add(note);
             original.add(note);
@@ -244,7 +460,13 @@ public final class GuideService implements GuideHistoryAdministration {
                         "retry_unavailable", "Only a failed or cancelled request can be retried"));
                 return;
             }
-            submit(request.sessionId(), request.userMessage(), result);
+            SessionState session = sessions.get(request.sessionId());
+            dev.openallay.model.ModelMessage input = submittedInputs.get(request.requestId());
+            if (input == null) input = (session == null ? List.<dev.openallay.model.ModelMessage>of()
+                    : session.originalContext.getOrDefault(request.requestId(), List.of()))
+                    .stream().filter(message -> message.role() == dev.openallay.model.ModelRole.USER)
+                    .findFirst().orElse(dev.openallay.model.ModelMessage.userText(request.userMessage()));
+            submit(request.sessionId(), input, result);
         });
         return result;
     }
@@ -310,6 +532,7 @@ public final class GuideService implements GuideHistoryAdministration {
                         : sessions.keySet().iterator().next();
             }
             publish();
+            releaseSessionImageReferences(sessionId);
             result.complete(new ToolResult.Success<>(true));
         });
         return result;
@@ -349,7 +572,7 @@ public final class GuideService implements GuideHistoryAdministration {
                                 session.nextRequestSequence - 1, capturedAt)
                         .whenComplete((export, failure) -> dispatcher.execute(() -> {
                             if (failure == null) {
-                                result.complete(new ToolResult.Success<>(export));
+                                captureExportImages(export, result);
                             } else {
                                 result.complete(new ToolResult.Failure<>(
                                         "history_export_failed",
@@ -363,6 +586,47 @@ public final class GuideService implements GuideHistoryAdministration {
             }
         });
         return result;
+    }
+
+    private void captureExportImages(
+            GuideSessionExportSnapshot export,
+            CompletableFuture<ToolResult<GuideSessionExportSnapshot>> result) {
+        List<dev.openallay.model.image.ImageReference> references = imageReferences(
+                export.requests().stream().flatMap(request -> request.originalContext().stream()).toList());
+        if (references.isEmpty()) {
+            result.complete(new ToolResult.Success<>(export));
+            return;
+        }
+        if (attachmentStore == null) {
+            result.complete(new ToolResult.Failure<>("image_attachment_unavailable",
+                    "The images needed for this export are unavailable"));
+            return;
+        }
+        String owner = imageOwnerPrefix + "export:" + UUID.randomUUID();
+        retainedImages.put(owner, references);
+        imageOperation(() -> {
+            attachmentStore.retain(actor, owner, references);
+            return export.withImagePayloadResolver(new dev.openallay.model.image.ImagePayloadResolver() {
+                private final java.util.concurrent.atomic.AtomicBoolean closed =
+                        new java.util.concurrent.atomic.AtomicBoolean();
+                @Override public byte[] read(dev.openallay.model.image.ImageReference reference)
+                        throws java.io.IOException {
+                    if (closed.get() || !references.contains(reference)) throw new java.io.IOException(
+                            "Image is not part of this active captured export");
+                    return attachmentStore.read(actor, reference);
+                }
+                @Override public void close() {
+                    if (closed.compareAndSet(false, true)) IMAGE_IO.execute(() -> {
+                        try { attachmentStore.release(actor, owner); }
+                        catch (java.io.IOException ignored) { /* A failed release preserves the asset. */ }
+                    });
+                }
+            });
+        }).whenComplete((value, failure) -> {
+            if (failure != null) result.complete(new ToolResult.Failure<>(
+                    "history_export_failed", "Unable to retain the images needed for this export"));
+            else result.complete(value);
+        });
     }
 
     public CompletableFuture<ToolResult<Boolean>> clearSelectedSession() {
@@ -404,6 +668,7 @@ public final class GuideService implements GuideHistoryAdministration {
                 local.clearSession(actor, selectedSession);
             }
             publish();
+            releaseSessionImageReferences(session.id);
             result.complete(new ToolResult.Success<>(true));
         });
         return result;
@@ -504,6 +769,19 @@ public final class GuideService implements GuideHistoryAdministration {
             historyWriteBarriers.stream().map(HistoryWriteBarrier::requestId)
                     .filter(Objects::nonNull).toList().forEach(this::cancelHistoryContextBarrier);
             disconnected = true;
+            List<String> transientImageOwners = new ArrayList<>(imageImportOwners);
+            transientImageOwners.addAll(imageDraftOwners);
+            retainedImages.keySet().stream().filter(owner -> !owner.contains(":export:"))
+                    .forEach(transientImageOwners::add);
+            // Export snapshots carry their own lease and can finish after this connection closes.
+            CompletableFuture<Void> imageCleanup = durable.handle((ignored, failure) -> null)
+                    .thenRunAsync(() -> {
+                        if (attachmentStore == null) return;
+                        for (String owner : transientImageOwners) {
+                            try { attachmentStore.release(actor, owner); }
+                            catch (java.io.IOException ignored) { /* Retention failure is conservative. */ }
+                        }
+                    }, IMAGE_IO);
             if (local != null) {
                 local.clearActor(actor);
             }
@@ -514,7 +792,7 @@ public final class GuideService implements GuideHistoryAdministration {
             sessions.put("main", new SessionState("main", defaultClientSelection()));
             selectedSession = "main";
             publishWithoutSave();
-            durable.handle((ignored, failure) -> null).thenRun(() -> result.complete(null));
+            imageCleanup.handle((ignored, failure) -> null).thenRun(() -> result.complete(null));
         });
         return result;
     }
@@ -661,15 +939,17 @@ public final class GuideService implements GuideHistoryAdministration {
     }
 
     private void submit(
-            String sessionId, String question, CompletableFuture<ToolResult<UUID>> result) {
+            String sessionId, dev.openallay.model.ModelMessage input,
+            CompletableFuture<ToolResult<UUID>> result) {
         if (rejectStateChange(result)) {
             return;
         }
-        if (question == null || question.isBlank()) {
-            result.complete(new ToolResult.Failure<>(
-                    "invalid_arguments", "Question must not be blank"));
+        try { dev.openallay.model.ModelMessage.requireUserInput(input); }
+        catch (IllegalArgumentException | NullPointerException invalid) {
+            result.complete(new ToolResult.Failure<>("invalid_arguments", "Enter text or attach an image"));
             return;
         }
+        String question = dev.openallay.agent.AgentRequest.displayText(input);
         SessionState session = sessions.computeIfAbsent(
                 sessionId, id -> new SessionState(id, defaultClientSelection()));
         if (active(session) != null) {
@@ -678,6 +958,11 @@ public final class GuideService implements GuideHistoryAdministration {
             return;
         }
         GuideModelSelection capturedSelection = session.modelSelection;
+        ToolResult<Boolean> valid = validateUserInput(input, capturedSelection);
+        if (valid instanceof ToolResult.Failure<Boolean> failure) {
+            result.complete(new ToolResult.Failure<>(failure.code(), failure.message()));
+            return;
+        }
         GuideTopology topology;
         if (capturedSelection.kind() == GuideModelSelection.Kind.SERVER) {
             if (!remote.serverModelAvailable()) {
@@ -717,6 +1002,9 @@ public final class GuideService implements GuideHistoryAdministration {
         session.messages.add(new GuideMessage(
                 requestId, GuideMessage.Role.USER, question, now));
         requestSessions.put(requestId, sessionId);
+        submittedInputs.put(requestId, input);
+        // The managed bytes stay actor/session-owned through the request and durable context.
+        retainUserInput(requestId, input);
         publish();
 
         if (topology == GuideTopology.SERVER) {
@@ -726,7 +1014,8 @@ public final class GuideService implements GuideHistoryAdministration {
                 if (!remote.askWithContext(
                         requestId,
                         sessionId,
-                        question,
+                        userInput(requestId),
+                        images(requestId),
                         session.modelContext,
                         event -> dispatcher.execute(() -> apply(requestId, event)))) {
                     apply(requestId, new AgentEvent.Failed(
@@ -841,7 +1130,7 @@ public final class GuideService implements GuideHistoryAdministration {
         boolean accepted;
         try {
             accepted = remote.askWithContext(
-                    requestId, sessionId, question, seed.messages(),
+                    requestId, sessionId, userInput(requestId), images(requestId), seed.messages(),
                     event -> dispatcher.execute(() -> apply(requestId, event)));
         } catch (RuntimeException malformed) {
             accepted = false;
@@ -913,7 +1202,8 @@ public final class GuideService implements GuideHistoryAdministration {
                             actor,
                             sessionId,
                             requestId,
-                            question,
+                            userInput(requestId),
+                            images(requestId),
                             context,
                             event -> dispatcher.execute(() -> apply(requestId, event)))
                     .whenComplete((ignored, throwable) -> dispatcher.execute(() -> {
@@ -1123,7 +1413,9 @@ public final class GuideService implements GuideHistoryAdministration {
                 clock.instant(),
                 currentSelection,
                 profiles,
-                remote.contextSpec());
+                remote.contextSpec(),
+                remote.imageInputCapability(),
+                remote.imageInputCapabilitySource());
     }
 
     private void startHistoryLoad() {

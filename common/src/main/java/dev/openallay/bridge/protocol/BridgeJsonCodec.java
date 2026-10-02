@@ -4,6 +4,11 @@ import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.google.gson.Strictness;
+import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonToken;
+import java.io.IOException;
+import java.io.StringReader;
 import java.util.Map;
 import java.util.Set;
 
@@ -12,7 +17,8 @@ public final class BridgeJsonCodec {
             Map.entry(CapabilityPayload.class, Set.of(
                     "remoteTools", "serverModel",
                     "serverContextWindowTokens", "serverMaxOutputTokens",
-                    "serverPromptAndToolTokens", "serverCanonicalModelId")),
+                    "serverPromptAndToolTokens", "serverCanonicalModelId",
+                    "serverImageInputCapability", "serverImageInputCapabilitySource")),
             Map.entry(RemoteToolCallPayload.class,
                     Set.of("correlationId", "sessionId", "toolId", "argumentsJson")),
             Map.entry(RemoteToolResultChunkPayload.class,
@@ -22,7 +28,8 @@ public final class BridgeJsonCodec {
             Map.entry(ServerAgentRequestPayload.class,
                     Set.of(
                             "requestId", "sessionId", "question", "stream",
-                            "history", "clientToolIds", "skillDocuments")),
+                            "history", "clientToolIds", "skillDocuments",
+                            "userInput", "imageAttachments")),
             Map.entry(ClientToolCallPayload.class,
                     Set.of(
                             "requestId", "invocationId", "sessionId", "toolId",
@@ -65,6 +72,12 @@ public final class BridgeJsonCodec {
         if (expected == null) {
             throw new IllegalArgumentException("Unsupported bridge payload " + type.getName());
         }
+        if (type == ServerAgentRequestChunkPayload.class) {
+            requireEncodedEnvelope(json, BridgeProtocol.MAX_REQUEST_CHUNK_JSON_BYTES);
+        } else if (type == ServerAgentRequestPayload.class) {
+            requireEncodedEnvelope(json, BridgeProtocol.MAX_OPENAI_REQUEST_BYTES);
+        }
+        rejectDuplicateFields(json);
         JsonElement parsed = JsonParser.parseString(json);
         if (!parsed.isJsonObject()) {
             throw new IllegalArgumentException("Bridge payload must be a JSON object");
@@ -78,40 +91,40 @@ public final class BridgeJsonCodec {
             throw new IllegalArgumentException(
                     "Bridge payload schema mismatch; missing=" + missing + ", extra=" + extra);
         }
+        if (type == ServerAgentRequestChunkPayload.class) {
+            requireText(object.get("requestId"));
+            requireInteger(object.get("index"));
+            requireInteger(object.get("total"));
+            requireText(object.get("contentHash"));
+            requireText(object.get("base64Data"));
+        }
+        if (type == CapabilityPayload.class) {
+            requireText(object.get("serverImageInputCapability"));
+            if (!Set.of("SUPPORTED", "UNSUPPORTED", "UNKNOWN").contains(
+                    object.get("serverImageInputCapability").getAsString())) {
+                throw new IllegalArgumentException("Unknown server image input capability");
+            }
+            requireText(object.get("serverImageInputCapabilitySource"));
+        }
         if (type == ServerAgentRequestPayload.class) {
+            requireText(object.get("requestId"));
+            requireText(object.get("sessionId"));
+            requireText(object.get("question"));
+            requireBoolean(object.get("stream"));
             JsonElement history = object.get("history");
             if (history == null || !history.isJsonArray()) {
                 throw new IllegalArgumentException("Server Agent history must be an array");
             }
-            for (JsonElement item : history.getAsJsonArray()) {
-                if (!item.isJsonObject()
-                        || !item.getAsJsonObject().keySet().equals(Set.of("role", "content"))) {
-                    throw new IllegalArgumentException("Server Agent history schema mismatch");
-                }
-                JsonElement content = item.getAsJsonObject().get("content");
-                if (content == null || !content.isJsonArray()) {
-                    throw new IllegalArgumentException("Server Agent history content must be an array");
-                }
-                for (JsonElement block : content.getAsJsonArray()) {
-                    if (!block.isJsonObject()) {
-                        throw new IllegalArgumentException(
-                                "Server Agent history content schema mismatch");
-                    }
-                    JsonObject contentObject = block.getAsJsonObject();
-                    JsonElement kind = contentObject.get("kind");
-                    Set<String> contentFields = kind == null ? Set.of() : switch (kind.getAsString()) {
-                        case "TEXT" -> Set.of("kind", "text");
-                        case "TOOL_USE" -> Set.of(
-                                "kind", "toolUseId", "toolName", "json");
-                        case "TOOL_RESULT" -> Set.of(
-                                "kind", "toolUseId", "json", "error");
-                        default -> Set.of();
-                    };
-                    if (!contentObject.keySet().equals(contentFields)) {
-                        throw new IllegalArgumentException(
-                                "Server Agent history content schema mismatch");
-                    }
-                }
+            for (JsonElement item : history.getAsJsonArray()) validateHistoryMessage(item);
+            validateHistoryMessage(object.get("userInput"));
+            JsonElement attachments = object.get("imageAttachments");
+            if (attachments == null || !attachments.isJsonArray()) {
+                throw new IllegalArgumentException("Server Agent image attachments must be an array");
+            }
+            for (JsonElement item : attachments.getAsJsonArray()) {
+                JsonObject attachment = exactObject(item, Set.of("reference", "base64Data"));
+                validateImageReference(attachment.get("reference"));
+                requireText(attachment.get("base64Data"));
             }
             JsonElement clientToolIds = object.get("clientToolIds");
             if (clientToolIds == null || !clientToolIds.isJsonArray()) {
@@ -137,6 +150,110 @@ public final class BridgeJsonCodec {
             // Gson wraps record-constructor validation failures. Keep the public wire boundary's
             // malformed-payload contract stable without exposing reflected constructor arguments.
             throw new IllegalArgumentException("Bridge payload values do not match the current shape", malformed);
+        }
+    }
+
+    private static void requireEncodedEnvelope(String json, int maximumBytes) {
+        java.util.Objects.requireNonNull(json, "json");
+        if (json.length() > maximumBytes) throw new IllegalArgumentException("Bridge request envelope is too large");
+        long bytes = 0;
+        for (int index = 0; index < json.length(); index++) {
+            char value = json.charAt(index);
+            if (value <= 0x7f) bytes++;
+            else if (value <= 0x7ff) bytes += 2;
+            else if (Character.isHighSurrogate(value) && index + 1 < json.length()
+                    && Character.isLowSurrogate(json.charAt(index + 1))) {
+                bytes += 4;
+                index++;
+            } else bytes += Character.isSurrogate(value) ? 1 : 3;
+            if (bytes > maximumBytes) throw new IllegalArgumentException("Bridge request envelope is too large");
+        }
+    }
+
+    /** Gson tokenizes JSON; this scan only rejects repeated object field names before tree decoding. */
+    public static void rejectDuplicateFields(String json) {
+        try (JsonReader reader = new JsonReader(new StringReader(json))) {
+            reader.setStrictness(Strictness.STRICT);
+            java.util.ArrayDeque<Set<String>> objects = new java.util.ArrayDeque<>();
+            do {
+                switch (reader.peek()) {
+                    case BEGIN_OBJECT -> { reader.beginObject(); objects.push(new java.util.HashSet<>()); }
+                    case BEGIN_ARRAY -> { reader.beginArray(); objects.push(Set.of()); }
+                    case NAME -> {
+                        if (!objects.peek().add(reader.nextName())) {
+                            throw new IllegalArgumentException("Duplicate bridge JSON field");
+                        }
+                    }
+                    case END_OBJECT -> { reader.endObject(); objects.pop(); }
+                    case END_ARRAY -> { reader.endArray(); objects.pop(); }
+                    default -> reader.skipValue();
+                }
+            } while (!objects.isEmpty());
+            if (reader.peek() != JsonToken.END_DOCUMENT) throw new IllegalArgumentException("Trailing bridge JSON");
+        } catch (IOException malformed) {
+            throw new IllegalArgumentException("Malformed bridge JSON", malformed);
+        }
+    }
+
+    /** Shared by every current typed history wire boundary. No paths, URLs or encoded bytes. */
+    public static void validateHistoryMessage(JsonElement item) {
+        JsonObject message = exactObject(item, Set.of("role", "content"));
+        requireText(message.get("role"));
+        if (!Set.of("USER", "ASSISTANT").contains(message.get("role").getAsString())) {
+            throw new IllegalArgumentException("Unknown Server Agent history role");
+        }
+        JsonElement content = message.get("content");
+        if (content == null || !content.isJsonArray()) {
+            throw new IllegalArgumentException("Server Agent history content must be an array");
+        }
+        for (JsonElement block : content.getAsJsonArray()) {
+            if (!block.isJsonObject()) {
+                throw new IllegalArgumentException("Server Agent history content schema mismatch");
+            }
+            JsonObject value = block.getAsJsonObject();
+            requireText(value.get("kind"));
+            Set<String> fields = switch (value.get("kind").getAsString()) {
+                case "TEXT" -> Set.of("kind", "text");
+                case "IMAGE" -> Set.of("kind", "image");
+                case "TOOL_USE" -> Set.of("kind", "toolUseId", "toolName", "json");
+                case "TOOL_RESULT" -> Set.of("kind", "toolUseId", "json", "error");
+                default -> throw new IllegalArgumentException("Unknown Server Agent history content kind");
+            };
+            exactObject(value, fields);
+            for (String field : fields) {
+                switch (field) {
+                    case "image" -> validateImageReference(value.get(field));
+                    case "error" -> requireBoolean(value.get(field));
+                    default -> requireText(value.get(field));
+                }
+            }
+        }
+    }
+
+    public static void validateImageReference(JsonElement element) {
+        JsonObject image = exactObject(element, Set.of("sha256", "mimeType", "width", "height", "byteSize"));
+        requireText(image.get("sha256"));
+        requireText(image.get("mimeType"));
+        requireInteger(image.get("width"));
+        requireInteger(image.get("height"));
+        requireLong(image.get("byteSize"));
+    }
+
+    private static void requireBoolean(JsonElement value) {
+        if (value == null || !value.isJsonPrimitive() || !value.getAsJsonPrimitive().isBoolean()) {
+            throw new IllegalArgumentException("Bridge metadata field must be boolean");
+        }
+    }
+
+    private static void requireLong(JsonElement value) {
+        if (value == null || !value.isJsonPrimitive() || !value.getAsJsonPrimitive().isNumber()
+                || !value.getAsString().matches("[0-9]+")) {
+            throw new IllegalArgumentException("Bridge metadata field must be a nonnegative integer");
+        }
+        try {
+            Long.parseLong(value.getAsString());
+        } catch (NumberFormatException invalid) {
+            throw new IllegalArgumentException("Bridge metadata integer is out of range", invalid);
         }
     }
 
@@ -174,19 +291,19 @@ public final class BridgeJsonCodec {
     private static JsonObject exactObject(JsonElement element, Set<String> fields) {
         if (element == null || !element.isJsonObject()
                 || !element.getAsJsonObject().keySet().equals(fields)) {
-            throw new IllegalArgumentException("Skill catalog metadata schema mismatch");
+            throw new IllegalArgumentException("Bridge metadata schema mismatch");
         }
         return element.getAsJsonObject();
     }
 
     private static void requireText(JsonElement value) {
-        if (!value.isJsonPrimitive() || !value.getAsJsonPrimitive().isString()) {
+        if (value == null || !value.isJsonPrimitive() || !value.getAsJsonPrimitive().isString()) {
             throw new IllegalArgumentException("Skill catalog metadata field must be text");
         }
     }
 
     private static void requireInteger(JsonElement value) {
-        if (!value.isJsonPrimitive() || !value.getAsJsonPrimitive().isNumber()
+        if (value == null || !value.isJsonPrimitive() || !value.getAsJsonPrimitive().isNumber()
                 || !value.getAsString().matches("[0-9]+")) {
             throw new IllegalArgumentException("Skill catalog metadata field must be a nonnegative integer");
         }

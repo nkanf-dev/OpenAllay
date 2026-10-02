@@ -36,13 +36,20 @@ public final class OpenAiChatClient implements ModelClient {
             ModelRequest request,
             Consumer<ModelEvent> events,
             CancellationSignal cancellation) {
-        HttpExchangeRequest httpRequest = HttpExchangeRequest.newBuilder(
-                        config.baseUri().resolve("chat/completions"))
-                .timeout(config.requestTimeout())
-                .header("authorization", "Bearer " + config.apiKey().reveal())
-                .header("content-type", "application/json")
-                .postJson(codec.requestBody(config, request))
-                .build();
+        HttpExchangeRequest httpRequest;
+        try {
+            httpRequest = HttpExchangeRequest.newBuilder(
+                            config.baseUri().resolve("chat/completions"))
+                    .timeout(config.requestTimeout())
+                    .header("authorization", "Bearer " + config.apiKey().reveal())
+                    .header("content-type", "application/json")
+                    .postJson(codec.requestBody(config, request))
+                    .build();
+        } catch (RuntimeException failure) {
+            // Missing/unauthorized assets and invalid payloads must finish the
+            // agent request through its future, not throw before pending state is cleared.
+            return CompletableFuture.failedFuture(failure);
+        }
         return transport.execute(httpRequest, cancellation, events, (status, headers, body, safeEvents) -> {
             ModelHttpErrors.requireSuccess(status, headers, body);
             return request.stream()

@@ -111,7 +111,7 @@ final class ServerAgentServiceTest {
         AgentSessionStore sessions = new AgentSessionStore();
         AgentToolExecutor tools = new EmptyTools();
         List<ServerAgentEventPayload> events = new java.util.concurrent.CopyOnWriteArrayList<>();
-        java.util.concurrent.CountDownLatch released = new java.util.concurrent.CountDownLatch(3);
+        java.util.concurrent.CountDownLatch released = new java.util.concurrent.CountDownLatch(2);
         ServerAgentService service = new ServerAgentService(
                 new GameGuideAgent(model, tools, sessions, new Gson()),
                 tools,
@@ -130,7 +130,14 @@ final class ServerAgentServiceTest {
         UUID otherId = UUID.randomUUID();
 
         assertInstanceOf(ToolResult.Success.class, service.ask(actor, request(firstId, "main")));
-        assertInstanceOf(ToolResult.Success.class, service.ask(actor, request(busyId, "main")));
+        ToolResult.Failure<?> busy = assertInstanceOf(ToolResult.Failure.class,
+                service.ask(actor, request(busyId, "main")));
+        assertEquals("agent_busy", busy.code(), "admission rejects the busy session before capture or dispatch");
+        assertEquals(1, model.pending.size(), "a rejected request must not reach the model");
+        assertEquals(0, events.stream().filter(event -> event.requestId().equals(busyId)).count(),
+                "the rejected request has no admitted owner or provider-attempt receipts");
+        org.junit.jupiter.api.Assertions.assertFalse(service.hasRequest(actor, busyId),
+                "a direct admission failure must not reserve the rejected request nonce");
         assertInstanceOf(ToolResult.Success.class, service.ask(actor, request(otherId, "other")));
         assertEquals(2, model.pending.size());
         assertEquals(2, service.activeRequests());
@@ -140,15 +147,23 @@ final class ServerAgentServiceTest {
         org.junit.jupiter.api.Assertions.assertTrue(released.await(5, java.util.concurrent.TimeUnit.SECONDS),
                 "Each accepted request must release after actual cleanup and numeric receipts");
         assertEquals(0, service.activeRequests());
-        assertEquals(Set.of(firstId, busyId, otherId), events.stream()
+        assertEquals(Set.of(firstId, otherId), events.stream()
                 .filter(event -> event.eventType().equals("request_released"))
                 .map(ServerAgentEventPayload::requestId).collect(java.util.stream.Collectors.toSet()));
-        assertEquals(3, events.stream().filter(event -> event.eventType().equals("request_released")).count());
+        assertEquals(2, events.stream().filter(event -> event.eventType().equals("request_released")).count());
         assertEquals(2, events.stream().filter(event -> event.eventType().equals("model_usage_observed")).count());
         assertEquals(0, events.stream().filter(event -> event.requestId().equals(busyId)
                 && event.eventType().equals("model_usage_started")).count());
-        assertEquals(3, events.stream().filter(ServerAgentEventPayload::terminal).count());
-        assertEquals(1, events.stream().filter(event -> event.eventJson().contains("agent_busy")).count());
+        assertEquals(2, events.stream().filter(ServerAgentEventPayload::terminal).count());
+        assertEquals(0, events.stream().filter(event -> event.eventJson().contains("agent_busy")).count(),
+                "synchronous admission failure is returned once, not emitted for a nonexistent owner");
+        for (UUID accepted : Set.of(firstId, otherId)) {
+            List<ServerAgentEventPayload> owned = events.stream()
+                    .filter(event -> event.requestId().equals(accepted)).toList();
+            assertEquals("request_released", owned.getLast().eventType());
+            assertEquals(1, owned.stream().filter(event -> event.eventType().equals("model_usage_started")).count());
+            assertEquals(1, owned.stream().filter(event -> event.eventType().equals("model_usage_observed")).count());
+        }
     }
 
     @Test

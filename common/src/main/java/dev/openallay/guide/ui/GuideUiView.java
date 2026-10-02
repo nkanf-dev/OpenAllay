@@ -42,6 +42,10 @@ public record GuideUiView(
                 .findFirst().orElseThrow();
     }
 
+    public dev.openallay.model.image.ImageInputCapability selectedImageInputCapability() {
+        return selectedModel().imageInput();
+    }
+
     public GuideUiModelChoice runningModel() {
         return modelChoices.stream().filter(GuideUiModelChoice::running)
                 .findFirst().orElseGet(this::selectedModel);
@@ -202,7 +206,14 @@ public record GuideUiView(
                 seed.editable(),
                 seed.available(),
                 seed.selection().equals(snapshot.modelSelection()),
-                seed.selection().equals(running))).toList();
+                seed.selection().equals(running),
+                snapshot.imageInputCapability(seed.selection()),
+                seed.selection().kind() == GuideModelSelection.Kind.SERVER
+                        ? snapshot.serverImageInputSource()
+                        : snapshot.clientProfiles().stream()
+                                .filter(profile -> profile.id().equals(seed.selection().profileId()))
+                                .map(GuideClientModelProfile::imageInputSource)
+                                .filter(java.util.Objects::nonNull).findFirst().orElse(null))).toList();
     }
 
     private static void ensureClientChoice(

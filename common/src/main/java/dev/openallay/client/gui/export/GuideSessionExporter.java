@@ -2,6 +2,7 @@ package dev.openallay.client.gui.export;
 
 import dev.openallay.guide.export.GuideSessionExportSnapshot;
 import dev.openallay.model.ModelContent;
+import dev.openallay.model.image.ImageReference;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
@@ -24,7 +25,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-/** Writes player-requested conversation text under one fixed game-directory child. */
+/** Writes player-requested conversation text and permanent images under one fixed child. */
 public final class GuideSessionExporter {
     private static final DateTimeFormatter FILE_TIME = DateTimeFormatter
             .ofPattern("uuuuMMdd-HHmmss-SSS", Locale.ROOT)
@@ -47,49 +48,111 @@ public final class GuideSessionExporter {
 
     public ExportedFile export(GuideSessionExportSnapshot snapshot) {
         Objects.requireNonNull(snapshot, "snapshot");
-        String content = format(snapshot);
-        byte[] encoded = content.getBytes(StandardCharsets.UTF_8);
-        String hash = digest(encoded).substring(0, 12);
-        String filename = snapshot.sessionId() + "-"
-                + FILE_TIME.format(snapshot.capturedAt()) + "-" + hash + ".txt";
-        Path temporary = null;
         try {
+            // Resolve and verify every unique asset before creating any export files.
+            // A missing scoped resolver is an explicit export failure, never a text-only fallback.
+            Map<String, ImageReference> assets = preflightAssets(snapshot);
+            byte[] encoded = format(snapshot).getBytes(StandardCharsets.UTF_8);
+            String filename = snapshot.sessionId() + "-"
+                    + FILE_TIME.format(snapshot.capturedAt()) + "-"
+                    + digest(encoded).substring(0, 12) + ".txt";
             Path root = prepareManagedRoot();
-            Path destination = root.resolve(filename).normalize();
-            if (!destination.getParent().equals(root)) {
-                throw new IOException("export destination escaped the managed directory");
+            if (!assets.isEmpty()) {
+                Path images = root.resolve("images");
+                rejectSymlink(images);
+                Files.createDirectories(images);
+                rejectSymlink(images);
+                if (!images.toRealPath().getParent().equals(root)) {
+                    throw new IOException("export image directory escaped the managed directory");
+                }
+                for (ImageReference reference : assets.values()) {
+                    // Keep memory bounded to one managed image. Re-read under the snapshot
+                    // lease after the all-assets preflight and verify again before publication.
+                    publishAtomic(images, imageFilename(reference), readVerified(snapshot, reference));
+                }
             }
-            temporary = Files.createTempFile(root, ".openallay-export-", ".tmp");
-            restrictPermissions(temporary);
-            try (FileChannel channel = FileChannel.open(
-                    temporary,
-                    StandardOpenOption.WRITE,
-                    StandardOpenOption.TRUNCATE_EXISTING)) {
-                ByteBuffer buffer = ByteBuffer.wrap(encoded);
-                while (buffer.hasRemaining()) channel.write(buffer);
-                channel.force(true);
-            }
-            try {
-                Files.move(
-                        temporary,
-                        destination,
-                        StandardCopyOption.ATOMIC_MOVE,
-                        StandardCopyOption.REPLACE_EXISTING);
-            } catch (AtomicMoveNotSupportedException unsupported) {
-                throw new IOException("atomic export publication is unavailable", unsupported);
-            }
-            temporary = null;
+            // The text is the publication marker. All linked images already exist permanently.
+            // An IO failure may leave verified images, but never a text file with missing assets.
+            publishAtomic(root, filename, encoded);
             return new ExportedFile(filename, snapshot.requests().size());
         } catch (IOException | RuntimeException failure) {
             throw new GuideSessionExportException(
                     "history_export_failed", "Unable to write the guide session export", failure);
         } finally {
-            if (temporary != null) {
-                try {
-                    Files.deleteIfExists(temporary);
-                } catch (IOException ignored) {
-                    // The final file was never published; best-effort cleanup is sufficient.
+            try {
+                snapshot.close();
+            } catch (Exception conservativeRetention) {
+                // Lease release failure can leave a managed pin, but must not turn an already
+                // published permanent export into a failed operation. The owner handles retry.
+            }
+        }
+    }
+
+    private static Map<String, ImageReference> preflightAssets(GuideSessionExportSnapshot snapshot)
+            throws IOException {
+        Map<String, ImageReference> references = new LinkedHashMap<>();
+        for (var request : snapshot.requests()) {
+            for (var message : request.originalContext()) {
+                for (var content : message.content()) {
+                    if (content instanceof ModelContent.Image image) {
+                        ImageReference reference = image.reference();
+                        ImageReference existing = references.putIfAbsent(reference.sha256(), reference);
+                        if (existing != null && !existing.equals(reference)) {
+                            throw new IOException("export image metadata disagrees for one content hash");
+                        }
+                    }
                 }
+            }
+        }
+        for (ImageReference reference : references.values()) readVerified(snapshot, reference);
+        return references;
+    }
+
+    private static byte[] readVerified(
+            GuideSessionExportSnapshot snapshot, ImageReference reference) throws IOException {
+        byte[] bytes = Objects.requireNonNull(
+                snapshot.imagePayloadResolver().read(reference), "resolved image bytes").clone();
+        if (bytes.length != reference.byteSize() || !digest(bytes).equals(reference.sha256())) {
+            throw new IOException("export image payload does not match its managed reference");
+        }
+        // The scoped resolver verifies the MIME type, dimensions and complete image decode.
+        return bytes;
+    }
+
+    private static String imageFilename(ImageReference reference) {
+        return reference.sha256() + (reference.mimeType().equals("image/png") ? ".png" : ".jpg");
+    }
+
+    private static void publishAtomic(Path root, String filename, byte[] encoded) throws IOException {
+        Path destination = root.resolve(filename).normalize();
+        if (!destination.getParent().equals(root)) {
+            throw new IOException("export destination escaped the managed directory");
+        }
+        rejectSymlink(root);
+        rejectSymlink(destination);
+        Path temporary = Files.createTempFile(root, ".openallay-export-", ".tmp");
+        try {
+            restrictPermissions(temporary);
+            try (FileChannel channel = FileChannel.open(temporary,
+                    StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING,
+                    LinkOption.NOFOLLOW_LINKS)) {
+                ByteBuffer buffer = ByteBuffer.wrap(encoded);
+                while (buffer.hasRemaining()) channel.write(buffer);
+                channel.force(true);
+            }
+            rejectSymlink(root);
+            rejectSymlink(destination);
+            try {
+                Files.move(temporary, destination, StandardCopyOption.ATOMIC_MOVE,
+                        StandardCopyOption.REPLACE_EXISTING);
+            } catch (AtomicMoveNotSupportedException unsupported) {
+                throw new IOException("atomic export publication is unavailable", unsupported);
+            }
+        } finally {
+            try {
+                Files.deleteIfExists(temporary);
+            } catch (IOException ignored) {
+                // Best-effort cleanup must not report a false failure after atomic publication.
             }
         }
     }
@@ -126,6 +189,17 @@ public final class GuideSessionExporter {
                                 }
                                 result.append(message.role()).append('\n')
                                         .append(formatText(text.text())).append("\n\n");
+                            }
+                            case ModelContent.Image image -> {
+                                ImageReference reference = image.reference();
+                                result.append(message.role()).append(" · IMAGE\n")
+                                        .append("MIME: ").append(reference.mimeType())
+                                        .append("\nDimensions: ").append(reference.width()).append('x')
+                                        .append(reference.height())
+                                        .append("\nBytes: ").append(reference.byteSize())
+                                        .append("\nSHA-256: ").append(reference.sha256())
+                                        .append("\nFile: images/").append(imageFilename(reference))
+                                        .append("\n\n");
                             }
                             case ModelContent.ToolUse call -> {
                                 tools.put(call.id(), call.name());
