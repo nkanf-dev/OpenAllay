@@ -2,7 +2,9 @@ package dev.openallay.client.gui.hud;
 
 import dev.openallay.client.gui.GuideClientUiState;
 import dev.openallay.client.gui.OpenAllayButton;
+import dev.openallay.client.gui.OpenAllayKeyMappings;
 import dev.openallay.client.gui.OpenAllayWidgetTheme;
+import dev.openallay.client.voice.VoiceRuntime;
 import dev.openallay.guide.GuideService;
 import dev.openallay.guide.GuideSnapshot;
 import dev.openallay.guide.composer.SlashCommandDispatcher;
@@ -17,6 +19,7 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.MultiLineEditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 import org.lwjgl.glfw.GLFW;
@@ -27,11 +30,13 @@ public final class GuideChatLiteScreen extends Screen {
     private final GuideClientUiState state;
     private final GuideDisplayRuntime display;
     private final Runnable openFullscreen;
+    private final VoiceRuntime voice;
     private final GuideHudPresenter presenter = new GuideHudPresenter();
     private GuideClientUiState.ViewAttachment attachment;
     private MultiLineEditBox composer;
     private Button send;
     private Button stop;
+    private Button mic;
     private Button intentAction;
     private GuideSnapshot projectedSnapshot;
     private GuideHudView view;
@@ -39,15 +44,18 @@ public final class GuideChatLiteScreen extends Screen {
     private String session;
     private String notice = "";
     private boolean submitting;
+    private boolean micHeld;
+    private boolean pttHeld;
     private Card card;
 
     public GuideChatLiteScreen(GuideService service, GuideClientUiState state,
-            GuideDisplayRuntime display, Runnable openFullscreen) {
+            GuideDisplayRuntime display, Runnable openFullscreen, VoiceRuntime voice) {
         super(Component.translatable("screen.openallay.hud.interact"));
         this.service = Objects.requireNonNull(service, "service");
         this.state = Objects.requireNonNull(state, "state");
         this.display = Objects.requireNonNull(display, "display");
         this.openFullscreen = Objects.requireNonNull(openFullscreen, "openFullscreen");
+        this.voice = voice;
         session = service.snapshot().selectedSession();
         view = presenter.project(service.snapshot(), display.config());
     }
@@ -69,7 +77,7 @@ public final class GuideChatLiteScreen extends Screen {
         composer.setValue(state.readText(session), true);
         composer.setValueListener(value -> state.setText(session, value));
         int actionY = card.y() + card.height() - 30;
-        int actionWidth = Math.max(1, (inner - 8) / 3);
+        int actionWidth = Math.max(1, (inner - 12) / (voice != null && voice.enabled() ? 4 : 3));
         intentAction = addRenderableWidget(OpenAllayButton.create(Component.empty(), button -> {
             GuideClientUiState.DraftIntent intent = state.intent(session);
             if (intent.editing()) state.resetIntent(session); // Explicit conversion never deletes text/images.
@@ -85,6 +93,9 @@ public final class GuideChatLiteScreen extends Screen {
                 .bounds(card.x() + 12 + actionWidth, actionY, actionWidth, 20).build());
         addRenderableWidget(OpenAllayButton.create(Component.translatable("screen.openallay.hud.fullscreen"), button -> openFullscreen.run())
                 .bounds(card.x() + 16 + actionWidth * 2, actionY, actionWidth, 20).build());
+        if (voice != null && voice.enabled()) mic = addRenderableWidget(OpenAllayButton.create(
+                Component.translatable("screen.openallay.voice.mic"), button -> { micHeld = true; voice.press(); })
+                .bounds(card.x() + 20 + actionWidth * 3, actionY, actionWidth, 20).build());
         setFocused(null);
         project();
     }
@@ -223,7 +234,23 @@ public final class GuideChatLiteScreen extends Screen {
         if (composer != null && composer.isFocused() && event.key() == GLFW.GLFW_KEY_ENTER && !event.hasShiftDown()) {
             submit(); return true;
         }
+        if (voice != null && voice.enabled() && (composer == null || !composer.isFocused())
+                && !OpenAllayKeyMappings.VOICE_PTT.isUnbound() && OpenAllayKeyMappings.VOICE_PTT.matches(event)) {
+            pttHeld = true;
+            voice.press(); // Screen physical mappings are released natively; own release below.
+            return true;
+        }
         return super.keyPressed(event);
+    }
+
+    @Override public boolean keyReleased(KeyEvent event) {
+        if (pttHeld && OpenAllayKeyMappings.VOICE_PTT.matches(event)) { pttHeld = false; voice.release(); return true; }
+        if (micHeld) { micHeld = false; voice.release(); }
+        return super.keyReleased(event);
+    }
+    @Override public boolean mouseReleased(MouseButtonEvent event) {
+        if (micHeld) { micHeld = false; voice.release(); }
+        return super.mouseReleased(event);
     }
 
     @Override public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
@@ -247,11 +274,15 @@ public final class GuideChatLiteScreen extends Screen {
         graphics.text(font, font.plainSubstrByWidth(message, card.width() - 16), card.x() + 8, card.y() + card.height() - 88,
                 notice.isBlank() ? OpenAllayWidgetTheme.MUTED : OpenAllayWidgetTheme.AMBER);
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
+        GuideVoiceIndicator.extract(graphics, minecraft, voice);
     }
 
     @Override public void removed() {
         if (attachment != null) attachment.close();
         attachment = null;
+        if (voice != null && (micHeld || pttHeld || voice.status().active())) voice.cancel(VoiceRuntime.CancelReason.SCREEN_CLOSED);
+        micHeld = false;
+        pttHeld = false;
         presenter.clear();
     }
 

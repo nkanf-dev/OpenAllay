@@ -54,6 +54,7 @@ final class OpenAllaySettingsScreenProjectionTest {
         assertFalse(projection.toString().contains("ALPHA_KEY"));
         assertFalse(projection.toString().contains("secret-value"));
         assertTrue(projection.sections().contains(SettingsSection.UI));
+        assertTrue(projection.sections().contains(SettingsSection.VOICE));
         assertFalse(projection.ui().config().hud().enabled());
         assertFalse(projection.ui().config().notifications().enabled());
         assertTrue(projection.sections().contains(SettingsSection.EXTENSIONS));

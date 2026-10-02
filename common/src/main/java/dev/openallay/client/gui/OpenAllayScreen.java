@@ -103,6 +103,9 @@ public final class OpenAllayScreen extends Screen {
     private final GuideClientUiState uiState;
     private GuideClientUiState.ViewAttachment attachment;
     private AutoCloseable draftSubscription;
+    private dev.openallay.client.voice.VoiceInputActions voice;
+    private Button microphone;
+    private boolean voiceKeyHeld;
     private dev.openallay.client.presentation.GuideNotificationController notifications;
     private boolean railVisible;
     private boolean overflowOpen;
@@ -255,6 +258,11 @@ public final class OpenAllayScreen extends Screen {
         railVisible = projectedDisplay.ui().fullscreen().sessionRailVisible();
     }
 
+    public OpenAllayScreen withVoice(dev.openallay.client.voice.VoiceInputActions voice) {
+        this.voice = voice;
+        return this;
+    }
+
     public OpenAllayScreen withNotifications(dev.openallay.client.presentation.GuideNotificationController notifications) {
         this.notifications = notifications;
         return this;
@@ -316,6 +324,17 @@ public final class OpenAllayScreen extends Screen {
                 .bounds(controls.stop().x(), controls.stop().y(), controls.stop().width(), 20).build());
         if (stop != null) stop.setTooltip(Tooltip.create(Component.translatable("screen.openallay.action.stop.description")));
         retry = null; // Retry belongs to its factual failed request row.
+        microphone = null;
+        if (voice != null && voice.enabled()) {
+            GuideUiLayout.Rect action = controls.send();
+            int micY = action.y() + (stop == null ? 24 : 44);
+            if (micY + 18 <= layout.composer().bottom()) {
+                microphone = addRenderableWidget(OpenAllayButton.create(
+                                Component.translatable("screen.openallay.voice.mic_short"), button -> microphoneAction())
+                        .bounds(action.x(), micY, action.width(), 18)
+                        .tooltip(Tooltip.create(Component.translatable("screen.openallay.voice.mic"))).build());
+            }
+        }
         updateVirtualRows(Math.max(40, layout.transcript().width() - 18));
         scroll = followBottom
                 ? virtualizer.maximumScroll(transcriptViewportHeight())
@@ -372,6 +391,8 @@ public final class OpenAllayScreen extends Screen {
             draftSubscription = null;
         }
         if (notifications != null) notifications.clearVisibility(service);
+        voiceKeyHeld = false;
+        if (voice != null) voice.cancel(dev.openallay.client.voice.VoiceRuntime.CancelReason.SCREEN_CLOSED);
         releaseComposerTextures();
         submittingDraft = false;
     }
@@ -404,6 +425,15 @@ public final class OpenAllayScreen extends Screen {
 
     @Override
     public boolean keyPressed(KeyEvent event) {
+        if (voice != null && voice.enabled()
+                && voiceKeyAllowed(getFocused() == composer, sessionOverlay || overflowOpen || modelSelectorOpen)
+                && OpenAllayKeyMappings.VOICE_PTT.matches(event)) {
+            if (!voiceKeyHeld) {
+                voiceKeyHeld = true;
+                voice.press(); // Screen keys are not gameplay KeyMapping.isDown() PTT ownership.
+            }
+            return true;
+        }
         if (overflowOpen && event.key() == GLFW.GLFW_KEY_ESCAPE) { overflowOpen = false; return true; }
         if (sessionOverlay && event.key() == GLFW.GLFW_KEY_ESCAPE) { sessionOverlay = false; return true; }
         if (sessionOverlay && scrollSessionsKey(event.key())) return true;
@@ -485,6 +515,29 @@ public final class OpenAllayScreen extends Screen {
             }
         }
         return super.keyPressed(event);
+    }
+
+    @Override
+    public boolean keyReleased(KeyEvent event) {
+        if (voice != null && voiceKeyHeld && OpenAllayKeyMappings.VOICE_PTT.matches(event)) {
+            voiceKeyHeld = false;
+            voice.release();
+            return true;
+        }
+        return super.keyReleased(event);
+    }
+
+    static boolean voiceKeyAllowed(boolean composerFocused, boolean modalOpen) {
+        return !composerFocused && !modalOpen;
+    }
+
+    static void activateVoice(dev.openallay.client.voice.VoiceInputActions actions) {
+        if (actions == null || !actions.enabled()) return;
+        switch (actions.status().state()) {
+            case STARTING, RECORDING -> actions.release();
+            case TRANSCRIBING -> actions.cancel(dev.openallay.client.voice.VoiceRuntime.CancelReason.USER);
+            default -> actions.press();
+        }
     }
 
     static boolean closesDetailFirst(boolean detailOpen, boolean escape) {
@@ -802,11 +855,39 @@ public final class OpenAllayScreen extends Screen {
             hits.add(new Hit(row, HitKind.MENU, () -> { overflowOpen = false; action.run(); }, "menu:" + index, label.getString()));
         }
     }
+    private void microphoneAction() {
+        activateVoice(voice);
+    }
+
+    private Component voiceFeedback() {
+        var feedback = dev.openallay.client.voice.VoiceStatusPresentation.describe(voice.status());
+        MutableComponent text = Component.translatable(feedback.translationKey()).copy();
+        if (!feedback.actionTranslationKey().isBlank()) text.append(" · ").append(Component.translatable(feedback.actionTranslationKey()));
+        return text;
+    }
+
     private void renderLocalNotice(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         GuideUiLayout.Rect bounds = layout.composerNotice();
+        if (voice != null && voice.enabled() && microphone == null) {
+            int micWidth = voice.status().active() ? Math.min(70, bounds.width() / 2) : 30;
+            GuideUiLayout.Rect mic = new GuideUiLayout.Rect(bounds.right() - micWidth, bounds.y(), micWidth, bounds.height());
+            graphics.fill(mic.x(), mic.y(), mic.right(), mic.bottom(), panelAltColor());
+            Component micLabel = voice.status().active()
+                    ? Component.translatable("screen.openallay.voice.short." + voice.status().state().name().toLowerCase(java.util.Locale.ROOT), voice.status().elapsedMillis() / 1000)
+                    : Component.translatable("screen.openallay.voice.mic_short");
+            boundedHeaderText(graphics, micLabel, mic, voice.status().active() ? OpenAllayWidgetTheme.WARNING : ACCENT);
+            hits.add(new Hit(mic, HitKind.COMPOSER, this::microphoneAction, "voice:mic", Component.translatable("screen.openallay.voice.mic").getString()));
+            if (mic.contains(mouseX, mouseY)) graphics.setTooltipForNextFrame(font, voiceFeedback(), mouseX, mouseY);
+            bounds = new GuideUiLayout.Rect(bounds.x(), bounds.y(), bounds.width() - micWidth - 2, bounds.height());
+        }
         if (!notice.empty()) {
             boundedHeaderText(graphics, Component.literal(notice.message()), bounds, notice.color());
             if (bounds.contains(mouseX, mouseY)) graphics.setTooltipForNextFrame(font, Component.literal(notice.message()), mouseX, mouseY);
+        } else if (voice != null && voice.status().indicatorVisible()) {
+            Component status = voiceFeedback();
+            var feedback = dev.openallay.client.voice.VoiceStatusPresentation.describe(voice.status());
+            boundedHeaderText(graphics, status, bounds, feedback.error() ? ERROR : voice.status().active() ? OpenAllayWidgetTheme.WARNING : MUTED);
+            if (bounds.contains(mouseX, mouseY)) graphics.setTooltipForNextFrame(font, status, mouseX, mouseY);
         }
         if (draftIntent().editInvalid()) {
             GuideUiLayout.Rect reset = new GuideUiLayout.Rect(bounds.right() - Math.min(104, bounds.width()), bounds.y(), Math.min(104, bounds.width()), bounds.height());
@@ -817,6 +898,14 @@ public final class OpenAllayScreen extends Screen {
                 notice = GuideUiNotice.info("");
             }, "composer:reset-edit", Component.translatable("screen.openallay.pending.use_as_new").getString()));
             return; // The missing pending-edit target requires an explicit player action.
+        }
+        List<GuideClientUiState.PendingInsertion> pending = uiState.pendingInsertions(view.selectedSession());
+        if (!pending.isEmpty()) {
+            GuideUiLayout.Rect action = new GuideUiLayout.Rect(bounds.right() - Math.min(100, bounds.width()), bounds.y(), Math.min(100, bounds.width()), bounds.height());
+            graphics.fill(action.x(), action.y(), action.right(), action.bottom(), panelAltColor());
+            boundedHeaderText(graphics, Component.translatable("screen.openallay.voice.pending", pending.size()), action, ACCENT);
+            hits.add(new Hit(action, HitKind.COMPOSER, () -> uiState.applyPendingInsertion(pending.getFirst().id()),
+                    "voice:pending", Component.translatable("screen.openallay.voice.pending", pending.size()).getString()));
         }
     }
 
@@ -2429,7 +2518,8 @@ public final class OpenAllayScreen extends Screen {
     }
 
     private String currentComposerLayoutKey() {
-        return hasComposerImagePreviews() + ":" + composerRequestActive() + ":" + pendingMessages().size();
+        return hasComposerImagePreviews() + ":" + composerRequestActive() + ":" + pendingMessages().size()
+                + ":" + (voice != null && voice.enabled());
     }
 
     private void refreshComposerLayout() {
@@ -3000,6 +3090,12 @@ public final class OpenAllayScreen extends Screen {
         model.setTooltip(Tooltip.create(modelStatus().copy().append(" · ").append(modelLabel())));
 
         model.active = !view.modelChoices().isEmpty();
+        if (microphone != null && voice != null) {
+            microphone.setMessage(voice.status().active()
+                    ? Component.translatable("screen.openallay.voice.short." + voice.status().state().name().toLowerCase(java.util.Locale.ROOT), voice.status().elapsedMillis() / 1000)
+                    : Component.translatable("screen.openallay.voice.mic_short"));
+            microphone.setTooltip(Tooltip.create(voiceFeedback()));
+        }
     }
 
     static String retryQuestion(GuideSnapshot snapshot) {

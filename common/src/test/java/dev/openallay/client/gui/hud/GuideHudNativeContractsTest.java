@@ -60,4 +60,68 @@ class GuideHudNativeContractsTest {
         assertTrue(small.x() + small.width() <= 240);
         assertTrue(small.y() + small.height() <= 180);
     }
+    @Test void voiceKeyAndFactoryUseExplicitAdmissionAndTheCurrentDraftOwner() throws Exception {
+        String keys = source("common/src/main/java/dev/openallay/client/gui/OpenAllayKeyMappings.java");
+        assertTrue(keys.contains("VOICE_PTT = unbound(\"key.openallay.voice_ptt\")"));
+        assertTrue(keys.contains("INTERACT_HUD, VOICE_PTT"));
+        String coordinator = source("common/src/main/java/dev/openallay/client/gui/GuideClientUiCoordinator.java");
+        assertTrue(coordinator.contains("VoiceClientRuntime.create(configDirectory, new VoiceRuntime.DraftPort()"));
+        assertTrue(coordinator.contains("withVoiceActions(voice.settings())"));
+        assertTrue(coordinator.contains(".withNotifications(notifications).withVoice(voice.input())"));
+        assertTrue(coordinator.contains("state.selectSession(bound.snapshot().selectedSession())"));
+        assertTrue(coordinator.contains("state.ownerId(), state.selectedSession()"));
+        assertTrue(coordinator.contains("state.generation(), target.sessionId(), target.draftRevision()"));
+        assertTrue(coordinator.contains("state.insertTranscript(captured, text)"));
+        int factory = coordinator.indexOf("voice = VoiceClientRuntime.create(");
+        int factoryEnd = coordinator.indexOf("settingsBinding =", factory);
+        assertTrue(factory >= 0 && factoryEnd > factory);
+        String draftPort = coordinator.substring(factory, factoryEnd);
+        for (String forbidden : new String[]{".ask(", ".steer(", ".followUp(", "forActor(", "new GuideService"}) {
+            assertFalse(draftPort.contains(forbidden), forbidden);
+        }
+        assertTrue(coordinator.contains("OpenAllayKeyMappings.VOICE_PTT.isDown()"));
+        assertTrue(coordinator.contains("gameplay && physicalDown && !pttDown && feedback && voice.input().enabled()"));
+        assertTrue(coordinator.contains("voice.input().pressPtt()"));
+        assertTrue(coordinator.contains("pttDown && !physicalDown"));
+        assertTrue(coordinator.contains("voice.input().release()"));
+    }
+    @Test void voiceFeedbackVisibilityCancelsCaptureAndFencesTheDraftBeforeCleanup() throws Exception {
+        String coordinator = source("common/src/main/java/dev/openallay/client/gui/GuideClientUiCoordinator.java");
+        assertTrue(coordinator.contains("minecraft.gui.overlay() == null && !minecraft.gui.hud.isHidden()"));
+        assertTrue(coordinator.contains("activeScreen instanceof OpenAllayScreen"));
+        assertTrue(coordinator.contains("activeScreen instanceof GuideChatLiteScreen"));
+        assertTrue(coordinator.contains("setFeedbackVisible(feedback)"));
+        assertTrue(coordinator.contains("voice.input().tick(minecraft.isWindowActive()"));
+        assertTrue(coordinator.contains("physicalDown, feedback)"));
+        String closeState = coordinator.substring(coordinator.indexOf("private void closeState()"));
+        int stateClosed = closeState.indexOf("state.close()");
+        int voiceCancelled = closeState.indexOf("voice.input().cancel(");
+        assertTrue(stateClosed >= 0 && voiceCancelled > stateClosed);
+        assertTrue(voiceCancelled < closeState.indexOf("state = null"));
+        String runtime = source("common/src/main/java/dev/openallay/client/voice/VoiceRuntime.java");
+        assertTrue(runtime.contains("if (!visible && active) cancel(CancelReason.FEEDBACK_HIDDEN)"));
+        assertTrue(runtime.contains("if (!visibleFeedback) cancel = CancelReason.FEEDBACK_HIDDEN"));
+        assertTrue(runtime.contains("else if (!connected) cancel = CancelReason.DISCONNECTED"));
+        assertTrue(runtime.contains("else if (!focused) cancel = CancelReason.FOCUS_LOST"));
+        assertTrue(runtime.contains("cancel = CancelReason.KEY_LOST"));
+        String lite = source("common/src/main/java/dev/openallay/client/gui/hud/GuideChatLiteScreen.java");
+        assertTrue(lite.contains("voice.cancel(VoiceRuntime.CancelReason.SCREEN_CLOSED)"));
+    }
+    @Test void voiceStatusExtractionIsPassiveAndUsesClosedPlayerFacingPresentation() throws Exception {
+        String indicator = source("common/src/main/java/dev/openallay/client/gui/hud/GuideVoiceIndicator.java");
+        assertTrue(indicator.contains("if (!status.indicatorVisible()) return"));
+        assertTrue(indicator.contains("VoiceStatusPresentation.describe(status)"));
+        assertTrue(indicator.contains("feedback.translationKey()"));
+        assertTrue(indicator.contains("feedback.actionTranslationKey()"));
+        assertTrue(indicator.contains("Component.translatable(key)"));
+        for (String forbidden : new String[]{"status.code()", "status.source()", "Component.literal(",
+                "setScreen(", "forActor(", "capture(", "Files.", ".ask(", ".press(", ".pressPtt("}) {
+            assertFalse(indicator.contains(forbidden), forbidden);
+        }
+        String lite = source("common/src/main/java/dev/openallay/client/gui/hud/GuideChatLiteScreen.java");
+        assertTrue(lite.contains("GuideVoiceIndicator.extract(graphics, minecraft, voice)"));
+        String presentation = source("common/src/main/java/dev/openallay/client/voice/VoiceStatusPresentation.java");
+        assertTrue(presentation.contains("default -> notice(\"failed\", \"retry\", true)"));
+        assertFalse(presentation.contains("PREFIX + code"));
+    }
 }

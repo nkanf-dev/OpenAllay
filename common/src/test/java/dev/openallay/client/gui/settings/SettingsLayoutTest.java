@@ -13,6 +13,7 @@ final class SettingsLayoutTest {
         assertEquals(List.of(
                         SettingsSection.GENERAL,
                         SettingsSection.UI,
+                        SettingsSection.VOICE,
                         SettingsSection.MODELS,
                         SettingsSection.EXTENSIONS,
                         SettingsSection.SKILLS,
@@ -41,9 +42,9 @@ final class SettingsLayoutTest {
     }
 
     @Test
-    void singlePagesDoNotWasteAnEmptyListAndNavigationScrollReachesEightCategories() {
+    void singlePagesDoNotWasteAnEmptyListAndNavigationScrollReachesNineCategories() {
         for (SettingsSection section : List.of(SettingsSection.GENERAL, SettingsSection.UI,
-                SettingsSection.ABOUT, SettingsSection.HISTORY, SettingsSection.DIAGNOSTICS)) {
+                SettingsSection.VOICE, SettingsSection.ABOUT, SettingsSection.HISTORY, SettingsSection.DIAGNOSTICS)) {
             SettingsLayout layout = SettingsLayout.calculate(900, 180, section);
             assertEquals(0, layout.list().width());
             assertEquals(layout.navigation().right() + 6, layout.editor().x());

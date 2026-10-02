@@ -22,7 +22,7 @@ final class UiSettingsScreenArchitectureTest {
                 source.indexOf("private void renderUi"));
         assertEquals(1, apply.split("saveDisplay", -1).length - 1);
         assertTrue(source.contains("withUiActions"));
-        assertFalse(source.contains("withVoiceActions"));
+        assertTrue(source.contains("withVoiceActions"));
         assertTrue(source.contains("previewNotification"));        assertFalse(source.contains("cycleSection"));
     }
 

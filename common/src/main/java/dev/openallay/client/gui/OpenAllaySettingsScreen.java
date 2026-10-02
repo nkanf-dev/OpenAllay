@@ -7,6 +7,9 @@ import dev.openallay.client.gui.settings.UiSettingsProjection;
 import dev.openallay.client.gui.settings.UiSettingsDraft;
 import dev.openallay.guide.ui.GuideDisplayConfig;
 import dev.openallay.guide.ui.GuideUiConfig;
+import dev.openallay.client.voice.VoiceSettingsActions;
+import dev.openallay.client.voice.VoiceSettingsView;
+import dev.openallay.client.voice.VoiceConfig;
 import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.client.input.KeyEvent;
 import org.lwjgl.glfw.GLFW;
@@ -132,6 +135,16 @@ public final class OpenAllaySettingsScreen extends Screen {
     private int navigationScroll;
     private boolean sectionMenuOpen;
     private UiActions uiActions;
+    private VoiceSettingsActions voiceActions;
+    private VoiceSettingsView voiceView;
+    private VoiceConfig voiceDraft;
+    private int voiceScroll;
+    private int voiceContentHeight;
+    private String voiceModelPath = "";
+    private String voiceRuntimePath = "";
+    private String voiceHttpUrl = "";
+    private String voiceHttpModel = "";
+    private String voiceApiKeyDraft = "";
 
     /** Loader hooks only. Neither preview nor editor entry creates an Agent task. */
     public interface UiActions {
@@ -142,6 +155,13 @@ public final class OpenAllaySettingsScreen extends Screen {
 
     public OpenAllaySettingsScreen withUiActions(UiActions actions) {
         uiActions = Objects.requireNonNull(actions, "actions");
+        return this;
+    }
+
+    public OpenAllaySettingsScreen withVoiceActions(VoiceSettingsActions actions) {
+        voiceActions = Objects.requireNonNull(actions, "actions");
+        voiceView = actions.view();
+        resetVoiceDraft();
         return this;
     }
 
@@ -183,6 +203,8 @@ public final class OpenAllaySettingsScreen extends Screen {
             addExtensionsPage();
         } else if (section == SettingsSection.SKILLS) {
             addSkillsPage();
+        } else if (section == SettingsSection.VOICE) {
+            addVoicePage();
         } else if (section == SettingsSection.UI) {
             addUiPage();
         } else if (section == SettingsSection.GENERAL) {
@@ -271,6 +293,7 @@ public final class OpenAllaySettingsScreen extends Screen {
 
     @Override
     public void removed() {
+        voiceApiKeyDraft = "";
         if (!openingRequirementReview) {
             service.cancelPackagePreparation();
             snapshot.requirementReview().ifPresent(review -> service.cancelPackageInstall(review.token()));
@@ -306,6 +329,14 @@ public final class OpenAllaySettingsScreen extends Screen {
     public void tick() {
         super.tick();
         service.refreshRuntimeState();
+        if (voiceActions != null) {
+            VoiceSettingsView next = voiceActions.view();
+            boolean controlsChanged = voiceView == null || voiceView.busy() != next.busy()
+                    || !voiceView.devices().equals(next.devices())
+                    || !voiceView.config().equals(next.config());
+            voiceView = next;
+            if (controlsChanged && section == SettingsSection.VOICE && layout != null) rebuildWidgets();
+        }
         service.snapshot().requirementReview().ifPresent(review -> {
             captureDraft();
             openingRequirementReview = true;
@@ -336,6 +367,15 @@ public final class OpenAllaySettingsScreen extends Screen {
                     - (int) Math.round(scrollY * (sectionMenuOpen ? 1 : 24)), 0, maximum);
             if (next != navigationScroll) {
                 navigationScroll = next;
+                rebuildWidgets();
+            }
+            return true;
+        }
+        if (section == SettingsSection.VOICE && layout.editor().contains(mouseX, mouseY)) {
+            int next = net.minecraft.util.Mth.clamp(voiceScroll - (int) Math.round(scrollY * 24),
+                    0, Math.max(0, voiceContentHeight - layout.editor().height()));
+            if (next != voiceScroll) {
+                voiceScroll = next;
                 rebuildWidgets();
             }
             return true;
@@ -431,6 +471,8 @@ public final class OpenAllaySettingsScreen extends Screen {
         }
         if (sectionMenuOpen) {
             renderSectionMenu(graphics);
+        } else if (section == SettingsSection.VOICE) {
+            renderVoice(graphics);
         } else if (section == SettingsSection.UI) {
             renderUi(graphics);
         } else if (section == SettingsSection.MODELS) {
@@ -858,12 +900,286 @@ public final class OpenAllaySettingsScreen extends Screen {
         protected void updateMessage() {
             String amount = integral ? Long.toString(Math.round(actual()))
                     : String.format(java.util.Locale.ROOT, "%.2f", actual());
-            String translationKey = "screen.openallay.settings.ui." + key;
+            String translationKey = key.startsWith("voice.")
+                    ? "screen.openallay.settings." + key
+                    : "screen.openallay.settings.ui." + key;
             setMessage(Component.translatable(translationKey).copy().append(" · " + amount));
         }
 
         @Override
         protected void applyValue() { changed.accept(actual()); }
+    }
+
+    private void resetVoiceDraft() {
+        if (voiceActions == null) return;
+        voiceView = voiceActions.view();
+        voiceDraft = voiceView.config();
+        voiceModelPath = voiceDraft.nativeModelDirectory();
+        voiceHttpUrl = voiceDraft.httpBaseUrl().toString();
+        voiceHttpModel = voiceDraft.httpModel();
+        voiceApiKeyDraft = "";
+    }
+
+    private void addVoicePage() {
+        if (voiceActions == null || voiceDraft == null) return;
+        SettingsLayout.Rect area = layout.editor();
+        int x = area.x() + 10;
+        int w = Math.max(120, area.width() - 20);
+        int y = area.y() + 34 - voiceScroll;
+        voiceButton("enabled", Component.translatable("screen.openallay.settings.ui."
+                + (voiceDraft.enabled() ? "on" : "off")), x, y, w, () -> {
+            voiceDraft = voiceDraft.withEnabled(!voiceDraft.enabled());
+            rebuildWidgets();
+        });
+        y += 26;
+        voiceButton("backend", Component.translatable("screen.openallay.settings.voice.backend."
+                + voiceDraft.backend().name().toLowerCase(java.util.Locale.ROOT)), x, y, w, () -> {
+            voiceDraft = voiceDraft.withBackend(voiceDraft.backend() == VoiceConfig.Backend.NATIVE
+                    ? VoiceConfig.Backend.HTTP : VoiceConfig.Backend.NATIVE);
+            rebuildWidgets();
+        });
+        y += 26;
+        String deviceName = voiceView.devices().stream().filter(device -> device.id().equals(voiceDraft.deviceId()))
+                .map(dev.openallay.client.voice.AudioCapture.Device::name).findFirst().orElse(voiceDraft.deviceId());
+        voiceButton("device", Component.literal(deviceName), x, y, w, () -> {
+            List<dev.openallay.client.voice.AudioCapture.Device> devices = voiceView.devices();
+            if (devices.isEmpty()) return;
+            int current = -1;
+            for (int index = 0; index < devices.size(); index++) {
+                if (devices.get(index).id().equals(voiceDraft.deviceId())) current = index;
+            }
+            voiceDraft = voiceDraft.withDevice(devices.get((current + 1) % devices.size()).id());
+            rebuildWidgets();
+        });
+        y += 26;
+        voiceButton("refresh_devices", Component.empty(), x, y, w, () -> acceptVoice(voiceActions.refreshDevices(), false));
+        y += 26;
+        voiceButton("language", Component.literal(voiceDraft.language()), x, y, w, () -> {
+            voiceDraft = voiceDraft.withLanguage(switch (voiceDraft.language()) {
+                case "auto" -> "zh";
+                case "zh" -> "en";
+                default -> "auto";
+            });
+            rebuildWidgets();
+        });
+        y += 26;
+        voiceSlider("clip_seconds", voiceDraft.maxClipSeconds(), 1, 60, x, y, w,
+                value -> voiceDraft = voiceDraft.withLimits((int) Math.round(value), voiceDraft.cpuThreads()));
+        y += 26;
+        voiceSlider("cpu_threads", voiceDraft.cpuThreads(), 1, 8, x, y, w,
+                value -> voiceDraft = voiceDraft.withLimits(voiceDraft.maxClipSeconds(), (int) Math.round(value)));
+        y += 26;
+        if (voiceDraft.backend() == VoiceConfig.Backend.NATIVE) {
+            voiceText("model_directory", voiceModelPath, x, y, w, value -> voiceModelPath = value, false);
+            y += 42;
+            voiceButton("choose_model", Component.empty(), x, y, w, () -> chooseVoiceDirectory(false));
+            y += 26;
+            voiceButton("import_model", Component.empty(), x, y, w, () -> {
+                try {
+                    if (voiceModelPath.isBlank()) throw new IllegalArgumentException("empty model directory");
+                    acceptVoice(voiceActions.importModel(Path.of(voiceModelPath)), true);
+                } catch (IllegalArgumentException invalid) {
+                    localNotice = Component.translatable("screen.openallay.settings.voice.invalid").getString();
+                }
+            });
+            y += 26;
+            voiceText("runtime_directory", voiceRuntimePath, x, y, w, value -> voiceRuntimePath = value, false);
+            y += 42;
+            voiceButton("choose_runtime", Component.empty(), x, y, w, () -> chooseVoiceDirectory(true));
+            y += 26;
+            voiceButton("import_runtime", Component.empty(), x, y, w, () -> {
+                try {
+                    if (voiceRuntimePath.isBlank()) throw new IllegalArgumentException("empty runtime directory");
+                    acceptVoice(voiceActions.importRuntime(Path.of(voiceRuntimePath)), false);
+                } catch (IllegalArgumentException invalid) {
+                    localNotice = Component.translatable("screen.openallay.settings.voice.invalid").getString();
+                }
+            });
+            y += 26;
+            voiceButton("download_model", Component.empty(), x, y, w,
+                    () -> acceptVoice(voiceActions.downloadDefaultModel(), true));
+            y += 26;
+            Button cancel = voiceButton("cancel_download", Component.empty(), x, y, w, voiceActions::cancelDownload);
+            cancel.active = voiceView.busy();
+            y += 26;
+            Button notices = voiceButton("runtime_notices", Component.empty(), x, y, w,
+                    () -> net.minecraft.util.Util.getPlatform().openPath(voiceActions.runtimeNoticesDirectory()));
+            notices.setTooltip(Tooltip.create(Component.translatable(
+                    "screen.openallay.settings.voice.runtime_notices.description")));
+            y += 26;
+        } else {
+            voiceText("http_url", voiceHttpUrl, x, y, w, value -> voiceHttpUrl = value, false);
+            y += 42;
+            voiceText("http_model", voiceHttpModel, x, y, w, value -> voiceHttpModel = value, false);
+            y += 42;
+            voiceText("api_key", voiceApiKeyDraft, x, y, w, value -> voiceApiKeyDraft = value, true);
+            y += 42;
+            voiceButton("store_api_key", Component.empty(), x, y, w, () -> {
+                char[] key = voiceApiKeyDraft.toCharArray();
+                voiceApiKeyDraft = "";
+                acceptVoice(voiceActions.setApiKey(key), true);
+            });
+            y += 26;
+            voiceButton("clear_credential", Component.empty(), x, y, w, () -> {
+                voiceDraft = voiceDraft.withCredential(null);
+                rebuildWidgets();
+            });
+            y += 26;
+        }
+        int copyLines = font.split(Component.translatable("screen.openallay.settings.voice.description"), w).size()
+                + font.split(Component.translatable("screen.openallay.settings.voice.not_ready"), w).size()
+                + font.split(voiceSettingsStatus(voiceView.statusCode()), w).size()
+                + font.split(Component.literal(voiceView.modelName()), w).size() + 4;
+        if (voiceDraft.backend() == VoiceConfig.Backend.NATIVE) {
+            copyLines += font.split(Component.translatable("screen.openallay.settings.voice.native_source"), w).size();
+        }
+        voiceContentHeight = y + voiceScroll - area.y() + copyLines * 10 + 18;
+    }
+
+    private Button voiceButton(String key, Component value, int x, int y, int w, Runnable action) {
+        Component label = Component.translatable("screen.openallay.settings.voice." + key);
+        if (!value.getString().isBlank()) label = label.copy().append(" · ").append(value);
+        Button button = addRenderableWidget(OpenAllayButton.create(label, ignored -> action.run())
+                .bounds(x, y, w, 20).build());
+        button.visible = layout.pageWidgetVisible(y, 20);
+        button.active = voiceView != null && !voiceView.busy();
+        return button;
+    }
+
+    private void voiceText(String key, String value, int x, int y, int w,
+            java.util.function.Consumer<String> changed, boolean secret) {
+        EditBox field = secret ? new PasswordEditBox(font, x, y + 14, w, 20,
+                Component.translatable("screen.openallay.settings.voice." + key))
+                : new EditBox(font, x, y + 14, w, 20,
+                        Component.translatable("screen.openallay.settings.voice." + key));
+        field.setMaxLength(4096);
+        field.setValue(value);
+        field.setResponder(changed);
+        field.setVisible(layout.pageWidgetVisible(y, 34));
+        field.active = voiceView != null && !voiceView.busy();
+        addRenderableWidget(field);
+    }
+
+    private void voiceSlider(String key, double value, double minimum, double maximum,
+            int x, int y, int w, java.util.function.DoubleConsumer changed) {
+        UiSlider slider = new UiSlider(x, y, w, "voice." + key, value, minimum, maximum, true, changed);
+        slider.visible = layout.pageWidgetVisible(y, 20);
+        slider.active = voiceView != null && !voiceView.busy();
+        addRenderableWidget(slider);
+    }
+
+    private void chooseVoiceDirectory(boolean runtime) {
+        String key = runtime ? "runtime_directory" : "model_directory";
+        try {
+            String selected = org.lwjgl.util.tinyfd.TinyFileDialogs.tinyfd_selectFolderDialog(
+                    Component.translatable("screen.openallay.settings.voice." + key).getString(),
+                    runtime ? voiceRuntimePath : voiceModelPath);
+            if (selected != null && !selected.isBlank()) {
+                if (runtime) voiceRuntimePath = selected;
+                else voiceModelPath = selected;
+                rebuildWidgets();
+            }
+        } catch (RuntimeException | LinkageError unavailable) {
+            localNotice = Component.translatable("screen.openallay.settings.voice.chooser_unavailable").getString();
+        }
+    }
+
+    private void applyVoice() {
+        if (voiceActions == null || voiceDraft == null) return;
+        try {
+            // Model import is its own explicit integrity-checked action, not a path-only save.
+            voiceDraft = voiceDraft.withHttp(java.net.URI.create(voiceHttpUrl), voiceHttpModel);
+            acceptVoice(voiceActions.update(voiceDraft), false);
+        } catch (IllegalArgumentException invalid) {
+            localNotice = Component.translatable("screen.openallay.settings.voice.invalid").getString();
+        }
+    }
+
+    private void acceptVoice(java.util.concurrent.CompletableFuture<? extends ToolResult<?>> future,
+            boolean resetOnSuccess) {
+        localNotice = "";
+        future.whenComplete((result, failure) -> minecraft.execute(() -> {
+            if (failure != null || result instanceof ToolResult.Failure<?>) {
+                localNotice = result instanceof ToolResult.Failure<?> rejected ? rejected.message()
+                        : Component.translatable("screen.openallay.settings.voice.failed").getString();
+            } else if (resetOnSuccess) {
+                // Import/download/credential storage may change config; preserve other unsaved fields.
+                VoiceConfig previous = voiceDraft;
+                String previousHttpUrl = voiceHttpUrl;
+                String previousHttpModel = voiceHttpModel;
+                resetVoiceDraft();
+                voiceDraft = voiceDraft.withEnabled(previous.enabled()).withBackend(previous.backend())
+                        .withDevice(previous.deviceId()).withLanguage(previous.language())
+                        .withLimits(previous.maxClipSeconds(), previous.cpuThreads());
+                voiceHttpUrl = previousHttpUrl;
+                voiceHttpModel = previousHttpModel;
+            }
+            if (layout != null && section == SettingsSection.VOICE) rebuildWidgets();
+        }));
+    }
+
+    private Component voiceSettingsStatus(String code) {
+        String known = switch (code) {
+            case "model_downloading" -> "downloading";
+            case "model_download_cancelled" -> "download_cancelled";
+            case "model_download_failed" -> "download_failed";
+            case "voice_settings_failed", "voice_save_failed", "invalid_voice_config" -> "voice_failed";
+            case "runtime_imported", "runtime_invalid", "model_imported", "model_invalid", "voice_saved",
+                    "voice_reloaded", "downloading", "download_cancelled", "download_failed", "voice_disabled",
+                    "microphone_denied", "microphone_launcher_unprepared", "microphone_permission_unavailable",
+                    "microphone_device_unavailable", "microphone_format_unsupported", "microphone_open_failed",
+                    "device_broken", "empty_audio", "voice_failed" -> code;
+            default -> "status";
+        };
+        return Component.translatable("screen.openallay.settings.voice.status." + known);
+    }
+
+    private void renderVoice(GuiGraphicsExtractor graphics) {
+        SettingsLayout.Rect area = layout.editor();
+        int x = area.x() + 10;
+        int y = area.y() + 12 - voiceScroll;
+        int w = Math.max(100, area.width() - 20);
+        graphics.enableScissor(area.x(), area.y(), area.right(), area.bottom());
+        graphics.text(font, Component.translatable("screen.openallay.settings.voice.title"), x, y, ACCENT, false);
+        if (voiceActions == null || voiceView == null) {
+            renderWrapped(graphics, Component.translatable("screen.openallay.settings.voice.unavailable"),
+                    x, y + 22, w, MUTED, 10);
+        } else {
+            int fieldsY = area.y() + 34 - voiceScroll + 7 * 26;
+            if (voiceDraft.backend() == VoiceConfig.Backend.NATIVE) {
+                if (layout.pageWidgetVisible(fieldsY, 34)) graphics.text(font,
+                        Component.translatable("screen.openallay.settings.voice.model_directory"),
+                        x, fieldsY, MUTED, false);
+                int runtimeY = fieldsY + 94;
+                if (layout.pageWidgetVisible(runtimeY, 34)) graphics.text(font,
+                        Component.translatable("screen.openallay.settings.voice.runtime_directory"),
+                        x, runtimeY, MUTED, false);
+            } else {
+                for (int index = 0; index < 3; index++) {
+                    int fieldY = fieldsY + index * 42;
+                    if (layout.pageWidgetVisible(fieldY, 34)) graphics.text(font, Component.translatable(
+                                    "screen.openallay.settings.voice." + List.of("http_url", "http_model", "api_key").get(index)),
+                            x, fieldY, MUTED, false);
+                }
+            }
+            int bodyHeight = voiceDraft.backend() == VoiceConfig.Backend.NATIVE ? 448 : 360;
+            int bottom = area.y() + 34 + bodyHeight - voiceScroll;
+            bottom = renderWrapped(graphics, Component.translatable("screen.openallay.settings.voice.description"),
+                    x, bottom, w, MUTED, 10);
+            String progress = voiceView.totalBytes() > 0
+                    ? " · " + voiceView.downloadedBytes() / 1048576 + "/" + voiceView.totalBytes() / 1048576 + " MiB" : "";
+            bottom = renderWrapped(graphics, Component.translatable(voiceDraft.backend() == VoiceConfig.Backend.HTTP
+                            ? "screen.openallay.settings.voice.http_selected" : voiceView.modelReady()
+                            ? "screen.openallay.settings.voice.ready" : "screen.openallay.settings.voice.not_ready")
+                            .copy().append(" · " + voiceView.modelName() + progress),
+                    x, bottom + 4, w, voiceView.modelReady() ? ACCENT : MUTED, 10);
+            bottom = renderWrapped(graphics, voiceSettingsStatus(voiceView.statusCode()), x, bottom + 3, w, MUTED, 10);
+            if (voiceDraft.backend() == VoiceConfig.Backend.NATIVE) {
+                renderWrapped(graphics, Component.translatable("screen.openallay.settings.voice.native_source"),
+                        x, bottom + 3, w, MUTED, 10);
+            }
+        }
+        graphics.disableScissor();
     }
 
     private void addModelsPage() {
@@ -1773,6 +2089,17 @@ public final class OpenAllaySettingsScreen extends Screen {
                         rebuildWidgets();
                     }),
                     new Action("screen.openallay.settings.done", this::onClose));
+            case VOICE -> voiceActions == null
+                    ? List.of(new Action("screen.openallay.settings.done", this::onClose))
+                    : List.of(new Action("screen.openallay.settings.voice.apply", this::applyVoice),
+                            new Action("screen.openallay.settings.voice.discard", () -> {
+                                resetVoiceDraft();
+                                localNotice = "";
+                                rebuildWidgets();
+                            }),
+                            new Action("screen.openallay.settings.voice.reload", () ->
+                                    acceptVoice(voiceActions.reload(), true)),
+                            new Action("screen.openallay.settings.done", this::onClose));
             case GENERAL -> List.of(
                     new Action(
                             "screen.openallay.settings.reload",
@@ -1785,6 +2112,7 @@ public final class OpenAllaySettingsScreen extends Screen {
 
     private boolean actionEnabled(String key) {
         boolean busy = snapshot.operation().kind() != SettingsOperation.Kind.IDLE;
+        if (key.startsWith("screen.openallay.settings.voice.")) return voiceView != null && !voiceView.busy();
         if (key.equals("screen.openallay.settings.ui.apply")) return !busy && uiDraft.dirty();
         if (key.equals("screen.openallay.settings.cancel")) {
             return snapshot.operation().kind() == SettingsOperation.Kind.TESTING_CONNECTION
@@ -3021,7 +3349,7 @@ public final class OpenAllaySettingsScreen extends Screen {
         if (message.isBlank()) {
             return;
         }
-        boolean localPage = section == SettingsSection.UI;
+        boolean localPage = section == SettingsSection.UI || section == SettingsSection.VOICE;
         int x = localPage ? layout.footer().x() + 8 : layout.header().x() + 150;
         int right = localPage ? layout.footer().right() - 8
                 : layout.header().right() - (layout.showBack() ? 66 : 8);
@@ -4014,6 +4342,8 @@ public final class OpenAllaySettingsScreen extends Screen {
     }
 
     private static final class PasswordEditBox extends EditBox {
+        private final Component narration;
+
         private PasswordEditBox(
                 net.minecraft.client.gui.Font font,
                 int x,
@@ -4022,6 +4352,7 @@ public final class OpenAllaySettingsScreen extends Screen {
                 int height,
                 Component narration) {
             super(font, x, y, width, height, narration);
+            this.narration = narration;
             addFormatter((text, offset) -> net.minecraft.util.FormattedCharSequence.forward(
                     "•".repeat(text.length()), net.minecraft.network.chat.Style.EMPTY));
         }
@@ -4036,7 +4367,7 @@ public final class OpenAllaySettingsScreen extends Screen {
 
         @Override
         protected net.minecraft.network.chat.MutableComponent createNarrationMessage() {
-            return Component.translatable("screen.openallay.settings.models.api_key");
+            return narration.copy();
         }
     }
 }

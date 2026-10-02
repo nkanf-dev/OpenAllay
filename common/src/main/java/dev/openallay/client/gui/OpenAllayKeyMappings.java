@@ -15,9 +15,10 @@ public final class OpenAllayKeyMappings {
     public static final KeyMapping TOGGLE_HUD = unbound("key.openallay.toggle_hud");
     public static final KeyMapping EDIT_HUD = unbound("key.openallay.edit_hud");
     public static final KeyMapping INTERACT_HUD = unbound("key.openallay.interact_hud");
+    public static final KeyMapping VOICE_PTT = unbound("key.openallay.voice_ptt");
 
     public static java.util.List<KeyMapping> all() {
-        return java.util.List.of(OPEN_GUIDE, TOGGLE_HUD, EDIT_HUD, INTERACT_HUD);
+        return java.util.List.of(OPEN_GUIDE, TOGGLE_HUD, EDIT_HUD, INTERACT_HUD, VOICE_PTT);
     }
 
     private static KeyMapping unbound(String name) {

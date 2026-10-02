@@ -41,6 +41,71 @@ import org.junit.jupiter.api.Test;
 
 final class OpenAllayScreenProjectionTest {
     @Test
+    void voiceKeyDoesNotStealComposerTypingOrModalNavigation() {
+        assertTrue(OpenAllayScreen.voiceKeyAllowed(false, false));
+        assertFalse(OpenAllayScreen.voiceKeyAllowed(true, false));
+        assertFalse(OpenAllayScreen.voiceKeyAllowed(false, true));
+        assertFalse(OpenAllayScreen.voiceKeyAllowed(true, true));
+    }
+
+    @Test
+    void microphoneActionsUseTypedCaptureStateWithoutTaskSubmission() {
+        var actions = new FakeVoiceActions();
+        OpenAllayScreen.activateVoice(actions);
+        assertEquals(1, actions.presses);
+        assertEquals(0, actions.releases);
+        actions.state = dev.openallay.client.voice.VoiceRuntime.State.STARTING;
+        OpenAllayScreen.activateVoice(actions);
+        actions.state = dev.openallay.client.voice.VoiceRuntime.State.RECORDING;
+        OpenAllayScreen.activateVoice(actions);
+        assertEquals(2, actions.releases);
+        assertEquals(1, actions.presses);
+        actions.state = dev.openallay.client.voice.VoiceRuntime.State.TRANSCRIBING;
+        OpenAllayScreen.activateVoice(actions);
+        assertEquals(dev.openallay.client.voice.VoiceRuntime.CancelReason.USER, actions.cancelled);
+        assertEquals(1, actions.cancels);
+        actions.state = dev.openallay.client.voice.VoiceRuntime.State.ERROR;
+        OpenAllayScreen.activateVoice(actions);
+        assertEquals(2, actions.presses);
+        actions.enabled = false;
+        OpenAllayScreen.activateVoice(actions);
+        assertEquals(2, actions.presses);
+        OpenAllayScreen.activateVoice(null);
+    }
+
+    @Test
+    void fullscreenVoiceHooksKeepCapturedDraftAndNotificationOwnership() throws Exception {
+        java.nio.file.Path current = java.nio.file.Path.of("").toAbsolutePath().normalize();
+        java.nio.file.Path root = current.getFileName() != null && current.getFileName().toString().equals("common")
+                ? current.getParent() : current;
+        String screen = java.nio.file.Files.readString(root.resolve(
+                "common/src/main/java/dev/openallay/client/gui/OpenAllayScreen.java"));
+        assertTrue(screen.contains("withVoice(dev.openallay.client.voice.VoiceInputActions voice)"));
+        assertTrue(screen.contains("VoiceStatusPresentation.describe(voice.status())"));
+        assertTrue(screen.contains("voiceKeyHeld && OpenAllayKeyMappings.VOICE_PTT.matches(event)"));
+        assertTrue(screen.contains("voice.cancel(dev.openallay.client.voice.VoiceRuntime.CancelReason.SCREEN_CLOSED)"));
+        assertTrue(screen.contains("notifications.clearVisibility(service)"));
+        assertTrue(screen.contains("uiState.applyPendingInsertion(pending.getFirst().id())"));
+        assertFalse(screen.contains("voice.status().code()"), "raw backend errors must not become player text");
+    }
+
+    private static final class FakeVoiceActions implements dev.openallay.client.voice.VoiceInputActions {
+        boolean enabled = true;
+        dev.openallay.client.voice.VoiceRuntime.State state = dev.openallay.client.voice.VoiceRuntime.State.IDLE;
+        int presses;
+        int releases;
+        int cancels;
+        dev.openallay.client.voice.VoiceRuntime.CancelReason cancelled;
+        public boolean enabled() { return enabled; }
+        public dev.openallay.client.voice.VoiceRuntime.Status status() {
+            return new dev.openallay.client.voice.VoiceRuntime.Status(state, "test_code", 0, 1000, "", null);
+        }
+        public void press() { presses++; }
+        public void release() { releases++; }
+        public void cancel(dev.openallay.client.voice.VoiceRuntime.CancelReason reason) { cancels++; cancelled = reason; }
+    }
+
+    @Test
     void onlyAcceptedPendingEditsMayClearTextAndImages() {
         assertTrue(OpenAllayScreen.submissionAccepted(false,
                 new dev.openallay.tool.ToolResult.Success<>(UUID.randomUUID())));

@@ -5,6 +5,9 @@ import dev.openallay.client.gui.hud.GuideChatLiteScreen;
 import dev.openallay.client.gui.hud.GuideHudEditorScreen;
 import dev.openallay.client.gui.hud.GuideHudRenderer;
 import dev.openallay.client.gui.hud.GuideNativeToastPort;
+import dev.openallay.client.gui.hud.GuideVoiceIndicator;
+import dev.openallay.client.voice.VoiceClientRuntime;
+import dev.openallay.client.voice.VoiceRuntime;
 import dev.openallay.client.presentation.GuideNotificationController;
 import dev.openallay.guide.GuidePresentationEvent;
 import dev.openallay.guide.GuidePresentationListener;
@@ -21,6 +24,7 @@ import java.util.Objects;
 import java.util.UUID;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.server.packs.resources.ReloadableResourceManager;
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
 
@@ -35,11 +39,13 @@ public final class GuideClientUiCoordinator implements AutoCloseable {
     private final GuideHudRenderer renderer;
     private final ClientEventDispatcher dispatcher;
     private final GuideNotificationController notifications;
+    private final VoiceClientRuntime voice;
     private final AutoCloseable binding;
     private final AutoCloseable notificationBinding;
     private final AutoCloseable settingsBinding;
     private GuideService bound;
     private GuideClientUiState state;
+    private boolean pttDown;
     private boolean closed;
 
     public GuideClientUiCoordinator(Minecraft minecraft, GuideServiceManager services,
@@ -72,6 +78,26 @@ public final class GuideClientUiCoordinator implements AutoCloseable {
                 }
             }
         });
+        voice = VoiceClientRuntime.create(configDirectory, new VoiceRuntime.DraftPort() {
+            @Override public VoiceRuntime.DraftTarget capture() {
+                if (state == null || state.closed()) return null;
+                state.selectSession(bound.snapshot().selectedSession());
+                return new VoiceRuntime.DraftTarget(state.ownerId(), state.selectedSession(),
+                        state.revision(state.selectedSession()));
+            }
+            @Override public VoiceRuntime.Insertion append(VoiceRuntime.DraftTarget target, String text) {
+                if (state == null || state.closed() || !state.ownerId().equals(target.actorId())) {
+                    return VoiceRuntime.Insertion.REJECTED;
+                }
+                GuideClientUiState.Insertion captured = new GuideClientUiState.Insertion(
+                        target.actorId(), state.generation(), target.sessionId(), target.draftRevision());
+                return switch (state.insertTranscript(captured, text)) {
+                    case INSERTED -> VoiceRuntime.Insertion.INSERTED;
+                    case PENDING -> VoiceRuntime.Insertion.PENDING;
+                    case REJECTED -> VoiceRuntime.Insertion.REJECTED;
+                };
+            }
+        }, dispatcher::execute);
         settingsBinding = settings == null ? () -> {} : settings.listen(ignored -> notifications.settingsChanged());
         if (minecraft.getResourceManager() instanceof ReloadableResourceManager resources) {
             resources.registerReloadListener((ResourceManagerReloadListener) ignored -> renderer.invalidateLayout());
@@ -94,11 +120,11 @@ public final class GuideClientUiCoordinator implements AutoCloseable {
                         @Override public void previewNotification(dev.openallay.guide.ui.GuideUiConfig.Notifications config) {
                             if (valid(service, owner)) notifications.testNotification(config);
                         }
-                    });
+                    }).withVoiceActions(voice.settings());
             minecraft.gui.setScreen(screen);
         };
         minecraft.gui.setScreen(new OpenAllayScreen(service, recipes, display, openSettings, owner)
-                .withNotifications(notifications));
+                .withNotifications(notifications).withVoice(voice.input()));
     }
 
     /** Client tick only. Disabled passive surfaces never create a GuideService or capture context. */
@@ -109,6 +135,11 @@ public final class GuideClientUiCoordinator implements AutoCloseable {
         notifications.tick();
         boolean gameplay = minecraft.player != null && minecraft.level != null
                 && minecraft.gui.screen() == null && minecraft.gui.overlay() == null;
+        Screen activeScreen = minecraft.gui.screen();
+        boolean feedback = minecraft.gui.overlay() == null && !minecraft.gui.hud.isHidden()
+                && (activeScreen == null || activeScreen instanceof OpenAllayScreen
+                        || activeScreen instanceof GuideChatLiteScreen);
+        voice.input().setFeedbackVisible(feedback);
         while (OpenAllayKeyMappings.TOGGLE_HUD.consumeClick()) {
             if (gameplay && settings != null) {
                 GuideDisplayConfig current = display.config();
@@ -129,19 +160,35 @@ public final class GuideClientUiCoordinator implements AutoCloseable {
             if (gameplay) {
                 GuideService service = services.forActor(minecraft.player.getUUID());
                 if (state != null) minecraft.gui.setScreen(new GuideChatLiteScreen(service, state, display,
-                        () -> openGuide(service)));
+                        () -> openGuide(service), voice.input()));
             }
         }
+        boolean physicalDown = OpenAllayKeyMappings.VOICE_PTT.isDown();
+        if (gameplay && physicalDown && !pttDown && feedback && voice.input().enabled()) {
+            services.forActor(minecraft.player.getUUID()); // Explicit PTT captures this session draft, not a task.
+            voice.input().pressPtt();
+        } else if (pttDown && !physicalDown) {
+            voice.input().release();
+        }
+        pttDown = physicalDown;
+        voice.input().tick(minecraft.isWindowActive(), minecraft.player != null && minecraft.level != null,
+                physicalDown, feedback);
     }
 
     public void extractRenderState(GuiGraphicsExtractor graphics) {
         if (closed) return;
         renderer.extractRenderState(graphics, hud.view());
+        if (minecraft.gui.screen() == null && minecraft.gui.overlay() == null
+                && minecraft.player != null && minecraft.level != null && !minecraft.gui.hud.isHidden()) {
+            GuideVoiceIndicator.extract(graphics, minecraft, voice.input());
+        }
     }
 
     public void disconnect() {
         if (bound != null) notifications.invalidated(bound.presentationGeneration());
-        closeState();
+        closeState(); // Fence the original draft before asynchronous device cleanup.
+        voice.input().cancel(VoiceRuntime.CancelReason.DISCONNECTED);
+        pttDown = false;
         hud.disconnect();
     }
 
@@ -151,6 +198,7 @@ public final class GuideClientUiCoordinator implements AutoCloseable {
     }
     private void closeState() {
         if (state != null) state.close();
+        if (voice != null) voice.input().cancel(VoiceRuntime.CancelReason.DISCONNECTED);
         state = null;
         bound = null;
     }
@@ -161,6 +209,7 @@ public final class GuideClientUiCoordinator implements AutoCloseable {
         if (closed) return;
         closed = true;
         disconnect();
+        voice.close();
         hud.close();
         notifications.close();
         close(settingsBinding);

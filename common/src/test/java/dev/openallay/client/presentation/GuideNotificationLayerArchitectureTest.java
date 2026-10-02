@@ -21,7 +21,12 @@ final class GuideNotificationLayerArchitectureTest {
         assertTrue(source.contains("notifications.tick()"));
         assertFalse(source.contains("bindCurrent()"));
         assertFalse(source.contains("snapshot().updatedAt()"));
-        assertFalse(source.contains("client.voice"));
+        assertTrue(source.contains("VoiceClientRuntime.create("));
+        String tick = source.substring(source.indexOf("public void tick()"), source.indexOf("public void extractRenderState("));
+        assertTrue(tick.indexOf("notifications.tick()") < tick.indexOf("boolean gameplay"),
+                "notification delivery must not depend on game/HUD/voice interaction gates");
+        assertFalse(tick.substring(0, tick.indexOf("notifications.tick()") + "notifications.tick()".length())
+                .contains("voice.input().enabled()"));
         String constructor = source.substring(source.indexOf("public GuideClientUiCoordinator("), source.indexOf("public void openGuide("));
         assertFalse(constructor.contains("forActor("), "constructing presentation must not create a task/service");
         assertTrue(constructor.contains("settings.listen(ignored -> notifications.settingsChanged())"));
@@ -50,7 +55,10 @@ final class GuideNotificationLayerArchitectureTest {
         String settings = source("common/src/main/java/dev/openallay/client/gui/OpenAllaySettingsScreen.java");
         assertTrue(settings.contains("case NOTIFICATIONS ->"));
         assertTrue(settings.contains("previewNotification(uiDraft.ui().notifications())"));
-        assertFalse(settings.contains("VoiceSettingsActions"));
-        assertFalse(settings.contains("SettingsSection.VOICE"));
+        assertTrue(settings.contains("VoiceSettingsActions"));
+        assertTrue(settings.contains("SettingsSection.VOICE"));
+        assertTrue(settings.contains("public OpenAllaySettingsScreen withVoiceActions("));
+        assertTrue(settings.contains("public OpenAllaySettingsScreen withUiActions("),
+                "voice settings cannot replace independent notification controls");
     }
 }
