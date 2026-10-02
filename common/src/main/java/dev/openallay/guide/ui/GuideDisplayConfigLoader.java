@@ -13,7 +13,7 @@ import java.util.Set;
 
 public final class GuideDisplayConfigLoader {
     private static final Set<String> FIELDS = Set.of(
-            "debugMode", "animationsEnabled", "assistantName");
+            "debugMode", "animationsEnabled", "assistantName", "ui");
 
     public record Load(GuideDisplayConfig config, GuideFailure failure) {
         public Load {
@@ -55,9 +55,72 @@ public final class GuideDisplayConfigLoader {
             String assistantName = string(object, "assistantName");
             return new Load(
                     new GuideDisplayConfig(
-                            debugMode, animationsEnabled, assistantName), null);
+                            debugMode, animationsEnabled, assistantName, ui(object.get("ui"))), null);
         } catch (RuntimeException failure) {
             return invalid(failure);
+        }
+    }
+
+    private static GuideUiConfig ui(JsonElement value) {
+        JsonObject ui = object(value, "ui", Set.of("fullscreen", "hud", "notifications"));
+        JsonObject full = object(ui.get("fullscreen"), "fullscreen", Set.of(
+                "density", "sessionRailVisible", "toolsCollapsed", "theme"));
+        JsonObject hud = object(ui.get("hud"), "hud", Set.of(
+                "enabled", "anchor", "offsetX", "offsetY", "width", "height", "scale",
+                "backgroundOpacity", "collapsed", "maxReplyLines", "showLatestReply",
+                "showStreamingPreview", "hideWithDebug", "hideOnOtherScreens"));
+        JsonObject notifications = object(ui.get("notifications"), "notifications", Set.of(
+                "enabled", "policy", "replyCompleted", "cardBatches", "taskFailures", "durationSeconds"));
+        return new GuideUiConfig(
+                new GuideUiConfig.Fullscreen(
+                        enumeration(full, "density", GuideUiConfig.Density.class),
+                        bool(full, "sessionRailVisible"), bool(full, "toolsCollapsed"),
+                        enumeration(full, "theme", GuideUiConfig.Theme.class)),
+                new GuideUiConfig.Hud(
+                        bool(hud, "enabled"), enumeration(hud, "anchor", GuideUiConfig.Anchor.class),
+                        integer(hud, "offsetX"), integer(hud, "offsetY"), integer(hud, "width"),
+                        integer(hud, "height"), number(hud, "scale"), number(hud, "backgroundOpacity"),
+                        bool(hud, "collapsed"), integer(hud, "maxReplyLines"), bool(hud, "showLatestReply"),
+                        bool(hud, "showStreamingPreview"), bool(hud, "hideWithDebug"),
+                        bool(hud, "hideOnOtherScreens")),
+                new GuideUiConfig.Notifications(
+                        bool(notifications, "enabled"),
+                        enumeration(notifications, "policy", GuideUiConfig.NotificationPolicy.class),
+                        bool(notifications, "replyCompleted"), bool(notifications, "cardBatches"),
+                        bool(notifications, "taskFailures"), integer(notifications, "durationSeconds")));
+    }
+
+    private static JsonObject object(JsonElement value, String field, Set<String> fields) {
+        if (value == null || !value.isJsonObject()) {
+            throw new IllegalArgumentException(field + " must be an object");
+        }
+        JsonObject result = value.getAsJsonObject();
+        if (!result.keySet().equals(fields)) {
+            throw new IllegalArgumentException(field + " has missing or unknown fields");
+        }
+        return result;
+    }
+
+    private static <E extends Enum<E>> E enumeration(JsonObject object, String field, Class<E> type) {
+        return Enum.valueOf(type, string(object, field));
+    }
+
+    private static double number(JsonObject object, String field) {
+        JsonElement value = object.get(field);
+        if (value == null || !value.isJsonPrimitive() || !value.getAsJsonPrimitive().isNumber()) {
+            throw new IllegalArgumentException(field + " must be a number");
+        }
+        double result = value.getAsDouble();
+        if (!Double.isFinite(result)) throw new IllegalArgumentException(field + " must be finite");
+        return result;
+    }
+
+    private static int integer(JsonObject object, String field) {
+        number(object, field);
+        try {
+            return object.get(field).getAsBigDecimal().intValueExact();
+        } catch (ArithmeticException failure) {
+            throw new IllegalArgumentException(field + " must be an integer", failure);
         }
     }
 

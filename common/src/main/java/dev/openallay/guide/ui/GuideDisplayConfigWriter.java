@@ -18,6 +18,7 @@ public final class GuideDisplayConfigWriter {
         root.addProperty("debugMode", config.debugMode());
         root.addProperty("animationsEnabled", config.animationsEnabled());
         root.addProperty("assistantName", config.assistantName());
+        root.add("ui", GSON.toJsonTree(config.ui()));
         return GSON.toJson(root) + System.lineSeparator();
     }
 }

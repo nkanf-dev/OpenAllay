@@ -9,6 +9,17 @@ import org.junit.jupiter.api.Test;
 
 final class GeneralSettingsProjectionTest {
     @Test
+    void everyGeneralActionPreservesNewUiSettings() {
+        var config = GuideDisplayConfig.defaults().withUi(dev.openallay.guide.ui.GuideUiConfig.defaults()
+                .withHud(dev.openallay.guide.ui.GuideUiConfig.Hud.defaults().withEnabled(true).withBackgroundOpacity(.25))
+                .withNotifications(dev.openallay.guide.ui.GuideUiConfig.Notifications.defaults().withEnabled(true)));
+        var projection = GeneralSettingsProjection.from(config);
+        assertEquals(config.ui(), projection.toggleDebug().ui());
+        assertEquals(config.ui(), projection.toggleAnimations().ui());
+        assertEquals(config.ui(), projection.renameAssistant("名字").ui());
+    }
+
+    @Test
     void displayControlsDefaultSafelyAndToggleIndependently() {
         GeneralSettingsProjection projection = GeneralSettingsProjection.from(new GuideDisplayConfig(
                 false, true, "小羽"));

@@ -30,10 +30,8 @@ final class GuideDisplayRuntimeTest {
         assertNull(runtime.failure());
         assertTrue(Files.readString(path).contains("\"debugMode\": true"));
 
-        Files.writeString(path, """
-                {"debugMode":false,"animationsEnabled":true,
-                 "assistantName":"小羽"}
-                """);
+        Files.writeString(path, new GuideDisplayConfigWriter().encode(
+                GuideDisplayConfig.defaults().withAssistantName("小羽")));
         ToolResult<GuideDisplayConfig> reloaded = runtime.reload();
 
         assertTrue(reloaded instanceof ToolResult.Success<GuideDisplayConfig>);
@@ -63,11 +61,27 @@ final class GuideDisplayRuntimeTest {
     }
 
     @Test
+    void failedNestedUiSaveRetainsEveryLastValidPreferenceAndExactBytes() throws Exception {
+        Path path = temporary.resolve("ui-display.json");
+        GuideDisplayConfig saved = GuideDisplayConfig.defaults().withUi(GuideUiConfig.defaults()
+                .withHud(GuideUiConfig.Hud.defaults().withEnabled(true).withBackgroundOpacity(.3))
+                .withNotifications(GuideUiConfig.Notifications.defaults().withEnabled(true)));
+        String original = new GuideDisplayConfigWriter().encode(saved);
+        Files.writeString(path, original);
+        GuideDisplayRuntime runtime = new GuideDisplayRuntime(path, (target, contents) -> {
+            throw new SettingsWriteException();
+        });
+        GuideDisplayConfig candidate = saved.withUi(saved.ui().withHud(saved.ui().hud().withBackgroundOpacity(.1)));
+        assertTrue(runtime.save(candidate) instanceof ToolResult.Failure<?>);
+        assertEquals(saved, runtime.config());
+        assertEquals(original, Files.readString(path));
+        assertEquals("settings_write_failed", runtime.failure().code());
+    }
+
+    @Test
     void failedDebugSaveRetainsFileAndProjection() throws Exception {
         Path path = temporary.resolve("display.json");
-        String original =
-                "{\"debugMode\":false,\"animationsEnabled\":true,"
-                        + "\"assistantName\":\"OpenAllay\"}";
+        String original = new GuideDisplayConfigWriter().encode(GuideDisplayConfig.defaults());
         Files.writeString(path, original);
         GuideDisplayRuntime runtime = new GuideDisplayRuntime(
                 path,

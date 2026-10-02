@@ -17,7 +17,8 @@ public record GeneralSettingsProjection(
         String animationsLabelKey,
         String animationsDescriptionKey,
         String animationsStatusKey,
-        String narrationKey) {
+        String narrationKey,
+        GuideDisplayConfig display) {
     public static GeneralSettingsProjection from(GuideDisplayConfig display) {
         Objects.requireNonNull(display, "display");
         return new GeneralSettingsProjection(
@@ -37,27 +38,18 @@ public record GeneralSettingsProjection(
                 display.animationsEnabled()
                         ? "screen.openallay.settings.general.animations.enabled"
                         : "screen.openallay.settings.general.animations.disabled",
-                "screen.openallay.settings.general.narration");
+                "screen.openallay.settings.general.narration", display);
     }
 
     public GuideDisplayConfig toggleDebug() {
-        return new GuideDisplayConfig(
-                !debugMode,
-                animationsEnabled,
-                assistantName);
+        return display.withDebugMode(!debugMode);
     }
 
     public GuideDisplayConfig toggleAnimations() {
-        return new GuideDisplayConfig(
-                debugMode,
-                !animationsEnabled,
-                assistantName);
+        return display.withAnimationsEnabled(!animationsEnabled);
     }
 
     public GuideDisplayConfig renameAssistant(String nextAssistantName) {
-        return new GuideDisplayConfig(
-                debugMode,
-                animationsEnabled,
-                nextAssistantName);
+        return display.withAssistantName(nextAssistantName);
     }
 }
