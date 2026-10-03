@@ -21,6 +21,15 @@ class VoiceConfigStoreTest {
         assertThrows(RuntimeException.class, () -> config.withLimits(20, 9));
         assertThrows(RuntimeException.class, () -> config.withHttp(java.net.URI.create("https://user:secret@example.test/v1"), "asr"));
     }
+    @Test void httpUrlWithoutSchemeIsRejectedAsInvalidInputNotNullPointer() {
+        VoiceConfig config = VoiceConfig.defaults();
+        for (String address : new String[]{"not-a-url", "/v1/audio/transcriptions", "//example.test/v1", ""}) {
+            assertThrows(IllegalArgumentException.class,
+                    () -> config.withHttp(java.net.URI.create(address), "asr"), address);
+        }
+        assertEquals(java.net.URI.create("https://example.test/v1"),
+                config.withHttp(java.net.URI.create("https://example.test/v1"), "asr").httpBaseUrl());
+    }
     @Test void badReloadAndFailedSaveRetainLastValidWithoutDestroyingFile() throws Exception {
         Path path = directory.resolve("voice.json"); VoiceConfigStore store = new VoiceConfigStore(path);
         VoiceConfig valid = VoiceConfig.defaults().withEnabled(true).withDevice("fake-id");

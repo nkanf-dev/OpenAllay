@@ -22,7 +22,8 @@ public record VoiceConfig(boolean enabled, Backend backend, String deviceId, int
         if (!language.matches("auto|[a-z]{2,3}(-[A-Z]{2})?")) throw new IllegalArgumentException("language");
         if (cpuThreads < 1 || cpuThreads > 8) throw new IllegalArgumentException("cpuThreads");
         if (!nativeModelDirectory.isEmpty()) Path.of(nativeModelDirectory);
-        if (!java.util.Set.of("http", "https").contains(httpBaseUrl.getScheme())
+        if (httpBaseUrl.getScheme() == null
+                || !java.util.Set.of("http", "https").contains(httpBaseUrl.getScheme())
                 || httpBaseUrl.getHost() == null || httpBaseUrl.getUserInfo() != null
                 || httpBaseUrl.getFragment() != null || httpBaseUrl.getQuery() != null) throw new IllegalArgumentException("httpBaseUrl");
         if (httpModel.isBlank() || httpModel.length() > 256 || httpModel.chars().anyMatch(c -> c < 32)) throw new IllegalArgumentException("httpModel");
