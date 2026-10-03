@@ -10,7 +10,7 @@ to work through the task and bring useful answers back into the game.
 <img src="docs/media/openallay-banner.png" alt="OpenAllay — your AI companion in Minecraft. Explore, build, and create.">
 
 [Download on GitHub](https://github.com/nkanf-dev/OpenAllay/releases) ·
-[Quick start](#quick-start) · [0.3.0 release notes](docs/releases/0.3.0.md) ·
+[Quick start](#quick-start) · [0.4.0 release notes](docs/releases/0.4.0.md) ·
 [Community](#community-and-development)
 
 | | Make it part of your game |
@@ -22,7 +22,7 @@ to work through the task and bring useful answers back into the game.
 
 ## Quick start
 
-OpenAllay **0.3.0** targets **Minecraft 26.2**, **Java 25**, and **Fabric or
+OpenAllay **0.4.0** targets **Minecraft 26.2**, **Java 25**, and **Fabric or
 NeoForge**. Use [GitHub Releases](https://github.com/nkanf-dev/OpenAllay/releases)
 for published downloads and choose the JAR for your loader. Fabric also needs
 the matching **Fabric API**.
@@ -56,8 +56,8 @@ at once rather than looking up one item per model turn.
 - “Which resource packs are active, and what are my current video settings?”
 
 Answers can include item icons, ingredient slots, recipe layouts, tables, and
-expandable details. Tool cards show the work performed and its results, with
-clean expandable previews when datasets are large.
+expandable details. Tool cards show a compact summary of each operation.
+Open a card's details to inspect complete results when datasets are large.
 
 Optional integrations include **JEI**, **REI**, **Patchouli**, and recipe-rich
 mods such as **Farmer's Delight**. The available data depends on your installed
@@ -111,11 +111,16 @@ Want to connect your own mod? Start with the examples and authoring guide in
 
 ## Inside Minecraft
 
-| Conversation | Tool details |
+| Fullscreen conversation | Native recipe details |
 | --- | --- |
-| ![OpenAllay conversation screen](docs/media/screenshots/openallay-chat.png) | ![OpenAllay tool details screen](docs/media/screenshots/openallay-tool-detail.png) |
+| ![OpenAllay 0.4.0 conversation screen](docs/media/screenshots/openallay-chat.png) | ![OpenAllay 0.4.0 tool details and native recipe](docs/media/screenshots/openallay-tool-detail.png) |
 
-*Screenshots show an earlier build. Layout and labels may differ in 0.3.0.*
+| Gameplay HUD | Full HUD reader |
+| --- | --- |
+| ![OpenAllay 0.4.0 gameplay HUD](docs/media/screenshots/openallay-hud.png) | ![OpenAllay 0.4.0 HUD reader](docs/media/screenshots/openallay-hud-reader.png) |
+
+*Captured from OpenAllay 0.4.0 in an isolated demonstration world. The example
+conversation uses a local deterministic demo endpoint.*
 
 Keep separate conversations for different projects, return to saved history,
 copy answers, or export a session. The screen does not pause the game.
@@ -131,6 +136,22 @@ copy answers, or export a session. The screen does not pause the game.
   with your client-configured model. Server models do not support this command yet. Use `//` to send a literal `/`.
 - Open tool details to inspect results. **Debug mode** also shows the submitted
   JavaScript and full input/output.
+
+- **HUD and appearance:** enable the gameplay HUD in **Settings → UI**. Press
+  **F8** by default to open its reader; existing custom key bindings stay unchanged.
+  Adjust HUD placement, text size, density, and theme to suit your screen.
+- **Push-to-talk:** enable and configure **Settings → Voice**, then bind its key
+  in Minecraft Controls. Native recognition needs a downloaded or imported model;
+  an HTTP transcription backend is also available. Gameplay/HUD speech defaults
+  to **Send**, with **Draft** available. Fullscreen dictation stays editable before sending.
+
+| Appearance settings | Voice settings |
+| --- | --- |
+| ![OpenAllay 0.4.0 appearance settings](docs/media/screenshots/openallay-ui-settings.png) | ![OpenAllay 0.4.0 voice settings](docs/media/screenshots/openallay-voice-settings.png) |
+
+| General settings | About OpenAllay |
+| --- | --- |
+| ![OpenAllay 0.4.0 general settings](docs/media/screenshots/openallay-general-settings.png) | ![OpenAllay 0.4.0 About screen](docs/media/screenshots/openallay-about.png) |
 
 ## Choose your model
 

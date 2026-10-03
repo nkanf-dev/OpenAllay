@@ -10,7 +10,7 @@
 <img src="docs/media/openallay-banner.png" alt="OpenAllay — 你的 Minecraft AI 伙伴。探索、建造、创造。">
 
 [GitHub 下载](https://github.com/nkanf-dev/OpenAllay/releases) ·
-[快速上手](#快速上手) · [0.3.0 更新说明](docs/releases/0.3.0.md) ·
+[快速上手](#快速上手) · [0.4.0 更新说明](docs/releases/0.4.0.md) ·
 [社区与开发](#社区与开发)
 
 | | 让它融入你的玩法 |
@@ -22,7 +22,7 @@
 
 ## 快速上手
 
-OpenAllay **0.3.0** 面向 **Minecraft 26.2**，需要 **Java 25**，支持
+OpenAllay **0.4.0** 面向 **Minecraft 26.2**，需要 **Java 25**，支持
 **Fabric 和 NeoForge**。请在
 [GitHub Releases](https://github.com/nkanf-dev/OpenAllay/releases)
 查看已发布的下载包，并选择对应加载器的 JAR。Fabric 还需要安装匹配的
@@ -108,11 +108,15 @@ Extensions 可以接入新的游戏数据、可复用 JavaScript 模块、模组
 
 ## 就在游戏里
 
-| 对话界面 | 工具详情 |
+| 全屏对话 | 原生配方详情 |
 | --- | --- |
-| ![OpenAllay 对话界面](docs/media/screenshots/openallay-chat.png) | ![OpenAllay 工具详情界面](docs/media/screenshots/openallay-tool-detail.png) |
+| ![OpenAllay 0.4.0 对话界面](docs/media/screenshots/openallay-chat.png) | ![OpenAllay 0.4.0 工具详情与原生配方](docs/media/screenshots/openallay-tool-detail.png) |
 
-*截图来自较早版本，0.3.0 的布局与文字可能有所不同。*
+| 游戏内 HUD | HUD 全文阅读器 |
+| --- | --- |
+| ![OpenAllay 0.4.0 游戏内 HUD](docs/media/screenshots/openallay-hud.png) | ![OpenAllay 0.4.0 HUD 阅读器](docs/media/screenshots/openallay-hud-reader.png) |
+
+*截图来自 OpenAllay 0.4.0 的独立演示世界；示例对话使用本地固定响应的演示端点。*
 
 为不同项目保留独立会话，随时回看历史、复制回答，或导出整段对话。
 OpenAllay 界面不会暂停游戏。
@@ -127,6 +131,20 @@ OpenAllay 界面不会暂停游戏。
 - **手动压缩（/compact）：**会话空闲时，输入 `/compact` 可使用客户端配置的模型压缩较早的上下文。
   服务器模型暂不支持此命令；输入 `//` 可发送普通的 `/` 字符。
 - 打开工具详情查看结果；**调试模式**还会展示提交的 JavaScript 与完整输入、输出。
+
+- **HUD 与外观：**在**设置 → UI**中开启游戏内 HUD。默认按 **F8** 打开阅读器；
+  已有自定义键位保持不变。可调整 HUD 位置、文字大小、密度和主题。
+- **按住说话：**在**设置 → 语音**中启用并配置，再到 Minecraft 控制设置中绑定按键。
+  本地 Native 识别需要下载或导入模型，也可配置 HTTP 转录后端。
+  游戏/HUD 语音默认**发送**，可改为**草稿**；全屏听写先写入可编辑草稿。
+
+| 外观设置 | 语音设置 |
+| --- | --- |
+| ![OpenAllay 0.4.0 外观设置](docs/media/screenshots/openallay-ui-settings.png) | ![OpenAllay 0.4.0 语音设置](docs/media/screenshots/openallay-voice-settings.png) |
+
+| 通用设置 | 关于 OpenAllay |
+| --- | --- |
+| ![OpenAllay 0.4.0 通用设置](docs/media/screenshots/openallay-general-settings.png) | ![OpenAllay 0.4.0 关于页面](docs/media/screenshots/openallay-about.png) |
 
 ## 模型由你选择
 

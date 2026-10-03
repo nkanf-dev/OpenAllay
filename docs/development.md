@@ -1,10 +1,10 @@
 # Development
 
-OpenAllay 0.3.0 targets Minecraft 26.2 and Java 25 and implements public
+OpenAllay 0.4.0 targets Minecraft 26.2 and Java 25 and implements public
 Extension API 0.2.2. Product and public API versions are independent.
 Use the checked-in Gradle wrapper; a system Gradle installation is not needed.
 
-See the [0.3.0 release notes](releases/0.3.0.md) for the current product changes.
+See the [0.4.0 release notes](releases/0.4.0.md) for the current product changes.
 Earlier Builder performance, request-control and Skill context evidence remains in
 its [verification record](verification/2026-10-01-builder-performance-runtime-controls.md).
 Historical execution/context receipts remain in the [041 verification record](verification/execution-context-simplification.md).
@@ -45,10 +45,11 @@ OPENALLAY_CURL_PROXY=socks5h://127.0.0.1:7890 ./gradlew-curl build
 
 Both loader artifacts bundle the separately built Builder Extension from
 `OpenAllay-Extensions`. The lock at `distribution/extensions.lock.json` pins
-Builder 0.2.0 to `5645230e70612264724bc4249abe138859477d43`. This source revision
-preserves batched operations and incremental journals, and uses scoped native APIs
-without granting Agent JVM access. Its 221 common tests, both loader builds and
-package checks passed; final integrated release gates are recorded in the
+Builder 0.2.1 to `0b6eba3b03ebdbdb00f732170b1fef283ed5dada`. This source revision
+updates compatibility to OpenAllay 0.4.x and retains batched operations,
+incremental journals, and scoped native APIs without granting Agent JVM access.
+Its 221 common tests, both loader builds, and package checks passed. Historical
+0.3.0 gates remain in the
 [0.3.0 verification record](verification/2026-10-01-openallay-0.3.0-release.md).
 Product, Extension, and API versions are independent.
 Installation does not enable JVM authority. Player automation and Baritone
@@ -603,10 +604,10 @@ a managed name in `mods`. Local imports need no catalog entry. Status stays
 `restart_required` until startup registers the Extension.
 
 The public authoring repository's `examples/hello-extension` builds both loaders.
-Current product 0.3.0 implements public Extension API 0.2.2. Loader product
+Current product 0.4.0 implements public Extension API 0.2.2. Loader product
 ranges and `openAllayApiVersionRange` are separate compatibility contracts:
 `[0.2,0.3)` still accepts API 0.2.2, but a loader product range excluding
-0.3.0 rejects this release. Existing four-list and five-list contribution
+0.4.0 rejects this release. Existing four-list and five-list contribution
 constructors remain supported. Match each independent Extension's declared
 requirements rather than copying the product version into its API range.
 
@@ -639,8 +640,8 @@ authorization. Required-mods compatibility and actual Tool policy remain separat
 See [decision 035](isme/decisions/2026-09-30-035-advisory-extension-skill-requirements.md).
 
 Builder code, Skill, modules, native scheduling, templates, and journals belong
-to `OpenAllay-Extensions`, not core. Builder 0.2.0 requires product
-`[0.3.0,0.4)` and public Extension API `[0.2.2,0.3)`. Its backend uses the active
+to `OpenAllay-Extensions`, not core. Builder 0.2.1 requires product
+`[0.4.0,0.5)` and public Extension API `[0.2.2,0.3)`. Its backend uses the active
 integrated server through invocation-scoped native bindings. World mutation
 requires the client-local `openallay_builder:world_write` grant for
 `openallay:builder`, not unrestricted JavaScript. It does not edit client world
