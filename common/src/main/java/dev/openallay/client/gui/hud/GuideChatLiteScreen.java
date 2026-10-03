@@ -119,7 +119,7 @@ public final class GuideChatLiteScreen extends Screen {
         addRenderableWidget(OpenAllayButton.create(Component.translatable("screen.openallay.hud.fullscreen"), button -> openFullscreen.run())
                 .bounds(card.x() + 16 + actionWidth * 2, actionY, actionWidth, 20).build());
         if (voice != null && voice.enabled()) mic = addRenderableWidget(OpenAllayButton.create(
-                Component.translatable("screen.openallay.voice.mic"), button -> { micHeld = true; voice.press(); })
+                Component.translatable("screen.openallay.voice.mic"), button -> { micHeld = true; voice.pressExternalPtt(); })
                 .bounds(card.x() + 20 + actionWidth * 3, actionY, actionWidth, 20).build());
         back = addRenderableWidget(OpenAllayButton.create(Component.translatable("screen.openallay.hud.back_results"), button -> {
             results.back(); project();
@@ -294,7 +294,7 @@ public final class GuideChatLiteScreen extends Screen {
         if (voice != null && voice.enabled() && (composer == null || !composer.isFocused())
                 && !OpenAllayKeyMappings.VOICE_PTT.isUnbound() && OpenAllayKeyMappings.VOICE_PTT.matches(event)) {
             pttHeld = true;
-            voice.press(); // Screen physical mappings are released natively; own release below.
+            voice.pressExternalPtt(); // Screen physical mappings are released natively; own release below.
             return true;
         }
         if (composer == null || !composer.isFocused()) {

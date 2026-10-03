@@ -203,6 +203,17 @@ public final class GuideClientUiState implements AutoCloseable {
         return InsertionResult.INSERTED;
     }
 
+    /** Keep a refused voice send for explicit review without changing the composer or its intent. */
+    public boolean retainPendingTranscript(Insertion capture, String transcript) {
+        if (closed || capture == null || !ownerId.equals(capture.ownerId())
+                || generation != capture.generation() || transcript == null || transcript.isBlank()) return false;
+        Draft draft = drafts.get(capture.session());
+        if (draft == null) return false;
+        draft.pending.add(new PendingInsertion(UUID.randomUUID(), capture.session(), transcript));
+        changed();
+        return true;
+    }
+
     public List<PendingInsertion> pendingInsertions(String session) {
         return closed ? List.of() : List.copyOf(draft(session).pending);
     }

@@ -14,7 +14,7 @@ import java.util.Set;
 /** Exact current shape; malformed files are retained, never replaced with defaults. */
 public final class VoiceConfigStore {
     private static final Set<String> FIELDS = Set.of("enabled", "backend", "deviceId", "maxClipSeconds", "language",
-            "cpuThreads", "nativeModelDirectory", "httpBaseUrl", "httpModel", "credentialRef");
+            "cpuThreads", "nativeModelDirectory", "httpBaseUrl", "httpModel", "credentialRef", "gameplayAction");
     private final Path path;
     private volatile VoiceConfig config = VoiceConfig.defaults();
     public VoiceConfigStore(Path path) { this.path = path; }
@@ -40,6 +40,7 @@ public final class VoiceConfigStore {
     public static String encode(VoiceConfig c) {
         JsonObject o = new JsonObject();
         o.addProperty("enabled", c.enabled()); o.addProperty("backend", c.backend().name());
+        o.addProperty("gameplayAction", c.gameplayAction().name());
         o.addProperty("deviceId", c.deviceId()); o.addProperty("maxClipSeconds", c.maxClipSeconds());
         o.addProperty("language", c.language()); o.addProperty("cpuThreads", c.cpuThreads());
         o.addProperty("nativeModelDirectory", c.nativeModelDirectory()); o.addProperty("httpBaseUrl", c.httpBaseUrl().toString());
@@ -58,7 +59,7 @@ public final class VoiceConfigStore {
         CredentialReference credential = o.get("credentialRef").isJsonNull() ? null : CredentialReference.parse(string(o, "credentialRef"));
         return new VoiceConfig(enabled.getAsBoolean(), VoiceConfig.Backend.valueOf(string(o, "backend")), string(o, "deviceId"),
                 integer(o, "maxClipSeconds"), string(o, "language"), integer(o, "cpuThreads"), string(o, "nativeModelDirectory"),
-                URI.create(string(o, "httpBaseUrl")), string(o, "httpModel"), credential);
+                URI.create(string(o, "httpBaseUrl")), string(o, "httpModel"), credential, VoiceConfig.GameplayAction.valueOf(string(o, "gameplayAction")));
     }
     private static String string(JsonObject o, String field) {
         JsonElement e = o.get(field);

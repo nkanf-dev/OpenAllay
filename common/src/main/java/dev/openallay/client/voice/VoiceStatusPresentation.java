@@ -18,7 +18,7 @@ public final class VoiceStatusPresentation {
         Objects.requireNonNull(status, "status");
         if (status.active()) return notice(status.state().name().toLowerCase(java.util.Locale.ROOT), switch (status.state()) {
             case RECORDING -> "release_to_finish";
-            case TRANSCRIBING -> "wait_or_cancel";
+            case TRANSCRIBING, DELIVERING -> "wait_or_cancel";
             default -> "hold_to_speak";
         }, false);
         return describeCode(status.code());
@@ -31,6 +31,11 @@ public final class VoiceStatusPresentation {
             case "starting" -> notice("starting", "hold_to_speak", false);
             case "recording" -> notice("recording", "release_to_finish", false);
             case "transcribing" -> notice("transcribing", "wait_or_cancel", false);
+            case "voice_sending" -> notice("delivering", "wait_or_cancel", false);
+            case "voice_sent" -> notice("voice_sent", "", false);
+            case "voice_queued" -> notice("voice_queued", "", false);
+            case "voice_send_failed" -> notice("voice_send_failed", "review_pending", true);
+            case "voice_send_rejected" -> notice("voice_send_rejected", "retry_current_session", true);
             case "draft_inserted" -> notice("draft_inserted", "review_draft", false);
             case "draft_pending" -> notice("draft_pending", "review_pending", false);
             case "draft_rejected" -> notice("draft_rejected", "retry_current_session", true);

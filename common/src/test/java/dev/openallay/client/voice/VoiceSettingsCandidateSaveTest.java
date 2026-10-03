@@ -28,7 +28,8 @@ final class VoiceSettingsCandidateSaveTest {
             var previous = VoiceConfig.defaults().withCredential(old);
             var candidate = previous.withBackend(VoiceConfig.Backend.HTTP).withEnabled(true)
                     .withDevice("chosen-device").withLanguage("zh").withLimits(37, 4)
-                    .withHttp(URI.create("https://voice.example/v1"), "chosen-model");
+                    .withHttp(URI.create("https://voice.example/v1"), "chosen-model")
+                    .withGameplayAction(VoiceConfig.GameplayAction.DRAFT);
             var persisted = new AtomicReference<>(previous);
             var saves = new AtomicInteger();
             char[] replacement = "new voice key".toCharArray();
@@ -36,6 +37,7 @@ final class VoiceSettingsCandidateSaveTest {
                     root.resolve("runtime"), credentials, submitted -> {
                         saves.incrementAndGet();
                         assertNotEquals(old, submitted.credential());
+                        assertEquals(VoiceConfig.GameplayAction.DRAFT, submitted.gameplayAction());
                         assertEquals(candidate.withCredential(submitted.credential()), submitted);
                         assertEquals(previous, persisted.get(), "No old-config credential-only write");
                         persisted.set(submitted);

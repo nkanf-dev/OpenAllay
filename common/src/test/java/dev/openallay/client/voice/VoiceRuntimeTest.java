@@ -3,6 +3,10 @@ package dev.openallay.client.voice;
 import org.junit.jupiter.api.Test;
 import java.util.ArrayDeque;
 import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.BooleanSupplier;
+import dev.openallay.tool.ToolResult;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.jupiter.api.Assertions.*;
@@ -15,8 +19,34 @@ class VoiceRuntimeTest {
     }
     static class Draft implements VoiceRuntime.DraftPort {
         long revision; String text = "existing"; String capturedSession = "s1"; String selectedSession = "s1";
-        String pending; boolean closed;
-        public VoiceRuntime.DraftTarget capture() { return new VoiceRuntime.DraftTarget("connection", capturedSession, revision); }
+        String pending; boolean closed; int sendCalls, acceptedSends, retained;
+        final UUID actor = UUID.randomUUID(), sessionOwner = UUID.randomUUID(), connection = UUID.randomUUID();
+        final UUID receipt = UUID.randomUUID();
+        VoiceRuntime.DraftTarget sentTarget; String sentText; BooleanSupplier fence;
+        VoiceRuntime.DeliveryKind kind = VoiceRuntime.DeliveryKind.SENT;
+        CompletableFuture<ToolResult<VoiceRuntime.DeliveryReceipt>> admission;
+        boolean automaticAdmission = true;
+        public VoiceRuntime.DraftTarget capture() {
+            return new VoiceRuntime.DraftTarget(actor, "connection", 0, capturedSession, sessionOwner, connection, revision);
+        }
+        public CompletableFuture<ToolResult<VoiceRuntime.DeliveryReceipt>> send(
+                VoiceRuntime.DraftTarget target, String transcript, BooleanSupplier admissionFence) {
+            sendCalls++; sentTarget = target; sentText = transcript; fence = admissionFence;
+            admission = new CompletableFuture<>();
+            if (automaticAdmission) admit();
+            return admission;
+        }
+        void admit() {
+            if (closed || !fence.getAsBoolean()) {
+                admission.complete(new ToolResult.Failure<>("message_cancelled", "Cancelled")); return;
+            }
+            acceptedSends++;
+            admission.complete(new ToolResult.Success<>(new VoiceRuntime.DeliveryReceipt(receipt, kind)));
+        }
+        public VoiceRuntime.Insertion retainPending(VoiceRuntime.DraftTarget target, String transcript) {
+            if (closed) return VoiceRuntime.Insertion.REJECTED;
+            retained++; pending = transcript; return VoiceRuntime.Insertion.PENDING;
+        }
         public VoiceRuntime.Insertion append(VoiceRuntime.DraftTarget target, String transcript) {
             assertEquals("s1", target.sessionId());
             if (closed) return VoiceRuntime.Insertion.REJECTED;
@@ -40,6 +70,129 @@ class VoiceRuntimeTest {
         }
         public List<AudioCapture.Device> devices() { return List.of(new AudioCapture.Device("fake", "Fake")); }
     }
+    @Test void explicitExternalPttDefaultsToSendOnlySpeechWithAnActualReceipt() {
+        Draft draft = new Draft(); FakeCapture capture = new FakeCapture(); Queue worker = new Queue();
+        java.util.concurrent.atomic.AtomicReference<VoiceConfig> config = new java.util.concurrent.atomic.AtomicReference<>(
+                VoiceConfig.defaults().withEnabled(true));
+        VoiceRuntime runtime = new VoiceRuntime(draft, capture, c -> (r, x) -> {
+            draft.selectedSession = "s2"; draft.revision++; draft.text = "typed edit with image and edit intent";
+            config.set(config.get().withGameplayAction(VoiceConfig.GameplayAction.DRAFT));
+            return new SpeechToText.Result("/compact literal spoken text", "synthetic", null);
+        }, config::get, worker, Runnable::run);
+        capture.onRead = runtime::release;
+        runtime.pressPtt(); worker.drain();
+        assertEquals(1, draft.sendCalls); assertEquals(1, draft.acceptedSends);
+        assertEquals("/compact literal spoken text", draft.sentText);
+        assertEquals("s1", draft.sentTarget.sessionId()); assertEquals(draft.actor, draft.sentTarget.actorId());
+        assertEquals(draft.sessionOwner, draft.sentTarget.sessionOwner());
+        assertEquals(draft.connection, draft.sentTarget.connectionGeneration());
+        assertEquals(0, draft.sentTarget.uiGeneration()); assertEquals(0, draft.sentTarget.draftRevision());
+        assertEquals("typed edit with image and edit intent", draft.text);
+        assertNull(draft.pending); assertEquals(VoiceRuntime.State.READY, runtime.status().state());
+        assertEquals("voice_sent", runtime.status().code()); assertEquals(draft.receipt, runtime.status().receipt());
+    }
+
+    @Test void nativeHudHoldOwnsReleaseIndependentlyOfGameplayPhysicalKeyState() {
+        for (VoiceConfig.GameplayAction choice : VoiceConfig.GameplayAction.values()) {
+            Draft draft = new Draft(); FakeCapture capture = new FakeCapture(); Queue worker = new Queue();
+            VoiceRuntime runtime = new VoiceRuntime(draft, capture, c -> (r, x) -> new SpeechToText.Result("HUD speech", "synthetic", null),
+                    () -> VoiceConfig.defaults().withEnabled(true).withGameplayAction(choice), worker, Runnable::run);
+            capture.onRead = runtime::release;
+            runtime.pressExternalPtt(); runtime.tick(true, true, false, true);
+            assertEquals(VoiceRuntime.State.STARTING, runtime.status().state());
+            worker.drain();
+            if (choice == VoiceConfig.GameplayAction.SEND) {
+                assertEquals(1, draft.acceptedSends); assertEquals("voice_sent", runtime.status().code());
+                assertEquals("existing", draft.text);
+            } else {
+                assertEquals(0, draft.sendCalls); assertEquals("existing HUD speech", draft.text);
+                assertEquals("draft_inserted", runtime.status().code());
+            }
+        }
+    }
+
+    @Test void configuredExternalDraftAndFullscreenMicNeverSendEvenIfChoiceChanges() {
+        for (boolean external : List.of(false, true)) {
+            Draft draft = new Draft(); FakeCapture capture = new FakeCapture(); Queue worker = new Queue();
+            java.util.concurrent.atomic.AtomicReference<VoiceConfig> config = new java.util.concurrent.atomic.AtomicReference<>(
+                    VoiceConfig.defaults().withEnabled(true).withGameplayAction(external
+                            ? VoiceConfig.GameplayAction.DRAFT : VoiceConfig.GameplayAction.SEND));
+            VoiceRuntime runtime = new VoiceRuntime(draft, capture, c -> (r, x) -> {
+                config.set(config.get().withGameplayAction(VoiceConfig.GameplayAction.SEND));
+                return new SpeechToText.Result("draft speech", "synthetic", null);
+            }, config::get, worker, Runnable::run);
+            capture.onRead = runtime::release;
+            if (external) runtime.pressPtt(); else runtime.press();
+            worker.drain();
+            assertEquals(0, draft.sendCalls); assertEquals("existing draft speech", draft.text);
+            assertEquals("draft_inserted", runtime.status().code()); assertNull(runtime.status().receipt());
+        }
+    }
+
+    @Test void asyncAdmissionKeepsOperationActiveRejectsAnotherCaptureAndReportsExactQueuedReceipt() {
+        Draft draft = new Draft(); draft.automaticAdmission = false; draft.kind = VoiceRuntime.DeliveryKind.QUEUED;
+        FakeCapture capture = new FakeCapture(); Queue worker = new Queue();
+        VoiceRuntime runtime = new VoiceRuntime(draft, capture, c -> (r, x) -> new SpeechToText.Result("spoken follow-up", "synthetic", null),
+                () -> VoiceConfig.defaults().withEnabled(true), worker, Runnable::run);
+        capture.onRead = runtime::release;
+        runtime.pressPtt(); worker.drain();
+        assertEquals(VoiceRuntime.State.DELIVERING, runtime.status().state()); assertTrue(runtime.status().active());
+        assertNull(runtime.status().receipt());
+        runtime.pressPtt(); worker.drain(); assertEquals(1, capture.opened); assertEquals(1, draft.sendCalls);
+        draft.admit();
+        assertEquals("voice_queued", runtime.status().code()); assertEquals(draft.receipt, runtime.status().receipt());
+        assertEquals("existing", draft.text); assertEquals(1, draft.acceptedSends);
+    }
+
+    @Test void rejectedAndFailedAdmissionRetainSpeechSeparatelyWithoutSuccessOrAutomaticRetry() {
+        for (boolean exceptional : List.of(false, true)) {
+            Draft draft = new Draft(); draft.automaticAdmission = false;
+            FakeCapture capture = new FakeCapture(); Queue worker = new Queue();
+            VoiceRuntime runtime = new VoiceRuntime(draft, capture, c -> (r, x) -> new SpeechToText.Result("keep spoken text", "synthetic", null),
+                    () -> VoiceConfig.defaults().withEnabled(true), worker, Runnable::run);
+            capture.onRead = runtime::release; runtime.pressPtt(); worker.drain();
+            draft.text = "typed draft stays"; draft.revision++;
+            if (exceptional) draft.admission.completeExceptionally(new IllegalStateException("private failure"));
+            else draft.admission.complete(new ToolResult.Failure<>("capability_unavailable", "No model"));
+            assertEquals(VoiceRuntime.State.ERROR, runtime.status().state()); assertEquals("voice_send_failed", runtime.status().code());
+            assertNull(runtime.status().receipt()); assertEquals("keep spoken text", draft.pending);
+            assertEquals("typed draft stays", draft.text); assertEquals(1, draft.retained);
+            draft.admission.complete(new ToolResult.Failure<>("again", "Duplicate"));
+            runtime.tick(true, true, false, true); worker.drain();
+            assertEquals(1, draft.sendCalls); assertEquals(0, draft.acceptedSends); assertEquals(1, draft.retained);
+        }
+    }
+
+    @Test void cancellationBeforeDeliveryAndWhileAdmissionIsQueuedNeverDispatchesLateSpeech() {
+        for (boolean duringAdmission : List.of(false, true)) {
+            Draft draft = new Draft(); draft.automaticAdmission = false;
+            FakeCapture capture = new FakeCapture(); Queue worker = new Queue(); Queue client = new Queue();
+            VoiceRuntime runtime = new VoiceRuntime(draft, capture, c -> (r, x) -> new SpeechToText.Result("late speech", "synthetic", null),
+                    () -> VoiceConfig.defaults().withEnabled(true), worker, client);
+            capture.onRead = runtime::release; runtime.pressPtt(); worker.drain();
+            if (duringAdmission) { client.drain(); assertEquals(VoiceRuntime.State.DELIVERING, runtime.status().state()); }
+            runtime.cancel(VoiceRuntime.CancelReason.DISCONNECTED);
+            if (duringAdmission) { assertFalse(draft.fence.getAsBoolean()); draft.admit(); }
+            client.drain(); worker.drain();
+            assertEquals(duringAdmission ? 1 : 0, draft.sendCalls); assertEquals(0, draft.acceptedSends);
+            assertEquals(0, draft.retained); assertEquals("existing", draft.text);
+            assertEquals(VoiceRuntime.State.IDLE, runtime.status().state()); assertNull(runtime.status().receipt());
+        }
+    }
+
+    @Test void acceptedAdmissionIsNotRolledBackAndLateReceiptCannotOverwriteNewCapture() {
+        Draft draft = new Draft(); draft.automaticAdmission = false;
+        FakeCapture capture = new FakeCapture(); Queue worker = new Queue(); Queue client = new Queue();
+        VoiceRuntime runtime = new VoiceRuntime(draft, capture, c -> (r, x) -> new SpeechToText.Result("accepted speech", "synthetic", null),
+                () -> VoiceConfig.defaults().withEnabled(true), worker, client);
+        capture.onRead = runtime::release;
+        runtime.pressPtt(); worker.drain(); client.drain(); draft.admit();
+        assertEquals(1, draft.acceptedSends);
+        runtime.cancel(VoiceRuntime.CancelReason.USER); runtime.press(); client.drain();
+        assertEquals(VoiceRuntime.State.STARTING, runtime.status().state()); assertEquals(1, draft.acceptedSends);
+        assertEquals(0, draft.retained); runtime.close(); worker.drain(); client.drain();
+    }
+
     @Test void captureBackendPermissionFormatAndDeviceErrorsHaveDistinctSafeCodes() {
         for (AudioCapture.Failure kind : AudioCapture.Failure.values()) {
             Draft draft = new Draft(); Queue worker = new Queue(); AtomicInteger transcriptions = new AtomicInteger();

@@ -918,5 +918,15 @@
   "screen.openallay.telemetry.session.calls": "模型调用：%s 次",
   "screen.openallay.telemetry.session.cost": "会话估算费用：%s",
   "screen.openallay.notification.card_item": "%s",
-  "screen.openallay.notification.more_cards": "另有 %s 张卡片"
+  "screen.openallay.notification.more_cards": "另有 %s 张卡片",
+  "screen.openallay.settings.voice.gameplay_action": "游戏内语音行为",
+  "screen.openallay.settings.voice.gameplay_action.send": "识别后直接发送（推荐）",
+  "screen.openallay.settings.voice.gameplay_action.draft": "仅填入草稿（需手动发送）",
+  "screen.openallay.settings.voice.gameplay_action.description": "游戏内按住说话可直接发送任务。全屏主界面中始终填入草稿，便于审阅编辑。",
+  "screen.openallay.voice.feedback.delivering": "正在发送识别文字…",
+  "screen.openallay.voice.feedback.voice_sent": "语音请求已发送",
+  "screen.openallay.voice.feedback.voice_queued": "语音跟进已加入队列",
+  "screen.openallay.voice.feedback.voice_send_failed": "未发送。识别文字已保留，可查看后编辑。",
+  "screen.openallay.voice.feedback.voice_send_rejected": "未发送。录音时的会话已不可用。",
+  "screen.openallay.voice.short.delivering": "发送中…"
 }

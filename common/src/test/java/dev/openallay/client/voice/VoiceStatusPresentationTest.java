@@ -44,8 +44,23 @@ class VoiceStatusPresentationTest {
         assertTrue(VoiceStatusPresentation.describeCode("draft_pending").actionTranslationKey().endsWith("review_pending"));
         assertFalse(VoiceStatusPresentation.describeCode("draft_pending").error());
     }
+    @Test void sentQueuedAndRefusedDeliveryNeverClaimDraftInsertionOrTaskCompletion() {
+        var sent = VoiceStatusPresentation.describeCode("voice_sent");
+        var queued = VoiceStatusPresentation.describeCode("voice_queued");
+        var failed = VoiceStatusPresentation.describeCode("voice_send_failed");
+        assertTrue(sent.translationKey().endsWith("voice_sent")); assertFalse(sent.error());
+        assertTrue(queued.translationKey().endsWith("voice_queued")); assertFalse(queued.error());
+        assertNotEquals(sent.translationKey(), queued.translationKey());
+        assertEquals("", sent.actionTranslationKey()); assertEquals("", queued.actionTranslationKey());
+        assertTrue(failed.error()); assertTrue(failed.actionTranslationKey().endsWith("review_pending"));
+        assertTrue(VoiceStatusPresentation.describeCode("voice_send_rejected").error());
+        var delivering = VoiceStatusPresentation.describe(new VoiceRuntime.Status(
+                VoiceRuntime.State.DELIVERING, "untrusted detail", 0, 0, "", null, null));
+        assertTrue(delivering.translationKey().endsWith("delivering"));
+        assertTrue(delivering.actionTranslationKey().endsWith("wait_or_cancel")); assertFalse(delivering.error());
+    }
     @Test void livePhaseDoesNotExposeAnUnexpectedBackendCode() {
-        var status = new VoiceRuntime.Status(VoiceRuntime.State.RECORDING, "unexpected /private/path", 3000, 30000, "", null);
+        var status = new VoiceRuntime.Status(VoiceRuntime.State.RECORDING, "unexpected /private/path", 3000, 30000, "", null, null);
         var shown = VoiceStatusPresentation.describe(status);
         assertEquals("screen.openallay.voice.feedback.recording", shown.translationKey());
         assertFalse(shown.error());

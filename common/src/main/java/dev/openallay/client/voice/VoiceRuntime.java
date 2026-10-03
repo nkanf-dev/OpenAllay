@@ -1,43 +1,62 @@
 package dev.openallay.client.voice;
 
+import dev.openallay.tool.ToolResult;
 import java.io.ByteArrayOutputStream;
 import java.util.Objects;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.locks.LockSupport;
+import java.util.function.BooleanSupplier;
 import java.util.function.Function;
 import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 
 /** Explicit PTT owner. All capture, recognition and cleanup run off the game thread. */
 public final class VoiceRuntime implements VoiceInputActions, AutoCloseable {
-    public enum State { IDLE, STARTING, RECORDING, TRANSCRIBING, READY, PENDING, ERROR }
+    public enum State { IDLE, STARTING, RECORDING, TRANSCRIBING, DELIVERING, READY, PENDING, ERROR }
     public enum CancelReason { USER, FOCUS_LOST, SCREEN_CLOSED, DISCONNECTED, KEY_LOST, LIMIT, DEVICE_BROKEN, FEEDBACK_HIDDEN }
     public enum Insertion { INSERTED, PENDING, REJECTED }
-    public record DraftTarget(String actorId, String sessionId, long draftRevision) {
-        public DraftTarget { Objects.requireNonNull(actorId); Objects.requireNonNull(sessionId); }
+    public enum Origin { FULLSCREEN, GAMEPLAY, HUD_INPUT }
+    public enum DeliveryKind { SENT, QUEUED }
+    public record DeliveryReceipt(UUID id, DeliveryKind kind) {
+        public DeliveryReceipt { Objects.requireNonNull(id); Objects.requireNonNull(kind); }
+    }
+    public record DraftTarget(UUID actorId, String uiOwnerId, long uiGeneration, String sessionId,
+            UUID sessionOwner, UUID connectionGeneration, long draftRevision) {
+        public DraftTarget {
+            Objects.requireNonNull(actorId); Objects.requireNonNull(uiOwnerId); Objects.requireNonNull(sessionId);
+            Objects.requireNonNull(sessionOwner); Objects.requireNonNull(connectionGeneration);
+        }
     }
     public interface DraftPort {
         DraftTarget capture();
         Insertion append(DraftTarget target, String text);
+        CompletableFuture<ToolResult<DeliveryReceipt>> send(DraftTarget target, String text, BooleanSupplier admissionFence);
+        /** Keep refused spoken text separate from typed text, images and pending-edit intent. */
+        Insertion retainPending(DraftTarget target, String text);
     }
     public record Status(State state, String code, long elapsedMillis, long maxMillis,
-            String source, SpeechToText.Usage usage) {
-        public boolean active() { return state == State.STARTING || state == State.RECORDING || state == State.TRANSCRIBING; }
+            String source, SpeechToText.Usage usage, UUID receipt) {
+        public boolean active() { return state == State.STARTING || state == State.RECORDING
+                || state == State.TRANSCRIBING || state == State.DELIVERING; }
         public boolean indicatorVisible() { return state != State.IDLE; }
     }
     private static final class Operation {
         final long id;
         final DraftTarget target;
         final VoiceConfig config;
-        final boolean ptt;
+        final Origin origin;
+        final VoiceConfig.GameplayAction action;
         final VoiceCancellation cancellation = new VoiceCancellation();
         final long started;
         volatile boolean finish;
-        Operation(long id, DraftTarget target, VoiceConfig config, boolean ptt, long started) {
-            this.id = id; this.target = target; this.config = config; this.ptt = ptt; this.started = started;
+        Operation(long id, DraftTarget target, VoiceConfig config, Origin origin, long started) {
+            this.id = id; this.target = target; this.config = config; this.origin = origin; this.started = started;
+            this.action = origin == Origin.FULLSCREEN ? VoiceConfig.GameplayAction.DRAFT : config.gameplayAction();
         }
     }
     private final Semaphore captureSlot = new Semaphore(1);
@@ -53,7 +72,7 @@ public final class VoiceRuntime implements VoiceInputActions, AutoCloseable {
     private boolean closed;
     private boolean feedbackVisible = true;
     private long statusSince;
-    private Status status = new Status(State.IDLE, "idle", 0, 0, "", null);
+    private Status status = new Status(State.IDLE, "idle", 0, 0, "", null, null);
 
     public VoiceRuntime(DraftPort drafts, AudioCapture.Factory captures,
             Function<VoiceConfig, SpeechToText> backends, Supplier<VoiceConfig> config,
@@ -71,16 +90,17 @@ public final class VoiceRuntime implements VoiceInputActions, AutoCloseable {
     @Override public synchronized boolean enabled() { return !closed && config.get().enabled(); }
     @Override public synchronized Status status() {
         if (operation == null) return status;
-        return new Status(status.state(), status.code(), elapsed(operation), status.maxMillis(), status.source(), status.usage());
+        return new Status(status.state(), status.code(), elapsed(operation), status.maxMillis(), status.source(), status.usage(), status.receipt());
     }
-    @Override public void press() { start(false); }
-    public void pressPtt() { start(true); }
-    private synchronized void start(boolean ptt) {
-        if (!enabled() || operation != null || !feedbackVisible) return;
+    @Override public void press() { start(Origin.FULLSCREEN); }
+    @Override public void pressPtt() { start(Origin.GAMEPLAY); }
+    @Override public void pressExternalPtt() { start(Origin.HUD_INPUT); }
+    private synchronized void start(Origin origin) {
+        VoiceConfig selected = config.get();
+        if (closed || !selected.enabled() || operation != null || !feedbackVisible) return;
         DraftTarget target = drafts.capture();
         if (target == null) { setStatus(State.ERROR, "no_session", 0, "", null); return; }
-        VoiceConfig selected = config.get();
-        Operation next = new Operation(++generation, target, selected, ptt, nanoTime.getAsLong());
+        Operation next = new Operation(++generation, target, selected, origin, nanoTime.getAsLong());
         operation = next;
         setStatus(State.STARTING, "starting", selected.maxClipSeconds() * 1000L, "", null);
         worker.execute(() -> record(next));
@@ -114,7 +134,7 @@ public final class VoiceRuntime implements VoiceInputActions, AutoCloseable {
                 if (!visibleFeedback) cancel = CancelReason.FEEDBACK_HIDDEN;
                 else if (!connected) cancel = CancelReason.DISCONNECTED;
                 else if (!focused) cancel = CancelReason.FOCUS_LOST;
-                else if (operation.ptt && !physicalPttDown && !operation.finish
+                else if (operation.origin == Origin.GAMEPLAY && !physicalPttDown && !operation.finish
                         && (status.state() == State.STARTING || status.state() == State.RECORDING)) cancel = CancelReason.KEY_LOST;
             } else if (status.indicatorVisible() && nanoTime.getAsLong() - statusSince > 6_000_000_000L) {
                 setStatus(State.IDLE, "idle", 0, "", null);
@@ -153,13 +173,7 @@ public final class VoiceRuntime implements VoiceInputActions, AutoCloseable {
             dispatch(op, () -> setStatus(State.TRANSCRIBING, "transcribing", op.config.maxClipSeconds() * 1000L, "", null));
             SpeechToText.Result result = backend.transcribe(new SpeechToText.Request(clip, op.config.language(), op.config.cpuThreads()), op.cancellation);
             op.cancellation.check();
-            dispatch(op, () -> {
-                Insertion insertion = drafts.append(op.target, result.text());
-                operation = null;
-                setStatus(insertion == Insertion.INSERTED ? State.READY : insertion == Insertion.PENDING ? State.PENDING : State.ERROR,
-                        insertion == Insertion.INSERTED ? "draft_inserted" : insertion == Insertion.PENDING ? "draft_pending" : "draft_rejected",
-                        0, result.source(), result.usage());
-            });
+            dispatch(op, () -> deliver(op, result));
         } catch (CancellationException failure) {
             // Only the operation's token proves that the caller fenced this result.
             // A provider cancelling itself must not leave STARTING/RECORDING stuck.
@@ -174,9 +188,50 @@ public final class VoiceRuntime implements VoiceInputActions, AutoCloseable {
             if (acquired) captureSlot.release();
         }
     }
+    private void deliver(Operation op, SpeechToText.Result transcript) {
+        if (op.action == VoiceConfig.GameplayAction.DRAFT) {
+            Insertion insertion = drafts.append(op.target, transcript.text());
+            operation = null;
+            setStatus(insertion == Insertion.INSERTED ? State.READY : insertion == Insertion.PENDING ? State.PENDING : State.ERROR,
+                    insertion == Insertion.INSERTED ? "draft_inserted" : insertion == Insertion.PENDING ? "draft_pending" : "draft_rejected",
+                    0, transcript.source(), transcript.usage());
+            return;
+        }
+        setStatus(State.DELIVERING, "voice_sending", 0, transcript.source(), transcript.usage());
+        try {
+            CompletableFuture<ToolResult<DeliveryReceipt>> admission = Objects.requireNonNull(
+                    drafts.send(op.target, transcript.text(), () -> current(op)));
+            admission.whenComplete((result, failure) -> dispatch(op, () -> {
+                if (failure == null && result instanceof ToolResult.Success<DeliveryReceipt> success) {
+                    DeliveryReceipt receipt = success.value();
+                    if (receipt != null) {
+                        operation = null;
+                        setStatus(State.READY, receipt.kind() == DeliveryKind.SENT ? "voice_sent" : "voice_queued",
+                                0, transcript.source(), transcript.usage(), receipt.id());
+                        return;
+                    }
+                }
+                deliveryFailed(op, transcript);
+            }));
+        } catch (RuntimeException failure) {
+            deliveryFailed(op, transcript);
+        }
+    }
+    private void deliveryFailed(Operation op, SpeechToText.Result transcript) {
+        if (!current(op)) return;
+        Insertion retained;
+        try { retained = drafts.retainPending(op.target, transcript.text()); }
+        catch (RuntimeException failure) { retained = Insertion.REJECTED; }
+        operation = null;
+        setStatus(State.ERROR, retained == Insertion.PENDING ? "voice_send_failed" : "voice_send_rejected",
+                0, transcript.source(), transcript.usage());
+    }
+    private synchronized boolean current(Operation op) {
+        return !closed && operation == op && generation == op.id && !op.cancellation.cancelled();
+    }
     private void dispatch(Operation op, Runnable action) {
         client.execute(() -> { synchronized (VoiceRuntime.this) {
-            if (!closed && operation == op && generation == op.id && !op.cancellation.cancelled()) action.run();
+            if (current(op)) action.run();
         }});
     }
     static String safeCode(Throwable failure) {
@@ -205,7 +260,10 @@ public final class VoiceRuntime implements VoiceInputActions, AutoCloseable {
     }
     private long elapsed(Operation op) { return Math.max(0, (nanoTime.getAsLong() - op.started) / 1_000_000L); }
     private void setStatus(State state, String code, long maximum, String source, SpeechToText.Usage usage) {
-        status = new Status(state, code, 0, maximum, source, usage); statusSince = nanoTime.getAsLong();
+        setStatus(state, code, maximum, source, usage, null);
+    }
+    private void setStatus(State state, String code, long maximum, String source, SpeechToText.Usage usage, UUID receipt) {
+        status = new Status(state, code, 0, maximum, source, usage, receipt); statusSince = nanoTime.getAsLong();
     }
     @Override public void close() {
         synchronized (this) { closed = true; }

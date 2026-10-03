@@ -605,7 +605,8 @@ public final class OpenAllaySettingsScreen extends Screen {
         VoiceConfig defaults = VoiceConfig.defaults();
         voiceDraft = new VoiceConfig(defaults.enabled(), defaults.backend(), defaults.deviceId(),
                 defaults.maxClipSeconds(), defaults.language(), defaults.cpuThreads(),
-                voiceDraft.nativeModelDirectory(), defaults.httpBaseUrl(), defaults.httpModel(), voiceDraft.credential());
+                voiceDraft.nativeModelDirectory(), defaults.httpBaseUrl(), defaults.httpModel(), voiceDraft.credential(),
+                defaults.gameplayAction());
         voiceHttpUrl = defaults.httpBaseUrl().toString();
         voiceHttpModel = defaults.httpModel();
         // Existing model selection and credential stay available; reset never removes files or keys.
@@ -1094,6 +1095,13 @@ public final class OpenAllaySettingsScreen extends Screen {
             rebuildWidgets();
         });
         y += 26;
+        voiceButton("gameplay_action", Component.translatable("screen.openallay.settings.voice.gameplay_action."
+                + voiceDraft.gameplayAction().name().toLowerCase(java.util.Locale.ROOT)), x, y, w, () -> {
+            voiceDraft = voiceDraft.withGameplayAction(voiceDraft.gameplayAction() == VoiceConfig.GameplayAction.SEND
+                    ? VoiceConfig.GameplayAction.DRAFT : VoiceConfig.GameplayAction.SEND);
+            rebuildWidgets();
+        });
+        y += 26;
         voiceButton("backend", Component.translatable("screen.openallay.settings.voice.backend."
                 + voiceDraft.backend().name().toLowerCase(java.util.Locale.ROOT)), x, y, w, () -> {
             voiceDraft = voiceDraft.withBackend(voiceDraft.backend() == VoiceConfig.Backend.NATIVE
@@ -1184,7 +1192,7 @@ public final class OpenAllaySettingsScreen extends Screen {
             });
             y += 26;
         }
-        int copyLines = font.split(Component.translatable("screen.openallay.settings.voice.description"), w).size()
+        int copyLines = font.split(Component.translatable("screen.openallay.settings.voice.gameplay_action.description"), w).size()
                 + font.split(Component.translatable("screen.openallay.settings.voice.not_ready"), w).size()
                 + font.split(voiceSettingsStatus(voiceView.statusCode()), w).size()
                 + font.split(Component.literal(voiceView.modelName()), w).size() + 4;
@@ -1257,7 +1265,7 @@ public final class OpenAllaySettingsScreen extends Screen {
                     : Path.of(voiceModelPath).toAbsolutePath().normalize().toString();
             candidate = new VoiceConfig(candidate.enabled(), candidate.backend(), candidate.deviceId(),
                     candidate.maxClipSeconds(), candidate.language(), candidate.cpuThreads(), modelDirectory,
-                    candidate.httpBaseUrl(), candidate.httpModel(), candidate.credential());
+                    candidate.httpBaseUrl(), candidate.httpModel(), candidate.credential(), candidate.gameplayAction());
             if (candidate.equals(voiceActions.view().config()) && voiceApiKeyDraft.isBlank()) {
                 if (closeOnSuccess) closeAfterSave();
                 return;
@@ -1291,7 +1299,8 @@ public final class OpenAllaySettingsScreen extends Screen {
                 resetVoiceDraft();
                 voiceDraft = voiceDraft.withEnabled(previous.enabled()).withBackend(previous.backend())
                         .withDevice(previous.deviceId()).withLanguage(previous.language())
-                        .withLimits(previous.maxClipSeconds(), previous.cpuThreads());
+                        .withLimits(previous.maxClipSeconds(), previous.cpuThreads())
+                        .withGameplayAction(previous.gameplayAction());
                 voiceHttpUrl = previousHttpUrl;
                 voiceHttpModel = previousHttpModel;
             }
@@ -1326,7 +1335,7 @@ public final class OpenAllaySettingsScreen extends Screen {
             renderWrapped(graphics, Component.translatable("screen.openallay.settings.voice.unavailable"),
                     x, y + 22, w, MUTED, 10);
         } else {
-            int fieldsY = area.y() + 34 - voiceScroll + 7 * 26;
+            int fieldsY = area.y() + 34 - voiceScroll + 8 * 26;
             if (voiceDraft.backend() == VoiceConfig.Backend.NATIVE) {
                 if (layout.pageWidgetVisible(fieldsY, 34)) graphics.text(font,
                         Component.translatable("screen.openallay.settings.voice.model_directory"),
@@ -1343,9 +1352,9 @@ public final class OpenAllaySettingsScreen extends Screen {
                             x, fieldY, MUTED, false);
                 }
             }
-            int bodyHeight = voiceDraft.backend() == VoiceConfig.Backend.NATIVE ? 448 : 360;
+            int bodyHeight = voiceDraft.backend() == VoiceConfig.Backend.NATIVE ? 474 : 386;
             int bottom = area.y() + 34 + bodyHeight - voiceScroll;
-            bottom = renderWrapped(graphics, Component.translatable("screen.openallay.settings.voice.description"),
+            bottom = renderWrapped(graphics, Component.translatable("screen.openallay.settings.voice.gameplay_action.description"),
                     x, bottom, w, MUTED, 10);
             String progress = voiceView.totalBytes() > 0
                     ? " · " + voiceView.downloadedBytes() / 1048576 + "/" + voiceView.totalBytes() / 1048576 + " MiB" : "";

@@ -918,5 +918,15 @@
   "screen.openallay.telemetry.session.calls": "Model calls: %s",
   "screen.openallay.telemetry.session.cost": "Estimated session cost: %s",
   "screen.openallay.notification.card_item": "%s",
-  "screen.openallay.notification.more_cards": "+%s more cards"
+  "screen.openallay.notification.more_cards": "+%s more cards",
+  "screen.openallay.settings.voice.gameplay_action": "In-game voice behavior",
+  "screen.openallay.settings.voice.gameplay_action.send": "Send task immediately (Default)",
+  "screen.openallay.settings.voice.gameplay_action.draft": "Add to draft only",
+  "screen.openallay.settings.voice.gameplay_action.description": "Voice input during gameplay can send tasks directly. Inside the fullscreen chat, it always adds to your draft.",
+  "screen.openallay.voice.feedback.delivering": "Sending recognized speech…",
+  "screen.openallay.voice.feedback.voice_sent": "Voice request sent",
+  "screen.openallay.voice.feedback.voice_queued": "Voice follow-up queued",
+  "screen.openallay.voice.feedback.voice_send_failed": "Not sent. Recognized speech is kept for review.",
+  "screen.openallay.voice.feedback.voice_send_rejected": "Not sent. The captured session is no longer available.",
+  "screen.openallay.voice.short.delivering": "Sending…"
 }

@@ -584,7 +584,7 @@ public final class OpenAllayScreen extends Screen {
         if (actions == null || !actions.enabled()) return;
         switch (actions.status().state()) {
             case STARTING, RECORDING -> actions.release();
-            case TRANSCRIBING -> actions.cancel(dev.openallay.client.voice.VoiceRuntime.CancelReason.USER);
+            case TRANSCRIBING, DELIVERING -> actions.cancel(dev.openallay.client.voice.VoiceRuntime.CancelReason.USER);
             default -> actions.press();
         }
     }

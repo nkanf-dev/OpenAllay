@@ -12,6 +12,7 @@ class VoiceConfigStoreTest {
     @Test void defaultsNativeDisabledAndExactShapeRejectsSecretsAndFractionalLimits() {
         VoiceConfig config = VoiceConfig.defaults();
         assertFalse(config.enabled()); assertEquals(VoiceConfig.Backend.NATIVE, config.backend());
+        assertEquals(VoiceConfig.GameplayAction.SEND, config.gameplayAction());
         String json = VoiceConfigStore.encode(config);
         assertEquals(config, VoiceConfigStore.decode(json));
         assertThrows(RuntimeException.class, () -> VoiceConfigStore.decode(json.replace("\"maxClipSeconds\":20", "\"maxClipSeconds\":1.5")));
@@ -20,6 +21,30 @@ class VoiceConfigStoreTest {
         assertThrows(RuntimeException.class, () -> config.withLimits(61, 4));
         assertThrows(RuntimeException.class, () -> config.withLimits(20, 9));
         assertThrows(RuntimeException.class, () -> config.withHttp(java.net.URI.create("https://user:secret@example.test/v1"), "asr"));
+    }
+    @Test void gameplayChoiceIsMandatoryExactAndRetainedByEveryCandidateHelper() {
+        VoiceConfig draft = VoiceConfig.defaults().withGameplayAction(VoiceConfig.GameplayAction.DRAFT);
+        String json = VoiceConfigStore.encode(draft);
+        assertEquals(11, com.google.gson.JsonParser.parseString(json).getAsJsonObject().size());
+        assertEquals(draft, VoiceConfigStore.decode(json));
+        assertThrows(RuntimeException.class, () -> VoiceConfigStore.decode(json.replace("\"gameplayAction\":\"DRAFT\",", "")));
+        assertThrows(RuntimeException.class, () -> VoiceConfigStore.decode(json.replace("\"gameplayAction\":\"DRAFT\"", "\"gameplayAction\":\"send\"")));
+        assertThrows(RuntimeException.class, () -> VoiceConfigStore.decode(json.replace("\"gameplayAction\":\"DRAFT\"", "\"gameplayAction\":null")));
+        assertThrows(RuntimeException.class, () -> draft.withGameplayAction(null));
+        var ref = dev.openallay.model.config.CredentialReference.local(java.util.UUID.randomUUID());
+        for (VoiceConfig candidate : java.util.List.of(draft.withEnabled(true), draft.withBackend(VoiceConfig.Backend.HTTP),
+                draft.withDevice("fake"), draft.withLimits(10, 1), draft.withLanguage("en"),
+                draft.withModelDirectory(directory), draft.withHttp(java.net.URI.create("https://example.test/v1"), "model"),
+                draft.withCredential(ref))) assertEquals(VoiceConfig.GameplayAction.DRAFT, candidate.gameplayAction());
+    }
+    @Test void missingChoiceReloadRetainsLastValidAndDoesNotRewriteOldShape() throws Exception {
+        Path path = directory.resolve("voice.json"); VoiceConfigStore store = new VoiceConfigStore(path);
+        VoiceConfig valid = VoiceConfig.defaults().withGameplayAction(VoiceConfig.GameplayAction.DRAFT);
+        assertInstanceOf(ToolResult.Success.class, store.save(valid));
+        String oldShape = VoiceConfigStore.encode(valid).replace("\"gameplayAction\":\"DRAFT\",", "");
+        Files.writeString(path, oldShape);
+        assertInstanceOf(ToolResult.Failure.class, store.reload());
+        assertEquals(valid, store.config()); assertEquals(oldShape, Files.readString(path));
     }
     @Test void httpUrlWithoutSchemeIsRejectedAsInvalidInputNotNullPointer() {
         VoiceConfig config = VoiceConfig.defaults();

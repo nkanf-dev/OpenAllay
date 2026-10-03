@@ -98,7 +98,7 @@ final class OpenAllayScreenProjectionTest {
         dev.openallay.client.voice.VoiceRuntime.CancelReason cancelled;
         public boolean enabled() { return enabled; }
         public dev.openallay.client.voice.VoiceRuntime.Status status() {
-            return new dev.openallay.client.voice.VoiceRuntime.Status(state, "test_code", 0, 1000, "", null);
+            return new dev.openallay.client.voice.VoiceRuntime.Status(state, "test_code", 0, 1000, "", null, null);
         }
         public void press() { presses++; }
         public void release() { releases++; }

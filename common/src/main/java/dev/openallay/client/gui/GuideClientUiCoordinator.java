@@ -82,22 +82,36 @@ public final class GuideClientUiCoordinator implements AutoCloseable {
         });
         voice = VoiceClientRuntime.create(configDirectory, new VoiceRuntime.DraftPort() {
             @Override public VoiceRuntime.DraftTarget capture() {
-                if (state == null || state.closed()) return null;
+                if (state == null || state.closed() || bound == null || minecraft.player == null
+                        || minecraft.level == null || !minecraft.player.getUUID().equals(bound.snapshot().actorId())) return null;
                 state.selectSession(bound.snapshot().selectedSession());
-                return new VoiceRuntime.DraftTarget(state.ownerId(), state.selectedSession(),
-                        state.revision(state.selectedSession()));
+                UUID sessionOwner = bound.presentationSessionOwner(state.selectedSession()).orElse(null);
+                if (sessionOwner == null) return null;
+                return new VoiceRuntime.DraftTarget(bound.snapshot().actorId(), state.ownerId(), state.generation(),
+                        state.selectedSession(), sessionOwner, bound.presentationGeneration(), state.revision(state.selectedSession()));
             }
             @Override public VoiceRuntime.Insertion append(VoiceRuntime.DraftTarget target, String text) {
-                if (state == null || state.closed() || !state.ownerId().equals(target.actorId())) {
-                    return VoiceRuntime.Insertion.REJECTED;
-                }
-                GuideClientUiState.Insertion captured = new GuideClientUiState.Insertion(
-                        target.actorId(), state.generation(), target.sessionId(), target.draftRevision());
+                if (!validVoiceTarget(target)) return VoiceRuntime.Insertion.REJECTED;
+                GuideClientUiState.Insertion captured = voiceInsertion(target);
                 return switch (state.insertTranscript(captured, text)) {
-                    case INSERTED -> VoiceRuntime.Insertion.INSERTED;
+                    case INSERTED -> {
+                        if (target.sessionId().equals(state.selectedSession())
+                                && minecraft.gui.screen() instanceof OpenAllayScreen screen) {
+                            screen.focusComposerAfterVoiceDraft();
+                        }
+                        yield VoiceRuntime.Insertion.INSERTED;
+                    }
                     case PENDING -> VoiceRuntime.Insertion.PENDING;
                     case REJECTED -> VoiceRuntime.Insertion.REJECTED;
                 };
+            }
+            @Override public java.util.concurrent.CompletableFuture<dev.openallay.tool.ToolResult<VoiceRuntime.DeliveryReceipt>> send(
+                    VoiceRuntime.DraftTarget target, String text, java.util.function.BooleanSupplier admissionFence) {
+                return sendVoice(target, text, admissionFence);
+            }
+            @Override public VoiceRuntime.Insertion retainPending(VoiceRuntime.DraftTarget target, String text) {
+                return validVoiceTarget(target) && state.retainPendingTranscript(voiceInsertion(target), text)
+                        ? VoiceRuntime.Insertion.PENDING : VoiceRuntime.Insertion.REJECTED;
             }
         }, dispatcher::execute);
         settingsBinding = settings == null ? () -> {} : settings.listen(ignored -> notifications.settingsChanged());
@@ -167,7 +181,7 @@ public final class GuideClientUiCoordinator implements AutoCloseable {
         }
         boolean physicalDown = OpenAllayKeyMappings.VOICE_PTT.isDown();
         if (gameplay && physicalDown && !pttDown && feedback && voice.input().enabled()) {
-            services.forActor(minecraft.player.getUUID()); // Explicit PTT captures this session draft, not a task.
+            services.forActor(minecraft.player.getUUID()); // Explicit PTT freezes this actor/session and gameplay delivery choice.
             voice.input().pressPtt();
         } else if (pttDown && !physicalDown) {
             voice.input().release();
@@ -210,6 +224,49 @@ public final class GuideClientUiCoordinator implements AutoCloseable {
         voice.input().cancel(VoiceRuntime.CancelReason.DISCONNECTED);
         pttDown = false;
         hud.disconnect();
+    }
+
+    private GuideClientUiState.Insertion voiceInsertion(VoiceRuntime.DraftTarget target) {
+        return new GuideClientUiState.Insertion(target.uiOwnerId(), target.uiGeneration(),
+                target.sessionId(), target.draftRevision());
+    }
+
+    private boolean validVoiceTarget(VoiceRuntime.DraftTarget target) {
+        return !closed && target != null && state != null && !state.closed() && bound != null
+                && minecraft.player != null && minecraft.level != null
+                && minecraft.player.getUUID().equals(target.actorId())
+                && bound.snapshot().actorId().equals(target.actorId())
+                && state.ownerId().equals(target.uiOwnerId()) && state.generation() == target.uiGeneration()
+                && bound.presentationGeneration().equals(target.connectionGeneration())
+                && bound.presentationSessionOwner(target.sessionId()).filter(target.sessionOwner()::equals).isPresent();
+    }
+
+    private boolean voiceAdmissionAllowed(VoiceRuntime.DraftTarget target) {
+        return validVoiceTarget(target) && minecraft.isWindowActive()
+                && minecraft.gui.overlay() == null && !minecraft.gui.hud.isHidden()
+                && (minecraft.gui.screen() == null || minecraft.gui.screen() instanceof OpenAllayScreen
+                        || minecraft.gui.screen() instanceof GuideChatLiteScreen);
+    }
+
+    private java.util.concurrent.CompletableFuture<dev.openallay.tool.ToolResult<VoiceRuntime.DeliveryReceipt>> sendVoice(
+            VoiceRuntime.DraftTarget target, String text, java.util.function.BooleanSupplier admissionFence) {
+        if (!voiceAdmissionAllowed(target) || !admissionFence.getAsBoolean()) {
+            return java.util.concurrent.CompletableFuture.completedFuture(new dev.openallay.tool.ToolResult.Failure<>(
+                    "voice_send_rejected", "The captured voice session is no longer available"));
+        }
+        GuideService service = bound;
+        java.util.function.BooleanSupplier fence = () -> service == bound && voiceAdmissionAllowed(target)
+                && admissionFence.getAsBoolean();
+        return service.followUp(target.sessionId(), target.sessionOwner(), text, fence).thenApply(result -> {
+            if (result instanceof dev.openallay.tool.ToolResult.Success<GuideService.InputReceipt> success) {
+                GuideService.InputReceipt receipt = success.value();
+                return new dev.openallay.tool.ToolResult.Success<>(new VoiceRuntime.DeliveryReceipt(receipt.id(),
+                        receipt.queued() ? VoiceRuntime.DeliveryKind.QUEUED : VoiceRuntime.DeliveryKind.SENT));
+            }
+            dev.openallay.tool.ToolResult.Failure<GuideService.InputReceipt> failure =
+                    (dev.openallay.tool.ToolResult.Failure<GuideService.InputReceipt>) result;
+            return new dev.openallay.tool.ToolResult.Failure<>(failure.code(), failure.message());
+        });
     }
 
     private boolean valid(GuideService service, GuideClientUiState owner) {

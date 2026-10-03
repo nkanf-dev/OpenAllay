@@ -266,6 +266,121 @@ final class GuideServiceRequestControlTest {
         assertTrue(service.pendingMessages("main").isEmpty());
     }
 
+    @Test void capturedVoiceAdmissionUsesOriginalSessionAndReportsActualRequestRatherThanPendingReceipt() {
+        ArrayDeque<Runnable> queue = new ArrayDeque<>(); Endpoint endpoint = new Endpoint();
+        GuideService service = new GuideService(UUID.randomUUID(), endpoint, offline(),
+                (required, correlation) -> new ToolResult.Success<>(ToolInvocationContext.developmentConsole(correlation)),
+                queue::addLast, Clock.systemUTC(), new Gson());
+        UUID owner = service.presentationSessionOwner("main").orElseThrow();
+        var selection = service.selectSession("other"); runOwner(queue); success(selection.join());
+        var delivered = service.followUp("main", owner, "/compact spoken literal", () -> true);
+        runOwner(queue); GuideService.InputReceipt receipt = success(delivered.join());
+        assertFalse(receipt.queued()); assertEquals(1, endpoint.calls.size());
+        assertEquals(receipt.id(), endpoint.calls.getFirst().id());
+        assertEquals("main", endpoint.calls.getFirst().session());
+        assertEquals("/compact spoken literal", endpoint.calls.getFirst().text());
+        assertEquals("other", service.snapshot().selectedSession());
+        assertTrue(service.pendingMessages("main").isEmpty());
+        assertTrue(session(service, "other").requests().isEmpty()); assertTrue(endpoint.steers.isEmpty());
+    }
+
+    @Test void capturedVoiceDuringRealWorkIsFifoFollowUpNotSteerAndNeverEditsExistingQueue() {
+        Endpoint endpoint = new Endpoint(); GuideService service = service(endpoint);
+        UUID owner = service.presentationSessionOwner("main").orElseThrow();
+        UUID first = success(service.ask("active goal").join());
+        UUID existing = success(service.followUp("existing typed follow-up").join());
+        service.selectSession("other").join();
+        GuideService.InputReceipt voice = success(service.followUp("main", owner, "spoken follow-up", () -> true).join());
+        assertTrue(voice.queued()); assertNotEquals(first, voice.id()); assertNotEquals(existing, voice.id());
+        assertEquals(List.of("existing typed follow-up", "spoken follow-up"), service.pendingMessages("main").stream()
+                .map(GuidePendingMessage::text).toList());
+        assertTrue(service.pendingMessages("main").stream().allMatch(value -> value.kind() == GuidePendingMessage.Kind.FOLLOW_UP));
+        assertTrue(endpoint.steers.isEmpty()); assertEquals(1, endpoint.calls.size());
+        endpoint.terminal(first, "done but not released"); assertEquals(1, endpoint.calls.size());
+        endpoint.release(first, "done"); assertEquals("existing typed follow-up", endpoint.calls.getLast().text());
+        UUID second = endpoint.calls.getLast().id(); endpoint.terminal(second, "second done"); endpoint.release(second, "second done");
+        assertEquals("spoken follow-up", endpoint.calls.getLast().text()); assertEquals("main", endpoint.calls.getLast().session());
+        assertNotEquals(voice.id(), endpoint.calls.getLast().id()); assertEquals("other", service.snapshot().selectedSession());
+    }
+
+    @Test void capturedVoiceRejectedOwnerDisconnectedOrUnavailableModelDoesNotCreateWork() {
+        Endpoint endpoint = new Endpoint(); GuideService service = service(endpoint);
+        UUID oldOwner = service.presentationSessionOwner("main").orElseThrow();
+        success(service.closeSession("main").join());
+        assertNotEquals(oldOwner, service.presentationSessionOwner("main").orElseThrow());
+        assertInstanceOf(ToolResult.Failure.class, service.followUp("main", oldOwner, "stale speech", () -> true).join());
+        UUID owner = service.presentationSessionOwner("main").orElseThrow();
+        GuideService unavailable = new GuideService(UUID.randomUUID(), null, offline(),
+                (required, correlation) -> new ToolResult.Success<>(ToolInvocationContext.developmentConsole(correlation)),
+                Runnable::run, Clock.systemUTC(), new Gson());
+        UUID unavailableOwner = unavailable.presentationSessionOwner("main").orElseThrow();
+        ToolResult<GuideService.InputReceipt> rejected = unavailable.followUp("main", unavailableOwner, "no model", () -> true).join();
+        assertInstanceOf(ToolResult.Failure.class, rejected); assertTrue(endpoint.calls.isEmpty());
+        assertTrue(session(unavailable, "main").requests().isEmpty()); assertTrue(unavailable.pendingMessages("main").isEmpty());
+        service.disconnect().join();
+        assertInstanceOf(ToolResult.Failure.class, service.followUp("main", owner, "disconnected", () -> true).join());
+        assertTrue(endpoint.calls.isEmpty());
+    }
+
+    @Test void capturedVoiceFenceIsCheckedBeforePreparationAndAgainBeforeActualAdmission() {
+        for (boolean afterPreparation : List.of(false, true)) {
+            ArrayDeque<Runnable> queue = new ArrayDeque<>(); Endpoint endpoint = new Endpoint();
+            GuideService service = new GuideService(UUID.randomUUID(), endpoint, offline(),
+                    (required, correlation) -> new ToolResult.Success<>(ToolInvocationContext.developmentConsole(correlation)),
+                    queue::addLast, Clock.systemUTC(), new Gson());
+            UUID owner = service.presentationSessionOwner("main").orElseThrow();
+            java.util.concurrent.atomic.AtomicBoolean allowed = new java.util.concurrent.atomic.AtomicBoolean(true);
+            var delivered = service.followUp("main", owner, "cancel before admission", allowed::get);
+            if (afterPreparation) { queue.removeFirst().run(); assertFalse(delivered.isDone()); }
+            allowed.set(false); runOwner(queue);
+            assertInstanceOf(ToolResult.Failure.class, delivered.join()); assertTrue(endpoint.calls.isEmpty());
+            assertTrue(service.pendingMessages("main").isEmpty()); assertTrue(session(service, "main").requests().isEmpty());
+            allowed.set(true);
+            var retry = service.followUp("main", owner, "explicit retry", allowed::get); runOwner(queue);
+            assertFalse(success(retry.join()).queued()); assertEquals(1, endpoint.calls.size());
+        }
+    }
+
+    @Test void capturedVoiceFinalOwnerFenceRejectsSessionClearBetweenPreparationAndAdmission() {
+        ArrayDeque<Runnable> queue = new ArrayDeque<>(); Endpoint endpoint = new Endpoint();
+        GuideService service = new GuideService(UUID.randomUUID(), endpoint, offline(),
+                (required, correlation) -> new ToolResult.Success<>(ToolInvocationContext.developmentConsole(correlation)),
+                queue::addLast, Clock.systemUTC(), new Gson());
+        UUID owner = service.presentationSessionOwner("main").orElseThrow();
+        var delivered = service.followUp("main", owner, "stale after clear", () -> true);
+        var cleared = service.clearSelectedSession();
+        queue.removeFirst().run(); queue.removeFirst().run(); runOwner(queue);
+        assertInstanceOf(ToolResult.Success.class, cleared.join());
+        assertNotEquals(owner, service.presentationSessionOwner("main").orElseThrow());
+        assertInstanceOf(ToolResult.Failure.class, delivered.join()); assertTrue(endpoint.calls.isEmpty());
+        assertTrue(service.pendingMessages("main").isEmpty());
+    }
+
+    @Test void capturedVoiceHeldBehindOlderImageAdmissionKeepsFifoAndHonorsLateCancellation() throws Exception {
+        for (boolean cancelled : List.of(false, true)) {
+            Owner owner = new Owner(); PinStore store = new PinStore(); Endpoint endpoint = new Endpoint();
+            GuideService service = imageService(endpoint, store, owner);
+            var asking = service.ask("active goal"); owner.runAll(); success(asking.join());
+            UUID sessionOwner = service.presentationSessionOwner("main").orElseThrow();
+            store.gate(image(cancelled ? 'd' : 'e'));
+            var older = service.followUp(withImage("older image follow-up", store.blockImage)); owner.runAll();
+            assertTrue(store.entered.await(2, java.util.concurrent.TimeUnit.SECONDS));
+            java.util.concurrent.atomic.AtomicBoolean allowed = new java.util.concurrent.atomic.AtomicBoolean(true);
+            var voice = service.followUp("main", sessionOwner, "voice behind image", allowed::get); owner.runAll();
+            assertFalse(voice.isDone()); assertFalse(older.isDone());
+            if (cancelled) allowed.set(false);
+            store.release.countDown(); owner.runNext(); owner.runAll(); success(older.join());
+            if (cancelled) {
+                assertInstanceOf(ToolResult.Failure.class, voice.join());
+                assertEquals(List.of("older image follow-up"), service.pendingMessages("main").stream().map(GuidePendingMessage::text).toList());
+            } else {
+                assertTrue(success(voice.join()).queued());
+                assertEquals(List.of("older image follow-up", "voice behind image"), service.pendingMessages("main").stream().map(GuidePendingMessage::text).toList());
+            }
+            assertEquals(1, endpoint.calls.size()); assertTrue(endpoint.steers.isEmpty());
+        }
+    }
+
     private static dev.openallay.model.image.ImageReference image(char hash) {
         return new dev.openallay.model.image.ImageReference(String.valueOf(hash).repeat(64), "image/png", 1, 1, 1);
     }

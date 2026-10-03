@@ -834,6 +834,62 @@ public final class GuideService implements GuideHistoryAdministration {
         return enqueue(message, false);
     }
 
+    /** Actual request identity or accepted FIFO pending identity; neither means task completion. */
+    public record InputReceipt(UUID id, boolean queued) {
+        public InputReceipt { Objects.requireNonNull(id, "id"); }
+    }
+
+    /** Explicit captured owner. Idle sends and busy FIFO follow-ups are chosen at final admission. */
+    public CompletableFuture<ToolResult<InputReceipt>> followUp(String sessionId, UUID sessionOwner, String text,
+            java.util.function.BooleanSupplier admissionFence) {
+        Objects.requireNonNull(admissionFence, "admissionFence");
+        SessionState captured = publishedSessions.get(sessionId);
+        dev.openallay.model.ModelMessage message = text == null ? null : dev.openallay.model.ModelMessage.userText(text);
+        CompletableFuture<ToolResult<InputReceipt>> result = new CompletableFuture<>();
+        dispatcher.execute(() -> {
+            if (captured == null || sessions.get(sessionId) != captured
+                    || !captured.presentationOwner.equals(sessionOwner)) {
+                result.complete(new ToolResult.Failure<>("invalid_session", "Guide session was closed")); return;
+            }
+            if (disconnected || !admissionFence.getAsBoolean()) {
+                result.complete(new ToolResult.Failure<>("message_cancelled", "Message was cancelled")); return;
+            }
+            if (rejectStateChange(result)) return;
+            ToolResult<Boolean> valid = validateUserInput(message, captured.modelSelection);
+            if (valid instanceof ToolResult.Failure<Boolean> failure) {
+                result.complete(new ToolResult.Failure<>(failure.code(), failure.message())); return;
+            }
+            UUID receipt = UUID.randomUUID();
+            captured.pendingOrder.put(receipt, captured.nextPendingOrder++);
+            admitInput(captured, receipt, message, result, () -> {
+                boolean busy = captured.workingRequest != null || active(captured) != null
+                        || captured.manualCompaction != null || !captured.pending.isEmpty();
+                if (!busy) {
+                    captured.pendingOrder.remove(receipt);
+                    CompletableFuture<ToolResult<UUID>> submitted = new CompletableFuture<>();
+                    submit(sessionId, message, receipt, submitted);
+                    submitted.thenAccept(admitted -> {
+                        if (admitted instanceof ToolResult.Success<UUID> success) {
+                            result.complete(new ToolResult.Success<>(new InputReceipt(success.value(), false)));
+                        } else {
+                            ToolResult.Failure<UUID> failure = (ToolResult.Failure<UUID>) admitted;
+                            result.complete(new ToolResult.Failure<>(failure.code(), failure.message()));
+                        }
+                    });
+                    return;
+                }
+                GuidePendingMessage pending = new GuidePendingMessage(receipt, GuidePendingMessage.Kind.FOLLOW_UP,
+                        message, clock.instant(), null);
+                putPendingOrdered(captured, pending);
+                captured.pendingReceipts.put(receipt, receipt);
+                publishWithoutSave();
+                result.complete(new ToolResult.Success<>(new InputReceipt(receipt, true)));
+                drainPending(captured);
+            }, () -> captured.presentationOwner.equals(sessionOwner) && admissionFence.getAsBoolean());
+        });
+        return result;
+    }
+
     public CompletableFuture<ToolResult<UUID>> steer(String text) {
         return steer(text == null ? null : dev.openallay.model.ModelMessage.userText(text));
     }
@@ -1871,6 +1927,17 @@ public final class GuideService implements GuideHistoryAdministration {
     private <T> void admitInput(
             SessionState session, UUID receipt, dev.openallay.model.ModelMessage input,
             CompletableFuture<ToolResult<T>> result, Runnable accepted) {
+        admitInput(session, receipt, input, result, accepted, () -> true);
+    }
+
+    private <T> void admitInput(
+            SessionState session, UUID receipt, dev.openallay.model.ModelMessage input,
+            CompletableFuture<ToolResult<T>> result, Runnable accepted,
+            java.util.function.BooleanSupplier admissionFence) {
+        if (disconnected || !admissionFence.getAsBoolean()) {
+            session.pendingOrder.remove(receipt);
+            result.complete(new ToolResult.Failure<>("message_cancelled", "Message was cancelled")); return;
+        }
         long generation = session.queueGeneration;
         session.admissions.put(receipt, generation);
         transferImageInput(session.id, receipt, input).whenComplete((ignored, failure) ->
@@ -1882,7 +1949,7 @@ public final class GuideService implements GuideHistoryAdministration {
                     }
                     session.readyAdmissions.put(receipt, () -> {
                         if (failure != null || disconnected || sessions.get(session.id) != session
-                                || session.queueGeneration != generation) {
+                                || session.queueGeneration != generation || !admissionFence.getAsBoolean()) {
                             releaseImageInput(receipt);
                             session.pendingOrder.remove(receipt);
                             result.complete(new ToolResult.Failure<>(failure != null

@@ -145,8 +145,10 @@ final class ClientArchitectureTest {
         assertTrue(coordinator.contains("VoiceClientRuntime.create(configDirectory, new VoiceRuntime.DraftPort()"));
         assertTrue(coordinator.contains("withVoiceActions(voice.settings())"));
         assertTrue(coordinator.contains(".withNotifications(notifications).withVoice(voice.input())"));
-        assertTrue(coordinator.contains("state.ownerId(), state.selectedSession()"));
-        assertTrue(coordinator.contains("state.generation(), target.sessionId(), target.draftRevision()"));
+        assertTrue(coordinator.contains("bound.snapshot().actorId(), state.ownerId(), state.generation()"));
+        assertTrue(coordinator.contains("bound.presentationSessionOwner(state.selectedSession())"));
+        assertTrue(coordinator.contains("target.uiOwnerId(), target.uiGeneration()"));
+        assertTrue(coordinator.contains("target.sessionId(), target.draftRevision()"));
         assertTrue(coordinator.contains("state.insertTranscript(captured, text)"));
         assertTrue(coordinator.contains("voice.input().setFeedbackVisible(feedback)"));
         assertTrue(coordinator.contains("activeScreen instanceof OpenAllayScreen"));

@@ -124,8 +124,10 @@ public final class OpenAllaySettingsScreenDoneScenarios {
         assertEquals(0, f.worker.tasks.size());
         FakeVoice voice = new FakeVoice(f.worker);
         var credential = CredentialReference.local(java.util.UUID.randomUUID());
-        voice.config = VoiceConfig.defaults().withCredential(credential).withModelDirectory(Path.of("saved-model"));
+        voice.config = VoiceConfig.defaults().withCredential(credential).withModelDirectory(Path.of("saved-model"))
+                .withGameplayAction(VoiceConfig.GameplayAction.DRAFT);
         f.screen.withVoiceActions(voice);
+        assertEquals(VoiceConfig.GameplayAction.DRAFT, ((VoiceConfig) get(f.screen, "voiceDraft")).gameplayAction());
         set(f.screen, "section", SettingsSection.VOICE);
         set(f.screen, "voiceDraft", voice.config.withBackend(VoiceConfig.Backend.HTTP).withEnabled(true));
         assertEquals(List.of("screen.openallay.settings.voice.apply", "screen.openallay.settings.voice.reset",
@@ -135,6 +137,8 @@ public final class OpenAllaySettingsScreenDoneScenarios {
         assertEquals(credential, reset.credential());
         assertEquals(voice.config.nativeModelDirectory(), reset.nativeModelDirectory());
         assertFalse(reset.enabled());
+        assertEquals(VoiceConfig.GameplayAction.SEND, reset.gameplayAction());
+        assertEquals(VoiceConfig.GameplayAction.DRAFT, voice.config.gameplayAction(), "Reset only edits the local draft");
         assertEquals(0, voice.updates);
         assertEquals(0, f.worker.tasks.size());
     }
@@ -325,7 +329,8 @@ public final class OpenAllaySettingsScreenDoneScenarios {
         f.screen.withVoiceActions(voice);
         set(f.screen, "section", SettingsSection.VOICE);
         set(f.screen, "voiceDraft", voice.config.withBackend(VoiceConfig.Backend.HTTP)
-                .withDevice("chosen-device").withEnabled(true).withLanguage("en"));
+                .withDevice("chosen-device").withEnabled(true).withLanguage("en")
+                .withGameplayAction(VoiceConfig.GameplayAction.DRAFT));
         set(f.screen, "voiceHttpUrl", "https://voice.example/v1");
         set(f.screen, "voiceHttpModel", "chosen-http-model");
         set(f.screen, "voiceApiKeyDraft", "uncommitted-voice-key");
@@ -333,6 +338,8 @@ public final class OpenAllaySettingsScreenDoneScenarios {
         assertEquals(1, voice.updates);
         assertEquals(0, f.closed);
         assertEquals("uncommitted-voice-key", get(f.screen, "voiceApiKeyDraft"));
+        assertEquals(VoiceConfig.GameplayAction.DRAFT, ((VoiceConfig) get(f.screen, "voiceDraft")).gameplayAction());
+        assertEquals(VoiceConfig.GameplayAction.SEND, voice.config.gameplayAction(), "No save before the worker receipt");
         f.worker.runAll();
         assertEquals(0, f.closed);
         f.client.runAll();
@@ -340,6 +347,7 @@ public final class OpenAllaySettingsScreenDoneScenarios {
         assertEquals("chosen-device", voice.config.deviceId());
         assertEquals(URI.create("https://voice.example/v1"), voice.config.httpBaseUrl());
         assertEquals("chosen-http-model", voice.config.httpModel());
+        assertEquals(VoiceConfig.GameplayAction.DRAFT, voice.config.gameplayAction());
         assertNotNull(voice.config.credential());
         assertEquals("", get(f.screen, "voiceApiKeyDraft"));
         assertEquals(0, f.display.saves);
@@ -351,12 +359,15 @@ public final class OpenAllaySettingsScreenDoneScenarios {
         FakeVoice voice = new FakeVoice(f.worker);
         f.screen.withVoiceActions(voice);
         set(f.screen, "section", SettingsSection.VOICE);
-        set(f.screen, "voiceDraft", voice.config.withBackend(VoiceConfig.Backend.HTTP).withDevice("draft-device"));
+        set(f.screen, "voiceDraft", voice.config.withBackend(VoiceConfig.Backend.HTTP).withDevice("draft-device")
+                .withGameplayAction(VoiceConfig.GameplayAction.DRAFT));
         set(f.screen, "voiceHttpUrl", "not-a-url");
         set(f.screen, "voiceApiKeyDraft", "retry-key");
         f.screen.onClose();
         assertEquals(0, voice.updates);
         assertEquals(0, f.closed);
+        assertEquals("not-a-url", get(f.screen, "voiceHttpUrl"));
+        assertEquals(VoiceConfig.GameplayAction.DRAFT, ((VoiceConfig) get(f.screen, "voiceDraft")).gameplayAction());
         set(f.screen, "voiceHttpUrl", "https://retry.example/v1");
         set(f.screen, "voiceHttpModel", "retry-model");
         voice.fail = true;
@@ -367,11 +378,13 @@ public final class OpenAllaySettingsScreenDoneScenarios {
         assertEquals("retry-model", get(f.screen, "voiceHttpModel"));
         assertEquals("retry-key", get(f.screen, "voiceApiKeyDraft"));
         assertEquals("draft-device", ((VoiceConfig) get(f.screen, "voiceDraft")).deviceId());
+        assertEquals(VoiceConfig.GameplayAction.DRAFT, ((VoiceConfig) get(f.screen, "voiceDraft")).gameplayAction());
         assertEquals(VoiceConfig.defaults(), voice.config);
         voice.fail = false;
         f.screen.onClose(); f.ack();
         assertEquals(1, f.closed);
         assertEquals(2, voice.updates);
+        assertEquals(VoiceConfig.GameplayAction.DRAFT, voice.config.gameplayAction());
     }
 
     void nativeTypedDirectoryReachesSaveCandidateWithoutImportDownloadOrDeviceOpen() throws Exception {

@@ -117,6 +117,43 @@ final class GuideClientUiStateTest {
         assertFalse(f.state.applyPendingInsertion(pending.id()));
     }
 
+    @Test void refusedVoiceSendIsPendingWithoutChangingTextImagesRevisionOrEditIntent() {
+        var f = new Fixture(); f.state.setText("one", "typed replacement"); f.readyImage();
+        UUID edit = UUID.randomUUID();
+        f.state.beginPendingEdit("one", edit, GuideClientUiState.DraftMode.STEER);
+        var capture = f.state.captureInsertion("one");
+        var intent = f.state.intent("one");
+        long revision = f.state.revision("one"); int leases = f.retains.size();
+        f.state.selectSession("two");
+        assertTrue(f.state.retainPendingTranscript(capture, "spoken request not sent"));
+        assertEquals("typed replacement", f.state.readText("one")); assertEquals(revision, f.state.revision("one"));
+        assertEquals(intent, f.state.intent("one")); assertEquals(leases, f.retains.size());
+        assertEquals("", f.state.readText("two")); assertTrue(f.state.pendingInsertions("two").isEmpty());
+        var pending = f.state.pendingInsertions("one").getFirst();
+        assertEquals("one", pending.session()); assertEquals("spoken request not sent", pending.text());
+        f.state.selectSession("one"); assertEquals(List.of(IMAGE), f.state.images().references());
+        assertTrue(f.state.applyPendingInsertion(pending.id()));
+        assertEquals("typed replacement\nspoken request not sent", f.state.readText("one"));
+        assertEquals(intent, f.state.intent("one")); assertEquals(List.of(IMAGE), f.state.images().references());
+    }
+
+    @Test void refusedVoiceRetentionRequiresLiveCapturedOwnerGenerationAndExistingSession() {
+        var f = new Fixture(); var capture = f.state.captureInsertion("one");
+        assertFalse(f.state.retainPendingTranscript(null, "spoken"));
+        assertFalse(f.state.retainPendingTranscript(capture, "  "));
+        assertFalse(f.state.retainPendingTranscript(capture, null));
+        assertFalse(f.state.retainPendingTranscript(new GuideClientUiState.Insertion(
+                "other owner", capture.generation(), "one", capture.revision()), "spoken"));
+        assertFalse(f.state.retainPendingTranscript(new GuideClientUiState.Insertion(
+                capture.ownerId(), capture.generation() + 1, "one", capture.revision()), "spoken"));
+        assertFalse(f.state.retainPendingTranscript(new GuideClientUiState.Insertion(
+                capture.ownerId(), capture.generation(), "never-created", capture.revision()), "spoken"));
+        assertTrue(f.state.pendingInsertions("one").isEmpty());
+        f.state.close(); assertFalse(f.state.retainPendingTranscript(capture, "late"));
+        var next = new Fixture(); assertFalse(next.state.retainPendingTranscript(capture, "wrong connection"));
+        assertTrue(next.state.pendingInsertions("one").isEmpty());
+    }
+
     @Test void acceptedOldSubmissionClearsOnlyCapturedTextAndImagesEvenAfterSwitch() {
         var f = new Fixture();
         f.readyImage(); f.state.setText("one", "send me");
