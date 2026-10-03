@@ -15,6 +15,44 @@ Use the checked-in Gradle wrapper. `./gradlew :common:test` runs the common test
 
 Inspect the working tree before editing and preserve changes that are not part of the task. Do not include credentials or generated build/runtime output in a change.
 
+## Disk space and temporary worktrees
+
+Disk efficiency is required for all work in this project.
+
+- Check free space and the size of project temporary directories before large
+  builds, downloads, or parallel work. Check again at delivery. Treat less than
+  10 GiB free as a warning: stop avoidable large allocations and clean verified
+  disposable output before continuing.
+- Use only the worktrees needed by active independent tasks. Reuse a suitable
+  clean worktree where practical. Avoid giving each worker its own full build,
+  game runtime, asset download, or model copy. Share existing immutable artifacts
+  and normal dependency caches when safe; keep mutable game profiles isolated.
+- The coordinating agent owns the temporary-file inventory and cleanup. Record
+  each worktree or large temporary directory, its purpose, owner, and retirement
+  condition. Workers must report their temporary paths and cleanup needs.
+- Retire completed worktrees promptly after verified delivery. Inspect Git
+  status, commit recoverability, and active process references first. Preserve
+  unpublished commits, uncommitted source, and unique diagnostics with a verified
+  archive or durable Git reference. Use `git worktree remove`, not a blanket
+  directory deletion. Keep branches unless their deletion is separately justified.
+- Remove unused, reproducible module build outputs, worktree-local `.gradle`
+  caches, temporary virtual environments, and duplicate download archives when
+  their retained replacement has been verified. Preserve test reports and the
+  required delivered artifacts first. Do not clear shared dependency caches just
+  to remove duplicate worktree output.
+- A directory named `build`, `tmp`, or an old profile is not automatically
+  disposable. Check running process command lines, working directories, open
+  files, native libraries, and configured paths. Never delete active dependencies
+  or force-stop a player client to make cleanup easier.
+- Preserve worlds, configurations, credentials, history databases and their
+  WAL/SHM sidecars, voice models, screenshots, exports, and unique acceptance
+  evidence. In particular, `build/e2e` and manual profiles can contain real game
+  data. Do not overwrite a playable world's later native changes with an archive.
+- Keep archival retention compact: use one hash-verified copy of unique evidence
+  rather than many full directory backups. Move/archive data only for preservation,
+  not as a substitute for actually freeing disk space. Report what was removed,
+  what was preserved, the measured space recovered, and any remaining candidates.
+
 ## Pre-1.0 release boundary
 
 Before formal 1.0, OpenAllay is in rapid iteration and internal formats are
