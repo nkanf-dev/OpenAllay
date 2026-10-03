@@ -120,7 +120,7 @@ final class OpenAllayScreenHeaderContractsTest {
     void developmentReceiptsReadNativeWidgetsAndLastExtractionWithoutChangingTheScreen() throws Exception {
         String screen = screenSource();
         int start = screen.indexOf("public Map<String, Object> e2eHeaderReceipt()");
-        int end = screen.indexOf("public Map<String, Object> e2eExportReceipt()", start);
+        int end = screen.indexOf("public Map<String, Object> e2eTelemetryTooltipReceipt()", start);
         assertTrue(start >= 0 && end > start);
         String receipts = screen.substring(start, end);
         assertEquals(2, receipts.split("requireDevelopmentProbe\\(\\)", -1).length - 1);

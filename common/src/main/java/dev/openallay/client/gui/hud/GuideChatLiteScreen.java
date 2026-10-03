@@ -333,6 +333,8 @@ public final class GuideChatLiteScreen extends Screen {
         return super.mouseScrolled(x, y, scrollX, scrollY);
     }
     @Override public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        // Native controls still own dispatch, including the composer's external scrollbar.
+        if (event.button() == 0 && !composerContains(event.x(), event.y())) clearFocus();
         if (event.button() == 0 && scrollbar.contains(event.x(), event.y()) && results.scroll().maximum() > 0) {
             draggingScrollbar = true;
             clearFocus();
@@ -347,6 +349,12 @@ public final class GuideChatLiteScreen extends Screen {
             return true;
         }
         return super.mouseClicked(event, doubleClick);
+    }
+    private boolean composerContains(double x, double y) {
+        if (composer == null) return false;
+        GuideUiLayout.Rect input = new GuideUiLayout.Rect(
+                composer.getX(), composer.getY(), composer.getWidth(), composer.getHeight());
+        return input.contains(x, y) && composer.isMouseOver(x, y);
     }
     @Override public boolean mouseDragged(MouseButtonEvent event, double dx, double dy) {
         if (draggingScrollbar) { scrollAt(event.y()); return true; }

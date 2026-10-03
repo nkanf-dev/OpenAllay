@@ -561,10 +561,8 @@
   "screen.openallay.telemetry.cost": "会话估算：%s",
   "screen.openallay.telemetry.compact": "Tokens %s · 缓存 %s · %s",
   "screen.openallay.telemetry.latest": "会话累计（当前分支）",
-  "screen.openallay.telemetry.budget": "输入估算：%s / %s tokens\n总窗口：%s；预留：%s（2 × %s 输出）",
   "screen.openallay.telemetry.context_unknown": "上下文未知：暂无匹配的本地请求估算。",
   "screen.openallay.telemetry.partial": "部分调用缺少用量或价格，“+”仅表示已知估算金额。",
-  "screen.openallay.telemetry.session": "模型调用：%s 次\n会话估算费用：%s",
   "screen.openallay.telemetry.price_note": "基于公开单价估算，不代表实际账单。缺失用量保持未知，不含未报告的图片用量。",
   "screen.openallay.settings.models.image_input": "图片输入",
   "screen.openallay.settings.models.image_input.auto": "自动 · 模型公开信息",
@@ -914,5 +912,9 @@
   "screen.openallay.tools.step.expand": "展开此步骤",
   "screen.openallay.tools.task.collapse": "收起本任务所有步骤",
   "screen.openallay.tools.task.expand": "展开本任务所有步骤",
-  "screen.openallay.tools.step.preview": "仅显示部分结果"
+  "screen.openallay.tools.step.preview": "仅显示部分结果",
+  "screen.openallay.telemetry.budget.input": "输入估算：%s / %s tokens",
+  "screen.openallay.telemetry.budget.window": "总窗口：%s；预留：%s（2 × %s 输出）",
+  "screen.openallay.telemetry.session.calls": "模型调用：%s 次",
+  "screen.openallay.telemetry.session.cost": "会话估算费用：%s"
 }

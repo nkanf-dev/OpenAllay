@@ -25,8 +25,8 @@ import org.junit.jupiter.api.Test;
 
 final class ClientArchitectureTest {
     @Test
-    void modelCallbacksArePublishedThroughClientDispatcher() {
-        List<Runnable> queued = new ArrayList<>();
+    void modelCallbacksArePublishedThroughClientDispatcher() throws Exception {
+        java.util.concurrent.LinkedBlockingQueue<Runnable> queued = new java.util.concurrent.LinkedBlockingQueue<>();
         ToolRegistry tools = new ToolRegistry();
         OpenAllayRuntime base = new OpenAllayRuntime(
                 new FakePlatform(),
@@ -50,8 +50,15 @@ final class ClientArchitectureTest {
                 dev.openallay.context.ToolInvocationContext.developmentConsole("test"), delivered::add);
         assertEquals(0, delivered.size());
         assertTrue(!completed.isDone(), "completion waits for queued event handoff");
-        for (int i = 0; i < queued.size(); i++) queued.get(i).run();
-        completed.join();
+        long deadline = System.nanoTime() + java.util.concurrent.TimeUnit.SECONDS.toNanos(5);
+        while (!completed.isDone()) {
+            long remaining = deadline - System.nanoTime();
+            assertTrue(remaining > 0, "completion must arrive through the client dispatcher within the deadline");
+            Runnable next = queued.poll(remaining, java.util.concurrent.TimeUnit.NANOSECONDS);
+            org.junit.jupiter.api.Assertions.assertNotNull(next, "completion needs its dispatcher handoff");
+            next.run();
+        }
+        completed.get(0, java.util.concurrent.TimeUnit.NANOSECONDS);
         assertTrue(delivered.stream().anyMatch(event -> event instanceof AgentEvent.ContextUpdated));
         assertTrue(delivered.stream().anyMatch(event -> event instanceof AgentEvent.FinalText));
         assertTrue(delivered.stream().anyMatch(event -> event instanceof AgentEvent.ModelProgress));

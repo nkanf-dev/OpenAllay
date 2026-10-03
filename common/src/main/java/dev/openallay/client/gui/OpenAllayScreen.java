@@ -140,6 +140,7 @@ public final class OpenAllayScreen extends Screen {
     private GuideUiLayout.Rect renderedTelemetryBounds;
     private int renderedTelemetryRows;
     private MultiLineEditBox composer;
+    private boolean presentationInitialized;
     private Button send;
     private Button stop;
     private Button retry;
@@ -190,7 +191,15 @@ public final class OpenAllayScreen extends Screen {
     private Component telemetryOutput = Component.empty();
     private Component telemetryCost = Component.empty();
     private Component telemetryCompact = Component.empty();
-    private Component telemetryTooltip = Component.empty();
+    private List<Component> telemetryTooltip = List.of();
+    private List<FormattedCharSequence> telemetryTooltipWrapped = List.of();
+    private List<String> telemetryTooltipTexts = List.of();
+    private net.minecraft.client.gui.Font telemetryTooltipFont;
+    private net.minecraft.locale.Language telemetryTooltipLanguage;
+    private int telemetryTooltipWidth;
+    private int requestedTelemetryTooltipWidth;
+    private int requestedTelemetryTooltipLines;
+    private long requestedTelemetryTooltipFrame;
 
     public OpenAllayScreen(GuideService service) {
         this(service, RecipeClientRuntime.defaults(), GuideDisplayConfig.defaults());
@@ -375,11 +384,18 @@ public final class OpenAllayScreen extends Screen {
         refreshTelemetry();
         updateControls();
         if (detailOpen()) focusDetail();
-        else setInitialFocus(composer);
+        else if (!presentationInitialized) setInitialFocus(composer);
+        presentationInitialized = true;
+    }
+
+    @Override
+    protected void setInitialFocus() {
+        // init owns first input focus; a native rebuild must not choose a new focused widget.
     }
 
     @Override
     public void resize(int width, int height) {
+        invalidateContentHits();
         GuideViewportAnchor anchor = layout == null ? null : virtualizer.anchorAt(scroll);
         boolean shouldFollow = followBottom;
         draft = composer == null ? draft : composer.getValue();
@@ -594,6 +610,7 @@ public final class OpenAllayScreen extends Screen {
             default -> Integer.MIN_VALUE;
         };
         if (target == Integer.MIN_VALUE) return false;
+        invalidateContentHits();
         detailScroll = Mth.clamp(target, 0, maximum);
         return true;
     }
@@ -604,6 +621,7 @@ public final class OpenAllayScreen extends Screen {
 
     @Override
     public boolean mouseScrolled(double x, double y, double scrollX, double scrollY) {
+        if (scrollX != 0 || scrollY != 0) invalidateContentHits();
         if (sessionOverlay && sessionBounds().contains(x, y) || layout.sessionRail().contains(x, y)) {
             sessionScroll = Mth.clamp(sessionScroll - (int) Math.signum(scrollY), 0, maximumSessionScroll());
             return true;
@@ -647,6 +665,8 @@ public final class OpenAllayScreen extends Screen {
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
         if (event.button() == 0) {
+            // Clear before routing. Native buttons and the input scrollbar may take focus below.
+            if (!composerContains(event.x(), event.y())) clearFocus();
             if (sessionOverlay || overflowOpen) {
                 HitKind topKind = sessionOverlay ? HitKind.SESSION : HitKind.MENU;
                 for (Hit hit : List.copyOf(hits)) {
@@ -722,6 +742,29 @@ public final class OpenAllayScreen extends Screen {
             }
         }
         return super.mouseClicked(event, doubleClick);
+    }
+
+    /** Old render closures cannot act after scrolling, projection or geometry changes. */
+    private void invalidateContentHits() {
+        hits.removeIf(hit -> hit.kind() == HitKind.CONTENT || hit.kind() == HitKind.DETAIL
+                || hit.kind() == HitKind.COMPOSER);
+    }
+
+    private boolean composerContains(double x, double y) {
+        if (composer == null) return false;
+        GuideUiLayout.Rect input = new GuideUiLayout.Rect(
+                composer.getX(), composer.getY(), composer.getWidth(), composer.getHeight());
+        return input.contains(x, y) && composer.isMouseOver(x, y);
+    }
+
+    /** Only a successful voice draft insertion may request this; never displace a player's focus. */
+    public boolean focusComposerAfterVoiceDraft() {
+        if (minecraft == null || minecraft.gui.screen() != this || composer == null
+                || !composer.active || !composer.visible || getFocused() != null
+                || sessionOverlay || overflowOpen || modelSelectorOpen || detailOpen()
+                || draftIntent().editing()) return false;
+        setFocused(composer);
+        return getFocused() == composer;
     }
 
     @Override
@@ -825,6 +868,16 @@ public final class OpenAllayScreen extends Screen {
                 "width", area.width(), "height", area.height(),
                 "contextText", telemetryContext.getString(), "cacheText", telemetryInput.getString(),
                 "costText", telemetryCost.getString(), "imageBarEligible", telemetryImageBarEligible());
+    }
+
+    /** Cached aggregate telemetry only. A tooltip request is not a screenshot or visual acceptance. */
+    public Map<String, Object> e2eTelemetryTooltipReceipt() {
+        requireDevelopmentProbe();
+        return Map.of("logicalLineCount", telemetryTooltip.size(),
+                "wrappedLineCount", telemetryTooltipWrapped.size(), "wrapWidth", telemetryTooltipWidth,
+                "logicalTexts", telemetryTooltipTexts,
+                "requestedWidth", requestedTelemetryTooltipWidth, "requestedLineCount", requestedTelemetryTooltipLines,
+                "requestedNativeFrame", requestedTelemetryTooltipFrame);
     }
 
     /** Cached outcomes from the real export handler. Reading this receipt never captures or exports data. */
@@ -971,6 +1024,7 @@ public final class OpenAllayScreen extends Screen {
             default -> Integer.MIN_VALUE;
         };
         if (next == Integer.MIN_VALUE) return false;
+        invalidateContentHits();
         scroll = Mth.clamp(next, 0, maximum);
         followBottom = scroll == maximum;
         return true;
@@ -1108,7 +1162,10 @@ public final class OpenAllayScreen extends Screen {
 
     private void refreshTelemetry() {
         var next = service.telemetry();
-        if (Objects.equals(telemetry, next)) return;
+        var language = net.minecraft.locale.Language.getInstance();
+        int wrapWidth = nativeTooltipWidth(width);
+        if (telemetry == next && telemetryTooltipFont == font
+                && telemetryTooltipLanguage == language && telemetryTooltipWidth == wrapWidth) return;
         telemetry = next;
         String unknown = Component.translatable("screen.openallay.telemetry.unknown").getString();
         var context = telemetry.context();
@@ -1123,41 +1180,76 @@ public final class OpenAllayScreen extends Screen {
         telemetryContext = Component.literal(occupancy);
         var usage = telemetry.sessionUsage();
         var rate = usage.cacheHitRate();
-        String cache = rate == null ? unknown : rate.movePointRight(2)
-                .setScale(1, java.math.RoundingMode.HALF_UP).toPlainString() + "%";
+        String cache = telemetryCacheText(usage, unknown);
         telemetryInput = rate == null ? Component.translatable("screen.openallay.telemetry.cache_compact_unknown")
                 : Component.translatable("screen.openallay.telemetry.cache", cache);
+        String cost = telemetryCostText(usage, unknown);
+        telemetryCost = Component.translatable("screen.openallay.telemetry.cost_compact", cost);
+        telemetryCompact = Component.translatable("screen.openallay.telemetry.compact", occupancy, cache, cost);
+        telemetryTooltip = telemetryTooltipComponents(telemetry, unknown, cost, cache);
+        telemetryTooltipWrapped = wrapNativeTooltip(telemetryTooltip, wrapWidth, font::split);
+        telemetryTooltipTexts = telemetryTooltip.stream().map(Component::getString).toList();
+        telemetryTooltipFont = font;
+        telemetryTooltipLanguage = language;
+        telemetryTooltipWidth = wrapWidth;
+    }
+
+    /** Logical native lines remain separate before the font performs bounded wrapping. */
+    static List<Component> telemetryTooltipComponents(
+            dev.openallay.guide.GuideTelemetrySnapshot telemetry, String unknown, String cost, String cache) {
+        List<Component> detail = new ArrayList<>();
+        detail.add(Component.translatable("screen.openallay.telemetry.latest").withStyle(ChatFormatting.BOLD));
+        var context = telemetry.context();
+        boolean contextKnown = context != null && context.budget() != null;
+        if (contextKnown) {
+            detail.add(Component.translatable("screen.openallay.telemetry.budget.input",
+                    context.estimatedTokens(), context.budget().inputTokens()));
+            detail.add(Component.translatable("screen.openallay.telemetry.budget.window",
+                    context.budget().contextWindowTokens(), context.budget().reservedTokens(),
+                    context.budget().maxOutputTokens()));
+        } else {
+            detail.add(Component.translatable("screen.openallay.telemetry.context_unknown"));
+        }
+        if (contextKnown && context.imageAccounting()
+                == dev.openallay.model.tokenizer.TokenizerMetadata.ImageAccounting.UNKNOWN) {
+            detail.add(Component.translatable("screen.openallay.telemetry.image_unknown"));
+        }
+        var usage = telemetry.sessionUsage();
+        detail.add(Component.translatable("screen.openallay.telemetry.session.calls", usage.actualCalls()));
+        detail.add(Component.translatable("screen.openallay.telemetry.session.cost", cost));
+        detail.add(Component.translatable("screen.openallay.telemetry.cache_detail",
+                cache, usage.cacheReadTokens(), usage.inputTokens()));
+        if (usage.costIncomplete()) detail.add(Component.translatable("screen.openallay.telemetry.partial"));
+        if (usage.cacheIncomplete()) detail.add(Component.translatable("screen.openallay.telemetry.cache_unknown"));
+        var inherited = telemetry.inheritedUsage();
+        if (inherited.actualCalls() > 0) {
+            String reference = telemetryCostText(inherited, unknown);
+            detail.add(Component.translatable("screen.openallay.telemetry.inherited", reference));
+        }
+        detail.add(Component.translatable("screen.openallay.telemetry.price_note"));
+        return List.copyOf(detail);
+    }
+
+    static String telemetryCacheText(dev.openallay.guide.GuideUsageSnapshot usage, String unknown) {
+        var rate = usage.cacheHitRate();
+        return rate == null ? unknown : rate.movePointRight(2)
+                .setScale(1, java.math.RoundingMode.HALF_UP).toPlainString() + "%";
+    }
+
+    static String telemetryCostText(dev.openallay.guide.GuideUsageSnapshot usage, String unknown) {
         String cost = usage.estimatedUsd() == null ? unknown : "~$" + usage.estimatedUsd()
                 .setScale(5, java.math.RoundingMode.HALF_UP).toPlainString();
         if (usage.costIncomplete() && usage.estimatedUsd() != null) cost += "+";
-        telemetryCost = Component.translatable("screen.openallay.telemetry.cost_compact", cost);
-        telemetryCompact = Component.translatable("screen.openallay.telemetry.compact", occupancy, cache, cost);
-        MutableComponent detail = Component.translatable("screen.openallay.telemetry.latest");
-        detail.append("\n").append(contextKnown
-                ? Component.translatable("screen.openallay.telemetry.budget",
-                        context.estimatedTokens(), context.budget().inputTokens(),
-                        context.budget().contextWindowTokens(), context.budget().reservedTokens(),
-                        context.budget().maxOutputTokens())
-                : Component.translatable("screen.openallay.telemetry.context_unknown"));
-        if (imageUnknown) detail.append("\n").append(
-                Component.translatable("screen.openallay.telemetry.image_unknown"));
-        detail.append("\n").append(Component.translatable("screen.openallay.telemetry.session",
-                usage.actualCalls(), cost));
-        detail.append("\n").append(Component.translatable("screen.openallay.telemetry.cache_detail",
-                cache, usage.cacheReadTokens(), usage.inputTokens()));
-        if (usage.costIncomplete()) detail.append("\n").append(
-                Component.translatable("screen.openallay.telemetry.partial"));
-        if (usage.cacheIncomplete()) detail.append("\n").append(
-                Component.translatable("screen.openallay.telemetry.cache_unknown"));
-        var inherited = telemetry.inheritedUsage();
-        if (inherited.actualCalls() > 0) {
-            String reference = inherited.estimatedUsd() == null ? unknown : "~$" + inherited.estimatedUsd()
-                    .setScale(5, java.math.RoundingMode.HALF_UP).toPlainString();
-            if (inherited.costIncomplete() && inherited.estimatedUsd() != null) reference += "+";
-            detail.append("\n").append(Component.translatable("screen.openallay.telemetry.inherited", reference));
-        }
-        detail.append("\n").append(Component.translatable("screen.openallay.telemetry.price_note"));
-        telemetryTooltip = detail;
+        return cost;
+    }
+
+    static int nativeTooltipWidth(int screenWidth) {
+        return Math.max(1, Math.min(260, screenWidth - 24));
+    }
+
+    static List<FormattedCharSequence> wrapNativeTooltip(List<Component> logicalLines, int wrapWidth,
+            java.util.function.BiFunction<Component, Integer, List<FormattedCharSequence>> splitter) {
+        return logicalLines.stream().flatMap(line -> splitter.apply(line, wrapWidth).stream()).toList();
     }
 
     static String compactTokens(long count) {
@@ -1193,7 +1285,12 @@ public final class OpenAllayScreen extends Screen {
         renderedTelemetryBounds = area;
         renderedTelemetryRows = layout.telemetryCard() ? 3 : 1;
         if (area.contains(mouseX, mouseY) && !modelSelectorOpen && !sessionOverlay && !overflowOpen) {
-            graphics.setTooltipForNextFrame(font, telemetryTooltip, mouseX, mouseY);
+            graphics.setTooltipForNextFrame(font, telemetryTooltipWrapped,
+                    net.minecraft.client.gui.screens.inventory.tooltip.DefaultTooltipPositioner.INSTANCE,
+                    mouseX, mouseY, false);
+            requestedTelemetryTooltipWidth = telemetryTooltipWidth;
+            requestedTelemetryTooltipLines = telemetryTooltipWrapped.size();
+            requestedTelemetryTooltipFrame = renderedNativeFrame;
         }
     }
 
@@ -2680,11 +2777,21 @@ public final class OpenAllayScreen extends Screen {
             String source, int width, List<FormattedCharSequence> lines) {}
 
     private void rebuildPresentationWidgets() {
+        invalidateContentHits();
         boolean composerFocused = composer != null && getFocused() == composer;
+        AbstractWidget previous = getFocused() instanceof AbstractWidget widget ? widget : null;
         String contentFocus = focusedContentId;
         rebuildWidgets();
         focusedContentId = contentFocus;
+        clearFocus();
         if (composerFocused) setFocused(composer);
+        else if (previous != null) {
+            // Recreated controls may retain focus by native type and label; never reattach an old widget.
+            children().stream().filter(AbstractWidget.class::isInstance).map(AbstractWidget.class::cast)
+                    .filter(widget -> widget.getClass() == previous.getClass()
+                            && widget.getMessage().equals(previous.getMessage()) && widget.active && widget.visible)
+                    .findFirst().ifPresent(this::setFocused);
+        }
     }
 
     private void rebuildForDetail() {
@@ -2741,6 +2848,7 @@ public final class OpenAllayScreen extends Screen {
     }
 
     private void applyProjection(GuideUiView next, GuideDisplayConfig nextDisplay) {
+        invalidateContentHits();
         // Keep immutable retained groups across streaming updates; discard only lists no longer present.
         Map<List<GuideSource>, Boolean> retainedSources = new java.util.IdentityHashMap<>();
         for (GuideUiRow row : next.rows()) {
@@ -3023,8 +3131,20 @@ public final class OpenAllayScreen extends Screen {
         }
     }
 
+    static GuidePendingMessage currentPending(List<GuidePendingMessage> current, UUID id) {
+        return current.stream().filter(value -> value.id().equals(id)).findFirst().orElse(null);
+    }
+
     private void editPending(GuidePendingMessage pending) {
         synchronizeComposerSession();
+        // The rendered closure may belong to a prior session or an already changed queue entry.
+        String currentSession = service.snapshot().selectedSession();
+        pending = view.selectedSession().equals(currentSession)
+                ? currentPending(service.pendingMessages(currentSession), pending.id()) : null;
+        if (pending == null) {
+            notice = GuideUiNotice.warning(Component.translatable("screen.openallay.pending.already_consumed").getString());
+            return;
+        }
         if (!draft.isBlank() || !composerImages.empty()) {
             notice = GuideUiNotice.error(Component.translatable("screen.openallay.pending.draft_not_empty").getString());
             return;
