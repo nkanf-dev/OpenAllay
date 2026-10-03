@@ -48,6 +48,15 @@ final class GuideLivePresentationSourceTest {
         assertEquals("Full **player** result", after.assistantText(), "receipt must not mutate source reply");
     }
 
+    @Test void admittedBeforeCannotEmitAnotherRequestAfterSnapshot() {
+        source.subscribe(observed::add);
+        GuideRequestSnapshot before = start(); source.admit(owner, before);
+        AgentEvent.FinalText event = new AgentEvent.FinalText("Other request");
+        GuideRequestSnapshot after = reducer.apply(start(), event, now);
+        source.applied(owner, before, after, event);
+        assertTrue(observed.isEmpty());
+    }
+
     @Test void streamingUsageAndToolProgressAreNotReplyOrCardEvents() {
         source.subscribe(observed::add);
         GuideRequestSnapshot before = start(); source.admit(owner, before);
@@ -81,6 +90,8 @@ final class GuideLivePresentationSourceTest {
         assertEquals(GuidePresentationEvent.Kind.CARD_BATCH, observed.getFirst().kind());
         assertEquals(List.of(new GuidePresentationEvent.ContentRef(0, "tool:actual-item:card:0")),
                 observed.getFirst().content());
+        assertEquals(List.of(new GuidePresentationEvent.CardPreview(observed.getFirst().content().getFirst(),
+                "minecraft:stone", "minecraft:stone × 2")), observed.getFirst().cardPreviews());
         source.applied(owner, running, done, complete);
         assertEquals(1, observed.size(), "same identity must not produce a second card batch");
     }
@@ -112,6 +123,8 @@ final class GuideLivePresentationSourceTest {
         GuideRequestSnapshot stable = timeline(initial, new GuideTimelineEntry.Assistant(0, "Two stone", document, false, List.of()));
         source.applied(owner, partial, stable, started);
         assertEquals(List.of(new GuidePresentationEvent.ContentRef(0, "node:" + itemId)), observed.getFirst().content());
+        assertEquals(List.of(new GuidePresentationEvent.CardPreview(observed.getFirst().content().getFirst(),
+                "Stone", "Two stone")), observed.getFirst().cardPreviews());
         source.applied(owner, partial, stable, started);
         assertEquals(1, observed.size());
     }
@@ -143,6 +156,101 @@ final class GuideLivePresentationSourceTest {
         source.subscribe(observed::add);
         source.applied(owner, loaded, loaded, new AgentEvent.FinalText("Restored answer"));
         assertTrue(observed.isEmpty());
+    }
+
+    @Test void canonicalIntentNotResultFieldsOrProgramProvidesCardTitleAndDescription() {
+        source.subscribe(observed::add);
+        GuideRequestSnapshot initial = start(); source.admit(owner, initial);
+        var arguments = JsonParser.parseString("""
+                {"title":"Stone supply","description":"Compare available stone for the build.",
+                 "source":"PRIVATE_PROGRAM_DO_NOT_DISPLAY"}
+                """).getAsJsonObject();
+        AgentEvent.ToolStarted started = new AgentEvent.ToolStarted("supply", "openallay:run_javascript", arguments, List.of());
+        GuideRequestSnapshot running = reducer.apply(initial, started, now);
+        AgentEvent.ToolCompleted complete = new AgentEvent.ToolCompleted("supply", "openallay:run_javascript", false,
+                JsonParser.parseString("""
+                    {"status":"success","value":{"viewKind":"TABLE","title":"Wrong result title",
+                     "description":"Wrong result description","handle":"PRIVATE_HANDLE",
+                     "preview":[{"privateColumn":"PRIVATE_ROW_DO_NOT_DISPLAY"}],"complete":true}}
+                    """).getAsJsonObject());
+        GuideRequestSnapshot after = reducer.apply(running, complete, now);
+        source.applied(owner, running, after, complete);
+        var event = observed.getFirst();
+        assertEquals(List.of(new GuidePresentationEvent.CardPreview(event.content().getFirst(),
+                "Stone supply", "Compare available stone for the build.")), event.cardPreviews());
+        assertEquals(arguments, ((GuideTimelineEntry.Tool) after.timeline().getFirst()).activity().invocationArguments());
+        assertFalse(event.cardPreviews().toString().contains("PRIVATE"));
+    }
+
+    @Test void transportedInvocationMessagesProvideTheSameCanonicalMetadataWithoutArguments() {
+        source.subscribe(observed::add);
+        GuideRequestSnapshot initial = start(); source.admit(owner, initial);
+        AgentEvent.ToolStarted started = new AgentEvent.ToolStarted("remote", "openallay:run_javascript", List.of(
+                GuideToolMessage.of(GuideToolMessage.Key.INVOCATION_RUN_JAVASCRIPT,
+                        "Remote stone list", "Read available building blocks.")));
+        GuideRequestSnapshot running = reducer.apply(initial, started, now);
+        AgentEvent.ToolCompleted complete = new AgentEvent.ToolCompleted("remote", "openallay:run_javascript", false,
+                JsonParser.parseString("""
+                    {"status":"success","value":{"viewKind":"ITEM",
+                     "preview":[{"itemId":"minecraft:stone","displayName":"Stone","count":2}]}}
+                    """).getAsJsonObject());
+        source.applied(owner, running, reducer.apply(running, complete, now), complete);
+        assertEquals("Remote stone list", observed.getFirst().cardPreviews().getFirst().title());
+        assertEquals("Read available building blocks.", observed.getFirst().cardPreviews().getFirst().description());
+    }
+
+    @Test void absentIntentNeverPromotesDataRowsOrTextBodyToNotificationMetadata() {
+        source.subscribe(observed::add);
+        GuideRequestSnapshot initial = start(); source.admit(owner, initial);
+        AgentEvent.ToolStarted started = new AgentEvent.ToolStarted("table", "run_javascript");
+        GuideRequestSnapshot running = reducer.apply(initial, started, now);
+        AgentEvent.ToolCompleted complete = new AgentEvent.ToolCompleted("table", "run_javascript", false,
+                JsonParser.parseString("""
+                    {"status":"success","value":{"viewKind":"TABLE","preview":[{"body":"Not a description"}]}}
+                    """).getAsJsonObject());
+        source.applied(owner, running, reducer.apply(running, complete, now), complete);
+        assertEquals(1, observed.getFirst().content().size(), "admitted content identity is retained");
+        assertTrue(observed.getFirst().cardPreviews().isEmpty(), "no manufactured title or raw-cell description");
+    }
+
+    @Test void typedSemanticLabelsAndFallbackRemainExactThroughNestedQuoteAndList() {
+        source.subscribe(observed::add);
+        GuideRequestSnapshot initial = start(); source.admit(owner, initial);
+        String first = "c".repeat(64), second = "d".repeat(64), quote = "e".repeat(64), list = "f".repeat(64);
+        var choice = new SemanticBlock.Component(first, new RichComponent.ChoiceGroup(first, "Choose the roof",
+                List.of(new RichComponent.Choice("oak", "Oak")), "Oak roof available", "Oak roof available"));
+        var items = new SemanticBlock.Component(second, new RichComponent.ItemRow(second, List.of(
+                new RichComponent.Item("minecraft:stone", 2, "Stone", "supply")), "Two stone", "Two stone"));
+        var nestedList = new SemanticBlock.ListBlock(list, false, 1, List.of(List.of(choice, items)));
+        SemanticDocument document = SemanticDocument.of(List.of(new SemanticBlock.Quote(quote, List.of(nestedList))), List.of());
+        GuideRequestSnapshot stable = timeline(initial, new GuideTimelineEntry.Assistant(0, document.fallbackText(), document, false, List.of()));
+        source.applied(owner, initial, stable, new AgentEvent.ToolStarted("next", "load_skill"));
+        assertEquals(List.of("Choose the roof", "Stone"), observed.getFirst().cardPreviews().stream()
+                .map(GuidePresentationEvent.CardPreview::title).toList());
+        assertEquals(observed.getFirst().content(), observed.getFirst().cardPreviews().stream()
+                .map(GuidePresentationEvent.CardPreview::source).toList());
+    }
+
+    @Test void metadataIsImmutableExactRefValidatedAndUnicodeBoundedWithoutChangingIntent() {
+        var ref = new GuidePresentationEvent.ContentRef(2, "tool:preview:card:0");
+        var key = new GuidePresentationEvent.Key(source.generation(), actor, owner, "main", UUID.randomUUID(), 1);
+        String title = "🌲".repeat(200), description = "🧱".repeat(600);
+        var preview = new GuidePresentationEvent.CardPreview(ref, title, description);
+        assertEquals(161, preview.title().codePointCount(0, preview.title().length()));
+        assertEquals(513, preview.description().codePointCount(0, preview.description().length()));
+        List<GuidePresentationEvent.CardPreview> mutable = new ArrayList<>(List.of(preview));
+        var event = new GuidePresentationEvent(key, GuidePresentationEvent.Kind.CARD_BATCH, List.of(ref), "", mutable, now);
+        mutable.clear(); assertEquals(1, event.cardPreviews().size());
+        assertThrows(UnsupportedOperationException.class, () -> event.cardPreviews().clear());
+        assertThrows(IllegalArgumentException.class, () -> new GuidePresentationEvent.CardPreview(ref, "", "body"));
+        assertThrows(IllegalArgumentException.class, () -> new GuidePresentationEvent(key,
+                GuidePresentationEvent.Kind.CARD_BATCH, List.of(new GuidePresentationEvent.ContentRef(3, ref.contentId())), "", List.of(preview), now));
+        assertThrows(IllegalArgumentException.class, () -> new GuidePresentationEvent(key,
+                GuidePresentationEvent.Kind.CARD_BATCH, List.of(ref), "", List.of(preview, preview), now));
+        assertThrows(IllegalArgumentException.class, () -> new GuidePresentationEvent(key,
+                GuidePresentationEvent.Kind.REPLY_FINAL, List.of(ref), "reply", List.of(preview), now));
+        assertEquals(200, title.codePointCount(0, title.length()));
+        assertEquals(600, description.codePointCount(0, description.length()));
     }
 
     private GuideRequestSnapshot start() {

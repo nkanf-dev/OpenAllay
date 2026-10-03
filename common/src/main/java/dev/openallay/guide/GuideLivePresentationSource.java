@@ -5,6 +5,7 @@ import dev.openallay.guide.semantic.RichComponent;
 import dev.openallay.guide.semantic.SemanticBlock;
 import dev.openallay.guide.ui.GuideDetailCard;
 import dev.openallay.guide.ui.GuideToolDetailPresenter;
+import dev.openallay.guide.ui.GuideToolDetailView;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -46,27 +47,33 @@ final class GuideLivePresentationSource {
     void applied(UUID owner, GuideRequestSnapshot before, GuideRequestSnapshot after, AgentEvent event) {
         Admission admission = admitted.get(before.requestId());
         if (!valid || admission == null || !admission.owner.equals(owner)
+                || !before.requestId().equals(after.requestId()) || !admission.session.equals(before.sessionId())
                 || !admission.session.equals(after.sessionId()) || before.terminal() || before == after) return;
         // Stable semantic closure and successful native projections only. Streaming/progress never notify.
         if (event instanceof AgentEvent.ToolCompleted || event instanceof AgentEvent.ToolStarted
                 || event instanceof AgentEvent.FinalText || event instanceof AgentEvent.SteerApplied) {
             List<GuidePresentationEvent.ContentRef> cards = new ArrayList<>();
+            List<GuidePresentationEvent.CardPreview> previews = new ArrayList<>();
             for (GuideTimelineEntry entry : after.timeline()) {
                 if (entry instanceof GuideTimelineEntry.Tool tool
                         && event instanceof AgentEvent.ToolCompleted completed
                         && tool.activity().invocationId().equals(completed.invocationId())
                         && tool.activity().status() == GuideToolStatus.SUCCEEDED) {
-                    List<GuideDetailCard> projected = GuideToolDetailPresenter.project(tool.activity(), false).cards();
-                    for (int ordinal = 0; ordinal < projected.size(); ordinal++) {
-                        if (!(projected.get(ordinal) instanceof GuideDetailCard.Error)) {
-                            add(admission, cards, tool.ordinal(), "tool:" + tool.activity().invocationId() + ":card:" + ordinal);
+                    GuideToolDetailView detail = GuideToolDetailPresenter.project(tool.activity(), false);
+                    for (int ordinal = 0; ordinal < detail.cards().size(); ordinal++) {
+                        if (!(detail.cards().get(ordinal) instanceof GuideDetailCard.Error)) {
+                            GuideToolIntent summary = cardSummary(detail.cards().get(ordinal));
+                            add(admission, cards, previews, tool.ordinal(),
+                                    "tool:" + tool.activity().invocationId() + ":card:" + ordinal,
+                                    detail.intent().title().isBlank() ? summary.title() : detail.intent().title(),
+                                    detail.intent().description().isBlank() ? summary.description() : detail.intent().description());
                         }
                     }
                 } else if (entry instanceof GuideTimelineEntry.Assistant assistant && !assistant.streaming()) {
-                    collect(admission, cards, assistant.ordinal(), assistant.semantic().blocks());
+                    collect(admission, cards, previews, assistant.ordinal(), assistant.semantic().blocks());
                 }
             }
-            if (!cards.isEmpty()) emit(admission, after, GuidePresentationEvent.Kind.CARD_BATCH, cards, "");
+            if (!cards.isEmpty()) emit(admission, after, GuidePresentationEvent.Kind.CARD_BATCH, cards, "", previews);
         }
         if (after.status() == GuideRequestStatus.COMPLETED && after.terminal()) {
             if (event instanceof AgentEvent.FinalText) {
@@ -74,7 +81,7 @@ final class GuideLivePresentationSource {
                     if (after.timeline().get(index) instanceof GuideTimelineEntry.Assistant assistant) {
                         String text = assistant.semantic().fallbackText();
                         if (!text.isBlank()) emit(admission, after, GuidePresentationEvent.Kind.REPLY_FINAL,
-                                List.of(new GuidePresentationEvent.ContentRef(assistant.ordinal(), "reply")), text);
+                                List.of(new GuidePresentationEvent.ContentRef(assistant.ordinal(), "reply")), text, List.of());
                         break;
                     }
                 }
@@ -86,40 +93,80 @@ final class GuideLivePresentationSource {
                     .reduce((first, second) -> second)
                     .map(assistant -> List.of(new GuidePresentationEvent.ContentRef(assistant.ordinal(), "reply")))
                     .orElse(List.of(new GuidePresentationEvent.ContentRef(-1, "task-completed")));
-            emit(admission, after, GuidePresentationEvent.Kind.TASK_COMPLETED, completedContent, "");
+            emit(admission, after, GuidePresentationEvent.Kind.TASK_COMPLETED, completedContent, "", List.of());
         } else if (after.status() == GuideRequestStatus.FAILED && after.terminal()) {
             emit(admission, after, GuidePresentationEvent.Kind.TASK_FAILED,
                     List.of(new GuidePresentationEvent.ContentRef(-1, "task-failed")),
-                    after.failure() == null ? "" : after.failure().message());
+                    after.failure() == null ? "" : after.failure().message(), List.of());
         }
         if (after.terminal()) admitted.remove(after.requestId());
     }
 
     private void collect(Admission admission, List<GuidePresentationEvent.ContentRef> cards,
-                         int ordinal, List<SemanticBlock> blocks) {
+                         List<GuidePresentationEvent.CardPreview> previews, int ordinal, List<SemanticBlock> blocks) {
         for (SemanticBlock block : blocks) {
             if (block instanceof SemanticBlock.Component component
                     && !(component.component() instanceof RichComponent.ProgressSteps)
                     && !(component.component() instanceof RichComponent.StatusBadge)) {
-                add(admission, cards, ordinal, "node:" + component.nodeId());
+                RichComponent value = component.component();
+                String title = componentTitle(value);
+                add(admission, cards, previews, ordinal, "node:" + component.nodeId(),
+                        title.isBlank() ? value.fallbackText() : title, value.fallbackText());
             } else if (block instanceof SemanticBlock.Table table) {
-                add(admission, cards, ordinal, "node:" + table.nodeId());
+                // Tables have no title/description fields. Never substitute raw cells or an unrelated reply.
+                add(admission, cards, previews, ordinal, "node:" + table.nodeId(), "", "");
             } else if (block instanceof SemanticBlock.Quote quote) {
-                collect(admission, cards, ordinal, quote.content());
+                collect(admission, cards, previews, ordinal, quote.content());
             } else if (block instanceof SemanticBlock.ListBlock list) {
-                list.items().forEach(items -> collect(admission, cards, ordinal, items));
+                list.items().forEach(items -> collect(admission, cards, previews, ordinal, items));
             }
         }
     }
-    private void add(Admission admission, List<GuidePresentationEvent.ContentRef> cards, int ordinal, String id) {
+    private static String componentTitle(RichComponent value) {
+        return switch (value) {
+            case RichComponent.RecipeGrid recipe -> recipe.label();
+            case RichComponent.ChoiceGroup choices -> choices.prompt();
+            case RichComponent.ItemRow items -> labels(items.items().stream().map(RichComponent.Item::label).toList());
+            case RichComponent.IngredientCheck ingredients ->
+                    labels(ingredients.ingredients().stream().map(RichComponent.Ingredient::label).toList());
+            case RichComponent.SourceSummary sources -> labels(sources.sources().stream().map(RichComponent.Source::label).toList());
+            default -> "";
+        };
+    }
+    private static String labels(List<String> labels) {
+        return labels.stream().filter(label -> !label.isBlank()).distinct()
+                .reduce((first, next) -> first + ", " + next).orElse("");
+    }
+    private static GuideToolIntent cardSummary(GuideDetailCard card) {
+        // Use only canonical typed display fields. Never read execution arguments or normalized raw values here.
+        return switch (card) {
+            case GuideDetailCard.ItemGrid items -> new GuideToolIntent(
+                    labels(items.items().stream().map(dev.openallay.guide.ui.GuideItemView::displayName).toList()),
+                    items.items().stream().map(item -> item.displayName() + " × " + item.count())
+                            .reduce((first, next) -> first + ", " + next).orElse(""));
+            case GuideDetailCard.Recipe recipe -> new GuideToolIntent(
+                    labels(recipe.recipe().outputs().stream().map(dev.openallay.guide.ui.GuideRecipeCard.Output::displayName).toList()),
+                    recipe.recipe().outputs().stream().map(output -> output.displayName() + " × " + output.count())
+                            .reduce((first, next) -> first + ", " + next).orElse(""));
+            default -> GuideToolIntent.none();
+        };
+    }
+    private void add(Admission admission, List<GuidePresentationEvent.ContentRef> cards,
+                     List<GuidePresentationEvent.CardPreview> previews, int ordinal,
+                     String id, String title, String description) {
         GuidePresentationEvent.ContentRef ref = new GuidePresentationEvent.ContentRef(ordinal, id);
-        if (admission.content.add(ref)) cards.add(ref);
+        if (!admission.content.add(ref)) return;
+        cards.add(ref);
+        if (!title.isBlank() && !description.isBlank()) {
+            previews.add(new GuidePresentationEvent.CardPreview(ref, title, description));
+        }
     }
     private void emit(Admission admission, GuideRequestSnapshot request, GuidePresentationEvent.Kind kind,
-                      List<GuidePresentationEvent.ContentRef> content, String preview) {
+                      List<GuidePresentationEvent.ContentRef> content, String preview,
+                      List<GuidePresentationEvent.CardPreview> cards) {
         GuidePresentationEvent event = new GuidePresentationEvent(new GuidePresentationEvent.Key(
                 generation, actor, admission.owner, admission.session, request.requestId(), ++sequence),
-                kind, content, preview, request.updatedAt());
+                kind, content, preview, cards, request.updatedAt());
         for (Consumer<GuidePresentationEvent> listener : listeners) {
             try { listener.accept(event); }
             catch (RuntimeException ignored) { /* A presentation observer cannot fail the task. */ }

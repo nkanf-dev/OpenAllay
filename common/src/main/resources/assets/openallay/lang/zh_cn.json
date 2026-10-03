@@ -744,7 +744,7 @@
   "screen.openallay.notification.completed": "任务完成",
   "screen.openallay.notification.failed": "任务失败",
   "screen.openallay.notification.more_tasks": "另有 %s 个任务结果",
-  "screen.openallay.notification.view": "%s：查看回复",
+  "screen.openallay.notification.view": "%s：打开对话",
   "screen.openallay.settings.ui.duration": "通知显示秒数",
   "screen.openallay.settings.ui.notification_policy": "通知时机",
   "screen.openallay.settings.ui.notifications": "通知",
@@ -916,5 +916,7 @@
   "screen.openallay.telemetry.budget.input": "输入估算：%s / %s tokens",
   "screen.openallay.telemetry.budget.window": "总窗口：%s；预留：%s（2 × %s 输出）",
   "screen.openallay.telemetry.session.calls": "模型调用：%s 次",
-  "screen.openallay.telemetry.session.cost": "会话估算费用：%s"
+  "screen.openallay.telemetry.session.cost": "会话估算费用：%s",
+  "screen.openallay.notification.card_item": "%s",
+  "screen.openallay.notification.more_cards": "另有 %s 张卡片"
 }

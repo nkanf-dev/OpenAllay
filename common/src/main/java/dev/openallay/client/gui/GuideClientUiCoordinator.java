@@ -39,6 +39,7 @@ public final class GuideClientUiCoordinator implements AutoCloseable {
     private final GuideHudRenderer renderer;
     private final ClientEventDispatcher dispatcher;
     private final GuideNotificationController notifications;
+    private final GuideNativeToastPort notificationPort;
     private final VoiceClientRuntime voice;
     private final AutoCloseable binding;
     private final AutoCloseable notificationBinding;
@@ -59,8 +60,9 @@ public final class GuideClientUiCoordinator implements AutoCloseable {
         hud = new GuideHudController(services, display::config);
         renderer = new GuideHudRenderer(minecraft);
         this.dispatcher = Objects.requireNonNull(dispatcher, "dispatcher");
+        notificationPort = new GuideNativeToastPort(minecraft);
         notifications = new GuideNotificationController(() -> display.config().ui().notifications(), clock,
-                new GuideNativeToastPort(minecraft));
+                notificationPort);
         // Both result delivery and draft ownership bind before forActor returns for admission.
         notificationBinding = services.listenPresentation(notifications);
         binding = services.listenPresentation(new GuidePresentationListener() {
@@ -194,6 +196,12 @@ public final class GuideClientUiCoordinator implements AutoCloseable {
     public dev.openallay.client.voice.VoiceSettingsActions e2eVoiceSettings() {
         if (!Boolean.getBoolean("openallay.e2e.enabled")) throw new IllegalStateException("Development probe is disabled");
         return voice.settings();
+    }
+
+    /** Cached native toast facts only. Reading never renders, captures audio, or shows a toast. */
+    public Object e2eNotificationReceipt() {
+        if (!Boolean.getBoolean("openallay.e2e.enabled")) throw new IllegalStateException("Development probe is disabled");
+        return notificationPort.e2eReceipt();
     }
 
     public void disconnect() {

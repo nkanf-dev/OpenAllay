@@ -63,10 +63,11 @@ public final class GuideNotificationController implements GuidePresentationListe
         settingsChanged();
         // Keep small semantic preview only. Original reply, cards and history remain unchanged.
         GuidePresentationEvent stored = new GuidePresentationEvent(event.key(), event.kind(),
-                event.content(), preview(event.preview()), event.createdAt());
+                event.content(), preview(event.preview()), event.cardPreviews(), event.createdAt());
         receipts.put(stored.key(), new Receipt(stored));
         GuideUiConfig.Notifications config = config();
-        if (!enabled || !eligible(stored, config)) return;
+        if (!enabled || !eligible(stored, config) || suppressed(stored, config)
+                || stored.kind() == GuidePresentationEvent.Kind.CARD_BATCH && stored.cardPreviews().isEmpty()) return;
         Task task = Task.of(stored.key());
         Batch batch = pending.get(task);
         if (batch == null) {
@@ -93,14 +94,14 @@ public final class GuideNotificationController implements GuidePresentationListe
         pruneDeletedSessions();
         Instant now = clock.instant();
         tests.removeIf(test -> {
-            if (now.isBefore(test.until)) return false;
-            test.hide();
+            if (!test.handle.finished()) return false;
+            test.retire();
             return true;
         });
         owned.entrySet().removeIf(entry -> {
             OwnedToast toast = entry.getValue();
-            if (now.isBefore(toast.until)) return false;
-            toast.hide();
+            if (!toast.handle.finished()) return false;
+            toast.retire();
             return true;
         });
         if (!enabled || generation == null) return;
@@ -113,22 +114,23 @@ public final class GuideNotificationController implements GuidePresentationListe
             List<GuidePresentationEvent> deliverable = batch.events.stream()
                     .map(receipts::get).filter(Objects::nonNull).map(receipt -> receipt.event)
                     .filter(event -> eligible(event, config))
-                    .filter(event -> config.policy() == GuideUiConfig.NotificationPolicy.ALWAYS
-                            || !actuallyVisible(event))
+                    .filter(event -> !suppressed(event, config))
                     .toList();
             if (deliverable.isEmpty()) continue; // Suppression is not read acknowledgement.
             OwnedToast previous = owned.get(batch.task);
             GuideNotificationPort.Fence fence = previous == null
                     ? new GuideNotificationPort.Fence() : previous.fence;
-            Set<GuidePresentationEvent.Key> merged = new LinkedHashSet<>(batch.events);
+            Set<GuidePresentationEvent.Key> merged = new LinkedHashSet<>();
             if (previous != null) merged.addAll(previous.events);
+            merged.addAll(batch.events);
             List<GuidePresentationEvent> all = merged.stream().map(receipts::get)
                     .filter(Objects::nonNull).map(receipt -> receipt.event)
                     .filter(event -> eligible(event, config))
-                    .filter(event -> config.policy() == GuideUiConfig.NotificationPolicy.ALWAYS
-                            || !actuallyVisible(event)).toList();
+                    .filter(event -> !suppressed(event, config)).toList();
             GuideNotificationPort.Notification notification = notification(batch.task, all,
                     config.durationSeconds(), fence, overflowTasks);
+            if (notification.cardPreviews().isEmpty() && !notification.replyCompleted()
+                    && !notification.taskCompleted() && !notification.taskFailed()) continue;
             overflowTasks = 0;
             if (previous == null) {
                 if (owned.size() == MAX_PENDING_TASKS) {
@@ -136,8 +138,7 @@ public final class GuideNotificationController implements GuidePresentationListe
                     owned.remove(oldest).hide();
                 }
                 GuideNotificationPort.Handle handle = port.show(notification);
-                owned.put(batch.task, new OwnedToast(fence, handle,
-                        now.plusSeconds(config.durationSeconds()), merged));
+                owned.put(batch.task, new OwnedToast(fence, handle, merged));
             } else {
                 previous.events.addAll(merged);
                 previous.handle.update(notification); // Same task upgrades its owned object, no restart/spam.
@@ -158,6 +159,7 @@ public final class GuideNotificationController implements GuidePresentationListe
             tests.clear();
         }
         enabled = next; // Enabling starts with future receipts; it does not replay history or unread state.
+        suppressVisibleSession();
     }
 
     public List<GuidePresentationEvent> receipts(GuideService owner, String sessionId) {
@@ -174,7 +176,7 @@ public final class GuideNotificationController implements GuidePresentationListe
                 .filter(key -> key.sessionId().equals(sessionId) && currentOwner(key)).map(Task::of).distinct().count();
     }
 
-    /** Exact rendered receipt keys only. Surface attachment alone never suppresses another session. */
+    /** Full guide presence suppresses this session. Exact rendered keys remain separate read evidence. */
     public void visible(GuideService owner, String sessionId,
                         Set<GuidePresentationEvent.Key> actuallyVisible, boolean active) {
         if (owner != service || generation == null) return;
@@ -183,6 +185,7 @@ public final class GuideNotificationController implements GuidePresentationListe
         visible = actuallyVisible.stream().filter(receipts::containsKey)
                 .filter(key -> key.connectionGeneration().equals(generation)
                         && key.sessionId().equals(sessionId)).collect(java.util.stream.Collectors.toUnmodifiableSet());
+        suppressVisibleSession();
     }
 
     public void clearVisibility(GuideService owner) {
@@ -214,15 +217,27 @@ public final class GuideNotificationController implements GuidePresentationListe
         UUID id = UUID.randomUUID();
         GuideNotificationPort.Notification preview = new GuideNotificationPort.Notification(
                 generation == null ? id : generation, actor == null ? new UUID(0, 0) : actor,
-                id, "preview", id, "", 1, true, true, false,
+                id, "preview", id, "", 0, List.of(), true, true, false,
                 config.durationSeconds(), fence);
-        tests.add(new OwnedToast(fence, port.show(preview), clock.instant().plusSeconds(config.durationSeconds()), Set.of()));
+        tests.add(new OwnedToast(fence, port.show(preview), Set.of()));
     }
 
     @Override public void close() { clearConnection(); closed = true; }
 
-    private boolean actuallyVisible(GuidePresentationEvent event) {
-        return windowActive && event.key().sessionId().equals(visibleSession) && visible.contains(event.key());
+    private boolean suppressed(GuidePresentationEvent event, GuideUiConfig.Notifications config) {
+        return config.policy() != GuideUiConfig.NotificationPolicy.ALWAYS
+                && windowActive && event.key().sessionId().equals(visibleSession);
+    }
+    private void suppressVisibleSession() {
+        if (!windowActive || visibleSession == null
+                || config().policy() == GuideUiConfig.NotificationPolicy.ALWAYS) return;
+        pending.entrySet().removeIf(entry -> entry.getKey().session.equals(visibleSession));
+        owned.entrySet().removeIf(entry -> {
+            if (!entry.getKey().session.equals(visibleSession)) return false;
+            entry.getValue().hide();
+            return true;
+        });
+        // Receipt read state is untouched. Other sessions keep independent pending/owned objects.
     }
     private GuideUiConfig.Notifications config() { return Objects.requireNonNull(settings.get(), "notification settings"); }
     private static boolean eligible(GuidePresentationEvent event, GuideUiConfig.Notifications config) {
@@ -237,19 +252,25 @@ public final class GuideNotificationController implements GuidePresentationListe
     private GuideNotificationPort.Notification notification(Task task, List<GuidePresentationEvent> events,
                                                            int duration, GuideNotificationPort.Fence fence,
                                                            int additionalTasks) {
-        String text = "";
-        int cards = 0;
+        String text = "", failure = "";
+        Set<GuidePresentationEvent.ContentRef> cards = new LinkedHashSet<>();
+        Map<GuidePresentationEvent.ContentRef, GuidePresentationEvent.CardPreview> previews = new LinkedHashMap<>();
         boolean reply = false, complete = false, failed = false;
-        for (GuidePresentationEvent event : events) {
+        for (GuidePresentationEvent event : events.stream()
+                .sorted(java.util.Comparator.comparingLong(event -> event.key().sequence())).toList()) {
             switch (event.kind()) {
                 case REPLY_FINAL -> { reply = true; text = event.preview(); }
-                case CARD_BATCH -> cards += event.content().size();
+                case CARD_BATCH -> {
+                    cards.addAll(event.content());
+                    event.cardPreviews().forEach(card -> previews.putIfAbsent(card.source(), card));
+                }
                 case TASK_COMPLETED -> complete = true;
-                case TASK_FAILED -> { failed = true; text = event.preview(); }
+                case TASK_FAILED -> { failed = true; failure = event.preview(); }
             }
         }
         return new GuideNotificationPort.Notification(task.generation, task.actor, task.owner,
-                task.session, task.request, text, cards, reply, complete, failed, duration, fence, additionalTasks);
+                task.session, task.request, failed ? failure : text, cards.size(), List.copyOf(previews.values()),
+                reply, complete, failed, duration, fence, additionalTasks);
     }
     private boolean currentOwner(GuidePresentationEvent.Key key) {
         return service != null && service.presentationSessionOwner(key.sessionId())
@@ -297,13 +318,13 @@ public final class GuideNotificationController implements GuidePresentationListe
     private static final class OwnedToast {
         final GuideNotificationPort.Fence fence;
         final GuideNotificationPort.Handle handle;
-        final Instant until;
         final Set<GuidePresentationEvent.Key> events;
         OwnedToast(GuideNotificationPort.Fence fence, GuideNotificationPort.Handle handle,
-                   Instant until, Set<GuidePresentationEvent.Key> events) {
-            this.fence = fence; this.handle = handle; this.until = until;
+                   Set<GuidePresentationEvent.Key> events) {
+            this.fence = fence; this.handle = handle;
             this.events = new LinkedHashSet<>(events);
         }
+        void retire() { fence.invalidate(); }
         void hide() { fence.invalidate(); handle.hide(); }
     }
 }
