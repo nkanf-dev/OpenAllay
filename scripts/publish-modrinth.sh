@@ -54,20 +54,10 @@ import sys
 
 root = pathlib.Path(sys.argv[1])
 output = pathlib.Path(sys.argv[2])
-body = (root / "README.md").read_text(encoding="utf-8")
-body = body.replace(
-    "docs/media/openallay-banner.png",
-    "https://raw.githubusercontent.com/nkanf-dev/OpenAllay/main/docs/media/openallay-banner.png",
-).replace(
-    "README.zh-CN.md",
-    "https://github.com/nkanf-dev/OpenAllay/blob/main/README.zh-CN.md",
-).replace(
-    "docs/development.md",
-    "https://github.com/nkanf-dev/OpenAllay/blob/main/docs/development.md",
-).replace(
-    "LICENSE",
-    "https://github.com/nkanf-dev/OpenAllay/blob/main/LICENSE",
-)
+sys.path.insert(0, str(root / "scripts"))
+from modrinth_readme import render_readme
+
+body = render_readme((root / "README.md").read_text(encoding="utf-8"))
 payload = {
     "project_type": "mod",
     "slug": "openallay",
@@ -121,20 +111,10 @@ import sys
 
 root = pathlib.Path(sys.argv[1])
 output = pathlib.Path(sys.argv[2])
-body = (root / "README.md").read_text(encoding="utf-8")
-body = body.replace(
-    "docs/media/openallay-banner.png",
-    "https://raw.githubusercontent.com/nkanf-dev/OpenAllay/main/docs/media/openallay-banner.png",
-).replace(
-    "README.zh-CN.md",
-    "https://github.com/nkanf-dev/OpenAllay/blob/main/README.zh-CN.md",
-).replace(
-    "docs/development.md",
-    "https://github.com/nkanf-dev/OpenAllay/blob/main/docs/development.md",
-).replace(
-    "LICENSE",
-    "https://github.com/nkanf-dev/OpenAllay/blob/main/LICENSE",
-)
+sys.path.insert(0, str(root / "scripts"))
+from modrinth_readme import render_readme
+
+body = render_readme((root / "README.md").read_text(encoding="utf-8"))
 payload = {
     "description": "A modern Minecraft Agent with Skills, Extensions, and data-driven game analysis.",
     "body": body,
