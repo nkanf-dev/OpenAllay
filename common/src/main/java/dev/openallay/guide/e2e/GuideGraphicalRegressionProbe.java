@@ -54,6 +54,7 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.MultiLineEditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
 
@@ -65,6 +66,12 @@ final class GuideGraphicalRegressionProbe {
     private final Gson gson;
     private final Consumer<GuideService> openGuide;
     private final Supplier<Object> hudReceipt;
+    private final Supplier<Object> toastReceipt;
+    private final boolean developmentProbeEnabled = Boolean.getBoolean(GuideClientE2EConfig.ENABLED);
+    private static final String LIVE_PREFIX = "OpenAllay E2E UI live UX regressions";
+    private static final String LIVE_FOLLOW_UP = "OpenAllay E2E UI live UX follow-up";
+    private static final String LIVE_STEER = "OpenAllay E2E UI live UX steer";
+    private static final String LIVE_TAIL = "全文末尾：原生实时 UX 验收完成 · LATEST-48。";
     private final Supplier<VoiceSettingsActions> voiceSettings;
     private final BiFunction<String, UUID, java.util.Optional<String>> traceLookup;
     private final Consumer<Map<String, Object>> completed;
@@ -76,6 +83,23 @@ final class GuideGraphicalRegressionProbe {
     private final Map<String, CompletableFuture<Map<String, Object>>> frames = new LinkedHashMap<>();
     private final InputConstants.Key originalInteractKey;
     private final String originalInteractBinding;
+    private final InputConstants.Key originalPttKey;
+    private final String originalPttBinding;
+    private GuideRequestSnapshot latestRequest;
+    private GuideRequestSnapshot toastRequest;
+    private UUID liveFollowUpId;
+    private UUID liveSteerId;
+    private String liveRecipeToolId;
+    private String liveHeaderName;
+    private long liveHoverFrame;
+    private int liveHoverAttempts;
+    private java.lang.reflect.Method nativeCursorMoveCallback;
+    private final List<Map<String, Object>> liveHoverDiagnostics = new ArrayList<>();
+    private long liveHudFrame;
+    private int liveReaderScroll;
+    private String liveReaderAnchor;
+    private CompletableFuture<Integer> liveTransportRelease;
+    private String liveToastQuestion;
     private final Path frameRoot;
     private final int originalWindowWidth;
     private final int originalWindowHeight;
@@ -120,7 +144,7 @@ final class GuideGraphicalRegressionProbe {
     GuideGraphicalRegressionProbe(GuideClientE2EConfig config, String loader, String gameVersion,
             String modVersion, GuideService service, ClientSettingsService settings, Gson gson,
             Consumer<GuideService> openGuide, Supplier<Object> hudReceipt,
-            Supplier<VoiceSettingsActions> voiceSettings,
+            Supplier<VoiceSettingsActions> voiceSettings, Supplier<Object> toastReceipt,
             BiFunction<String, UUID, java.util.Optional<String>> traceLookup,
             Consumer<Map<String, Object>> completed) {
         this.config = config;
@@ -129,6 +153,7 @@ final class GuideGraphicalRegressionProbe {
         this.gson = gson;
         this.openGuide = openGuide;
         this.hudReceipt = hudReceipt;
+        this.toastReceipt = toastReceipt;
         this.voiceSettings = voiceSettings;
         this.traceLookup = traceLookup;
         this.completed = completed;
@@ -139,6 +164,8 @@ final class GuideGraphicalRegressionProbe {
         originalWindowHeight = client.getWindow().getHeight();
         originalGuiScale = client.options.guiScale().get();
         report.put("windowBefore", Map.of("width", originalWindowWidth, "height", originalWindowHeight, "guiScale", originalGuiScale));
+        originalPttBinding = OpenAllayKeyMappings.VOICE_PTT.saveString();
+        originalPttKey = InputConstants.getKey(originalPttBinding);
         originalInteractBinding = OpenAllayKeyMappings.INTERACT_HUD.saveString();
         originalInteractKey = InputConstants.getKey(originalInteractBinding);
         report.put("loader", loader);
@@ -151,6 +178,9 @@ final class GuideGraphicalRegressionProbe {
         report.put("checkpoints", checkpoints);
         report.put("actions", actions);
         report.put("interactKeyBefore", originalInteractBinding);
+        report.put("sourceIdentity", Map.of("revision", System.getProperty("openallay.e2e.sourceRevision", "UNRECORDED"),
+                "manifestSha256", System.getProperty("openallay.e2e.sourceManifestSha256", "UNRECORDED")));
+        report.put("voiceProof", "NOT TESTED: no capture/STT device; synthetic external companion is separate from hardware proof");
     }
 
     void tick() {
@@ -163,7 +193,8 @@ final class GuideGraphicalRegressionProbe {
             // At FPS10 this leaves several actual extraction/render frames between actions.
             if (++ticks < 12 || client.gui.overlay() != null) return;
             ticks = 0;
-            runStage();
+            if ("ui-live-ux-regressions".equals(config.scenario())) runLiveStage();
+            else runStage();
         } catch (RuntimeException failure) {
             fail(failure);
         }
@@ -260,9 +291,8 @@ final class GuideGraphicalRegressionProbe {
             }
             case 11 -> {
                 if (!doneReturned()) return;
-                require(!settings.snapshot().display().ui().fullscreen().toolsCollapsed(), "Reset kept Tools collapsed");
                 require(expectedTheme.equals(theme()), "Done did not acknowledge Reset");
-                checkpoint("03-reset-expanded-tools", true);
+                checkpoint("03-reset-compact-tools", true);
                 validateGuideReceipts();
                 advance();
             }
@@ -319,13 +349,9 @@ final class GuideGraphicalRegressionProbe {
                 require(client.gui.screen() == null, "Passive HUD captured the gameplay screen");
                 JsonObject receipt = gson.toJsonTree(hudReceipt.get()).getAsJsonObject();
                 require(number(receipt, "extractedFrame") > hudFrameBeforeDone, "HUD receipt is stale after Done");
-                if (number(receipt, "recipeNodes") == 0 || number(receipt, "nativeViews") == 0
-                        || number(receipt, "toolRows") == 0 || number(receipt, "toolCards") == 0) {
-                    waitFor("passive HUD actual recipe and Tool-result page");
-                    return;
-                }
-                checkpoint("05-passive-hud-native-recipe-tool", false);
-                report.put("passiveHudNativeRecipeAndTool", receipt);
+                requireHudLatest(receipt, request);
+                checkpoint("05-passive-hud-latest-tail", false);
+                report.put("passiveHudLatestTail", receipt);
                 passiveRecipeFrame = number(receipt, "extractedFrame");
                 stage = 65;
                 stageWait = 0;
@@ -583,18 +609,16 @@ final class GuideGraphicalRegressionProbe {
             case 63 -> { navigate("screen.openallay.settings.ui"); advance(); }
             case 64 -> { press("screen.openallay.settings.ui.hud"); stage = 60; stageWait = 0; }
             case 65 -> {
-                require(client.gui.screen() == null, "Passive item page captured gameplay");
+                require(client.gui.screen() == null, "Passive latest tail captured gameplay");
                 JsonObject receipt = gson.toJsonTree(hudReceipt.get()).getAsJsonObject();
-                if (number(receipt, "extractedFrame") <= passiveRecipeFrame || number(receipt, "nativeItemNodes") == 0) {
-                    waitFor("passive HUD actual native item page");
-                    return;
+                if (number(receipt, "extractedFrame") <= passiveRecipeFrame) {
+                    waitFor("fresh passive HUD latest-tail extraction"); return;
                 }
-                report.put("passiveHudNativeItemPage", receipt);
-                checkpoint("05-passive-hud-native-items", false);
+                requireHudLatest(receipt, request);
+                checkpoint("05-passive-hud-latest-tail-stable", false);
                 KeyMapping.click(InputConstants.Type.KEYSYM.getOrCreate(GLFW.GLFW_KEY_F8));
                 recordAction("native-keymapping-click", "INTERACT_HUD/F8");
-                stage = 26;
-                stageWait = 0;
+                stage = 26; stageWait = 0;
             }
             case 70 -> { press("screen.openallay.settings.short"); advance(); }
             case 71 -> { navigate("screen.openallay.settings.ui"); advance(); }
@@ -814,6 +838,632 @@ final class GuideGraphicalRegressionProbe {
         }
     }
 
+    /** Separate bounded native scenario. Unit/source tests do not certify these frames. */
+    private void runLiveStage() {
+        switch (stage) {
+            case 0 -> {
+                require(developmentProbeEnabled, "Development opt-in was disabled at construction");
+                requireLoopbackFixture();
+                require(config.question().startsWith(LIVE_PREFIX) && config.question().contains(" hold"),
+                        "Live UX scenario requires the explicit held loopback question prefix");
+                require("zh_cn".equals(client.options.languageCode), "Chinese language must be prepared before launch");
+                var voice = dev.openallay.client.voice.VoiceConfigStore.decode(readCurrentConfig("voice.json"));
+                require(!voice.enabled(), "Native GUI scenario must not open a microphone");
+                report.put("voiceConfig", gson.toJsonTree(voice));
+                require("key.keyboard.f8".equals(OpenAllayKeyMappings.INTERACT_HUD.saveString()),
+                        "Fresh native profile must retain the new F8 default without a harness override");
+                liveHeaderName = settings.snapshot().display().assistantName();
+                client.getWindow().setWindowed(850, 480);
+                OpenAllayKeyMappings.VOICE_PTT.setKey(InputConstants.Type.KEYSYM.getOrCreate(GLFW.GLFW_KEY_V));
+                KeyMapping.resetMapping();
+                openGuide.accept(service);
+                advance();
+            }
+            case 1 -> {
+                require(guide().getFocused() == composer(), "New Guide did not focus its actual native composer");
+                require(guide().charTyped(new CharacterEvent('x')), "Initial native character was not routed to composer");
+                require("x".equals(composer().getValue()), "Initial character callback did not edit native input");
+                checkpoint("live-01-initial-character-focus", true);
+                clickAt(guide(), 1, 1, "blank-outside-composer");
+                require(guide().getFocused() != composer(), "Blank click did not blur native text input");
+                client.getWindow().setWindowed(900, 540);
+                advance();
+            }
+            case 2 -> {
+                require(guide().getFocused() != composer(), "Resize/rebuild incorrectly refocused blurred composer");
+                require("x".equals(composer().getValue()), "Resize lost player draft");
+                clickAt(guide(), composer().getX() + 8, composer().getY() + 8, "composer-focus");
+                require(guide().getFocused() == composer(), "Native input click did not restore text focus");
+                String beforeTypedPttKey = composer().getValue();
+                boolean endHandled = guide().keyPressed(new KeyEvent(GLFW.GLFW_KEY_END, 0, 0));
+                recordAction("native-key", "END/focused-composer-before-typed-PTT-key");
+                require(endHandled && guide().getFocused() == composer(), "Native End did not retain composer focus");
+                guide().keyPressed(new KeyEvent(GLFW.GLFW_KEY_V, 0, 0));
+                boolean characterHandled = guide().charTyped(new CharacterEvent('v'));
+                guide().keyReleased(new KeyEvent(GLFW.GLFW_KEY_V, 0, 0));
+                report.put("typedPttKeyNativeEdit", Map.of("beforeValue", beforeTypedPttKey,
+                        "afterValue", composer().getValue(), "endKeyHandled", endHandled,
+                        "characterHandled", characterHandled, "composerFocused", guide().getFocused() == composer()));
+                require(characterHandled && guide().getFocused() == composer() && "xv".equals(composer().getValue()),
+                        "Focused PTT-bound typed key did not insert at native composer End");
+                report.put("focusReceipts", Map.of("initialChar", true, "blankBlur", true,
+                        "resizeRemainsBlurred", true, "typedPttKeyEditsText", true,
+                        "voiceDisabledNoCapture", true));
+                checkpoint("live-02-blur-resize-typed-ptt", true);
+                composer().setValue(config.question(), true);
+                advance();
+            }
+            case 3 -> { press("screen.openallay.action.send"); advance(); }
+            case 4 -> {
+                request = requestFor(config.question());
+                if (request == null || request.tools().isEmpty()
+                        || request.tools().getFirst().status() != GuideToolStatus.SUCCEEDED) {
+                    waitFor("actual first native recipe Tool while continuation transport is held"); return;
+                }
+                require(!request.terminal(), "Transport hold did not keep a real task active");
+                composer().setValue(LIVE_FOLLOW_UP + " queued-native-callback", true);
+                advance();
+            }
+            case 5 -> { press("screen.openallay.pending.follow_up"); advance(); }
+            case 6 -> {
+                var pending = session().pendingMessages();
+                if (pending.isEmpty()) { waitFor("actual Follow-up admission receipt"); return; }
+                var follow = pending.getFirst();
+                require(follow.kind() == dev.openallay.guide.GuidePendingMessage.Kind.FOLLOW_UP
+                        && follow.text().startsWith(LIVE_FOLLOW_UP), "Real Follow-up queue has wrong kind/text");
+                liveFollowUpId = follow.id();
+                report.put("followUpAccepted", gson.toJsonTree(follow));
+                var notice = (dev.openallay.client.gui.GuideUiNotice) readField(guide(), "notice");
+                require(notice.message().equals(Component.translatable("screen.openallay.composer.accepted.follow_up").getString()),
+                        "Actual Follow-up callback did not show queued admission feedback");
+                report.put("followUpNotice", notice);
+                checkpoint("live-03-follow-up-accepted-active", true);
+                var extras = (dev.openallay.guide.ui.GuideUiLayout.ComposerExtras) readField(guide(), "composerExtras");
+                clickAt(guide(), extras.footer().x() + 4, extras.footer().y() + 4, "composer-mode-steer");
+                composer().setValue(LIVE_STEER + " admitted-native-callback", true);
+                advance();
+            }
+            case 7 -> { press("screen.openallay.pending.steer"); advance(); }
+            case 8 -> {
+                var pending = session().pendingMessages();
+                if (pending.size() < 2) { waitFor("actual Steer admission receipt"); return; }
+                var steer = pending.get(1);
+                require(pending.getFirst().id().equals(liveFollowUpId)
+                        && steer.kind() == dev.openallay.guide.GuidePendingMessage.Kind.STEER
+                        && steer.text().startsWith(LIVE_STEER) && steer.requestId().equals(request.requestId()),
+                        "Actual pending receipt did not preserve Follow-up then Steer order");
+                liveSteerId = steer.id();
+                report.put("steerAccepted", gson.toJsonTree(steer));
+                var notice = (dev.openallay.client.gui.GuideUiNotice) readField(guide(), "notice");
+                require(notice.message().equals(Component.translatable("screen.openallay.composer.accepted.steer").getString()),
+                        "Actual Steer callback did not show pending admission feedback");
+                report.put("steerNotice", notice);
+                report.put("pendingReceiptOrder", pending.stream().map(value -> value.id().toString()).toList());
+                checkpoint("live-04-steer-accepted-active", true);
+                liveTransportRelease = releaseLiveTransport();
+                advance();
+            }
+            case 9 -> {
+                if (!liveTransportRelease.isDone()) { waitFor("loopback fixture transport release"); return; }
+                require(liveTransportRelease.join() == 204, "Loopback transport release was rejected");
+                request = requestFor(config.question());
+                latestRequest = session().requests().stream().filter(value -> value.userMessage().startsWith(LIVE_FOLLOW_UP))
+                        .findFirst().orElse(null);
+                if (request == null || !request.terminal() || latestRequest == null || !latestRequest.terminal()) {
+                    waitFor("actual original task and queued Follow-up terminal receipts"); return;
+                }
+                validateLiveRequest(request);
+                validateLiveRequest(latestRequest);
+                require(session().pendingMessages().isEmpty(), "Completed real queue retained pending drafts");
+                var admitted = request.timeline().stream().filter(dev.openallay.guide.GuideTimelineEntry.User.class::isInstance)
+                        .map(dev.openallay.guide.GuideTimelineEntry.User.class::cast).toList();
+                require(admitted.stream().anyMatch(value -> value.messageId().equals(liveSteerId)
+                        && value.text().startsWith(LIVE_STEER)), "Steer was not actually admitted into original timeline");
+                report.put("admittedSteerTimeline", admitted);
+                report.put("followUpRequestId", latestRequest.requestId().toString());
+                require(latestRequest.createdAt().compareTo(request.createdAt()) >= 0, "Follow-up request preceded original request");
+                var layout = (dev.openallay.guide.ui.GuideUiLayout) readField(guide(), "layout");
+                liveHoverFrame = number(jsonReceipt(guide(), "e2eTelemetryTooltipReceipt"), "requestedNativeFrame");
+                hoverNative(layout.telemetry().x() + 8, layout.telemetry().y() + 8);
+                recordNativeHoverDiagnostic("stage9-after-native-cursor-request");
+                advance();
+            }
+            case 10 -> {
+                recordNativeHoverDiagnostic("stage10-before-reissue");
+                JsonObject tooltip = jsonReceipt(guide(), "e2eTelemetryTooltipReceipt");
+                if (number(tooltip, "requestedNativeFrame") <= liveHoverFrame) {
+                    var layout = (dev.openallay.guide.ui.GuideUiLayout) readField(guide(), "layout");
+                    // Alternate inside the same native target to request a real OS cursor callback.
+                    // Never invoke extraction or write the MouseHandler's coordinates.
+                    hoverNative(layout.telemetry().x() + 8 + (++liveHoverAttempts % 2), layout.telemetry().y() + 8);
+                    recordNativeHoverDiagnostic("stage10-after-native-cursor-reissue");
+                    require(liveHoverAttempts < 5, "Native telemetry hover did not extract after 5 real cursor requests; inspect nativeHoverDiagnostics");
+                    return;
+                }
+                require(number(tooltip, "logicalLineCount") >= 3 && number(tooltip, "requestedLineCount") >= 3
+                        && number(tooltip, "requestedWidth") > 0 && number(tooltip, "requestedWidth") <= 300,
+                        "Native telemetry tooltip did not request bounded multiline paint");
+                report.put("nativeTelemetryHover", tooltip);
+                checkpoint("live-05-native-hover-known-budget-unknown-cost", true);
+                hoverNative(1, 1);
+                clickAt(guide(), 1, 1, "blur-before-native-transcript-home");
+                guide().keyPressed(new KeyEvent(GLFW.GLFW_KEY_HOME, 0, 0));
+                advance();
+            }
+            case 11 -> {
+                JsonObject summary = revealRecipeSummary(request);
+                if (summary == null) return;
+                liveRecipeToolId = summary.get("id").getAsString();
+                report.put("compactComfortableSummary", summary);
+                JsonObject second = revealToolSummary(request, 1);
+                if (second == null) return;
+                require(number(second.getAsJsonObject("bounds"), "height") == 28
+                        && second.get("description").getAsString().isBlank(), "Title-only actual native Tool card is not 28 pixels");
+                report.put("actualTitleOnly28Summary", second);
+                summary = revealRecipeSummary(request);
+                if (summary == null) return;
+                validateCompactSummaries(jsonReceipt(guide(), "e2eToolsReceipt"));
+                checkpoint("live-06-comfortable-tool-summary", true);
+                clickAt(guide(), summary.get("blankClickX").getAsDouble(), summary.get("blankClickY").getAsDouble(), "tool-row-blank-padding");
+                advance();
+            }
+            case 12 -> {
+                if (!detailRecipePainted(liveRecipeToolId)) return;
+                report.put("actualNativeRecipeDetail", jsonReceipt(guide(), "e2eToolsReceipt"));
+                checkpoint("live-07-tool-detail-native-recipe", true);
+                guide().keyPressed(new KeyEvent(GLFW.GLFW_KEY_ESCAPE, 0, 0));
+                advance();
+            }
+            case 13 -> {
+                JsonObject summary = revealRecipeSummary(request);
+                if (summary == null) return;
+                var capsules = summary.getAsJsonArray("capsules");
+                require(!capsules.isEmpty(), "Actual native recipe summary icon was not painted");
+                JsonObject capsule = capsules.get(0).getAsJsonObject();
+                JsonObject bounds = capsule.getAsJsonObject("bounds");
+                clickAt(guide(), number(bounds, "x") + number(bounds, "width") / 2.0,
+                        number(bounds, "y") + number(bounds, "height") / 2.0, "native-summary-capsule-priority");
+                report.put("actualCapsuleClicked", capsule);
+                advance();
+            }
+            case 14 -> {
+                if (client.gui.screen() instanceof OpenAllayScreen)
+                    require(jsonReceipt(guide(), "e2eToolsReceipt").get("detailToolId").getAsString().isEmpty(),
+                            "Native child capsule opened parent Tool drawer");
+                else { client.gui.screen().keyPressed(new KeyEvent(GLFW.GLFW_KEY_ESCAPE, 0, 0)); openGuide.accept(service); }
+                checkpoint("live-08-native-child-priority-no-parent-drawer", true);
+                press("screen.openallay.settings.short"); advance();
+            }
+            case 15 -> { navigate("screen.openallay.settings.ui"); advance(); }
+            case 16 -> { press("screen.openallay.settings.ui.fullscreen"); advance(); }
+            case 17 -> { press("screen.openallay.settings.ui.density"); press("screen.openallay.settings.done"); advance(); }
+            case 18 -> {
+                if (!doneReturned()) return;
+                require(settings.snapshot().display().ui().fullscreen().density() == GuideUiConfig.Density.COMPACT,
+                        "Actual settings callback did not save Compact density");
+                clickAt(guide(), 1, 1, "blur-before-compact-home");
+                guide().keyPressed(new KeyEvent(GLFW.GLFW_KEY_HOME, 0, 0)); advance();
+            }
+            case 19 -> {
+                JsonObject summary = revealRecipeSummary(request);
+                if (summary == null) return;
+                require(number(summary.getAsJsonObject("bounds"), "height") == 40,
+                        "Actual descriptive native summary card is not 40 pixels");
+                validateCompactSummaries(jsonReceipt(guide(), "e2eToolsReceipt"));
+                report.put("compactDensitySummary", summary);
+                checkpoint("live-09-compact-tool-summary", true);
+                press("screen.openallay.settings.short"); advance();
+            }
+            case 20 -> { navigate("screen.openallay.settings.ui"); advance(); }
+            case 21 -> { press("screen.openallay.settings.ui.hud"); advance(); }
+            case 22 -> { press("screen.openallay.settings.ui.hud_enabled"); press("screen.openallay.settings.done"); advance(); }
+            case 23 -> {
+                if (!doneReturned()) return;
+                require(settings.snapshot().display().ui().hud().enabled(), "HUD enabled draft was not acknowledged");
+                liveHudFrame = number(gson.toJsonTree(hudReceipt.get()).getAsJsonObject(), "extractedFrame");
+                guide().onClose(); advance();
+            }
+            case 24 -> {
+                JsonObject receipt = gson.toJsonTree(hudReceipt.get()).getAsJsonObject();
+                if (number(receipt, "extractedFrame") <= liveHudFrame) { waitFor("fresh gameplay HUD tail extraction"); return; }
+                requireHudLatest(receipt, latestRequest);
+                if (++stageWait < 22) return; // 264 real client ticks, longer than the removed carousel interval.
+                report.put("passiveHudLatestStable", receipt);
+                checkpoint("live-10-passive-hud-latest-48-no-carousel", false);
+                OpenAllayKeyMappings.INTERACT_HUD.setKey(InputConstants.UNKNOWN);
+                KeyMapping.resetMapping(); advance();
+            }
+            case 25 -> {
+                report.put("explicitUnboundKeyLabel", OpenAllayKeyMappings.INTERACT_HUD.getTranslatedKeyMessage().getString());
+                require(OpenAllayKeyMappings.INTERACT_HUD.isUnbound(), "Explicit unbound key was silently reset");
+                checkpoint("live-11-passive-hud-explicit-unbound-hint", false);
+                OpenAllayKeyMappings.INTERACT_HUD.setKey(InputConstants.Type.KEYSYM.getOrCreate(GLFW.GLFW_KEY_F8));
+                KeyMapping.resetMapping();
+                KeyMapping.click(InputConstants.Type.KEYSYM.getOrCreate(GLFW.GLFW_KEY_F8));
+                recordAction("native-keymapping-click", "INTERACT_HUD/default-F8"); advance();
+            }
+            case 26 -> {
+                Screen lite = lite();
+                JsonObject receipt = jsonReceipt(lite, "resultReceipt");
+                requireHudLatest(receipt, latestRequest);
+                checkpoint("live-12-interactive-hud-opens-at-latest", false);
+                wheelHud(lite, 8);
+                advance();
+            }
+            case 27 -> {
+                JsonObject receipt = jsonReceipt(lite(), "resultReceipt");
+                require(number(receipt, "scroll") < number(receipt, "maximumScroll"), "Native wheel up did not leave latest tail");
+                liveReaderScroll = (int) number(receipt, "scroll");
+                liveReaderAnchor = receipt.getAsJsonArray("renderedRowIds").get(0).getAsString();
+                composer().setValue(LIVE_FOLLOW_UP + " reader-new-content", true);
+                liveHudFrame = number(receipt, "extractedFrame");
+                report.put("readerSendPrepared", readerSendDiagnostic());
+                stage = 127; stageWait = 0;
+            }
+            case 127 -> {
+                JsonObject receipt = jsonReceipt(lite(), "resultReceipt");
+                Map<String, Object> diagnostic = readerSendDiagnostic();
+                report.put("readerSendBeforeCallback", diagnostic);
+                require((boolean) diagnostic.get("draftMatches") && config.sessionId().equals(diagnostic.get("sessionId")),
+                        "Native HUD reader draft or session changed before Send");
+                require(!(boolean) diagnostic.get("submitting") && !(boolean) diagnostic.get("intentSubmissionInFlight")
+                        && !(boolean) diagnostic.get("intentInvalid"), "Native HUD reader has an in-flight or invalid input intent before Send");
+                if (number(receipt, "extractedFrame") < liveHudFrame + 3) {
+                    waitFor("three actual HUD reader extractions after draft preparation"); return;
+                }
+                require((boolean) diagnostic.get("sendVisible") && (boolean) diagnostic.get("sendActive"),
+                        "Native HUD reader Send was not active after three real draft projection frames");
+                press("screen.openallay.action.send");
+                stage = 28; stageWait = 0;
+            }
+            case 28 -> {
+                var next = requestFor(LIVE_FOLLOW_UP + " reader-new-content");
+                if (next == null || !next.terminal()) { waitFor("actual reader new-content request"); return; }
+                validateLiveRequest(next);
+                latestRequest = next;
+                JsonObject receipt = jsonReceipt(lite(), "resultReceipt");
+                require(number(receipt, "scroll") == liveReaderScroll
+                        && receipt.getAsJsonArray("renderedRowIds").asList().stream().anyMatch(value -> value.getAsString().equals(liveReaderAnchor)),
+                        "New actual content displaced the reader's wheel-up anchor");
+                report.put("readerAnchorAfterActualNewContent", receipt);
+                checkpoint("live-13-reader-anchor-with-new-content", false);
+                press("screen.openallay.hud.latest"); advance();
+            }
+            case 29 -> {
+                requireHudLatest(jsonReceipt(lite(), "resultReceipt"), latestRequest);
+                checkpoint("live-14-reader-native-latest-restores", false);
+                wheelHud(lite(), 10000); advance();
+            }
+            case 30 -> {
+                JsonObject receipt = jsonReceipt(lite(), "resultReceipt");
+                require(number(receipt, "scroll") == 0 && number(receipt, "toolRows") > 0,
+                        "Full native reader cannot reach prior loaded request Tool cards");
+                require(receipt.getAsJsonArray("renderedRowIds").asList().stream()
+                        .anyMatch(value -> value.getAsString().contains(request.requestId().toString())),
+                        "Reader first page lost the prior original request identity");
+                report.put("priorRequestReader", receipt);
+                checkpoint("live-15-reader-prior-request-cards", false);
+                lite().onClose(); openGuide.accept(service); press("screen.openallay.settings.short"); advance();
+            }
+            case 31 -> { navigate("screen.openallay.settings.ui"); advance(); }
+            case 32 -> { press("screen.openallay.settings.ui.notifications"); advance(); }
+            case 33 -> { press("screen.openallay.settings.ui.notifications_enabled"); press("screen.openallay.settings.done"); advance(); }
+            case 34 -> {
+                if (!doneReturned()) return;
+                require(settings.snapshot().display().ui().notifications().enabled()
+                        && settings.snapshot().display().ui().notifications().policy() == GuideUiConfig.NotificationPolicy.WHEN_GUIDE_NOT_VISIBLE,
+                        "Native notification opt-in did not retain Guide-not-visible policy");
+                JsonObject receipt = toastJson();
+                require(receipt == null || !receipt.get("visible").getAsBoolean(), "Guide visible with empty cards admitted a popup");
+                report.put("guideVisibleSuppression", receipt);
+                liveToastQuestion = LIVE_PREFIX + " gameplay-toast";
+                composer().setValue(liveToastQuestion, true);
+                press("screen.openallay.action.send");
+                guide().onClose(); advance();
+            }
+            case 35 -> {
+                toastRequest = requestFor(liveToastQuestion);
+                JsonObject receipt = toastJson();
+                if (toastRequest == null || receipt == null || !receipt.get("visible").getAsBoolean()
+                        || number(receipt, "frame") == 0) { waitFor("actual CardProduced owned native toast paint"); return; }
+                require(receipt.get("requestId").getAsString().equals(toastRequest.requestId().toString()), "Native toast has another request identity");
+                require(!receipt.get("title").getAsString().isBlank() && !receipt.get("description").getAsString().isBlank(),
+                        "Actual card toast did not retain meaningful title and description");
+                require(number(receipt, "width") <= 240 && number(receipt, "height") == 64 && number(receipt, "slots") == 2
+                        && number(receipt, "titleLineCount") == 1 && number(receipt, "descriptionLineCount") <= 2,
+                        "Actual native toast changed fixed geometry or exceeded text slots");
+                require(receipt.get("noClickTarget").getAsBoolean(), "Native toast added a click target");
+                require(toastRequest.tools().stream().anyMatch(tool -> tool.intent().title().equals(receipt.get("title").getAsString())
+                        && tool.intent().description().equals(receipt.get("description").getAsString())),
+                        "Native toast title/description do not match an actual meaningful Tool card");
+                report.put("actualCardNativeToast", receipt);
+                checkpoint("live-16-actual-card-title-description-native-toast", false);
+                openGuide.accept(service); advance();
+            }
+            case 36 -> {
+                JsonObject receipt = toastJson();
+                require(receipt != null && !receipt.get("visible").getAsBoolean() && receipt.get("ownedHidden").getAsBoolean()
+                        && number(receipt, "hideOrder") > number(receipt, "showOrder"),
+                        "Opening same-session Guide did not immediately hide owned native popup");
+                liveTransportRelease = releaseLiveTransport();
+                report.put("actualOwnedToastHiddenOnGuide", receipt);
+                checkpoint("live-17-visible-guide-owned-toast-hidden", true); advance();
+            }
+            case 37 -> {
+                if (!liveTransportRelease.isDone()) { waitFor("gameplay toast fixture transport release"); return; }
+                require(liveTransportRelease.join() == 204, "Gameplay toast release was rejected");
+                toastRequest = requestFor(liveToastQuestion);
+                if (toastRequest == null || !toastRequest.terminal()) { waitFor("real gameplay toast task completion"); return; }
+                validateLiveRequest(toastRequest);
+                require(liveHeaderName.equals(settings.snapshot().display().assistantName()), "Live UI scenario changed assistant full name");
+                JsonObject header = jsonReceipt(guide(), "e2eHeaderReceipt");
+                require(header.get("fullVisible").getAsBoolean(), "Live header clipped the existing full title");
+                stage = 39; stageWait = 0;
+            }
+            case 39, 40 -> runStage();
+            default -> throw new IllegalStateException("Unknown live native stage " + stage);
+        }
+    }
+
+    private MultiLineEditBox composer() {
+        return client.gui.screen().children().stream().filter(MultiLineEditBox.class::isInstance)
+                .map(MultiLineEditBox.class::cast).findFirst()
+                .orElseThrow(() -> new IllegalStateException("Actual native composer is unavailable"));
+    }
+
+    private dev.openallay.guide.GuideSessionSnapshot session() {
+        return service.snapshot().sessions().stream().filter(value -> value.sessionId().equals(config.sessionId()))
+                .findFirst().orElseThrow();
+    }
+
+    private GuideRequestSnapshot requestFor(String question) {
+        return session().requests().stream().filter(value -> value.userMessage().equals(question)).findFirst().orElse(null);
+    }
+
+    private void validateLiveRequest(GuideRequestSnapshot value) {
+        require(value.status() == GuideRequestStatus.COMPLETED, "Actual live UI request did not complete");
+        require(value.tools().size() == 2 && value.tools().stream().allMatch(tool -> tool.toolId().equals("openallay:run_javascript")
+                && tool.status() == GuideToolStatus.SUCCEEDED && tool.normalized() != null), "Actual native recipe Tools are incomplete");
+        require("RECIPE".equals(value.tools().getFirst().normalized().getAsJsonObject("value").get("viewKind").getAsString()),
+                "First actual tool result is not a trusted native recipe");
+        require(value.assistantText().contains(LIVE_TAIL) && value.assistantText().contains("本地验收阅读段 48"),
+                "Actual full provider response lost latest48 marker");
+        report.put("requestId", request.requestId().toString());
+        report.put("assistantTextSha256", sha256(request.assistantText()));
+        report.put("actualTools", request.tools().stream().map(tool -> Map.of("invocationId", tool.invocationId(),
+                "toolId", tool.toolId(), "status", tool.status().name(), "title", tool.intent().title(),
+                "description", tool.intent().description())).toList());
+    }
+
+    private JsonObject revealRecipeSummary(GuideRequestSnapshot value) { return revealToolSummary(value, 0); }
+
+    private JsonObject revealToolSummary(GuideRequestSnapshot value, int index) {
+        String expected = "tool:" + value.requestId() + ":" + value.tools().get(index).invocationId();
+        JsonObject tools = jsonReceipt(guide(), "e2eToolsReceipt");
+        JsonObject found = tools.getAsJsonArray("toolSummaries").asList().stream().map(element -> element.getAsJsonObject())
+                .filter(summary -> expected.equals(summary.get("id").getAsString())).findFirst().orElse(null);
+        if (found == null) {
+            var virtualizer = (dev.openallay.guide.ui.GuideTranscriptVirtualizer) readField(guide(), "virtualizer");
+            var rows = virtualizer.rows();
+            int rowIndex = java.util.stream.IntStream.range(0, rows.size())
+                    .filter(row -> rows.get(row).id().equals(expected)).findFirst().orElseThrow();
+            int currentScroll = (Integer) readField(guide(), "scroll");
+            double direction = virtualizer.offset(rowIndex) < currentScroll ? 2 : -2;
+            var layout = (dev.openallay.guide.ui.GuideUiLayout) readField(guide(), "layout");
+            guide().mouseScrolled(layout.transcript().x() + layout.transcript().width() / 2.0,
+                    layout.transcript().y() + layout.transcript().height() / 2.0, 0, direction);
+            recordAction("native-wheel", "reveal-real-compact-tool-summary");
+            waitFor("actual painted Tool summary");
+        }
+        return found;
+    }
+
+    private void validateCompactSummaries(JsonObject tools) {
+        int spacing = settings.snapshot().display().ui().fullscreen().density() == GuideUiConfig.Density.COMPACT ? 4 : 8;
+        for (var element : tools.getAsJsonArray("toolSummaries")) {
+            JsonObject summary = element.getAsJsonObject();
+            int cardHeight = summary.get("description").getAsString().isBlank() ? 28 : 40;
+            require(number(summary.getAsJsonObject("bounds"), "height") == cardHeight
+                    && number(summary, "rowHeight") == cardHeight + spacing,
+                    "Actual Tool summary changed 28/40 native card height or row spacing");
+            var actual = session().requests().stream().flatMap(value -> value.tools().stream()
+                    .filter(tool -> ("tool:" + value.requestId() + ":" + tool.invocationId()).equals(summary.get("id").getAsString())))
+                    .findFirst().orElseThrow(() -> new IllegalStateException("Native summary has no actual service Tool identity"));
+            require(summary.get("title").getAsString().equals(actual.intent().title())
+                    && summary.get("description").getAsString().equals(actual.intent().description())
+                    && !summary.get("status").getAsString().isBlank(), "Native summary lost actual title/description/status");
+        }
+        require(!tools.has("expandedToolCount") && !tools.has("toolsCollapsedDefault"), "Removed fold state remains in receipt");
+    }
+
+    private boolean detailRecipePainted(String toolId) {
+        JsonObject tools = jsonReceipt(guide(), "e2eToolsReceipt");
+        require(toolId.equals(tools.get("detailToolId").getAsString()), "Blank row click opened a different Tool detail");
+        if (tools.getAsJsonArray("detailNativeRecipeIds").isEmpty() || tools.getAsJsonArray("detailCardIds").isEmpty()) {
+            var layout = (dev.openallay.guide.ui.GuideUiLayout) readField(guide(), "layout");
+            guide().mouseScrolled(layout.detail().x() + layout.detail().width() / 2.0,
+                    layout.detail().y() + layout.detail().height() / 2.0, 0, -1);
+            recordAction("native-wheel", "reveal-full-native-recipe-in-tool-detail");
+            waitFor("actual detail registry render returned true"); return false;
+        }
+        require(number(tools, "lastNativeFrame") > nativeRecipeFrame, "Actual detail receipt is stale");
+        nativeRecipeFrame = number(tools, "lastNativeFrame");
+        require(tools.getAsJsonArray("detailNativeRecipeIds").asList().stream().allMatch(value -> value.getAsString().startsWith(toolId + ":")),
+                "Painted native recipe detail has another Tool identity");
+        return true;
+    }
+
+    private void requireHudLatest(JsonObject receipt, GuideRequestSnapshot source) {
+        require(number(receipt, "maximumScroll") > 0 && number(receipt, "scroll") == number(receipt, "maximumScroll"),
+                "Actual native HUD did not render measured latest-tail offset");
+        var finalAssistant = source.timeline().stream().filter(dev.openallay.guide.GuideTimelineEntry.Assistant.class::isInstance)
+                .map(dev.openallay.guide.GuideTimelineEntry.Assistant.class::cast).toList().getLast();
+        String nodeId = finalAssistant.semantic().blocks().getLast().nodeId();
+        require(receipt.getAsJsonArray("renderedRowIds").asList().stream()
+                        .anyMatch(value -> value.getAsString().contains(source.requestId().toString())),
+                "Native HUD tail has another request source identity");
+        require(receipt.getAsJsonArray("renderedNodeIds").asList().stream().anyMatch(value -> value.getAsString().equals(nodeId)),
+                "Native latest tail does not include source final semantic node");
+        String painted = receipt.get("lastRenderedText").getAsString().strip();
+        String expectedTail = "ui-live-ux-regressions".equals(config.scenario()) ? LIVE_TAIL : "全文末尾：原生图形长回复验收完成。";
+        require(!painted.isEmpty() && expectedTail.endsWith(painted), "Native latest text tail was not actually painted");
+    }
+
+    /** Actual draft/button projection after native ticks, never an active override or direct submit. */
+    private Map<String, Object> readerSendDiagnostic() {
+        Screen screen = lite();
+        var state = (dev.openallay.client.gui.GuideClientUiState) readField(screen, "state");
+        String sessionId = (String) readField(screen, "session");
+        var intent = state.intent(sessionId);
+        Button actualSend = (Button) readField(screen, "send");
+        Map<String, Object> diagnostic = new LinkedHashMap<>();
+        diagnostic.put("sessionId", sessionId);
+        diagnostic.put("expectedFixtureDraft", LIVE_FOLLOW_UP + " reader-new-content");
+        diagnostic.put("draftMatches", (LIVE_FOLLOW_UP + " reader-new-content").equals(composer().getValue()));
+        diagnostic.put("sendVisible", actualSend.visible);
+        diagnostic.put("sendActive", actualSend.active);
+        diagnostic.put("sendLabel", actualSend.getMessage().getString());
+        diagnostic.put("submitting", readField(screen, "submitting"));
+        diagnostic.put("intentSubmissionInFlight", state.intentSubmissionInFlight(sessionId));
+        diagnostic.put("intentSteer", intent.steer());
+        diagnostic.put("intentEditing", intent.editing());
+        diagnostic.put("intentInvalid", intent.editInvalid());
+        diagnostic.put("nativeResultFrame", number(jsonReceipt(screen, "resultReceipt"), "extractedFrame"));
+        return Map.copyOf(diagnostic);
+    }
+
+    private Screen lite() {
+        require(client.gui.screen() instanceof GuideChatLiteScreen, "Native F8 callback did not open full HUD reader");
+        return client.gui.screen();
+    }
+
+    private void wheelHud(Screen screen, double scrollY) {
+        var card = GuideChatLiteScreen.Card.calculate(screen.width, screen.height);
+        var results = GuideHudReadingLayout.calculate(card.x(), card.y(), card.width(), card.height()).results();
+        double x = results.x() + results.width() / 2.0;
+        double y = results.y() + results.height() / 2.0;
+        require(screen.mouseScrolled(x, y, 0, scrollY), "Actual HUD result viewport did not consume native wheel");
+        actions.add(Map.of("type", "native-wheel", "stage", stage, "x", x, "y", y, "scrollY", scrollY));
+    }
+
+    private void clickAt(Screen screen, double x, double y, String target) {
+        var event = new MouseButtonEvent(x, y, new MouseButtonInfo(GLFW.GLFW_MOUSE_BUTTON_LEFT, 0));
+        boolean clicked = screen.mouseClicked(event, false);
+        boolean released = screen.mouseReleased(event);
+        actions.add(Map.of("type", "native-mouse-callback", "target", target, "stage", stage,
+                "x", x, "y", y, "clickedHandled", clicked, "releasedHandled", released));
+    }
+
+    private void hoverNative(double guiX, double guiY) {
+        var window = client.getWindow();
+        double nativeX = guiX * window.getScreenWidth() / window.getGuiScaledWidth();
+        double nativeY = guiY * window.getScreenHeight() / window.getGuiScaledHeight();
+        GLFW.glfwSetCursorPos(window.handle(), nativeX, nativeY);
+        actions.add(Map.of("type", "native-glfw-cursor", "stage", stage, "guiX", guiX, "guiY", guiY,
+                "windowX", nativeX, "windowY", nativeY, "screenWidth", window.getScreenWidth(),
+                "screenHeight", window.getScreenHeight(), "source", "OS-programmatic-cursor-request"));
+        if (Math.abs(client.mouseHandler.getScaledXPos(window) - guiX) > 1
+                || Math.abs(client.mouseHandler.getScaledYPos(window) - guiY) > 1)
+            dispatchNativeCursorMove(nativeX, nativeY);
+    }
+
+    /** Controlled native event callback, not physical OS input, direct render, or private field mutation. */
+    private void dispatchNativeCursorMove(double nativeX, double nativeY) {
+        require(developmentProbeEnabled, "Development probe was disabled at construction");
+        client.execute(() -> {
+            try {
+                if (nativeCursorMoveCallback == null) {
+                    nativeCursorMoveCallback = client.mouseHandler.getClass().getDeclaredMethod("onMove", long.class, double.class, double.class);
+                    nativeCursorMoveCallback.setAccessible(true);
+                }
+                nativeCursorMoveCallback.invoke(client.mouseHandler, client.getWindow().handle(), nativeX, nativeY);
+                actions.add(Map.of("type", "controlled-native-cursor-callback", "stage", stage,
+                        "source", "MouseHandler.onMove/window-cursor-event", "physicalInput", false,
+                        "windowX", nativeX, "windowY", nativeY,
+                        "scaledXAfterCallback", client.mouseHandler.getScaledXPos(client.getWindow()),
+                        "scaledYAfterCallback", client.mouseHandler.getScaledYPos(client.getWindow())));
+            } catch (ReflectiveOperationException failure) {
+                fail(new IllegalStateException("Controlled native MouseHandler.onMove callback failed", failure));
+            }
+        });
+    }
+
+    /** Bounded native input observations only; these never manufacture a hover or paint receipt. */
+    private void recordNativeHoverDiagnostic(String phase) {
+        require(developmentProbeEnabled, "Development probe was disabled at construction");
+        var window = client.getWindow();
+        double[] cursorX = new double[1];
+        double[] cursorY = new double[1];
+        GLFW.glfwGetCursorPos(window.handle(), cursorX, cursorY);
+        var layout = (dev.openallay.guide.ui.GuideUiLayout) readField(guide(), "layout");
+        Map<String, Object> diagnostic = new LinkedHashMap<>();
+        diagnostic.put("phase", phase);
+        diagnostic.put("stage", stage);
+        diagnostic.put("attempt", liveHoverAttempts);
+        diagnostic.put("screenIdentity", System.identityHashCode(guide()));
+        diagnostic.put("screenClass", guide().getClass().getName());
+        diagnostic.put("screenWidth", guide().width);
+        diagnostic.put("screenHeight", guide().height);
+        diagnostic.put("windowFocused", window.isFocused());
+        diagnostic.put("clientWindowActive", client.isWindowActive());
+        diagnostic.put("windowLogicalWidth", window.getScreenWidth());
+        diagnostic.put("windowLogicalHeight", window.getScreenHeight());
+        diagnostic.put("framebufferWidth", window.getWidth());
+        diagnostic.put("framebufferHeight", window.getHeight());
+        diagnostic.put("guiWidth", window.getGuiScaledWidth());
+        diagnostic.put("guiHeight", window.getGuiScaledHeight());
+        diagnostic.put("glfwCursorX", cursorX[0]);
+        diagnostic.put("glfwCursorY", cursorY[0]);
+        diagnostic.put("mouseHandlerX", client.mouseHandler.xpos());
+        diagnostic.put("mouseHandlerY", client.mouseHandler.ypos());
+        diagnostic.put("mouseHandlerScaledX", client.mouseHandler.getScaledXPos(window));
+        diagnostic.put("mouseHandlerScaledY", client.mouseHandler.getScaledYPos(window));
+        diagnostic.put("mouseGrabbed", client.mouseHandler.isMouseGrabbed());
+        diagnostic.put("telemetryBounds", layout.telemetry());
+        diagnostic.put("modelSelectorOpen", readField(guide(), "modelSelectorOpen"));
+        diagnostic.put("sessionOverlay", readField(guide(), "sessionOverlay"));
+        diagnostic.put("overflowOpen", readField(guide(), "overflowOpen"));
+        diagnostic.put("toolsNativeFrame", number(jsonReceipt(guide(), "e2eToolsReceipt"), "lastNativeFrame"));
+        diagnostic.put("tooltipReceipt", jsonReceipt(guide(), "e2eTelemetryTooltipReceipt"));
+        if (liveHoverDiagnostics.size() < 12) liveHoverDiagnostics.add(Map.copyOf(diagnostic));
+        else liveHoverDiagnostics.set(11, Map.copyOf(diagnostic));
+        report.put("nativeHoverDiagnostics", liveHoverDiagnostics);
+    }
+
+    /** Guarded read-only geometry. No reflective writes, callbacks, or service data insertion. */
+    private Object readField(Object owner, String name) {
+        require(developmentProbeEnabled, "Development probe was disabled at construction");
+        try {
+            var field = owner.getClass().getDeclaredField(name);
+            field.setAccessible(true);
+            return field.get(owner);
+        } catch (ReflectiveOperationException failure) { throw new IllegalStateException("Native geometry field unavailable: " + name, failure); }
+    }
+
+    private JsonObject jsonReceipt(Object owner, String method) {
+        return gson.toJsonTree(readReceipt(owner, method)).getAsJsonObject();
+    }
+
+    private JsonObject toastJson() {
+        require(toastReceipt != null, "Actual native toast owner receipt is unattached");
+        var value = gson.toJsonTree(toastReceipt.get());
+        return value.isJsonNull() ? null : value.getAsJsonObject();
+    }
+
+    private String readCurrentConfig(String name) {
+        try { return Files.readString(client.gameDirectory.toPath().resolve("config/openallay").resolve(name), StandardCharsets.UTF_8); }
+        catch (IOException failure) { throw new IllegalStateException("Current native config is unavailable: " + name, failure); }
+    }
+
+    private CompletableFuture<Integer> releaseLiveTransport() {
+        var profile = settings.snapshot().models().config().profiles().stream().filter(value -> value.enabled()).findFirst().orElseThrow();
+        require("127.0.0.1".equals(profile.baseUri().getHost()) && "http".equals(profile.baseUri().getScheme()), "Fixture release must stay loopback");
+        var uri = profile.baseUri().resolve("/__e2e/live-ux/release");
+        return java.net.http.HttpClient.newHttpClient().sendAsync(java.net.http.HttpRequest.newBuilder(uri)
+                .timeout(Duration.ofSeconds(10)).POST(java.net.http.HttpRequest.BodyPublishers.noBody()).build(),
+                java.net.http.HttpResponse.BodyHandlers.discarding()).thenApply(java.net.http.HttpResponse::statusCode);
+    }
+
     private GuideHudEditorScreen hudEditor() {
         require(client.gui.screen() instanceof GuideHudEditorScreen, "Actual native HUD layout editor is not open");
         return (GuideHudEditorScreen) client.gui.screen();
@@ -943,31 +1593,21 @@ final class GuideGraphicalRegressionProbe {
     }
 
     private boolean nativeRecipePainted() {
-        var actual = dev.openallay.guide.ui.GuideUiView.from(service.snapshot(), settings.snapshot().display());
-        var recipeTool = actual.rows().stream().filter(dev.openallay.guide.ui.GuideUiRow.Tool.class::isInstance)
-                .map(dev.openallay.guide.ui.GuideUiRow.Tool.class::cast)
-                .filter(tool -> tool.requestId().equals(request.requestId())
-                        && tool.activity().invocationId().equals(request.tools().getFirst().invocationId()))
-                .findFirst().orElseThrow(() -> new IllegalStateException("Actual recipe Tool row is unavailable"));
-        String toolIdentity = "tool:" + recipeTool.requestId() + ":" + recipeTool.activity().invocationId();
-        var recipeNodes = dev.openallay.guide.ui.hud.GuideHudToolCards.project(recipeTool,
-                key -> Component.translatable(key).getString()).recipes().keySet();
-        require(!recipeNodes.isEmpty(), "Actual typed Tool projection contains no native recipe card");
-        var expected = recipeNodes.stream().map(node -> toolIdentity + ":card:" + node).toList();
-        JsonObject nativeReceipt = gson.toJsonTree(readReceipt(guide(), "e2eToolsReceipt")).getAsJsonObject();
-        var painted = nativeReceipt.getAsJsonArray("resultCardIds").asList().stream().map(value -> value.getAsString()).toList();
-        if (expected.stream().noneMatch(painted::contains)) {
-            guide().mouseScrolled(guide().width / 2.0, guide().height / 2.0, 0, -2);
-            recordAction("native-wheel", "reveal-actual-typed-recipe-card");
-            waitFor("painted native recipe stable ID in the actual fullscreen viewport");
+        String expected = "tool:" + request.requestId() + ":" + request.tools().getFirst().invocationId();
+        JsonObject tools = jsonReceipt(guide(), "e2eToolsReceipt");
+        if (!expected.equals(tools.get("detailToolId").getAsString())) {
+            JsonObject summary = revealRecipeSummary(request);
+            if (summary == null) return false;
+            clickAt(guide(), summary.get("blankClickX").getAsDouble(), summary.get("blankClickY").getAsDouble(),
+                    "manual-real-tool-blank-padding-open-detail");
+            waitFor("actual right Tool detail extraction");
             return false;
         }
-        long frame = number(nativeReceipt, "lastNativeFrame");
-        require(frame > nativeRecipeFrame, "Fullscreen recipe receipt did not come from a fresh extraction");
-        nativeRecipeFrame = frame;
-        report.put("fullscreenNativeRecipePaint", Map.of("expectedStableIds", expected,
-                "actuallyPaintedStableIds", painted, "nativeExtractedFrame", frame,
-                "receiptSource", "native registry render returned painted=true"));
+        if (!detailRecipePainted(expected)) return false;
+        report.put("fullscreenNativeRecipePaint", Map.of("expectedToolId", expected,
+                "actuallyPaintedStableIds", tools.getAsJsonArray("detailNativeRecipeIds"),
+                "detailCardIds", tools.getAsJsonArray("detailCardIds"), "nativeExtractedFrame", nativeRecipeFrame,
+                "receiptSource", "actual right-detail native registry render returned painted=true"));
         return true;
     }
 
@@ -1077,9 +1717,9 @@ final class GuideGraphicalRegressionProbe {
         require(header.get("fullVisible").getAsBoolean(), "Native header extraction clipped the assistant name");
         JsonObject telemetry = gson.toJsonTree(readReceipt(guide(), "e2eTelemetryReceipt")).getAsJsonObject();
         if (telemetry.get("card").getAsBoolean()) require(number(telemetry, "rowCount") == 3, "Native fee card is not three lines");
-        require(!settings.snapshot().display().ui().fullscreen().toolsCollapsed(), "Tools must default to expanded");
         JsonObject tools = gson.toJsonTree(readReceipt(guide(), "e2eToolsReceipt")).getAsJsonObject();
-        require(number(tools, "totalToolCount") == number(tools, "expandedToolCount"), "Actual task Tools are not expanded");
+        require(!tools.has("expandedToolCount") && !tools.has("toolsCollapsedDefault"), "Removed fold state remains in native receipt");
+        validateCompactSummaries(tools);
     }
 
     private boolean doneReturned() {
@@ -1220,6 +1860,8 @@ final class GuideGraphicalRegressionProbe {
         client.getWindow().setWindowed(originalWindowWidth, originalWindowHeight);
         report.put("windowRestorationRequested", Map.of("width", originalWindowWidth, "height", originalWindowHeight,
                 "guiScale", client.options.guiScale().get(), "originalGuiScaleRestored", client.options.guiScale().get() == originalGuiScale));
+        OpenAllayKeyMappings.VOICE_PTT.setKey(originalPttKey);
+        report.put("pttKeyRestored", originalPttBinding.equals(OpenAllayKeyMappings.VOICE_PTT.saveString()));
         OpenAllayKeyMappings.INTERACT_HUD.setKey(originalInteractKey);
         KeyMapping.resetMapping();
         report.put("interactKeyAfter", OpenAllayKeyMappings.INTERACT_HUD.saveString());
@@ -1235,6 +1877,14 @@ final class GuideGraphicalRegressionProbe {
         report.put("failureException", failure.toString());
         if (failure.getCause() != null) report.put("failureCause", failure.getCause().toString());
         report.put("elapsedMillis", Duration.between(started, Instant.now()).toMillis());
+        if ("ui-live-ux-regressions".equals(config.scenario()) && (stage == 27 || stage == 127)) {
+            try { report.put("readerSendAtFailure", readerSendDiagnostic()); }
+            catch (RuntimeException diagnosticFailure) { report.put("readerSendDiagnosticFailure", diagnosticFailure.toString()); }
+        }
+        if ("ui-live-ux-regressions".equals(config.scenario()) && (stage == 9 || stage == 10)) {
+            try { recordNativeHoverDiagnostic("failure-before-native-frame-capture"); }
+            catch (RuntimeException diagnosticFailure) { report.put("nativeHoverDiagnosticFailure", diagnosticFailure.toString()); }
+        }
         try { captureFrame(String.format("failure-stage-%02d", stage)); }
         catch (RuntimeException captureFailure) { report.put("failureFrameCaptureFailure", captureFailure.toString()); }
         restoreKey();

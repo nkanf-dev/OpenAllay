@@ -19,8 +19,6 @@ public record GuideHudView(
         List<GuideUiRow> rows,
         GuideUiConfig.Fullscreen presentation,
         boolean animationsEnabled) {
-    public static final int MAX_PREVIEW_CODE_POINTS = 512;
-
     public GuideHudView {
         rows = List.copyOf(rows);
         Objects.requireNonNull(presentation, "presentation");
@@ -31,8 +29,8 @@ public record GuideHudView(
         Objects.requireNonNull(hud, "hud");
         Objects.requireNonNull(assistantName, "assistantName");
         Objects.requireNonNull(selectedSession, "selectedSession");
-        requirePreview(latestReply, "latestReply");
-        requirePreview(streamingPreview, "streamingPreview");
+        Objects.requireNonNull(latestReply, "latestReply");
+        Objects.requireNonNull(streamingPreview, "streamingPreview");
         if (otherRunningTasks < 0) {
             throw new IllegalArgumentException("otherRunningTasks must not be negative");
         }
@@ -53,13 +51,5 @@ public record GuideHudView(
     public boolean hasContent() {
         return !rows.isEmpty() || progress != null || otherRunningTasks > 0
                 || !latestReply.isBlank() || !streamingPreview.isBlank();
-    }
-
-    private static void requirePreview(String value, String name) {
-        Objects.requireNonNull(value, name);
-        if (value.length() > MAX_PREVIEW_CODE_POINTS * 2
-                || value.codePointCount(0, value.length()) > MAX_PREVIEW_CODE_POINTS) {
-            throw new IllegalArgumentException(name + " exceeds the HUD preview limit");
-        }
     }
 }

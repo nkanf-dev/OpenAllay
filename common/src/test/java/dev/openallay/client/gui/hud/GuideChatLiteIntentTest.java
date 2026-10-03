@@ -78,5 +78,24 @@ class GuideChatLiteIntentTest {
         assertTrue(GuideChatLiteScreen.submissionAccepted(true, new ToolResult.Success<>(true)));
         assertFalse(GuideChatLiteScreen.submissionAccepted(true, new ToolResult.Failure<>("pending_missing", "missing")));
         assertTrue(GuideChatLiteScreen.submissionAccepted(false, new ToolResult.Success<>(UUID.randomUUID())));
+        assertFalse(GuideChatLiteScreen.submissionAccepted(false, new ToolResult.Success<>(false)));
+        assertFalse(GuideChatLiteScreen.submissionAccepted(false, new ToolResult.Success<>(true)));
+        assertFalse(GuideChatLiteScreen.submissionAccepted(false, new ToolResult.Success<>("unknown")));
+    }
+
+    @Test void liteCapturedRoutesUseTheSharedTruthfulFeedbackRoutes() {
+        for (var route : GuideChatLiteScreen.Route.values()) {
+            var expected = route == GuideChatLiteScreen.Route.BLOCKED
+                    ? GuideClientUiState.SubmissionRoute.EDIT_INVALID
+                    : GuideClientUiState.SubmissionRoute.valueOf(route.name());
+            assertEquals(expected, GuideChatLiteScreen.submissionRoute(route));
+        }
+    }
+
+    @Test void pendingVoiceRecoveryUsesRealCountAndDoesNotDependOnEphemeralVoiceStatus() {
+        assertFalse(GuideChatLiteScreen.pendingVoiceRecoveryVisible(true, 0));
+        assertFalse(GuideChatLiteScreen.pendingVoiceRecoveryVisible(false, 1));
+        assertTrue(GuideChatLiteScreen.pendingVoiceRecoveryVisible(true, 1));
+        assertTrue(GuideChatLiteScreen.pendingVoiceRecoveryVisible(true, 3));
     }
 }

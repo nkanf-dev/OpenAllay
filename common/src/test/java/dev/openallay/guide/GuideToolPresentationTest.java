@@ -290,12 +290,8 @@ final class GuideToolPresentationTest {
         JsonObject chinese = language("zh_cn");
         assertEquals("Run JavaScript", english.get("screen.openallay.tool.run_javascript").getAsString());
         assertEquals("执行 JavaScript", chinese.get("screen.openallay.tool.run_javascript").getAsString());
-        assertEquals("Run the JavaScript for this step.",
-                english.get("screen.openallay.tool.intent.run_javascript.description").getAsString());
-        assertEquals("执行这一步的 JavaScript。",
-                chinese.get("screen.openallay.tool.intent.run_javascript.description").getAsString());
         for (String key : List.of("screen.openallay.tool.run_javascript",
-                "screen.openallay.tool.intent.label", "screen.openallay.tool.intent.run_javascript.description")) {
+                "screen.openallay.tool.intent.label")) {
             assertTrue(english.has(key), "missing en_us: " + key);
             assertTrue(chinese.has(key), "missing zh_cn: " + key);
         }

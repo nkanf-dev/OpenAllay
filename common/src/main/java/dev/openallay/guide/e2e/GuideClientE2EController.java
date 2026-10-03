@@ -90,9 +90,11 @@ public final class GuideClientE2EController {
     private boolean cancelOnToolStartRequested;
     private boolean cancelOnToolStartPending;
     private boolean cancelOnToolStartAccepted;
+    private final boolean developmentProbeEnabled = Boolean.getBoolean(GuideClientE2EConfig.ENABLED);
     private GuideGraphicalRegressionProbe graphicalProbe;
     private java.util.function.Consumer<GuideService> graphicalOpenGuide;
     private Supplier<Object> graphicalHudReceipt;
+    private Supplier<Object> graphicalToastReceipt;
     private Supplier<dev.openallay.client.voice.VoiceSettingsActions> graphicalVoiceSettings;
     private String graphicalFreshWorldName;
     private net.minecraft.client.server.IntegratedServer graphicalSeedServer;
@@ -177,10 +179,22 @@ public final class GuideClientE2EController {
             java.util.function.Consumer<GuideService> openGuide,
             Supplier<Object> hudReceipt,
             Supplier<dev.openallay.client.voice.VoiceSettingsActions> voiceSettings) {
+        if (!developmentProbeEnabled) throw new IllegalStateException("development probe was disabled at construction");
         if (started) throw new IllegalStateException("Graphical probe must attach before startup");
         graphicalOpenGuide = java.util.Objects.requireNonNull(openGuide, "openGuide");
         graphicalHudReceipt = java.util.Objects.requireNonNull(hudReceipt, "hudReceipt");
         graphicalVoiceSettings = java.util.Objects.requireNonNull(voiceSettings, "voiceSettings");
+    }
+
+    /** Read-only native owner receipt; never shows a test notification or creates a card. */
+    public void attachGraphicalToastReceipt(Supplier<Object> toastReceipt) {
+        if (!developmentProbeEnabled) throw new IllegalStateException("development probe was disabled at construction");
+        if (started) throw new IllegalStateException("Graphical toast receipt must attach before startup");
+        graphicalToastReceipt = java.util.Objects.requireNonNull(toastReceipt, "toastReceipt");
+    }
+
+    static boolean graphicalScenario(String scenario) {
+        return "ui-manual-regressions".equals(scenario) || "ui-live-ux-regressions".equals(scenario);
     }
 
     /** Runs opt-in startup lifecycle and starts the request once a real client player exists. */
@@ -271,7 +285,7 @@ public final class GuideClientE2EController {
 
     /** Setup-only native recipe unlock; never a model Tool, inventory grant, or accepted UI action. */
     private boolean tickGraphicalRecipePrecondition(UUID actor) {
-        if (!"ui-manual-regressions".equals(config.scenario())) return true;
+        if (!graphicalScenario(config.scenario())) return true;
         var client = net.minecraft.client.Minecraft.getInstance();
         if (graphicalRecipeSeedReceipt == null) {
             graphicalRecipeSeedReceipt = new com.google.gson.JsonObject();
@@ -326,8 +340,8 @@ public final class GuideClientE2EController {
     private void requireGraphicalSeedWorld(net.minecraft.client.server.IntegratedServer server) {
         var client = net.minecraft.client.Minecraft.getInstance();
         String create = System.getProperty("openallay.e2e.createWorld", "");
-        if (!Boolean.getBoolean(GuideClientE2EConfig.ENABLED)
-                || !"ui-manual-regressions".equals(config.scenario())
+        if (!developmentProbeEnabled
+                || !graphicalScenario(config.scenario())
                 || !worldLaunchStarted || graphicalFreshWorldName == null
                 || !graphicalFreshWorldName.equals(create)
                 || !System.getProperty("openallay.e2e.resumeWorld", "").isBlank()
@@ -528,7 +542,7 @@ public final class GuideClientE2EController {
         if (client.gui.overlay() != null
                 || !(client.gui.screen() instanceof net.minecraft.client.gui.screens.TitleScreen)) return;
         worldLaunchStarted = true;
-        if ("ui-manual-regressions".equals(config.scenario())) {
+        if (graphicalScenario(config.scenario())) {
             if (create.isBlank() || !resume.isBlank()) {
                 failWithoutRequest("fresh_world_required", "Graphical acceptance requires a new disposable world");
                 return;
@@ -566,7 +580,7 @@ public final class GuideClientE2EController {
                 registries -> registries.lookupOrThrow(net.minecraft.core.registries.Registries.WORLD_PRESET)
                         .getOrThrow(net.minecraft.world.level.levelgen.presets.WorldPresets.FLAT)
                         .value().createWorldDimensions(), client.gui.screen());
-        if ("ui-manual-regressions".equals(config.scenario())) graphicalFreshWorldName = name;
+        if (graphicalScenario(config.scenario())) graphicalFreshWorldName = name;
     }
 
     public boolean finished() {
@@ -578,16 +592,17 @@ public final class GuideClientE2EController {
             if (mode instanceof ToolResult.Failure<?> failure) {
                 failWithoutRequest(failure.code(), failure.message());
             } else {
-                if ("ui-manual-regressions".equals(config.scenario())) {
+                if (graphicalScenario(config.scenario())) {
                     net.minecraft.client.Minecraft.getInstance().execute(() -> {
-                        if (clientSettings == null || graphicalOpenGuide == null) {
+                        if (!developmentProbeEnabled || clientSettings == null || graphicalOpenGuide == null
+                                || ("ui-live-ux-regressions".equals(config.scenario()) && graphicalToastReceipt == null)) {
                             failWithoutRequest("graphical_probe_unattached", "The actual client UI is unavailable");
                             return;
                         }
                         try {
                             graphicalProbe = new GuideGraphicalRegressionProbe(config, loader, gameVersion, modVersion,
                                     service, clientSettings, gson, graphicalOpenGuide, graphicalHudReceipt,
-                                    graphicalVoiceSettings, traceLookup, report -> {
+                                    graphicalVoiceSettings, graphicalToastReceipt, traceLookup, report -> {
                                         finish(gson.toJson(report));
                                         if (!config.shutdownAfterReport()
                                                 && Boolean.getBoolean("openallay.e2e.shutdownAfterScreenshots")) shutdown.run();

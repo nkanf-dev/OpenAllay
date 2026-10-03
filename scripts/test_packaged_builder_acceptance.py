@@ -39,9 +39,9 @@ class PackagedBuilderLauncherTests(unittest.TestCase):
         self.assertFalse(display["debugMode"])
         ui = display["ui"]
         self.assertEqual({"fullscreen", "hud", "notifications"}, set(ui))
-        self.assertEqual({"density", "sessionRailVisible", "toolsCollapsed", "theme"}, set(ui["fullscreen"]))
+        self.assertEqual({"density", "sessionRailVisible", "theme"}, set(ui["fullscreen"]))
         self.assertEqual({"density": "COMFORTABLE", "sessionRailVisible": True,
-                          "toolsCollapsed": False, "theme": "CHARCOAL"}, ui["fullscreen"])
+                          "theme": "CHARCOAL"}, ui["fullscreen"])
         self.assertEqual({"enabled", "anchor", "offsetX", "offsetY", "width", "height", "scale",
                           "backgroundOpacity", "collapsed", "maxReplyLines", "showLatestReply",
                           "showStreamingPreview", "hideWithDebug", "hideOnOtherScreens"}, set(ui["hud"]))
@@ -54,6 +54,30 @@ class PackagedBuilderLauncherTests(unittest.TestCase):
         self.assertFalse(ui["notifications"]["enabled"])
         self.assertNotIn("version", display)
         self.assertNotIn("schemaVersion", display)
+
+    def test_voice_fixture_is_current_eleven_fields_disabled_and_action_explicit(self):
+        voice = launcher.fixture_voice_config()
+        self.assertEqual({"enabled", "backend", "deviceId", "maxClipSeconds", "language", "cpuThreads",
+                          "nativeModelDirectory", "httpBaseUrl", "httpModel", "credentialRef", "gameplayAction"}, set(voice))
+        self.assertFalse(voice["enabled"])
+        self.assertEqual("SEND", voice["gameplayAction"])
+        self.assertEqual("DRAFT", launcher.fixture_voice_config("DRAFT")["gameplayAction"])
+        self.assertIsNone(voice["credentialRef"])
+        with self.assertRaises(ValueError):
+            launcher.fixture_voice_config("legacy")
+
+    def test_live_graphical_scenario_is_distinct_and_rejects_external_profile(self):
+        self.assertIn("ui-live-ux-regressions", launcher.SCENARIOS)
+        self.assertTrue(launcher.graphical_scenario("ui-live-ux-regressions"))
+        self.assertEqual("COMPLETED", launcher.UI_OUTCOMES["ui-live-ux-regressions"])
+        args = launcher.parser().parse_args(["fabric", "--scenario", "ui-live-ux-regressions",
+                                             "--model-config", "/unused/ordinary-provider.json"])
+        with self.assertRaisesRegex(ValueError, "local deterministic fixture"):
+            launcher.prepare(args)
+        args = launcher.parser().parse_args(["fabric", "--scenario", "ui-live-ux-regressions",
+                                             "--question", "ordinary paid question"])
+        with self.assertRaisesRegex(ValueError, "explicit held loopback"):
+            launcher.prepare(args)
 
     def test_model_configuration_rejects_embedded_credentials_and_url_queries(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -663,6 +687,17 @@ class PackagedBuilderLauncherTests(unittest.TestCase):
             frame.write_bytes(b"changed-native-frame-test")
             with self.assertRaisesRegex(ValueError, "changed"):
                 launcher.validate_ui_capture(manifest)
+
+    def test_live_receipt_validator_never_substitutes_test_notification_for_card_paint(self):
+        # Deliberately generated unit data. This validates the gate, not a native GUI pass.
+        report = {"nativeFrames": [], "testNotification": {"title": "test"}, "outcome": "COMPLETED"}
+        with self.assertRaisesRegex(ValueError, "frame evidence"):
+            launcher.validate_live_ux_receipts(report)
+        source = MODULE_PATH.read_text()
+        self.assertIn('"detailNativeRecipeIds"', source)
+        self.assertIn('"admittedSteerTimeline"', source)
+        self.assertIn('"ownedHidden"', source)
+        self.assertNotIn('"toolsCollapsed":', source)
 
     def test_ui_stop_rejects_missing_or_false_pending_tool_fact(self):
         with tempfile.TemporaryDirectory() as directory:

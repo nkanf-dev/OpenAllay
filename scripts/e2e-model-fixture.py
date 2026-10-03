@@ -2,9 +2,11 @@
 """Deterministic loopback-only OpenAI-compatible fixture for real-client E2E."""
 
 import argparse
+import hashlib
 import json
 import os
 import time
+import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 
@@ -379,6 +381,45 @@ def assistant_content(request, completed):
     return "".join(content)
 
 
+LIVE_UX_PREFIX = "OpenAllay E2E UI live UX regressions"
+LIVE_UX_FOLLOW_UP = "OpenAllay E2E UI live UX follow-up"
+LIVE_UX_STEER = "OpenAllay E2E UI live UX steer"
+# Controls fixture transport only. It cannot insert a service receipt or native card.
+LIVE_UX_RELEASE = threading.Event()
+
+
+def live_ux_turn(request):
+    """Keep actual Tool chronology when a real in-flight Steer appends a user message."""
+    messages = request.get("messages", [])
+    latest = next((index for index in range(len(messages) - 1, -1, -1)
+                   if messages[index].get("role") == "user"), -1)
+    if latest < 0:
+        return None
+    latest_text = messages[latest].get("content", "")
+    if not (isinstance(latest_text, str) and latest_text.startswith(LIVE_UX_STEER)):
+        return None
+    root = next((index for index in range(latest - 1, -1, -1)
+                 if messages[index].get("role") == "user"
+                 and isinstance(messages[index].get("content"), str)
+                 and messages[index]["content"].startswith(LIVE_UX_PREFIX)), -1)
+    if root < 0:
+        raise ValueError("live UX Steer has no actual original request")
+    return messages[root]["content"], messages[root + 1:]
+
+
+def live_ux_analysis_arguments():
+    arguments = javascript_arguments()
+    # A genuine title-only second tool exercises the 28px compact row; first native recipe remains 40px.
+    arguments["description"] = ""
+    return arguments
+
+
+def live_ux_content(request, completed):
+    content = manual_regression_content(request, completed)
+    return content.replace("原生图形长回复验收", "原生实时 UX 验收").replace(
+        "全文末尾：原生实时 UX 验收完成。", "全文末尾：原生实时 UX 验收完成 · LATEST-48。")
+
+
 def manual_recipe_arguments():
     """Return an existing closed native recipe value, never a JS-constructed imitation."""
     return {
@@ -666,13 +707,36 @@ def current_user_turn(request):
         if message.get("role") == "user":
             latest_user = index
             user_text = message.get("content", "")
-    return user_text, messages[latest_user + 1:]
+    steered = live_ux_turn(request)
+    return steered if steered is not None else (user_text, messages[latest_user + 1:])
+
+
+def fixture_tool_call_id(request, tool_ordinal):
+    """Stable current-turn identity, unique against retained earlier conversation turns."""
+    if tool_ordinal < 1:
+        raise ValueError("fixture Tool ordinal must be positive")
+    user_text, turn_messages = current_user_turn(request)
+    messages = request.get("messages", [])
+    # Steer uses the actual original root slice, so appending it does not change this index.
+    root_index = len(messages) - len(turn_messages) - 1
+    if root_index < 0 or messages[root_index].get("role") != "user" or not isinstance(user_text, str):
+        raise ValueError("fixture Tool call requires an actual current user turn")
+    turn_digest = hashlib.sha256(user_text.encode("utf-8")).hexdigest()[:16]
+    return f"fixture-{root_index}-{turn_digest}-{tool_ordinal}"
 
 
 class Handler(BaseHTTPRequestHandler):
     server_version = "OpenAllayFixture/1"
 
     def do_POST(self):
+        if self.path == "/__e2e/live-ux/release":
+            if self.client_address[0] != "127.0.0.1":
+                self.send_error(403, "live UX fixture control is loopback only")
+                return
+            LIVE_UX_RELEASE.set()
+            self.send_response(204)
+            self.end_headers()
+            return
         if self.path != "/v1/chat/completions":
             self.send_error(404)
             return
@@ -681,7 +745,11 @@ class Handler(BaseHTTPRequestHandler):
         user_text, turn_messages = current_user_turn(request)
         completed = sum(1 for message in turn_messages
                         if message.get("role") == "tool")
-        manual_regressions = user_text.startswith("OpenAllay E2E UI manual regressions")
+        live_ux = user_text.startswith(LIVE_UX_PREFIX)
+        live_ux_follow_up = user_text.startswith(LIVE_UX_FOLLOW_UP)
+        manual_regressions = user_text.startswith("OpenAllay E2E UI manual regressions") or live_ux or live_ux_follow_up
+        if live_ux and completed == 0:
+            LIVE_UX_RELEASE.clear()
         ui_provider_failure = user_text.startswith("OpenAllay E2E UI provider failure")
         ui_stop = user_text.startswith("OpenAllay E2E UI stop")
         if ui_stop and completed >= 1:
@@ -724,6 +792,7 @@ class Handler(BaseHTTPRequestHandler):
                 if server_client_tools and completed == len(GAME_STATE_STEPS)
                 else game_state_assistant_content(
                     completed, world_query_permission_denied) if game_state
+                else live_ux_content(request, completed) if live_ux or live_ux_follow_up
                 else manual_regression_content(request, completed) if manual_regressions
                 else assistant_content(request, completed))
         except ValueError as failure:
@@ -736,6 +805,7 @@ class Handler(BaseHTTPRequestHandler):
                 name, arguments = (builder_step if builder or ui_provider_failure or ui_stop
                                    else steps[completed] if game_state
                                    else (JAVASCRIPT_TOOL, manual_recipe_arguments() if manual_regressions and completed == 0
+                                         else live_ux_analysis_arguments() if live_ux or live_ux_follow_up
                                          else javascript_arguments()))
             except ValueError as failure:
                 self.send_error(422, str(failure))
@@ -747,7 +817,7 @@ class Handler(BaseHTTPRequestHandler):
                 return
             deltas.append({"tool_calls": [{
                 "index": 0,
-                "id": "fixture-" + str(completed + 1),
+                "id": fixture_tool_call_id(request, completed + 1),
                 "type": "function",
                 "function": {"name": name, "arguments": json.dumps(arguments)},
             }]})
@@ -772,6 +842,9 @@ class Handler(BaseHTTPRequestHandler):
         body = ("".join(events) + "data: [DONE]\n\n").encode()
         # Keep one real-client render window open long enough for the native progress strip
         # to be captured. This is loopback-only deterministic fixture latency.
+        if live_ux and (" hold" in user_text or " gameplay-toast" in user_text) and completed == 1 and not LIVE_UX_RELEASE.wait(timeout=120):
+            self.send_error(504, "live UX native action window was not explicitly released")
+            return
         if not history_seed:
             time.sleep(0.35)
         self.send_response(200)

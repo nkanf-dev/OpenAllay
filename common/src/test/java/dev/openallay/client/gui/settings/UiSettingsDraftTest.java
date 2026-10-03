@@ -67,7 +67,7 @@ final class UiSettingsDraftTest {
         var saved = GuideDisplayConfig.defaults();
         var draft = new UiSettingsDraft(saved);
         draft.preview(saved.ui().withFullscreen(new GuideUiConfig.Fullscreen(
-                saved.ui().fullscreen().density(), true, false, GuideUiConfig.Theme.MINT)));
+                saved.ui().fullscreen().density(), true, GuideUiConfig.Theme.MINT)));
         var latest = saved.withAssistantName("Latest name").withDebugMode(true).withAnimationsEnabled(false)
                 .withUi(saved.ui().withHud(saved.ui().hud().withEnabled(true))
                         .withNotifications(saved.ui().notifications().withEnabled(true)));
@@ -90,7 +90,7 @@ final class UiSettingsDraftTest {
         var saved = GuideDisplayConfig.defaults();
         var draft = new UiSettingsDraft(saved);
         var dirtyUi = saved.ui().withFullscreen(new GuideUiConfig.Fullscreen(
-                GuideUiConfig.Density.COMPACT, false, false, GuideUiConfig.Theme.MINT))
+                GuideUiConfig.Density.COMPACT, false, GuideUiConfig.Theme.MINT))
                 .withNotifications(saved.ui().notifications().withEnabled(true));
         draft.preview(dirtyUi);
         var returned = draft.candidate(saved).withUi(dirtyUi.withHud(dirtyUi.hud().withPlacement(

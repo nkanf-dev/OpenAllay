@@ -712,19 +712,15 @@ public final class OpenAllaySettingsScreen extends Screen {
                 uiButton("density", enumLabel("density", full.density()), x, y, w, () ->
                         changeFull(new GuideUiConfig.Fullscreen(full.density() == GuideUiConfig.Density.COMPACT
                                 ? GuideUiConfig.Density.COMFORTABLE : GuideUiConfig.Density.COMPACT,
-                                full.sessionRailVisible(), full.toolsCollapsed(), full.theme())));
+                                full.sessionRailVisible(), full.theme())));
                 y += 26;
                 uiToggle("session_rail", full.sessionRailVisible(), x, y, w, () ->
                         changeFull(new GuideUiConfig.Fullscreen(full.density(), !full.sessionRailVisible(),
-                                full.toolsCollapsed(), full.theme())));
-                y += 26;
-                uiToggle("tools_fold", full.toolsCollapsed(), x, y, w, () ->
-                        changeFull(new GuideUiConfig.Fullscreen(full.density(), full.sessionRailVisible(),
-                                !full.toolsCollapsed(), full.theme())));
+                                full.theme())));
                 y += 26;
                 uiButton("theme", enumLabel("theme", full.theme()), x, y, w, () ->
                         changeFull(new GuideUiConfig.Fullscreen(full.density(), full.sessionRailVisible(),
-                                full.toolsCollapsed(), full.theme() == GuideUiConfig.Theme.CHARCOAL
+                                full.theme() == GuideUiConfig.Theme.CHARCOAL
                                         ? GuideUiConfig.Theme.MINT : GuideUiConfig.Theme.CHARCOAL)));
                 y += 26;
                 uiToggle("animations", uiDraft.animationsEnabled(), x, y, w, () -> {

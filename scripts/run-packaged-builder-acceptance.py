@@ -32,8 +32,8 @@ MOD_VERSION = "0.2.3"
 WORLD_PREFIX = "openallay-builder-"
 SCENARIOS = ("builder-disabled", "builder-acceptance", "builder-reload",
              "builder-partial", "builder-cancel", "builder-live", "builder-live-copy", "builder-live-undo",
-             "ui-stop", "ui-provider-failure", "ui-manual-regressions")
-UI_OUTCOMES = {"ui-stop": "CANCELLED", "ui-provider-failure": "FAILED", "ui-manual-regressions": "COMPLETED"}
+             "ui-stop", "ui-provider-failure", "ui-manual-regressions", "ui-live-ux-regressions")
+UI_OUTCOMES = {"ui-stop": "CANCELLED", "ui-provider-failure": "FAILED", "ui-manual-regressions": "COMPLETED", "ui-live-ux-regressions": "COMPLETED"}
 REPO = Path(__file__).resolve().parents[1]
 
 
@@ -300,7 +300,7 @@ def fixture_display_config():
     return {"debugMode": False, "animationsEnabled": True, "assistantName": "OpenAllay",
             "ui": {
                 "fullscreen": {"density": "COMFORTABLE", "sessionRailVisible": True,
-                               "toolsCollapsed": False, "theme": "CHARCOAL"},
+                               "theme": "CHARCOAL"},
                 "hud": {"enabled": False, "anchor": "TOP_LEFT", "offsetX": 12, "offsetY": 12,
                         "width": 320, "height": 240, "scale": 1, "backgroundOpacity": 0.78,
                         "collapsed": False, "maxReplyLines": 18, "showLatestReply": True,
@@ -308,6 +308,20 @@ def fixture_display_config():
                 "notifications": {"enabled": False, "policy": "WHEN_GUIDE_NOT_VISIBLE",
                                   "replyCompleted": True, "cardBatches": True,
                                   "taskFailures": True, "durationSeconds": 6}}}
+
+
+def fixture_voice_config(gameplay_action="SEND"):
+    """Current eleven-field voice shape. Native GUI tests never open an audio device."""
+    if gameplay_action not in ("SEND", "DRAFT"):
+        raise ValueError("Unknown gameplay voice action")
+    return {"enabled": False, "backend": "NATIVE", "deviceId": "default", "maxClipSeconds": 20,
+            "language": "auto", "cpuThreads": max(1, min(2, os.cpu_count() or 1)),
+            "nativeModelDirectory": "", "httpBaseUrl": "http://127.0.0.1:8080/v1",
+            "httpModel": "whisper-1", "credentialRef": None, "gameplayAction": gameplay_action}
+
+
+def graphical_scenario(scenario):
+    return scenario in ("ui-manual-regressions", "ui-live-ux-regressions")
 
 
 def write_json(path, value):
@@ -342,8 +356,12 @@ def prepare(args, repo=REPO):
         raise ValueError("--cancel-on-tool-start is allowed only for ui-stop")
     if args.scenario == "ui-stop" and not args.cancel_on_tool_start:
         raise ValueError("ui-stop requires explicit --cancel-on-tool-start")
-    if args.scenario == "ui-manual-regressions" and args.model_config:
+    if graphical_scenario(args.scenario) and args.model_config:
         raise ValueError("Graphical regression uses the local deterministic fixture, never an external provider config")
+    if args.scenario == "ui-live-ux-regressions" and args.question and not args.question.startswith("OpenAllay E2E UI live UX regressions hold"):
+        raise ValueError("Live UX graphical scenario requires its explicit held loopback question")
+    if args.scenario == "ui-live-ux-regressions":
+        args.timeout_seconds = max(args.timeout_seconds, 600)
     if args.scenario.startswith("builder-live") and (not args.question or not args.model_config):
         raise ValueError("Live acceptance requires an explicit ordinary provider question and environment-reference model config")
     if args.professional_screenshots and (not args.screenshot_manual_profile or not args.screenshot_automatic_profile):
@@ -441,8 +459,9 @@ def prepare(args, repo=REPO):
     write_json(config / "unrestricted-javascript.json", {"enabled": args.enable_unrestricted})
     write_json(config / "experimental-commands.json", {"enabled": False})
     write_json(config / "display.json", fixture_display_config())
+    write_json(config / "voice.json", fixture_voice_config())
     fps = 10 if args.low_impact else 30
-    graphical = args.scenario == "ui-manual-regressions"
+    graphical = graphical_scenario(args.scenario)
     options = "onboardAccessibility:false\njoinedFirstServer:true\nrenderDistance:4\nsimulationDistance:5\nmaxFps:" + str(fps) + "\npauseOnLostFocus:false\n"
     if graphical:
         options += "lang:zh_cn\nguiScale:1\n"
@@ -461,8 +480,18 @@ def prepare(args, repo=REPO):
         raise ValueError("Synthetic Minecraft username must contain 1 to 16 simple characters")
     jvm = expand_arguments(vanilla["arguments"]["jvm"] + extra_jvm, values)
     game_args = expand_arguments(vanilla["arguments"]["game"] + extra_game, values, {"has_custom_resolution": True})
+    source_files = ["common/src/main/java/dev/openallay/guide/e2e/GuideGraphicalRegressionProbe.java",
+                    "common/src/main/java/dev/openallay/guide/e2e/GuideClientE2EController.java",
+                    "scripts/e2e-model-fixture.py", "scripts/run-packaged-builder-acceptance.py"]
+    source_manifest = {"packagedArtifact": identity,
+                       "files": {name: digest(repo / name) for name in source_files if (repo / name).is_file()}}
+    source_manifest_path = output / "source-manifest.json"
+    write_json(source_manifest_path, source_manifest)
     properties = {"enabled": "true", "createWorld": world, "scenario": args.scenario,
-                  "question": args.question or ("OpenAllay E2E UI " + args.scenario.removeprefix("ui-").replace("-", " ")
+                  "sourceRevision": os.environ.get("OPENALLAY_E2E_SOURCE_REVISION", identity.get("sha256", "UNRECORDED")),
+                  "sourceManifestSha256": digest(source_manifest_path),
+                  "question": args.question or ("OpenAllay E2E UI live UX regressions hold" if args.scenario == "ui-live-ux-regressions"
+                                               else "OpenAllay E2E UI " + args.scenario.removeprefix("ui-").replace("-", " ")
                                                if ui_scenario else "OpenAllay E2E Builder " + args.scenario.removeprefix("builder-")),
                   "report": str(output / "report.json"), "trace": str(output / "trace.json"),
                   "session": run_id, "modelMode": "client", "screenshotRoot": str(output / "screenshots"),
@@ -649,19 +678,70 @@ def validate_ui_capture(manifest):
         stop = report.get("actualStop", {})
         if not all(stop.get(field) is True for field in ("requested", "accepted", "terminalCancelled", "pendingToolHasNoNormalizedResult")):
             raise ValueError("UI stop evidence did not retain an accepted real cancellation")
-    if manifest["scenario"] == "ui-manual-regressions":
+    if graphical_scenario(manifest["scenario"]):
         frames = report.get("nativeFrames", [])
-        if not frames or report.get("themeChangeCount", 0) < 4 or report.get("interactKeyRestored") is not True:
-            raise ValueError("Native graphical report lacks repeated theme frames or restored interaction key")
+        if not frames or report.get("interactKeyRestored") is not True:
+            raise ValueError("Native graphical report lacks frames or restored interaction key")
+        if manifest["scenario"] == "ui-manual-regressions" and report.get("themeChangeCount", 0) < 4:
+            raise ValueError("Manual native graphical report lacks repeated theme frames")
         for frame in frames:
             path = Path(frame["path"])
             if not path.is_file() or digest(path) != frame["sha256"] or frame.get("source") != "native-mainRenderTarget":
                 raise ValueError("Native graphical frame is missing or changed")
-        if report.get("microphoneCaptureAttempted") is not False or not report.get("export", {}).get("containsCurrentQuestionAndAnswer"):
-            raise ValueError("Native graphical report lacks actual export or microphone no-capture proof")
+        if report.get("microphoneCaptureAttempted") is not False:
+            raise ValueError("Native graphical report attempted microphone capture")
+        if manifest["scenario"] == "ui-manual-regressions":
+            if not report.get("export", {}).get("containsCurrentQuestionAndAnswer"):
+                raise ValueError("Manual native graphical report lacks actual export")
+        else:
+            validate_live_ux_receipts(report)
     else:
         validate_final_screenshot(manifest)
     return report
+
+
+def validate_live_ux_receipts(report):
+    """Mechanical receipt gate only. Retained native PNGs still require separate expert review."""
+    expected_names = {
+        "live-01-initial-character-focus", "live-02-blur-resize-typed-ptt",
+        "live-03-follow-up-accepted-active", "live-04-steer-accepted-active",
+        "live-05-native-hover-known-budget-unknown-cost", "live-06-comfortable-tool-summary",
+        "live-07-tool-detail-native-recipe", "live-08-native-child-priority-no-parent-drawer",
+        "live-09-compact-tool-summary", "live-10-passive-hud-latest-48-no-carousel",
+        "live-11-passive-hud-explicit-unbound-hint", "live-12-interactive-hud-opens-at-latest",
+        "live-13-reader-anchor-with-new-content", "live-14-reader-native-latest-restores",
+        "live-15-reader-prior-request-cards", "live-16-actual-card-title-description-native-toast",
+        "live-17-visible-guide-owned-toast-hidden",
+    }
+    if not expected_names.issubset({value.get("name") for value in report.get("nativeFrames", [])}):
+        raise ValueError("Live native scenario is missing required frame evidence")
+    if report.get("pttKeyRestored") is not True or not all(report.get("focusReceipts", {}).values()):
+        raise ValueError("Live native focus/key restoration receipts are incomplete")
+    detail = report.get("actualNativeRecipeDetail", {})
+    if not detail.get("detailNativeRecipeIds") or not detail.get("detailCardIds") or not detail.get("detailToolId"):
+        raise ValueError("Actual right-detail native recipe paint is missing")
+    capsule = report.get("actualCapsuleClicked", {})
+    if not capsule.get("id") or capsule.get("action") not in ("BrowseRecipes", "ExactRecipe"):
+        raise ValueError("Actual native capsule callback identity is missing")
+    hover = report.get("nativeTelemetryHover", {})
+    if hover.get("requestedNativeFrame", 0) <= 0 or hover.get("requestedLineCount", 0) < 3:
+        raise ValueError("Native hover multiline extraction is missing")
+    pending = report.get("pendingReceiptOrder", [])
+    if (pending != [report.get("followUpAccepted", {}).get("id"), report.get("steerAccepted", {}).get("id")]
+            or report.get("followUpAccepted", {}).get("kind") != "FOLLOW_UP"
+            or report.get("steerAccepted", {}).get("kind") != "STEER"
+            or not report.get("admittedSteerTimeline") or not report.get("followUpRequestId")):
+        raise ValueError("Actual Follow-up/Steer admission order is missing")
+    toast = report.get("actualCardNativeToast", {})
+    hidden = report.get("actualOwnedToastHiddenOnGuide", {})
+    if (not toast.get("title") or not toast.get("description") or toast.get("frame", 0) <= 0
+            or toast.get("height") != 64 or toast.get("slots") != 2 or toast.get("noClickTarget") is not True
+            or hidden.get("ownedHidden") is not True or hidden.get("visible") is not False
+            or hidden.get("hideOrder", 0) <= hidden.get("showOrder", 0)):
+        raise ValueError("Actual meaningful owned native card toast paint/hide is missing")
+    source = report.get("sourceIdentity", {})
+    if not source.get("revision") or source.get("revision") == "UNRECORDED" or not re.fullmatch(r"[0-9a-f]{64}", source.get("manifestSha256", "")):
+        raise ValueError("Live source revision/manifest hash was not recorded")
 
 
 def validate_final_screenshot(manifest):
@@ -699,9 +779,10 @@ def launch_prepared(path, repo=REPO):
         raise ValueError("Prepared game files changed; prepare a new reviewed run")
     models = validate_model_config(game / "config/openallay/models.json")
     launch_environment = os.environ.copy()
-    if manifest["scenario"] == "ui-manual-regressions":
+    if graphical_scenario(manifest["scenario"]):
         if any(profile.get("enabled") and (profile.get("model") != "openallay-e2e-fixture"
                 or urlsplit(profile.get("baseUrl", "")).hostname != "127.0.0.1"
+                or urlsplit(profile.get("baseUrl", "")).scheme != "http"
                 or profile.get("credentialRef") != "env:OPENALLAY_E2E_FIXTURE_KEY")
                 for profile in models["profiles"]):
             raise ValueError("Graphical acceptance can use only the deterministic loopback fixture")

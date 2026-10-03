@@ -251,6 +251,8 @@ public final class OpenAllayNeoForgeClient {
                     settings == null ? null : settings.settings(),
                     modelRegistry == null ? null : modelRegistry::encodedTrace);
             controller.attachGraphicalProbe(ui::openGuide, ui::e2eHudReceipt, ui::e2eVoiceSettings);
+            if (Boolean.getBoolean(GuideClientE2EConfig.ENABLED))
+                controller.attachGraphicalToastReceipt(ui::e2eNotificationReceipt);
             NeoForge.EVENT_BUS.addListener((ClientTickEvent.Post event) -> {
                 controller.tick(client.player == null ? null : client.player.getUUID());
             });

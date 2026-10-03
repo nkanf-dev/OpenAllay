@@ -9,13 +9,11 @@ import dev.openallay.guide.ui.GuideDisplayConfig;
 import dev.openallay.guide.ui.GuideUiProgress;
 import dev.openallay.guide.ui.GuideUiRow;
 import dev.openallay.guide.ui.GuideUiView;
-import java.util.ArrayList;
-import java.util.List;
-import java.text.BreakIterator;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Locale;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -72,15 +70,28 @@ public final class GuideHudPresenter {
                 ? assistantPreview(active, true) : "";
         List<GuideUiRow> rows = new ArrayList<>();
         Reply result = results.get(snapshot.selectedSession());
-        if ((interactive || config.ui().hud().showLatestReply()) && result != null) {
-            rows.addAll(rows(result.request(), config));
-        }
-        if (active != null) {
-            for (GuideUiRow row : rows(active, config)) {
-                if (!(row instanceof GuideUiRow.Assistant) || interactive || config.ui().hud().showStreamingPreview()) rows.add(row);
+        Set<UUID> retained = new HashSet<>();
+        if (interactive && selected != null) {
+            // Read only the admitted window. Older loaded cards stay reachable without history I/O.
+            List<GuideRequestSnapshot> admitted = new ArrayList<>();
+            for (GuideRequestSnapshot request : selected.requests()) {
+                if (retained.add(request.requestId())) admitted.add(request);
+            }
+            if (result != null && retained.add(result.requestId())) {
+                // A historical window can omit the last result. Keep it beside current work,
+                // without reordering the authoritative sequence or putting it after a live tail.
+                int beforeActive = active == null ? -1 : admitted.indexOf(active);
+                admitted.add(beforeActive < 0 ? admitted.size() : beforeActive, result.request());
+            }
+            admitted.forEach(request -> rows.addAll(rows(request, config)));
+        } else {
+            if (config.ui().hud().showLatestReply() && result != null) rows.addAll(rows(result.request(), config));
+            if (active != null) {
+                for (GuideUiRow row : rows(active, config)) {
+                    if (!(row instanceof GuideUiRow.Assistant) || config.ui().hud().showStreamingPreview()) rows.add(row);
+                }
             }
         }
-        Set<UUID> retained = new HashSet<>();
         replies.values().forEach(value -> retained.add(value.requestId()));
         results.values().forEach(value -> retained.add(value.requestId()));
         if (active != null) retained.add(active.requestId());
@@ -114,7 +125,7 @@ public final class GuideHudPresenter {
         Reply latest = replies.get(session.sessionId());
         for (GuideRequestSnapshot request : session.requests()) {
             if (request.status() != GuideRequestStatus.COMPLETED || request.terminalAt() == null
-                    || latest != null && compare(request, latest) <= 0) continue;
+                    || latest != null && compare(request, latest) < 0) continue;
             String text = assistantPreview(request, false);
             if (text.isBlank()) continue;
             latest = new Reply(request, text);
@@ -165,32 +176,10 @@ public final class GuideHudPresenter {
         for (int index = request.timeline().size() - 1; index >= 0; index--) {
             if (request.timeline().get(index) instanceof GuideTimelineEntry.Assistant assistant) {
                 if (assistant.streaming() != streaming) return "";
-                return preview(assistant.semantic().fallbackText());
+                return assistant.semantic().fallbackText();
             }
         }
         return "";
-    }
-
-    /** Reads at most 513 code points; grapheme boundaries keep a truncated cluster intact. */
-    static String preview(String text) {
-        Objects.requireNonNull(text, "text");
-        int index = 0;
-        int count = 0;
-        int contentEnd = 0;
-        int contentLimit = GuideHudView.MAX_PREVIEW_CODE_POINTS - 1;
-        while (index < text.length() && count <= GuideHudView.MAX_PREVIEW_CODE_POINTS) {
-            index += Character.charCount(text.codePointAt(index));
-            count++;
-            if (count == contentLimit) contentEnd = index;
-        }
-        if (count <= GuideHudView.MAX_PREVIEW_CODE_POINTS) return text;
-        String prefix = text.substring(0, index);
-        BreakIterator characters = BreakIterator.getCharacterInstance(Locale.ROOT);
-        characters.setText(prefix);
-        int boundary = characters.isBoundary(contentEnd)
-                ? contentEnd : characters.preceding(contentEnd);
-        if (boundary == BreakIterator.DONE) boundary = 0;
-        return prefix.substring(0, boundary) + "…";
     }
 
     private record Reply(GuideRequestSnapshot request, String text) {

@@ -175,22 +175,24 @@ final class GuideHudPresenterTest {
     }
 
     @Test
-    void previewCapsUnicodeCodePointsAndKeepsSurrogatesAndCombiningClustersIntact() {
-        assertEquals("short reply", GuideHudPresenter.preview("short reply"));
-        assertEquals("a".repeat(512), GuideHudPresenter.preview("a".repeat(512)));
-        assertEquals("😀".repeat(511) + "…", GuideHudPresenter.preview("😀".repeat(10000)));
-        String clusters = GuideHudPresenter.preview("e\u0301".repeat(10000));
-        assertEquals("e\u0301".repeat(255) + "…", clusters);
-        assertTrue(clusters.codePointCount(0, clusters.length()) <= 512);
-        assertEquals("x".repeat(510) + "…",
-                GuideHudPresenter.preview("x".repeat(510) + "e\u0301" + "y".repeat(50)));
+    void nativeFallbackKeepsTheActualUnicodeTailBeyondAnyPassiveLineBudget() {
+        String full = "😀e\u0301".repeat(10000) + " actual completed tail";
+        String stream = "stream ".repeat(10000) + " actual streaming tail";
+        GuideHudView view = new GuideHudPresenter().project(snapshot(ACTOR, "main", session("main",
+                completed("main", 1, 2, full),
+                request("main", GuideRequestStatus.MODEL_WAIT, 3, null,
+                        List.of(assistant(0, stream, true))))), config(CONFIG.ui().hud().withContent(1, true, true)));
+        assertEquals(full, view.latestReply());
+        assertEquals(stream, view.streamingPreview());
+        assertEquals(full, ((GuideUiRow.Assistant) view.rows().getFirst()).semantic().fallbackText());
+        assertEquals(stream, ((GuideUiRow.Assistant) view.rows().getLast()).semantic().fallbackText());
     }
 
     @Test
     void interactiveRowsRetainLongReplyToolItemsAndSourceIdentityBeyondPassiveBudgets() {
         String full = java.util.stream.IntStream.range(0, 60)
                 .mapToObj(index -> "Guide step " + index + ": " + "complete detail ".repeat(20))
-                .collect(java.util.stream.Collectors.joining("\n"));
+                .collect(java.util.stream.Collectors.joining("\n")) + "\nActual final reply text";
         var evidence = new dev.openallay.context.EvidenceMetadata(
                 dev.openallay.context.DataAuthority.CLIENT_VISIBLE,
                 dev.openallay.context.DataCompleteness.PARTIAL, Instant.EPOCH,
@@ -215,7 +217,10 @@ final class GuideHudPresenterTest {
         assertEquals(full, projected.text());
         assertSame(assistant.semantic(), projected.semantic());
         assertSame(source, projected.sources().getFirst());
-        assertTrue(projected.semantic().fallbackText().length() > GuideHudView.MAX_PREVIEW_CODE_POINTS);
+        assertEquals(full, assistant.semantic().fallbackText(), "the fixture has no trailing-only whitespace difference");
+        assertEquals(full, interactive.latestReply(), "the fallback source also retains the full exact text");
+        assertTrue(interactive.latestReply().endsWith("\nActual final reply text"),
+                "the actual final text remains present beyond the passive viewport budget");
         assertEquals(2, ((dev.openallay.guide.ui.GuideDetailCard.ItemGrid)
                 ((GuideUiRow.Tool) interactive.rows().getFirst()).detail().cards().getFirst()).items().size());
         assertEquals(128, ((dev.openallay.guide.ui.GuideDetailCard.ItemGrid)
@@ -223,6 +228,105 @@ final class GuideHudPresenterTest {
         assertSame(interactive, presenter.projectInteractive(snapshot, tiny), "unchanged snapshot does not re-project each frame");
         assertTrue(presenter.project(snapshot, tiny).rows().isEmpty(), "passive content preference does not trim interactive source");
         assertEquals(full, assistant.text());
+    }
+
+    @Test
+    void interactiveReadingPreservesEveryAdmittedRequestWhilePassiveShowsTheLatestTask() {
+        GuideToolActivity tool = new GuideToolActivity("old-items", 0, "openallay:run_javascript",
+                GuideToolStatus.SUCCEEDED, JsonParser.parseString("""
+                {"status":"success","value":{"viewKind":"ITEM","preview":[
+                {"itemId":"minecraft:diamond","displayName":"Diamond","count":64}]}}
+                """).getAsJsonObject(), List.of(), List.of());
+        GuideRequestSnapshot first = request("main", GuideRequestStatus.COMPLETED, 1, 2,
+                List.of(new GuideTimelineEntry.Tool(0, tool), assistant(1, "first full response", false)));
+        GuideRequestSnapshot second = completed("main", 3, 4, "second full response");
+        GuideRequestSnapshot active = request("main", GuideRequestStatus.MODEL_WAIT, 5, null,
+                List.of(assistant(0, "live response", true)));
+        GuideSnapshot snapshot = snapshot(ACTOR, "main", session("main", first, second, active),
+                session("other", completed("other", 6, 7, "not the selected session")));
+        GuideHudPresenter presenter = new GuideHudPresenter();
+        GuideDisplayConfig tiny = config(CONFIG.ui().hud().withContent(1, true, true));
+        GuideHudView interactive = presenter.projectInteractive(snapshot, tiny);
+        List<GuideUiRow> expected = java.util.stream.Stream.of(first, second, active)
+                .flatMap(request -> GuideUiView.projectRequestRows(request, tiny).stream())
+                .filter(row -> !(row instanceof GuideUiRow.User)).toList();
+        assertEquals(expected, interactive.rows());
+        assertSame(tool, ((GuideUiRow.Tool) interactive.rows().getFirst()).activity());
+        assertEquals(64, ((dev.openallay.guide.ui.GuideDetailCard.ItemGrid)
+                ((GuideUiRow.Tool) interactive.rows().getFirst()).detail().cards().getFirst()).items().getFirst().count());
+        assertEquals("live response", ((GuideUiRow.Assistant) interactive.rows().getLast()).semantic().fallbackText());
+        assertSame(interactive, presenter.projectInteractive(snapshot, tiny));
+        GuideHudView passive = presenter.project(snapshot, tiny);
+        assertEquals(List.of(second.requestId(), active.requestId()), passive.rows().stream()
+                .map(row -> ((GuideUiRow.Assistant) row).requestId()).toList());
+        assertEquals(interactive.rows(), presenter.projectInteractive(snapshot, tiny).rows());
+    }
+
+    @Test
+    void interactiveHistoricalPageKeepsTheCachedLatestResultExactlyOnce() {
+        GuideRequestSnapshot oldest = completed("main", 1, 2, "older admitted response");
+        GuideRequestSnapshot latest = completed("main", 3, 4, "latest cached response");
+        GuideHudPresenter presenter = new GuideHudPresenter();
+        presenter.project(snapshot(ACTOR, "main", session("main", latest)), CONFIG);
+        GuideHudView page = presenter.projectInteractive(snapshot(ACTOR, "main", session("main", oldest)), CONFIG);
+        assertEquals(List.of(oldest.requestId(), latest.requestId()), page.rows().stream()
+                .map(row -> ((GuideUiRow.Assistant) row).requestId()).toList());
+        GuideHudView loaded = presenter.projectInteractive(snapshot(ACTOR, "main", session("main", oldest, latest)), CONFIG);
+        assertEquals(page.rows(), loaded.rows(), "the admitted latest request must not duplicate its cached rows");
+    }
+
+    @Test
+    void interactiveLatestRespectsAdmittedSequenceWhenClocksTieOrMoveBackwards() {
+        GuideRequestSnapshot original = completed("main", 5, 6, "first accepted");
+        GuideRequestSnapshot first = new GuideRequestSnapshot(UUID.fromString("ffffffff-ffff-ffff-ffff-ffffffffffff"),
+                original.sessionId(), original.topology(), original.userMessage(), original.timeline(), original.status(),
+                original.sources(), original.usage(), original.retryAfterMillis(), original.failure(),
+                original.createdAt(), original.updatedAt(), original.terminalAt());
+        GuideRequestSnapshot last = new GuideRequestSnapshot(UUID.fromString("80000000-0000-0000-0000-000000000000"),
+                "main", first.topology(), "question", List.of(assistant(0, "last accepted", false)),
+                GuideRequestStatus.COMPLETED, List.of(), ModelUsage.empty(), null, null,
+                first.createdAt(), first.updatedAt(), first.terminalAt());
+        GuideHudPresenter presenter = new GuideHudPresenter();
+        GuideHudView tied = presenter.projectInteractive(snapshot(ACTOR, "main", session("main", first, last)), CONFIG);
+        assertEquals(List.of(first.requestId(), last.requestId()), tied.rows().stream()
+                .map(row -> ((GuideUiRow.Assistant) row).requestId()).toList());
+        GuideRequestSnapshot clockRolledBack = request("main", GuideRequestStatus.MODEL_WAIT, 1, null,
+                List.of(assistant(0, "actual latest live tail", true)));
+        GuideHudView rolledBack = presenter.projectInteractive(snapshot(ACTOR, "main", session("main", first, clockRolledBack)), CONFIG);
+        assertEquals(List.of(first.requestId(), clockRolledBack.requestId()), rolledBack.rows().stream()
+                .map(row -> ((GuideUiRow.Assistant) row).requestId()).toList());
+        assertEquals("actual latest live tail", ((GuideUiRow.Assistant) rolledBack.rows().getLast()).semantic().fallbackText());
+    }
+
+    @Test
+    void cachedLatestResultOutsideTheWindowCannotReplaceItsActiveNativeTail() {
+        GuideRequestSnapshot result = completed("main", 1, 2, "cached terminal result");
+        GuideRequestSnapshot active = request("main", GuideRequestStatus.MODEL_WAIT, 3, null,
+                List.of(assistant(0, "active actual tail", true)));
+        GuideHudPresenter presenter = new GuideHudPresenter();
+        presenter.project(snapshot(ACTOR, "main", session("main", result)), CONFIG);
+        GuideHudView view = presenter.projectInteractive(snapshot(ACTOR, "main", session("main", active)), CONFIG);
+        assertEquals(List.of(result.requestId(), active.requestId()), view.rows().stream()
+                .map(row -> ((GuideUiRow.Assistant) row).requestId()).toList());
+        assertEquals("active actual tail", ((GuideUiRow.Assistant) view.rows().getLast()).semantic().fallbackText());
+    }
+
+    @Test
+    void aNewFullSnapshotOfTheSameTerminalRequestRefreshesBothNativeAndFallbackTail() {
+        GuideRequestSnapshot partial = completed("main", 1, 2, "earlier admitted prefix");
+        GuideRequestSnapshot full = new GuideRequestSnapshot(partial.requestId(), partial.sessionId(), partial.topology(),
+                partial.userMessage(), List.of(assistant(0, "complete detail ".repeat(1000) + "actual full tail", false)),
+                partial.status(), partial.sources(), partial.usage(), partial.retryAfterMillis(), partial.failure(),
+                partial.createdAt(), partial.updatedAt(), partial.terminalAt());
+        GuideHudPresenter presenter = new GuideHudPresenter();
+        presenter.project(snapshot(ACTOR, "main", session("main", partial)), CONFIG);
+        GuideHudView admitted = presenter.project(snapshot(ACTOR, "main", session("main", full)), CONFIG);
+        assertEquals(((GuideTimelineEntry.Assistant) full.timeline().getFirst()).semantic().fallbackText(),
+                admitted.latestReply());
+        assertTrue(admitted.latestReply().endsWith("actual full tail"));
+        assertSame(((GuideTimelineEntry.Assistant) full.timeline().getFirst()).semantic(),
+                ((GuideUiRow.Assistant) admitted.rows().getFirst()).semantic());
+        assertEquals(admitted.latestReply(), presenter.project(snapshot(ACTOR, "main", session("main")), CONFIG).latestReply());
     }
 
     @Test

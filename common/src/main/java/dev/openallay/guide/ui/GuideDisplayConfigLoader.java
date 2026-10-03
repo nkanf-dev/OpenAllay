@@ -64,7 +64,7 @@ public final class GuideDisplayConfigLoader {
     private static GuideUiConfig ui(JsonElement value) {
         JsonObject ui = object(value, "ui", Set.of("fullscreen", "hud", "notifications"));
         JsonObject full = object(ui.get("fullscreen"), "fullscreen", Set.of(
-                "density", "sessionRailVisible", "toolsCollapsed", "theme"));
+                "density", "sessionRailVisible", "theme"));
         JsonObject hud = object(ui.get("hud"), "hud", Set.of(
                 "enabled", "anchor", "offsetX", "offsetY", "width", "height", "scale",
                 "backgroundOpacity", "collapsed", "maxReplyLines", "showLatestReply",
@@ -74,7 +74,7 @@ public final class GuideDisplayConfigLoader {
         return new GuideUiConfig(
                 new GuideUiConfig.Fullscreen(
                         enumeration(full, "density", GuideUiConfig.Density.class),
-                        bool(full, "sessionRailVisible"), bool(full, "toolsCollapsed"),
+                        bool(full, "sessionRailVisible"),
                         enumeration(full, "theme", GuideUiConfig.Theme.class)),
                 new GuideUiConfig.Hud(
                         bool(hud, "enabled"), enumeration(hud, "anchor", GuideUiConfig.Anchor.class),

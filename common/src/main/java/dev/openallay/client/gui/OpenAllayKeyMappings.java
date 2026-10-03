@@ -11,10 +11,11 @@ public final class OpenAllayKeyMappings {
     public static final KeyMapping OPEN_GUIDE = new KeyMapping(
             "key.openallay.open_guide", InputConstants.KEY_K, CATEGORY);
 
-    // These actions are deliberately unbound. Players choose conflict-free keys in Controls.
+    // Native options loading keeps existing custom or explicitly unbound preferences.
     public static final KeyMapping TOGGLE_HUD = unbound("key.openallay.toggle_hud");
     public static final KeyMapping EDIT_HUD = unbound("key.openallay.edit_hud");
-    public static final KeyMapping INTERACT_HUD = unbound("key.openallay.interact_hud");
+    public static final KeyMapping INTERACT_HUD = new KeyMapping(
+            "key.openallay.interact_hud", InputConstants.KEY_F8, CATEGORY);
     public static final KeyMapping VOICE_PTT = unbound("key.openallay.voice_ptt");
 
     public static java.util.List<KeyMapping> all() {

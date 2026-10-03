@@ -25,7 +25,13 @@ import dev.openallay.guide.GuideToolActivity;
 import dev.openallay.guide.GuideToolMessage;
 import dev.openallay.guide.GuideToolStatus;
 import dev.openallay.guide.GuideTopology;
+import dev.openallay.guide.ui.GuideDetailCard;
 import dev.openallay.guide.ui.GuideDisplayConfig;
+import dev.openallay.guide.ui.GuideItemView;
+import dev.openallay.guide.ui.GuideRecipeCard;
+import dev.openallay.guide.ui.GuideToolDetailView;
+import dev.openallay.guide.ui.GuideToolDisplayStatus;
+import dev.openallay.guide.ui.GuideToolSummaryPresenter;
 import dev.openallay.guide.ui.GuideUiRow;
 import dev.openallay.guide.ui.GuideUiModelChoice;
 import dev.openallay.model.ModelUsage;
@@ -115,6 +121,9 @@ final class OpenAllayScreenProjectionTest {
                 new dev.openallay.tool.ToolResult.Success<>(false)));
         assertFalse(OpenAllayScreen.submissionAccepted(true,
                 new dev.openallay.tool.ToolResult.Failure<>("pending_missing", "Already consumed")));
+        assertFalse(OpenAllayScreen.submissionAccepted(false, new dev.openallay.tool.ToolResult.Success<>(false)));
+        assertFalse(OpenAllayScreen.submissionAccepted(false, new dev.openallay.tool.ToolResult.Success<>(true)));
+        assertFalse(OpenAllayScreen.submissionAccepted(false, new dev.openallay.tool.ToolResult.Success<>("unknown")));
     }
 
     @Test
@@ -329,17 +338,143 @@ final class OpenAllayScreenProjectionTest {
     }
 
     @Test
-    void collapsedToolSummaryKeepsAtMostThreeSemanticMessages() {
-        GuideToolMessage first = GuideToolMessage.of(GuideToolMessage.Key.RESULT_PENDING);
-        GuideToolMessage second = GuideToolMessage.of(GuideToolMessage.Key.RESULT_COMPLETED);
-        GuideToolMessage third = GuideToolMessage.of(GuideToolMessage.Key.RESULT_COMPLETED);
-        GuideToolMessage fourth = GuideToolMessage.of(GuideToolMessage.Key.RESULT_VALUE_UNAVAILABLE);
-        assertEquals(
-                List.of(first, second, third),
-                OpenAllayScreen.visibleToolSummaryMessages(
-                        List.of(first, second, third, fourth)));
-        assertEquals(51, OpenAllayScreen.toolCardHeight(3));
-        assertEquals(21, OpenAllayScreen.toolCardHeight(0));
+    void compactToolSummaryKeepsAtMostThreeNativeCapsulesAndRetainsFullDetailAndSources() {
+        UUID requestId = UUID.fromString("a42f9095-79d9-4ce7-bfc9-52890d15a12a");
+        var normalized = JsonParser.parseString("""
+                {"status":"success","value":{"resultType":"array","cardinality":4,
+                 "viewKind":"ITEM","complete":true,"preview":[
+                 {"id":"minecraft:apple","displayName":"Apple","count":2},
+                 {"id":"minecraft:carrot","displayName":"Carrot","count":3},
+                 {"id":"minecraft:potato","displayName":"Potato","count":4},
+                 {"id":"minecraft:bread","displayName":"Bread","count":5}]}}
+                """).getAsJsonObject();
+        GuideSource source = new GuideSource("openallay:run_javascript", new EvidenceMetadata(
+                DataAuthority.CLIENT_VISIBLE, DataCompleteness.COMPLETE, Instant.EPOCH,
+                "minecraft:client_blocks", "minecraft:captured", "26.2", "fabric",
+                Map.of("minecraft:position", "full source detail ".repeat(400))));
+        var activity = new GuideToolActivity("native-items", 0, "openallay:run_javascript",
+                GuideToolStatus.SUCCEEDED, normalized,
+                List.of(GuideToolMessage.of(GuideToolMessage.Key.RESULT_COMPLETED)), List.of(source));
+        var detail = dev.openallay.guide.ui.GuideToolDetailPresenter.project(activity, false);
+        var row = new GuideUiRow.Tool(requestId, 0, activity, detail);
+        GuideDetailCard.ItemGrid grid = assertInstanceOf(GuideDetailCard.ItemGrid.class, detail.cards().getFirst());
+
+        var summary = GuideToolSummaryPresenter.project(row);
+
+        assertEquals("tool:" + requestId + ":native-items", summary.id());
+        assertEquals(3, summary.capsules().size());
+        assertEquals(List.of("minecraft:apple", "minecraft:carrot", "minecraft:potato"),
+                summary.capsules().stream().map(capsule -> capsule.item().itemId()).toList());
+        for (int index = 0; index < summary.capsules().size(); index++) {
+            GuideToolSummaryPresenter.Item capsule = assertInstanceOf(
+                    GuideToolSummaryPresenter.Item.class, summary.capsules().get(index));
+            assertEquals(summary.id() + ":card:0:item:" + index, capsule.id());
+            assertEquals(activity.invocationId(), capsule.originInvocationId());
+            assertSame(grid.items().get(index), capsule.item());
+        }
+        assertEquals(4, grid.items().size());
+        assertEquals(new GuideItemView("minecraft:bread", "Bread", 5), grid.items().getLast());
+        assertSame(detail, row.detail());
+        assertSame(activity, row.activity());
+        assertSame(source, row.activity().sources().getFirst());
+        assertEquals("full source detail ".repeat(400),
+                row.activity().sources().getFirst().evidence().details().get("minecraft:position"));
+        assertEquals(normalized, row.activity().normalized());
+    }
+
+    @Test
+    void compactToolSummaryUsesProjectedIntentAndStatusAndOnlyNativeTypedCards() {
+        var input = JsonParser.parseString("""
+                {"title":"activity title","description":"activity description"}
+                """).getAsJsonObject();
+        var normalized = JsonParser.parseString("""
+                {"status":"success","value":{"itemId":"minecraft:diamond","count":64}}
+                """).getAsJsonObject();
+        var activity = new GuideToolActivity("typed-detail", 0, "openallay:run_javascript",
+                GuideToolStatus.RUNNING, input, normalized,
+                List.of(GuideToolMessage.of(GuideToolMessage.Key.ANALYSIS_COMPLETE, "64")), List.of());
+        var reference = new dev.openallay.context.RecipeReference(
+                "minecraft:recipe_manager", "0".repeat(64), "minecraft:iron_block");
+        var recipe = new GuideRecipeCard(reference, List.of(reference), "minecraft:iron_block",
+                "minecraft:crafting", "minecraft:crafting_table", List.of(
+                        new GuideRecipeCard.Output("minecraft:iron_block", 2, "Iron Block"),
+                        new GuideRecipeCard.Output("minecraft:iron_ingot", 3, "Iron Ingot")));
+        var item = new GuideItemView("minecraft:apple", "Apple", 7);
+        var detail = new GuideToolDetailView("screen.openallay.tool.load_skill",
+                GuideToolStatus.SUCCEEDED, dev.openallay.guide.GuideToolInvocationView.none(),
+                new dev.openallay.guide.GuideToolIntent("projected title", "projected description"),
+                List.of(new GuideDetailCard.Text("screen.openallay.detail.analysis", List.of("minecraft:diamond")),
+                        new GuideDetailCard.KeyValue("screen.openallay.detail.analysis.fields",
+                                List.of(new GuideDetailCard.DataCell("itemId", "minecraft:diamond")), true, 0),
+                        new GuideDetailCard.Recipe(recipe),
+                        new GuideDetailCard.ItemGrid("screen.openallay.detail.analysis.items", List.of(item))),
+                List.of(GuideToolMessage.of(GuideToolMessage.Key.ANALYSIS_COMPLETE, "64")),
+                java.util.Optional.empty());
+        UUID requestId = UUID.fromString("18716e8c-7258-491b-a326-5a93c77cb287");
+        var row = new GuideUiRow.Tool(requestId, 0, activity, detail);
+
+        var summary = GuideToolSummaryPresenter.project(row);
+
+        assertEquals("tool:" + requestId + ":typed-detail", summary.id());
+        assertEquals("projected title", summary.title());
+        assertEquals("screen.openallay.tool.load_skill", summary.titleKey());
+        assertEquals("projected description", summary.description());
+        assertTrue(summary.hasDescription());
+        assertEquals(GuideToolDisplayStatus.SUCCEEDED, summary.status());
+        assertEquals(2, summary.capsules().size());
+        var recipeCapsule = assertInstanceOf(GuideToolSummaryPresenter.Recipe.class, summary.capsules().getFirst());
+        assertEquals(summary.id() + ":card:2:recipe", recipeCapsule.id());
+        assertEquals("typed-detail", recipeCapsule.originInvocationId());
+        assertEquals(new GuideItemView("minecraft:iron_block", "Iron Block", 2), recipeCapsule.item());
+        assertSame(recipe, recipeCapsule.recipe());
+        var itemCapsule = assertInstanceOf(GuideToolSummaryPresenter.Item.class, summary.capsules().getLast());
+        assertEquals(summary.id() + ":card:3:item:0", itemCapsule.id());
+        assertEquals("typed-detail", itemCapsule.originInvocationId());
+        assertSame(item, itemCapsule.item());
+        assertEquals(4, detail.cards().size());
+        assertEquals(2, recipe.outputs().size());
+        assertEquals(GuideToolStatus.RUNNING, activity.status());
+        assertEquals(normalized, activity.normalized());
+    }
+
+    @Test
+    void compactToolSummaryNeverPromotesFailedOrUnfinishedNativeCards() {
+        var activity = new GuideToolActivity("unpromoted", 0, "openallay:run_javascript",
+                GuideToolStatus.SUCCEEDED, null, List.of(), List.of());
+        List<GuideDetailCard> cards = List.of(new GuideDetailCard.ItemGrid(
+                "screen.openallay.detail.analysis.items", List.of(new GuideItemView("minecraft:apple", "Apple", 1))));
+        for (GuideToolDisplayStatus status : List.of(GuideToolDisplayStatus.RUNNING,
+                GuideToolDisplayStatus.FAILED, GuideToolDisplayStatus.NO_RESULT_RECORDED)) {
+            var actualStatus = status == GuideToolDisplayStatus.FAILED
+                    ? GuideToolStatus.FAILED : GuideToolStatus.RUNNING;
+            var detail = new GuideToolDetailView("screen.openallay.tool.run_javascript", actualStatus,
+                    dev.openallay.guide.GuideToolInvocationView.none(), dev.openallay.guide.GuideToolIntent.none(),
+                    cards, List.of(GuideToolMessage.of(GuideToolMessage.Key.ANALYSIS_PREVIEW, "1", "5")),
+                    java.util.Optional.empty(), status, java.util.Optional.empty());
+            var row = new GuideUiRow.Tool(UUID.randomUUID(), 0, activity, detail);
+
+            var summary = GuideToolSummaryPresenter.project(row);
+
+            assertEquals(status, summary.status());
+            assertTrue(summary.capsules().isEmpty());
+            assertSame(detail, row.detail());
+            assertEquals(cards, row.detail().cards());
+        }
+        String fullFailure = "Full failure detail ".repeat(400);
+        var failure = new GuideToolDetailView.Failure("javascript_error", fullFailure);
+        var failedDetail = new GuideToolDetailView("screen.openallay.tool.run_javascript", GuideToolStatus.SUCCEEDED,
+                dev.openallay.guide.GuideToolInvocationView.none(), dev.openallay.guide.GuideToolIntent.none(),
+                cards, List.of(), java.util.Optional.empty(), GuideToolDisplayStatus.SUCCEEDED,
+                java.util.Optional.of(failure));
+        var failedRow = new GuideUiRow.Tool(UUID.randomUUID(), 0, activity, failedDetail);
+
+        var failedSummary = GuideToolSummaryPresenter.project(failedRow);
+
+        assertEquals(GuideToolDisplayStatus.SUCCEEDED, failedSummary.status());
+        assertTrue(failedSummary.capsules().isEmpty(), "actual failure blocks capsules even with a success status");
+        assertSame(failure, failedRow.detail().failure().orElseThrow());
+        assertEquals(fullFailure, failedRow.detail().failure().orElseThrow().message());
+        assertEquals(cards, failedRow.detail().cards());
     }
 
     @Test
@@ -359,7 +494,7 @@ final class OpenAllayScreenProjectionTest {
     }
 
     @Test
-    void javascriptCardsRenderIntentAsLiteralTextWithSeparateResultAndLegacyFallback() {
+    void compactJavascriptCardsKeepLiteralIntentAndNoFabricatedDescription() {
         var input = new com.google.gson.JsonObject();
         String title = "**比较** screen.openallay.title /op player <clickEvent> 🧚";
         String description = "[[tw:item|minecraft:apple]] \"quoted\" <script>";
@@ -377,20 +512,31 @@ final class OpenAllayScreenProjectionTest {
         assertFalse(descriptionComponent.getContents() instanceof TranslatableContents);
         assertNull(titleComponent.getStyle().getClickEvent());
         assertNull(descriptionComponent.getStyle().getClickEvent());
-        List<Component> summary = OpenAllayScreen.toolSummaryComponents(activity);
-        assertEquals("screen.openallay.tool.message.analysis.complete",
-                assertInstanceOf(TranslatableContents.class, summary.getFirst().getContents()).getKey());
-        assertEquals(description, summary.get(1).getString());
-        var legacy = new GuideToolActivity("legacy", 0, "openallay:run_javascript",
+        var detail = dev.openallay.guide.ui.GuideToolDetailPresenter.project(activity, false);
+        var summary = GuideToolSummaryPresenter.project(new GuideUiRow.Tool(UUID.randomUUID(), 0, activity, detail));
+        assertEquals(title, summary.title());
+        assertEquals("screen.openallay.tool.run_javascript", summary.titleKey());
+        assertEquals(description, summary.description());
+        assertTrue(summary.hasDescription());
+        assertEquals(GuideToolDisplayStatus.SUCCEEDED, summary.status());
+        assertTrue(summary.capsules().isEmpty(), "narration alone is not a native result capsule");
+        var noIntent = new GuideToolActivity("no-intent", 0, "openallay:run_javascript",
                 GuideToolStatus.RUNNING, null, List.of(), List.of());
         assertEquals("screen.openallay.tool.run_javascript", assertInstanceOf(TranslatableContents.class,
-                OpenAllayScreen.toolTitle(legacy).getContents()).getKey());
-        assertEquals("screen.openallay.tool.intent.run_javascript.description", assertInstanceOf(TranslatableContents.class,
-                OpenAllayScreen.toolDescription(legacy.intent()).getContents()).getKey());
+                OpenAllayScreen.toolTitle(noIntent).getContents()).getKey());
+        assertEquals(Component.empty(), OpenAllayScreen.toolDescription(noIntent.intent()));
+        var noIntentSummary = GuideToolSummaryPresenter.project(new GuideUiRow.Tool(UUID.randomUUID(), 0, noIntent,
+                dev.openallay.guide.ui.GuideToolDetailPresenter.project(noIntent, false)));
+        assertEquals("", noIntentSummary.title());
+        assertEquals("screen.openallay.tool.run_javascript", noIntentSummary.titleKey());
+        assertEquals("", noIntentSummary.description());
+        assertFalse(noIntentSummary.hasDescription());
+        assertEquals(GuideToolDisplayStatus.RUNNING, noIntentSummary.status());
+        assertTrue(noIntentSummary.capsules().isEmpty());
     }
 
     @Test
-    void codeOwnedStatusIsIndependentOfLongModelIntentAndFactsComeFirst() {
+    void compactToolStatusIsIndependentOfLongModelIntent() {
         var input = new com.google.gson.JsonObject();
         String title = "Model title ".repeat(200).trim();
         String description = "Model description ".repeat(200).trim();
@@ -406,12 +552,14 @@ final class OpenAllayScreenProjectionTest {
         Component translatedStatus = assertInstanceOf(Component.class, status.getSiblings().getFirst());
         assertEquals("screen.openallay.detail.tool.status.failed",
                 assertInstanceOf(TranslatableContents.class, translatedStatus.getContents()).getKey());
-        assertTrue(OpenAllayScreen.toolCardTitle(activity).getString()
-                .endsWith(activity.intent().title()));
-        List<Component> summary = OpenAllayScreen.toolSummaryComponents(activity);
-        assertEquals("screen.openallay.tool.failure.javascript",
-                assertInstanceOf(TranslatableContents.class, summary.getFirst().getContents()).getKey());
-        assertEquals(description, summary.getLast().getString());
+        assertEquals(title, OpenAllayScreen.toolTitle(activity).getString());
+        var detail = dev.openallay.guide.ui.GuideToolDetailPresenter.project(activity, false);
+        var summary = GuideToolSummaryPresenter.project(new GuideUiRow.Tool(UUID.randomUUID(), 0, activity, detail));
+        assertEquals(title, summary.title());
+        assertEquals(description, summary.description());
+        assertTrue(summary.hasDescription());
+        assertEquals(GuideToolDisplayStatus.FAILED, summary.status());
+        assertTrue(summary.capsules().isEmpty());
     }
 
     @Test
@@ -433,7 +581,15 @@ final class OpenAllayScreenProjectionTest {
         assertNull(reasons.getLast().getStyle().getClickEvent());
         assertFalse(reasons.getFirst().getString().contains("Succeeded"));
         assertTrue(detail.debug().isEmpty());
-        assertEquals("javascript_error", OpenAllayScreen.toolSummaryComponents(activity).getFirst().getString());
+        var row = new GuideUiRow.Tool(UUID.randomUUID(), 0, activity, detail);
+        var summary = GuideToolSummaryPresenter.project(row);
+        assertEquals(GuideToolDisplayStatus.FAILED, summary.status());
+        assertEquals("Succeeded by enabling Java", summary.title());
+        assertEquals("Untrusted planned claim", summary.description());
+        assertTrue(summary.capsules().isEmpty());
+        assertSame(detail, row.detail());
+        assertEquals(new GuideToolDetailView.Failure("javascript_error",
+                "ReferenceError: Java is not defined (line 3) <clickEvent>"), row.detail().failure().orElseThrow());
 
         var stopped = new GuideToolActivity("stopped", 0, "openallay:run_javascript",
                 GuideToolStatus.RUNNING, input, null, List.of(), List.of());
@@ -465,7 +621,7 @@ final class OpenAllayScreenProjectionTest {
     }
 
     @Test
-    void completedSampleNarrationIsVisibleAboveNativeCardsAndRefreshesStoredSummary() {
+    void completedSampleKeepsResultNarrationInDetailAndNativeItemInCompactSummary() {
         var normalized = JsonParser.parseString("""
                 {"status":"success","value":{"resultType":"array","cardinality":5,
                  "handle":"r_request","viewKind":"ITEM","complete":false,
@@ -481,11 +637,14 @@ final class OpenAllayScreenProjectionTest {
                 GuideToolMessage.of(GuideToolMessage.Key.ANALYSIS_PREVIEW, "1", "5"),
                 GuideToolMessage.of(GuideToolMessage.Key.ANALYSIS_WORKSPACE)),
                 OpenAllayScreen.toolResultMessages(detail));
-        TranslatableContents summary = assertInstanceOf(TranslatableContents.class,
-                OpenAllayScreen.toolSummaryComponents(activity).getFirst().getContents());
-        assertEquals(GuideToolMessage.Key.ANALYSIS_PREVIEW.translationKey(), summary.getKey());
-        assertEquals("1", assertInstanceOf(Component.class, summary.getArgs()[0]).getString());
-        assertEquals("5", assertInstanceOf(Component.class, summary.getArgs()[1]).getString());
+        var summary = GuideToolSummaryPresenter.project(new GuideUiRow.Tool(UUID.randomUUID(), 0, activity, detail));
+        assertEquals(GuideToolDisplayStatus.SUCCEEDED, summary.status());
+        assertEquals(1, summary.capsules().size());
+        var capsule = assertInstanceOf(GuideToolSummaryPresenter.Item.class, summary.capsules().getFirst());
+        assertEquals(new GuideItemView("minecraft:apple", "Apple", 1), capsule.item());
+        assertEquals("sample", capsule.originInvocationId());
+        assertEquals("", summary.description());
+        assertFalse(summary.hasDescription());
     }
 
     @Test
@@ -499,9 +658,9 @@ final class OpenAllayScreenProjectionTest {
                         GuideToolMessage.of(GuideToolMessage.Key.ANALYSIS_PREVIEW, "1", "5")), List.of());
         var detail = dev.openallay.guide.ui.GuideToolDetailPresenter.project(activity, false);
         assertTrue(OpenAllayScreen.toolResultMessages(detail).isEmpty());
-        assertTrue(OpenAllayScreen.toolSummaryComponents(activity).stream().noneMatch(component ->
-                component.getContents() instanceof TranslatableContents translation
-                        && translation.getKey().startsWith("screen.openallay.tool.message.analysis.")));
+        var summary = GuideToolSummaryPresenter.project(new GuideUiRow.Tool(UUID.randomUUID(), 0, activity, detail));
+        assertEquals(GuideToolDisplayStatus.FAILED, summary.status());
+        assertTrue(summary.capsules().isEmpty());
         assertEquals(List.of("javascript_error", "actual failure"),
                 OpenAllayScreen.toolFailureComponents(detail, activity.toolId()).stream()
                         .map(Component::getString).toList());
@@ -636,10 +795,14 @@ final class OpenAllayScreenProjectionTest {
                         GuideToolMessage.of(GuideToolMessage.Key.INVOCATION_RUN_JAVASCRIPT,
                                 "Build a platform", "Place blocks for the platform"),
                         GuideToolMessage.of(GuideToolMessage.Key.RESULT_PENDING)), List.of());
-        List<Component> summary = OpenAllayScreen.toolSummaryComponents(activity,
-                dev.openallay.guide.ui.GuideToolDisplayStatus.NO_RESULT_RECORDED);
-        assertEquals(1, summary.size());
-        assertEquals("Place blocks for the platform", summary.getFirst().getString());
+        var detail = dev.openallay.guide.ui.GuideToolDetailPresenter.project(activity, false).forRequest(true);
+        var summary = GuideToolSummaryPresenter.project(new GuideUiRow.Tool(UUID.randomUUID(), 0, activity, detail));
+        assertEquals("Build a platform", summary.title());
+        assertEquals("Place blocks for the platform", summary.description());
+        assertTrue(summary.hasDescription());
+        assertEquals(GuideToolDisplayStatus.NO_RESULT_RECORDED, summary.status());
+        assertTrue(summary.capsules().isEmpty());
+        assertTrue(detail.narration().isEmpty());
         assertEquals(GuideToolStatus.RUNNING, activity.status());
     }
 

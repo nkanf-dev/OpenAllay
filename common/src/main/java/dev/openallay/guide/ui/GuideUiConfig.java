@@ -47,15 +47,14 @@ public record GuideUiConfig(Fullscreen fullscreen, Hud hud, Notifications notifi
         public double yFactor() { return yFactor; }
     }
 
-    public record Fullscreen(
-            Density density, boolean sessionRailVisible, boolean toolsCollapsed, Theme theme) {
+    public record Fullscreen(Density density, boolean sessionRailVisible, Theme theme) {
         public Fullscreen {
             Objects.requireNonNull(density, "density");
             Objects.requireNonNull(theme, "theme");
         }
 
         public static Fullscreen defaults() {
-            return new Fullscreen(Density.COMFORTABLE, true, false, Theme.CHARCOAL);
+            return new Fullscreen(Density.COMFORTABLE, true, Theme.CHARCOAL);
         }
     }
 

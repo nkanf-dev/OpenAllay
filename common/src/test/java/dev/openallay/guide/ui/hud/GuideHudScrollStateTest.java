@@ -12,6 +12,9 @@ final class GuideHudScrollStateTest {
                 new GuideTranscriptVirtualizer.Row("tool-result", 220));
         state.update(rows, 140);
         assertEquals(1880, state.maximum());
+        assertEquals(state.maximum(), state.offset(), "a new compact viewport starts at the actual tail");
+        assertTrue(state.followingLatest());
+        state.first();
         for (int i = 0; i < 10; i++) state.wheel(-.125);
         assertEquals(30, state.offset(), "smooth wheel keeps fractional increments");
         state.page(1);
@@ -47,12 +50,60 @@ final class GuideHudScrollStateTest {
         assertEquals(state.maximum(), state.offset());
         assertTrue(state.followingLatest());
     }
-    @Test void passivePagesKeepFullContentAccessibleWithoutPointerCapture() {
-        assertEquals(14, GuideHudScrollState.passivePageCount(2020, 150));
-        assertEquals(0, GuideHudScrollState.passivePageOffset(2020, 150, 0));
-        assertEquals(150, GuideHudScrollState.passivePageOffset(2020, 150, 160));
-        assertEquals(1870, GuideHudScrollState.passivePageOffset(2020, 150, 160 * 13));
-        assertEquals(0, GuideHudScrollState.passivePageOffset(2020, 150, 160 * 14));
-        assertEquals(1, GuideHudScrollState.passivePageCount(0, 0));
+    @Test void defaultFollowingUsesMeasuredTailForNewContentAndViewportChanges() {
+        var state = new GuideHudScrollState();
+        state.update(List.of(new GuideTranscriptVirtualizer.Row("reply", 2020)), 150);
+        assertEquals(1870, state.offset());
+        for (int frame = 0; frame < 100; frame++) {
+            state.update(List.of(new GuideTranscriptVirtualizer.Row("reply", 2020)), 150);
+            assertEquals(1870, state.offset(), "elapsed frames never rotate back to the first page");
+        }
+        state.update(List.of(new GuideTranscriptVirtualizer.Row("reply", 2600)), 180);
+        assertEquals(2420, state.offset());
+        state.update(List.of(new GuideTranscriptVirtualizer.Row("reply", 2600)), 90);
+        assertEquals(2510, state.offset());
+        assertTrue(state.followingLatest());
+    }
+    @Test void manualWheelStopsFollowingEvenAtTheBoundaryUntilExplicitLatest() {
+        var state = new GuideHudScrollState();
+        state.update(List.of(new GuideTranscriptVirtualizer.Row("reply", 600)), 150);
+        assertFalse(state.wheel(0));
+        assertFalse(state.wheel(Double.POSITIVE_INFINITY));
+        assertTrue(state.followingLatest(), "invalid input does not change reading ownership");
+        assertTrue(state.wheel(-1));
+        assertEquals(450, state.offset(), "wheel at the tail is clamped");
+        assertFalse(state.followingLatest(), "only Latest explicitly resumes wheel-following");
+        state.update(List.of(new GuideTranscriptVirtualizer.Row("reply", 900)), 150);
+        assertEquals(450, state.offset(), "new content cannot pull a manual reader to the tail");
+        state.latest();
+        assertEquals(750, state.offset());
+        assertTrue(state.followingLatest());
+        state.page(-1);
+        assertEquals(612, state.offset());
+        assertFalse(state.followingLatest());
+        state.update(List.of(new GuideTranscriptVirtualizer.Row("reply", 1000)), 150);
+        assertEquals(612, state.offset());
+        state.latest();
+        assertEquals(850, state.offset());
+        state.move(state.maximum());
+        assertFalse(state.followingLatest(), "manual scrollbar movement at the tail also keeps reading ownership");
+        state.page(1);
+        assertFalse(state.followingLatest(), "Page Down at the boundary is not an implicit Latest action");
+        state.update(List.of(new GuideTranscriptVirtualizer.Row("reply", 1200)), 150);
+        assertEquals(850, state.offset());
+        state.latest();
+        assertEquals(1050, state.offset());
+        assertTrue(state.followingLatest());
+    }
+    @Test void tinyAndEmptyViewportsKeepSourceRowsWithoutInventingVisibleContent() {
+        var state = new GuideHudScrollState();
+        state.update(List.of(new GuideTranscriptVirtualizer.Row("actual-reply", 600)), 0);
+        assertEquals(600, state.totalHeight());
+        assertEquals(600, state.maximum());
+        assertEquals(600, state.offset());
+        state.update(List.of(), 0);
+        assertEquals(0, state.offset());
+        assertEquals(0, state.totalHeight());
+        assertTrue(state.followingLatest());
     }
 }

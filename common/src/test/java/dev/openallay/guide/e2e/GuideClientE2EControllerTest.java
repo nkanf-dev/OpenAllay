@@ -64,6 +64,14 @@ final class GuideClientE2EControllerTest {
     }
 
     @Test
+    void distinctLiveNativeScenarioReusesGuardedGraphicalLifecycleOnly() {
+        assertTrue(GuideClientE2EController.graphicalScenario("ui-manual-regressions"));
+        assertTrue(GuideClientE2EController.graphicalScenario("ui-live-ux-regressions"));
+        assertFalse(GuideClientE2EController.graphicalScenario("phase-4-semantic-history"));
+        assertFalse(GuideClientE2EController.graphicalScenario("ui-stop"));
+    }
+
+    @Test
     void writesCanonicalReportAndRequestsCleanShutdown() throws Exception {
         Path report = temporary.resolve("nested/report.json");
         ArrayDeque<Runnable> clientTasks = new ArrayDeque<>();

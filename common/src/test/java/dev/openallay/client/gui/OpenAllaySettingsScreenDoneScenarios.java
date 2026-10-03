@@ -118,9 +118,9 @@ public final class OpenAllaySettingsScreenDoneScenarios {
                 "screen.openallay.settings.done"), footerKeys(f.screen));
         UiSettingsDraft draft = (UiSettingsDraft) get(f.screen, "uiDraft");
         draft.preview(draft.ui().withFullscreen(new GuideUiConfig.Fullscreen(
-                GuideUiConfig.Density.COMPACT, false, true, GuideUiConfig.Theme.MINT)));
+                GuideUiConfig.Density.COMPACT, false, GuideUiConfig.Theme.MINT)));
         invoke(f.screen, "resetUiGroup");
-        assertFalse(draft.ui().fullscreen().toolsCollapsed());
+        assertEquals(GuideUiConfig.Fullscreen.defaults(), draft.ui().fullscreen());
         assertEquals(0, f.worker.tasks.size());
         FakeVoice voice = new FakeVoice(f.worker);
         var credential = CredentialReference.local(java.util.UUID.randomUUID());
@@ -203,7 +203,7 @@ public final class OpenAllaySettingsScreenDoneScenarios {
             var ui = draft.ui();
             draft.preview(switch (group) {
                 case FULLSCREEN -> ui.withFullscreen(new GuideUiConfig.Fullscreen(
-                        GuideUiConfig.Density.COMPACT, false, true, GuideUiConfig.Theme.MINT));
+                        GuideUiConfig.Density.COMPACT, false, GuideUiConfig.Theme.MINT));
                 case HUD -> ui.withHud(ui.hud().withEnabled(true).withBackgroundOpacity(.2));
                 case NOTIFICATIONS -> ui.withNotifications(ui.notifications().withEnabled(true));
             });
@@ -419,7 +419,7 @@ public final class OpenAllaySettingsScreenDoneScenarios {
         set(f.screen, "uiGroup", dev.openallay.client.gui.settings.UiSettingsProjection.Group.HUD);
         UiSettingsDraft draft = (UiSettingsDraft) get(f.screen, "uiDraft");
         draft.preview(draft.ui().withFullscreen(new GuideUiConfig.Fullscreen(
-                GuideUiConfig.Density.COMPACT, false, false, GuideUiConfig.Theme.MINT))
+                GuideUiConfig.Density.COMPACT, false, GuideUiConfig.Theme.MINT))
                 .withNotifications(draft.ui().notifications().withEnabled(true)));
         var font = net.minecraft.client.Minecraft.getInstance().font;
         var oldX = new net.minecraft.client.gui.components.EditBox(font, 0, 0, 80, 20,

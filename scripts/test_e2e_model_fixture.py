@@ -1,4 +1,5 @@
 import importlib.util
+import io
 import json
 import shutil
 import subprocess
@@ -151,6 +152,132 @@ class ManualGraphicalRegressionFixtureTests(unittest.TestCase):
         for completed in (1, 2):
             with self.subTest(completed=completed), self.assertRaises(ValueError):
                 fixture.manual_regression_content({}, completed)
+
+
+class LiveUxRegressionFixtureTests(unittest.TestCase):
+    def test_live_prefix_and_same_tools_keep_actual_recipe_identity_and_long_tail(self):
+        recipe = captured_recipe()
+        analysis = {"recipe": recipe, "craftability": None, "ingredients": [], "sources": []}
+        request = {"messages": [tool_message(recipe), tool_message(json.dumps(analysis))]}
+        content = fixture.live_ux_content(request, 2)
+        self.assertIn("LATEST-48", content)
+        self.assertIn("本地验收阅读段 48", content)
+        self.assertIn(recipe["reference"]["generation"], content)
+        self.assertIn("固定测试文案", content)
+        for completed in (1, 2):
+            with self.assertRaises(ValueError):
+                fixture.live_ux_content({}, completed)
+
+    def test_title_only_second_tool_is_safe_actual_read_only_analysis(self):
+        arguments = fixture.live_ux_analysis_arguments()
+        self.assertEqual("", arguments["description"])
+        self.assertTrue(arguments["title"])
+        self.assertIn("mc.player.inventory", arguments["source"])
+        self.assertIn('require("openallay:crafting").allocate', arguments["source"])
+        self.assertNotIn("Java", arguments["source"])
+
+    def test_real_steer_keeps_original_current_tool_chronology_but_follow_up_is_new_turn(self):
+        request = {"messages": [
+            {"role": "user", "content": fixture.LIVE_UX_PREFIX + " hold"},
+            {"role": "assistant", "tool_calls": [{"id": "fixture-1", "function": {"name": fixture.JAVASCRIPT_TOOL}}]},
+            {"role": "tool", "tool_call_id": "fixture-1", "content": "actual first result"},
+            {"role": "user", "content": fixture.LIVE_UX_STEER + " native callback"},
+        ]}
+        text, messages = fixture.current_user_turn(request)
+        self.assertEqual(fixture.LIVE_UX_PREFIX + " hold", text)
+        self.assertEqual(1, len(fixture.current_tool_results(request)))
+        self.assertEqual("actual first result", messages[1]["content"])
+        request["messages"].append({"role": "user", "content": fixture.LIVE_UX_FOLLOW_UP + " queued"})
+        text, messages = fixture.current_user_turn(request)
+        self.assertEqual(fixture.LIVE_UX_FOLLOW_UP + " queued", text)
+        self.assertEqual([], messages)
+        self.assertEqual([], fixture.current_tool_results(request))
+
+    def test_tool_call_ids_are_stable_through_continuation_and_steer_but_new_for_follow_up(self):
+        root = {"role": "user", "content": fixture.LIVE_UX_PREFIX + " hold"}
+        request = {"messages": [root]}
+        first = fixture.fixture_tool_call_id(request, 1)
+        second = fixture.fixture_tool_call_id(request, 2)
+        self.assertNotEqual(first, second)
+        request["messages"].extend([
+            {"role": "assistant", "tool_calls": [{"id": first, "function": {"name": fixture.JAVASCRIPT_TOOL}}]},
+            {"role": "tool", "tool_call_id": first, "content": "actual first result"},
+            {"role": "user", "content": fixture.LIVE_UX_STEER + " native callback"},
+        ])
+        self.assertEqual(first, fixture.fixture_tool_call_id(request, 1))
+        self.assertEqual(second, fixture.fixture_tool_call_id(request, 2))
+        request["messages"].extend([
+            {"role": "assistant", "tool_calls": [{"id": second, "function": {"name": fixture.JAVASCRIPT_TOOL}}]},
+            {"role": "tool", "tool_call_id": second, "content": "actual second result"},
+            {"role": "assistant", "content": "completed original task"},
+            {"role": "user", "content": fixture.LIVE_UX_FOLLOW_UP + " queued-native-callback"},
+        ])
+        follow_up_id = fixture.fixture_tool_call_id(request, 1)
+        self.assertNotIn(follow_up_id, {first, second})
+        self.assertEqual(follow_up_id, fixture.fixture_tool_call_id(request, 1))
+        request["messages"].extend([
+            {"role": "assistant", "content": "completed follow-up"},
+            {"role": "user", "content": fixture.LIVE_UX_FOLLOW_UP + " queued-native-callback"},
+        ])
+        self.assertNotIn(fixture.fixture_tool_call_id(request, 1), {first, second, follow_up_id})
+
+    def test_endpoint_follow_up_tool_id_does_not_collide_with_completed_original_history(self):
+        # Unit-only constructed HTTP inputs. These are not native Tool success evidence.
+        request = {"messages": [
+            {"role": "user", "content": fixture.LIVE_UX_PREFIX + " hold"},
+            {"role": "assistant", "tool_calls": [{"id": "fixture-1", "function": {"name": fixture.JAVASCRIPT_TOOL}}]},
+            {"role": "tool", "tool_call_id": "fixture-1", "content": "historical first result"},
+            {"role": "assistant", "tool_calls": [{"id": "fixture-2", "function": {"name": fixture.JAVASCRIPT_TOOL}}]},
+            {"role": "tool", "tool_call_id": "fixture-2", "content": "historical second result"},
+            {"role": "assistant", "content": "completed original response"},
+            {"role": "user", "content": fixture.LIVE_UX_FOLLOW_UP + " queued-native-callback"},
+        ], "tools": [{"function": {"name": fixture.JAVASCRIPT_TOOL}}]}
+        class CaptureHandler:
+            path = "/v1/chat/completions"
+            body = json.dumps(request).encode()
+            headers = {"content-length": str(len(body))}
+            rfile = io.BytesIO(body)
+            wfile = io.BytesIO()
+            errors = []
+            codes = []
+            def send_error(self, code, message): self.errors.append((code, message))
+            def send_response(self, code): self.codes.append(code)
+            def send_header(self, name, value): pass
+            def end_headers(self): pass
+        handler = CaptureHandler()
+        with patch.object(fixture.time, "sleep"):
+            fixture.Handler.do_POST(handler)
+        self.assertEqual([], handler.errors)
+        self.assertEqual([200], handler.codes)
+        events = [json.loads(line[6:]) for line in handler.wfile.getvalue().decode().splitlines()
+                  if line.startswith("data: ") and line != "data: [DONE]"]
+        calls = [call for event in events for call in event["choices"][0]["delta"].get("tool_calls", [])]
+        self.assertEqual(1, len(calls))
+        self.assertEqual(fixture.fixture_tool_call_id(request, 1), calls[0]["id"])
+        self.assertNotIn(calls[0]["id"], {"fixture-1", "fixture-2"})
+        self.assertEqual("tool_calls", events[-1]["choices"][0]["finish_reason"])
+        self.assertIn("return recipe", json.loads(calls[0]["function"]["arguments"])["source"])
+
+    def test_fixture_control_only_releases_loopback_transport_not_service_results(self):
+        class ControlHandler:
+            path = "/__e2e/live-ux/release"
+            client_address = ("127.0.0.1", 1234)
+            codes = []
+            errors = []
+            def send_response(self, code): self.codes.append(code)
+            def end_headers(self): pass
+            def send_error(self, code, message): self.errors.append((code, message))
+        fixture.LIVE_UX_RELEASE.clear()
+        local = ControlHandler()
+        fixture.Handler.do_POST(local)
+        self.assertEqual([204], local.codes)
+        self.assertTrue(fixture.LIVE_UX_RELEASE.is_set())
+        fixture.LIVE_UX_RELEASE.clear()
+        remote = ControlHandler()
+        remote.client_address = ("192.0.2.4", 1234)
+        fixture.Handler.do_POST(remote)
+        self.assertFalse(fixture.LIVE_UX_RELEASE.is_set())
+        self.assertEqual(403, remote.errors[-1][0])
 
 
 class CurrentModelProjectionTests(unittest.TestCase):

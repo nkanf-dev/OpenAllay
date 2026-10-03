@@ -61,7 +61,7 @@ final class SettingsEditorSaveReceiptTest {
         Fixture f = new Fixture();
         var draft = new UiSettingsDraft(f.display.current);
         draft.preview(draft.ui().withFullscreen(new GuideUiConfig.Fullscreen(
-                GuideUiConfig.Density.COMPACT, false, false, GuideUiConfig.Theme.MINT))
+                GuideUiConfig.Density.COMPACT, false, GuideUiConfig.Theme.MINT))
                 .withHud(draft.ui().hud().withEnabled(true))
                 .withNotifications(draft.ui().notifications().withEnabled(true)));
         GuideDisplayConfig candidate = draft.candidate(f.service.snapshot().display());
@@ -130,7 +130,7 @@ final class SettingsEditorSaveReceiptTest {
         var draft = new UiSettingsDraft(f.display.current);
         var oldOffsets = Map.of("offset_x", "17", "offset_y", "29");
         var ui = draft.ui().withFullscreen(new GuideUiConfig.Fullscreen(
-                GuideUiConfig.Density.COMPACT, false, false, GuideUiConfig.Theme.MINT))
+                GuideUiConfig.Density.COMPACT, false, GuideUiConfig.Theme.MINT))
                 .withNotifications(draft.ui().notifications().withEnabled(true));
         var returned = f.display.current.withUi(ui.withHud(ui.hud().withPlacement(
                 GuideUiConfig.Anchor.BOTTOM_RIGHT, -144, -72, 352, 208, 1.2)));

@@ -56,11 +56,16 @@ final class GuideHudViewTest {
     }
 
     @Test
-    void renderViewCannotCarryOversizedPreviewsOrNegativeTaskCount() {
-        assertThrows(IllegalArgumentException.class,
-                () -> new GuideHudView(HUD, "Allay", "main", "x".repeat(513), "", null, 0));
-        assertThrows(IllegalArgumentException.class,
-                () -> new GuideHudView(HUD, "Allay", "main", "", "😀".repeat(513), null, 0));
+    void fallbackSourcesAreNotTruncatedButTaskCountsRemainValidated() {
+        String completed = "x".repeat(10000) + " completed tail";
+        String streaming = "😀e\u0301".repeat(10000) + " streaming tail";
+        var view = new GuideHudView(HUD.withContent(0, true, true), "Allay", "main",
+                completed, streaming, null, 0);
+        assertEquals(completed, view.latestReply());
+        assertEquals(streaming, view.streamingPreview());
+        assertTrue(view.hasContent());
+        assertThrows(NullPointerException.class,
+                () -> new GuideHudView(HUD, "Allay", "main", null, "", null, 0));
         assertThrows(IllegalArgumentException.class,
                 () -> new GuideHudView(HUD, "Allay", "main", "", "", null, -1));
     }

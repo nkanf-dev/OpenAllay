@@ -7,6 +7,7 @@ import com.google.gson.JsonParser;
 import java.io.StringReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -28,7 +29,7 @@ final class GuideDisplayConfigLoaderTest {
     @Test
     void canonicalWriterRoundTripsEveryCurrentNestedField() {
         var ui = new GuideUiConfig(
-                new GuideUiConfig.Fullscreen(GuideUiConfig.Density.COMPACT, false, false, GuideUiConfig.Theme.MINT),
+                new GuideUiConfig.Fullscreen(GuideUiConfig.Density.COMPACT, false, GuideUiConfig.Theme.MINT),
                 new GuideUiConfig.Hud(true, GuideUiConfig.Anchor.BOTTOM_RIGHT, -40, -24, 400, 180, 1.5, .2,
                         true, 8, false, true, false, false),
                 new GuideUiConfig.Notifications(true, GuideUiConfig.NotificationPolicy.ALWAYS, false, true, false, 12));
@@ -40,6 +41,9 @@ final class GuideDisplayConfigLoaderTest {
         assertEquals("小羽", load.config().assistantName());
         assertTrue(encoded.endsWith(System.lineSeparator()));
         assertTrue(encoded.contains("\"backgroundOpacity\": 0.2"));
+        JsonObject fullscreen = JsonParser.parseString(encoded).getAsJsonObject()
+                .getAsJsonObject("ui").getAsJsonObject("fullscreen");
+        assertEquals(Set.of("density", "sessionRailVisible", "theme"), fullscreen.keySet());
         assertFalse(encoded.contains("schemaVersion"));
         assertFalse(encoded.contains("formatVersion"));
         assertEquals(encoded, new GuideDisplayConfigWriter().encode(load.config()));
@@ -55,6 +59,22 @@ final class GuideDisplayConfigLoaderTest {
         assertNotNull(load.failure());
         assertEquals("invalid_display_config", load.failure().code());
         assertEquals(old, Files.readString(path));
+    }
+
+    @Test
+    void rejectsRemovedFullscreenPreferenceWithoutMigrationOrRewriting() throws Exception {
+        Path path = temporary.resolve("display.json");
+        for (boolean collapsed : new boolean[] {false, true}) {
+            JsonObject root = current();
+            object(root, "fullscreen").addProperty("toolsCollapsed", collapsed);
+            String old = root.toString();
+            Files.writeString(path, old);
+            var load = new GuideDisplayConfigLoader().load(path);
+            assertEquals(GuideDisplayConfig.defaults(), load.config());
+            assertNotNull(load.failure());
+            assertEquals("invalid_display_config", load.failure().code());
+            assertEquals(old, Files.readString(path));
+        }
     }
 
     @Test

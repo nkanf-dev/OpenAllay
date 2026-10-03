@@ -160,13 +160,20 @@ final class OpenAllayScreenHeaderContractsTest {
         assertFalse(action.contains("exportRunning ="));
         assertTrue(tools.contains("List.copyOf(renderedToolIds)"));
         assertTrue(tools.contains("List.copyOf(renderedResultCardIds)"));
-        assertTrue(tools.contains("tools.stream().filter(this::toolExpanded).count()"));
-        assertTrue(screen.contains("intersects(paintedRow, area)) renderedToolIds.add(toolFocusId(paintedTool))"));
-        assertTrue(screen.contains("if (painted && Boolean.getBoolean(\"openallay.e2e.enabled\"))"));
-        assertTrue(screen.contains("intersects(paintedNode, layout.transcript()) && !renderedResultCardIds.contains(cardId)"));
-        assertTrue(screen.contains("line.component() instanceof dev.openallay.guide.semantic.RichComponent.RecipeGrid"));
+        assertTrue(tools.contains("List.copyOf(renderedToolSummaries)"));
+        assertTrue(tools.contains("List.copyOf(renderedSummaryCapsuleIds)"));
+        assertTrue(tools.contains("List.copyOf(renderedDetailCardIds)"));
+        assertTrue(tools.contains("List.copyOf(renderedDetailNativeRecipeIds)"));
+        assertFalse(tools.contains("expandedToolCount"));
+        assertFalse(tools.contains("toolsCollapsedDefault"));
+        assertTrue(screen.contains("intersects(card, layout.transcript())"));
+        assertTrue(screen.contains("renderedToolIds.add(summary.id())"));
+        assertTrue(screen.contains("painted && Boolean.getBoolean(\"openallay.e2e.enabled\")"));
+        assertTrue(screen.contains("boolean painted = !stack.isEmpty() && intersects(bounds, layout.transcript())"));
+        assertTrue(screen.contains("boolean painted = detailNativeViews.render(binding"));
+        assertTrue(screen.contains("renderedDetailNativeRecipeIds.add(binding.stableId())"));
         assertTrue(screen.contains("painted && Boolean.getBoolean(\"openallay.e2e.enabled\") && intersects(bounds, layout.transcript())"));
-        assertTrue(screen.contains("visibleDetail(cardTop, y - cardTop, detail)"));
+        assertTrue(screen.contains("detailCardPaintSerial > paintBefore"));
         assertTrue(screen.contains("lastExportFilename = exported.filename()"));
         assertTrue(screen.contains("lastExportRequestCount = exported.requestCount()"));
     }

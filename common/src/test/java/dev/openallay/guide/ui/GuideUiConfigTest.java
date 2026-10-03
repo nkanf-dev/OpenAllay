@@ -38,7 +38,7 @@ final class GuideUiConfigTest {
         for (int duration : new int[] {2, 16})
             assertThrows(IllegalArgumentException.class, () -> GuideUiConfig.Notifications.defaults().withDurationSeconds(duration));
         assertThrows(NullPointerException.class, () -> hud.withPlacement(null, 0, 0, 280, 88, 1));
-        assertThrows(NullPointerException.class, () -> new GuideUiConfig.Fullscreen(null, true, true, GuideUiConfig.Theme.CHARCOAL));
+        assertThrows(NullPointerException.class, () -> new GuideUiConfig.Fullscreen(null, true, GuideUiConfig.Theme.CHARCOAL));
         assertThrows(NullPointerException.class, () -> GuideUiConfig.Notifications.defaults().withPolicy(null));
     }
 

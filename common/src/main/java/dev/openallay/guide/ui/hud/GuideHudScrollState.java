@@ -9,7 +9,7 @@ public final class GuideHudScrollState {
     private final GuideTranscriptVirtualizer rows = new GuideTranscriptVirtualizer();
     private double scroll;
     private int viewportHeight;
-    private boolean followingLatest;
+    private boolean followingLatest = true;
 
     public void update(List<GuideTranscriptVirtualizer.Row> replacement, int height) {
         GuideViewportAnchor anchor = rows.anchorAt((int) scroll);
@@ -21,7 +21,8 @@ public final class GuideHudScrollState {
     public boolean wheel(double amount) {
         if (!Double.isFinite(amount) || amount == 0) return false;
         scroll = clamp(scroll - amount * 24);
-        followingLatest = scroll >= maximum() - 1;
+        // Manual reading owns its position, even when a wheel step hits the current boundary.
+        followingLatest = false;
         return true;
     }
 
@@ -30,7 +31,7 @@ public final class GuideHudScrollState {
     public void latest() { scroll = maximum(); followingLatest = true; }
     public void move(double position) {
         scroll = clamp(position);
-        followingLatest = scroll >= maximum() - 1;
+        followingLatest = false;
     }
     public int offset() { return (int) Math.round(scroll); }
     public int maximum() { return rows.maximumScroll(viewportHeight); }
@@ -42,13 +43,5 @@ public final class GuideHudScrollState {
     }
     public int rowOffset(int index) { return rows.offset(index); }
 
-    public static int passivePageCount(int contentHeight, int viewportHeight) {
-        return viewportHeight <= 0 ? 1 : Math.max(1, (contentHeight + viewportHeight - 1) / viewportHeight);
-    }
-    public static int passivePageOffset(int contentHeight, int viewportHeight, long ticks) {
-        int pages = passivePageCount(contentHeight, viewportHeight);
-        int page = (int) Math.floorMod(ticks / 160, pages);
-        return Math.min(Math.max(0, contentHeight - viewportHeight), page * Math.max(0, viewportHeight));
-    }
     private double clamp(double value) { return Math.max(0, Math.min(maximum(), value)); }
 }

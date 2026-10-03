@@ -113,14 +113,8 @@ public final class OpenAllayScreen extends Screen {
     private boolean railVisible;
     private boolean overflowOpen;
     private int sessionScroll;
-    private final dev.openallay.guide.ui.GuideToolStepFlowState toolStepFolds =
-            new dev.openallay.guide.ui.GuideToolStepFlowState();
-    private final Map<String, ToolStepBody> toolStepBodies = new LinkedHashMap<>();
-    private ToolFlowOwner toolStepOwner;
+    private ToolFlowOwner toolSummaryOwner;
     private record ToolFlowOwner(UUID actor, String session, Object world) {}
-    private record ToolStepBody(GuideToolDetailView detail, String locale,
-            dev.openallay.guide.ui.hud.GuideHudToolCards.Projection nativeBody,
-            List<Component> messages) {}
     private final Map<String, GuideUiLayout.Rect> renderedRows = new LinkedHashMap<>();
     private final String imageDraftOwner = UUID.randomUUID().toString();
     private final Map<UUID, Identifier> imageTextures = new LinkedHashMap<>();
@@ -165,6 +159,12 @@ public final class OpenAllayScreen extends Screen {
     private long renderedNativeFrame;
     private final List<String> renderedToolIds = new ArrayList<>();
     private final List<String> renderedResultCardIds = new ArrayList<>();
+    private final List<Map<String, Object>> renderedToolSummaries = new ArrayList<>();
+    private final List<String> renderedSummaryCapsuleIds = new ArrayList<>();
+    private final List<String> renderedDetailCardIds = new ArrayList<>();
+    private final List<String> renderedDetailNativeRecipeIds = new ArrayList<>();
+    private String renderedDetailToolId = "";
+    private long detailCardPaintSerial;
     private int modelSelectorScroll;
     private int modelSelectorCursor;
     private GuideUiRow.Tool selectedTool;
@@ -179,6 +179,7 @@ public final class OpenAllayScreen extends Screen {
     private final MinecraftSemanticRenderer semanticRenderer =
             new MinecraftSemanticRenderer(new MinecraftSemanticResolver());
     private NativeDomainViewRegistry nativeViews = new NativeDomainViewRegistry();
+    private NativeDomainViewRegistry detailNativeViews = new NativeDomainViewRegistry();
     private final Map<String, Integer> semanticHashes = new LinkedHashMap<>();
     private final StableRowHeights stableRowHeights = new StableRowHeights();
     private boolean followBottom = true;
@@ -312,8 +313,7 @@ public final class OpenAllayScreen extends Screen {
         headerTitleWidget = addRenderableWidget(new HeaderTitle(title, header.title()));
         renderedTelemetryBounds = null;
         renderedTelemetryRows = 0;
-        renderedToolIds.clear();
-        renderedResultCardIds.clear();
+        clearToolPaintReceipts();
         Component sessionsLabel = Component.translatable("screen.openallay.action.sessions");
         Component sessionsText = font.width(sessionsLabel) + 8 <= header.sessions().width()
                 ? sessionsLabel : Component.literal("≡");
@@ -408,6 +408,7 @@ public final class OpenAllayScreen extends Screen {
         // Minecraft may return to this same Screen instance from a native confirmation.
         // A removed screen releases every provider view, so each attachment gets a fresh owner.
         nativeViews = new NativeDomainViewRegistry();
+        detailNativeViews = new NativeDomainViewRegistry();
         uiState.selectSession(service.snapshot().selectedSession());
         attachment = uiState.attach(GuideClientUiState.Surface.FULLSCREEN, service.snapshot().selectedSession());
         draftSubscription = uiState.subscribe(this::sharedDraftChanged);
@@ -433,6 +434,7 @@ public final class OpenAllayScreen extends Screen {
             subscription = null;
         }
         nativeViews.close();
+        detailNativeViews.close();
         uiState.setText(view.selectedSession(), draft);
         if (attachment != null) { attachment.close(); attachment = null; }
         if (draftSubscription != null) {
@@ -464,6 +466,7 @@ public final class OpenAllayScreen extends Screen {
     public void tick() {
         presentationTicks++;
         nativeViews.tick();
+        detailNativeViews.tick();
         applyPendingProjection();
         refreshTelemetry();
         validatePendingEditTarget();
@@ -770,8 +773,7 @@ public final class OpenAllayScreen extends Screen {
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
         if (Boolean.getBoolean("openallay.e2e.enabled")) {
-            renderedToolIds.clear();
-            renderedResultCardIds.clear();
+            clearToolPaintReceipts();
             renderedNativeFrame++;
         }
         graphics.fill(0, 0, width, height, 0xC00B0D12);
@@ -894,17 +896,35 @@ public final class OpenAllayScreen extends Screen {
         exportSession();
     }
 
-    /** Last native extraction identities only; clipped or retained-but-unpainted cards are not counted. */
+    /** Last real summary and detail extraction only. No retained or expected card is counted as paint. */
     public Map<String, Object> e2eToolsReceipt() {
         requireDevelopmentProbe();
-        List<GuideUiRow.Tool> tools = view.rows().stream().filter(GuideUiRow.Tool.class::isInstance)
-                .map(GuideUiRow.Tool.class::cast).toList();
-        long expanded = tools.stream().filter(this::toolExpanded).count();
-        return Map.of("lastNativeFrame", renderedNativeFrame,
-                "visibleToolIds", List.copyOf(renderedToolIds), "visibleToolCount", renderedToolIds.size(),
-                "resultCardIds", List.copyOf(renderedResultCardIds), "resultCardCount", renderedResultCardIds.size(),
-                "totalToolCount", tools.size(), "expandedToolCount", expanded,
-                "toolsCollapsedDefault", projectedDisplay.ui().fullscreen().toolsCollapsed());
+        Map<String, Object> receipt = new LinkedHashMap<>();
+        receipt.put("lastNativeFrame", renderedNativeFrame);
+        receipt.put("visibleToolIds", List.copyOf(renderedToolIds));
+        receipt.put("visibleToolCount", renderedToolIds.size());
+        receipt.put("toolSummaries", List.copyOf(renderedToolSummaries));
+        receipt.put("summaryCapsuleIds", List.copyOf(renderedSummaryCapsuleIds));
+        receipt.put("summaryCapsuleCount", renderedSummaryCapsuleIds.size());
+        receipt.put("resultCardIds", List.copyOf(renderedResultCardIds));
+        receipt.put("resultCardCount", renderedResultCardIds.size());
+        receipt.put("detailToolId", renderedDetailToolId);
+        receipt.put("detailCardIds", List.copyOf(renderedDetailCardIds));
+        receipt.put("detailCardCount", renderedDetailCardIds.size());
+        receipt.put("detailNativeRecipeIds", List.copyOf(renderedDetailNativeRecipeIds));
+        receipt.put("detailNativeRecipeCount", renderedDetailNativeRecipeIds.size());
+        receipt.put("totalToolCount", view.rows().stream().filter(GuideUiRow.Tool.class::isInstance).count());
+        return Map.copyOf(receipt);
+    }
+
+    private void clearToolPaintReceipts() {
+        renderedToolIds.clear();
+        renderedResultCardIds.clear();
+        renderedToolSummaries.clear();
+        renderedSummaryCapsuleIds.clear();
+        renderedDetailCardIds.clear();
+        renderedDetailNativeRecipeIds.clear();
+        renderedDetailToolId = "";
     }
 
     private void boundedHeaderText(
@@ -981,36 +1001,8 @@ public final class OpenAllayScreen extends Screen {
         renderScrollMarker(graphics, rail, sessionScroll, maximumSessionScroll());
     }
 
-    private boolean toolsExpanded(UUID request) {
-        return taskTools(request).stream().allMatch(this::toolExpanded);
-    }
-
-    private boolean toolExpanded(GuideUiRow.Tool tool) {
-        return toolStepFolds.expanded(tool);
-    }
-
     private ToolFlowOwner toolFlowOwner() {
         return new ToolFlowOwner(service.snapshot().actorId(), view.selectedSession(), minecraft == null ? null : minecraft.level);
-    }
-
-    private List<GuideUiRow.Tool> taskTools(UUID request) {
-        return view.rows().stream().filter(GuideUiRow.Tool.class::isInstance)
-                .map(GuideUiRow.Tool.class::cast).filter(tool -> tool.requestId().equals(request)).toList();
-    }
-
-    private boolean firstTool(GuideUiRow.Tool tool) {
-        return taskTools(tool.requestId()).getFirst().equals(tool);
-    }
-
-    private void toggleToolStep(GuideUiRow.Tool tool, boolean task) {
-        GuideViewportAnchor anchor = virtualizer.anchorAt(scroll);
-        if (task) toolStepFolds.toggleTask(taskTools(tool.requestId()));
-        else toolStepFolds.toggle(tool);
-        hits.removeIf(hit -> hit.kind() == HitKind.CONTENT);
-        updateVirtualRows(Math.max(40, layout.transcript().width() - 18));
-        // Folding is an explicit reading action. Keep the current step, not the last transcript row.
-        followBottom = false;
-        restoreTranscript(anchor, false);
     }
 
     private boolean scrollTranscriptKey(int key) {
@@ -1373,7 +1365,7 @@ public final class OpenAllayScreen extends Screen {
         graphics.fill(area.x(), area.y(), area.x() + area.width(), area.y() + area.height(), panelColor());
         graphics.enableScissor(area.x(), area.y(), area.x() + area.width(), area.y() + area.height());
         int textWidth = Math.max(40, area.width() - 18);
-        if (!Objects.equals(toolStepOwner, toolFlowOwner())) updateVirtualRows(textWidth);
+        if (!Objects.equals(toolSummaryOwner, toolFlowOwner())) updateVirtualRows(textWidth);
         int viewportHeight = Math.max(0, area.height() - 14);
         GuideTranscriptVirtualizer.Window window = virtualizer.visible(scroll, viewportHeight, 30);
         int contentTop = area.y() + 7;
@@ -1389,11 +1381,10 @@ public final class OpenAllayScreen extends Screen {
                 int y = contentTop - scroll + virtualizer.offset(index);
                 GuideUiRow row = view.rows().get(index);
                 int bottom = renderRow(graphics, row, area.x() + 9, y, textWidth, mouseX, mouseY);
-                // A collapsed step still has its own actual header and row identity.
+                // Every compact Tool summary retains its own measured row identity.
                 GuideUiLayout.Rect paintedRow = new GuideUiLayout.Rect(area.x() + 9, y, textWidth, bottom - y);
                 renderedRows.put(rowId(row), paintedRow);
-                if (Boolean.getBoolean("openallay.e2e.enabled") && row instanceof GuideUiRow.Tool paintedTool
-                        && intersects(paintedRow, area)) renderedToolIds.add(toolFocusId(paintedTool));
+
             }
         } finally {
             nativeViews.endFrame();
@@ -1501,7 +1492,7 @@ public final class OpenAllayScreen extends Screen {
             return y + rowSpacing();
         }
         if (row instanceof GuideUiRow.Tool tool) {
-            return renderToolStepCard(graphics, tool, x, y, width, mouseX, mouseY);
+            return renderToolSummaryCard(graphics, tool, x, y, width, mouseX, mouseY);
         }
         int color = row instanceof GuideUiRow.Persistence persistence
                 ? persistence.state() == dev.openallay.guide.GuidePersistenceSnapshot.State.UNAVAILABLE
@@ -1537,17 +1528,12 @@ public final class OpenAllayScreen extends Screen {
     }
 
     private void updateVirtualRows(int width) {
-        List<GuideUiRow.Tool> tools = view.rows().stream().filter(GuideUiRow.Tool.class::isInstance)
-                .map(GuideUiRow.Tool.class::cast).toList();
         ToolFlowOwner nextOwner = toolFlowOwner();
-        boolean changedOwner = toolStepFolds.synchronize(
-                nextOwner, tools, projectedDisplay.ui().fullscreen().toolsCollapsed());
-        toolStepOwner = nextOwner;
-        if (changedOwner) {
-            toolStepBodies.keySet().forEach(semanticLayouts::invalidateRow);
-            toolStepBodies.clear();
+        if (!Objects.equals(toolSummaryOwner, nextOwner)) {
             nativeViews.clear();
+            detailNativeViews.clear();
         }
+        toolSummaryOwner = nextOwner;
         ArrayList<GuideTranscriptVirtualizer.Row> measured = new ArrayList<>();
         Map<String, Integer> nextHashes = new LinkedHashMap<>();
         HashSet<String> retainedIds = new HashSet<>();
@@ -1568,11 +1554,6 @@ public final class OpenAllayScreen extends Screen {
                     id, stableRowHeights.retain(id, measureRow(row, width), stabilize)));
         }
         stableRowHeights.retainOnly(retainedIds);
-        toolStepBodies.keySet().removeIf(id -> {
-            if (retainedIds.contains(id)) return false;
-            semanticLayouts.invalidateRow(id);
-            return true;
-        });
         semanticHashes.clear();
         semanticHashes.putAll(nextHashes);
         virtualizer.update(measured);
@@ -1588,175 +1569,151 @@ public final class OpenAllayScreen extends Screen {
             return 11 + body + groupedSources(assistant.sources()).size() * 12 + rowSpacing();
         }
         if (row instanceof GuideUiRow.Tool tool) {
-            return toolStepGeometry(tool, 0, 0, width).rowHeight();
+            return toolSummaryGeometry(tool, 0, 0, width).rowHeight();
         }
         int retryHeight = row instanceof GuideUiRow.Status status && (status.status() == GuideRequestStatus.FAILED
                 || status.status() == GuideRequestStatus.CANCELLED || status.status() == GuideRequestStatus.INTERRUPTED) ? 16 : 0;
         return font.split(factualRowText(row), Math.max(1, width - 12)).size() * 10 + rowSpacing() + retryHeight;
     }
 
-    private ToolStepBody toolStepBody(GuideUiRow.Tool tool) {
-        String id = toolFocusId(tool);
-        String locale = java.util.Locale.getDefault().toLanguageTag() + ":"
-                + System.identityHashCode(net.minecraft.locale.Language.getInstance());
-        ToolStepBody cached = toolStepBodies.get(id);
-        if (cached != null && cached.detail().equals(tool.detail()) && cached.locale().equals(locale)) return cached;
-        List<Component> messages = new ArrayList<>(toolFailureComponents(tool.detail(), tool.activity().toolId()));
-        if (dev.openallay.guide.ui.GuideToolStepFlowPresenter.partial(tool)) {
-            messages.add(Component.translatable("screen.openallay.tools.step.preview"));
-        }
-        dev.openallay.guide.ui.GuideToolStepFlowPresenter.messages(tool).stream()
-                .map(OpenAllayScreen::toolMessage).forEach(messages::add);
-        var nativeBody = dev.openallay.guide.ui.hud.GuideHudToolCards.project(
-                tool, key -> Component.translatable(key).getString());
-        ToolStepBody body = new ToolStepBody(tool.detail(), locale, nativeBody, List.copyOf(messages));
-        toolStepBodies.put(id, body);
-        semanticLayouts.invalidateRow(id);
-        return body;
-    }
-
-    private SemanticLayout toolStepBodyLayout(GuideUiRow.Tool tool, int width) {
-        return semanticLayouts.get(
-                toolFocusId(tool), toolStepBody(tool).nativeBody().document(), Math.max(1, width),
-                toolStepBody(tool).locale(), font.getClass().getName() + ":" + System.identityHashCode(font),
-                new SemanticLayoutEngine.Measurer() {
-                    @Override public int width(String text, SemanticLayout.Style style) {
-                        return font.width(Component.literal(text).withStyle(switch (style) {
-                            case EMPHASIS -> ChatFormatting.ITALIC;
-                            case STRONG -> ChatFormatting.BOLD;
-                            case CODE -> ChatFormatting.GRAY;
-                            case REFERENCE -> ChatFormatting.AQUA;
-                            case NORMAL -> ChatFormatting.WHITE;
-                        }));
-                    }
-                    @Override public int lineHeight(SemanticLayout.Kind kind) {
-                        return kind == SemanticLayout.Kind.HEADING ? 12 : 10;
-                    }
-                });
-    }
-
-    private dev.openallay.guide.ui.GuideToolStepFlowGeometry toolStepGeometry(
+    private dev.openallay.guide.ui.GuideToolSummaryGeometry toolSummaryGeometry(
             GuideUiRow.Tool tool, int x, int y, int width) {
-        int titleWidth = dev.openallay.guide.ui.GuideToolStepFlowGeometry.titleWidth(width);
-        int titleHeight = Math.max(10, font.split(toolTitle(tool.activity()), titleWidth).size() * 10);
-        int statusHeight = Math.max(10, font.split(toolCardStatus(tool.detail().displayStatus()), titleWidth).size() * 10);
-        boolean expanded = toolExpanded(tool);
-        int bodyWidth = dev.openallay.guide.ui.GuideToolStepFlowGeometry.bodyWidth(width);
-        int bodyHeight = expanded ? wrappedHeight(toolStepBody(tool).messages(), bodyWidth)
-                + toolStepBodyLayout(tool, bodyWidth).height() : 0;
-        return dev.openallay.guide.ui.GuideToolStepFlowGeometry.measure(
-                x, y, width, titleHeight, statusHeight, bodyHeight, expanded, rowSpacing());
+        var summary = dev.openallay.guide.ui.GuideToolSummaryPresenter.project(tool);
+        List<Integer> capsules = summary.capsules().stream().map(capsule ->
+                Math.max(22, Math.min(110, 22 + font.width(capsuleLabel(capsule))))).toList();
+        return dev.openallay.guide.ui.GuideToolSummaryGeometry.measure(x, y, width,
+                font.width(Component.translatable(summary.status().translationKey())),
+                capsules, summary.hasDescription(), rowSpacing());
     }
 
-    private int renderToolStepCard(
+    private int renderToolSummaryCard(
             GuiGraphicsExtractor graphics, GuideUiRow.Tool tool, int x, int y,
             int width, int mouseX, int mouseY) {
-        var geometry = toolStepGeometry(tool, x, y, width);
+        var summary = dev.openallay.guide.ui.GuideToolSummaryPresenter.project(tool);
+        var geometry = toolSummaryGeometry(tool, x, y, width);
         GuideUiLayout.Rect card = geometry.card();
-        boolean selected = selectedTool != null && toolFocusId(selectedTool).equals(toolFocusId(tool));
-        int border = selected ? ACCENT : OpenAllayWidgetTheme.SLATE_BORDER;
-        renderToolStepFrame(graphics, card, panelAltColor(), border);
-        renderToolStepLines(graphics, toolTitle(tool.activity()), geometry.title(), TEXT);
-        int statusColor = switch (tool.detail().displayStatus()) {
+        boolean selected = selectedTool != null && toolFocusId(selectedTool).equals(summary.id());
+        boolean hovered = card.contains(mouseX, mouseY) && layout.transcript().contains(mouseX, mouseY);
+        renderToolSummaryFrame(graphics, card, panelAltColor(),
+                selected || hovered ? ACCENT : OpenAllayWidgetTheme.SLATE_BORDER);
+        int statusColor = switch (summary.status()) {
             case FAILED -> ERROR;
             case SUCCEEDED -> OpenAllayWidgetTheme.SUCCESS;
             case RUNNING -> ACCENT;
             case NO_RESULT_RECORDED -> MUTED;
         };
-        Component status = toolCardStatus(tool.detail().displayStatus());
-        if (tool.detail().displayStatus() == GuideToolDisplayStatus.RUNNING
-                && projectedDisplay.animationsEnabled() && (presentationTicks / 8) % 2 == 0) {
-            status = Component.literal("◍ ").append(Component.translatable(tool.detail().displayStatus().translationKey()));
+        String marker = switch (summary.status()) {
+            case FAILED -> "!";
+            case SUCCEEDED -> "✓";
+            case RUNNING -> projectedDisplay.animationsEnabled() && (presentationTicks / 8) % 2 == 0 ? "◍" : "◌";
+            case NO_RESULT_RECORDED -> "—";
+        };
+        graphics.text(font, marker, geometry.icon().x(), geometry.icon().y(), statusColor, false);
+        Component title = intentTitle(tool.detail().intent(), summary.titleKey());
+        renderToolSummaryText(graphics, title, geometry.title(), TEXT, mouseX, mouseY, true);
+        renderToolSummaryText(graphics, Component.translatable(summary.status().translationKey()),
+                geometry.status(), statusColor, mouseX, mouseY, false);
+        if (summary.hasDescription()) {
+            renderToolSummaryText(graphics, Component.literal(summary.description()), geometry.description(),
+                    MUTED, mouseX, mouseY, false);
         }
-        renderToolStepLines(graphics, status, geometry.status(), statusColor);
-        boolean expanded = toolExpanded(tool);
-        String rowId = toolFocusId(tool);
-        Component toggleLabel = Component.translatable(expanded
-                ? "screen.openallay.tools.step.collapse" : "screen.openallay.tools.step.expand");
-        renderToolStepControl(graphics, geometry.toggle(), expanded ? "▲" : "▼", toggleLabel,
-                rowId + ":collapse", () -> toggleToolStep(tool, false), mouseX, mouseY);
-        if (firstTool(tool) && taskTools(tool.requestId()).size() > 1) {
-            boolean anyExpanded = taskTools(tool.requestId()).stream().anyMatch(this::toolExpanded);
-            Component label = Component.translatable(anyExpanded
-                    ? "screen.openallay.tools.task.collapse" : "screen.openallay.tools.task.expand");
-            renderToolStepControl(graphics, geometry.batch(), anyExpanded ? "−" : "+", label,
-                    rowId + ":task-collapse", () -> toggleToolStep(tool, true), mouseX, mouseY);
+        List<String> paintedCapsules = new ArrayList<>();
+        List<Map<String, Object>> capsuleReceipts = new ArrayList<>();
+        for (int index = 0; index < geometry.capsules().size(); index++) {
+            var capsule = summary.capsules().get(index);
+            GuideUiLayout.Rect capsuleBounds = geometry.capsules().get(index);
+            if (renderToolSummaryCapsule(graphics, capsule, capsuleBounds, mouseX, mouseY)) {
+                paintedCapsules.add(capsule.id());
+                if (Boolean.getBoolean("openallay.e2e.enabled")) {
+                    capsuleReceipts.add(toolSummaryCapsuleReceipt(capsule, capsuleBounds));
+                }
+            }
         }
-        // The title opens complete detail. Neither the toggle nor the native body routes through it.
-        toolStepHit(geometry.title(), () -> open(tool), rowId, toolTitle(tool.activity()).getString());
-        if (expanded) {
-            GuideUiLayout.Rect bodyBounds = geometry.body();
-            ToolStepBody body = toolStepBody(tool);
-            renderToolStepBody(graphics, tool, body.nativeBody(),
-                    toolStepBodyLayout(tool, bodyBounds.width()), bodyBounds.x(), bodyBounds.y(),
-                    bodyBounds.width(), mouseX, mouseY);
-            renderToolStepLines(graphics, Component.translatable("screen.openallay.detail.title"),
-                    geometry.detail(), ACCENT);
-            toolStepHit(geometry.detail(), () -> open(tool), rowId + ":detail",
-                    Component.translatable("screen.openallay.detail.title").getString());
+        // Child semantic actions are inserted first. The complete card body then opens real detail.
+        toolSummaryHit(card, () -> open(tool), summary.id(), title.getString() + " · "
+                + Component.translatable("screen.openallay.tool.view_details").getString());
+        if (Boolean.getBoolean("openallay.e2e.enabled") && intersects(card, layout.transcript())) {
+            renderedToolIds.add(summary.id());
+            GuideUiLayout.Rect viewport = layout.transcript();
+            int visibleTop = Math.max(card.y(), viewport.y());
+            int visibleBottom = Math.min(card.bottom(), viewport.bottom());
+            Map<String, Object> receipt = new LinkedHashMap<>();
+            receipt.put("id", summary.id());
+            receipt.put("title", title.getString());
+            receipt.put("description", summary.description());
+            receipt.put("status", summary.status().name());
+            receipt.put("rowHeight", geometry.rowHeight());
+            receipt.put("capsuleIds", List.copyOf(paintedCapsules));
+            receipt.put("capsules", List.copyOf(capsuleReceipts));
+            receipt.put("bounds", toolPaintBounds(card));
+            receipt.put("titleBounds", toolPaintBounds(geometry.title()));
+            receipt.put("blankClickX", card.x() + 2);
+            receipt.put("blankClickY", visibleTop + (visibleBottom - visibleTop) / 2);
+            renderedToolSummaries.add(Map.copyOf(receipt));
         }
-        // Consume inert slots and card padding after real native actions. Never click into the game.
-        toolStepHit(card, () -> {}, null, "");
         return y + geometry.rowHeight();
     }
 
-    private int renderToolStepBody(
-            GuiGraphicsExtractor graphics, GuideUiRow.Tool tool,
-            dev.openallay.guide.ui.hud.GuideHudToolCards.Projection body,
-            SemanticLayout bodyLayout, int x, int y, int width, int mouseX, int mouseY) {
-        for (Component message : toolStepBody(tool).messages()) {
-            for (FormattedCharSequence line : font.split(message, Math.max(1, width))) {
-                graphics.text(font, line, x, y, tool.detail().failure().isPresent() ? ERROR : MUTED, false);
-                y += 10;
-            }
+    private boolean renderToolSummaryCapsule(
+            GuiGraphicsExtractor graphics, dev.openallay.guide.ui.GuideToolSummaryPresenter.Capsule capsule,
+            GuideUiLayout.Rect bounds, int mouseX, int mouseY) {
+        boolean hovered = bounds.contains(mouseX, mouseY) || isFocused(focusedContentId, capsule.id());
+        renderToolSummaryFrame(graphics, bounds, panelColor(), hovered ? ACCENT : OpenAllayWidgetTheme.SLATE_BORDER);
+        GuideItemView item = capsule.item();
+        ItemStack stack = itemStack(item.itemId(), item.count());
+        if (!stack.isEmpty()) {
+            graphics.item(stack, bounds.x() + 1, bounds.y());
+            graphics.itemDecorations(font, stack, bounds.x() + 1, bounds.y());
         }
-        int nativeBodyTop = y;
-        MinecraftSemanticRenderer.Result rendered = semanticRenderer.render(
-                graphics, font, bodyLayout, x, nativeBodyTop, width, mouseX, mouseY,
-                projectedDisplay.animationsEnabled(), presentationTicks,
-                (nativeGraphics, nativeFont, component, bounds, nativeMouseX, nativeMouseY, ticks) -> {
-                    GuideRecipeCard recipe = body.recipes().get(component.nodeId());
-                    if (recipe == null || !intersects(bounds, layout.transcript())) return false;
-                    NativeDomainViewBinding.Recipe binding = new NativeDomainViewBinding.Recipe(
-                            toolFocusId(tool) + ":card:" + component.nodeId(), component, recipe);
-                    boolean painted = nativeViews.render(binding, new NativeDomainView.RenderContext(
-                            nativeGraphics, nativeFont, bounds, nativeMouseX, nativeMouseY, ticks));
-                    if (painted && Boolean.getBoolean("openallay.e2e.enabled")) {
-                        renderedResultCardIds.add(binding.stableId());
-                    }
-                    return painted;
-                });
-        // Keep actual item icons inside restrained native slots, without copying the renderer.
-        int lineY = nativeBodyTop;
-        for (SemanticLayout.Line line : bodyLayout.lines()) {
-            if (line.component() instanceof dev.openallay.guide.semantic.RichComponent.ItemRow items) {
-                for (int item = 0; item < items.items().size(); item++) {
-                    graphics.outline(x + line.indent() + 1, lineY + item * 22 - 1,
-                            18, 18, OpenAllayWidgetTheme.SLATE_BORDER);
-                }
-            }
-            if (Boolean.getBoolean("openallay.e2e.enabled")
-                    && line.kind() != SemanticLayout.Kind.RULE
-                    && !(line.component() instanceof dev.openallay.guide.semantic.RichComponent.RecipeGrid)) {
-                int lineWidth = line.table() != null ? line.table().width() : Math.max(1, width - line.indent());
-                GuideUiLayout.Rect paintedNode = new GuideUiLayout.Rect(
-                        x + line.indent(), lineY, lineWidth, line.height());
-                String cardId = toolFocusId(tool) + ":card:" + line.nodeId();
-                if (intersects(paintedNode, layout.transcript()) && !renderedResultCardIds.contains(cardId)) {
-                    renderedResultCardIds.add(cardId);
-                }
-            }
-            lineY += line.height();
+        renderToolSummaryText(graphics, Component.literal(capsuleLabel(capsule)),
+                new GuideUiLayout.Rect(bounds.x() + 20, bounds.y() + 3, Math.max(1, bounds.width() - 22), 10),
+                TEXT, mouseX, mouseY, false);
+        if (bounds.contains(mouseX, mouseY) && layout.transcript().contains(mouseX, mouseY) && !stack.isEmpty()) {
+            graphics.setTooltipForNextFrame(font, stack, mouseX, mouseY);
         }
-        // Receipts include only the native typed result layout drawn above, never message narration.
-        for (MinecraftSemanticRenderer.Hit hit : rendered.hits()) {
-            toolStepHit(hit.bounds(), () -> semanticIntent(hit.intent()),
-                    toolFocusId(tool) + ":native:" + hit.intent(), semanticIntentNarration(hit.intent()));
-        }
-        return rendered.bottom();
+        MinecraftSemanticRenderer.Intent intent = toolSummaryCapsuleIntent(capsule);
+        toolSummaryHit(bounds, () -> semanticIntent(intent), capsule.id(), semanticIntentNarration(intent));
+        boolean painted = !stack.isEmpty() && intersects(bounds, layout.transcript());
+        if (painted && Boolean.getBoolean("openallay.e2e.enabled")) renderedSummaryCapsuleIds.add(capsule.id());
+        return painted;
     }
 
-    private void toolStepHit(GuideUiLayout.Rect bounds, Runnable action, String id, String narration) {
+    private MinecraftSemanticRenderer.Intent toolSummaryCapsuleIntent(
+            dev.openallay.guide.ui.GuideToolSummaryPresenter.Capsule capsule) {
+        return switch (capsule) {
+            case dev.openallay.guide.ui.GuideToolSummaryPresenter.Item value ->
+                    new MinecraftSemanticRenderer.Intent.BrowseRecipes(value.item().itemId());
+            case dev.openallay.guide.ui.GuideToolSummaryPresenter.Recipe value ->
+                    new MinecraftSemanticRenderer.Intent.ExactRecipe(value.recipe().references().stream()
+                            .filter(recipeClient::supportsExact).findFirst().orElse(value.recipe().reference()));
+        };
+    }
+
+    private Map<String, Object> toolSummaryCapsuleReceipt(
+            dev.openallay.guide.ui.GuideToolSummaryPresenter.Capsule capsule, GuideUiLayout.Rect bounds) {
+        Map<String, Object> receipt = new LinkedHashMap<>();
+        receipt.put("id", capsule.id());
+        receipt.put("originInvocationId", capsule.originInvocationId());
+        receipt.put("bounds", toolPaintBounds(bounds));
+        receipt.put("itemId", capsule.item().itemId());
+        MinecraftSemanticRenderer.Intent intent = toolSummaryCapsuleIntent(capsule);
+        if (intent instanceof MinecraftSemanticRenderer.Intent.ExactRecipe exact) {
+            receipt.put("action", "ExactRecipe");
+            receipt.put("reference", exact.reference());
+        } else receipt.put("action", "BrowseRecipes");
+        return Map.copyOf(receipt);
+    }
+
+    private static Map<String, Integer> toolPaintBounds(GuideUiLayout.Rect bounds) {
+        return Map.of("x", bounds.x(), "y", bounds.y(), "width", bounds.width(), "height", bounds.height());
+    }
+
+    private static String capsuleLabel(dev.openallay.guide.ui.GuideToolSummaryPresenter.Capsule capsule) {
+        GuideItemView item = capsule.item();
+        return item.displayName() + (item.count() > 1 ? " ×" + item.count() : "");
+    }
+
+    private void toolSummaryHit(GuideUiLayout.Rect bounds, Runnable action, String id, String narration) {
         GuideUiLayout.Rect viewport = layout.transcript();
         int left = Math.max(bounds.x(), viewport.x());
         int top = Math.max(bounds.y(), viewport.y());
@@ -1768,79 +1725,29 @@ public final class OpenAllayScreen extends Screen {
         }
     }
 
-    private void renderToolStepControl(
-            GuiGraphicsExtractor graphics, GuideUiLayout.Rect bounds, String icon,
-            Component label, String id, Runnable action, int mouseX, int mouseY) {
-        boolean hovered = bounds.contains(mouseX, mouseY) || isFocused(focusedContentId, id);
-        if (hovered) renderToolStepFrame(graphics, bounds, panelColor(), ACCENT);
-        graphics.text(font, icon, bounds.x() + (bounds.width() - font.width(icon)) / 2,
-                bounds.y() + 4, hovered ? ACCENT : MUTED, false);
+    private void renderToolSummaryText(
+            GuiGraphicsExtractor graphics, Component text, GuideUiLayout.Rect bounds, int color,
+            int mouseX, int mouseY, boolean detailHint) {
+        String full = text.getString();
+        int available = Math.max(1, bounds.width());
+        String visible = font.width(text) <= available ? full
+                : font.plainSubstrByWidth(full, Math.max(0, available - font.width("…")))
+                        + (available >= font.width("…") ? "…" : "");
+        graphics.text(font, visible, bounds.x(), bounds.y(), color, false);
         if (bounds.contains(mouseX, mouseY) && layout.transcript().contains(mouseX, mouseY)) {
-            graphics.setTooltipForNextFrame(font, label, mouseX, mouseY);
-        }
-        toolStepHit(bounds, action, id, label.getString());
-    }
-
-    private void renderToolStepLines(
-            GuiGraphicsExtractor graphics, Component text, GuideUiLayout.Rect bounds, int color) {
-        int y = bounds.y();
-        for (FormattedCharSequence line : font.split(text, Math.max(1, bounds.width()))) {
-            graphics.text(font, line, bounds.x(), y, color, false);
-            y += 10;
+            Component tooltip = detailHint ? text.copy().append("\n")
+                    .append(Component.translatable("screen.openallay.tool.view_details")) : text;
+            graphics.setTooltipForNextFrame(font, tooltip, mouseX, mouseY);
         }
     }
 
-    private static void renderToolStepFrame(
+    private static void renderToolSummaryFrame(
             GuiGraphicsExtractor graphics, GuideUiLayout.Rect bounds, int fill, int border) {
         int x = bounds.x(), y = bounds.y(), right = bounds.right(), bottom = bounds.bottom();
-        // Two-pixel clipped corners keep the expert's rounded sub-card treatment native to Minecraft.
         graphics.fill(x + 2, y, right - 2, bottom, border);
         graphics.fill(x, y + 2, right, bottom - 2, border);
         graphics.fill(x + 2, y + 1, right - 2, bottom - 1, fill);
         graphics.fill(x + 1, y + 2, right - 1, bottom - 2, fill);
-    }
-
-    private List<FormattedCharSequence> toolSummaryLines(GuideUiRow.Tool tool, int width) {
-        ArrayList<FormattedCharSequence> result = new ArrayList<>();
-        for (Component message : toolSummaryComponents(tool.activity(), tool.detail())) {
-            for (FormattedCharSequence wrapped : font.split(message, Math.max(1, width))) {
-                result.add(wrapped);
-                if (result.size() == 3) return List.copyOf(result);
-            }
-        }
-        return List.copyOf(result);
-    }
-
-    static List<Component> toolSummaryComponents(GuideToolActivity activity) {
-        return toolSummaryComponents(activity, GuideToolDisplayStatus.from(activity.status(), false));
-    }
-
-    static List<Component> toolSummaryComponents(
-            GuideToolActivity activity, GuideToolDisplayStatus status) {
-        GuideToolDetailView detail = dev.openallay.guide.ui.GuideToolDetailPresenter.project(activity, false);
-        return toolSummaryComponents(activity, detail.forRequest(status == GuideToolDisplayStatus.NO_RESULT_RECORDED));
-    }
-
-    private static List<Component> toolSummaryComponents(GuideToolActivity activity, GuideToolDetailView detail) {
-        ArrayList<Component> summary = new ArrayList<>();
-        GuideToolDisplayStatus status = detail.displayStatus();
-        boolean actualFailure = detail.failure().isPresent();
-        if (actualFailure) summary.addAll(toolFailureComponents(detail, activity.toolId()));
-        boolean javascript = activity.toolId().endsWith(":run_javascript");
-        List<GuideToolMessage> messages = javascript && status == GuideToolDisplayStatus.SUCCEEDED
-                && !actualFailure && activity.normalized() != null
-                ? detail.narration() : activity.presentationMessages();
-        for (GuideToolMessage message : messages) {
-            if (actualFailure && message.key().name().startsWith("FAILURE_")) continue;
-            if ((actualFailure || status == GuideToolDisplayStatus.FAILED)
-                    && message.key().name().startsWith("ANALYSIS_")) continue;
-            if (javascript && message.key() == GuideToolMessage.Key.INVOCATION_RUN_JAVASCRIPT) continue;
-            if (status == GuideToolDisplayStatus.NO_RESULT_RECORDED
-                    && message.key() == GuideToolMessage.Key.RESULT_PENDING) continue;
-            summary.add(friendlyToolMessage(activity.toolId(), message));
-        }
-        if (javascript) summary.add(toolDescription(activity.intent()));
-        return List.copyOf(summary);
     }
 
     static List<Component> toolFailureComponents(GuideToolDetailView detail, String toolId) {
@@ -1871,25 +1778,11 @@ public final class OpenAllayScreen extends Screen {
                 ? List.of() : detail.narration();
     }
 
-    static List<GuideToolMessage> visibleToolSummaryMessages(
-            List<GuideToolMessage> messages) {
-        return messages.stream()
-                .limit(3)
-                .toList();
-    }
-
     static Component toolMessage(GuideToolMessage message) {
         Object[] arguments = message.arguments().stream()
                 .map(Component::literal)
                 .toArray();
         return Component.translatable(message.key().translationKey(), arguments);
-    }
-
-    static int toolCardHeight(int visibleSummaryLines) {
-        if (visibleSummaryLines < 0 || visibleSummaryLines > 3) {
-            throw new IllegalArgumentException("visible Tool summary line count must be 0..3");
-        }
-        return 21 + visibleSummaryLines * 10;
     }
 
     private int wrappedHeight(List<Component> paragraphs, int width) {
@@ -2053,6 +1946,15 @@ public final class OpenAllayScreen extends Screen {
     }
 
     private void renderDetail(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+        detailNativeViews.beginFrame();
+        try {
+            renderDetailContent(graphics, mouseX, mouseY);
+        } finally {
+            detailNativeViews.endFrame();
+        }
+    }
+
+    private void renderDetailContent(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         if (!detailOpen()) return;
         hits.removeIf(hit -> hit.kind() == HitKind.DETAIL);
         GuideUiLayout.Rect detail = layout.detail();
@@ -2076,6 +1978,7 @@ public final class OpenAllayScreen extends Screen {
         int y = detail.y() + 26 - detailScroll;
         if (selectedTool != null) {
             GuideToolDetailView toolDetail = selectedTool.detail();
+            if (Boolean.getBoolean("openallay.e2e.enabled")) renderedDetailToolId = toolFocusId(selectedTool);
             y = detailLine(graphics,
                     Component.translatable("screen.openallay.detail.tool.status").getString()
                             + ": " + Component.translatable(toolDetail.displayStatus().translationKey()).getString(),
@@ -2094,11 +1997,12 @@ public final class OpenAllayScreen extends Screen {
                         }
                         for (int cardIndex = 0; cardIndex < toolDetail.cards().size(); cardIndex++) {
                             GuideDetailCard card = toolDetail.cards().get(cardIndex);
-                            int cardTop = y;
-                            y = detailCard(graphics, card, detail, y, mouseX, mouseY);
-                            if (Boolean.getBoolean("openallay.e2e.enabled") && visibleDetail(cardTop, y - cardTop, detail)) {
-                                renderedResultCardIds.add(toolFocusId(selectedTool) + ":card:" + cardIndex
-                                        + ":" + card.getClass().getSimpleName());
+                            long paintBefore = detailCardPaintSerial;
+                            String cardId = toolFocusId(selectedTool) + ":card:" + cardIndex
+                                    + ":" + card.getClass().getSimpleName();
+                            y = detailCard(graphics, card, cardId, detail, y, mouseX, mouseY);
+                            if (Boolean.getBoolean("openallay.e2e.enabled") && detailCardPaintSerial > paintBefore) {
+                                renderedDetailCardIds.add(cardId);
                             }
                         }
                     }
@@ -2111,7 +2015,7 @@ public final class OpenAllayScreen extends Screen {
                     case INTENT -> {
                         y = detailLine(graphics, Component.translatable("screen.openallay.tool.intent.label"), detail, y + 4);
                         y = detailLine(graphics, intentTitle(toolDetail.intent(), toolDetail.titleKey()), detail, y);
-                        if (selectedTool.activity().toolId().endsWith(":run_javascript")) {
+                        if (!toolDetail.intent().description().isBlank()) {
                             y = detailLine(graphics, toolDescription(toolDetail.intent()), detail, y);
                         }
                     }
@@ -2153,6 +2057,11 @@ public final class OpenAllayScreen extends Screen {
             y = sourceGroup(graphics, selectedSource, detail, y, "selected-source");
         }
         detailContentHeight = Math.max(0, y + detailScroll - detail.y());
+        int clampedScroll = Mth.clamp(detailScroll, 0, maximumDetailScroll());
+        if (clampedScroll != detailScroll) {
+            detailScroll = clampedScroll;
+            hits.removeIf(hit -> hit.kind() == HitKind.DETAIL && !"detail:close".equals(hit.focusId()));
+        }
         graphics.disableScissor();
     }
 
@@ -2202,13 +2111,14 @@ public final class OpenAllayScreen extends Screen {
     private int detailCard(
             GuiGraphicsExtractor graphics,
             GuideDetailCard card,
+            String cardId,
             GuideUiLayout.Rect detail,
             int y,
             int mouseX,
             int mouseY) {
         return switch (card) {
             case GuideDetailCard.Recipe recipe ->
-                    recipeCard(graphics, recipe.recipe(), detail, y, mouseX, mouseY);
+                    recipeCard(graphics, recipe.recipe(), cardId, detail, y, mouseX, mouseY);
             case GuideDetailCard.ItemGrid grid ->
                     itemGridCard(graphics, grid, detail, y, mouseX, mouseY);
             case GuideDetailCard.Requirements requirements ->
@@ -2280,6 +2190,7 @@ public final class OpenAllayScreen extends Screen {
         int height = 22 + rows * 22;
         int left = detail.x() + 6;
         if (visibleDetail(y, height, detail)) {
+            detailCardPaintSerial++;
             graphics.fill(left, y, detail.x() + detail.width() - 6, y + height, panelAltColor());
             graphics.text(font, Component.translatable(card.titleKey()), left + 7, y + 6, TEXT, false);
             for (int index = 0; index < card.items().size(); index++) {
@@ -2301,6 +2212,7 @@ public final class OpenAllayScreen extends Screen {
         int height = 31 + Math.max(1, card.requirements().size()) * 31;
         int left = detail.x() + 6;
         if (visibleDetail(y, height, detail)) {
+            detailCardPaintSerial++;
             graphics.fill(left, y, detail.x() + detail.width() - 6, y + height, panelAltColor());
             String state = card.craftable()
                     ? Component.translatable("screen.openallay.craftability.ready").getString()
@@ -2361,102 +2273,59 @@ public final class OpenAllayScreen extends Screen {
     }
 
     private int recipeCard(
-            GuiGraphicsExtractor graphics,
-            GuideRecipeCard card,
-            GuideUiLayout.Rect detail,
-            int y,
-            int mouseX,
-            int mouseY) {
-        boolean canBrowse = recipeClient.canBrowse();
-        int ingredientCount = card.ingredients().size() + card.catalysts().size();
-        int materialRows = ingredientCount == 0 ? 0 : (ingredientCount + 7) / 8;
-        int byproductRows = card.byproducts().isEmpty() ? 0 : (card.byproducts().size() + 7) / 8;
-        int height = (canBrowse ? 62 : 74) + materialRows * 23 + byproductRows * 23;
-        if (visibleDetail(y, height, detail)) {
-            int left = detail.x() + 6;
-            int right = detail.x() + detail.width() - 6;
-            graphics.fill(left, y, right, y + height, panelAltColor());
-            graphics.outline(left, y, right - left, height, 0xFF46515F);
-            GuideRecipeCard.Output output = card.outputs().getFirst();
-            ItemStack stack = itemStack(output);
-            if (!stack.isEmpty()) {
-                graphics.item(stack, left + 7, y + 7);
-                graphics.itemDecorations(font, stack, left + 7, y + 7);
-                if (mouseX >= left + 7 && mouseX < left + 23
-                        && mouseY >= y + 7 && mouseY < y + 23) {
-                    graphics.setTooltipForNextFrame(font, stack, mouseX, mouseY);
-                }
-            }
-            graphics.text(font, output.displayName(), left + 29, y + 7, TEXT, false);
-            if (!card.workstation().isBlank()) {
-                graphics.text(font,
-                        Component.translatable("screen.openallay.recipe.workstation", card.workstation()),
-                        left + 29,
-                        y + 20,
-                        MUTED,
-                        false);
-            }
-            int rowY = y + 34;
-            int materialIndex = 0;
-            for (GuideRecipeCard.Ingredient ingredient : card.ingredients()) {
-                GuideItemView item = ingredientItem(ingredient);
-                renderItem(graphics, item, left + 7 + (materialIndex % 8) * 22,
-                        rowY + (materialIndex / 8) * 23, mouseX, mouseY);
-                materialIndex++;
-            }
-            for (GuideRecipeCard.Ingredient catalyst : card.catalysts()) {
-                GuideItemView item = ingredientItem(catalyst);
-                renderItem(graphics, item, left + 7 + (materialIndex % 8) * 22,
-                        rowY + (materialIndex / 8) * 23, mouseX, mouseY);
-                materialIndex++;
-            }
-            rowY += materialRows * 23;
-            for (int index = 0; index < card.byproducts().size(); index++) {
-                GuideRecipeCard.Output outputView = card.byproducts().get(index);
-                renderItem(graphics,
-                        new GuideItemView(outputView.itemId(), outputView.displayName(), outputView.count()),
-                        left + 7 + (index % 8) * 22,
-                        rowY + (index / 8) * 23,
-                        mouseX,
-                        mouseY);
-            }
-            int actionY = y + 44 + materialRows * 23 + byproductRows * 23;
-            int actionX = left + 7;
-            actionX = recipeAction(
-                    graphics,
-                    Component.translatable("screen.openallay.recipe.recipes"),
-                    actionX,
-                    actionY,
-                    canBrowse,
-                    () -> navigate(recipeClient.openRecipes(output.itemId())));
-            actionX = recipeAction(
-                    graphics,
-                    Component.translatable("screen.openallay.recipe.usages"),
-                    actionX + 7,
-                    actionY,
-                    canBrowse,
-                    () -> navigate(recipeClient.openUsages(output.itemId())));
-            var exact = card.references().stream().filter(recipeClient::supportsExact).findFirst();
-            recipeAction(
-                    graphics,
-                    Component.translatable(exact.isPresent()
-                            ? "screen.openallay.recipe.open_exact"
-                            : "screen.openallay.recipe.open_exact_unavailable"),
-                    actionX + 7,
-                    actionY,
-                    exact.isPresent(),
-                    () -> navigate(recipeClient.openExact(exact.orElseThrow())));
-            if (!canBrowse) {
-                graphics.text(
-                        font,
-                        Component.translatable("screen.openallay.recipe.viewer_unavailable"),
-                        left + 7,
-                        actionY + 14,
-                        0xFFFFD479,
-                        false);
+            GuiGraphicsExtractor graphics, GuideRecipeCard card, String cardId,
+            GuideUiLayout.Rect detail, int y, int mouseX, int mouseY) {
+        int left = detail.x() + 6;
+        int canvasWidth = Math.max(1, detail.width() - 12);
+        int canvasHeight = 126;
+        if (visibleDetail(y, canvasHeight, detail)) {
+            String label = card.outputs().isEmpty() ? card.id() : card.outputs().getFirst().displayName();
+            var component = new dev.openallay.guide.semantic.RichComponent.RecipeGrid(
+                    toolDetailRecipeNodeId(cardId), card.reference(), selectedTool.activity().invocationId(), label, label, label);
+            NativeDomainViewBinding.Recipe binding = new NativeDomainViewBinding.Recipe(cardId, component, card);
+            boolean painted = detailNativeViews.render(binding, new NativeDomainView.RenderContext(
+                    graphics, font, new GuideUiLayout.Rect(left, y, canvasWidth, canvasHeight),
+                    mouseX, mouseY, presentationTicks));
+            if (painted) detailCardPaintSerial++;
+            if (painted && Boolean.getBoolean("openallay.e2e.enabled")) {
+                renderedDetailNativeRecipeIds.add(binding.stableId());
+                renderedResultCardIds.add(binding.stableId());
             }
         }
-        return y + height + 5;
+        y += canvasHeight + 5;
+        // The native canvas is bounded. These scrollable lines preserve every stored player fact.
+        for (var line : dev.openallay.guide.ui.GuideRecipeDetailFacts.project(card)) {
+            Object[] arguments = line.arguments().stream().map(Component::literal).toArray();
+            y = detailLine(graphics, Component.translatable(line.key(), arguments), detail, y);
+        }
+        for (GuideRecipeCard.Output output : card.outputs()) {
+            y = detailLine(graphics, Component.literal(output.displayName() + " ×" + output.count()), detail, y + 3);
+            int actionX = left + 7;
+            actionX = recipeAction(graphics, Component.translatable("screen.openallay.recipe.recipes"),
+                    actionX, y + 2, recipeClient.canBrowse(), () -> navigate(recipeClient.openRecipes(output.itemId())));
+            recipeAction(graphics, Component.translatable("screen.openallay.recipe.usages"),
+                    actionX + 7, y + 2, recipeClient.canBrowse(), () -> navigate(recipeClient.openUsages(output.itemId())));
+            y += 16;
+        }
+        var exact = card.references().stream().filter(recipeClient::supportsExact).findFirst();
+        recipeAction(graphics, Component.translatable(exact.isPresent()
+                        ? "screen.openallay.recipe.open_exact" : "screen.openallay.recipe.open_exact_unavailable"),
+                left + 7, y + 2, exact.isPresent(), () -> navigate(recipeClient.openExact(exact.orElseThrow())));
+        y += 16;
+        if (!recipeClient.canBrowse()) {
+            y = detailLine(graphics, Component.translatable("screen.openallay.recipe.viewer_unavailable")
+                    .withStyle(ChatFormatting.YELLOW), detail, y);
+        }
+        return y + 5;
+    }
+
+    private static String toolDetailRecipeNodeId(String cardId) {
+        try {
+            return java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256")
+                    .digest(cardId.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        } catch (java.security.NoSuchAlgorithmException impossible) {
+            throw new IllegalStateException("SHA-256 is unavailable", impossible);
+        }
     }
 
     private int recipeAction(
@@ -2482,10 +2351,6 @@ public final class OpenAllayScreen extends Screen {
         return x + width;
     }
 
-    private static ItemStack itemStack(GuideRecipeCard.Output output) {
-        return itemStack(output.itemId(), output.count());
-    }
-
     private static ItemStack itemStack(String itemId, long count) {
         Identifier id = Identifier.tryParse(itemId);
         if (id == null || !BuiltInRegistries.ITEM.containsKey(id)) {
@@ -2493,14 +2358,6 @@ public final class OpenAllayScreen extends Screen {
         }
         return new ItemStack(BuiltInRegistries.ITEM.getValue(id),
                 (int) Math.min(Integer.MAX_VALUE, Math.max(1, count)));
-    }
-
-    private static GuideItemView ingredientItem(GuideRecipeCard.Ingredient ingredient) {
-        GuideRecipeCard.Alternative alternative = ingredient.alternatives().getFirst();
-        String itemId = alternative.resolvedItems().isEmpty()
-                ? alternative.id()
-                : alternative.resolvedItems().getFirst();
-        return new GuideItemView(itemId, itemId, ingredient.count());
     }
 
     private void renderItem(
@@ -2523,7 +2380,7 @@ public final class OpenAllayScreen extends Screen {
     }
 
     private static boolean visibleDetail(int y, int height, GuideUiLayout.Rect detail) {
-        return y + height >= detail.y() + 21 && y <= detail.y() + detail.height();
+        return y + height > detail.y() + 21 && y < detail.bottom();
     }
 
     private void navigate(RecipeNavigationResult result) {
@@ -2655,6 +2512,7 @@ public final class OpenAllayScreen extends Screen {
         for (FormattedCharSequence line : font.split(text, detail.width() - 16)) {
             if (y >= detail.y() + 21 && y < detail.y() + detail.height() - 10) {
                 graphics.text(font, line, detail.x() + 8, y, TEXT, false);
+                detailCardPaintSerial++;
             }
             y += 10;
         }
@@ -2721,6 +2579,8 @@ public final class OpenAllayScreen extends Screen {
     }
 
     private void closeDetail() {
+        hits.removeIf(hit -> hit.kind() == HitKind.CONTENT || hit.kind() == HitKind.DETAIL);
+        detailNativeViews.clear();
         selectedTool = null;
         selectedSource = null;
         selectedSourceFocusId = null;
@@ -2738,6 +2598,7 @@ public final class OpenAllayScreen extends Screen {
     }
 
     private void open(GuideUiRow.Tool tool) {
+        hits.removeIf(hit -> hit.kind() == HitKind.CONTENT || hit.kind() == HitKind.DETAIL);
         selectedTool = tool;
         selectedSource = null;
         selectedSourceFocusId = null;
@@ -2761,6 +2622,7 @@ public final class OpenAllayScreen extends Screen {
     }
 
     private void open(GuideEvidencePresentation.Group source, String focusId) {
+        hits.removeIf(hit -> hit.kind() == HitKind.CONTENT || hit.kind() == HitKind.DETAIL);
         selectedSource = source;
         selectedSourceFocusId = Objects.requireNonNull(focusId, "focusId");
         selectedTool = null;
@@ -2894,6 +2756,7 @@ public final class OpenAllayScreen extends Screen {
             semanticHashes.clear();
             stableRowHeights.clear();
             nativeViews.clear();
+            detailNativeViews.clear();
         }
         if ((changedSession || closedDetail || changedChrome) && composer != null) {
             if (!changedSession) draft = composer.getValue();
@@ -3229,9 +3092,10 @@ public final class OpenAllayScreen extends Screen {
         GuideClientUiState.IntentCapture capturedIntent = uiState.captureIntent(view.selectedSession());
         if (!uiState.beginIntentSubmission(capturedIntent)) return;
         submittingDraft = true;
+        GuideClientUiState.SubmissionRoute capturedRoute = GuideClientUiState.submissionRoute(capturedIntent.intent(), active);
         CompletableFuture<? extends ToolResult<?>> future;
         try {
-            future = switch (GuideClientUiState.submissionRoute(capturedIntent.intent(), active)) {
+            future = switch (capturedRoute) {
             case EDIT_PENDING -> service.editPending(pendingId, message);
             case STEER -> service.steer(message);
             case FOLLOW_UP -> service.followUp(message);
@@ -3263,11 +3127,14 @@ public final class OpenAllayScreen extends Screen {
                 if (failure != null) {
                     notice = GuideUiNotice.error(Component.translatable("screen.openallay.composer.submit_failed").getString());
                 } else if (accepted) {
-                    notice = GuideUiNotice.info("");
+                    notice = GuideUiNotice.acceptedSubmission(capturedRoute, pendingId, result,
+                            service.snapshot(), images.session());
                 } else if (pendingId != null && result instanceof ToolResult.Success<?>) {
                     notice = GuideUiNotice.warning(Component.translatable("screen.openallay.pending.already_consumed").getString());
                 } else if (result instanceof ToolResult.Failure<?> rejected) {
                     notice = GuideUiNotice.error(rejected.code() + ": " + rejected.message());
+                } else {
+                    notice = GuideUiNotice.error(Component.translatable("screen.openallay.composer.submit_failed").getString());
                 }
                 sharedDraftChanged();
                 refreshComposerLayout();
@@ -3290,7 +3157,7 @@ public final class OpenAllayScreen extends Screen {
 
     static boolean submissionAccepted(boolean editing, ToolResult<?> result) {
         return result instanceof ToolResult.Success<?> success
-                && (!editing || Boolean.TRUE.equals(success.value()));
+                && (editing ? Boolean.TRUE.equals(success.value()) : success.value() instanceof UUID);
     }
 
     private void cancel() {
@@ -3849,9 +3716,7 @@ public final class OpenAllayScreen extends Screen {
     }
 
     static Component toolDescription(dev.openallay.guide.GuideToolIntent intent) {
-        return intent.description().isEmpty()
-                ? Component.translatable("screen.openallay.tool.intent.run_javascript.description")
-                : Component.literal(intent.description());
+        return intent.description().isEmpty() ? Component.empty() : Component.literal(intent.description());
     }
 
     static Component toolCardStatus(GuideToolDisplayStatus status) {
@@ -3863,14 +3728,6 @@ public final class OpenAllayScreen extends Screen {
         };
         return Component.literal(icon + " ")
                 .append(Component.translatable(status.translationKey()));
-    }
-
-    static Component toolCardTitle(GuideToolActivity activity) {
-        var title = Component.empty();
-        if (!activity.intent().empty()) {
-            title.append(Component.translatable("screen.openallay.tool.intent.label")).append(": ");
-        }
-        return title.append(toolTitle(activity));
     }
 
     private static Component friendlyTool(String id) {

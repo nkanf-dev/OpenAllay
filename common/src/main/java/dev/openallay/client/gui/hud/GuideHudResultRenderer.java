@@ -67,12 +67,23 @@ public final class GuideHudResultRenderer implements AutoCloseable {
     private final GuideHudScrollState scroll = new GuideHudScrollState();
     private final NativeDomainViewRegistry nativeViews = new NativeDomainViewRegistry();
     private final List<Hit> hits = new ArrayList<>();
+    private long hitEpoch;
+    private PaintedHits paintedHits;
+    /** Identity and geometry of the actual interactive extraction, not a synthetic fresh frame. */
+    record PaintedHits(long epoch, Object font, Object language, GuideUiLayout.Rect viewport, int offset) {
+        boolean current(long currentEpoch, Object currentFont, Object currentLanguage,
+                GuideUiLayout.Rect currentViewport, int currentOffset) {
+            return epoch == currentEpoch && font == currentFont && language == currentLanguage
+                    && viewport.equals(currentViewport) && offset == currentOffset;
+        }
+    }
     private List<Row> rows = List.of();
     private List<GuideUiRow> sourceRows;
     private Font cachedFont;
     private Language cachedLanguage;
     private GuideUiConfig.Fullscreen cachedPresentation;
     private String cachedAssistantName;
+    private String cachedSession;
     private int cachedWidth = -1;
     private int cachedHeight = -1;
     private String selectedTool;
@@ -84,16 +95,22 @@ public final class GuideHudResultRenderer implements AutoCloseable {
 
     public GuideHudScrollState scroll() { return scroll; }
     public Receipt receipt() { return receipt; }
-    public List<Hit> hits() { return List.copyOf(hits); }
+    public List<Hit> hits() { return hits(cachedFont, paintedHits == null ? null : paintedHits.viewport()); }
+    public List<Hit> hits(Font font, GuideUiLayout.Rect viewport) {
+        return paintedHits != null && paintedHits.current(hitEpoch, font, Language.getInstance(), viewport, scroll.offset())
+                ? List.copyOf(hits) : List.of();
+    }
     public boolean detailOpen() { return selectedTool != null || !selectedSources.isEmpty(); }
     public void openTool(String id) { selectedTool = id; selectedSources = List.of(); invalidate(); scroll.first(); }
     public void openSources(List<GuideSource> sources) { selectedSources = List.copyOf(sources); selectedTool = null; invalidate(); scroll.first(); }
     public void back() { selectedTool = null; selectedSources = List.of(); invalidate(); scroll.first(); }
     public void tick() { nativeViews.tick(); }
-    public void releaseNativeViews() { nativeViews.clear(); }
-    public void invalidate() { sourceRows = null; layouts.clear(); nativeViews.clear(); }
+    public void releaseNativeViews() { invalidateHits(); nativeViews.clear(); }
+    public void invalidateHits() { hitEpoch++; paintedHits = null; hits.clear(); }
+    public void invalidate() { invalidateHits(); sourceRows = null; layouts.clear(); nativeViews.clear(); }
 
-    public void prepare(GuideHudView view, Font font, int width, int height) {
+    /** Returns true only when the projected content or measured viewport changed. */
+    public boolean prepare(GuideHudView view, Font font, int width, int height) {
         final int measuredWidth = Math.max(1, width);
         Language language = Language.getInstance();
         boolean rowsChanged = sourceRows != view.rows() && !java.util.Objects.equals(sourceRows, view.rows());
@@ -101,8 +118,10 @@ public final class GuideHudResultRenderer implements AutoCloseable {
         sourceRows = view.rows();
         boolean changed = rowsChanged || cachedFont != font || cachedLanguage != language
                 || !view.presentation().equals(cachedPresentation) || cachedWidth != measuredWidth
-                || !view.assistantName().equals(cachedAssistantName)
+                || !view.assistantName().equals(cachedAssistantName) || !view.selectedSession().equals(cachedSession)
                 || !java.util.Objects.equals(selectedTool, cachedSelection) || cachedSources != selectedSources;
+        boolean viewportChanged = cachedHeight != height;
+        if (changed || viewportChanged) invalidateHits();
         if (changed) {
             // Clear once on resource/content identity changes, never grow one entry per streaming delta.
             layouts.clear();
@@ -111,6 +130,7 @@ public final class GuideHudResultRenderer implements AutoCloseable {
             cachedLanguage = language;
             cachedPresentation = view.presentation();
             cachedAssistantName = view.assistantName();
+            cachedSession = view.selectedSession();
             cachedWidth = measuredWidth;
             cachedSelection = selectedTool;
             cachedSources = selectedSources;
@@ -170,15 +190,17 @@ public final class GuideHudResultRenderer implements AutoCloseable {
             }
             rows = List.copyOf(replacement);
         }
-        if (changed || cachedHeight != height) {
+        if (changed || viewportChanged) {
             cachedHeight = height;
             scroll.update(rows.stream().map(row -> new GuideTranscriptVirtualizer.Row(row.id(), row.height())).toList(), height);
         }
+        return changed || viewportChanged;
     }
 
     public void render(GuiGraphicsExtractor graphics, Font font, GuideHudView view,
             GuideUiLayout.Rect viewport, int offset, int mouseX, int mouseY,
             boolean interactive, long ticks) {
+        paintedHits = null;
         hits.clear();
         nativeViews.beginFrame();
         ArrayList<String> rendered = new ArrayList<>();
@@ -264,6 +286,7 @@ public final class GuideHudResultRenderer implements AutoCloseable {
                 }
             }
         } finally { graphics.disableScissor(); nativeViews.endFrame(); }
+        if (interactive) paintedHits = new PaintedHits(hitEpoch, font, Language.getInstance(), viewport, offset);
         receipt = new Receipt(++extractedFrame, rendered, assistants, tools, cards, nodes, items, paintedRecipes.size(), scroll.totalHeight(), viewport.height(),
                 offset, Math.max(0, scroll.totalHeight() - viewport.height()), layouts.stats().entries(), nativeViews.activeViewCount(),
                 List.copyOf(paintedNodes), lastPaintedText);
@@ -320,5 +343,5 @@ public final class GuideHudResultRenderer implements AutoCloseable {
             @Override public int lineHeight(SemanticLayout.Kind kind) { return kind == SemanticLayout.Kind.HEADING ? 12 : density == GuideUiConfig.Density.COMPACT ? 10 : 11; }
         };
     }
-    @Override public void close() { nativeViews.close(); layouts.clear(); rows = List.of(); sourceRows = null; hits.clear(); }
+    @Override public void close() { invalidateHits(); nativeViews.close(); layouts.clear(); rows = List.of(); sourceRows = null; }
 }
