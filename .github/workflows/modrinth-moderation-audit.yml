@@ -20,7 +20,7 @@ jobs:
           umask 077
           python3 - <<'PY'
           import json,os,pathlib,time,urllib.request,urllib.error
-          API='https://api.modrinth.com/v2';PROJECT='vuB8HitN';token=os.environ['MODRINTH_TOKEN'];record={'kind':'authorized-readonly-moderation-audit','generatedAtUnix':time.time(),'projectId':PROJECT,'requests':{},'tokenIncluded':False,'mutationsPerformed':False}
+          API='https://api.modrinth.com';PROJECT='vuB8HitN';token=os.environ['MODRINTH_TOKEN'];record={'kind':'authorized-readonly-moderation-audit','generatedAtUnix':time.time(),'projectId':PROJECT,'requests':{},'tokenIncluded':False,'mutationsPerformed':False}
           def get(label,path):
            req=urllib.request.Request(API+path,headers={'Authorization':token,'User-Agent':'nkanf-dev/OpenAllay moderation audit (https://github.com/nkanf-dev/OpenAllay)'})
            try:
@@ -32,9 +32,9 @@ jobs:
            except Exception as error:
             record['requests'][label]={'path':path,'errorClass':type(error).__name__};print('read_only_endpoint='+label+' errorClass='+type(error).__name__,flush=True)
            return None
-          user=get('self','/user');project=get('project','/project/'+PROJECT);versions=get('versions','/project/'+PROJECT+'/version')
-          if isinstance(project,dict) and project.get('thread_id'):get('moderationThread','/thread/'+str(project['thread_id']))
-          if isinstance(user,dict) and user.get('id'):get('notifications','/user/'+str(user['id'])+'/notifications')
+          user=get('self','/v2/user');project=get('project','/v2/project/'+PROJECT);versions=get('versions','/v2/project/'+PROJECT+'/version');get('disclosures','/v3/project/'+PROJECT+'/disclosures');get('reviewValidation','/v3/project/'+PROJECT+'/validate')
+          if isinstance(project,dict) and project.get('thread_id'):get('moderationThread','/v2/thread/'+str(project['thread_id']))
+          if isinstance(user,dict) and user.get('id'):get('notifications','/v2/user/'+str(user['id'])+'/notifications')
           pathlib.Path(os.environ['AUDIT_OUTPUT']).write_text(json.dumps(record,ensure_ascii=False,indent=2))
           print('audit_complete token_exported=false writes=false',flush=True)
           PY
