@@ -494,6 +494,39 @@ mc.extensions / extensionCatalog / extensionDiagnostics
 ```
 
 `world` and `commands` depend on frozen runtime capabilities, not model selection.
+The Agent chooses observations when useful; no fixed observe/build/check workflow is imposed.
+
+`world.focus()` samples current client-visible focus, camera, hit target, hands, and known
+screen/menu/hover facts. It is distinct from the optional, detached `mc.ui.focus` sample in an invocation
+snapshot and from the input's original `inputObservation` anchor. `world.capture({target:"WORLD"})`
+returns a managed image reference with native source identity and time:
+
+- `WORLD` captures before native GUI rendering. It includes the real first-person hand
+  and 3D effects, but not 2D HUD or the Guide.
+- `GAME_UI` captures the currently visible native game UI/HUD. It is unavailable while
+  OpenAllay is foreground; it does not swap screens to fabricate a current game view.
+- `ASSOCIATED_UI` reads the exact retained pre-Guide source associated with this request.
+  Its source ID, capture ID, time, image and screen remain those of the original source.
+  The result target identifies the associated-view query, not a new source frame. Missing sources are unavailable, not replaced
+  with a current frame.
+
+Image-bearing Tool results keep typed references in canonical `ToolResult.images`.
+Anthropic receives native nested Tool images. OpenAI receives its text Tool reply followed
+by an attributed provider-only visual supplement; canonical history does not gain a player
+turn. Server-provided models use the existing request-scoped client Tool transport. Native
+image production, import, resolver authority and final image handoff retain actor/request
+ownership. Trusted native completion waiting is excluded from the interpreter budget;
+argument decoding, result adaptation and model-authored JavaScript remain budgeted.
+
+The canonical `ModelMessage.inputObservation` records what a player input referred to.
+Queue, edit, Steer, retry, history and exports keep that input's own reference, rather than
+reading the latest draft. Ordinary image attachments remain separate. When an anchor image is submitted without text or ordinary attachments,
+the input uses an empty text carrier and projects that anchor image once, without filler
+words or a duplicate ordinary attachment.
+The UI lets players refresh/remove focus, attach/remove a frame and inspect real Tool images.
+Opening Guide from a native menu uses the configured key after native focused-text handling;
+it retains the source frame before opening the Guide.
+
 `schema.list()` reports roots/availability without resolving data;
 `schema.describe("game.mods.installed")` walks stable paths from the same
 KubeJS-Rhino `TypeInfo` catalog. Use a focused `helpers.schema` sample for dynamic

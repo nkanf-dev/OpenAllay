@@ -13,6 +13,12 @@ public final class ClipboardImageEncoder {
     private static final int PREVIEW_SIZE = 40;
     private ClipboardImageEncoder() {}
 
+    /** Decode managed image bytes with the shared reader's single-owner image-stream lifetime. */
+    public static BufferedImage decode(byte[] encodedImage) throws IOException {
+        java.util.Objects.requireNonNull(encodedImage, "encodedImage");
+        return ClipboardImageDecoder.read(new java.io.ByteArrayInputStream(encodedImage));
+    }
+
     public static BufferedImage bitmap(Image image) throws IOException {
         if (!(image instanceof BufferedImage)) {
             // AWT clipboard images can be lazy ToolkitImages. Load their pixels on the worker.

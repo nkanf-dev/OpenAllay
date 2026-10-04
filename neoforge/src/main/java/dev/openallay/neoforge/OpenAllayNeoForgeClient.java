@@ -195,13 +195,17 @@ public final class OpenAllayNeoForgeClient {
         GuideClientUiCoordinator coordinator = new GuideClientUiCoordinator(client, services,
                 recipeClient, display, settings == null ? null : settings.settings(),
                 configDirectory, dispatcher, clock);
+        var observationInput = dev.openallay.client.observation.ObservationUiBindings.bind(
+                client, runtime.platform(), runtime.worldObservations(), coordinator, services);
         ui = coordinator;
         bridge.onDisconnect(() -> {
+            observationInput.clearConnectionState();
             coordinator.disconnect();
             if (settings != null) settings.settings().clearServerModel();
             services.disconnect();
         });
         NeoForge.EVENT_BUS.addListener((ClientStoppingEvent event) -> {
+            observationInput.close();
             coordinator.close();
             ui = null;
             services.shutdown()

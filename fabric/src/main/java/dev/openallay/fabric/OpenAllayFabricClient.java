@@ -168,15 +168,19 @@ public final class OpenAllayFabricClient implements ClientModInitializer {
         GuideClientUiCoordinator ui = new GuideClientUiCoordinator(Minecraft.getInstance(), services,
                 recipeClient, display, settings == null ? null : settings.settings(),
                 configDirectory, dispatcher, clock);
+        var observationInput = dev.openallay.client.observation.ObservationUiBindings.bind(
+                Minecraft.getInstance(), runtime.platform(), runtime.worldObservations(), ui, services);
         HudElementRegistry.attachElementBefore(VanillaHudElements.CHAT,
                 Identifier.fromNamespaceAndPath("openallay", "guide_hud"),
                 (graphics, deltaTracker) -> ui.extractRenderState(graphics));
         bridge.onDisconnect(() -> {
+            observationInput.clearConnectionState();
             ui.disconnect();
             if (settings != null) settings.settings().clearServerModel();
             services.disconnect();
         });
         ClientLifecycleEvents.CLIENT_STOPPING.register(client -> {
+            observationInput.close();
             ui.close();
             services.shutdown()
                         .handle((ignored, failure) -> null)

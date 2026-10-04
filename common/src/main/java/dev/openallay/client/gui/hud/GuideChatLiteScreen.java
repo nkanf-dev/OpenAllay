@@ -1,6 +1,11 @@
 package dev.openallay.client.gui.hud;
 
 import dev.openallay.client.gui.GuideClientUiState;
+import dev.openallay.client.observation.ClientObservationInputCoordinator;
+import dev.openallay.client.observation.GuideObservationInputActions;
+import dev.openallay.client.observation.GuideObservationSubmission;
+import dev.openallay.client.observation.ObservationAnchorPresentation;
+import dev.openallay.model.image.ImageInputCapability;
 import dev.openallay.client.gui.GuideComposerGeometry;
 import dev.openallay.client.gui.GuideUiNotice;
 import dev.openallay.client.gui.OpenAllayButton;
@@ -35,6 +40,14 @@ import org.lwjgl.glfw.GLFW;
 public final class GuideChatLiteScreen extends Screen {
     private final GuideService service;
     private final GuideClientUiState state;
+    private GuideObservationInputActions observationActions;
+    private GuideObservationSubmission observationSubmission;
+    private boolean observationCapturing;
+    private Button observationRefresh;
+    private Button observationRemove;
+    private Button observationAttach;
+    private Button observationRemoveImage;
+    private GuideUiLayout.Rect observationBounds;
     private final GuideDisplayRuntime display;
     private final Runnable openFullscreen;
     private final VoiceRuntime voice;
@@ -70,12 +83,94 @@ public final class GuideChatLiteScreen extends Screen {
             GuideDisplayRuntime display, Runnable openFullscreen, VoiceRuntime voice) {
         super(Component.translatable("screen.openallay.hud.interact"));
         this.service = Objects.requireNonNull(service, "service");
+        this.observationSubmission = GuideObservationSubmission.existing(service);
         this.state = Objects.requireNonNull(state, "state");
         this.display = Objects.requireNonNull(display, "display");
         this.openFullscreen = Objects.requireNonNull(openFullscreen, "openFullscreen");
         this.voice = voice;
         session = service.snapshot().selectedSession();
         view = presenter.projectInteractive(service.snapshot(), display.config());
+    }
+
+    public GuideChatLiteScreen withObservationInput(GuideObservationInputActions input) {
+        observationActions = Objects.requireNonNull(input, "input");
+        return this;
+    }
+
+    public GuideChatLiteScreen withObservationSubmission(GuideObservationSubmission sender) {
+        observationSubmission = Objects.requireNonNull(sender, "sender");
+        return this;
+    }
+
+    private boolean hasObservationStrip() {
+        return observationActions != null || state.observation(session).isPresent();
+    }
+
+    private void refreshObservation() {
+        if (observationActions == null || observationCapturing) return;
+        try {
+            new ClientObservationInputCoordinator(observationActions, minecraft::execute).refresh(state, session);
+        } catch (RuntimeException unavailable) {
+            notice = GuideUiNotice.warning(Component.translatable("screen.openallay.observation.capture_failed").getString());
+        }
+        project();
+    }
+
+    private void attachObservationFrame() {
+        if (observationActions == null || observationCapturing) return;
+        observationCapturing = true;
+        try {
+            new ClientObservationInputCoordinator(observationActions, minecraft::execute).attachCurrentFrame(state, session)
+                    .whenComplete((applied, failure) -> minecraft.execute(() -> {
+                        observationCapturing = false;
+                        if (attachment == null) return;
+                        if (failure != null) notice = GuideUiNotice.warning(
+                                Component.translatable("screen.openallay.observation.capture_failed").getString());
+                        project();
+                    }));
+        } catch (RuntimeException unavailable) {
+            observationCapturing = false;
+            notice = GuideUiNotice.warning(Component.translatable("screen.openallay.observation.capture_failed").getString());
+        }
+        project();
+    }
+
+    private void initObservationControls(GuideUiLayout.Rect strip) {
+        observationBounds = hasObservationStrip() ? new GuideUiLayout.Rect(strip.x(), strip.y(), strip.width(), 12) : GuideUiLayout.Rect.EMPTY;
+        observationRefresh = observationRemove = observationAttach = observationRemoveImage = null;
+        if (observationBounds.height() == 0) return;
+        int x = strip.right() - 64;
+        observationRemoveImage = addRenderableWidget(OpenAllayButton.create(Component.literal("×▧"), button -> {
+            state.removeObservationImage(session); project();
+        }).bounds(x, strip.y(), 16, 12).tooltip(Tooltip.create(Component.translatable("screen.openallay.observation.remove_frame"))).build());
+        observationRemove = addRenderableWidget(OpenAllayButton.create(Component.literal("×"), button -> {
+            state.removeObservation(session); project();
+        }).bounds(x + 16, strip.y(), 16, 12).tooltip(Tooltip.create(Component.translatable("screen.openallay.observation.remove"))).build());
+        observationRefresh = addRenderableWidget(OpenAllayButton.create(Component.literal("↻"), button -> refreshObservation())
+                .bounds(x + 32, strip.y(), 16, 12).tooltip(Tooltip.create(Component.translatable("screen.openallay.observation.refresh"))).build());
+        observationAttach = addRenderableWidget(OpenAllayButton.create(Component.literal("▧"), button -> attachObservationFrame())
+                .bounds(x + 48, strip.y(), 16, 12).tooltip(Tooltip.create(Component.translatable("screen.openallay.observation.attach_frame"))).build());
+    }
+
+    private void renderObservationStrip(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+        if (observationBounds == null || observationBounds.height() == 0 || !readingLayout.footerFits()) return;
+        Component label = Component.translatable("screen.openallay.observation.add_focus");
+        var anchor = state.observation(session);
+        if (anchor.isPresent()) {
+            label = Component.empty();
+            for (var chip : ObservationAnchorPresentation.chips(anchor.orElseThrow())) {
+                if (!label.getString().isEmpty()) label = label.copy().append(" · ");
+                label = label.copy().append(Component.translatable(chip.key(), chip.value()));
+            }
+            if (anchor.orElseThrow().image().isPresent()) label = label.copy().append(" · ")
+                    .append(Component.translatable("screen.openallay.observation.frame"));
+        }
+        int labelWidth = Math.max(0, observationBounds.width() - 66);
+        graphics.text(font, font.plainSubstrByWidth(label.getString(), labelWidth),
+                observationBounds.x(), observationBounds.y() + 2, OpenAllayWidgetTheme.MUTED);
+        if (new GuideUiLayout.Rect(observationBounds.x(), observationBounds.y(), labelWidth, 12).contains(mouseX, mouseY)) {
+            graphics.setTooltipForNextFrame(font, label, mouseX, mouseY);
+        }
     }
 
     /** Shared current recipe preferences; no new service or model is created for HUD reading. */
@@ -102,6 +197,10 @@ public final class GuideChatLiteScreen extends Screen {
         draggingScrollbar = false;
         results.invalidate();
         var strip = readingLayout.composer();
+        initObservationControls(strip);
+        int observationHeight = hasObservationStrip() ? 14 : 0;
+        strip = new GuideUiLayout.Rect(strip.x(), strip.y() + observationHeight,
+                strip.width(), Math.max(1, strip.height() - observationHeight));
         // Hidden tiny layouts still need a readable native text-field width for later reflow.
         var input = new GuideUiLayout.Rect(strip.x(), strip.y(),
                 Math.max(AbstractTextAreaWidget.DEFAULT_TOTAL_PADDING + 1, strip.width()), Math.max(1, strip.height()));
@@ -230,7 +329,8 @@ public final class GuideChatLiteScreen extends Screen {
         }
         if (send != null) {
             send.active = !submitting && !state.intentSubmissionInFlight(session)
-                    && (!composer.getValue().isBlank() || intent.editing() && !state.images().empty())
+                    && (!composer.getValue().isBlank() || intent.editing() && !state.images().empty()
+                            || state.observation(session).flatMap(value -> value.image()).isPresent())
                     && !intent.editInvalid() && !state.images().pending();
             send.setMessage(Component.translatable(intent.editing() ? "screen.openallay.pending.save"
                     : "screen.openallay.action.send"));
@@ -241,6 +341,14 @@ public final class GuideChatLiteScreen extends Screen {
                     : intent.steer() ? "screen.openallay.hud.mode.steer" : "screen.openallay.hud.mode.follow_up"));
         }
         if (stop != null) stop.active = active;
+        if (observationRefresh != null) {
+            boolean visible = readingLayout.footerFits();
+            observationRefresh.visible = observationAttach.visible = visible && observationActions != null;
+            observationRefresh.active = observationAttach.active = !observationCapturing;
+            observationRemove.visible = visible && state.observation(session).isPresent();
+            observationRemoveImage.visible = visible && state.observation(session).flatMap(value -> value.image()).isPresent();
+            observationAttach.setMessage(Component.literal(observationCapturing ? "…" : "▧"));
+        }
     }
 
     private void submit() {
@@ -248,7 +356,10 @@ public final class GuideChatLiteScreen extends Screen {
         String text = state.readText(session);
         GuideClientUiState.IntentCapture intentCapture = state.captureIntent(session);
         GuideClientUiState.DraftIntent intent = intentCapture.intent();
-        if (text.isBlank() && (!intent.editing() || state.images().empty())) return;
+        GuideClientUiState.ObservationCapture observation = state.captureObservation(session);
+        List<dev.openallay.model.image.ImageReference> observedImages = observation.anchor().stream()
+                .flatMap(value -> value.image().stream()).map(value -> value.image()).toList();
+        if (text.isBlank() && observedImages.isEmpty() && (!intent.editing() || state.images().empty())) return;
         GuideClientUiState.Insertion captured = state.captureInsertion(session);
         SlashCommandDispatcher.Dispatch dispatch = dispatchDraft(text, intent,
                 ordinaryText -> SlashCommandDispatcher.dispatch(ordinaryText, service, completion -> minecraft.execute(() -> {
@@ -272,25 +383,26 @@ public final class GuideChatLiteScreen extends Screen {
             project();
             return;
         }
-        // Lite displays text only. A pending edit still preserves all of its captured image parts.
+        // Observation refs are visible here; explicit fullscreen paste drafts stay retained unless editing.
         var images = state.images().captureSubmission();
-        var message = intent.editing()
-                ? dev.openallay.model.ModelMessage.userInput(dispatch.normalizedText(), state.images().references())
-                : dev.openallay.model.ModelMessage.userText(dispatch.normalizedText());
+        var inputImages = intent.editing() ? state.inputImageReferences(session, observation) : observedImages;
+        var inputView = dev.openallay.guide.ui.GuideUiView.from(service.snapshot(), display.config());
+        if (!inputImages.isEmpty() && inputView.selectedImageInputCapability() != ImageInputCapability.SUPPORTED) {
+            notice = GuideUiNotice.error(Component.translatable("screen.openallay.image.model_unsupported").getString());
+            return;
+        }
+        var message = dev.openallay.model.ModelMessage.userInput(dispatch.normalizedText(),
+                intent.editing() ? state.images().references() : List.of(), observation.anchor());
         boolean attachmentsRetained = !state.images().empty() && !intent.editing();
         if (attachmentsRetained) notice = GuideUiNotice.info(Component.translatable("screen.openallay.hud.attachments_retained").getString());
         if (!state.beginIntentSubmission(intentCapture)) return;
+        GuideClientUiState.ObservationLease observationLease = state.leaseObservation(observation);
         submitting = true;
         java.util.concurrent.CompletableFuture<? extends ToolResult<?>> future;
         try {
-            future = switch (route) {
-                case EDIT_PENDING -> service.editPending(intent.pendingId(), message);
-                case STEER -> service.steer(message);
-                case FOLLOW_UP -> service.followUp(message);
-                case ASK -> service.ask(message);
-                case BLOCKED -> throw new IllegalStateException("Blocked draft cannot be submitted");
-            };
+            future = observationSubmission.send(service, submissionRoute(route), intent.pendingId(), message, observation);
         } catch (RuntimeException failure) {
+            observationLease.close();
             state.completeIntentSubmission(intentCapture);
             submitting = false;
             notice = GuideUiNotice.error(Component.translatable("screen.openallay.composer.submit_failed").getString());
@@ -306,6 +418,7 @@ public final class GuideChatLiteScreen extends Screen {
                     state.clearAcceptedText(captured, text);
                     state.clearAcceptedIntent(intentCapture);
                     if (intent.editing()) state.images().accepted(images);
+                    state.acceptedObservation(observation);
                 } else if (failure == null && intent.editing() && result instanceof ToolResult.Success<?>) {
                     state.invalidatePendingEdit(intentCapture);
                 }
@@ -325,6 +438,7 @@ public final class GuideChatLiteScreen extends Screen {
                 if (attachmentsRetained) notice = new GuideUiNotice(notice.severity(), notice.placement(), notice.message()
                         + " · " + Component.translatable("screen.openallay.hud.attachments_retained").getString());
             } finally {
+                observationLease.close();
                 state.completeIntentSubmission(intentCapture);
                 submitting = false;
             }
@@ -540,6 +654,7 @@ public final class GuideChatLiteScreen extends Screen {
             } finally { graphics.disableScissor(); }
             if (strip.contains(mouseX, mouseY)) graphics.setTooltipForNextFrame(font, Component.literal(message), mouseX, mouseY);
         }
+        renderObservationStrip(graphics, mouseX, mouseY);
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
         GuideVoiceIndicator.extract(graphics, minecraft, voice);
     }

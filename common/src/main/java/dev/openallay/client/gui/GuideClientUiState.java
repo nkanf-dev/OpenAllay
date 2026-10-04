@@ -6,6 +6,8 @@ import dev.openallay.client.gui.clipboard.SystemImageClipboard;
 import dev.openallay.guide.GuideService;
 import dev.openallay.model.image.ImageReference;
 import dev.openallay.tool.ToolResult;
+import dev.openallay.world.ClientObservationAnchor;
+import java.util.Optional;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -23,10 +25,12 @@ public final class GuideClientUiState implements AutoCloseable {
     private final Map<String, Draft> drafts = new LinkedHashMap<>();
     private final Map<UUID, ViewAttachment> views = new LinkedHashMap<>();
     private final List<Runnable> listeners = new ArrayList<>();
+    private final Map<UUID, ObservationCapture> observationLeases = new LinkedHashMap<>();
     private final ComposerImageDraft images;
     private final Function<List<ImageReference>, CompletableFuture<ToolResult<Boolean>>> retain;
     private final Runnable release;
-    private CompletableFuture<?> leaseWork = CompletableFuture.completedFuture(null);
+    private CompletableFuture<ToolResult<Boolean>> leaseWork =
+            CompletableFuture.completedFuture(new ToolResult.Success<>(true));
     private String selectedSession;
     private long generation;
     private boolean closed;
@@ -64,6 +68,12 @@ public final class GuideClientUiState implements AutoCloseable {
     public boolean closed() { return closed; }
     public String selectedSession() { return selectedSession; }
     public ComposerImageDraft images() { return images; }
+
+    /** Latest actual draft-store pin acknowledgement. Never wait on it from the native client thread. */
+    public CompletableFuture<ToolResult<Boolean>> observationImagesSettled() {
+        return closed ? CompletableFuture.completedFuture(new ToolResult.Failure<>(
+                "observation_connection_closed", "Observation connection is closed")) : leaseWork;
+    }
     public ComposerImageDraft.Notice imageNotice() { return imageNotice; }
     public String imageNoticeSession() { return images.changedSession(); }
 
@@ -182,12 +192,104 @@ public final class GuideClientUiState implements AutoCloseable {
         changed();
     }
 
+    /** The frozen draft source, separate from the live world.focus sample. */
+    public Optional<ClientObservationAnchor> observation(String session) {
+        return closed ? Optional.empty() : Optional.ofNullable(draft(session).observation);
+    }
+
+    public boolean observationInitialized(String session) {
+        return !closed && draft(session).observationInitialized;
+    }
+
+    /** Reopening a view never replaces a prior entry source or an explicit removal. */
+    public boolean seedObservation(String session, ClientObservationAnchor anchor) {
+        if (closed || draft(session).observationInitialized) return false;
+        setObservation(draft(session), Objects.requireNonNull(anchor, "anchor"), true);
+        return true;
+    }
+
+    public ObservationCapture captureObservation(String session) {
+        Draft draft = closed ? null : draft(session);
+        return new ObservationCapture(ownerId, generation, session,
+                draft == null ? -1 : draft.observationRevision,
+                draft == null ? Optional.empty() : Optional.ofNullable(draft.observation));
+    }
+
+    /** A late capture may only update its unchanged original draft, even after a view switches. */
+    public boolean replaceObservation(ObservationCapture capture, ClientObservationAnchor anchor) {
+        if (!currentObservation(capture)) return false;
+        setObservation(drafts.get(capture.session()), Objects.requireNonNull(anchor, "anchor"), true);
+        return true;
+    }
+
+    public void removeObservation(String session) {
+        if (!closed) setObservation(draft(session), null, true);
+    }
+
+    /** Remove pixels without relabeling the remaining focus or its association/source time. */
+    public void removeObservationImage(String session) {
+        if (closed) return;
+        ClientObservationAnchor anchor = draft(session).observation;
+        if (anchor == null || anchor.image().isEmpty()) return;
+        setObservation(draft(session), new ClientObservationAnchor(anchor.associationId(),
+                anchor.capturedAt(), anchor.focus(), Optional.empty()), true);
+    }
+
+    /** An old acceptance must not clear a newer refresh or another connection's draft. */
+    public boolean acceptedObservation(ObservationCapture capture) {
+        if (!currentObservation(capture)) return false;
+        setObservation(drafts.get(capture.session()), null, false);
+        return true;
+    }
+
+    /** Pins the captured image independently of later draft edits. Close on voice/input completion. */
+    public ObservationLease leaseObservation(ObservationCapture capture) {
+        if (closed || capture == null || !ownerId.equals(capture.ownerId())
+                || generation != capture.generation() || !drafts.containsKey(capture.session())) {
+            throw new IllegalStateException("Observation connection is no longer available");
+        }
+        UUID id = UUID.randomUUID();
+        observationLeases.put(id, capture);
+        retainImages();
+        return new ObservationLease(id, capture);
+    }
+
+    /** Public managed refs only; never write imported frames into ComposerImageDraft's internals. */
+    public List<ImageReference> inputImageReferences(String session, ObservationCapture capture) {
+        java.util.stream.Stream<ImageReference> observed = closed || capture == null || !ownerId.equals(capture.ownerId())
+                || generation != capture.generation() || !session.equals(capture.session()) ? java.util.stream.Stream.empty()
+                : capture.anchor().stream().flatMap(anchor -> anchor.image().stream()).map(view -> view.image());
+        return java.util.stream.Stream.concat(images.attachments(session).stream()
+                .map(ComposerImageDraft.Attachment::reference).filter(Objects::nonNull), observed).distinct().toList();
+    }
+
+    private boolean currentObservation(ObservationCapture capture) {
+        if (closed || capture == null || !ownerId.equals(capture.ownerId()) || generation != capture.generation()) return false;
+        Draft draft = drafts.get(capture.session());
+        return draft != null && draft.observationRevision == capture.observationRevision()
+                && Objects.equals(Optional.ofNullable(draft.observation), capture.anchor());
+    }
+
+    private void setObservation(Draft draft, ClientObservationAnchor anchor, boolean initialized) {
+        if (Objects.equals(draft.observation, anchor) && draft.observationInitialized == initialized) return;
+        draft.observation = anchor;
+        draft.observationInitialized = initialized;
+        draft.observationRevision++;
+        draft.revision++;
+        retainImages();
+        changed();
+    }
+
     public Insertion captureInsertion(String session) {
         return new Insertion(ownerId, generation, session, revision(session));
     }
 
     /** Final transcription appends only to the captured unedited draft; changed drafts get a pending result. */
     public InsertionResult insertTranscript(Insertion capture, String transcript) {
+        return insertTranscript(capture, transcript, null);
+    }
+
+    public InsertionResult insertTranscript(Insertion capture, String transcript, ObservationCapture observation) {
         if (closed || capture == null || !ownerId.equals(capture.ownerId)
                 || generation != capture.generation || transcript == null || transcript.isBlank()) {
             return InsertionResult.REJECTED;
@@ -195,7 +297,8 @@ public final class GuideClientUiState implements AutoCloseable {
         Draft draft = drafts.get(capture.session);
         if (draft == null) return InsertionResult.REJECTED;
         if (draft.revision != capture.revision) {
-            draft.pending.add(new PendingInsertion(UUID.randomUUID(), capture.session, transcript));
+            draft.pending.add(new PendingInsertion(UUID.randomUUID(), capture.session, transcript, pendingAnchor(capture, observation)));
+            if (draft.pending.getLast().observation().isPresent()) retainImages();
             changed();
             return InsertionResult.PENDING;
         }
@@ -205,13 +308,23 @@ public final class GuideClientUiState implements AutoCloseable {
 
     /** Keep a refused voice send for explicit review without changing the composer or its intent. */
     public boolean retainPendingTranscript(Insertion capture, String transcript) {
+        return retainPendingTranscript(capture, transcript, null);
+    }
+
+    public boolean retainPendingTranscript(Insertion capture, String transcript, ObservationCapture observation) {
         if (closed || capture == null || !ownerId.equals(capture.ownerId())
                 || generation != capture.generation() || transcript == null || transcript.isBlank()) return false;
         Draft draft = drafts.get(capture.session());
         if (draft == null) return false;
-        draft.pending.add(new PendingInsertion(UUID.randomUUID(), capture.session(), transcript));
+        draft.pending.add(new PendingInsertion(UUID.randomUUID(), capture.session(), transcript, pendingAnchor(capture, observation)));
+        if (draft.pending.getLast().observation().isPresent()) retainImages();
         changed();
         return true;
+    }
+
+    private Optional<ClientObservationAnchor> pendingAnchor(Insertion insertion, ObservationCapture observation) {
+        return observation != null && ownerId.equals(observation.ownerId()) && generation == observation.generation()
+                && insertion.session().equals(observation.session()) ? observation.anchor() : Optional.empty();
     }
 
     public List<PendingInsertion> pendingInsertions(String session) {
@@ -225,6 +338,8 @@ public final class GuideClientUiState implements AutoCloseable {
                     .filter(value -> value.id.equals(id)).findFirst().orElse(null);
             if (pending == null) continue;
             entry.getValue().pending.remove(pending);
+            pending.observation().ifPresent(anchor -> setObservation(entry.getValue(), anchor, true));
+            if (pending.observation().isPresent()) retainImages();
             setText(entry.getKey(), append(entry.getValue().text, pending.text));
             return true;
         }
@@ -248,6 +363,8 @@ public final class GuideClientUiState implements AutoCloseable {
         draft(session).inFlight = null;
         draft(session).pending.clear();
         images.clear();
+        setObservation(draft(session), null, false);
+        retainImages();
         selectSession(previous);
         changed();
     }
@@ -280,10 +397,19 @@ public final class GuideClientUiState implements AutoCloseable {
         imageNotice = notice;
         String session = images.changedSession();
         if (session != null) draft(session).revision++;
-        List<ImageReference> refs = images.retainedReferences();
+        retainImages();
+        changed();
+    }
+    private void retainImages() {
+        var draftAnchors = drafts.values().stream().map(value -> value.observation).filter(Objects::nonNull);
+        var heldAnchors = observationLeases.values().stream().flatMap(value -> value.anchor().stream());
+        var pendingAnchors = drafts.values().stream().flatMap(value -> value.pending.stream())
+                .flatMap(value -> value.observation().stream());
+        List<ImageReference> refs = java.util.stream.Stream.concat(images.retainedReferences().stream(),
+                java.util.stream.Stream.concat(java.util.stream.Stream.concat(draftAnchors, heldAnchors), pendingAnchors)
+                        .flatMap(anchor -> anchor.image().stream()).map(view -> view.image())).distinct().toList();
         // Serialize retain updates so a slower old lease update cannot drop a newly added image.
         leaseWork = leaseWork.handle((ignored, failure) -> null).thenCompose(ignored -> retain.apply(refs));
-        changed();
     }
     private void changed() { List.copyOf(listeners).forEach(Runnable::run); }
 
@@ -294,8 +420,9 @@ public final class GuideClientUiState implements AutoCloseable {
         images.detach();
         views.clear();
         drafts.clear();
+        observationLeases.clear();
         listeners.clear();
-        leaseWork = leaseWork.handle((ignored, failure) -> null).thenRun(release);
+        leaseWork.handle((ignored, failure) -> null).thenRun(release);
     }
 
     public enum SubmissionRoute { ASK, FOLLOW_UP, STEER, EDIT_PENDING, EDIT_INVALID }
@@ -318,10 +445,33 @@ public final class GuideClientUiState implements AutoCloseable {
     public record IntentCapture(String ownerId, long generation, String session, long intentRevision, DraftIntent intent) {}
     public enum Surface { FULLSCREEN, HUD_INPUT }
     public enum InsertionResult { INSERTED, PENDING, REJECTED }
+    public record ObservationCapture(String ownerId, long generation, String session,
+            long observationRevision, Optional<ClientObservationAnchor> anchor) {
+        public ObservationCapture {
+            Objects.requireNonNull(ownerId, "ownerId");
+            Objects.requireNonNull(session, "session");
+            Objects.requireNonNull(anchor, "anchor");
+        }
+    }
+    public final class ObservationLease implements AutoCloseable {
+        private final UUID id;
+        private final ObservationCapture capture;
+        private ObservationLease(UUID id, ObservationCapture capture) { this.id = id; this.capture = capture; }
+        public ObservationCapture capture() { return capture; }
+        @Override public void close() {
+            if (observationLeases.remove(id) != null && !closed) retainImages();
+        }
+    }
     public record Insertion(String ownerId, long generation, String session, long revision) {}
-    public record PendingInsertion(UUID id, String session, String text) {}
+    public record PendingInsertion(UUID id, String session, String text, Optional<ClientObservationAnchor> observation) {
+        public PendingInsertion { Objects.requireNonNull(observation, "observation"); }
+        public PendingInsertion(UUID id, String session, String text) { this(id, session, text, Optional.empty()); }
+    }
     private static final class Draft {
         String text = "";
+        ClientObservationAnchor observation;
+        boolean observationInitialized;
+        long observationRevision;
         long revision;
         long intentRevision;
         DraftIntent intent = DraftIntent.defaults();

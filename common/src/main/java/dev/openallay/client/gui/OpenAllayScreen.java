@@ -5,6 +5,14 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.mojang.blaze3d.platform.NativeImage;
 import dev.openallay.client.gui.clipboard.ClipboardImageEncoder;
+import dev.openallay.client.observation.ClientObservationInputCoordinator;
+import dev.openallay.client.observation.GuideObservationInputActions;
+import dev.openallay.client.observation.GuideObservationSubmission;
+import dev.openallay.client.observation.ObservationAnchorPresentation;
+import dev.openallay.client.observation.ObservationComposerLayout;
+import dev.openallay.client.observation.ObservationImageTextures;
+import dev.openallay.model.image.ImageReference;
+import java.util.function.BiFunction;
 import dev.openallay.client.gui.clipboard.SystemImageClipboard;
 import dev.openallay.guide.GuidePendingMessage;
 import dev.openallay.model.ModelContent;
@@ -104,6 +112,13 @@ public final class OpenAllayScreen extends Screen {
     private final GuideService service;
     private final ComposerImageDraft composerImages;
     private final GuideClientUiState uiState;
+    private GuideObservationInputActions observationActions;
+    private GuideObservationSubmission observationSubmission;
+    private BiFunction<UUID, String, List<ImageReference>> observationImages;
+    private ObservationImageTextures observationTextures;
+    private ImageReference selectedObservationImage;
+    private boolean observationCapturing;
+    private GuideUiLayout.Rect observationComposerBounds = GuideUiLayout.Rect.EMPTY;
     private GuideClientUiState.ViewAttachment attachment;
     private AutoCloseable draftSubscription;
     private dev.openallay.client.voice.VoiceInputActions voice;
@@ -268,6 +283,7 @@ public final class OpenAllayScreen extends Screen {
             Runnable settingsOpener, GuideClientUiState uiState) {
         super(Component.translatable("screen.openallay.guide"));
         this.service = Objects.requireNonNull(service, "service");
+        this.observationSubmission = GuideObservationSubmission.existing(service);
         this.uiState = Objects.requireNonNull(uiState, "uiState");
         this.composerImages = uiState.images();
         this.recipeClient = java.util.Objects.requireNonNull(recipeClient, "recipeClient");
@@ -286,6 +302,21 @@ public final class OpenAllayScreen extends Screen {
         uiState.selectSession(view.selectedSession());
         draft = uiState.readText(view.selectedSession());
         railVisible = projectedDisplay.ui().fullscreen().sessionRailVisible();
+    }
+
+    public OpenAllayScreen withObservationInput(GuideObservationInputActions input) {
+        observationActions = Objects.requireNonNull(input, "input");
+        return this;
+    }
+
+    public OpenAllayScreen withObservationSubmission(GuideObservationSubmission sender) {
+        observationSubmission = Objects.requireNonNull(sender, "sender");
+        return this;
+    }
+
+    public OpenAllayScreen withObservationImages(BiFunction<UUID, String, List<ImageReference>> images) {
+        observationImages = Objects.requireNonNull(images, "images");
+        return this;
     }
 
     public OpenAllayScreen withVoice(dev.openallay.client.voice.VoiceInputActions voice) {
@@ -445,6 +476,7 @@ public final class OpenAllayScreen extends Screen {
         voiceKeyHeld = false;
         if (voice != null) voice.cancel(dev.openallay.client.voice.VoiceRuntime.CancelReason.SCREEN_CLOSED);
         releaseComposerTextures();
+        if (observationTextures != null) { observationTextures.close(); observationTextures = null; }
         submittingDraft = false;
     }
 
@@ -1976,7 +2008,9 @@ public final class OpenAllayScreen extends Screen {
                 detail.x() + detail.width() - 1,
                 detail.y() + detail.height() - 1);
         int y = detail.y() + 26 - detailScroll;
-        if (selectedTool != null) {
+        if (selectedObservationImage != null) {
+            y = observationImageDetail(graphics, selectedObservationImage, detail, y, mouseX, mouseY, true);
+        } else if (selectedTool != null) {
             GuideToolDetailView toolDetail = selectedTool.detail();
             if (Boolean.getBoolean("openallay.e2e.enabled")) renderedDetailToolId = toolFocusId(selectedTool);
             y = detailLine(graphics,
@@ -1994,6 +2028,12 @@ public final class OpenAllayScreen extends Screen {
                         }
                         for (GuideToolMessage message : toolResultMessages(toolDetail)) {
                             y = detailLine(graphics, toolMessage(message), detail, y);
+                        }
+                        if (observationImages != null) {
+                            for (ImageReference reference : List.copyOf(observationImages.apply(
+                                    selectedTool.requestId(), selectedTool.activity().invocationId()))) {
+                                y = observationImageDetail(graphics, reference, detail, y, mouseX, mouseY, false);
+                            }
                         }
                         for (int cardIndex = 0; cardIndex < toolDetail.cards().size(); cardIndex++) {
                             GuideDetailCard card = toolDetail.cards().get(cardIndex);
@@ -2583,6 +2623,7 @@ public final class OpenAllayScreen extends Screen {
         detailNativeViews.clear();
         selectedTool = null;
         selectedSource = null;
+        selectedObservationImage = null;
         selectedSourceFocusId = null;
         detailScroll = 0;
         expandedDetails.clear();
@@ -2600,6 +2641,7 @@ public final class OpenAllayScreen extends Screen {
     private void open(GuideUiRow.Tool tool) {
         hits.removeIf(hit -> hit.kind() == HitKind.CONTENT || hit.kind() == HitKind.DETAIL);
         selectedTool = tool;
+        selectedObservationImage = null;
         selectedSource = null;
         selectedSourceFocusId = null;
         detailScroll = 0;
@@ -2624,6 +2666,7 @@ public final class OpenAllayScreen extends Screen {
     private void open(GuideEvidencePresentation.Group source, String focusId) {
         hits.removeIf(hit -> hit.kind() == HitKind.CONTENT || hit.kind() == HitKind.DETAIL);
         selectedSource = source;
+        selectedObservationImage = null;
         selectedSourceFocusId = Objects.requireNonNull(focusId, "focusId");
         selectedTool = null;
         detailScroll = 0;
@@ -2665,7 +2708,7 @@ public final class OpenAllayScreen extends Screen {
     }
 
     private boolean detailOpen() {
-        return selectedTool != null || selectedSource != null;
+        return selectedTool != null || selectedSource != null || selectedObservationImage != null;
     }
 
     private boolean refreshDetail(GuideUiView next) {
@@ -2692,6 +2735,7 @@ public final class OpenAllayScreen extends Screen {
         if (!wasOpen) return false;
         if (!detailOpen()) return true;
         if (!next.selectedSession().equals(view.selectedSession())) {
+            selectedObservationImage = null;
             selectedTool = null;
             selectedSource = null;
             selectedSourceFocusId = null;
@@ -2837,7 +2881,8 @@ public final class OpenAllayScreen extends Screen {
     }
 
     private boolean hasComposerImagePreviews() {
-        return composerImages.attachments().stream().anyMatch(image -> image.preview() != null || image.reference() != null);
+        return observationActions != null || uiState.observation(view.selectedSession()).isPresent()
+                || composerImages.attachments().stream().anyMatch(image -> image.preview() != null || image.reference() != null);
     }
 
     private String currentComposerLayoutKey() {
@@ -2895,11 +2940,155 @@ public final class OpenAllayScreen extends Screen {
         imageTextures.clear();
     }
 
+    private ObservationImageTextures observationTextures() {
+        if (observationTextures == null) observationTextures = new ObservationImageTextures(minecraft, service);
+        return observationTextures;
+    }
+
+    private void refreshObservation() {
+        if (observationActions == null || observationCapturing) return;
+        try {
+            new ClientObservationInputCoordinator(observationActions, minecraft::execute)
+                    .refresh(uiState, view.selectedSession());
+            notice = GuideUiNotice.info("");
+        } catch (RuntimeException unavailable) {
+            notice = GuideUiNotice.warning(Component.translatable("screen.openallay.observation.capture_failed").getString());
+        }
+    }
+
+    private void attachObservationFrame() {
+        if (observationActions == null || observationCapturing) return;
+        observationCapturing = true;
+        try {
+            new ClientObservationInputCoordinator(observationActions, minecraft::execute)
+                    .attachCurrentFrame(uiState, view.selectedSession()).whenComplete((applied, failure) -> minecraft.execute(() -> {
+                        observationCapturing = false;
+                        if (failure != null && attachment != null) notice = GuideUiNotice.warning(
+                                Component.translatable("screen.openallay.observation.capture_failed").getString());
+                        if (attachment != null) sharedDraftChanged();
+                    }));
+        } catch (RuntimeException unavailable) {
+            observationCapturing = false;
+            notice = GuideUiNotice.warning(Component.translatable("screen.openallay.observation.capture_failed").getString());
+        }
+    }
+
+    /** Leaves the existing image/pending strips and text cursor in their measured bounds. */
+    private GuideUiLayout.Rect renderObservationComposer(GuiGraphicsExtractor graphics,
+            GuideUiLayout.Rect strip, int mouseX, int mouseY) {
+        var anchor = uiState.observation(view.selectedSession());
+        if (anchor.isEmpty() && observationActions == null) return strip;
+        ObservationComposerLayout observationLayout = ObservationComposerLayout.calculate(strip, !composerImages.empty());
+        GuideUiLayout.Rect row = observationLayout.row();
+        int rowHeight = row.height();
+        observationComposerBounds = row;
+        graphics.fill(row.x(), row.y(), row.right(), row.bottom(), panelAltColor());
+        int controls = observationActions == null ? 0 : 32;
+        if (anchor.isPresent()) controls += 16;
+        int imageControls = anchor.flatMap(value -> value.image()).isPresent() ? 48 : 0;
+        GuideUiLayout.Rect label = new GuideUiLayout.Rect(row.x() + 2, row.y(),
+                Math.max(0, row.width() - controls - imageControls - 2), rowHeight);
+        Component text = Component.empty();
+        if (anchor.isPresent()) {
+            for (var chip : ObservationAnchorPresentation.chips(anchor.orElseThrow())) {
+                if (!text.getString().isEmpty()) text = text.copy().append(" · ");
+                text = text.copy().append(Component.translatable(chip.key(), chip.value()));
+            }
+        } else text = Component.translatable("screen.openallay.observation.add_focus");
+        boundedHeaderText(graphics, text, label, MUTED);
+        if (label.contains(mouseX, mouseY)) graphics.setTooltipForNextFrame(font, text, mouseX, mouseY);
+        int x = Math.max(row.x(), row.right() - controls - imageControls);
+        if (imageControls > 0) {
+            ImageReference reference = anchor.orElseThrow().image().orElseThrow().image();
+            GuideUiLayout.Rect image = new GuideUiLayout.Rect(x, row.y(), 32, rowHeight);
+            observationComposerAction(graphics, image, Component.translatable("screen.openallay.observation.frame"),
+                    () -> openObservationImage(reference), "observation:frame", mouseX, mouseY);
+            observationComposerAction(graphics, new GuideUiLayout.Rect(x + 32, row.y(), 16, rowHeight),
+                    Component.literal("×"), () -> uiState.removeObservationImage(view.selectedSession()),
+                    "observation:remove-frame", mouseX, mouseY);
+            x += 48;
+        }
+        if (anchor.isPresent()) {
+            observationComposerAction(graphics, new GuideUiLayout.Rect(x, row.y(), 16, rowHeight), Component.literal("×"),
+                    () -> uiState.removeObservation(view.selectedSession()), "observation:remove", mouseX, mouseY);
+            x += 16;
+        }
+        if (observationActions != null) {
+            observationComposerAction(graphics, new GuideUiLayout.Rect(x, row.y(), 16, rowHeight), Component.literal("↻"),
+                    this::refreshObservation, "observation:refresh", mouseX, mouseY);
+            observationComposerAction(graphics, new GuideUiLayout.Rect(x + 16, row.y(), 16, rowHeight),
+                    Component.literal(observationCapturing ? "…" : "▧"), this::attachObservationFrame,
+                    "observation:attach", mouseX, mouseY);
+        }
+        return observationLayout.remaining();
+    }
+
+    private void observationComposerAction(GuiGraphicsExtractor graphics, GuideUiLayout.Rect bounds,
+            Component label, Runnable action, String id, int mouseX, int mouseY) {
+        int left = Math.max(bounds.x(), observationComposerBounds.x());
+        int right = Math.min(bounds.right(), observationComposerBounds.right());
+        if (right <= left || bounds.height() <= 0) return;
+        bounds = new GuideUiLayout.Rect(left, bounds.y(), right - left, bounds.height());
+        boundedHeaderText(graphics, label, bounds, observationCapturing ? MUTED : ACCENT);
+        String key = switch (id) {
+            case "observation:refresh" -> "screen.openallay.observation.refresh";
+            case "observation:attach" -> "screen.openallay.observation.attach_frame";
+            case "observation:remove-frame" -> "screen.openallay.observation.remove_frame";
+            case "observation:frame" -> "screen.openallay.observation.open_frame";
+            default -> "screen.openallay.observation.remove";
+        };
+        Component description = Component.translatable(key);
+        hits.add(new Hit(bounds, HitKind.COMPOSER, action, id, description.getString()));
+        if (bounds.contains(mouseX, mouseY)) graphics.setTooltipForNextFrame(font, description, mouseX, mouseY);
+    }
+
+    private void openObservationImage(ImageReference reference) {
+        selectedObservationImage = Objects.requireNonNull(reference, "reference");
+        selectedTool = null;
+        selectedSource = null;
+        detailScroll = 0;
+        expandedDetails.clear();
+        rebuildForDetail();
+    }
+
+    private int observationImageDetail(GuiGraphicsExtractor graphics, ImageReference reference,
+            GuideUiLayout.Rect detail, int y, int mouseX, int mouseY, boolean expanded) {
+        y = detailLine(graphics, Component.translatable("screen.openallay.observation.frame_size",
+                reference.width(), reference.height()), detail, y);
+        int canvasWidth = Math.max(1, detail.width() - 16);
+        int canvasHeight = Math.min(expanded ? 320 : 144,
+                Math.max(30, (int) Math.round(canvasWidth * reference.height() / (double) reference.width())));
+        GuideUiLayout.Rect canvas = new GuideUiLayout.Rect(detail.x() + 8, y, canvasWidth, canvasHeight);
+        if (visibleDetail(y, canvasHeight, detail)) {
+            graphics.fill(canvas.x(), canvas.y(), canvas.right(), canvas.bottom(), panelAltColor());
+            Identifier texture = observationTextures().texture(reference);
+            if (texture != null) {
+                double scale = Math.min(canvas.width() / (double) reference.width(), canvas.height() / (double) reference.height());
+                int imageWidth = Math.max(1, (int) Math.round(reference.width() * scale));
+                int imageHeight = Math.max(1, (int) Math.round(reference.height() * scale));
+                graphics.blit(texture, canvas.x() + (canvas.width() - imageWidth) / 2,
+                        canvas.y() + (canvas.height() - imageHeight) / 2, imageWidth, imageHeight, 0, 1, 0, 1);
+            } else boundedHeaderText(graphics, Component.translatable(observationTextures().failed(reference)
+                    ? "screen.openallay.observation.image_unavailable" : "screen.openallay.observation.image_loading"), canvas, MUTED);
+            int clippedTop = Math.max(canvas.y(), detail.y() + 21);
+            int clippedBottom = Math.min(canvas.bottom(), detail.bottom() - 1);
+            if (!expanded && clippedBottom > clippedTop) {
+                GuideUiLayout.Rect hit = new GuideUiLayout.Rect(canvas.x(), clippedTop, canvas.width(), clippedBottom - clippedTop);
+                hits.add(new Hit(hit, HitKind.DETAIL, () -> openObservationImage(reference),
+                        "observation:image:" + reference.sha256(), Component.translatable("screen.openallay.observation.open_frame").getString()));
+                if (hit.contains(mouseX, mouseY)) graphics.setTooltipForNextFrame(font,
+                        Component.translatable("screen.openallay.observation.open_frame"), mouseX, mouseY);
+            }
+        }
+        return y + canvasHeight + 5;
+    }
+
     private void renderComposerExtras(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         hits.removeIf(hit -> hit.kind() == HitKind.COMPOSER);
         if (composerExtras == null) return;
         GuideUiLayout.Rect strip = composerExtras.images();
-        if (strip.height() > 0) {
+        if (strip.height() > 0) strip = renderObservationComposer(graphics, strip, mouseX, mouseY);
+        if (strip.height() > 0 && strip.width() > 0) {
             List<ComposerImageDraft.Attachment> images = composerImages.attachments();
             int cell = Math.min(46, strip.height());
             int visible = Math.max(1, strip.width() / (cell + 4));
@@ -3075,8 +3264,10 @@ public final class OpenAllayScreen extends Screen {
         if (dispatch.handled()) return;
         if (composerImages.pending()) return;
         String question = dispatch.normalizedText().trim();
-        if (question.isEmpty() && composerImages.empty()) return;
-        if (!composerImages.empty() && view.selectedImageInputCapability() != ImageInputCapability.SUPPORTED) {
+        GuideClientUiState.ObservationCapture observation = uiState.captureObservation(view.selectedSession());
+        List<ImageReference> inputImages = uiState.inputImageReferences(view.selectedSession(), observation);
+        if (question.isEmpty() && inputImages.isEmpty()) return;
+        if (!inputImages.isEmpty() && view.selectedImageInputCapability() != ImageInputCapability.SUPPORTED) {
             notice = GuideUiNotice.error(Component.translatable("screen.openallay.image.model_unsupported").getString());
             return;
         }
@@ -3084,25 +3275,21 @@ public final class OpenAllayScreen extends Screen {
         validatePendingEditTarget();
         if (draftIntent().editInvalid()) return;
         if (editingPending() == null && !active && !view.canSend()) return;
-        ModelMessage message = ModelMessage.userInput(question, composerImages.references());
+        ModelMessage message = ModelMessage.userInput(question, composerImages.references(), observation.anchor());
         ComposerImageDraft.Submission images = composerImages.captureSubmission();
         GuideClientUiState.Insertion revision = uiState.captureInsertion(view.selectedSession());
         String capturedText = composer.getValue();
         UUID pendingId = editingPending();
         GuideClientUiState.IntentCapture capturedIntent = uiState.captureIntent(view.selectedSession());
         if (!uiState.beginIntentSubmission(capturedIntent)) return;
+        GuideClientUiState.ObservationLease observationLease = uiState.leaseObservation(observation);
         submittingDraft = true;
         GuideClientUiState.SubmissionRoute capturedRoute = GuideClientUiState.submissionRoute(capturedIntent.intent(), active);
         CompletableFuture<? extends ToolResult<?>> future;
         try {
-            future = switch (capturedRoute) {
-            case EDIT_PENDING -> service.editPending(pendingId, message);
-            case STEER -> service.steer(message);
-            case FOLLOW_UP -> service.followUp(message);
-            case ASK -> service.ask(message);
-            case EDIT_INVALID -> throw new IllegalStateException("Invalid edit cannot be submitted");
-            };
+            future = observationSubmission.send(service, capturedRoute, pendingId, message, observation);
         } catch (RuntimeException dispatchFailed) {
+            observationLease.close();
             uiState.completeIntentSubmission(capturedIntent);
             submittingDraft = false;
             notice = GuideUiNotice.error(Component.translatable("screen.openallay.composer.submit_failed").getString());
@@ -3118,6 +3305,7 @@ public final class OpenAllayScreen extends Screen {
                     uiState.clearAcceptedText(revision, capturedText);
                     uiState.clearAcceptedIntent(capturedIntent);
                     composerImages.accepted(images);
+                    uiState.acceptedObservation(observation);
                 } else if (failure == null && pendingId != null && result instanceof ToolResult.Success<?>) {
                     uiState.invalidatePendingEdit(capturedIntent);
                 }
@@ -3140,6 +3328,7 @@ public final class OpenAllayScreen extends Screen {
                 refreshComposerLayout();
                 updateControls();
             } finally {
+                observationLease.close();
                 uiState.completeIntentSubmission(capturedIntent);
                 if (images.session().equals(view.selectedSession())) submittingDraft = false;
                 updateControls();
@@ -3416,10 +3605,12 @@ public final class OpenAllayScreen extends Screen {
         if (send == null) return;
         boolean inWorld = minecraft.player != null;
         boolean active = composerRequestActive();
-        boolean content = !draft.trim().isEmpty() || !composerImages.empty();
+        List<ImageReference> inputImages = uiState.inputImageReferences(view.selectedSession(),
+                uiState.captureObservation(view.selectedSession()));
+        boolean content = !draft.trim().isEmpty() || !composerImages.empty() || !inputImages.isEmpty();
         boolean localControl = !draftIntent().editing() && dev.openallay.guide.composer.SlashCommandParser.parse(draft).kind()
                 != dev.openallay.guide.composer.SlashCommandParser.Kind.TEXT;
-        boolean imageCapable = composerImages.references().isEmpty()
+        boolean imageCapable = inputImages.isEmpty()
                 || view.selectedImageInputCapability() == ImageInputCapability.SUPPORTED;
         send.active = inWorld && !submittingDraft && !uiState.intentSubmissionInFlight(view.selectedSession()) && (localControl
                 || (editingPending() != null || active || view.canSend()) && content

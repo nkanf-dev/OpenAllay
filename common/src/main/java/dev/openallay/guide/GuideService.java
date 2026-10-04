@@ -73,6 +73,7 @@ public final class GuideService implements GuideHistoryAdministration {
             new CopyOnWriteArrayList<>();
     private volatile GuideSnapshot snapshot;
     private volatile Map<String, SessionState> publishedSessions = Map.of();
+    private volatile Map<UUID, Map<String, List<dev.openallay.model.image.ImageReference>>> publishedObservationImages = Map.of();
     private volatile GuideTelemetrySnapshot telemetry;
     private String selectedSession = "main";
     private String compactSelectedSession = "main";
@@ -262,6 +263,13 @@ public final class GuideService implements GuideHistoryAdministration {
             }
             return true;
         });
+    }
+
+    /** Original typed Tool images, never inferred from normalized result JSON. */
+    public List<dev.openallay.model.image.ImageReference> observationImages(UUID requestId, String toolUseId) {
+        if (requestId == null || toolUseId == null) return List.of();
+        return publishedObservationImages.getOrDefault(requestId, Map.of())
+                .getOrDefault(toolUseId, List.of());
     }
 
     public CompletableFuture<ToolResult<byte[]>> readImage(
@@ -908,9 +916,15 @@ public final class GuideService implements GuideHistoryAdministration {
     /** Explicit captured owner. Idle sends and busy FIFO follow-ups are chosen at final admission. */
     public CompletableFuture<ToolResult<InputReceipt>> followUp(String sessionId, UUID sessionOwner, String text,
             java.util.function.BooleanSupplier admissionFence) {
+        return followUp(sessionId, sessionOwner, text == null ? null
+                : dev.openallay.model.ModelMessage.userText(text), admissionFence);
+    }
+
+    /** Voice and other captured input carry their original reference alongside the same admission. */
+    public CompletableFuture<ToolResult<InputReceipt>> followUp(String sessionId, UUID sessionOwner,
+            dev.openallay.model.ModelMessage message, java.util.function.BooleanSupplier admissionFence) {
         Objects.requireNonNull(admissionFence, "admissionFence");
         SessionState captured = publishedSessions.get(sessionId);
-        dev.openallay.model.ModelMessage message = text == null ? null : dev.openallay.model.ModelMessage.userText(text);
         CompletableFuture<ToolResult<InputReceipt>> result = new CompletableFuture<>();
         dispatcher.execute(() -> {
             if (captured == null || sessions.get(sessionId) != captured
@@ -2744,6 +2758,9 @@ public final class GuideService implements GuideHistoryAdministration {
     private void publishWithoutSave() {
         fenceManualCompactionSelection();
         publishedSessions = Map.copyOf(sessions);
+        Map<UUID, List<dev.openallay.model.ModelMessage>> originalImages = new LinkedHashMap<>();
+        sessions.values().forEach(session -> originalImages.putAll(session.originalContext));
+        publishedObservationImages = ToolObservationImageIndex.build(originalImages);
         snapshot = buildSnapshot();
         telemetry = buildTelemetry();
         for (Consumer<GuideSnapshot> listener : listeners) {

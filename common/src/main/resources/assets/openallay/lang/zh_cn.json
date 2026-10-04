@@ -933,5 +933,20 @@
   "screen.openallay.composer.accepted.sent": "消息已发送。",
   "screen.openallay.composer.accepted.message": "消息已接受。",
   "screen.openallay.hud.voice_drafts": "查看草稿（%s）",
-  "screen.openallay.hud.voice_drafts.description": "语音文字待查看，尚未发送。打开完整界面查看，并选择是否插入草稿。"
+  "screen.openallay.hud.voice_drafts.description": "语音文字待查看，尚未发送。打开完整界面查看，并选择是否插入草稿。",
+  "screen.openallay.observation.add_focus": "焦点",
+  "screen.openallay.observation.attach_frame": "附加当前画面",
+  "screen.openallay.observation.capture_failed": "未能获取当前画面",
+  "screen.openallay.observation.crosshair": "准星：%s",
+  "screen.openallay.observation.focus": "焦点：%s",
+  "screen.openallay.observation.frame": "画面",
+  "screen.openallay.observation.frame_size": "画面 · %s × %s",
+  "screen.openallay.observation.held": "手持：%s",
+  "screen.openallay.observation.image_loading": "正在读取画面…",
+  "screen.openallay.observation.image_unavailable": "画面不可用",
+  "screen.openallay.observation.open_frame": "查看画面",
+  "screen.openallay.observation.refresh": "刷新焦点",
+  "screen.openallay.observation.remove": "移除焦点",
+  "screen.openallay.observation.remove_frame": "移除画面",
+  "screen.openallay.observation.slot": "槽位：%s"
 }

@@ -131,6 +131,10 @@ copy answers, or export a session. The screen does not pause the game.
 - **Branch sessions (Fork):** create an independent conversation from a completed task without re-running Tools.
 - **Follow-up & Steer:** choose **Follow-up** to run after the current task releases its resources,
   or **Steer** to add guidance at the next operation boundary. Steer does not interrupt a model call.
+- **World observation:** the Agent can read live focus and request world or game-UI images as needed.
+  Image requests need an image-capable model. Open tool details to inspect the actual capture.
+- **Input references:** focus and associated frames support your question. Refresh or remove them,
+  or attach a current world frame. They describe the source of that input, not a live view.
 - **Image inputs:** paste images with **Ctrl/Cmd+V** when using an image-capable model.
 - **Manual compaction:** when the conversation is idle, enter `/compact` to summarize older context
   with your client-configured model. Server models do not support this command yet. Use `//` to send a literal `/`.

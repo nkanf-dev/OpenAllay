@@ -6,7 +6,8 @@
     "MultiLineEditBoxAccessor",
     "MultilineTextFieldAccessor",
     "AbstractContainerScreenObservationAccessor",
-    "GameRendererObservationMixin"
+    "GameRendererObservationMixin",
+    "KeyboardHandlerObservationMixin"
   ],
   "injectors": {
     "defaultRequire": 1

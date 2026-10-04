@@ -149,7 +149,8 @@ final class ClientArchitectureTest {
         assertTrue(coordinator.contains("bound.presentationSessionOwner(state.selectedSession())"));
         assertTrue(coordinator.contains("target.uiOwnerId(), target.uiGeneration()"));
         assertTrue(coordinator.contains("target.sessionId(), target.draftRevision()"));
-        assertTrue(coordinator.contains("state.insertTranscript(captured, text)"));
+        assertTrue(coordinator.contains("state.insertTranscript(captured, text, observationForVoice(target).orElse(null))"));
+        assertTrue(coordinator.contains("state.leaseObservation(state.captureObservation(state.selectedSession()))"));
         assertTrue(coordinator.contains("voice.input().setFeedbackVisible(feedback)"));
         assertTrue(coordinator.contains("activeScreen instanceof OpenAllayScreen"));
         assertTrue(coordinator.contains("activeScreen instanceof GuideChatLiteScreen"));

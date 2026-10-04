@@ -933,5 +933,20 @@
   "screen.openallay.composer.accepted.sent": "Message sent.",
   "screen.openallay.composer.accepted.message": "Message accepted.",
   "screen.openallay.hud.voice_drafts": "View drafts (%s)",
-  "screen.openallay.hud.voice_drafts.description": "Voice text is waiting here and has not been sent. Open the full screen to review it and choose whether to insert it."
+  "screen.openallay.hud.voice_drafts.description": "Voice text is waiting here and has not been sent. Open the full screen to review it and choose whether to insert it.",
+  "screen.openallay.observation.add_focus": "Focus",
+  "screen.openallay.observation.attach_frame": "Attach current frame",
+  "screen.openallay.observation.capture_failed": "Frame is not available now",
+  "screen.openallay.observation.crosshair": "Crosshair: %s",
+  "screen.openallay.observation.focus": "Focus: %s",
+  "screen.openallay.observation.frame": "Frame",
+  "screen.openallay.observation.frame_size": "Frame · %s × %s",
+  "screen.openallay.observation.held": "Held: %s",
+  "screen.openallay.observation.image_loading": "Loading image…",
+  "screen.openallay.observation.image_unavailable": "Image is not available",
+  "screen.openallay.observation.open_frame": "Open frame",
+  "screen.openallay.observation.refresh": "Refresh focus",
+  "screen.openallay.observation.remove": "Remove focus",
+  "screen.openallay.observation.remove_frame": "Remove frame",
+  "screen.openallay.observation.slot": "Slot: %s"
 }
