@@ -59,7 +59,7 @@ def properties(text):
 
 
 def validate_profile(text, target="26.2", competing=()):
-    if target not in ("26.1", "26.1.1", "26.1.2", "26.2", "26.3"):
+    if target not in ("1.21.11", "26.1", "26.1.1", "26.1.2", "26.2", "26.3"):
         raise ValueError("unknown target")
     profile = properties(text)
     if set(profile) != PROFILE_FIELDS:
@@ -120,12 +120,22 @@ class MinecraftTargetProfileSourceTest(unittest.TestCase):
         self.assertEqual(PINS_26_2, validate_profile(self.profile("26.2")))
         selector = self.source("gradle/minecraft-targets.gradle")
         self.assertIn("getOrElse('26.2')", selector)
-        self.assertIn("def nativeFamilies = ['26.1': '26.1', '26.1.1': '26.1', '26.1.2': '26.1'", selector)
+        self.assertIn("def nativeFamilies = ['1.21.11': '1.21.11', '26.1': '26.1', '26.1.1': '26.1', '26.1.2': '26.1'", selector)
 
     def test_explicit_26_3_is_the_audited_candidate_tuple(self):
         self.assertEqual(PINS_26_3, validate_profile(self.profile("26.3"), "26.3"))
         self.assertIn("compile candidate only", self.profile("26.3"))
         self.assertNotIn("validatedTargetIds", self.source("gradle/minecraft-targets.gradle"))
+
+    def test_1_21_11_build_family(self):
+        profile = validate_profile(self.profile("1.21.11"), "1.21.11")
+        self.assertEqual(("21", "1.21.11-20251209.172050"),
+                         (profile["java_version"], profile["neo_form_version"]))
+        fabric = self.source("fabric/build.gradle")
+        self.assertLess(fabric.index("pluginManager.apply("), fabric.index("dependencies {"))
+        self.assertIn("mappings(loom.officialMojangMappings())", fabric)
+        self.assertIn("if (!remapMinecraft) include(project", fabric)
+        self.assertIn("Integer.parseInt(java_version)", self.source("adapters/minecraft-26.2/build.gradle"))
 
     def test_profile_is_loaded_first_and_shared_product_pins_stay_shared(self):
         root_build = self.source("build.gradle")
@@ -162,7 +172,8 @@ class MinecraftTargetProfileSourceTest(unittest.TestCase):
     def test_six_fabric_components_read_the_selected_profile(self):
         fabric = self.source("fabric/build.gradle")
         for module, field in FABRIC_COMPONENTS.items():
-            self.assertIn('net.fabricmc.fabric-api:' + module + ':${' + field + '}', fabric)
+            artifact = '${keyApiArtifact}' if field == 'fabric_key_mapping_api_version' else module
+            self.assertIn('net.fabricmc.fabric-api:' + artifact + ':${' + field + '}', fabric)
             self.assertNotIn('net.fabricmc.fabric-api:' + module + ':' + PINS_26_2[field], fabric)
 
     def test_exact_path_replacement_keeps_override_and_unrelated_shared_files(self):
@@ -239,7 +250,7 @@ class MinecraftTargetProfileSourceTest(unittest.TestCase):
         self.assertIn("withPathSensitivity(PathSensitivity.RELATIVE)", family)
         self.assertIn("dependsOn(validateSelection)", family)
         build = self.source("build.gradle")
-        self.assertIn("version '1.16.3'", build)
+        self.assertIn("version '1.17.21'", build)
         self.assertIn("version '2.0.148'", build)
         # No buildDirectory/run/cache mutation belongs to this foundation.
         for text in (family, loader, self.source("gradle/minecraft-targets.gradle")):

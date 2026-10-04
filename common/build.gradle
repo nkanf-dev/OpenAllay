@@ -14,6 +14,8 @@ neoForge {
     }
 }
 
+def viewerApiLoader = minecraftTarget == '1.21.11' ? 'neoforge' : 'fabric'
+
 dependencies {
     api(project(":engine-core"))
     api(project(":extension-api"))
@@ -27,8 +29,8 @@ dependencies {
     // Fabric and NeoForge both bundle MixinExtras, so it is safe to use it in common
     compileOnly(annotationProcessor('io.github.llamalad7:mixinextras-common:0.5.3'))
     compileOnly("mezz.jei:jei-${minecraft_version}-common-api:${jei_version}")
-    compileOnly("me.shedaniel:RoughlyEnoughItems-api-fabric:${rei_version}")
-    compileOnly("dev.architectury:architectury-fabric:${architectury_version}")
+    compileOnly("me.shedaniel:RoughlyEnoughItems-api-${viewerApiLoader}:${rei_version}")
+    compileOnly("dev.architectury:architectury-${viewerApiLoader}:${architectury_version}")
     implementation("org.commonmark:commonmark:${commonmark_version}")
     implementation("org.commonmark:commonmark-ext-gfm-tables:${commonmark_version}")
     implementation("dev.latvian.mods:rhino:${rhino_version}")
@@ -38,8 +40,8 @@ dependencies {
     testRuntimeOnly('org.junit.platform:junit-platform-launcher:1.11.4')
     testRuntimeOnly("org.xerial:sqlite-jdbc:${sqlite_jdbc_version}")
     testRuntimeOnly("mezz.jei:jei-${minecraft_version}-common-api:${jei_version}")
-    testRuntimeOnly("me.shedaniel:RoughlyEnoughItems-api-fabric:${rei_version}")
-    testRuntimeOnly("dev.architectury:architectury-fabric:${architectury_version}")
+    testRuntimeOnly("me.shedaniel:RoughlyEnoughItems-api-${viewerApiLoader}:${rei_version}")
+    testRuntimeOnly("dev.architectury:architectury-${viewerApiLoader}:${architectury_version}")
 }
 
 tasks.withType(Test).configureEach {

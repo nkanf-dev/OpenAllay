@@ -10,12 +10,12 @@ version = rootProject.version
 base { archivesName = "openallay-minecraft-${minecraft_version}-world-adapter" }
 
 java {
-    toolchain { languageVersion = JavaLanguageVersion.of(25) }
+    toolchain { languageVersion = JavaLanguageVersion.of(java_version) }
     withSourcesJar()
 }
 
 tasks.withType(JavaCompile).configureEach {
-    options.release = 25
+    options.release = Integer.parseInt(java_version)
     options.encoding = 'UTF-8'
 }
 

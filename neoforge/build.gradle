@@ -26,6 +26,8 @@ dependencies {
     compileOnly("dev.architectury:architectury-neoforge:${architectury_version}")
 }
 
+evaluationDependsOn(':adapters:minecraft-26.2')
+
 neoForge {
     version = neoforge_version
     // Automatically enable neoforge AccessTransformers if the file exists
