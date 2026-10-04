@@ -36,7 +36,6 @@ import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
-import net.minecraft.world.level.block.entity.BlockEntityTypes;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.Property;
 import net.minecraft.world.level.storage.TagValueInput;
@@ -267,10 +266,10 @@ final class NativeBlockCodec {
         if (blockId == null || !"minecraft".equals(blockId.getNamespace())) return false;
         Class<?> blockClass = state.getBlock().getClass();
         BlockEntityType<?> expected;
-        if (blockClass == ChestBlock.class) expected = BlockEntityTypes.CHEST;
-        else if (blockClass == TrappedChestBlock.class) expected = BlockEntityTypes.TRAPPED_CHEST;
-        else if (blockClass == BarrelBlock.class) expected = BlockEntityTypes.BARREL;
-        else if (blockClass == ShulkerBoxBlock.class) expected = BlockEntityTypes.SHULKER_BOX;
+        if (blockClass == ChestBlock.class) expected = NativeContainerEntityTypes.chest();
+        else if (blockClass == TrappedChestBlock.class) expected = NativeContainerEntityTypes.trappedChest();
+        else if (blockClass == BarrelBlock.class) expected = NativeContainerEntityTypes.barrel();
+        else if (blockClass == ShulkerBoxBlock.class) expected = NativeContainerEntityTypes.shulkerBox();
         else return false;
         Identifier id = Identifier.tryParse(tag.getString("id").orElse(""));
         if (id == null || !expected.isValid(state)

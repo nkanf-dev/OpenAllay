@@ -49,12 +49,12 @@ public final class NativeGuidePresentationHost implements GuidePresentationHost 
             connectionWorld = level;
             worldConnection = level == null ? null : UUID.randomUUID();
         }
-        Screen screen = minecraft.gui.screen();
+        Screen screen = MinecraftClientWindow.screen(minecraft);
         Surface surface = screen == null ? Surface.GAMEPLAY
                 : screen instanceof OpenAllayScreen ? Surface.GUIDE
                 : screen instanceof GuideChatLiteScreen ? Surface.HUD_INPUT : Surface.OTHER;
         return new Facts(minecraft.player == null ? null : minecraft.player.getUUID(), worldConnection, surface,
-                minecraft.gui.overlay() != null, minecraft.gui.hud.isHidden(), minecraft.isWindowActive());
+                MinecraftClientWindow.overlay(minecraft) != null, MinecraftClientWindow.hudHidden(minecraft), minecraft.isWindowActive());
     }
 
     @Override public Input pollInput() {
@@ -70,9 +70,9 @@ public final class NativeGuidePresentationHost implements GuidePresentationHost 
     @Override public BooleanSupplier captureFence(FenceScope scope) {
         Object level = minecraft.level;
         UUID actor = minecraft.player == null ? null : minecraft.player.getUUID();
-        Screen sourceScreen = minecraft.gui.screen();
+        Screen sourceScreen = MinecraftClientWindow.screen(minecraft);
         return scope == FenceScope.VIEW
-                ? () -> minecraft.level == level && minecraft.gui.screen() == sourceScreen
+                ? () -> minecraft.level == level && MinecraftClientWindow.screen(minecraft) == sourceScreen
                 : () -> minecraft.level == level && minecraft.player != null
                         && actor != null && actor.equals(minecraft.player.getUUID());
     }
@@ -83,7 +83,7 @@ public final class NativeGuidePresentationHost implements GuidePresentationHost 
         if (view.observationInput() != null) screen.withObservationInput(view.observationInput());
         if (view.observationSubmission() != null) screen.withObservationSubmission(view.observationSubmission());
         if (view.observationImages() != null) screen.withObservationImages(view.observationImages());
-        minecraft.gui.setScreen(screen);
+        MinecraftClientWindow.setScreen(minecraft, screen);
     }
 
     @Override public void showSettings(Runnable returnToGuide, BooleanSupplier ownerValid, VoiceSettingsActions voice,
@@ -93,19 +93,19 @@ public final class NativeGuidePresentationHost implements GuidePresentationHost 
                     @Override public void editHud(OpenAllaySettingsScreen returnScreen, GuideDisplayConfig draft,
                             Consumer<GuideDisplayConfig> applied) {
                         if (!ownerValid.getAsBoolean()) return;
-                        minecraft.gui.setScreen(new GuideHudEditorScreen(draft, applied, returnScreen,
+                        MinecraftClientWindow.setScreen(minecraft, new GuideHudEditorScreen(draft, applied, returnScreen,
                                 ownerValid, renderer, hudView));
                     }
                     @Override public void previewNotification(GuideUiConfig.Notifications config) {
                         previewNotification.accept(config);
                     }
                 }).withVoiceActions(voice);
-        minecraft.gui.setScreen(screen);
+        MinecraftClientWindow.setScreen(minecraft, screen);
     }
 
     @Override public void showHudEditor(GuideDisplayConfig draft, Consumer<GuideDisplayConfig> applied,
             BooleanSupplier ownerValid) {
-        minecraft.gui.setScreen(new GuideHudEditorScreen(draft, applied, null, ownerValid, renderer, hudView));
+        MinecraftClientWindow.setScreen(minecraft, new GuideHudEditorScreen(draft, applied, null, ownerValid, renderer, hudView));
     }
 
     @Override public void showHudInput(View view, Runnable openGuide) {
@@ -113,10 +113,10 @@ public final class NativeGuidePresentationHost implements GuidePresentationHost 
                 view.voice()).withRecipes(recipes);
         if (view.observationInput() != null) screen.withObservationInput(view.observationInput());
         if (view.observationSubmission() != null) screen.withObservationSubmission(view.observationSubmission());
-        minecraft.gui.setScreen(screen);
+        MinecraftClientWindow.setScreen(minecraft, screen);
     }
 
     @Override public void focusComposerAfterVoiceDraft() {
-        if (minecraft.gui.screen() instanceof OpenAllayScreen screen) screen.focusComposerAfterVoiceDraft();
+        if (MinecraftClientWindow.screen(minecraft) instanceof OpenAllayScreen screen) screen.focusComposerAfterVoiceDraft();
     }
 }

@@ -1,5 +1,7 @@
 package dev.openallay.client.gui.hud;
 
+import dev.openallay.client.gui.MinecraftClientWindow;
+
 import dev.openallay.client.gui.OpenAllayKeyMappings;
 import dev.openallay.client.gui.OpenAllayWidgetTheme;
 import dev.openallay.guide.ui.GuideUiConfig;
@@ -30,10 +32,10 @@ public final class GuideHudRenderer {
 
     public void extractRenderState(GuiGraphicsExtractor graphics, GuideHudView view) {
         var context = new GuideHudVisibility.Context(minecraft.level != null, minecraft.player != null,
-                minecraft.gui.hud.isHidden(), minecraft.gui.hud.getDebugOverlay().showDebugScreen(),
-                minecraft.gui.screen() != null, minecraft.gui.overlay() != null);
-        if (minecraft.gui.screen() instanceof GuideHudEditorScreen
-                || minecraft.gui.screen() instanceof GuideChatLiteScreen) { results.releaseNativeViews(); return; }
+                MinecraftClientWindow.hudHidden(minecraft), MinecraftClientWindow.debugScreenVisible(minecraft),
+                MinecraftClientWindow.screen(minecraft) != null, MinecraftClientWindow.overlay(minecraft) != null);
+        if (MinecraftClientWindow.screen(minecraft) instanceof GuideHudEditorScreen
+                || MinecraftClientWindow.screen(minecraft) instanceof GuideChatLiteScreen) { results.releaseNativeViews(); return; }
         if (GuideHudVisibility.isVisible(view.hud(), context)) draw(graphics, view, view.hud());
         else results.releaseNativeViews();
     }

@@ -73,8 +73,8 @@ public final class GuideClientUiCoordinator implements AutoCloseable {
     public void extractRenderState(GuiGraphicsExtractor graphics) {
         if (presentation.closed()) return;
         renderer.extractRenderState(graphics, presentation.hud().view());
-        if (minecraft.gui.screen() == null && minecraft.gui.overlay() == null
-                && minecraft.player != null && minecraft.level != null && !minecraft.gui.hud.isHidden()) {
+        if (MinecraftClientWindow.screen(minecraft) == null && MinecraftClientWindow.overlay(minecraft) == null
+                && minecraft.player != null && minecraft.level != null && !MinecraftClientWindow.hudHidden(minecraft)) {
             GuideVoiceIndicator.extract(graphics, minecraft, presentation.voiceInput());
         }
     }

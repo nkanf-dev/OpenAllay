@@ -1,5 +1,7 @@
 package dev.openallay.client.observation;
 
+import dev.openallay.client.gui.MinecraftClientWindow;
+
 import dev.openallay.client.context.ClientFocusCapture;
 import dev.openallay.model.CancellationSignal;
 import dev.openallay.platform.PlatformService;
@@ -42,7 +44,7 @@ public final class MinecraftObservationInputActions implements GuideObservationI
                     focus.actorId(), focus.dimension(), observations, correlation);
             observations.capture(correlation, coordinator);
             CancellationSignal cancellation = new CancellationSignal();
-            var target = MinecraftClientViewCapture.owns(client.gui.screen())
+            var target = MinecraftClientViewCapture.owns(MinecraftClientWindow.screen(client))
                     ? WorldViewRequest.Target.WORLD : WorldViewRequest.Target.GAME_UI;
             return coordinator.capture(new WorldViewRequest(target), cancellation).toCompletableFuture()
                     .thenCompose(view -> {

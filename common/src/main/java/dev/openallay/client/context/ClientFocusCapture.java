@@ -1,5 +1,7 @@
 package dev.openallay.client.context;
 
+import dev.openallay.client.gui.MinecraftClientWindow;
+
 import com.google.gson.JsonObject;
 import com.mojang.serialization.JsonOps;
 import dev.openallay.client.gui.mixin.AbstractContainerScreenObservationAccessor;
@@ -52,8 +54,8 @@ public final class ClientFocusCapture {
 
         var player = client.player;
         String dimension = client.level.dimension().identifier().toString();
-        Screen nativeScreen = client.gui.screen();
-        boolean overlay = client.gui.overlay() != null;
+        Screen nativeScreen = MinecraftClientWindow.screen(client);
+        boolean overlay = MinecraftClientWindow.overlay(client) != null;
         WorldFocusObservation.Menu menu = menu(client, nativeScreen, overlay);
         WorldFocusObservation.Hover hover = hover(client, nativeScreen, overlay);
         TreeMap<String, String> details = new TreeMap<>();
@@ -63,7 +65,7 @@ public final class ClientFocusCapture {
         details.put("minecraft:component_scope", "effective_persistent_components;transient_components_excluded");
         details.put("minecraft:menu_scope", "identity_carried_and_slot_count;slot_contents_not_scanned");
         if (overlay) {
-            details.put("minecraft:overlay_class", client.gui.overlay().getClass().getName());
+            details.put("minecraft:overlay_class", MinecraftClientWindow.overlay(client).getClass().getName());
         }
         return new WorldFocusObservation(
                 capturedAt,
@@ -90,7 +92,7 @@ public final class ClientFocusCapture {
     /** Current native main-camera numbers, never the player's body rotation or configured FOV. */
     public static WorldFocusObservation.Camera camera(Minecraft client) {
         requireOwnerThread(client);
-        var camera = client.gameRenderer.mainCamera();
+        var camera = dev.openallay.client.gui.MinecraftClientWindow.camera(client);
         Vec3 position = camera.position();
         var entity = camera.entity();
         return new WorldFocusObservation.Camera(

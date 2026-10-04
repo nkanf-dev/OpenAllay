@@ -239,7 +239,7 @@ public final class OpenAllayNeoForgeClient {
         NeoForge.EVENT_BUS.addListener((ClientTickEvent.Post event) -> {
             while (OpenAllayKeyMappings.OPEN_GUIDE.consumeClick()) {
                 if (client.player != null && client.level != null
-                        && client.gui.screen() == null && client.gui.overlay() == null) {
+                        && dev.openallay.client.gui.MinecraftClientWindow.screen(client) == null && dev.openallay.client.gui.MinecraftClientWindow.overlay(client) == null) {
                     screens.open(services.forActor(client.player.getUUID()));
                 }
             }

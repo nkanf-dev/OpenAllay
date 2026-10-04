@@ -1,5 +1,7 @@
 package dev.openallay.guide.e2e;
 
+import dev.openallay.client.gui.MinecraftClientWindow;
+
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.mojang.blaze3d.platform.InputConstants;
@@ -190,7 +192,7 @@ final class GuideGraphicalRegressionProbe {
                 throw new IllegalStateException("Native graphical scenario exceeded its timeout at stage " + stage);
             }
             // At FPS10 this leaves several actual extraction/render frames between actions.
-            if (++ticks < 12 || client.gui.overlay() != null) return;
+            if (++ticks < 12 || MinecraftClientWindow.overlay(client) != null) return;
             ticks = 0;
             if ("ui-live-ux-regressions".equals(config.scenario())) runLiveStage();
             else runStage();
@@ -216,7 +218,7 @@ final class GuideGraphicalRegressionProbe {
             }
             case 1 -> {
                 guide();
-                MultiLineEditBox composer = client.gui.screen().children().stream()
+                MultiLineEditBox composer = MinecraftClientWindow.screen(client).children().stream()
                         .filter(MultiLineEditBox.class::isInstance).map(MultiLineEditBox.class::cast)
                         .findFirst().orElseThrow();
                 composer.setValue(config.question(), true);
@@ -263,7 +265,7 @@ final class GuideGraphicalRegressionProbe {
             case 5 -> {
                 expectedName = "小羽 · 原生图形回归";
                 String label = Component.translatable("screen.openallay.settings.general.assistant_name.label").getString();
-                EditBox name = client.gui.screen().children().stream().filter(EditBox.class::isInstance)
+                EditBox name = MinecraftClientWindow.screen(client).children().stream().filter(EditBox.class::isInstance)
                         .map(EditBox.class::cast).filter(value -> value.getMessage().getString().equals(label))
                         .findFirst().orElseThrow(() -> new IllegalStateException("Actual assistant-name editor unavailable"));
                 name.setValue(expectedName);
@@ -345,7 +347,7 @@ final class GuideGraphicalRegressionProbe {
                 advance();
             }
             case 25 -> {
-                require(client.gui.screen() == null, "Passive HUD captured the gameplay screen");
+                require(MinecraftClientWindow.screen(client) == null, "Passive HUD captured the gameplay screen");
                 JsonObject receipt = gson.toJsonTree(hudReceipt.get()).getAsJsonObject();
                 require(number(receipt, "extractedFrame") > hudFrameBeforeDone, "HUD receipt is stale after Done");
                 requireHudLatest(receipt, request);
@@ -356,7 +358,7 @@ final class GuideGraphicalRegressionProbe {
                 stageWait = 0;
             }
             case 26 -> {
-                Screen lite = client.gui.screen();
+                Screen lite = MinecraftClientWindow.screen(client);
                 require(lite != null && lite.getClass().getSimpleName().equals("GuideChatLiteScreen"), "Native HUD interaction key did not open HUD");
                 checkpoint("06-interactive-hud-top", false);
                 JsonObject before = gson.toJsonTree(readReceipt(lite, "resultReceipt")).getAsJsonObject();
@@ -375,7 +377,7 @@ final class GuideGraphicalRegressionProbe {
                 advance();
             }
             case 27 -> {
-                Screen lite = client.gui.screen();
+                Screen lite = MinecraftClientWindow.screen(client);
                 JsonObject receipt = gson.toJsonTree(readReceipt(lite, "resultReceipt")).getAsJsonObject();
                 require(number(receipt, "extractedFrame") > interactiveBeforeWheelFrame,
                         "HUD wheel receipt was not freshly extracted");
@@ -400,7 +402,7 @@ final class GuideGraphicalRegressionProbe {
                 advance();
             }
             case 28 -> {
-                require(client.gui.screen() == null, "HUD ESC left a Screen or focus behind");
+                require(MinecraftClientWindow.screen(client) == null, "HUD ESC left a Screen or focus behind");
                 checkpoint("08-passive-hud-after-esc", false);
                 openGuide.accept(service);
                 advance();
@@ -423,7 +425,7 @@ final class GuideGraphicalRegressionProbe {
                 advance();
             }
             case 35 -> {
-                require(client.gui.screen() == null, "Cached HUD failed to return to gameplay");
+                require(MinecraftClientWindow.screen(client) == null, "Cached HUD failed to return to gameplay");
                 require(number(gson.toJsonTree(hudReceipt.get()).getAsJsonObject(), "extractedFrame") > hudFrameBeforeDone,
                         "Cached-caption HUD did not perform a fresh extraction after settings returned");
                 checkpoint("10-passive-hud-cached-caption", false);
@@ -608,7 +610,7 @@ final class GuideGraphicalRegressionProbe {
             case 63 -> { navigate("screen.openallay.settings.ui"); advance(); }
             case 64 -> { press("screen.openallay.settings.ui.hud"); stage = 60; stageWait = 0; }
             case 65 -> {
-                require(client.gui.screen() == null, "Passive latest tail captured gameplay");
+                require(MinecraftClientWindow.screen(client) == null, "Passive latest tail captured gameplay");
                 JsonObject receipt = gson.toJsonTree(hudReceipt.get()).getAsJsonObject();
                 if (number(receipt, "extractedFrame") <= passiveRecipeFrame) {
                     waitFor("fresh passive HUD latest-tail extraction"); return;
@@ -765,7 +767,7 @@ final class GuideGraphicalRegressionProbe {
                 advance();
             }
             case 82 -> {
-                require(client.gui.screen() == null, "Applied HUD did not return to actual gameplay");
+                require(MinecraftClientWindow.screen(client) == null, "Applied HUD did not return to actual gameplay");
                 JsonObject receipt = gson.toJsonTree(hudReceipt.get()).getAsJsonObject();
                 if (number(receipt, "extractedFrame") <= hudDragFrameBeforePassive) {
                     waitFor("actual passive HUD extraction after layout Apply");
@@ -1026,10 +1028,10 @@ final class GuideGraphicalRegressionProbe {
                 advance();
             }
             case 14 -> {
-                if (client.gui.screen() instanceof OpenAllayScreen)
+                if (MinecraftClientWindow.screen(client) instanceof OpenAllayScreen)
                     require(jsonReceipt(guide(), "e2eToolsReceipt").get("detailToolId").getAsString().isEmpty(),
                             "Native child capsule opened parent Tool drawer");
-                else { client.gui.screen().keyPressed(GuideNativeInput.keyEvent(InputConstants.KEY_ESCAPE, 0)); openGuide.accept(service); }
+                else { MinecraftClientWindow.screen(client).keyPressed(GuideNativeInput.keyEvent(InputConstants.KEY_ESCAPE, 0)); openGuide.accept(service); }
                 checkpoint("live-08-native-child-priority-no-parent-drawer", true);
                 press("screen.openallay.settings.short"); advance();
             }
@@ -1205,7 +1207,7 @@ final class GuideGraphicalRegressionProbe {
     }
 
     private MultiLineEditBox composer() {
-        return client.gui.screen().children().stream().filter(MultiLineEditBox.class::isInstance)
+        return MinecraftClientWindow.screen(client).children().stream().filter(MultiLineEditBox.class::isInstance)
                 .map(MultiLineEditBox.class::cast).findFirst()
                 .orElseThrow(() -> new IllegalStateException("Actual native composer is unavailable"));
     }
@@ -1332,8 +1334,8 @@ final class GuideGraphicalRegressionProbe {
     }
 
     private Screen lite() {
-        require(client.gui.screen() instanceof GuideChatLiteScreen, "Native F8 callback did not open full HUD reader");
-        return client.gui.screen();
+        require(MinecraftClientWindow.screen(client) instanceof GuideChatLiteScreen, "Native F8 callback did not open full HUD reader");
+        return MinecraftClientWindow.screen(client);
     }
 
     private void wheelHud(Screen screen, double scrollY) {
@@ -1459,8 +1461,8 @@ final class GuideGraphicalRegressionProbe {
     }
 
     private GuideHudEditorScreen hudEditor() {
-        require(client.gui.screen() instanceof GuideHudEditorScreen, "Actual native HUD layout editor is not open");
-        return (GuideHudEditorScreen) client.gui.screen();
+        require(MinecraftClientWindow.screen(client) instanceof GuideHudEditorScreen, "Actual native HUD layout editor is not open");
+        return (GuideHudEditorScreen) MinecraftClientWindow.screen(client);
     }
 
     private EditBox hudOffsetEditor(String key) {
@@ -1491,7 +1493,7 @@ final class GuideGraphicalRegressionProbe {
     private void clickHudCaseButton(String key) {
         Button button = findButton(key, false);
         require(button != null, "Actual visible enabled HUD case button unavailable: " + key);
-        Screen screen = client.gui.screen();
+        Screen screen = MinecraftClientWindow.screen(client);
         double x = button.getX() + button.getWidth() / 2.0;
         double y = button.getY() + button.getHeight() / 2.0;
         require(button.getX() >= 0 && button.getY() >= 0
@@ -1717,7 +1719,7 @@ final class GuideGraphicalRegressionProbe {
     }
 
     private boolean doneReturned() {
-        if (client.gui.screen() instanceof OpenAllaySettingsScreen) { waitFor("Done save acknowledgement and return"); return false; }
+        if (MinecraftClientWindow.screen(client) instanceof OpenAllaySettingsScreen) { waitFor("Done save acknowledgement and return"); return false; }
         guide();
         require(settings.snapshot().operation().kind() == SettingsOperation.Kind.IDLE, "Done returned before save acknowledgement");
         return true;
@@ -1737,7 +1739,7 @@ final class GuideGraphicalRegressionProbe {
 
     private Button findButton(String key, boolean prefix) {
         String text = Component.translatable(key).getString();
-        return client.gui.screen().children().stream().filter(Button.class::isInstance).map(Button.class::cast)
+        return MinecraftClientWindow.screen(client).children().stream().filter(Button.class::isInstance).map(Button.class::cast)
                 .filter(value -> value.visible && value.active)
                 .filter(value -> value.getMessage().getString().equals(text)
                         || prefix && value.getMessage().getString().startsWith(text + " · "))
@@ -1752,13 +1754,13 @@ final class GuideGraphicalRegressionProbe {
     }
 
     private OpenAllayScreen guide() {
-        require(client.gui.screen() instanceof OpenAllayScreen, "Actual fullscreen guide is not open");
-        return (OpenAllayScreen) client.gui.screen();
+        require(MinecraftClientWindow.screen(client) instanceof OpenAllayScreen, "Actual fullscreen guide is not open");
+        return (OpenAllayScreen) MinecraftClientWindow.screen(client);
     }
 
     private OpenAllaySettingsScreen settingsScreen() {
-        require(client.gui.screen() instanceof OpenAllaySettingsScreen, "Actual coordinator settings screen is not open");
-        return (OpenAllaySettingsScreen) client.gui.screen();
+        require(MinecraftClientWindow.screen(client) instanceof OpenAllaySettingsScreen, "Actual coordinator settings screen is not open");
+        return (OpenAllaySettingsScreen) MinecraftClientWindow.screen(client);
     }
 
     private void checkpoint(String name, boolean includeGuide) {
@@ -1766,7 +1768,7 @@ final class GuideGraphicalRegressionProbe {
         receipt.put("name", name);
         receipt.put("stage", stage);
         receipt.put("capturedAt", Instant.now().toString());
-        receipt.put("nativeScreen", client.gui.screen() == null ? "gameplay" : client.gui.screen().getClass().getName());
+        receipt.put("nativeScreen", MinecraftClientWindow.screen(client) == null ? "gameplay" : MinecraftClientWindow.screen(client).getClass().getName());
         receipt.put("theme", theme());
         receipt.put("guiWidth", client.getWindow().getGuiScaledWidth());
         receipt.put("guiHeight", client.getWindow().getGuiScaledHeight());
@@ -1782,10 +1784,10 @@ final class GuideGraphicalRegressionProbe {
             receipt.put("header", readReceipt(guide(), "e2eHeaderReceipt"));
             receipt.put("telemetry", readReceipt(guide(), "e2eTelemetryReceipt"));
             receipt.put("tools", readReceipt(guide(), "e2eToolsReceipt"));
-        } else if (client.gui.screen() instanceof OpenAllaySettingsScreen) {
-            receipt.put("settingsState", readReceipt(client.gui.screen(), "e2eSettingsState"));
-        } else if (client.gui.screen() != null && client.gui.screen().getClass().getSimpleName().equals("GuideChatLiteScreen")) {
-            receipt.put("interactiveHud", readReceipt(client.gui.screen(), "resultReceipt"));
+        } else if (MinecraftClientWindow.screen(client) instanceof OpenAllaySettingsScreen) {
+            receipt.put("settingsState", readReceipt(MinecraftClientWindow.screen(client), "e2eSettingsState"));
+        } else if (MinecraftClientWindow.screen(client) != null && MinecraftClientWindow.screen(client).getClass().getSimpleName().equals("GuideChatLiteScreen")) {
+            receipt.put("interactiveHud", readReceipt(MinecraftClientWindow.screen(client), "resultReceipt"));
         }
         checkpoints.add(receipt);
         captureFrame(name);
@@ -1797,7 +1799,7 @@ final class GuideGraphicalRegressionProbe {
         Path path = frameRoot.resolve(name + ".png");
         try {
             Files.createDirectories(frameRoot);
-            Screenshot.takeScreenshot(client.gameRenderer.mainRenderTarget(), image -> {
+            Screenshot.takeScreenshot(MinecraftClientWindow.mainRenderTarget(client), image -> {
                 CompletableFuture.runAsync(() -> {
                     try (image) {
                         int width = image.getWidth();

@@ -214,7 +214,7 @@ public final class OpenAllayFabricClient implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             while (OpenAllayKeyMappings.OPEN_GUIDE.consumeClick()) {
                 if (client.player != null && client.level != null
-                        && client.gui.screen() == null && client.gui.overlay() == null) {
+                        && dev.openallay.client.gui.MinecraftClientWindow.screen(client) == null && dev.openallay.client.gui.MinecraftClientWindow.overlay(client) == null) {
                     screens.open(services.forActor(client.player.getUUID()));
                 }
             }

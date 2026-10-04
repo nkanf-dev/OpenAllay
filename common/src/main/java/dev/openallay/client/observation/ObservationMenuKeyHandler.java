@@ -1,5 +1,7 @@
 package dev.openallay.client.observation;
 
+import dev.openallay.client.gui.MinecraftClientWindow;
+
 import dev.openallay.client.gui.OpenAllayKeyMappings;
 import java.util.Objects;
 import java.util.function.Consumer;
@@ -17,8 +19,8 @@ public final class ObservationMenuKeyHandler {
     public static void configure(Consumer<Minecraft> open) { opener = Objects.requireNonNull(open, "open"); }
 
     public static void afterUnhandledKey(Minecraft client, int action, KeyEvent event) {
-        if (action != 1 || client.player == null || client.level == null || client.gui.overlay() != null) return;
-        var screen = client.gui.screen();
+        if (action != 1 || client.player == null || client.level == null || MinecraftClientWindow.overlay(client) != null) return;
+        var screen = MinecraftClientWindow.screen(client);
         if (screen == null || MinecraftClientViewCapture.owns(screen) || screen instanceof KeyBindsScreen
                 || screen.getFocused() instanceof EditBox || screen.getFocused() instanceof MultiLineEditBox
                 || !OpenAllayKeyMappings.OPEN_GUIDE.matches(event)) return;

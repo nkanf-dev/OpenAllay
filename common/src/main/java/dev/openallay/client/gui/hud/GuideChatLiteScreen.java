@@ -1,5 +1,7 @@
 package dev.openallay.client.gui.hud;
 
+import dev.openallay.client.gui.MinecraftClientWindow;
+
 import dev.openallay.client.gui.GuideClientUiState;
 import dev.openallay.client.observation.ClientObservationInputCoordinator;
 import dev.openallay.client.observation.GuideObservationInputActions;
@@ -184,7 +186,7 @@ public final class GuideChatLiteScreen extends Screen {
     public GuideHudResultRenderer.Receipt resultReceipt() { return results.receipt(); }
 
     @Override public void onClose() {
-        if (minecraft.gui.canInterruptScreen()) super.onClose();
+        if (MinecraftClientWindow.canInterruptScreen(minecraft)) super.onClose();
     }
     @Override public boolean isPauseScreen() { return false; }
     @Override public boolean isInGameUi() { return true; }
@@ -617,7 +619,7 @@ public final class GuideChatLiteScreen extends Screen {
     }
 
     @Override public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
-        minecraft.gui.hud.extractDeferredSubtitles();
+        MinecraftClientWindow.extractDeferredSubtitles(minecraft);
     }
     @Override public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         int background = view.presentation().theme() == GuideUiConfig.Theme.MINT ? 0xFF172A27 : OpenAllayWidgetTheme.CHARCOAL;

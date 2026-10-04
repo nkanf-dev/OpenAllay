@@ -1,5 +1,7 @@
 package dev.openallay.guide.e2e;
 
+import dev.openallay.client.gui.MinecraftClientWindow;
+
 import com.google.gson.Gson;
 import dev.openallay.guide.GuideRequestSnapshot;
 import dev.openallay.guide.GuideRequestStatus;
@@ -241,7 +243,7 @@ public final class GuideClientE2EController {
         if (GuideBuilderE2EProbe.enabled(config.scenario()) && ++builderWarmupTicks < 40) return;
         if (!System.getProperty("openallay.e2e.screenshotRoot", "").isBlank()) {
             var client = net.minecraft.client.Minecraft.getInstance();
-            if (client.gui.overlay() != null || client.gui.screen() != null) return;
+            if (MinecraftClientWindow.overlay(client) != null || MinecraftClientWindow.screen(client) != null) return;
         }
         GuideService service = services.forActor(actor);
         if (service.snapshot().persistence().state()
@@ -539,8 +541,8 @@ public final class GuideClientE2EController {
         String name = create.isBlank() ? resume : create;
         if (name.isBlank() || worldLaunchStarted) return;
         var client = net.minecraft.client.Minecraft.getInstance();
-        if (client.gui.overlay() != null
-                || !(client.gui.screen() instanceof net.minecraft.client.gui.screens.TitleScreen)) return;
+        if (MinecraftClientWindow.overlay(client) != null
+                || !(MinecraftClientWindow.screen(client) instanceof net.minecraft.client.gui.screens.TitleScreen)) return;
         worldLaunchStarted = true;
         if (graphicalScenario(config.scenario())) {
             if (create.isBlank() || !resume.isBlank()) {
@@ -579,7 +581,7 @@ public final class GuideClientE2EController {
                 new net.minecraft.world.level.levelgen.WorldOptions(17L, false, false),
                 registries -> registries.lookupOrThrow(net.minecraft.core.registries.Registries.WORLD_PRESET)
                         .getOrThrow(net.minecraft.world.level.levelgen.presets.WorldPresets.FLAT)
-                        .value().createWorldDimensions(), client.gui.screen());
+                        .value().createWorldDimensions(), MinecraftClientWindow.screen(client));
         if (graphicalScenario(config.scenario())) graphicalFreshWorldName = name;
     }
 
@@ -767,7 +769,7 @@ public final class GuideClientE2EController {
                 var client = net.minecraft.client.Minecraft.getInstance();
                 originalWindowWidth = client.getWindow().getWidth();
                 originalWindowHeight = client.getWindow().getHeight();
-                client.gui.setScreen(screenshotGuide(services.forActor(snapshot.actorId())));
+                MinecraftClientWindow.setScreen(client, screenshotGuide(services.forActor(snapshot.actorId())));
                 if (!System.getProperty("openallay.e2e.screenshotRoot", "").isBlank()) {
                     screenshotStage = 0;
                     screenshotTicks = 0;
@@ -855,8 +857,8 @@ public final class GuideClientE2EController {
         screenshotTicks = 0;
         var client = net.minecraft.client.Minecraft.getInstance();
         if (screenshotStage <= 7
-                && !(client.gui.screen() instanceof OpenAllayScreen)) return;
-        OpenAllayScreen screen = client.gui.screen() instanceof OpenAllayScreen value
+                && !(MinecraftClientWindow.screen(client) instanceof OpenAllayScreen)) return;
+        OpenAllayScreen screen = MinecraftClientWindow.screen(client) instanceof OpenAllayScreen value
                 ? value : null;
         switch (screenshotStage++) {
             case 0 -> screen.positionForDevelopmentProbe(0.0D);
@@ -898,37 +900,37 @@ public final class GuideClientE2EController {
                 }
                 OpenAllaySettingsScreen settings = new OpenAllaySettingsScreen(
                         clientSettings, () -> {});
-                client.gui.setScreen(settings);
+                MinecraftClientWindow.setScreen(client, settings);
                 if (professionalScreenshots()) settings.e2eSelectExtension("openallay:builder");
                 else settings.e2eOpenExtensions();
             }
             case 8 -> {
                 screenshot(client, professionalScreenshots() ? "07-wide-builder-extension.png" : "07-wide-tool-settings.png");
-                if (client.gui.screen() instanceof OpenAllaySettingsScreen settings) {
+                if (MinecraftClientWindow.screen(client) instanceof OpenAllaySettingsScreen settings) {
                     settings.e2eScrollExtensionDetails(320);
                 }
             }
             case 9 -> {
                 screenshot(client, professionalScreenshots() ? "08-wide-builder-extension-lower.png" : "08-wide-tool-settings-lower.png");
-                if (client.gui.screen() instanceof OpenAllaySettingsScreen settings) {
+                if (MinecraftClientWindow.screen(client) instanceof OpenAllaySettingsScreen settings) {
                     settings.e2eOpenGeneral(professionalScreenshots()
                             ? clientSettings.snapshot().display().assistantName() : "小羽");
                 }
             }
             case 10 -> {
                 screenshot(client, "09-wide-general-settings.png");
-                if (client.gui.screen() instanceof OpenAllaySettingsScreen settings) {
+                if (MinecraftClientWindow.screen(client) instanceof OpenAllaySettingsScreen settings) {
                     settings.e2eOpenAbout();
                 }
             }
             case 11 -> {
                 screenshot(client, "10-wide-about.png");
                 if (professionalScreenshots()) {
-                    if (client.gui.screen() instanceof OpenAllaySettingsScreen settings) settings.e2eScrollPageBottom();
+                    if (MinecraftClientWindow.screen(client) instanceof OpenAllaySettingsScreen settings) settings.e2eScrollPageBottom();
                 } else if (!GuideBuilderE2EProbe.enabled(config.scenario())) {
                     finishScreenshotProbe();
                 } else {
-                    client.gui.setScreen(null);
+                    MinecraftClientWindow.setScreen(client, null);
                     if (client.player != null) {
                         client.player.setYRot(-45.0F);
                         client.player.setXRot(-12.0F);
@@ -951,36 +953,36 @@ public final class GuideClientE2EController {
                 screenshot(client, "12-models-manual-context.png");
                 String profile = requiredScreenshotProperty("openallay.e2e.screenshotAutomaticProfile");
                 requireScreenshotProfile(profile, true);
-                ((OpenAllaySettingsScreen) client.gui.screen()).e2eOpenModels(profile);
+                ((OpenAllaySettingsScreen) MinecraftClientWindow.screen(client)).e2eOpenModels(profile);
             }
             case 14 -> {
                 screenshot(client, "13-models-automatic-reference.png");
-                ((OpenAllaySettingsScreen) client.gui.screen()).e2eScrollPageBottom();
+                ((OpenAllaySettingsScreen) MinecraftClientWindow.screen(client)).e2eScrollPageBottom();
             }
             case 15 -> {
                 screenshot(client, "14-models-automatic-reference-bottom.png");
-                var settings = (OpenAllaySettingsScreen) client.gui.screen();
+                var settings = (OpenAllaySettingsScreen) MinecraftClientWindow.screen(client);
                 settings.e2eOpenGeneral(clientSettings.snapshot().display().assistantName());
             }
             case 16 -> {
-                ((OpenAllaySettingsScreen) client.gui.screen()).e2eScrollPageBottom();
+                ((OpenAllaySettingsScreen) MinecraftClientWindow.screen(client)).e2eScrollPageBottom();
             }
             case 17 -> {
                 screenshot(client, "15-general-bottom.png");
-                ((OpenAllaySettingsScreen) client.gui.screen()).e2eOpenAbout();
+                ((OpenAllaySettingsScreen) MinecraftClientWindow.screen(client)).e2eOpenAbout();
             }
-            case 18 -> ((OpenAllaySettingsScreen) client.gui.screen()).e2eScrollPageBottom();
+            case 18 -> ((OpenAllaySettingsScreen) MinecraftClientWindow.screen(client)).e2eScrollPageBottom();
             case 19 -> {
                 screenshot(client, "16-about-bottom.png");
                 screenshotDebug(false, () -> {
                     var guide = screenshotGuide(services.forActor(screenshotActor));
-                    client.gui.setScreen(guide);
+                    MinecraftClientWindow.setScreen(client, guide);
                     guide.selectLatestJavascriptForDevelopmentProbe();
                 });
             }
             case 20 -> {
                 screenshot(client, "17-normal-javascript-intent-detail.png");
-                screenshotSourceAvailable = client.gui.screen() instanceof OpenAllayScreen guide
+                screenshotSourceAvailable = MinecraftClientWindow.screen(client) instanceof OpenAllayScreen guide
                         && guide.selectLatestSourceForDevelopmentProbe();
                 if (!screenshotSourceAvailable)
                     System.out.println("OpenAllay E2E source detail: no actual source in this request");
@@ -991,17 +993,17 @@ public final class GuideClientE2EController {
                 } else screenshot(client, "18-normal-source-detail.png");
                 screenshotDebug(true, () -> {
                     var guide = screenshotGuide(services.forActor(screenshotActor));
-                    client.gui.setScreen(guide);
+                    MinecraftClientWindow.setScreen(client, guide);
                     guide.selectLatestJavascriptForDevelopmentProbe();
                 });
             }
             case 22 -> {
                 screenshot(client, "19-debug-javascript-detail.png");
-                ((OpenAllayScreen) client.gui.screen()).scrollDetailToBottomForDevelopmentProbe();
+                ((OpenAllayScreen) MinecraftClientWindow.screen(client)).scrollDetailToBottomForDevelopmentProbe();
             }
             case 23 -> {
                 screenshot(client, "20-debug-javascript-detail-bottom.png");
-                screenshotSourceAvailable = ((OpenAllayScreen) client.gui.screen()).selectLatestSourceForDevelopmentProbe();
+                screenshotSourceAvailable = ((OpenAllayScreen) MinecraftClientWindow.screen(client)).selectLatestSourceForDevelopmentProbe();
                 if (!screenshotSourceAvailable)
                     System.out.println("OpenAllay E2E debug source screenshot skipped: no actual source");
             }
@@ -1027,7 +1029,7 @@ public final class GuideClientE2EController {
                     System.out.println("OpenAllay E2E package review failed: " + screenshotReviewFailure);
                     screenshot(client, "23-builder-review-failed.png");
                     screenshotStage = 28;
-                } else if (client.gui.screen() instanceof dev.openallay.client.gui.RequirementReviewScreen) {
+                } else if (MinecraftClientWindow.screen(client) instanceof dev.openallay.client.gui.RequirementReviewScreen) {
                     screenshot(client, "23-builder-advisory-review.png");
                     screenshotWaitTicks = 0;
                 } else if (++screenshotWaitTicks > 100) {
@@ -1035,12 +1037,12 @@ public final class GuideClientE2EController {
                 } else screenshotStage = 26;
             }
             case 27 -> {
-                if (client.gui.screen() instanceof dev.openallay.client.gui.RequirementReviewScreen review) review.onClose();
+                if (MinecraftClientWindow.screen(client) instanceof dev.openallay.client.gui.RequirementReviewScreen review) review.onClose();
                 else throw new IllegalStateException("Actual package review is unavailable for cancellation");
             }
             case 28 -> {
                 screenshot(client, "24-builder-review-cancelled.png");
-                client.gui.setScreen(null);
+                MinecraftClientWindow.setScreen(client, null);
                 if (client.player != null) {
                     client.player.setYRot(-45.0F);
                     client.player.setXRot(-12.0F);
@@ -1085,7 +1087,7 @@ public final class GuideClientE2EController {
 
     private OpenAllaySettingsScreen screenshotSettings(net.minecraft.client.Minecraft client) {
         OpenAllaySettingsScreen settings = new OpenAllaySettingsScreen(clientSettings, () -> {});
-        client.gui.setScreen(settings);
+        MinecraftClientWindow.setScreen(client, settings);
         return settings;
     }
 
@@ -1138,8 +1140,8 @@ public final class GuideClientE2EController {
             return;
         }
         var client = net.minecraft.client.Minecraft.getInstance();
-        if (client.gui.overlay() == null
-                && client.gui.screen() instanceof OpenAllayScreen screen
+        if (MinecraftClientWindow.overlay(client) == null
+                && MinecraftClientWindow.screen(client) instanceof OpenAllayScreen screen
                 && screen.hasRenderedActiveProgressForDevelopmentProbe()) {
             // A tick projection becomes visible in the framebuffer only after a later render.
             // Retained evidence must show the strip, not the frame immediately before it.
@@ -1161,7 +1163,7 @@ public final class GuideClientE2EController {
             var client = net.minecraft.client.Minecraft.getInstance();
             originalWindowWidth = client.getWindow().getWidth();
             originalWindowHeight = client.getWindow().getHeight();
-            client.gui.setScreen(screenshotGuide(service));
+            MinecraftClientWindow.setScreen(client, screenshotGuide(service));
         });
     }
 
@@ -1172,7 +1174,7 @@ public final class GuideClientE2EController {
         net.minecraft.client.Screenshot.grab(
                 root,
                 name,
-                client.gameRenderer.mainRenderTarget(),
+                MinecraftClientWindow.mainRenderTarget(client),
                 1,
                 component -> System.out.println("OpenAllay E2E screenshot: "
                         + component.getString()));

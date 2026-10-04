@@ -120,7 +120,7 @@ class MinecraftTargetProfileSourceTest(unittest.TestCase):
         self.assertEqual(PINS_26_2, validate_profile(self.profile("26.2")))
         selector = self.source("gradle/minecraft-targets.gradle")
         self.assertIn("getOrElse('26.2')", selector)
-        self.assertIn("def supportedTargets = ['26.2', '26.3']", selector)
+        self.assertIn("def supportedTargets = ['26.1.2', '26.2', '26.3']", selector)
 
     def test_explicit_26_3_is_the_audited_candidate_tuple(self):
         self.assertEqual(PINS_26_3, validate_profile(self.profile("26.3"), "26.3"))

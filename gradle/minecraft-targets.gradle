@@ -4,7 +4,7 @@ import java.util.Properties
 if (project != rootProject) {
     throw new GradleException('Minecraft target profiles must be selected by the root project')
 }
-def supportedTargets = ['26.2', '26.3']
+def supportedTargets = ['26.1.2', '26.2', '26.3']
 def selectedTarget = providers.gradleProperty('minecraftTarget').getOrElse('26.2')
 if (!(selectedTarget in supportedTargets)) {
     throw new GradleException("Unknown minecraftTarget '${selectedTarget}'; choose ${supportedTargets.join(', ')}")

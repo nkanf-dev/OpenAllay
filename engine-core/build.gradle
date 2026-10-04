@@ -29,7 +29,7 @@ tasks.withType(Jar).configureEach {
 dependencies {
     // Host-supplied public SDK stays separately packaged, never shaded into the engine.
     api(project(':extension-api'))
-    api('com.google.code.gson:gson:2.14.0')
+    api('com.google.code.gson:gson:2.13.2')
     api('org.slf4j:slf4j-api:2.0.17')
     api("dev.latvian.mods:rhino:${rhino_version}")
     implementation('org.apache.maven:maven-artifact:3.9.9')

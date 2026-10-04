@@ -1238,7 +1238,7 @@ public final class OpenAllaySettingsScreen extends Screen {
         GuideNativeDialogs.selectDirectory(minecraft,
                 Component.translatable("screen.openallay.settings.voice." + key).getString(),
                 runtime ? voiceRuntimePath : voiceModelPath).whenComplete((selected, failure) -> minecraft.execute(() -> {
-                    if (minecraft.gui.screen() != this) return;
+                    if (MinecraftClientWindow.screen(minecraft) != this) return;
                     if (failure != null) {
                         localNotice = Component.translatable("screen.openallay.settings.voice.chooser_unavailable").getString();
                     } else if (selected != null && !selected.isBlank()) {

@@ -1,5 +1,7 @@
 package dev.openallay.client.observation;
 
+import dev.openallay.client.gui.MinecraftClientWindow;
+
 import com.mojang.blaze3d.platform.NativeImage;
 import dev.openallay.client.context.ClientFocusCapture;
 import dev.openallay.context.DataAuthority;
@@ -75,7 +77,7 @@ public final class MinecraftClientViewCapture implements AutoCloseable {
                             } catch (Throwable rejected) { result.completeExceptionally(rejected); }
                         });
                     }
-                    if (request.target() == WorldViewRequest.Target.GAME_UI && owns(client.gui.screen())) {
+                    if (request.target() == WorldViewRequest.Target.GAME_UI && owns(MinecraftClientWindow.screen(client))) {
                         throw unavailable("OpenAllay is foreground; no native game UI is currently displayed");
                     }
                 } catch (Throwable failure) { result.completeExceptionally(failure); }
@@ -111,10 +113,10 @@ public final class MinecraftClientViewCapture implements AutoCloseable {
         if (selected.isEmpty()) return;
         try {
             for (Pending capture : selected) verify(capture);
-            if (target == WorldViewRequest.Target.GAME_UI && owns(client.gui.screen())) {
+            if (target == WorldViewRequest.Target.GAME_UI && owns(MinecraftClientWindow.screen(client))) {
                 throw unavailable("OpenAllay is foreground; no native game UI is currently displayed");
             }
-            var nativeTarget = client.gameRenderer.mainRenderTarget();
+            var nativeTarget = MinecraftClientWindow.mainRenderTarget(client);
             var limits = observations.imageLimits(actor);
             if (nativeTarget.width <= 0 || nativeTarget.height <= 0
                     || nativeTarget.width > limits.maxDimension() || nativeTarget.height > limits.maxDimension()
@@ -123,15 +125,15 @@ public final class MinecraftClientViewCapture implements AutoCloseable {
             }
             Instant capturedAt = Instant.now();
             WorldFocusObservation focus = ClientFocusCapture.capture(client, platform, capturedAt);
-            var cameraState = client.gameRenderer.gameRenderState().levelRenderState.cameraRenderState;
+            var cameraState = dev.openallay.client.gui.MinecraftClientWindow.renderState(client).levelRenderState.cameraRenderState;
             var observedCamera = focus.camera();
             var camera = new WorldFocusObservation.Camera(cameraState.pos.x(), cameraState.pos.y(), cameraState.pos.z(),
                     cameraState.yRot, cameraState.xRot, observedCamera.fov(), observedCamera.mode(),
                     cameraState.initialized, observedCamera.detached(), observedCamera.entityUuid());
             Frame frame = new Frame(UUID.randomUUID().toString(), capturedAt, target, nativeTarget.width,
-                    nativeTarget.height, client.gameRenderer.gameRenderState().windowRenderState.guiScale,
-                    camera, focus.screen(), target == WorldViewRequest.Target.GAME_UI && !client.gui.hud.isHidden(),
-                    target == WorldViewRequest.Target.GAME_UI && (client.gui.screen() != null || client.gui.overlay() != null));
+                    nativeTarget.height, dev.openallay.client.gui.MinecraftClientWindow.renderState(client).windowRenderState.guiScale,
+                    camera, focus.screen(), target == WorldViewRequest.Target.GAME_UI && !MinecraftClientWindow.hudHidden(client),
+                    target == WorldViewRequest.Target.GAME_UI && (MinecraftClientWindow.screen(client) != null || MinecraftClientWindow.overlay(client) != null));
             selected.forEach(value -> value.submitted = true);
             Screenshot.takeScreenshot(nativeTarget, image -> nativeReady(frame, selected, image));
         } catch (Throwable failure) {

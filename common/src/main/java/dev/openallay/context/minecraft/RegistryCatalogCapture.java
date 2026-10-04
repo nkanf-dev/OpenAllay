@@ -96,7 +96,7 @@ public final class RegistryCatalogCapture {
                     properties("effect", id, effect, Map.of("minecraft:mob_effect", object(
                             "category", effect.getCategory().name().toLowerCase(java.util.Locale.ROOT),
                             "beneficial", effect.isBeneficial(),
-                            "instantaneous", effect.isInstantaneous(),
+                            "instantaneous", MinecraftEffectFacts.instantaneous(effect),
                             "color", effect.getColor())), propertyContributors)));
         });
 

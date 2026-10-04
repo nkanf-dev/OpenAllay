@@ -1,5 +1,7 @@
 package dev.openallay.client.gui.hud;
 
+import dev.openallay.client.gui.MinecraftClientWindow;
+
 import com.mojang.blaze3d.platform.cursor.CursorTypes;
 import dev.openallay.client.gui.OpenAllayButton;
 import dev.openallay.client.gui.GuideNativeInput;
@@ -175,8 +177,8 @@ public final class GuideHudEditorScreen extends Screen {
 
     private void returnToOwner(boolean valid) {
         // Native teardown will replace this Screen. Do not return to game UI during disconnection.
-        if (minecraft.gui.screen() == this && minecraft.gui.canInterruptScreen()) {
-            minecraft.gui.setScreen(valid ? returnScreen : null);
+        if (MinecraftClientWindow.screen(minecraft) == this && MinecraftClientWindow.canInterruptScreen(minecraft)) {
+            MinecraftClientWindow.setScreen(minecraft, valid ? returnScreen : null);
         }
     }
 
@@ -265,7 +267,7 @@ public final class GuideHudEditorScreen extends Screen {
     @Override
     public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         // Keep the world visible for opacity editing; preserve native in-game subtitle extraction.
-        minecraft.gui.hud.extractDeferredSubtitles();
+        MinecraftClientWindow.extractDeferredSubtitles(minecraft);
     }
 
     @Override

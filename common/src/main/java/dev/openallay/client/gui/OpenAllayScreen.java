@@ -795,7 +795,7 @@ public final class OpenAllayScreen extends Screen {
 
     /** Only a successful voice draft insertion may request this; never displace a player's focus. */
     public boolean focusComposerAfterVoiceDraft() {
-        if (minecraft == null || minecraft.gui.screen() != this || composer == null
+        if (minecraft == null || MinecraftClientWindow.screen(minecraft) != this || composer == null
                 || !composer.active || !composer.visible || getFocused() != null
                 || sessionOverlay || overflowOpen || modelSelectorOpen || detailOpen()
                 || draftIntent().editing()) return false;

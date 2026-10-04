@@ -1,5 +1,7 @@
 package dev.openallay.client.gui.hud;
 
+import dev.openallay.client.gui.MinecraftClientWindow;
+
 import dev.openallay.client.presentation.GuideNotificationPort;
 import java.util.Objects;
 import net.minecraft.client.Minecraft;
@@ -15,7 +17,7 @@ public final class GuideNativeToastPort implements GuideNotificationPort {
 
     @Override public Handle show(Notification notification) {
         GuideNativeToast toast = new GuideNativeToast(notification, minecraft.font, minecraft.getWindow().getGuiScaledWidth());
-        minecraft.gui.toastManager().addToast(toast);
+        MinecraftClientWindow.toastManager(minecraft).addToast(toast);
         toast.queued();
         lastOwnedToast = toast;
         return toast;
