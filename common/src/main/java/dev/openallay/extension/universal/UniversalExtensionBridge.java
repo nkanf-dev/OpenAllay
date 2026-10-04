@@ -79,7 +79,7 @@ public final class UniversalExtensionBridge implements OpenAllayExtension {
                         context.requireActive();
                         try {
                             AutoCloseable opened = Objects.requireNonNull(
-                                    value.open(new UniversalInvocationAdapter(context)), "invocation scope");
+                                    value.open(context.sdkInvocation()), "invocation scope");
                             return () -> {
                                 try { opened.close(); }
                                 catch (Throwable failure) {
@@ -115,7 +115,7 @@ public final class UniversalExtensionBridge implements OpenAllayExtension {
                                     }
                                     String returned;
                                     try {
-                                        returned = method.invoker().invoke(new UniversalInvocationAdapter(context),
+                                        returned = method.invoker().invoke(context.sdkInvocation(),
                                                 List.copyOf(json));
                                     } catch (Throwable failure) {
                                         throw safeFailure(context, failure, "javascript_extension_host_failed",

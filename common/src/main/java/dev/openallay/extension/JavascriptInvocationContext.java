@@ -18,6 +18,8 @@ public final class JavascriptInvocationContext {
     private final State state;
     private final String extensionId;
     private final Set<String> capabilities;
+    // Owned by this exact Extension execution context, never a process-wide identity cache.
+    private dev.openallay.api.extension.ExtensionInvocation sdkInvocation;
 
     JavascriptInvocationContext(ToolInvocationContext invocation, CancellationSignal requestCancellation) {
         state = new State(invocation, requestCancellation);
@@ -36,6 +38,15 @@ public final class JavascriptInvocationContext {
     }
 
     public ToolInvocationContext invocation() { return state.invocation; }
+
+    /** Stable public facade for this admitted execution and Extension, not its correlation ID. */
+    public synchronized dev.openallay.api.extension.ExtensionInvocation sdkInvocation() {
+        requireActive();
+        if (sdkInvocation == null) {
+            sdkInvocation = new dev.openallay.extension.universal.UniversalInvocationAdapter(this);
+        }
+        return sdkInvocation;
+    }
 
     /** The registered owner of this trusted context, not a script-supplied identity. */
     public String extensionId() { return extensionId; }

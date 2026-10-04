@@ -121,6 +121,75 @@ class UniversalExtensionBridgeTest {
                     List.of(JsonParser.parseString("1"))));
         }
     }
+    @Test void participantAndHostMethodsShareOneSdkIdentityPerActualExecution() throws Exception {
+        var registry = UniversalExtensionFixtures.registry();
+        AtomicReference<ExtensionInvocation> participantView = new AtomicReference<>();
+        java.util.List<ExtensionInvocation> opened = new java.util.ArrayList<>();
+        var participant = new JavascriptInvocationParticipant() {
+            public String id() { return "test:identity_participant"; }
+            public AutoCloseable open(ExtensionInvocation context) {
+                participantView.set(context); opened.add(context); return () -> {};
+            }
+        };
+        var method = new JavascriptHostMethod("identity", List.of(), JavascriptHostValueType.STRING, Set.of(),
+                (context, arguments) -> {
+                    assertSame(participantView.get(), context, "One actual invocation must retain SDK identity");
+                    return "\"same execution\"";
+                });
+        var contribution = new ExtensionContribution(List.of(), List.of(), List.of(), List.of(participant),
+                List.of(new JavascriptHostBinding("test:identity", List.of(method))), List.of());
+        assertEquals(dev.openallay.extension.OpenAllayExtensionState.ACTIVE,
+                registry.register(UniversalExtensionFixtures.bridge("test:identity_extension", contribution)).state());
+        for (int index = 0; index < 2; index++) {
+            try (var scope = registry.prepareJavascriptInvocation(
+                    ToolInvocationContext.developmentConsole("same-correlation"), new CancellationSignal())) {
+                scope.open(ignored -> {});
+                assertEquals("same execution", scope.invokeHostMethod("test:identity", "identity", List.of()).getAsString());
+                assertEquals("same execution", scope.invokeHostMethod("test:identity", "identity", List.of()).getAsString());
+            }
+        }
+        assertNotSame(opened.get(0), opened.get(1), "Correlation equality must not merge execution identities");
+        opened.forEach(context -> assertThrows(JavascriptExecutionException.class, context::requireActive));
+    }
+
+    @Test void differentExtensionsKeepDifferentSdkFacadesAndFrozenOwnGrants() throws Exception {
+        var registry = UniversalExtensionFixtures.registry();
+        java.util.Map<String, ExtensionInvocation> participantViews = new java.util.HashMap<>();
+        for (String owner : List.of("first", "second")) {
+            String id = "test:" + owner;
+            var participant = new JavascriptInvocationParticipant() {
+                public String id() { return id + "_participant"; }
+                public AutoCloseable open(ExtensionInvocation context) {
+                    participantViews.put(id, context); return () -> {};
+                }
+            };
+            var method = new JavascriptHostMethod("identity", List.of(), JavascriptHostValueType.BOOLEAN, Set.of(),
+                    (context, arguments) -> {
+                        assertSame(participantViews.get(id), context);
+                        assertEquals(id, context.extensionId());
+                        assertEquals(owner.equals("first"), context.hasCapability(id + "_write"));
+                        return "true";
+                    });
+            var contribution = new ExtensionContribution(List.of(), List.of(), List.of(), List.of(participant),
+                    List.of(new JavascriptHostBinding(id + "_binding", List.of(method))),
+                    List.of(new ExtensionCapability(id + "_write", "Write", "Own fixture grant")));
+            assertEquals(dev.openallay.extension.OpenAllayExtensionState.ACTIVE,
+                    registry.register(UniversalExtensionFixtures.bridge(id, contribution)).state());
+        }
+        registry.replaceCapabilityPolicy(dev.openallay.extension.ExtensionCapabilityPolicy.defaults()
+                .withGrant("test:first", "test:first_write", true));
+        registry.freezeJavascriptRequest("shared-request", true);
+        try (var scope = registry.prepareJavascriptInvocation(
+                ToolInvocationContext.developmentConsole("shared-request"), new CancellationSignal())) {
+            scope.open(ignored -> {});
+            assertNotSame(participantViews.get("test:first"), participantViews.get("test:second"));
+            for (String owner : List.of("first", "second")) {
+                assertTrue(scope.invokeHostMethod("test:" + owner + "_binding", "identity", List.of()).getAsBoolean());
+            }
+        }
+        participantViews.values().forEach(context -> assertThrows(JavascriptExecutionException.class, context::requireActive));
+    }
+
     private static JavascriptExecutionException invokeFailure(JavascriptHostMethod.Invoker invoker) throws Exception {
         var registry = registryWithMethod(JavascriptHostValueType.JSON, invoker);
         try (var scope = registry.prepareJavascriptInvocation(ToolInvocationContext.developmentConsole("failure"),
