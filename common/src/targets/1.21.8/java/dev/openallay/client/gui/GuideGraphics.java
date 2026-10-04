@@ -37,7 +37,7 @@ public final class GuideGraphics {
     public int guiWidth() { return graphics.guiWidth(); }
     public int guiHeight() { return graphics.guiHeight(); }
     public Matrix3x2fStack pose() { return graphics.pose(); }
-    public void requestResizeCursor() { graphics.requestCursor(com.mojang.blaze3d.platform.cursor.CursorTypes.RESIZE_ALL); }
+    public void requestResizeCursor() { GuideLegacyCursor.requestResize(); }
 
     public void enableScissor(int x0, int y0, int x1, int y1) {
         graphics.enableScissor(x0, y0, x1, y1);

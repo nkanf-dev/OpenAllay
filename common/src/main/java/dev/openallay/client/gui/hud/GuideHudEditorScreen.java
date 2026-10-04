@@ -2,7 +2,6 @@ package dev.openallay.client.gui.hud;
 
 import dev.openallay.client.gui.MinecraftClientWindow;
 
-import com.mojang.blaze3d.platform.cursor.CursorTypes;
 import dev.openallay.client.gui.OpenAllayButton;
 import dev.openallay.client.gui.GuideNativeInput;
 import dev.openallay.guide.ui.GuideDisplayConfig;
@@ -17,7 +16,7 @@ import dev.openallay.client.gui.GuideGraphics;
 import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.input.MouseButtonEvent;
+import dev.openallay.client.gui.GuideInputMouse;
 import net.minecraft.network.chat.Component;
 
 /** Native, non-pausing HUD editor. Changes stay in memory until the player presses Apply. */
@@ -224,23 +223,23 @@ public final class GuideHudEditorScreen extends dev.openallay.client.gui.GuideNa
     }
 
     @Override
-    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+    public boolean guideMouseClicked(GuideInputMouse event, boolean doubleClick) {
         if (!ownerValid.getAsBoolean() || draft.finished()) {
             return true;
         }
         if (insideControls(event.x(), event.y())) {
-            super.mouseClicked(event, doubleClick);
+            super.guideMouseClicked(event, doubleClick);
             return true;
         }
         if (GuideNativeInput.isLeftClick(event) && interaction.begin(width, height, event.x(), event.y())) {
             clearFocus();
             return true;
         }
-        return super.mouseClicked(event, doubleClick);
+        return super.guideMouseClicked(event, doubleClick);
     }
 
     @Override
-    public boolean mouseDragged(MouseButtonEvent event, double dx, double dy) {
+    public boolean guideMouseDragged(GuideInputMouse event, double dx, double dy) {
         if (interaction.active()) {
             if (GuideNativeInput.isLeftClick(event) && ownerValid.getAsBoolean() && minecraft.isWindowActive()) {
                 interaction.move(width, height, event.x(), event.y());
@@ -249,14 +248,14 @@ public final class GuideHudEditorScreen extends dev.openallay.client.gui.GuideNa
             }
             return true;
         }
-        return super.mouseDragged(event, dx, dy);
+        return super.guideMouseDragged(event, dx, dy);
     }
 
     @Override
-    public boolean mouseReleased(MouseButtonEvent event) {
+    public boolean guideMouseReleased(GuideInputMouse event) {
         boolean editing = interaction.active();
         interaction.cancel();
-        boolean widgetReleased = super.mouseReleased(event);
+        boolean widgetReleased = super.guideMouseReleased(event);
         return editing || widgetReleased;
     }
 
@@ -267,7 +266,7 @@ public final class GuideHudEditorScreen extends dev.openallay.client.gui.GuideNa
     @Override
     protected void paintGuideBackground(GuideGraphics graphics, int mouseX, int mouseY, float partialTick) {
         // Keep the world visible for opacity editing; preserve native in-game subtitle extraction.
-        MinecraftClientWindow.extractDeferredSubtitles(minecraft);
+        MinecraftClientWindow.extractDeferredSubtitles(minecraft, graphics);
     }
 
     @Override
@@ -286,7 +285,7 @@ public final class GuideHudEditorScreen extends dev.openallay.client.gui.GuideNa
         graphics.outline(left, top, right - left, bottom - top, ACCENT);
         graphics.fill(Math.max(left, right - HANDLE), Math.max(top, bottom - HANDLE), right, bottom, ACCENT);
         if (!insideControls(mouseX, mouseY) && bounds.contains(mouseX, mouseY)) {
-            graphics.requestCursor(CursorTypes.RESIZE_ALL);
+            graphics.requestResizeCursor();
             graphics.setTooltipForNextFrame(font,
                     label(Interaction.onHandle(bounds, mouseX, mouseY) ? "resize_hint" : "drag_hint"),
                     mouseX, mouseY);

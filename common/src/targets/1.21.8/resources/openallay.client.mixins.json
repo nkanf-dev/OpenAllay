@@ -1,0 +1,18 @@
+{
+  "required": true,
+  "package": "dev.openallay.client.gui.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "MultiLineEditBoxAccessor",
+    "MultilineTextFieldAccessor",
+    "AbstractContainerScreenObservationAccessor",
+    "GameRendererObservationMixin",
+    "KeyboardHandlerObservationMixin",
+    "GameRendererFovAccess",
+    "MinecraftTeardownAccess",
+    "GuiSubtitleAccess"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

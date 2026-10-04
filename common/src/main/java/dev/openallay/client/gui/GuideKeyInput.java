@@ -1,12 +1,11 @@
 package dev.openallay.client.gui;
 
 import com.mojang.blaze3d.platform.InputConstants;
-import net.minecraft.client.input.KeyEvent;
 
 /** Translate once at screen entry. Minecraft retains ownership of text, shortcuts and IME. */
 public record GuideKeyInput(GuideKeyIntent intent, boolean confirmation, boolean shift,
         boolean control, boolean paste) {
-    public static GuideKeyInput from(KeyEvent event) {
+    public static GuideKeyInput from(GuideInputKey event) {
         GuideKeyIntent intent = switch (event.key()) {
             case InputConstants.KEY_ESCAPE -> GuideKeyIntent.ESCAPE;
             case InputConstants.KEY_RETURN, InputConstants.KEY_NUMPADENTER -> GuideKeyIntent.ENTER;
@@ -21,6 +20,6 @@ public record GuideKeyInput(GuideKeyIntent intent, boolean confirmation, boolean
             default -> GuideKeyIntent.OTHER;
         };
         return new GuideKeyInput(intent, event.isConfirmation(), event.hasShiftDown(),
-                GuideNativeInput.controlDown(event), event.isPaste());
+                event.controlDown(), event.isPaste());
     }
 }

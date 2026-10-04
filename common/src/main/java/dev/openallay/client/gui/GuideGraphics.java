@@ -2,7 +2,6 @@ package dev.openallay.client.gui;
 
 import dev.openallay.platform.minecraft.MinecraftResourceIds;
 
-import com.mojang.blaze3d.platform.cursor.CursorType;
 import java.util.List;
 import java.util.Objects;
 import net.minecraft.client.gui.Font;
@@ -38,7 +37,7 @@ public final class GuideGraphics {
     public int guiWidth() { return graphics.guiWidth(); }
     public int guiHeight() { return graphics.guiHeight(); }
     public Matrix3x2fStack pose() { return graphics.pose(); }
-    public void requestCursor(CursorType cursor) { graphics.requestCursor(cursor); }
+    public void requestResizeCursor() { graphics.requestCursor(com.mojang.blaze3d.platform.cursor.CursorTypes.RESIZE_ALL); }
 
     public void enableScissor(int x0, int y0, int x1, int y1) {
         graphics.enableScissor(x0, y0, x1, y1);

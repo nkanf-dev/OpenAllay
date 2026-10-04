@@ -12,7 +12,7 @@ import java.util.Objects;
 import dev.openallay.client.gui.GuideGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.input.KeyEvent;
+import dev.openallay.client.gui.GuideInputKey;
 import net.minecraft.network.chat.Component;
 
 /** Reviews the already checked candidate; only Continue anyway publishes it. */
@@ -283,7 +283,7 @@ public final class RequirementReviewScreen extends dev.openallay.client.gui.Guid
                 rebuildWidgets();
             } else {
                 finished = true;
-                minecraft.setScreenAndShow(parent);
+                dev.openallay.client.gui.MinecraftClientWindow.showScreen(minecraft, parent);
             }
         }));
     }
@@ -299,7 +299,7 @@ public final class RequirementReviewScreen extends dev.openallay.client.gui.Guid
         }
         finished = true;
         service.cancelPackageInstall(token);
-        minecraft.setScreenAndShow(parent);
+        dev.openallay.client.gui.MinecraftClientWindow.showScreen(minecraft, parent);
     }
 
     @Override
@@ -322,7 +322,7 @@ public final class RequirementReviewScreen extends dev.openallay.client.gui.Guid
     }
 
     @Override
-    public boolean keyPressed(KeyEvent event) {
+    public boolean guideKeyPressed(GuideInputKey event) {
         GuideKeyInput input = GuideKeyInput.from(event);
         if (input.intent() == GuideKeyIntent.PAGE_DOWN || input.intent() == GuideKeyIntent.PAGE_UP) {
             int page = Math.max(24, viewportBottom() - viewportTop() - 20);
@@ -333,7 +333,7 @@ public final class RequirementReviewScreen extends dev.openallay.client.gui.Guid
             scrollBy(input.intent() == GuideKeyIntent.HOME ? -contentHeight : contentHeight);
             return true;
         }
-        return super.keyPressed(event);
+        return super.guideKeyPressed(event);
     }
 
     @Override

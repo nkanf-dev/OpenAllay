@@ -23,4 +23,29 @@ public abstract class GuideNativeScreen extends Screen {
     @Override public final void resize(int width, int height) { resizeGuide(width, height); }
     protected void resizeGuide(int width, int height) { resizeGuideWidgets(width, height); }
     protected final void resizeGuideWidgets(int width, int height) { super.resize(width, height); }
+
+    @Override public final boolean keyPressed(net.minecraft.client.input.KeyEvent event) {
+        return guideKeyPressed(GuideNativeInput.capture(event));
+    }
+    @Override public final boolean keyReleased(net.minecraft.client.input.KeyEvent event) {
+        return guideKeyReleased(GuideNativeInput.capture(event));
+    }
+    @Override public final boolean charTyped(net.minecraft.client.input.CharacterEvent event) {
+        return guideCharTyped(GuideNativeInput.capture(event));
+    }
+    @Override public final boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event, boolean doubleClick) {
+        return guideMouseClicked(GuideNativeInput.capture(event), doubleClick);
+    }
+    @Override public final boolean mouseDragged(net.minecraft.client.input.MouseButtonEvent event, double dx, double dy) {
+        return guideMouseDragged(GuideNativeInput.capture(event), dx, dy);
+    }
+    @Override public final boolean mouseReleased(net.minecraft.client.input.MouseButtonEvent event) {
+        return guideMouseReleased(GuideNativeInput.capture(event));
+    }
+    public boolean guideKeyPressed(GuideInputKey event) { return super.keyPressed(GuideNativeInput.nativeKey(event)); }
+    public boolean guideKeyReleased(GuideInputKey event) { return super.keyReleased(GuideNativeInput.nativeKey(event)); }
+    public boolean guideCharTyped(GuideInputCharacter event) { return super.charTyped(GuideNativeInput.nativeCharacter(event)); }
+    public boolean guideMouseClicked(GuideInputMouse event, boolean doubleClick) { return super.mouseClicked(GuideNativeInput.nativeMouse(event), doubleClick); }
+    public boolean guideMouseDragged(GuideInputMouse event, double dx, double dy) { return super.mouseDragged(GuideNativeInput.nativeMouse(event), dx, dy); }
+    public boolean guideMouseReleased(GuideInputMouse event) { return super.mouseReleased(GuideNativeInput.nativeMouse(event)); }
 }

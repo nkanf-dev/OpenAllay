@@ -87,8 +87,8 @@ import dev.openallay.guide.ui.GuideEvidencePresentation;
 import dev.openallay.guide.ui.GuideToolDisplayStatus;
 import net.minecraft.client.gui.screens.ConfirmScreen;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.input.KeyEvent;
-import net.minecraft.client.input.MouseButtonEvent;
+import dev.openallay.client.gui.GuideInputKey;
+import dev.openallay.client.gui.GuideInputMouse;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -510,11 +510,11 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
     }
 
     @Override
-    public boolean keyPressed(KeyEvent event) {
+    public boolean guideKeyPressed(GuideInputKey event) {
         GuideKeyInput input = GuideKeyInput.from(event);
         if (voice != null && voice.enabled()
                 && voiceKeyAllowed(getFocused() == composer, sessionOverlay || overflowOpen || modelSelectorOpen)
-                && OpenAllayKeyMappings.VOICE_PTT.matches(event)) {
+                && GuideNativeInput.matches(OpenAllayKeyMappings.VOICE_PTT, event)) {
             if (!voiceKeyHeld) {
                 voiceKeyHeld = true;
                 voice.press(); // Screen keys are not gameplay KeyMapping.isDown() PTT ownership.
@@ -552,7 +552,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         if (composer != null && getFocused() == composer && input.paste()) {
             // Preserve Minecraft's text paste and selection semantics, including text+image clipboards.
             synchronizeComposerSession();
-            super.keyPressed(event);
+            super.guideKeyPressed(event);
             composerImages.paste();
             return true;
         }
@@ -566,7 +566,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
             return true;
         }
         if (composerAction == ComposerKeyAction.NEWLINE) {
-            return super.keyPressed(event);
+            return super.guideKeyPressed(event);
         }
         if (input.intent() == GuideKeyIntent.NEXT_CONTENT) {
             List<Hit> focusable = hits.stream()
@@ -601,17 +601,17 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
                 return true;
             }
         }
-        return super.keyPressed(event);
+        return super.guideKeyPressed(event);
     }
 
     @Override
-    public boolean keyReleased(KeyEvent event) {
-        if (voice != null && voiceKeyHeld && OpenAllayKeyMappings.VOICE_PTT.matches(event)) {
+    public boolean guideKeyReleased(GuideInputKey event) {
+        if (voice != null && voiceKeyHeld && GuideNativeInput.matches(OpenAllayKeyMappings.VOICE_PTT, event)) {
             voiceKeyHeld = false;
             voice.release();
             return true;
         }
-        return super.keyReleased(event);
+        return super.guideKeyReleased(event);
     }
 
     static boolean voiceKeyAllowed(boolean composerFocused, boolean modalOpen) {
@@ -701,7 +701,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
     }
 
     @Override
-    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+    public boolean guideMouseClicked(GuideInputMouse event, boolean doubleClick) {
         if (GuideNativeInput.isLeftClick(event)) {
             // Clear before routing. Native buttons and the input scrollbar may take focus below.
             if (!composerContains(event.x(), event.y())) clearFocus();
@@ -779,7 +779,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
                 }
             }
         }
-        return super.mouseClicked(event, doubleClick);
+        return super.guideMouseClicked(event, doubleClick);
     }
 
     /** Old render closures cannot act after scrolling, projection or geometry changes. */
@@ -3440,12 +3440,12 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
 
     private void closeSession() {
         String sessionId = view.selectedSession();
-        minecraft.setScreenAndShow(new ConfirmScreen(
+        dev.openallay.client.gui.MinecraftClientWindow.showScreen(minecraft, new ConfirmScreen(
                 confirmed -> {
                     if (confirmed) {
                         confirmSessionDeletionAgain(sessionId);
                     } else {
-                        minecraft.setScreenAndShow(this);
+                        dev.openallay.client.gui.MinecraftClientWindow.showScreen(minecraft, this);
                     }
                 },
                 Component.translatable("screen.openallay.session.delete.first.title"),
@@ -3455,9 +3455,9 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
     }
 
     private void confirmSessionDeletionAgain(String sessionId) {
-        minecraft.setScreenAndShow(new ConfirmScreen(
+        dev.openallay.client.gui.MinecraftClientWindow.showScreen(minecraft, new ConfirmScreen(
                 confirmed -> {
-                    minecraft.setScreenAndShow(this);
+                    dev.openallay.client.gui.MinecraftClientWindow.showScreen(minecraft, this);
                     if (confirmed) {
                         accept(service.closeSession(sessionId), deleted -> {
                             notice = GuideUiNotice.success(Component.translatable(

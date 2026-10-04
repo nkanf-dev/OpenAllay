@@ -34,7 +34,7 @@ public final class MinecraftClientWindow {
         return minecraft.gui.getDebugOverlay().showDebugScreen();
     }
 
-    public static void extractDeferredSubtitles(Minecraft minecraft) {
+    public static void extractDeferredSubtitles(Minecraft minecraft, GuideGraphics graphics) {
         minecraft.gui.renderDeferredSubtitles();
     }
 
@@ -46,4 +46,10 @@ public final class MinecraftClientWindow {
         return minecraft.getMainRenderTarget();
     }
     public static net.minecraft.client.Camera camera(Minecraft client) { return client.gameRenderer.getMainCamera(); }
+    public static void showScreen(Minecraft minecraft, Screen screen) {
+        minecraft.setScreenAndShow(screen);
+    }
+    public static boolean isInGameUi(Minecraft minecraft, Screen screen) {
+        return screen.isInGameUi();
+    }
 }

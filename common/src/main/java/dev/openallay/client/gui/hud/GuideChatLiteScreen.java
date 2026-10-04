@@ -37,8 +37,8 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.MultiLineEditBox;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.input.KeyEvent;
-import net.minecraft.client.input.MouseButtonEvent;
+import dev.openallay.client.gui.GuideInputKey;
+import dev.openallay.client.gui.GuideInputMouse;
 import net.minecraft.network.chat.Component;
 
 /** Explicit compact native input surface. Gameplay keys/mouse are not forwarded while it is open. */
@@ -480,14 +480,14 @@ public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNat
                 && (editing ? Boolean.TRUE.equals(success.value()) : success.value() instanceof java.util.UUID);
     }
 
-    @Override public boolean keyPressed(KeyEvent event) {
+    @Override public boolean guideKeyPressed(GuideInputKey event) {
         GuideKeyInput input = GuideKeyInput.from(event);
         if (input.intent() == GuideKeyIntent.ESCAPE) { onClose(); return true; }
         if (composer != null && composer.isFocused() && input.intent() == GuideKeyIntent.ENTER && !input.shift()) {
             submit(); return true;
         }
         if (voice != null && voice.enabled() && (composer == null || !composer.isFocused())
-                && !OpenAllayKeyMappings.VOICE_PTT.isUnbound() && OpenAllayKeyMappings.VOICE_PTT.matches(event)) {
+                && !OpenAllayKeyMappings.VOICE_PTT.isUnbound() && GuideNativeInput.matches(OpenAllayKeyMappings.VOICE_PTT, event)) {
             pttHeld = true;
             voice.pressExternalPtt(); // Screen physical mappings are released natively; own release below.
             return true;
@@ -512,7 +512,7 @@ public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNat
                 }
             }
         }
-        return super.keyPressed(event);
+        return super.guideKeyPressed(event);
     }
 
     private List<GuideHudResultRenderer.Hit> visibleResultHits() {
@@ -535,7 +535,7 @@ public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNat
         }
         return super.mouseScrolled(x, y, scrollX, scrollY);
     }
-    @Override public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+    @Override public boolean guideMouseClicked(GuideInputMouse event, boolean doubleClick) {
         // Native controls still own dispatch, including the composer's external scrollbar.
         if (GuideNativeInput.isLeftClick(event) && !composerContains(event.x(), event.y())) clearFocus();
         if (GuideNativeInput.isLeftClick(event) && scrollbar.contains(event.x(), event.y()) && results.scroll().maximum() > 0) {
@@ -551,7 +551,7 @@ public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNat
             }
             return true;
         }
-        return super.mouseClicked(event, doubleClick);
+        return super.guideMouseClicked(event, doubleClick);
     }
     private boolean composerContains(double x, double y) {
         if (composer == null) return false;
@@ -559,9 +559,9 @@ public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNat
                 composer.getX(), composer.getY(), composer.getWidth(), composer.getHeight());
         return input.contains(x, y) && composer.isMouseOver(x, y);
     }
-    @Override public boolean mouseDragged(MouseButtonEvent event, double dx, double dy) {
+    @Override public boolean guideMouseDragged(GuideInputMouse event, double dx, double dy) {
         if (draggingScrollbar) { scrollAt(event.y()); return true; }
-        return super.mouseDragged(event, dx, dy);
+        return super.guideMouseDragged(event, dx, dy);
     }
     private void scrollAt(double y) {
         int thumb = scrollbarThumbHeight();
@@ -607,19 +607,19 @@ public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNat
         notice = result.opened() ? GuideUiNotice.info(feedback) : GuideUiNotice.warning(feedback);
     }
 
-    @Override public boolean keyReleased(KeyEvent event) {
-        if (pttHeld && OpenAllayKeyMappings.VOICE_PTT.matches(event)) { pttHeld = false; voice.release(); return true; }
+    @Override public boolean guideKeyReleased(GuideInputKey event) {
+        if (pttHeld && GuideNativeInput.matches(OpenAllayKeyMappings.VOICE_PTT, event)) { pttHeld = false; voice.release(); return true; }
         if (micHeld) { micHeld = false; voice.release(); }
-        return super.keyReleased(event);
+        return super.guideKeyReleased(event);
     }
-    @Override public boolean mouseReleased(MouseButtonEvent event) {
+    @Override public boolean guideMouseReleased(GuideInputMouse event) {
         draggingScrollbar = false;
         if (micHeld) { micHeld = false; voice.release(); }
-        return super.mouseReleased(event);
+        return super.guideMouseReleased(event);
     }
 
     @Override protected void paintGuideBackground(GuideGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        MinecraftClientWindow.extractDeferredSubtitles(minecraft);
+        MinecraftClientWindow.extractDeferredSubtitles(minecraft, graphics);
     }
     @Override protected void paintGuideScreen(GuideGraphics graphics, int mouseX, int mouseY, float partialTick) {
         int background = view.presentation().theme() == GuideUiConfig.Theme.MINT ? 0xFF172A27 : OpenAllayWidgetTheme.CHARCOAL;

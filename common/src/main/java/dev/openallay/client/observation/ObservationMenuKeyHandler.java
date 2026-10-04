@@ -9,7 +9,8 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.MultiLineEditBox;
 import net.minecraft.client.gui.screens.options.controls.KeyBindsScreen;
-import net.minecraft.client.input.KeyEvent;
+import dev.openallay.client.gui.GuideInputKey;
+import dev.openallay.client.gui.GuideNativeInput;
 
 /** Handles an unconsumed Guide key in a native game menu using its configured key mapping. */
 public final class ObservationMenuKeyHandler {
@@ -18,12 +19,12 @@ public final class ObservationMenuKeyHandler {
 
     public static void configure(Consumer<Minecraft> open) { opener = Objects.requireNonNull(open, "open"); }
 
-    public static void afterUnhandledKey(Minecraft client, int action, KeyEvent event) {
+    public static void afterUnhandledKey(Minecraft client, int action, GuideInputKey event) {
         if (action != 1 || client.player == null || client.level == null || MinecraftClientWindow.overlay(client) != null) return;
         var screen = MinecraftClientWindow.screen(client);
         if (screen == null || MinecraftClientViewCapture.owns(screen) || screen instanceof KeyBindsScreen
                 || screen.getFocused() instanceof EditBox || screen.getFocused() instanceof MultiLineEditBox
-                || !OpenAllayKeyMappings.OPEN_GUIDE.matches(event)) return;
+                || !GuideNativeInput.matches(OpenAllayKeyMappings.OPEN_GUIDE, event)) return;
         Consumer<Minecraft> current = opener;
         if (current != null) current.accept(client);
     }

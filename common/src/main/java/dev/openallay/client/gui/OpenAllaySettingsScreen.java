@@ -13,7 +13,7 @@ import dev.openallay.client.voice.VoiceSettingsActions;
 import dev.openallay.client.voice.VoiceSettingsView;
 import dev.openallay.client.voice.VoiceConfig;
 import net.minecraft.client.gui.components.AbstractSliderButton;
-import net.minecraft.client.input.KeyEvent;
+import dev.openallay.client.gui.GuideInputKey;
 import dev.openallay.client.gui.settings.HistorySettingsProjection;
 import dev.openallay.client.gui.settings.ModelProfileDraft;
 import dev.openallay.client.gui.settings.ModelReasoningSettingsProjection;
@@ -368,7 +368,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
             captureDraft();
             openingRequirementReview = true;
             try {
-                minecraft.setScreenAndShow(new RequirementReviewScreen(service, this, review));
+                dev.openallay.client.gui.MinecraftClientWindow.showScreen(minecraft, new RequirementReviewScreen(service, this, review));
             } finally {
                 openingRequirementReview = false;
             }
@@ -632,7 +632,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
     }
 
     @Override
-    public boolean keyPressed(KeyEvent event) {
+    public boolean guideKeyPressed(GuideInputKey event) {
         GuideKeyInput input = GuideKeyInput.from(event);
         if (editorMenuOpen && input.intent() == GuideKeyIntent.ESCAPE) {
             editorMenuOpen = false;
@@ -648,7 +648,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
             done();
             return true;
         }
-        return super.keyPressed(event);
+        return super.guideKeyPressed(event);
     }
 
     private int sectionMenuRows() {
@@ -1832,9 +1832,9 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
     }
 
     private void confirmUnrestrictedJavascript() {
-        minecraft.setScreenAndShow(new ConfirmScreen(
+        dev.openallay.client.gui.MinecraftClientWindow.showScreen(minecraft, new ConfirmScreen(
                 confirmed -> {
-                    minecraft.setScreenAndShow(this);
+                    dev.openallay.client.gui.MinecraftClientWindow.showScreen(minecraft, this);
                     if (confirmed) accept(service.saveUnrestrictedJavascript(true));
                 },
                 Component.translatable(RequirementSettingsProjection.PREFIX + "confirm_enable"),
@@ -4440,7 +4440,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
 
     public void e2ePressEscape() {
         requireE2eControls();
-        keyPressed(GuideNativeInput.keyEvent(InputConstants.KEY_ESCAPE, 0));
+        GuideNativeInput.keyPressed(this, GuideNativeInput.keyEvent(InputConstants.KEY_ESCAPE, 0));
     }
 
     public void e2ePressBack() {
@@ -4454,7 +4454,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
             if (child instanceof Button button && button.visible && button.active
                     && (button.getMessage().getString().equals(label)
                             || button.getMessage().getString().startsWith(label + " · "))) {
-                button.onPress(GuideNativeInput.keyEvent(InputConstants.KEY_RETURN, 0));
+                GuideNativeInput.press(button, GuideNativeInput.keyEvent(InputConstants.KEY_RETURN, 0));
                 return;
             }
         }
@@ -4644,7 +4644,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
         TEST_CONNECTION
     }
 
-    private static final class PasswordEditBox extends EditBox {
+    private static final class PasswordEditBox extends GuideNativeEditBox {
         private final Component narration;
 
         private PasswordEditBox(
@@ -4656,16 +4656,16 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                 Component narration) {
             super(font, x, y, width, height, narration);
             this.narration = narration;
-            addFormatter((text, offset) -> net.minecraft.util.FormattedCharSequence.forward(
+            formatGuideText((text, offset) -> net.minecraft.util.FormattedCharSequence.forward(
                     "•".repeat(text.length()), net.minecraft.network.chat.Style.EMPTY));
         }
 
         @Override
-        public boolean keyPressed(net.minecraft.client.input.KeyEvent event) {
+        public boolean guideKeyPressed(dev.openallay.client.gui.GuideInputKey event) {
             if (event.isCopy() || event.isCut()) {
                 return true;
             }
-            return super.keyPressed(event);
+            return super.guideKeyPressed(event);
         }
 
         @Override

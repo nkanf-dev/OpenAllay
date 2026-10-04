@@ -158,7 +158,7 @@ public final class ClientFocusCapture {
                 nativeScreen.width,
                 nativeScreen.height,
                 nativeScreen.isPauseScreen(),
-                nativeScreen.isInGameUi(),
+                MinecraftClientWindow.isInGameUi(client, nativeScreen),
                 role);
     }
 
