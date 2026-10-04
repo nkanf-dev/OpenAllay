@@ -352,7 +352,7 @@ public final class ContextCompactor {
             List<ModelToolDefinition> requestTools, int target, String schedulingKey,
             CancellationSignal cancellation, ImagePayloadResolver images,
             Consumer<ModelEvent> usageObserver, int originalEstimate, boolean manual) {
-        List<ModelContent.Image> retainedImages = imageBlocks(history);
+        List<ModelContent> retainedImages = imageBlocks(history);
         List<ContextStructure.Unit> historyUnits = ContextStructure.units(history);
         List<String> serializedUnits = historyUnits.stream().map(unit ->
                 gson.toJson(ContextStructure.summarySafe(unit.messages()))).toList();
@@ -492,7 +492,7 @@ public final class ContextCompactor {
             List<String> serialized, int from, JsonObject prior, int target, String schedulingKey,
             CancellationSignal cancellation,
             java.util.function.Function<List<ModelMessage>, String> finalPrompt,
-            List<ModelContent.Image> retainedImages, List<ModelMessage> suffix,
+            List<ModelContent> retainedImages, List<ModelMessage> suffix,
             List<ModelToolDefinition> tools, ImagePayloadResolver images,
             Consumer<ModelEvent> usageObserver, boolean enforceOutputLimit) {
         cancellation.throwIfCancelled();
@@ -621,7 +621,7 @@ public final class ContextCompactor {
     }
 
     private static List<ModelMessage> summarized(JsonObject summary,
-            List<ModelContent.Image> images, List<ModelMessage> suffix) {
+            List<ModelContent> images, List<ModelMessage> suffix) {
         ArrayList<ModelMessage> projected = new ArrayList<>();
         // Text may be derived memory, but retained images remain actual visual input.
         projected.add(summaryInput(DERIVED_PREFIX + summary, images));
@@ -629,7 +629,7 @@ public final class ContextCompactor {
         return List.copyOf(projected);
     }
 
-    private static ModelMessage summaryInput(String text, List<ModelContent.Image> images) {
+    private static ModelMessage summaryInput(String text, List<ModelContent> images) {
         ArrayList<ModelContent> content = new ArrayList<>();
         content.add(new ModelContent.Text(text));
         content.addAll(images);
@@ -637,17 +637,13 @@ public final class ContextCompactor {
     }
 
     /** Keep image occurrences and their order; reference equality is not deletion permission. */
-    private static List<ModelContent.Image> imageBlocks(List<ModelMessage> messages) {
-        return messages.stream().flatMap(message -> message.content().stream())
-                .filter(ModelContent.Image.class::isInstance)
-                .map(ModelContent.Image.class::cast).toList();
+    private static List<ModelContent> imageBlocks(List<ModelMessage> messages) {
+        return dev.openallay.model.image.ModelImages.observationContent(messages);
     }
 
-    private static List<ModelContent.Image> unitImages(List<ContextStructure.Unit> units, int from, int to) {
-        return units.subList(from, to).stream().flatMap(unit -> unit.messages().stream())
-                .flatMap(message -> message.content().stream())
-                .filter(ModelContent.Image.class::isInstance)
-                .map(ModelContent.Image.class::cast).toList();
+    private static List<ModelContent> unitImages(List<ContextStructure.Unit> units, int from, int to) {
+        return imageBlocks(units.subList(from, to).stream()
+                .flatMap(unit -> unit.messages().stream()).toList());
     }
 
     private static List<ModelMessage> boundResults(List<ModelMessage> messages, int cap,
@@ -677,7 +673,7 @@ public final class ContextCompactor {
                         value = AgentToolResult.boundedModelValue(value, cap);
                     }
                     content.add(value == values.values.get(result) ? result
-                            : new ModelContent.ToolResult(result.toolUseId(), value, result.error()));
+                            : new ModelContent.ToolResult(result.toolUseId(), value, result.error(), result.images()));
                 } else content.add(item);
                 if (item instanceof ModelContent.ToolResult) resultIndex++;
             }

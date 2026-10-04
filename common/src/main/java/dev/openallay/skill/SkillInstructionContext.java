@@ -75,7 +75,7 @@ public final class SkillInstructionContext {
                     }
                     if (replacement != null && !result.value().equals(new JsonPrimitive(replacement))) {
                         content.add(new ModelContent.ToolResult(result.toolUseId(),
-                                new JsonPrimitive(replacement), result.error()));
+                                new JsonPrimitive(replacement), result.error(), result.images()));
                         changed = true;
                         continue;
                     }

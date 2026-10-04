@@ -63,6 +63,7 @@ public record AgentRequest(
 
     public static void validateUserInput(ModelMessage input) {
         Objects.requireNonNull(input, "userInput");
+        ModelMessage.requireUserInput(input);
         if (input.role() != ModelRole.USER
                 || input.content().stream().anyMatch(content ->
                         !(content instanceof ModelContent.Text)

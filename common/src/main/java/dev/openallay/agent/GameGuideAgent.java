@@ -416,7 +416,7 @@ public final class GameGuideAgent {
                 AgentToolResult raw = item.result.join();
                 AgentToolResult result = raw;
                 results.add(new ModelContent.ToolResult(
-                        item.call.id(), result.modelValue(), result.failure()));
+                        item.call.id(), result.modelValue(), result.failure(), result.images()));
                 freshResults.add(result);
                 updatedCallOutcomes.put(
                         item.callKey,

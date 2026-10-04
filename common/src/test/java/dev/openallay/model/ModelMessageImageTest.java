@@ -54,6 +54,20 @@ final class ModelMessageImageTest {
     }
 
     @Test
+    void typedToolOriginIsAllowedInInternalSummaryButRejectedAsPlayerInput() {
+        var carried = new ModelContent.Image(IMAGE, "original-call");
+        var summary = new ModelMessage(ModelRole.USER, List.of(new ModelContent.Text("derived memory"), carried));
+        assertEquals("original-call", ((ModelContent.Image) summary.content().getLast()).originToolUseId());
+        assertThrows(IllegalArgumentException.class, () -> ModelMessage.requireUserInput(summary));
+        assertThrows(IllegalArgumentException.class, () -> dev.openallay.agent.AgentRequest.validateUserInput(summary));
+        assertThrows(IllegalArgumentException.class, () -> new ModelContent.Image(IMAGE, " "));
+        var player = ModelMessage.userInput("look", List.of(IMAGE));
+        assertNull(((ModelContent.Image) player.content().getLast()).originToolUseId());
+        assertSame(player, ModelMessage.requireUserInput(player));
+    }
+
+
+    @Test
     void optionalResolverLeaseCleanupKeepsLambdaResolversFunctional() throws IOException {
         ImagePayloadResolver resolver = reference -> new byte[(int) reference.byteSize()];
         assertDoesNotThrow(resolver::close);

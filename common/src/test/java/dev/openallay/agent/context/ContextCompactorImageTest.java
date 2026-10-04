@@ -189,6 +189,93 @@ final class ContextCompactorImageTest {
         assertEquals(List.of(PNG, JPEG), images(requests.getFirst().messages()));
     }
 
+    @Test
+    void nestedToolImagesSurviveResultFittingSummaryAndCheckpointReuse() {
+        var calls = new ModelMessage(ModelRole.ASSISTANT, List.of(new ModelContent.ToolUse(
+                "visual", "capture", new JsonObject())));
+        var output = new ModelMessage(ModelRole.USER, List.of(new ModelContent.ToolResult(
+                "visual", new com.google.gson.JsonPrimitive("data ".repeat(1_000)), false, List.of(PNG, JPEG, PNG))));
+        var exchange = List.of(calls, output);
+        var requests = new ArrayList<ModelRequest>();
+        ModelClient model = (request, events, cancellation) -> {
+            requests.add(request);
+            assertEquals(PREFIX_IMAGES, dev.openallay.model.image.ModelImages.occurrences(request.messages()));
+            assertEquals(List.of("visual", "visual", "visual"), request.messages().stream()
+                    .flatMap(message -> message.content().stream()).filter(ModelContent.Image.class::isInstance)
+                    .map(ModelContent.Image.class::cast).map(ModelContent.Image::originToolUseId).toList());
+            assertDoesNotThrow(() -> new OpenAiJsonCodec(GSON).requestBody(config(ModelProtocol.OPENAI_CHAT), request));
+            return CompletableFuture.completedFuture(textTurn(SUMMARY));
+        };
+        var compactor = new ContextCompactor(model, GSON, new CharacterFixtureEstimator(),
+                new ContextBudget(8_000, 1_000), "test-model", Clock.fixed(Instant.EPOCH, ZoneOffset.UTC));
+        List<ModelMessage> fitted = compactor.prepareModelView(exchange);
+        assertEquals(PREFIX_IMAGES, dev.openallay.model.image.ModelImages.occurrences(fitted));
+        assertEquals(TokenizerMetadata.ImageAccounting.UNKNOWN, compactor.estimator().imageAccounting(fitted));
+        var source = new ArrayList<>(exchange);
+        source.add(ModelMessage.userText("current:" + "c".repeat(1_300)));
+        var compacted = compactor.compactManually(ignored -> "system", source, 2, List.of(),
+                "actor:nested", new CancellationSignal(), image -> new byte[6], ignored -> {}).join();
+        assertTrue(compacted.successful(), compacted.failureMessage());
+        assertNotNull(compacted.checkpoint());
+        assertFalse(requests.isEmpty());
+        assertEquals(PREFIX_IMAGES, dev.openallay.model.image.ModelImages.occurrences(compacted.projection().messages()));
+        var restored = new ModelContextCodec().decode(new ModelContextCodec().encode(compacted.projection().messages()));
+        assertEquals(compacted.projection().messages(), restored);
+        var reused = compactor.reuse(compacted.checkpoint(), "system", source, 2, List.of()).orElseThrow();
+        assertEquals(PREFIX_IMAGES, dev.openallay.model.image.ModelImages.occurrences(reused.messages()));
+    }
+
+
+    @Test
+    void repeatedCompactionAfterCodecRestoreKeepsEveryOriginalToolImageOrigin() {
+        var requests = new ArrayList<ModelRequest>();
+        ModelClient model = (request, events, cancellation) -> {
+            requests.add(request);
+            assertEquals(List.of(PNG, PNG), dev.openallay.model.image.ModelImages.occurrences(request.messages()));
+            assertEquals(List.of("original-view", "original-view"), request.messages().stream()
+                    .flatMap(message -> message.content().stream()).filter(ModelContent.Image.class::isInstance)
+                    .map(ModelContent.Image.class::cast).map(ModelContent.Image::originToolUseId).toList());
+            assertTrue(new OpenAiJsonCodec(GSON).requestBody(config(ModelProtocol.OPENAI_CHAT), request)
+                    .contains("tool observation for tool call original-view"));
+            assertTrue(new AnthropicJsonCodec(GSON).requestBody(config(ModelProtocol.ANTHROPIC_MESSAGES), request)
+                    .contains("tool observation for tool call original-view"));
+            return CompletableFuture.completedFuture(textTurn(SUMMARY));
+        };
+        var compactor = new ContextCompactor(model, GSON, new CharacterFixtureEstimator(),
+                new ContextBudget(12_000, 1_000), "test-model", Clock.fixed(Instant.EPOCH, ZoneOffset.UTC));
+        var original = List.of(new ModelMessage(ModelRole.ASSISTANT, List.of(new ModelContent.ToolUse(
+                        "original-view", "capture", new JsonObject()))),
+                new ModelMessage(ModelRole.USER, List.of(new ModelContent.ToolResult("original-view",
+                        new com.google.gson.JsonPrimitive("view ".repeat(1_000)), false, List.of(PNG, PNG)))),
+                ModelMessage.userText("first current question " + "x".repeat(500)));
+        var first = compactor.compactManually(ignored -> "system", original, 2, List.of(),
+                "actor:first", new CancellationSignal(), image -> new byte[6], ignored -> {}).join();
+        assertTrue(first.successful(), first.failureMessage());
+        assertNotNull(first.checkpoint());
+        var codec = new ModelContextCodec();
+        var restored = new ArrayList<>(codec.decode(codec.encode(first.projection().messages())));
+        restored.add(new ModelMessage(ModelRole.ASSISTANT, List.of(new ModelContent.Text("answer ".repeat(150)))));
+        restored.add(ModelMessage.userText("eligible old follow up " + "y".repeat(800)));
+        restored.add(new ModelMessage(ModelRole.ASSISTANT, List.of(new ModelContent.Text("completed ".repeat(150)))));
+        restored.add(ModelMessage.userText("new protected question"));
+        int firstCallCount = requests.size();
+        var second = compactor.compactManually(ignored -> "system", restored, 5, List.of(),
+                "actor:second", new CancellationSignal(), image -> new byte[6], ignored -> {}).join();
+        assertTrue(second.successful(), second.failureMessage());
+        assertNotNull(second.checkpoint());
+        assertTrue(requests.size() > firstCallCount);
+        var twice = codec.decode(codec.encode(second.projection().messages()));
+        assertEquals(List.of("original-view", "original-view"), twice.stream()
+                .flatMap(message -> message.content().stream()).filter(ModelContent.Image.class::isInstance)
+                .map(ModelContent.Image.class::cast).map(ModelContent.Image::originToolUseId).toList());
+        assertEquals(List.of(PNG, PNG), dev.openallay.model.image.ModelImages.occurrences(twice));
+        var checkpointCodec = new ContextCheckpointCodec();
+        var checkpoint = checkpointCodec.decode(checkpointCodec.encode(second.checkpoint()));
+        var reused = compactor.reuse(checkpoint, "system", restored, 5, List.of()).orElseThrow();
+        assertEquals(twice, reused.messages());
+    }
+
+
     private static List<ModelMessage> source() {
         return List.of(ModelMessage.userInput("a".repeat(600), List.of(PNG, JPEG)),
                 ModelMessage.userInput("b".repeat(600), List.of(PNG)),
@@ -225,7 +312,8 @@ final class ContextCompactorImageTest {
             for (ModelMessage message : messages) {
                 estimate += 10;
                 for (ModelContent content : message.content()) {
-                    estimate += content instanceof ModelContent.Text text ? text.text().length() : 8;
+                    estimate += content instanceof ModelContent.Text text ? text.text().length()
+                            : content instanceof ModelContent.ToolResult result ? result.value().toString().length() : 8;
                 }
             }
             return estimate;

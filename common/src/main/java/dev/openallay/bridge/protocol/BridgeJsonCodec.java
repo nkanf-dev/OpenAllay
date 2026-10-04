@@ -68,12 +68,33 @@ public final class BridgeJsonCodec {
         if (!FIELDS.containsKey(payload.getClass())) {
             throw new IllegalArgumentException("Unsupported bridge payload " + payload.getClass().getName());
         }
+        JsonObject encoded = gson.toJsonTree(payload).getAsJsonObject();
         if (payload instanceof ServerAgentSteerPayload steer) {
-            JsonObject object = gson.toJsonTree(steer).getAsJsonObject();
-            if (steer.message() == null) object.add("message", com.google.gson.JsonNull.INSTANCE);
-            return object.toString();
+            encoded.add("message", steer.message() == null ? com.google.gson.JsonNull.INSTANCE
+                    : encodeHistoryMessage(gson, steer.message()));
+        } else if (payload instanceof ServerAgentRequestPayload request) {
+            com.google.gson.JsonArray history = new com.google.gson.JsonArray();
+            for (ServerAgentHistoryMessage message : request.history()) history.add(encodeHistoryMessage(gson, message));
+            encoded.add("history", history);
+            encoded.add("userInput", encodeHistoryMessage(gson, request.userInput()));
         }
-        return gson.toJson(payload);
+        return encoded.toString();
+    }
+
+    /** Current typed IMAGE history shape includes an explicit nullable occurrence origin. */
+    public static JsonObject encodeHistoryMessage(Gson gson, ServerAgentHistoryMessage message) {
+        JsonObject encoded = new JsonObject();
+        encoded.addProperty("role", message.role().name());
+        com.google.gson.JsonArray content = new com.google.gson.JsonArray();
+        for (ServerAgentHistoryContent block : message.content()) {
+            JsonObject value = gson.toJsonTree(block).getAsJsonObject();
+            if (block.kind() == ServerAgentHistoryContent.Kind.IMAGE && block.originToolUseId() == null) {
+                value.add("originToolUseId", com.google.gson.JsonNull.INSTANCE);
+            }
+            content.add(value);
+        }
+        encoded.add("content", content);
+        return encoded;
     }
 
     public <T> T decode(String json, Class<T> type) {
@@ -244,15 +265,25 @@ public final class BridgeJsonCodec {
             requireText(value.get("kind"));
             Set<String> fields = switch (value.get("kind").getAsString()) {
                 case "TEXT" -> Set.of("kind", "text");
-                case "IMAGE" -> Set.of("kind", "image");
+                case "IMAGE" -> Set.of("kind", "image", "originToolUseId");
                 case "TOOL_USE" -> Set.of("kind", "toolUseId", "toolName", "json");
-                case "TOOL_RESULT" -> Set.of("kind", "toolUseId", "json", "error");
+                case "TOOL_RESULT" -> Set.of("kind", "toolUseId", "json", "error", "images");
                 default -> throw new IllegalArgumentException("Unknown Server Agent history content kind");
             };
             exactObject(value, fields);
             for (String field : fields) {
                 switch (field) {
                     case "image" -> validateImageReference(value.get(field));
+                    case "originToolUseId" -> {
+                        if (!value.get(field).isJsonNull()) requireText(value.get(field));
+                    }
+                    case "images" -> {
+                        JsonElement images = value.get(field);
+                        if (images == null || !images.isJsonArray()) {
+                            throw new IllegalArgumentException("Tool result images must be an array");
+                        }
+                        for (JsonElement image : images.getAsJsonArray()) validateImageReference(image);
+                    }
                     case "error" -> requireBoolean(value.get(field));
                     default -> requireText(value.get(field));
                 }

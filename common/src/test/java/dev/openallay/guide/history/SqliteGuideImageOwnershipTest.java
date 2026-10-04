@@ -727,6 +727,43 @@ final class SqliteGuideImageOwnershipTest {
         }
     }
 
+    @Test
+    void nestedToolImageSurvivesReopenCompactionForkAndIndependentDeletion() throws Exception {
+        var images = images();
+        byte[] bytes = png(0xff102938);
+        var reference = images.importImage(ACTOR, bytes);
+        var scope = scope("nested.example");
+        var request = request("main", "view question");
+        var original = List.of(ModelMessage.userText("view question"),
+                new ModelMessage(ModelRole.ASSISTANT, List.of(new ModelContent.ToolUse(
+                        "view", "capture", new com.google.gson.JsonObject()))),
+                new ModelMessage(ModelRole.USER, List.of(new ModelContent.ToolResult("view",
+                        new com.google.gson.JsonPrimitive("view metadata"), false, List.of(reference)))),
+                new ModelMessage(ModelRole.ASSISTANT, List.of(new ModelContent.Text("seen"))));
+        store(images).commit(new GuideHistoryCommit(scope, List.of(
+                new GuideHistoryMutation.UpsertPartition("main", NOW),
+                new GuideHistoryMutation.UpsertSession("main", 0, GuideModelSelection.client("default")),
+                new GuideHistoryMutation.UpsertRequest(0, request),
+                new GuideHistoryMutation.ReplaceContext("main", original),
+                new GuideHistoryMutation.ReplaceRequestContext(request.requestId(), original),
+                new GuideHistoryMutation.CaptureRequestBoundary(request.requestId(), original, List.of()))));
+        var reopened = store(images);
+        assertEquals(original, reopened.requestContext(scope, request.requestId()));
+        reopened.commit(new GuideHistoryCommit(scope, List.of(new GuideHistoryMutation.ReplaceContext(
+                "main", List.of(ModelMessage.userText("compacted"))))));
+        assertEquals(0, images.collect(ACTOR));
+        var fork = reopened.fork(new GuideHistoryForkRequest(scope, new GuideHistoryMutation.ForkSession(
+                "main", new GuideHistoryCursor(0, request.requestId()), "branch", 1, GuideModelSelection.client("default"))));
+        reopened.commit(new GuideHistoryCommit(scope, List.of(new GuideHistoryMutation.UpsertPartition("branch", NOW),
+                new GuideHistoryMutation.DeleteSession("main"))));
+        assertArrayEquals(bytes, images.read(ACTOR, reference));
+        assertEquals(0, images.collect(ACTOR));
+        assertEquals(original, store(images).requestContext(scope, fork.page().requests().getFirst().requestId()));
+        reopened.commit(new GuideHistoryCommit(scope, List.of(new GuideHistoryMutation.DeleteSession("branch"))));
+        assertThrows(IOException.class, () -> images.read(ACTOR, reference));
+    }
+
+
     private void seed(GuideHistoryStore store, GuideHistoryScope scope,
             GuideRequestSnapshot request, ImageReference reference) {
         store.commit(new GuideHistoryCommit(scope, List.of(

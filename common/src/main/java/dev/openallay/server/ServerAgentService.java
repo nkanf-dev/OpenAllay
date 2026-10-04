@@ -606,16 +606,7 @@ public final class ServerAgentService {
     }
 
     private static List<dev.openallay.model.image.ImageReference> imageReferences(List<ModelMessage> messages) {
-        java.util.Map<String, dev.openallay.model.image.ImageReference> unique = new java.util.LinkedHashMap<>();
-        messages.stream().flatMap(message -> message.content().stream())
-                .filter(ModelContent.Image.class::isInstance).map(ModelContent.Image.class::cast)
-                .forEach(image -> {
-                    var previous = unique.putIfAbsent(image.reference().sha256(), image.reference());
-                    if (previous != null && !previous.equals(image.reference())) {
-                        throw new IllegalArgumentException("Conflicting image reference metadata");
-                    }
-                });
-        return List.copyOf(unique.values());
+        return dev.openallay.model.image.ModelImages.uniqueReferences(messages);
     }
 
     private static final class ImageAttachmentFailure extends RuntimeException {

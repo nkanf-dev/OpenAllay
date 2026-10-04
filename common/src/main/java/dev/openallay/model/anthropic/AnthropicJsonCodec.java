@@ -90,6 +90,12 @@ public final class AnthropicJsonCodec {
             encoded.addProperty("role", message.role() == ModelRole.USER ? "user" : "assistant");
             JsonArray content = new JsonArray();
             for (ModelContent block : message.content()) {
+                if (block instanceof ModelContent.Image image && image.originToolUseId() != null) {
+                    JsonObject label = new JsonObject();
+                    label.addProperty("type", "text");
+                    label.addProperty("text", dev.openallay.model.image.ModelImages.observationLabel(image.originToolUseId()));
+                    content.add(label);
+                }
                 content.add(encodeContent(block, toolIds, imageEncoder));
             }
             encoded.add("content", content);
@@ -176,7 +182,17 @@ public final class AnthropicJsonCodec {
             case ModelContent.ToolResult result -> {
                 encoded.addProperty("type", "tool_result");
                 encoded.addProperty("tool_use_id", toolIds.encode(result.toolUseId()));
-                encoded.addProperty("content", providerToolResult(result.value()));
+                if (result.images().isEmpty()) {
+                    encoded.addProperty("content", providerToolResult(result.value()));
+                } else {
+                    JsonArray content = new JsonArray();
+                    JsonObject text = new JsonObject();
+                    text.addProperty("type", "text");
+                    text.addProperty("text", providerToolResult(result.value()));
+                    content.add(text);
+                    result.images().forEach(image -> content.add(imageEncoder.apply(image)));
+                    encoded.add("content", content);
+                }
                 encoded.addProperty("is_error", result.error());
             }
         }
@@ -186,32 +202,28 @@ public final class AnthropicJsonCodec {
     private static void validateImages(List<ModelMessage> messages) {
         int count = 0;
         long encodedBytes = 0;
-        for (ModelMessage message : messages) {
-            for (ModelContent block : message.content()) {
-                if (!(block instanceof ModelContent.Image image)) continue;
-                ImageReference reference = image.reference();
-                if (++count > MAX_IMAGES) {
-                    throw new IllegalArgumentException("Anthropic request exceeds 600 images");
-                }
-                if (!reference.mimeType().equals("image/png")
-                        && !reference.mimeType().equals("image/jpeg")) {
-                    throw new IllegalArgumentException("Anthropic image must be PNG or JPEG");
-                }
-                // This early raw-byte bound also prevents long overflow before Base64 length math.
-                if (reference.byteSize() > MAX_ENCODED_IMAGE_BYTES) {
-                    throw new IllegalArgumentException("Anthropic image exceeds 10,000,000 Base64 bytes");
-                }
-                long base64Bytes = 4 * ((reference.byteSize() + 2) / 3);
-                if (base64Bytes > MAX_ENCODED_IMAGE_BYTES) {
-                    throw new IllegalArgumentException("Anthropic image exceeds 10,000,000 Base64 bytes");
-                }
-                if (reference.width() > MAX_IMAGE_DIMENSION || reference.height() > MAX_IMAGE_DIMENSION) {
-                    throw new IllegalArgumentException("Anthropic image dimension exceeds 8,000 pixels");
-                }
-                encodedBytes += base64Bytes;
-                if (encodedBytes > MAX_REQUEST_BYTES) {
-                    throw new IllegalArgumentException("Anthropic image payload exceeds 32,000,000 bytes");
-                }
+        for (ImageReference reference : dev.openallay.model.image.ModelImages.occurrences(messages)) {
+            if (++count > MAX_IMAGES) {
+                throw new IllegalArgumentException("Anthropic request exceeds 600 images");
+            }
+            if (!reference.mimeType().equals("image/png")
+                    && !reference.mimeType().equals("image/jpeg")) {
+                throw new IllegalArgumentException("Anthropic image must be PNG or JPEG");
+            }
+            // This early raw-byte bound also prevents long overflow before Base64 length math.
+            if (reference.byteSize() > MAX_ENCODED_IMAGE_BYTES) {
+                throw new IllegalArgumentException("Anthropic image exceeds 10,000,000 Base64 bytes");
+            }
+            long base64Bytes = 4 * ((reference.byteSize() + 2) / 3);
+            if (base64Bytes > MAX_ENCODED_IMAGE_BYTES) {
+                throw new IllegalArgumentException("Anthropic image exceeds 10,000,000 Base64 bytes");
+            }
+            if (reference.width() > MAX_IMAGE_DIMENSION || reference.height() > MAX_IMAGE_DIMENSION) {
+                throw new IllegalArgumentException("Anthropic image dimension exceeds 8,000 pixels");
+            }
+            encodedBytes += base64Bytes;
+            if (encodedBytes > MAX_REQUEST_BYTES) {
+                throw new IllegalArgumentException("Anthropic image payload exceeds 32,000,000 bytes");
             }
         }
     }

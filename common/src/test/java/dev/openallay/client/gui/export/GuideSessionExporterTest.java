@@ -421,6 +421,50 @@ final class GuideSessionExporterTest {
         assertFalse(Files.exists(game.resolve("openallay")));
     }
 
+    @Test
+    void nestedToolImagesPublishVerifiedAssetsUnderTheirToolIdentity(@TempDir Path game) throws Exception {
+        UUID actor = UUID.randomUUID();
+        var images = new FileImageAttachmentStore(game.resolve("managed-images"));
+        byte[] bytes = png(0xff123abc);
+        var reference = images.importImage(actor, "export:nested", bytes);
+        var original = List.of(ModelMessage.userText("look"),
+                new ModelMessage(ModelRole.ASSISTANT, List.of(new ModelContent.ToolUse(
+                        "native-view", "capture", new JsonObject()))),
+                new ModelMessage(ModelRole.USER, List.of(new ModelContent.ToolResult("native-view",
+                        new com.google.gson.JsonPrimitive("captured"), false, List.of(reference, reference)))));
+        var snapshot = new GuideSessionExportSnapshot("main", List.of(new GuideSessionExportSnapshot.Request(
+                UUID.randomUUID(), NOW, GuideRequestStatus.COMPLETED, "look", List.of(), original, null)), NOW)
+                .withImagePayloadResolver(ref -> images.read(actor, ref));
+        var output = new GuideSessionExporter(game).export(snapshot);
+        Path root = game.resolve("openallay/exports");
+        String text = Files.readString(root.resolve(output.filename()));
+        assertTrue(text.contains("Tool observation · native-view · IMAGE"));
+        assertTrue(text.contains("File: images/" + reference.sha256() + ".png"));
+        assertFalse(text.contains(java.util.Base64.getEncoder().encodeToString(bytes)));
+        assertArrayEquals(bytes, Files.readAllBytes(root.resolve("images/" + reference.sha256() + ".png")));
+        try (var assets = Files.list(root.resolve("images"))) { assertEquals(1, assets.count()); }
+    }
+
+
+    @Test
+    void carriedToolImageExportKeepsItsOriginalToolAssociation(@TempDir Path game) throws Exception {
+        UUID actor = UUID.randomUUID();
+        var images = new FileImageAttachmentStore(game.resolve("managed-images"));
+        byte[] bytes = png(0xff234abc);
+        var reference = images.importImage(actor, "export:carried", bytes);
+        var summary = new ModelMessage(ModelRole.USER, List.of(new ModelContent.Text("derived memory"),
+                new ModelContent.Image(reference, "original-view")));
+        var snapshot = new GuideSessionExportSnapshot("main", List.of(new GuideSessionExportSnapshot.Request(
+                UUID.randomUUID(), NOW, GuideRequestStatus.COMPLETED, "look", List.of(), List.of(summary), null)), NOW)
+                .withImagePayloadResolver(ref -> images.read(actor, ref));
+        var output = new GuideSessionExporter(game).export(snapshot);
+        String text = Files.readString(game.resolve("openallay/exports").resolve(output.filename()));
+        assertTrue(text.contains("Tool observation · original-view · IMAGE"));
+        assertArrayEquals(bytes, Files.readAllBytes(game.resolve("openallay/exports/images")
+                .resolve(reference.sha256() + ".png")));
+    }
+
+
     private static GuideSessionExportSnapshot imageSnapshot(List<ImageReference> references) {
         List<ModelContent> content = new java.util.ArrayList<>();
         content.add(new ModelContent.Text("look"));

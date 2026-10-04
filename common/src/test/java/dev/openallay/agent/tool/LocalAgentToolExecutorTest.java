@@ -23,6 +23,30 @@ final class LocalAgentToolExecutorTest {
     record Input(int value) {}
     record Output(int fact) {}
 
+    record VisualOutput(List<dev.openallay.model.image.ImageReference> images, String fact)
+            implements ModelImageToolOutput {}
+
+    @Test
+    void extractsTypedVisualOutputWithoutInferringImagesFromOrdinaryJson() {
+        var image = new dev.openallay.model.image.ImageReference("a".repeat(64), "image/png", 2, 2, 12);
+        ToolRegistry registry = new ToolRegistry();
+        registry.register("test", List.of(new Tool<Input, VisualOutput>() {
+            @Override public ToolDescriptor<Input, VisualOutput> descriptor() {
+                return new ToolDescriptor<>("test:visual", "Visual fact", Input.class, VisualOutput.class, ToolAccess.READ_ONLY);
+            }
+            @Override public ToolResult<VisualOutput> invoke(ToolInvocationContext context, Input input) {
+                return new ToolResult.Success<>(new VisualOutput(List.of(image), "captured"));
+            }
+        }));
+        var result = new LocalAgentToolExecutor(registry, new Gson()).execute("test:visual",
+                JsonParser.parseString("{\"value\":1}").getAsJsonObject(),
+                ToolInvocationContext.developmentConsole("visual"), new CancellationSignal()).join();
+        assertFalse(result.failure());
+        assertEquals(List.of(image), result.images());
+        assertEquals("captured", result.normalized().getAsJsonObject("value").get("fact").getAsString());
+    }
+
+
     @Test
     void exposesSchemasAndInvokesTheRealRegistry() {
         ToolRegistry registry = new ToolRegistry();

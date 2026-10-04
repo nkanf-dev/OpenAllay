@@ -9,6 +9,7 @@ public final class AgentToolResult {
     private final String toolId;
     private final JsonObject normalized;
     private final boolean failure;
+    private final java.util.List<dev.openallay.model.image.ImageReference> images;
     private final transient ModelToolResultProjection.Prepared prepared;
     private final transient dev.openallay.tool.ModelResultSource source;
 
@@ -18,6 +19,17 @@ public final class AgentToolResult {
 
     public AgentToolResult(String toolId, JsonObject normalized, boolean failure,
             dev.openallay.tool.ModelResultSource source) {
+        this(toolId, normalized, failure, source, java.util.List.of());
+    }
+
+    public AgentToolResult(String toolId, JsonObject normalized, boolean failure,
+            dev.openallay.tool.ModelResultSource source,
+            java.util.List<dev.openallay.model.image.ImageReference> images) {
+        this.images = java.util.List.copyOf(images);
+        dev.openallay.model.image.ModelImages.unique(this.images);
+        if (failure && !this.images.isEmpty()) {
+            throw new IllegalArgumentException("Failed tool results cannot publish images");
+        }
         this.toolId = toolId;
         this.normalized = Objects.requireNonNull(normalized, "normalized").deepCopy();
         this.failure = failure;
@@ -28,6 +40,7 @@ public final class AgentToolResult {
     public String toolId() { return toolId; }
     public JsonObject normalized() { return normalized.deepCopy(); }
     public boolean failure() { return failure; }
+    public java.util.List<dev.openallay.model.image.ImageReference> images() { return images; }
 
     /** Initial transport view, not proof that a provider request fits its token budget. */
     public JsonElement modelValue() {
@@ -55,10 +68,10 @@ public final class AgentToolResult {
 
     @Override public boolean equals(Object other) {
         return other instanceof AgentToolResult result && Objects.equals(toolId, result.toolId)
-                && normalized.equals(result.normalized) && failure == result.failure;
+                && normalized.equals(result.normalized) && failure == result.failure && images.equals(result.images);
     }
-    @Override public int hashCode() { return Objects.hash(toolId, normalized, failure); }
+    @Override public int hashCode() { return Objects.hash(toolId, normalized, failure, images); }
     @Override public String toString() {
-        return "AgentToolResult[toolId=" + toolId + ", normalized=" + normalized + ", failure=" + failure + "]";
+        return "AgentToolResult[toolId=" + toolId + ", normalized=" + normalized + ", failure=" + failure + ", images=" + images + "]";
     }
 }

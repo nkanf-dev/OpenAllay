@@ -89,6 +89,37 @@ final class GuideServiceForkTest {
     }
 
     @Test
+    void memoryForkRetainsNestedToolImagesFromCompactedOriginalRequests() throws Exception {
+        Local local = new Local();
+        dev.openallay.model.image.FileImageAttachmentStore images = new dev.openallay.model.image.FileImageAttachmentStore(
+                temporary.resolve("images"));
+        // A synthetic PNG fixture, not a game capture or clipboard read.
+        var pixels = new java.awt.image.BufferedImage(2, 2, java.awt.image.BufferedImage.TYPE_INT_RGB);
+        pixels.setRGB(0, 0, 0xff123456);
+        var encoded = new java.io.ByteArrayOutputStream();
+        javax.imageio.ImageIO.write(pixels, "png", encoded); pixels.flush();
+        var reference = images.importImage(ACTOR, encoded.toByteArray());
+        GuideService service = new GuideService(ACTOR, local, new Remote(),
+                (capabilities, correlation) -> new ToolResult.Success<>(ToolInvocationContext.developmentConsole(correlation)),
+                Runnable::run, Clock.fixed(NOW, ZoneOffset.UTC), new Gson(), null, null, images);
+        UUID request = success(service.ask("historical picture").join());
+        List<ModelMessage> original = List.of(ModelMessage.userText("historical picture"),
+                new ModelMessage(ModelRole.ASSISTANT, List.of(new ModelContent.ToolUse(
+                        "view", "capture", new com.google.gson.JsonObject()))),
+                new ModelMessage(ModelRole.USER, List.of(new ModelContent.ToolResult("view",
+                        new com.google.gson.JsonPrimitive("captured"), false, List.of(reference)))),
+                new ModelMessage(ModelRole.ASSISTANT, List.of(new ModelContent.Text("picture result"))));
+        List<ModelMessage> projected = context("compacted summary", "safe completed tail");
+        local.complete(request, projected, original);
+        assertEquals("image-branch", success(service.forkSession("main", request, "image-branch").join()));
+        service.closeSession("main").join();
+        assertEquals(0, images.collect(ACTOR));
+        assertArrayEquals(encoded.toByteArray(), images.read(ACTOR, reference));
+        assertEquals(projected, local.hydrated.get("image-branch"));
+    }
+
+
+    @Test
     void memoryForkFinishesIndependentlyAfterSourceClearDuringImageRetentionWithoutPartialAttach() throws Exception {
         Local local = new Local();
         var retained = new java.util.concurrent.CountDownLatch(1);

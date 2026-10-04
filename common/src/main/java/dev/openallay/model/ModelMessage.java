@@ -13,7 +13,7 @@ public record ModelMessage(ModelRole role, List<ModelContent> content) {
             throw new IllegalArgumentException("Model message content must not be empty");
         }
         if (content.stream().anyMatch(ModelContent.Image.class::isInstance)) {
-            validateUserInput(role, content);
+            validateVisualInput(role, content);
         }
     }
 
@@ -42,8 +42,16 @@ public record ModelMessage(ModelRole role, List<ModelContent> content) {
     }
 
     private static void validateUserInput(ModelRole role, List<ModelContent> content) {
+        validateVisualInput(role, content);
+        if (content.stream().anyMatch(block -> block instanceof ModelContent.Image image
+                && image.originToolUseId() != null)) {
+            throw new IllegalArgumentException("Player input cannot contain tool-origin images");
+        }
+    }
+
+    private static void validateVisualInput(ModelRole role, List<ModelContent> content) {
         if (role != ModelRole.USER) {
-            throw new IllegalArgumentException("Player input must have USER role");
+            throw new IllegalArgumentException("Visual input must have USER role");
         }
         boolean nonempty = false;
         for (ModelContent block : content) {
@@ -52,11 +60,11 @@ public record ModelMessage(ModelRole role, List<ModelContent> content) {
             } else if (block instanceof ModelContent.Image) {
                 nonempty = true;
             } else {
-                throw new IllegalArgumentException("Player input supports only text and images");
+                throw new IllegalArgumentException("Visual input supports only text and images");
             }
         }
         if (!nonempty) {
-            throw new IllegalArgumentException("Player input requires text or an image");
+            throw new IllegalArgumentException("Visual input requires text or an image");
         }
     }
 }

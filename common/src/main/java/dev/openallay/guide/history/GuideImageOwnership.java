@@ -67,13 +67,7 @@ final class GuideImageOwnership {
     }
 
     static List<ImageReference> references(List<ModelMessage> messages) {
-        LinkedHashSet<ImageReference> refs = new LinkedHashSet<>();
-        for (ModelMessage message : messages) {
-            for (ModelContent content : message.content()) {
-                if (content instanceof ModelContent.Image image) refs.add(image.reference());
-            }
-        }
-        return List.copyOf(refs);
+        return dev.openallay.model.image.ModelImages.uniqueReferences(messages);
     }
 
     static List<ImageReference> references(Map<String, List<ImageReference>> owners) {

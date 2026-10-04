@@ -20,6 +20,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.HashSet;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
@@ -91,19 +92,10 @@ public final class GuideSessionExporter {
     private static Map<String, ImageReference> preflightAssets(GuideSessionExportSnapshot snapshot)
             throws IOException {
         Map<String, ImageReference> references = new LinkedHashMap<>();
-        for (var request : snapshot.requests()) {
-            for (var message : request.originalContext()) {
-                for (var content : message.content()) {
-                    if (content instanceof ModelContent.Image image) {
-                        ImageReference reference = image.reference();
-                        ImageReference existing = references.putIfAbsent(reference.sha256(), reference);
-                        if (existing != null && !existing.equals(reference)) {
-                            throw new IOException("export image metadata disagrees for one content hash");
-                        }
-                    }
-                }
-            }
-        }
+        List<dev.openallay.model.ModelMessage> messages = snapshot.requests().stream()
+                .flatMap(request -> request.originalContext().stream()).toList();
+        dev.openallay.model.image.ModelImages.uniqueReferences(messages)
+                .forEach(reference -> references.put(reference.sha256(), reference));
         for (ImageReference reference : references.values()) readVerified(snapshot, reference);
         return references;
     }
@@ -117,6 +109,14 @@ public final class GuideSessionExporter {
         }
         // The scoped resolver verifies the MIME type, dimensions and complete image decode.
         return bytes;
+    }
+
+    private static void appendImage(StringBuilder result, ImageReference reference) {
+        result.append("MIME: ").append(reference.mimeType())
+                .append("\nDimensions: ").append(reference.width()).append('x').append(reference.height())
+                .append("\nBytes: ").append(reference.byteSize())
+                .append("\nSHA-256: ").append(reference.sha256())
+                .append("\nFile: images/").append(imageFilename(reference)).append("\n\n");
     }
 
     private static String imageFilename(ImageReference reference) {
@@ -192,14 +192,13 @@ public final class GuideSessionExporter {
                             }
                             case ModelContent.Image image -> {
                                 ImageReference reference = image.reference();
-                                result.append(message.role()).append(" · IMAGE\n")
-                                        .append("MIME: ").append(reference.mimeType())
-                                        .append("\nDimensions: ").append(reference.width()).append('x')
-                                        .append(reference.height())
-                                        .append("\nBytes: ").append(reference.byteSize())
-                                        .append("\nSHA-256: ").append(reference.sha256())
-                                        .append("\nFile: images/").append(imageFilename(reference))
-                                        .append("\n\n");
+                                if (image.originToolUseId() == null) {
+                                    result.append(message.role()).append(" · IMAGE\n");
+                                } else {
+                                    result.append("Tool observation · ").append(formatText(image.originToolUseId()))
+                                            .append(" · IMAGE\n");
+                                }
+                                appendImage(result, reference);
                             }
                             case ModelContent.ToolUse call -> {
                                 tools.put(call.id(), call.name());
@@ -210,8 +209,14 @@ public final class GuideSessionExporter {
                                         .append(call.input())
                                         .append("\n\n");
                             }
-                            case ModelContent.ToolResult outcome -> appendOutcome(result,
-                                    tools.getOrDefault(outcome.toolUseId(), "unknown_tool"), outcome);
+                            case ModelContent.ToolResult outcome -> {
+                                appendOutcome(result, tools.getOrDefault(outcome.toolUseId(), "unknown_tool"), outcome);
+                                for (ImageReference reference : outcome.images()) {
+                                    result.append("Tool observation · ").append(formatText(outcome.toolUseId()))
+                                            .append(" · IMAGE\n");
+                                    appendImage(result, reference);
+                                }
+                            }
                             case ModelContent.Reasoning ignored ->
                                     throw new IllegalArgumentException("export cannot contain reasoning");
                         }

@@ -50,12 +50,6 @@ public record ServerAgentSteerPayload(
     }
 
     public static void validateMessage(ServerAgentHistoryMessage message) {
-        if (message.role() != ServerAgentHistoryMessage.Role.USER
-                || message.toModelMessage().content().stream().anyMatch(content ->
-                        content instanceof ModelContent.ToolUse
-                                || content instanceof ModelContent.ToolResult
-                                || content instanceof ModelContent.Reasoning)) {
-            throw new IllegalArgumentException("Steer must be a user message without tool exchanges");
-        }
+        dev.openallay.model.ModelMessage.requireUserInput(message.toModelMessage());
     }
 }

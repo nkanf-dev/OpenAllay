@@ -18,9 +18,16 @@ public sealed interface ModelContent
     }
 
     /** A managed image reference, never a path, URL or binary payload. */
-    record Image(ImageReference reference) implements ModelContent {
+    record Image(ImageReference reference, String originToolUseId) implements ModelContent {
         public Image {
             Objects.requireNonNull(reference, "reference");
+            if (originToolUseId != null && originToolUseId.isBlank()) {
+                throw new IllegalArgumentException("Image tool origin must not be blank");
+            }
+        }
+
+        public Image(ImageReference reference) {
+            this(reference, null);
         }
     }
 
@@ -44,12 +51,22 @@ public sealed interface ModelContent
         }
     }
 
-    record ToolResult(String toolUseId, JsonElement value, boolean error) implements ModelContent {
+    record ToolResult(String toolUseId, JsonElement value, boolean error,
+                      java.util.List<ImageReference> images) implements ModelContent {
         public ToolResult {
             if (toolUseId == null || toolUseId.isBlank()) {
                 throw new IllegalArgumentException("Tool result requires toolUseId");
             }
             value = Objects.requireNonNull(value, "value").deepCopy();
+            images = java.util.List.copyOf(images);
+            dev.openallay.model.image.ModelImages.unique(images);
+            if (error && !images.isEmpty()) {
+                throw new IllegalArgumentException("Failed tool results cannot publish images");
+            }
+        }
+
+        public ToolResult(String toolUseId, JsonElement value, boolean error) {
+            this(toolUseId, value, error, java.util.List.of());
         }
 
         @Override

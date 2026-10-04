@@ -138,6 +138,23 @@ public final class OpenAiJsonCodec {
                 encoded.addProperty("content", providerToolResult(result.value()));
                 output.add(encoded);
             }
+            // Chat Completions tool content supports text, not image_url. Keep the complete
+            // reply group first, then project visual tool evidence as provider-only user input.
+            JsonArray observations = new JsonArray();
+            for (ModelContent.ToolResult result : results) {
+                if (result.images().isEmpty()) continue;
+                JsonObject label = new JsonObject();
+                label.addProperty("type", "text");
+                label.addProperty("text", dev.openallay.model.image.ModelImages.observationLabel(result.toolUseId()));
+                observations.add(label);
+                result.images().forEach(image -> observations.add(imageEncoder.apply(image)));
+            }
+            if (!observations.isEmpty()) {
+                JsonObject visual = new JsonObject();
+                visual.addProperty("role", "user");
+                visual.add("content", observations);
+                output.add(visual);
+            }
             return;
         }
 
@@ -160,7 +177,15 @@ public final class OpenAiJsonCodec {
                         text.append(value.text());
                     }
                 }
-                case ModelContent.Image value -> parts.add(imageEncoder.apply(value.reference()));
+                case ModelContent.Image value -> {
+                    if (value.originToolUseId() != null) {
+                        JsonObject label = new JsonObject();
+                        label.addProperty("type", "text");
+                        label.addProperty("text", dev.openallay.model.image.ModelImages.observationLabel(value.originToolUseId()));
+                        parts.add(label);
+                    }
+                    parts.add(imageEncoder.apply(value.reference()));
+                }
                 case ModelContent.Reasoning value -> reasoning.append(value.text());
                 case ModelContent.ToolUse value -> toolCalls.add(encodeToolCall(value, toolIds));
                 case ModelContent.ToolResult ignored -> throw new IllegalStateException();
@@ -183,24 +208,20 @@ public final class OpenAiJsonCodec {
     private static void validateImages(List<ModelMessage> messages) {
         int count = 0;
         long encodedBytes = 0;
-        for (ModelMessage message : messages) {
-            for (ModelContent block : message.content()) {
-                if (!(block instanceof ModelContent.Image image)) continue;
-                ImageReference reference = image.reference();
-                if (++count > MAX_IMAGES) {
-                    throw new IllegalArgumentException("OpenAI request exceeds 500 images");
-                }
-                if (!reference.mimeType().equals("image/png")
-                        && !reference.mimeType().equals("image/jpeg")) {
-                    throw new IllegalArgumentException("OpenAI image must be PNG or JPEG");
-                }
-                if (reference.byteSize() > MAX_REQUEST_BYTES) {
-                    throw new IllegalArgumentException("OpenAI image exceeds request byte limit");
-                }
-                encodedBytes += 4 * ((reference.byteSize() + 2) / 3);
-                if (encodedBytes > MAX_REQUEST_BYTES) {
-                    throw new IllegalArgumentException("OpenAI image payload exceeds 50,000,000 bytes");
-                }
+        for (ImageReference reference : dev.openallay.model.image.ModelImages.occurrences(messages)) {
+            if (++count > MAX_IMAGES) {
+                throw new IllegalArgumentException("OpenAI request exceeds 500 images");
+            }
+            if (!reference.mimeType().equals("image/png")
+                    && !reference.mimeType().equals("image/jpeg")) {
+                throw new IllegalArgumentException("OpenAI image must be PNG or JPEG");
+            }
+            if (reference.byteSize() > MAX_REQUEST_BYTES) {
+                throw new IllegalArgumentException("OpenAI image exceeds request byte limit");
+            }
+            encodedBytes += 4 * ((reference.byteSize() + 2) / 3);
+            if (encodedBytes > MAX_REQUEST_BYTES) {
+                throw new IllegalArgumentException("OpenAI image payload exceeds 50,000,000 bytes");
             }
         }
     }

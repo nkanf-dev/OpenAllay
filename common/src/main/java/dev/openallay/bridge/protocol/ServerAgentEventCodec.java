@@ -32,7 +32,7 @@ public final class ServerAgentEventCodec {
         if (event instanceof AgentEvent.SteerApplied applied) {
             JsonObject body = new JsonObject();
             body.addProperty("messageId", applied.messageId().toString());
-            body.add("message", gson.toJsonTree(ServerAgentHistoryMessage.from(applied.message())));
+            body.add("message", BridgeJsonCodec.encodeHistoryMessage(gson, ServerAgentHistoryMessage.from(applied.message())));
             eventJson = body.toString();
         } else if (event instanceof AgentEvent.ContextCompacted compacted) {
             eventJson = checkpoints.encode(compacted.checkpoint());

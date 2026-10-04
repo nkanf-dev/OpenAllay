@@ -428,10 +428,7 @@ public final class GuideService implements GuideHistoryAdministration {
 
     private static List<dev.openallay.model.image.ImageReference> imageReferences(
             List<dev.openallay.model.ModelMessage> messages) {
-        return messages.stream().flatMap(message -> message.content().stream())
-                .filter(dev.openallay.model.ModelContent.Image.class::isInstance)
-                .map(dev.openallay.model.ModelContent.Image.class::cast)
-                .map(dev.openallay.model.ModelContent.Image::reference).distinct().toList();
+        return dev.openallay.model.image.ModelImages.uniqueReferences(messages);
     }
 
     private <T> CompletableFuture<ToolResult<T>> imageOperation(ImageOperation<T> action) {

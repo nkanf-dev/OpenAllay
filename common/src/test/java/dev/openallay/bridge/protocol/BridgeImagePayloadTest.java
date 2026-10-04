@@ -39,7 +39,7 @@ final class BridgeImagePayloadTest {
         assertTrue(!input.toString().contains("base64Data"));
         assertEquals(java.util.Set.of("role", "content"), input.keySet());
         JsonObject block = input.getAsJsonArray("content").get(0).getAsJsonObject();
-        assertEquals(java.util.Set.of("kind", "image"), block.keySet());
+        assertEquals(java.util.Set.of("kind", "image", "originToolUseId"), block.keySet());
         assertEquals(java.util.Set.of("sha256", "mimeType", "width", "height", "byteSize"),
                 block.getAsJsonObject("image").keySet());
         assertEquals(java.util.Set.of("reference", "base64Data"), object.getAsJsonArray("imageAttachments")
@@ -89,6 +89,61 @@ final class BridgeImagePayloadTest {
         assertThrows(IllegalArgumentException.class,
                 () -> codec.decode(imageRequest.toString(), ServerAgentRequestPayload.class));
     }
+
+    @Test
+    void nestedToolImageHistoryRequiresExactBytesAndRoundTripsTheCurrentShape() {
+        var canonical = List.of(new ModelMessage(ModelRole.ASSISTANT, List.of(new ModelContent.ToolUse(
+                        "view", "capture", new JsonObject()))),
+                new ModelMessage(ModelRole.USER, List.of(new ModelContent.ToolResult(
+                        "view", new com.google.gson.JsonPrimitive("captured"), false, List.of(REFERENCE, REFERENCE)))));
+        var history = canonical.stream().map(ServerAgentHistoryMessage::from).toList();
+        var attachment = ServerAgentImageAttachment.from(REFERENCE, BYTES);
+        var request = new ServerAgentRequestPayload(UUID.randomUUID(), "main", ModelMessage.userText("continue"),
+                true, history, List.of(attachment));
+        var codec = new BridgeJsonCodec();
+        String encoded = codec.encode(request);
+        assertEquals(request, codec.decode(encoded, ServerAgentRequestPayload.class));
+        assertEquals(canonical, request.history().stream().map(ServerAgentHistoryMessage::toModelMessage).toList());
+        var wire = JsonParser.parseString(encoded).getAsJsonObject();
+        var result = wire.getAsJsonArray("history").get(1).getAsJsonObject()
+                .getAsJsonArray("content").get(0).getAsJsonObject();
+        assertEquals(java.util.Set.of("kind", "toolUseId", "json", "error", "images"), result.keySet());
+        assertEquals(2, result.getAsJsonArray("images").size());
+        result.remove("images");
+        assertThrows(IllegalArgumentException.class, () -> codec.decode(wire.toString(), ServerAgentRequestPayload.class));
+        assertThrows(IllegalArgumentException.class, () -> new ServerAgentRequestPayload(UUID.randomUUID(), "main",
+                ModelMessage.userText("continue"), true, history, List.of()));
+    }
+
+
+    @Test
+    void carriedImageOriginSurvivesHistoryWireButCannotEnterPlayerRequestOrSteer() {
+        var observation = new ModelMessage(ModelRole.USER, List.of(new ModelContent.Text("derived memory"),
+                new ModelContent.Image(REFERENCE, "original-view")));
+        var history = List.of(ServerAgentHistoryMessage.from(observation));
+        var attachment = ServerAgentImageAttachment.from(REFERENCE, BYTES);
+        var request = new ServerAgentRequestPayload(UUID.randomUUID(), "main", ModelMessage.userText("continue"),
+                true, history, List.of(attachment));
+        var codec = new BridgeJsonCodec();
+        String wire = codec.encode(request);
+        assertEquals(request, codec.decode(wire, ServerAgentRequestPayload.class));
+        assertEquals(observation, request.history().getFirst().toModelMessage());
+        assertTrue(wire.contains("\"originToolUseId\":\"original-view\""));
+        assertThrows(IllegalArgumentException.class, () -> new ServerAgentRequestPayload(UUID.randomUUID(), "main",
+                observation, true, List.of(), List.of(attachment)));
+        assertThrows(IllegalArgumentException.class, () -> new ServerAgentSteerPayload(UUID.randomUUID(), UUID.randomUUID(),
+                ServerAgentSteerPayload.Operation.PUT, history.getFirst(), List.of(attachment)));
+        JsonObject absent = JsonParser.parseString(wire).getAsJsonObject();
+        absent.getAsJsonArray("history").get(0).getAsJsonObject().getAsJsonArray("content")
+                .get(1).getAsJsonObject().remove("originToolUseId");
+        assertThrows(IllegalArgumentException.class, () -> codec.decode(absent.toString(), ServerAgentRequestPayload.class));
+        var player = ModelMessage.userInput("look", List.of(REFERENCE));
+        var applied = new dev.openallay.agent.AgentEvent.SteerApplied(UUID.randomUUID(), player);
+        var eventCodec = new ServerAgentEventCodec(new com.google.gson.Gson());
+        UUID requestId = UUID.randomUUID();
+        assertEquals(applied, eventCodec.decode(eventCodec.encode(requestId, applied), requestId));
+    }
+
 
     private void historyOnlyImageRequiresTheSameExactAttachmentClosure() {
         var history = List.of(ServerAgentHistoryMessage.from(imageMessage()));

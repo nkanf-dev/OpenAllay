@@ -132,7 +132,7 @@ final class ModelContextCodecTest {
             content(broken, 1, 1).remove(field);
             assertThrows(IllegalArgumentException.class, () -> codec.decode(broken.toString()), field);
         }
-        for (String field : List.of("type", "toolUseId", "value", "error")) {
+        for (String field : List.of("type", "toolUseId", "value", "error", "images")) {
             JsonObject broken = valid.deepCopy();
             content(broken, 2, 0).remove(field);
             assertThrows(IllegalArgumentException.class, () -> codec.decode(broken.toString()), field);

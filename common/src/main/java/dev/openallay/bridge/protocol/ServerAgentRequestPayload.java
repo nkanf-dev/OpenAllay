@@ -33,16 +33,9 @@ public record ServerAgentRequestPayload(
         java.util.Map<String, dev.openallay.model.image.ImageReference> required = new java.util.LinkedHashMap<>();
         java.util.List<ServerAgentHistoryMessage> messages = new java.util.ArrayList<>(history);
         messages.add(userInput);
-        for (ServerAgentHistoryMessage message : messages) {
-            for (ServerAgentHistoryContent block : message.content()) {
-                if (block.kind() == ServerAgentHistoryContent.Kind.IMAGE) {
-                    var previous = required.putIfAbsent(block.image().sha256(), block.image());
-                    if (previous != null && !previous.equals(block.image())) {
-                        throw new IllegalArgumentException("Conflicting metadata for the same image hash");
-                    }
-                }
-            }
-        }
+        dev.openallay.model.image.ModelImages.uniqueReferences(messages.stream()
+                .map(ServerAgentHistoryMessage::toModelMessage).toList())
+                .forEach(image -> required.put(image.sha256(), image));
         java.util.Map<String, dev.openallay.model.image.ImageReference> supplied = new java.util.LinkedHashMap<>();
         for (ServerAgentImageAttachment attachment : imageAttachments) {
             if (supplied.putIfAbsent(attachment.reference().sha256(), attachment.reference()) != null) {

@@ -45,6 +45,38 @@ import org.junit.jupiter.api.Test;
 
 final class GameGuideAgentTest {
     @Test
+    void toolProducedImagesReachTheNextModelTurnAsCanonicalToolEvidence() {
+        var image = new dev.openallay.model.image.ImageReference("a".repeat(64), "image/png", 2, 2, 4);
+        var model = new QueueModelClient();
+        model.enqueue(CompletableFuture.completedFuture(toolTurn("visual_call", 42)));
+        model.enqueue(CompletableFuture.completedFuture(textTurn("seen")));
+        var delegate = new FakeTools();
+        AgentToolExecutor visual = new AgentToolExecutor() {
+            @Override public List<ModelToolDefinition> definitions() { return delegate.definitions(); }
+            @Override public Set<ContextCapability> requiredContext() { return Set.of(); }
+            @Override public Optional<String> canonicalToolId(String name) { return delegate.canonicalToolId(name); }
+            @Override public CompletableFuture<AgentToolResult> execute(String name, JsonObject arguments,
+                    ToolInvocationContext context, CancellationSignal cancellation) {
+                return delegate.execute(name, arguments, context, cancellation).thenApply(result ->
+                        new AgentToolResult(result.toolId(), result.normalized(), false, null, List.of(image)));
+            }
+        };
+        AgentRequest initial = request(UUID.randomUUID());
+        var request = new AgentRequest(initial.requestId(), initial.actorId(), initial.sessionId(),
+                initial.userInput(), initial.systemPrompt(), initial.context(), initial.stream(), ref -> new byte[4]);
+        var sessions = new AgentSessionStore();
+        assertTrue(new GameGuideAgent(model, visual, sessions, new Gson()).ask(request, ignored -> {}).join().successful());
+        assertEquals(2, model.requests.size());
+        var result = (ModelContent.ToolResult) model.requests.getLast().messages().getLast().content().getFirst();
+        assertEquals(List.of(image), result.images());
+        assertEquals("visual_call", result.toolUseId());
+        assertEquals(List.of(image), dev.openallay.model.image.ModelImages.occurrences(sessions.history(request.sessionKey())));
+        assertEquals(model.requests.getLast().messages(),
+                dev.openallay.agent.context.ModelContextCodec.safe(model.requests.getLast().messages()));
+    }
+
+
+    @Test
     void steerWaitsForCompleteOrderedToolResultsWithoutReplayingToolsOrInterruptingModel() throws Exception {
         QueueModelClient model = new QueueModelClient();
         CompletableFuture<ModelTurn> first = new CompletableFuture<>();

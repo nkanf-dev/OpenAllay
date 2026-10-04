@@ -107,7 +107,10 @@ public final class LocalAgentToolExecutor implements AgentToolExecutor {
                                     toolId,
                                     normalized,
                                     result instanceof ToolResult.Failure<?>,
-                                    source);
+                                    source,
+                                    result instanceof ToolResult.Success<?> succeeded
+                                            && succeeded.value() instanceof ModelImageToolOutput visual
+                                            ? visual.images() : List.of());
                         });
             }
             JsonObject normalized = normalizer.normalize(decoded, tool.descriptor().outputType());

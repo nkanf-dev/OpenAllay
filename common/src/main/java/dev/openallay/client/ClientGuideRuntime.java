@@ -328,8 +328,7 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
             lease.cancellation().throwIfCancelled();
             if (imageCapability != null
                     && imageCapability != dev.openallay.model.image.ImageInputCapability.SUPPORTED
-                    && lease.history().stream().flatMap(message -> message.content().stream())
-                            .anyMatch(ModelContent.Image.class::isInstance)) {
+                    && dev.openallay.model.image.ModelImages.hasImages(lease.history())) {
                 scope.finishPreparation();
                 scope.close();
                 return CompletableFuture.completedFuture(new ToolResult.Failure<>(

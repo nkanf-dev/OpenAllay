@@ -20,8 +20,7 @@ public interface ContextTokenEstimator {
 
     /** No image cost is inferred from byte size, dimensions or provider protocol. */
     default TokenizerMetadata.ImageAccounting imageAccounting(List<ModelMessage> messages) {
-        return messages.stream().flatMap(message -> message.content().stream())
-                        .anyMatch(ModelContent.Image.class::isInstance)
+        return dev.openallay.model.image.ModelImages.hasImages(messages)
                 ? TokenizerMetadata.ImageAccounting.UNKNOWN
                 : TokenizerMetadata.ImageAccounting.TEXT_ONLY;
     }

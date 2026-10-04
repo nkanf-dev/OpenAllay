@@ -359,8 +359,7 @@ public final class ClientModelRuntimeRegistry implements GuideLocalEndpoint {
     }
 
     private static boolean hasImages(List<ModelMessage> messages) {
-        return messages.stream().flatMap(message -> message.content().stream())
-                .anyMatch(dev.openallay.model.ModelContent.Image.class::isInstance);
+        return dev.openallay.model.image.ModelImages.hasImages(messages);
     }
 
     @Override

@@ -127,13 +127,13 @@ final class LiveModelContinuationDiagnosticTest {
         JsonDeserializer<ModelContent> content = (json, type, context) -> {
             JsonObject block = json.getAsJsonObject();
             Set<String> fields = block.keySet();
-            if (fields.equals(Set.of("toolUseId", "value", "error"))) {
+            if (fields.equals(Set.of("toolUseId", "value", "error", "images"))) {
                 return context.deserialize(block, ModelContent.ToolResult.class);
             }
             if (fields.equals(Set.of("id", "name", "input"))) {
                 return context.deserialize(block, ModelContent.ToolUse.class);
             }
-            if (fields.equals(Set.of("reference"))) {
+            if (fields.equals(Set.of("reference")) || fields.equals(Set.of("reference", "originToolUseId"))) {
                 return context.deserialize(block, ModelContent.Image.class);
             }
             if (fields.equals(Set.of("text"))) {

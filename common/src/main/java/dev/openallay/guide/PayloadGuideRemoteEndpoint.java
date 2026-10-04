@@ -130,17 +130,11 @@ public final class PayloadGuideRemoteEndpoint implements GuideRemoteEndpoint {
             List<dev.openallay.model.ModelMessage> history, Consumer<AgentEvent> consumer) {
         dev.openallay.agent.AgentRequest.validateUserInput(userInput);
         Objects.requireNonNull(images, "images");
+        java.util.List<dev.openallay.model.ModelMessage> visualContext = new java.util.ArrayList<>(history);
+        visualContext.add(userInput);
         java.util.Map<String, dev.openallay.model.image.ImageReference> references = new java.util.LinkedHashMap<>();
-        java.util.stream.Stream.concat(history.stream(), java.util.stream.Stream.of(userInput))
-                .flatMap(message -> message.content().stream())
-                .filter(dev.openallay.model.ModelContent.Image.class::isInstance)
-                .map(dev.openallay.model.ModelContent.Image.class::cast)
-                .forEach(image -> {
-                    var previous = references.putIfAbsent(image.reference().sha256(), image.reference());
-                    if (previous != null && !previous.equals(image.reference())) {
-                        throw new IllegalArgumentException("Conflicting metadata for the same image hash");
-                    }
-                });
+        dev.openallay.model.image.ModelImages.uniqueReferences(visualContext)
+                .forEach(image -> references.put(image.sha256(), image));
         CapabilityPayload captured = port.capabilities();
         if (!references.isEmpty()
                 && captured.serverImageInputCapability()

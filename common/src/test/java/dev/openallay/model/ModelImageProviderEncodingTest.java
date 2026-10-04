@@ -221,6 +221,96 @@ final class ModelImageProviderEncodingTest {
         }
     }
 
+    @Test
+    void nestedToolImagesUseSupportedProviderFramingAndKeepCanonicalResultGroup() {
+        List<ModelMessage> canonical = toolExchange(List.of(PNG, JPEG, PNG));
+        for (ModelProtocol protocol : ModelProtocol.values()) {
+            for (boolean stream : List.of(false, true)) {
+                var reads = new ArrayList<ImageReference>();
+                var request = new ModelRequest("System", canonical, List.of(), stream, "session", null, image -> {
+                    reads.add(image);
+                    return image.equals(PNG) ? FIRST : SECOND;
+                });
+                JsonArray messages = JsonParser.parseString(body(protocol, request)).getAsJsonObject()
+                        .getAsJsonArray("messages");
+                JsonArray visual;
+                if (protocol == ModelProtocol.OPENAI_CHAT) {
+                    assertEquals(5, messages.size()); // System, assistant, both tool replies, visual supplement.
+                    assertEquals("tool", messages.get(2).getAsJsonObject().get("role").getAsString());
+                    assertEquals("tool", messages.get(3).getAsJsonObject().get("role").getAsString());
+                    assertTrue(messages.get(2).getAsJsonObject().get("content").isJsonPrimitive());
+                    assertEquals("user", messages.get(4).getAsJsonObject().get("role").getAsString());
+                    visual = messages.get(4).getAsJsonObject().getAsJsonArray("content");
+                    assertTrue(visual.get(0).getAsJsonObject().get("text").getAsString().contains("capture-call"));
+                    assertTrue(visual.get(0).getAsJsonObject().get("text").getAsString().contains("not a new player"));
+                } else {
+                    assertEquals(2, messages.size());
+                    JsonArray results = messages.get(1).getAsJsonObject().getAsJsonArray("content");
+                    assertEquals(2, results.size());
+                    assertEquals("capture-call", results.get(0).getAsJsonObject().get("tool_use_id").getAsString());
+                    visual = results.get(0).getAsJsonObject().getAsJsonArray("content");
+                    assertTrue(results.get(1).getAsJsonObject().get("content").isJsonPrimitive());
+                }
+                assertEquals(4, visual.size());
+                assertImage(protocol, visual.get(1).getAsJsonObject(), PNG, FIRST);
+                assertImage(protocol, visual.get(2).getAsJsonObject(), JPEG, SECOND);
+                assertImage(protocol, visual.get(3).getAsJsonObject(), PNG, FIRST);
+                assertEquals(List.of(PNG, JPEG, PNG), reads);
+                assertEquals(2, canonical.size());
+                assertTrue(canonical.getLast().content().stream().allMatch(ModelContent.ToolResult.class::isInstance));
+                String offline = context(protocol, canonical).toString();
+                assertFalse(offline.contains("base64"));
+                assertFalse(offline.contains(Base64.getEncoder().encodeToString(FIRST)));
+            }
+        }
+    }
+
+    @Test
+    void nestedImagesCountTowardNativeLimitsAndMissingPayloadCannotBecomeTextOnly() {
+        for (ModelProtocol protocol : ModelProtocol.values()) {
+            int limit = protocol == ModelProtocol.OPENAI_CHAT ? 500 : 600;
+            var reads = new AtomicInteger();
+            var oversized = new ModelRequest("System", toolExchange(Collections.nCopies(limit + 1, PNG)),
+                    List.of(), false, "session", null, image -> { reads.incrementAndGet(); return FIRST; });
+            assertThrows(IllegalArgumentException.class, () -> body(protocol, oversized));
+            assertEquals(0, reads.get());
+            assertThrows(UncheckedIOException.class, () -> body(protocol,
+                    new ModelRequest("System", toolExchange(List.of(PNG)), List.of(), false)));
+        }
+    }
+
+    @Test
+    void carriedToolOriginUsesTypedProviderLabelsWithTheActualPixels() {
+        var observation = new ModelMessage(ModelRole.USER, List.of(new ModelContent.Text("derived memory"),
+                new ModelContent.Image(PNG, "original-view"), new ModelContent.Image(PNG, "original-view")));
+        for (ModelProtocol protocol : ModelProtocol.values()) {
+            var reads = new ArrayList<ImageReference>();
+            var request = new ModelRequest("System", List.of(observation), List.of(), false, "session", null, image -> {
+                reads.add(image); return FIRST;
+            });
+            JsonArray content = content(protocol, JsonParser.parseString(body(protocol, request)).getAsJsonObject());
+            assertEquals(5, content.size());
+            assertTrue(content.get(1).getAsJsonObject().get("text").getAsString().contains("original-view"));
+            assertTrue(content.get(3).getAsJsonObject().get("text").getAsString().contains("not a new player"));
+            assertImage(protocol, content.get(2).getAsJsonObject(), PNG, FIRST);
+            assertImage(protocol, content.get(4).getAsJsonObject(), PNG, FIRST);
+            assertEquals(List.of(PNG, PNG), reads);
+            String offline = context(protocol, List.of(observation)).toString();
+            assertTrue(offline.contains("original-view"));
+            assertFalse(offline.contains("base64"));
+        }
+    }
+
+
+    private static List<ModelMessage> toolExchange(List<ImageReference> images) {
+        return List.of(new ModelMessage(ModelRole.ASSISTANT, List.of(
+                        new ModelContent.ToolUse("capture-call", "capture", new JsonObject()),
+                        new ModelContent.ToolUse("other-call", "other", new JsonObject()))),
+                new ModelMessage(ModelRole.USER, List.of(
+                        new ModelContent.ToolResult("capture-call", new com.google.gson.JsonPrimitive("captured"), false, images),
+                        new ModelContent.ToolResult("other-call", new com.google.gson.JsonPrimitive("fact"), false))));
+    }
+
     private String body(ModelProtocol protocol, ModelRequest request) {
         return protocol == ModelProtocol.OPENAI_CHAT
                 ? openAi.requestBody(config(protocol), request)

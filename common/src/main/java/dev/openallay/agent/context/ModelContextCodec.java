@@ -30,11 +30,9 @@ public final class ModelContextCodec {
                     case ModelContent.Image image -> {
                         value.addProperty("type", "image");
                         var reference = image.reference();
-                        value.addProperty("sha256", reference.sha256());
-                        value.addProperty("mimeType", reference.mimeType());
-                        value.addProperty("width", reference.width());
-                        value.addProperty("height", reference.height());
-                        value.addProperty("byteSize", reference.byteSize());
+                        addImageReference(value, reference);
+                        if (image.originToolUseId() == null) value.add("originToolUseId", com.google.gson.JsonNull.INSTANCE);
+                        else value.addProperty("originToolUseId", image.originToolUseId());
                     }
                     case ModelContent.ToolUse use -> {
                         value.addProperty("type", "tool_use");
@@ -47,6 +45,13 @@ public final class ModelContextCodec {
                         value.addProperty("toolUseId", result.toolUseId());
                         value.add("value", result.value());
                         value.addProperty("error", result.error());
+                        JsonArray images = new JsonArray();
+                        for (var reference : result.images()) {
+                            JsonObject image = new JsonObject();
+                            addImageReference(image, reference);
+                            images.add(image);
+                        }
+                        value.add("images", images);
                     }
                     case ModelContent.Reasoning ignored -> throw new IllegalStateException(
                             "private reasoning reached safe model context");
@@ -77,12 +82,8 @@ public final class ModelContextCodec {
                         content.add(new ModelContent.Text(text(item, "text")));
                     }
                     case "image" -> {
-                        fields(item, Set.of("type", "sha256", "mimeType", "width", "height", "byteSize"));
-                        content.add(new ModelContent.Image(new dev.openallay.model.image.ImageReference(
-                                text(item, "sha256"), text(item, "mimeType"),
-                                Math.toIntExact(positiveInteger(item, "width")),
-                                Math.toIntExact(positiveInteger(item, "height")),
-                                positiveInteger(item, "byteSize"))));
+                        fields(item, Set.of("type", "sha256", "mimeType", "width", "height", "byteSize", "originToolUseId"));
+                        content.add(new ModelContent.Image(imageReference(item), nullableText(item, "originToolUseId")));
                     }
                     case "tool_use" -> {
                         fields(item, Set.of("type", "id", "name", "input"));
@@ -90,13 +91,19 @@ public final class ModelContextCodec {
                                 object(item.get("input"))));
                     }
                     case "tool_result" -> {
-                        fields(item, Set.of("type", "toolUseId", "value", "error"));
+                        fields(item, Set.of("type", "toolUseId", "value", "error", "images"));
                         JsonElement error = item.get("error");
                         if (!error.isJsonPrimitive() || !error.getAsJsonPrimitive().isBoolean()) {
                             throw new IllegalArgumentException("model context error flag must be boolean");
                         }
+                        ArrayList<dev.openallay.model.image.ImageReference> images = new ArrayList<>();
+                        for (JsonElement rawImage : array(item.get("images"))) {
+                            JsonObject image = object(rawImage);
+                            fields(image, Set.of("sha256", "mimeType", "width", "height", "byteSize"));
+                            images.add(imageReference(image));
+                        }
                         content.add(new ModelContent.ToolResult(text(item, "toolUseId"),
-                                item.get("value"), error.getAsBoolean()));
+                                item.get("value"), error.getAsBoolean(), images));
                     }
                     default -> throw new IllegalArgumentException("unknown model context content type");
                 }
@@ -112,6 +119,26 @@ public final class ModelContextCodec {
         List<ModelMessage> safe = ContextStructure.summarySafe(messages);
         ContextStructure.units(safe);
         return safe;
+    }
+
+    private static String nullableText(JsonObject value, String field) {
+        JsonElement element = value.get(field);
+        return element.isJsonNull() ? null : text(value, field);
+    }
+
+    private static void addImageReference(JsonObject value,
+            dev.openallay.model.image.ImageReference reference) {
+        value.addProperty("sha256", reference.sha256());
+        value.addProperty("mimeType", reference.mimeType());
+        value.addProperty("width", reference.width());
+        value.addProperty("height", reference.height());
+        value.addProperty("byteSize", reference.byteSize());
+    }
+
+    private static dev.openallay.model.image.ImageReference imageReference(JsonObject value) {
+        return new dev.openallay.model.image.ImageReference(text(value, "sha256"), text(value, "mimeType"),
+                Math.toIntExact(positiveInteger(value, "width")),
+                Math.toIntExact(positiveInteger(value, "height")), positiveInteger(value, "byteSize"));
     }
 
     private static void fields(JsonObject value, Set<String> expected) {
