@@ -4,9 +4,10 @@ import org.gradle.api.tasks.PathSensitivity
 // Shared source families plus small exact-target overrides reuse one implementation.
 def selectedTarget = rootProject.ext.minecraftTarget
 def nativeFamily = rootProject.ext.minecraftNativeFamily
-def javaRoots = [file('src/main/java'), file("src/targets/${nativeFamily}/java")]
-def resourceRoots = [file('src/main/resources'), file("src/targets/${nativeFamily}/resources")]
-if (selectedTarget != nativeFamily) {
+def families = rootProject.ext.minecraftNativeSourceFamilies
+def javaRoots = [file('src/main/java')] + families.collect { file("src/targets/${it}/java") }
+def resourceRoots = [file('src/main/resources')] + families.collect { file("src/targets/${it}/resources") }
+if (!families.contains(selectedTarget)) {
     javaRoots.add(file("src/targets/${selectedTarget}/java"))
     resourceRoots.add(file("src/targets/${selectedTarget}/resources"))
 }

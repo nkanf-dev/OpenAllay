@@ -4,7 +4,8 @@ import java.util.Properties
 if (project != rootProject) {
     throw new GradleException('Minecraft target profiles must be selected by the root project')
 }
-def nativeFamilies = ['1.21.10': '1.21.11', '1.21.11': '1.21.11', '26.1': '26.1', '26.1.1': '26.1', '26.1.2': '26.1', '26.2': '26.2', '26.3': '26.3']
+def nativeFamilies = ['1.21.9': '1.21.10', '1.21.10': '1.21.10', '1.21.11': '1.21.11', '26.1': '26.1', '26.1.1': '26.1', '26.1.2': '26.1', '26.2': '26.2', '26.3': '26.3']
+def nativeFamilyParents = ['1.21.10': '1.21.11']
 def supportedTargets = nativeFamilies.keySet().toList()
 def selectedTarget = providers.gradleProperty('minecraftTarget').getOrElse('26.2')
 if (!(selectedTarget in supportedTargets)) {
@@ -78,6 +79,9 @@ allprojects { candidate ->
 allprojects { candidate ->
     candidate.extensions.extraProperties.set('minecraftTarget', selectedTarget)
     candidate.extensions.extraProperties.set('minecraftNativeFamily', nativeFamilies[selectedTarget])
+    def family = nativeFamilies[selectedTarget]
+    def roots = nativeFamilyParents.containsKey(family) ? [nativeFamilyParents[family], family] : [family]
+    candidate.extensions.extraProperties.set('minecraftNativeSourceFamilies', roots)
     candidate.extensions.extraProperties.set('minecraftTargetProfile', profile)
     profile.each { key, value -> candidate.extensions.extraProperties.set(key, value) }
 }
