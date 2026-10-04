@@ -29,6 +29,7 @@ dependencies {
     testImplementation(project(':extension-api'))
     testImplementation('org.junit.jupiter:junit-jupiter:5.11.4')
     testRuntimeOnly('org.junit.platform:junit-platform-launcher:1.11.4')
+    testImplementation('com.google.code.gson:gson:2.14.0')
 }
 
 tasks.withType(Jar).configureEach {
@@ -41,4 +42,14 @@ tasks.named('test') {
     systemProperty('minecraft26Adapter.sources', file('src/main/java').absolutePath)
     systemProperty('minecraft26Adapter.classes', sourceSets.main.output.classesDirs.asPath)
     systemProperty('minecraft26Adapter.buildFile', file('build.gradle').absolutePath)
+}
+
+// Native regression tests execute against the exact NeoForm game classes/libraries.
+configurations.testCompileClasspath.extendsFrom(configurations.compileClasspath)
+configurations.testRuntimeClasspath.extendsFrom(configurations.compileClasspath)
+
+// Explicit cross-repository fixture produced by the one shared Builder algorithm suite.
+tasks.named('test') {
+    def states = providers.gradleProperty('sharedPresetStates')
+    if (states.isPresent()) systemProperty('sharedPresetStates', states.get())
 }

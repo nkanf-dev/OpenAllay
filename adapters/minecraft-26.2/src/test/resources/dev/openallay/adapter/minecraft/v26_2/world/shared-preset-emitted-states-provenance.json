@@ -1,0 +1,12 @@
+{
+  "generatedBy": "BuilderPresetsContractTest.distinctPresetStates()",
+  "emittedStates": 122,
+  "generatorResources": {
+    "presets.js": "fba3bf9c9d5de7e2f29d9ca5494fe4699f91f7bd898b0f67aa94eb1a9eb0f0a1",
+    "building.js": "4f431f0313887982eba4ea8649aa9df6625ac8966e63053871a9ac6df6be4960",
+    "terrain.js": "15a735dd38dcda09df7aa997043951551dd5e6c6fe3c29f7fe1fad3efb45a279"
+  },
+  "collectorTestSHA256": "6b5508fea21d3d41a4ddc32e1f03ac2efa12f837beb981c9baadb16db72d25c6",
+  "fixtureSHA256": "d7ece49220f8f7999685cf2db729f5f23f5091b1748b065f6d53f6041510ebdd",
+  "generatorProject": "OpenAllay-Extensions/extensions/minecraft-builder"
+}
