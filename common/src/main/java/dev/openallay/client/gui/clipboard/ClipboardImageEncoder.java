@@ -14,6 +14,15 @@ public final class ClipboardImageEncoder {
     private ClipboardImageEncoder() {}
 
     public static BufferedImage bitmap(Image image) throws IOException {
+        if (!(image instanceof BufferedImage)) {
+            // AWT clipboard images can be lazy ToolkitImages. Load their pixels on the worker.
+            // macOS native decoding returns BufferedImage and never enters this Toolkit path.
+            var loaded = new javax.swing.ImageIcon(image);
+            if (loaded.getImageLoadStatus() != java.awt.MediaTracker.COMPLETE) {
+                throw new IOException("Clipboard image could not be loaded");
+            }
+            image = loaded.getImage();
+        }
         int width = image.getWidth(null);
         int height = image.getHeight(null);
         if (width <= 0 || height <= 0) throw new IOException("Clipboard image has no bitmap dimensions");

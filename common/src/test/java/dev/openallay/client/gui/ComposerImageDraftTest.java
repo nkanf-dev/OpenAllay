@@ -93,6 +93,58 @@ final class ComposerImageDraftTest {
         assertTrue(fixture.draft.empty());
     }
 
+    @Test
+    void rejectedWorkerReleasesOwnedCaptureAndClearsPendingWithoutReading() {
+        AtomicCapture capture = new AtomicCapture();
+        ImageClipboard clipboard = new ImageClipboard() {
+            public Read read() { throw new AssertionError("Only captured data can be read"); }
+            public ImageClipboard capture() { return capture; }
+        };
+        List<ComposerImageDraft.Notice> notices = new ArrayList<>();
+        var draft = new ComposerImageDraft(clipboard,
+                job -> { throw new java.util.concurrent.RejectedExecutionException("closed worker"); },
+                Runnable::run, png -> { throw new AssertionError("Rejected work must not import"); }, notices::add);
+        draft.attach("one");
+        assertDoesNotThrow(draft::paste);
+        assertEquals(0, capture.reads);
+        assertEquals(1, capture.closes);
+        assertTrue(draft.empty());
+        assertEquals(ComposerImageDraft.Notice.CLIPBOARD_UNAVAILABLE, notices.getLast());
+    }
+
+    @Test
+    void staleAndFailedPasteWorkStillReleasesItsOwnCapture() {
+        for (boolean throwsOnRead : List.of(false, true)) {
+            AtomicCapture capture = new AtomicCapture();
+            capture.throwsOnRead = throwsOnRead;
+            ImageClipboard clipboard = new ImageClipboard() {
+                public Read read() { throw new AssertionError("Only captured data can be read"); }
+                public ImageClipboard capture() { return capture; }
+            };
+            QueuedExecutor work = new QueuedExecutor();
+            QueuedExecutor client = new QueuedExecutor();
+            var draft = new ComposerImageDraft(clipboard, work, client::execute,
+                    png -> { throw new AssertionError("Stale work must not import"); }, ignored -> {});
+            draft.attach("one"); draft.paste(); draft.detach(); draft.attach("two");
+            work.runAll(); client.runAll();
+            assertEquals(1, capture.reads);
+            assertEquals(1, capture.closes);
+            assertTrue(draft.empty());
+        }
+    }
+
+    private static final class AtomicCapture implements ImageClipboard {
+        int reads;
+        int closes;
+        boolean throwsOnRead;
+        public Read read() {
+            reads++;
+            if (throwsOnRead) throw new IllegalStateException("invalid owned image");
+            return Read.image(new BufferedImage(3, 2, BufferedImage.TYPE_INT_ARGB));
+        }
+        public void close() { closes++; }
+    }
+
     private static final class Fixture {
         final QueuedExecutor work = new QueuedExecutor();
         final QueuedExecutor client = new QueuedExecutor();

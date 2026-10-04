@@ -102,43 +102,50 @@ public final class ComposerImageDraft {
             fail(scope, id, Notice.CLIPBOARD_UNAVAILABLE);
             return;
         }
-        worker.execute(() -> {
-            try {
-                ImageClipboard.Read read = captured.read();
-                if (read.status() != ImageClipboard.Status.IMAGE) {
-                    client.execute(() -> fail(scope, id, read.status() == ImageClipboard.Status.EMPTY
-                            ? Notice.NONE : Notice.CLIPBOARD_UNAVAILABLE));
-                    return;
-                }
-                ClipboardImageEncoder.Encoded image = ClipboardImageEncoder.encode(read.image());
-                client.execute(() -> {
-                    if (!current(scope, id)) return;
-                    replace(scope.session, id, new Attachment(id, null, image.preview()));
-                    notifyChanged(scope.session, Notice.PROCESSING);
-                    // The importer owns actor-scoped asynchronous storage, never the render loop.
-                    try {
-                        importer.apply(image.png()).whenComplete((result, failure) -> client.execute(() -> {
-                            if (!current(scope, id)) {
-                                if (result instanceof ToolResult.Success<ImageReference> imported) {
-                                    discardedImport.accept(imported.value());
-                                }
-                                return;
-                            }
-                            if (failure != null || !(result instanceof ToolResult.Success<ImageReference> imported)) {
-                                fail(scope, id, Notice.IMPORT_FAILED);
-                                return;
-                            }
-                            replace(scope.session, id, new Attachment(id, imported.value(), image.preview()));
-                            notifyChanged(scope.session, Notice.READY);
-                        }));
-                    } catch (RuntimeException failed) {
-                        fail(scope, id, Notice.IMPORT_FAILED);
+        try {
+            worker.execute(() -> {
+                try {
+                    ImageClipboard.Read read = captured.read();
+                    if (read.status() != ImageClipboard.Status.IMAGE) {
+                        client.execute(() -> fail(scope, id, read.status() == ImageClipboard.Status.EMPTY
+                                ? Notice.NONE : Notice.CLIPBOARD_UNAVAILABLE));
+                        return;
                     }
-                });
-            } catch (Exception | LinkageError | java.awt.AWTError failed) {
-                client.execute(() -> fail(scope, id, Notice.CLIPBOARD_UNAVAILABLE));
-            }
-        });
+                    ClipboardImageEncoder.Encoded image = ClipboardImageEncoder.encode(read.image());
+                    client.execute(() -> {
+                        if (!current(scope, id)) return;
+                        replace(scope.session, id, new Attachment(id, null, image.preview()));
+                        notifyChanged(scope.session, Notice.PROCESSING);
+                        // The importer owns actor-scoped asynchronous storage, never the render loop.
+                        try {
+                            importer.apply(image.png()).whenComplete((result, failure) -> client.execute(() -> {
+                                if (!current(scope, id)) {
+                                    if (result instanceof ToolResult.Success<ImageReference> imported) {
+                                        discardedImport.accept(imported.value());
+                                    }
+                                    return;
+                                }
+                                if (failure != null || !(result instanceof ToolResult.Success<ImageReference> imported)) {
+                                    fail(scope, id, Notice.IMPORT_FAILED);
+                                    return;
+                                }
+                                replace(scope.session, id, new Attachment(id, imported.value(), image.preview()));
+                                notifyChanged(scope.session, Notice.READY);
+                            }));
+                        } catch (RuntimeException failed) {
+                            fail(scope, id, Notice.IMPORT_FAILED);
+                        }
+                    });
+                } catch (Exception | LinkageError | java.awt.AWTError failed) {
+                    client.execute(() -> fail(scope, id, Notice.CLIPBOARD_UNAVAILABLE));
+                } finally {
+                    captured.close();
+                }
+            });
+        } catch (RuntimeException | LinkageError | java.awt.AWTError rejected) {
+            captured.close();
+            fail(scope, id, Notice.CLIPBOARD_UNAVAILABLE);
+        }
     }
 
     private boolean current(Scope scope, UUID id) {

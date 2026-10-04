@@ -2,13 +2,16 @@ package dev.openallay.client.gui.clipboard;
 
 import java.awt.image.BufferedImage;
 
-/** Reads only image data, and only after an explicit paste action. Never reads file-list flavors. */
+/** Reads image representations or explicitly copied local image files, only after a paste action. */
 @FunctionalInterface
-public interface ImageClipboard {
+public interface ImageClipboard extends AutoCloseable {
     Read read();
 
     /** Capture platform ownership on the client if needed; bitmap work belongs to read(). */
     default ImageClipboard capture() { return this; }
+
+    /** Release an owned native capture if work is rejected or has finished. Idempotent. */
+    @Override default void close() {}
 
     record Read(Status status, BufferedImage image) {
         public Read {
