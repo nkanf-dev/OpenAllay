@@ -7,6 +7,7 @@ pluginManager.apply(remapMinecraft ? 'net.fabricmc.fabric-loom-remap' : 'net.fab
 def modImplementationConfiguration = remapMinecraft ? 'modImplementation' : 'implementation'
 def modCompileOnlyConfiguration = remapMinecraft ? 'modCompileOnly' : 'compileOnly'
 def keyApiArtifact = remapMinecraft ? 'fabric-key-binding-api-v1' : 'fabric-key-mapping-api-v1'
+def resourceApiArtifact = minecraftTarget == '1.21.8' ? 'fabric-resource-loader-v0' : 'fabric-resource-loader-v1'
 dependencies {
     implementation(project(":engine-core"))
     implementation(project(":adapters:minecraft-26.2"))
@@ -19,7 +20,7 @@ dependencies {
     if (remapMinecraft) mappings(loom.officialMojangMappings())
     add(modImplementationConfiguration, "net.fabricmc:fabric-loader:${fabric_loader_version}")
     add(modImplementationConfiguration, "net.fabricmc.fabric-api:fabric-command-api-v2:${fabric_command_api_version}")
-    add(modImplementationConfiguration, "net.fabricmc.fabric-api:fabric-resource-loader-v1:${fabric_resource_loader_version}")
+    add(modImplementationConfiguration, "net.fabricmc.fabric-api:${resourceApiArtifact}:${fabric_resource_loader_version}")
     add(modImplementationConfiguration, "net.fabricmc.fabric-api:fabric-networking-api-v1:${fabric_networking_api_version}")
     add(modImplementationConfiguration, "net.fabricmc.fabric-api:fabric-lifecycle-events-v1:${fabric_lifecycle_events_version}")
     add(modImplementationConfiguration, "net.fabricmc.fabric-api:${keyApiArtifact}:${fabric_key_mapping_api_version}")

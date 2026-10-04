@@ -403,9 +403,8 @@ public final class ClientContextCapture {
         values.put("world_border", clientQuery("world_border",
                 "center=" + border.getCenterX() + "," + border.getCenterZ()
                         + ",size=" + border.getSize()));
-        var respawn = client.level.getRespawnData();
         values.put("spawn", clientQuery("spawn",
-                dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(respawn.dimension()) + " " + respawn.pos().toShortString()));
+                dev.openallay.context.minecraft.MinecraftSpawnFacts.describe(client.level)));
         return new ObservableGameStateSnapshot.WorldQueriesState(
                 values,
                 evidence(DataCompleteness.PARTIAL, capturedAt,

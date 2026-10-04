@@ -163,7 +163,6 @@ public final class MinecraftContextCapture {
                         new DiagnosticValue("player", "game_mode", player.gameMode()));
         var level = source.getLevel();
         var border = level.getWorldBorder();
-        var spawn = level.getRespawnData();
         Map<String, ObservableGameStateSnapshot.QueryValue> queries = new LinkedHashMap<>();
         if (authorizedWorldQuery(source, WorldQueryOperation.TIME)) {
             queries.put("time", serverQuery("time", Long.toString(level.getGameTime())));
@@ -183,7 +182,7 @@ public final class MinecraftContextCapture {
         }
         if (authorizedWorldQuery(source, WorldQueryOperation.SPAWN)) {
             queries.put("spawn", serverQuery("spawn",
-                    dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(spawn.dimension()) + " " + spawn.pos().toShortString()));
+                    MinecraftSpawnFacts.describe(level)));
         }
         boolean worldQueriesAuthorized = queries.size() == WorldQueryOperation.values().length;
         return new ObservableGameStateSnapshot(

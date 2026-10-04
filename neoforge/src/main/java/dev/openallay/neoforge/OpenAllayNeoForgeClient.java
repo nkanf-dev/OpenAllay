@@ -58,10 +58,7 @@ public final class OpenAllayNeoForgeClient {
         });
         NeoForgeClientBridge bridge = new NeoForgeClientBridge();
         bridge.register(modBus);
-        modBus.addListener((RegisterKeyMappingsEvent event) -> {
-            event.registerCategory(OpenAllayKeyMappings.CATEGORY);
-            OpenAllayKeyMappings.all().forEach(event::register);
-        });
+        modBus.addListener((RegisterKeyMappingsEvent event) -> NeoForgeNativeKeyRegistration.register(event));
         modBus.addListener((RegisterGuiLayersEvent event) -> event.registerBelow(
                 net.neoforged.neoforge.client.gui.VanillaGuiLayers.CHAT,
                 MinecraftResourceIds.fromNamespaceAndPath("openallay", "guide_hud"),

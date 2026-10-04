@@ -20,7 +20,7 @@ public final class OpenAllayNeoForge {
         OpenAllayRuntime runtime = OpenAllayBootstrap.initialize();
         NeoForgeBridgePayloads.register(modBus, runtime);
         NeoForgeDevelopmentCommands.register(runtime);
-        if (FMLEnvironment.getDist().isClient()) {
+        if (NeoForgeNativeEnvironment.isClient()) {
             OpenAllayNeoForgeClient.initialize(runtime, modBus);
         }
     }
