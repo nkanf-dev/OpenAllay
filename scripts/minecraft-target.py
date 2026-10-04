@@ -39,7 +39,7 @@ def read_profile(root, target):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--target", choices=("1.21.8", "1.21.9", "1.21.10", "1.21.11", "26.1", "26.1.1", "26.1.2", "26.2", "26.3"), default="26.2")
+    parser.add_argument("--target", choices=("1.21.7", "1.21.8", "1.21.9", "1.21.10", "1.21.11", "26.1", "26.1.1", "26.1.2", "26.2", "26.3"), default="26.2")
     parser.add_argument("--property", choices=sorted(FIELDS), required=True)
     args = parser.parse_args()
     try:

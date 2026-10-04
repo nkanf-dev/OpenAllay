@@ -12,6 +12,17 @@ apply from: 'gradle/distribution.gradle'
 
 allprojects {
     repositories {
+        configureEach { repository ->
+            // Loom's local Maven/flat-dir repositories own transformed coordinates.
+            if (repository instanceof org.gradle.api.artifacts.repositories.MavenArtifactRepository
+                    && repository.url.scheme in ['http', 'https']) {
+                repository.content {
+                    excludeGroupByRegex('remapped\\..*')
+                    excludeGroup('net.minecraft')
+                    excludeGroup('loom.mappings')
+                }
+            }
+        }
         maven {
             url = uri("${rootProject.rootDir}/.gradle/curl-mirror")
             metadataSources {
