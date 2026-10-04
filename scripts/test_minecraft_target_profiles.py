@@ -59,7 +59,7 @@ def properties(text):
 
 
 def validate_profile(text, target="26.2", competing=()):
-    if target not in ("1.21.4", "1.21.5", "1.21.6", "1.21.7", "1.21.8", "1.21.9", "1.21.10", "1.21.11",
+    if target not in ("1.21.3", "1.21.4", "1.21.5", "1.21.6", "1.21.7", "1.21.8", "1.21.9", "1.21.10", "1.21.11",
                       "26.1", "26.1.1", "26.1.2", "26.2", "26.3"):
         raise ValueError("unknown target")
     profile = properties(text)
@@ -142,19 +142,21 @@ class MinecraftTargetProfileSourceTest(unittest.TestCase):
 
     def test_descending_primitive_profiles_reuse_native_families_with_external_component_coordinates(self):
         selector = self.source("gradle/minecraft-targets.gradle")
-        for target in ("1.21.4", "1.21.5", "1.21.6", "1.21.7", "1.21.8", "1.21.9", "1.21.10"):
+        for target in ("1.21.3", "1.21.4", "1.21.5", "1.21.6", "1.21.7", "1.21.8", "1.21.9", "1.21.10"):
             with self.subTest(target=target):
                 profile = validate_profile(self.profile(target), target)
                 self.assertEqual("21", profile["java_version"])
                 self.assertEqual(target, profile["fabric_version"].split("+", 1)[1])
                 self.assertEqual("[" + target + "]", profile["minecraft_version_range"])
         for pair in ("'1.21.7': '1.21.8'", "'1.21.9': '1.21.10'",
-                     "'1.21.4': '1.21.5'", "'1.21.5': '1.21.6'", "'1.21.6': '1.21.8'", "'1.21.8': '1.21.10'",
+                     "'1.21.3': '1.21.4'", "'1.21.4': '1.21.5'", "'1.21.5': '1.21.6'", "'1.21.6': '1.21.8'", "'1.21.8': '1.21.10'",
                      "'1.21.10': '1.21.11'"):
             self.assertIn(pair, selector)
         self.assertFalse((ROOT / "common/src/targets/1.21.7/java").exists())
         self.assertFalse((ROOT / "common/src/targets/1.21.9/java").exists())
-        self.assertIn("selectedTarget == '1.21.6' ? '1.21.5' : selectedTarget", selector)
+        self.assertIn("'1.21.3': '1.21.1'", selector)
+        self.assertIn("'1.21.6': '1.21.5'", selector)
+        self.assertIn(".getOrDefault(selectedTarget, selectedTarget)", selector)
         for relative in ("common/build.gradle", "fabric/build.gradle", "neoforge/build.gradle"):
             source = self.source(relative)
             self.assertIn("jei-${jeiArtifactTarget}", source)

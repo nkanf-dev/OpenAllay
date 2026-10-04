@@ -74,6 +74,11 @@ class GuideHudNativeContractsTest {
         String legacyRegistration = source("fabric/src/targets/1.21.5/java/dev/openallay/fabric/FabricNativeHudRegistration.java");
         assertTrue(legacyRegistration.contains("HudLayerRegistrationCallback.EVENT.register"));
         assertTrue(legacyRegistration.contains("IdentifiedLayer.CHAT"));
+        String olderRegistration = source("fabric/src/targets/1.21.3/java/dev/openallay/fabric/FabricNativeHudRegistration.java");
+        String olderLayer = source("fabric/src/targets/1.21.3/java/dev/openallay/fabric/mixin/FabricGuideHudLayerMixin.java");
+        assertTrue(olderRegistration.contains("current.extractRenderState(GuideGraphics.wrap(graphics))"));
+        assertTrue(olderLayer.contains("@Inject(method = \"renderChat\", at = @At(\"HEAD\"))"));
+        assertFalse(olderRegistration.contains("HudRenderCallback"));
         assertTrue(build.contains("fabric-rendering-v1:${fabric_rendering_version}"));
         assertTrue(source("gradle/minecraft-targets/26.2.properties")
                 .contains("fabric_rendering_version=25.1.6+46a6d00c9c"));
