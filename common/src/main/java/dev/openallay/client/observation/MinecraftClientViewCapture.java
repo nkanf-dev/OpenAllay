@@ -27,7 +27,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import javax.imageio.ImageIO;
 import javax.imageio.stream.MemoryCacheImageOutputStream;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.Screenshot;
 import net.minecraft.client.gui.screens.Screen;
 
 /** Next native frame capture. It never replaces a Screen or changes game input state. */
@@ -86,7 +85,7 @@ public final class MinecraftClientViewCapture implements AutoCloseable {
         return result;
     }
 
-    /** Exact GameRenderer pre-GuiRenderer invocation hook. One GPU readback serves each target group. */
+    /** Exact native pre-GUI frame hook. One readback serves each target group. */
     public static void beforeGui(Minecraft client, boolean advanceGameTime) {
         if (!client.isGameLoadFinished() || !advanceGameTime || client.level == null) return;
         for (MinecraftClientViewCapture capture : ACTIVE) {
@@ -94,7 +93,7 @@ public final class MinecraftClientViewCapture implements AutoCloseable {
         }
     }
 
-    /** Exact GameRenderer post-GuiRenderer invocation hook. Native game UI only, never Guide pixels. */
+    /** Exact native post-final-GUI frame hook. Native game UI only, never Guide pixels. */
     public static void afterGui(Minecraft client, boolean advanceGameTime) {
         if (!client.isGameLoadFinished() || !advanceGameTime || client.level == null) return;
         for (MinecraftClientViewCapture capture : ACTIVE) {
@@ -131,13 +130,16 @@ public final class MinecraftClientViewCapture implements AutoCloseable {
                     camera, focus.screen(), target == WorldViewRequest.Target.GAME_UI && !MinecraftClientWindow.hudHidden(client),
                     target == WorldViewRequest.Target.GAME_UI && (MinecraftClientWindow.screen(client) != null || MinecraftClientWindow.overlay(client) != null));
             selected.forEach(value -> value.submitted = true);
-            Screenshot.takeScreenshot(nativeTarget, image -> nativeReady(frame, selected, image));
+            MinecraftNativeImageCapture.capture(nativeTarget).whenComplete((image, failure) -> {
+                if (failure != null) selected.forEach(value -> value.result.completeExceptionally(failure));
+                else nativeReady(frame, selected, image);
+            });
         } catch (Throwable failure) {
             selected.forEach(value -> value.result.completeExceptionally(failure));
         }
     }
 
-    /** Native callback must never throw: Screenshot closes its GPU buffer after this callback. */
+    /** The readback future transfers image ownership here; this handler must never throw. */
     private void nativeReady(Frame frame, List<Pending> selected, NativeImage image) {
         try {
             if (selected.stream().noneMatch(value -> available(value))) { image.close(); return; }
