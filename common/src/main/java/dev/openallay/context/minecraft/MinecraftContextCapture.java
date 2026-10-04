@@ -268,7 +268,7 @@ public final class MinecraftContextCapture {
                 capturedAt,
                 "minecraft:server_player",
                 "minecraft:server_player");
-        int selected = player.getInventory().getSelectedSlot();
+        int selected = dev.openallay.context.minecraft.MinecraftPlayerFacts.selectedSlot(player.getInventory());
         InventorySnapshot inventorySnapshot = new InventorySnapshot(
                 inventory,
                 player.getInventory().getContainerSize(),
@@ -282,7 +282,7 @@ public final class MinecraftContextCapture {
                 player.getName().getString(),
                 dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(player.level().dimension()).toString(),
                 new BlockPositionSnapshot(position.getX(), position.getY(), position.getZ()),
-                player.gameMode().getName(),
+                dev.openallay.context.minecraft.MinecraftPlayerFacts.gameMode(player).getName(),
                 inventorySnapshot,
                 evidence);
     }

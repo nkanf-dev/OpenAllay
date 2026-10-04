@@ -30,7 +30,13 @@ dependencies {
     implementation(include("org.commonmark:commonmark-ext-gfm-tables:${commonmark_version}"))
     implementation(include("dev.latvian.mods:rhino:${rhino_version}"))
     implementation(include("com.knuddels:jtokkit:${jtokkit_version}"))
-    add(modCompileOnlyConfiguration, "mezz.jei:jei-${jeiArtifactTarget}-fabric-api:${jei_version}")
+    if (minecraftTarget == '1.21.4') {
+        // This JEI release publishes a named common API, but no Fabric API artifact.
+        // Compile against its actual public contracts; never bundle or remap the API itself.
+        compileOnly("mezz.jei:jei-${jeiArtifactTarget}-common-api:${jei_version}") { transitive = false }
+    } else {
+        add(modCompileOnlyConfiguration, "mezz.jei:jei-${jeiArtifactTarget}-fabric-api:${jei_version}")
+    }
     add(modCompileOnlyConfiguration, "me.shedaniel:RoughlyEnoughItems-api-fabric:${rei_version}")
     add(modCompileOnlyConfiguration, "dev.architectury:architectury-fabric:${architectury_version}")
 }

@@ -31,8 +31,6 @@ import net.neoforged.bus.api.IEventBus;
 import dev.openallay.neoforge.network.NeoForgeClientBridge;
 import net.neoforged.neoforge.client.event.ClientChatReceivedEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
-import net.neoforged.neoforge.client.event.lifecycle.ClientStartedEvent;
-import net.neoforged.neoforge.client.event.lifecycle.ClientStoppingEvent;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.common.NeoForge;
 
@@ -42,7 +40,7 @@ public final class OpenAllayNeoForgeClient {
     private static final java.util.concurrent.atomic.AtomicBoolean STARTED =
             new java.util.concurrent.atomic.AtomicBoolean();
 
-    // Installed before ClientStartedEvent; the stable layer resolves the later runtime.
+    // Installed before native startup; the stable layer resolves the later runtime.
     private static volatile GuideClientUiCoordinator ui;
 
     private OpenAllayNeoForgeClient() {}
@@ -66,8 +64,7 @@ public final class OpenAllayNeoForgeClient {
                     GuideClientUiCoordinator current = ui;
                     if (current != null) current.extractRenderState(dev.openallay.client.gui.GuideGraphics.wrap(graphics));
                 }));
-        NeoForge.EVENT_BUS.addListener((ClientStartedEvent event) ->
-                start(runtime, bridge, event.getClient()));
+        NeoForgeNativeClientLifecycle.onStarted(client -> start(runtime, bridge, client));
     }
 
     private static void start(
@@ -202,7 +199,7 @@ public final class OpenAllayNeoForgeClient {
             if (settings != null) settings.settings().clearServerModel();
             services.disconnect();
         });
-        NeoForge.EVENT_BUS.addListener((ClientStoppingEvent event) -> {
+        NeoForgeNativeClientLifecycle.onStopping(() -> {
             observationInput.close();
             coordinator.close();
             ui = null;

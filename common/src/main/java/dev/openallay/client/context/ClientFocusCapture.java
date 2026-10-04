@@ -192,8 +192,8 @@ public final class ClientFocusCapture {
 
     private static WorldFocusObservation.Hover hover(
             Minecraft client, Screen nativeScreen, boolean overlay) {
-        double x = client.mouseHandler.getScaledXPos(client.getWindow());
-        double y = client.mouseHandler.getScaledYPos(client.getWindow());
+        double x = dev.openallay.client.context.MinecraftMouseCoordinates.x(client.mouseHandler, client.getWindow());
+        double y = dev.openallay.client.context.MinecraftMouseCoordinates.y(client.mouseHandler, client.getWindow());
         boolean mouseGrabbed = client.mouseHandler.isMouseGrabbed();
         if (overlay || mouseGrabbed || !(nativeScreen instanceof AbstractContainerScreen<?>)) {
             return new WorldFocusObservation.Hover(x, y, mouseGrabbed, "none", -1, -1, null, "");

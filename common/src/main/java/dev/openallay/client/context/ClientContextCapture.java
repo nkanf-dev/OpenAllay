@@ -333,7 +333,7 @@ public final class ClientContextCapture {
         add(values, "player", "armor", Integer.toString(player.getArmorValue()));
         add(values, "player", "experience_level", Integer.toString(player.experienceLevel));
         add(values, "player", "selected_hotbar_slot",
-                Integer.toString(player.getInventory().getSelectedSlot()));
+                Integer.toString(dev.openallay.context.minecraft.MinecraftPlayerFacts.selectedSlot(player.getInventory())));
         add(values, "player", "camera", client.options.getCameraType().name().toLowerCase(Locale.ROOT));
         add(values, "player", "active_effects", player.getActiveEffects().stream()
                 .map(effect -> effect.getEffect().unwrapKey()
@@ -450,7 +450,7 @@ public final class ClientContextCapture {
                 capturedAt,
                 "minecraft:client_player",
                 "minecraft:client_player");
-        int selected = player.getInventory().getSelectedSlot();
+        int selected = dev.openallay.context.minecraft.MinecraftPlayerFacts.selectedSlot(player.getInventory());
         InventorySnapshot inventorySnapshot = new InventorySnapshot(
                 inventory,
                 player.getInventory().getContainerSize(),

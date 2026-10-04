@@ -105,8 +105,8 @@ public final class GuideHudRenderer {
         // Native hover is available only when another screen has already released the mouse.
         // This passive renderer never changes input ownership to make its footer interactive.
         if (footer != null && !minecraft.mouseHandler.isMouseGrabbed()) {
-            int mouseX = (int) minecraft.mouseHandler.getScaledXPos(minecraft.getWindow());
-            int mouseY = (int) minecraft.mouseHandler.getScaledYPos(minecraft.getWindow());
+            int mouseX = (int) dev.openallay.client.context.MinecraftMouseCoordinates.x(minecraft.mouseHandler, minecraft.getWindow());
+            int mouseY = (int) dev.openallay.client.context.MinecraftMouseCoordinates.y(minecraft.mouseHandler, minecraft.getWindow());
             double localX = (mouseX - rect.x()) / rect.scale();
             double localY = (mouseY - rect.y()) / rect.scale();
             if (localX >= 8 && localX < contentWidth - 8 && localY >= contentHeight - 14 && localY < contentHeight) {

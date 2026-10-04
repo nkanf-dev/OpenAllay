@@ -367,7 +367,7 @@ public final class GuideClientE2EController {
             requireGraphicalSeedWorld(server);
             if (!server.isSameThread()) throw new IllegalStateException("Recipe bootstrap is not on the server owner thread");
             var player = server.getPlayerList().getPlayer(actor);
-            if (player == null || player.gameMode() != net.minecraft.world.level.GameType.SURVIVAL
+            if (player == null || dev.openallay.context.minecraft.MinecraftPlayerFacts.gameMode(player) != net.minecraft.world.level.GameType.SURVIVAL
                     || dev.openallay.context.minecraft.MinecraftServerPlayerLevel.get(player).getSeed() != 17L)
                 throw new IllegalStateException("Native bootstrap player or fresh-world seed differs from setup");
             var manager = server.getRecipeManager();

@@ -1357,8 +1357,8 @@ final class GuideGraphicalRegressionProbe {
         actions.add(Map.of("type", "native-" + GuideProbeNativeCursor.backend() + "-cursor", "stage", stage, "guiX", guiX, "guiY", guiY,
                 "windowX", nativeX, "windowY", nativeY, "screenWidth", window.getScreenWidth(),
                 "screenHeight", window.getScreenHeight(), "source", "OS-programmatic-cursor-request"));
-        if (Math.abs(client.mouseHandler.getScaledXPos(window) - guiX) > 1
-                || Math.abs(client.mouseHandler.getScaledYPos(window) - guiY) > 1)
+        if (Math.abs(dev.openallay.client.context.MinecraftMouseCoordinates.x(client.mouseHandler, window) - guiX) > 1
+                || Math.abs(dev.openallay.client.context.MinecraftMouseCoordinates.y(client.mouseHandler, window) - guiY) > 1)
             dispatchNativeCursorMove(nativeX, nativeY);
     }
 
@@ -1371,8 +1371,8 @@ final class GuideGraphicalRegressionProbe {
                 actions.add(Map.of("type", "controlled-native-cursor-callback", "stage", stage,
                         "source", "MouseHandler.onMove/window-cursor-event", "physicalInput", false,
                         "windowX", nativeX, "windowY", nativeY,
-                        "scaledXAfterCallback", client.mouseHandler.getScaledXPos(client.getWindow()),
-                        "scaledYAfterCallback", client.mouseHandler.getScaledYPos(client.getWindow())));
+                        "scaledXAfterCallback", dev.openallay.client.context.MinecraftMouseCoordinates.x(client.mouseHandler, client.getWindow()),
+                        "scaledYAfterCallback", dev.openallay.client.context.MinecraftMouseCoordinates.y(client.mouseHandler, client.getWindow())));
             } catch (RuntimeException failure) {
                 fail(new IllegalStateException("Controlled native mouse callback failed", failure));
             }
@@ -1406,8 +1406,8 @@ final class GuideGraphicalRegressionProbe {
         diagnostic.put("nativeCursorY", nativeCursor[1]);
         diagnostic.put("mouseHandlerX", client.mouseHandler.xpos());
         diagnostic.put("mouseHandlerY", client.mouseHandler.ypos());
-        diagnostic.put("mouseHandlerScaledX", client.mouseHandler.getScaledXPos(window));
-        diagnostic.put("mouseHandlerScaledY", client.mouseHandler.getScaledYPos(window));
+        diagnostic.put("mouseHandlerScaledX", dev.openallay.client.context.MinecraftMouseCoordinates.x(client.mouseHandler, window));
+        diagnostic.put("mouseHandlerScaledY", dev.openallay.client.context.MinecraftMouseCoordinates.y(client.mouseHandler, window));
         diagnostic.put("mouseGrabbed", client.mouseHandler.isMouseGrabbed());
         diagnostic.put("telemetryBounds", layout.telemetry());
         diagnostic.put("modelSelectorOpen", readField(guide(), "modelSelectorOpen"));
@@ -1793,7 +1793,12 @@ final class GuideGraphicalRegressionProbe {
         Path path = frameRoot.resolve(name + ".png");
         try {
             Files.createDirectories(frameRoot);
-            Screenshot.takeScreenshot(MinecraftClientWindow.mainRenderTarget(client), image -> {
+            dev.openallay.client.observation.MinecraftNativeImageCapture.capture(
+                    MinecraftClientWindow.mainRenderTarget(client)).whenComplete((image, captureFailure) -> {
+                if (captureFailure != null) {
+                    saved.completeExceptionally(captureFailure);
+                    return;
+                }
                 CompletableFuture.runAsync(() -> {
                     try (image) {
                         int width = image.getWidth();
