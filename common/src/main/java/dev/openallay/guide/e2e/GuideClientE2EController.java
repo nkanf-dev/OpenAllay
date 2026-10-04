@@ -1167,11 +1167,10 @@ public final class GuideClientE2EController {
         java.io.File root = new java.io.File(
                 System.getProperty("openallay.e2e.screenshotRoot"));
         root.mkdirs();
-        net.minecraft.client.Screenshot.grab(
+        GuideNativeScreenshot.grab(
                 root,
                 name,
                 MinecraftClientWindow.mainRenderTarget(client),
-                1,
                 component -> System.out.println("OpenAllay E2E screenshot: "
                         + component.getString()));
     }

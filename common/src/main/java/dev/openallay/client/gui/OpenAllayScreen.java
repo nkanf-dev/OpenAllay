@@ -583,7 +583,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
                 focusedContentId = next.focusId();
                 clearFocus();
                 if (minecraft != null && minecraft.getNarrator().isActive()) {
-                    minecraft.getNarrator().saySystemNow(next.narration());
+                    dev.openallay.client.gui.GuideNativeNarrator.sayNow(minecraft, next.narration());
                 }
                 return true;
             }
@@ -3701,7 +3701,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         GuideUiModelChoice choice = view.modelChoices().get(modelSelectorCursor);
         focusedContentId = modelFocusId(choice);
         if (minecraft != null && minecraft.getNarrator().isActive()) {
-            minecraft.getNarrator().saySystemNow(choiceLabel(choice));
+            dev.openallay.client.gui.GuideNativeNarrator.sayNow(minecraft, choiceLabel(choice));
         }
     }
 

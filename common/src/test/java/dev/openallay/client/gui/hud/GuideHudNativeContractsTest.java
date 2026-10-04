@@ -68,7 +68,12 @@ class GuideHudNativeContractsTest {
         String fabric = source("fabric/src/main/java/dev/openallay/fabric/OpenAllayFabricClient.java");
         String neo = source("neoforge/src/main/java/dev/openallay/neoforge/OpenAllayNeoForgeClient.java");
         String build = source("fabric/build.gradle");
-        assertTrue(fabric.contains("HudElementRegistry.attachElementBefore(VanillaHudElements.CHAT"));
+        assertTrue(fabric.contains("FabricNativeHudRegistration.register(ui)"));
+        String registration = source("fabric/src/main/java/dev/openallay/fabric/FabricNativeHudRegistration.java");
+        assertTrue(registration.contains("HudElementRegistry.attachElementBefore(VanillaHudElements.CHAT"));
+        String legacyRegistration = source("fabric/src/targets/1.21.5/java/dev/openallay/fabric/FabricNativeHudRegistration.java");
+        assertTrue(legacyRegistration.contains("HudLayerRegistrationCallback.EVENT.register"));
+        assertTrue(legacyRegistration.contains("IdentifiedLayer.CHAT"));
         assertTrue(build.contains("fabric-rendering-v1:${fabric_rendering_version}"));
         assertTrue(source("gradle/minecraft-targets/26.2.properties")
                 .contains("fabric_rendering_version=25.1.6+46a6d00c9c"));

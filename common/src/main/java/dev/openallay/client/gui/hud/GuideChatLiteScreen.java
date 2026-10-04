@@ -503,7 +503,7 @@ public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNat
                     List<GuideHudResultRenderer.Hit> hits = visibleResultHits();
                     if (!hits.isEmpty()) {
                         focusedResult = Math.floorMod(focusedResult + (input.intent() == GuideKeyIntent.DOWN ? 1 : -1), hits.size());
-                        if (minecraft.getNarrator().isActive()) minecraft.getNarrator().saySystemNow(Component.literal(hits.get(focusedResult).narration()));
+                        if (minecraft.getNarrator().isActive()) dev.openallay.client.gui.GuideNativeNarrator.sayNow(minecraft, Component.literal(hits.get(focusedResult).narration()));
                         return true;
                     }
                 }

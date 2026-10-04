@@ -59,7 +59,8 @@ def properties(text):
 
 
 def validate_profile(text, target="26.2", competing=()):
-    if target not in ("1.21.11", "26.1", "26.1.1", "26.1.2", "26.2", "26.3"):
+    if target not in ("1.21.5", "1.21.6", "1.21.7", "1.21.8", "1.21.9", "1.21.10", "1.21.11",
+                      "26.1", "26.1.1", "26.1.2", "26.2", "26.3"):
         raise ValueError("unknown target")
     profile = properties(text)
     if set(profile) != PROFILE_FIELDS:
@@ -120,7 +121,9 @@ class MinecraftTargetProfileSourceTest(unittest.TestCase):
         self.assertEqual(PINS_26_2, validate_profile(self.profile("26.2")))
         selector = self.source("gradle/minecraft-targets.gradle")
         self.assertIn("getOrElse('26.2')", selector)
-        self.assertIn("def nativeFamilies = ['1.21.11': '1.21.11', '26.1': '26.1', '26.1.1': '26.1', '26.1.2': '26.1'", selector)
+        for target in ("26.1", "26.1.1", "26.1.2"):
+            self.assertIn("'" + target + "': '26.1'", selector)
+        self.assertIn("'1.21.11': '1.21.11'", selector)
 
     def test_explicit_26_3_is_the_audited_candidate_tuple(self):
         self.assertEqual(PINS_26_3, validate_profile(self.profile("26.3"), "26.3"))
@@ -136,6 +139,27 @@ class MinecraftTargetProfileSourceTest(unittest.TestCase):
         self.assertIn("mappings(loom.officialMojangMappings())", fabric)
         self.assertIn("if (!remapMinecraft) include(project", fabric)
         self.assertIn("Integer.parseInt(java_version)", self.source("adapters/minecraft-26.2/build.gradle"))
+
+    def test_descending_primitive_profiles_reuse_native_families_with_external_component_coordinates(self):
+        selector = self.source("gradle/minecraft-targets.gradle")
+        for target in ("1.21.5", "1.21.6", "1.21.7", "1.21.8", "1.21.9", "1.21.10"):
+            with self.subTest(target=target):
+                profile = validate_profile(self.profile(target), target)
+                self.assertEqual("21", profile["java_version"])
+                self.assertEqual(target, profile["fabric_version"].split("+", 1)[1])
+                self.assertEqual("[" + target + "]", profile["minecraft_version_range"])
+        for pair in ("'1.21.7': '1.21.8'", "'1.21.9': '1.21.10'",
+                     "'1.21.5': '1.21.6'", "'1.21.6': '1.21.8'", "'1.21.8': '1.21.10'",
+                     "'1.21.10': '1.21.11'"):
+            self.assertIn(pair, selector)
+        self.assertFalse((ROOT / "common/src/targets/1.21.7/java").exists())
+        self.assertFalse((ROOT / "common/src/targets/1.21.9/java").exists())
+        self.assertIn("selectedTarget == '1.21.6' ? '1.21.5' : selectedTarget", selector)
+        for relative in ("common/build.gradle", "fabric/build.gradle", "neoforge/build.gradle"):
+            source = self.source(relative)
+            self.assertIn("jei-${jeiArtifactTarget}", source)
+            self.assertNotIn("jei-${minecraft_version}", source)
+        self.assertIn("minecraftNativeSourceFamilies.contains('1.21.8')", self.source("fabric/build.gradle"))
 
     def test_profile_is_loaded_first_and_shared_product_pins_stay_shared(self):
         root_build = self.source("build.gradle")
@@ -172,7 +196,9 @@ class MinecraftTargetProfileSourceTest(unittest.TestCase):
     def test_six_fabric_components_read_the_selected_profile(self):
         fabric = self.source("fabric/build.gradle")
         for module, field in FABRIC_COMPONENTS.items():
-            artifact = '${keyApiArtifact}' if field == 'fabric_key_mapping_api_version' else module
+            artifact = ('${keyApiArtifact}' if field == 'fabric_key_mapping_api_version'
+                        else '${resourceApiArtifact}' if field == 'fabric_resource_loader_version'
+                        else module)
             self.assertIn('net.fabricmc.fabric-api:' + artifact + ':${' + field + '}', fabric)
             self.assertNotIn('net.fabricmc.fabric-api:' + module + ':' + PINS_26_2[field], fabric)
 
@@ -189,10 +215,12 @@ class MinecraftTargetProfileSourceTest(unittest.TestCase):
             selected = validate_entries(selected_entries(base, target_263, "java"), "java")
             self.assertEqual({"demo.Native": native, "demo.Shared": shared}, selected)
         family = self.source("gradle/minecraft-source-family.gradle")
-        self.assertIn("element.file.toPath().startsWith(base.toPath())", family)
-        self.assertIn("new File(overrides, element.relativePath.pathString).isFile()", family)
-        self.assertIn("src/targets/${nativeFamily}/java", family)
-        self.assertIn("src/targets/${nativeFamily}/resources", family)
+        self.assertIn("element.file.toPath().startsWith(it.toPath())", family)
+        self.assertIn("roots.drop(index + 1).any", family)
+        self.assertIn("new File(it, element.relativePath.pathString).isFile()", family)
+        self.assertIn("families.collect { file(\"src/targets/${it}/java\") }", family)
+        self.assertIn("families.collect { file(\"src/targets/${it}/resources\") }", family)
+        self.assertIn("if (!families.contains(selectedTarget))", family)
         self.assertNotIn("**/Native.java", family)
 
     def test_java_loader_collisions_and_misplaced_fqn_fail(self):

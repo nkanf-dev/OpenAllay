@@ -885,7 +885,7 @@ final class GuideGraphicalRegressionProbe {
                         "resizeRemainsBlurred", true, "typedPttKeyEditsText", true,
                         "voiceDisabledNoCapture", true));
                 checkpoint("live-02-blur-resize-typed-ptt", true);
-                composer().setValue(config.question(), true);
+                dev.openallay.client.gui.GuideNativeMultilineText.setValue(composer(), config.question(), true);
                 advance();
             }
             case 3 -> { press("screen.openallay.action.send"); advance(); }
@@ -896,7 +896,7 @@ final class GuideGraphicalRegressionProbe {
                     waitFor("actual first native recipe Tool while continuation transport is held"); return;
                 }
                 require(!request.terminal(), "Transport hold did not keep a real task active");
-                composer().setValue(LIVE_FOLLOW_UP + " queued-native-callback", true);
+                dev.openallay.client.gui.GuideNativeMultilineText.setValue(composer(), LIVE_FOLLOW_UP + " queued-native-callback", true);
                 advance();
             }
             case 5 -> { press("screen.openallay.pending.follow_up"); advance(); }
@@ -915,7 +915,7 @@ final class GuideGraphicalRegressionProbe {
                 checkpoint("live-03-follow-up-accepted-active", true);
                 var extras = (dev.openallay.guide.ui.GuideUiLayout.ComposerExtras) readField(guide(), "composerExtras");
                 clickAt(guide(), extras.footer().x() + 4, extras.footer().y() + 4, "composer-mode-steer");
-                composer().setValue(LIVE_STEER + " admitted-native-callback", true);
+                dev.openallay.client.gui.GuideNativeMultilineText.setValue(composer(), LIVE_STEER + " admitted-native-callback", true);
                 advance();
             }
             case 7 -> { press("screen.openallay.pending.steer"); advance(); }
@@ -1090,7 +1090,7 @@ final class GuideGraphicalRegressionProbe {
                 require(number(receipt, "scroll") < number(receipt, "maximumScroll"), "Native wheel up did not leave latest tail");
                 liveReaderScroll = (int) number(receipt, "scroll");
                 liveReaderAnchor = receipt.getAsJsonArray("renderedRowIds").get(0).getAsString();
-                composer().setValue(LIVE_FOLLOW_UP + " reader-new-content", true);
+                dev.openallay.client.gui.GuideNativeMultilineText.setValue(composer(), LIVE_FOLLOW_UP + " reader-new-content", true);
                 liveHudFrame = number(receipt, "extractedFrame");
                 report.put("readerSendPrepared", readerSendDiagnostic());
                 stage = 127; stageWait = 0;
@@ -1152,7 +1152,7 @@ final class GuideGraphicalRegressionProbe {
                 require(receipt == null || !receipt.get("visible").getAsBoolean(), "Guide visible with empty cards admitted a popup");
                 report.put("guideVisibleSuppression", receipt);
                 liveToastQuestion = LIVE_PREFIX + " gameplay-toast";
-                composer().setValue(liveToastQuestion, true);
+                dev.openallay.client.gui.GuideNativeMultilineText.setValue(composer(), liveToastQuestion, true);
                 press("screen.openallay.action.send");
                 guide().onClose(); advance();
             }

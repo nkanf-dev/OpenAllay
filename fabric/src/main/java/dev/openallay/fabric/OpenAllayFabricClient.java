@@ -20,8 +20,6 @@ import dev.openallay.guide.e2e.GuideClientE2EConfig;
 import dev.openallay.guide.e2e.GuideClientE2EController;
 import dev.openallay.client.gui.OpenAllayKeyMappings;
 import dev.openallay.client.gui.GuideClientUiCoordinator;
-import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
-import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
 import dev.openallay.guide.ui.GuideDisplayRuntime;
 import dev.openallay.settings.ClientSettingsHistoryBinding;
 import dev.openallay.tool.ToolResult;
@@ -170,9 +168,7 @@ public final class OpenAllayFabricClient implements ClientModInitializer {
                 configDirectory, dispatcher, clock);
         var observationInput = dev.openallay.client.observation.ObservationUiBindings.bind(
                 Minecraft.getInstance(), runtime.platform(), runtime.worldObservations(), ui, services);
-        HudElementRegistry.attachElementBefore(VanillaHudElements.CHAT,
-                MinecraftResourceIds.fromNamespaceAndPath("openallay", "guide_hud"),
-                (graphics, deltaTracker) -> ui.extractRenderState(dev.openallay.client.gui.GuideGraphics.wrap(graphics)));
+        FabricNativeHudRegistration.register(ui);
         bridge.onDisconnect(() -> {
             observationInput.clearConnectionState();
             ui.disconnect();

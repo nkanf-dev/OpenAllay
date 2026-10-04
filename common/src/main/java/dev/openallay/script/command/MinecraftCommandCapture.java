@@ -36,7 +36,7 @@ public final class MinecraftCommandCapture {
         }
         UUID actorId = client.player.getUUID();
         var connection = client.getConnection();
-        CommandDispatcher<ClientSuggestionProvider> dispatcher = connection.getCommands();
+        var dispatcher = connection.getCommands();
         ClientSuggestionProvider source = connection.getSuggestionsProvider();
         List<CommandCatalogSnapshot.CommandNodeSnapshot> nodes = new ArrayList<>();
         flatten(dispatcher, source, dispatcher.getRoot(), "", nodes);
@@ -74,16 +74,16 @@ public final class MinecraftCommandCapture {
         return result;
     }
 
-    private static void flatten(
-            CommandDispatcher<ClientSuggestionProvider> dispatcher,
-            ClientSuggestionProvider source,
-            CommandNode<ClientSuggestionProvider> parent,
+    private static <S> void flatten(
+            CommandDispatcher<S> dispatcher,
+            S source,
+            CommandNode<S> parent,
             String parentPath,
             List<CommandCatalogSnapshot.CommandNodeSnapshot> target) {
-        for (CommandNode<ClientSuggestionProvider> child : parent.getChildren()) {
+        for (CommandNode<S> child : parent.getChildren()) {
             String segment = segment(child);
             String path = parentPath.isEmpty() ? segment : parentPath + " " + segment;
-            Map<CommandNode<ClientSuggestionProvider>, String> usage =
+            Map<CommandNode<S>, String> usage =
                     dispatcher.getSmartUsage(child, source);
             List<String> usages = usage.values().stream().sorted().toList();
             List<String> children = child.getChildren().stream()
