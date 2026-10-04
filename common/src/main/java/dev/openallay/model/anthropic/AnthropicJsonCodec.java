@@ -98,6 +98,13 @@ public final class AnthropicJsonCodec {
                 }
                 content.add(encodeContent(block, toolIds, imageEncoder));
             }
+            message.inputObservation().ifPresent(anchor -> {
+                JsonObject label = new JsonObject();
+                label.addProperty("type", "text");
+                label.addProperty("text", dev.openallay.model.image.ModelImages.inputObservationLabel(anchor));
+                content.add(label);
+                anchor.image().ifPresent(capture -> content.add(imageEncoder.apply(capture.image())));
+            });
             encoded.add("content", content);
             messages.add(encoded);
         }

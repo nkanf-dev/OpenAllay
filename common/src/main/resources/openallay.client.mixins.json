@@ -4,7 +4,9 @@
   "compatibilityLevel": "JAVA_25",
   "client": [
     "MultiLineEditBoxAccessor",
-    "MultilineTextFieldAccessor"
+    "MultilineTextFieldAccessor",
+    "AbstractContainerScreenObservationAccessor",
+    "GameRendererObservationMixin"
   ],
   "injectors": {
     "defaultRequire": 1

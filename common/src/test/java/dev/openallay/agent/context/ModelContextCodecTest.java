@@ -50,7 +50,7 @@ final class ModelContextCodecTest {
                 success.value());
         JsonObject envelope = JsonParser.parseString(encoded).getAsJsonObject();
         assertEquals(Set.of("messages"), envelope.keySet());
-        assertEquals(Set.of("role", "content"),
+        assertEquals(Set.of("role", "content", "inputObservation"),
                 envelope.getAsJsonArray("messages").get(1).getAsJsonObject().keySet());
     }
 

@@ -36,10 +36,14 @@ public final class MinecraftClientWorldObservationCoordinator
     private final PlatformService platform;
     private final UUID expectedActor;
     private final String expectedDimension;
+    private final Object expectedLevel;
+    private final dev.openallay.client.observation.MinecraftClientViewCapture views;
     private final String observationPrefix = UUID.randomUUID().toString();
     private final AtomicLong entitySequence = new AtomicLong();
     private final Map<String, WorldEntitySnapshot> entityDetails = new ConcurrentHashMap<>();
     private final AtomicBoolean closed = new AtomicBoolean();
+    private final java.util.Set<CompletableFuture<WorldFocusObservation>> focusRequests =
+            ConcurrentHashMap.newKeySet();
 
     public MinecraftClientWorldObservationCoordinator(
             Minecraft client,
@@ -53,6 +57,43 @@ public final class MinecraftClientWorldObservationCoordinator
             throw new IllegalArgumentException("expectedDimension must not be blank");
         }
         this.expectedDimension = expectedDimension;
+        this.expectedLevel = client.level;
+        this.views = null;
+    }
+
+    public MinecraftClientWorldObservationCoordinator(
+            Minecraft client, PlatformService platform, UUID expectedActor, String expectedDimension,
+            WorldObservationRuntime observations, String correlationId) {
+        this.client = java.util.Objects.requireNonNull(client, "client");
+        this.platform = java.util.Objects.requireNonNull(platform, "platform");
+        this.expectedActor = java.util.Objects.requireNonNull(expectedActor, "expectedActor");
+        this.expectedDimension = java.util.Objects.requireNonNull(expectedDimension, "expectedDimension");
+        this.expectedLevel = client.level;
+        this.views = new dev.openallay.client.observation.MinecraftClientViewCapture(
+                client, platform, observations, correlationId, expectedActor, expectedDimension);
+    }
+
+    @Override
+    public CompletionStage<WorldFocusObservation> focus(CancellationSignal cancellation) {
+        CompletableFuture<WorldFocusObservation> result = new CompletableFuture<>();
+        focusRequests.add(result);
+        result.whenComplete((value, failure) -> focusRequests.remove(result));
+        cancellation.onCancel(() -> result.completeExceptionally(unavailable()));
+        try {
+            schedule(() -> {
+                try {
+                    verifyAvailable(cancellation);
+                    result.complete(dev.openallay.client.context.ClientFocusCapture.capture(client, platform));
+                } catch (RuntimeException failure) { result.completeExceptionally(translate(failure)); }
+            });
+        } catch (RuntimeException failure) { result.completeExceptionally(translate(failure)); }
+        return result;
+    }
+
+    @Override
+    public CompletionStage<WorldViewCapture> capture(WorldViewRequest request, CancellationSignal cancellation) {
+        if (views == null) return WorldObservationCoordinator.super.capture(request, cancellation);
+        return views.capture(request, cancellation);
     }
 
     @Override
@@ -141,6 +182,9 @@ public final class MinecraftClientWorldObservationCoordinator
     @Override
     public void close() {
         closed.set(true);
+        if (views != null) views.close();
+        focusRequests.forEach(result -> result.completeExceptionally(unavailable()));
+        focusRequests.clear();
         entityDetails.clear();
     }
 
@@ -251,6 +295,7 @@ public final class MinecraftClientWorldObservationCoordinator
     private void verifyAvailable(CancellationSignal cancellation) {
         cancellation.throwIfCancelled();
         if (closed.get()
+                || client.level != expectedLevel
                 || client.player == null
                 || client.level == null
                 || !expectedActor.equals(client.player.getUUID())

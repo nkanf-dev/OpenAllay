@@ -33,7 +33,6 @@ import dev.openallay.recipe.RecipeKnowledgeService;
 import dev.openallay.recipe.RecipeProviderSnapshot;
 import dev.openallay.recipe.RecipeVisibilityPolicy;
 import dev.openallay.tool.gamestate.WorldQueryOperation;
-import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -63,7 +62,7 @@ public final class MinecraftContextCapture {
     private static final String CAPTURE_GENERATION_PLACEHOLDER = "0".repeat(64);
     private static final String REGISTRY_PROVENANCE = "minecraft:registry";
     private static final String RECIPE_PROVENANCE = "minecraft:recipe_manager";
-    private final Gson gson;
+    private final dev.openallay.context.ContextSnapshotMetricsJson metricsJson;
     private final PlatformService platform;
     private final RecipeKnowledgeService recipeKnowledge = new RecipeKnowledgeService();
 
@@ -72,7 +71,7 @@ public final class MinecraftContextCapture {
     }
 
     public MinecraftContextCapture(Gson gson, PlatformService platform) {
-        this.gson = Objects.requireNonNull(gson, "gson");
+        this.metricsJson = new dev.openallay.context.ContextSnapshotMetricsJson(gson);
         this.platform = Objects.requireNonNull(platform, "platform");
     }
 
@@ -414,7 +413,7 @@ public final class MinecraftContextCapture {
         if (value == null) {
             return 0;
         }
-        return gson.toJson(value).getBytes(StandardCharsets.UTF_8).length;
+        return metricsJson.bytes(value);
     }
 
     private EvidenceMetadata evidence(

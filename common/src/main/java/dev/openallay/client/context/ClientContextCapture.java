@@ -40,7 +40,6 @@ import dev.openallay.recipe.RecipeUnlockState;
 import dev.openallay.recipe.RecipeViewerProviderRegistry;
 import dev.openallay.recipe.config.RecipeClientConfig;
 import dev.openallay.recipe.config.RecipeClientRuntime;
-import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -66,7 +65,7 @@ import net.minecraft.world.phys.EntityHitResult;
 
 public final class ClientContextCapture {
     private static final String CAPTURE_GENERATION_PLACEHOLDER = "0".repeat(64);
-    private final Gson gson;
+    private final dev.openallay.context.ContextSnapshotMetricsJson metricsJson;
     private final PlatformService platform;
     private final RecipeClientRuntime recipeClient;
     private final RecipeKnowledgeService recipeKnowledge = new RecipeKnowledgeService();
@@ -81,7 +80,7 @@ public final class ClientContextCapture {
 
     public ClientContextCapture(
             Gson gson, PlatformService platform, RecipeClientRuntime recipeClient) {
-        this.gson = gson;
+        this.metricsJson = new dev.openallay.context.ContextSnapshotMetricsJson(gson);
         this.platform = platform;
         this.recipeClient = java.util.Objects.requireNonNull(recipeClient, "recipeClient");
     }
@@ -378,22 +377,17 @@ public final class ClientContextCapture {
 
     private ObservableGameStateSnapshot.PlayerUiState playerUiState(
             Minecraft client, PlayerSnapshot playerSnapshot, Instant capturedAt) {
-        boolean inventoryMenu = client.player.containerMenu == client.player.inventoryMenu;
-        String screen = inventoryMenu
-                ? "gameplay_or_player_inventory"
-                : "open_synchronized_menu";
-        String title = inventoryMenu || client.player.containerMenu.getType() == null
-                ? ""
-                : BuiltInRegistries.MENU.getKey(client.player.containerMenu.getType()).toString();
+        var focus = ClientFocusCapture.capture(client, platform, capturedAt);
+        String identity = focus.screen().className().isEmpty() ? "gameplay" : focus.screen().className();
         return new ObservableGameStateSnapshot.PlayerUiState(
                 playerSnapshot,
-                screen,
-                title,
+                identity,
+                focus.screen().title(),
                 evidence(DataCompleteness.PARTIAL, capturedAt,
                         "minecraft:player_ui", "minecraft:client_player_ui"),
                 List.of(new SectionDiagnostic(
-                        "screen_identity_not_public",
-                        "Minecraft exposes the player's synchronized menu state but not every active screen identity")));
+                        "sampled_client_focus", "Current focus is a detached client-visible sample")),
+                Optional.of(focus));
     }
 
     private ObservableGameStateSnapshot.WorldQueriesState worldQueriesState(
@@ -668,7 +662,7 @@ public final class ClientContextCapture {
     }
 
     private long bytes(Object value) {
-        return value == null ? 0 : gson.toJson(value).getBytes(StandardCharsets.UTF_8).length;
+        return metricsJson.bytes(value);
     }
 
     private EvidenceMetadata evidence(

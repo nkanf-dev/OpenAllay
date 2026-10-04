@@ -81,11 +81,13 @@ final class GuideServiceForkTest {
                 new ModelMessage(ModelRole.ASSISTANT, List.of(new ModelContent.Text("picture result"))));
         List<ModelMessage> projected = context("compacted summary", "safe completed tail");
         local.complete(request, projected, original);
+        awaitReleased(service, request);
         assertEquals("image-branch", success(service.forkSession("main", request, "image-branch").join()));
         service.closeSession("main").join();
         assertEquals(0, images.collect(ACTOR));
         assertArrayEquals(encoded.toByteArray(), images.read(ACTOR, reference));
         assertEquals(projected, local.hydrated.get("image-branch"));
+        service.shutdown().get(2, java.util.concurrent.TimeUnit.SECONDS);
     }
 
     @Test
@@ -111,11 +113,13 @@ final class GuideServiceForkTest {
                 new ModelMessage(ModelRole.ASSISTANT, List.of(new ModelContent.Text("picture result"))));
         List<ModelMessage> projected = context("compacted summary", "safe completed tail");
         local.complete(request, projected, original);
+        awaitReleased(service, request);
         assertEquals("image-branch", success(service.forkSession("main", request, "image-branch").join()));
         service.closeSession("main").join();
         assertEquals(0, images.collect(ACTOR));
         assertArrayEquals(encoded.toByteArray(), images.read(ACTOR, reference));
         assertEquals(projected, local.hydrated.get("image-branch"));
+        service.shutdown().get(2, java.util.concurrent.TimeUnit.SECONDS);
     }
 
 
@@ -141,7 +145,7 @@ final class GuideServiceForkTest {
                     Map<String, List<dev.openallay.model.image.ImageReference>> owners) {}
             @Override public void retain(UUID actor, String owner,
                     List<dev.openallay.model.image.ImageReference> references) throws java.io.IOException {
-                if (!owner.endsWith("session:race-branch")) return;
+                if (!owner.contains(":session:race-branch:")) return;
                 retained.countDown();
                 try {
                     if (!release.await(2, java.util.concurrent.TimeUnit.SECONDS)) {
@@ -160,6 +164,7 @@ final class GuideServiceForkTest {
         UUID first = success(service.ask("captured source").join());
         List<ModelMessage> original = context("captured source", "actual source answer");
         local.complete(first, original, original);
+        awaitReleased(service, first);
         CompletableFuture<ToolResult<String>> forking = service.forkSession("main", first, "race-branch");
         try {
             assertTrue(retained.await(2, java.util.concurrent.TimeUnit.SECONDS));
@@ -420,6 +425,16 @@ final class GuideServiceForkTest {
         return new GuideService(ACTOR, local, new Remote(),
                 (capabilities, correlation) -> new ToolResult.Success<>(ToolInvocationContext.developmentConsole(correlation)),
                 Runnable::run, Clock.fixed(NOW, ZoneOffset.UTC), new Gson(), history == null ? null : SCOPE, history);
+    }
+    private static void awaitReleased(GuideService service, UUID requestId) throws Exception {
+        CompletableFuture<Void> released = new CompletableFuture<>();
+        try (GuideSubscription ignored = service.subscribe(snapshot -> {
+            boolean working = snapshot.sessions().stream().anyMatch(session ->
+                    requestId.equals(session.workingRequestId()));
+            if (!working) released.complete(null);
+        })) {
+            released.get(2, java.util.concurrent.TimeUnit.SECONDS);
+        }
     }
     private static GuideSessionSnapshot session(GuideService service, String id) {
         return service.snapshot().sessions().stream().filter(session -> session.sessionId().equals(id)).findFirst().orElseThrow();

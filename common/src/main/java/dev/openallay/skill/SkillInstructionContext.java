@@ -82,7 +82,7 @@ public final class SkillInstructionContext {
                 }
                 content.add(item);
             }
-            refreshed.add(changed ? new ModelMessage(message.role(), content) : message);
+            refreshed.add(changed ? new ModelMessage(message.role(), content, message.inputObservation()) : message);
         }
         return List.copyOf(refreshed);
     }

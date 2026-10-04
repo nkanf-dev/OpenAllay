@@ -179,6 +179,17 @@ public final class GuideSessionExporter {
                 Set<String> recordedCalls = new HashSet<>();
                 boolean firstUserText = true;
                 for (var message : request.originalContext()) {
+                    message.inputObservation().ifPresent(anchor -> {
+                        result.append("Player-input reference context\n")
+                                .append(formatText(dev.openallay.model.image.ModelImages.inputObservationLabel(anchor)))
+                                .append("\nTyped source metadata\n")
+                                .append(dev.openallay.world.ClientObservationAnchorJson.encode(java.util.Optional.of(anchor)))
+                                .append("\n\n");
+                        anchor.image().ifPresent(capture -> {
+                            result.append("Associated input source · IMAGE\n");
+                            appendImage(result, capture.image());
+                        });
+                    });
                     for (ModelContent content : message.content()) {
                         switch (content) {
                             case ModelContent.Text text -> {

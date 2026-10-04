@@ -336,14 +336,8 @@ public final class PayloadGuideRemoteEndpoint implements GuideRemoteEndpoint {
                 try {
                     java.util.Map<String, dev.openallay.model.image.ImageReference> references =
                             new java.util.LinkedHashMap<>();
-                    for (var content : message.content()) {
-                        if (content instanceof dev.openallay.model.ModelContent.Image image) {
-                            var previous = references.putIfAbsent(image.reference().sha256(), image.reference());
-                            if (previous != null && !previous.equals(image.reference())) {
-                                throw new IllegalArgumentException("Conflicting steer image metadata");
-                            }
-                        }
-                    }
+                    dev.openallay.model.image.ModelImages.uniqueReferences(List.of(message))
+                            .forEach(image -> references.put(image.sha256(), image));
                     List<dev.openallay.bridge.protocol.ServerAgentImageAttachment> attachments =
                             new java.util.ArrayList<>();
                     for (var reference : references.values()) {

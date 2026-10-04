@@ -160,7 +160,8 @@ public final class OpenAiJsonCodec {
 
         JsonObject encoded = new JsonObject();
         encoded.addProperty("role", message.role() == ModelRole.USER ? "user" : "assistant");
-        boolean multipart = message.content().stream().anyMatch(ModelContent.Image.class::isInstance);
+        boolean multipart = message.inputObservation().isPresent()
+                || message.content().stream().anyMatch(ModelContent.Image.class::isInstance);
         JsonArray parts = new JsonArray();
         StringBuilder text = new StringBuilder();
         StringBuilder reasoning = new StringBuilder();
@@ -191,6 +192,13 @@ public final class OpenAiJsonCodec {
                 case ModelContent.ToolResult ignored -> throw new IllegalStateException();
             }
         }
+        message.inputObservation().ifPresent(anchor -> {
+            JsonObject label = new JsonObject();
+            label.addProperty("type", "text");
+            label.addProperty("text", dev.openallay.model.image.ModelImages.inputObservationLabel(anchor));
+            parts.add(label);
+            anchor.image().ifPresent(capture -> parts.add(imageEncoder.apply(capture.image())));
+        });
         if (multipart) {
             encoded.add("content", parts);
         } else {

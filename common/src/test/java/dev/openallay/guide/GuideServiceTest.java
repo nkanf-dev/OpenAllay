@@ -259,10 +259,13 @@ final class GuideServiceTest {
         FakeRemote remote = new FakeRemote(true);
         GuideService service = service(new FakeLocal(), remote);
         service.setModelMode(GuideModelMode.SERVER).join();
-        success(service.ask("active").join());
+        UUID active = success(service.ask("active").join());
         service.selectSession("other").join();
 
-        service.disconnect().join();
+        CompletableFuture<Void> disconnected = service.disconnect();
+        assertFalse(disconnected.isDone(), "cancel acknowledgement is not the remote endpoint release");
+        remote.releaseCancelled(active);
+        disconnected.join();
 
         assertEquals(GuideModelMode.CLIENT, service.snapshot().modelMode());
         assertEquals("main", service.snapshot().selectedSession());
@@ -488,9 +491,14 @@ final class GuideServiceTest {
         }
         @Override public boolean cancel(UUID requestId) {
             cancelled.add(requestId);
-            return pending.remove(requestId) != null;
+            return pending.containsKey(requestId);
         }
-        @Override public void disconnect() { pending.clear(); }
+        @Override public void disconnect() { /* Already-produced callbacks drain until explicit release. */ }
+
+        void releaseCancelled(UUID request) {
+            Consumer<AgentEvent> events = pending.remove(request);
+            events.accept(new AgentEvent.RequestReleased());
+        }
 
         void fail(UUID request, String code, String message) {
             pending.get(request).accept(new AgentEvent.Failed(code, message));

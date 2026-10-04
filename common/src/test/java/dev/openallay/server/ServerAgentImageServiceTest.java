@@ -388,6 +388,76 @@ final class ServerAgentImageServiceTest {
         assertFalse(Files.exists(root.resolve(sender.toString()).resolve(reference.sha256())));
     }
 
+    @Test
+    void clientResultImportPinsAndAllowsImagesOnlyAfterWorkerAcceptance(@TempDir Path directory) throws Exception {
+        byte[] bytes = encodedImage("png", 2, 1);
+        ImageReference ref = reference(bytes, "image/png", 2, 1);
+        BlockingImportStore store = new BlockingImportStore(new FileImageAttachmentStore(directory));
+        UUID actor = UUID.randomUUID();
+        CompletableFuture<ModelRequest> observed = new CompletableFuture<>();
+        CompletableFuture<ModelTurn> response = new CompletableFuture<>();
+        Fixture fixture = fixture(store, ImageInputCapability.SUPPORTED, (request, events, cancellation) -> {
+            observed.complete(request); return response;
+        });
+        ServerAgentRequestPayload payload = new ServerAgentRequestPayload(UUID.randomUUID(), "main", "observe", true);
+        try {
+            assertInstanceOf(ToolResult.Success.class, fixture.service.ask(actor, payload));
+            ModelRequest request = observed.get(5, TimeUnit.SECONDS);
+            assertThrows(IOException.class, () -> request.images().read(ref));
+            CompletableFuture<Void> prepared = fixture.service.prepareClientToolImages(actor, payload.requestId(), "main",
+                    List.of(ref), List.of(ServerAgentImageAttachment.from(ref, bytes)), () -> true);
+            assertTrue(store.importing.await(5, TimeUnit.SECONDS));
+            assertFalse(prepared.isDone());
+            assertFalse(store.importThread.get(5, TimeUnit.SECONDS) == Thread.currentThread());
+            assertThrows(IOException.class, () -> request.images().read(ref));
+            store.continueImport.countDown();
+            prepared.get(5, TimeUnit.SECONDS);
+            assertArrayEquals(bytes, request.images().read(ref));
+            assertEquals(0, store.collect(actor), "Request owner must pin pixels before next model turn");
+            assertThrows(java.util.concurrent.CompletionException.class, () -> fixture.service.prepareClientToolImages(
+                    UUID.randomUUID(), payload.requestId(), "main", List.of(ref),
+                    List.of(ServerAgentImageAttachment.from(ref, bytes)), () -> true).join());
+            assertThrows(java.util.concurrent.CompletionException.class, () -> fixture.service.prepareClientToolImages(
+                    actor, payload.requestId(), "other", List.of(ref),
+                    List.of(ServerAgentImageAttachment.from(ref, bytes)), () -> true).join());
+        } finally {
+            store.continueImport.countDown(); response.complete(turn("done"));
+            fixture.released(payload.requestId()).get(5, TimeUnit.SECONDS);
+            fixture.service.disconnectAsync(actor).get(5, TimeUnit.SECONDS);
+        }
+    }
+
+    @Test
+    void revokedClientInvocationDuringImportNeverGrantsLateResolverAccess(@TempDir Path directory) throws Exception {
+        byte[] bytes = encodedImage("png", 1, 1);
+        ImageReference ref = reference(bytes, "image/png", 1, 1);
+        BlockingImportStore store = new BlockingImportStore(new FileImageAttachmentStore(directory));
+        UUID actor = UUID.randomUUID();
+        CompletableFuture<ModelRequest> observed = new CompletableFuture<>();
+        CompletableFuture<ModelTurn> response = new CompletableFuture<>();
+        Fixture fixture = fixture(store, ImageInputCapability.SUPPORTED, (request, events, cancellation) -> {
+            observed.complete(request); return response;
+        });
+        ServerAgentRequestPayload payload = new ServerAgentRequestPayload(UUID.randomUUID(), "main", "observe", true);
+        AtomicBoolean current = new AtomicBoolean(true);
+        try {
+            fixture.service.ask(actor, payload);
+            ModelRequest request = observed.get(5, TimeUnit.SECONDS);
+            CompletableFuture<Void> prepared = fixture.service.prepareClientToolImages(actor, payload.requestId(), "main",
+                    List.of(ref), List.of(ServerAgentImageAttachment.from(ref, bytes)), current::get);
+            assertTrue(store.importing.await(5, TimeUnit.SECONDS));
+            current.set(false);
+            store.continueImport.countDown();
+            assertThrows(java.util.concurrent.ExecutionException.class, () -> prepared.get(5, TimeUnit.SECONDS));
+            assertThrows(IOException.class, () -> request.images().read(ref));
+        } finally {
+            store.continueImport.countDown(); response.complete(turn("done"));
+            fixture.released(payload.requestId()).get(5, TimeUnit.SECONDS);
+            fixture.service.disconnectAsync(actor).get(5, TimeUnit.SECONDS);
+        }
+        assertThrows(IOException.class, () -> store.read(actor, ref));
+    }
+
     private static Fixture fixture(ImageAttachmentStore store, ImageInputCapability capability, ModelClient model) {
         return new Fixture(store, capability, model);
     }

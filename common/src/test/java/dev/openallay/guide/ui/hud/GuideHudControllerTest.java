@@ -157,7 +157,7 @@ final class GuideHudControllerTest {
             GuideService replacement = fixture.manager.forActor(UUID.randomUUID());
             controller.tick();
             assertEquals("main", controller.view().selectedSession());
-            fixture.dispatcher.runAll();
+            fixture.dispatcher.runUntil(() -> listenerCount(replacement) == 1);
             assertEquals(0, listenerCount(old));
             assertEquals(1, listenerCount(replacement));
             controller.tick();
@@ -217,11 +217,28 @@ final class GuideHudControllerTest {
         }
     }
 
+    @FunctionalInterface
+    private interface OwnerCondition { boolean satisfied() throws Exception; }
+
     private static final class QueuedDispatcher implements ClientEventDispatcher {
-        final ArrayDeque<Runnable> queued = new ArrayDeque<>();
+        final java.util.concurrent.LinkedBlockingQueue<Runnable> queued =
+                new java.util.concurrent.LinkedBlockingQueue<>();
         @Override public void execute(Runnable event) { queued.add(event); }
         void runAll() {
-            while (!queued.isEmpty()) queued.remove().run();
+            Runnable event;
+            while ((event = queued.poll()) != null) event.run();
+        }
+        void runUntil(OwnerCondition condition) throws Exception {
+            long deadline = System.nanoTime() + java.util.concurrent.TimeUnit.SECONDS.toNanos(2);
+            while (!condition.satisfied()) {
+                long remaining = deadline - System.nanoTime();
+                assertTrue(remaining > 0, "Real previous-connection cleanup and replacement subscription must settle");
+                Runnable event = queued.poll(remaining, java.util.concurrent.TimeUnit.NANOSECONDS);
+                org.junit.jupiter.api.Assertions.assertNotNull(event,
+                        "No owner callback arrived before the real cleanup deadline");
+                event.run();
+            }
+            runAll();
         }
     }
 

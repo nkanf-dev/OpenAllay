@@ -45,6 +45,30 @@ final class RemoteImageEndpointTest {
     private static final ModelMessage IMAGE = image(REFERENCE);
 
     @Test
+    void associatedOnlyFrameIsUploadedForHistoryAndSteerWithoutOrdinaryImageBlocks() throws Exception {
+        var anchor = dev.openallay.world.InputObservationFixtures.anchor(REFERENCE);
+        var input = ModelMessage.userInput("", List.of(), java.util.Optional.of(anchor));
+        Port port = new Port(ImageInputCapability.SUPPORTED);
+        var endpoint = new PayloadGuideRemoteEndpoint(port, new Gson(), Runnable::run, Runnable::run);
+        UUID requestId = UUID.randomUUID();
+        try {
+            assertTrue(endpoint.askWithContext(requestId, "main", ModelMessage.userText("continue"),
+                    reference -> BYTES, List.of(input), ignored -> {}));
+            var request = port.sent.get(5, TimeUnit.SECONDS);
+            assertEquals(List.of(REFERENCE), request.imageAttachments().stream()
+                    .map(ServerAgentImageAttachment::reference).toList());
+            assertEquals(input, request.history().getFirst().toModelMessage());
+            UUID messageId = UUID.randomUUID();
+            assertTrue(endpoint.steer(requestId, messageId, input, reference -> BYTES));
+            var steer = port.steerSent.get(5, TimeUnit.SECONDS);
+            assertEquals(input, steer.message().toModelMessage());
+            assertEquals(List.of(REFERENCE), steer.imageAttachments().stream()
+                    .map(ServerAgentImageAttachment::reference).toList());
+            assertArrayEquals(BYTES, steer.imageAttachments().getFirst().bytes());
+        } finally { endpoint.disconnect(); }
+    }
+
+    @Test
     void uploadsUniqueActualImageClosureOffCallerThread(@TempDir Path directory) throws Exception {
         terminalImageRequestKeepsItsIdUntilTheActualReleaseEvent();
         UUID actor = UUID.randomUUID();
@@ -260,6 +284,7 @@ final class RemoteImageEndpointTest {
     private static final class Port implements PayloadGuideRemoteEndpoint.Port {
         private final ImageInputCapability capability;
         private final CompletableFuture<ServerAgentRequestPayload> sent = new CompletableFuture<>();
+        private final CompletableFuture<dev.openallay.bridge.protocol.ServerAgentSteerPayload> steerSent = new CompletableFuture<>();
         private final CompletableFuture<Consumer<ServerAgentEventPayload>> events = new CompletableFuture<>();
         private final AtomicInteger cancelCalls = new AtomicInteger();
         private final AtomicInteger disconnectCalls = new AtomicInteger();
@@ -272,6 +297,9 @@ final class RemoteImageEndpointTest {
             sent.complete(request);
             events.complete(sink);
             return true;
+        }
+        @Override public boolean steer(dev.openallay.bridge.protocol.ServerAgentSteerPayload payload) {
+            steerSent.complete(payload); return true;
         }
         @Override public boolean cancel(UUID requestId) { cancelCalls.incrementAndGet(); return false; }
         @Override public void disconnect() { disconnectCalls.incrementAndGet(); }

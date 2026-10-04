@@ -173,8 +173,10 @@ public record ServerGuideRuntime(
                 scheduled::awaitReady,
                 imageStore,
                 config.imageCapability().capability());
-        return new ToolResult.Success<>(
-                new ServerGuideRuntime(config, service, contextSpec, clientTools));
+        ServerGuideRuntime configured = new ServerGuideRuntime(config, service, contextSpec, clientTools);
+        clientTools.configureResultPreparation(
+                service::prepareClientToolImages, configured.requestBodyLimit(), service::ownsRequest);
+        return new ToolResult.Success<>(configured);
     }
 
     /** Frozen runtime hook for a typed Steer. Call only on the off-thread payload worker. */

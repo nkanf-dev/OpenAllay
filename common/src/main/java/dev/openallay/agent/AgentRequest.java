@@ -26,6 +26,10 @@ public record AgentRequest(
             throw new IllegalArgumentException("Invalid Agent session ID: " + sessionId);
         }
         validateUserInput(userInput);
+        if (userInput.inputObservation().isPresent()
+                && !actorId.equals(userInput.inputObservation().orElseThrow().focus().actorId())) {
+            throw new IllegalArgumentException("Input reference belongs to another player");
+        }
         if (systemPrompt == null || systemPrompt.isBlank()) {
             throw new IllegalArgumentException("Agent system prompt must not be blank");
         }
@@ -70,9 +74,9 @@ public record AgentRequest(
                                 && !(content instanceof ModelContent.Image))) {
             throw new IllegalArgumentException("Agent user input must contain only user text or images");
         }
-        if (input.content().stream().noneMatch(content ->
-                content instanceof ModelContent.Image
-                        || content instanceof ModelContent.Text text && !text.text().isBlank())) {
+        if (!dev.openallay.model.image.ModelImages.hasImages(java.util.List.of(input))
+                && input.content().stream().noneMatch(content ->
+                        content instanceof ModelContent.Text text && !text.text().isBlank())) {
             throw new IllegalArgumentException("Agent user input must not be blank");
         }
     }

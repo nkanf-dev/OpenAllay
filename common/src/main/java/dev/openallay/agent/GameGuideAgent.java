@@ -383,8 +383,11 @@ public final class GameGuideAgent {
             String callKey = exposedId + ":" + canonical(executionArguments);
             String previousOutcome = previousCallOutcomes.get(callKey);
             AgentToolResult feedback = null;
-            boolean skillRead = "openallay:load_skill".equals(exposedId);
-            if (!skillRead && REPEATED_CALL_SENTINEL.equals(previousOutcome)) {
+            // RunJS is a fresh execution capability. Equal source can observe changed live state.
+            // Do not infer freshness from source keywords or route it through fixed workflows.
+            boolean freshCall = "openallay:load_skill".equals(exposedId)
+                    || dev.openallay.tool.builtin.RunJavascriptTool.ID.equals(exposedId);
+            if (!freshCall && REPEATED_CALL_SENTINEL.equals(previousOutcome)) {
                 ModelClientException repeated = new ModelClientException(
                         new dev.openallay.model.ModelFailure(
                                 "repeated_tool_call",
@@ -392,7 +395,7 @@ public final class GameGuideAgent {
                                 null));
                 terminalFailure.compareAndSet(null, repeated);
                 feedback = recoverToolFailure(exposedId, repeated);
-            } else if (!skillRead && (previousOutcome != null || !firstCalls.add(callKey))) {
+            } else if (!freshCall && (previousOutcome != null || !firstCalls.add(callKey))) {
                 duplicatedThisTurn.add(callKey);
                 feedback = noNewInformation(exposedId);
             }

@@ -67,6 +67,8 @@ public final class GuideService implements GuideHistoryAdministration {
     private final Map<String, SessionState> sessions = new LinkedHashMap<>();
     private final Map<UUID, String> requestSessions = new LinkedHashMap<>();
     private final Map<UUID, CancelledFinalization> pendingCancelledFinalization = new LinkedHashMap<>();
+    // Dispatcher-owned barriers. Their continuations use immutable image snapshots only.
+    private final Map<UUID, CompletableFuture<Void>> observationReleases = new LinkedHashMap<>();
     private final CopyOnWriteArrayList<Consumer<GuideSnapshot>> listeners =
             new CopyOnWriteArrayList<>();
     private volatile GuideSnapshot snapshot;
@@ -78,10 +80,14 @@ public final class GuideService implements GuideHistoryAdministration {
     private long compactSelectionEpoch;
     private long sessionSelectionGeneration;
     private final Map<String, UUID> pendingForks = new LinkedHashMap<>();
+    private final Map<String, String> pendingForkImageOwners = new LinkedHashMap<>();
     private GuidePersistenceSnapshot persistence;
     private boolean allowHistoryWrites;
     private boolean historyDeletionPending;
+    private volatile boolean closing;
     private volatile boolean disconnected;
+    private CompletableFuture<Void> disconnectFuture;
+    private final Map<UUID, CompletableFuture<Void>> endpointSettled = new LinkedHashMap<>();
     private boolean incrementalHistory;
     private final DurableProjection durableProjection = new DurableProjection();
     // Captured rows suppress duplicate deltas; only successful writes enter durableProjection.
@@ -226,14 +232,14 @@ public final class GuideService implements GuideHistoryAdministration {
     /** Encoded PNG/JPEG bytes only. Decoding and managed file I/O never run on the client owner thread. */
     public CompletableFuture<ToolResult<dev.openallay.model.image.ImageReference>> importImage(
             byte[] encodedImage) {
-        if (attachmentStore == null || disconnected) return CompletableFuture.completedFuture(new ToolResult.Failure<>(
+        if (attachmentStore == null || closing || disconnected) return CompletableFuture.completedFuture(new ToolResult.Failure<>(
                 "image_store_unavailable", "Image attachments are unavailable on this connection"));
         Objects.requireNonNull(encodedImage, "encodedImage");
         byte[] captured = encodedImage.clone();
         String owner = imageOwnerPrefix + "import:" + UUID.randomUUID();
         imageImportOwners.add(owner);
         return imageOperation(() -> {
-            if (disconnected) {
+            if (closing || disconnected) {
                 imageImportOwners.remove(owner);
                 throw new java.io.IOException("Image connection is closed");
             }
@@ -304,8 +310,11 @@ public final class GuideService implements GuideHistoryAdministration {
         } catch (IllegalArgumentException | NullPointerException invalid) {
             return new ToolResult.Failure<>("invalid_question", "Enter text or attach an image");
         }
-        boolean images = input.content().stream()
-                .anyMatch(dev.openallay.model.ModelContent.Image.class::isInstance);
+        if (input.inputObservation().isPresent()
+                && !actor.equals(input.inputObservation().orElseThrow().focus().actorId())) {
+            return new ToolResult.Failure<>("input_source_actor_mismatch", "Input reference belongs to another player");
+        }
+        boolean images = dev.openallay.model.image.ModelImages.hasImages(List.of(input));
         if (!images) return new ToolResult.Success<>(true);
         return validateImageCapability(input, snapshot.imageInputCapability(selection));
     }
@@ -325,6 +334,10 @@ public final class GuideService implements GuideHistoryAdministration {
         catch (IllegalArgumentException | NullPointerException invalid) {
             return new ToolResult.Failure<>("invalid_question", "Enter text or attach an image");
         }
+        if (input.inputObservation().isPresent()
+                && !actor.equals(input.inputObservation().orElseThrow().focus().actorId())) {
+            return new ToolResult.Failure<>("input_source_actor_mismatch", "Input reference belongs to another player");
+        }
         return validateImageCapability(input, requestImageCapabilities.getOrDefault(requestId,
                 dev.openallay.model.image.ImageInputCapability.UNKNOWN));
     }
@@ -332,7 +345,7 @@ public final class GuideService implements GuideHistoryAdministration {
     private ToolResult<Boolean> validateImageCapability(
             dev.openallay.model.ModelMessage input,
             dev.openallay.model.image.ImageInputCapability capability) {
-        if (input.content().stream().noneMatch(dev.openallay.model.ModelContent.Image.class::isInstance)) {
+        if (!dev.openallay.model.image.ModelImages.hasImages(List.of(input))) {
             return new ToolResult.Success<>(true);
         }
         if (capability != dev.openallay.model.image.ImageInputCapability.SUPPORTED) {
@@ -352,32 +365,84 @@ public final class GuideService implements GuideHistoryAdministration {
         if (attachmentStore == null) return dev.openallay.model.image.ImagePayloadResolver.unavailable();
         String session = requestSessions.get(requestId);
         if (session == null) throw new IllegalArgumentException("Image request owner is unavailable");
-        CompletableFuture<Void> retained = retainUserInput(requestId, userInput(requestId));
-        return reference -> {
-            try { retained.join(); }
-            catch (java.util.concurrent.CompletionException failure) {
-                throw new java.io.IOException("Unable to retain image attachments", failure);
-            }
-            return attachmentStore.read(actor, reference);
-        };
+        retainUserInput(requestId, userInput(requestId));
+        // Input receipts and active observation producers already pin these bytes. Provider
+        // reads need no blocking owner-thread wait; terminal cleanup uses the async barrier.
+        return reference -> attachmentStore.read(actor, reference);
     }
 
     /** Retain this session input before normal ask dispatch may release its import lease. */
     private CompletableFuture<Void> retainUserInput(
             UUID requestId, dev.openallay.model.ModelMessage input) {
-        if (attachmentStore == null) return CompletableFuture.completedFuture(null);
-        String session = requestSessions.get(requestId);
+        String sessionId = requestSessions.get(requestId);
+        SessionState session = sessionId == null ? null : sessions.get(sessionId);
         if (session == null) throw new IllegalArgumentException("Image request owner is unavailable");
-        List<dev.openallay.model.image.ImageReference> initial = imageReferences(List.of(input));
-        String owner = imageOwnerPrefix + "session:" + session;
+        return retainSessionImages(session, imageReferences(List.of(input)));
+    }
+
+    private String sessionImageOwner(SessionState session) {
+        return imageOwnerPrefix + "session:" + session.id + ":" + session.imageOwner;
+    }
+
+    /** Called on the dispatcher: collect typed originals and all still-live projections. */
+    private CompletableFuture<Void> retainPublishedImages(SessionState session) {
+        List<dev.openallay.model.ModelMessage> messages = new ArrayList<>(session.modelContext);
+        session.originalContext.values().forEach(messages::addAll);
+        session.forkBoundaries.values().forEach(boundary -> messages.addAll(boundary.messages()));
+        // Checkpoints contain text and source indices, not independent image references.
+        return retainSessionImages(session, imageReferences(List.copyOf(messages)));
+    }
+
+    private CompletableFuture<Void> retainSessionImages(SessionState session,
+            List<dev.openallay.model.image.ImageReference> references) {
+        String owner = sessionImageOwner(session);
         List<dev.openallay.model.image.ImageReference> union = new ArrayList<>(
                 retainedImages.getOrDefault(owner, List.of()));
-        for (var reference : initial) if (!union.contains(reference)) union.add(reference);
-        retainedImages.put(owner, List.copyOf(union));
-        return CompletableFuture.runAsync(() -> {
-            try { attachmentStore.retain(actor, owner, union); }
-            catch (java.io.IOException failure) { throw new java.io.UncheckedIOException(failure); }
-        }, IMAGE_IO);
+        for (var reference : references) if (!union.contains(reference)) union.add(reference);
+        if (union.isEmpty()) return session.imageCustody;
+        List<dev.openallay.model.image.ImageReference> captured = List.copyOf(union);
+        retainedImages.put(owner, captured);
+        CompletableFuture<Void> retained = attachmentStore == null
+                ? CompletableFuture.failedFuture(new java.io.IOException(
+                        "Published image attachments are unavailable on this connection"))
+                : CompletableFuture.runAsync(() -> {
+                    try { attachmentStore.retain(actor, owner, captured); }
+                    catch (java.io.IOException failure) { throw new java.io.UncheckedIOException(failure); }
+                }, IMAGE_IO);
+        session.imageCustody = retained;
+        retained.whenComplete((ignored, failure) -> {
+            if (failure != null) dispatcher.execute(() -> {
+                if (!disconnected && sessions.get(session.id) == session) reportImageCustodyFailure(failure);
+            });
+        });
+        return retained;
+    }
+
+    private CompletableFuture<Void> releaseObservationImages(SessionState session, UUID requestId) {
+        return observationReleases.computeIfAbsent(requestId, ignored -> {
+            List<dev.openallay.model.image.ImageReference> produced = List.copyOf(
+                    contexts.observationImageReferences(requestId.toString()));
+            CompletableFuture<Void> retained = retainPublishedImages(session);
+            List<dev.openallay.model.image.ImageReference> published = retainedImages.getOrDefault(
+                    sessionImageOwner(session), List.of());
+            if (!published.containsAll(produced)) return CompletableFuture.failedFuture(
+                    new java.io.IOException("Produced observation images have no authoritative transcript custody receipt"));
+            return retained.thenCompose(receipt -> Objects.requireNonNull(
+                    contexts.releaseObservationImages(requestId.toString()), "observation image release future"));
+        });
+    }
+
+    private void stopObservations(UUID requestId) {
+        try { contexts.closeRequest(requestId.toString()); }
+        catch (RuntimeException failure) { reportImageCustodyFailure(failure); }
+    }
+
+    private void reportImageCustodyFailure(Throwable failure) {
+        persistence = new GuidePersistenceSnapshot(GuidePersistenceSnapshot.State.UNAVAILABLE,
+                persistence.submittedGeneration(), persistence.committedGeneration(),
+                new GuideFailure("observation_image_handoff_failed",
+                        "Observation image custody could not complete; retained assets are preserved: " + message(failure)));
+        publishWithoutSave();
     }
 
     /** Pin receipt before acknowledging a queued message or steer. Caller commits state after completion. */
@@ -404,12 +469,16 @@ public final class GuideService implements GuideHistoryAdministration {
         return releaseImageInput(receipt);
     }
 
-    private void releaseSessionImageReferences(String sessionId) {
+    private void releaseSessionImageReferences(SessionState session) {
+        releaseSessionImageReferences(sessionImageOwner(session), session.imageCustody);
+    }
+
+    private void releaseSessionImageReferences(String owner, CompletableFuture<Void> imageCustody) {
         if (attachmentStore == null) return;
-        String owner = imageOwnerPrefix + "session:" + sessionId;
         retainedImages.remove(owner);
-        CompletableFuture<Void> barrier = history != null && allowHistoryWrites
+        CompletableFuture<Void> durable = history != null && allowHistoryWrites
                 ? drainHistoryWrites() : CompletableFuture.completedFuture(null);
+        CompletableFuture<Void> barrier = CompletableFuture.allOf(imageCustody, durable);
         barrier.thenRunAsync(() -> {
             try { attachmentStore.release(actor, owner); }
             catch (java.io.IOException ignored) { /* Preserve files when release cannot be saved. */ }
@@ -848,7 +917,7 @@ public final class GuideService implements GuideHistoryAdministration {
                     || !captured.presentationOwner.equals(sessionOwner)) {
                 result.complete(new ToolResult.Failure<>("invalid_session", "Guide session was closed")); return;
             }
-            if (disconnected || !admissionFence.getAsBoolean()) {
+            if (closing || disconnected || !admissionFence.getAsBoolean()) {
                 result.complete(new ToolResult.Failure<>("message_cancelled", "Message was cancelled")); return;
             }
             if (rejectStateChange(result)) return;
@@ -1288,7 +1357,9 @@ public final class GuideService implements GuideHistoryAdministration {
         requestOriginals.values().forEach(originals::addAll);
         requestBoundaries.values().forEach(boundary -> originals.addAll(boundary.messages()));
         List<dev.openallay.model.image.ImageReference> references = imageReferences(originals);
-        String owner = imageOwnerPrefix + "session:" + mutation.sessionId();
+        String imageOwner = UUID.randomUUID().toString();
+        pendingForkImageOwners.put(mutation.sessionId(), imageOwner);
+        String owner = imageOwnerPrefix + "session:" + mutation.sessionId() + ":" + imageOwner;
         retainedImages.put(owner, references);
         return CompletableFuture.runAsync(() -> {
             try { attachmentStore.retain(actor, owner, references); }
@@ -1343,6 +1414,9 @@ public final class GuideService implements GuideHistoryAdministration {
         sessions.put(target.id, target);
         mergePage(target, GuideHistoryPageRequest.Direction.NEWEST, 120, fork.page());
         if (history == null) {
+            // retainForkImages already pinned this immutable memory-only fork before publication.
+            String retainedOwner = pendingForkImageOwners.remove(target.id);
+            if (retainedOwner != null) target.imageOwner = retainedOwner;
             target.originalContext.putAll(originals);
             target.forkBoundaries.putAll(boundaries);
         }
@@ -1455,6 +1529,9 @@ public final class GuideService implements GuideHistoryAdministration {
                 local.clearSession(actor, sessionId);
             }
             invalidatePageLoad(session, "history_page_cancelled", "History page request was cancelled");
+            session.requests.forEach(request -> stopObservations(request.requestId()));
+            retainPublishedImages(session);
+            session.requests.forEach(request -> releaseObservationImages(session, request.requestId()));
             session.requests.forEach(request -> cancelHistoryContextBarrier(request.requestId()));
             session.requests.forEach(request -> requestSessions.remove(request.requestId()));
             session.requestReceipts.values().forEach(this::releaseImageInput);
@@ -1477,7 +1554,7 @@ public final class GuideService implements GuideHistoryAdministration {
                         : sessions.keySet().iterator().next();
             }
             publish();
-            releaseSessionImageReferences(sessionId);
+            releaseSessionImageReferences(session);
             result.complete(new ToolResult.Success<>(true));
         });
         return result;
@@ -1589,6 +1666,13 @@ public final class GuideService implements GuideHistoryAdministration {
                 return;
             }
             invalidatePageLoad(session, "history_page_cancelled", "History page request was cancelled");
+            retainPublishedImages(session);
+            session.requests.forEach(request -> stopObservations(request.requestId()));
+            session.requests.forEach(request -> releaseObservationImages(session, request.requestId()));
+            String previousImageOwner = sessionImageOwner(session);
+            CompletableFuture<Void> previousImageCustody = session.imageCustody;
+            session.imageOwner = UUID.randomUUID().toString();
+            session.imageCustody = CompletableFuture.completedFuture(null);
             session.requests.forEach(request -> requestSessions.remove(request.requestId()));
             capturedProjection.clearSession(session.id);
             presentation.discardSession(session.presentationOwner);
@@ -1622,7 +1706,7 @@ public final class GuideService implements GuideHistoryAdministration {
                 local.clearSession(actor, selectedSession);
             }
             publish();
-            releaseSessionImageReferences(session.id);
+            releaseSessionImageReferences(previousImageOwner, previousImageCustody);
             result.complete(new ToolResult.Success<>(true));
         });
         return result;
@@ -1701,10 +1785,13 @@ public final class GuideService implements GuideHistoryAdministration {
         return result;
     }
 
-    public CompletableFuture<Void> disconnect() {
-        // Fence presentation before the dispatcher synthesizes disconnect cancellations.
+    public synchronized CompletableFuture<Void> disconnect() {
+        if (disconnectFuture != null) return disconnectFuture;
+        // Reject new work immediately, but consume final context receipts until actual endpoints settle.
+        closing = true;
         invalidatePresentation();
         CompletableFuture<Void> result = new CompletableFuture<>();
+        disconnectFuture = result;
         dispatcher.execute(() -> {
             List<ManualCompaction> detachedControls = sessions.values().stream()
                     .map(session -> session.manualCompaction).filter(Objects::nonNull).toList();
@@ -1712,61 +1799,78 @@ public final class GuideService implements GuideHistoryAdministration {
             sessions.values().forEach(this::revokePending);
             sessions.values().forEach(this::cancelManualCompaction);
             List<GuideRequestSnapshot> activeRequests = sessions.values().stream()
-                    .map(GuideService::active)
-                    .filter(Objects::nonNull)
-                    .toList();
+                    .map(GuideService::active).filter(Objects::nonNull).toList();
             for (GuideRequestSnapshot active : activeRequests) {
-                if (active.topology() == GuideTopology.SERVER) {
-                    remote.cancel(active.requestId());
-                } else if (local != null) {
-                    local.cancel(actor, active.sessionId(), active.requestId());
+                SessionState session = sessions.get(active.sessionId());
+                if (session != null && session.endpointRequests.contains(active.requestId())) {
+                    pendingCancelledFinalization.putIfAbsent(active.requestId(), new CancelledFinalization(
+                            session.id, Objects.requireNonNull(session.requestSequences.get(active.requestId())),
+                            List.copyOf(session.checkpoints)));
                 }
+                stopObservations(active.requestId());
+                if (active.topology() == GuideTopology.SERVER) remote.cancel(active.requestId());
+                else if (local != null) local.cancel(actor, active.sessionId(), active.requestId());
                 apply(active.requestId(), new AgentEvent.Failed(
                         "agent_cancelled", "Agent request was cancelled by disconnect"));
             }
-            CompletableFuture<Void> controlsSettled = CompletableFuture.allOf(detachedControls.stream()
-                    .map(control -> control.settled).toArray(CompletableFuture[]::new));
-            CompletableFuture<Void> ordinaryWrites = history != null && allowHistoryWrites
-                    ? drainHistoryWrites().handle((ignored, failure) -> null)
-                    : CompletableFuture.completedFuture(null);
-            // A saved but unpublished summary owns a compensation write even after disconnect.
-            // Wait for its real acknowledgement before flush and image-owner cleanup.
-            CompletableFuture<Void> durable = CompletableFuture.allOf(ordinaryWrites, controlsSettled)
-                    .thenCompose(ignored -> history != null && allowHistoryWrites
-                            ? history.flush() : CompletableFuture.completedFuture(null));
-            sessions.values().forEach(session -> invalidatePageLoad(
-                    session, "history_page_cancelled", "History page request was cancelled by disconnect"));
-            historyWriteBarriers.stream().map(HistoryWriteBarrier::requestId)
-                    .filter(Objects::nonNull).toList().forEach(this::cancelHistoryContextBarrier);
-            disconnected = true;
-            List<String> transientImageOwners = new ArrayList<>(imageImportOwners);
-            transientImageOwners.addAll(imageDraftOwners);
-            retainedImages.keySet().stream().filter(owner -> !owner.contains(":export:"))
-                    .forEach(transientImageOwners::add);
-            // Export snapshots carry their own lease and can finish after this connection closes.
-            CompletableFuture<Void> imageCleanup = durable.thenRunAsync(() -> {
-                        if (attachmentStore == null) return;
-                        for (String owner : transientImageOwners) {
-                            try { attachmentStore.release(actor, owner); }
-                            catch (java.io.IOException ignored) { /* Retention failure is conservative. */ }
-                        }
-                    }, IMAGE_IO);
-            if (local != null) {
-                local.clearActor(actor);
-            }
+            // The remote endpoint drains already-received events before its release receipt.
+            // A vanished server cannot supply a new transcript; captured client producers stay
+            // retained if that receipt does not contain their references.
             remote.disconnect();
+            List<CompletableFuture<Void>> endpointBarriers = List.copyOf(endpointSettled.values());
+            CompletableFuture.allOf(endpointBarriers.toArray(CompletableFuture[]::new))
+                    .whenComplete((ignored, failure) -> dispatcher.execute(() ->
+                            finishDisconnect(detachedControls, result)));
+        });
+        return result;
+    }
+
+    private void finishDisconnect(List<ManualCompaction> detachedControls, CompletableFuture<Void> result) {
+        List<CompletableFuture<Void>> imageHandoffs = new ArrayList<>();
+        for (SessionState session : sessions.values()) {
+            session.requests.forEach(request -> stopObservations(request.requestId()));
+            imageHandoffs.add(retainPublishedImages(session));
+            session.requests.forEach(request -> imageHandoffs.add(
+                    releaseObservationImages(session, request.requestId())));
+        }
+        CompletableFuture<Void> imagesSettled = CompletableFuture.allOf(
+                imageHandoffs.toArray(CompletableFuture[]::new));
+        CompletableFuture<Void> controlsSettled = CompletableFuture.allOf(detachedControls.stream()
+                .map(control -> control.settled).toArray(CompletableFuture[]::new));
+        CompletableFuture<Void> ordinaryWrites = history != null && allowHistoryWrites
+                ? drainHistoryWrites() : CompletableFuture.completedFuture(null);
+        CompletableFuture<Void> durable = CompletableFuture.allOf(ordinaryWrites, controlsSettled)
+                .thenCompose(ignored -> history != null && allowHistoryWrites
+                        ? history.flush() : CompletableFuture.completedFuture(null));
+        sessions.values().forEach(session -> invalidatePageLoad(
+                session, "history_page_cancelled", "History page request was cancelled by disconnect"));
+        historyWriteBarriers.stream().map(HistoryWriteBarrier::requestId)
+                .filter(Objects::nonNull).toList().forEach(this::cancelHistoryContextBarrier);
+        List<String> transientImageOwners = new ArrayList<>(imageImportOwners);
+        transientImageOwners.addAll(imageDraftOwners);
+        retainedImages.keySet().stream().filter(owner -> !owner.contains(":export:"))
+                .forEach(transientImageOwners::add);
+        CompletableFuture<Void> imageCleanup = CompletableFuture.allOf(durable, imagesSettled).thenRunAsync(() -> {
+            if (attachmentStore == null) return;
+            for (String owner : transientImageOwners) {
+                try { attachmentStore.release(actor, owner); }
+                catch (java.io.IOException failure) { throw new java.io.UncheckedIOException(failure); }
+            }
+        }, IMAGE_IO);
+        imageCleanup.whenComplete((ignored, failure) -> dispatcher.execute(() -> {
+            if (failure != null) reportImageCustodyFailure(failure);
+            disconnected = true;
+            if (local != null) local.clearActor(actor);
             requestSessions.clear();
             pendingCancelledFinalization.clear();
+            endpointSettled.clear();
             sessions.clear();
             sessions.put("main", new SessionState("main", defaultClientSelection()));
             selectedSession = "main";
             publishWithoutSave();
-            imageCleanup.whenComplete((ignored, failure) -> {
-                if (failure == null) result.complete(null);
-                else result.completeExceptionally(failure);
-            });
-        });
-        return result;
+            if (failure == null) result.complete(null);
+            else result.completeExceptionally(failure);
+        }));
     }
 
     public CompletableFuture<Void> shutdown() {
@@ -1830,7 +1934,7 @@ public final class GuideService implements GuideHistoryAdministration {
     }
 
     private GuideFailure historyAdministrationFailure(HistoryAdministrationKind kind) {
-        if (history == null || historyScope == null || disconnected) {
+        if (history == null || historyScope == null || closing || disconnected) {
             return new GuideFailure(
                     "history_unavailable", "Durable guide history is unavailable");
         }
@@ -1867,7 +1971,9 @@ public final class GuideService implements GuideHistoryAdministration {
                     historyFailure.code(), historyFailure.message()));
             return;
         }
-        if (!disconnected) {
+        // Closing owns the old projection/generation until its actual drain completes.
+        // A successful deletion receipt must not rebase those pending custody barriers.
+        if (!closing && !disconnected) {
             resetHistoryMemory();
             allowHistoryWrites = true;
             persistence = GuidePersistenceSnapshot.available(0);
@@ -1931,7 +2037,7 @@ public final class GuideService implements GuideHistoryAdministration {
             SessionState session, UUID receipt, dev.openallay.model.ModelMessage input,
             CompletableFuture<ToolResult<T>> result, Runnable accepted,
             java.util.function.BooleanSupplier admissionFence) {
-        if (disconnected || !admissionFence.getAsBoolean()) {
+        if (closing || disconnected || !admissionFence.getAsBoolean()) {
             session.pendingOrder.remove(receipt);
             result.complete(new ToolResult.Failure<>("message_cancelled", "Message was cancelled")); return;
         }
@@ -1945,7 +2051,7 @@ public final class GuideService implements GuideHistoryAdministration {
                         return;
                     }
                     session.readyAdmissions.put(receipt, () -> {
-                        if (failure != null || disconnected || sessions.get(session.id) != session
+                        if (failure != null || closing || disconnected || sessions.get(session.id) != session
                                 || session.queueGeneration != generation || !admissionFence.getAsBoolean()) {
                             releaseImageInput(receipt);
                             session.pendingOrder.remove(receipt);
@@ -2037,13 +2143,25 @@ public final class GuideService implements GuideHistoryAdministration {
     }
 
     private void releaseRequest(SessionState owner, UUID requestId) {
-        if (disconnected || owner == null || sessions.get(owner.id) != owner
-                || !requestId.equals(owner.workingRequest)) return;
+        if (closing || disconnected || owner == null || sessions.get(owner.id) != owner
+                || !requestId.equals(owner.workingRequest) || owner.releasingRequest) return;
         GuideRequestSnapshot request = find(requestId);
         if (request == null && owner.usageCarriers.containsKey(requestId)) {
             request = capturedProjection.requests.get(requestId);
         }
         if (request == null || !request.terminal()) return;
+        owner.releasingRequest = true;
+        releaseObservationImages(owner, requestId).whenComplete((ignored, failure) -> dispatcher.execute(() -> {
+            if (disconnected || sessions.get(owner.id) != owner
+                    || !requestId.equals(owner.workingRequest)) return;
+            // A failed retain keeps the producer pins. It is a real failure, not an endless FIFO wait.
+            if (failure != null) reportImageCustodyFailure(failure);
+            finishRequestRelease(owner, requestId);
+        }));
+    }
+
+    private void finishRequestRelease(SessionState owner, UUID requestId) {
+        owner.releasingRequest = false;
         if (!releaseUsageOwner(requestId)) return;
         owner.endpointRequests.remove(requestId);
         owner.usageCarriers.remove(requestId);
@@ -2058,7 +2176,7 @@ public final class GuideService implements GuideHistoryAdministration {
     }
 
     private void drainPending(SessionState session) {
-        if (session.drainingPending || disconnected || historyDeletionPending
+        if (session.drainingPending || closing || disconnected || historyDeletionPending
                 || sessions.get(session.id) != session || session.workingRequest != null
                 || !session.admissions.isEmpty() || session.manualCompaction != null
                 || active(session) != null) return;
@@ -2178,6 +2296,7 @@ public final class GuideService implements GuideHistoryAdministration {
                 prepareRemoteContext(session, requestId, question);
             } else {
                 session.endpointRequests.add(requestId);
+                endpointSettled.put(requestId, new CompletableFuture<>());
                 if (!remote.askWithContext(
                         requestId,
                         sessionId,
@@ -2188,6 +2307,7 @@ public final class GuideService implements GuideHistoryAdministration {
                     apply(requestId, new AgentEvent.Failed(
                             "capability_unavailable",
                             "The connected server rejected the model request"));
+                    settleEndpoint(requestId);
                     releaseRequest(session, requestId);
                     result.complete(new ToolResult.Failure<>(
                             "capability_unavailable",
@@ -2298,6 +2418,7 @@ public final class GuideService implements GuideHistoryAdministration {
         boolean accepted;
         try {
             session.endpointRequests.add(requestId);
+            endpointSettled.put(requestId, new CompletableFuture<>());
             accepted = remote.askWithContext(
                     requestId, sessionId, userInput(requestId), images(requestId), seed.messages(),
                     event -> dispatcher.execute(() -> apply(requestId, event)));
@@ -2308,6 +2429,7 @@ public final class GuideService implements GuideHistoryAdministration {
             apply(requestId, new AgentEvent.Failed(
                     "capability_unavailable",
                     "The connected server rejected the model request"));
+            settleEndpoint(requestId);
             releaseRequest(session, requestId);
         }
     }
@@ -2358,6 +2480,7 @@ public final class GuideService implements GuideHistoryAdministration {
             apply(requestId, new AgentEvent.Failed(failure.code(), failure.getMessage()));
             return;
         }
+        contexts.associateInputObservation(requestId.toString(), userInput(requestId).inputObservation());
         ToolResult<ToolInvocationContext> captured =
                 contexts.capture(requiredContext, requestId.toString());
         if (captured instanceof ToolResult.Failure<ToolInvocationContext> failure) {
@@ -2369,6 +2492,7 @@ public final class GuideService implements GuideHistoryAdministration {
         SessionState owner = sessions.get(sessionId);
         try {
             owner.endpointRequests.add(requestId);
+            endpointSettled.put(requestId, new CompletableFuture<>());
             local.ask(
                             profileId,
                             actor,
@@ -2389,11 +2513,13 @@ public final class GuideService implements GuideHistoryAdministration {
                                                 completed == null ? "Agent endpoint ended without a result" : completed.errorMessage()));
                             }
                         }
+                        settleEndpoint(requestId);
                         releaseRequest(owner, requestId);
                     }));
         } catch (RuntimeException failure) {
             apply(requestId, new AgentEvent.Failed(
                     "agent_failure", message(failure)));
+            settleEndpoint(requestId);
             releaseRequest(owner, requestId);
         }
     }
@@ -2413,9 +2539,15 @@ public final class GuideService implements GuideHistoryAdministration {
                 request.usageProjection(), request.usageOriginRequestId());
     }
 
+    private void settleEndpoint(UUID requestId) {
+        CompletableFuture<Void> settled = endpointSettled.get(requestId);
+        if (settled != null) settled.complete(null);
+    }
+
     private void apply(UUID requestId, AgentEvent event) {
         if (disconnected) return;
         if (event instanceof AgentEvent.RequestReleased) {
+            settleEndpoint(requestId);
             String releasedSession = requestSessions.get(requestId);
             releaseRequest(releasedSession == null ? null : sessions.get(releasedSession), requestId);
             return;
@@ -2438,6 +2570,7 @@ public final class GuideService implements GuideHistoryAdministration {
                 }
             }
             captureForkBoundary(session, requestId, finalized.messages(), pending.checkpoints());
+            retainPublishedImages(session);
             publish();
             return;
         }
@@ -2488,7 +2621,7 @@ public final class GuideService implements GuideHistoryAdministration {
                 pendingSteerChanged = true;
             }
         }
-        if (target.terminal()) {
+        if (target.terminal() && !(closing && event instanceof AgentEvent.ContextUpdated)) {
             if (pendingSteerChanged) publishWithoutSave();
             return;
         }
@@ -2507,6 +2640,7 @@ public final class GuideService implements GuideHistoryAdministration {
                 pendingHistoryMutations.add(new GuideHistoryMutation.ReplaceRequestContext(
                         requestId, updated.requestMessages()));
             }
+            retainPublishedImages(session);
             publish();
             return;
         }
@@ -2533,7 +2667,7 @@ public final class GuideService implements GuideHistoryAdministration {
         session.requests.set(index, after);
         presentation.applied(session.presentationOwner, before, after, event);
         if (after.terminal()) {
-            contexts.closeRequest(requestId.toString());
+            stopObservations(requestId);
             captureForkBoundary(session, requestId);
         }
         if (after.status() == GuideRequestStatus.COMPLETED
@@ -3154,6 +3288,10 @@ public final class GuideService implements GuideHistoryAdministration {
     }
 
     private <T> boolean rejectStateChange(CompletableFuture<ToolResult<T>> result) {
+        if (closing || disconnected) {
+            result.complete(new ToolResult.Failure<>("guide_disconnected", "This Guide connection is closing"));
+            return true;
+        }
         if (historyDeletionPending) {
             result.complete(new ToolResult.Failure<>(
                     "history_delete_busy", "Guide history is busy"));
@@ -3267,6 +3405,9 @@ public final class GuideService implements GuideHistoryAdministration {
         private long nextPendingOrder;
         private final Set<UUID> endpointRequests = new java.util.HashSet<>();
         private UUID workingRequest;
+        private boolean releasingRequest;
+        private String imageOwner = UUID.randomUUID().toString();
+        private CompletableFuture<Void> imageCustody = CompletableFuture.completedFuture(null);
         private ManualCompaction manualCompaction;
         private final Map<UUID, UUID> requestReceipts = new LinkedHashMap<>();
         private final Map<UUID, Long> admissions = new LinkedHashMap<>();

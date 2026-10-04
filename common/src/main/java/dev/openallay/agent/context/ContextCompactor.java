@@ -108,7 +108,7 @@ public final class ContextCompactor {
                     content.add(receipts.get(index).content().get(item));
                 } else content.add(original);
             }
-            projected.add(content.equals(message.content()) ? message : new ModelMessage(message.role(), content));
+            projected.add(content.equals(message.content()) ? message : new ModelMessage(message.role(), content, message.inputObservation()));
         }
         return List.copyOf(projected);
     }
@@ -355,7 +355,7 @@ public final class ContextCompactor {
         List<ModelContent> retainedImages = imageBlocks(history);
         List<ContextStructure.Unit> historyUnits = ContextStructure.units(history);
         List<String> serializedUnits = historyUnits.stream().map(unit ->
-                gson.toJson(ContextStructure.summarySafe(unit.messages()))).toList();
+                gson.toJson(summarySource(unit.messages()))).toList();
         return summarizeChunks(historyUnits, serializedUnits, 0, null, target, schedulingKey, cancellation,
                         promptForProjection, retainedImages, suffix, requestTools, images, usageObserver, manual)
                 .handle((summary, throwable) -> {
@@ -563,6 +563,17 @@ public final class ContextCompactor {
         });
     }
 
+    /** Full anchors stay in durable original context; summary source gets only the concise projection. */
+    private static List<ModelMessage> summarySource(List<ModelMessage> messages) {
+        return ContextStructure.summarySafe(messages).stream().map(message -> {
+            if (message.inputObservation().isEmpty()) return message;
+            ArrayList<ModelContent> content = new ArrayList<>(message.content());
+            content.add(new ModelContent.Text(dev.openallay.model.image.ModelImages.inputObservationLabel(
+                    message.inputObservation().orElseThrow())));
+            return new ModelMessage(message.role(), content);
+        }).toList();
+    }
+
     private static String joinUnits(List<String> serialized) {
         StringBuilder payload = new StringBuilder("[");
         for (String unit : serialized) {
@@ -677,7 +688,7 @@ public final class ContextCompactor {
                 } else content.add(item);
                 if (item instanceof ModelContent.ToolResult) resultIndex++;
             }
-            projected.add(content.equals(message.content()) ? message : new ModelMessage(message.role(), content));
+            projected.add(content.equals(message.content()) ? message : new ModelMessage(message.role(), content, message.inputObservation()));
             messageIndex++;
         }
         return List.copyOf(projected);

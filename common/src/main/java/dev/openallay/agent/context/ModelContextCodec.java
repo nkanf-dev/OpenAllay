@@ -19,6 +19,7 @@ public final class ModelContextCodec {
         for (ModelMessage message : safe(messages)) {
             JsonObject object = new JsonObject();
             object.addProperty("role", message.role().name());
+            object.add("inputObservation", dev.openallay.world.ClientObservationAnchorJson.encode(message.inputObservation()));
             JsonArray content = new JsonArray();
             for (ModelContent item : message.content()) {
                 JsonObject value = new JsonObject();
@@ -71,7 +72,7 @@ public final class ModelContextCodec {
         ArrayList<ModelMessage> messages = new ArrayList<>();
         for (JsonElement encoded : array(envelope.get("messages"))) {
             JsonObject message = object(encoded);
-            fields(message, Set.of("role", "content"));
+            fields(message, Set.of("role", "content", "inputObservation"));
             ModelRole role = ModelRole.valueOf(text(message, "role"));
             ArrayList<ModelContent> content = new ArrayList<>();
             for (JsonElement raw : array(message.get("content"))) {
@@ -108,7 +109,8 @@ public final class ModelContextCodec {
                     default -> throw new IllegalArgumentException("unknown model context content type");
                 }
             }
-            messages.add(new ModelMessage(role, content));
+            messages.add(new ModelMessage(role, content,
+                    dev.openallay.world.ClientObservationAnchorJson.decode(message.get("inputObservation"))));
         }
         ContextStructure.units(messages);
         return List.copyOf(messages);

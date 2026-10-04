@@ -186,7 +186,8 @@ final class ServerSkillContextLifecycleTest {
                 ToolResult<LoadSkillTool.Output> result = actualClientTool.invoke(
                         ToolInvocationContext.developmentConsole(payload.requestId().toString()), input);
                 JsonObject normalized = new ToolResultNormalizer(GSON).normalize(result, LoadSkillTool.Output.class);
-                for (var chunk : new ResultChunker().split(payload.invocationId(), normalized.toString(), 128)) {
+                for (var chunk : new ResultChunker().split(payload.invocationId(), new dev.openallay.bridge.protocol.BridgeJsonCodec().encode(
+                                new dev.openallay.bridge.protocol.ToolExecutionMessage(normalized, List.of())), 128)) {
                     assertTrue(routerRef.get().receive(actorId,
                             ClientToolResultChunkPayload.from(payload.requestId(), chunk)));
                 }

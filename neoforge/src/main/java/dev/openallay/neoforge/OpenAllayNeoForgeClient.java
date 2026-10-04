@@ -119,11 +119,12 @@ public final class OpenAllayNeoForgeClient {
                         ? dev.openallay.agent.tool.ToolRuntimeCatalog.empty()
                         : modelRegistry.capabilities().localTools(),
                 (required, correlation, cancellation) -> {
+                    java.util.function.BooleanSupplier admitted = bridge.clientToolAdmission(correlation);
                     java.util.concurrent.CompletableFuture<
                             dev.openallay.context.ToolInvocationContext> captured =
                             new java.util.concurrent.CompletableFuture<>();
                     client.execute(() -> {
-                        if (cancellation.isCancelled()) {
+                        if (cancellation.isCancelled() || !admitted.getAsBoolean()) {
                             captured.completeExceptionally(
                                     new dev.openallay.model.ModelClientException(
                                             new dev.openallay.model.ModelFailure(
@@ -132,6 +133,8 @@ public final class OpenAllayNeoForgeClient {
                                                     null)));
                             return;
                         }
+                        contexts.associateInputObservation(correlation,
+                                bridge.clientToolInputObservation(correlation));
                         ToolResult<dev.openallay.context.ToolInvocationContext> result =
                                 contexts.captureServerToolContext(required, correlation);
                         if (result instanceof ToolResult.Success<
@@ -172,6 +175,8 @@ public final class OpenAllayNeoForgeClient {
         dev.openallay.model.image.ImageAttachmentStore imageStore =
                 new dev.openallay.model.image.FileImageAttachmentStore(
                         FMLPaths.CONFIGDIR.get().resolve("openallay/images"));
+        runtime.worldObservations().configureImages(actor -> imageStore);
+        bridge.configureResultImages(imageStore, contexts);
         GuideHistoryRepository history = new GuideHistoryRepository(new SqliteGuideHistoryStore(
                 FMLPaths.CONFIGDIR.get().resolve("openallay/history.sqlite3"),
                 clock,

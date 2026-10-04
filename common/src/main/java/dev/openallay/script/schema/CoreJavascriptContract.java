@@ -29,6 +29,10 @@ public final class CoreJavascriptContract {
                   world.inspect({from:{x,y,z},to:{x,y,z}}, {includeAir:false}) returns blocks, coverage, and evidence.
                   world.entities({from:{x,y,z},to:{x,y,z}}, {type:"namespace:id"}) returns entity summaries with request-scoped observationId values, coverage, and evidence.
                   world.entity(observationId) returns detached detail for one entity observed in the same request.
+                  world.focus() captures the current target, held items, camera, screen/menu and hovered slot.
+                  world.capture() captures the current native WORLD frame before 2D GUI rendering and returns metadata plus an actual image to the next model turn.
+                  world.capture({target:"GAME_UI"}) captures the currently displayed game UI/HUD; OpenAllay's own foreground chat is not that game UI.
+                  world.capture({target:"ASSOCIATED_UI"}) reads the retained UI source associated with this input, with its original source time.
 
                 Host arrays support non-mutating filter, map, flatMap, slice, reduce, some, and includes.
                 Copy a host array before sort, reverse, splice, push, or index assignment.

@@ -147,7 +147,10 @@ final class GuideServiceRequestControlTest {
         assertTrue(success(service.cancelPending(removed).join()));
         assertFalse(success(service.cancelPending(removed).join()));
         assertEquals(1, service.pendingMessages("main").size());
-        service.disconnect().join();
+        CompletableFuture<Void> disconnected = service.disconnect();
+        assertFalse(disconnected.isDone());
+        endpoint.release(first, "endpoint resources actually closed");
+        disconnected.join();
         endpoint.terminal(first, "late disconnected");
         endpoint.release(first, "late disconnected");
         assertEquals(1, endpoint.calls.size());

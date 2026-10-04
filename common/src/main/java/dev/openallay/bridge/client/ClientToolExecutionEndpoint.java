@@ -48,6 +48,26 @@ public final class ClientToolExecutionEndpoint {
         void send(ClientToolResultChunkPayload chunk);
     }
 
+    /** Root owns the captured actor/connection/session custody and managed store reads. */
+    public interface ResultImages {
+        CompletableFuture<List<dev.openallay.bridge.protocol.ServerAgentImageAttachment>> prepare(
+                UUID requestId, UUID invocationId, String sessionId,
+                List<dev.openallay.model.image.ImageReference> references,
+                CancellationSignal cancellation);
+
+        /** Revoke execution only. Root retains published pixels until transcript handoff settles. */
+        default void close(UUID requestId) {}
+    }
+
+    private static final ResultImages NO_IMAGES = (request, invocation, session, references, cancellation) ->
+            references.isEmpty() ? CompletableFuture.completedFuture(List.of())
+                    : CompletableFuture.failedFuture(new IllegalStateException("Client image custody is unavailable"));
+    private volatile ResultImages resultImages = NO_IMAGES;
+
+    public void configureResultImages(ResultImages images) {
+        resultImages = java.util.Objects.requireNonNull(images, "images");
+    }
+
     private final ContextProvider contexts;
     private final ResponseSink responses;
     private final Gson gson;
@@ -125,6 +145,7 @@ public final class ClientToolExecutionEndpoint {
         RequestState state = new RequestState(
                 sessionId,
                 requestTools,
+                resultImages,
                 exported.stream()
                         .filter(id -> !id.equals(EXPERIMENTAL_COMMANDS_CAPABILITY))
                         .collect(java.util.stream.Collectors.toUnmodifiableSet()));
@@ -210,6 +231,8 @@ public final class ClientToolExecutionEndpoint {
             return false;
         }
         request.close();
+        try { request.images.close(requestId); }
+        catch (RuntimeException ignored) { /* Root cleanup retains custody on failure. */ }
         request.tools.registrations().stream()
                 .map(registration -> registration.tool())
                 .filter(RequestScopeParticipant.class::isInstance)
@@ -265,19 +288,41 @@ public final class ClientToolExecutionEndpoint {
             RequestState request,
             Tool<?, ?> tool,
             ToolResult<?> result) {
-        CancellationSignal cancellation = request.remove(payload.invocationId());
-        if (cancellation == null
-                || cancellation.isCancelled()
-                || requests.get(payload.requestId()) != request) {
-            return;
-        }
+        CancellationSignal cancellation = request.current(payload.invocationId());
+        if (!current(payload, request, cancellation)) return;
         try {
-            sendNormalized(
-                    payload.requestId(), payload.invocationId(),
-                    normalizer.normalize(result, tool.descriptor().outputType()));
+            com.google.gson.JsonObject normalized = normalizer.normalize(result, tool.descriptor().outputType());
+            List<dev.openallay.model.image.ImageReference> images = result instanceof ToolResult.Success<?> success
+                    && success.value() instanceof dev.openallay.agent.tool.ModelImageToolOutput visual
+                    ? List.copyOf(visual.images()) : List.of();
+            dev.openallay.model.image.ModelImages.unique(images);
+            request.images.prepare(payload.requestId(), payload.invocationId(), request.sessionId,
+                            images, cancellation)
+                    .thenAcceptAsync(attachments -> {
+                        if (!current(payload, request, cancellation)) return;
+                        var message = new dev.openallay.bridge.protocol.ToolExecutionMessage(normalized, attachments);
+                        message.requireImages(images);
+                        sendMessage(payload.requestId(), payload.invocationId(), message);
+                        request.remove(payload.invocationId());
+                    }, worker)
+                    .exceptionally(failure -> {
+                        if (current(payload, request, cancellation)
+                                && request.remove(payload.invocationId()) == cancellation) {
+                            sendFailure(payload, "client_tool_image_failed", "Client Tool images could not be prepared");
+                        }
+                        return null;
+                    });
         } catch (RuntimeException failure) {
-            sendFailure(payload, "client_tool_result_invalid", "Client Tool result was invalid");
+            if (request.remove(payload.invocationId()) == cancellation) {
+                sendFailure(payload, "client_tool_result_invalid", "Client Tool result was invalid");
+            }
         }
+    }
+
+    private boolean current(ClientToolCallPayload payload, RequestState request, CancellationSignal cancellation) {
+        return cancellation != null && !cancellation.isCancelled()
+                && requests.get(payload.requestId()) == request
+                && request.current(payload.invocationId()) == cancellation;
     }
 
     private void sendFailure(ClientToolCallPayload payload, String code, String message) {
@@ -289,8 +334,19 @@ public final class ClientToolExecutionEndpoint {
 
     private void sendNormalized(
             UUID requestId, UUID invocationId, com.google.gson.JsonObject normalized) {
+        sendMessage(requestId, invocationId,
+                new dev.openallay.bridge.protocol.ToolExecutionMessage(normalized, List.of()));
+    }
+
+    private void sendMessage(UUID requestId, UUID invocationId,
+            dev.openallay.bridge.protocol.ToolExecutionMessage message) {
+        String json = new dev.openallay.bridge.protocol.BridgeJsonCodec(gson).encode(message);
+        if (json.getBytes(java.nio.charset.StandardCharsets.UTF_8).length
+                > BridgeProtocol.MAX_OPENAI_REQUEST_BYTES) {
+            throw new IllegalArgumentException("Client Tool result exceeds transport envelope limit");
+        }
         new ResultChunker().split(
-                        invocationId, gson.toJson(normalized), transportChunkBytes)
+                        invocationId, json, transportChunkBytes)
                 .stream()
                 .map(chunk -> ClientToolResultChunkPayload.from(requestId, chunk))
                 .forEach(responses::send);
@@ -334,13 +390,15 @@ public final class ClientToolExecutionEndpoint {
         private final String sessionId;
         private final ToolRuntimeCatalog tools;
         private final Set<String> exported;
+        private final ResultImages images;
         private final Map<UUID, CancellationSignal> pending = new HashMap<>();
         private boolean closed;
 
         private RequestState(
-                String sessionId, ToolRuntimeCatalog tools, Set<String> exported) {
+                String sessionId, ToolRuntimeCatalog tools, ResultImages images, Set<String> exported) {
             this.sessionId = sessionId;
             this.tools = tools;
+            this.images = images;
             this.exported = exported;
         }
 
@@ -353,6 +411,10 @@ public final class ClientToolExecutionEndpoint {
                 return Registration.DUPLICATE;
             }
             return Registration.REGISTERED;
+        }
+
+        private synchronized CancellationSignal current(UUID invocationId) {
+            return closed ? null : pending.get(invocationId);
         }
 
         private synchronized CancellationSignal remove(UUID invocationId) {

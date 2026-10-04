@@ -299,7 +299,7 @@ final class GuideServiceManualCompactionTest {
         success(service.ask("safe successor after compensation").join());
     }
 
-    @Test void failedCompensationDoesNotReportDisconnectDurabilitySuccess() {
+    @Test void failedCompensationDoesNotReportDisconnectDurabilitySuccess() throws Exception {
         Local local = new Local();
         History history = new History();
         GuideService service = service(local, history);
@@ -312,6 +312,8 @@ final class GuideServiceManualCompactionTest {
         history.writes.get(summary).complete(null);
         assertFalse(disconnecting.isDone());
         history.writes.getLast().completeExceptionally(new IllegalStateException("injected rollback write failure"));
+        assertThrows(java.util.concurrent.ExecutionException.class,
+                () -> disconnecting.get(2, java.util.concurrent.TimeUnit.SECONDS));
         assertTrue(disconnecting.isCompletedExceptionally());
         assertThrows(java.util.concurrent.CompletionException.class, disconnecting::join);
     }

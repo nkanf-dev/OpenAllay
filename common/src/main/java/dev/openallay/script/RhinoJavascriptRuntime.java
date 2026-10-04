@@ -298,6 +298,11 @@ public final class RhinoJavascriptRuntime {
         }
     }
 
+    /** Runs only trusted native work outside the interpreter budget, never Agent callbacks. */
+    public static <T> T callNative(Context context, java.util.concurrent.Callable<T> action) throws Exception {
+        return ((OpenAllayRhinoContext) context).callNative(action);
+    }
+
     private static void installJavaBridge(Context context, ScriptableObject scope) {
         defineGlobal(context, scope, "Java", UnrestrictedJavaAccess.bind(context, scope));
     }

@@ -55,19 +55,36 @@ public final class ResultChunker {
                 });
         private final Map<UUID, Assembly> assemblies = new HashMap<>();
         private final Duration timeout;
+        private final long maximumBytes;
+        private final int maximumChunkBytes;
 
         public Reassembler() {
             this(BridgeProtocol.PARTIAL_ASSEMBLY_TIMEOUT);
         }
 
         public Reassembler(Duration timeout) {
+            this(timeout, Long.MAX_VALUE, Integer.MAX_VALUE);
+        }
+
+        /** Opt-in bounds for binary-bearing request results; other callers keep their policy. */
+        public Reassembler(Duration timeout, long maximumBytes, int maximumChunkBytes) {
             this.timeout = java.util.Objects.requireNonNull(timeout, "timeout");
-            if (timeout.isZero() || timeout.isNegative()) {
-                throw new IllegalArgumentException("timeout must be positive");
+            if (timeout.isZero() || timeout.isNegative()
+                    || maximumBytes <= 0 || maximumChunkBytes <= 0) {
+                throw new IllegalArgumentException("Reassembly limits and timeout must be positive");
             }
+            this.maximumBytes = maximumBytes;
+            this.maximumChunkBytes = maximumChunkBytes;
         }
 
         public synchronized java.util.Optional<String> accept(RemoteToolResultChunkPayload chunk) {
+            long maximumChunks = maximumBytes / maximumChunkBytes
+                    + (maximumBytes % maximumChunkBytes == 0 ? 0 : 1);
+            if (chunk.total() > maximumChunks
+                    || chunk.base64Data().length() > 4L * ((maximumChunkBytes + 2L) / 3)) {
+                remove(chunk.correlationId());
+                throw new IllegalArgumentException("Result chunk exceeds reassembly limits");
+            }
             Assembly assembly = assemblies.get(chunk.correlationId());
             if (assembly == null) {
                 assembly = new Assembly(chunk.total(), chunk.contentHash());
@@ -83,6 +100,10 @@ public final class ResultChunker {
                 throw new IllegalArgumentException("Chunk metadata changed during result assembly");
             }
             byte[] value = Base64.getDecoder().decode(chunk.base64Data());
+            if (value.length > maximumChunkBytes) {
+                remove(chunk.correlationId());
+                throw new IllegalArgumentException("Result raw chunk exceeds reassembly limit");
+            }
             byte[] existing = assembly.parts.get(chunk.index());
             if (existing != null) {
                 if (!java.util.Arrays.equals(existing, value)) {
@@ -91,6 +112,11 @@ public final class ResultChunker {
                 }
                 return java.util.Optional.empty();
             }
+            if (value.length > maximumBytes - assembly.receivedBytes) {
+                remove(chunk.correlationId());
+                throw new IllegalArgumentException("Result exceeds assembled byte limit");
+            }
+            assembly.receivedBytes += value.length;
             assembly.parts.put(chunk.index(), value);
             if (assembly.parts.size() != assembly.total) {
                 return java.util.Optional.empty();
@@ -135,6 +161,7 @@ public final class ResultChunker {
             private final int total;
             private final String hash;
             private final Map<Integer, byte[]> parts;
+            private long receivedBytes;
             private volatile ScheduledFuture<?> deadline;
 
             private Assembly(int total, String hash) {

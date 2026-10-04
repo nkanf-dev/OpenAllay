@@ -57,7 +57,8 @@ final class ServerClientToolAgentTest {
                         failure.addProperty("code", "client_tool_unavailable");
                         failure.addProperty("message", "unavailable");
                         for (var chunk : new ResultChunker().split(
-                                payload.invocationId(), failure.toString(), 5)) {
+                                payload.invocationId(), new dev.openallay.bridge.protocol.BridgeJsonCodec().encode(
+                                new dev.openallay.bridge.protocol.ToolExecutionMessage(failure, List.of())), 5)) {
                             routerRef.get().receive(
                                     actorId,
                                     ClientToolResultChunkPayload.from(payload.requestId(), chunk));

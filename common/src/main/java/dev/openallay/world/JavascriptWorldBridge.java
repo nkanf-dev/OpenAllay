@@ -9,6 +9,7 @@ import dev.openallay.model.CancellationSignal;
 import dev.openallay.context.EvidenceMetadata;
 import dev.openallay.model.ModelClientException;
 import dev.openallay.script.JavascriptExecutionException;
+import dev.openallay.script.RhinoJavascriptRuntime;
 import dev.openallay.script.host.RhinoHostAdapter;
 import java.util.Objects;
 import java.util.concurrent.CompletionException;
@@ -24,14 +25,17 @@ public final class JavascriptWorldBridge {
     private final WorldObservationCoordinator coordinator;
     private final CancellationSignal cancellation;
     private final Consumer<EvidenceMetadata> evidence;
+    private final Consumer<dev.openallay.model.image.ImageReference> images;
 
     JavascriptWorldBridge(
             WorldObservationCoordinator coordinator,
             CancellationSignal cancellation,
-            Consumer<EvidenceMetadata> evidence) {
+            Consumer<EvidenceMetadata> evidence,
+            Consumer<dev.openallay.model.image.ImageReference> images) {
         this.coordinator = Objects.requireNonNull(coordinator, "coordinator");
         this.cancellation = Objects.requireNonNull(cancellation, "cancellation");
         this.evidence = Objects.requireNonNull(evidence, "evidence");
+        this.images = Objects.requireNonNull(images, "images");
     }
 
     public Scriptable bind(Context context, ScriptableObject scope, RhinoHostAdapter adapter) {
@@ -43,7 +47,7 @@ public final class JavascriptWorldBridge {
                 "inspect",
                 1,
                 2,
-                arguments -> observed(await(coordinator.inspect(
+                arguments -> observed(await(context, coordinator.inspect(
                         blocksRequest(context, arguments), cancellation))),
                 adapter);
         define(
@@ -53,7 +57,7 @@ public final class JavascriptWorldBridge {
                 "entities",
                 1,
                 2,
-                arguments -> observed(await(coordinator.entities(
+                arguments -> observed(await(context, coordinator.entities(
                         entitiesRequest(context, arguments), cancellation))),
                 adapter);
         define(
@@ -63,13 +67,36 @@ public final class JavascriptWorldBridge {
                 "entity",
                 1,
                 1,
-                arguments -> observed(await(coordinator.entity(
+                arguments -> observed(await(context, coordinator.entity(
                         string(arguments[0], "world.entity"), cancellation))),
                 adapter);
+        define(context, scope, world, "focus", 0, 0,
+                arguments -> observed(await(context, coordinator.focus(cancellation))), adapter);
+        define(context, scope, world, "capture", 0, 1,
+                arguments -> observed(await(context, coordinator.capture(viewRequest(context, arguments), cancellation))), adapter);
         if (world instanceof ScriptableObject object) {
             object.preventExtensions();
         }
         return world;
+    }
+
+    private static WorldViewRequest viewRequest(Context context, Object[] arguments) {
+        if (arguments.length == 0) return WorldViewRequest.defaults();
+        Scriptable options = scriptable(arguments[0], "world.capture options");
+        for (Object id : options.getIds(context)) {
+            if (!(id instanceof String key) || !key.equals("target")) {
+                throw invalid("world.capture has an unknown option");
+            }
+        }
+        Object selected = optionalProperty(context, options, "target");
+        WorldViewRequest.Target target = WorldViewRequest.Target.WORLD;
+        if (selected != Undefined.INSTANCE && selected != null) {
+            try { target = WorldViewRequest.Target.valueOf(string(selected, "world.capture target")); }
+            catch (IllegalArgumentException malformed) {
+                throw invalid("world.capture target must be WORLD, GAME_UI, or ASSOCIATED_UI");
+            }
+        }
+        return new WorldViewRequest(target);
     }
 
     private static WorldObservationRequest blocksRequest(Context context, Object[] arguments) {
@@ -169,7 +196,25 @@ public final class JavascriptWorldBridge {
         if (value instanceof BlockObservation blocks) evidence.accept(blocks.evidence());
         else if (value instanceof EntityObservation entities) evidence.accept(entities.evidence());
         else if (value instanceof WorldEntitySnapshot entity) evidence.accept(entity.evidence());
+        else if (value instanceof WorldFocusObservation focus) evidence.accept(focus.evidence());
+        else if (value instanceof WorldViewCapture capture) {
+            evidence.accept(capture.evidence());
+            images.accept(capture.image());
+        }
         return value;
+    }
+
+    private Object await(Context context, CompletionStage<?> stage) {
+        try {
+            // Requests are decoded and submitted before this boundary. Only the owning-thread
+            // completion wait is excluded; evidence and detached result adaptation stay budgeted.
+            return RhinoJavascriptRuntime.callNative(context, () -> await(stage));
+        } catch (JavascriptExecutionException | ModelClientException failure) {
+            throw failure;
+        } catch (Exception failure) {
+            throw new JavascriptExecutionException(
+                    "world_observation_failed", "World observation failed", failure);
+        }
     }
 
     private Object await(CompletionStage<?> stage) {

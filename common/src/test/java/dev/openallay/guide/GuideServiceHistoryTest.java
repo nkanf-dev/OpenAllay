@@ -538,7 +538,7 @@ final class GuideServiceHistoryTest {
     }
 
     @Test
-    void removedOrDisconnectedCancelledRequestsDropFinalizedContextWithoutWrites() {
+    void removedOrDisconnectedCancelledRequestsDropFinalizedContextWithoutWrites() throws Exception {
         for (String removal : List.of("clear", "close", "delete", "disconnect")) {
             QueuedDispatcher dispatcher = new QueuedDispatcher();
             QueuedLocal local = new QueuedLocal(dispatcher);
@@ -555,17 +555,19 @@ final class GuideServiceHistoryTest {
             dispatcher.runAll();
             history.completeAllCommits();
             dispatcher.runAll();
+            CompletableFuture<Void> disconnecting = null;
             switch (removal) {
                 case "clear" -> service.clearSelectedSession();
                 case "close" -> service.closeSession("main");
                 case "delete" -> service.deleteCurrentHistory();
-                case "disconnect" -> service.disconnect();
+                case "disconnect" -> disconnecting = service.disconnect();
                 default -> throw new AssertionError("unknown removal fixture");
             }
             dispatcher.runAll();
             if (removal.equals("delete")) history.completeDeletion();
             history.completeAllCommits();
             dispatcher.runAll();
+            if (disconnecting != null) dispatcher.runUntil(disconnecting::isDone);
             GuideSnapshot before = service.snapshot();
             int commits = history.commits.size();
 
@@ -803,9 +805,12 @@ final class GuideServiceHistoryTest {
 
         assertFalse(disconnecting.isDone());
         assertEquals(1, history.commits.size());
-        assertTrue(service.snapshot().sessions().getFirst().requests().isEmpty());
+        assertEquals(GuideRequestStatus.CANCELLED,
+                service.snapshot().sessions().getFirst().requests().getFirst().status());
+        local.releaseCancelled(request);
         history.completeAllCommits();
         disconnecting.join();
+        assertTrue(service.snapshot().sessions().getFirst().requests().isEmpty());
         assertEquals(2, history.commits.size());
         List<GuideHistoryMutation> finalWrite = history.commits.getLast().mutations();
         assertEquals(GuideRequestStatus.CANCELLED, finalWrite.stream()
@@ -852,6 +857,8 @@ final class GuideServiceHistoryTest {
         int before = history.commits.size();
 
         CompletableFuture<Void> disconnect = service.disconnect();
+        assertFalse(disconnect.isDone(), "disconnect must await the actual endpoint's finalization");
+        local.releaseCancelled(request);
         history.completeAllCommits();
         disconnect.join();
 
@@ -1065,12 +1072,13 @@ final class GuideServiceHistoryTest {
     }
 
     @Test
-    void disconnectDuringDeleteLeavesDisconnectedMemoryCleanAndWaitsForTransaction() {
+    void disconnectDuringDeleteLeavesDisconnectedMemoryCleanAndWaitsForTransaction() throws Exception {
         FakeHistory history = new FakeHistory();
         GuideService service = service(new FakeLocal(), history);
         history.metadata.complete(Optional.empty());
         service.selectSession("other").join();
         history.completeAllCommits();
+        int writesBeforeDelete = history.commits.size();
         CompletableFuture<ToolResult<Boolean>> deleting = service.deleteCurrentHistory();
 
         CompletableFuture<Void> disconnect = service.disconnect();
@@ -1078,10 +1086,12 @@ final class GuideServiceHistoryTest {
         history.completeDeletion();
 
         assertInstanceOf(ToolResult.Success.class, deleting.join());
-        disconnect.join();
+        disconnect.get(2, java.util.concurrent.TimeUnit.SECONDS);
         assertEquals(List.of("main"), service.snapshot().sessions().stream()
                 .map(GuideSessionSnapshot::sessionId).toList());
         assertTrue(service.snapshot().sessions().getFirst().requests().isEmpty());
+        assertEquals(writesBeforeDelete, history.commits.size(),
+                "closing cleanup must not write an empty replacement after the actual delete transaction");
     }
 
     private static GuideService queuedService(
@@ -1197,12 +1207,24 @@ final class GuideServiceHistoryTest {
     }
 
     private static final class QueuedDispatcher implements dev.openallay.client.ClientEventDispatcher {
-        private final java.util.ArrayDeque<Runnable> tasks = new java.util.ArrayDeque<>();
+        private final java.util.concurrent.ConcurrentLinkedQueue<Runnable> tasks = new java.util.concurrent.ConcurrentLinkedQueue<>();
+        private final java.util.concurrent.Semaphore available = new java.util.concurrent.Semaphore(0);
 
-        @Override public void execute(Runnable event) { tasks.addLast(event); }
+        @Override public void execute(Runnable event) { tasks.add(event); available.release(); }
 
         private void runAll() {
-            while (!tasks.isEmpty()) tasks.removeFirst().run();
+            while (available.tryAcquire()) tasks.remove().run();
+        }
+
+        private void runUntil(java.util.function.BooleanSupplier settled) throws Exception {
+            long deadline = System.nanoTime() + java.util.concurrent.TimeUnit.SECONDS.toNanos(3);
+            while (!settled.getAsBoolean()) {
+                long remaining = deadline - System.nanoTime();
+                assertTrue(remaining > 0 && available.tryAcquire(remaining, java.util.concurrent.TimeUnit.NANOSECONDS),
+                        "actual final owner-thread cleanup must arrive");
+                tasks.remove().run();
+                runAll();
+            }
         }
     }
 
@@ -1398,6 +1420,12 @@ final class GuideServiceHistoryTest {
             if (!messages.isEmpty()) contextSessions.add(sessionId);
             hydratedMessages.addAll(messages);
             hydratedCheckpoints.addAll(checkpoints);
+        }
+
+        /** The cancelled endpoint has actually finished its work and resource cleanup. */
+        private void releaseCancelled(UUID request) {
+            completions.get(request).complete(new AgentResult(
+                    AgentState.CANCELLED, null, "agent_cancelled", "Agent request was cancelled", null));
         }
 
         private void updateContext(

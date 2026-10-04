@@ -1,6 +1,5 @@
 package dev.openallay.bridge.protocol;
 
-import dev.openallay.model.ModelContent;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -22,14 +21,8 @@ public record ServerAgentSteerPayload(
             Objects.requireNonNull(message, "message");
             validateMessage(message);
             java.util.Map<String, dev.openallay.model.image.ImageReference> required = new java.util.LinkedHashMap<>();
-            for (var content : message.toModelMessage().content()) {
-                if (content instanceof ModelContent.Image image) {
-                    var previous = required.putIfAbsent(image.reference().sha256(), image.reference());
-                    if (previous != null && !previous.equals(image.reference())) {
-                        throw new IllegalArgumentException("Conflicting steer image references");
-                    }
-                }
-            }
+            dev.openallay.model.image.ModelImages.uniqueReferences(java.util.List.of(message.toModelMessage()))
+                    .forEach(image -> required.put(image.sha256(), image));
             java.util.Map<String, dev.openallay.model.image.ImageReference> uploaded = new java.util.LinkedHashMap<>();
             for (var attachment : imageAttachments) {
                 if (uploaded.putIfAbsent(attachment.reference().sha256(), attachment.reference()) != null) {

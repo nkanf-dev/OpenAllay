@@ -42,6 +42,7 @@ public final class FabricClientBridge {
             new java.util.concurrent.CopyOnWriteArrayList<>();
     private volatile Supplier<ToolRuntimeCatalog> localToolCatalog;
     private volatile ClientToolExecutionEndpoint clientTools;
+    private Object connectionScope = new Object();
     private final RemoteToolExecutor remoteTools = new RemoteToolExecutor(
             capabilities,
             new RemoteToolExecutor.Transport() {
@@ -69,7 +70,17 @@ public final class FabricClientBridge {
     public void register() {
         ClientPlayNetworking.registerGlobalReceiver(
                 FabricBridgePayloads.Packet.TYPE,
-                (packet, context) -> context.client().execute(() -> receive(packet)));
+                (packet, context) -> {
+                    Object connection = context.client().getConnection();
+                    Object scope;
+                    synchronized (serverRequestLock) { scope = connectionScope; }
+                    context.client().execute(() -> {
+                        synchronized (serverRequestLock) {
+                            if (scope != connectionScope || context.client().getConnection() != connection) return;
+                        }
+                        receive(packet);
+                    });
+                });
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
             disconnectState();
             disconnectListeners.forEach(Runnable::run);
@@ -93,15 +104,111 @@ public final class FabricClientBridge {
                 localToolCatalog, "localToolCatalog");
         this.clientTools = new ClientToolExecutionEndpoint(
                 contexts,
-                chunk -> {
-                    net.minecraft.client.Minecraft.getInstance().execute(() -> {
-                        if (ClientPlayNetworking.canSend(FabricBridgePayloads.Packet.TYPE)) {
-                            send("client_tool_result", chunk);
-                        }
-                    });
-                },
+                this::queueClientToolResult,
                 gson,
                 dev.openallay.bridge.protocol.BridgeProtocol.TRANSPORT_CHUNK_BYTES);
+    }
+
+    /** Existing actor store only. Endpoint close revokes native work, not producer custody. */
+    public void configureResultImages(dev.openallay.model.image.ImageAttachmentStore store,
+            dev.openallay.guide.GuideContextProvider contexts) {
+        java.util.Objects.requireNonNull(store, "store");
+        java.util.Objects.requireNonNull(contexts, "contexts");
+        ClientToolExecutionEndpoint endpoint = java.util.Objects.requireNonNull(clientTools, "clientTools");
+        endpoint.configureResultImages(new ClientToolExecutionEndpoint.ResultImages() {
+            @Override
+            public java.util.concurrent.CompletableFuture<java.util.List<
+                    dev.openallay.bridge.protocol.ServerAgentImageAttachment>> prepare(
+                    UUID requestId, UUID invocationId, String sessionId,
+                    java.util.List<dev.openallay.model.image.ImageReference> references,
+                    dev.openallay.model.CancellationSignal cancellation) {
+                ServerRequest request;
+                synchronized (serverRequestLock) {
+                    request = serverRequests.get(requestId);
+                    if (!current(requestId, request) || !request.sessionId.equals(sessionId)) {
+                        return java.util.concurrent.CompletableFuture.failedFuture(
+                                new IllegalStateException("Client image request is no longer active"));
+                    }
+                }
+                var captured = dev.openallay.model.image.ModelImages.unique(references);
+                return java.util.concurrent.CompletableFuture.supplyAsync(() -> {
+                    java.util.List<dev.openallay.bridge.protocol.ServerAgentImageAttachment> attachments =
+                            new java.util.ArrayList<>();
+                    for (var reference : captured) {
+                        cancellation.throwIfCancelled();
+                        requireCurrent(requestId, request);
+                        try {
+                            byte[] bytes = store.read(request.actorId, reference);
+                            cancellation.throwIfCancelled();
+                            requireCurrent(requestId, request);
+                            attachments.add(dev.openallay.bridge.protocol.ServerAgentImageAttachment.from(reference, bytes));
+                        } catch (java.io.IOException failure) {
+                            throw new java.io.UncheckedIOException(failure);
+                        }
+                    }
+                    cancellation.throwIfCancelled();
+                    requireCurrent(requestId, request);
+                    return java.util.List.copyOf(attachments);
+                }, command -> Thread.ofVirtual().name("openallay-client-result-images").start(command));
+            }
+
+            @Override
+            public void close(UUID requestId) {
+                contexts.closeRequest(requestId.toString());
+            }
+        });
+    }
+
+    private void queueClientToolResult(dev.openallay.bridge.protocol.ClientToolResultChunkPayload chunk) {
+        ServerRequest request;
+        synchronized (serverRequestLock) {
+            request = serverRequests.get(chunk.requestId());
+            if (!current(chunk.requestId(), request)) return;
+        }
+        net.minecraft.client.Minecraft.getInstance().execute(() -> {
+            synchronized (serverRequestLock) {
+                // Recheck the exact request and native connection after this queued callback runs.
+                if (!current(chunk.requestId(), request)) return;
+                if (ClientPlayNetworking.canSend(FabricBridgePayloads.Packet.TYPE)) {
+                    send("client_tool_result", chunk);
+                }
+            }
+        });
+    }
+
+    /** Capture exact custody before posting a native context callback. */
+    public java.util.function.BooleanSupplier clientToolAdmission(String correlationId) {
+        UUID requestId = UUID.fromString(correlationId);
+        ServerRequest request;
+        synchronized (serverRequestLock) { request = serverRequests.get(requestId); }
+        return () -> {
+            synchronized (serverRequestLock) { return current(requestId, request); }
+        };
+    }
+
+    private void requireCurrent(UUID requestId, ServerRequest request) {
+        synchronized (serverRequestLock) {
+            if (!current(requestId, request)) throw new IllegalStateException(
+                    "Client image request is no longer active");
+        }
+    }
+
+    private boolean current(UUID requestId, ServerRequest request) {
+        return request != null && serverRequests.get(requestId) == request
+                && request.connectionScope == connectionScope && !request.cancelled && !request.terminal
+                && net.minecraft.client.Minecraft.getInstance().getConnection() == request.connection;
+    }
+
+    /** Admitted player reference for this exact server-model request, not the latest UI draft. */
+    public java.util.Optional<dev.openallay.world.ClientObservationAnchor> clientToolInputObservation(
+            String correlationId) {
+        UUID requestId = UUID.fromString(correlationId);
+        synchronized (serverRequestLock) {
+            ServerRequest request = serverRequests.get(requestId);
+            if (!current(requestId, request)) throw new IllegalStateException(
+                    "Client input reference request is no longer active");
+            return request.inputObservation;
+        }
     }
 
     public void onDisconnect(Runnable listener) { disconnectListeners.add(listener); }
@@ -110,6 +217,7 @@ public final class FabricClientBridge {
         capabilities.clear();
         remoteTools.disconnect();
         synchronized (serverRequestLock) {
+            connectionScope = new Object();
             serverRequests.clear();
             agentEventIds.clear();
             agentEventChunks.clear();
@@ -140,7 +248,14 @@ public final class FabricClientBridge {
                     success.value().clientToolIds(), success.value().skillDocuments());
         }
         synchronized (serverRequestLock) {
-            serverRequests.put(request.requestId(), new ServerRequest(events));
+            var client = net.minecraft.client.Minecraft.getInstance();
+            if (client.player == null || client.getConnection() == null) {
+                if (endpoint != null) endpoint.close(request.requestId());
+                return false;
+            }
+            serverRequests.put(request.requestId(), new ServerRequest(
+                    events, request.sessionId(), client.player.getUUID(), client.getConnection(), connectionScope,
+                    request.userInput().toModelMessage().inputObservation()));
         }
         try {
             for (var chunk : requestChunker.split(
@@ -293,8 +408,21 @@ public final class FabricClientBridge {
         private boolean contextFinalized;
         private boolean terminal;
 
-        private ServerRequest(Consumer<ServerAgentEventPayload> events) {
+        private final String sessionId;
+        private final UUID actorId;
+        private final Object connection;
+        private final Object connectionScope;
+        private final java.util.Optional<dev.openallay.world.ClientObservationAnchor> inputObservation;
+
+        private ServerRequest(Consumer<ServerAgentEventPayload> events, String sessionId, UUID actorId,
+                Object connection, Object connectionScope,
+                java.util.Optional<dev.openallay.world.ClientObservationAnchor> inputObservation) {
             this.events = java.util.Objects.requireNonNull(events, "events");
+            this.sessionId = sessionId;
+            this.actorId = actorId;
+            this.connection = connection;
+            this.connectionScope = connectionScope;
+            this.inputObservation = java.util.Objects.requireNonNull(inputObservation, "inputObservation");
         }
     }
 

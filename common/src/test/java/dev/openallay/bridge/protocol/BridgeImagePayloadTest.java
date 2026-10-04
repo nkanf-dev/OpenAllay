@@ -21,6 +21,37 @@ final class BridgeImagePayloadTest {
             ResultChunker.sha256(BYTES), "image/png", 1, 1, BYTES.length);
 
     @Test
+    void associatedHistoryRequestSteerAndEventHaveExactImageClosureAndSourceRoundTrip() {
+        var anchor = dev.openallay.world.InputObservationFixtures.anchor(REFERENCE);
+        var input = ModelMessage.userInput("", List.of(), java.util.Optional.of(anchor));
+        var detached = ServerAgentHistoryMessage.from(input);
+        var attachment = ServerAgentImageAttachment.from(REFERENCE, BYTES);
+        var request = new ServerAgentRequestPayload(UUID.randomUUID(), "main", input, true,
+                List.of(detached), List.of(attachment));
+        var codec = new BridgeJsonCodec();
+        String wire = codec.encode(request);
+        assertEquals(request, codec.decode(wire, ServerAgentRequestPayload.class));
+        assertEquals(input, detached.toModelMessage());
+        assertEquals("[Image]", request.question());
+        assertEquals(anchor, codec.decode(wire, ServerAgentRequestPayload.class).userInput().inputObservation().orElseThrow());
+        assertThrows(IllegalArgumentException.class, () -> new ServerAgentRequestPayload(UUID.randomUUID(), "main",
+                ModelMessage.userText("continue"), true, List.of(detached), List.of()));
+        var steer = new ServerAgentSteerPayload(UUID.randomUUID(), UUID.randomUUID(),
+                ServerAgentSteerPayload.Operation.PUT, detached, List.of(attachment));
+        assertEquals(steer, codec.decode(codec.encode(steer), ServerAgentSteerPayload.class));
+        assertThrows(IllegalArgumentException.class, () -> new ServerAgentSteerPayload(UUID.randomUUID(), UUID.randomUUID(),
+                ServerAgentSteerPayload.Operation.PUT, detached, List.of()));
+        var applied = new dev.openallay.agent.AgentEvent.SteerApplied(UUID.randomUUID(), input);
+        var eventCodec = new ServerAgentEventCodec(new com.google.gson.Gson());
+        assertEquals(applied, eventCodec.decode(eventCodec.encode(request.requestId(), applied), request.requestId()));
+        JsonObject malformed = JsonParser.parseString(wire).getAsJsonObject();
+        malformed.getAsJsonObject("userInput").remove("inputObservation");
+        assertThrows(IllegalArgumentException.class, () -> codec.decode(malformed.toString(), ServerAgentRequestPayload.class));
+        assertThrows(IllegalArgumentException.class, () -> new ModelMessage(ModelRole.USER,
+                List.of(new ModelContent.Image(REFERENCE, "not-player")), java.util.Optional.of(anchor)));
+    }
+
+    @Test
     void imageOnlyUserInputAndHistoryRoundTripWithMetadataOnlyReferences() {
         var image = imageMessage();
         var history = List.of(ServerAgentHistoryMessage.from(image));
@@ -37,7 +68,7 @@ final class BridgeImagePayloadTest {
         assertEquals(image, payload.userInput().toModelMessage());
         assertEquals("[Image]", payload.question());
         assertTrue(!input.toString().contains("base64Data"));
-        assertEquals(java.util.Set.of("role", "content"), input.keySet());
+        assertEquals(java.util.Set.of("role", "content", "inputObservation"), input.keySet());
         JsonObject block = input.getAsJsonArray("content").get(0).getAsJsonObject();
         assertEquals(java.util.Set.of("kind", "image", "originToolUseId"), block.keySet());
         assertEquals(java.util.Set.of("sha256", "mimeType", "width", "height", "byteSize"),

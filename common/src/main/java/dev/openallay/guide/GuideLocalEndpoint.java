@@ -128,8 +128,7 @@ public interface GuideLocalEndpoint {
             ToolInvocationContext context,
             Consumer<AgentEvent> events) {
         dev.openallay.agent.AgentRequest.validateUserInput(userInput);
-        if (userInput.content().stream().anyMatch(
-                dev.openallay.model.ModelContent.Image.class::isInstance)) {
+        if (dev.openallay.model.image.ModelImages.hasImages(java.util.List.of(userInput))) {
             return CompletableFuture.failedFuture(new GuideModelProfileException(
                     "image_input_unsupported", "This client model endpoint does not support image input"));
         }
@@ -147,8 +146,7 @@ public interface GuideLocalEndpoint {
             ToolInvocationContext context,
             Consumer<AgentEvent> events) {
         dev.openallay.agent.AgentRequest.validateUserInput(userInput);
-        if (userInput.content().stream().anyMatch(
-                dev.openallay.model.ModelContent.Image.class::isInstance)) {
+        if (dev.openallay.model.image.ModelImages.hasImages(java.util.List.of(userInput))) {
             return CompletableFuture.failedFuture(new GuideModelProfileException(
                     "image_input_unsupported", "This client model endpoint does not support image input"));
         }

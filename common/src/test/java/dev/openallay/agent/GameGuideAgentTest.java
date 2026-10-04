@@ -550,17 +550,43 @@ final class GameGuideAgentTest {
     }
 
     @Test
-    void changingJavascriptIntentCannotBypassRepeatedExecutionSuppression() {
+    void identicalJavascriptSourceExecutesFreshLiveObservationsAcrossModelTurns() {
         QueueModelClient model = new QueueModelClient();
-        model.enqueue(CompletableFuture.completedFuture(javascriptTurn("call-1", "Compare swords")));
-        model.enqueue(CompletableFuture.completedFuture(javascriptTurn("call-2", "A different display title")));
+        String source = "return world.inspect({from:{x:0,y:0,z:0},to:{x:0,y:0,z:0}});";
+        model.enqueue(CompletableFuture.completedFuture(javascriptProgramTurn("call-1", source)));
+        model.enqueue(CompletableFuture.completedFuture(javascriptProgramTurn("call-2", source)));
+        model.enqueue(CompletableFuture.completedFuture(javascriptProgramTurn("call-3", source)));
         model.enqueue(CompletableFuture.completedFuture(textTurn("done")));
         AtomicInteger executions = new AtomicInteger();
+        AtomicInteger observations = new AtomicInteger();
+        var world = new dev.openallay.world.WorldObservationRuntime();
+        world.capture("agent-test", new dev.openallay.world.WorldObservationCoordinator() {
+            public java.util.concurrent.CompletionStage<dev.openallay.world.BlockObservation> inspect(
+                    dev.openallay.world.WorldObservationRequest request, CancellationSignal cancellation) {
+                int observed = observations.incrementAndGet();
+                var evidence = new dev.openallay.context.EvidenceMetadata(
+                        dev.openallay.context.DataAuthority.DETERMINISTIC_TEST,
+                        dev.openallay.context.DataCompleteness.COMPLETE, java.time.Instant.ofEpochSecond(observed),
+                        "openallay:live_test", "openallay:live_fixture", "test", "test", java.util.Map.of());
+                return CompletableFuture.completedFuture(new dev.openallay.world.BlockObservation(
+                        request.bounds(), List.of(), new dev.openallay.world.WorldObservationCoverage(
+                                1, observed % 2, observed % 2 == 1, List.of()), evidence));
+            }
+            public java.util.concurrent.CompletionStage<dev.openallay.world.EntityObservation> entities(
+                    dev.openallay.world.WorldObservationRequest request, CancellationSignal cancellation) {
+                return CompletableFuture.failedFuture(new UnsupportedOperationException());
+            }
+            public java.util.concurrent.CompletionStage<dev.openallay.world.WorldEntitySnapshot> entity(
+                    String id, CancellationSignal cancellation) {
+                return CompletableFuture.failedFuture(new UnsupportedOperationException());
+            }
+        });
         var javascript = new dev.openallay.tool.builtin.RunJavascriptTool(
                 new dev.openallay.script.RhinoJavascriptRuntime(),
                 dev.openallay.script.data.MinecraftAgentHostGraph::new,
                 new dev.openallay.script.workspace.AgentResultWorkspaceRegistry(),
-                new dev.openallay.script.workspace.JavascriptResultPresenter());
+                new dev.openallay.script.workspace.JavascriptResultPresenter(),
+                new dev.openallay.script.command.CommandCapabilityRuntime(), world);
         dev.openallay.tool.Tool<dev.openallay.tool.builtin.RunJavascriptTool.Input,
                 dev.openallay.tool.builtin.RunJavascriptTool.Output> counted = new dev.openallay.tool.Tool<>() {
             @Override
@@ -590,16 +616,25 @@ final class GameGuideAgentTest {
                 new dev.openallay.agent.tool.LocalAgentToolExecutor(registry, new Gson()),
                 new AgentSessionStore(), new Gson()).ask(request(UUID.randomUUID()), events::add).join();
         assertTrue(result.successful());
-        assertEquals(1, executions.get());
-        assertEquals(1, events.stream().filter(AgentEvent.ToolStarted.class::isInstance).count());
-        ModelContent.ToolResult repeated = (ModelContent.ToolResult) model.requests.get(2)
-                .messages().getLast().content().getFirst();
-        assertTrue(repeated.error());
-        assertTrue(repeated.value().getAsString().contains("code: no_new_information"));
-        AgentEvent.ToolStarted started = (AgentEvent.ToolStarted) events.stream()
-                .filter(AgentEvent.ToolStarted.class::isInstance).findFirst().orElseThrow();
-        assertEquals("Compare swords", started.arguments().get("title").getAsString());
+        assertEquals(3, executions.get());
+        assertEquals(3, observations.get(), "each equal source call must actually reach live observation");
+        assertEquals(3, events.stream().filter(AgentEvent.ToolStarted.class::isInstance).count());
+        for (int turn = 1; turn <= 3; turn++) {
+            ModelContent.ToolResult observed = (ModelContent.ToolResult) model.requests.get(turn)
+                    .messages().getLast().content().getFirst();
+            assertFalse(observed.error());
+            assertFalse(observed.value().toString().contains("code: no_new_information"));
+        }
+        List<AgentEvent.ToolCompleted> completed = events.stream()
+                .filter(AgentEvent.ToolCompleted.class::isInstance)
+                .map(AgentEvent.ToolCompleted.class::cast).toList();
+        for (int turn = 0; turn < 3; turn++) {
+            var preview = completed.get(turn).normalized().getAsJsonObject("value").getAsJsonObject("preview");
+            assertEquals((turn + 1) % 2,
+                    preview.getAsJsonObject("coverage").get("loadedPositions").getAsInt());
+        }
         javascript.closeRequestScope("agent-test");
+        world.releaseImageProducers("agent-test").join();
     }
 
     @Test
@@ -767,6 +802,9 @@ final class GameGuideAgentTest {
     @Test
     void compactsBeforePrimaryDispatchAndKeepsOnlyTheSuccessfulRuntimeProjection() {
         QueueModelClient model = new QueueModelClient();
+        // Required nullable inputObservation adds 48 source bytes across two historical units.
+        // The unchanged 1000-byte fixture budget correctly splits them into two summary chunks.
+        model.enqueue(CompletableFuture.completedFuture(textTurn(summaryJson())));
         model.enqueue(CompletableFuture.completedFuture(textTurn(summaryJson())));
         model.enqueue(CompletableFuture.completedFuture(textTurn("final")));
         AgentSessionStore sessions = new AgentSessionStore();
@@ -785,8 +823,8 @@ final class GameGuideAgentTest {
                 .ask(request(actor), events::add)
                 .join();
 
-        assertTrue(result.successful());
-        assertEquals(2, model.requests.size());
+        assertTrue(result.successful(), result.errorMessage());
+        assertEquals(3, model.requests.size());
         assertEquals("final", result.text());
         assertTrue(events.stream().anyMatch(event -> event.equals(
                 new AgentEvent.StateChanged(AgentState.COMPACTING))));
@@ -796,7 +834,7 @@ final class GameGuideAgentTest {
         assertEquals(1, events.stream().filter(AgentEvent.ContextCompacted.class::isInstance).count(),
                 "The successful checkpoint still appears in diagnostic events");
         assertEquals(5, sessions.status(key).historyMessages());
-        assertTrue(model.requests.get(1).messages().getFirst().content().stream()
+        assertTrue(model.requests.getLast().messages().getFirst().content().stream()
                 .map(ModelContent.Text.class::cast)
                 .anyMatch(text -> text.text().contains("NOT factual evidence")));
     }

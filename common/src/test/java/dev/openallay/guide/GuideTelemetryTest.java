@@ -140,7 +140,10 @@ final class GuideTelemetryTest {
         assertEquals(27, service.telemetry().sessionUsage().inputTokens());
         assertTrue(service.snapshot().sessions().stream().filter(s -> s.sessionId().equals("main"))
                 .findFirst().orElseThrow().requests().getLast().terminal());
-        service.disconnect().join();
+        CompletableFuture<Void> disconnected = service.disconnect();
+        assertFalse(disconnected.isDone(), "numeric late receipts do not release the actual endpoint");
+        local.releaseCancelled(next);
+        disconnected.join();
         assertUnknown(service);
     }
 
@@ -232,6 +235,10 @@ final class GuideTelemetryTest {
         @Override public boolean cancel(UUID actor, String session) { return true; }
         @Override public void clearSession(UUID actor, String session) { estimates.remove(session); }
         @Override public void clearActor(UUID actor) { estimates.clear(); }
+        void releaseCancelled(UUID id) {
+            completions.get(id).complete(new AgentResult(AgentState.CANCELLED, null,
+                    "agent_cancelled", "Agent request was cancelled", null));
+        }
         void send(UUID id, AgentEvent event) {
             events.get(id).accept(event);
             if (event instanceof AgentEvent.FinalText text) {

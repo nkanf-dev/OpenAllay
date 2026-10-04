@@ -47,6 +47,47 @@ final class SqliteGuideImageOwnershipTest {
     @TempDir Path temporary;
 
     @Test
+    void associatedFrameFullSourceSurvivesReopenCompactionForkAndIndependentDeletion() throws Exception {
+        var images = images();
+        byte[] bytes = png(0xff112233);
+        var reference = images.importImage(ACTOR, bytes);
+        var source = dev.openallay.world.InputObservationFixtures.anchor(reference);
+        var focus = dev.openallay.world.InputObservationFixtures.focus(ACTOR);
+        var capture = source.image().orElseThrow();
+        var anchor = new dev.openallay.world.ClientObservationAnchor(source.associationId(), source.capturedAt(), focus,
+                java.util.Optional.of(new dev.openallay.world.WorldViewCapture(capture.captureId(), capture.capturedAt(),
+                        ACTOR, capture.dimension(), capture.target(), capture.includedHud(), capture.includedGameUi(),
+                        capture.sourceWidth(), capture.sourceHeight(), capture.guiScale(), capture.camera(), capture.screen(),
+                        capture.image(), capture.evidence())));
+        var input = ModelMessage.userText("which item").withInputObservation(anchor);
+        var original = List.of(input, new ModelMessage(ModelRole.ASSISTANT, List.of(new ModelContent.Text("a sword"))));
+        var scope = scope("associated.example");
+        var request = request("main", "which item");
+        store(images).commit(new GuideHistoryCommit(scope, List.of(
+                new GuideHistoryMutation.UpsertPartition("main", NOW),
+                new GuideHistoryMutation.UpsertSession("main", 0, GuideModelSelection.client("default")),
+                new GuideHistoryMutation.UpsertRequest(0, request),
+                new GuideHistoryMutation.ReplaceContext("main", original),
+                new GuideHistoryMutation.ReplaceRequestContext(request.requestId(), original),
+                new GuideHistoryMutation.CaptureRequestBoundary(request.requestId(), original, List.of()))));
+        var reopened = store(images);
+        assertEquals(original, reopened.requestContext(scope, request.requestId()));
+        reopened.commit(new GuideHistoryCommit(scope, List.of(new GuideHistoryMutation.ReplaceContext(
+                "main", List.of(ModelMessage.userText("compacted"))))));
+        assertEquals(0, images.collect(ACTOR));
+        var fork = reopened.fork(new GuideHistoryForkRequest(scope, new GuideHistoryMutation.ForkSession(
+                "main", new GuideHistoryCursor(0, request.requestId()), "branch", 1, GuideModelSelection.client("default"))));
+        assertEquals(original, fork.messages());
+        var inherited = reopened.requestContext(scope, fork.page().requests().getFirst().requestId());
+        assertEquals(anchor, inherited.getFirst().inputObservation().orElseThrow());
+        reopened.commit(new GuideHistoryCommit(scope, List.of(new GuideHistoryMutation.UpsertPartition("branch", NOW),
+                new GuideHistoryMutation.DeleteSession("main"))));
+        assertArrayEquals(bytes, images.read(ACTOR, reference));
+        reopened.commit(new GuideHistoryCommit(scope, List.of(new GuideHistoryMutation.DeleteSession("branch"))));
+        assertThrows(IOException.class, () -> images.read(ACTOR, reference));
+    }
+
+    @Test
     void requestAndOtherSessionOwnersRemainIndependentOfCompactedSource() throws Exception {
         var images = images();
         var reference = images.importImage(ACTOR, png(0xff234567));

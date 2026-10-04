@@ -74,14 +74,24 @@ public final class RunJavascriptTool
             dev.openallay.tool.ModelResultView modelView,
             long elapsedMillis,
             List<String> modules,
-            List<dev.openallay.context.SourceObservation> sources)
-            implements WorkspaceModelFacingToolOutput {
+            List<dev.openallay.context.SourceObservation> sources,
+            List<dev.openallay.model.image.ImageReference> images)
+            implements WorkspaceModelFacingToolOutput, dev.openallay.agent.tool.ModelImageToolOutput {
         public Output {
             fields = List.copyOf(fields);
             preview = preview.deepCopy();
             java.util.Objects.requireNonNull(viewKind, "viewKind");
             modules = List.copyOf(modules);
             sources = List.copyOf(sources);
+            images = List.copyOf(images);
+        }
+
+        public Output(String handle, String resultType, long cardinality, List<String> fields,
+                JsonElement preview, String modelText, JavascriptSemanticKind viewKind, boolean complete,
+                int omittedRows, int omittedFields, dev.openallay.tool.ModelResultView modelView,
+                long elapsedMillis, List<String> modules, List<dev.openallay.context.SourceObservation> sources) {
+            this(handle, resultType, cardinality, fields, preview, modelText, viewKind, complete,
+                    omittedRows, omittedFields, modelView, elapsedMillis, modules, sources, List.of());
         }
 
         @Override
@@ -310,8 +320,9 @@ public final class RunJavascriptTool
                         context.player().map(value -> value.evidence().loader()).orElse("unknown"),
                         Map.of("openallay:scope", kind)),
                 data::recordEvidence);
+        List<dev.openallay.model.image.ImageReference> capturedImages = new java.util.ArrayList<>();
         var worldBridge = worldObservations.bridge(
-                context.correlationId(), cancellation, data::recordEvidence);
+                context.correlationId(), cancellation, data::recordEvidence, capturedImages::add);
         if (scope != null) scope.open(data::recordEvidence);
         JavascriptExecution execution = runtime.execute(
                 input.source(),
@@ -361,7 +372,8 @@ public final class RunJavascriptTool
                         presentation.complete(), "current request only", coverage),
                 execution.elapsed().toMillis(),
                 execution.modules(),
-                sources));
+                sources,
+                capturedImages));
     }
 
     @Override
@@ -379,7 +391,7 @@ public final class RunJavascriptTool
             workspaces.close(correlationId);
         }
         commands.closeRequest(correlationId);
-        worldObservations.closeRequest(correlationId);
+        worldObservations.closeObservations(correlationId);
         // Request authority is immutable in ToolInvocationContext and scoped to this request.
     }
 

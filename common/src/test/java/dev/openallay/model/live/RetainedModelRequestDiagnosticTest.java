@@ -66,10 +66,58 @@ final class RetainedModelRequestDiagnosticTest {
     }
 
     @Test
+    void rejectsMissingInputObservationBeforeReflectiveMessageConstruction() {
+        var request = new ModelRequest("System", List.of(ModelMessage.userText("Ask")), List.of(), false, "retained");
+        var trace = trace(request);
+        var message = trace.getAsJsonArray("events").get(1).getAsJsonObject().getAsJsonObject("payload")
+                .getAsJsonArray("messages").get(0).getAsJsonObject();
+        assertTrue(message.has("inputObservation"));
+        assertTrue(message.get("inputObservation").isJsonNull());
+        message.remove("inputObservation");
+        var failure = assertThrows(IllegalArgumentException.class,
+                () -> LiveModelContinuationDiagnosticTest.retainedRequest(trace));
+        assertTrue(failure.getMessage().contains("inputObservation"));
+    }
+
+    @Test
+    void reconstructsAssociatedSourceWithoutReadingOrPersistingItsResolver() {
+        var reference = new ImageReference("a".repeat(64), "image/png", 2, 3, 96);
+        var anchor = dev.openallay.world.InputObservationFixtures.anchor(reference);
+        var input = ModelMessage.userInput("", List.of(), java.util.Optional.of(anchor));
+        var reads = new java.util.concurrent.atomic.AtomicInteger();
+        var request = new ModelRequest("System", List.of(input), List.of(), false, "retained", null,
+                image -> { reads.incrementAndGet(); throw new IOException("must never be read"); });
+        var reconstructed = LiveModelContinuationDiagnosticTest.retainedRequest(trace(request));
+        assertEquals(request.messages(), reconstructed.messages());
+        assertEquals(anchor, reconstructed.messages().getFirst().inputObservation().orElseThrow());
+        assertEquals(0, reads.get());
+        assertThrows(IOException.class, () -> reconstructed.images().read(reference));
+    }
+
+    @Test
+    void persistedTraceJsonKeepsCurrentNullableInputReferenceAndReconstructsExactRequest() {
+        var request = new ModelRequest("System", List.of(ModelMessage.userText("Ask")), List.of(), false, "retained");
+        var agent = new AgentRequest(UUID.randomUUID(), UUID.randomUUID(), "retained", "Ask", "System",
+                ToolInvocationContext.developmentConsole("persisted-trace-test"), false);
+        var recorder = new LiveAgentTraceRecorder(new Gson(), agent);
+        recorder.modelRequest(request);
+        var persisted = new dev.openallay.agent.trace.LiveTraceJson().encode(
+                recorder.finish(AgentState.COMPLETED, "Done", null));
+        var trace = JsonParser.parseString(persisted).getAsJsonObject();
+        var input = trace.getAsJsonArray("events").get(1).getAsJsonObject().getAsJsonObject("payload")
+                .getAsJsonArray("messages").get(0).getAsJsonObject();
+        assertTrue(input.has("inputObservation"));
+        assertTrue(input.get("inputObservation").isJsonNull());
+        var reconstructed = LiveModelContinuationDiagnosticTest.retainedRequest(trace);
+        assertEquals(request.messages(), reconstructed.messages());
+        assertEquals(modelFacingPayload(request), modelFacingPayload(reconstructed));
+    }
+
+    @Test
     void rejectsUnknownRetainedContentRatherThanSilentlyDroppingIt() {
         JsonObject trace = JsonParser.parseString("""
                 {"events":[{"type":"model_request","payload":{"systemPrompt":"system",
-                "messages":[{"role":"USER","content":[{"unknown":"value"}]}],
+                "messages":[{"role":"USER","content":[{"unknown":"value"}],"inputObservation":null}],
                 "tools":[],"stream":true,"sessionKey":"retained"}}]}
                 """).getAsJsonObject();
         assertThrows(IllegalArgumentException.class,
@@ -151,7 +199,9 @@ final class RetainedModelRequestDiagnosticTest {
             recorder.modelRequest(request);
         }
         recorder.state(AgentState.COMPLETED);
-        return new Gson().toJsonTree(recorder.finish(AgentState.COMPLETED, "Done", null)).getAsJsonObject();
+        // The current nullable source field must survive the outer trace JsonElement serialization.
+        return new Gson().newBuilder().serializeNulls().create()
+                .toJsonTree(recorder.finish(AgentState.COMPLETED, "Done", null)).getAsJsonObject();
     }
 
     private static JsonObject modelFacingPayload(ModelRequest request) {

@@ -33,6 +33,10 @@ final class CoreJavascriptContractTest {
         assertTrue(rendered.contains("commands.list()"));
         assertTrue(rendered.contains("commands.describe(path)"));
         assertTrue(rendered.contains("commands.run(text)"));
+        assertTrue(rendered.contains("world.focus()"));
+        assertTrue(rendered.contains("world.capture()"));
+        assertTrue(rendered.contains("ASSOCIATED_UI"));
+        assertTrue(rendered.contains("GAME_UI"));
         assertTrue(rendered.contains("top-level binding, separate from mc and schema"));
         assertFalse(catalog.describe("commands").isPresent());
         assertTrue(rendered.contains("world.inspect("));

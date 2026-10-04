@@ -104,7 +104,10 @@ final class GuideServicePresentationTest {
         assertNull(first.snapshot().sessions().getFirst().workingRequestId());
         UUID pending = success(first.ask("disconnect pending").join());
         UUID generation = first.presentationGeneration();
-        manager.disconnect().join();
+        CompletableFuture<Void> disconnected = manager.disconnect();
+        assertFalse(disconnected.isDone(), "the pending endpoint must actually finalize before cleanup ends");
+        local.releaseCancelled(pending, "disconnect pending");
+        disconnected.join();
         assertEquals(List.of("bound", "invalidated"), order);
         assertNull(manager.current()); assertTrue(observed.isEmpty());
         local.emit(pending, new AgentEvent.FinalText("late after disconnect"));

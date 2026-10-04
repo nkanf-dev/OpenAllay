@@ -68,7 +68,7 @@ final class PlayerClientToolRouterTest {
         normalized.add("value", value);
         for (var chunk : new ResultChunker().split(
                 calls.getFirst().payload().invocationId(),
-                normalized.toString(),
+                wire(normalized),
                 3)) {
             assertTrue(router.receive(
                     actor, ClientToolResultChunkPayload.from(requestId, chunk)));
@@ -103,7 +103,7 @@ final class PlayerClientToolRouterTest {
         var chunk = ClientToolResultChunkPayload.from(
                 requestId,
                 new ResultChunker().split(
-                                call.invocationId(), normalized.toString(), 128)
+                                call.invocationId(), wire(normalized), 16 * 1024)
                         .getFirst());
 
         assertFalse(router.receive(UUID.randomUUID(), chunk));
@@ -146,7 +146,7 @@ final class PlayerClientToolRouterTest {
                         requestId,
                         new ResultChunker().split(
                                         calls.getFirst().payload().invocationId(),
-                                        late.toString(),
+                                        wire(late),
                                         128)
                                 .getFirst())));
     }
@@ -588,9 +588,9 @@ final class PlayerClientToolRouterTest {
             CompletableFuture<AgentToolResult> result = tools.execute("openallay__load_skill", input,
                     ToolInvocationContext.developmentConsole(requestId.toString()), new CancellationSignal());
             var chunks = new ResultChunker().split(calls.getFirst().payload().invocationId(),
-                    normalized.toString(), 131);
+                    wire(normalized), 131);
             for (int index = 0; index < chunks.size(); index++) {
-                assertEquals(index < chunks.size() - 1 || accepted, router.receive(actor,
+                assertTrue(router.receive(actor,
                         ClientToolResultChunkPayload.from(requestId, chunks.get(index))));
             }
             return result.join();
@@ -605,7 +605,7 @@ final class PlayerClientToolRouterTest {
         registry.register("test", List.of(tool));
         List<SentCall> calls = new ArrayList<>();
         PlayerClientToolRouter router = new PlayerClientToolRouter(
-                registry, new Gson(), transport(calls, new ArrayList<>()));
+                registry, new Gson(), transport(calls, new ArrayList<>()), Duration.ofMinutes(5), Runnable::run);
         UUID actor = UUID.fromString("00000000-0000-0000-0000-000000000001");
         UUID requestId = UUID.fromString("00000000-0000-0000-0000-000000000002");
         AgentToolExecutor tools = success(router.open(
@@ -616,12 +616,11 @@ final class PlayerClientToolRouterTest {
                     ToolInvocationContext.developmentConsole(requestId.toString()),
                     new CancellationSignal());
             var chunks = new ResultChunker().split(
-                    calls.getFirst().payload().invocationId(), normalized.toString(), 3);
+                    calls.getFirst().payload().invocationId(), wire(normalized), 3);
             for (int index = 0; index < chunks.size(); index++) {
-                assertEquals(index < chunks.size() - 1 || accepted, router.receive(
+                assertTrue(router.receive(
                         actor, ClientToolResultChunkPayload.from(requestId, chunks.get(index))));
             }
-            assertTrue(result.isDone());
             return result.join();
         } finally {
             router.close(actor, requestId);
@@ -648,6 +647,11 @@ final class PlayerClientToolRouterTest {
         return ((ToolResult.Success<AgentToolExecutor>) assertInstanceOf(
                         ToolResult.Success.class, result))
                 .value();
+    }
+
+    private static String wire(JsonObject normalized) {
+        return new dev.openallay.bridge.protocol.BridgeJsonCodec().encode(
+                new dev.openallay.bridge.protocol.ToolExecutionMessage(normalized, List.of()));
     }
 
     private static JsonObject arguments(String key, int value) {

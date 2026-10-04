@@ -60,6 +60,38 @@ public final class PlayerClientToolRouter {
         void cancel(UUID actorId, ClientToolCancelPayload payload);
     }
 
+    /** The Agent request owner imports, pins and grants resolver access before completion. */
+    @FunctionalInterface
+    public interface ResultPreparation {
+        CompletableFuture<Void> prepare(UUID actorId, UUID requestId, String sessionId,
+                List<dev.openallay.model.image.ImageReference> references,
+                List<dev.openallay.bridge.protocol.ServerAgentImageAttachment> attachments,
+                java.util.function.BooleanSupplier invocationCurrent);
+    }
+
+    private volatile ResultPreparation resultPreparation =
+            (actor, request, session, references, attachments, current) -> references.isEmpty()
+                    ? CompletableFuture.completedFuture(null)
+                    : CompletableFuture.failedFuture(new IllegalStateException("Server image admission is unavailable"));
+    private volatile int resultByteLimit = dev.openallay.bridge.protocol.BridgeProtocol.MAX_OPENAI_REQUEST_BYTES;
+    private volatile java.util.function.BiPredicate<UUID, UUID> resultAdmission = (actor, request) -> true;
+    private final java.util.concurrent.Executor resultWorker;
+
+    public void configureResultPreparation(ResultPreparation preparation, int maximumBytes) {
+        configureResultPreparation(preparation, maximumBytes, (actor, request) -> true);
+    }
+
+    public void configureResultPreparation(ResultPreparation preparation, int maximumBytes,
+            java.util.function.BiPredicate<UUID, UUID> admission) {
+        resultAdmission = java.util.Objects.requireNonNull(admission, "admission");
+        if (maximumBytes <= 0
+                || maximumBytes > dev.openallay.bridge.protocol.BridgeProtocol.MAX_OPENAI_REQUEST_BYTES) {
+            throw new IllegalArgumentException("Invalid Tool result envelope limit");
+        }
+        resultPreparation = java.util.Objects.requireNonNull(preparation, "preparation");
+        resultByteLimit = maximumBytes;
+    }
+
     private final ToolRuntimeCatalog trustedTools;
     private final Gson gson;
     private final Transport transport;
@@ -74,6 +106,15 @@ public final class PlayerClientToolRouter {
 
     public PlayerClientToolRouter(
             ToolRegistry tools, Gson gson, Transport transport, Duration resultTimeout) {
+        this(tools, gson, transport, resultTimeout,
+                command -> Thread.ofVirtual().name("openallay-client-tool-result").start(command));
+    }
+
+    /** Explicit executor lets tests drive assembly and image admission without native threads. */
+    public PlayerClientToolRouter(
+            ToolRegistry tools, Gson gson, Transport transport, Duration resultTimeout,
+            java.util.concurrent.Executor resultWorker) {
+        this.resultWorker = java.util.Objects.requireNonNull(resultWorker, "resultWorker");
         java.util.Objects.requireNonNull(tools, "tools");
         Set<String> nonReadOnly = tools.descriptors().stream()
                 .filter(descriptor -> descriptor.access() != ToolAccess.READ_ONLY
@@ -187,7 +228,11 @@ public final class PlayerClientToolRouter {
         private final Map<String, RetainedSkillContext> retained = new ConcurrentHashMap<>();
         private final Map<UUID, Pending> pending = new ConcurrentHashMap<>();
         private volatile boolean closed;
-        private final ResultChunker.Reassembler reassembler = new ResultChunker.Reassembler();
+        private final ResultPreparation preparation = resultPreparation;
+        private final java.util.function.BiPredicate<UUID, UUID> admission = resultAdmission;
+        private final ResultChunker.Reassembler reassembler = new ResultChunker.Reassembler(
+                dev.openallay.bridge.protocol.BridgeProtocol.PARTIAL_ASSEMBLY_TIMEOUT,
+                resultByteLimit, dev.openallay.bridge.protocol.BridgeProtocol.TRANSPORT_CHUNK_BYTES);
 
         private RequestExecutor(
                 RequestKey key,
@@ -300,51 +345,77 @@ public final class PlayerClientToolRouter {
 
         private boolean receive(ClientToolResultChunkPayload chunk) {
             Pending value = pending.get(chunk.invocationId());
-            if (value == null) {
+            if (value == null || !current(chunk.invocationId(), value)
+                    || !admission.test(key.actorId, key.requestId)) return false;
+            try {
+                resultWorker.execute(() -> assemble(chunk, value));
+                return true;
+            } catch (RuntimeException unavailable) {
+                failResult(chunk.invocationId(), value, "client_tool_result_invalid",
+                        "Player client Tool result preparation is unavailable");
                 return false;
             }
-            synchronized (value) {
-                if (pending.get(chunk.invocationId()) != value) {
-                    return false;
-                }
-                try {
+        }
+
+        private boolean current(UUID invocation, Pending value) {
+            return !closed && active.get(key) == this && pending.get(invocation) == value;
+        }
+
+        private void assemble(ClientToolResultChunkPayload chunk, Pending value) {
+            // Owner admission can take the service owner lock; never take it under Pending.
+            if (!admission.test(key.actorId, key.requestId)) return;
+            try {
+                String json;
+                synchronized (value) {
+                    if (!current(chunk.invocationId(), value) || value.accepting) return;
                     Optional<String> complete = reassembler.accept(chunk.asRemoteChunk());
-                    if (complete.isEmpty()) {
-                        return true;
-                    }
-                    if (!pending.remove(chunk.invocationId(), value)) {
-                        reassembler.cancel(chunk.invocationId());
-                        return false;
-                    }
-                    value.cancelDeadline();
-                    JsonObject normalized = JsonParser.parseString(
-                                    complete.orElseThrow())
-                            .getAsJsonObject();
-                    JsonObject validated = validateNormalized(requestTools, value.toolId, normalized);
-                    if (validated == null
-                            || (value.skillInput != null
-                                    && validated.get("status").getAsString().equals("success")
-                                    && !validSkillResult(value.skillInput, normalized, validated))) {
-                        value.result.complete(failure(
-                                value.toolId,
-                                "client_tool_result_invalid",
-                                "Player client Tool result was invalid"));
-                        return false;
-                    }
-                    boolean failed = validated.get("status").getAsString().equals("failure");
-                    value.result.complete(new AgentToolResult(value.toolId, validated, failed));
-                    return true;
-                } catch (RuntimeException failure) {
-                    pending.remove(chunk.invocationId(), value);
-                    value.cancelDeadline();
-                    reassembler.cancel(chunk.invocationId());
-                    value.result.complete(failure(
-                            value.toolId,
-                            "client_tool_result_invalid",
-                            "Player client Tool result was invalid"));
-                    return false;
+                    if (complete.isEmpty()) return;
+                    value.accepting = true;
+                    json = complete.orElseThrow();
                 }
+                var message = new dev.openallay.bridge.protocol.BridgeJsonCodec(gson).decode(
+                        json, dev.openallay.bridge.protocol.ToolExecutionMessage.class);
+                JsonObject normalized = message.result();
+                ValidatedResult validated = validateNormalized(requestTools, value.toolId, normalized);
+                if (validated == null
+                        || (value.skillInput != null
+                                && validated.normalized().get("status").getAsString().equals("success")
+                                && !validSkillResult(value.skillInput, normalized, validated.normalized()))) {
+                    throw new IllegalArgumentException("Invalid typed client Tool result");
+                }
+                message.requireImages(validated.images());
+                if (!current(chunk.invocationId(), value)) return;
+                preparation.prepare(key.actorId, key.requestId, sessionId, validated.images(),
+                                message.imageAttachments(), () -> current(chunk.invocationId(), value))
+                        .whenComplete((ignored, failure) -> {
+                            if (failure != null) {
+                                failResult(chunk.invocationId(), value, "client_tool_image_failed",
+                                        "Player client Tool images were invalid or unavailable");
+                                return;
+                            }
+                            synchronized (value) {
+                                if (!current(chunk.invocationId(), value)
+                                        || !pending.remove(chunk.invocationId(), value)) return;
+                                value.cancelDeadline();
+                            }
+                            // Completion may synchronously take Agent/service owner locks.
+                            boolean failed = validated.normalized().get("status").getAsString().equals("failure");
+                            value.result.complete(new AgentToolResult(value.toolId,
+                                    validated.normalized(), failed, null, validated.images()));
+                        });
+            } catch (RuntimeException invalid) {
+                failResult(chunk.invocationId(), value, "client_tool_result_invalid",
+                        "Player client Tool result was invalid");
             }
+        }
+
+        private void failResult(UUID invocation, Pending value, String code, String message) {
+            synchronized (value) {
+                if (!pending.remove(invocation, value)) return;
+                value.cancelDeadline();
+                reassembler.cancel(invocation);
+            }
+            value.result.complete(failure(value.toolId, code, message));
         }
 
         @Override
@@ -487,7 +558,10 @@ public final class PlayerClientToolRouter {
                 true);
     }
 
-    private JsonObject validateNormalized(
+    private record ValidatedResult(JsonObject normalized,
+            List<dev.openallay.model.image.ImageReference> images) {}
+
+    private ValidatedResult validateNormalized(
             ToolRuntimeCatalog requestTools, String toolId, JsonObject normalized) {
         if (normalized == null
                 || !normalized.has("status")
@@ -500,11 +574,11 @@ public final class PlayerClientToolRouter {
                 return null;
             }
             try {
-                return normalizer.normalize(
+                return new ValidatedResult(normalizer.normalize(
                         new ToolResult.Failure<>(
                                 normalized.get("code").getAsString(),
                                 normalized.get("message").getAsString()),
-                        Object.class);
+                        Object.class), List.of());
             } catch (RuntimeException invalid) {
                 return null;
             }
@@ -538,8 +612,12 @@ public final class PlayerClientToolRouter {
         try {
             Object value = gson.fromJson(normalized.get("value"), tool.descriptor().outputType());
             // The structured value is authoritative; rebuild any model projection locally.
-            return normalizer.normalize(
-                    new ToolResult.Success<>(value), tool.descriptor().outputType());
+            List<dev.openallay.model.image.ImageReference> images =
+                    value instanceof dev.openallay.agent.tool.ModelImageToolOutput visual
+                            ? List.copyOf(visual.images()) : List.of();
+            dev.openallay.model.image.ModelImages.unique(images);
+            return new ValidatedResult(normalizer.normalize(
+                    new ToolResult.Success<>(value), tool.descriptor().outputType()), images);
         } catch (RuntimeException invalid) {
             return null;
         }
@@ -583,6 +661,7 @@ public final class PlayerClientToolRouter {
         private final LoadSkillTool.Input skillInput;
         private volatile ScheduledFuture<?> deadline;
         private boolean dispatched;
+        private boolean accepting;
 
         private Pending(String toolId, CompletableFuture<AgentToolResult> result,
                 LoadSkillTool.Input skillInput) {

@@ -47,6 +47,52 @@ final class ContextCompactorImageTest {
     private static final List<ImageReference> PREFIX_IMAGES = List.of(PNG, JPEG, PNG);
 
     @Test
+    void associatedFrameSurvivesSummaryRestoreReuseAndRepeatedSummaryWithoutRetainingFullFocus() {
+        var anchor = dev.openallay.world.InputObservationFixtures.anchor(PNG);
+        var requests = new ArrayList<ModelRequest>();
+        ModelClient model = (request, events, cancellation) -> {
+            requests.add(request);
+            assertEquals(List.of(PNG), dev.openallay.model.image.ModelImages.occurrences(request.messages()));
+            String nativeBody = new OpenAiJsonCodec(GSON).requestBody(config(ModelProtocol.OPENAI_CHAT), request);
+            assertTrue(nativeBody.contains("data:image/png;base64,"));
+            assertFalse(nativeBody.contains("minecraft:custom_data"));
+            return CompletableFuture.completedFuture(textTurn(SUMMARY));
+        };
+        var compactor = new ContextCompactor(model, GSON, new CharacterFixtureEstimator(),
+                new ContextBudget(20_000, 1_000), "test-model", Clock.fixed(Instant.EPOCH, ZoneOffset.UTC));
+        var original = List.of(ModelMessage.userText("old question " + "x".repeat(2_500)).withInputObservation(anchor),
+                new ModelMessage(ModelRole.ASSISTANT, List.of(new ModelContent.Text("old answer " + "y".repeat(2_500)))),
+                ModelMessage.userText("current question"));
+        var first = compactor.compactManually(ignored -> "system", original, 2, List.of(),
+                "actor:associated", new CancellationSignal(), image -> new byte[6], ignored -> {}).join();
+        assertTrue(first.successful(), first.failureMessage());
+        assertNotNull(first.checkpoint());
+        assertTrue(first.projection().messages().stream().allMatch(message -> message.inputObservation().isEmpty()));
+        assertEquals(List.of(PNG), dev.openallay.model.image.ModelImages.occurrences(first.projection().messages()));
+        assertNull(first.projection().messages().getFirst().content().stream()
+                .filter(ModelContent.Image.class::isInstance).map(ModelContent.Image.class::cast)
+                .findFirst().orElseThrow().originToolUseId());
+        assertTrue(first.projection().messages().getFirst().content().stream()
+                .filter(ModelContent.Text.class::isInstance).map(ModelContent.Text.class::cast)
+                .anyMatch(text -> text.text().contains(anchor.image().orElseThrow().capturedAt().toString())));
+        var codec = new ModelContextCodec();
+        var restoredOriginal = codec.decode(codec.encode(original));
+        assertEquals(anchor, restoredOriginal.getFirst().inputObservation().orElseThrow());
+        var restored = new ArrayList<>(codec.decode(codec.encode(first.projection().messages())));
+        var reused = compactor.reuse(first.checkpoint(), "system", restoredOriginal, 2, List.of()).orElseThrow();
+        assertEquals(List.of(PNG), dev.openallay.model.image.ModelImages.occurrences(reused.messages()));
+        restored.add(new ModelMessage(ModelRole.ASSISTANT, List.of(new ModelContent.Text("answer " + "z".repeat(2_500)))));
+        restored.add(ModelMessage.userText("next protected question"));
+        var second = compactor.compactManually(ignored -> "system", restored, restored.size() - 1, List.of(),
+                "actor:again", new CancellationSignal(), image -> new byte[6], ignored -> {}).join();
+        assertTrue(second.successful(), second.failureMessage());
+        assertNotNull(second.checkpoint());
+        assertEquals(List.of(PNG), dev.openallay.model.image.ModelImages.occurrences(
+                codec.decode(codec.encode(second.projection().messages()))));
+        assertEquals(anchor, original.getFirst().inputObservation().orElseThrow());
+    }
+
+    @Test
     void nativeSummaryChunksAndFinalProjectionKeepActualImagesIncludingRepeatedReferences() {
         var requests = new ArrayList<ModelRequest>();
         var reads = new ArrayList<ImageReference>();

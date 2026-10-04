@@ -47,9 +47,8 @@ public interface GuideRemoteEndpoint {
             dev.openallay.model.image.ImagePayloadResolver images, List<ModelMessage> history,
             Consumer<AgentEvent> events) {
         dev.openallay.agent.AgentRequest.validateUserInput(userInput);
-        boolean containsImages = java.util.stream.Stream.concat(history.stream(), java.util.stream.Stream.of(userInput))
-                .flatMap(message -> message.content().stream())
-                .anyMatch(dev.openallay.model.ModelContent.Image.class::isInstance);
+        boolean containsImages = dev.openallay.model.image.ModelImages.hasImages(
+                java.util.stream.Stream.concat(history.stream(), java.util.stream.Stream.of(userInput)).toList());
         if (containsImages) {
             throw new GuideModelProfileException(
                     "image_input_unsupported", "This remote endpoint does not support typed image input");

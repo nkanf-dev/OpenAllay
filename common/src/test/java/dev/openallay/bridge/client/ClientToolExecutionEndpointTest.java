@@ -415,7 +415,9 @@ final class ClientToolExecutionEndpointTest {
             java.util.Optional<String> accepted = reassembler.accept(chunk.asRemoteChunk());
             if (accepted.isPresent()) complete = accepted;
         }
-        return complete.orElseThrow();
+        return new dev.openallay.bridge.protocol.BridgeJsonCodec().decode(
+                complete.orElseThrow(), dev.openallay.bridge.protocol.ToolExecutionMessage.class)
+                .result().toString();
     }
 
     private static final class PendingScopeRequest {

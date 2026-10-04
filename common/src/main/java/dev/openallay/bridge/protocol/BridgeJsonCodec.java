@@ -40,6 +40,7 @@ public final class BridgeJsonCodec {
                             "contentHash", "base64Data")),
             Map.entry(ClientToolCancelPayload.class,
                     Set.of("requestId", "invocationId")),
+            Map.entry(ToolExecutionMessage.class, Set.of("result", "imageAttachments")),
             Map.entry(ServerAgentRequestChunkPayload.class,
                     Set.of("requestId", "index", "total", "contentHash", "base64Data")),
             Map.entry(ServerAgentCancelPayload.class, Set.of("requestId")),
@@ -68,6 +69,14 @@ public final class BridgeJsonCodec {
         if (!FIELDS.containsKey(payload.getClass())) {
             throw new IllegalArgumentException("Unsupported bridge payload " + payload.getClass().getName());
         }
+        if (payload instanceof ToolExecutionMessage message) {
+            // Keep explicit nulls in normalized JSON. Reflective Gson serialization would
+            // drop them and could turn a malformed optional field into an absent field.
+            JsonObject object = new JsonObject();
+            object.add("result", message.result());
+            object.add("imageAttachments", gson.toJsonTree(message.imageAttachments()));
+            return object.toString();
+        }
         JsonObject encoded = gson.toJsonTree(payload).getAsJsonObject();
         if (payload instanceof ServerAgentSteerPayload steer) {
             encoded.add("message", steer.message() == null ? com.google.gson.JsonNull.INSTANCE
@@ -85,6 +94,7 @@ public final class BridgeJsonCodec {
     public static JsonObject encodeHistoryMessage(Gson gson, ServerAgentHistoryMessage message) {
         JsonObject encoded = new JsonObject();
         encoded.addProperty("role", message.role().name());
+        encoded.add("inputObservation", dev.openallay.world.ClientObservationAnchorJson.encode(message.inputObservation()));
         com.google.gson.JsonArray content = new com.google.gson.JsonArray();
         for (ServerAgentHistoryContent block : message.content()) {
             JsonObject value = gson.toJsonTree(block).getAsJsonObject();
@@ -102,9 +112,11 @@ public final class BridgeJsonCodec {
         if (expected == null) {
             throw new IllegalArgumentException("Unsupported bridge payload " + type.getName());
         }
-        if (type == ServerAgentRequestChunkPayload.class || type == ServerAgentSteerChunkPayload.class) {
+        if (type == ServerAgentRequestChunkPayload.class || type == ServerAgentSteerChunkPayload.class
+                || type == ClientToolResultChunkPayload.class) {
             requireEncodedEnvelope(json, BridgeProtocol.MAX_REQUEST_CHUNK_JSON_BYTES);
-        } else if (type == ServerAgentRequestPayload.class || type == ServerAgentSteerPayload.class) {
+        } else if (type == ServerAgentRequestPayload.class || type == ServerAgentSteerPayload.class
+                || type == ToolExecutionMessage.class) {
             requireEncodedEnvelope(json, BridgeProtocol.MAX_OPENAI_REQUEST_BYTES);
         }
         rejectDuplicateFields(json);
@@ -135,6 +147,28 @@ public final class BridgeJsonCodec {
             requireInteger(object.get("total"));
             requireText(object.get("contentHash"));
             requireText(object.get("base64Data"));
+        }
+        if (type == ClientToolResultChunkPayload.class) {
+            requireText(object.get("requestId"));
+            requireText(object.get("invocationId"));
+            requireInteger(object.get("index"));
+            requireInteger(object.get("total"));
+            requireText(object.get("contentHash"));
+            requireText(object.get("base64Data"));
+        }
+        if (type == ToolExecutionMessage.class) {
+            if (!object.get("result").isJsonObject()) {
+                throw new IllegalArgumentException("Tool result must be an object");
+            }
+            JsonElement attachments = object.get("imageAttachments");
+            if (!attachments.isJsonArray()) {
+                throw new IllegalArgumentException("Tool image attachments must be an array");
+            }
+            for (JsonElement item : attachments.getAsJsonArray()) {
+                JsonObject attachment = exactObject(item, Set.of("reference", "base64Data"));
+                validateImageReference(attachment.get("reference"));
+                requireText(attachment.get("base64Data"));
+            }
         }
         if (type == ServerAgentSteerPayload.class) {
             requireText(object.get("requestId"));
@@ -248,7 +282,8 @@ public final class BridgeJsonCodec {
 
     /** Shared by every current typed history wire boundary. No paths, URLs or encoded bytes. */
     public static void validateHistoryMessage(JsonElement item) {
-        JsonObject message = exactObject(item, Set.of("role", "content"));
+        JsonObject message = exactObject(item, Set.of("role", "content", "inputObservation"));
+        dev.openallay.world.ClientObservationAnchorJson.decode(message.get("inputObservation"));
         requireText(message.get("role"));
         if (!Set.of("USER", "ASSISTANT").contains(message.get("role").getAsString())) {
             throw new IllegalArgumentException("Unknown Server Agent history role");

@@ -16,6 +16,41 @@ final class ModelMessageImageTest {
             new ImageReference("a".repeat(64), "image/png", 32, 24, 100);
 
     @Test
+    void explicitAssociationKeepsOrdinaryAttachmentsIndependentAndAllowsOnlyRealImageBlankInput() {
+        var anchor = dev.openallay.world.InputObservationFixtures.anchor(IMAGE);
+        var associated = ModelMessage.userText("this item").withInputObservation(anchor);
+        assertEquals(anchor, associated.inputObservation().orElseThrow());
+        assertEquals(List.of(new ModelContent.Text("this item")), associated.content());
+        assertTrue(ModelMessage.userText("plain").inputObservation().isEmpty());
+        var imageOnly = ModelMessage.userInput("", List.of(), java.util.Optional.of(anchor));
+        assertEquals(List.of(new ModelContent.Text("")), imageOnly.content());
+        assertSame(imageOnly, ModelMessage.requireUserInput(imageOnly));
+        assertDoesNotThrow(() -> dev.openallay.agent.AgentRequest.validateUserInput(imageOnly));
+        assertEquals("[Image]", dev.openallay.agent.AgentRequest.displayText(imageOnly));
+        assertEquals(List.of(IMAGE), dev.openallay.model.image.ModelImages.occurrences(List.of(imageOnly)));
+        var independent = ModelMessage.userInput("", List.of(IMAGE), java.util.Optional.of(anchor));
+        assertEquals(List.of(IMAGE, IMAGE), dev.openallay.model.image.ModelImages.occurrences(List.of(independent)));
+        assertTrue(dev.openallay.model.image.ModelImages.hasImages(List.of(imageOnly)));
+        assertEquals(List.of(IMAGE), dev.openallay.model.image.ModelImages.uniqueReferences(List.of(independent)));
+        var conflict = ModelMessage.userInput("", List.of(new ImageReference(IMAGE.sha256(), IMAGE.mimeType(),
+                IMAGE.width() + 1, IMAGE.height(), IMAGE.byteSize())), java.util.Optional.of(anchor));
+        assertThrows(IllegalArgumentException.class, () -> dev.openallay.model.image.ModelImages.uniqueReferences(List.of(conflict)));
+        assertThrows(IllegalArgumentException.class, () -> ModelMessage.userInput("", List.of(),
+                java.util.Optional.of(dev.openallay.world.InputObservationFixtures.anchor(null))));
+        assertThrows(IllegalArgumentException.class, () -> new ModelMessage(ModelRole.ASSISTANT,
+                List.of(new ModelContent.Text("answer")), java.util.Optional.of(anchor)));
+        assertThrows(IllegalArgumentException.class, () -> new ModelMessage(ModelRole.USER,
+                List.of(new ModelContent.ToolResult("tool", new JsonPrimitive("result"), false)),
+                java.util.Optional.of(anchor)));
+        assertThrows(IllegalArgumentException.class, () -> new ModelMessage(ModelRole.USER,
+                List.of(new ModelContent.Image(IMAGE, "tool-origin")), java.util.Optional.of(anchor)));
+        var foreignFocus = dev.openallay.world.InputObservationFixtures.focus(java.util.UUID.randomUUID());
+        var mismatched = new dev.openallay.world.ClientObservationAnchor(anchor.associationId(), anchor.capturedAt(),
+                foreignFocus, anchor.image());
+        assertThrows(IllegalArgumentException.class, () -> ModelMessage.userText("look").withInputObservation(mismatched));
+    }
+
+    @Test
     void imageOnlyAndMixedPlayerInputAreTypedAndDetached() {
         var images = new ArrayList<>(List.of(IMAGE));
         var input = ModelMessage.userInput("Look at this", images);

@@ -36,6 +36,41 @@ final class ModelImageProviderEncodingTest {
     private static final ImageReference JPEG = reference("b", "image/jpeg", 64, 48, SECOND.length);
 
     @Test
+    void associatedReferenceIsInsideSamePlayerMessageWithRealBytesAndConciseSourceLabel() {
+        var anchor = dev.openallay.world.InputObservationFixtures.anchor(PNG);
+        for (ModelProtocol protocol : ModelProtocol.values()) {
+            var reads = new ArrayList<ImageReference>();
+            var input = ModelMessage.userText("Which one?").withInputObservation(anchor);
+            var nativeBody = JsonParser.parseString(body(protocol, request(input, image -> {
+                reads.add(image); return FIRST;
+            }))).getAsJsonObject();
+            assertEquals(protocol == ModelProtocol.OPENAI_CHAT ? 2 : 1, nativeBody.getAsJsonArray("messages").size());
+            var parts = content(protocol, nativeBody);
+            assertEquals(3, parts.size());
+            assertEquals("Which one?", parts.get(0).getAsJsonObject().get("text").getAsString());
+            String label = parts.get(1).getAsJsonObject().get("text").getAsString();
+            assertTrue(label.contains("player-input reference context"));
+            assertTrue(label.contains(anchor.capturedAt().toString()));
+            assertTrue(label.contains(anchor.focus().actorId().toString()));
+            assertTrue(label.contains("minecraft:oak_stairs at 12,65,-4"));
+            assertTrue(label.contains("hovered menu slot 4"));
+            assertTrue(label.contains("Named sword"));
+            assertTrue(label.contains(anchor.image().orElseThrow().capturedAt().toString()));
+            assertFalse(label.contains("minecraft:custom_data"));
+            assertFalse(label.contains("9007199254740993"));
+            assertImage(protocol, parts.get(2).getAsJsonObject(), PNG, FIRST);
+            assertEquals(List.of(PNG), reads);
+            var imageOnly = ModelMessage.userInput("", List.of(), java.util.Optional.of(anchor));
+            assertEquals(3, content(protocol, JsonParser.parseString(body(protocol, request(imageOnly,
+                    image -> FIRST))).getAsJsonObject()).size());
+            var focusOnly = ModelMessage.userText("Which item?").withInputObservation(
+                    dev.openallay.world.InputObservationFixtures.anchor(null));
+            assertEquals(2, content(protocol, JsonParser.parseString(body(protocol, request(focusOnly,
+                    image -> { throw new AssertionError("no source frame captured"); }))).getAsJsonObject()).size());
+        }
+    }
+
+    @Test
     void nativeImagesPreserveEveryTextAndImageBlockInOriginalOrder() {
         var message = new ModelMessage(ModelRole.USER, List.of(
                 new ModelContent.Text("before"), new ModelContent.Image(PNG),

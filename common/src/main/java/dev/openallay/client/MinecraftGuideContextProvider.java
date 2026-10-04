@@ -30,6 +30,10 @@ public final class MinecraftGuideContextProvider implements GuideContextProvider
     private final RecipeClientRuntime recipeClient;
     private volatile dev.openallay.script.UnrestrictedJavascriptRuntime unrestrictedJavascript;
     private final RecipeProviderReadinessGate recipeReadiness = new RecipeProviderReadinessGate();
+    private final java.util.Map<String, dev.openallay.world.ClientObservationAnchor> inputObservations =
+            new java.util.concurrent.ConcurrentHashMap<>();
+    private final java.util.concurrent.ConcurrentMap<String, List<dev.openallay.model.image.ImageReference>>
+            detachedObservationImages = new java.util.concurrent.ConcurrentHashMap<>();
 
     public MinecraftGuideContextProvider(
             OpenAllayRuntime runtime,
@@ -57,6 +61,15 @@ public final class MinecraftGuideContextProvider implements GuideContextProvider
     }
 
     @Override
+    public void associateInputObservation(String correlationId,
+            java.util.Optional<dev.openallay.world.ClientObservationAnchor> observation) {
+        java.util.Objects.requireNonNull(correlationId, "correlationId");
+        java.util.Objects.requireNonNull(observation, "observation");
+        if (observation.isPresent()) inputObservations.put(correlationId, observation.orElseThrow());
+        else inputObservations.remove(correlationId);
+    }
+
+    @Override
     public void freezeRequest(String correlationId, boolean clientLocalModel) {
         runtime.commands().freezeRequest(correlationId);
         runtime.extensions().freezeJavascriptRequest(correlationId, clientLocalModel);
@@ -66,10 +79,28 @@ public final class MinecraftGuideContextProvider implements GuideContextProvider
 
     @Override
     public void closeRequest(String correlationId) {
+        inputObservations.remove(correlationId);
         runtime.commands().closeRequest(correlationId);
         runtime.extensions().closeJavascriptRequest(correlationId);
         var javascript = unrestrictedJavascript;
         if (javascript != null) javascript.close(correlationId);
+        runtime.worldObservations().closeObservations(correlationId);
+    }
+
+    @Override
+    public List<dev.openallay.model.image.ImageReference> observationImageReferences(String correlationId) {
+        List<dev.openallay.model.image.ImageReference> detached = detachedObservationImages.get(correlationId);
+        return detached != null ? detached : runtime.worldObservations().producerReferences(correlationId);
+    }
+
+    @Override
+    public java.util.concurrent.CompletableFuture<Void> releaseObservationImages(String correlationId) {
+        // Exact detached requests are released by their detach callback after the whole
+        // connection custody barrier. Do not look up and close a new same-correlation request.
+        if (detachedObservationImages.containsKey(correlationId)) {
+            return java.util.concurrent.CompletableFuture.completedFuture(null);
+        }
+        return runtime.worldObservations().releaseImageProducers(correlationId);
     }
 
     @Override
@@ -108,7 +139,16 @@ public final class MinecraftGuideContextProvider implements GuideContextProvider
                             client,
                             runtime.platform(),
                             player.uuid(),
-                            player.dimension())));
+                            player.dimension(),
+                            runtime.worldObservations(),
+                            correlationId)));
+            var observation = inputObservations.get(correlationId);
+            if (observation != null && context.player().isPresent()) {
+                if (!observation.focus().actorId().equals(context.player().orElseThrow().uuid())) {
+                    throw new IllegalArgumentException("Input reference belongs to another player");
+                }
+                runtime.worldObservations().associate(correlationId, observation);
+            }
             return new ToolResult.Success<>(context);
         } catch (RuntimeException failure) {
             return new ToolResult.Failure<>(
@@ -130,8 +170,28 @@ public final class MinecraftGuideContextProvider implements GuideContextProvider
     }
 
     @Override
-    public void clearConnectionState() {
+    public java.util.concurrent.CompletableFuture<Void> detachConnectionState(
+            java.util.concurrent.CompletableFuture<Void> custody) {
         runtime.knowledge().clearConnectionState();
+        var references = runtime.worldObservations().producerReferenceSnapshot();
+        java.util.Map<String, List<dev.openallay.model.image.ImageReference>> installed = new java.util.LinkedHashMap<>();
+        references.forEach((correlation, images) -> installed.put(correlation,
+                detachedObservationImages.compute(correlation, (key, previous) -> {
+                    List<dev.openallay.model.image.ImageReference> union = new ArrayList<>(
+                            previous == null ? List.of() : previous);
+                    union.addAll(images);
+                    return dev.openallay.model.image.ModelImages.unique(union);
+                })));
+        return runtime.worldObservations().detachConnectionState(custody).thenRun(() ->
+                installed.forEach((correlation, images) -> detachedObservationImages.computeIfPresent(
+                        correlation, (key, current) -> current == images ? null : current)));
+    }
+
+    @Override
+    public void clearConnectionState() {
+        inputObservations.clear();
+        runtime.knowledge().clearConnectionState();
+        runtime.worldObservations().clearConnectionState();
     }
 
     @Override

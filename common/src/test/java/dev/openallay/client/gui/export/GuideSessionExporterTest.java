@@ -35,6 +35,28 @@ final class GuideSessionExporterTest {
     private static final Instant NOW = Instant.parse("2026-07-19T12:34:56.789Z");
 
     @Test
+    void associatedOnlyImageExportPublishesExactAnchorMetadataAndPermanentBytes(@TempDir Path game) throws Exception {
+        byte[] bytes = new byte[] {1, 2, 3, 4};
+        var reference = new ImageReference(java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(bytes)),
+                "image/png", 1, 1, bytes.length);
+        var anchor = dev.openallay.world.InputObservationFixtures.anchor(reference);
+        var input = ModelMessage.userText("which item").withInputObservation(anchor);
+        var request = new GuideSessionExportSnapshot.Request(UUID.randomUUID(), NOW,
+                GuideRequestStatus.COMPLETED, "which item", List.of(), List.of(input), null);
+        var snapshot = new GuideSessionExportSnapshot("main", List.of(request), NOW)
+                .withImagePayloadResolver(value -> { assertEquals(reference, value); return bytes; });
+        var file = new GuideSessionExporter(game).export(snapshot);
+        Path exports = game.resolve("openallay/exports");
+        String text = Files.readString(exports.resolve(file.filename()));
+        assertTrue(text.contains("Associated input source · IMAGE"));
+        assertTrue(text.contains(anchor.associationId().toString()));
+        assertTrue(text.contains(anchor.capturedAt().toString()));
+        assertTrue(text.contains(anchor.focus().actorId().toString()));
+        assertTrue(text.contains("9007199254740993.125"));
+        assertArrayEquals(bytes, Files.readAllBytes(exports.resolve("images/" + reference.sha256() + ".png")));
+    }
+
+    @Test
     void writesChronologicalPlayerTextUnchangedUnderTheFixedManagedRoot(@TempDir Path game)
             throws Exception {
         GuideSessionExporter exporter = new GuideSessionExporter(game);

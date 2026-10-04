@@ -13,17 +13,22 @@ public record ClientToolResultChunkPayload(
     public ClientToolResultChunkPayload {
         java.util.Objects.requireNonNull(requestId, "requestId");
         java.util.Objects.requireNonNull(invocationId, "invocationId");
-        if (index < 0 || total <= 0 || index >= total) {
+        if (index < 0 || total <= 0 || index >= total
+                || total > BridgeProtocol.MAX_REQUEST_CHUNKS) {
             throw new IllegalArgumentException("Invalid client Tool result chunk position");
         }
         if (contentHash == null || !contentHash.matches("[0-9a-f]{64}")) {
             throw new IllegalArgumentException("Invalid client Tool result SHA-256 hash");
         }
-        if (base64Data == null) {
-            throw new IllegalArgumentException("Client Tool result chunk data is required");
+        if (base64Data == null
+                || base64Data.length() > BridgeProtocol.MAX_REQUEST_CHUNK_BASE64_CHARS) {
+            throw new IllegalArgumentException("Client Tool result chunk exceeds transport limits");
         }
         try {
-            java.util.Base64.getDecoder().decode(base64Data);
+            if (java.util.Base64.getDecoder().decode(base64Data).length
+                    > BridgeProtocol.TRANSPORT_CHUNK_BYTES) {
+                throw new IllegalArgumentException("Client Tool result raw chunk exceeds transport limits");
+            }
         } catch (IllegalArgumentException failure) {
             throw new IllegalArgumentException("Client Tool result chunk is not valid base64", failure);
         }

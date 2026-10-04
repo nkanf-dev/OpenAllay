@@ -124,6 +124,17 @@ final class LiveModelContinuationDiagnosticTest {
         if (payload == null) {
             throw new IllegalArgumentException("trace has no retained model request");
         }
+        JsonElement messages = payload.get("messages");
+        if (messages == null || !messages.isJsonArray()) {
+            throw new IllegalArgumentException("retained request messages must be an array");
+        }
+        for (JsonElement encoded : messages.getAsJsonArray()) {
+            if (!encoded.isJsonObject()
+                    || !encoded.getAsJsonObject().keySet().equals(Set.of("role", "content", "inputObservation"))) {
+                throw new IllegalArgumentException("retained message requires current role, content and nullable inputObservation fields");
+            }
+            dev.openallay.world.ClientObservationAnchorJson.decode(encoded.getAsJsonObject().get("inputObservation"));
+        }
         JsonDeserializer<ModelContent> content = (json, type, context) -> {
             JsonObject block = json.getAsJsonObject();
             Set<String> fields = block.keySet();

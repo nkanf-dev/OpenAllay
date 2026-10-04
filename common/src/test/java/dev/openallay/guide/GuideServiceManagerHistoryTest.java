@@ -65,10 +65,8 @@ final class GuideServiceManagerHistoryTest {
         dispatcher.runAll();
         assertEquals(List.of(first), history.loads, "old durable flush must complete before the replacement loads");
         assertFalse(history.secondLoad.isDone());
-        dispatcher.armWorkerHandoff();
         history.flushGate.complete(null);
-        history.secondLoad.get(2, TimeUnit.SECONDS);
-        dispatcher.awaitWorkerHandoff();
+        dispatcher.runUntil(history.secondLoad::isDone);
         dispatcher.runAll();
         assertEquals(List.of(first, second), history.loads);
         assertEquals(GuidePersistenceSnapshot.State.AVAILABLE,
@@ -104,13 +102,13 @@ final class GuideServiceManagerHistoryTest {
         CompletableFuture<ToolResult<String>> tooEarly = replacement.forkSession(
                 "main", UUID.randomUUID(), "not-before-disconnect");
         dispatcher.runAll();
-        assertFailure(tooEarly.get(2, TimeUnit.SECONDS), "history_loading");
+        assertFalse(tooEarly.isDone(), "new owner jobs wait behind actual previous cleanup");
         assertEquals(0, history.forks.size());
-        dispatcher.armWorkerHandoff();
         history.flushGate.complete(null);
-        history.secondLoad.get(2, TimeUnit.SECONDS);
-        dispatcher.awaitWorkerHandoff();
+        dispatcher.runUntil(history.secondLoad::isDone);
         dispatcher.runAll();
+        assertFailure(tooEarly.get(2, TimeUnit.SECONDS), "history_loading");
+        assertEquals(0, history.forks.size(), "the queued early fork must not bypass context readiness");
         assertEquals(GuidePersistenceSnapshot.State.AVAILABLE,
                 replacement.snapshot().persistence().state());
 
@@ -260,12 +258,14 @@ final class GuideServiceManagerHistoryTest {
         private final ArrayDeque<Runnable> queued = new ArrayDeque<>();
         private final Thread owner = Thread.currentThread();
         private volatile CountDownLatch workerHandoff;
+        private final java.util.concurrent.Semaphore available = new java.util.concurrent.Semaphore(0);
 
         @Override
         public void execute(Runnable event) {
             synchronized (queued) {
                 queued.add(event);
             }
+            available.release();
             CountDownLatch handoff = workerHandoff;
             if (Thread.currentThread() != owner && handoff != null) {
                 handoff.countDown();
@@ -284,13 +284,23 @@ final class GuideServiceManagerHistoryTest {
         }
 
         private void runAll() {
-            while (true) {
-                Runnable event;
-                synchronized (queued) {
-                    if (queued.isEmpty()) return;
-                    event = queued.remove();
-                }
-                event.run();
+            while (available.tryAcquire()) runOne();
+        }
+
+        private void runOne() {
+            Runnable event;
+            synchronized (queued) { event = queued.remove(); }
+            event.run();
+        }
+
+        private void runUntil(java.util.function.BooleanSupplier settled) throws Exception {
+            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(3);
+            while (!settled.getAsBoolean()) {
+                long remaining = deadline - System.nanoTime();
+                assertTrue(remaining > 0 && available.tryAcquire(remaining, TimeUnit.NANOSECONDS),
+                        "actual previous cleanup must post the replacement owner job");
+                runOne();
+                runAll();
             }
         }
     }

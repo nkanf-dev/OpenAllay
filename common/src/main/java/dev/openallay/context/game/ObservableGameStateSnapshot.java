@@ -158,12 +158,19 @@ public record ObservableGameStateSnapshot(
             String openScreen,
             String openScreenTitle,
             EvidenceMetadata evidence,
-            List<SectionDiagnostic> diagnostics) {
+            List<SectionDiagnostic> diagnostics,
+            java.util.Optional<dev.openallay.world.WorldFocusObservation> focus) {
         public PlayerUiState {
             openScreen = require(openScreen, "openScreen");
             openScreenTitle = openScreenTitle == null ? "" : openScreenTitle;
             Objects.requireNonNull(evidence, "evidence");
             diagnostics = List.copyOf(diagnostics);
+            focus = Objects.requireNonNull(focus, "focus");
+        }
+
+        public PlayerUiState(PlayerSnapshot player, String openScreen, String openScreenTitle,
+                EvidenceMetadata evidence, List<SectionDiagnostic> diagnostics) {
+            this(player, openScreen, openScreenTitle, evidence, diagnostics, java.util.Optional.empty());
         }
     }
 

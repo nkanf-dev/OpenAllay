@@ -23,6 +23,7 @@ public final class GuideServiceManager {
     private final GuideHistoryScopeProvider historyScopes;
     private final dev.openallay.model.image.ImageAttachmentStore attachmentStore;
     private GuideService current;
+    private CompletableFuture<Void> previousConnection = CompletableFuture.completedFuture(null);
     private final java.util.concurrent.CopyOnWriteArrayList<GuidePresentationListener> presentationListeners =
             new java.util.concurrent.CopyOnWriteArrayList<>();
     private GuideSubscription presentationSubscription;
@@ -74,16 +75,25 @@ public final class GuideServiceManager {
                 || !current.snapshot().actorId().equals(actor)
                 || !Objects.equals(current.historyScope(), scope)) {
             GuideHistoryAccess nextHistory = history;
+            CompletableFuture<Void> readiness = previousConnection;
             if (current != null) {
                 invalidatePresentationBinding();
                 CompletableFuture<Void> disconnected = current.disconnect();
+                CompletableFuture<Void> detached = contexts.detachConnectionState(disconnected);
+                previousConnection = detached;
+                readiness = detached;
                 if (history != null) {
-                    nextHistory = afterDisconnect(disconnected);
+                    nextHistory = afterDisconnect(detached);
                 }
+            } else if (readiness.isDone()) {
+                contexts.clearConnectionState();
             }
-            contexts.clearConnectionState();
+            // Capture this old-connection barrier, not the manager's later mutable field.
+            // A failed custody barrier has still detached native work and cleared the old
+            // endpoint actor; its preserved image pins do not block a new game task.
+            ClientEventDispatcher readyDispatcher = afterDisconnectDispatcher(readiness);
             current = new GuideService(
-                    actor, local, remote, contexts, dispatcher, clock, gson, scope, nextHistory,
+                    actor, local, remote, contexts, readyDispatcher, clock, gson, scope, nextHistory,
                     attachmentStore);
             // Bind synchronously, before this service can be returned for request admission.
             presentationSubscription = current.subscribePresentation(event -> {
@@ -98,15 +108,17 @@ public final class GuideServiceManager {
     }
 
     public synchronized CompletableFuture<Void> disconnect() {
-        contexts.clearConnectionState();
         if (current != null) {
             invalidatePresentationBinding();
             CompletableFuture<Void> disconnected = current.disconnect();
+            CompletableFuture<Void> detached = contexts.detachConnectionState(disconnected);
+            previousConnection = detached;
             current = null;
-            return disconnected;
+            return detached;
         }
+        if (previousConnection.isDone()) contexts.clearConnectionState();
         remote.disconnect();
-        return CompletableFuture.completedFuture(null);
+        return previousConnection;
     }
 
     public CompletableFuture<Void> shutdown() {
@@ -160,6 +172,20 @@ public final class GuideServiceManager {
                     "history_unavailable", "Durable guide history is unavailable"));
         }
         return current.resetHistoryDatabase();
+    }
+
+    /** One service's owner jobs keep arrival order while its previous connection settles. */
+    private ClientEventDispatcher afterDisconnectDispatcher(CompletableFuture<Void> readiness) {
+        return new ClientEventDispatcher() {
+            private CompletableFuture<Void> tail = readiness.handle((ignored, failure) -> null);
+
+            @Override
+            public synchronized void execute(Runnable task) {
+                // Chain scheduling receipts, not independent completion callbacks (which are LIFO).
+                // The native dispatcher owns actual execution after these FIFO posts.
+                tail = tail.handle((ignored, failure) -> null).thenRun(() -> dispatcher.execute(task));
+            }
+        };
     }
 
     private GuideHistoryAccess afterDisconnect(CompletableFuture<Void> disconnected) {

@@ -335,6 +335,70 @@ public final class ServerAgentService {
         }
     }
 
+    /** Result bytes are imported on the tracked image worker before a pending Tool completes. */
+    public CompletableFuture<Void> prepareClientToolImages(
+            UUID actor, UUID requestId, String sessionId,
+            List<dev.openallay.model.image.ImageReference> references,
+            List<dev.openallay.bridge.protocol.ServerAgentImageAttachment> attachments,
+            java.util.function.BooleanSupplier invocationCurrent) {
+        Owner owner = active.get(requestId);
+        if (owner == null || !owner.actorId().equals(actor) || !owner.sessionId().equals(sessionId)
+                || !ownsRequest(actor, requestId) || !invocationCurrent.getAsBoolean()) {
+            return CompletableFuture.failedFuture(new IllegalStateException("Client Tool request scope closed"));
+        }
+        List<dev.openallay.model.image.ImageReference> required;
+        try {
+            required = dev.openallay.model.image.ModelImages.unique(List.copyOf(references));
+            List<dev.openallay.model.image.ImageReference> supplied = attachments.stream()
+                    .map(dev.openallay.bridge.protocol.ServerAgentImageAttachment::reference).toList();
+            if (dev.openallay.model.image.ModelImages.unique(supplied).size() != supplied.size()
+                    || !new java.util.HashSet<>(required).equals(new java.util.HashSet<>(supplied))) {
+                throw new IllegalArgumentException("Client Tool image attachments do not match typed references");
+            }
+            if (required.isEmpty()) return CompletableFuture.completedFuture(null);
+            if (images == null || imageCapability != dev.openallay.model.image.ImageInputCapability.SUPPORTED) {
+                throw new IllegalArgumentException("Server model image input is unavailable");
+            }
+        } catch (RuntimeException invalid) {
+            return CompletableFuture.failedFuture(invalid);
+        }
+        List<dev.openallay.bridge.protocol.ServerAgentImageAttachment> captured = List.copyOf(attachments);
+        return imageOperation(requestId, owner, () -> {
+            try {
+                requireClientToolImport(requestId, owner, invocationCurrent);
+                for (var attachment : captured) {
+                    requireClientToolImport(requestId, owner, invocationCurrent);
+                    var imported = images.importImage(actor,
+                            requestImageOwner(owner.imageScope, requestId), attachment.bytes());
+                    if (!imported.equals(attachment.reference())) {
+                        throw new java.io.IOException("Client Tool image metadata differs from actual image");
+                    }
+                }
+                java.util.LinkedHashSet<dev.openallay.model.image.ImageReference> retained;
+                synchronized (owner) {
+                    requireClientToolImport(requestId, owner, invocationCurrent);
+                    retained = new java.util.LinkedHashSet<>(owner.allowedImages);
+                    retained.addAll(required);
+                }
+                images.retain(actor, requestImageOwner(owner.imageScope, requestId), List.copyOf(retained));
+                synchronized (owner) {
+                    requireClientToolImport(requestId, owner, invocationCurrent);
+                    owner.allowedImages.addAll(required);
+                }
+            } catch (java.io.IOException invalid) {
+                throw new java.io.UncheckedIOException(invalid);
+            }
+        }).thenRun(() -> requireClientToolImport(requestId, owner, invocationCurrent));
+    }
+
+    private void requireClientToolImport(UUID requestId, Owner owner,
+            java.util.function.BooleanSupplier invocationCurrent) {
+        if (!ownsRequest(owner.actorId(), requestId) || active.get(requestId) != owner
+                || !invocationCurrent.getAsBoolean()) {
+            throw new IllegalStateException("Client Tool image request scope closed");
+        }
+    }
+
     public boolean cancel(UUID sender, UUID requestId) {
         Owner owner = active.get(requestId);
         if (owner == null || !owner.actorId().equals(sender)) return false;

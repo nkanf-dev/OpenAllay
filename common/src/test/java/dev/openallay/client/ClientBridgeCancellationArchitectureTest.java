@@ -19,7 +19,8 @@ final class ClientBridgeCancellationArchitectureTest {
             String cancel = block(source, "public boolean cancelServer(UUID requestId)");
             assertTrue(source.contains("Map<UUID, ServerRequest> serverRequests"), bridge::toString);
             String ask = block(source, "public boolean askServer(");
-            assertTrue(ask.contains("new ServerRequest(events)"), bridge::toString);
+            assertTrue(ask.contains("new ServerRequest("), bridge::toString);
+            assertTrue(ask.contains("client.player.getUUID(), client.getConnection(), connectionScope"), bridge::toString);
             assertTrue(ask.contains("serverRequests.put(request.requestId()")
                     || ask.contains("serverRequests.putIfAbsent(request.requestId()"), bridge::toString);
             assertTrue(ask.indexOf("serverRequests.put") < ask.indexOf("requestChunker.split("),
@@ -91,6 +92,35 @@ final class ClientBridgeCancellationArchitectureTest {
             assertTrue(disconnect.contains("serverRequests.clear()"), bridge::toString);
             assertTrue(disconnect.contains("agentEventIds.clear()"), bridge::toString);
             assertTrue(disconnect.contains("agentEventChunks.clear()"), bridge::toString);
+        }
+    }
+
+    @Test
+    void bothLoadersFenceQueuedImageReadsContextCaptureAndEveryNativeResultSend() throws Exception {
+        for (Path bridge : clientBridges()) {
+            String source = Files.readString(bridge);
+            String prepare = block(source, "public void configureResultImages(");
+            assertTrue(prepare.contains("endpoint.configureResultImages("), bridge::toString);
+            assertTrue(prepare.contains("store.read(request.actorId, reference)"), bridge::toString);
+            assertTrue(prepare.indexOf("requireCurrent(requestId, request)")
+                    < prepare.indexOf("store.read(request.actorId, reference)"), bridge::toString);
+            assertTrue(prepare.lastIndexOf("requireCurrent(requestId, request)")
+                    > prepare.indexOf("store.read(request.actorId, reference)"), bridge::toString);
+            String close = block(prepare, "public void close(UUID requestId)");
+            assertTrue(close.contains("contexts.closeRequest(requestId.toString())"), bridge::toString);
+            assertFalse(close.contains("releaseObservationImages"), bridge::toString);
+            String queued = block(source, "private void queueClientToolResult(");
+            assertTrue(queued.contains("Minecraft.getInstance().execute("), bridge::toString);
+            assertTrue(queued.lastIndexOf("current(chunk.requestId(), request)")
+                    > queued.indexOf("Minecraft.getInstance().execute("), bridge::toString);
+            assertTrue(queued.lastIndexOf("current(chunk.requestId(), request)")
+                    < queued.indexOf("send(\"client_tool_result\""), bridge::toString);
+            String identity = block(source, "private boolean current(UUID requestId, ServerRequest request)");
+            assertTrue(identity.contains("serverRequests.get(requestId) == request"), bridge::toString);
+            assertTrue(identity.contains("request.connectionScope == connectionScope"), bridge::toString);
+            assertTrue(identity.contains("getConnection() == request.connection"), bridge::toString);
+            String admission = block(source, "public java.util.function.BooleanSupplier clientToolAdmission(");
+            assertTrue(admission.contains("current(requestId, request)"), bridge::toString);
         }
     }
 
