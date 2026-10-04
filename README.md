@@ -10,7 +10,7 @@ to work through the task and bring useful answers back into the game.
 <img src="docs/media/openallay-banner.png" alt="OpenAllay — your AI companion in Minecraft. Explore, build, and create.">
 
 [Download on GitHub](https://github.com/nkanf-dev/OpenAllay/releases) ·
-[Quick start](#quick-start) · [0.4.0 release notes](docs/releases/0.4.0.md) ·
+[Quick start](#quick-start) · [0.4.1 release notes](docs/releases/0.4.1.md) ·
 [Community](#community-and-development)
 
 | | Make it part of your game |
@@ -22,7 +22,7 @@ to work through the task and bring useful answers back into the game.
 
 ## Quick start
 
-OpenAllay **0.4.0** targets **Minecraft 26.2**, **Java 25**, and **Fabric or
+OpenAllay **0.4.1** targets **Minecraft 26.2**, **Java 25**, and **Fabric or
 NeoForge**. Use [GitHub Releases](https://github.com/nkanf-dev/OpenAllay/releases)
 for published downloads and choose the JAR for your loader. Fabric also needs
 the matching **Fabric API**.

@@ -10,7 +10,7 @@
 <img src="docs/media/openallay-banner.png" alt="OpenAllay — 你的 Minecraft AI 伙伴。探索、建造、创造。">
 
 [GitHub 下载](https://github.com/nkanf-dev/OpenAllay/releases) ·
-[快速上手](#快速上手) · [0.4.0 更新说明](docs/releases/0.4.0.md) ·
+[快速上手](#快速上手) · [0.4.1 更新说明](docs/releases/0.4.1.md) ·
 [社区与开发](#社区与开发)
 
 | | 让它融入你的玩法 |
@@ -22,7 +22,7 @@
 
 ## 快速上手
 
-OpenAllay **0.4.0** 面向 **Minecraft 26.2**，需要 **Java 25**，支持
+OpenAllay **0.4.1** 面向 **Minecraft 26.2**，需要 **Java 25**，支持
 **Fabric 和 NeoForge**。请在
 [GitHub Releases](https://github.com/nkanf-dev/OpenAllay/releases)
 查看已发布的下载包，并选择对应加载器的 JAR。Fabric 还需要安装匹配的
