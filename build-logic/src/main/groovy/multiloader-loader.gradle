@@ -10,26 +10,30 @@ def commonProject = project(':common')
 def commonSources = commonProject.sourceSets.main
 
 def nativeFamily = rootProject.ext.minecraftNativeFamily
-def baseJava = file('src/main/java')
-def targetJava = file("src/targets/${nativeFamily}/java")
-def baseResources = file('src/main/resources')
-def targetResources = file("src/targets/${nativeFamily}/resources")
-def replacedBase = { element, File base, File overrides ->
-    !element.directory && element.file.toPath().startsWith(base.toPath())
-            && new File(overrides, element.relativePath.pathString).isFile()
+def selectedTarget = rootProject.ext.minecraftTarget
+def javaRoots = [file('src/main/java'), file("src/targets/${nativeFamily}/java")]
+def resourceRoots = [file('src/main/resources'), file("src/targets/${nativeFamily}/resources")]
+if (selectedTarget != nativeFamily) {
+    javaRoots.add(file("src/targets/${selectedTarget}/java"))
+    resourceRoots.add(file("src/targets/${selectedTarget}/resources"))
+}
+def overridden = { element, List<File> roots ->
+    if (element.directory) return false
+    def index = roots.findIndexOf { element.file.toPath().startsWith(it.toPath()) }
+    index >= 0 && roots.drop(index + 1).any { new File(it, element.relativePath.pathString).isFile() }
 }
 sourceSets.main.java {
-    srcDir(targetJava)
-    exclude { element -> replacedBase(element, baseJava, targetJava) }
+    javaRoots.drop(1).each { srcDir(it) }
+    exclude { element -> overridden(element, javaRoots) }
 }
 sourceSets.main.resources {
-    srcDir(targetResources)
-    exclude { element -> replacedBase(element, baseResources, targetResources) }
+    resourceRoots.drop(1).each { srcDir(it) }
+    exclude { element -> overridden(element, resourceRoots) }
 }
 
 
 dependencies {
-    testImplementation('com.google.code.gson:gson:2.14.0')
+    testImplementation('com.google.code.gson:gson:2.11.0')
     testImplementation('org.junit.jupiter:junit-jupiter:5.11.4')
     testRuntimeOnly('org.junit.platform:junit-platform-launcher:1.11.4')
     compileOnly(project(':common')) {

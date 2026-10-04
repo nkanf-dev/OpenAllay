@@ -1,32 +1,32 @@
 import org.gradle.api.file.SourceDirectorySet
 import org.gradle.api.tasks.PathSensitivity
 
-// Apply only to common. Do not copy shared code or create target-specific build/cache trees.
+// Shared source families plus small exact-target overrides reuse one implementation.
 def selectedTarget = rootProject.ext.minecraftTarget
 def nativeFamily = rootProject.ext.minecraftNativeFamily
-def baseJava = file('src/main/java')
-def targetJava = file("src/targets/${nativeFamily}/java")
-def baseResources = file('src/main/resources')
-def targetResources = file("src/targets/${nativeFamily}/resources")
-
-// SourceDirectorySet excludes see FileTreeElement.file as well as its relative path.
-// A path-only exclude would also remove the selected replacement from the second root.
-def isReplacedBaseFile = { element, File base, File overrides ->
-    !element.directory && element.file.toPath().startsWith(base.toPath())
-            && new File(overrides, element.relativePath.pathString).isFile()
+def javaRoots = [file('src/main/java'), file("src/targets/${nativeFamily}/java")]
+def resourceRoots = [file('src/main/resources'), file("src/targets/${nativeFamily}/resources")]
+if (selectedTarget != nativeFamily) {
+    javaRoots.add(file("src/targets/${selectedTarget}/java"))
+    resourceRoots.add(file("src/targets/${selectedTarget}/resources"))
+}
+def overridden = { element, List<File> roots ->
+    if (element.directory) return false
+    def index = roots.findIndexOf { element.file.toPath().startsWith(it.toPath()) }
+    index >= 0 && roots.drop(index + 1).any { new File(it, element.relativePath.pathString).isFile() }
 }
 sourceSets.main.java {
-    srcDir(targetJava)
-    exclude { element -> isReplacedBaseFile(element, baseJava, targetJava) }
+    javaRoots.drop(1).each { srcDir(it) }
+    exclude { element -> overridden(element, javaRoots) }
 }
 sourceSets.main.resources {
-    srcDir(targetResources)
-    exclude { element -> isReplacedBaseFile(element, baseResources, targetResources) }
+    resourceRoots.drop(1).each { srcDir(it) }
+    exclude { element -> overridden(element, resourceRoots) }
 }
-// Native build plugins must inspect the same selected AT/access-widener resource.
+// Native plugins use the exact same selected AT/access-widener resource.
 ext.selectedMinecraftTargetResource = { String relativePath ->
-    def override = new File(targetResources, relativePath)
-    override.isFile() ? override : new File(baseResources, relativePath)
+    resourceRoots.reverse().collect { new File(it, relativePath) }.find { it.isFile() }
+            ?: new File(resourceRoots.first(), relativePath)
 }
 
 // Java's package plus filename defines each primary compilation unit identity.
