@@ -49,7 +49,7 @@ public final class GuideNativeToast extends GuideNativeToastBinding implements G
     @Override public int width() { return width; }
     @Override public int height() { return HEIGHT; }
     @Override public int occcupiedSlotCount() { return 2; }
-    @Override public float yPos(int firstSlotIndex) { return firstSlotIndex * 32.0F; }
+    public float yPos(int firstSlotIndex) { return firstSlotIndex * 32.0F; }
 
     private boolean valid() { return !hidden && !finished && notification.fence().valid(); }
 

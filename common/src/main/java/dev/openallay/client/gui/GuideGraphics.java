@@ -24,6 +24,11 @@ public final class GuideGraphics {
         this.graphics = Objects.requireNonNull(graphics, "graphics");
     }
 
+    /** Run one complete paint; the native canvas owns deferred tooltip rendering. */
+    public void paint(Runnable paint) {
+        Objects.requireNonNull(paint, "paint").run();
+    }
+
     public static GuideGraphics wrap(GuiGraphicsExtractor graphics) {
         return new GuideGraphics(graphics);
     }
