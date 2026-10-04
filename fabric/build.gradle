@@ -7,7 +7,7 @@ pluginManager.apply(remapMinecraft ? 'net.fabricmc.fabric-loom-remap' : 'net.fab
 def modImplementationConfiguration = remapMinecraft ? 'modImplementation' : 'implementation'
 def modCompileOnlyConfiguration = remapMinecraft ? 'modCompileOnly' : 'compileOnly'
 def keyApiArtifact = remapMinecraft ? 'fabric-key-binding-api-v1' : 'fabric-key-mapping-api-v1'
-def resourceApiArtifact = minecraftNativeFamily == '1.21.8' ? 'fabric-resource-loader-v0' : 'fabric-resource-loader-v1'
+def resourceApiArtifact = minecraftNativeSourceFamilies.contains('1.21.8') ? 'fabric-resource-loader-v0' : 'fabric-resource-loader-v1'
 dependencies {
     implementation(project(":engine-core"))
     implementation(project(":adapters:minecraft-26.2"))
@@ -30,7 +30,7 @@ dependencies {
     implementation(include("org.commonmark:commonmark-ext-gfm-tables:${commonmark_version}"))
     implementation(include("dev.latvian.mods:rhino:${rhino_version}"))
     implementation(include("com.knuddels:jtokkit:${jtokkit_version}"))
-    add(modCompileOnlyConfiguration, "mezz.jei:jei-${minecraft_version}-fabric-api:${jei_version}")
+    add(modCompileOnlyConfiguration, "mezz.jei:jei-${jeiArtifactTarget}-fabric-api:${jei_version}")
     add(modCompileOnlyConfiguration, "me.shedaniel:RoughlyEnoughItems-api-fabric:${rei_version}")
     add(modCompileOnlyConfiguration, "dev.architectury:architectury-fabric:${architectury_version}")
 }

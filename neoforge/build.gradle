@@ -21,7 +21,7 @@ dependencies {
     jarJar("dev.latvian.mods:rhino:${rhino_version}")
     implementation("com.knuddels:jtokkit:${jtokkit_version}")
     jarJar("com.knuddels:jtokkit:${jtokkit_version}")
-    compileOnly("mezz.jei:jei-${minecraft_version}-neoforge-api:${jei_version}")
+    compileOnly("mezz.jei:jei-${jeiArtifactTarget}-neoforge-api:${jei_version}")
     compileOnly("me.shedaniel:RoughlyEnoughItems-api-neoforge:${rei_version}")
     compileOnly("dev.architectury:architectury-neoforge:${architectury_version}")
 }

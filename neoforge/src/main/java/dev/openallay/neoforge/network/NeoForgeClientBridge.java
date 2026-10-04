@@ -25,8 +25,6 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
-import net.neoforged.neoforge.client.network.ClientPacketDistributor;
-import net.neoforged.neoforge.client.network.event.RegisterClientPayloadHandlersEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
@@ -66,8 +64,7 @@ public final class NeoForgeClientBridge {
             });
 
     public void register(IEventBus modBus) {
-        modBus.addListener((RegisterClientPayloadHandlersEvent event) ->
-                event.register(NeoForgeBridgePayloads.Packet.TYPE, this::receive));
+        NeoForgeNativeClientPayloads.register(modBus, this::receive);
         NeoForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.LoggingOut event) -> {
             disconnectState();
             disconnectListeners.forEach(Runnable::run);
@@ -418,7 +415,7 @@ public final class NeoForgeClientBridge {
     }
 
     private void send(String kind, Object payload) {
-        ClientPacketDistributor.sendToServer(
+        NeoForgeNativeClientPayloads.send(
                 new NeoForgeBridgePayloads.Packet(kind, codec.encode(payload)));
     }
 }
