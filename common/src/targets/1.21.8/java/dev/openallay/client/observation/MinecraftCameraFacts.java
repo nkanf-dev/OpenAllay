@@ -13,7 +13,7 @@ public final class MinecraftCameraFacts {
         var position = camera.getPosition();
         var entity = camera.getEntity();
         float fov = ((GameRendererFovAccess) client.gameRenderer).openallay$computedFov(camera,
-                client.getDeltaTracker().getGameTimeDeltaPartialTick(false), true);
+                client.getDeltaTracker().getGameTimeDeltaPartialTick(true), true);
         return new WorldFocusObservation.Camera(position.x(), position.y(), position.z(),
                 camera.getYRot(), camera.getXRot(), fov,
                 client.options.getCameraType().name().toLowerCase(java.util.Locale.ROOT),
