@@ -32,6 +32,7 @@ import dev.openallay.trace.json.TraceParser;
 import dev.openallay.trace.minecraft.TraceReplayService;
 import dev.openallay.trace.minecraft.TraceRepository;
 import dev.openallay.trace.replay.AgentTraceReplayer;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -40,6 +41,7 @@ public final class OpenAllayBootstrap {
     private static OpenAllayRuntime runtime;
     private static final List<OpenAllayExtension> pendingExtensions = new ArrayList<>();
     private static dev.openallay.extension.universal.UniversalExtensionDiscovery universalExtensions;
+    private static dev.openallay.extension.universal.BundledUniversalExtensions bundledExtensions;
     private static final Set<String> implementedExtensionApis = Set.of(
             OpenAllayConstants.EXTENSION_API_VERSION, "0.3.0");
 
@@ -146,6 +148,21 @@ public final class OpenAllayBootstrap {
                         result.extensionId(), result.diagnostic());
             }
         }
+        try {
+            Path bundledCache = platform.extensionDirectory().getParent().resolve(".bundled-extensions");
+            bundledExtensions = dev.openallay.extension.universal.BundledUniversalExtensions.open(
+                    bundledCache, extensions, host,
+                    dev.openallay.api.extension.OpenAllayExtension.class.getClassLoader(),
+                    path -> OpenAllayBootstrap.class.getClassLoader().getResourceAsStream(path));
+            for (var result : bundledExtensions.results()) {
+                if (result.state() != dev.openallay.extension.OpenAllayExtensionState.ACTIVE) {
+                    OpenAllayConstants.LOGGER.warn("Bundled Extension registration rejected: {} ({})",
+                            result.extensionId(), result.diagnostic());
+                }
+            }
+        } catch (java.io.IOException | IllegalArgumentException failure) {
+            OpenAllayConstants.LOGGER.warn("Bundled Extension startup failed", failure);
+        }
         TraceReplayService traceReplay = new TraceReplayService(
                 new TraceRepository(new TraceParser()),
                 new MinecraftContextCapture(gson),
@@ -191,13 +208,16 @@ public final class OpenAllayBootstrap {
     public static java.util.concurrent.CompletableFuture<Void> shutdownExtensions() {
         OpenAllayRuntime captured;
         dev.openallay.extension.universal.UniversalExtensionDiscovery discovery;
+        dev.openallay.extension.universal.BundledUniversalExtensions bundled;
         synchronized (OpenAllayBootstrap.class) {
             captured = runtime;
             discovery = universalExtensions;
+            bundled = bundledExtensions;
         }
         if (captured == null) return java.util.concurrent.CompletableFuture.completedFuture(null);
         return captured.extensions().shutdown().thenRun(() -> {
             if (discovery != null) discovery.close();
+            if (bundled != null) bundled.close();
         });
     }
 

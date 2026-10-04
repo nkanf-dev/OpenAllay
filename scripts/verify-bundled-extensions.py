@@ -1,28 +1,57 @@
 #!/usr/bin/env python3
-"""Verify default nested Extensions, loader registration, and source provenance."""
+"""Verify and stage one universal Builder resource with exact source provenance.
+
+The Builder JAR is a raw core-owned resource, never a loader-registered mod.
+Only the explicit source preparation command may access Git remotes.
+"""
 from __future__ import annotations
 
 import argparse
+import hashlib
+from importlib.util import module_from_spec, spec_from_file_location
 from io import BytesIO
 import json
+import os
 from pathlib import Path
-import sys
 import re
+import subprocess
+import sys
+import tempfile
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 PROVENANCE = "META-INF/openallay/distribution.json"
 DESCRIPTOR = "META-INF/openallay-extension.json"
+RESOURCE_DIRECTORY = "META-INF/openallay/bundled-extensions/"
 SHARED_ENTRIES = {
     "dev/openallay/builder/BuilderExtension.class",
     "dev/openallay/builder/BuilderRuntime.class",
     "dev/openallay/builder/BuilderSession.class",
+    "dev/openallay/builder/internal/gson/Strictness.class",
     "assets/openallay_builder/building.js",
     "assets/openallay_builder/terrain.js",
     "assets/openallay_builder/presets.js",
     "assets/openallay_builder/openallay_skills/minecraft-builder/SKILL.md",
     DESCRIPTOR,
 }
+MANIFEST_FIELDS = {"schemaVersion", "id", "name", "version", "entrypoint", "provider", "summary", "source", "support"}
+SUPPORT_FIELDS = {"targets", "minimumJavaVersion", "requiredHostFeatures", "validatedTargetIds"}
+TARGET_FIELDS = {"loader", "minecraftVersionRange", "openAllayVersionRange", "openAllayApiVersionRange"}
+PROVENANCE_FIELDS = {"source", "project", "version", "extensionId", "openAllayApiVersion", "artifact"}
+SOURCE_FIELDS = {"repository", "revision", "dirty", "pinned"}
+FORBIDDEN_PREFIXES = ("net/minecraft/", "net/minecraftforge/", "net/fabricmc/", "net/neoforged/",
+    "cpw/mods/", "org/spongepowered/asm/", "baritone/", "com/google/gson/", "META-INF/versions/", "dev/openallay/builder/fabric/",
+    "dev/openallay/builder/neoforge/")
+FORBIDDEN_ENTRIES = {"fabric.mod.json", "META-INF/neoforge.mods.toml", "META-INF/mods.toml",
+    "mcmod.info", "module-info.class"}
+# This verifier checks the currently pinned independently released Builder package,
+# not community package compatibility. The host uses Maven for range semantics.
+SDK_VERSION = "0.3.0"
+SDK_SUPPORT_RANGE = "[0.3.0,0.4.0)"
+
+_spec = spec_from_file_location("distribution_source", ROOT / "scripts/prepare-distribution.py")
+prepare = module_from_spec(_spec)
+_spec.loader.exec_module(prepare)
 
 
 def require(condition: bool, message: str) -> None:
@@ -30,179 +59,272 @@ def require(condition: bool, message: str) -> None:
         raise ValueError(message)
 
 
-def class_annotations(content: bytes) -> dict:
-    """Read class-level runtime annotations, without loading client classes."""
-    stream = BytesIO(content)
+def resource_path(lock: dict) -> str:
+    return RESOURCE_DIRECTORY + Path(lock["artifact"]).name
 
-    def read(size):
-        value = stream.read(size)
-        require(len(value) == size, "Truncated loader entrypoint class")
+
+def string(value: object, name: str) -> str:
+    require(isinstance(value, str) and bool(value.strip()), f"Expected nonblank {name} string")
+    return value
+
+
+def strings(value: object, name: str, pattern: str) -> list[str]:
+    require(isinstance(value, list), f"Expected {name} array")
+    require(all(isinstance(item, str) and re.fullmatch(pattern, item) for item in value),
+        f"Invalid {name} string")
+    require(len(value) == len(set(value)), f"Duplicate {name} string")
+    return value
+
+
+def exact(value: object, fields: set[str], name: str) -> None:
+    prepare.exact_fields(value, fields, name)
+
+
+def support_range(value: object, name: str) -> str:
+    """Validate SDK declaration syntax only; Maven range matching stays in the host."""
+    value = string(value, name)
+    version = r"[0-9A-Za-z][0-9A-Za-z._+\-]*"
+    if re.fullmatch(version, value):
         return value
-
-    def number(size):
-        return int.from_bytes(read(size), "big")
-
-    require(read(4) == b"\xca\xfe\xba\xbe", "Invalid loader entrypoint class")
-    read(4)  # Class minor/major versions.
-    pool = [None] * number(2)
-    index = 1
-    sizes = {3: 4, 4: 4, 5: 8, 6: 8, 7: 2, 8: 2, 9: 4, 10: 4, 11: 4,
-             12: 4, 15: 3, 16: 2, 17: 4, 18: 4, 19: 2, 20: 2}
-    while index < len(pool):
-        tag = number(1)
-        if tag == 1:
-            # Relevant annotation names and enum values are ASCII; unrelated JVM
-            # modified-UTF8 strings need not be interpreted by this checker.
-            pool[index] = read(number(2)).decode("utf-8", errors="replace")
-        else:
-            require(tag in sizes, "Unsupported constant-pool entry")
-            read(sizes[tag])
-            if tag in (5, 6):
-                index += 1
-        index += 1
-
-    def text():
-        value = pool[number(2)]
-        require(isinstance(value, str), "Annotation references a non-string constant")
-        return value
-
-    def annotation():
-        name = text()
-        values = {}
-        for _ in range(number(2)):
-            key = text()
-            values[key] = element()
-        return name, values
-
-    def element():
-        tag = chr(number(1))
-        if tag == "s":
-            return text()
-        if tag in "BCDFIJSZ":
-            return (tag, number(2))
-        if tag == "e":
-            return ("enum", text(), text())
-        if tag == "c":
-            return ("class", text())
-        if tag == "@":
-            return annotation()
-        if tag == "[":
-            return [element() for _ in range(number(2))]
-        raise ValueError("Unsupported annotation element")
-
-    def skip_attributes():
-        for _ in range(number(2)):
-            read(2)
-            read(number(4))
-
-    read(6)  # Access flags, this class, super class.
-    read(2 * number(2))  # Interfaces.
-    for _ in range(2):  # Fields, then methods.
-        for _ in range(number(2)):
-            read(6)
-            skip_attributes()
-    annotations = {}
-    for _ in range(number(2)):
-        name = text()
-        length = number(4)
-        end = stream.tell() + length
-        if name in ("RuntimeVisibleAnnotations", "RuntimeInvisibleAnnotations"):
-            for _ in range(number(2)):
-                annotation_name, values = annotation()
-                annotations[annotation_name] = values
-            require(stream.tell() == end, "Invalid annotation attribute length")
-        else:
-            read(length)
-    return annotations
+    require(len(value) >= 3 and value[0] in "[(" and value[-1] in ")]", f"Invalid {name}")
+    body = value[1:-1]
+    if "," not in body:
+        require(value[0] == "[" and value[-1] == "]" and re.fullmatch(version, body), f"Invalid {name}")
+    else:
+        require(body.count(",") == 1, f"Invalid {name}")
+        lower, upper = (item.strip() for item in body.split(","))
+        require(bool(lower or upper), f"Invalid {name}")
+        require(bool(lower) or value[0] == "(", f"Invalid {name}")
+        require(bool(upper) or value[-1] == ")", f"Invalid {name}")
+        require(not lower or re.fullmatch(version, lower), f"Invalid {name}")
+        require(not upper or re.fullmatch(version, upper), f"Invalid {name}")
+    return value
 
 
-def verify_package(path: Path, loader: str, lock: dict, allow_unpinned: bool = False) -> None:
+def verify_manifest(content: bytes, lock: dict) -> dict:
+    descriptor = prepare.decode_json(content)
+    require(isinstance(descriptor, dict), "Expected universal manifest object")
+    exact({key: value for key, value in descriptor.items() if key != "requirements"},
+        MANIFEST_FIELDS, "Universal manifest")
+    require(type(descriptor["schemaVersion"]) is int and descriptor["schemaVersion"] == 2,
+        "Not a schema 2 universal Extension package")
+    for field in ("id", "name", "version", "entrypoint", "provider", "summary", "source"):
+        string(descriptor[field], field)
+    require(descriptor["id"] == lock["extensionId"], "Wrong Extension ID")
+    require(descriptor["version"] == lock["version"], "Wrong Extension version")
+    require(descriptor["entrypoint"] == "dev.openallay.builder.BuilderExtension", "Wrong Builder entrypoint")
+    support = descriptor["support"]
+    exact(support, SUPPORT_FIELDS, "Universal support")
+    require(type(support["minimumJavaVersion"]) is int and support["minimumJavaVersion"] == 8,
+        "Universal Builder must declare Java8 support")
+    features = strings(support["requiredHostFeatures"], "requiredHostFeatures",
+        r"[a-z0-9][a-z0-9_.-]*(?::[a-z0-9_][a-z0-9_./-]*)?")
+    require(features == ["minecraft:world-access"], "Wrong Builder host features")
+    strings(support["validatedTargetIds"], "validatedTargetIds",
+        r"[a-z0-9][a-z0-9_.-]*(?::[a-z0-9_][a-z0-9_./-]*)?")
+    targets = support["targets"]
+    require(isinstance(targets, list) and bool(targets), "Support targets must be a nonempty array")
+    require(lock["openAllayApiVersion"] == SDK_VERSION, "Unsupported pinned Builder SDK version")
+    encoded_targets = []
+    for target in targets:
+        exact(target, TARGET_FIELDS, "Universal support target")
+        for field in TARGET_FIELDS - {"loader"}:
+            support_range(target[field], field)
+        string(target["loader"], "loader")
+        require(re.fullmatch(r"[a-z][a-z0-9_.-]*", target["loader"]) is not None, "Invalid loader ID")
+        require(target["openAllayApiVersionRange"] == SDK_SUPPORT_RANGE, "Wrong Builder SDK support range")
+        encoded_targets.append(tuple(target[field] for field in sorted(TARGET_FIELDS)))
+    require(len(encoded_targets) == len(set(encoded_targets)), "Duplicate support target")
+    require({target["loader"] for target in targets} == {"fabric", "neoforge"},
+        "Builder must declare both current loaders in one package")
+    requirements = descriptor.get("requirements", {})
+    require(isinstance(requirements, dict) and set(requirements) <= {"capabilities", "extensions", "skills"},
+        "Invalid universal requirements fields")
+    patterns = {"capabilities": r"[a-z0-9][a-z0-9_.-]*(?::[a-z0-9_][a-z0-9_./-]*)?",
+        "extensions": r"[a-z0-9_.-]+:[a-z0-9_./-]+", "skills": r"[a-z0-9]+(?:-[a-z0-9]+)*"}
+    for field, pattern in patterns.items():
+        values = strings(requirements.get(field, []), f"requirements.{field}", pattern)
+        if field == "skills":
+            require(all(len(item) <= 64 for item in values), "Invalid Skill ID length")
+    require(requirements.get("capabilities") == ["openallay_builder:world_write"],
+        "Wrong Builder world-write requirement")
+    return descriptor
+
+
+def archive_entries(archive: zipfile.ZipFile, name: str) -> list[str]:
+    entries = archive.namelist()
+    require(len(entries) == len(set(entries)), f"Duplicate entries in {name}")
+    for entry in entries:
+        if not entry.endswith("/"):
+            prepare.relative_path(entry)
+    return entries
+
+
+def verify_universal(content: bytes, lock: dict) -> None:
+    with zipfile.ZipFile(BytesIO(content)) as nested:
+        entries = archive_entries(nested, "universal Extension")
+        require(SHARED_ENTRIES.issubset(entries), "Builder classes, canonical Skill/JS or private Gson missing")
+        verify_manifest(nested.read(DESCRIPTOR), lock)
+        for name in entries:
+            require(name not in FORBIDDEN_ENTRIES and not name.startswith(FORBIDDEN_PREFIXES)
+                and "BuilderEntrypoint" not in name and "BuilderEntry.class" not in name,
+                f"Nonportable or legacy loader payload: {name}")
+            if name.endswith(".class"):
+                require(not name.startswith("dev/openallay/") or name.startswith("dev/openallay/builder/"),
+                    f"Extension duplicates OpenAllay core/SDK classes: {name}")
+                header = nested.read(name)[:8]
+                require(len(header) == 8 and header[:4] == b"\xca\xfe\xba\xbe", f"Invalid class header: {name}")
+                require(int.from_bytes(header[6:8], "big") == 52, f"Non-Java8 class: {name}")
+
+
+def verify_provenance(provenance: dict, lock: dict, digest: str, allow_unpinned: bool) -> None:
+    exact(provenance, PROVENANCE_FIELDS, "Distribution provenance")
+    source = provenance["source"]
+    exact(source, SOURCE_FIELDS, "Distribution source provenance")
+    require(source["repository"] == lock["source"]["repository"], "Source repository mismatch")
+    require(isinstance(source["revision"], str) and re.fullmatch(r"[0-9a-f]{40}", source["revision"]),
+        "Invalid source revision")
+    require(type(source["dirty"]) is bool and type(source["pinned"]) is bool, "Source flags must be booleans")
+    for field in ("project", "version", "extensionId", "openAllayApiVersion"):
+        require(provenance[field] == lock[field], f"Extension provenance {field} mismatch")
+    if not allow_unpinned or source["pinned"]:
+        require(source["pinned"] is True, "Unpinned development build is not a distribution")
+        require(source["dirty"] is False, "Dirty Extension source is not a distribution")
+        require(source["revision"] == lock["source"]["revision"], "Source revision mismatch")
+    artifact = provenance["artifact"]
+    exact(artifact, {"path", "sha256"}, "Distribution artifact provenance")
+    require(artifact["path"] == resource_path(lock), "Wrong distribution artifact path")
+    require(artifact["sha256"] == digest, "Bundled Builder SHA-256 mismatch")
+
+
+def reject_builder_registration(archive: zipfile.ZipFile, entries: list[str], loader: str, lock: dict) -> None:
+    if loader == "fabric":
+        metadata = prepare.decode_json(archive.read("fabric.mod.json"))
+        registered = [item["file"] for item in metadata.get("jars", [])]
+        require(metadata.get("id") != "openallay_builder", "Core is a duplicate Builder mod")
+    else:
+        metadata = (prepare.decode_json(archive.read("META-INF/jarjar/metadata.json"))
+            if "META-INF/jarjar/metadata.json" in entries else {"jars": []})
+        registered = [item["path"] for item in metadata["jars"]]
+        require(not re.search(r"\bmodId\s*=\s*['\"]openallay_builder['\"]",
+            archive.read("META-INF/neoforge.mods.toml").decode("utf-8")), "Core is a duplicate Builder mod")
+    require(resource_path(lock) not in registered, "Raw Builder resource must not be loader registered")
+    for path in registered:
+        require(isinstance(path, str) and path in entries, "Registered loader JAR is missing")
+    # Detect renamed duplicate Builder mods/Extensions too, not only known filenames.
+    for path in entries:
+        if not path.endswith(".jar") or path == resource_path(lock):
+            continue
+        with zipfile.ZipFile(BytesIO(archive.read(path))) as nested:
+            names = archive_entries(nested, "ordinary nested dependency")
+            if DESCRIPTOR in names:
+                descriptor = prepare.decode_json(nested.read(DESCRIPTOR))
+                require(descriptor.get("id") != lock["extensionId"], "Duplicate bundled Builder Extension ID")
+            require(not any(name.startswith("dev/openallay/builder/") for name in names),
+                "Duplicate Builder classes in ordinary loader dependency")
+            if "fabric.mod.json" in names:
+                mod = prepare.decode_json(nested.read("fabric.mod.json"))
+                require(mod.get("id") != "openallay_builder", "Duplicate legacy Builder mod")
+            for name in ("META-INF/neoforge.mods.toml", "META-INF/mods.toml"):
+                if name in names:
+                    require(not re.search(r"\bmodId\s*=\s*['\"]openallay_builder['\"]",
+                        nested.read(name).decode("utf-8")), "Duplicate legacy Builder mod")
+            if "mcmod.info" in names:
+                require("openallay_builder" not in nested.read("mcmod.info").decode("utf-8"),
+                    "Duplicate legacy Builder mod")
+
+
+def verify_package(path: Path, loader: str, lock: dict, allow_unpinned: bool = False) -> str:
+    prepare.validate_manifest(lock)
+    require(loader in {"fabric", "neoforge"}, "Unknown core loader")
     with zipfile.ZipFile(path) as archive:
-        entries = archive.namelist()
-        require(len(entries) == len(set(entries)), "Duplicate entries in product JAR")
+        entries = archive_entries(archive, "product JAR")
         require(not any(name.startswith("dev/openallay/builder/") for name in entries),
-                "Builder classes were flattened into core instead of independently nested")
-        provenance = json.loads(archive.read(PROVENANCE))
-        require(provenance["source"]["repository"] == lock["source"]["repository"], "Source repository mismatch")
-        require(provenance["project"] == lock["project"], "Extension source project mismatch")
-        require(provenance["version"] == lock["version"], "Extension provenance version mismatch")
-        require(provenance["modId"] == lock["modId"], "Extension provenance mod ID mismatch")
-        if not allow_unpinned:
-            require(provenance["source"].get("pinned") is True, "Unpinned development build is not a distribution")
-            require(provenance["source"].get("dirty") is False, "Dirty Extension source is not a distribution")
-            require(provenance["source"]["revision"] == lock["source"]["revision"], "Source revision mismatch")
-        if loader == "fabric":
-            metadata = json.loads(archive.read("fabric.mod.json"))
-            registered = [item["file"] for item in metadata.get("jars", [])]
-        else:
-            metadata = json.loads(archive.read("META-INF/jarjar/metadata.json"))
-            registered = [item["path"] for item in metadata["jars"]]
-        candidates = [name for name in entries if name.endswith(".jar") and "openallay-builder-" in name]
-        require(len(candidates) == 1, "Exactly one native Builder Extension must be nested")
-        nested_path = candidates[0]
-        require(nested_path in registered, "Nested Builder is not registered with the loader")
-        require(Path(nested_path).name.endswith(Path(lock["artifacts"][loader]).name), "Wrong loader artifact nested")
-        if loader == "neoforge":
-            item = next(item for item in metadata["jars"] if item["path"] == nested_path)
-            require(item["identifier"] == {"group": "dev.openallay.builder",
-                    "artifact": f"openallay-builder-neoforge-{lock['minecraftVersion']}"}, "Invalid JarJar identity")
-            require(item["version"]["artifactVersion"] == lock["version"], "Invalid JarJar version")
-        with zipfile.ZipFile(BytesIO(archive.read(nested_path))) as nested:
-            nested_entries = nested.namelist()
-            require(len(nested_entries) == len(set(nested_entries)), "Duplicate entries in nested Extension")
-            require(SHARED_ENTRIES.issubset(nested_entries), "Builder native classes, Skill, or JS library missing")
-            require(not any(name.endswith(".class") and name.startswith("dev/openallay/")
-                            and not name.startswith("dev/openallay/builder/") for name in nested_entries), "Nested Extension duplicates OpenAllay core classes")
-            require(not any(name.startswith(("net/minecraft/", "net/fabricmc/", "net/neoforged/", "baritone/"))
-                            for name in nested_entries), "Nested Extension bundles platform or unrelated classes")
-            descriptor = json.loads(nested.read(DESCRIPTOR))
-            require(descriptor["id"] == lock["extensionId"], "Wrong Extension ID")
-            require(descriptor["version"] == lock["version"], "Wrong Extension version")
-            require(descriptor["loaders"] == [loader], "Wrong Extension loader descriptor")
-            require(descriptor["modIds"] == [lock["modId"]], "Wrong Extension mod binding")
-            if loader == "fabric":
-                mod = json.loads(nested.read("fabric.mod.json"))
-                entrypoint = "dev.openallay.builder.fabric.BuilderFabricEntrypoint"
-                require(mod["id"] == lock["modId"] and mod["version"] == lock["version"], "Wrong Fabric mod identity")
-                require(mod.get("environment") == "client", "Fabric Builder must be client-only")
-                require(entrypoint in mod["entrypoints"]["main"], "Fabric entrypoint is not registered")
-                require("openallay" in mod["depends"], "Fabric core dependency is missing")
-            else:
-                mod = nested.read("META-INF/neoforge.mods.toml").decode("utf-8")
-                entrypoint = "dev.openallay.builder.neoforge.BuilderNeoForgeEntrypoint"
-                tables = re.findall(r"(?ms)^\[\[([^]\n]+)\]\]\s*\n(.*?)(?=^\[|\Z)", mod)
-                values = [(name, dict(re.findall(r'(?m)^\s*(\w+)\s*=\s*"([^"\n]*)"', body)))
-                          for name, body in tables]
-                require(any(name == "mods" and item.get("modId") == lock["modId"]
-                            and item.get("version") == lock["version"] for name, item in values),
-                        "Wrong NeoForge mod identity")
-                require(any(name == f"dependencies.{lock['modId']}" and item.get("modId") == "openallay"
-                            and item.get("ordering") == "AFTER" for name, item in values),
-                        "NeoForge core ordering is missing")
-            entrypoint_path = entrypoint.replace(".", "/") + ".class"
-            require(entrypoint_path in nested_entries, "Native loader entrypoint class is missing")
-            if loader == "neoforge":
-                annotations = class_annotations(nested.read(entrypoint_path))
-                mod_annotation = annotations.get("Lnet/neoforged/fml/common/Mod;", {})
-                require(mod_annotation.get("value") == lock["modId"], "NeoForge @Mod identity is missing")
-                require(mod_annotation.get("dist") == [("enum", "Lnet/neoforged/api/distmarker/Dist;", "CLIENT")],
-                        "NeoForge Builder @Mod must be client-only")
+            "Builder classes were flattened into core instead of a raw resource")
+        expected = resource_path(lock)
+        candidates = [name for name in entries if name.endswith(".jar")
+            and (name.startswith(RESOURCE_DIRECTORY) or "openallay-builder-" in name)]
+        require(candidates == [expected], "Exactly one universal Builder resource must be bundled")
+        require(DESCRIPTOR not in entries, "Universal Extension descriptor was flattened into core")
+        require(PROVENANCE in entries, "Missing distribution provenance")
+        content = archive.read(expected)
+        digest = hashlib.sha256(content).hexdigest()
+        provenance = prepare.decode_json(archive.read(PROVENANCE))
+        verify_provenance(provenance, lock, digest, allow_unpinned)
+        reject_builder_registration(archive, entries, loader, lock)
+        verify_universal(content, lock)
+        return digest
+
+
+def verify_packages(fabric: Path, neoforge: Path, lock: dict, allow_unpinned: bool = False) -> str:
+    fabric_digest = verify_package(fabric, "fabric", lock, allow_unpinned)
+    neoforge_digest = verify_package(neoforge, "neoforge", lock, allow_unpinned)
+    require(fabric_digest == neoforge_digest, "Both loaders must bundle identical universal Builder bytes")
+    with zipfile.ZipFile(fabric) as fabric_archive, zipfile.ZipFile(neoforge) as neoforge_archive:
+        require(fabric_archive.read(resource_path(lock)) == neoforge_archive.read(resource_path(lock)),
+            "Both loaders must bundle identical decompressed universal Builder bytes")
+    return fabric_digest
+
+
+def stage_distribution(source: Path, output: Path, lock: dict, allow_unpinned: bool = False) -> dict:
+    """Run only after the delegated build; failed verification leaves prior output intact."""
+    prepare.validate_manifest(lock)
+    source_evidence = prepare.verify_source(source, lock, allow_unpinned)
+    artifact = source / lock["project"] / lock["artifact"]
+    require(artifact.resolve().is_relative_to(source.resolve()), "Artifact escapes source checkout")
+    content = artifact.read_bytes()
+    verify_universal(content, lock)
+    provenance = {"source": {**lock["source"], **source_evidence},
+        **{field: lock[field] for field in ("project", "version", "extensionId", "openAllayApiVersion")},
+        "artifact": {"path": resource_path(lock), "sha256": hashlib.sha256(content).hexdigest()}}
+    verify_provenance(provenance, lock, provenance["artifact"]["sha256"], allow_unpinned)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix=".bundled-extensions-", dir=output.parent) as directory:
+        staged = Path(directory) / "resources"
+        artifact_output = staged / resource_path(lock)
+        artifact_output.parent.mkdir(parents=True)
+        artifact_output.write_bytes(content)
+        provenance_output = staged / PROVENANCE
+        provenance_output.write_text(json.dumps(provenance, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        previous = Path(directory) / "previous"
+        if output.exists():
+            os.replace(output, previous)
+        try:
+            os.replace(staged, output)
+        except OSError:
+            if previous.exists():
+                os.replace(previous, output)
+            raise
+    return provenance
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("fabric", type=Path)
-    parser.add_argument("neoforge", type=Path)
+    parser.add_argument("fabric", type=Path, nargs="?")
+    parser.add_argument("neoforge", type=Path, nargs="?")
     parser.add_argument("--manifest", type=Path, default=ROOT / "distribution/extensions.lock.json")
-    parser.add_argument("--allow-unpinned", action="store_true", help="Check local package contents, not release provenance")
+    parser.add_argument("--allow-unpinned", action="store_true", help="Explicit local development only")
+    parser.add_argument("--stage", action="store_true", help="Stage resources after a successful delegated build")
+    parser.add_argument("--source-directory", type=Path)
+    parser.add_argument("--output-directory", type=Path)
     args = parser.parse_args()
     try:
-        lock = json.loads(args.manifest.read_text(encoding="utf-8"))
-        for loader in ("fabric", "neoforge"):
-            verify_package(getattr(args, loader), loader, lock, args.allow_unpinned)
-        print("bundled_extension_verification=passed")
+        lock = prepare.load_manifest(args.manifest)
+        if args.stage:
+            if args.fabric or args.neoforge or not args.source_directory or not args.output_directory:
+                raise ValueError("--stage requires only --source-directory and --output-directory")
+            provenance = stage_distribution(args.source_directory.resolve(), args.output_directory.resolve(),
+                lock, args.allow_unpinned)
+            print(json.dumps(provenance, sort_keys=True))
+        else:
+            if not args.fabric or not args.neoforge or args.source_directory or args.output_directory:
+                raise ValueError("Verification requires both Fabric and NeoForge JARs")
+            digest = verify_packages(args.fabric, args.neoforge, lock, args.allow_unpinned)
+            print(f"bundled_extension_sha256={digest}")
+            print("bundled_extension_verification=passed")
         return 0
-    except (ValueError, KeyError, IndexError, OSError, zipfile.BadZipFile, StopIteration) as exc:
+    except (ValueError, KeyError, TypeError, IndexError, OSError, subprocess.CalledProcessError,
+            zipfile.BadZipFile) as exc:
         print(f"Bundled Extension verification failed: {exc}", file=sys.stderr)
         return 1
 

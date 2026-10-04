@@ -43,17 +43,28 @@ OPENALLAY_CURL_PROXY=socks5h://127.0.0.1:7890 ./gradlew-curl build
 
 ### Default distribution
 
-Both loader artifacts bundle the separately built Builder Extension from
-`OpenAllay-Extensions`. The lock at `distribution/extensions.lock.json` pins
-Builder 0.2.1 to `0b6eba3b03ebdbdb00f732170b1fef283ed5dada`. This source revision
-updates compatibility to OpenAllay 0.4.x and retains batched operations,
-incremental journals, and scoped native APIs without granting Agent JVM access.
-Its 221 common tests, both loader builds, and package checks passed. Historical
-0.3.0 gates remain in the
-[0.3.0 verification record](verification/2026-10-01-openallay-0.3.0-release.md).
-Product, Extension, and API versions are independent.
-Installation does not enable JVM authority. Player automation and Baritone
-integration remain research-only.
+The development distribution bundles **one universal Builder 0.3.0 JAR** from
+`OpenAllay-Extensions`. The current lock at `distribution/extensions.lock.json`
+pins source `7c43a2162cf34501c4383e28481d4c63c2e057c0` and one artifact path.
+Both loaders contain the same raw resource at
+`META-INF/openallay/bundled-extensions/openallay-builder-universal-0.3.0.jar`.
+Builder is not registered as a Fabric or NeoForge mod. The host supplies public
+Extension API 0.3.0, the native game adapter and frozen world-write grants.
+Builder's domain code, Skills, JavaScript, templates and journals remain one
+Java-8 Extension payload with privately shaded Gson.
+
+At normal startup, community packages in `config/openallay/extensions/` are
+admitted first. An ACTIVE package with the same ID takes precedence over the
+bundled package. Otherwise, the host verifies the bundled SHA-256 and manifest,
+stages it under `config/openallay/.bundled-extensions/<sha256>/`, and uses the
+same universal discovery path. It never overwrites a community JAR. Accepted
+classloaders remain open until actual invocation workers finish at shutdown.
+
+The published **v0.4.1** downloads remain unchanged: Builder 0.2.1 and legacy API
+0.2.2. This development switch does not amend that release. Product, Extension
+and API versions are independent. A Java-8 Extension is not proof that the core
+runs on stock Forge 1.12.2. Player automation and Baritone remain research-only;
+installation does not enable Agent JVM authority.
 
 Prepare the exact source before a full distribution build:
 
@@ -673,9 +684,12 @@ authorization. Required-mods compatibility and actual Tool policy remain separat
 See [decision 035](isme/decisions/2026-09-30-035-advisory-extension-skill-requirements.md).
 
 Builder code, Skill, modules, native scheduling, templates, and journals belong
-to `OpenAllay-Extensions`, not core. Builder 0.2.1 requires product
-`[0.4.0,0.5)` and public Extension API `[0.2.2,0.3)`. Its backend uses the active
-integrated server through invocation-scoped native bindings. World mutation
+to `OpenAllay-Extensions`, not core. Development Builder 0.3.0 declares current
+26.2 Fabric and NeoForge targets, product `[0.4.1,)`, public Extension API
+`[0.3.0,0.4.0)`, and the actual `minecraft:world-access` host feature. The native
+adapter uses the active integrated server through invocation-scoped `WorldSession`
+operations. The published v0.4.1 Builder 0.2.1 contract remains historical.
+World mutation
 requires the client-local `openallay_builder:world_write` grant for
 `openallay:builder`, not unrestricted JavaScript. It does not edit client world
 mirrors, open offline saves, add a remote write protocol, or fall back to commands.

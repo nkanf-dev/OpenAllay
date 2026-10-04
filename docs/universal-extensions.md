@@ -11,17 +11,19 @@ use stable host interfaces instead of linking to a specific game's native classe
 One unchanged Java-8 Extension fixture has run on JVM 8, 11, 17, 21 and 25.
 The same universal fixture JAR has also been discovered at normal startup in actual
 Minecraft 26.2 Fabric and NeoForge clients. Its registered host method executed
-through RunJS. The existing Builder 0.2.1 remained active, and real framework shutdown
-completed before accepted package classloaders were released.
+through RunJS. In that initial bridge test, the legacy Builder 0.2.1 remained active. Real
+framework shutdown completed before accepted package classloaders were released.
 
 This proves the shared SDK and current host integration. It does not yet make the
 current Minecraft 26.2 core executable on stock Forge 1.12.2. The classic game runtime,
-native adapters and a native-neutral Builder payload are separate work in progress.
+native adapters remain separate work in progress.
 Current development 26.2 client hosts now advertise `minecraft:world-access` only
 when their actual native adapter is installed. The SDK backend has passed native
 permission-freeze and write/read/restore tests on both loaders. The standalone shared
-Builder business payload still requires its own actual-game acceptance before a
-release pin changes.
+Builder 0.3.0 business payload has also passed actual 26.2 Fabric and NeoForge
+acceptance with the same Java-8 JAR. The current development distribution now
+bundles that one universal artifact. These development changes do not amend the
+published v0.4.1 downloads or establish older-game support.
 
 ## Build against the SDK
 
@@ -99,6 +101,19 @@ and Skill requirements; it is not an installation or permission gate.
 Startup retains accepted package classloaders for the framework lifetime. Closing a
 world is not framework shutdown. At shutdown, invocation admission closes, native
 activity is revoked, and actual worker cleanup completes before classloaders close.
+
+## Core-bundled packages
+
+Both current loader artifacts embed the same Builder JAR as a raw resource, not a
+loader mod or JarJar Builder dependency. Exact source and artifact SHA-256
+provenance is stored at `META-INF/openallay/distribution.json`.
+The host admits community packages first. An ACTIVE same-ID package wins without
+reading or extracting the bundled payload. Otherwise, the verified package is
+staged under `config/openallay/.bundled-extensions/<sha256>/` and admitted through
+the normal universal discovery implementation. Invalid or corrupt cache files
+are preserved and reported, not overwritten. No remote download or source build
+runs inside Minecraft. The host closes bundled and community package classloaders
+only after admitted workers release their invocation hooks.
 
 ## Shared Builder and game adapters
 
