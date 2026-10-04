@@ -4,7 +4,8 @@ import java.util.Properties
 if (project != rootProject) {
     throw new GradleException('Minecraft target profiles must be selected by the root project')
 }
-def supportedTargets = ['26.1.2', '26.2', '26.3']
+def nativeFamilies = ['26.1': '26.1', '26.1.1': '26.1', '26.1.2': '26.1', '26.2': '26.2', '26.3': '26.3']
+def supportedTargets = nativeFamilies.keySet().toList()
 def selectedTarget = providers.gradleProperty('minecraftTarget').getOrElse('26.2')
 if (!(selectedTarget in supportedTargets)) {
     throw new GradleException("Unknown minecraftTarget '${selectedTarget}'; choose ${supportedTargets.join(', ')}")
@@ -76,6 +77,7 @@ allprojects { candidate ->
 }
 allprojects { candidate ->
     candidate.extensions.extraProperties.set('minecraftTarget', selectedTarget)
+    candidate.extensions.extraProperties.set('minecraftNativeFamily', nativeFamilies[selectedTarget])
     candidate.extensions.extraProperties.set('minecraftTargetProfile', profile)
     profile.each { key, value -> candidate.extensions.extraProperties.set(key, value) }
 }

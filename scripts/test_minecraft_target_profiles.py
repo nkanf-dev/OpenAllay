@@ -59,7 +59,7 @@ def properties(text):
 
 
 def validate_profile(text, target="26.2", competing=()):
-    if target not in ("26.2", "26.3"):
+    if target not in ("26.1", "26.1.1", "26.1.2", "26.2", "26.3"):
         raise ValueError("unknown target")
     profile = properties(text)
     if set(profile) != PROFILE_FIELDS:
@@ -120,7 +120,7 @@ class MinecraftTargetProfileSourceTest(unittest.TestCase):
         self.assertEqual(PINS_26_2, validate_profile(self.profile("26.2")))
         selector = self.source("gradle/minecraft-targets.gradle")
         self.assertIn("getOrElse('26.2')", selector)
-        self.assertIn("def supportedTargets = ['26.1.2', '26.2', '26.3']", selector)
+        self.assertIn("def nativeFamilies = ['26.1': '26.1', '26.1.1': '26.1', '26.1.2': '26.1'", selector)
 
     def test_explicit_26_3_is_the_audited_candidate_tuple(self):
         self.assertEqual(PINS_26_3, validate_profile(self.profile("26.3"), "26.3"))
@@ -180,8 +180,8 @@ class MinecraftTargetProfileSourceTest(unittest.TestCase):
         family = self.source("gradle/minecraft-source-family.gradle")
         self.assertIn("element.file.toPath().startsWith(base.toPath())", family)
         self.assertIn("new File(overrides, element.relativePath.pathString).isFile()", family)
-        self.assertIn("src/targets/${selectedTarget}/java", family)
-        self.assertIn("src/targets/${selectedTarget}/resources", family)
+        self.assertIn("src/targets/${nativeFamily}/java", family)
+        self.assertIn("src/targets/${nativeFamily}/resources", family)
         self.assertNotIn("**/Native.java", family)
 
     def test_java_loader_collisions_and_misplaced_fqn_fail(self):

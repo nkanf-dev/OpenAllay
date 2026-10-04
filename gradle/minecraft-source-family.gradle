@@ -3,10 +3,11 @@ import org.gradle.api.tasks.PathSensitivity
 
 // Apply only to common. Do not copy shared code or create target-specific build/cache trees.
 def selectedTarget = rootProject.ext.minecraftTarget
+def nativeFamily = rootProject.ext.minecraftNativeFamily
 def baseJava = file('src/main/java')
-def targetJava = file("src/targets/${selectedTarget}/java")
+def targetJava = file("src/targets/${nativeFamily}/java")
 def baseResources = file('src/main/resources')
-def targetResources = file("src/targets/${selectedTarget}/resources")
+def targetResources = file("src/targets/${nativeFamily}/resources")
 
 // SourceDirectorySet excludes see FileTreeElement.file as well as its relative path.
 // A path-only exclude would also remove the selected replacement from the second root.
