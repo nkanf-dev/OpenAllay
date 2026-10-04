@@ -10,9 +10,6 @@ dependencies {
     jarJar(project(":extension-api"))
     implementation("org.apache.maven:maven-artifact:3.9.9")
     jarJar("org.apache.maven:maven-artifact:3.9.9")
-    if (rootProject.bundleExtensions) {
-        jarJar(project(path: ':', configuration: 'bundledExtensionNeoforge'))
-    }
     implementation("org.xerial:sqlite-jdbc:${sqlite_jdbc_version}")
     jarJar("org.xerial:sqlite-jdbc:${sqlite_jdbc_version}")
     implementation("org.commonmark:commonmark:${commonmark_version}")

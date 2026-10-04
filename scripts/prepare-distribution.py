@@ -19,24 +19,63 @@ DEFAULT_MANIFEST = ROOT / "distribution/extensions.lock.json"
 DEFAULT_SOURCE = ROOT / ".gradle/distribution-sources/openallay-extensions"
 
 
-def load_manifest(path: Path) -> dict:
-    data = json.loads(path.read_text(encoding="utf-8"))
+def decode_json(content: str | bytes) -> dict:
+    """Standard JSON parser with duplicate members and non-finite values rejected."""
+    def object_pairs(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError(f"Duplicate JSON member: {key}")
+            result[key] = value
+        return result
+
+    def invalid_constant(value):
+        raise ValueError(f"Non-finite JSON number: {value}")
+
+    return json.loads(content, object_pairs_hook=object_pairs, parse_constant=invalid_constant)
+
+
+def exact_fields(value: object, fields: set[str], name: str) -> None:
+    if not isinstance(value, dict) or set(value) != fields:
+        raise ValueError(f"{name} fields do not match the current shape")
+
+
+def relative_path(value: object) -> str:
+    if not isinstance(value, str) or not value or value.strip() != value:
+        raise ValueError("Extension paths must be nonblank relative paths")
+    path = PurePosixPath(value)
+    if (path.is_absolute() or ".." in path.parts or "\\" in value or ":" in value
+            or path.as_posix() != value or value == "."):
+        raise ValueError("Extension paths must be relative and cannot traverse directories")
+    return value
+
+
+def validate_manifest(data: object) -> dict:
+    exact_fields(data, {"source", "project", "version", "extensionId", "openAllayApiVersion", "artifact"},
+        "Extension lock")
     source = data["source"]
-    if not re.fullmatch(r"[0-9a-f]{40}", source["revision"]):
+    exact_fields(source, {"repository", "revision"}, "Extension source")
+    if not isinstance(source["revision"], str) or not re.fullmatch(r"[0-9a-f]{40}", source["revision"]):
         raise ValueError("Extension source revision must be a full 40-character Git commit")
+    if not isinstance(source["repository"], str):
+        raise ValueError("Extension source repository must be an HTTPS URL without credentials")
     url = urlparse(source["repository"])
     if url.scheme != "https" or not url.hostname or url.username or url.password:
         raise ValueError("Extension source repository must be an HTTPS URL without credentials")
-    for value in [data["project"], *data["artifacts"].values()]:
-        path_value = PurePosixPath(value)
-        if path_value.is_absolute() or ".." in path_value.parts or "\\" in value:
-            raise ValueError("Extension paths must be relative and cannot traverse directories")
-    if set(data["artifacts"]) != {"fabric", "neoforge"}:
-        raise ValueError("Extension lock must include Fabric and NeoForge artifacts")
-    for field in ("version", "minecraftVersion", "modId", "extensionId"):
-        if not isinstance(data.get(field), str) or not data[field]:
-            raise ValueError(f"Missing Extension {field}")
+    for field in ("project", "artifact"):
+        relative_path(data[field])
+    if not data["artifact"].endswith(".jar"):
+        raise ValueError("Extension artifact must be a JAR path")
+    for field in ("version", "openAllayApiVersion"):
+        if not isinstance(data[field], str) or not re.fullmatch(r"[0-9A-Za-z][0-9A-Za-z._+\-]*", data[field]):
+            raise ValueError(f"Invalid Extension {field}")
+    if not isinstance(data["extensionId"], str) or not re.fullmatch(r"[a-z0-9_.-]+:[a-z0-9_./-]+", data["extensionId"]):
+        raise ValueError("Invalid Extension extensionId")
     return data
+
+
+def load_manifest(path: Path) -> dict:
+    return validate_manifest(decode_json(path.read_text(encoding="utf-8")))
 
 
 def git(source: Path, *args: str) -> str:
@@ -51,6 +90,8 @@ def verify_source(source: Path, manifest: dict, allow_unpinned: bool = False) ->
         raise ValueError("Extension source is not prepared. Run python3 scripts/prepare-distribution.py")
     if Path(git(source, "rev-parse", "--show-toplevel")).resolve() != source.resolve():
         raise ValueError("Extension source must be the root of its own Git checkout")
+    if git(source, "remote", "get-url", "origin") != manifest["source"]["repository"]:
+        raise ValueError("Extension source checkout origin does not match the lock")
     revision = git(source, "rev-parse", "HEAD")
     dirty = bool(git(source, "status", "--porcelain", "--untracked-files=all"))
     if not allow_unpinned:
@@ -59,6 +100,8 @@ def verify_source(source: Path, manifest: dict, allow_unpinned: bool = False) ->
         if dirty:
             raise ValueError("Extension source has uncommitted changes; a distribution requires clean pinned source")
     project = source / manifest["project"]
+    if not project.resolve().is_relative_to(source.resolve()):
+        raise ValueError("Extension project escapes the source checkout")
     if not (project / "settings.gradle").is_file():
         raise ValueError(f"Extension project is missing at {project}; check the source lock revision")
     return {"revision": revision, "dirty": dirty, "pinned": not allow_unpinned}
