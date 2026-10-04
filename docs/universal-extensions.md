@@ -17,7 +17,11 @@ completed before accepted package classloaders were released.
 This proves the shared SDK and current host integration. It does not yet make the
 current Minecraft 26.2 core executable on stock Forge 1.12.2. The classic game runtime,
 native adapters and a native-neutral Builder payload are separate work in progress.
-The current universal host does not advertise a native `WorldSession` backend.
+Current development 26.2 client hosts now advertise `minecraft:world-access` only
+when their actual native adapter is installed. The SDK backend has passed native
+permission-freeze and write/read/restore tests on both loaders. The standalone shared
+Builder business payload still requires its own actual-game acceptance before a
+release pin changes.
 
 ## Build against the SDK
 

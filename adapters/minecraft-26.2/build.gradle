@@ -1,0 +1,44 @@
+plugins {
+    id 'java-library'
+    id 'net.neoforged.moddev'
+}
+
+group = 'dev.openallay'
+version = rootProject.version
+base { archivesName = 'openallay-minecraft-26.2-world-adapter' }
+
+java {
+    toolchain { languageVersion = JavaLanguageVersion.of(25) }
+    withSourcesJar()
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = 25
+    options.encoding = 'UTF-8'
+}
+
+neoForge {
+    neoFormVersion = providers.gradleProperty('neo_form_version').getOrElse('26.2-1')
+}
+
+dependencies {
+    // The host supplies the sole SDK identity. No common/core or Extension domain dependency.
+    compileOnly(project(':extension-api'))
+    // Minecraft and its Gson/serialization libraries come from the NeoForm compile artifact.
+    // Do not add game libraries to the SDK or publish another runtime copy of Gson.
+    testImplementation(project(':extension-api'))
+    testImplementation('org.junit.jupiter:junit-jupiter:5.11.4')
+    testRuntimeOnly('org.junit.platform:junit-platform-launcher:1.11.4')
+}
+
+tasks.withType(Jar).configureEach {
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+    systemProperty('minecraft26Adapter.sources', file('src/main/java').absolutePath)
+    systemProperty('minecraft26Adapter.classes', sourceSets.main.output.classesDirs.asPath)
+    systemProperty('minecraft26Adapter.buildFile', file('build.gradle').absolutePath)
+}

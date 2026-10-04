@@ -4,6 +4,8 @@ plugins {
 }
 
 dependencies {
+    implementation(project(":adapters:minecraft-26.2"))
+    // Native code belongs in the game mod layer, not an independently loaded library layer.
     implementation(project(":extension-api"))
     jarJar(project(":extension-api"))
     implementation("org.apache.maven:maven-artifact:3.9.9")
@@ -94,4 +96,9 @@ sourceSets.configureEach {
             }
         }
     }
+}
+
+// Keep source/build isolation while loading native game adapters with the core mod.
+tasks.named('jar', Jar) {
+    from(project(':adapters:minecraft-26.2').sourceSets.main.output)
 }

@@ -31,6 +31,14 @@ public final class FabricPlatformService implements PlatformService {
     }
 
     @Override
+    public java.util.Optional<dev.openallay.api.extension.MinecraftWorldAccess> minecraftWorldAccess() {
+        if (FabricLoader.getInstance().getEnvironmentType() != net.fabricmc.api.EnvType.CLIENT) {
+            return java.util.Optional.empty();
+        }
+        return java.util.Optional.of(new dev.openallay.adapter.minecraft.v26_2.world.Minecraft26WorldAccess());
+    }
+
+    @Override
     public boolean isModLoaded(String modId) {
         return FabricLoader.getInstance().isModLoaded(modId);
     }

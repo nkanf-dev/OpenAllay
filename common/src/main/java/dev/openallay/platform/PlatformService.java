@@ -18,6 +18,11 @@ public interface PlatformService {
         throw new UnsupportedOperationException("Extension directory is unavailable");
     }
 
+    /** Optional native adapter. Construction must not capture a player, connection or world. */
+    default java.util.Optional<dev.openallay.api.extension.MinecraftWorldAccess> minecraftWorldAccess() {
+        return java.util.Optional.empty();
+    }
+
     boolean isModLoaded(String modId);
 
     boolean isDevelopmentEnvironment();

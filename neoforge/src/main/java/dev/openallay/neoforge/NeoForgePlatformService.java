@@ -33,6 +33,14 @@ public final class NeoForgePlatformService implements PlatformService {
     }
 
     @Override
+    public java.util.Optional<dev.openallay.api.extension.MinecraftWorldAccess> minecraftWorldAccess() {
+        if (!net.neoforged.fml.loading.FMLEnvironment.getDist().isClient()) {
+            return java.util.Optional.empty();
+        }
+        return java.util.Optional.of(new dev.openallay.adapter.minecraft.v26_2.world.Minecraft26WorldAccess());
+    }
+
+    @Override
     public boolean isModLoaded(String modId) {
         return ModList.get().isLoaded(modId);
     }

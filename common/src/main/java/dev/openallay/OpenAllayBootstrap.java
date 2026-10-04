@@ -129,12 +129,14 @@ public final class OpenAllayBootstrap {
             }
         }
         pendingExtensions.clear();
-        var environment = universalEnvironment(platform);
-        var host = dev.openallay.extension.universal.UniversalExtensionBridge.host(environment, invocation -> {
-            invocation.requireActive();
-            throw new dev.openallay.api.extension.ExtensionException(
-                    "world_backend_unavailable", "A native world backend is unavailable on this host");
-        });
+        var worldAccess = platform.minecraftWorldAccess();
+        var environment = universalEnvironment(platform, worldAccess.isPresent());
+        var host = dev.openallay.extension.universal.UniversalExtensionBridge.host(environment,
+                worldAccess.orElseGet(() -> invocation -> {
+                    invocation.requireActive();
+                    throw new dev.openallay.api.extension.ExtensionException(
+                            "world_backend_unavailable", "A native world backend is unavailable on this host");
+                }));
         universalExtensions = new dev.openallay.extension.universal.UniversalExtensionDiscovery(
                 platform.extensionDirectory(), extensions, host,
                 dev.openallay.api.extension.OpenAllayExtension.class.getClassLoader());
@@ -171,11 +173,18 @@ public final class OpenAllayBootstrap {
 
     /** Loader display names and public support IDs are distinct; normalize at the adapter seam. */
     static dev.openallay.api.extension.ExtensionEnvironment universalEnvironment(PlatformService platform) {
+        return universalEnvironment(platform, platform.minecraftWorldAccess().isPresent());
+    }
+
+    private static dev.openallay.api.extension.ExtensionEnvironment universalEnvironment(
+            PlatformService platform, boolean nativeWorldAvailable) {
+        Set<String> features = new java.util.HashSet<>(Set.of(
+                "openallay:javascript_host", "openallay:skills", "openallay:semantic_results"));
+        if (nativeWorldAvailable) features.add("minecraft:world-access");
         return new dev.openallay.api.extension.ExtensionEnvironment(
                 platform.platformName().toLowerCase(java.util.Locale.ROOT),
                 platform.gameVersion(), platform.productVersion(), implementedExtensionApis,
-                Runtime.version().feature(),
-                Set.of("openallay:javascript_host", "openallay:skills", "openallay:semantic_results"));
+                Runtime.version().feature(), features);
     }
 
     /** Loader shutdown keeps package classes alive until admitted Extension hooks unwind. */
