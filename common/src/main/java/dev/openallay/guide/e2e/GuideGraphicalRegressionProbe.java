@@ -862,7 +862,7 @@ final class GuideGraphicalRegressionProbe {
             }
             case 1 -> {
                 require(guide().getFocused() == composer(), "New Guide did not focus its actual native composer");
-                require(guide().charTyped(new CharacterEvent('x')), "Initial native character was not routed to composer");
+                require(guide().charTyped(GuideNativeInput.characterEvent('x')), "Initial native character was not routed to composer");
                 require("x".equals(composer().getValue()), "Initial character callback did not edit native input");
                 checkpoint("live-01-initial-character-focus", true);
                 clickAt(guide(), 1, 1, "blank-outside-composer");
@@ -880,7 +880,7 @@ final class GuideGraphicalRegressionProbe {
                 recordAction("native-key", "END/focused-composer-before-typed-PTT-key");
                 require(endHandled && guide().getFocused() == composer(), "Native End did not retain composer focus");
                 guide().keyPressed(GuideNativeInput.keyEvent(InputConstants.KEY_V, 0));
-                boolean characterHandled = guide().charTyped(new CharacterEvent('v'));
+                boolean characterHandled = guide().charTyped(GuideNativeInput.characterEvent('v'));
                 guide().keyReleased(GuideNativeInput.keyEvent(InputConstants.KEY_V, 0));
                 report.put("typedPttKeyNativeEdit", Map.of("beforeValue", beforeTypedPttKey,
                         "afterValue", composer().getValue(), "endKeyHandled", endHandled,
@@ -1399,7 +1399,7 @@ final class GuideGraphicalRegressionProbe {
         diagnostic.put("screenClass", guide().getClass().getName());
         diagnostic.put("screenWidth", guide().width);
         diagnostic.put("screenHeight", guide().height);
-        diagnostic.put("windowFocused", window.isFocused());
+        diagnostic.put("windowFocused", client.isWindowActive());
         diagnostic.put("clientWindowActive", client.isWindowActive());
         diagnostic.put("windowLogicalWidth", window.getScreenWidth());
         diagnostic.put("windowLogicalHeight", window.getScreenHeight());

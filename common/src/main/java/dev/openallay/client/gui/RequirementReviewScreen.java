@@ -9,14 +9,14 @@ import dev.openallay.settings.SettingsOperation;
 import dev.openallay.settings.requirement.RequirementReview;
 import dev.openallay.tool.ToolResult;
 import java.util.Objects;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import dev.openallay.client.gui.GuideGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.network.chat.Component;
 
 /** Reviews the already checked candidate; only Continue anyway publishes it. */
-public final class RequirementReviewScreen extends Screen {
+public final class RequirementReviewScreen extends dev.openallay.client.gui.GuideNativeScreen {
     private static final String PREFIX = RequirementSettingsProjection.PREFIX;
     private static final int TEXT = 0xFFE8EDF2;
     private static final int MUTED = 0xFFA9B3BE;
@@ -144,7 +144,7 @@ public final class RequirementReviewScreen extends Screen {
     private int viewportBottom() { return height - 38; }
 
     /** Shared measuring/rendering pass keeps every row and action reachable by scrolling. */
-    private void layoutContents(GuiGraphicsExtractor graphics, boolean buttons) {
+    private void layoutContents(GuideGraphics graphics, boolean buttons) {
         int x = left() + 8;
         int w = panelWidth() - 16;
         int start = viewportTop() + 7 - scroll;
@@ -222,7 +222,7 @@ public final class RequirementReviewScreen extends Screen {
                 Component.translatable(row.statusKey()));
     }
 
-    private int text(GuiGraphicsExtractor graphics, Component value, int x, int y, int w, int color) {
+    private int text(GuideGraphics graphics, Component value, int x, int y, int w, int color) {
         for (var line : font.split(value, Math.max(20, w))) {
             if (graphics != null) graphics.text(font, line, x, y, color, false);
             y += 11;
@@ -343,13 +343,13 @@ public final class RequirementReviewScreen extends Screen {
     }
 
     @Override
-    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float tick) {
+    protected void paintGuideScreen(GuideGraphics graphics, int mouseX, int mouseY, float tick) {
         graphics.fill(0, 0, width, height, 0xF00B0D12);
         graphics.text(font, title, left() + 8, 14, ACCENT, false);
         graphics.fill(left(), viewportTop(), left() + panelWidth(), viewportBottom(), 0xE0181B22);
         graphics.enableScissor(left(), viewportTop(), left() + panelWidth(), viewportBottom());
         layoutContents(graphics, false);
         graphics.disableScissor();
-        super.extractRenderState(graphics, mouseX, mouseY, tick);
+        renderGuideWidgets(graphics, mouseX, mouseY, tick);
     }
 }

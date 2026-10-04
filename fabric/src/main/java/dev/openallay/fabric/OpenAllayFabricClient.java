@@ -28,7 +28,6 @@ import dev.openallay.recipe.config.RecipeClientRuntime;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
-import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
@@ -172,7 +171,7 @@ public final class OpenAllayFabricClient implements ClientModInitializer {
                 Minecraft.getInstance(), runtime.platform(), runtime.worldObservations(), ui, services);
         HudElementRegistry.attachElementBefore(VanillaHudElements.CHAT,
                 Identifier.fromNamespaceAndPath("openallay", "guide_hud"),
-                (graphics, deltaTracker) -> ui.extractRenderState(graphics));
+                (graphics, deltaTracker) -> ui.extractRenderState(dev.openallay.client.gui.GuideGraphics.wrap(graphics)));
         bridge.onDisconnect(() -> {
             observationInput.clearConnectionState();
             ui.disconnect();
@@ -210,7 +209,7 @@ public final class OpenAllayFabricClient implements ClientModInitializer {
                 services,
                 contexts,
                 screens));
-        OpenAllayKeyMappings.all().forEach(KeyMappingHelper::registerKeyMapping);
+        OpenAllayKeyMappings.all().forEach(FabricNativeKeys::register);
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             while (OpenAllayKeyMappings.OPEN_GUIDE.consumeClick()) {
                 if (client.player != null && client.level != null

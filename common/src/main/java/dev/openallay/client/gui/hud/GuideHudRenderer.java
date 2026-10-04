@@ -1,5 +1,6 @@
 package dev.openallay.client.gui.hud;
 
+import dev.openallay.client.gui.GuideGraphics;
 import dev.openallay.client.gui.MinecraftClientWindow;
 
 import dev.openallay.client.gui.OpenAllayKeyMappings;
@@ -12,7 +13,6 @@ import java.util.List;
 import java.util.Objects;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.inventory.tooltip.DefaultTooltipPositioner;
 import net.minecraft.locale.Language;
 import net.minecraft.network.chat.Component;
@@ -30,7 +30,7 @@ public final class GuideHudRenderer {
     }
     public GuideHudResultRenderer.Receipt resultReceipt() { return results.receipt(); }
 
-    public void extractRenderState(GuiGraphicsExtractor graphics, GuideHudView view) {
+    public void extractRenderState(GuideGraphics graphics, GuideHudView view) {
         var context = new GuideHudVisibility.Context(minecraft.level != null, minecraft.player != null,
                 MinecraftClientWindow.hudHidden(minecraft), MinecraftClientWindow.debugScreenVisible(minecraft),
                 MinecraftClientWindow.screen(minecraft) != null, MinecraftClientWindow.overlay(minecraft) != null);
@@ -39,12 +39,12 @@ public final class GuideHudRenderer {
         if (GuideHudVisibility.isVisible(view.hud(), context)) draw(graphics, view, view.hud());
         else results.releaseNativeViews();
     }
-    public void extractPreview(GuiGraphicsExtractor graphics, GuideHudView view, GuideUiConfig.Hud hud) {
+    public void extractPreview(GuideGraphics graphics, GuideHudView view, GuideUiConfig.Hud hud) {
         draw(graphics, view, hud.withCollapsed(false));
     }
     public void invalidateLayout() { cacheKey = null; results.invalidate(); }
 
-    private void draw(GuiGraphicsExtractor graphics, GuideHudView view, GuideUiConfig.Hud hud) {
+    private void draw(GuideGraphics graphics, GuideHudView view, GuideUiConfig.Hud hud) {
         GuideHudLayout.Rect rect = GuideHudLayout.calculate(graphics.guiWidth(), graphics.guiHeight(), hud);
         Font font = minecraft.font;
         int contentWidth = rect.contentWidth();

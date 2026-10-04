@@ -1,8 +1,8 @@
 package dev.openallay.client.gui.nativeview;
 
+import dev.openallay.client.gui.GuideGraphics;
 import dev.openallay.guide.ui.GuideUiLayout;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 /** Visible client-thread object; never persisted or exposed to model context. */
 public interface NativeDomainView extends AutoCloseable {
@@ -18,7 +18,7 @@ public interface NativeDomainView extends AutoCloseable {
     default void close() {}
 
     record RenderContext(
-            GuiGraphicsExtractor graphics,
+            GuideGraphics graphics,
             Font font,
             GuideUiLayout.Rect bounds,
             int mouseX,

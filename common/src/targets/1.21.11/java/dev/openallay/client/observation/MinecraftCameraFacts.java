@@ -1,0 +1,29 @@
+package dev.openallay.client.observation;
+
+import dev.openallay.client.gui.MinecraftClientWindow;
+import dev.openallay.client.gui.mixin.GameRendererFovAccess;
+import dev.openallay.world.WorldFocusObservation;
+import net.minecraft.client.Minecraft;
+
+/** Old render-state family, using the actual renderer-computed camera FOV. */
+public final class MinecraftCameraFacts {
+    private MinecraftCameraFacts() {}
+    public static WorldFocusObservation.Camera focus(Minecraft client) {
+        var camera = MinecraftClientWindow.camera(client);
+        var position = camera.position();
+        var entity = camera.entity();
+        float fov = ((GameRendererFovAccess) client.gameRenderer).openallay$computedFov(camera,
+                client.getDeltaTracker().getGameTimeDeltaPartialTick(false), true);
+        return new WorldFocusObservation.Camera(position.x(), position.y(), position.z(),
+                camera.yRot(), camera.xRot(), fov,
+                client.options.getCameraType().name().toLowerCase(java.util.Locale.ROOT),
+                camera.isInitialized(), camera.isDetached(), entity == null ? null : entity.getUUID());
+    }
+    public static WorldFocusObservation.Camera rendered(Minecraft client, WorldFocusObservation.Camera observed) {
+        var camera = client.gameRenderer.getLevelRenderState().cameraRenderState;
+        return new WorldFocusObservation.Camera(camera.pos.x(), camera.pos.y(), camera.pos.z(),
+                observed.yaw(), observed.pitch(), observed.fov(), observed.mode(), camera.initialized,
+                observed.detached(), observed.entityUuid());
+    }
+    public static int guiScale(Minecraft client) { return client.getWindow().getGuiScale(); }
+}

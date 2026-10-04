@@ -3,8 +3,8 @@ package dev.openallay.fabric;
 import static com.mojang.brigadier.arguments.StringArgumentType.getString;
 import static com.mojang.brigadier.arguments.StringArgumentType.greedyString;
 import static com.mojang.brigadier.arguments.StringArgumentType.word;
-import static net.fabricmc.fabric.api.client.command.v2.ClientCommands.argument;
-import static net.fabricmc.fabric.api.client.command.v2.ClientCommands.literal;
+import static dev.openallay.fabric.FabricNativeCommands.argument;
+import static dev.openallay.fabric.FabricNativeCommands.literal;
 
 import dev.openallay.guide.GuideCommandFacade;
 import dev.openallay.guide.GuideModelMode;

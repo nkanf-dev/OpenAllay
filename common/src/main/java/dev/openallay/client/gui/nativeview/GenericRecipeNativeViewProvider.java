@@ -1,11 +1,11 @@
 package dev.openallay.client.gui.nativeview;
 
+import dev.openallay.client.gui.GuideGraphics;
 import dev.openallay.guide.ui.GuideRecipeCard;
 import dev.openallay.guide.ui.GuideUiLayout;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -54,7 +54,7 @@ final class GenericRecipeNativeViewProvider implements NativeDomainViewProvider 
 
         @Override
         public void render(RenderContext context) {
-            GuiGraphicsExtractor graphics = context.graphics();
+            GuideGraphics graphics = context.graphics();
             Font font = context.font();
             GuideUiLayout.Rect bounds = context.bounds();
             graphics.fill(
@@ -144,7 +144,7 @@ final class GenericRecipeNativeViewProvider implements NativeDomainViewProvider 
         }
 
         private static void renderSlot(
-                GuiGraphicsExtractor graphics,
+                GuideGraphics graphics,
                 Font font,
                 String itemId,
                 long count,

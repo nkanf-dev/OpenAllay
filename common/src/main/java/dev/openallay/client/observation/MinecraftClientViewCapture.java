@@ -125,13 +125,9 @@ public final class MinecraftClientViewCapture implements AutoCloseable {
             }
             Instant capturedAt = Instant.now();
             WorldFocusObservation focus = ClientFocusCapture.capture(client, platform, capturedAt);
-            var cameraState = dev.openallay.client.gui.MinecraftClientWindow.renderState(client).levelRenderState.cameraRenderState;
-            var observedCamera = focus.camera();
-            var camera = new WorldFocusObservation.Camera(cameraState.pos.x(), cameraState.pos.y(), cameraState.pos.z(),
-                    cameraState.yRot, cameraState.xRot, observedCamera.fov(), observedCamera.mode(),
-                    cameraState.initialized, observedCamera.detached(), observedCamera.entityUuid());
+            var camera = MinecraftCameraFacts.rendered(client, focus.camera());
             Frame frame = new Frame(UUID.randomUUID().toString(), capturedAt, target, nativeTarget.width,
-                    nativeTarget.height, dev.openallay.client.gui.MinecraftClientWindow.renderState(client).windowRenderState.guiScale,
+                    nativeTarget.height, MinecraftCameraFacts.guiScale(client),
                     camera, focus.screen(), target == WorldViewRequest.Target.GAME_UI && !MinecraftClientWindow.hudHidden(client),
                     target == WorldViewRequest.Target.GAME_UI && (MinecraftClientWindow.screen(client) != null || MinecraftClientWindow.overlay(client) != null));
             selected.forEach(value -> value.submitted = true);

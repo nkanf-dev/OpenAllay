@@ -572,11 +572,7 @@ public final class GuideClientE2EController {
                     "world_reload_cancelled", "The native world reload did not complete"));
             return;
         }
-        var settings = new net.minecraft.world.level.LevelSettings(name,
-                net.minecraft.world.level.GameType.SURVIVAL,
-                new net.minecraft.world.level.LevelSettings.DifficultySettings(
-                        net.minecraft.world.Difficulty.PEACEFUL, false, false),
-                false, net.minecraft.world.level.WorldDataConfiguration.DEFAULT);
+        var settings = GuideProbeWorldSettings.create(name);
         client.createWorldOpenFlows().createFreshLevel(name, settings,
                 new net.minecraft.world.level.levelgen.WorldOptions(17L, false, false),
                 registries -> registries.lookupOrThrow(net.minecraft.core.registries.Registries.WORLD_PRESET)

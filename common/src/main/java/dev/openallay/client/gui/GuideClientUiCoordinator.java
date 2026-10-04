@@ -25,7 +25,7 @@ import java.util.UUID;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import dev.openallay.client.gui.GuideGraphics;
 import net.minecraft.server.packs.resources.ReloadableResourceManager;
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
 
@@ -70,7 +70,7 @@ public final class GuideClientUiCoordinator implements AutoCloseable {
     public void tick() { presentation.tick(); }
     public void disconnect() { presentation.disconnect(); }
 
-    public void extractRenderState(GuiGraphicsExtractor graphics) {
+    public void extractRenderState(GuideGraphics graphics) {
         if (presentation.closed()) return;
         renderer.extractRenderState(graphics, presentation.hud().view());
         if (MinecraftClientWindow.screen(minecraft) == null && MinecraftClientWindow.overlay(minecraft) == null

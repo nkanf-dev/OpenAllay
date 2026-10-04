@@ -144,8 +144,8 @@ final class JeiNativeRecipeViewProvider implements NativeDomainViewProvider {
             int x = context.bounds().x() + Math.max(0, (context.bounds().width() - layoutWidth) / 2);
             int y = context.bounds().y() + Math.max(0, (contentHeight - layoutHeight) / 2);
             layout.setPosition(x, y);
-            layout.drawRecipe(context.graphics(), context.mouseX(), context.mouseY());
-            layout.drawOverlays(context.graphics(), context.mouseX(), context.mouseY());
+            layout.drawRecipe(context.graphics().nativeGraphics(), context.mouseX(), context.mouseY());
+            layout.drawOverlays(context.graphics().nativeGraphics(), context.mouseX(), context.mouseY());
         }
     }
 }

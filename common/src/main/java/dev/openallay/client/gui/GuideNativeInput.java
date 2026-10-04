@@ -14,6 +14,8 @@ public final class GuideNativeInput {
     /** Synthetic native event for inert controls and probes, not evidence of OS dispatch. */
     public static KeyEvent keyEvent(int key, int modifiers) { return new KeyEvent(key, 0, modifiers); }
 
+    public static net.minecraft.client.input.CharacterEvent characterEvent(int codePoint) { return new net.minecraft.client.input.CharacterEvent(codePoint); }
+
     public static boolean isLeftClick(MouseButtonEvent event) {
         return event.button() == InputConstants.MOUSE_BUTTON_LEFT;
     }

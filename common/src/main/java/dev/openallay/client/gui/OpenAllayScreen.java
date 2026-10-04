@@ -73,7 +73,7 @@ import java.util.function.Supplier;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import dev.openallay.client.gui.GuideGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.narration.NarratedElementType;
@@ -95,7 +95,7 @@ import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.Mth;
 
 /** Full-screen, non-pausing projection and intent sender for GuideService. */
-public final class OpenAllayScreen extends Screen {
+public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeScreen {
     private static final int PANEL = OpenAllayWidgetTheme.PANEL;
     private static final int PANEL_ALT = OpenAllayWidgetTheme.PANEL_ALT;
     private static final int ACCENT = OpenAllayWidgetTheme.MINT;
@@ -804,7 +804,7 @@ public final class OpenAllayScreen extends Screen {
     }
 
     @Override
-    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
+    protected void paintGuideScreen(GuideGraphics graphics, int mouseX, int mouseY, float a) {
         if (Boolean.getBoolean("openallay.e2e.enabled")) {
             clearToolPaintReceipts();
             renderedNativeFrame++;
@@ -816,7 +816,7 @@ public final class OpenAllayScreen extends Screen {
         renderProgress(graphics);
         renderTelemetry(graphics, mouseX, mouseY);
         renderDetail(graphics, mouseX, mouseY);
-        super.extractRenderState(graphics, mouseX, mouseY, a);
+        renderGuideWidgets(graphics, mouseX, mouseY, a);
         renderComposerExtras(graphics, mouseX, mouseY);
         renderModelSelector(graphics, mouseX, mouseY);
         renderLocalNotice(graphics, mouseX, mouseY);
@@ -825,7 +825,7 @@ public final class OpenAllayScreen extends Screen {
         reportVisibleReceipts();
     }
 
-    private void renderTop(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    private void renderTop(GuideGraphics graphics, int mouseX, int mouseY) {
         GuideUiLayout.Rect top = layout.topBar();
         graphics.fill(top.x(), top.y(), top.x() + top.width(), top.y() + top.height(), panelColor());
         graphics.fill(top.x(), top.y(), top.x() + 3, top.y() + top.height(), ACCENT);
@@ -844,7 +844,7 @@ public final class OpenAllayScreen extends Screen {
     }
 
     /** A passive native label: Tab reveals and narrates its own complete name, not another button's. */
-    private final class HeaderTitle extends AbstractWidget {
+    private final class HeaderTitle extends GuideNativeWidget {
         private Component paintedTitle;
 
         private HeaderTitle(Component title, GuideUiLayout.Rect bounds) {
@@ -853,8 +853,8 @@ public final class OpenAllayScreen extends Screen {
         }
 
         @Override
-        protected void extractWidgetRenderState(
-                GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+        protected void paintGuideWidget(
+                GuideGraphics graphics, int mouseX, int mouseY, float partialTick) {
             Component full = getMessage();
             Component visible = full;
             if (font.width(full.getVisualOrderText()) > getWidth()) {
@@ -961,7 +961,7 @@ public final class OpenAllayScreen extends Screen {
     }
 
     private void boundedHeaderText(
-            GuiGraphicsExtractor graphics, Component text, GuideUiLayout.Rect bounds, int color) {
+            GuideGraphics graphics, Component text, GuideUiLayout.Rect bounds, int color) {
         graphics.enableScissor(bounds.x(), bounds.y(), bounds.right(), bounds.bottom());
         graphics.text(font, text, bounds.x(), bounds.y(), color, false);
         graphics.disableScissor();
@@ -1000,7 +1000,7 @@ public final class OpenAllayScreen extends Screen {
         return true;
     }
 
-    private void renderSessions(GuiGraphicsExtractor graphics) {
+    private void renderSessions(GuideGraphics graphics) {
         hits.removeIf(hit -> hit.kind() == HitKind.SESSION);
         if (layout.sessionRail().width() == 0 && !sessionOverlay) return;
         GuideUiLayout.Rect rail = sessionBounds();
@@ -1054,7 +1054,7 @@ public final class OpenAllayScreen extends Screen {
         followBottom = scroll == maximum;
         return true;
     }
-    private void renderScrollMarker(GuiGraphicsExtractor graphics, GuideUiLayout.Rect bounds, int position, int maximum) {
+    private void renderScrollMarker(GuideGraphics graphics, GuideUiLayout.Rect bounds, int position, int maximum) {
         if (maximum <= 0 || bounds.height() < 8) return;
         int track = bounds.height() - 4;
         int thumb = Math.max(6, track / 5);
@@ -1066,7 +1066,7 @@ public final class OpenAllayScreen extends Screen {
         return new GuideUiLayout.Rect(Math.max(4, layout.header().overflow().right() - 160),
                 layout.topBar().bottom() + 2, 160, Math.min(156, height - layout.topBar().bottom() - 6));
     }
-    private void renderOverflow(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    private void renderOverflow(GuideGraphics graphics, int mouseX, int mouseY) {
         hits.removeIf(hit -> hit.kind() == HitKind.MENU);
         if (!overflowOpen) return;
         GuideUiLayout.Rect menu = overflowBounds();
@@ -1097,7 +1097,7 @@ public final class OpenAllayScreen extends Screen {
         return text;
     }
 
-    private void renderLocalNotice(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    private void renderLocalNotice(GuideGraphics graphics, int mouseX, int mouseY) {
         GuideUiLayout.Rect bounds = layout.composerNotice();
         if (voice != null && voice.enabled() && microphone == null) {
             int micWidth = voice.status().active() ? Math.min(70, bounds.width() / 2) : 30;
@@ -1283,7 +1283,7 @@ public final class OpenAllayScreen extends Screen {
                 count / (count < 1_000_000 ? 1_000.0 : 1_000_000.0));
     }
 
-    private void renderTelemetry(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    private void renderTelemetry(GuideGraphics graphics, int mouseX, int mouseY) {
         GuideUiLayout.Rect area = layout.telemetry();
         graphics.fill(area.x(), area.y(), area.right(), area.bottom(), panelAltColor());
         graphics.enableScissor(area.x() + 4, area.y(), area.right() - 4, area.bottom());
@@ -1325,7 +1325,7 @@ public final class OpenAllayScreen extends Screen {
                 != dev.openallay.model.tokenizer.TokenizerMetadata.ImageAccounting.UNKNOWN;
     }
 
-    private void renderProgress(GuiGraphicsExtractor graphics) {
+    private void renderProgress(GuideGraphics graphics) {
         if (layout.progress().height() == 0) return;
         GuideUiProgress progress = view.progress();
         if (progress == null) {
@@ -1391,7 +1391,7 @@ public final class OpenAllayScreen extends Screen {
                 : "%d:%02d".formatted(minutes, remainder);
     }
 
-    private void renderTranscript(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    private void renderTranscript(GuideGraphics graphics, int mouseX, int mouseY) {
         hits.removeIf(hit -> hit.kind() == HitKind.CONTENT);
         renderedRows.clear();
         GuideUiLayout.Rect area = layout.transcript();
@@ -1443,7 +1443,7 @@ public final class OpenAllayScreen extends Screen {
     }
 
     private int renderRow(
-            GuiGraphicsExtractor graphics,
+            GuideGraphics graphics,
             GuideUiRow row,
             int x,
             int y,
@@ -1620,7 +1620,7 @@ public final class OpenAllayScreen extends Screen {
     }
 
     private int renderToolSummaryCard(
-            GuiGraphicsExtractor graphics, GuideUiRow.Tool tool, int x, int y,
+            GuideGraphics graphics, GuideUiRow.Tool tool, int x, int y,
             int width, int mouseX, int mouseY) {
         var summary = dev.openallay.guide.ui.GuideToolSummaryPresenter.project(tool);
         var geometry = toolSummaryGeometry(tool, x, y, width);
@@ -1688,7 +1688,7 @@ public final class OpenAllayScreen extends Screen {
     }
 
     private boolean renderToolSummaryCapsule(
-            GuiGraphicsExtractor graphics, dev.openallay.guide.ui.GuideToolSummaryPresenter.Capsule capsule,
+            GuideGraphics graphics, dev.openallay.guide.ui.GuideToolSummaryPresenter.Capsule capsule,
             GuideUiLayout.Rect bounds, int mouseX, int mouseY) {
         boolean hovered = bounds.contains(mouseX, mouseY) || isFocused(focusedContentId, capsule.id());
         renderToolSummaryFrame(graphics, bounds, panelColor(), hovered ? ACCENT : OpenAllayWidgetTheme.SLATE_BORDER);
@@ -1759,7 +1759,7 @@ public final class OpenAllayScreen extends Screen {
     }
 
     private void renderToolSummaryText(
-            GuiGraphicsExtractor graphics, Component text, GuideUiLayout.Rect bounds, int color,
+            GuideGraphics graphics, Component text, GuideUiLayout.Rect bounds, int color,
             int mouseX, int mouseY, boolean detailHint) {
         String full = text.getString();
         int available = Math.max(1, bounds.width());
@@ -1775,7 +1775,7 @@ public final class OpenAllayScreen extends Screen {
     }
 
     private static void renderToolSummaryFrame(
-            GuiGraphicsExtractor graphics, GuideUiLayout.Rect bounds, int fill, int border) {
+            GuideGraphics graphics, GuideUiLayout.Rect bounds, int fill, int border) {
         int x = bounds.x(), y = bounds.y(), right = bounds.right(), bottom = bounds.bottom();
         graphics.fill(x + 2, y, right - 2, bottom, border);
         graphics.fill(x, y + 2, right, bottom - 2, border);
@@ -1953,7 +1953,7 @@ public final class OpenAllayScreen extends Screen {
     }
 
     private int renderWrapped(
-            GuiGraphicsExtractor graphics, List<Component> paragraphs, int x, int y, int width, int color) {
+            GuideGraphics graphics, List<Component> paragraphs, int x, int y, int width, int color) {
         for (Component paragraph : paragraphs) {
             List<FormattedCharSequence> lines = font.split(paragraph, width);
             if (lines.isEmpty()) y += 9;
@@ -1978,7 +1978,7 @@ public final class OpenAllayScreen extends Screen {
                 : Component.literal(display.assistantName());
     }
 
-    private void renderDetail(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    private void renderDetail(GuideGraphics graphics, int mouseX, int mouseY) {
         detailNativeViews.beginFrame();
         try {
             renderDetailContent(graphics, mouseX, mouseY);
@@ -1987,7 +1987,7 @@ public final class OpenAllayScreen extends Screen {
         }
     }
 
-    private void renderDetailContent(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    private void renderDetailContent(GuideGraphics graphics, int mouseX, int mouseY) {
         if (!detailOpen()) return;
         hits.removeIf(hit -> hit.kind() == HitKind.DETAIL);
         GuideUiLayout.Rect detail = layout.detail();
@@ -2129,7 +2129,7 @@ public final class OpenAllayScreen extends Screen {
     }
 
     private int detailDisclosure(
-            GuiGraphicsExtractor graphics, Component label, GuideUiLayout.Rect detail, int y, String id) {
+            GuideGraphics graphics, Component label, GuideUiLayout.Rect detail, int y, String id) {
         Component text = Component.literal(expandedDetails.contains(id) ? "▼ " : "▶ ").append(label);
         int bottom = detailLine(graphics, text, detail, y);
         if (visibleDetail(y, bottom - y, detail)) {
@@ -2150,7 +2150,7 @@ public final class OpenAllayScreen extends Screen {
     }
 
     private int detailCard(
-            GuiGraphicsExtractor graphics,
+            GuideGraphics graphics,
             GuideDetailCard card,
             String cardId,
             GuideUiLayout.Rect detail,
@@ -2176,7 +2176,7 @@ public final class OpenAllayScreen extends Screen {
     }
 
     private int tableCard(
-            GuiGraphicsExtractor graphics,
+            GuideGraphics graphics,
             GuideDetailCard.Table card,
             GuideUiLayout.Rect detail,
             int y) {
@@ -2191,7 +2191,7 @@ public final class OpenAllayScreen extends Screen {
     }
 
     private int keyValueCard(
-            GuiGraphicsExtractor graphics,
+            GuideGraphics graphics,
             GuideDetailCard.KeyValue card,
             GuideUiLayout.Rect detail,
             int y) {
@@ -2204,7 +2204,7 @@ public final class OpenAllayScreen extends Screen {
     }
 
     private int dataPreviewCard(
-            GuiGraphicsExtractor graphics,
+            GuideGraphics graphics,
             GuideDetailCard.DataPreview card,
             GuideUiLayout.Rect detail,
             int y) {
@@ -2220,7 +2220,7 @@ public final class OpenAllayScreen extends Screen {
     }
 
     private int itemGridCard(
-            GuiGraphicsExtractor graphics,
+            GuideGraphics graphics,
             GuideDetailCard.ItemGrid card,
             GuideUiLayout.Rect detail,
             int y,
@@ -2244,7 +2244,7 @@ public final class OpenAllayScreen extends Screen {
     }
 
     private int requirementsCard(
-            GuiGraphicsExtractor graphics,
+            GuideGraphics graphics,
             GuideDetailCard.Requirements card,
             GuideUiLayout.Rect detail,
             int y,
@@ -2295,7 +2295,7 @@ public final class OpenAllayScreen extends Screen {
     }
 
     private int textCard(
-            GuiGraphicsExtractor graphics,
+            GuideGraphics graphics,
             GuideDetailCard.Text card,
             GuideUiLayout.Rect detail,
             int y) {
@@ -2306,7 +2306,7 @@ public final class OpenAllayScreen extends Screen {
     }
 
     private int errorCard(
-            GuiGraphicsExtractor graphics,
+            GuideGraphics graphics,
             GuideDetailCard.Error card,
             GuideUiLayout.Rect detail,
             int y) {
@@ -2314,7 +2314,7 @@ public final class OpenAllayScreen extends Screen {
     }
 
     private int recipeCard(
-            GuiGraphicsExtractor graphics, GuideRecipeCard card, String cardId,
+            GuideGraphics graphics, GuideRecipeCard card, String cardId,
             GuideUiLayout.Rect detail, int y, int mouseX, int mouseY) {
         int left = detail.x() + 6;
         int canvasWidth = Math.max(1, detail.width() - 12);
@@ -2370,7 +2370,7 @@ public final class OpenAllayScreen extends Screen {
     }
 
     private int recipeAction(
-            GuiGraphicsExtractor graphics,
+            GuideGraphics graphics,
             Component label,
             int x,
             int y,
@@ -2402,7 +2402,7 @@ public final class OpenAllayScreen extends Screen {
     }
 
     private void renderItem(
-            GuiGraphicsExtractor graphics,
+            GuideGraphics graphics,
             GuideItemView item,
             int x,
             int y,
@@ -2451,7 +2451,7 @@ public final class OpenAllayScreen extends Screen {
     }
 
     private int sourceGroups(
-            GuiGraphicsExtractor graphics, List<GuideSource> sources, GuideUiLayout.Rect detail, int y) {
+            GuideGraphics graphics, List<GuideSource> sources, GuideUiLayout.Rect detail, int y) {
         if (sources.isEmpty()) return y;
         List<GuideEvidencePresentation.Group> groups = groupedSources(sources);
         y = detailDisclosure(graphics, Component.translatable("screen.openallay.evidence.groups",
@@ -2465,7 +2465,7 @@ public final class OpenAllayScreen extends Screen {
     }
 
     private int sourceGroup(
-            GuiGraphicsExtractor graphics, GuideEvidencePresentation.Group group,
+            GuideGraphics graphics, GuideEvidencePresentation.Group group,
             GuideUiLayout.Rect detail, int y, String id) {
         y = detailDisclosure(graphics, Component.literal(sourceLabel(group, projectedDisplay.debugMode())),
                 detail, y, id);
@@ -2544,12 +2544,12 @@ public final class OpenAllayScreen extends Screen {
                 .withLocale(locale).withZone(zone).format(capturedAt);
     }
 
-    private int detailLine(GuiGraphicsExtractor graphics, String text, GuideUiLayout.Rect detail, int y) {
+    private int detailLine(GuideGraphics graphics, String text, GuideUiLayout.Rect detail, int y) {
         return detailLine(graphics, Component.literal(text), detail, y);
     }
 
     private int detailLine(
-            GuiGraphicsExtractor graphics, Component text, GuideUiLayout.Rect detail, int y) {
+            GuideGraphics graphics, Component text, GuideUiLayout.Rect detail, int y) {
         for (FormattedCharSequence line : font.split(text, detail.width() - 16)) {
             if (y >= detail.y() + 21 && y < detail.y() + detail.height() - 10) {
                 graphics.text(font, line, detail.x() + 8, y, TEXT, false);
@@ -2561,7 +2561,7 @@ public final class OpenAllayScreen extends Screen {
     }
 
     private int detailCode(
-            GuiGraphicsExtractor graphics,
+            GuideGraphics graphics,
             String source,
             GuideUiLayout.Rect detail,
             int y,
@@ -2599,7 +2599,7 @@ public final class OpenAllayScreen extends Screen {
     }
 
     private int detailValues(
-            GuiGraphicsExtractor graphics,
+            GuideGraphics graphics,
             String labelKey,
             List<String> values,
             GuideUiLayout.Rect detail,
@@ -2975,7 +2975,7 @@ public final class OpenAllayScreen extends Screen {
     }
 
     /** Leaves the existing image/pending strips and text cursor in their measured bounds. */
-    private GuideUiLayout.Rect renderObservationComposer(GuiGraphicsExtractor graphics,
+    private GuideUiLayout.Rect renderObservationComposer(GuideGraphics graphics,
             GuideUiLayout.Rect strip, int mouseX, int mouseY) {
         var anchor = uiState.observation(view.selectedSession());
         if (anchor.isEmpty() && observationActions == null) return strip;
@@ -3024,7 +3024,7 @@ public final class OpenAllayScreen extends Screen {
         return observationLayout.remaining();
     }
 
-    private void observationComposerAction(GuiGraphicsExtractor graphics, GuideUiLayout.Rect bounds,
+    private void observationComposerAction(GuideGraphics graphics, GuideUiLayout.Rect bounds,
             Component label, Runnable action, String id, int mouseX, int mouseY) {
         int left = Math.max(bounds.x(), observationComposerBounds.x());
         int right = Math.min(bounds.right(), observationComposerBounds.right());
@@ -3052,7 +3052,7 @@ public final class OpenAllayScreen extends Screen {
         rebuildForDetail();
     }
 
-    private int observationImageDetail(GuiGraphicsExtractor graphics, ImageReference reference,
+    private int observationImageDetail(GuideGraphics graphics, ImageReference reference,
             GuideUiLayout.Rect detail, int y, int mouseX, int mouseY, boolean expanded) {
         y = detailLine(graphics, Component.translatable("screen.openallay.observation.frame_size",
                 reference.width(), reference.height()), detail, y);
@@ -3067,7 +3067,7 @@ public final class OpenAllayScreen extends Screen {
                 double scale = Math.min(canvas.width() / (double) reference.width(), canvas.height() / (double) reference.height());
                 int imageWidth = Math.max(1, (int) Math.round(reference.width() * scale));
                 int imageHeight = Math.max(1, (int) Math.round(reference.height() * scale));
-                graphics.blit(texture, canvas.x() + (canvas.width() - imageWidth) / 2,
+                graphics.blitTexture(texture, canvas.x() + (canvas.width() - imageWidth) / 2,
                         canvas.y() + (canvas.height() - imageHeight) / 2, imageWidth, imageHeight, 0, 1, 0, 1);
             } else boundedHeaderText(graphics, Component.translatable(observationTextures().failed(reference)
                     ? "screen.openallay.observation.image_unavailable" : "screen.openallay.observation.image_loading"), canvas, MUTED);
@@ -3084,7 +3084,7 @@ public final class OpenAllayScreen extends Screen {
         return y + canvasHeight + 5;
     }
 
-    private void renderComposerExtras(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    private void renderComposerExtras(GuideGraphics graphics, int mouseX, int mouseY) {
         hits.removeIf(hit -> hit.kind() == HitKind.COMPOSER);
         if (composerExtras == null) return;
         GuideUiLayout.Rect strip = composerExtras.images();
@@ -3105,7 +3105,7 @@ public final class OpenAllayScreen extends Screen {
                             (double) (cell - 2) / image.preview().height());
                     int imageWidth = Math.max(1, (int) (image.preview().width() * scale));
                     int imageHeight = Math.max(1, (int) (image.preview().height() * scale));
-                    graphics.blit(texture, x + (cell - imageWidth) / 2, strip.y() + (cell - imageHeight) / 2,
+                    graphics.blitTexture(texture, x + (cell - imageWidth) / 2, strip.y() + (cell - imageHeight) / 2,
                             imageWidth, imageHeight, 0, 1, 0, 1);
                 } else graphics.text(font, image.pending() ? "…" : "▧", x + 4, strip.y() + 4, MUTED, false);
                 GuideUiLayout.Rect remove = new GuideUiLayout.Rect(x + cell - 12, strip.y(), 12, 12);
@@ -3127,7 +3127,7 @@ public final class OpenAllayScreen extends Screen {
         renderPendingComposer(graphics, mouseX, mouseY);
     }
 
-    private void renderPendingComposer(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    private void renderPendingComposer(GuideGraphics graphics, int mouseX, int mouseY) {
         GuideUiLayout.Rect footer = composerExtras.footer();
         if (footer.height() == 0) return;
         List<GuidePendingMessage> pending = pendingMessages();
@@ -3155,7 +3155,7 @@ public final class OpenAllayScreen extends Screen {
         }
     }
 
-    private void renderPendingRow(GuiGraphicsExtractor graphics, GuidePendingMessage pending,
+    private void renderPendingRow(GuideGraphics graphics, GuidePendingMessage pending,
             GuideUiLayout.Rect area, boolean navigator, int count, int mouseX, int mouseY) {
         graphics.fill(area.x(), area.y(), area.right(), area.bottom(), panelAltColor());
         int textWidth = Math.max(0, area.width() - 42);
@@ -3382,7 +3382,7 @@ public final class OpenAllayScreen extends Screen {
         });
     }
 
-    private void renderForkAction(GuiGraphicsExtractor graphics, UUID requestId, String text,
+    private void renderForkAction(GuideGraphics graphics, UUID requestId, String text,
             int x, int y, int width) {
         if (!forkableRequest(service.snapshot(), view.selectedSession(), requestId)) return;
         Component label = Component.translatable("screen.openallay.action.fork");
@@ -3527,7 +3527,7 @@ public final class OpenAllayScreen extends Screen {
     }
 
     private void renderCopyAction(
-            GuiGraphicsExtractor graphics,
+            GuideGraphics graphics,
             GuideUiRow row,
             String text,
             int x,
@@ -3724,7 +3724,7 @@ public final class OpenAllayScreen extends Screen {
                 Math.max(1, visible * 20));
     }
 
-    private void renderModelSelector(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    private void renderModelSelector(GuideGraphics graphics, int mouseX, int mouseY) {
         hits.removeIf(hit -> hit.kind() == HitKind.MODEL);
         GuideUiLayout.Rect menu = modelSelectorBounds();
         if (menu == null) return;
@@ -3776,7 +3776,7 @@ public final class OpenAllayScreen extends Screen {
 
     private boolean renderNativeRecipe(
             GuideUiRow.Assistant assistant,
-            GuiGraphicsExtractor graphics,
+            GuideGraphics graphics,
             net.minecraft.client.gui.Font font,
             dev.openallay.guide.semantic.RichComponent.RecipeGrid component,
             GuideUiLayout.Rect bounds,

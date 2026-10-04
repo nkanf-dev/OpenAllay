@@ -12,7 +12,6 @@ import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.world.item.ItemStack;
@@ -44,7 +43,7 @@ public final class MinecraftSemanticRenderer {
     @FunctionalInterface
     public interface RecipeGridRenderer {
         boolean render(
-                GuiGraphicsExtractor graphics,
+                GuideGraphics graphics,
                 Font font,
                 RichComponent.RecipeGrid component,
                 GuideUiLayout.Rect bounds,
@@ -63,7 +62,7 @@ public final class MinecraftSemanticRenderer {
     }
 
     public Result render(
-            GuiGraphicsExtractor graphics,
+            GuideGraphics graphics,
             Font font,
             SemanticLayout layout,
             int x,
@@ -75,7 +74,7 @@ public final class MinecraftSemanticRenderer {
     }
 
     public Result render(
-            GuiGraphicsExtractor graphics,
+            GuideGraphics graphics,
             Font font,
             SemanticLayout layout,
             int x,
@@ -91,7 +90,7 @@ public final class MinecraftSemanticRenderer {
     }
 
     public Result render(
-            GuiGraphicsExtractor graphics,
+            GuideGraphics graphics,
             Font font,
             SemanticLayout layout,
             int x,
@@ -153,7 +152,7 @@ public final class MinecraftSemanticRenderer {
     }
 
     private void renderTable(
-            GuiGraphicsExtractor graphics,
+            GuideGraphics graphics,
             Font font,
             SemanticLayout.TableBox table,
             int x,
@@ -208,7 +207,7 @@ public final class MinecraftSemanticRenderer {
     }
 
     private static void renderTableRuns(
-            GuiGraphicsExtractor graphics,
+            GuideGraphics graphics,
             Font font,
             List<SemanticLayout.Run> runs,
             int x,
@@ -267,7 +266,7 @@ public final class MinecraftSemanticRenderer {
     }
 
     private void renderComponent(
-            GuiGraphicsExtractor graphics,
+            GuideGraphics graphics,
             Font font,
             RichComponent component,
             int x,
@@ -402,7 +401,7 @@ public final class MinecraftSemanticRenderer {
     }
 
     private void renderItem(
-            GuiGraphicsExtractor graphics,
+            GuideGraphics graphics,
             Font font,
             String itemId,
             String label,
@@ -427,7 +426,7 @@ public final class MinecraftSemanticRenderer {
     }
 
     private static void action(
-            GuiGraphicsExtractor graphics,
+            GuideGraphics graphics,
             Font font,
             Component label,
             int x,

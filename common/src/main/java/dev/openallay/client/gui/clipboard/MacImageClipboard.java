@@ -55,7 +55,7 @@ final class MacImageClipboard {
             // Let AppKit classify local image files. Never interpret ordinary clipboard text as a path.
             long classes = NativeApi.argument(NativeApi.type("NSArray"), "arrayWithObject:", NativeApi.type("NSURL"));
             long options = NativeApi.message(NativeApi.type("NSMutableDictionary"), "dictionary");
-            long yes = JNI.invokePPP(NativeApi.type("NSNumber"), NativeApi.selector("numberWithBool:"), true, NativeApi.SEND);
+            long yes = MacBooleanNumber.trueValue(NativeApi.type("NSNumber"), NativeApi.selector("numberWithBool:"), NativeApi.SEND);
             NativeApi.set(options, yes, NativeApi.constant("NSPasteboardURLReadingFileURLsOnlyKey"));
             long imageContentTypes = NativeApi.argument(NativeApi.type("NSArray"), "arrayWithObject:",
                     NativeApi.string(stack, "public.image"));

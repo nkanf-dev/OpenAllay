@@ -31,7 +31,7 @@ import dev.openallay.guide.ui.hud.GuideHudView;
 import dev.openallay.tool.ToolResult;
 import java.util.List;
 import java.util.Objects;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import dev.openallay.client.gui.GuideGraphics;
 import net.minecraft.client.gui.components.AbstractTextAreaWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.MultiLineEditBox;
@@ -42,7 +42,7 @@ import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 
 /** Explicit compact native input surface. Gameplay keys/mouse are not forwarded while it is open. */
-public final class GuideChatLiteScreen extends Screen {
+public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNativeScreen {
     private final GuideService service;
     private final GuideClientUiState state;
     private GuideObservationInputActions observationActions;
@@ -157,7 +157,7 @@ public final class GuideChatLiteScreen extends Screen {
                 .bounds(x + 48, strip.y(), 16, 12).tooltip(Tooltip.create(Component.translatable("screen.openallay.observation.attach_frame"))).build());
     }
 
-    private void renderObservationStrip(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    private void renderObservationStrip(GuideGraphics graphics, int mouseX, int mouseY) {
         if (observationBounds == null || observationBounds.height() == 0 || !readingLayout.footerFits()) return;
         Component label = Component.translatable("screen.openallay.observation.add_focus");
         var anchor = state.observation(session);
@@ -618,10 +618,10 @@ public final class GuideChatLiteScreen extends Screen {
         return super.mouseReleased(event);
     }
 
-    @Override public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+    @Override protected void paintGuideBackground(GuideGraphics graphics, int mouseX, int mouseY, float partialTick) {
         MinecraftClientWindow.extractDeferredSubtitles(minecraft);
     }
-    @Override public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+    @Override protected void paintGuideScreen(GuideGraphics graphics, int mouseX, int mouseY, float partialTick) {
         int background = view.presentation().theme() == GuideUiConfig.Theme.MINT ? 0xFF172A27 : OpenAllayWidgetTheme.CHARCOAL;
         graphics.fill(card.x(), card.y(), card.x() + card.width(), card.y() + card.height(), background);
         graphics.outline(card.x(), card.y(), card.width(), card.height(), OpenAllayWidgetTheme.SLATE_BORDER);
@@ -661,7 +661,7 @@ public final class GuideChatLiteScreen extends Screen {
             if (strip.contains(mouseX, mouseY)) graphics.setTooltipForNextFrame(font, Component.literal(message), mouseX, mouseY);
         }
         renderObservationStrip(graphics, mouseX, mouseY);
-        super.extractRenderState(graphics, mouseX, mouseY, partialTick);
+        renderGuideWidgets(graphics, mouseX, mouseY, partialTick);
         GuideVoiceIndicator.extract(graphics, minecraft, voice);
     }
 

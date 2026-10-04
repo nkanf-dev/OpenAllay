@@ -1,5 +1,6 @@
 package dev.openallay.client.gui.hud;
 
+import dev.openallay.client.gui.GuideGraphics;
 import dev.openallay.client.gui.MinecraftSemanticRenderer;
 import dev.openallay.client.gui.MinecraftSemanticResolver;
 import dev.openallay.client.gui.OpenAllayWidgetTheme;
@@ -26,7 +27,6 @@ import java.util.List;
 import java.util.Map;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.locale.Language;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
@@ -197,7 +197,7 @@ public final class GuideHudResultRenderer implements AutoCloseable {
         return changed || viewportChanged;
     }
 
-    public void render(GuiGraphicsExtractor graphics, Font font, GuideHudView view,
+    public void render(GuideGraphics graphics, Font font, GuideHudView view,
             GuideUiLayout.Rect viewport, int offset, int mouseX, int mouseY,
             boolean interactive, long ticks) {
         paintedHits = null;
@@ -307,7 +307,7 @@ public final class GuideHudResultRenderer implements AutoCloseable {
                 && (long) top + height > viewport.y() && top < viewport.bottom();
     }
 
-    private boolean nativeRecipe(GuideHudView view, Row row, GuiGraphicsExtractor graphics, Font font,
+    private boolean nativeRecipe(GuideHudView view, Row row, GuideGraphics graphics, Font font,
             RichComponent.RecipeGrid component, GuideUiLayout.Rect bounds, int mouseX, int mouseY, long ticks) {
         GuideRecipeCard recipe = row.recipes().get(component.nodeId());
         if (recipe == null && row.source() instanceof GuideUiRow.Assistant assistant) {

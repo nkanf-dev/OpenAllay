@@ -49,7 +49,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import net.minecraft.client.renderer.RenderPipelines;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import dev.openallay.client.gui.GuideGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.MultiLineEditBox;
@@ -60,7 +60,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 
 /** Native settings shell and model-profile editor backed only by ClientSettingsService. */
-public final class OpenAllaySettingsScreen extends Screen {
+public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.GuideNativeScreen {
     private static final int BACKGROUND = 0xE00B0D12;
     private static final int PANEL = 0xE0181B22;
     private static final int PANEL_ALT = 0xE0242933;
@@ -485,8 +485,8 @@ public final class OpenAllaySettingsScreen extends Screen {
     }
 
     @Override
-    public void extractRenderState(
-            GuiGraphicsExtractor graphics,
+    protected void paintGuideScreen(
+            GuideGraphics graphics,
             int mouseX,
             int mouseY,
             float partialTick) {
@@ -525,7 +525,7 @@ public final class OpenAllaySettingsScreen extends Screen {
             renderPlaceholder(graphics);
         }
         renderNotice(graphics);
-        super.extractRenderState(graphics, mouseX, mouseY, partialTick);
+        renderGuideWidgets(graphics, mouseX, mouseY, partialTick);
     }
 
     private void addHeaderActions() {
@@ -686,7 +686,7 @@ public final class OpenAllaySettingsScreen extends Screen {
         next.active = navigationScroll < maximum;
     }
 
-    private void renderSectionMenu(GuiGraphicsExtractor graphics) {
+    private void renderSectionMenu(GuideGraphics graphics) {
         graphics.text(font, Component.translatable("screen.openallay.settings.navigation.choose"),
                 layout.footer().x() + 8, layout.footer().y() + 9, MUTED, false);
     }
@@ -987,7 +987,7 @@ public final class OpenAllaySettingsScreen extends Screen {
         }
     }
 
-    private void renderUi(GuiGraphicsExtractor graphics) {
+    private void renderUi(GuideGraphics graphics) {
         SettingsLayout.Rect area = layout.editor();
         int x = area.x() + 10;
         int y = area.y() + uiControlsInset() - uiScroll;
@@ -1322,7 +1322,7 @@ public final class OpenAllaySettingsScreen extends Screen {
         return Component.translatable("screen.openallay.settings.voice.status." + known);
     }
 
-    private void renderVoice(GuiGraphicsExtractor graphics) {
+    private void renderVoice(GuideGraphics graphics) {
         SettingsLayout.Rect area = layout.editor();
         int x = area.x() + 10;
         int y = area.y() + 12 - voiceScroll;
@@ -1722,7 +1722,7 @@ public final class OpenAllaySettingsScreen extends Screen {
     }
 
     private int renderExtensionCapabilities(
-            GuiGraphicsExtractor graphics, ExtensionSettingsProjection.ExtensionCard extension,
+            GuideGraphics graphics, ExtensionSettingsProjection.ExtensionCard extension,
             int x, int y, int width) {
         if (extension.capabilities().isEmpty()) return y;
         y = renderWrapped(graphics, Component.translatable(
@@ -2313,7 +2313,7 @@ public final class OpenAllaySettingsScreen extends Screen {
         return !busy;
     }
 
-    private void renderModels(GuiGraphicsExtractor graphics) {
+    private void renderModels(GuideGraphics graphics) {
         if (layout.wide()) {
             graphics.text(
                     font,
@@ -2404,7 +2404,7 @@ public final class OpenAllaySettingsScreen extends Screen {
     }
 
     private void renderServerModel(
-            GuiGraphicsExtractor graphics, SettingsLayout.Rect area) {
+            GuideGraphics graphics, SettingsLayout.Rect area) {
         var server = snapshot.serverModel();
         int x = area.x() + 10;
         int y = area.y() + 12;
@@ -2455,7 +2455,7 @@ public final class OpenAllaySettingsScreen extends Screen {
         }
     }
 
-    private void renderGeneral(GuiGraphicsExtractor graphics) {
+    private void renderGeneral(GuideGraphics graphics) {
         GeneralSettingsProjection general = project(snapshot).general();
         SettingsLayout.Rect area = layout.editor();
         int origin = layout.pageOrigin(pageScroll);
@@ -2481,7 +2481,7 @@ public final class OpenAllaySettingsScreen extends Screen {
         graphics.disableScissor();
     }
 
-    private void renderAbout(GuiGraphicsExtractor graphics) {
+    private void renderAbout(GuideGraphics graphics) {
         SettingsLayout.Rect area = layout.editor();
         int origin = layout.pageOrigin(pageScroll);
         int x = area.x() + 10;
@@ -2493,7 +2493,7 @@ public final class OpenAllaySettingsScreen extends Screen {
         int bannerHeight = Math.max(54, bannerWidth * 9 / 16);
         int bannerX = x + Math.max(0, (contentWidth - bannerWidth) / 2);
         int bannerY = origin + 31;
-        graphics.blit(RenderPipelines.GUI_TEXTURED, ABOUT_BANNER,
+        graphics.blitTexture( ABOUT_BANNER,
                 bannerX, bannerY, 0.0F, 0.0F, bannerWidth, bannerHeight,
                 1024, 576, 1024, 576);
         int y = bannerY + bannerHeight + 12;
@@ -2516,7 +2516,7 @@ public final class OpenAllaySettingsScreen extends Screen {
         graphics.disableScissor();
     }
 
-    private void renderHistory(GuiGraphicsExtractor graphics) {
+    private void renderHistory(GuideGraphics graphics) {
         HistorySettingsProjection history = project(snapshot).history();
         SettingsLayout.Rect area = layout.editor();
         graphics.text(
@@ -2534,7 +2534,7 @@ public final class OpenAllaySettingsScreen extends Screen {
         pageContentHeight = Math.max(0, actionsBottom + pageScroll - area.y());
     }
 
-    private void renderDiagnostics(GuiGraphicsExtractor graphics) {
+    private void renderDiagnostics(GuideGraphics graphics) {
         DiagnosticsSettingsProjection diagnostics = project(snapshot).diagnostics();
         SettingsLayout.Rect area = layout.editor();
         graphics.enableScissor(area.x(), area.y(), area.right(), area.bottom());
@@ -2594,7 +2594,7 @@ public final class OpenAllaySettingsScreen extends Screen {
     }
 
     private int renderDebugDiagnostics(
-            GuiGraphicsExtractor graphics,
+            GuideGraphics graphics,
             DiagnosticsSettingsProjection.DebugSection section,
             int x,
             int y,
@@ -2692,7 +2692,7 @@ public final class OpenAllaySettingsScreen extends Screen {
     }
 
     private int settingsHeading(
-            GuiGraphicsExtractor graphics,
+            GuideGraphics graphics,
             Component text,
             int x,
             int y,
@@ -2706,7 +2706,7 @@ public final class OpenAllaySettingsScreen extends Screen {
     }
 
     private int debugLine(
-            GuiGraphicsExtractor graphics,
+            GuideGraphics graphics,
             int x,
             int y,
             int width,
@@ -2720,7 +2720,7 @@ public final class OpenAllaySettingsScreen extends Screen {
         return y + 2;
     }
 
-    private void renderPlaceholder(GuiGraphicsExtractor graphics) {
+    private void renderPlaceholder(GuideGraphics graphics) {
         SettingsLayout.Rect area = layout.editor();
         graphics.text(
                 font,
@@ -2738,7 +2738,7 @@ public final class OpenAllaySettingsScreen extends Screen {
                 false);
     }
 
-    private void renderExtensions(GuiGraphicsExtractor graphics) {
+    private void renderExtensions(GuideGraphics graphics) {
         SettingsLayout.Rect area = layout.editor();
         if (!layout.wide() && !narrowExtensionDetail) {
             return;
@@ -2924,7 +2924,7 @@ public final class OpenAllaySettingsScreen extends Screen {
     }
 
     private int extensionDetailLine(
-            GuiGraphicsExtractor graphics,
+            GuideGraphics graphics,
             String labelKey,
             String value,
             int x,
@@ -2941,7 +2941,7 @@ public final class OpenAllaySettingsScreen extends Screen {
     }
 
     private int renderExtensionContributions(
-            GuiGraphicsExtractor graphics,
+            GuideGraphics graphics,
             dev.openallay.settings.extension.ExtensionSettingsView.Contributions contributions,
             int x,
             int y,
@@ -2996,7 +2996,7 @@ public final class OpenAllaySettingsScreen extends Screen {
     }
 
     private int renderExtensionRuntime(
-            GuiGraphicsExtractor graphics,
+            GuideGraphics graphics,
             ExtensionSettingsProjection.RuntimeCard runtime,
             int x,
             int y,
@@ -3045,7 +3045,7 @@ public final class OpenAllaySettingsScreen extends Screen {
     }
 
     private int renderExtensionCatalog(
-            GuiGraphicsExtractor graphics,
+            GuideGraphics graphics,
             ExtensionSettingsProjection projection,
             int x,
             int y,
@@ -3132,7 +3132,7 @@ public final class OpenAllaySettingsScreen extends Screen {
     }
 
     private int renderExtensionHeading(
-            GuiGraphicsExtractor graphics,
+            GuideGraphics graphics,
             String key,
             int count,
             int x,
@@ -3147,7 +3147,7 @@ public final class OpenAllaySettingsScreen extends Screen {
         return y + 14;
     }
 
-    private int renderExtensionEmpty(GuiGraphicsExtractor graphics, int x, int y) {
+    private int renderExtensionEmpty(GuideGraphics graphics, int x, int y) {
         graphics.text(
                 font,
                 Component.translatable("screen.openallay.settings.extensions.none"),
@@ -3159,7 +3159,7 @@ public final class OpenAllaySettingsScreen extends Screen {
     }
 
     private int renderExtensionCard(
-            GuiGraphicsExtractor graphics,
+            GuideGraphics graphics,
             Component title,
             Component detail,
             Component schema,
@@ -3296,7 +3296,7 @@ public final class OpenAllaySettingsScreen extends Screen {
     }
 
     private int renderWrapped(
-            GuiGraphicsExtractor graphics,
+            GuideGraphics graphics,
             Component text,
             int x,
             int y,
@@ -3314,7 +3314,7 @@ public final class OpenAllaySettingsScreen extends Screen {
         return Math.max(1, font.split(text, Math.max(20, width)).size()) * lineHeight;
     }
 
-    private void renderSkills(GuiGraphicsExtractor graphics) {
+    private void renderSkills(GuideGraphics graphics) {
         SettingsLayout.Rect area = layout.editor();
         if (!layout.wide() && !narrowSkillDetail) {
             return;
@@ -3372,7 +3372,7 @@ public final class OpenAllaySettingsScreen extends Screen {
     }
 
     private int renderRequirements(
-            GuiGraphicsExtractor graphics,
+            GuideGraphics graphics,
             RequirementSettingsProjection requirements,
             int x, int y, int width, boolean catalogPreview) {
         y = renderWrapped(graphics, Component.translatable(
@@ -3398,7 +3398,7 @@ public final class OpenAllaySettingsScreen extends Screen {
     }
 
     private void renderCommunitySkills(
-            GuiGraphicsExtractor graphics,
+            GuideGraphics graphics,
             SettingsLayout.Rect area) {
         SkillSettingsProjection.Community community = skillProjection().community();
         graphics.text(
@@ -3526,7 +3526,7 @@ public final class OpenAllaySettingsScreen extends Screen {
         graphics.disableScissor();
     }
 
-    private void renderNotice(GuiGraphicsExtractor graphics) {
+    private void renderNotice(GuideGraphics graphics) {
         String message = localNotice;
         int color = ERROR;
         SettingsNotice serviceNotice = snapshot.notice();
@@ -4413,7 +4413,7 @@ public final class OpenAllaySettingsScreen extends Screen {
     }
 
     private static void panel(
-            GuiGraphicsExtractor graphics, SettingsLayout.Rect rect, int color) {
+            GuideGraphics graphics, SettingsLayout.Rect rect, int color) {
         if (rect.width() > 0 && rect.height() > 0) {
             graphics.fill(rect.x(), rect.y(), rect.right(), rect.bottom(), color);
         }

@@ -1,12 +1,12 @@
 package dev.openallay.client.gui.hud;
 
+import dev.openallay.client.gui.GuideGraphics;
 import dev.openallay.client.gui.OpenAllayWidgetTheme;
 import dev.openallay.client.voice.VoiceRuntime;
 import dev.openallay.client.voice.VoiceStatusPresentation;
 import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.locale.Language;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
@@ -18,7 +18,7 @@ public final class GuideVoiceIndicator {
     private static List<FormattedCharSequence> action = List.of();
     private GuideVoiceIndicator() {}
 
-    public static void extract(GuiGraphicsExtractor graphics, Minecraft minecraft, VoiceRuntime voice) {
+    public static void extract(GuideGraphics graphics, Minecraft minecraft, VoiceRuntime voice) {
         if (voice == null) return;
         VoiceRuntime.Status status = voice.status();
         if (!status.indicatorVisible()) return;

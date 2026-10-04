@@ -17,6 +17,8 @@ public final class GuideNativeInput {
         return new KeyEvent(key, SDLKeyboard.SDL_GetKeyFromScancode(key, (short) modifiers, false), modifiers);
     }
 
+    public static net.minecraft.client.input.CharacterEvent characterEvent(int codePoint) { return new net.minecraft.client.input.CharacterEvent(codePoint); }
+
     public static boolean isLeftClick(MouseButtonEvent event) {
         return event.button() == InputConstants.MOUSE_BUTTON_LEFT;
     }

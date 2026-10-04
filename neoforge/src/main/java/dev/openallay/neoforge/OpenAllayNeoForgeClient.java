@@ -66,7 +66,7 @@ public final class OpenAllayNeoForgeClient {
                 Identifier.fromNamespaceAndPath("openallay", "guide_hud"),
                 (graphics, deltaTracker) -> {
                     GuideClientUiCoordinator current = ui;
-                    if (current != null) current.extractRenderState(graphics);
+                    if (current != null) current.extractRenderState(dev.openallay.client.gui.GuideGraphics.wrap(graphics));
                 }));
         NeoForge.EVENT_BUS.addListener((ClientStartedEvent event) ->
                 start(runtime, bridge, event.getClient()));

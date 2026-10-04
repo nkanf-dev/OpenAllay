@@ -6,14 +6,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import dev.openallay.client.gui.GuideGraphics;
 import net.minecraft.client.gui.components.toasts.Toast;
 import net.minecraft.client.gui.components.toasts.ToastManager;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 
 /** Native owned toast with bounded wrapped card facts and stable slot demand across task upgrades. */
-public final class GuideNativeToast implements Toast, GuideNotificationPort.Handle {
+public final class GuideNativeToast extends GuideNativeToastBinding implements GuideNotificationPort.Handle {
     private static final int HEIGHT = 64;
     private static final int MAX_WIDTH = 240;
     private final Object token = new Object();
@@ -165,7 +165,7 @@ public final class GuideNativeToast implements Toast, GuideNotificationPort.Hand
         return List.copyOf(visible);
     }
 
-    @Override public void extractRenderState(GuiGraphicsExtractor graphics, Font font, long fullyVisibleForMs) {
+    @Override protected void paintGuideToast(GuideGraphics graphics, Font font, long fullyVisibleForMs) {
         if (!valid()) return;
         refreshLayout(font);
         graphics.fill(0, 0, width(), height(), OpenAllayWidgetTheme.CHARCOAL);
@@ -183,7 +183,7 @@ public final class GuideNativeToast implements Toast, GuideNotificationPort.Hand
                 width(), height(), occcupiedSlotCount(), layout.title().size(), layout.description().size());
     }
 
-    private static void text(GuiGraphicsExtractor graphics, Font font,
+    private static void text(GuideGraphics graphics, Font font,
                              List<FormattedCharSequence> lines, int y, int color) {
         for (int index = 0; index < lines.size(); index++) graphics.text(font, lines.get(index), 10, y + index * 10, color);
     }

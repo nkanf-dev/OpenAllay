@@ -13,7 +13,7 @@ import java.util.Objects;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import dev.openallay.client.gui.GuideGraphics;
 import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
@@ -21,7 +21,7 @@ import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 
 /** Native, non-pausing HUD editor. Changes stay in memory until the player presses Apply. */
-public final class GuideHudEditorScreen extends Screen {
+public final class GuideHudEditorScreen extends dev.openallay.client.gui.GuideNativeScreen {
     private static final int PANEL = 0xF0181B22;
     private static final int TEXT = 0xFFE8EDF2;
     private static final int MUTED = 0xFFA9B3BE;
@@ -265,13 +265,13 @@ public final class GuideHudEditorScreen extends Screen {
     }
 
     @Override
-    public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+    protected void paintGuideBackground(GuideGraphics graphics, int mouseX, int mouseY, float partialTick) {
         // Keep the world visible for opacity editing; preserve native in-game subtitle extraction.
         MinecraftClientWindow.extractDeferredSubtitles(minecraft);
     }
 
     @Override
-    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+    protected void paintGuideScreen(GuideGraphics graphics, int mouseX, int mouseY, float partialTick) {
         if (!ownerValid.getAsBoolean() || draft.finished()) {
             return;
         }
@@ -316,16 +316,16 @@ public final class GuideHudEditorScreen extends Screen {
         } else {
             boundedText(graphics, label("title"), panelX + 6, panelY + 8, panelWidth - 94, TEXT);
         }
-        super.extractRenderState(graphics, mouseX, mouseY, partialTick);
+        renderGuideWidgets(graphics, mouseX, mouseY, partialTick);
     }
 
-    private void boundedCenteredText(GuiGraphicsExtractor graphics, Component message, int y) {
+    private void boundedCenteredText(GuideGraphics graphics, Component message, int y) {
         int available = Math.max(0, panelWidth - 76);
         String text = font.plainSubstrByWidth(message.getString(), available);
         graphics.text(font, text, panelX + (panelWidth - font.width(text)) / 2, y, TEXT);
     }
 
-    private void boundedText(GuiGraphicsExtractor graphics, Component message, int x, int y, int width, int color) {
+    private void boundedText(GuideGraphics graphics, Component message, int x, int y, int width, int color) {
         graphics.text(font, font.plainSubstrByWidth(message.getString(), Math.max(0, width)), x, y, color);
     }
 

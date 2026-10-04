@@ -17,8 +17,7 @@ public final class FabricBridgePayloads {
             return;
         }
         registered = true;
-        PayloadTypeRegistry.serverboundPlay().register(Packet.TYPE, Packet.CODEC);
-        PayloadTypeRegistry.clientboundPlay().register(Packet.TYPE, Packet.CODEC);
+        FabricNativePayloadRegistration.register();
     }
 
     public record Packet(String kind, String json) implements CustomPacketPayload {

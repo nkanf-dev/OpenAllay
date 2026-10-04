@@ -92,20 +92,7 @@ public final class ClientFocusCapture {
     /** Current native main-camera numbers, never the player's body rotation or configured FOV. */
     public static WorldFocusObservation.Camera camera(Minecraft client) {
         requireOwnerThread(client);
-        var camera = dev.openallay.client.gui.MinecraftClientWindow.camera(client);
-        Vec3 position = camera.position();
-        var entity = camera.entity();
-        return new WorldFocusObservation.Camera(
-                position.x(),
-                position.y(),
-                position.z(),
-                camera.yRot(),
-                camera.xRot(),
-                camera.getFov(),
-                client.options.getCameraType().name().toLowerCase(java.util.Locale.ROOT),
-                camera.isInitialized(),
-                camera.isDetached(),
-                entity == null ? null : entity.getUUID());
+        return dev.openallay.client.observation.MinecraftCameraFacts.focus(client);
     }
 
     private static WorldFocusObservation.Target target(Minecraft client) {
@@ -122,8 +109,7 @@ public final class ClientFocusCapture {
             BlockPos blockPos = blockHit.getBlockPos();
             var state = client.level.getBlockState(blockPos);
             TreeMap<String, String> properties = new TreeMap<>();
-            state.getValues().forEach(value ->
-                    properties.put(value.property().getName(), value.valueName()));
+            properties.putAll(dev.openallay.context.minecraft.MinecraftBlockStateProperties.capture(state));
             var fluid = state.getFluidState();
             return new WorldFocusObservation.Target(
                     "block",

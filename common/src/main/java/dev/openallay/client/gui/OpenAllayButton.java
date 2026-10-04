@@ -1,13 +1,13 @@
 package dev.openallay.client.gui;
 
 import java.util.Objects;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import dev.openallay.client.gui.GuideGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.network.chat.Component;
 
 /** A compact pixel-style button that keeps Minecraft's input and narration behavior. */
-public final class OpenAllayButton extends Button {
+public final class OpenAllayButton extends GuideNativeButton {
     private boolean selected;
 
     private OpenAllayButton(
@@ -36,8 +36,8 @@ public final class OpenAllayButton extends Button {
     }
 
     @Override
-    protected void extractContents(
-            GuiGraphicsExtractor graphics,
+    protected void paintGuideButton(
+            GuideGraphics graphics,
             int mouseX,
             int mouseY,
             float partialTick) {
@@ -70,11 +70,7 @@ public final class OpenAllayButton extends Button {
                     colors.marker());
         }
 
-        extractScrollingStringOverContents(
-                graphics.textRendererForWidget(
-                        this, GuiGraphicsExtractor.HoveredTextEffects.NONE),
-                getMessage().copy().withColor(colors.text()),
-                4);
+        paintGuideButtonLabel(graphics, getMessage().copy().withColor(colors.text()), 4);
     }
 
     public static final class Builder {
