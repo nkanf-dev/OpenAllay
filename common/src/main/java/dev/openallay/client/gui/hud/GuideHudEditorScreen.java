@@ -208,10 +208,10 @@ public final class GuideHudEditorScreen extends dev.openallay.client.gui.GuideNa
     }
 
     @Override
-    public void resize(int width, int height) {
+    protected void resizeGuide(int width, int height) {
         interaction.cancel();
         setDragging(false);
-        super.resize(width, height);
+        resizeGuideWidgets(width, height);
     }
 
     @Override

@@ -2,7 +2,6 @@ package dev.openallay.client.gui.mixin;
 
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.world.inventory.Slot;
-import org.jspecify.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Invoker;
 
@@ -10,5 +9,6 @@ import org.spongepowered.asm.mixin.gen.Invoker;
 @Mixin(AbstractContainerScreen.class)
 public interface AbstractContainerScreenObservationAccessor {
     @Invoker("getHoveredSlot")
-    @Nullable Slot openallay$getHoveredSlot(double x, double y);
+    /** Returns null when no native slot is under the pointer. */
+    Slot openallay$getHoveredSlot(double x, double y);
 }

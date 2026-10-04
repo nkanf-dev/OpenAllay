@@ -16,6 +16,8 @@ public final class GuideNativeInput {
 
     public static net.minecraft.client.input.CharacterEvent characterEvent(int codePoint) { return new net.minecraft.client.input.CharacterEvent(codePoint, 0); }
 
+    public static boolean controlDown(KeyEvent event) { return event.hasControlDownWithQuirk(); }
+
     public static boolean isLeftClick(MouseButtonEvent event) {
         return event.button() == InputConstants.MOUSE_BUTTON_LEFT;
     }

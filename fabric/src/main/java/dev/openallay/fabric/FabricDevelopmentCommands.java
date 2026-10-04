@@ -17,7 +17,6 @@ import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.network.chat.Component;
-import net.minecraft.server.permissions.Permissions;
 
 public final class FabricDevelopmentCommands {
     private FabricDevelopmentCommands() {}
@@ -28,8 +27,7 @@ public final class FabricDevelopmentCommands {
         CommandRegistrationCallback.EVENT.register((dispatcher, access, environment) ->
                 dispatcher.register(literal("openallay")
                         .then(literal("dev")
-                                .requires(source -> source.permissions()
-                                        .hasPermission(Permissions.COMMANDS_GAMEMASTER))
+                                .requires(source -> dev.openallay.context.minecraft.MinecraftCommandPermissions.canReadWorld(source))
                                 .then(literal("tools").executes(context -> {
                                     handler.listTools().forEach(line -> context.getSource()
                                             .sendSuccess(() -> Component.literal(line), false));

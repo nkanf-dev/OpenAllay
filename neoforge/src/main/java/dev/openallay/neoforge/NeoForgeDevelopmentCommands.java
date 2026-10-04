@@ -16,7 +16,6 @@ import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.network.chat.Component;
-import net.minecraft.server.permissions.Permissions;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 
@@ -30,9 +29,7 @@ public final class NeoForgeDevelopmentCommands {
                 event.getDispatcher()
                         .register(literal("openallay")
                                 .then(literal("dev")
-                                        .requires(source -> source.permissions()
-                                                .hasPermission(
-                                                        Permissions.COMMANDS_GAMEMASTER))
+                                        .requires(source -> dev.openallay.context.minecraft.MinecraftCommandPermissions.canReadWorld(source))
                                         .then(literal("tools").executes(context -> {
                                             handler.listTools().forEach(line -> context.getSource()
                                                     .sendSuccess(

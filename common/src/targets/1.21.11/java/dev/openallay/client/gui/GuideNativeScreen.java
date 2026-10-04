@@ -20,4 +20,7 @@ public abstract class GuideNativeScreen extends Screen {
     protected final void renderGuideWidgets(GuideGraphics graphics, int mouseX, int mouseY, float delta) {
         super.render(graphics.nativeGraphics(), mouseX, mouseY, delta);
     }
+    @Override public final void resize(int width, int height) { resizeGuide(width, height); }
+    protected void resizeGuide(int width, int height) { resizeGuideWidgets(width, height); }
+    protected final void resizeGuideWidgets(int width, int height) { super.resize(width, height); }
 }

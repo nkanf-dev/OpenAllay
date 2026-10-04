@@ -21,6 +21,6 @@ public record GuideKeyInput(GuideKeyIntent intent, boolean confirmation, boolean
             default -> GuideKeyIntent.OTHER;
         };
         return new GuideKeyInput(intent, event.isConfirmation(), event.hasShiftDown(),
-                event.hasControlDownWithQuirk(), event.isPaste());
+                GuideNativeInput.controlDown(event), event.isPaste());
     }
 }
