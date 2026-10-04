@@ -1,8 +1,7 @@
 package dev.openallay.client.gui.mixin;
 
 import dev.openallay.client.gui.GuideComposerGeometry;
-import net.minecraft.client.gui.components.AbstractScrollArea;
-import net.minecraft.client.gui.components.AbstractTextAreaWidget;
+import net.minecraft.client.gui.components.AbstractScrollWidget;
 import net.minecraft.client.gui.components.MultiLineEditBox;
 import net.minecraft.client.gui.components.MultilineTextField;
 import net.minecraft.network.chat.Component;
@@ -10,14 +9,13 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
-/** Exact Minecraft 26.2 access. Keep the native editor and its live IME state during layout changes. */
+/** Exact Minecraft 1.21.3 access to the live native editor and its scroll-widget superclass. */
 @Mixin(MultiLineEditBox.class)
-public abstract class MultiLineEditBoxAccessor extends AbstractTextAreaWidget
+public abstract class MultiLineEditBoxAccessor extends AbstractScrollWidget
         implements GuideComposerGeometry.NativeAccess {
     /** Mixin superclass signature only; product code never creates this abstract mixin. */
-    protected MultiLineEditBoxAccessor(int x, int y, int width, int height, Component message,
-            AbstractScrollArea.ScrollbarSettings scrollbar) {
-        super(x, y, width, height, message, scrollbar);
+    protected MultiLineEditBoxAccessor(int x, int y, int width, int height, Component message) {
+        super(x, y, width, height, message);
     }
 
     @Override
@@ -33,6 +31,7 @@ public abstract class MultiLineEditBoxAccessor extends AbstractTextAreaWidget
     @Override
     @Unique
     public void openallay$refreshScrollAmount() {
-        refreshScrollAmount();
+        // Reflow changed the native content height. Clamp the current offset, not the cursor.
+        setScrollAmount(scrollAmount());
     }
 }

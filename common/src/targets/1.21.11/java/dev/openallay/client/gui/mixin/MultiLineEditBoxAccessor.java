@@ -27,4 +27,10 @@ public abstract class MultiLineEditBoxAccessor extends AbstractTextAreaWidget
     public int openallay$totalInnerPadding() {
         return totalInnerPadding();
     }
+
+    @Override
+    @Unique
+    public void openallay$refreshScrollAmount() {
+        refreshScrollAmount();
+    }
 }

@@ -386,7 +386,7 @@ public final class MinecraftContextCapture {
     }
 
     private IngredientRequirementSnapshot captureIngredient(int index, Ingredient ingredient) {
-        List<IngredientAlternativeSnapshot> alternatives = ingredient.items()
+        List<IngredientAlternativeSnapshot> alternatives = dev.openallay.context.minecraft.MinecraftIngredientItems.items(ingredient)
                 .map(holder -> {
                     String id = dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(holder.unwrapKey()
                             .orElseThrow(() -> new IllegalStateException("Unbound recipe item"))

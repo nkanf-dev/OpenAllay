@@ -185,11 +185,11 @@ final class JeiRecipeProvider implements RecipeKnowledgeProvider {
                 outputs.add(captureOutput(values));
             } else if (allItems(values)) {
                 IngredientRequirementSnapshot requirement = captureItemRequirement(
-                        slot.getRole() == RecipeIngredientRole.CRAFTING_STATION
+                        MinecraftJeiIngredientRoles.craftingStation(slot.getRole())
                                 ? "catalyst-" + catalystIndex++
                                 : "input-" + inputIndex++,
                         values);
-                if (slot.getRole() == RecipeIngredientRole.CRAFTING_STATION) {
+                if (MinecraftJeiIngredientRoles.craftingStation(slot.getRole())) {
                     catalysts.add(requirement);
                 } else if (slot.getRole() == RecipeIngredientRole.INPUT) {
                     ingredients.add(requirement);

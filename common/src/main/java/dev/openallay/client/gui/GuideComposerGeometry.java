@@ -13,6 +13,7 @@ public final class GuideComposerGeometry {
     public interface NativeAccess {
         MultilineTextField openallay$textField();
         int openallay$totalInnerPadding();
+        void openallay$refreshScrollAmount();
     }
 
     public static void resize(MultiLineEditBox composer, GuideUiLayout.Rect bounds) {
@@ -23,7 +24,7 @@ public final class GuideComposerGeometry {
         if (field.openallay$width() != width) {
             field.openallay$width(width);
             field.openallay$reflowDisplayLines();
-            composer.refreshScrollAmount();
+            widget.openallay$refreshScrollAmount();
         }
     }
 

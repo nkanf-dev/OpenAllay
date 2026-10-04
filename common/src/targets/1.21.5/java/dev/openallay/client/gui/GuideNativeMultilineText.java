@@ -19,7 +19,7 @@ public final class GuideNativeMultilineText {
     }
 
     public static int defaultTotalPadding() {
-        // Native AbstractTextAreaWidget.innerPadding() is four pixels per side.
+        // Native scroll/text-area widgets in this family use four pixels per side.
         return 8;
     }
 }

@@ -76,7 +76,7 @@ final class GuideHudHitCacheContractsTest {
         String init = lite.substring(initStart, reposition);
         assertTrue(init.contains("if (composer == null)"));
         assertTrue(init.contains("GuideComposerGeometry.resize(composer, input)"));
-        assertTrue(init.contains("if (!composer.getValue().equals(state.readText(session))) composer.setValue("));
+        assertTrue(init.contains("if (!composer.getValue().equals(state.readText(session))) dev.openallay.client.gui.GuideNativeMultilineText.setValue(composer, state.readText(session), true)"));
         assertTrue(init.contains("addRenderableWidget(composer)"));
         assertTrue(init.contains("composer.visible = readingLayout.footerFits()"));
         assertTrue(init.contains("setFocused(null)"));

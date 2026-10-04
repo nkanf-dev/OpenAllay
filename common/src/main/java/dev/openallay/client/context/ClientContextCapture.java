@@ -593,7 +593,7 @@ public final class ClientContextCapture {
                             "input-" + index,
                             1,
                             true,
-                            ingredient.items().map(holder -> {
+                            dev.openallay.context.minecraft.MinecraftIngredientItems.items(ingredient).map(holder -> {
                                 String id = dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(holder.unwrapKey().orElseThrow()).toString();
                                 return new IngredientAlternativeSnapshot("item", id, List.of(id));
                             }).toList()));

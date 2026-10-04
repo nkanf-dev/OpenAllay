@@ -32,7 +32,6 @@ import dev.openallay.tool.ToolResult;
 import java.util.List;
 import java.util.Objects;
 import dev.openallay.client.gui.GuideGraphics;
-import net.minecraft.client.gui.components.AbstractTextAreaWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.MultiLineEditBox;
 import net.minecraft.client.gui.components.Tooltip;

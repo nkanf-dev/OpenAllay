@@ -57,14 +57,62 @@ final class FullscreenDraftArchitectureTest {
         String neo = source("neoforge/src/main/resources/META-INF/neoforge.mods.toml");
         assertTrue(geometry.contains("NativeAccess widget = (NativeAccess) composer;"));
         assertFalse(geometry.contains("(MultiLineEditBoxAccessor)"));
+        assertTrue(geometry.contains("void openallay$refreshScrollAmount();"));
+        int widthChange = geometry.indexOf("if (field.openallay$width() != width) {");
+        int widthChangeEnd = geometry.indexOf("\n        }", widthChange);
+        assertTrue(widthChange >= 0 && widthChangeEnd > widthChange);
+        String reflow = geometry.substring(widthChange, widthChangeEnd);
+        assertTrue(reflow.contains("field.openallay$width(width);"));
+        assertTrue(reflow.contains("field.openallay$reflowDisplayLines();"));
+        assertTrue(reflow.contains("widget.openallay$refreshScrollAmount();"));
+        assertTrue(reflow.indexOf("field.openallay$width(width);") < reflow.indexOf("field.openallay$reflowDisplayLines();"));
+        assertTrue(reflow.indexOf("field.openallay$reflowDisplayLines();") < reflow.indexOf("widget.openallay$refreshScrollAmount();"));
+        assertEquals(1, geometry.split("widget\\.openallay\\$refreshScrollAmount\\(\\);", -1).length - 1);
+        for (String forbidden : new String[]{"new MultiLineEditBox", "new MultilineTextField", ".setValue(",
+                "seekCursor", "setSelecting", "setScrollAmount", "composer.refreshScrollAmount()"}) {
+            assertFalse(geometry.contains(forbidden), forbidden);
+        }
         assertTrue(widgetMixin.contains("implements GuideComposerGeometry.NativeAccess"));
+        assertTrue(widgetMixin.contains("void openallay$refreshScrollAmount()"));
+        assertTrue(widgetMixin.contains("refreshScrollAmount();"));
+        String legacyWidgetMixin = source("common/src/targets/1.21.11/java/dev/openallay/client/gui/mixin/MultiLineEditBoxAccessor.java");
+        assertTrue(legacyWidgetMixin.contains("void openallay$refreshScrollAmount()"));
+        assertTrue(legacyWidgetMixin.contains("refreshScrollAmount();"));
         assertTrue(widgetMixin.contains("@Mixin(MultiLineEditBox.class)"));
         assertTrue(fieldMixin.contains("@Invoker(\"reflowDisplayLines\")"));
+        assertTrue(fieldMixin.contains("@Mutable"));
+        assertTrue(fieldMixin.contains("@Accessor(\"width\")"));
+        for (String forbidden : new String[]{"@Accessor(\"cursor\")", "@Accessor(\"selectCursor\")",
+                "@Accessor(\"selecting\")", "@Accessor(\"displayLines\")"}) {
+            assertFalse(fieldMixin.contains(forbidden), forbidden);
+        }
         assertTrue(mixins.contains("MultiLineEditBoxAccessor"));
         assertTrue(mixins.contains("MultilineTextFieldAccessor"));
         assertTrue(fabric.contains("\"config\": \"openallay.client.mixins.json\""));
         assertTrue(fabric.contains("\"environment\": \"client\""));
         assertTrue(neo.contains("[[mixins]]"));
         assertTrue(neo.contains("config = \"openallay.client.mixins.json\""));
+    }
+    @Test void minecraft1213UsesItsActualScrollSuperclassAndReusesNativeConstruction() throws Exception {
+        String widgetMixin = source("common/src/targets/1.21.3/java/dev/openallay/client/gui/mixin/MultiLineEditBoxAccessor.java");
+        assertTrue(widgetMixin.contains("@Mixin(MultiLineEditBox.class)"));
+        assertTrue(widgetMixin.contains("extends AbstractScrollWidget"));
+        assertTrue(widgetMixin.contains("implements GuideComposerGeometry.NativeAccess"));
+        assertTrue(widgetMixin.contains("super(x, y, width, height, message)"));
+        assertTrue(widgetMixin.contains("@Accessor(\"textField\")"));
+        assertTrue(widgetMixin.contains("return totalInnerPadding();"));
+        assertTrue(widgetMixin.contains("setScrollAmount(scrollAmount());"));
+        for (String forbidden : new String[]{"AbstractTextAreaWidget", "new MultiLineEditBox", "new MultilineTextField",
+                "setScrollAmount(0", "scrollToCursor", "seekCursor", "setValue(", "renderContents("}) {
+            assertFalse(widgetMixin.contains(forbidden), forbidden);
+        }
+        String editor = source("common/src/targets/1.21.5/java/dev/openallay/client/gui/GuideNativeMultilineText.java");
+        assertTrue(editor.contains("new MultiLineEditBox(font, x, y, width, height, placeholder, narration)"));
+        assertTrue(editor.contains("editor.setValue(value);"));
+        assertTrue(editor.contains("return 8;"));
+        String lite = source("common/src/main/java/dev/openallay/client/gui/hud/GuideChatLiteScreen.java");
+        assertFalse(lite.contains("AbstractTextAreaWidget"));
+        assertFalse(Files.exists(root().resolve("common/src/targets/1.21.3/java/dev/openallay/client/gui/GuideComposerGeometry.java")));
+        assertFalse(Files.exists(root().resolve("common/src/targets/1.21.3/java/dev/openallay/client/gui/GuideNativeMultilineText.java")));
     }
 }
