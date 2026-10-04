@@ -14,7 +14,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.io.StringReader;
-import java.util.Comparator;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -383,10 +382,7 @@ final class NativeBlockCodec {
         Identifier id = BuiltInRegistries.BLOCK.getKey(state.getBlock());
         if (id == null) throw new IllegalArgumentException("Cannot encode an unregistered block");
         json.addProperty("id", id.toString());
-        JsonObject properties = new JsonObject();
-        state.getValues().sorted(Comparator.comparing(value -> value.property().getName()))
-                .forEach(value -> properties.addProperty(value.property().getName(), value.valueName()));
-        json.add("properties", properties);
+        json.add("properties", NativeBlockStateProperties.encode(state));
         return json;
     }
 

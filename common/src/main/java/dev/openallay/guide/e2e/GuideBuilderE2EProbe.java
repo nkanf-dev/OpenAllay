@@ -257,7 +257,7 @@ final class GuideBuilderE2EProbe {
                         var state = level.getBlockState(pos);
                         String id = BuiltInRegistries.BLOCK.getKey(state.getBlock()).toString();
                         Map<String, String> properties = new java.util.LinkedHashMap<>();
-                        state.getValues().forEach(value -> properties.put(value.property().getName(), value.valueName()));
+                        properties.putAll(dev.openallay.context.minecraft.MinecraftBlockStateProperties.capture(state));
                         check.addProperty("actualId", id); JsonObject actualProperties = new JsonObject(); properties.forEach(actualProperties::addProperty); check.add("actualProperties", actualProperties);
                         match = matches(landmark, id, properties);
                     }

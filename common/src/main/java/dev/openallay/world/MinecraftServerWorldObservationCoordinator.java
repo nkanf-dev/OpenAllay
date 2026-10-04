@@ -177,8 +177,7 @@ public final class MinecraftServerWorldObservationCoordinator
                 var state = level.getBlockState(blockPos);
                 if (capture.request.includeAir() || !state.isAir()) {
                     LinkedHashMap<String, String> properties = new LinkedHashMap<>();
-                    state.getValues().forEach(value ->
-                            properties.put(value.property().getName(), value.valueName()));
+                    properties.putAll(dev.openallay.context.minecraft.MinecraftBlockStateProperties.capture(state));
                     var fluidState = state.getFluidState();
                     String fluid = fluidState.isEmpty()
                             ? ""

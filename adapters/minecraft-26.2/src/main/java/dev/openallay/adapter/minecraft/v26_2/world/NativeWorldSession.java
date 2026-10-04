@@ -175,7 +175,7 @@ final class NativeWorldSession implements WorldSession {
         if(chunk==null)throw new ExtensionException("chunk_unavailable","Chunk is not loaded; no implicit generation: "+min);
         var section=chunk.getSection(chunk.getSectionIndex(minY));
         if(!canonicalAir(section))return false;
-        long key=net.minecraft.world.level.ChunkPos.pack(chunkX,chunkZ);
+        long key=NativeChunkCoordinates.pack(chunkX,chunkZ);
         java.util.Set<Integer> occupied=blockEntitySections.computeIfAbsent(key,ignored -> {
             java.util.Set<Integer> sections=new java.util.HashSet<>();
             for(BlockPos pos:chunk.getBlockEntitiesPos())sections.add(Math.floorDiv(pos.getY(),16));
@@ -279,9 +279,7 @@ final class NativeWorldSession implements WorldSession {
             // adapter did; an in-hook target mutation still fails the before gate.
             JsonObject state=com.google.gson.JsonParser.parseString(NativeBlockCodec.read(level,pos)).getAsJsonObject();
             state.addProperty("id",net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(updated.getBlock()).toString());
-            JsonObject properties=new JsonObject();
-            updated.getValues().forEach(value -> properties.addProperty(value.property().getName(),value.valueName()));
-            state.add("properties",properties);
+            state.add("properties",NativeBlockStateProperties.encode(updated));
             if(updated.getBlock()!=current.getBlock())state.remove("blockEntity");
             return new RepairOutcome(before.json(),state.toString());
         } finally {if(blockEntitySections!=null)blockEntitySections.clear();}
