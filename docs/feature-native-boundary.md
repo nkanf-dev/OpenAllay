@@ -31,10 +31,11 @@ Put native capture/render/window/input/world/network calls at their owning adapt
 boundary. Prefer existing native APIs and small typed bindings. Do not split stable
 code into interfaces merely for symmetry.
 
-The engine currently retains its existing Java25 runtime behavior. Older Java21/17
-targets need one central runtime adaptation, not feature forks. In particular the
-current Rhino dependency requires Java21; targeting Java17 bytecode alone cannot
-make it run on Java17. This boundary does not by itself claim old-game support.
+The shared engine targets Java21. Its source compiles with a Java21 toolchain,
+and the same compiled output serves the Java25 native 26.x adapters. Older Java17
+targets still need one central runtime adaptation, not feature forks. In particular
+the current Rhino dependency requires Java21; targeting Java17 bytecode alone
+cannot make it run on Java17. This boundary does not by itself claim old-game support.
 
 Compile the feature engine without a native game classpath:
 

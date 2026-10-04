@@ -8,8 +8,8 @@ plugins {
 }
 
 // This value is independent of minecraftTarget and the native java_version.
-// Retain the current runtime baseline until the central Java 17/Rhino gate passes.
-def engineJavaVersion = 25
+// Java 21 supports current Rhino and shared runtime features; Java 17 needs one central port.
+def engineJavaVersion = 21
 base { archivesName = 'openallay-engine-core' }
 java {
     toolchain.languageVersion = JavaLanguageVersion.of(engineJavaVersion)
