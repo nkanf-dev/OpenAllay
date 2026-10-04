@@ -3,9 +3,11 @@ plugins {
     id 'net.neoforged.moddev'
 }
 
+apply from: rootProject.file('gradle/minecraft-source-family.gradle')
+
 group = 'dev.openallay'
 version = rootProject.version
-base { archivesName = 'openallay-minecraft-26.2-world-adapter' }
+base { archivesName = "openallay-minecraft-${minecraft_version}-world-adapter" }
 
 java {
     toolchain { languageVersion = JavaLanguageVersion.of(25) }
@@ -18,7 +20,7 @@ tasks.withType(JavaCompile).configureEach {
 }
 
 neoForge {
-    neoFormVersion = providers.gradleProperty('neo_form_version').getOrElse('26.2-1')
+    neoFormVersion = neo_form_version
 }
 
 dependencies {

@@ -1,0 +1,94 @@
+import org.gradle.api.file.SourceDirectorySet
+import org.gradle.api.tasks.PathSensitivity
+
+// Apply only to common. Do not copy shared code or create target-specific build/cache trees.
+def selectedTarget = rootProject.ext.minecraftTarget
+def baseJava = file('src/main/java')
+def targetJava = file("src/targets/${selectedTarget}/java")
+def baseResources = file('src/main/resources')
+def targetResources = file("src/targets/${selectedTarget}/resources")
+
+// SourceDirectorySet excludes see FileTreeElement.file as well as its relative path.
+// A path-only exclude would also remove the selected replacement from the second root.
+def isReplacedBaseFile = { element, File base, File overrides ->
+    !element.directory && element.file.toPath().startsWith(base.toPath())
+            && new File(overrides, element.relativePath.pathString).isFile()
+}
+sourceSets.main.java {
+    srcDir(targetJava)
+    exclude { element -> isReplacedBaseFile(element, baseJava, targetJava) }
+}
+sourceSets.main.resources {
+    srcDir(targetResources)
+    exclude { element -> isReplacedBaseFile(element, baseResources, targetResources) }
+}
+// Native build plugins must inspect the same selected AT/access-widener resource.
+ext.selectedMinecraftTargetResource = { String relativePath ->
+    def override = new File(targetResources, relativePath)
+    override.isFile() ? override : new File(baseResources, relativePath)
+}
+
+// Java's package plus filename defines each primary compilation unit identity.
+// Reject misplaced files as well as duplicate identities; do not silently hide a
+// duplicate FQN at a different path. javac still validates all Java declarations.
+def javaPackage = ~/(?m)^\s*package\s+([\p{javaJavaIdentifierStart}][\p{javaJavaIdentifierPart}]*(?:\.[\p{javaJavaIdentifierStart}][\p{javaJavaIdentifierPart}]*)*)\s*;/
+def validateSources = { Collection<SourceDirectorySet> sourceDirectories ->
+    def identities = [:]
+    def visitedFiles = [] as Set
+    sourceDirectories.each { directories ->
+        directories.asFileTree.visit { element ->
+            if (!element.directory && element.name.endsWith('.java') && visitedFiles.add(element.file)) {
+                def matcher = javaPackage.matcher(element.file.getText('UTF-8'))
+                def packageName = matcher.find() ? matcher.group(1) : ''
+                def name = element.name.substring(0, element.name.length() - '.java'.length())
+                def identity = packageName.empty ? name : "${packageName}.${name}"
+                def expectedPath = (packageName.empty ? '' : packageName.replace('.', '/') + '/') + element.name
+                if (element.relativePath.pathString != expectedPath) {
+                    throw new GradleException("Java package/file path mismatch for ${identity}: ${element.file}; expected ${expectedPath}")
+                }
+                def previous = identities.put(identity, element.file)
+                if (previous != null) {
+                    throw new GradleException("Duplicate selected Java FQN ${identity}: ${previous} and ${element.file}")
+                }
+            }
+        }
+    }
+}
+def validateResources = { Collection<SourceDirectorySet> resourceDirectories ->
+    def paths = [:]
+    def visitedFiles = [] as Set
+    resourceDirectories.each { directories ->
+        directories.asFileTree.visit { element ->
+            if (!element.directory && visitedFiles.add(element.file)) {
+                def path = element.relativePath.pathString
+                def previous = paths.put(path, element.file)
+                if (previous != null) {
+                    throw new GradleException("Duplicate selected resource ${path}: ${previous} and ${element.file}")
+                }
+            }
+        }
+    }
+}
+// Loaders use these checks on their own sources AND the selected common sources.
+ext.validateSelectedMinecraftJava = validateSources
+ext.validateSelectedMinecraftResources = validateResources
+
+def validateSelection = tasks.register('validateMinecraftTargetSources') {
+    group = 'verification'
+    description = 'Reject duplicate selected native/shared Java and resource paths.'
+    inputs.property('minecraftTarget', selectedTarget)
+    inputs.files(sourceSets.main.allJava).withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.files(sourceSets.main.resources).withPathSensitivity(PathSensitivity.RELATIVE)
+    // Run even when a newly added duplicate has byte-identical contents.
+    outputs.upToDateWhen { false }
+    doLast {
+        validateSources([sourceSets.main.allJava])
+        validateResources([sourceSets.main.resources])
+    }
+}
+tasks.configureEach {
+    if (name in ['compileJava', 'processResources', 'javadoc', 'sourcesJar']) {
+        dependsOn(validateSelection)
+        inputs.property('minecraftTarget', selectedTarget)
+    }
+}

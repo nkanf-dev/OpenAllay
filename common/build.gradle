@@ -3,10 +3,12 @@ plugins {
     id 'net.neoforged.moddev'
 }
 
+apply from: rootProject.file('gradle/minecraft-source-family.gradle')
+
 neoForge {
     neoFormVersion = neo_form_version
     // Automatically enable AccessTransformers if the file exists
-    def at = file('src/main/resources/META-INF/accesstransformer.cfg')
+    def at = selectedMinecraftTargetResource('META-INF/accesstransformer.cfg')
     if (at.exists()) {
         accessTransformers.from(at.absolutePath)
     }
@@ -54,21 +56,8 @@ tasks.register('printSqliteProofSupportClasspath') {
     }
 }
 
-configurations {
-    commonJava {
-        canBeResolved = false
-        canBeConsumed = true
-    }
-    commonResources {
-        canBeResolved = false
-        canBeConsumed = true
-    }
-}
-
-artifacts {
-    commonJava sourceSets.main.java.sourceDirectories.singleFile
-    commonResources sourceSets.main.resources.sourceDirectories.singleFile
-}
+// Loaders consume these selected SourceDirectorySets directly. A single outgoing
+// directory artifact cannot represent base files plus file-level replacements.
 
 // Implement mcgradleconventions loader attribute
 def loaderAttribute = Attribute.of('io.github.mcgradleconventions.loader', String)

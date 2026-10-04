@@ -4,7 +4,9 @@ set -euo pipefail
 repository=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 proof_dir=$(mktemp -d "${TMPDIR:-/tmp}/openallay-sqlite-packaging.XXXXXX")
 version=$(sed -n 's/^version=//p' "$repository/gradle.properties")
-minecraft_version=$(sed -n 's/^minecraft_version=//p' "$repository/gradle.properties")
+minecraft_target=${OPENALLAY_MINECRAFT_TARGET-26.2}
+minecraft_version=$(python3 "$repository/scripts/minecraft-target.py" \
+  --target "$minecraft_target" --property minecraft_version)
 sqlite_version=$(sed -n 's/^sqlite_jdbc_version=//p' "$repository/gradle.properties")
 sqlite_runtime_version=${sqlite_version%.0}
 test -n "$version"
@@ -12,7 +14,8 @@ test -n "$minecraft_version"
 test -n "$sqlite_version"
 support_classpath=$(
   cd "$repository"
-  ./gradlew -q :common:testClasses :common:printSqliteProofSupportClasspath | tail -n 1
+  ./gradlew -PminecraftTarget="$minecraft_target" -q \
+    :common:testClasses :common:printSqliteProofSupportClasspath | tail -n 1
 )
 
 sha256() {

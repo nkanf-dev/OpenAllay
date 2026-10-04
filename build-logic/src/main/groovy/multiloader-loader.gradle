@@ -1,15 +1,13 @@
+import org.gradle.api.tasks.PathSensitivity
+
 plugins {
     id 'multiloader-common'
 }
 
-configurations {
-    commonJava {
-        canBeResolved = true
-    }
-    commonResources {
-        canBeResolved = true
-    }
-}
+// Common owns one selected source family; do not resolve unsupported directory artifacts.
+evaluationDependsOn(':common')
+def commonProject = project(':common')
+def commonSources = commonProject.sourceSets.main
 
 dependencies {
     testImplementation('com.google.code.gson:gson:2.14.0')
@@ -21,30 +19,49 @@ dependencies {
             attribute(loaderAttribute, 'common')
         }
     }
-    commonJava(project(path: ':common', configuration: 'commonJava'))
-    commonResources(project(path: ':common', configuration: 'commonResources'))
 }
 
 tasks.withType(Test).configureEach { useJUnitPlatform() }
 
+def validateSelection = tasks.register('validateMinecraftTargetSources') {
+    group = 'verification'
+    description = 'Reject collisions between loader sources and selected common sources.'
+    dependsOn(commonProject.tasks.named('validateMinecraftTargetSources'))
+    inputs.property('minecraftTarget', rootProject.ext.minecraftTarget)
+    inputs.files(sourceSets.main.allJava, commonSources.allJava).withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.files(sourceSets.main.resources, commonSources.resources).withPathSensitivity(PathSensitivity.RELATIVE)
+    outputs.upToDateWhen { false }
+    doLast {
+        commonProject.validateSelectedMinecraftJava([sourceSets.main.allJava, commonSources.allJava])
+        commonProject.validateSelectedMinecraftResources([sourceSets.main.resources, commonSources.resources])
+    }
+}
+
 tasks.named('compileJava', JavaCompile) {
-    dependsOn(configurations.commonJava)
-    source(configurations.commonJava)
+    dependsOn(validateSelection)
+    source(commonSources.allJava)
+    inputs.property('minecraftTarget', rootProject.ext.minecraftTarget)
 }
 
 processResources {
-    dependsOn(configurations.commonResources)
-    from(configurations.commonResources)
+    dependsOn(validateSelection)
+    // Raw selected resources still pass through this loader's expansion/copy lifecycle.
+    // Root distribution.gradle adds stageBundledExtensions to this same task.
+    from(commonSources.resources)
+    inputs.property('minecraftTarget', rootProject.ext.minecraftTarget)
+    duplicatesStrategy = DuplicatesStrategy.FAIL
 }
 
 tasks.named('javadoc', Javadoc).configure {
-    dependsOn(configurations.commonJava)
-    source(configurations.commonJava)
+    dependsOn(validateSelection)
+    source(commonSources.allJava)
+    inputs.property('minecraftTarget', rootProject.ext.minecraftTarget)
 }
 
 tasks.named('sourcesJar', Jar) {
-    dependsOn(configurations.commonJava)
-    from(configurations.commonJava)
-    dependsOn(configurations.commonResources)
-    from(configurations.commonResources)
+    dependsOn(validateSelection)
+    from(commonSources.allJava)
+    from(commonSources.resources)
+    inputs.property('minecraftTarget', rootProject.ext.minecraftTarget)
+    duplicatesStrategy = DuplicatesStrategy.FAIL
 }

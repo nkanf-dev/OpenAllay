@@ -19,9 +19,15 @@ version=${tag#v}
 [[ -n "${MODRINTH_TOKEN:-}" ]] || fail 'MODRINTH_TOKEN is required'
 
 configured_version=$(sed -n 's/^version=//p' gradle.properties)
-minecraft_version=$(sed -n 's/^minecraft_version=//p' gradle.properties)
+minecraft_target=${OPENALLAY_MINECRAFT_TARGET-26.2}
+minecraft_version=$(python3 "$repository/scripts/minecraft-target.py" \
+  --target "$minecraft_target" --property minecraft_version)
 [[ "$configured_version" == "$version" ]] \
   || fail "tag version $version does not match Gradle version $configured_version"
+
+# A profile is only a pin tuple. Require matching built metadata and the existing
+# full package/Extension gate before any Modrinth API activity.
+OPENALLAY_MINECRAFT_TARGET="$minecraft_target" "$repository/scripts/verify-distribution.sh"
 
 api=https://api.modrinth.com/v2
 slug=openallay

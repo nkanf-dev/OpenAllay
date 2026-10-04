@@ -1,0 +1,92 @@
+import java.util.Properties
+
+// External target pins only. This is not an internal format/version registry.
+if (project != rootProject) {
+    throw new GradleException('Minecraft target profiles must be selected by the root project')
+}
+def supportedTargets = ['26.2', '26.3']
+def selectedTarget = providers.gradleProperty('minecraftTarget').getOrElse('26.2')
+if (!(selectedTarget in supportedTargets)) {
+    throw new GradleException("Unknown minecraftTarget '${selectedTarget}'; choose ${supportedTargets.join(', ')}")
+}
+def profileFields = [
+    'java_version',
+    'minecraft_version',
+    'minecraft_version_range',
+    'neo_form_version',
+    'fabric_version',
+    'fabric_loader_version',
+    'neoforge_version',
+    'neoforge_loader_version_range',
+    'jei_version',
+    'rei_version',
+    'architectury_version',
+    'fabric_command_api_version',
+    'fabric_resource_loader_version',
+    'fabric_networking_api_version',
+    'fabric_lifecycle_events_version',
+    'fabric_key_mapping_api_version',
+    'fabric_rendering_version'
+] as Set
+
+def profileFile = rootProject.file("gradle/minecraft-targets/${selectedTarget}.properties")
+if (!profileFile.isFile()) {
+    throw new GradleException("Missing Minecraft target profile: ${profileFile}")
+}
+// Properties handles its standard syntax. Reject duplicate keys instead of last-one-wins.
+def properties = new Properties() {
+    @Override
+    synchronized Object put(Object key, Object value) {
+        if (containsKey(key)) {
+            throw new GradleException("Duplicate Minecraft target profile field: ${key}")
+        }
+        return super.put(key, value)
+    }
+}
+profileFile.withReader('UTF-8') { reader -> properties.load(reader) }
+def actualFields = properties.stringPropertyNames()
+def missingFields = profileFields - actualFields
+def unknownFields = actualFields - profileFields
+if (!missingFields.empty || !unknownFields.empty) {
+    throw new GradleException("Invalid Minecraft target profile fields; missing=${missingFields}, unknown=${unknownFields}")
+}
+def profile = profileFields.collectEntries { key ->
+    def value = properties.getProperty(key)
+    if (value == null || value.isBlank() || value != value.trim()) {
+        throw new GradleException("Empty or padded Minecraft target profile field: ${key}")
+    }
+    [(key): value]
+}.asImmutable()
+if (profile.minecraft_version != selectedTarget || !(profile.java_version ==~ /[1-9][0-9]*/)) {
+    throw new GradleException('Minecraft target profile must match its native game version and declare a Java major')
+}
+// No command-line/user/root property may silently compete with the selected tuple.
+profileFields.each { key ->
+    if (providers.gradleProperty(key).isPresent()) {
+        throw new GradleException("Minecraft target field '${key}' collides with a Gradle property; select minecraftTarget instead")
+    }
+}
+def reservedExtraFields = profileFields + ['minecraftTargetProfile']
+allprojects { candidate ->
+    reservedExtraFields.each { key ->
+        if (candidate.extensions.extraProperties.has(key)) {
+            throw new GradleException("Minecraft target field '${key}' collides with an existing property in ${candidate.path}")
+        }
+    }
+}
+allprojects { candidate ->
+    candidate.extensions.extraProperties.set('minecraftTarget', selectedTarget)
+    candidate.extensions.extraProperties.set('minecraftTargetProfile', profile)
+    profile.each { key, value -> candidate.extensions.extraProperties.set(key, value) }
+}
+
+tasks.register('printMinecraftTarget') {
+    group = 'help'
+    description = 'Print selected native game pins; a profile is not a support declaration.'
+    inputs.file(profileFile)
+    inputs.property('minecraftTarget', selectedTarget)
+    doLast {
+        println("minecraftTarget=${selectedTarget}")
+        profile.each { key, value -> println("${key}=${value}") }
+    }
+}
