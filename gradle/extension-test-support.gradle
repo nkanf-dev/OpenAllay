@@ -1,0 +1,13 @@
+// File dependencies have no published POM. Supply the core's exact runtime support
+// only to independent Extension test tasks, never into their distributed payload.
+allprojects { project ->
+    project.plugins.withId('java') {
+        project.tasks.withType(Test).configureEach {
+            def support = project.providers.gradleProperty('openallayTestSupportClasspath')
+            if (support.isPresent()) {
+                def paths = support.get().split(java.util.regex.Pattern.quote(File.pathSeparator))
+                classpath += project.files(paths)
+            }
+        }
+    }
+}

@@ -348,6 +348,29 @@ public final class JavascriptInvocationLifecycleTest {
         assertEquals(0, fixture.registry.activeJavascriptInvocations());
     }
 
+    @Test
+    void frameworkShutdownWaitsForRequestRemovedWorkerToUnwindAndRejectsNewScopes() {
+        Fixture fixture = new Fixture();
+        AtomicInteger closes = new AtomicInteger();
+        fixture.register("test:shutdown", List.of(participant("test:shutdown_hook", context -> {
+            return closes::incrementAndGet;
+        })));
+        var scope = fixture.registry.prepareJavascriptInvocation(
+                ToolInvocationContext.developmentConsole("removed-before-shutdown"), new CancellationSignal());
+        scope.open(ignored -> {});
+        fixture.registry.closeJavascriptRequest("removed-before-shutdown");
+        assertEquals(0, fixture.registry.activeJavascriptInvocations());
+        var shutdown = fixture.registry.shutdown();
+        assertFalse(shutdown.isDone(), "Request-map removal is not a worker release receipt");
+        assertEquals(0, closes.get());
+        assertThrows(JavascriptExecutionException.class, () -> fixture.registry.prepareJavascriptInvocation(
+                ToolInvocationContext.developmentConsole("late"), new CancellationSignal()));
+        assertSame(shutdown, fixture.registry.shutdown());
+        scope.close();
+        assertEquals(1, closes.get());
+        assertTrue(shutdown.isDone());
+    }
+
     private static JavascriptInvocationParticipant participant(String id, Opener opener) {
         return new JavascriptInvocationParticipant() {
             public String id() { return id; }

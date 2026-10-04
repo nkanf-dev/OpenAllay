@@ -81,3 +81,12 @@ native Minecraft support. SDK source delivery alone is **not Minecraft 1.12.2
 support**. Native Forge 1.12.2 and every advertised target still need separate
 core/adapter boot, client, Tool and Builder acceptance evidence. The existing
 0.4.1 distribution and legacy API stay untouched in this batch.
+
+## Current framework integration
+
+The current development core, after the published 0.4.1 release, supplies API 0.3.0 alongside legacy 0.2.2 and discovers exact schema-2
+universal packages at startup from `config/openallay/extensions/`. See
+[`docs/universal-extensions.md`](../docs/universal-extensions.md) for the package,
+support and lifetime contract. Current actual game-host acceptance covers 26.2 Fabric
+and NeoForge with the same Java-8 fixture JAR. Native world-port and older/newer game
+adapters remain separate implementation work; the SDK itself has no game-version link.

@@ -57,8 +57,11 @@ if (bundleExtensions) {
         def wrapper = file(System.getProperty('os.name').toLowerCase().contains('windows') ? 'gradlew.bat' : 'gradlew')
         doFirst {
             def commonJar = project(':common').tasks.named('jar').get().archiveFile.get().asFile
+            def runtimeSupport = project(':common').configurations.runtimeClasspath.asPath
             commandLine wrapper, '--no-daemon', '--console=plain', '--gradle-user-home', gradle.gradleUserHomeDir,
+                    '--init-script', file('gradle/extension-test-support.gradle'),
                     '-p', extensionProject,
+                    "-PopenallayTestSupportClasspath=${runtimeSupport}",
                     "-PopenallayCommonJar=${commonJar.absolutePath}",
                     ':common:test', ':fabric:build', ':neoforge:build', ':verifyLoaderPackages'
             if (gradle.startParameter.taskNames.any { it == 'clean' || it == ':clean' }) {

@@ -1,104 +1,50 @@
 package dev.openallay.extension;
 
-import java.math.BigInteger;
-import java.util.ArrayList;
-import java.util.List;
+import org.apache.maven.artifact.versioning.ComparableVersion;
+import org.apache.maven.artifact.versioning.DefaultArtifactVersion;
+import org.apache.maven.artifact.versioning.InvalidVersionSpecificationException;
+import org.apache.maven.artifact.versioning.VersionRange;
 
-/** Small deterministic comparator for exact versions and Maven-style closed/open ranges. */
-final class ExtensionCompatibility {
+/** Public game/core/API ranges use Maven's mature version and interval semantics. */
+public final class ExtensionCompatibility {
     private ExtensionCompatibility() {}
 
-    static String requireRange(String value, String name) {
+    public static String requireRange(String value, String name) {
         if (value == null || value.isBlank()) {
             throw new IllegalArgumentException(name + " must not be blank");
         }
         String range = value.strip();
-        if ((range.startsWith("[") || range.startsWith("("))
-                && (range.endsWith("]") || range.endsWith(")"))
-                && range.contains(",")) {
-            String body = range.substring(1, range.length() - 1);
-            if (body.indexOf(',') != body.lastIndexOf(',')) {
+        if (range.equals("[]")) throw new IllegalArgumentException("Invalid version range: " + range);
+        try {
+            VersionRange parsed = VersionRange.createFromVersionSpec(range);
+            if (range.startsWith("[") || range.startsWith("(")) {
+                if (parsed.getRecommendedVersion() != null || parsed.getRestrictions().isEmpty()) {
+                    throw new IllegalArgumentException("Invalid version range: " + range);
+                }
+            } else if (range.contains(",") || range.contains("[") || range.contains("]")
+                    || range.contains("(") || range.contains(")")) {
                 throw new IllegalArgumentException("Invalid version range: " + range);
             }
             return range;
+        } catch (InvalidVersionSpecificationException malformed) {
+            throw new IllegalArgumentException("Invalid version range: " + range, malformed);
         }
-        if (range.contains(",") || range.startsWith("[") || range.startsWith("(")) {
-            throw new IllegalArgumentException("Invalid version range: " + range);
-        }
-        return range;
     }
 
-    static boolean includes(String range, String version) {
+    public static boolean includes(String range, String version) {
         range = requireRange(range, "range");
+        if (version == null || version.isBlank()) {
+            throw new IllegalArgumentException("version must not be blank");
+        }
         if (!(range.startsWith("[") || range.startsWith("("))) {
-            return compare(version, range) == 0;
+            // A bare version is an exact public declaration, not Maven's recommended-any form.
+            return new ComparableVersion(version.strip()).compareTo(new ComparableVersion(range)) == 0;
         }
-        String[] bounds = range.substring(1, range.length() - 1).split(",", -1);
-        String lower = bounds[0].strip();
-        String upper = bounds[1].strip();
-        if (!lower.isEmpty()) {
-            int compared = compare(version, lower);
-            if (compared < 0 || (compared == 0 && range.startsWith("("))) {
-                return false;
-            }
-        }
-        if (!upper.isEmpty()) {
-            int compared = compare(version, upper);
-            if (compared > 0 || (compared == 0 && range.endsWith(")"))) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private static int compare(String left, String right) {
-        List<Part> leftParts = parts(left);
-        List<Part> rightParts = parts(right);
-        int length = Math.max(leftParts.size(), rightParts.size());
-        for (int index = 0; index < length; index++) {
-            Part leftPart = index < leftParts.size() ? leftParts.get(index) : Part.ZERO;
-            Part rightPart = index < rightParts.size() ? rightParts.get(index) : Part.ZERO;
-            int compared = leftPart.compareTo(rightPart);
-            if (compared != 0) {
-                return compared;
-            }
-        }
-        return 0;
-    }
-
-    private static List<Part> parts(String value) {
-        ArrayList<Part> result = new ArrayList<>();
-        for (String token : value.strip().toLowerCase(java.util.Locale.ROOT).split("[._+\\-]")) {
-            if (!token.isEmpty()) {
-                result.add(Part.of(token));
-            }
-        }
-        return result;
-    }
-
-    private record Part(BigInteger number, String text) implements Comparable<Part> {
-        private static final Part ZERO = new Part(BigInteger.ZERO, "");
-
-        private static Part of(String value) {
-            try {
-                return new Part(new BigInteger(value), "");
-            } catch (NumberFormatException ignored) {
-                return new Part(null, value);
-            }
-        }
-
-        @Override
-        public int compareTo(Part other) {
-            if (number != null && other.number != null) {
-                return number.compareTo(other.number);
-            }
-            if (number != null) {
-                return 1;
-            }
-            if (other.number != null) {
-                return -1;
-            }
-            return text.compareTo(other.text);
+        try {
+            return VersionRange.createFromVersionSpec(range).containsVersion(
+                    new DefaultArtifactVersion(version.strip()));
+        } catch (InvalidVersionSpecificationException malformed) {
+            throw new IllegalArgumentException("Invalid version range: " + range, malformed);
         }
     }
 }

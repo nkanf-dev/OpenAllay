@@ -22,6 +22,17 @@ public final class NeoForgePlatformService implements PlatformService {
     }
 
     @Override
+    public String productVersion() {
+        return ModList.get().getModContainerById("openallay").orElseThrow()
+                .getModInfo().getVersion().toString();
+    }
+
+    @Override
+    public java.nio.file.Path extensionDirectory() {
+        return net.neoforged.fml.loading.FMLPaths.CONFIGDIR.get().resolve("openallay/extensions");
+    }
+
+    @Override
     public boolean isModLoaded(String modId) {
         return ModList.get().isLoaded(modId);
     }

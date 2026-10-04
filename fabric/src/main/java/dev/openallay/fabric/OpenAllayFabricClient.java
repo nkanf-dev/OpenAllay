@@ -184,6 +184,7 @@ public final class OpenAllayFabricClient implements ClientModInitializer {
             ui.close();
             services.shutdown()
                         .handle((ignored, failure) -> null)
+                        .thenCompose(ignored -> dev.openallay.OpenAllayBootstrap.shutdownExtensions())
                         .thenCompose(ignored -> history.closeAsync())
                         .thenCompose(ignored -> settings == null
                                 ? java.util.concurrent.CompletableFuture.completedFuture(null)

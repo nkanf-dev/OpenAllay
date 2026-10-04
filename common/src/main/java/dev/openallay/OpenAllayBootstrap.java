@@ -39,13 +39,17 @@ import java.util.Set;
 public final class OpenAllayBootstrap {
     private static OpenAllayRuntime runtime;
     private static final List<OpenAllayExtension> pendingExtensions = new ArrayList<>();
+    private static dev.openallay.extension.universal.UniversalExtensionDiscovery universalExtensions;
+    private static final Set<String> implementedExtensionApis = Set.of(
+            OpenAllayConstants.EXTENSION_API_VERSION, "0.3.0");
 
     private OpenAllayBootstrap() {}
 
     /**
      * Ordinary Fabric/NeoForge mod entrypoints call this during loader initialization.
      *
-     * <p>Registration remains loader-owned; OpenAllay does not scan classes or hot-load JARs.
+     * <p>Legacy loader-mod registration stays loader-owned. Universal packages use the
+     * separate startup-only SDK entrypoint, not runtime hot loading.
      */
     public static synchronized void registerExtension(OpenAllayExtension extension) {
         java.util.Objects.requireNonNull(extension, "extension");
@@ -88,7 +92,8 @@ public final class OpenAllayBootstrap {
                 new OpenAllayExtensionEnvironment(
                         platform.platformName(),
                         platform.gameVersion(),
-                        OpenAllayConstants.EXTENSION_API_VERSION),
+                        OpenAllayConstants.EXTENSION_API_VERSION,
+                        implementedExtensionApis),
                 javascriptModules,
                 javascriptModuleCatalog,
                 skills,
@@ -124,6 +129,21 @@ public final class OpenAllayBootstrap {
             }
         }
         pendingExtensions.clear();
+        var environment = universalEnvironment(platform);
+        var host = dev.openallay.extension.universal.UniversalExtensionBridge.host(environment, invocation -> {
+            invocation.requireActive();
+            throw new dev.openallay.api.extension.ExtensionException(
+                    "world_backend_unavailable", "A native world backend is unavailable on this host");
+        });
+        universalExtensions = new dev.openallay.extension.universal.UniversalExtensionDiscovery(
+                platform.extensionDirectory(), extensions, host,
+                dev.openallay.api.extension.OpenAllayExtension.class.getClassLoader());
+        for (var result : universalExtensions.discover()) {
+            if (result.state() != dev.openallay.extension.OpenAllayExtensionState.ACTIVE) {
+                OpenAllayConstants.LOGGER.warn("Universal Extension registration rejected: {} ({})",
+                        result.extensionId(), result.diagnostic());
+            }
+        }
         TraceReplayService traceReplay = new TraceReplayService(
                 new TraceRepository(new TraceParser()),
                 new MinecraftContextCapture(gson),
@@ -147,6 +167,29 @@ public final class OpenAllayBootstrap {
                 platform.platformName(),
                 tools.descriptors().size());
         return runtime;
+    }
+
+    /** Loader display names and public support IDs are distinct; normalize at the adapter seam. */
+    static dev.openallay.api.extension.ExtensionEnvironment universalEnvironment(PlatformService platform) {
+        return new dev.openallay.api.extension.ExtensionEnvironment(
+                platform.platformName().toLowerCase(java.util.Locale.ROOT),
+                platform.gameVersion(), platform.productVersion(), implementedExtensionApis,
+                Runtime.version().feature(),
+                Set.of("openallay:javascript_host", "openallay:skills", "openallay:semantic_results"));
+    }
+
+    /** Loader shutdown keeps package classes alive until admitted Extension hooks unwind. */
+    public static java.util.concurrent.CompletableFuture<Void> shutdownExtensions() {
+        OpenAllayRuntime captured;
+        dev.openallay.extension.universal.UniversalExtensionDiscovery discovery;
+        synchronized (OpenAllayBootstrap.class) {
+            captured = runtime;
+            discovery = universalExtensions;
+        }
+        if (captured == null) return java.util.concurrent.CompletableFuture.completedFuture(null);
+        return captured.extensions().shutdown().thenRun(() -> {
+            if (discovery != null) discovery.close();
+        });
     }
 
     static CapabilitySettingsCatalog capabilitySettings(

@@ -22,6 +22,7 @@ public final class JavascriptInvocationScope implements AutoCloseable {
     private Thread worker;
     private final List<AutoCloseable> opened = new ArrayList<>();
     private final Runnable release;
+    private final java.util.concurrent.CompletableFuture<Void> released = new java.util.concurrent.CompletableFuture<>();
     private boolean started;
     private boolean closed;
 
@@ -125,6 +126,9 @@ public final class JavascriptInvocationScope implements AutoCloseable {
         context.complete();
     }
 
+    /** Completes only after worker-local hooks and registry release have actually unwound. */
+    java.util.concurrent.CompletableFuture<Void> releasedFuture() { return released; }
+
     /** Stops queued native actions without running worker-local cleanup on the closing thread. */
     void revoke() {
         context.revoke();
@@ -146,7 +150,8 @@ public final class JavascriptInvocationScope implements AutoCloseable {
             }
         } finally {
             opened.clear();
-            release.run();
+            try { release.run(); }
+            finally { released.complete(null); }
         }
         if (failed) {
             throw new JavascriptExecutionException(

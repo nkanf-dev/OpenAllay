@@ -20,6 +20,17 @@ public final class FabricPlatformService implements PlatformService {
     }
 
     @Override
+    public String productVersion() {
+        return FabricLoader.getInstance().getModContainer("openallay").orElseThrow()
+                .getMetadata().getVersion().getFriendlyString();
+    }
+
+    @Override
+    public java.nio.file.Path extensionDirectory() {
+        return FabricLoader.getInstance().getConfigDir().resolve("openallay/extensions");
+    }
+
+    @Override
     public boolean isModLoaded(String modId) {
         return FabricLoader.getInstance().isModLoaded(modId);
     }

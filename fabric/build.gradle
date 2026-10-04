@@ -3,6 +3,10 @@ plugins {
     id 'net.fabricmc.fabric-loom'
 }
 dependencies {
+    implementation(project(":extension-api"))
+    include(project(":extension-api"))
+    implementation("org.apache.maven:maven-artifact:3.9.9")
+    include("org.apache.maven:maven-artifact:3.9.9")
     if (rootProject.bundleExtensions) {
         include(project(path: ':', configuration: 'bundledExtensionFabric'))
     }

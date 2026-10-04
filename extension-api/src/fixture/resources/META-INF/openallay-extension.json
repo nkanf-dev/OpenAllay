@@ -1,6 +1,5 @@
 {
   "id": "fixture:hello",
-  "packageType": "universal",
   "entrypoint": "dev.openallay.fixture.HelloExtension",
   "support": {
     "targets": [
@@ -20,5 +19,11 @@
     "minimumJavaVersion": 8,
     "requiredHostFeatures": [],
     "validatedTargetIds": []
-  }
+  },
+  "schemaVersion": 2,
+  "name": "Hello",
+  "version": "1.0.0",
+  "provider": "OpenAllay",
+  "summary": "SDK ABI fixture",
+  "source": "fixture:source"
 }

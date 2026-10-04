@@ -4,6 +4,10 @@ plugins {
 }
 
 dependencies {
+    implementation(project(":extension-api"))
+    jarJar(project(":extension-api"))
+    implementation("org.apache.maven:maven-artifact:3.9.9")
+    jarJar("org.apache.maven:maven-artifact:3.9.9")
     if (rootProject.bundleExtensions) {
         jarJar(project(path: ':', configuration: 'bundledExtensionNeoforge'))
     }

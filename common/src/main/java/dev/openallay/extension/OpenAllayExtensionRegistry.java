@@ -29,6 +29,9 @@ public final class OpenAllayExtensionRegistry {
     private final Map<String, RegisteredExtension> active = new TreeMap<>();
     private final Map<String, String> contributionOwners = new TreeMap<>();
     private final Map<String, Set<JavascriptInvocationScope>> invocations = new java.util.HashMap<>();
+    private final Set<JavascriptInvocationScope> liveInvocations = new HashSet<>();
+    private boolean closing;
+    private java.util.concurrent.CompletableFuture<Void> shutdown;
     private List<JavascriptInvocationParticipant> javascriptInvocationParticipants = List.of();
     private ExtensionCapabilityPolicy capabilityPolicy = ExtensionCapabilityPolicy.defaults();
     private final Map<String, ExtensionCapabilityPolicy> javascriptRequests = new java.util.HashMap<>();
@@ -148,6 +151,8 @@ public final class OpenAllayExtensionRegistry {
             dev.openallay.context.ToolInvocationContext invocation,
             dev.openallay.model.CancellationSignal cancellation) {
         cancellation.throwIfCancelled();
+        if (closing) throw new dev.openallay.script.JavascriptExecutionException(
+                "javascript_invocation_closed", "Extension runtime is closing");
         String requestId = invocation.correlationId();
         Set<JavascriptInvocationScope> scopes =
                 invocations.computeIfAbsent(requestId, ignored -> new HashSet<>());
@@ -171,6 +176,7 @@ public final class OpenAllayExtensionRegistry {
                 () -> releaseInvocation(requestId, reference[0]));
         reference[0] = scope;
         scopes.add(scope);
+        liveInvocations.add(scope);
         return scope;
     }
 
@@ -188,7 +194,31 @@ public final class OpenAllayExtensionRegistry {
         return invocations.values().stream().mapToInt(Set::size).sum();
     }
 
+    /** Revoke now, but keep classloaders alive until every admitted worker has closed its hooks. */
+    public java.util.concurrent.CompletableFuture<Void> shutdown() {
+        List<JavascriptInvocationScope> captured;
+        java.util.concurrent.CompletableFuture<Void> receipt;
+        synchronized (this) {
+            if (shutdown != null) return shutdown;
+            closing = true;
+            javascriptRequests.clear();
+            captured = List.copyOf(liveInvocations);
+            shutdown = new java.util.concurrent.CompletableFuture<>();
+            receipt = shutdown;
+        }
+        captured.forEach(JavascriptInvocationScope::revoke);
+        java.util.concurrent.CompletableFuture.allOf(captured.stream()
+                .map(JavascriptInvocationScope::releasedFuture)
+                .toArray(java.util.concurrent.CompletableFuture[]::new))
+                .whenComplete((ignored, failure) -> {
+                    if (failure == null) receipt.complete(null);
+                    else receipt.completeExceptionally(failure);
+                });
+        return receipt;
+    }
+
     private synchronized void releaseInvocation(String requestId, JavascriptInvocationScope scope) {
+        liveInvocations.remove(scope);
         Set<JavascriptInvocationScope> scopes = invocations.get(requestId);
         if (scopes == null) return;
         scopes.remove(scope);
