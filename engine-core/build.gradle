@@ -29,8 +29,9 @@ tasks.withType(Jar).configureEach {
 dependencies {
     // Host-supplied public SDK stays separately packaged, never shaded into the engine.
     api(project(':extension-api'))
-    api('com.google.code.gson:gson:2.11.0')
-    api('org.slf4j:slf4j-api:2.0.16')
+    compileOnlyApi(project(':runtime-json'))
+    api('com.google.code.gson:gson:2.10.1')
+    api('org.slf4j:slf4j-api:2.0.9')
     api("dev.latvian.mods:rhino:${rhino_version}")
     implementation('org.apache.maven:maven-artifact:3.9.9')
     implementation("org.commonmark:commonmark:${commonmark_version}")
@@ -40,6 +41,13 @@ dependencies {
     testImplementation('org.junit.jupiter:junit-jupiter:5.11.4')
     testRuntimeOnly('org.junit.platform:junit-platform-launcher:1.11.4')
 }
+
+// Reuse the independently compiled helper in the one game-mod engine output. The
+// compile-only project edge avoids an extra runtime JAR or classloader identity.
+evaluationDependsOn(':runtime-json')
+def jsonSupport = project(':runtime-json')
+sourceSets.main.output.dir([builtBy: jsonSupport.tasks.named('classes')],
+        jsonSupport.sourceSets.main.output.classesDirs.singleFile)
 
 // Enforce actual resolved production classpaths, not names appearing in source comments.
 def productionCoordinates = [
@@ -63,7 +71,7 @@ def verifyProductionDependencies = tasks.register('verifyProductionDependencies'
             configuration.incoming.resolutionResult.allComponents.each { component ->
                 def id = component.id
                 if (id instanceof ProjectComponentIdentifier) {
-                    if (!(id.projectPath in [project.path, ':extension-api'])) {
+                    if (!(id.projectPath in [project.path, ':extension-api', ':runtime-json'])) {
                         throw new GradleException("Engine cannot depend on native project ${id.projectPath}")
                     }
                 } else if (id instanceof ModuleComponentIdentifier) {

@@ -37,8 +37,8 @@ public final class TraceParser {
 
     public ToolResult<AgentTrace> parse(Reader source) {
         try {
-            JsonReader reader = new JsonReader(source);
-            reader.setStrictness(com.google.gson.Strictness.STRICT);
+            JsonReader reader = dev.openallay.json.JsonReaders.strict(source);
+
             JsonElement root = readElement(reader, "$");
             if (reader.peek() != JsonToken.END_DOCUMENT) {
                 throw invalid("Unexpected data after trace document");

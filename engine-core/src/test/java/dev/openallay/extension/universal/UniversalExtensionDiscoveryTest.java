@@ -40,14 +40,16 @@ class UniversalExtensionDiscoveryTest {
         jar(directory.resolve("c-sdk-shadow.jar"), manifest,
                 Map.of("community/Entry.class", entrypoint, "dev/openallay/api/extension/Shadow.class", new byte[] {1}));
         jar(directory.resolve("d-core-shadow.jar"), manifest,
-                Map.of("community/Entry.class", entrypoint, "dev/openallay/OpenAllayBootstrap.class", new byte[] {1}));
+                Map.of("community/Entry.class", entrypoint,
+                        "dev/openallay/bridge/protocol/BridgeJsonCodec.class", new byte[] {1}));
         jar(directory.resolve("e-native.jar"), manifest,
                 Map.of("community/Entry.class", entrypoint, "native/lib.dll", new byte[] {1}));
         try (var discovery = discovery(directory)) {
             var results = discovery.discover();
             assertEquals(List.of("a-incompatible.jar", "b-malformed.jar", "c-sdk-shadow.jar", "d-core-shadow.jar", "e-native.jar"),
                     results.stream().map(UniversalExtensionDiscovery.DiscoveryResult::filename).toList());
-            assertEquals(OpenAllayExtensionState.INCOMPATIBLE, results.getFirst().state());
+            assertEquals(OpenAllayExtensionState.INCOMPATIBLE, results.getFirst().state(),
+                    results.getFirst().toString());
             assertTrue(results.stream().skip(1).allMatch(value -> value.state() == OpenAllayExtensionState.UNAVAILABLE));
             assertNull(System.getProperty(property + ".init"));
             assertNull(System.getProperty(property + ".contribution"));

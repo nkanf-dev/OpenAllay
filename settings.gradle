@@ -27,6 +27,7 @@ rootProject.name = 'OpenAllay'
 includeBuild('build-logic')
 include('common')
 include('engine-core')
+include('runtime-json')
 include('extension-api')
 include('adapters:minecraft-26.2')
 include('fabric')

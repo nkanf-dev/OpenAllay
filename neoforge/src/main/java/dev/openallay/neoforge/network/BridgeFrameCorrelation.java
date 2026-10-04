@@ -17,8 +17,8 @@ final class BridgeFrameCorrelation {
 
     static Optional<UUID> read(String json) {
         if (json == null || json.length() > 32_767) return Optional.empty();
-        try (JsonReader reader = new JsonReader(new StringReader(json))) {
-            reader.setStrictness(com.google.gson.Strictness.STRICT);
+        try (JsonReader reader = dev.openallay.json.JsonReaders.strict(new java.io.StringReader(json))) {
+
             if (reader.peek() != JsonToken.BEGIN_OBJECT) return Optional.empty();
             reader.beginObject();
             Set<String> fields = new HashSet<>();

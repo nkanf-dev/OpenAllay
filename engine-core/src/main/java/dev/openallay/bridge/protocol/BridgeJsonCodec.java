@@ -4,7 +4,6 @@ import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import com.google.gson.Strictness;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonToken;
 import java.io.IOException;
@@ -257,8 +256,8 @@ public final class BridgeJsonCodec {
 
     /** Gson tokenizes JSON; this scan only rejects repeated object field names before tree decoding. */
     public static void rejectDuplicateFields(String json) {
-        try (JsonReader reader = new JsonReader(new StringReader(json))) {
-            reader.setStrictness(Strictness.STRICT);
+        try (JsonReader reader = dev.openallay.json.JsonReaders.strict(new java.io.StringReader(json))) {
+
             java.util.ArrayDeque<Set<String>> objects = new java.util.ArrayDeque<>();
             do {
                 switch (reader.peek()) {

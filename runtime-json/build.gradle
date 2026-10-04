@@ -1,0 +1,36 @@
+plugins {
+    id 'java-library'
+}
+
+// Independent shared JSON support. Native adapters never depend on the feature engine.
+base { archivesName = 'openallay-runtime-json' }
+version = rootProject.version
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(21)
+}
+tasks.withType(JavaCompile).configureEach {
+    options.release = 21
+    options.encoding = 'UTF-8'
+}
+tasks.withType(Jar).configureEach {
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
+}
+dependencies {
+    api('com.google.code.gson:gson:2.10.1')
+}
+
+tasks.register('verifyProductionDependencies') {
+    doLast {
+        ['compileClasspath', 'runtimeClasspath'].each { name ->
+            configurations.getByName(name).incoming.resolutionResult.allComponents.each { component ->
+                def id = component.id
+                if (id instanceof org.gradle.api.artifacts.component.ModuleComponentIdentifier
+                        && !(id.group == 'com.google.code.gson' && id.module == 'gson')) {
+                    throw new GradleException("JSON support cannot depend on ${id.displayName}")
+                }
+            }
+        }
+    }
+}
+tasks.named('compileJava') { dependsOn('verifyProductionDependencies') }

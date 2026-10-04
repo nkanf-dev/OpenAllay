@@ -3,7 +3,6 @@ package dev.openallay.client.voice;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import com.google.gson.Strictness;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonToken;
 import dev.openallay.model.config.CredentialReference;
@@ -229,9 +228,9 @@ public final class HttpSpeechToText implements SpeechToText {
                     .onMalformedInput(CodingErrorAction.REPORT)
                     .onUnmappableCharacter(CodingErrorAction.REPORT)
                     .decode(ByteBuffer.wrap(bytes)).toString();
-            JsonReader reader = new JsonReader(new StringReader(json));
-            reader.setStrictness(Strictness.STRICT);
-            JsonElement parsed = JsonParser.parseReader(reader);
+            JsonReader reader = dev.openallay.json.JsonReaders.strict(new java.io.StringReader(json));
+
+            JsonElement parsed = dev.openallay.json.JsonReaders.read(reader);
             if (reader.peek() != JsonToken.END_DOCUMENT || !parsed.isJsonObject()) {
                 throw new Failure("voice_invalid_response", null);
             }

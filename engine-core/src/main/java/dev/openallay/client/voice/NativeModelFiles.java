@@ -62,8 +62,8 @@ public final class NativeModelFiles {
     }
     static Model parse(String json) throws IOException {
         try {
-            try (var reader = new com.google.gson.stream.JsonReader(new java.io.StringReader(json))) {
-                reader.setStrictness(com.google.gson.Strictness.STRICT);
+            try (var reader = dev.openallay.json.JsonReaders.strict(new java.io.StringReader(json))) {
+
                 checkJson(reader, 0);
                 if (reader.peek() != com.google.gson.stream.JsonToken.END_DOCUMENT) throw new IllegalArgumentException();
             }

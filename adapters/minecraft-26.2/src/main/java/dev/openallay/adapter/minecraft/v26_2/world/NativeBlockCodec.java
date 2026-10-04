@@ -5,7 +5,6 @@ import dev.openallay.api.extension.ExtensionException;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
-import com.google.gson.Strictness;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonToken;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
@@ -378,8 +377,8 @@ final class NativeBlockCodec {
     /** Flat schema parsing rejects duplicate fields and Gson's legacy JSON extensions. */
     private static JsonObject parse(String stateJson) {
         if (stateJson == null) throw new IllegalArgumentException("Block state JSON must not be null");
-        try (JsonReader reader = new JsonReader(new StringReader(stateJson))) {
-            reader.setStrictness(Strictness.STRICT);
+        try (JsonReader reader = dev.openallay.json.JsonReaders.strict(new java.io.StringReader(stateJson))) {
+
             JsonObject json = new JsonObject();
             reader.beginObject();
             while (reader.hasNext()) {

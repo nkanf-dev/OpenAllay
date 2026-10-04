@@ -8,7 +8,6 @@ import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import com.google.gson.Strictness;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonToken;
 import dev.openallay.model.CancellationSignal;
@@ -50,9 +49,9 @@ final class LiveModelContinuationDiagnosticTest {
             System.setProperty("openallay.model.diagnostics", "true");
             ModelRequest request;
             try (Reader reader = Files.newBufferedReader(Path.of(tracePath))) {
-                JsonReader json = new JsonReader(reader);
-                json.setStrictness(Strictness.STRICT);
-                request = retainedRequest(JsonParser.parseReader(json).getAsJsonObject());
+                JsonReader json = dev.openallay.json.JsonReaders.strict(reader);
+
+                request = retainedRequest(dev.openallay.json.JsonReaders.read(json).getAsJsonObject());
                 if (json.peek() != JsonToken.END_DOCUMENT) {
                     throw new IllegalArgumentException("unexpected data after retained trace");
                 }

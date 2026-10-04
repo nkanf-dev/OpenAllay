@@ -3,7 +3,6 @@ package dev.openallay.extension;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import com.google.gson.Strictness;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonToken;
 import dev.openallay.settings.AtomicSettingsFile;
@@ -82,8 +81,8 @@ public final class ExtensionCapabilityPolicyStore {
     static ToolResult<ExtensionCapabilityPolicy> decode(Reader source) {
         Objects.requireNonNull(source, "source");
         try {
-            JsonReader reader = new JsonReader(source);
-            reader.setStrictness(Strictness.STRICT);
+            JsonReader reader = dev.openallay.json.JsonReaders.strict(source);
+
             reader.beginObject();
             if (!reader.hasNext() || !reader.nextName().equals("grants")) return invalid();
             Map<String, Set<String>> grants = new TreeMap<>();

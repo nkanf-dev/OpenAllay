@@ -5,7 +5,6 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
-import com.google.gson.Strictness;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonToken;
 import dev.openallay.guide.GuideFailure;
@@ -188,8 +187,8 @@ public final class BuiltinModelCatalog {
         return rate;
     }
     static JsonElement readStrict(Reader input) throws IOException {
-        JsonReader reader = new JsonReader(input);
-        reader.setStrictness(Strictness.STRICT);
+        JsonReader reader = dev.openallay.json.JsonReaders.strict(input);
+
         JsonElement value = read(reader);
         if (reader.peek() != JsonToken.END_DOCUMENT) throw invalid();
         return value;

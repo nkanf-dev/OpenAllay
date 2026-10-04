@@ -12,6 +12,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /** Scans source and class bytes without loading any game class or using fake game classes. */
 class AdapterArchitectureTest {
     private static final String SDK = "dev/openallay/api/extension/";
+    private static final String JSON = "dev/openallay/json/JsonReaders";
     private static final String OWN = "dev/openallay/adapter/minecraft/v26_2/world/";
 
     @Test void productionImportsOnlyOwnSdkJdkAndActualNativeLibraries() throws IOException {
@@ -28,7 +29,8 @@ class AdapterArchitectureTest {
                     String name = line.substring(7).replace("static ", "").replace(";", "");
                     assertTrue(name.startsWith("java.") || name.startsWith("net.minecraft.")
                             || name.startsWith("com.google.gson.") || name.startsWith("com.mojang.")
-                            || name.startsWith("dev.openallay.api.extension."), "Unapproved import in " + file + ": " + name);
+                            || name.startsWith("dev.openallay.api.extension.")
+                            || name.equals("dev.openallay.json.JsonReaders"), "Unapproved import in " + file + ": " + name);
                 }
             }
         }
@@ -61,7 +63,7 @@ class AdapterArchitectureTest {
                         int start = 0;
                         while ((start = value.indexOf("dev/openallay/",start)) >= 0) {
                             String name = value.substring(start);
-                            assertTrue(name.startsWith(SDK) || name.startsWith(OWN),
+                            assertTrue(name.startsWith(SDK) || name.startsWith(OWN) || name.startsWith(JSON),
                                     "Unexpected internal class reference in " + file + ": " + value);
                             start += "dev/openallay/".length();
                         }
@@ -78,7 +80,9 @@ class AdapterArchitectureTest {
         assertTrue(build.contains("id 'java-library'"));
         assertTrue(build.contains("id 'net.neoforged.moddev'"));
         assertTrue(build.contains("compileOnly(project(':extension-api'))"));
-        assertTrue(build.contains("options.release = 25"));
+        assertTrue(build.contains("options.release = Integer.parseInt(java_version)"));
+        assertTrue(build.contains("compileOnly(project(':runtime-json'))"));
+        assertFalse(build.contains("project(':engine-core')"));
         assertFalse(build.contains("project(':common')"));
         assertFalse(build.contains("multiloader"));
         assertFalse(build.contains("jarJar("));
