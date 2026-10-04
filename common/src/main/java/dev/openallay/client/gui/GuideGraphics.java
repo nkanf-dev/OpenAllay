@@ -1,5 +1,7 @@
 package dev.openallay.client.gui;
 
+import dev.openallay.platform.minecraft.MinecraftResourceIds;
+
 import com.mojang.blaze3d.platform.cursor.CursorType;
 import java.util.List;
 import java.util.Objects;
@@ -8,7 +10,6 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipPositioner;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.item.ItemStack;
 import org.joml.Matrix3x2fStack;
@@ -50,7 +51,10 @@ public final class GuideGraphics {
     }
 
     public void outline(int x, int y, int width, int height, int color) {
-        graphics.outline(x, y, width, height, color);
+        graphics.fill(x, y, x + width, y + 1, color);
+        graphics.fill(x, y + height - 1, x + width, y + height, color);
+        graphics.fill(x, y + 1, x + 1, y + height - 1, color);
+        graphics.fill(x + width - 1, y + 1, x + width, y + height - 1, color);
     }
 
     public void text(Font font, String text, int x, int y, int color) {
@@ -121,16 +125,16 @@ public final class GuideGraphics {
 
     /** Normalized texture coordinates; x1 and y1 are destination corners, not sizes. */
     public void blitTexture(
-            Identifier texture, int x0, int y0, int x1, int y1,
+            String texture, int x0, int y0, int x1, int y1,
             float u0, float u1, float v0, float v1) {
-        graphics.blit(texture, x0, y0, x1, y1, u0, u1, v0, v1);
+        graphics.blit(MinecraftResourceIds.parse(texture), x0, y0, x1, y1, u0, u1, v0, v1);
     }
 
     /** GUI texture with explicit pixel source rectangle and destination size. */
     public void blitTexture(
-            Identifier texture, int x, int y, float u, float v, int width, int height,
+            String texture, int x, int y, float u, float v, int width, int height,
             int sourceWidth, int sourceHeight, int textureWidth, int textureHeight) {
-        graphics.blit(RenderPipelines.GUI_TEXTURED, texture, x, y, u, v, width, height,
+        graphics.blit(RenderPipelines.GUI_TEXTURED, MinecraftResourceIds.parse(texture), x, y, u, v, width, height,
                 sourceWidth, sourceHeight, textureWidth, textureHeight);
     }
 }

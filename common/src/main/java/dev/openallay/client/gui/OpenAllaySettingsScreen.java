@@ -57,7 +57,6 @@ import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.ConfirmScreen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
 
 /** Native settings shell and model-profile editor backed only by ClientSettingsService. */
 public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.GuideNativeScreen {
@@ -69,8 +68,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
     private static final int MUTED = 0xFFA9B3BE;
     private static final int ERROR = 0xFFFF7D7D;
     private static final String REPOSITORY_URL = "https://github.com/nkanf-dev/OpenAllay";
-    private static final Identifier ABOUT_BANNER = Identifier.fromNamespaceAndPath(
-            "openallay", "textures/gui/about_banner.png");
+    private static final String ABOUT_BANNER = "openallay:textures/gui/about_banner.png";
 
     private final ClientSettingsService service;
     private final Runnable returnToGuide;

@@ -1,5 +1,7 @@
 package dev.openallay.neoforge;
 
+import dev.openallay.platform.minecraft.MinecraftResourceIds;
+
 import dev.openallay.OpenAllayRuntime;
 import dev.openallay.client.ClientModelRuntimeRegistry;
 import dev.openallay.settings.ClientSettingsRuntime;
@@ -18,7 +20,6 @@ import dev.openallay.guide.e2e.GuideClientE2EController;
 import dev.openallay.client.gui.OpenAllayKeyMappings;
 import dev.openallay.client.gui.GuideClientUiCoordinator;
 import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
-import net.minecraft.resources.Identifier;
 import dev.openallay.guide.ui.GuideDisplayRuntime;
 import dev.openallay.settings.ClientSettingsHistoryBinding;
 import dev.openallay.tool.ToolResult;
@@ -63,7 +64,7 @@ public final class OpenAllayNeoForgeClient {
         });
         modBus.addListener((RegisterGuiLayersEvent event) -> event.registerBelow(
                 net.neoforged.neoforge.client.gui.VanillaGuiLayers.CHAT,
-                Identifier.fromNamespaceAndPath("openallay", "guide_hud"),
+                MinecraftResourceIds.fromNamespaceAndPath("openallay", "guide_hud"),
                 (graphics, deltaTracker) -> {
                     GuideClientUiCoordinator current = ui;
                     if (current != null) current.extractRenderState(dev.openallay.client.gui.GuideGraphics.wrap(graphics));

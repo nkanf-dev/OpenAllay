@@ -231,7 +231,7 @@ public final class MinecraftServerWorldObservationCoordinator
             data.put("armor", living.getArmorValue());
             data.put("effects", living.getActiveEffects().stream()
                     .map(effect -> effect.getEffect().unwrapKey()
-                            .map(key -> key.identifier().toString())
+                            .map(key -> dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(key).toString())
                             .orElse("unknown"))
                     .sorted()
                     .toList());
@@ -268,7 +268,7 @@ public final class MinecraftServerWorldObservationCoordinator
             throw cancelled();
         }
         if (!expectedDimension.equals(
-                player.level().dimension().identifier().toString())) {
+                dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(player.level().dimension()).toString())) {
             throw new JavascriptExecutionException(
                     "world_observation_unavailable",
                     "Player changed dimension during world observation");

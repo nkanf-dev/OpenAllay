@@ -1,5 +1,7 @@
 package dev.openallay.integration.rei;
 
+import dev.openallay.platform.minecraft.MinecraftResourceIds;
+
 import dev.openallay.context.RecipeReference;
 import dev.openallay.recipe.RecipeNavigationResult;
 import dev.openallay.recipe.RecipeViewerNavigator;
@@ -7,7 +9,6 @@ import me.shedaniel.rei.api.client.view.ViewSearchBuilder;
 import me.shedaniel.rei.api.common.util.EntryStacks;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 
 final class ReiRecipeNavigator implements RecipeViewerNavigator {
@@ -43,7 +44,7 @@ final class ReiRecipeNavigator implements RecipeViewerNavigator {
             return RecipeNavigationResult.failed(
                     "wrong_thread", "Recipe viewer navigation requires the client thread");
         }
-        Identifier id = Identifier.tryParse(itemId);
+        var id = MinecraftResourceIds.tryParse(itemId);
         if (id == null || !BuiltInRegistries.ITEM.containsKey(id)) {
             return RecipeNavigationResult.failed("unknown_item", "Item is not registered");
         }

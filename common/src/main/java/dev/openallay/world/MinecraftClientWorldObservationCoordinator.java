@@ -268,7 +268,7 @@ public final class MinecraftClientWorldObservationCoordinator
             data.put("armor", living.getArmorValue());
             data.put("effects", living.getActiveEffects().stream()
                     .map(effect -> effect.getEffect().unwrapKey()
-                            .map(key -> key.identifier().toString())
+                            .map(key -> dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(key).toString())
                             .orElse("unknown"))
                     .sorted()
                     .toList());
@@ -299,7 +299,7 @@ public final class MinecraftClientWorldObservationCoordinator
                 || client.level == null
                 || !expectedActor.equals(client.player.getUUID())
                 || !expectedDimension.equals(
-                        client.level.dimension().identifier().toString())) {
+                        dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(client.level.dimension()).toString())) {
             throw unavailable();
         }
         if (!client.isSameThread()) {

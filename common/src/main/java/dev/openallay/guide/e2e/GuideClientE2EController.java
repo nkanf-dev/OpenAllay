@@ -372,7 +372,7 @@ public final class GuideClientE2EController {
                 throw new IllegalStateException("Native bootstrap player or fresh-world seed differs from setup");
             var manager = server.getRecipeManager();
             var holder = manager.getRecipes().stream()
-                    .filter(recipe -> "minecraft:iron_block".equals(recipe.id().identifier().toString()))
+                    .filter(recipe -> "minecraft:iron_block".equals(dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(recipe.id()).toString()))
                     .findFirst().orElseThrow(() -> new IllegalStateException("Exact native iron-block recipe is unavailable"));
             List<net.minecraft.world.item.crafting.display.RecipeDisplayEntry> displays = new ArrayList<>();
             manager.listDisplaysForRecipe(holder.id(), displays::add);
@@ -384,7 +384,7 @@ public final class GuideClientE2EController {
             var receipt = new com.google.gson.JsonObject();
             receipt.addProperty("api", "ServerPlayer.awardRecipes");
             receipt.addProperty("ownerThread", server.isSameThread());
-            receipt.addProperty("recipeHolderId", holder.id().identifier().toString());
+            receipt.addProperty("recipeHolderId", dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(holder.id()).toString());
             receipt.addProperty("nativeRecipeClass", holder.value().getClass().getName());
             receipt.addProperty("knownBefore", player.getRecipeBook().contains(holder.id()));
             receipt.add("displayIndexes", gson.toJsonTree(positiveDisplays.stream().map(entry -> entry.id().index()).toList()));

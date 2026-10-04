@@ -84,7 +84,7 @@ final class NativeWorldSession implements WorldSession {
         if (!client.isSameThread()) throw new ExtensionException("wrong_owner", "Client validation requires its owner thread");
         if (client.player == null || !connection.getConnection().isConnected()) throw stale();
         identity.requireClient(client.getConnection(), client.player, client.level, client.getSingleplayerServer(),
-                client.player.getUUID(), client.player.level().dimension().identifier().toString());
+                client.player.getUUID(), NativeWorldResourceIds.keyId(client.player.level().dimension()).toString());
     }
 
     private void validateServer() {
@@ -93,7 +93,7 @@ final class NativeWorldSession implements WorldSession {
                 || player.isRemoved() || !player.connection.isAcceptingMessages()
                 || !connection.getConnection().isConnected()) throw stale();
         identity.requireServer(server.getPlayerList().getPlayer(actor), player.level(), player.getUUID(),
-                player.level().dimension().identifier().toString());
+                NativeWorldResourceIds.keyId(player.level().dimension()).toString());
     }
 
     @Override public <T> T call(java.util.concurrent.Callable<T> action) {

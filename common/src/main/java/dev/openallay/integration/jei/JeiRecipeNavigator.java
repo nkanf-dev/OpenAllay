@@ -1,5 +1,7 @@
 package dev.openallay.integration.jei;
 
+import dev.openallay.platform.minecraft.MinecraftResourceIds;
+
 import dev.openallay.context.RecipeReference;
 import dev.openallay.recipe.RecipeNavigationResult;
 import dev.openallay.recipe.RecipeProviderSnapshot;
@@ -12,7 +14,6 @@ import mezz.jei.api.recipe.category.IRecipeCategory;
 import mezz.jei.api.runtime.IJeiRuntime;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 
 final class JeiRecipeNavigator implements RecipeViewerNavigator {
@@ -71,7 +72,7 @@ final class JeiRecipeNavigator implements RecipeViewerNavigator {
         if (readiness != null) {
             return readiness;
         }
-        Identifier id = Identifier.tryParse(itemId);
+        var id = MinecraftResourceIds.tryParse(itemId);
         if (id == null || !BuiltInRegistries.ITEM.containsKey(id)) {
             return RecipeNavigationResult.failed("unknown_item", "Item is not registered");
         }

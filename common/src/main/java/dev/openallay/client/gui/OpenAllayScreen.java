@@ -1,5 +1,9 @@
 package dev.openallay.client.gui;
 
+import dev.openallay.client.observation.MinecraftImageTextures;
+
+import dev.openallay.platform.minecraft.MinecraftResourceIds;
+
 import com.google.gson.JsonObject;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -18,7 +22,6 @@ import dev.openallay.guide.GuidePendingMessage;
 import dev.openallay.model.ModelContent;
 import dev.openallay.model.ModelMessage;
 import dev.openallay.model.image.ImageInputCapability;
-import net.minecraft.client.renderer.texture.DynamicTexture;
 import dev.openallay.guide.GuideModelSelection;
 import dev.openallay.guide.GuideFailure;
 import dev.openallay.guide.GuideRequestSnapshot;
@@ -89,7 +92,6 @@ import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.Mth;
@@ -131,7 +133,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
     private record ToolFlowOwner(UUID actor, String session, Object world) {}
     private final Map<String, GuideUiLayout.Rect> renderedRows = new LinkedHashMap<>();
     private final String imageDraftOwner = UUID.randomUUID().toString();
-    private final Map<UUID, Identifier> imageTextures = new LinkedHashMap<>();
+    private final Map<UUID, String> imageTextures = new LinkedHashMap<>();
     private GuideUiLayout.ComposerExtras composerExtras;
     private boolean submittingDraft;
     private int pendingCursor;
@@ -424,12 +426,12 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
     }
 
     @Override
-    public void resize(int width, int height) {
+    protected void resizeGuide(int width, int height) {
         invalidateContentHits();
         GuideViewportAnchor anchor = layout == null ? null : virtualizer.anchorAt(scroll);
         boolean shouldFollow = followBottom;
         draft = composer == null ? draft : composer.getValue();
-        super.resize(width, height);
+        resizeGuideWidgets(width, height);
         restoreTranscript(anchor, shouldFollow);
     }
 
@@ -2393,7 +2395,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
     }
 
     private static ItemStack itemStack(String itemId, long count) {
-        Identifier id = Identifier.tryParse(itemId);
+        var id = MinecraftResourceIds.tryParse(itemId);
         if (id == null || !BuiltInRegistries.ITEM.containsKey(id)) {
             return ItemStack.EMPTY;
         }
@@ -2920,7 +2922,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         java.util.Set<UUID> retained = images.stream().map(ComposerImageDraft.Attachment::id)
                 .collect(java.util.stream.Collectors.toSet());
         for (UUID id : new ArrayList<>(imageTextures.keySet())) {
-            if (!retained.contains(id)) minecraft.getTextureManager().release(imageTextures.remove(id));
+            if (!retained.contains(id)) MinecraftImageTextures.release(minecraft.getTextureManager(), imageTextures.remove(id));
         }
         for (ComposerImageDraft.Attachment image : images) {
             if (image.preview() == null || imageTextures.containsKey(image.id())) continue;
@@ -2930,14 +2932,15 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
             for (int y = 0; y < preview.height(); y++) {
                 for (int x = 0; x < preview.width(); x++) bitmap.setPixel(x, y, pixels[y * preview.width() + x]);
             }
-            Identifier texture = Identifier.fromNamespaceAndPath("openallay", "composer/" + imageDraftOwner + "/" + image.id());
-            minecraft.getTextureManager().register(texture, new DynamicTexture(() -> "OpenAllay draft image", bitmap));
+            String texture = "openallay:composer/" + imageDraftOwner + "/" + image.id();
+            MinecraftImageTextures.register(minecraft.getTextureManager(), texture, () -> "OpenAllay draft image", bitmap);
             imageTextures.put(image.id(), texture);
         }
     }
 
     private void releaseComposerTextures() {
-        if (minecraft != null) imageTextures.values().forEach(minecraft.getTextureManager()::release);
+        if (minecraft != null) imageTextures.values().forEach(
+                texture -> MinecraftImageTextures.release(minecraft.getTextureManager(), texture));
         imageTextures.clear();
     }
 
@@ -3062,7 +3065,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         GuideUiLayout.Rect canvas = new GuideUiLayout.Rect(detail.x() + 8, y, canvasWidth, canvasHeight);
         if (visibleDetail(y, canvasHeight, detail)) {
             graphics.fill(canvas.x(), canvas.y(), canvas.right(), canvas.bottom(), panelAltColor());
-            Identifier texture = observationTextures().texture(reference);
+            String texture = observationTextures().texture(reference);
             if (texture != null) {
                 double scale = Math.min(canvas.width() / (double) reference.width(), canvas.height() / (double) reference.height());
                 int imageWidth = Math.max(1, (int) Math.round(reference.width() * scale));
@@ -3099,7 +3102,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
                 ComposerImageDraft.Attachment image = images.get(index);
                 int x = strip.x() + (index - imageScroll) * (cell + 4);
                 graphics.fill(x, strip.y(), x + cell, strip.y() + cell, panelAltColor());
-                Identifier texture = imageTextures.get(image.id());
+                String texture = imageTextures.get(image.id());
                 if (texture != null) {
                     double scale = Math.min((double) (cell - 2) / image.preview().width(),
                             (double) (cell - 2) / image.preview().height());

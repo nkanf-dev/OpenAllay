@@ -53,7 +53,7 @@ public final class ClientFocusCapture {
         }
 
         var player = client.player;
-        String dimension = client.level.dimension().identifier().toString();
+        String dimension = dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(client.level.dimension()).toString();
         Screen nativeScreen = MinecraftClientWindow.screen(client);
         boolean overlay = MinecraftClientWindow.overlay(client) != null;
         WorldFocusObservation.Menu menu = menu(client, nativeScreen, overlay);

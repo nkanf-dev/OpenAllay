@@ -41,7 +41,7 @@ final class GuideBuilderE2EProbe {
                 if (player == null) throw new IllegalStateException("Native player is unavailable");
                 Anchor anchor = new Anchor((int)Math.floor(player.getX()) + 8,
                         (int)Math.floor(player.getY()) - 1, (int)Math.floor(player.getZ()) + 8,
-                        player.level().dimension().identifier().toString());
+                        dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(player.level().dimension()).toString());
                 client.execute(() -> success.accept(anchor));
             } catch (RuntimeException error) { client.execute(() -> failure.accept(error.toString())); }
         });
@@ -231,7 +231,7 @@ final class GuideBuilderE2EProbe {
                 var player = server.getPlayerList().getPlayer(actor);
                 if (player == null) throw new IllegalStateException("Native player disappeared");
                 ServerLevel level = player.level();
-                if (!anchor.dimension().equals(level.dimension().identifier().toString()))
+                if (!anchor.dimension().equals(dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(level.dimension()).toString()))
                     throw new IllegalStateException("Native dimension changed");
                 result.addProperty("worldName", server.getWorldData().getLevelName());
                 result.addProperty("survival", server.getWorldData().getGameType() == net.minecraft.world.level.GameType.SURVIVAL);

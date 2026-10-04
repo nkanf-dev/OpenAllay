@@ -1,12 +1,13 @@
 package dev.openallay.neoforge.network;
 
+import dev.openallay.platform.minecraft.MinecraftResourceIds;
+
 import dev.openallay.OpenAllayConstants;
 import dev.openallay.OpenAllayRuntime;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.Identifier;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 
@@ -24,7 +25,7 @@ public final class NeoForgeBridgePayloads {
 
     public record Packet(String kind, String json) implements CustomPacketPayload {
         public static final Type<Packet> TYPE = new Type<>(
-                Identifier.fromNamespaceAndPath("openallay", "bridge"));
+                MinecraftResourceIds.fromNamespaceAndPath("openallay", "bridge"));
         public static final StreamCodec<RegistryFriendlyByteBuf, Packet> CODEC = StreamCodec.composite(
                 ByteBufCodecs.STRING_UTF8,
                 Packet::kind,

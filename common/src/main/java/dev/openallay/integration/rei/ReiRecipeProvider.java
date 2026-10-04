@@ -1,5 +1,7 @@
 package dev.openallay.integration.rei;
 
+import dev.openallay.platform.minecraft.MinecraftResourceId;
+
 import dev.architectury.fluid.FluidStack;
 import dev.openallay.context.DataAuthority;
 import dev.openallay.context.DataCompleteness;
@@ -33,13 +35,11 @@ import me.shedaniel.rei.api.common.display.Display;
 import me.shedaniel.rei.api.common.entry.EntryIngredient;
 import me.shedaniel.rei.api.common.entry.EntryStack;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 
 final class ReiRecipeProvider implements RecipeKnowledgeProvider {
     private static final String SOURCE_ID = "viewer:rei";
-    private static final Identifier TAG_CATEGORY =
-            Identifier.fromNamespaceAndPath("minecraft", "plugins/tag");
+    private static final String TAG_CATEGORY = "minecraft:plugins/tag";
     private static final String CAPTURE_GENERATION_PLACEHOLDER = "0".repeat(64);
 
     private final Instant capturedAt;
@@ -91,7 +91,7 @@ final class ReiRecipeProvider implements RecipeKnowledgeProvider {
             List<Display> displays,
             Map<String, RecipeEntrySnapshot> recipes,
             List<RecipeProviderDiagnostic> diagnostics) {
-        if (TAG_CATEGORY.equals(category.getIdentifier())) {
+        if (TAG_CATEGORY.equals(category.getIdentifier().toString())) {
             // REI publishes tag membership as multi-output displays. They are useful viewer
             // metadata, but they are not recipes and must not become recipe search candidates.
             return;
@@ -119,13 +119,14 @@ final class ReiRecipeProvider implements RecipeKnowledgeProvider {
     }
 
     private RecipeEntrySnapshot detach(CategoryIdentifier<?> category, Display display) {
-        Identifier categoryId = category.getIdentifier();
-        if (!display.getCategoryIdentifier().getIdentifier().equals(categoryId)) {
+        MinecraftResourceId categoryId = MinecraftResourceId.from(category.getIdentifier().toString());
+        if (!display.getCategoryIdentifier().getIdentifier().toString().equals(categoryId.toString())) {
             throw new UnsupportedRecipe(
                     "category_mismatch", "REI display belongs to another category");
         }
         CapturedEntries entries = captureEntries(display);
-        Identifier location = display.getDisplayLocation().orElse(null);
+        MinecraftResourceId location = display.getDisplayLocation()
+                .map(id -> MinecraftResourceId.from(id.toString())).orElse(null);
         String provisionalId = location == null
                 ? "openallay:rei_pending"
                 : location.toString();
@@ -262,7 +263,7 @@ final class ReiRecipeProvider implements RecipeKnowledgeProvider {
     }
 
     private RecipeEntrySnapshot entry(
-            String referenceId, String entryId, Identifier categoryId, CapturedEntries entries) {
+            String referenceId, String entryId, MinecraftResourceId categoryId, CapturedEntries entries) {
         return new RecipeEntrySnapshot(
                 new RecipeReference(SOURCE_ID, CAPTURE_GENERATION_PLACEHOLDER, referenceId),
                 entryId,
@@ -281,7 +282,7 @@ final class ReiRecipeProvider implements RecipeKnowledgeProvider {
                 evidence(categoryId));
     }
 
-    private EvidenceMetadata evidence(Identifier categoryId) {
+    private EvidenceMetadata evidence(MinecraftResourceId categoryId) {
         return new EvidenceMetadata(
                 DataAuthority.INTEGRATION_API,
                 DataCompleteness.COMPLETE,
@@ -294,16 +295,16 @@ final class ReiRecipeProvider implements RecipeKnowledgeProvider {
     }
 
     private static String referenceId(
-            Identifier categoryId, Identifier location, String fingerprint) {
+            MinecraftResourceId categoryId, MinecraftResourceId location, String fingerprint) {
         StringBuilder path = new StringBuilder("rei/")
-                .append(categoryId.getNamespace())
+                .append(categoryId.namespace())
                 .append('/')
-                .append(categoryId.getPath());
+                .append(categoryId.path());
         if (location != null) {
             path.append('/')
-                    .append(location.getNamespace())
+                    .append(location.namespace())
                     .append('/')
-                    .append(location.getPath());
+                    .append(location.path());
         } else {
             path.append("/generated");
         }

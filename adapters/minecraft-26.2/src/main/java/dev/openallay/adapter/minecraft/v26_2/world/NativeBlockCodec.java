@@ -22,7 +22,6 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.IntTag;
 import net.minecraft.nbt.TagParser;
-import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.level.block.BarrelBlock;
@@ -261,7 +260,7 @@ final class NativeBlockCodec {
     }
 
     private static boolean canTransformContainer(BlockState state, CompoundTag tag) {
-        Identifier blockId = BuiltInRegistries.BLOCK.getKey(state.getBlock());
+        var blockId = BuiltInRegistries.BLOCK.getKey(state.getBlock());
         if (blockId == null || !"minecraft".equals(blockId.getNamespace())) return false;
         Class<?> blockClass = state.getBlock().getClass();
         BlockEntityType<?> expected;
@@ -270,7 +269,7 @@ final class NativeBlockCodec {
         else if (blockClass == BarrelBlock.class) expected = NativeContainerEntityTypes.barrel();
         else if (blockClass == ShulkerBoxBlock.class) expected = NativeContainerEntityTypes.shulkerBox();
         else return false;
-        Identifier id = Identifier.tryParse(tag.getString("id").orElse(""));
+        var id = NativeWorldResourceIds.tryParse(tag.getString("id").orElse(""));
         if (id == null || !expected.isValid(state)
                 || BuiltInRegistries.BLOCK_ENTITY_TYPE.get(id).map(holder -> holder.value() != expected).orElse(true)) return false;
         if (!CONTAINER_FIELDS.containsAll(tag.keySet())) return false;
@@ -299,7 +298,7 @@ final class NativeBlockCodec {
         if (tag != null) {
             String rawId = tag.getString("id").orElseThrow(
                     () -> new IllegalArgumentException("blockEntity requires a string id"));
-            Identifier id = identifier(rawId, "blockEntity id");
+            var id = NativeWorldResourceIds.parse(rawId, "blockEntity id");
             BlockEntityType<?> type = BuiltInRegistries.BLOCK_ENTITY_TYPE.get(id)
                     .orElseThrow(() -> new IllegalArgumentException("Unknown blockEntity id: " + rawId)).value();
             if (type != entity.getType() || !type.isValid(state)) {
@@ -336,7 +335,7 @@ final class NativeBlockCodec {
 
     private static BlockState decode(JsonObject json) {
         String rawId = string(json.get("id"), "id");
-        Identifier id = identifier(rawId, "block id");
+        var id = NativeWorldResourceIds.parse(rawId, "block id");
         Block block = BuiltInRegistries.BLOCK.get(id)
                 .orElseThrow(() -> new IllegalArgumentException("Unknown block id: " + rawId)).value();
         BlockState state = block.defaultBlockState();
@@ -379,7 +378,7 @@ final class NativeBlockCodec {
 
     private static JsonObject encodeState(BlockState state) {
         JsonObject json = new JsonObject();
-        Identifier id = BuiltInRegistries.BLOCK.getKey(state.getBlock());
+        var id = BuiltInRegistries.BLOCK.getKey(state.getBlock());
         if (id == null) throw new IllegalArgumentException("Cannot encode an unregistered block");
         json.addProperty("id", id.toString());
         json.add("properties", NativeBlockStateProperties.encode(state));
@@ -450,21 +449,13 @@ final class NativeBlockCodec {
         return primitive.getAsString();
     }
 
-    private static Identifier identifier(String value, String field) {
-        Identifier id = Identifier.tryParse(value);
-        if (id == null || value.isBlank() || id.getPath().isEmpty()) {
-            throw new IllegalArgumentException("Invalid " + field + ": " + value);
-        }
-        return id;
-    }
-
     private static void checkOwnerAndPosition(ServerLevel level, BlockPos pos) {
         Objects.requireNonNull(level, "level");
         Objects.requireNonNull(pos, "pos");
         if (!level.getServer().isSameThread()) {
             throw new ExtensionException("wrong_owner", "Native block operations require the server owner thread");
         }
-        if (!level.isInValidBounds(pos)) {
+        if (!NativeWorldBounds.contains(level, pos)) {
             throw new IllegalArgumentException("Block position is outside the level's native bounds: " + pos);
         }
     }

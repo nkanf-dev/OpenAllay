@@ -1,5 +1,7 @@
 package dev.openallay.client.gui.nativeview;
 
+import dev.openallay.platform.minecraft.MinecraftResourceIds;
+
 import dev.openallay.client.gui.GuideGraphics;
 import dev.openallay.guide.ui.GuideRecipeCard;
 import dev.openallay.guide.ui.GuideUiLayout;
@@ -8,7 +10,6 @@ import java.util.List;
 import net.minecraft.client.gui.Font;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 
 /** Neutral OpenAllay recipe canvas; it deliberately does not imitate a mod screen. */
@@ -154,7 +155,7 @@ final class GenericRecipeNativeViewProvider implements NativeDomainViewProvider 
                 int mouseY) {
             graphics.fill(x, y, x + 18, y + 18, SLOT);
             graphics.outline(x, y, 18, 18, BORDER);
-            Identifier id = Identifier.tryParse(itemId);
+            var id = MinecraftResourceIds.tryParse(itemId);
             if (id == null || !BuiltInRegistries.ITEM.containsKey(id)) {
                 graphics.text(font, "?", x + 6, y + 5, MUTED, false);
                 return;

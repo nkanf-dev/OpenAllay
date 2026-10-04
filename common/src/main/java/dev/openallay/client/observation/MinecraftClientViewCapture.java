@@ -210,7 +210,7 @@ public final class MinecraftClientViewCapture implements AutoCloseable {
         capture.cancellation.throwIfCancelled();
         if (closed || client.level != level || client.player == null || client.level == null
                 || !actor.equals(client.player.getUUID())
-                || !dimension.equals(client.level.dimension().identifier().toString())) {
+                || !dimension.equals(dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(client.level.dimension()).toString())) {
             throw unavailable("Native view source is no longer available");
         }
         if (!client.isSameThread()) throw new IllegalStateException("Native view admission must run on the Minecraft thread");

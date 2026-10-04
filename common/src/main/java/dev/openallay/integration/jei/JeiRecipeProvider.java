@@ -1,5 +1,7 @@
 package dev.openallay.integration.jei;
 
+import dev.openallay.platform.minecraft.MinecraftResourceId;
+
 import dev.openallay.context.DataAuthority;
 import dev.openallay.context.DataCompleteness;
 import dev.openallay.context.EvidenceMetadata;
@@ -36,7 +38,6 @@ import mezz.jei.api.recipe.RecipeIngredientRole;
 import mezz.jei.api.recipe.category.IRecipeCategory;
 import mezz.jei.api.runtime.IJeiRuntime;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 
 final class JeiRecipeProvider implements RecipeKnowledgeProvider {
@@ -137,8 +138,8 @@ final class JeiRecipeProvider implements RecipeKnowledgeProvider {
                 .orElseThrow(() -> new UnsupportedRecipe(
                         "layout_unavailable", "JEI did not provide a recipe layout"));
         CapturedSlots slots = captureSlots(layout.getRecipeSlotsView().getSlotViews());
-        Identifier explicitId = category.getIdentifier(recipe);
-        Identifier categoryId = category.getRecipeType().getUid();
+        MinecraftResourceId explicitId = MinecraftJeiResourceIds.recipe(category, recipe);
+        MinecraftResourceId categoryId = MinecraftResourceId.from(category.getRecipeType().getUid().toString());
         String provisionalId = explicitId == null
                 ? "openallay:jei_pending"
                 : explicitId.toString();
@@ -280,7 +281,7 @@ final class JeiRecipeProvider implements RecipeKnowledgeProvider {
         IIngredientType type = value.getType();
         IIngredientHelper helper = runtime.getIngredientManager().getIngredientHelper(type);
         Object ingredient = value.getIngredient();
-        Identifier id = helper.getIdentifier(ingredient);
+        var id = MinecraftJeiResourceIds.ingredient(helper, ingredient);
         return new FluidValue(id.toString(), helper.getAmount(ingredient));
     }
 
@@ -304,7 +305,7 @@ final class JeiRecipeProvider implements RecipeKnowledgeProvider {
     }
 
     private RecipeEntrySnapshot entry(
-            String referenceId, String entryId, Identifier categoryId, CapturedSlots slots) {
+            String referenceId, String entryId, MinecraftResourceId categoryId, CapturedSlots slots) {
         return new RecipeEntrySnapshot(
                 new RecipeReference(SOURCE_ID, CAPTURE_GENERATION_PLACEHOLDER, referenceId),
                 entryId,
@@ -323,7 +324,7 @@ final class JeiRecipeProvider implements RecipeKnowledgeProvider {
                 evidence(categoryId));
     }
 
-    private EvidenceMetadata evidence(Identifier categoryId) {
+    private EvidenceMetadata evidence(MinecraftResourceId categoryId) {
         return new EvidenceMetadata(
                 DataAuthority.INTEGRATION_API,
                 DataCompleteness.COMPLETE,
@@ -336,16 +337,16 @@ final class JeiRecipeProvider implements RecipeKnowledgeProvider {
     }
 
     private static String referenceId(
-            Identifier categoryId, Identifier explicitId, String fingerprint) {
+            MinecraftResourceId categoryId, MinecraftResourceId explicitId, String fingerprint) {
         StringBuilder path = new StringBuilder("jei/")
-                .append(categoryId.getNamespace())
+                .append(categoryId.namespace())
                 .append('/')
-                .append(categoryId.getPath());
+                .append(categoryId.path());
         if (explicitId != null) {
             path.append('/')
-                    .append(explicitId.getNamespace())
+                    .append(explicitId.namespace())
                     .append('/')
-                    .append(explicitId.getPath());
+                    .append(explicitId.path());
         } else {
             path.append("/generated");
         }

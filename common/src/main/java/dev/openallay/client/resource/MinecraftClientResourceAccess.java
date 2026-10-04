@@ -21,7 +21,7 @@ public final class MinecraftClientResourceAccess implements ClientResourceAccess
     @Override
     public List<ClientResource> list(String pathPrefix) {
         String prefix = ClientResourceAccess.validatePrefix(pathPrefix);
-        Map<net.minecraft.resources.Identifier, List<Resource>> stacks =
+        var stacks =
                 resources.listResourceStacks(prefix, id -> id.getPath().startsWith(prefix));
         List<ClientResource> detached = new ArrayList<>();
         stacks.entrySet().stream().sorted(Map.Entry.comparingByKey()).forEach(entry -> {

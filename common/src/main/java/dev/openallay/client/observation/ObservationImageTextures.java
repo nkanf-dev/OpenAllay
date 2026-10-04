@@ -11,8 +11,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Executor;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.texture.DynamicTexture;
-import net.minecraft.resources.Identifier;
 
 /** View-owned textures decoded only from the service's actual managed image bytes. */
 public final class ObservationImageTextures implements AutoCloseable {
@@ -25,21 +23,21 @@ public final class ObservationImageTextures implements AutoCloseable {
     private final Map<ImageReference, Entry> entries = new LinkedHashMap<>();
     private long generation;
     private boolean closed;
-    private static final class Entry { Identifier texture; boolean failed; }
+    private static final class Entry { String texture; boolean failed; }
 
     public ObservationImageTextures(Minecraft client, GuideService service) {
         this.client = java.util.Objects.requireNonNull(client, "client");
         this.service = java.util.Objects.requireNonNull(service, "service");
     }
 
-    public Identifier texture(ImageReference reference) {
+    public String texture(ImageReference reference) {
         if (closed) return null;
         Entry entry = entries.get(reference);
         if (entry != null) return entry.texture;
         if (entries.size() >= MAX_TEXTURES) {
             ImageReference oldest = entries.keySet().iterator().next();
             Entry evicted = entries.remove(oldest);
-            if (evicted.texture != null) client.getTextureManager().release(evicted.texture);
+            if (evicted.texture != null) MinecraftImageTextures.release(client.getTextureManager(), evicted.texture);
         }
         entry = new Entry();
         entries.put(reference, entry);
@@ -74,8 +72,8 @@ public final class ObservationImageTextures implements AutoCloseable {
                             for (int y = 0; y < preview.height(); y++) {
                                 for (int x = 0; x < preview.width(); x++) image.setPixel(x, y, pixels[y * preview.width() + x]);
                             }
-                            Identifier texture = Identifier.fromNamespaceAndPath("openallay", "observation/" + owner + "/" + reference.sha256());
-                            client.getTextureManager().register(texture, new DynamicTexture(() -> "OpenAllay observation", image));
+                            String texture = "openallay:observation/" + owner + "/" + reference.sha256();
+                            MinecraftImageTextures.register(client.getTextureManager(), texture, () -> "OpenAllay observation", image);
                             loading.texture = texture;
                         } catch (RuntimeException rejected) {
                             image.close();
@@ -104,7 +102,7 @@ public final class ObservationImageTextures implements AutoCloseable {
         closed = true;
         generation++;
         for (Entry entry : new ArrayList<>(entries.values())) {
-            if (entry.texture != null) client.getTextureManager().release(entry.texture);
+            if (entry.texture != null) MinecraftImageTextures.release(client.getTextureManager(), entry.texture);
         }
         entries.clear();
     }

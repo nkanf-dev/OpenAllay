@@ -52,7 +52,7 @@ public final class MinecraftObservationInputActions implements GuideObservationI
                         client.execute(() -> {
                             if (closed || client.player == null || client.level == null
                                     || !focus.actorId().equals(client.player.getUUID())
-                                    || !focus.dimension().equals(client.level.dimension().identifier().toString())) {
+                                    || !focus.dimension().equals(dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(client.level.dimension()).toString())) {
                                 observations.releaseImageProducers(correlation);
                                 result.completeExceptionally(new IllegalStateException("Input view source changed"));
                                 return;

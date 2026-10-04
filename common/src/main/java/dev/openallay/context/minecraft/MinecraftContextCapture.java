@@ -46,9 +46,7 @@ import java.util.Set;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.permissions.Permissions;
 import net.minecraft.util.context.ContextMap;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
@@ -94,7 +92,7 @@ public final class MinecraftContextCapture {
                         CallerKind.PLAYER,
                         serverPlayer.getUUID(),
                         source.getTextName(),
-                        source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER));
+                        MinecraftCommandPermissions.canReadWorld(source));
 
         Optional<PlayerSnapshot> player = capabilities.contains(ContextCapability.PLAYER)
                 && serverPlayer != null
@@ -185,7 +183,7 @@ public final class MinecraftContextCapture {
         }
         if (authorizedWorldQuery(source, WorldQueryOperation.SPAWN)) {
             queries.put("spawn", serverQuery("spawn",
-                    spawn.dimension().identifier() + " " + spawn.pos().toShortString()));
+                    dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(spawn.dimension()) + " " + spawn.pos().toShortString()));
         }
         boolean worldQueriesAuthorized = queries.size() == WorldQueryOperation.values().length;
         return new ObservableGameStateSnapshot(
@@ -250,7 +248,7 @@ public final class MinecraftContextCapture {
     private static boolean authorizedWorldQuery(
             CommandSourceStack source, WorldQueryOperation operation) {
         Objects.requireNonNull(operation, "operation");
-        return source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER);
+        return MinecraftCommandPermissions.canReadWorld(source);
     }
 
     private static ObservableGameStateSnapshot.QueryValue serverQuery(
@@ -283,7 +281,7 @@ public final class MinecraftContextCapture {
         return new PlayerSnapshot(
                 player.getUUID(),
                 player.getName().getString(),
-                player.level().dimension().identifier().toString(),
+                dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(player.level().dimension()).toString(),
                 new BlockPositionSnapshot(position.getX(), position.getY(), position.getZ()),
                 player.gameMode().getName(),
                 inventorySnapshot,
@@ -349,7 +347,7 @@ public final class MinecraftContextCapture {
                 .flatMap(display -> display.result().resolveForStacks(displayContext).stream())
                 .map(value -> new RecipeOutputSnapshot(captureStack(value), 1.0D))
                 .toList();
-        Identifier type = Objects.requireNonNull(
+        var type = Objects.requireNonNull(
                 BuiltInRegistries.RECIPE_TYPE.getKey(holder.value().getType()));
         RecipeDisplay primary = displays.isEmpty() ? null : displays.getFirst();
         RecipeLayoutSnapshot layout = primary instanceof ShapedCraftingRecipeDisplay shaped
@@ -364,7 +362,7 @@ public final class MinecraftContextCapture {
                         .map(value -> BuiltInRegistries.ITEM.getKey(value.getItem()).toString())
                         .findFirst()
                         .orElse(null);
-        String recipeId = holder.id().identifier().toString();
+        String recipeId = dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(holder.id()).toString();
         EvidenceMetadata recipeEvidence = evidence(
                 DataCompleteness.COMPLETE,
                 capturedAt,
@@ -391,9 +389,9 @@ public final class MinecraftContextCapture {
     private IngredientRequirementSnapshot captureIngredient(int index, Ingredient ingredient) {
         List<IngredientAlternativeSnapshot> alternatives = ingredient.items()
                 .map(holder -> {
-                    String id = holder.unwrapKey()
+                    String id = dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(holder.unwrapKey()
                             .orElseThrow(() -> new IllegalStateException("Unbound recipe item"))
-                            .identifier()
+                            )
                             .toString();
                     return new IngredientAlternativeSnapshot("item", id, List.of(id));
                 })
@@ -405,7 +403,7 @@ public final class MinecraftContextCapture {
         if (stack.isEmpty()) {
             return ItemStackSnapshot.empty();
         }
-        Identifier id = Objects.requireNonNull(BuiltInRegistries.ITEM.getKey(stack.getItem()));
+        var id = Objects.requireNonNull(BuiltInRegistries.ITEM.getKey(stack.getItem()));
         return new ItemStackSnapshot(id.toString(), stack.getCount(), stack.getHoverName().getString());
     }
 

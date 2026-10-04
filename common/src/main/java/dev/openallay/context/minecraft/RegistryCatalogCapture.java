@@ -1,5 +1,7 @@
 package dev.openallay.context.minecraft;
 
+import dev.openallay.platform.minecraft.MinecraftResourceId;
+
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -19,7 +21,6 @@ import java.util.TreeSet;
 import java.util.function.BooleanSupplier;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.Identifier;
 
 /** Captures public built-in catalog data after the caller has proved Minecraft-thread ownership. */
 public final class RegistryCatalogCapture {
@@ -42,28 +43,28 @@ public final class RegistryCatalogCapture {
         List<RegistryEntrySnapshot> entries = new ArrayList<>();
         Map<net.minecraft.world.item.Item, Set<String>> itemTags = tags(BuiltInRegistries.ITEM);
         BuiltInRegistries.ITEM.stream().forEach(item -> {
-            Identifier id = Objects.requireNonNull(BuiltInRegistries.ITEM.getKey(item));
+            var id = Objects.requireNonNull(BuiltInRegistries.ITEM.getKey(item));
             Set<String> components = new TreeSet<>();
             item.components().keySet().forEach(type -> {
-                Identifier componentId = BuiltInRegistries.DATA_COMPONENT_TYPE.getKey(type);
+                var componentId = BuiltInRegistries.DATA_COMPONENT_TYPE.getKey(type);
                 if (componentId != null) {
                     components.add(componentId.toString());
                 }
             });
             entries.add(entry(
-                    id,
+                    MinecraftResourceId.from(id.toString()),
                     "item",
                     item.getDefaultInstance().getHoverName().getString(),
                     provenance,
                     List.of(item.getDescriptionId()),
                     itemTags.getOrDefault(item, Set.of()),
                     components,
-                    properties("item", id, item, encodeComponents(item.components()), propertyContributors)));
+                    properties("item", id.toString(), item, encodeComponents(item.components()), propertyContributors)));
         });
 
         Map<net.minecraft.world.level.block.Block, Set<String>> blockTags = tags(BuiltInRegistries.BLOCK);
         BuiltInRegistries.BLOCK.stream().forEach(block -> {
-            Identifier id = Objects.requireNonNull(BuiltInRegistries.BLOCK.getKey(block));
+            var id = Objects.requireNonNull(BuiltInRegistries.BLOCK.getKey(block));
             String properties = block.getStateDefinition().getProperties().stream()
                     .map(property -> property.getName())
                     .sorted()
@@ -72,28 +73,28 @@ public final class RegistryCatalogCapture {
             data.addProperty("state_properties", properties.isBlank() ? "none" : properties);
             data.addProperty("explosion_resistance", block.getExplosionResistance());
             entries.add(entry(
-                    id,
+                    MinecraftResourceId.from(id.toString()),
                     "block",
                     block.getName().getString(),
                     provenance,
                     List.of(block.getDescriptionId()),
                     blockTags.getOrDefault(block, Set.of()),
                     Set.of(),
-                    properties("block", id, block, Map.of("minecraft:block", data), propertyContributors)));
+                    properties("block", id.toString(), block, Map.of("minecraft:block", data), propertyContributors)));
         });
 
         Map<net.minecraft.world.effect.MobEffect, Set<String>> effectTags = tags(BuiltInRegistries.MOB_EFFECT);
         BuiltInRegistries.MOB_EFFECT.stream().forEach(effect -> {
-            Identifier id = Objects.requireNonNull(BuiltInRegistries.MOB_EFFECT.getKey(effect));
+            var id = Objects.requireNonNull(BuiltInRegistries.MOB_EFFECT.getKey(effect));
             entries.add(entry(
-                    id,
+                    MinecraftResourceId.from(id.toString()),
                     "effect",
                     effect.getDisplayName().getString(),
                     provenance,
                     List.of(effect.getDescriptionId()),
                     effectTags.getOrDefault(effect, Set.of()),
                     Set.of(),
-                    properties("effect", id, effect, Map.of("minecraft:mob_effect", object(
+                    properties("effect", id.toString(), effect, Map.of("minecraft:mob_effect", object(
                             "category", effect.getCategory().name().toLowerCase(java.util.Locale.ROOT),
                             "beneficial", effect.isBeneficial(),
                             "instantaneous", MinecraftEffectFacts.instantaneous(effect),
@@ -102,11 +103,11 @@ public final class RegistryCatalogCapture {
 
         Map<net.minecraft.world.item.alchemy.Potion, Set<String>> potionTags = tags(BuiltInRegistries.POTION);
         BuiltInRegistries.POTION.stream().forEach(potion -> {
-            Identifier id = Objects.requireNonNull(BuiltInRegistries.POTION.getKey(potion));
+            var id = Objects.requireNonNull(BuiltInRegistries.POTION.getKey(potion));
             String translationKey = "item.minecraft.potion.effect." + potion.name();
             JsonArray effects = new JsonArray();
             potion.getEffects().forEach(instance -> {
-                Identifier effectId = BuiltInRegistries.MOB_EFFECT.getKey(instance.getEffect().value());
+                var effectId = BuiltInRegistries.MOB_EFFECT.getKey(instance.getEffect().value());
                 if (effectId == null) return;
                 effects.add(object(
                         "id", effectId.toString(),
@@ -120,28 +121,28 @@ public final class RegistryCatalogCapture {
             potionData.addProperty("name", potion.name());
             potionData.add("effects", effects);
             entries.add(entry(
-                    id,
+                    MinecraftResourceId.from(id.toString()),
                     "potion",
                     net.minecraft.network.chat.Component.translatable(translationKey).getString(),
                     provenance,
                     List.of(potion.name(), translationKey),
                     potionTags.getOrDefault(potion, Set.of()),
                     Set.of(),
-                    properties("potion", id, potion, Map.of("minecraft:potion", potionData), propertyContributors)));
+                    properties("potion", id.toString(), potion, Map.of("minecraft:potion", potionData), propertyContributors)));
         });
 
         Map<net.minecraft.world.entity.EntityType<?>, Set<String>> entityTags = tags(BuiltInRegistries.ENTITY_TYPE);
         BuiltInRegistries.ENTITY_TYPE.stream().forEach(entity -> {
-            Identifier id = Objects.requireNonNull(BuiltInRegistries.ENTITY_TYPE.getKey(entity));
+            var id = Objects.requireNonNull(BuiltInRegistries.ENTITY_TYPE.getKey(entity));
             entries.add(entry(
-                    id,
+                    MinecraftResourceId.from(id.toString()),
                     "entity",
                     entity.getDescription().getString(),
                     provenance,
                     List.of(entity.getDescriptionId()),
                     entityTags.getOrDefault(entity, Set.of()),
                     Set.of(),
-                    properties("entity", id, entity, Map.of("minecraft:entity_type", object(
+                    properties("entity", id.toString(), entity, Map.of("minecraft:entity_type", object(
                             "category", entity.getCategory().getName(),
                             "summonable", entity.canSummon(),
                             "fire_immune", entity.fireImmune())), propertyContributors)));
@@ -150,16 +151,16 @@ public final class RegistryCatalogCapture {
         Map<net.minecraft.world.entity.ai.attributes.Attribute, Set<String>> attributeTags =
                 tags(BuiltInRegistries.ATTRIBUTE);
         BuiltInRegistries.ATTRIBUTE.stream().forEach(attribute -> {
-            Identifier id = Objects.requireNonNull(BuiltInRegistries.ATTRIBUTE.getKey(attribute));
+            var id = Objects.requireNonNull(BuiltInRegistries.ATTRIBUTE.getKey(attribute));
             entries.add(entry(
-                    id,
+                    MinecraftResourceId.from(id.toString()),
                     "attribute",
                     net.minecraft.network.chat.Component.translatable(attribute.getDescriptionId()).getString(),
                     provenance,
                     List.of(attribute.getDescriptionId()),
                     attributeTags.getOrDefault(attribute, Set.of()),
                     Set.of(),
-                    properties("attribute", id, attribute, Map.of("minecraft:attribute", object(
+                    properties("attribute", id.toString(), attribute, Map.of("minecraft:attribute", object(
                             "default_value", attribute.getDefaultValue(),
                             "client_syncable", attribute.isClientSyncable())), propertyContributors)));
         });
@@ -170,7 +171,7 @@ public final class RegistryCatalogCapture {
     }
 
     private static RegistryEntrySnapshot entry(
-            Identifier id,
+            MinecraftResourceId id,
             String kind,
             String displayName,
             String provenance,
@@ -181,8 +182,8 @@ public final class RegistryCatalogCapture {
         return new RegistryEntrySnapshot(
                 id.toString(),
                 kind,
-                displayName.isBlank() ? humanize(id.getPath()) : displayName,
-                id.getNamespace(),
+                displayName.isBlank() ? humanize(id.path()) : displayName,
+                id.namespace(),
                 provenance,
                 aliases,
                 tags,
@@ -197,7 +198,7 @@ public final class RegistryCatalogCapture {
                 JsonOps.INSTANCE,
                 RegistryAccess.fromRegistryOfRegistries(BuiltInRegistries.REGISTRY));
         components.forEach(component -> {
-            Identifier id = BuiltInRegistries.DATA_COMPONENT_TYPE.getKey(component.type());
+            var id = BuiltInRegistries.DATA_COMPONENT_TYPE.getKey(component.type());
             if (id == null) return;
             component.encodeValue(ops).result().ifPresent(value -> encoded.put(id.toString(), value));
         });
@@ -206,7 +207,7 @@ public final class RegistryCatalogCapture {
 
     private static Map<String, JsonElement> properties(
             String kind,
-            Identifier resourceId,
+            String resourceId,
             Object registryValue,
             Map<String, JsonElement> builtIn,
             List<? extends RegistryPropertyContributor> contributors) {

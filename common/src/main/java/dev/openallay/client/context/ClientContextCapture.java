@@ -54,7 +54,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.recipebook.RecipeCollection;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.display.RecipeDisplayEntry;
 import net.minecraft.world.item.crafting.display.ShapedCraftingRecipeDisplay;
@@ -307,12 +306,12 @@ public final class ClientContextCapture {
         add(values, "position", "y", Double.toString(player.getY()));
         add(values, "position", "z", Double.toString(player.getZ()));
         add(values, "position", "block", player.blockPosition().toShortString());
-        add(values, "position", "dimension", player.level().dimension().identifier().toString());
+        add(values, "position", "dimension", dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(player.level().dimension()).toString());
         add(values, "position", "direction", player.getDirection().getName());
         add(values, "position", "yaw", Float.toString(player.getYRot()));
         add(values, "position", "pitch", Float.toString(player.getXRot()));
         player.level().getBiome(player.blockPosition()).unwrapKey().ifPresent(key ->
-                add(values, "position", "biome", key.identifier().toString()));
+                add(values, "position", "biome", dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(key).toString()));
 
         Runtime runtime = Runtime.getRuntime();
         add(values, "performance", "fps", Integer.toString(client.getFps()));
@@ -338,7 +337,7 @@ public final class ClientContextCapture {
         add(values, "player", "camera", client.options.getCameraType().name().toLowerCase(Locale.ROOT));
         add(values, "player", "active_effects", player.getActiveEffects().stream()
                 .map(effect -> effect.getEffect().unwrapKey()
-                        .map(key -> key.identifier().toString())
+                        .map(key -> dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(key).toString())
                         .orElse("unknown"))
                 .sorted()
                 .toList().toString());
@@ -406,7 +405,7 @@ public final class ClientContextCapture {
                         + ",size=" + border.getSize()));
         var respawn = client.level.getRespawnData();
         values.put("spawn", clientQuery("spawn",
-                respawn.dimension().identifier() + " " + respawn.pos().toShortString()));
+                dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(respawn.dimension()) + " " + respawn.pos().toShortString()));
         return new ObservableGameStateSnapshot.WorldQueriesState(
                 values,
                 evidence(DataCompleteness.PARTIAL, capturedAt,
@@ -464,7 +463,7 @@ public final class ClientContextCapture {
         return new PlayerSnapshot(
                 player.getUUID(),
                 player.getName().getString(),
-                player.level().dimension().identifier().toString(),
+                dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(player.level().dimension()).toString(),
                 new BlockPositionSnapshot(position.getX(), position.getY(), position.getZ()),
                 mode,
                 inventorySnapshot,
@@ -596,7 +595,7 @@ public final class ClientContextCapture {
                             1,
                             true,
                             ingredient.items().map(holder -> {
-                                String id = holder.unwrapKey().orElseThrow().identifier().toString();
+                                String id = dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(holder.unwrapKey().orElseThrow()).toString();
                                 return new IngredientAlternativeSnapshot("item", id, List.of(id));
                             }).toList()));
                 }
@@ -657,7 +656,7 @@ public final class ClientContextCapture {
         if (stack.isEmpty()) {
             return ItemStackSnapshot.empty();
         }
-        Identifier id = BuiltInRegistries.ITEM.getKey(stack.getItem());
+        var id = BuiltInRegistries.ITEM.getKey(stack.getItem());
         return new ItemStackSnapshot(id.toString(), stack.getCount(), stack.getHoverName().getString());
     }
 
