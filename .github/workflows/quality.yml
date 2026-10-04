@@ -18,20 +18,30 @@ concurrency:
 
 jobs:
   verify:
-    name: Java 25 / Minecraft 26.2
+    name: Minecraft 26.2
     runs-on: ubuntu-24.04
     timeout-minutes: 35
+    env:
+      # Only the accepted default target is gated/published here; no target matrix.
+      OPENALLAY_MINECRAFT_TARGET: "26.2"
     steps:
       - name: Check out source
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
 
-      - name: Set up Java 25
+      - name: Read selected Minecraft target Java pin
+        id: minecraft_target
+        run: |
+          java_version=$(python3 scripts/minecraft-target.py \
+            --target "$OPENALLAY_MINECRAFT_TARGET" --property java_version)
+          printf 'java_version=%s\n' "$java_version" >> "$GITHUB_OUTPUT"
+
+      - name: Set up target Java
         uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
         with:
           distribution: temurin
-          java-version: "25"
+          java-version: ${{ steps.minecraft_target.outputs.java_version }}
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
@@ -44,6 +54,9 @@ jobs:
           bash -n scripts/*.sh
           python3 -m py_compile scripts/*.py
 
+      - name: Test Minecraft target source and tooling contracts
+        run: python3 -m unittest discover -s scripts -p 'test_minecraft_target*.py'
+
       - name: Test distribution automation
         run: python3 -m unittest discover -s scripts -p 'test_distribution*.py'
 
@@ -51,7 +64,7 @@ jobs:
         run: python3 scripts/prepare-distribution.py
 
       - name: Run clean test and loader build gate
-        run: ./gradlew clean :common:test :fabric:build :neoforge:build
+        run: ./gradlew -PminecraftTarget="$OPENALLAY_MINECRAFT_TARGET" clean :common:test :fabric:build :neoforge:build
 
       - name: Verify Phase 4 package
         run: ./scripts/verify-phase4-package.sh
@@ -61,7 +74,8 @@ jobs:
 
       - name: Verify tokenizer packaging
         run: |
-          minecraft_version=$(sed -n 's/^minecraft_version=//p' gradle.properties)
+          minecraft_version=$(python3 scripts/minecraft-target.py \
+            --target "$OPENALLAY_MINECRAFT_TARGET" --property minecraft_version)
           version=$(sed -n 's/^version=//p' gradle.properties)
           python3 scripts/verify-tokenizer-packaging.py \
             --fabric "fabric/build/libs/openallay-fabric-${minecraft_version}-${version}.jar" \

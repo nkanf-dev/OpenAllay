@@ -3,7 +3,13 @@ set -euo pipefail
 
 repository=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 version=$(sed -n 's/^version=//p' "$repository/gradle.properties")
-minecraft_version=$(sed -n 's/^minecraft_version=//p' "$repository/gradle.properties")
+# Match the target used for the build; callers that build with -PminecraftTarget
+# must pass the same value here. Keep the existing optional directory argument.
+minecraft_target=${OPENALLAY_MINECRAFT_TARGET-26.2}
+minecraft_version=$(python3 "$repository/scripts/minecraft-target.py" \
+  --target "$minecraft_target" --property minecraft_version)
+minecraft_version_range=$(python3 "$repository/scripts/minecraft-target.py" \
+  --target "$minecraft_target" --property minecraft_version_range)
 
 fail() {
   printf 'distribution verification failed: %s\n' "$1" >&2
@@ -11,7 +17,7 @@ fail() {
 }
 
 test -n "$version" || fail 'version is missing from gradle.properties'
-test -n "$minecraft_version" || fail 'minecraft_version is missing from gradle.properties'
+test -n "$minecraft_version" || fail 'minecraft_version is missing from the selected target profile'
 
 fabric_name="openallay-fabric-${minecraft_version}-${version}.jar"
 neoforge_name="openallay-neoforge-${minecraft_version}-${version}.jar"
@@ -53,25 +59,26 @@ verify_zip() {
 verify_zip "$fabric_jar"
 verify_zip "$neoforge_jar"
 
-python3 - "$fabric_jar" "$version" <<'PY'
+python3 - "$fabric_jar" "$version" "$minecraft_version" <<'PY'
 import json
 import sys
 import zipfile
 
-path, version = sys.argv[1:]
+path, version, minecraft_version = sys.argv[1:]
 with zipfile.ZipFile(path) as archive:
     metadata = json.loads(archive.read("fabric.mod.json"))
 assert metadata["id"] == "openallay", metadata
 assert metadata["name"] == "OpenAllay", metadata
 assert metadata["version"] == version, metadata
+assert metadata["depends"]["minecraft"] == "~" + minecraft_version, metadata
 PY
 
-python3 - "$neoforge_jar" "$version" <<'PY'
+python3 - "$neoforge_jar" "$version" "$minecraft_version_range" <<'PY'
 import re
 import sys
 import zipfile
 
-path, version = sys.argv[1:]
+path, version, minecraft_version_range = sys.argv[1:]
 with zipfile.ZipFile(path) as archive:
     metadata = archive.read("META-INF/neoforge.mods.toml").decode("utf-8")
 mods = metadata.split("[[mods]]", 1)[1].split("[[dependencies.", 1)[0]
@@ -83,6 +90,14 @@ values = dict(
 assert values.get("modId") == "openallay", values
 assert values.get("displayName") == "OpenAllay", values
 assert values.get("version") == version, values
+minecraft_dependencies = []
+for block in metadata.split("[[dependencies.openallay]]")[1:]:
+    block = block.split("[[", 1)[0]
+    dependency = dict(re.findall(r'(?m)^\s*(modId|versionRange)\s*=\s*"([^"]+)"', block))
+    if dependency.get("modId") == "minecraft":
+        minecraft_dependencies.append(dependency)
+assert len(minecraft_dependencies) == 1, minecraft_dependencies
+assert minecraft_dependencies[0].get("versionRange") == minecraft_version_range, minecraft_dependencies
 PY
 
 python3 "$repository/scripts/verify-bundled-extensions.py" "$fabric_jar" "$neoforge_jar"

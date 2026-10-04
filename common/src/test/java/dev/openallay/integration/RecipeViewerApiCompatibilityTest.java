@@ -62,7 +62,7 @@ final class RecipeViewerApiCompatibilityTest {
         Path root = repositoryRoot();
         var metadata = com.google.gson.JsonParser.parseString(Files.readString(
                 root.resolve("fabric/src/main/resources/fabric.mod.json"))).getAsJsonObject();
-        String properties = Files.readString(root.resolve("gradle.properties"));
+        String properties = Files.readString(root.resolve("gradle/minecraft-targets/26.2.properties"));
         String readme = Files.readString(root.resolve("README.md"));
         String development = Files.readString(root.resolve("docs/development.md"));
         String chineseReadme = Files.readString(root.resolve("README.zh-CN.md"));
