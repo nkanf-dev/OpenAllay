@@ -9,6 +9,8 @@ import com.google.gson.JsonParser;
 import net.minecraft.SharedConstants;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.IntTag;
+import net.minecraft.nbt.StringTag;
 import net.minecraft.server.Bootstrap;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
@@ -67,8 +69,8 @@ final class NativeBlockCodecTest {
             assertThrows(IllegalArgumentException.class, () -> NativeBlockCodec.blockEntity(state("chest", snbt)), snbt);
         }
         CompoundTag tag = NativeBlockCodec.blockEntity(state("chest", "{id:'minecraft:chest',x:1,y:2,z:3,Items:[]}"));
-        assertEquals(1, tag.getIntOr("x", 0));
-        assertEquals("minecraft:chest", tag.getStringOr("id", ""));
+        assertEquals(IntTag.valueOf(1), tag.get("x"));
+        assertEquals(StringTag.valueOf("minecraft:chest"), tag.get("id"));
     }
 
     @Test void transformationsUseNativeStateSemantics() {
@@ -137,7 +139,7 @@ final class NativeBlockCodecTest {
         String input = state("chest","{id:'minecraft:chest',x:1,y:2,z:3,Items:[]}");
         CompoundTag first = NativeBlockCodec.blockEntity(input);
         first.putInt("x",999);
-        assertEquals(1,NativeBlockCodec.blockEntity(input).getIntOr("x",0));
+        assertEquals(IntTag.valueOf(1),NativeBlockCodec.blockEntity(input).get("x"));
     }
 
     @Test void canonicalAirSectionProofRejectsCaveVoidAndUnusedNoncanonicalPaletteValues() {

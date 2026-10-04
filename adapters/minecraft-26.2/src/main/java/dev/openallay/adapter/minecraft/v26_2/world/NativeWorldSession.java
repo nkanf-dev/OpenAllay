@@ -303,7 +303,7 @@ final class NativeWorldSession implements WorldSession {
         return call(() -> {
             requireWorldWrite.run();
             if (worldId == null)
-                worldId = server.overworld().getDataStorage().computeIfAbsent(NativeWorldIdentity.TYPE).id();
+                worldId = NativeWorldIdentity.getOrCreate(server.overworld()).id();
             return worldId;
         });
     }
@@ -312,7 +312,7 @@ final class NativeWorldSession implements WorldSession {
         // Native get reads/caches existing SavedData; it never invokes the constructor or setDirty.
         return call(() -> {
             if (worldId != null) return java.util.Optional.of(worldId);
-            NativeWorldIdentity existing = server.overworld().getDataStorage().get(NativeWorldIdentity.TYPE);
+            NativeWorldIdentity existing = NativeWorldIdentity.getExisting(server.overworld());
             if (existing == null) return java.util.Optional.empty();
             worldId = existing.id();
             return java.util.Optional.of(worldId);

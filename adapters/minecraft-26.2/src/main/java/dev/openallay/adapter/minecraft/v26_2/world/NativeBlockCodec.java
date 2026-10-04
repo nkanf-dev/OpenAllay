@@ -21,7 +21,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.IntTag;
-import net.minecraft.nbt.TagParser;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.BarrelBlock;
 import net.minecraft.world.level.block.Block;
@@ -266,10 +265,10 @@ final class NativeBlockCodec {
         else if (blockClass == BarrelBlock.class) expected = NativeContainerEntityTypes.barrel();
         else if (blockClass == ShulkerBoxBlock.class) expected = NativeContainerEntityTypes.shulkerBox();
         else return false;
-        var id = NativeWorldResourceIds.tryParse(tag.getString("id").orElse(""));
+        var id = NativeWorldResourceIds.tryParse(NativeBlockEntityTags.containerTransformId(tag));
         if (id == null || !expected.isValid(state)
                 || BuiltInRegistries.BLOCK_ENTITY_TYPE.get(id).map(holder -> holder.value() != expected).orElse(true)) return false;
-        if (!CONTAINER_FIELDS.containsAll(tag.keySet())) return false;
+        if (!NativeBlockEntityTags.hasOnlyContainerFields(tag, CONTAINER_FIELDS)) return false;
         // Unknown attached BE components can contain orientation. Fail rather than guess.
         return !tag.contains("components") || tag.get("components") instanceof CompoundTag components && components.isEmpty();
     }
@@ -293,8 +292,7 @@ final class NativeBlockCodec {
             throw new ExtensionException("invalid_block_entity", "Native block-entity factory did not create a valid entity");
         }
         if (tag != null) {
-            String rawId = tag.getString("id").orElseThrow(
-                    () -> new IllegalArgumentException("blockEntity requires a string id"));
+            String rawId = NativeBlockEntityTags.requiredId(tag);
             var id = NativeWorldResourceIds.parse(rawId, "blockEntity id");
             BlockEntityType<?> type = BuiltInRegistries.BLOCK_ENTITY_TYPE.get(id)
                     .orElseThrow(() -> new IllegalArgumentException("Unknown blockEntity id: " + rawId)).value();
@@ -345,7 +343,7 @@ final class NativeBlockCodec {
         if (value == null || value.isJsonNull()) return null;
         CompoundTag tag;
         try {
-            tag = TagParser.parseCompoundFully(string(value, "blockEntity"));
+            tag = NativeBlockEntityTags.parseCompound(string(value, "blockEntity"));
         } catch (CommandSyntaxException failure) {
             throw new IllegalArgumentException("blockEntity must be a complete SNBT compound", failure);
         }

@@ -11,6 +11,12 @@ final class NativeWorldIdentity extends SavedData {
             .xmap(id -> new NativeWorldIdentity(UUID.fromString(id)),value -> value.id.toString()).codec();
     static final SavedDataType<NativeWorldIdentity> TYPE = new SavedDataType<>(
             "openallay_builder_world_identity", NativeWorldIdentity::new, CODEC, net.minecraft.util.datafix.DataFixTypes.SAVED_DATA_COMMAND_STORAGE);
+    static NativeWorldIdentity getOrCreate(net.minecraft.server.level.ServerLevel level) {
+        return level.getDataStorage().computeIfAbsent(TYPE);
+    }
+    static NativeWorldIdentity getExisting(net.minecraft.server.level.ServerLevel level) {
+        return level.getDataStorage().get(TYPE);
+    }
     private final UUID id;
     NativeWorldIdentity() { this(UUID.randomUUID()); setDirty(); }
     private NativeWorldIdentity(UUID id) { this.id=id; }

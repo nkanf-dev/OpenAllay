@@ -89,10 +89,16 @@ class AdapterArchitectureTest {
         Path source = Path.of(System.getProperty("minecraft26Adapter.sources")).resolve(OWN);
         String codec = Files.readString(source.resolve("NativeBlockCodec.java"));
         String blockEntityData = Files.readString(source.resolve("NativeBlockEntityData.java"));
+        String blockEntityTags = Files.readString(source.resolve("NativeBlockEntityTags.java"));
+        assertTrue(blockEntityTags.contains("TagParser.parseCompoundFully"));
+        assertTrue(blockEntityTags.contains("tag.getString(\"id\").orElseThrow("));
+        assertTrue(blockEntityTags.contains("allowedFields.containsAll(tag.keySet())"));
         for (String call : List.of("TagValueInput.create", "TagValueOutput.createWithContext",
                 "entity.loadWithComponents", "entity.saveWithFullMetadata", "reporter.isEmpty()"))
             assertTrue(blockEntityData.contains(call), "Missing native block-entity behavior: " + call);
-        for (String call : List.of("TagParser.parseCompoundFully", "NativeBlockEntityData.load", "NativeBlockEntityData.save",
+        for (String call : List.of("NativeBlockEntityTags.parseCompound", "NativeBlockEntityTags.requiredId",
+                "NativeBlockEntityTags.containerTransformId", "NativeBlockEntityTags.hasOnlyContainerFields",
+                "NativeBlockEntityData.load", "NativeBlockEntityData.save",
                 "materialPalette()", "encodeState(decode(entry.getValue().toString()))", "level.setBlock(", "level.removeBlockEntity",
                 "level.setBlockEntity", "level.blockEntityChanged", "level.sendBlockUpdated", "private static final int WRITE_FLAGS = 18;"))
             assertTrue(codec.contains(call), "Missing native behavior: " + call);
@@ -101,7 +107,11 @@ class AdapterArchitectureTest {
                 "updateNeighborsAt", "updateNeighbourForOutputSignal", "NativeBlockCodec.sameImage", "openallay_builder:world_write"))
             assertTrue(session.contains(call), "Missing session behavior: " + call);
         String world = Files.readString(source.resolve("NativeWorldIdentity.java"));
-        assertTrue(world.contains("Identifier.fromNamespaceAndPath(\"openallay_builder\",\"world_identity\")"));
+        assertTrue(world.contains("NativeWorldResourceIds.fromNamespaceAndPath(\"openallay_builder\",\"world_identity\")"));
+        assertTrue(world.contains("getDataStorage().computeIfAbsent(TYPE)"));
+        assertTrue(world.contains("getDataStorage().get(TYPE)"));
+        assertTrue(session.contains("NativeWorldIdentity.getOrCreate(server.overworld())"));
+        assertTrue(session.contains("NativeWorldIdentity.getExisting(server.overworld())"));
         assertTrue(session.contains("config/openallay-builder"));
         assertTrue(session.contains("result.add(\"materialPalette\", NativeBlockCodec.materialPalette())"));
     }
