@@ -6,7 +6,6 @@ import dev.openallay.api.extension.ExtensionInvocation;
 import dev.openallay.api.extension.WorldSession;
 import java.nio.file.Path;
 import java.util.UUID;
-import net.minecraft.SharedConstants;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.player.LocalPlayer;
@@ -72,7 +71,7 @@ final class NativeWorldSession implements WorldSession {
                 new OwnerThreadBridge.Owner(session.server, session.server::isSameThread, () -> {}), () -> {
             session.player = session.server.getPlayerList().getPlayer(session.actor);
             if (session.player == null) throw stale();
-            session.level = session.player.level();
+            session.level = NativeServerPlayerLevel.get(session.player);
             session.identity.bindServer(session.player, session.level);
             session.validateServer();
             return null;
@@ -92,8 +91,8 @@ final class NativeWorldSession implements WorldSession {
         if (server.isStopped() || server.isShutdown() || player == null || level == null
                 || player.isRemoved() || !player.connection.isAcceptingMessages()
                 || !connection.getConnection().isConnected()) throw stale();
-        identity.requireServer(server.getPlayerList().getPlayer(actor), player.level(), player.getUUID(),
-                NativeWorldResourceIds.keyId(player.level().dimension()).toString());
+        identity.requireServer(server.getPlayerList().getPlayer(actor), NativeServerPlayerLevel.get(player), player.getUUID(),
+                NativeWorldResourceIds.keyId(NativeServerPlayerLevel.get(player).dimension()).toString());
     }
 
     @Override public <T> T call(java.util.concurrent.Callable<T> action) {
@@ -129,8 +128,8 @@ final class NativeWorldSession implements WorldSession {
             result.addProperty("dimension", dimension);
             result.addProperty("minY", level.getMinY());
             result.addProperty("maxY", Math.addExact(level.getMaxY(), 1));
-            result.addProperty("version", SharedConstants.getCurrentVersion().name());
-            result.addProperty("dataVersion", SharedConstants.getCurrentVersion().dataVersion().version());
+            result.addProperty("version", NativeWorldVersionFacts.name());
+            result.addProperty("dataVersion", NativeWorldVersionFacts.dataVersion());
             JsonObject who = new JsonObject();
             who.addProperty("uuid", actor.toString());
             who.addProperty("x", player.getX()); who.addProperty("y", player.getY()); who.addProperty("z", player.getZ());

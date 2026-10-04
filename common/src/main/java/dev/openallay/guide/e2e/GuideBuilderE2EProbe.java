@@ -230,7 +230,7 @@ final class GuideBuilderE2EProbe {
             try {
                 var player = server.getPlayerList().getPlayer(actor);
                 if (player == null) throw new IllegalStateException("Native player disappeared");
-                ServerLevel level = player.level();
+                ServerLevel level = dev.openallay.context.minecraft.MinecraftServerPlayerLevel.get(player);
                 if (!anchor.dimension().equals(dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(level.dimension()).toString()))
                     throw new IllegalStateException("Native dimension changed");
                 result.addProperty("worldName", server.getWorldData().getLevelName());

@@ -23,7 +23,6 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.IntTag;
 import net.minecraft.nbt.TagParser;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.level.block.BarrelBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.ChestBlock;
@@ -36,8 +35,6 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.Property;
-import net.minecraft.world.level.storage.TagValueInput;
-import net.minecraft.world.level.storage.TagValueOutput;
 
 /**
  * Native, live-world block serialization. All calls belong on the game owner thread;
@@ -308,29 +305,13 @@ final class NativeBlockCodec {
             tag.putInt("x", pos.getX());
             tag.putInt("y", pos.getY());
             tag.putInt("z", pos.getZ());
-            ProblemReporter.Collector reporter = new ProblemReporter.Collector(entity.problemPath());
-            try {
-                entity.loadWithComponents(TagValueInput.create(reporter, level.registryAccess(), tag));
-            } catch (RuntimeException failure) {
-                throw new ExtensionException("invalid_block_entity", "Native block-entity decoding failed", failure);
-            }
-            if (!reporter.isEmpty()) {
-                throw new ExtensionException("invalid_block_entity", "Native block-entity decoding failed",
-                        new IllegalStateException(reporter.getReport()));
-            }
+            NativeBlockEntityData.load(level, entity, tag);
         }
         return new Prepared(state, entity, save(level, entity));
     }
 
     private static CompoundTag save(ServerLevel level, BlockEntity entity) {
-        ProblemReporter.Collector reporter = new ProblemReporter.Collector(entity.problemPath());
-        TagValueOutput output = TagValueOutput.createWithContext(reporter, level.registryAccess());
-        entity.saveWithFullMetadata(output);
-        if (!reporter.isEmpty()) {
-            throw new ExtensionException("invalid_block_entity", "Native block-entity encoding failed",
-                    new IllegalStateException(reporter.getReport()));
-        }
-        return output.buildResult();
+        return NativeBlockEntityData.save(level, entity);
     }
 
     private static BlockState decode(JsonObject json) {

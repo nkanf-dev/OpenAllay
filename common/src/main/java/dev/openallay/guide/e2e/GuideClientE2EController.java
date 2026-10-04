@@ -368,7 +368,7 @@ public final class GuideClientE2EController {
             if (!server.isSameThread()) throw new IllegalStateException("Recipe bootstrap is not on the server owner thread");
             var player = server.getPlayerList().getPlayer(actor);
             if (player == null || player.gameMode() != net.minecraft.world.level.GameType.SURVIVAL
-                    || player.level().getSeed() != 17L)
+                    || dev.openallay.context.minecraft.MinecraftServerPlayerLevel.get(player).getSeed() != 17L)
                 throw new IllegalStateException("Native bootstrap player or fresh-world seed differs from setup");
             var manager = server.getRecipeManager();
             var holder = manager.getRecipes().stream()

@@ -16,7 +16,7 @@ public final class FabricPlatformService implements PlatformService {
 
     @Override
     public String gameVersion() {
-        return net.minecraft.SharedConstants.getCurrentVersion().name();
+        return dev.openallay.platform.minecraft.MinecraftGameVersionFacts.name();
     }
 
     @Override

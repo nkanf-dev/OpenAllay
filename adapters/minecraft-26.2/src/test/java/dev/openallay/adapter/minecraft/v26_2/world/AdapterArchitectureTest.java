@@ -88,8 +88,12 @@ class AdapterArchitectureTest {
     @Test void allNativeCommitHooksAndOpaqueNbtSerializationRemainActualNativeCalls() throws IOException {
         Path source = Path.of(System.getProperty("minecraft26Adapter.sources")).resolve(OWN);
         String codec = Files.readString(source.resolve("NativeBlockCodec.java"));
-        for (String call : List.of("TagParser.parseCompoundFully", "TagValueInput.create", "TagValueOutput.createWithContext",
-                "entity.loadWithComponents", "entity.saveWithFullMetadata", "materialPalette()", "encodeState(decode(entry.getValue().toString()))", "level.setBlock(", "level.removeBlockEntity",
+        String blockEntityData = Files.readString(source.resolve("NativeBlockEntityData.java"));
+        for (String call : List.of("TagValueInput.create", "TagValueOutput.createWithContext",
+                "entity.loadWithComponents", "entity.saveWithFullMetadata", "reporter.isEmpty()"))
+            assertTrue(blockEntityData.contains(call), "Missing native block-entity behavior: " + call);
+        for (String call : List.of("TagParser.parseCompoundFully", "NativeBlockEntityData.load", "NativeBlockEntityData.save",
+                "materialPalette()", "encodeState(decode(entry.getValue().toString()))", "level.setBlock(", "level.removeBlockEntity",
                 "level.setBlockEntity", "level.blockEntityChanged", "level.sendBlockUpdated", "private static final int WRITE_FLAGS = 18;"))
             assertTrue(codec.contains(call), "Missing native behavior: " + call);
         String session = Files.readString(source.resolve("NativeWorldSession.java"));
