@@ -376,15 +376,13 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         GuideUiLayout.ComposerControls controls = layout.composerControls();
         GuideUiLayout.Rect input = composerExtras.input();
         if (composer == null) {
-            composer = MultiLineEditBox.builder()
-                    .setX(input.x()).setY(input.y())
-                    .setPlaceholder(Component.translatable("screen.openallay.composer.placeholder"))
-                    .build(font, input.width(), input.height(),
-                            Component.translatable("screen.openallay.composer.narration"));
+            composer = GuideNativeMultilineText.create(font, input.x(), input.y(), input.width(), input.height(),
+                    Component.translatable("screen.openallay.composer.placeholder"),
+                    Component.translatable("screen.openallay.composer.narration"));
         } else {
             GuideComposerGeometry.resize(composer, input);
         }
-        if (!composer.getValue().equals(draft)) composer.setValue(draft, true);
+        if (!composer.getValue().equals(draft)) dev.openallay.client.gui.GuideNativeMultilineText.setValue(composer, draft, true);
         composer.setValueListener(value -> {
             draft = value;
             uiState.setText(view.selectedSession(), value);

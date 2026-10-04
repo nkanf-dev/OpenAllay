@@ -208,15 +208,16 @@ public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNat
                 strip.width(), Math.max(1, strip.height() - observationHeight));
         // Hidden tiny layouts still need a readable native text-field width for later reflow.
         var input = new GuideUiLayout.Rect(strip.x(), strip.y(),
-                Math.max(AbstractTextAreaWidget.DEFAULT_TOTAL_PADDING + 1, strip.width()), Math.max(1, strip.height()));
+                Math.max(dev.openallay.client.gui.GuideNativeMultilineText.defaultTotalPadding() + 1, strip.width()), Math.max(1, strip.height()));
         if (composer == null) {
-            composer = MultiLineEditBox.builder().setX(input.x()).setY(input.y())
-                    .setPlaceholder(Component.translatable("screen.openallay.composer.placeholder"))
-                    .build(font, input.width(), input.height(), Component.translatable("screen.openallay.composer.narration"));
+            composer = dev.openallay.client.gui.GuideNativeMultilineText.create(
+                    font, input.x(), input.y(), input.width(), input.height(),
+                    Component.translatable("screen.openallay.composer.placeholder"),
+                    Component.translatable("screen.openallay.composer.narration"));
         } else {
             GuideComposerGeometry.resize(composer, input);
         }
-        if (!composer.getValue().equals(state.readText(session))) composer.setValue(state.readText(session), true);
+        if (!composer.getValue().equals(state.readText(session))) dev.openallay.client.gui.GuideNativeMultilineText.setValue(composer, state.readText(session), true);
         composer.setValueListener(value -> state.setText(session, value));
         composer.visible = readingLayout.footerFits();
         addRenderableWidget(composer);
@@ -287,9 +288,9 @@ public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNat
             focusedResult = -1;
             state.selectSession(session);
             if (attachment != null) attachment.selectSession(session);
-            if (!composer.getValue().equals(state.readText(session))) composer.setValue(state.readText(session), true);
+            if (!composer.getValue().equals(state.readText(session))) dev.openallay.client.gui.GuideNativeMultilineText.setValue(composer, state.readText(session), true);
         } else if (!composer.getValue().equals(state.readText(session))) {
-            composer.setValue(state.readText(session), true);
+            dev.openallay.client.gui.GuideNativeMultilineText.setValue(composer, state.readText(session), true);
         }
         project();
     }

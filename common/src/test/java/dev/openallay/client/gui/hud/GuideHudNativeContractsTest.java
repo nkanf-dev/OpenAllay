@@ -16,9 +16,14 @@ class GuideHudNativeContractsTest {
     private static String source(String relative) throws Exception { return Files.readString(root().resolve(relative)); }
     @Test void renderIsPassiveOpaqueTextAndUsesActual2dExtractionApi() throws Exception {
         String renderer = source("common/src/main/java/dev/openallay/client/gui/hud/GuideHudRenderer.java");
-        assertTrue(renderer.contains("GuiGraphicsExtractor"));
-        assertTrue(renderer.contains("pushMatrix()"));
-        assertTrue(renderer.contains("popMatrix()"));
+        assertTrue(renderer.contains("GuideGraphics"));
+        assertTrue(renderer.contains("graphics.pushPose()"));
+        assertTrue(renderer.contains("graphics.popPose()"));
+        String graphics = source("common/src/main/java/dev/openallay/client/gui/GuideGraphics.java");
+        assertTrue(graphics.contains("GuiGraphicsExtractor"));
+        assertTrue(graphics.contains("graphics.pose().pushMatrix()"));
+        assertTrue(graphics.contains("graphics.pose().popMatrix()"));
+        assertFalse(renderer.contains(".pose()"));
         assertTrue(renderer.contains("disableScissor()"));
         for (String forbidden : new String[]{"setScreen(", "releaseMouse(", "grabMouse(", "forActor(",
                 "new GuideService", "capture(", "Tokenizer", "Files.", "history.page", "ask("}) {
@@ -70,7 +75,7 @@ class GuideHudNativeContractsTest {
         assertTrue(neo.contains("RegisterGuiLayersEvent"));
         assertTrue(neo.contains("VanillaGuiLayers.CHAT"));
         assertTrue(neo.indexOf("modBus.addListener((RegisterGuiLayersEvent") < neo.indexOf("private static void start("));
-        assertTrue(neo.contains("if (current != null) current.extractRenderState(graphics)"));
+        assertTrue(neo.contains("if (current != null) current.extractRenderState(dev.openallay.client.gui.GuideGraphics.wrap(graphics))"));
     }
     @Test void managerBindingOccursBeforeCommandRegistration() throws Exception {
         for (String loader : new String[]{"fabric/src/main/java/dev/openallay/fabric/OpenAllayFabricClient.java",
@@ -81,8 +86,15 @@ class GuideHudNativeContractsTest {
     }
     @Test void liteInputIsExplicitNativeAndNeverForwardsGameplayMappings() throws Exception {
         String lite = source("common/src/main/java/dev/openallay/client/gui/hud/GuideChatLiteScreen.java");
-        assertTrue(lite.contains("extends Screen"));
-        assertTrue(lite.contains("MultiLineEditBox.builder()"));
+        assertTrue(lite.contains("extends GuideNativeScreen"));
+        assertTrue(lite.contains("GuideNativeMultilineText.create("));
+        String editor = source("common/src/main/java/dev/openallay/client/gui/GuideNativeMultilineText.java");
+        assertTrue(editor.contains("MultiLineEditBox.builder()"));
+        assertTrue(editor.contains("editor.setValue(value, bypassLineLimit)"));
+        String legacyEditor = source("common/src/targets/1.21.5/java/dev/openallay/client/gui/GuideNativeMultilineText.java");
+        assertTrue(legacyEditor.contains("new MultiLineEditBox(font, x, y, width, height, placeholder, narration)"));
+        assertTrue(legacyEditor.contains("editor.setValue(value)"));
+        assertFalse(lite.contains("MultiLineEditBox.builder()"));
         assertTrue(lite.contains("setInitialFocus() {}"));
         assertTrue(lite.contains("Surface.HUD_INPUT"));
         assertFalse(lite.contains("KeyMapping.set("));
@@ -141,7 +153,7 @@ class GuideHudNativeContractsTest {
     @Test void voiceFeedbackVisibilityCancelsCaptureAndFencesTheDraftBeforeCleanup() throws Exception {
         String coordinator = source("engine-core/src/main/java/dev/openallay/client/presentation/GuidePresentationCoordinator.java");
         String host = source("common/src/main/java/dev/openallay/client/gui/NativeGuidePresentationHost.java");
-        assertTrue(host.contains("minecraft.gui.overlay() != null, minecraft.gui.hud.isHidden(), minecraft.isWindowActive()"));
+        assertTrue(host.contains("MinecraftClientWindow.overlay(minecraft) != null, MinecraftClientWindow.hudHidden(minecraft), minecraft.isWindowActive()"));
         assertTrue(host.contains("screen instanceof OpenAllayScreen ? Surface.GUIDE"));
         assertTrue(host.contains("screen instanceof GuideChatLiteScreen ? Surface.HUD_INPUT"));
         assertTrue(coordinator.contains("!facts.overlayPresent() && !facts.hudHidden()"));

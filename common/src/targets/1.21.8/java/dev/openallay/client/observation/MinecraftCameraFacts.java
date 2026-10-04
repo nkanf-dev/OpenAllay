@@ -10,7 +10,7 @@ public final class MinecraftCameraFacts {
     private MinecraftCameraFacts() {}
     public static WorldFocusObservation.Camera focus(Minecraft client) {
         var camera = MinecraftClientWindow.camera(client);
-        var position = camera.position();
+        var position = camera.getPosition();
         var entity = camera.getEntity();
         float fov = ((GameRendererFovAccess) client.gameRenderer).openallay$computedFov(camera,
                 client.getDeltaTracker().getGameTimeDeltaPartialTick(false), true);
@@ -22,5 +22,5 @@ public final class MinecraftCameraFacts {
     public static WorldFocusObservation.Camera rendered(Minecraft client, WorldFocusObservation.Camera observed) {
         return focus(client);
     }
-    public static int guiScale(Minecraft client) { return client.getWindow().getGuiScale(); }
+    public static int guiScale(Minecraft client) { return (int) client.getWindow().getGuiScale(); }
 }

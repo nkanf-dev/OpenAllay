@@ -11,7 +11,6 @@ import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.item.ItemStack;
-import org.joml.Matrix3x2fStack;
 
 /**
  * OpenAllay's concrete paint operations for the callback graphics family.
@@ -36,7 +35,10 @@ public final class GuideGraphics {
 
     public int guiWidth() { return graphics.guiWidth(); }
     public int guiHeight() { return graphics.guiHeight(); }
-    public Matrix3x2fStack pose() { return graphics.pose(); }
+    public void pushPose() { graphics.pose().pushMatrix(); }
+    public void popPose() { graphics.pose().popMatrix(); }
+    public void translatePose(float x, float y) { graphics.pose().translate(x, y); }
+    public void scalePose(float x, float y) { graphics.pose().scale(x, y); }
     public void requestResizeCursor() { graphics.requestCursor(com.mojang.blaze3d.platform.cursor.CursorTypes.RESIZE_ALL); }
 
     public void enableScissor(int x0, int y0, int x1, int y1) {

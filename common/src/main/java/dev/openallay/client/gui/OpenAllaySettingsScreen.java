@@ -1001,17 +1001,17 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
             }
             graphics.enableScissor(x, Math.max(area.y() + 30, previewY), x + w,
                     Math.min(area.bottom(), previewY + previewHeight));
-            graphics.pose().pushMatrix();
+            graphics.pushPose();
             try {
-                graphics.pose().translate(x + 4, previewY + 4);
-                graphics.pose().scale((float) hud.scale(), (float) hud.scale());
+                graphics.translatePose(x + 4, previewY + 4);
+                graphics.scalePose((float) hud.scale(), (float) hud.scale());
                 graphics.fill(0, 0, hud.width(), hud.collapsed() ? 24 : hud.height(), hud.backgroundArgb(0x181B22));
                 graphics.text(font, Component.translatable("screen.openallay.settings.ui.preview_title"),
                         6, 6, hud.textArgb(0xE8EDF2), false);
                 if (!hud.collapsed()) graphics.text(font, Component.translatable("screen.openallay.settings.ui.preview_reply"),
                         6, 20, hud.textArgb(0xE8EDF2), false);
             } finally {
-                graphics.pose().popMatrix();
+                graphics.popPose();
                 graphics.disableScissor();
             }
             for (int index = 0; index < 2; index++) {
@@ -1928,17 +1928,11 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
             int editorY = area.y() + 58;
             int editorWidth = area.width() - 18;
             if (skillEditing) {
-                skillEditor = MultiLineEditBox.builder()
-                        .setX(editorX)
-                        .setY(editorY)
-                        .setPlaceholder(Component.translatable(
-                                "screen.openallay.settings.skills.editor_placeholder"))
-                        .build(
-                                font,
-                                editorWidth,
-                                Math.max(70, area.bottom() - editorY - 34),
-                                Component.translatable("screen.openallay.settings.skills.editor"));
-                skillEditor.setValue(skillDraftMarkdown, true);
+                skillEditor = GuideNativeMultilineText.create(font, editorX, editorY, editorWidth,
+                        Math.max(70, area.bottom() - editorY - 34),
+                        Component.translatable("screen.openallay.settings.skills.editor_placeholder"),
+                        Component.translatable("screen.openallay.settings.skills.editor"));
+                dev.openallay.client.gui.GuideNativeMultilineText.setValue(skillEditor, skillDraftMarkdown, true);
                 skillEditor.setValueListener(value -> skillDraftMarkdown = value);
                 addRenderableWidget(skillEditor);
                 addRenderableWidget(OpenAllayButton.create(

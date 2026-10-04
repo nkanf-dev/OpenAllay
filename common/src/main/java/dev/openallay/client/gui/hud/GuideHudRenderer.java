@@ -54,10 +54,10 @@ public final class GuideHudRenderer {
         GuideUiLayout.Rect body = new GuideUiLayout.Rect(8, 36, Math.max(1, contentWidth - 16), bodyHeight);
         long ticks = minecraft.level == null ? 0 : minecraft.level.getGameTime();
         Component footer = null;
-        graphics.pose().pushMatrix();
+        graphics.pushPose();
         try {
-            graphics.pose().translate((float) rect.x(), (float) rect.y());
-            graphics.pose().scale((float) rect.scale(), (float) rect.scale());
+            graphics.translatePose((float) rect.x(), (float) rect.y());
+            graphics.scalePose((float) rect.scale(), (float) rect.scale());
             graphics.enableScissor(0, 0, contentWidth, contentHeight);
             try {
                 int rgb = view.presentation().theme() == GuideUiConfig.Theme.MINT ? 0x172A27 : OpenAllayWidgetTheme.CHARCOAL;
@@ -101,7 +101,7 @@ public final class GuideHudRenderer {
                             8, contentHeight - 12, OpenAllayWidgetTheme.MUTED);
                 }
             } finally { graphics.disableScissor(); }
-        } finally { graphics.pose().popMatrix(); }
+        } finally { graphics.popPose(); }
         // Native hover is available only when another screen has already released the mouse.
         // This passive renderer never changes input ownership to make its footer interactive.
         if (footer != null && !minecraft.mouseHandler.isMouseGrabbed()) {

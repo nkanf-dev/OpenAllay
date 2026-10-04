@@ -218,7 +218,7 @@ final class GuideGraphicalRegressionProbe {
                 MultiLineEditBox composer = MinecraftClientWindow.screen(client).children().stream()
                         .filter(MultiLineEditBox.class::isInstance).map(MultiLineEditBox.class::cast)
                         .findFirst().orElseThrow();
-                composer.setValue(config.question(), true);
+                dev.openallay.client.gui.GuideNativeMultilineText.setValue(composer, config.question(), true);
                 advance();
             }
             case 2 -> { press("screen.openallay.action.send"); advance(); }
