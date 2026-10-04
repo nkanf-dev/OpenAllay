@@ -1,0 +1,75 @@
+plugins {
+    id 'java-library'
+}
+
+group = 'dev.openallay'
+version = '0.3.0'
+base { archivesName = 'openallay-extension-api' }
+
+java {
+    // Use an installed modern compiler; production and fixture bytecode remain Java 8.
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(
+                providers.gradleProperty('extensionApiJavaVersion').getOrElse('25').toInteger())
+    }
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+    withSourcesJar()
+    withJavadocJar()
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = 8
+    options.encoding = 'UTF-8'
+}
+
+dependencies {
+    testImplementation('org.junit.jupiter:junit-jupiter:5.11.4')
+    testRuntimeOnly('org.junit.platform:junit-platform-launcher:1.11.4')
+}
+
+sourceSets {
+    fixture {
+        java.setSrcDirs(['src/fixture/java'])
+        resources.setSrcDirs(['src/fixture/resources'])
+        compileClasspath = sourceSets.main.output
+        runtimeClasspath = output + sourceSets.main.output
+    }
+}
+
+tasks.register('fixtureJar', Jar) {
+    dependsOn(tasks.named('fixtureClasses'))
+    archiveBaseName = 'openallay-hello-extension-fixture'
+    // Do not embed SDK classes. The host supplies the single SDK class identity.
+    from(sourceSets.fixture.output)
+    manifest { attributes('Main-Class': 'dev.openallay.fixture.HelloExtension') }
+}
+
+tasks.withType(Jar).configureEach {
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
+}
+
+tasks.register('verifyProductionDependencies') {
+    doLast {
+        ['api', 'implementation', 'compileOnly', 'runtimeOnly'].each { name ->
+            if (!configurations.getByName(name).allDependencies.empty) {
+                throw new GradleException("Extension SDK must have no production dependencies: ${name}")
+            }
+        }
+        ['compileClasspath', 'runtimeClasspath'].each { name ->
+            if (!configurations.getByName(name).resolve().empty) {
+                throw new GradleException("Extension SDK production classpath must be JDK-only: ${name}")
+            }
+        }
+    }
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+    dependsOn(tasks.named('verifyProductionDependencies'))
+    systemProperty('extensionApi.classes', sourceSets.main.output.classesDirs.asPath)
+    systemProperty('extensionApi.sources', file('src/main/java').absolutePath)
+}
+
+tasks.named('check') { dependsOn(tasks.named('verifyProductionDependencies')) }

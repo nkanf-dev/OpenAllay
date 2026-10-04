@@ -148,6 +148,49 @@ final class OpenAllayExtensionRegistryTest {
         assertTrue(fixture.dataModules.descriptors().isEmpty());
     }
 
+    @Test
+    void rejectsIncompatibleCandidateBeforeInvokingItsContribution() {
+        Fixture fixture = new Fixture();
+        java.util.concurrent.atomic.AtomicInteger contributions = new java.util.concurrent.atomic.AtomicInteger();
+        OpenAllayExtension incompatible = new OpenAllayExtension() {
+            @Override public OpenAllayExtensionDescriptor descriptor() {
+                return OpenAllayExtensionRegistryTest.descriptor(
+                        "test:incompatible", Set.of("forge"), "1.12.2", "[0.2,0.3)");
+            }
+            @Override public OpenAllayExtensionContribution contribution() {
+                contributions.incrementAndGet();
+                throw new AssertionError("Incompatible candidate contribution must not run");
+            }
+        };
+        var rejected = fixture.registry.register(incompatible);
+        assertEquals(OpenAllayExtensionState.INCOMPATIBLE, rejected.state());
+        assertEquals("incompatible_loader", rejected.diagnostic());
+        assertEquals(0, contributions.get());
+        assertTrue(fixture.registry.snapshot().extensions().isEmpty());
+    }
+
+    @Test
+    void rejectsDuplicateCandidateBeforeInvokingItsContribution() {
+        Fixture fixture = new Fixture();
+        fixture.registry.register(extension("test:existing", "test:existing_data", "test:existing_js"));
+        long generation = fixture.registry.snapshot().generation();
+        java.util.concurrent.atomic.AtomicInteger contributions = new java.util.concurrent.atomic.AtomicInteger();
+        OpenAllayExtension duplicate = new OpenAllayExtension() {
+            @Override public OpenAllayExtensionDescriptor descriptor() {
+                return OpenAllayExtensionRegistryTest.descriptor("test:existing");
+            }
+            @Override public OpenAllayExtensionContribution contribution() {
+                contributions.incrementAndGet();
+                throw new AssertionError("Duplicate candidate contribution must not run");
+            }
+        };
+        var rejected = fixture.registry.register(duplicate);
+        assertEquals(OpenAllayExtensionState.UNAVAILABLE, rejected.state());
+        assertEquals("duplicate_extension_id", rejected.diagnostic());
+        assertEquals(0, contributions.get());
+        assertEquals(generation, fixture.registry.snapshot().generation());
+    }
+
     private static OpenAllayExtension extension(
             String extensionId, String dataModuleId, String javascriptModuleId) {
         return extension(

@@ -53,15 +53,6 @@ public final class OpenAllayExtensionRegistry {
         OpenAllayExtensionContribution contribution;
         try {
             descriptor = Objects.requireNonNull(extension.descriptor(), "descriptor");
-            OpenAllayExtensionContribution declared =
-                    Objects.requireNonNull(extension.contribution(), "contribution");
-            // Capture foreign IDs exactly once before any registry mutation.
-            contribution = new OpenAllayExtensionContribution(
-                    declared.dataModules(), declared.javascriptModules(), declared.skills(),
-                    declared.resultViews(), declared.javascriptInvocationParticipants().stream()
-                            .map(participant -> (JavascriptInvocationParticipant)
-                                    new RegisteredParticipant(participant.id(), participant))
-                            .toList(), declared.hostBindings(), declared.capabilities());
         } catch (Throwable failure) {
             return rejected("", OpenAllayExtensionState.UNAVAILABLE, "extension_registration_failed");
         }
@@ -74,6 +65,15 @@ public final class OpenAllayExtensionRegistry {
             return rejected(descriptor.id(), OpenAllayExtensionState.INCOMPATIBLE, incompatibility);
         }
         try {
+            OpenAllayExtensionContribution declared =
+                    Objects.requireNonNull(extension.contribution(), "contribution");
+            // Capture foreign IDs only after identity and compatibility admission, before mutation.
+            contribution = new OpenAllayExtensionContribution(
+                    declared.dataModules(), declared.javascriptModules(), declared.skills(),
+                    declared.resultViews(), declared.javascriptInvocationParticipants().stream()
+                            .map(participant -> (JavascriptInvocationParticipant)
+                                    new RegisteredParticipant(participant.id(), participant))
+                            .toList(), declared.hostBindings(), declared.capabilities());
             validateContribution(descriptor.id(), contribution);
             publish(descriptor, contribution);
             generation++;

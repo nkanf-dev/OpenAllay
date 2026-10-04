@@ -1,0 +1,24 @@
+{
+  "id": "fixture:hello",
+  "packageType": "universal",
+  "entrypoint": "dev.openallay.fixture.HelloExtension",
+  "support": {
+    "targets": [
+      {
+        "loader": "forge",
+        "minecraftVersionRange": "1.12.2",
+        "openAllayVersionRange": "[0.4.1,)",
+        "openAllayApiVersionRange": "[0.3.0,0.4.0)"
+      },
+      {
+        "loader": "future-loader",
+        "minecraftVersionRange": "26.3",
+        "openAllayVersionRange": "[0.4.1,)",
+        "openAllayApiVersionRange": "[0.3.0,0.4.0)"
+      }
+    ],
+    "minimumJavaVersion": 8,
+    "requiredHostFeatures": [],
+    "validatedTargetIds": []
+  }
+}

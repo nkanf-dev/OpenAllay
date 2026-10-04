@@ -26,5 +26,6 @@ plugins {
 rootProject.name = 'OpenAllay'
 includeBuild('build-logic')
 include('common')
+include('extension-api')
 include('fabric')
 include('neoforge')
