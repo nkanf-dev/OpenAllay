@@ -179,7 +179,7 @@ final class GuideClientUiStateTest {
         f.readyImage();
         assertEquals(List.of(IMAGE), f.state.images().references());
         f.state.setText("one", "keep");
-        assertFalse(OpenAllayScreen.submissionAccepted(true, new ToolResult.Success<>(false)));
+        assertFalse(GuideClientUiState.submissionAccepted(true, new ToolResult.Success<>(false)));
         assertEquals(List.of(IMAGE), f.state.images().references());
         int before = f.retains.size();
         f.state.images().clear();
@@ -219,7 +219,7 @@ final class GuideClientUiStateTest {
         f.state.beginPendingEdit("one", target, GuideClientUiState.DraftMode.FOLLOW_UP);
         f.state.setText("one", "preserve replacement"); f.readyImage();
         var capture = f.state.captureIntent("one");
-        assertFalse(OpenAllayScreen.submissionAccepted(true, new ToolResult.Success<>(false)));
+        assertFalse(GuideClientUiState.submissionAccepted(true, new ToolResult.Success<>(false)));
         assertTrue(f.state.invalidatePendingEdit(capture));
         assertEquals(target, f.state.intent("one").pendingId());
         assertTrue(f.state.intent("one").editInvalid());
@@ -296,7 +296,7 @@ final class GuideClientUiStateTest {
         assertFalse(f.state.beginIntentSubmission(f.state.captureIntent("one")), "new view cannot double-submit");
         accepted.whenComplete((result, failure) -> {
             try {
-                if (OpenAllayScreen.submissionAccepted(true, result)) {
+                if (GuideClientUiState.submissionAccepted(true, result)) {
                     assertTrue(f.state.clearAcceptedText(text, "replacement"));
                     assertTrue(f.state.clearAcceptedIntent(intent));
                     assertTrue(f.state.images().accepted(image));
@@ -330,7 +330,7 @@ final class GuideClientUiStateTest {
         assertTrue(f.state.beginIntentSubmission(rejected));
         try {
             ToolResult<Boolean> result = new ToolResult.Success<>(false);
-            assertFalse(OpenAllayScreen.submissionAccepted(true, result));
+            assertFalse(GuideClientUiState.submissionAccepted(true, result));
             assertTrue(f.state.invalidatePendingEdit(rejected));
         } finally { f.state.completeIntentSubmission(rejected); }
         assertTrue(f.state.intent("one").editInvalid());

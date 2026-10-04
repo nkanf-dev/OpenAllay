@@ -1,6 +1,6 @@
 package dev.openallay.settings.capability;
 
-import dev.openallay.OpenAllayRuntime;
+import dev.openallay.FeatureServices;
 import dev.openallay.capability.CapabilityCatalogState;
 import dev.openallay.capability.CapabilityPolicy;
 import dev.openallay.capability.CapabilityPolicyStore;
@@ -18,7 +18,7 @@ import java.util.function.Consumer;
 
 /** Resolves dependency closure before atomic policy persistence and runtime publication. */
 public final class CapabilitySettingsBackend implements ClientSettingsService.CapabilityActions {
-    private final OpenAllayRuntime product;
+    private final FeatureServices product;
     private final CapabilityPolicyStore store;
     private final ClientCapabilityResolver resolver = new ClientCapabilityResolver();
     private final Consumer<ClientCapabilitySnapshot> publish;
@@ -26,14 +26,14 @@ public final class CapabilitySettingsBackend implements ClientSettingsService.Ca
 
     public CapabilitySettingsBackend(
             Path path,
-            OpenAllayRuntime product,
+            FeatureServices product,
             ClientModelRuntimeRegistry models) {
         this(path, product, models.capabilities(), models::replaceCapabilities);
     }
 
     CapabilitySettingsBackend(
             Path path,
-            OpenAllayRuntime product,
+            FeatureServices product,
             ClientCapabilitySnapshot initial,
             Consumer<ClientCapabilitySnapshot> publish) {
         this.product = Objects.requireNonNull(product, "product");

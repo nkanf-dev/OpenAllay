@@ -1,6 +1,6 @@
 package dev.openallay.guide;
 
-import dev.openallay.OpenAllayRuntime;
+import dev.openallay.FeatureServices;
 import dev.openallay.tool.ToolResult;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -10,13 +10,13 @@ import java.util.function.Consumer;
 
 /** Loader-neutral command behavior and notices. */
 public final class GuideCommandFacade {
-    private final OpenAllayRuntime runtime;
+    private final FeatureServices runtime;
     private final GuideServiceManager services;
     private final GuideContextProvider contexts;
     private final GuideScreenOpener screens;
 
     public GuideCommandFacade(
-            OpenAllayRuntime runtime,
+            FeatureServices runtime,
             GuideServiceManager services,
             GuideContextProvider contexts,
             GuideScreenOpener screens) {

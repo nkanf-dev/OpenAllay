@@ -818,7 +818,7 @@ verify both services and hashes. Curated notes live in `docs/releases/<version>.
 ### Agent benchmark
 
 The strict current corpus is
-`common/src/main/resources/data/openallay/benchmarks/core.json`. Offline fixtures
+`engine-core/src/main/resources/data/openallay/benchmarks/core.json`. Offline fixtures
 verify predicates, selection, and capability coverage:
 
 ```bash

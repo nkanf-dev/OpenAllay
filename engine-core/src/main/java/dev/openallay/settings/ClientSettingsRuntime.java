@@ -1,7 +1,7 @@
 package dev.openallay.settings;
 
 import com.google.gson.Gson;
-import dev.openallay.OpenAllayRuntime;
+import dev.openallay.FeatureServices;
 import dev.openallay.agent.tool.AgentToolExecutor;
 import dev.openallay.client.ClientEventDispatcher;
 import dev.openallay.client.ClientModelRuntimeRegistry;
@@ -62,7 +62,7 @@ public record ClientSettingsRuntime(
     }
 
     public static ToolResult<ClientSettingsRuntime> create(
-            OpenAllayRuntime product,
+            FeatureServices product,
             Path profilesPath,
             Path metadataCachePath,
             Map<String, String> environment,
@@ -91,7 +91,7 @@ public record ClientSettingsRuntime(
     }
 
     public static ToolResult<ClientSettingsRuntime> create(
-            OpenAllayRuntime product,
+            FeatureServices product,
             Path profilesPath,
             Path metadataCachePath,
             Path capabilitiesPath,
@@ -120,7 +120,7 @@ public record ClientSettingsRuntime(
     }
 
     public static ToolResult<ClientSettingsRuntime> create(
-            OpenAllayRuntime product,
+            FeatureServices product,
             Path profilesPath,
             Path metadataCachePath,
             Path capabilitiesPath,
@@ -164,7 +164,7 @@ public record ClientSettingsRuntime(
     }
 
     private static ToolResult<ClientSettingsRuntime> createInternal(
-            OpenAllayRuntime product,
+            FeatureServices product,
             Path profilesPath,
             Path metadataCachePath,
             Path capabilitiesPath,
@@ -428,7 +428,7 @@ public record ClientSettingsRuntime(
     private static ToolResult<CommandCapabilityConfig> publishCommandConfig(
             ToolResult<CommandCapabilityConfig> loaded,
             CommandCapabilityConfigStore store,
-            OpenAllayRuntime product,
+            FeatureServices product,
             CapabilitySettingsBackend capabilities) {
         if (loaded instanceof ToolResult.Failure<CommandCapabilityConfig> failure) {
             return failure;
@@ -495,7 +495,7 @@ public record ClientSettingsRuntime(
                 config, List.of(resolved));
     }
 
-    private static Set<String> installedSkillMods(OpenAllayRuntime product) {
+    private static Set<String> installedSkillMods(FeatureServices product) {
         java.util.TreeSet<String> installed = new java.util.TreeSet<>();
         try {
             product.platform().installedMods().stream()

@@ -18,15 +18,23 @@ final class FullscreenDraftArchitectureTest {
         return Files.readString(root().resolve(relative));
     }
     @Test void screensKeepTheConnectionDraftAndPendingIntentWhenSettingsTemporarilyOpens() throws Exception {
-        String coordinator = source("common/src/main/java/dev/openallay/client/gui/GuideClientUiCoordinator.java");
+        String coordinator = source("engine-core/src/main/java/dev/openallay/client/presentation/GuidePresentationCoordinator.java");
+        String host = source("common/src/main/java/dev/openallay/client/gui/NativeGuidePresentationHost.java");
+        String facade = source("common/src/main/java/dev/openallay/client/gui/GuideClientUiCoordinator.java");
         String screen = source("common/src/main/java/dev/openallay/client/gui/OpenAllayScreen.java");
-        assertTrue(coordinator.contains("new OpenAllaySettingsScreen(settings, () -> openGuide(service))"));
-        assertTrue(coordinator.contains("new OpenAllayScreen(service, recipes, display, openSettings, owner)"));
+        assertTrue(coordinator.contains("host.showSettings(() -> openGuide(service), ownerValid, voice.settings(), config ->"));
+        assertTrue(host.contains("new OpenAllaySettingsScreen(settings, returnToGuide)"));
+        assertTrue(coordinator.contains("host.showGuide(view(service, owner), openSettings)"));
+        assertTrue(coordinator.contains("new GuidePresentationHost.View(service, owner, notifications, voice.input()"));
+        assertTrue(host.contains("new OpenAllayScreen(view.service(), recipes, display, openSettings, view.state())"));
         assertTrue(coordinator.contains("binding = services.listenPresentation(new GuidePresentationListener()"),
                 "the shared draft owner binds before live request admission");
         assertTrue(coordinator.contains("public void bound(GuideService next)"));
         assertTrue(coordinator.contains("if (closed || bound == next) return;"));
-        assertTrue(coordinator.contains("state = GuideClientUiState.create(next, GuideClientUiCoordinator.this.dispatcher);"));
+        assertTrue(coordinator.contains("state = Objects.requireNonNull(states.apply(next), \"state\");"));
+        assertTrue(facade.contains("service -> GuideClientUiStates.create(service, dispatcher)"));
+        assertFalse(host.contains("new GuideClientUiState("));
+        assertFalse(facade.contains("new GuideClientUiState("));
         assertTrue(screen.contains("uiState.captureIntent("));
         assertTrue(screen.contains("uiState.beginIntentSubmission("));
         assertTrue(screen.contains("uiState.completeIntentSubmission("));

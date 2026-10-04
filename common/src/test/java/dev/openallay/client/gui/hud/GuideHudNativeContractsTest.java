@@ -33,8 +33,11 @@ class GuideHudNativeContractsTest {
         String results = source("common/src/main/java/dev/openallay/client/gui/hud/GuideHudResultRenderer.java");
         assertTrue(lite.contains("presenter.projectInteractive("));
         assertTrue(lite.contains("results.scroll().wheel(scrollY)"));
-        assertTrue(lite.contains("GLFW_KEY_PAGE_UP"));
-        assertTrue(lite.contains("GLFW_KEY_PAGE_DOWN"));
+        String keyInput = source("common/src/main/java/dev/openallay/client/gui/GuideKeyInput.java");
+        assertTrue(keyInput.contains("InputConstants.KEY_PAGEUP -> GuideKeyIntent.PAGE_UP"));
+        assertTrue(keyInput.contains("InputConstants.KEY_PAGEDOWN -> GuideKeyIntent.PAGE_DOWN"));
+        assertTrue(lite.contains("case PAGE_UP -> { scrollResults(() -> results.scroll().page(-1))"));
+        assertTrue(lite.contains("case PAGE_DOWN -> { scrollResults(() -> results.scroll().page(1))"));
         assertTrue(lite.contains("scrollbarThumbHeight()"));
         assertTrue(lite.contains("recipes.openExact(value.reference())"));
         assertFalse(lite.contains("Math.min(6, lines.size())"));
@@ -61,7 +64,9 @@ class GuideHudNativeContractsTest {
         String neo = source("neoforge/src/main/java/dev/openallay/neoforge/OpenAllayNeoForgeClient.java");
         String build = source("fabric/build.gradle");
         assertTrue(fabric.contains("HudElementRegistry.attachElementBefore(VanillaHudElements.CHAT"));
-        assertTrue(build.contains("fabric-rendering-v1:25.1.6+46a6d00c9c"));
+        assertTrue(build.contains("fabric-rendering-v1:${fabric_rendering_version}"));
+        assertTrue(source("gradle/minecraft-targets/26.2.properties")
+                .contains("fabric_rendering_version=25.1.6+46a6d00c9c"));
         assertTrue(neo.contains("RegisterGuiLayersEvent"));
         assertTrue(neo.contains("VanillaGuiLayers.CHAT"));
         assertTrue(neo.indexOf("modBus.addListener((RegisterGuiLayersEvent") < neo.indexOf("private static void start("));
@@ -92,44 +97,67 @@ class GuideHudNativeContractsTest {
         String keys = source("common/src/main/java/dev/openallay/client/gui/OpenAllayKeyMappings.java");
         assertTrue(keys.contains("VOICE_PTT = unbound(\"key.openallay.voice_ptt\")"));
         assertTrue(keys.contains("INTERACT_HUD, VOICE_PTT"));
-        String coordinator = source("common/src/main/java/dev/openallay/client/gui/GuideClientUiCoordinator.java");
-        assertTrue(coordinator.contains("VoiceClientRuntime.create(configDirectory, new VoiceRuntime.DraftPort()"));
-        assertTrue(coordinator.contains("withVoiceActions(voice.settings())"));
-        assertTrue(coordinator.contains(".withNotifications(notifications).withVoice(voice.input())"));
+        String coordinator = source("engine-core/src/main/java/dev/openallay/client/presentation/GuidePresentationCoordinator.java");
+        String facade = source("common/src/main/java/dev/openallay/client/gui/GuideClientUiCoordinator.java");
+        String host = source("common/src/main/java/dev/openallay/client/gui/NativeGuidePresentationHost.java");
+        String factorySource = source("common/src/main/java/dev/openallay/client/voice/VoiceClientRuntimes.java");
+        assertTrue(facade.contains("drafts -> VoiceClientRuntimes.create(configDirectory, drafts, dispatcher::execute)"));
+        assertTrue(factorySource.contains("return new VoiceClientRuntime(configDirectory, drafts, clientDispatcher,"));
+        assertTrue(factorySource.contains("Map.copyOf(credentialEnvironment), new OpenAlCapture()"));
+        assertTrue(host.contains("withVoiceActions(voice)"));
+        assertTrue(host.contains(".withNotifications(view.notifications()).withVoice(view.voice())"));
         assertTrue(coordinator.contains("state.selectSession(bound.snapshot().selectedSession())"));
         assertTrue(coordinator.contains("bound.snapshot().actorId(), state.ownerId(), state.generation()"));
         assertTrue(coordinator.contains("bound.presentationSessionOwner(state.selectedSession())"));
         assertTrue(coordinator.contains("target.uiOwnerId(), target.uiGeneration()"));
         assertTrue(coordinator.contains("target.sessionId(), target.draftRevision()"));
+        assertTrue(coordinator.contains("bound.presentationGeneration().equals(target.connectionGeneration())"));
+        assertTrue(coordinator.contains("bound.presentationSessionOwner(target.sessionId()).filter(target.sessionOwner()::equals).isPresent()"));
         assertTrue(coordinator.contains("state.insertTranscript(captured, text, observationForVoice(target).orElse(null))"));
         assertTrue(coordinator.contains("state.leaseObservation(state.captureObservation(state.selectedSession()))"));
-        int factory = coordinator.indexOf("voice = VoiceClientRuntime.create(");
+        assertTrue(coordinator.contains("finally { releaseVoiceObservation(target); }"));
+        assertTrue(coordinator.contains("voiceObservations.remove(target)"));
+        assertTrue(coordinator.contains("if (lease != null) lease.close()"));
+        assertTrue(coordinator.contains("service == bound && voiceAdmissionAllowed(target)"));
+        assertTrue(coordinator.contains("service.followUp(target.sessionId(), target.sessionOwner(), input, fence)"));
+        int factory = coordinator.indexOf("voices.apply(new VoiceRuntime.DraftPort()");
         int factoryEnd = coordinator.indexOf("settingsBinding =", factory);
         assertTrue(factory >= 0 && factoryEnd > factory);
         String draftPort = coordinator.substring(factory, factoryEnd);
         for (String forbidden : new String[]{".ask(", ".steer(", ".followUp(", "forActor(", "new GuideService"}) {
             assertFalse(draftPort.contains(forbidden), forbidden);
+            assertFalse(factorySource.contains(forbidden), forbidden);
         }
-        assertTrue(coordinator.contains("OpenAllayKeyMappings.VOICE_PTT.isDown()"));
+        assertTrue(host.contains("OpenAllayKeyMappings.VOICE_PTT.isDown()"));
+        assertTrue(coordinator.contains("boolean physicalDown = input.pttDown()"));
         assertTrue(coordinator.contains("gameplay && physicalDown && !pttDown && feedback && voice.input().enabled()"));
         assertTrue(coordinator.contains("voice.input().pressPtt()"));
         assertTrue(coordinator.contains("pttDown && !physicalDown"));
         assertTrue(coordinator.contains("voice.input().release()"));
+        String ptt = coordinator.substring(coordinator.indexOf("if (gameplay && physicalDown"),
+                coordinator.indexOf("} else if (pttDown && !physicalDown)"));
+        assertTrue(ptt.indexOf("services.forActor(facts.actorId())") < ptt.indexOf("voice.input().pressPtt()"));
     }
     @Test void voiceFeedbackVisibilityCancelsCaptureAndFencesTheDraftBeforeCleanup() throws Exception {
-        String coordinator = source("common/src/main/java/dev/openallay/client/gui/GuideClientUiCoordinator.java");
-        assertTrue(coordinator.contains("minecraft.gui.overlay() == null && !minecraft.gui.hud.isHidden()"));
-        assertTrue(coordinator.contains("activeScreen instanceof OpenAllayScreen"));
-        assertTrue(coordinator.contains("activeScreen instanceof GuideChatLiteScreen"));
+        String coordinator = source("engine-core/src/main/java/dev/openallay/client/presentation/GuidePresentationCoordinator.java");
+        String host = source("common/src/main/java/dev/openallay/client/gui/NativeGuidePresentationHost.java");
+        assertTrue(host.contains("minecraft.gui.overlay() != null, minecraft.gui.hud.isHidden(), minecraft.isWindowActive()"));
+        assertTrue(host.contains("screen instanceof OpenAllayScreen ? Surface.GUIDE"));
+        assertTrue(host.contains("screen instanceof GuideChatLiteScreen ? Surface.HUD_INPUT"));
+        assertTrue(coordinator.contains("!facts.overlayPresent() && !facts.hudHidden()"));
+        for (String surface : new String[]{"GAMEPLAY", "GUIDE", "HUD_INPUT"}) {
+            assertTrue(coordinator.contains("facts.surface() == GuidePresentationHost.Surface." + surface));
+        }
         assertTrue(coordinator.contains("setFeedbackVisible(feedback)"));
-        assertTrue(coordinator.contains("voice.input().tick(minecraft.isWindowActive()"));
-        assertTrue(coordinator.contains("physicalDown, feedback)"));
-        String closeState = coordinator.substring(coordinator.indexOf("private void closeState()"));
+        assertTrue(coordinator.contains("voice.input().tick(current.windowActive(), current.connected(), physicalDown, feedback)"));
+        String closeState = coordinator.substring(coordinator.indexOf("private void closeState()"),
+                coordinator.indexOf("private static void close("));
         int stateClosed = closeState.indexOf("state.close()");
         int voiceCancelled = closeState.indexOf("voice.input().cancel(");
         assertTrue(stateClosed >= 0 && voiceCancelled > stateClosed);
         assertTrue(voiceCancelled < closeState.indexOf("state = null"));
-        String runtime = source("common/src/main/java/dev/openallay/client/voice/VoiceRuntime.java");
+        assertTrue(closeState.contains("closeVoiceObservations()"));
+        String runtime = source("engine-core/src/main/java/dev/openallay/client/voice/VoiceRuntime.java");
         assertTrue(runtime.contains("if (!visible && active) cancel(CancelReason.FEEDBACK_HIDDEN)"));
         assertTrue(runtime.contains("if (!visibleFeedback) cancel = CancelReason.FEEDBACK_HIDDEN"));
         assertTrue(runtime.contains("else if (!connected) cancel = CancelReason.DISCONNECTED"));
@@ -151,7 +179,7 @@ class GuideHudNativeContractsTest {
         }
         String lite = source("common/src/main/java/dev/openallay/client/gui/hud/GuideChatLiteScreen.java");
         assertTrue(lite.contains("GuideVoiceIndicator.extract(graphics, minecraft, voice)"));
-        String presentation = source("common/src/main/java/dev/openallay/client/voice/VoiceStatusPresentation.java");
+        String presentation = source("engine-core/src/main/java/dev/openallay/client/voice/VoiceStatusPresentation.java");
         assertTrue(presentation.contains("default -> notice(\"failed\", \"retry\", true)"));
         assertFalse(presentation.contains("PREFIX + code"));
     }

@@ -216,12 +216,12 @@ class VoiceRuntimeTest {
             assertEquals(VoiceRuntime.State.ERROR, runtime.status().state());
             assertEquals(0, transcriptions.get()); assertEquals("existing", draft.text);
         }
-        assertEquals("microphone_denied", VoiceRuntime.safeCode(new MacMicrophonePermission.PermissionException(
-                MacMicrophonePermission.Failure.DENIED, "not a device failure")));
-        assertEquals("microphone_launcher_unprepared", VoiceRuntime.safeCode(new MacMicrophonePermission.PermissionException(
-                MacMicrophonePermission.Failure.LAUNCHER_NOT_PREPARED, "not a system-settings fix")));
-        assertEquals("microphone_permission_unavailable", VoiceRuntime.safeCode(new MacMicrophonePermission.PermissionException(
-                MacMicrophonePermission.Failure.CHECK_FAILED, "not a device failure")));
+        assertEquals("microphone_denied", VoiceRuntime.safeCode(new AudioPermissionException(
+                AudioPermissionException.Diagnostic.DENIED, "not a device failure")));
+        assertEquals("microphone_launcher_unprepared", VoiceRuntime.safeCode(new AudioPermissionException(
+                AudioPermissionException.Diagnostic.LAUNCHER_NOT_PREPARED, "not a system-settings fix")));
+        assertEquals("microphone_permission_unavailable", VoiceRuntime.safeCode(new AudioPermissionException(
+                AudioPermissionException.Diagnostic.CHECK_FAILED, "not a device failure")));
     }
 
     @Test void providerCancellationWithoutAnOperationCancellationReportsErrorAndAllowsRetry() {

@@ -39,22 +39,16 @@ public final class VoiceClientRuntime implements AutoCloseable {
     private volatile long total;
     private volatile VoiceCancellation download;
 
-    public static VoiceClientRuntime create(Path configDirectory, VoiceRuntime.DraftPort drafts, Executor clientDispatcher) {
-        return new VoiceClientRuntime(configDirectory, drafts, clientDispatcher, java.util.Map.of());
-    }
-    /** Environment is explicitly supplied by the existing client boundary; never read it here. */
-    public static VoiceClientRuntime create(Path configDirectory, VoiceRuntime.DraftPort drafts,
-            Executor clientDispatcher, java.util.Map<String, String> credentialEnvironment) {
-        return new VoiceClientRuntime(configDirectory, drafts, clientDispatcher, java.util.Map.copyOf(credentialEnvironment));
-    }
-    private VoiceClientRuntime(Path directory, VoiceRuntime.DraftPort drafts, Executor dispatcher,
-            java.util.Map<String, String> credentialEnvironment) {
+    /** Environment and capture provider are supplied by the client boundary; neither is discovered here. */
+    public VoiceClientRuntime(Path directory, VoiceRuntime.DraftPort drafts, Executor dispatcher,
+            java.util.Map<String, String> credentialEnvironment, AudioCapture.Factory captures) {
         Objects.requireNonNull(directory); Objects.requireNonNull(dispatcher);
+        this.captures = Objects.requireNonNull(captures, "captures");
+        credentialEnvironment = java.util.Map.copyOf(credentialEnvironment);
         runtimeDirectory = directory.resolve("voice-models").resolve("runtime");
         store = new VoiceConfigStore(directory.resolve("voice.json"));
         credentials = new LocalCredentialStore(directory.resolve("voice-credentials.sqlite3"), Clock.systemUTC());
         credentialResolver = dev.openallay.model.config.CredentialResolver.composite(credentials, credentialEnvironment);
-        captures = new OpenAlCapture();
         installer = new NativeModelInstaller(directory.resolve("voice-models"));
         ThreadFactory factory = Thread.ofVirtual().name("openallay-voice-", 0).factory();
         settingsWorker = Executors.newSingleThreadExecutor(factory);

@@ -1,7 +1,7 @@
 package dev.openallay.client;
 
 import com.google.gson.Gson;
-import dev.openallay.OpenAllayRuntime;
+import dev.openallay.FeatureServices;
 import dev.openallay.agent.AgentEvent;
 import dev.openallay.agent.AgentResult;
 import dev.openallay.agent.context.ContextCheckpoint;
@@ -55,7 +55,7 @@ public final class ClientModelRuntimeRegistry implements GuideLocalEndpoint {
     private final java.util.function.BooleanSupplier tracePersistenceEnabled;
 
     ClientModelRuntimeRegistry(
-            OpenAllayRuntime productRuntime,
+            FeatureServices productRuntime,
             ModelProfilesConfigLoader.Load initial,
             Gson gson,
             ClientEventDispatcher dispatcher,
@@ -66,7 +66,7 @@ public final class ClientModelRuntimeRegistry implements GuideLocalEndpoint {
     }
 
     ClientModelRuntimeRegistry(
-            OpenAllayRuntime productRuntime,
+            FeatureServices productRuntime,
             ModelProfilesConfigLoader.Load initial,
             Gson gson,
             ClientEventDispatcher dispatcher,
@@ -87,7 +87,7 @@ public final class ClientModelRuntimeRegistry implements GuideLocalEndpoint {
     }
 
     public static ToolResult<ClientModelRuntimeRegistry> create(
-            OpenAllayRuntime runtime,
+            FeatureServices runtime,
             Path profilesPath,
             Map<String, String> environment,
             ClientEventDispatcher dispatcher,
@@ -105,7 +105,7 @@ public final class ClientModelRuntimeRegistry implements GuideLocalEndpoint {
     }
 
     public static ClientModelRuntimeRegistry create(
-            OpenAllayRuntime runtime,
+            FeatureServices runtime,
             ModelProfilesConfigLoader.Load initial,
             Gson gson,
             ClientEventDispatcher dispatcher,
@@ -114,7 +114,7 @@ public final class ClientModelRuntimeRegistry implements GuideLocalEndpoint {
     }
 
     public static ClientModelRuntimeRegistry create(
-            OpenAllayRuntime runtime,
+            FeatureServices runtime,
             ModelProfilesConfigLoader.Load initial,
             Gson gson,
             ClientEventDispatcher dispatcher,
@@ -454,7 +454,7 @@ public final class ClientModelRuntimeRegistry implements GuideLocalEndpoint {
         return new State(load.config(), summaries, runtimes, capturedCapabilities);
     }
 
-    private static ClientCapabilitySnapshot resolveDefaultCapabilities(OpenAllayRuntime runtime) {
+    private static ClientCapabilitySnapshot resolveDefaultCapabilities(FeatureServices runtime) {
         ToolResult<ClientCapabilitySnapshot> resolved = new ClientCapabilityResolver().resolve(
                 CapabilityPolicy.defaults(), runtime.tools().registrations(), runtime.skills());
         if (resolved instanceof ToolResult.Success<ClientCapabilitySnapshot> success) {

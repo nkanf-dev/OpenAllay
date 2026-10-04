@@ -268,7 +268,7 @@ public final class OpenAllayScreen extends Screen {
             GuideFailure displayFailure,
             Runnable settingsOpener) {
         this(service, recipeClient, display, displayFailure, settingsOpener,
-                GuideClientUiState.create(service, event -> net.minecraft.client.Minecraft.getInstance().execute(event)));
+                GuideClientUiStates.create(service, event -> net.minecraft.client.Minecraft.getInstance().execute(event)));
     }
 
     public OpenAllayScreen(GuideService service, RecipeClientRuntime recipeClient,
@@ -3346,8 +3346,7 @@ public final class OpenAllayScreen extends Screen {
     }
 
     static boolean submissionAccepted(boolean editing, ToolResult<?> result) {
-        return result instanceof ToolResult.Success<?> success
-                && (editing ? Boolean.TRUE.equals(success.value()) : success.value() instanceof UUID);
+        return GuideClientUiState.submissionAccepted(editing, result);
     }
 
     private void cancel() {

@@ -28,7 +28,7 @@ public record OpenAllayRuntime(
         DevelopmentToolInspector developmentTools,
         TraceReplayService traceReplay,
         CapabilitySettingsCatalog capabilitySettings,
-        OpenAllayExtensionRegistry extensions) {
+        OpenAllayExtensionRegistry extensions) implements FeatureServices {
     public OpenAllayRuntime {
         Objects.requireNonNull(capabilitySettings, "capabilitySettings");
         Objects.requireNonNull(javascriptModules, "javascriptModules");

@@ -4,8 +4,8 @@ The client-local unrestricted setting adds native access methods to the existing
 Rhino `Java` object. It does not require a second private-access setting.
 Normal scripts and scoped Extension callbacks do not gain this surface.
 The system prompt stays capability-neutral; the bundled
-[unrestricted JavaScript Skill](../../common/src/main/resources/assets/openallay/openallay_skills/unrestricted-javascript/SKILL.md)
-and its [Java reference](../../common/src/main/resources/assets/openallay/openallay_skills/unrestricted-javascript/references/java-jvm.md)
+[unrestricted JavaScript Skill](../../engine-core/src/main/resources/assets/openallay/openallay_skills/unrestricted-javascript/SKILL.md)
+and its [Java reference](../../engine-core/src/main/resources/assets/openallay/openallay_skills/unrestricted-javascript/references/java-jvm.md)
 carry the usage contract.
 
 ## Native entrypoints

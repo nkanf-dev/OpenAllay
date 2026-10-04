@@ -119,7 +119,7 @@ final class CaptureOpenOwner {
             } catch (Exception known) {
                 if (aborted.get() || cancellation.cancelled())
                     failure = new CancellationException("Microphone open cancelled");
-                else if (known instanceof MacMicrophonePermission.PermissionException
+                else if (known instanceof AudioPermissionException
                         || known instanceof AudioCapture.CaptureException) failure = known;
                 else failure = new AudioCapture.CaptureException(known instanceof IllegalArgumentException
                                 ? AudioCapture.Failure.UNSUPPORTED_FORMAT : AudioCapture.Failure.OPEN_FAILED,

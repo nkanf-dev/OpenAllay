@@ -62,6 +62,8 @@ neoForge {
     mods {
         "${mod_id}" {
             sourceSet sourceSets.main
+            sourceSet project(':engine-core').sourceSets.main
+            sourceSet project(':adapters:minecraft-26.2').sourceSets.main
         }
     }
 }

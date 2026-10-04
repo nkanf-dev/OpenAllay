@@ -235,8 +235,8 @@ public final class VoiceRuntime implements VoiceInputActions, AutoCloseable {
         }});
     }
     static String safeCode(Throwable failure) {
-        if (failure instanceof MacMicrophonePermission.PermissionException permission) {
-            return switch (permission.failure()) {
+        if (failure instanceof AudioPermissionException permission) {
+            return switch (permission.diagnostic()) {
                 case DENIED, RESTRICTED -> "microphone_denied";
                 case LAUNCHER_NOT_PREPARED -> "microphone_launcher_unprepared";
                 case CHECK_FAILED -> "microphone_permission_unavailable";

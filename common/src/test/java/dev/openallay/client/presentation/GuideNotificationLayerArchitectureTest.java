@@ -16,19 +16,27 @@ final class GuideNotificationLayerArchitectureTest {
     private static String source(String path) throws Exception { return Files.readString(root().resolve(path)); }
 
     @Test void notificationsBindImmediatelyAndTickWithoutPassiveHudGate() throws Exception {
-        String source = source("common/src/main/java/dev/openallay/client/gui/GuideClientUiCoordinator.java");
+        String source = source("engine-core/src/main/java/dev/openallay/client/presentation/GuidePresentationCoordinator.java");
+        String facade = source("common/src/main/java/dev/openallay/client/gui/GuideClientUiCoordinator.java");
         assertTrue(source.contains("services.listenPresentation(notifications)"));
         assertTrue(source.contains("notifications.tick()"));
         assertFalse(source.contains("bindCurrent()"));
         assertFalse(source.contains("snapshot().updatedAt()"));
-        assertTrue(source.contains("VoiceClientRuntime.create("));
-        String tick = source.substring(source.indexOf("public void tick()"), source.indexOf("public void extractRenderState("));
+        assertTrue(source.contains("voices.apply(new VoiceRuntime.DraftPort()"));
+        assertTrue(facade.contains("drafts -> VoiceClientRuntimes.create(configDirectory, drafts, dispatcher::execute)"));
+        assertTrue(facade.contains("public void tick() { presentation.tick(); }"));
+        String tick = source.substring(source.indexOf("public void tick()"), source.indexOf("public GuideHudController hud()"));
         assertTrue(tick.indexOf("notifications.tick()") < tick.indexOf("boolean gameplay"),
                 "notification delivery must not depend on game/HUD/voice interaction gates");
+        assertTrue(tick.indexOf("notifications.tick()") < tick.indexOf("host.facts()"));
         assertFalse(tick.substring(0, tick.indexOf("notifications.tick()") + "notifications.tick()".length())
                 .contains("voice.input().enabled()"));
-        String constructor = source.substring(source.indexOf("public GuideClientUiCoordinator("), source.indexOf("public void openGuide("));
+        String constructor = source.substring(source.indexOf("public GuidePresentationCoordinator("),
+                source.indexOf("public GuidePresentationCoordinator withObservationInput("));
         assertFalse(constructor.contains("forActor("), "constructing presentation must not create a task/service");
+        String nativeConstructor = facade.substring(facade.indexOf("public GuideClientUiCoordinator("),
+                facade.indexOf("public GuideClientUiCoordinator withObservationInput("));
+        assertFalse(nativeConstructor.contains("forActor("));
         assertTrue(constructor.contains("settings.listen(ignored -> notifications.settingsChanged())"));
     }
 

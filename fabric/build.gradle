@@ -29,6 +29,12 @@ dependencies {
 }
 
 loom {
+    mods {
+        "${mod_id}" {
+            sourceSet sourceSets.main
+            sourceSet project(':engine-core').sourceSets.main
+        }
+    }
     def aw = project(':common').selectedMinecraftTargetResource("${mod_id}.accesswidener")
     if (aw.exists()) {
         accessWidenerPath.set(aw)

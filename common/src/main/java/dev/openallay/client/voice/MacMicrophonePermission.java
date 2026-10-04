@@ -63,21 +63,30 @@ final class MacMicrophonePermission {
         DENIED, RESTRICTED, LAUNCHER_NOT_PREPARED, CHECK_FAILED
     }
 
-    static final class PermissionException extends Exception {
+    static final class PermissionException extends AudioPermissionException {
         private final Failure failure;
 
         PermissionException(Failure failure, String message) {
-            super(message);
+            super(diagnostic(failure), message);
             this.failure = failure;
         }
 
         PermissionException(Failure failure, String message, Throwable cause) {
-            super(message, cause);
+            super(diagnostic(failure), message, cause);
             this.failure = failure;
         }
 
         Failure failure() {
             return failure;
+        }
+
+        private static Diagnostic diagnostic(Failure failure) {
+            return switch (failure) {
+                case DENIED -> Diagnostic.DENIED;
+                case RESTRICTED -> Diagnostic.RESTRICTED;
+                case LAUNCHER_NOT_PREPARED -> Diagnostic.LAUNCHER_NOT_PREPARED;
+                case CHECK_FAILED -> Diagnostic.CHECK_FAILED;
+            };
         }
     }
 

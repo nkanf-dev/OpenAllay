@@ -127,60 +127,85 @@ final class ClientArchitectureTest {
                     < source.indexOf("settings.closeAsync()"), entrypoint::toString);
         }
 
-        String coordinator = Files.readString(root.resolve(
+        String facade = Files.readString(root.resolve(
                 "common/src/main/java/dev/openallay/client/gui/GuideClientUiCoordinator.java"));
-        assertEquals(1, occurrences(coordinator, "GuideClientUiState.create(next, GuideClientUiCoordinator.this.dispatcher)"));
+        String coordinator = Files.readString(root.resolve(
+                "engine-core/src/main/java/dev/openallay/client/presentation/GuidePresentationCoordinator.java"));
+        String host = Files.readString(root.resolve(
+                "common/src/main/java/dev/openallay/client/gui/NativeGuidePresentationHost.java"));
+        String states = Files.readString(root.resolve(
+                "common/src/main/java/dev/openallay/client/gui/GuideClientUiStates.java"));
+        assertEquals(1, occurrences(facade, "new GuidePresentationCoordinator("));
+        assertEquals(1, occurrences(facade, "service -> GuideClientUiStates.create(service, dispatcher)"));
+        assertEquals(1, occurrences(states, "new GuideClientUiState(service, new SystemImageClipboard()"));
+        assertEquals(1, occurrences(coordinator, "state = Objects.requireNonNull(states.apply(next), \"state\")"));
         assertTrue(coordinator.contains("notificationBinding = services.listenPresentation(notifications)"));
         assertTrue(coordinator.contains("binding = services.listenPresentation(new GuidePresentationListener()"));
         assertTrue(coordinator.contains("if (closed || bound == next) return;"));
         assertTrue(coordinator.contains("notifications.tick()"));
-        assertTrue(coordinator.contains("notifications.testNotification(config)"));
-        assertTrue(coordinator.contains("if (valid(service, owner)) notifications.testNotification(config)"));
-        assertTrue(coordinator.contains(".withNotifications(notifications)"));
-        assertTrue(coordinator.contains("new GuideHudEditorScreen(draft, applied, returnScreen"));
-        assertTrue(coordinator.contains("new GuideChatLiteScreen(service, state, display,"));
+        assertTrue(coordinator.contains("if (ownerValid.getAsBoolean()) notifications.testNotification(config)"));
+        assertTrue(coordinator.contains("BooleanSupplier ownerValid = () -> valid(service, owner)"));
+        assertTrue(host.contains(".withNotifications(view.notifications()).withVoice(view.voice())"));
+        assertTrue(host.contains("new GuideHudEditorScreen(draft, applied, returnScreen"));
+        assertTrue(host.contains("new GuideChatLiteScreen(view.service(), view.state(), display, openGuide,"));
         assertTrue(!coordinator.contains("bindCurrent()"), "Live notification binding is not a tick identity diff");
         assertTrue(coordinator.contains("client.voice"));
-        assertTrue(coordinator.contains("client.presentation"));
-        assertTrue(coordinator.contains("VoiceClientRuntime.create(configDirectory, new VoiceRuntime.DraftPort()"));
-        assertTrue(coordinator.contains("withVoiceActions(voice.settings())"));
-        assertTrue(coordinator.contains(".withNotifications(notifications).withVoice(voice.input())"));
+        assertTrue(facade.contains("client.presentation"));
+        assertTrue(facade.contains("drafts -> VoiceClientRuntimes.create(configDirectory, drafts, dispatcher::execute)"));
+        assertTrue(coordinator.contains("voices.apply(new VoiceRuntime.DraftPort()"));
+        assertTrue(host.contains("withVoiceActions(voice)"));
+        assertTrue(coordinator.contains("new GuidePresentationHost.View(service, owner, notifications, voice.input()"));
         assertTrue(coordinator.contains("bound.snapshot().actorId(), state.ownerId(), state.generation()"));
         assertTrue(coordinator.contains("bound.presentationSessionOwner(state.selectedSession())"));
         assertTrue(coordinator.contains("target.uiOwnerId(), target.uiGeneration()"));
         assertTrue(coordinator.contains("target.sessionId(), target.draftRevision()"));
+        assertTrue(coordinator.contains("bound.presentationGeneration().equals(target.connectionGeneration())"));
+        assertTrue(coordinator.contains("bound.presentationSessionOwner(target.sessionId()).filter(target.sessionOwner()::equals).isPresent()"));
         assertTrue(coordinator.contains("state.insertTranscript(captured, text, observationForVoice(target).orElse(null))"));
         assertTrue(coordinator.contains("state.leaseObservation(state.captureObservation(state.selectedSession()))"));
+        assertTrue(coordinator.contains("finally { releaseVoiceObservation(target); }"));
+        assertTrue(coordinator.contains("voiceObservations.remove(target)"));
+        assertTrue(coordinator.contains("if (lease != null) lease.close()"));
         assertTrue(coordinator.contains("voice.input().setFeedbackVisible(feedback)"));
-        assertTrue(coordinator.contains("activeScreen instanceof OpenAllayScreen"));
-        assertTrue(coordinator.contains("activeScreen instanceof GuideChatLiteScreen"));
-        assertTrue(coordinator.contains("OpenAllayKeyMappings.VOICE_PTT.isDown()"));
+        assertTrue(host.contains("screen instanceof OpenAllayScreen ? Surface.GUIDE"));
+        assertTrue(host.contains("screen instanceof GuideChatLiteScreen ? Surface.HUD_INPUT"));
+        assertTrue(host.contains("OpenAllayKeyMappings.VOICE_PTT.isDown()"));
         assertTrue(coordinator.contains("voice.input().pressPtt()"));
         assertTrue(coordinator.contains("voice.input().release()"));
-        assertTrue(coordinator.contains("voice.input().tick(minecraft.isWindowActive()"));
-        assertTrue(coordinator.contains("physicalDown, feedback)"));
-        assertTrue(coordinator.contains("GuideVoiceIndicator.extract(graphics, minecraft, voice.input())"));
+        assertTrue(coordinator.contains("voice.input().tick(current.windowActive(), current.connected(), physicalDown, feedback)"));
+        assertTrue(facade.contains("GuideVoiceIndicator.extract(graphics, minecraft, presentation.voiceInput())"));
         assertTrue(coordinator.contains("voice.close()"));
         assertTrue(coordinator.contains("GuideClientUiState owner = state;"));
-        assertTrue(coordinator.contains("new OpenAllayScreen(service, recipes, display, openSettings, owner)"));
-        assertTrue(coordinator.contains("new OpenAllaySettingsScreen(settings, () -> openGuide(service))"));
+        assertTrue(host.contains("new OpenAllayScreen(view.service(), recipes, display, openSettings, view.state())"));
+        assertTrue(coordinator.contains("host.showSettings(() -> openGuide(service), ownerValid, voice.settings(), config ->"));
+        assertTrue(host.contains("new OpenAllaySettingsScreen(settings, returnToGuide)"));
+        assertTrue(coordinator.contains("host.showGuide(view(service, owner), openSettings)"));
         assertTrue(coordinator.contains("settings.saveDisplay(current.withUi(current.ui().withHud("));
         assertTrue(coordinator.contains("settings::saveDisplay"));
-        assertTrue(coordinator.contains("renderer.extractRenderState(graphics, hud.view())"));
-        assertTrue(!coordinator.contains("new GuideService("));
-        assertTrue(!coordinator.contains("new GuideDisplayRuntime("));
-        assertTrue(!coordinator.contains("new ClientSettingsRuntime("));
-        String closeState = coordinator.substring(coordinator.indexOf("private void closeState()"));
+        assertTrue(facade.contains("renderer.extractRenderState(graphics, presentation.hud().view())"));
+        for (String source : List.of(coordinator, host, facade)) {
+            assertTrue(!source.contains("new GuideService("));
+            assertTrue(!source.contains("new GuideDisplayRuntime("));
+            assertTrue(!source.contains("new ClientSettingsRuntime("));
+        }
+        assertTrue(!coordinator.contains("import net.minecraft."));
+        assertTrue(!coordinator.contains("import org.lwjgl."));
+        assertTrue(!host.contains("new GuideClientUiState("));
+        assertTrue(!facade.contains("new GuideClientUiState("));
+        String closeState = coordinator.substring(coordinator.indexOf("private void closeState()"),
+                coordinator.indexOf("private static void close("));
         assertTrue(closeState.indexOf("state.close()") < closeState.indexOf("state = null"));
         assertTrue(closeState.indexOf("state.close()") < closeState.indexOf("bound = null"));
         assertTrue(closeState.indexOf("state.close()") < closeState.indexOf("voice.input().cancel("));
         assertTrue(closeState.indexOf("voice.input().cancel(") < closeState.indexOf("state = null"));
         String disconnect = coordinator.substring(coordinator.indexOf("public void disconnect()"),
-                coordinator.indexOf("private boolean valid("));
+                coordinator.indexOf("private GuideClientUiState.Insertion voiceInsertion("));
         assertTrue(disconnect.indexOf("notifications.invalidated(bound.presentationGeneration())")
                 < disconnect.indexOf("closeState()"));
         assertTrue(disconnect.indexOf("closeState()") < disconnect.indexOf("voice.input().cancel("));
         assertTrue(disconnect.contains("pttDown = false"));
+        assertTrue(facade.contains("public void disconnect() { presentation.disconnect(); }"));
+        assertTrue(facade.contains("public void close() { presentation.close(); }"));
 
         String fabricClient = Files.readString(entrypoints.getFirst());
         assertTrue(fabricClient.contains("HudElementRegistry.attachElementBefore(VanillaHudElements.CHAT"));

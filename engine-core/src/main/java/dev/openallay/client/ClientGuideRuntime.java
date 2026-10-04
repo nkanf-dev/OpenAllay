@@ -1,7 +1,7 @@
 package dev.openallay.client;
 
 import com.google.gson.Gson;
-import dev.openallay.OpenAllayRuntime;
+import dev.openallay.FeatureServices;
 import dev.openallay.agent.AgentEvent;
 import dev.openallay.agent.AgentRequest;
 import dev.openallay.agent.AgentResult;
@@ -63,7 +63,7 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
     private final PromptModes promptModes;
 
     public ClientGuideRuntime(
-            OpenAllayRuntime runtime,
+            FeatureServices runtime,
             ModelClient model,
             AgentSessionStore sessions,
             Gson gson,
@@ -72,7 +72,7 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
     }
 
     public ClientGuideRuntime(
-            OpenAllayRuntime runtime,
+            FeatureServices runtime,
             ModelClient model,
             AgentSessionStore sessions,
             Gson gson,
@@ -82,7 +82,7 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
     }
 
     ClientGuideRuntime(
-            OpenAllayRuntime runtime,
+            FeatureServices runtime,
             ModelClient model,
             AgentSessionStore sessions,
             Gson gson,
@@ -715,7 +715,7 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
                 new ConcurrentHashMap<>(), new ConcurrentHashMap<>());
     }
 
-    private static ClientCapabilitySnapshot defaultCapabilities(OpenAllayRuntime runtime) {
+    private static ClientCapabilitySnapshot defaultCapabilities(FeatureServices runtime) {
         ToolResult<ClientCapabilitySnapshot> resolved = new ClientCapabilityResolver().resolve(
                 CapabilityPolicy.defaults(), runtime.tools().registrations(), runtime.skills());
         if (resolved instanceof ToolResult.Success<ClientCapabilitySnapshot> success) {

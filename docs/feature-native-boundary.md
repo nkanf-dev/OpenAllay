@@ -5,6 +5,13 @@ history, Skills, settings/domain/controller and detached protocol implementation
 Its production compile and runtime classpaths reject Minecraft, loader and LWJGL
 classes. `verifySourceOwnership` rejects duplicate feature classes in native sources.
 
+Shared presentation coordination, connection drafts, observation admission and
+voice lifecycle live in `engine-core`. A typed `GuidePresentationHost` supplies
+native facts and assembles views. Audio capture is injected through its existing
+`AudioCapture.Factory`; permission failures use a native-free diagnostic type.
+Client/server model runtimes and settings depend on `FeatureServices`, not the
+Minecraft composition record.
+
 `common` now contains native game composition and bindings, not a second feature
 engine. Loader modules compile only native source families. The same compiled
 `engine-core` output is embedded once in each core mod, in its game mod layer. This

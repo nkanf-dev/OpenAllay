@@ -2,7 +2,6 @@ package dev.openallay.client.gui;
 
 import dev.openallay.client.ClientEventDispatcher;
 import dev.openallay.client.gui.clipboard.ImageClipboard;
-import dev.openallay.client.gui.clipboard.SystemImageClipboard;
 import dev.openallay.guide.GuideService;
 import dev.openallay.model.image.ImageReference;
 import dev.openallay.tool.ToolResult;
@@ -58,9 +57,10 @@ public final class GuideClientUiState implements AutoCloseable {
         images.attach(selectedSession); // Owner attached for connection lifetime, not Screen lifetime.
     }
 
-    public static GuideClientUiState create(GuideService service, ClientEventDispatcher client) {
-        return new GuideClientUiState(service, new SystemImageClipboard(),
-                job -> Thread.ofVirtual().name("openallay-draft-image").start(job), client);
+    /** Shared admission receipt semantics; native views do not own acceptance policy. */
+    public static boolean submissionAccepted(boolean editing, ToolResult<?> result) {
+        return result instanceof ToolResult.Success<?> success
+                && (editing ? Boolean.TRUE.equals(success.value()) : success.value() instanceof UUID);
     }
 
     public String ownerId() { return ownerId; }

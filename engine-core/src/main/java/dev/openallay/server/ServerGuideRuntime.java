@@ -1,7 +1,7 @@
 package dev.openallay.server;
 
 import com.google.gson.Gson;
-import dev.openallay.OpenAllayRuntime;
+import dev.openallay.FeatureServices;
 import dev.openallay.agent.GameGuideAgent;
 import dev.openallay.agent.context.ContextCompactor;
 import dev.openallay.model.tokenizer.ModelContextTokenEstimator;
@@ -40,7 +40,7 @@ public record ServerGuideRuntime(
     }
 
     public static ToolResult<ServerGuideRuntime> create(
-            OpenAllayRuntime runtime,
+            FeatureServices runtime,
             Path configPath,
             Map<String, String> environment,
             ServerAgentService.ContextProvider contexts,
@@ -67,7 +67,7 @@ public record ServerGuideRuntime(
     }
 
     public static ToolResult<ServerGuideRuntime> create(
-            OpenAllayRuntime runtime,
+            FeatureServices runtime,
             Path configPath,
             Map<String, String> environment,
             ServerAgentService.ContextProvider contexts,
@@ -78,7 +78,7 @@ public record ServerGuideRuntime(
     }
 
     public static ToolResult<ServerGuideRuntime> create(
-            OpenAllayRuntime runtime,
+            FeatureServices runtime,
             Path configPath,
             Map<String, String> environment,
             ServerAgentService.ContextProvider contexts,
