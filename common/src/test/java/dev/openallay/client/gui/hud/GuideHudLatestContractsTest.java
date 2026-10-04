@@ -83,7 +83,7 @@ final class GuideHudLatestContractsTest {
     }
 
     @Test void interactiveProjectionIsReadOnlyAndDoesNotFetchBeyondItsAdmittedWindow() throws Exception {
-        String presenter = source("common/src/main/java/dev/openallay/guide/ui/hud/GuideHudPresenter.java");
+        String presenter = source("engine-core/src/main/java/dev/openallay/guide/ui/hud/GuideHudPresenter.java");
         assertTrue(presenter.contains("for (GuideRequestSnapshot request : selected.requests())"));
         assertTrue(presenter.contains("retained.add(result.requestId())"));
         assertTrue(presenter.contains("admitted.indexOf(active)"));

@@ -4,6 +4,7 @@ plugins {
 }
 
 dependencies {
+    implementation(project(":engine-core"))
     implementation(project(":adapters:minecraft-26.2"))
     // Native code belongs in the game mod layer, not an independently loaded library layer.
     implementation(project(":extension-api"))
@@ -98,4 +99,10 @@ sourceSets.configureEach {
 // Keep source/build isolation while loading native game adapters with the core mod.
 tasks.named('jar', Jar) {
     from(project(':adapters:minecraft-26.2').sourceSets.main.output)
+}
+
+// Feature code is compiled once without game dependencies and reused in the game mod layer.
+tasks.named('jar', Jar) {
+    dependsOn(':engine-core:classes')
+    from({ project(':engine-core').sourceSets.main.output })
 }

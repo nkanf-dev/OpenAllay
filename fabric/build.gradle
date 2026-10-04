@@ -3,6 +3,7 @@ plugins {
     id 'net.fabricmc.fabric-loom'
 }
 dependencies {
+    implementation(project(":engine-core"))
     implementation(project(":adapters:minecraft-26.2"))
     include(project(":adapters:minecraft-26.2"))
     implementation(project(":extension-api"))
@@ -70,4 +71,10 @@ sourceSets.configureEach {
             }
         }
     }
+}
+
+// Feature code is compiled once without game dependencies and reused in the game mod layer.
+tasks.named('jar', Jar) {
+    dependsOn(':engine-core:classes')
+    from({ project(':engine-core').sourceSets.main.output })
 }

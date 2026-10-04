@@ -45,8 +45,8 @@ final class NativeRuntimeNoticesTest {
         assertThrows(IOException.class, () -> NativeRuntimeNotices.write(temporary.resolve("absent")));
     }
     @Test void installerHooksRunAfterKnownPinValidationAndBeforePromotion() throws Exception {
-        Path source = Path.of("src/main/java/dev/openallay/client/voice/NativeModelInstaller.java");
-        if (!Files.exists(source)) source = Path.of("common").resolve(source);
+        Path source = Path.of("../engine-core/src/main/java/dev/openallay/client/voice/NativeModelInstaller.java");
+        if (!Files.exists(source)) source = Path.of("engine-core/src/main/java/dev/openallay/client/voice/NativeModelInstaller.java");
         String installer = Files.readString(source);
         int importStart = installer.indexOf("public void importRuntime(");
         int downloadStart = installer.indexOf("public Path install(");

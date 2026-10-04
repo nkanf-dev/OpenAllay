@@ -1,0 +1,143 @@
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.artifacts.component.ProjectComponentIdentifier
+import java.util.zip.ZipFile
+
+plugins {
+    id 'java-library'
+    id 'java-test-fixtures'
+}
+
+// This value is independent of minecraftTarget and the native java_version.
+// Retain the current runtime baseline until the central Java 17/Rhino gate passes.
+def engineJavaVersion = 25
+base { archivesName = 'openallay-engine-core' }
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(engineJavaVersion)
+    withSourcesJar()
+    withJavadocJar()
+}
+tasks.withType(JavaCompile).configureEach {
+    options.release = engineJavaVersion
+    options.encoding = 'UTF-8'
+}
+tasks.withType(Jar).configureEach {
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
+    from(rootProject.file('LICENSE')) { rename { 'LICENSE_OpenAllay' } }
+}
+
+dependencies {
+    // Host-supplied public SDK stays separately packaged, never shaded into the engine.
+    api(project(':extension-api'))
+    api('com.google.code.gson:gson:2.14.0')
+    api('org.slf4j:slf4j-api:2.0.17')
+    api("dev.latvian.mods:rhino:${rhino_version}")
+    implementation('org.apache.maven:maven-artifact:3.9.9')
+    implementation("org.commonmark:commonmark:${commonmark_version}")
+    implementation("org.commonmark:commonmark-ext-gfm-tables:${commonmark_version}")
+    implementation("com.knuddels:jtokkit:${jtokkit_version}")
+    runtimeOnly("org.xerial:sqlite-jdbc:${sqlite_jdbc_version}")
+    testImplementation('org.junit.jupiter:junit-jupiter:5.11.4')
+    testRuntimeOnly('org.junit.platform:junit-platform-launcher:1.11.4')
+}
+
+// Enforce actual resolved production classpaths, not names appearing in source comments.
+def productionCoordinates = [
+    'com.google.code.gson:gson', 'com.google.errorprone:error_prone_annotations', 'org.slf4j:slf4j-api',
+    'dev.latvian.mods:rhino', 'org.apache.maven:maven-artifact',
+    'org.codehaus.plexus:plexus-utils',
+    'org.commonmark:commonmark', 'org.commonmark:commonmark-ext-gfm-tables',
+    'com.knuddels:jtokkit', 'org.xerial:sqlite-jdbc'
+] as Set
+def nativeClassPrefixes = [
+    'net/minecraft/', 'com/mojang/', 'net/fabricmc/', 'net/neoforged/',
+    'org/lwjgl/', 'org/spongepowered/', 'com/llamalad7/',
+    'mezz/jei/', 'me/shedaniel/', 'dev/architectury/'
+]
+def verifyProductionDependencies = tasks.register('verifyProductionDependencies') {
+    group = 'verification'
+    description = 'Reject native/loader dependencies and classes from the engine production classpaths.'
+    doLast {
+        ['compileClasspath', 'runtimeClasspath'].each { name ->
+            def configuration = configurations.getByName(name)
+            configuration.incoming.resolutionResult.allComponents.each { component ->
+                def id = component.id
+                if (id instanceof ProjectComponentIdentifier) {
+                    if (!(id.projectPath in [project.path, ':extension-api'])) {
+                        throw new GradleException("Engine cannot depend on native project ${id.projectPath}")
+                    }
+                } else if (id instanceof ModuleComponentIdentifier) {
+                    def coordinate = "${id.group}:${id.module}".toString()
+                    if (!productionCoordinates.contains(coordinate)) {
+                        throw new GradleException("Unapproved engine production dependency ${id.displayName}")
+                    }
+                } else {
+                    throw new GradleException("Unidentified engine production component ${id.displayName}")
+                }
+            }
+            configuration.files.each { artifact ->
+                def checkClass = { String entry ->
+                    def classPath = entry.replaceFirst('^META-INF/versions/[0-9]+/', '')
+                    if (classPath.endsWith('.class') && nativeClassPrefixes.any { classPath.startsWith(it) }) {
+                        throw new GradleException("Native class ${entry} in engine ${name}: ${artifact}")
+                    }
+                }
+                if (artifact.isDirectory()) {
+                    // Standard java-library project compile variants expose classes directories.
+                    rootProject.fileTree(artifact) { include '**/*.class' }.each { file ->
+                        checkClass(artifact.toPath().relativize(file.toPath()).toString().replace('\\', '/'))
+                    }
+                } else if (artifact.isFile() && artifact.name.endsWith('.jar')) {
+                    new ZipFile(artifact).withCloseable { jar ->
+                        jar.entries().each { entry -> checkClass(entry.name) }
+                    }
+                } else {
+                    throw new GradleException("Unidentified engine classpath artifact ${artifact}")
+                }
+            }
+        }
+    }
+}
+// Build dependency JARs before inspecting their contents; no engine -> native edge exists.
+verifyProductionDependencies.configure {
+    dependsOn(configurations.compileClasspath.buildDependencies)
+    dependsOn(configurations.runtimeClasspath.buildDependencies)
+}
+tasks.named('compileJava') { dependsOn(verifyProductionDependencies) }
+tasks.named('check') { dependsOn(verifyProductionDependencies) }
+
+def verifySourceOwnership = tasks.register('verifySourceOwnership') {
+    group = 'verification'
+    description = 'Reject engine classes left in native source sets or selected target overrides.'
+    inputs.files(sourceSets.main.allJava)
+    outputs.upToDateWhen { false }
+    doLast {
+        def nativeClasses = [:]
+        def nativeRoots = ['common/src/main/java', 'common/src/targets',
+                           'fabric/src/main/java', 'neoforge/src/main/java', 'adapters']
+        nativeRoots.each { path ->
+            rootProject.fileTree(path) { include '**/*.java' }.each { source ->
+                def match = source.getText('UTF-8') =~ /(?m)^\s*package\s+([\w.]+)\s*;/
+                if (match.find()) {
+                    def qualified = match.group(1) + '.' + source.name.replaceFirst(/\.java$/, '')
+                    nativeClasses.computeIfAbsent(qualified) { [] }.add(source)
+                }
+            }
+        }
+        sourceSets.main.allJava.each { source ->
+            def match = source.getText('UTF-8') =~ /(?m)^\s*package\s+([\w.]+)\s*;/
+            if (!match.find()) throw new GradleException("Engine source missing package: ${source}")
+            def qualified = match.group(1) + '.' + source.name.replaceFirst(/\.java$/, '')
+            if (nativeClasses.containsKey(qualified)) {
+                throw new GradleException("Duplicated engine class ${qualified}: ${nativeClasses[qualified]}")
+            }
+        }
+    }
+}
+tasks.named('compileJava') { dependsOn(verifySourceOwnership) }
+tasks.named('check') { dependsOn(verifySourceOwnership) }
+
+tasks.withType(Test).configureEach {
+    useJUnitPlatform()
+    dependsOn(verifyProductionDependencies)
+}

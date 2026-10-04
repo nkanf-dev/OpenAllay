@@ -492,7 +492,7 @@ class RecipeProgramContractTests(unittest.TestCase):
             "evidence": {"completeness": "COMPLETE"}}}, "knowledge": []}
         payload = {"mc": mc, "native": fixture.manual_recipe_arguments()["source"],
                    "analysis": fixture.javascript_arguments()["source"], "module": str(
-                       MODULE_PATH.parent.parent / "common/src/main/resources/assets/openallay/openallay_js_modules/crafting.js")}
+                       MODULE_PATH.parent.parent / "engine-core/src/main/resources/assets/openallay/openallay_js_modules/crafting.js")}
         program = ("const input=JSON.parse(require('fs').readFileSync(0,'utf8'));"
                    "const mc=input.mc; const crafting=require(input.module);"
                    "const call=source=>new Function('mc','require',source)(mc,id=>{"

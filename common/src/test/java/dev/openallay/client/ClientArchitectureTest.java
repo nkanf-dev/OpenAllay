@@ -213,7 +213,7 @@ final class ClientArchitectureTest {
         }
 
         String protocol = Files.readString(root.resolve(
-                "common/src/main/java/dev/openallay/bridge/protocol/BridgeProtocol.java"));
+                "engine-core/src/main/java/dev/openallay/bridge/protocol/BridgeProtocol.java"));
         assertTrue(!protocol.contains("VERSION"));
         assertTrue(!protocol.contains("requireVersion"));
         for (Path bridge : List.of(

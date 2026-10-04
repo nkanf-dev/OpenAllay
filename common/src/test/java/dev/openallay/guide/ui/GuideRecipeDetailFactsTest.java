@@ -164,7 +164,7 @@ final class GuideRecipeDetailFactsTest {
         String screen = Files.readString(root.resolve(
                 "common/src/main/java/dev/openallay/client/gui/OpenAllayScreen.java"));
         String summary = Files.readString(root.resolve(
-                "common/src/main/java/dev/openallay/guide/ui/GuideToolSummaryPresenter.java"));
+                "engine-core/src/main/java/dev/openallay/guide/ui/GuideToolSummaryPresenter.java"));
         assertTrue(nativeCanvas.contains("Math.min(inputs.size(), columns * 3)"));
         assertTrue(nativeCanvas.contains("Math.min(3, recipe.outputs().size())"));
         assertTrue(nativeCanvas.contains("Math.min(Integer.MAX_VALUE, Math.max(1, count))"));
