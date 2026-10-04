@@ -7,6 +7,10 @@ import dev.openallay.client.observation.GuideObservationSubmission;
 import dev.openallay.client.observation.ObservationAnchorPresentation;
 import dev.openallay.model.image.ImageInputCapability;
 import dev.openallay.client.gui.GuideComposerGeometry;
+import dev.openallay.client.gui.GuideKeyInput;
+import dev.openallay.client.gui.GuideKeyIntent;
+import dev.openallay.client.gui.GuideNativeInput;
+import dev.openallay.client.gui.GuideTextInputFocus;
 import dev.openallay.client.gui.GuideUiNotice;
 import dev.openallay.client.gui.OpenAllayButton;
 import dev.openallay.client.gui.OpenAllayKeyMappings;
@@ -34,7 +38,6 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
-import org.lwjgl.glfw.GLFW;
 
 /** Explicit compact native input surface. Gameplay keys/mouse are not forwarded while it is open. */
 public final class GuideChatLiteScreen extends Screen {
@@ -476,8 +479,9 @@ public final class GuideChatLiteScreen extends Screen {
     }
 
     @Override public boolean keyPressed(KeyEvent event) {
-        if (event.key() == GLFW.GLFW_KEY_ESCAPE) { onClose(); return true; }
-        if (composer != null && composer.isFocused() && event.key() == GLFW.GLFW_KEY_ENTER && !event.hasShiftDown()) {
+        GuideKeyInput input = GuideKeyInput.from(event);
+        if (input.intent() == GuideKeyIntent.ESCAPE) { onClose(); return true; }
+        if (composer != null && composer.isFocused() && input.intent() == GuideKeyIntent.ENTER && !input.shift()) {
             submit(); return true;
         }
         if (voice != null && voice.enabled() && (composer == null || !composer.isFocused())
@@ -487,20 +491,20 @@ public final class GuideChatLiteScreen extends Screen {
             return true;
         }
         if (composer == null || !composer.isFocused()) {
-            switch (event.key()) {
-                case GLFW.GLFW_KEY_PAGE_UP -> { scrollResults(() -> results.scroll().page(-1)); return true; }
-                case GLFW.GLFW_KEY_PAGE_DOWN -> { scrollResults(() -> results.scroll().page(1)); return true; }
-                case GLFW.GLFW_KEY_HOME -> { scrollResults(() -> results.scroll().first()); return true; }
-                case GLFW.GLFW_KEY_END -> { scrollResults(() -> results.scroll().latest()); return true; }
-                case GLFW.GLFW_KEY_UP, GLFW.GLFW_KEY_DOWN -> {
+            switch (input.intent()) {
+                case PAGE_UP -> { scrollResults(() -> results.scroll().page(-1)); return true; }
+                case PAGE_DOWN -> { scrollResults(() -> results.scroll().page(1)); return true; }
+                case HOME -> { scrollResults(() -> results.scroll().first()); return true; }
+                case END -> { scrollResults(() -> results.scroll().latest()); return true; }
+                case UP, DOWN -> {
                     List<GuideHudResultRenderer.Hit> hits = visibleResultHits();
                     if (!hits.isEmpty()) {
-                        focusedResult = Math.floorMod(focusedResult + (event.key() == GLFW.GLFW_KEY_DOWN ? 1 : -1), hits.size());
+                        focusedResult = Math.floorMod(focusedResult + (input.intent() == GuideKeyIntent.DOWN ? 1 : -1), hits.size());
                         if (minecraft.getNarrator().isActive()) minecraft.getNarrator().saySystemNow(Component.literal(hits.get(focusedResult).narration()));
                         return true;
                     }
                 }
-                case GLFW.GLFW_KEY_ENTER, GLFW.GLFW_KEY_SPACE -> {
+                case ENTER, SPACE -> {
                     List<GuideHudResultRenderer.Hit> hits = visibleResultHits();
                     if (focusedResult >= 0 && focusedResult < hits.size()) { resultAction(hits.get(focusedResult).action()); return true; }
                 }
@@ -531,14 +535,14 @@ public final class GuideChatLiteScreen extends Screen {
     }
     @Override public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
         // Native controls still own dispatch, including the composer's external scrollbar.
-        if (event.button() == 0 && !composerContains(event.x(), event.y())) clearFocus();
-        if (event.button() == 0 && scrollbar.contains(event.x(), event.y()) && results.scroll().maximum() > 0) {
+        if (GuideNativeInput.isLeftClick(event) && !composerContains(event.x(), event.y())) clearFocus();
+        if (GuideNativeInput.isLeftClick(event) && scrollbar.contains(event.x(), event.y()) && results.scroll().maximum() > 0) {
             draggingScrollbar = true;
             clearFocus();
             scrollAt(event.y());
             return true;
         }
-        if (event.button() == 0 && resultBounds.contains(event.x(), event.y())) {
+        if (GuideNativeInput.isLeftClick(event) && resultBounds.contains(event.x(), event.y())) {
             clearFocus();
             for (var hit : visibleResultHits()) if (hit.bounds().contains(event.x(), event.y())) {
                 resultAction(hit.action()); return true;
@@ -660,6 +664,7 @@ public final class GuideChatLiteScreen extends Screen {
     }
 
     @Override public void removed() {
+        GuideTextInputFocus.release(this);
         if (attachment != null) attachment.close();
         attachment = null;
         if (voice != null && (micHeld || pttHeld || voice.status().active())) voice.cancel(VoiceRuntime.CancelReason.SCREEN_CLOSED);

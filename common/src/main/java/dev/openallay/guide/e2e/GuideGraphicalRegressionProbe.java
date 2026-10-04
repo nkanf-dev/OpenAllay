@@ -56,7 +56,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.network.chat.Component;
-import org.lwjgl.glfw.GLFW;
+import dev.openallay.client.gui.GuideNativeInput;
 
 /** Opt-in native GUI scenario. Does not manufacture model results or bypass Done/Export callbacks. */
 final class GuideGraphicalRegressionProbe {
@@ -93,7 +93,6 @@ final class GuideGraphicalRegressionProbe {
     private String liveHeaderName;
     private long liveHoverFrame;
     private int liveHoverAttempts;
-    private java.lang.reflect.Method nativeCursorMoveCallback;
     private final List<Map<String, Object>> liveHoverDiagnostics = new ArrayList<>();
     private long liveHudFrame;
     private int liveReaderScroll;
@@ -206,7 +205,7 @@ final class GuideGraphicalRegressionProbe {
                 requireLoopbackFixture();
                 require("zh_cn".equals(client.options.languageCode), "Chinese language must be prepared before launch");
                 client.getWindow().setWindowed(850, 480);
-                OpenAllayKeyMappings.INTERACT_HUD.setKey(InputConstants.Type.KEYSYM.getOrCreate(GLFW.GLFW_KEY_F8));
+                OpenAllayKeyMappings.INTERACT_HUD.setKey(GuideNativeInput.keyboardType().getOrCreate(InputConstants.KEY_F8));
                 KeyMapping.resetMapping();
                 report.put("interactKeyDuring", OpenAllayKeyMappings.INTERACT_HUD.saveString());
                 report.put("world", client.getSingleplayerServer().getWorldData().getLevelName());
@@ -244,7 +243,7 @@ final class GuideGraphicalRegressionProbe {
                         "toolId", value.toolId(), "status", value.status().name())).toList());
                 report.put("assistantTextSha256", sha256(request.assistantText()));
                 guide().setFocused(null);
-                guide().keyPressed(new KeyEvent(GLFW.GLFW_KEY_HOME, 0, 0));
+                guide().keyPressed(GuideNativeInput.keyEvent(InputConstants.KEY_HOME, 0));
                 stage = 41;
                 stageWait = 0;
             }
@@ -396,7 +395,7 @@ final class GuideGraphicalRegressionProbe {
                 require(!paintedTail.isEmpty() && "全文末尾：原生图形长回复验收完成。".endsWith(paintedTail),
                         "HUD full response tail was not actually painted after wheel scrolling");
                 checkpoint("07-interactive-hud-bottom", false);
-                lite.keyPressed(new KeyEvent(GLFW.GLFW_KEY_ESCAPE, 0, 0));
+                lite.keyPressed(GuideNativeInput.keyEvent(InputConstants.KEY_ESCAPE, 0));
                 recordAction("native-key", "ESC/HUD-to-game");
                 advance();
             }
@@ -500,7 +499,7 @@ final class GuideGraphicalRegressionProbe {
             case 43 -> {
                 expectedName = "小羽 · Escape 保存";
                 nameEditor().setValue(expectedName);
-                settingsScreen().keyPressed(new KeyEvent(GLFW.GLFW_KEY_ESCAPE, 0, 0));
+                settingsScreen().keyPressed(GuideNativeInput.keyEvent(InputConstants.KEY_ESCAPE, 0));
                 recordAction("native-key", "ESC/dirty-settings");
                 advance();
             }
@@ -616,7 +615,7 @@ final class GuideGraphicalRegressionProbe {
                 }
                 requireHudLatest(receipt, request);
                 checkpoint("05-passive-hud-latest-tail-stable", false);
-                KeyMapping.click(InputConstants.Type.KEYSYM.getOrCreate(GLFW.GLFW_KEY_F8));
+                KeyMapping.click(GuideNativeInput.keyboardType().getOrCreate(InputConstants.KEY_F8));
                 recordAction("native-keymapping-click", "INTERACT_HUD/F8");
                 stage = 26; stageWait = 0;
             }
@@ -689,7 +688,7 @@ final class GuideGraphicalRegressionProbe {
             case 75 -> {
                 GuideHudEditorScreen editor = hudEditor();
                 var event = new MouseButtonEvent(hudDragPointerX, hudDragPointerY,
-                        new MouseButtonInfo(GLFW.GLFW_MOUSE_BUTTON_LEFT, 0));
+                        new MouseButtonInfo(InputConstants.MOUSE_BUTTON_LEFT, 0));
                 boolean handled = editor.mouseClicked(event, false);
                 recordHudPointer("mouseClicked", event, 0, 0, handled);
                 require(handled, "Native HUD editor did not consume the real pointer press");
@@ -699,7 +698,7 @@ final class GuideGraphicalRegressionProbe {
                 GuideHudEditorScreen editor = hudEditor();
                 require(client.isWindowActive(), "Native HUD drag lost window focus");
                 var event = new MouseButtonEvent(hudDragPointerX + hudDragDx, hudDragPointerY + hudDragDy,
-                        new MouseButtonInfo(GLFW.GLFW_MOUSE_BUTTON_LEFT, 0));
+                        new MouseButtonInfo(InputConstants.MOUSE_BUTTON_LEFT, 0));
                 boolean handled = editor.mouseDragged(event, hudDragDx, hudDragDy);
                 recordHudPointer("mouseDragged", event, hudDragDx, hudDragDy, handled);
                 require(handled, "Native HUD editor did not consume the real drag callback");
@@ -709,7 +708,7 @@ final class GuideGraphicalRegressionProbe {
             case 77 -> {
                 GuideHudEditorScreen editor = hudEditor();
                 var event = new MouseButtonEvent(hudDragPointerX + hudDragDx, hudDragPointerY + hudDragDy,
-                        new MouseButtonInfo(GLFW.GLFW_MOUSE_BUTTON_LEFT, 0));
+                        new MouseButtonInfo(InputConstants.MOUSE_BUTTON_LEFT, 0));
                 boolean handled = editor.mouseReleased(event);
                 recordHudPointer("mouseReleased", event, 0, 0, handled);
                 require(handled, "Native HUD editor did not finish the actual pointer drag");
@@ -854,7 +853,7 @@ final class GuideGraphicalRegressionProbe {
                         "Fresh native profile must retain the new F8 default without a harness override");
                 liveHeaderName = settings.snapshot().display().assistantName();
                 client.getWindow().setWindowed(850, 480);
-                OpenAllayKeyMappings.VOICE_PTT.setKey(InputConstants.Type.KEYSYM.getOrCreate(GLFW.GLFW_KEY_V));
+                OpenAllayKeyMappings.VOICE_PTT.setKey(GuideNativeInput.keyboardType().getOrCreate(InputConstants.KEY_V));
                 KeyMapping.resetMapping();
                 openGuide.accept(service);
                 advance();
@@ -875,12 +874,12 @@ final class GuideGraphicalRegressionProbe {
                 clickAt(guide(), composer().getX() + 8, composer().getY() + 8, "composer-focus");
                 require(guide().getFocused() == composer(), "Native input click did not restore text focus");
                 String beforeTypedPttKey = composer().getValue();
-                boolean endHandled = guide().keyPressed(new KeyEvent(GLFW.GLFW_KEY_END, 0, 0));
+                boolean endHandled = guide().keyPressed(GuideNativeInput.keyEvent(InputConstants.KEY_END, 0));
                 recordAction("native-key", "END/focused-composer-before-typed-PTT-key");
                 require(endHandled && guide().getFocused() == composer(), "Native End did not retain composer focus");
-                guide().keyPressed(new KeyEvent(GLFW.GLFW_KEY_V, 0, 0));
+                guide().keyPressed(GuideNativeInput.keyEvent(InputConstants.KEY_V, 0));
                 boolean characterHandled = guide().charTyped(new CharacterEvent('v'));
-                guide().keyReleased(new KeyEvent(GLFW.GLFW_KEY_V, 0, 0));
+                guide().keyReleased(GuideNativeInput.keyEvent(InputConstants.KEY_V, 0));
                 report.put("typedPttKeyNativeEdit", Map.of("beforeValue", beforeTypedPttKey,
                         "afterValue", composer().getValue(), "endKeyHandled", endHandled,
                         "characterHandled", characterHandled, "composerFocused", guide().getFocused() == composer()));
@@ -987,7 +986,7 @@ final class GuideGraphicalRegressionProbe {
                 checkpoint("live-05-native-hover-known-budget-unknown-cost", true);
                 hoverNative(1, 1);
                 clickAt(guide(), 1, 1, "blur-before-native-transcript-home");
-                guide().keyPressed(new KeyEvent(GLFW.GLFW_KEY_HOME, 0, 0));
+                guide().keyPressed(GuideNativeInput.keyEvent(InputConstants.KEY_HOME, 0));
                 advance();
             }
             case 11 -> {
@@ -1011,7 +1010,7 @@ final class GuideGraphicalRegressionProbe {
                 if (!detailRecipePainted(liveRecipeToolId)) return;
                 report.put("actualNativeRecipeDetail", jsonReceipt(guide(), "e2eToolsReceipt"));
                 checkpoint("live-07-tool-detail-native-recipe", true);
-                guide().keyPressed(new KeyEvent(GLFW.GLFW_KEY_ESCAPE, 0, 0));
+                guide().keyPressed(GuideNativeInput.keyEvent(InputConstants.KEY_ESCAPE, 0));
                 advance();
             }
             case 13 -> {
@@ -1030,7 +1029,7 @@ final class GuideGraphicalRegressionProbe {
                 if (client.gui.screen() instanceof OpenAllayScreen)
                     require(jsonReceipt(guide(), "e2eToolsReceipt").get("detailToolId").getAsString().isEmpty(),
                             "Native child capsule opened parent Tool drawer");
-                else { client.gui.screen().keyPressed(new KeyEvent(GLFW.GLFW_KEY_ESCAPE, 0, 0)); openGuide.accept(service); }
+                else { client.gui.screen().keyPressed(GuideNativeInput.keyEvent(InputConstants.KEY_ESCAPE, 0)); openGuide.accept(service); }
                 checkpoint("live-08-native-child-priority-no-parent-drawer", true);
                 press("screen.openallay.settings.short"); advance();
             }
@@ -1042,7 +1041,7 @@ final class GuideGraphicalRegressionProbe {
                 require(settings.snapshot().display().ui().fullscreen().density() == GuideUiConfig.Density.COMPACT,
                         "Actual settings callback did not save Compact density");
                 clickAt(guide(), 1, 1, "blur-before-compact-home");
-                guide().keyPressed(new KeyEvent(GLFW.GLFW_KEY_HOME, 0, 0)); advance();
+                guide().keyPressed(GuideNativeInput.keyEvent(InputConstants.KEY_HOME, 0)); advance();
             }
             case 19 -> {
                 JsonObject summary = revealRecipeSummary(request);
@@ -1077,9 +1076,9 @@ final class GuideGraphicalRegressionProbe {
                 report.put("explicitUnboundKeyLabel", OpenAllayKeyMappings.INTERACT_HUD.getTranslatedKeyMessage().getString());
                 require(OpenAllayKeyMappings.INTERACT_HUD.isUnbound(), "Explicit unbound key was silently reset");
                 checkpoint("live-11-passive-hud-explicit-unbound-hint", false);
-                OpenAllayKeyMappings.INTERACT_HUD.setKey(InputConstants.Type.KEYSYM.getOrCreate(GLFW.GLFW_KEY_F8));
+                OpenAllayKeyMappings.INTERACT_HUD.setKey(GuideNativeInput.keyboardType().getOrCreate(InputConstants.KEY_F8));
                 KeyMapping.resetMapping();
-                KeyMapping.click(InputConstants.Type.KEYSYM.getOrCreate(GLFW.GLFW_KEY_F8));
+                KeyMapping.click(GuideNativeInput.keyboardType().getOrCreate(InputConstants.KEY_F8));
                 recordAction("native-keymapping-click", "INTERACT_HUD/default-F8"); advance();
             }
             case 26 -> {
@@ -1347,7 +1346,7 @@ final class GuideGraphicalRegressionProbe {
     }
 
     private void clickAt(Screen screen, double x, double y, String target) {
-        var event = new MouseButtonEvent(x, y, new MouseButtonInfo(GLFW.GLFW_MOUSE_BUTTON_LEFT, 0));
+        var event = new MouseButtonEvent(x, y, new MouseButtonInfo(InputConstants.MOUSE_BUTTON_LEFT, 0));
         boolean clicked = screen.mouseClicked(event, false);
         boolean released = screen.mouseReleased(event);
         actions.add(Map.of("type", "native-mouse-callback", "target", target, "stage", stage,
@@ -1358,8 +1357,8 @@ final class GuideGraphicalRegressionProbe {
         var window = client.getWindow();
         double nativeX = guiX * window.getScreenWidth() / window.getGuiScaledWidth();
         double nativeY = guiY * window.getScreenHeight() / window.getGuiScaledHeight();
-        GLFW.glfwSetCursorPos(window.handle(), nativeX, nativeY);
-        actions.add(Map.of("type", "native-glfw-cursor", "stage", stage, "guiX", guiX, "guiY", guiY,
+        GuideProbeNativeCursor.move(window, nativeX, nativeY);
+        actions.add(Map.of("type", "native-" + GuideProbeNativeCursor.backend() + "-cursor", "stage", stage, "guiX", guiX, "guiY", guiY,
                 "windowX", nativeX, "windowY", nativeY, "screenWidth", window.getScreenWidth(),
                 "screenHeight", window.getScreenHeight(), "source", "OS-programmatic-cursor-request"));
         if (Math.abs(client.mouseHandler.getScaledXPos(window) - guiX) > 1
@@ -1372,18 +1371,14 @@ final class GuideGraphicalRegressionProbe {
         require(developmentProbeEnabled, "Development probe was disabled at construction");
         client.execute(() -> {
             try {
-                if (nativeCursorMoveCallback == null) {
-                    nativeCursorMoveCallback = client.mouseHandler.getClass().getDeclaredMethod("onMove", long.class, double.class, double.class);
-                    nativeCursorMoveCallback.setAccessible(true);
-                }
-                nativeCursorMoveCallback.invoke(client.mouseHandler, client.getWindow().handle(), nativeX, nativeY);
+                GuideProbeNativeCursor.dispatchMove(client, nativeX, nativeY);
                 actions.add(Map.of("type", "controlled-native-cursor-callback", "stage", stage,
                         "source", "MouseHandler.onMove/window-cursor-event", "physicalInput", false,
                         "windowX", nativeX, "windowY", nativeY,
                         "scaledXAfterCallback", client.mouseHandler.getScaledXPos(client.getWindow()),
                         "scaledYAfterCallback", client.mouseHandler.getScaledYPos(client.getWindow())));
-            } catch (ReflectiveOperationException failure) {
-                fail(new IllegalStateException("Controlled native MouseHandler.onMove callback failed", failure));
+            } catch (RuntimeException failure) {
+                fail(new IllegalStateException("Controlled native mouse callback failed", failure));
             }
         });
     }
@@ -1392,9 +1387,7 @@ final class GuideGraphicalRegressionProbe {
     private void recordNativeHoverDiagnostic(String phase) {
         require(developmentProbeEnabled, "Development probe was disabled at construction");
         var window = client.getWindow();
-        double[] cursorX = new double[1];
-        double[] cursorY = new double[1];
-        GLFW.glfwGetCursorPos(window.handle(), cursorX, cursorY);
+        double[] nativeCursor = GuideProbeNativeCursor.position(window);
         var layout = (dev.openallay.guide.ui.GuideUiLayout) readField(guide(), "layout");
         Map<String, Object> diagnostic = new LinkedHashMap<>();
         diagnostic.put("phase", phase);
@@ -1412,8 +1405,9 @@ final class GuideGraphicalRegressionProbe {
         diagnostic.put("framebufferHeight", window.getHeight());
         diagnostic.put("guiWidth", window.getGuiScaledWidth());
         diagnostic.put("guiHeight", window.getGuiScaledHeight());
-        diagnostic.put("glfwCursorX", cursorX[0]);
-        diagnostic.put("glfwCursorY", cursorY[0]);
+        diagnostic.put("nativeCursorBackend", GuideProbeNativeCursor.backend());
+        diagnostic.put("nativeCursorX", nativeCursor[0]);
+        diagnostic.put("nativeCursorY", nativeCursor[1]);
         diagnostic.put("mouseHandlerX", client.mouseHandler.xpos());
         diagnostic.put("mouseHandlerY", client.mouseHandler.ypos());
         diagnostic.put("mouseHandlerScaledX", client.mouseHandler.getScaledXPos(window));
@@ -1504,7 +1498,7 @@ final class GuideGraphicalRegressionProbe {
                         && button.getX() + button.getWidth() <= screen.width
                         && button.getY() + button.getHeight() <= screen.height,
                 "Actual HUD case button is outside the native viewport");
-        var event = new MouseButtonEvent(x, y, new MouseButtonInfo(GLFW.GLFW_MOUSE_BUTTON_LEFT, 0));
+        var event = new MouseButtonEvent(x, y, new MouseButtonInfo(InputConstants.MOUSE_BUTTON_LEFT, 0));
         boolean clicked = screen.mouseClicked(event, false);
         boolean released = screen.mouseReleased(event);
         Map<String, Object> action = new LinkedHashMap<>();
@@ -1516,7 +1510,7 @@ final class GuideGraphicalRegressionProbe {
         action.put("eventType", MouseButtonEvent.class.getName());
         action.put("x", x);
         action.put("y", y);
-        action.put("button", GLFW.GLFW_MOUSE_BUTTON_LEFT);
+        action.put("button", InputConstants.MOUSE_BUTTON_LEFT);
         action.put("modifiers", 0);
         action.put("doubleClick", false);
         action.put("mouseClickedHandled", clicked);
@@ -1753,7 +1747,7 @@ final class GuideGraphicalRegressionProbe {
     private void press(String key) {
         Button button = findButton(key, true);
         require(button != null, "Actual visible enabled native button unavailable: " + key);
-        button.onPress(new KeyEvent(GLFW.GLFW_KEY_ENTER, 0, 0));
+        button.onPress(GuideNativeInput.keyEvent(InputConstants.KEY_RETURN, 0));
         recordAction("native-button", key);
     }
 

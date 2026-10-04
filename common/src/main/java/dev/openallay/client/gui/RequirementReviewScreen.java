@@ -13,7 +13,6 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
-import org.lwjgl.glfw.GLFW;
 import net.minecraft.network.chat.Component;
 
 /** Reviews the already checked candidate; only Continue anyway publishes it. */
@@ -324,13 +323,14 @@ public final class RequirementReviewScreen extends Screen {
 
     @Override
     public boolean keyPressed(KeyEvent event) {
-        if (event.key() == GLFW.GLFW_KEY_PAGE_DOWN || event.key() == GLFW.GLFW_KEY_PAGE_UP) {
+        GuideKeyInput input = GuideKeyInput.from(event);
+        if (input.intent() == GuideKeyIntent.PAGE_DOWN || input.intent() == GuideKeyIntent.PAGE_UP) {
             int page = Math.max(24, viewportBottom() - viewportTop() - 20);
-            scrollBy(event.key() == GLFW.GLFW_KEY_PAGE_DOWN ? page : -page);
+            scrollBy(input.intent() == GuideKeyIntent.PAGE_DOWN ? page : -page);
             return true;
         }
-        if (event.key() == GLFW.GLFW_KEY_HOME || event.key() == GLFW.GLFW_KEY_END) {
-            scrollBy(event.key() == GLFW.GLFW_KEY_HOME ? -contentHeight : contentHeight);
+        if (input.intent() == GuideKeyIntent.HOME || input.intent() == GuideKeyIntent.END) {
+            scrollBy(input.intent() == GuideKeyIntent.HOME ? -contentHeight : contentHeight);
             return true;
         }
         return super.keyPressed(event);

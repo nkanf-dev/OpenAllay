@@ -238,46 +238,21 @@ final class JeiRecipeProviderTest {
     }
 
     private static IRecipeSlotView slot(RecipeIngredientRole role, ItemStack stack) {
-        ITypedIngredient<ItemStack> ingredient = new ITypedIngredient<>() {
-            @Override
-            public IIngredientType<ItemStack> getType() {
-                return VanillaTypes.ITEM_STACK;
-            }
-
-            @Override
-            public ItemStack getIngredient() {
-                return stack;
-            }
-        };
-        return new IRecipeSlotView() {
-            @Override
-            public Stream<ITypedIngredient<?>> getAllIngredients() {
-                return Stream.of(ingredient);
-            }
-
-            @Override
-            public List<ITypedIngredient<?>> getAllIngredientsList() {
-                return List.of(ingredient);
-            }
-
-            @Override
-            public Optional<ITypedIngredient<?>> getDisplayedIngredient() {
-                return Optional.of(ingredient);
-            }
-
-            @Override
-            public RecipeIngredientRole getRole() {
-                return role;
-            }
-
-            @Override
-            public void drawHighlight(net.minecraft.client.gui.GuiGraphicsExtractor graphics, int color) {}
-
-            @Override
-            public Optional<String> getSlotName() {
-                return Optional.empty();
-            }
-        };
+        ITypedIngredient<ItemStack> ingredient = proxy(ITypedIngredient.class,
+                (self, method, args) -> switch (method.getName()) {
+                    case "getType" -> VanillaTypes.ITEM_STACK;
+                    case "getIngredient" -> stack;
+                    case "normalize" -> self;
+                    default -> defaultValue(method.getReturnType());
+                });
+        return proxy(IRecipeSlotView.class, (self, method, args) -> switch (method.getName()) {
+            case "getAllIngredients" -> Stream.of(ingredient);
+            case "getAllIngredientsList" -> List.of(ingredient);
+            case "getDisplayedIngredient" -> Optional.of(ingredient);
+            case "getRole" -> role;
+            case "getSlotName", "getTagKey" -> Optional.empty();
+            default -> defaultValue(method.getReturnType());
+        });
     }
 
     private static PlatformService platform() {

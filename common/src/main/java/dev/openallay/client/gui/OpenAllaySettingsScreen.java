@@ -1,5 +1,6 @@
 package dev.openallay.client.gui;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import dev.openallay.client.gui.settings.DiagnosticsSettingsProjection;
 import dev.openallay.client.gui.settings.ExtensionSettingsProjection;
 import dev.openallay.client.gui.settings.GeneralSettingsProjection;
@@ -13,7 +14,6 @@ import dev.openallay.client.voice.VoiceSettingsView;
 import dev.openallay.client.voice.VoiceConfig;
 import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.client.input.KeyEvent;
-import org.lwjgl.glfw.GLFW;
 import dev.openallay.client.gui.settings.HistorySettingsProjection;
 import dev.openallay.client.gui.settings.ModelProfileDraft;
 import dev.openallay.client.gui.settings.ModelReasoningSettingsProjection;
@@ -321,6 +321,7 @@ public final class OpenAllaySettingsScreen extends Screen {
 
     @Override
     public void removed() {
+        GuideTextInputFocus.release(this);
         voiceApiKeyDraft = "";
         if (!openingRequirementReview) {
             service.cancelPackagePreparation();
@@ -634,17 +635,18 @@ public final class OpenAllaySettingsScreen extends Screen {
 
     @Override
     public boolean keyPressed(KeyEvent event) {
-        if (editorMenuOpen && event.key() == GLFW.GLFW_KEY_ESCAPE) {
+        GuideKeyInput input = GuideKeyInput.from(event);
+        if (editorMenuOpen && input.intent() == GuideKeyIntent.ESCAPE) {
             editorMenuOpen = false;
             rebuildWidgets();
             return true;
         }
-        if (sectionMenuOpen && event.key() == GLFW.GLFW_KEY_ESCAPE) {
+        if (sectionMenuOpen && input.intent() == GuideKeyIntent.ESCAPE) {
             sectionMenuOpen = false;
             rebuildWidgets();
             return true;
         }
-        if (event.key() == GLFW.GLFW_KEY_ESCAPE) {
+        if (input.intent() == GuideKeyIntent.ESCAPE) {
             done();
             return true;
         }
@@ -1169,7 +1171,7 @@ public final class OpenAllaySettingsScreen extends Screen {
             cancel.active = voiceView.busy();
             y += 26;
             Button notices = voiceButton("runtime_notices", Component.empty(), x, y, w,
-                    () -> net.minecraft.util.Util.getPlatform().openPath(voiceActions.runtimeNoticesDirectory()));
+                    () -> GuideNativeDialogs.openDirectory(voiceActions.runtimeNoticesDirectory()));
             notices.setTooltip(Tooltip.create(Component.translatable(
                     "screen.openallay.settings.voice.runtime_notices.description")));
             y += 26;
@@ -1233,18 +1235,18 @@ public final class OpenAllaySettingsScreen extends Screen {
 
     private void chooseVoiceDirectory(boolean runtime) {
         String key = runtime ? "runtime_directory" : "model_directory";
-        try {
-            String selected = org.lwjgl.util.tinyfd.TinyFileDialogs.tinyfd_selectFolderDialog(
-                    Component.translatable("screen.openallay.settings.voice." + key).getString(),
-                    runtime ? voiceRuntimePath : voiceModelPath);
-            if (selected != null && !selected.isBlank()) {
-                if (runtime) voiceRuntimePath = selected;
-                else voiceModelPath = selected;
-                rebuildWidgets();
-            }
-        } catch (RuntimeException | LinkageError unavailable) {
-            localNotice = Component.translatable("screen.openallay.settings.voice.chooser_unavailable").getString();
-        }
+        GuideNativeDialogs.selectDirectory(minecraft,
+                Component.translatable("screen.openallay.settings.voice." + key).getString(),
+                runtime ? voiceRuntimePath : voiceModelPath).whenComplete((selected, failure) -> minecraft.execute(() -> {
+                    if (minecraft.gui.screen() != this) return;
+                    if (failure != null) {
+                        localNotice = Component.translatable("screen.openallay.settings.voice.chooser_unavailable").getString();
+                    } else if (selected != null && !selected.isBlank()) {
+                        if (runtime) voiceRuntimePath = selected;
+                        else voiceModelPath = selected;
+                        rebuildWidgets();
+                    }
+                }));
     }
 
     private void applyVoice() { saveVoice(false); }
@@ -4440,7 +4442,7 @@ public final class OpenAllaySettingsScreen extends Screen {
 
     public void e2ePressEscape() {
         requireE2eControls();
-        keyPressed(new KeyEvent(GLFW.GLFW_KEY_ESCAPE, 0, 0));
+        keyPressed(GuideNativeInput.keyEvent(InputConstants.KEY_ESCAPE, 0));
     }
 
     public void e2ePressBack() {
@@ -4454,7 +4456,7 @@ public final class OpenAllaySettingsScreen extends Screen {
             if (child instanceof Button button && button.visible && button.active
                     && (button.getMessage().getString().equals(label)
                             || button.getMessage().getString().startsWith(label + " · "))) {
-                button.onPress(new KeyEvent(GLFW.GLFW_KEY_ENTER, 0, 0));
+                button.onPress(GuideNativeInput.keyEvent(InputConstants.KEY_RETURN, 0));
                 return;
             }
         }

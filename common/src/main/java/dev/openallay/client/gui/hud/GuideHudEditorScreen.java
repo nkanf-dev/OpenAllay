@@ -2,6 +2,7 @@ package dev.openallay.client.gui.hud;
 
 import com.mojang.blaze3d.platform.cursor.CursorTypes;
 import dev.openallay.client.gui.OpenAllayButton;
+import dev.openallay.client.gui.GuideNativeInput;
 import dev.openallay.guide.ui.GuideDisplayConfig;
 import dev.openallay.guide.ui.GuideUiConfig;
 import dev.openallay.guide.ui.hud.GuideHudView;
@@ -229,7 +230,7 @@ public final class GuideHudEditorScreen extends Screen {
             super.mouseClicked(event, doubleClick);
             return true;
         }
-        if (event.button() == 0 && interaction.begin(width, height, event.x(), event.y())) {
+        if (GuideNativeInput.isLeftClick(event) && interaction.begin(width, height, event.x(), event.y())) {
             clearFocus();
             return true;
         }
@@ -239,7 +240,7 @@ public final class GuideHudEditorScreen extends Screen {
     @Override
     public boolean mouseDragged(MouseButtonEvent event, double dx, double dy) {
         if (interaction.active()) {
-            if (event.button() == 0 && ownerValid.getAsBoolean() && minecraft.isWindowActive()) {
+            if (GuideNativeInput.isLeftClick(event) && ownerValid.getAsBoolean() && minecraft.isWindowActive()) {
                 interaction.move(width, height, event.x(), event.y());
             } else {
                 interaction.cancel();

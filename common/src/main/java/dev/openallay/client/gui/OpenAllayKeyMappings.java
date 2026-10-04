@@ -23,7 +23,7 @@ public final class OpenAllayKeyMappings {
     }
 
     private static KeyMapping unbound(String name) {
-        return new KeyMapping(name, InputConstants.Type.KEYSYM, InputConstants.UNKNOWN.getValue(), CATEGORY);
+        return new KeyMapping(name, GuideNativeInput.keyboardType(), InputConstants.UNKNOWN.getValue(), CATEGORY);
     }
 
     private OpenAllayKeyMappings() {}

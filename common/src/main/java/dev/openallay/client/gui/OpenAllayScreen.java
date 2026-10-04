@@ -93,7 +93,6 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.Mth;
-import org.lwjgl.glfw.GLFW;
 
 /** Full-screen, non-pausing projection and intent sender for GuideService. */
 public final class OpenAllayScreen extends Screen {
@@ -459,6 +458,7 @@ public final class OpenAllayScreen extends Screen {
 
     @Override
     public void removed() {
+        GuideTextInputFocus.release(this);
         draft = composer == null ? draft : composer.getValue();
         if (subscription != null) {
             subscription.close();
@@ -509,6 +509,7 @@ public final class OpenAllayScreen extends Screen {
 
     @Override
     public boolean keyPressed(KeyEvent event) {
+        GuideKeyInput input = GuideKeyInput.from(event);
         if (voice != null && voice.enabled()
                 && voiceKeyAllowed(getFocused() == composer, sessionOverlay || overflowOpen || modelSelectorOpen)
                 && OpenAllayKeyMappings.VOICE_PTT.matches(event)) {
@@ -518,20 +519,20 @@ public final class OpenAllayScreen extends Screen {
             }
             return true;
         }
-        if (overflowOpen && event.key() == GLFW.GLFW_KEY_ESCAPE) { overflowOpen = false; return true; }
-        if (sessionOverlay && event.key() == GLFW.GLFW_KEY_ESCAPE) { sessionOverlay = false; return true; }
-        if (sessionOverlay && scrollSessionsKey(event.key())) return true;
-        if (getFocused() != composer && !detailOpen() && !modelSelectorOpen && !sessionOverlay && !overflowOpen && scrollTranscriptKey(event.key())) return true;
-        if (modelSelectorOpen && event.key() == GLFW.GLFW_KEY_ESCAPE) {
+        if (overflowOpen && input.intent() == GuideKeyIntent.ESCAPE) { overflowOpen = false; return true; }
+        if (sessionOverlay && input.intent() == GuideKeyIntent.ESCAPE) { sessionOverlay = false; return true; }
+        if (sessionOverlay && scrollSessionsKey(input.intent())) return true;
+        if (getFocused() != composer && !detailOpen() && !modelSelectorOpen && !sessionOverlay && !overflowOpen && scrollTranscriptKey(input.intent())) return true;
+        if (modelSelectorOpen && input.intent() == GuideKeyIntent.ESCAPE) {
             modelSelectorOpen = false;
             return true;
         }
         if (modelSelectorOpen
-                && (event.key() == GLFW.GLFW_KEY_UP || event.key() == GLFW.GLFW_KEY_DOWN)) {
-            moveModelSelectorCursor(event.key() == GLFW.GLFW_KEY_UP ? -1 : 1);
+                && (input.intent() == GuideKeyIntent.UP || input.intent() == GuideKeyIntent.DOWN)) {
+            moveModelSelectorCursor(input.intent() == GuideKeyIntent.UP ? -1 : 1);
             return true;
         }
-        if (modelSelectorOpen && event.isConfirmation()) {
+        if (modelSelectorOpen && input.confirmation()) {
             int choices = view.modelChoices().size();
             if (choices == 0) {
                 modelSelectorOpen = false;
@@ -541,12 +542,12 @@ public final class OpenAllayScreen extends Screen {
             }
             return true;
         }
-        if (closesDetailFirst(detailOpen(), event.key() == GLFW.GLFW_KEY_ESCAPE)) {
+        if (closesDetailFirst(detailOpen(), input.intent() == GuideKeyIntent.ESCAPE)) {
             closeDetail();
             return true;
         }
-        if (detailOpen() && getFocused() != composer && scrollDetailKey(event.key())) return true;
-        if (composer != null && getFocused() == composer && event.isPaste()) {
+        if (detailOpen() && getFocused() != composer && scrollDetailKey(input.intent())) return true;
+        if (composer != null && getFocused() == composer && input.paste()) {
             // Preserve Minecraft's text paste and selection semantics, including text+image clipboards.
             synchronizeComposerSession();
             super.keyPressed(event);
@@ -555,9 +556,9 @@ public final class OpenAllayScreen extends Screen {
         }
         ComposerKeyAction composerAction = composerKeyAction(
                 composer != null && getFocused() == composer,
-                event.isConfirmation(),
-                event.hasShiftDown(),
-                event.hasControlDownWithQuirk());
+                input.confirmation(),
+                input.shift(),
+                input.control());
         if (composerAction == ComposerKeyAction.SUBMIT) {
             submit();
             return true;
@@ -565,7 +566,7 @@ public final class OpenAllayScreen extends Screen {
         if (composerAction == ComposerKeyAction.NEWLINE) {
             return super.keyPressed(event);
         }
-        if (event.key() == GLFW.GLFW_KEY_F6) {
+        if (input.intent() == GuideKeyIntent.NEXT_CONTENT) {
             List<Hit> focusable = hits.stream()
                     .filter(hit -> (sessionOverlay ? hit.kind() == HitKind.SESSION
                             : overflowOpen ? hit.kind() == HitKind.MENU
@@ -587,7 +588,7 @@ public final class OpenAllayScreen extends Screen {
                 return true;
             }
         }
-        if (event.isConfirmation() && getFocused() == null && focusedContentId != null) {
+        if (input.confirmation() && getFocused() == null && focusedContentId != null) {
             Hit focused = hits.stream()
                     .filter(hit -> sessionOverlay ? hit.kind() == HitKind.SESSION : overflowOpen ? hit.kind() == HitKind.MENU
                             : !detailOpen() || hit.kind() == HitKind.DETAIL)
@@ -632,16 +633,16 @@ public final class OpenAllayScreen extends Screen {
         return detailOpen ? detailAction : contentAction;
     }
 
-    private boolean scrollDetailKey(int key) {
+    private boolean scrollDetailKey(GuideKeyIntent key) {
         int maximum = maximumDetailScroll();
         int page = Math.max(24, layout.detail().height() - 30);
         int target = switch (key) {
-            case GLFW.GLFW_KEY_UP -> detailScroll - 24;
-            case GLFW.GLFW_KEY_DOWN -> detailScroll + 24;
-            case GLFW.GLFW_KEY_PAGE_UP -> detailScroll - page;
-            case GLFW.GLFW_KEY_PAGE_DOWN -> detailScroll + page;
-            case GLFW.GLFW_KEY_HOME -> 0;
-            case GLFW.GLFW_KEY_END -> maximum;
+            case UP -> detailScroll - 24;
+            case DOWN -> detailScroll + 24;
+            case PAGE_UP -> detailScroll - page;
+            case PAGE_DOWN -> detailScroll + page;
+            case HOME -> 0;
+            case END -> maximum;
             default -> Integer.MIN_VALUE;
         };
         if (target == Integer.MIN_VALUE) return false;
@@ -699,7 +700,7 @@ public final class OpenAllayScreen extends Screen {
 
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
-        if (event.button() == 0) {
+        if (GuideNativeInput.isLeftClick(event)) {
             // Clear before routing. Native buttons and the input scrollbar may take focus below.
             if (!composerContains(event.x(), event.y())) clearFocus();
             if (sessionOverlay || overflowOpen) {
@@ -984,14 +985,14 @@ public final class OpenAllayScreen extends Screen {
 
     private int visibleSessionCount() { return Math.max(1, (sessionBounds().height() - 30) / 22); }
     private int maximumSessionScroll() { return Math.max(0, view.sessions().size() - visibleSessionCount()); }
-    private boolean scrollSessionsKey(int key) {
+    private boolean scrollSessionsKey(GuideKeyIntent key) {
         int target = switch (key) {
-            case GLFW.GLFW_KEY_UP -> sessionScroll - 1;
-            case GLFW.GLFW_KEY_DOWN -> sessionScroll + 1;
-            case GLFW.GLFW_KEY_PAGE_UP -> sessionScroll - visibleSessionCount();
-            case GLFW.GLFW_KEY_PAGE_DOWN -> sessionScroll + visibleSessionCount();
-            case GLFW.GLFW_KEY_HOME -> 0;
-            case GLFW.GLFW_KEY_END -> maximumSessionScroll();
+            case UP -> sessionScroll - 1;
+            case DOWN -> sessionScroll + 1;
+            case PAGE_UP -> sessionScroll - visibleSessionCount();
+            case PAGE_DOWN -> sessionScroll + visibleSessionCount();
+            case HOME -> 0;
+            case END -> maximumSessionScroll();
             default -> Integer.MIN_VALUE;
         };
         if (target == Integer.MIN_VALUE) return false;
@@ -1037,14 +1038,14 @@ public final class OpenAllayScreen extends Screen {
         return new ToolFlowOwner(service.snapshot().actorId(), view.selectedSession(), minecraft == null ? null : minecraft.level);
     }
 
-    private boolean scrollTranscriptKey(int key) {
+    private boolean scrollTranscriptKey(GuideKeyIntent key) {
         int maximum = virtualizer.maximumScroll(transcriptViewportHeight());
         int page = Math.max(20, transcriptViewportHeight() - 10);
         int next = switch (key) {
-            case GLFW.GLFW_KEY_PAGE_UP -> scroll - page;
-            case GLFW.GLFW_KEY_PAGE_DOWN -> scroll + page;
-            case GLFW.GLFW_KEY_HOME -> 0;
-            case GLFW.GLFW_KEY_END -> maximum;
+            case PAGE_UP -> scroll - page;
+            case PAGE_DOWN -> scroll + page;
+            case HOME -> 0;
+            case END -> maximum;
             default -> Integer.MIN_VALUE;
         };
         if (next == Integer.MIN_VALUE) return false;

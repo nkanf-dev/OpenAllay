@@ -35,7 +35,7 @@ final class OpenAllayScreenInputFocusContractsTest {
     void fullscreenBlursBeforeModalOrContentDispatchAndKeepsNativeDispatchLast() throws Exception {
         String screen = source("dev/openallay/client/gui/OpenAllayScreen.java");
         String click = method(screen, "public boolean mouseClicked(");
-        int left = click.indexOf("if (event.button() == 0)");
+        int left = click.indexOf("if (GuideNativeInput.isLeftClick(event))");
         int blur = click.indexOf("if (!composerContains(event.x(), event.y())) clearFocus()");
         int modal = click.indexOf("if (sessionOverlay || overflowOpen)");
         assertTrue(left >= 0 && blur > left && modal > blur);
@@ -53,7 +53,7 @@ final class OpenAllayScreenInputFocusContractsTest {
     void liteBlursBeforeScrollbarOrResultRoutingAndKeepsNativeButtonsAndInput() throws Exception {
         String screen = source("dev/openallay/client/gui/hud/GuideChatLiteScreen.java");
         String click = method(screen, "public boolean mouseClicked(");
-        int blur = click.indexOf("if (event.button() == 0 && !composerContains(event.x(), event.y())) clearFocus()");
+        int blur = click.indexOf("if (GuideNativeInput.isLeftClick(event) && !composerContains(event.x(), event.y())) clearFocus()");
         int scrollbar = click.indexOf("scrollbar.contains(event.x(), event.y())");
         assertTrue(blur >= 0 && scrollbar > blur);
         assertTrue(click.contains("draggingScrollbar = true"));

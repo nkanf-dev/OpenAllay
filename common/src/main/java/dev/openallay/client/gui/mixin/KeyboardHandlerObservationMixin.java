@@ -12,7 +12,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 /** Native handled events return before TAIL; normal menu input keeps priority. */
 @Mixin(KeyboardHandler.class)
 public abstract class KeyboardHandlerObservationMixin {
-    @Inject(method = "keyPress", at = @At("TAIL"), require = 1)
+    @Inject(method = "keyPress(JILnet/minecraft/client/input/KeyEvent;)V", at = @At("TAIL"), require = 1)
     private void openallay$guideAfterNativeMenuKey(long handle, int action, KeyEvent event, CallbackInfo callback) {
         Minecraft client = Minecraft.getInstance();
         if (handle == client.getWindow().handle()) ObservationMenuKeyHandler.afterUnhandledKey(client, action, event);
