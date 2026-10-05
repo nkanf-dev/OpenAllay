@@ -19,6 +19,8 @@ on:
       - "gradlew*"
       - "scripts/plan-ci-verification.py"
       - "scripts/test_plan_ci_verification.py"
+      - "scripts/run-ci-software-graphics.py"
+      - "scripts/test_ci_software_graphics.py"
       - ".github/workflows/minecraft-native.yml"
   workflow_dispatch:
     inputs:
@@ -68,7 +70,9 @@ jobs:
           persist-credentials: false
 
       - name: Test selective job and artifact-source decisions
-        run: python3 -B -m unittest discover -s scripts -p 'test_plan_ci_verification.py'
+        run: |
+          python3 -B -m unittest discover -s scripts -p 'test_plan_ci_verification.py'
+          python3 -B -m unittest discover -s scripts -p 'test_ci_software_graphics.py'
 
       - name: Select exact failed or affected jobs
         id: plan
@@ -277,7 +281,7 @@ jobs:
       - name: Install headless software graphics and lossless image tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 libopenal1 webp
+          sudo apt-get install -y xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 libegl-mesa0 mesa-utils libvulkan1 mesa-vulkan-drivers vulkan-tools libopenal1 webp
           python3 -m venv build/ci-tools
           build/ci-tools/bin/python -m pip install Pillow==11.3.0
 
@@ -291,7 +295,10 @@ jobs:
 
       - name: Run key native compatibility scenarios
         run: |
-          xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24" python3 -B scripts/run-ci-game-workflow.py --loader "${{ matrix.loader }}" --minecraft-target "${{ matrix.target }}" --java "$JAVA_HOME/bin/java" --batch-id "smoke-${{ github.sha }}-${{ matrix.loader }}" --scenarios builder-restricted builder-cancel ui-stop
+          xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24 +extension GLX +render -noreset" --error-file="$PWD/build/ci-xvfb.log" \
+            python3 -B scripts/run-ci-software-graphics.py --loader "${{ matrix.loader }}" --minecraft-target "${{ matrix.target }}" \
+            --minecraft-root "$PWD/build/e2e/runtime/${{ matrix.target }}/minecraft" --output "$PWD/build/ci-graphics/${{ matrix.target }}-${{ matrix.loader }}" -- \
+            python3 -B scripts/run-ci-game-workflow.py --loader "${{ matrix.loader }}" --minecraft-target "${{ matrix.target }}" --java "$JAVA_HOME/bin/java" --batch-id "smoke-${{ github.sha }}-${{ matrix.loader }}" --scenarios builder-restricted builder-cancel ui-stop
 
       - name: Preserve compact native evidence
         if: always()
@@ -309,6 +316,9 @@ jobs:
             build/ci-verification/*.json
             build/ci-client-production/SHA256SUMS
             build/ci-runtime-receipt.json
+            build/ci-xvfb.log
+            build/ci-graphics/${{ matrix.target }}-${{ matrix.loader }}/*.json
+            build/ci-graphics/${{ matrix.target }}-${{ matrix.loader }}/*.log.gz
             build/e2e/runtime/${{ matrix.target }}/minecraft/.provision/*.json
             build/e2e/runtime/${{ matrix.target }}/minecraft/.provision/*.log
             build/e2e/ci-client/${{ matrix.loader }}/smoke-${{ github.sha }}-${{ matrix.loader }}/summary.json
