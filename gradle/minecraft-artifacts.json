@@ -194,6 +194,17 @@
         "1.20.3"
       ],
       "publishing": false
+    },
+    {
+      "loaders": [
+        "fabric",
+        "neoforge"
+      ],
+      "buildTarget": "1.20.2",
+      "targets": [
+        "1.20.2"
+      ],
+      "publishing": false
     }
   ]
 }
