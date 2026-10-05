@@ -64,7 +64,7 @@ class PlanTest(unittest.TestCase):
     def test_default_full_native_and_only_six_key_smokes(self):
         plan = self.plan()
         self.assertEqual(list(planner.NATIVE_TARGETS), plan["native_targets"])
-        self.assertEqual(15, len(plan["native_targets"]))
+        self.assertEqual(16, len(plan["native_targets"]))
         self.assertEqual(6, len(plan["smoke_matrix"]["include"]))
         self.assertNotIn("26.2", plan["native_targets"])
         self.assertTrue(all(row["source_sha"] == self.source_sha for row in plan["smoke_targets"]))
@@ -78,7 +78,7 @@ class PlanTest(unittest.TestCase):
         self.assertEqual("999", plan["smoke_targets"][0]["source_run_id"])
 
     def test_rejects_unknown_profile_and_profile_outside_native_representatives(self):
-        for value in ("bogus", "../26.3", "1.20.5", "26.2"):
+        for value in ("bogus", "../26.3", "26.2"):
             with self.subTest(value=value), self.assertRaises(ValueError):
                 self.plan(value, "none")
         (self.root / "gradle/minecraft-targets/26.3.properties").unlink()
