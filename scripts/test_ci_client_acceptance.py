@@ -71,7 +71,8 @@ class Simulator:
             (directory / "client.log").write_text("mock client log; not real Minecraft\n")
             (directory / "trace.json").write_text('{"synthetic":true}')
             (directory / "screenshots").mkdir()
-            (directory / "screenshots/11-native-world-builds.png").write_bytes(PNG)
+            final_name = "10-wide-about.png" if scenario in ("ui-stop", "ui-provider-failure") else "11-native-world-builds.png"
+            (directory / "screenshots" / final_name).write_bytes(PNG)
             game = Path(manifest["gameDirectory"])
             (game / "saves" / manifest["world"]).mkdir(parents=True, exist_ok=True)
             (game / "saves" / manifest["world"] / "level.dat").write_bytes(b"unit-test-world")
@@ -388,6 +389,18 @@ class ClientAcceptanceTests(unittest.TestCase):
         runner.write_json(directory / "launch.json", {"gameDirectory": str(self.repo / "user-world")})
         with self.assertRaisesRegex(ValueError, "build/e2e"):
             runner.retain_evidence({}, directory, self.repo)
+
+    def test_builder_native_pass_without_final_frame_cannot_pass_ci(self):
+        directory = self.repo / "build/e2e/missing-final"
+        directory.mkdir(parents=True)
+        report_path = directory / "report.json"
+        runner.write_json(report_path, {"scenario": "builder-disabled", "outcome": "COMPLETED",
+                                        "nativeAcceptance": {"outcome": "PASSED"}})
+        launcher = runner.load_launcher(REFERENCE_REPO)
+        manifest = {"scenario": "builder-disabled", "report": str(report_path),
+                    "screenshots": str(directory / "screenshots")}
+        with self.assertRaisesRegex(ValueError, "final PNG"):
+            runner.validate_run(directory, manifest, launcher)
 
     def test_wrong_report_scenario_is_not_a_native_pass(self):
         directory = self.repo / "build/e2e/unit"

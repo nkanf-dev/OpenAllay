@@ -337,6 +337,8 @@ def validate_run(directory, manifest, launcher):
         report = launcher.validate_report(manifest["report"])
     if report.get("scenario") != manifest["scenario"]:
         raise ValueError("Actual report scenario differs from the launched scenario")
+    if not manifest.get("uiCapture"):
+        launcher.validate_final_screenshot(manifest)
     return report
 
 

@@ -865,7 +865,15 @@ def validate_live_ux_receipts(report):
 
 
 def validate_final_screenshot(manifest):
-    final_name = "25-native-world-final.png" if manifest.get("professionalScreenshots") else "11-native-world-builds.png"
+    if manifest.get("professionalScreenshots"):
+        final_name = "25-native-world-final.png"
+    elif manifest.get("scenario") in ("ui-stop", "ui-provider-failure"):
+        # These UI-only flows finish the actual native settings matrix at stage 11.
+        # They never execute the Builder world screenshot stage; terminal outcome
+        # and cancellation facts remain independently required by validate_ui_capture.
+        final_name = "10-wide-about.png"
+    else:
+        final_name = "11-native-world-builds.png"
     screenshots = list(Path(manifest["screenshots"]).rglob(final_name))
     if len(screenshots) != 1 or screenshots[0].read_bytes()[:8] != b"\x89PNG\r\n\x1a\n":
         raise ValueError("Screenshot matrix did not retain its final PNG capture")
@@ -961,8 +969,7 @@ def launch_prepared(path, repo=REPO):
         print("UI evidence capture completed; actual terminal outcome " + report["outcome"] + ": " + manifest["report"], flush=True)
     else:
         validate_report(manifest["report"])
-        if manifest.get("professionalScreenshots"):
-            validate_final_screenshot(manifest)
+        validate_final_screenshot(manifest)
         print("Packaged Builder native acceptance PASSED: " + manifest["report"], flush=True)
 
 

@@ -626,6 +626,8 @@ class PackagedBuilderLauncherTests(unittest.TestCase):
                                                  "--gradle-cache", str(cache), "--java", str(java)])
             output, prior = launcher.prepare(args, repo)
             launcher.write_json(output / "report.json", {"outcome": "COMPLETED", "nativeAcceptance": {"outcome": "PASSED"}})
+            (output / "screenshots").mkdir()
+            (output / "screenshots/11-native-world-builds.png").write_bytes(b"\x89PNG\r\n\x1a\nmock native final")
             process = unittest.mock.Mock(pid=12345)
             process.wait.return_value = 0
             with patch.object(launcher.subprocess, "Popen", return_value=process) as start, \
@@ -903,11 +905,35 @@ class PackagedBuilderLauncherTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "terminal outcome"):
                 launcher.validate_ui_capture(manifest)
 
+    def test_final_native_frame_matches_the_actual_ui_or_builder_producer(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            screenshots = root / "screenshots"
+            screenshots.mkdir()
+            png = b"\x89PNG\r\n\x1a\nsynthetic frame, not a game proof"
+            for scenario, expected in (("ui-stop", "10-wide-about.png"),
+                                       ("ui-provider-failure", "10-wide-about.png"),
+                                       ("builder-disabled", "11-native-world-builds.png"),
+                                       ("builder-acceptance", "11-native-world-builds.png"),
+                                       ("builder-reload", "11-native-world-builds.png")):
+                with self.subTest(scenario=scenario):
+                    manifest = {"scenario": scenario, "screenshots": str(screenshots)}
+                    with self.assertRaisesRegex(ValueError, "final PNG"):
+                        launcher.validate_final_screenshot(manifest)
+                    path = screenshots / expected
+                    path.write_bytes(png)
+                    launcher.validate_final_screenshot(manifest)
+                    path.unlink()
+            # A Builder world image is not a UI terminal matrix image.
+            (screenshots / "11-native-world-builds.png").write_bytes(png)
+            with self.assertRaisesRegex(ValueError, "final PNG"):
+                launcher.validate_final_screenshot({"scenario": "ui-stop", "screenshots": str(screenshots)})
+
     def test_ui_stop_requires_actual_accepted_cancellation(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             (root / "screenshots").mkdir()
-            (root / "screenshots/11-native-world-builds.png").write_bytes(b"\x89PNG\r\n\x1a\nretained capture")
+            (root / "screenshots/10-wide-about.png").write_bytes(b"\x89PNG\r\n\x1a\nretained capture")
             report = root / "report.json"
             manifest = {"report": str(report), "screenshots": str(root / "screenshots"), "scenario": "ui-stop"}
             launcher.write_json(report, {"outcome": "CANCELLED"})
