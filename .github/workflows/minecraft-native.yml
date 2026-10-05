@@ -47,11 +47,17 @@ jobs:
           java_version=$(python3 scripts/minecraft-target.py --target "$OPENALLAY_MINECRAFT_TARGET" --property java_version)
           printf 'java_version=%s\n' "$java_version" >> "$GITHUB_OUTPUT"
 
-      - name: Set up target Java
+      - name: Set up compiler toolchains and build JVM
         uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
         with:
           distribution: temurin
-          java-version: ${{ steps.target.outputs.java_version }}
+          # Loom runs on a modern JVM. Source toolchains/release and package checks
+          # still enforce each game's actual Java floor; test tooling uses Java 21.
+          # setup-java selects the last installed version as JAVA_HOME.
+          java-version: |
+            17
+            21
+            25
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
@@ -71,3 +77,16 @@ jobs:
 
       - name: Verify native package engine identity and metadata
         run: python3 -B scripts/verify-native-target-package.py --target "$OPENALLAY_MINECRAFT_TARGET"
+
+      - name: Retain native packages and build reports
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: native-${{ matrix.target }}-${{ github.sha }}
+          retention-days: 7
+          if-no-files-found: ignore
+          path: |
+            fabric/build/libs/*.jar
+            neoforge/build/libs/*.jar
+            build/reports/problems/
+            common/build/reports/
