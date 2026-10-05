@@ -24,6 +24,8 @@ class QualityPlanTest(unittest.TestCase):
         self.root = Path(self.temporary.name)
         self.write("common/src/main/java/Feature.java", "production before\n")
         self.write("distribution/extensions.lock.json", "pinned Builder before\n")
+        for owner in planner.shared.MAINLINE_SELECTION_OWNERS:
+            self.write(owner, (ROOT / owner).read_text())
         self.git("init", "--quiet")
         self.git("config", "user.name", "Offline fixture")
         self.git("config", "user.email", "offline@example.invalid")

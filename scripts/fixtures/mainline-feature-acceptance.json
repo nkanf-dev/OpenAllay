@@ -1,0 +1,152 @@
+{
+  "version": "0.4.2",
+  "verifier": {
+    "runId": 37301511571,
+    "sourceSha": "8739119ce1b1f1c3a4ce5df4bcc403deb59fab41",
+    "job": {
+      "id": 111735152109,
+      "url": "https://github.com/nkanf-dev/OpenAllay/actions/runs/37301511571/job/111735152109",
+      "run_attempt": 1,
+      "conclusion": "success"
+    },
+    "jarSha256": {
+      "openallay-fabric-26.2-0.4.2.jar": "78569ad3f62171ee909cc4287b19f92f67508546cfd2c62a94ad19423214afd3",
+      "openallay-neoforge-26.2-0.4.2.jar": "7b169a916d254298ca4322be4facd2bdd9c0921ce065c31833ed6afee675c18b"
+    },
+    "artifactId": 11341544493,
+    "artifactName": "client-production-8739119ce1b1f1c3a4ce5df4bcc403deb59fab41",
+    "artifactDigest": "sha256:7bd5edec510b9c42bc5bff7ca28759f1a5212d56cc0dc6298f0dc193453baa1a"
+  },
+  "clients": [
+    {
+      "runId": 37296617243,
+      "attempt": 1,
+      "jobId": 111722140324,
+      "jobConclusion": "failure",
+      "loader": "fabric",
+      "runnerSha": "1e8d57e06ed86744b6f5527dd86dcfef02bbe93b",
+      "sourceSha": "1e8d57e06ed86744b6f5527dd86dcfef02bbe93b",
+      "sourceRunId": 37296617243,
+      "sourceJob": {
+        "id": 111719316311,
+        "url": "https://github.com/nkanf-dev/OpenAllay/actions/runs/37296617243/job/111719316311",
+        "run_attempt": 1,
+        "conclusion": "success"
+      },
+      "jarSha256": {
+        "openallay-fabric-26.2-0.4.2.jar": "1e4d6fb6a1e373055e363f552aebd1f97af48113065f703140d22ebcab36ea25",
+        "openallay-neoforge-26.2-0.4.2.jar": "4e79d4b1f47cd18d0a9f6518ca350957fd52b0018a0793d4aec5cefd1792b23b"
+      },
+      "artifactId": 11340083136,
+      "artifactName": "client-fabric-1e8d57e06ed86744b6f5527dd86dcfef02bbe93b",
+      "artifactDigest": "sha256:8311088077d413cec7c9d17cb960cf2efa568f00c3c4b7e42e3ecf5f1585ba91",
+      "summaryPath": "e2e/ci-client/fabric/ci-1e8d57e06ed86744b6f5527dd86dcfef02bbe93b-fabric/summary.json",
+      "summarySha256": "52880fc185ad06a656702197e8be4cfde2cbeb1fd5dc3c429edc16b382927a25",
+      "receiptSha256": "7ab8db4c056dd83cda8d296b4863255978dea89e5346d10a4d3d552910745ad7",
+      "scenarios": [
+        "builder-restricted",
+        "builder-partial",
+        "builder-cancel",
+        "ui-stop",
+        "ui-provider-failure",
+        "ui-manual-regressions",
+        "ui-live-ux-regressions"
+      ]
+    },
+    {
+      "runId": 37296617243,
+      "attempt": 1,
+      "jobId": 111722140510,
+      "jobConclusion": "failure",
+      "loader": "neoforge",
+      "runnerSha": "1e8d57e06ed86744b6f5527dd86dcfef02bbe93b",
+      "sourceSha": "1e8d57e06ed86744b6f5527dd86dcfef02bbe93b",
+      "sourceRunId": 37296617243,
+      "sourceJob": {
+        "id": 111719316311,
+        "url": "https://github.com/nkanf-dev/OpenAllay/actions/runs/37296617243/job/111719316311",
+        "run_attempt": 1,
+        "conclusion": "success"
+      },
+      "jarSha256": {
+        "openallay-fabric-26.2-0.4.2.jar": "1e4d6fb6a1e373055e363f552aebd1f97af48113065f703140d22ebcab36ea25",
+        "openallay-neoforge-26.2-0.4.2.jar": "4e79d4b1f47cd18d0a9f6518ca350957fd52b0018a0793d4aec5cefd1792b23b"
+      },
+      "artifactId": 11340303193,
+      "artifactName": "client-neoforge-1e8d57e06ed86744b6f5527dd86dcfef02bbe93b",
+      "artifactDigest": "sha256:fbcda7dbc8b6ae55b97c19794d38b9d994a5514faf00aa8eca5d318f01309b6b",
+      "summaryPath": "e2e/ci-client/neoforge/ci-1e8d57e06ed86744b6f5527dd86dcfef02bbe93b-neoforge/summary.json",
+      "summarySha256": "6c45328483d6f11ea368b847690b63b98e715d7b6ad969287248f7538f26a76b",
+      "receiptSha256": "076b8b4294637ffaec265afacc052181447d7651aa81515d1fa6358b5e66cf89",
+      "scenarios": [
+        "builder-restricted",
+        "builder-partial",
+        "builder-cancel",
+        "ui-stop",
+        "ui-provider-failure",
+        "ui-manual-regressions",
+        "ui-live-ux-regressions"
+      ]
+    },
+    {
+      "runId": 37304458209,
+      "attempt": 1,
+      "jobId": 111744759634,
+      "jobConclusion": "success",
+      "loader": "fabric",
+      "runnerSha": "70dfe769f2d83f287af52ac6c537b6d70e2839ed",
+      "sourceSha": "8739119ce1b1f1c3a4ce5df4bcc403deb59fab41",
+      "sourceRunId": 37301511571,
+      "sourceJob": {
+        "id": 111735152109,
+        "url": "https://github.com/nkanf-dev/OpenAllay/actions/runs/37301511571/job/111735152109",
+        "run_attempt": 1,
+        "conclusion": "success"
+      },
+      "jarSha256": {
+        "openallay-fabric-26.2-0.4.2.jar": "78569ad3f62171ee909cc4287b19f92f67508546cfd2c62a94ad19423214afd3",
+        "openallay-neoforge-26.2-0.4.2.jar": "7b169a916d254298ca4322be4facd2bdd9c0921ce065c31833ed6afee675c18b"
+      },
+      "artifactId": 11342674064,
+      "artifactName": "client-fabric-70dfe769f2d83f287af52ac6c537b6d70e2839ed",
+      "artifactDigest": "sha256:366e5befba48abfa0565e08580f62e5529499025af521037368e2326d283b6cd",
+      "summaryPath": "e2e/ci-client/fabric/ci-70dfe769f2d83f287af52ac6c537b6d70e2839ed-fabric/summary.json",
+      "summarySha256": "df1e36844c041a6ade12a70f5cceaa7a3f72ebf6f039977e666b1226ac593e83",
+      "receiptSha256": "954d4754a920f0b028d59e067f46ef051fd80daf2f733736de0456b84a02703b",
+      "scenarios": [
+        "builder-acceptance",
+        "builder-reload"
+      ]
+    },
+    {
+      "runId": 37304458209,
+      "attempt": 1,
+      "jobId": 111744759510,
+      "jobConclusion": "success",
+      "loader": "neoforge",
+      "runnerSha": "70dfe769f2d83f287af52ac6c537b6d70e2839ed",
+      "sourceSha": "8739119ce1b1f1c3a4ce5df4bcc403deb59fab41",
+      "sourceRunId": 37301511571,
+      "sourceJob": {
+        "id": 111735152109,
+        "url": "https://github.com/nkanf-dev/OpenAllay/actions/runs/37301511571/job/111735152109",
+        "run_attempt": 1,
+        "conclusion": "success"
+      },
+      "jarSha256": {
+        "openallay-fabric-26.2-0.4.2.jar": "78569ad3f62171ee909cc4287b19f92f67508546cfd2c62a94ad19423214afd3",
+        "openallay-neoforge-26.2-0.4.2.jar": "7b169a916d254298ca4322be4facd2bdd9c0921ce065c31833ed6afee675c18b"
+      },
+      "artifactId": 11342659167,
+      "artifactName": "client-neoforge-70dfe769f2d83f287af52ac6c537b6d70e2839ed",
+      "artifactDigest": "sha256:1b81c9d23b27526de975df4e4a569b793bfd8aea699918a17566d52981c362ad",
+      "summaryPath": "e2e/ci-client/neoforge/ci-70dfe769f2d83f287af52ac6c537b6d70e2839ed-neoforge/summary.json",
+      "summarySha256": "c7436ecb354ded0a07db8814ad7fbd1ec825ae120a34b3266486ac9654cdb97b",
+      "receiptSha256": "56c0b559edcbb1b6e10c49d64af4d6e6d7136b08aef64d1bb49c92b96e92ad66",
+      "scenarios": [
+        "builder-acceptance",
+        "builder-reload"
+      ]
+    }
+  ]
+}

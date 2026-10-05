@@ -28,6 +28,7 @@ NON_PACKAGE_FILES = {
     "scripts/fixtures/minecraft-launch/README.md",
 }
 NON_PACKAGE_RUNNERS = {
+    "scripts/fixtures/mainline-feature-acceptance.json", "scripts/verify-minecraft-binary-intervals.py",
     "scripts/plan-ci-verification.py", "scripts/plan-quality-verification.py", "scripts/prepare-ci-diagnostics.py",
     "scripts/prepare-ci-minecraft-runtime.py", "scripts/run-ci-client-acceptance.py",
     "scripts/run-ci-game-workflow.py", "scripts/run-packaged-builder-acceptance.py",
@@ -107,6 +108,94 @@ def package_input_changed(path, target):
     if profile and profile.group(1) != target:
         return False  # Gradle reads only the selected target tuple.
     return True
+
+
+# Bounded to the current mainline recipe. These owners select only the 26.2
+# roots and never invoke the isolated early NeoForge build. Any owner edit
+# other than the exact module-path rename makes this proof unavailable.
+MAINLINE_SELECTION_OWNERS = (
+    "settings.gradle", "gradle/minecraft-targets.gradle", "gradle/minecraft-source-family.gradle",
+    "build-logic/src/main/groovy/multiloader-loader.gradle", "common/build.gradle",
+    "fabric/build.gradle", "neoforge/build.gradle", "scripts/compile-native-target.py",
+)
+FIXTURE_BRIDGE = {
+    "common/src/main/java/dev/openallay/guide/e2e/GuideBuilderE2EProbe.java":
+        ("b83bada8eabadc9b02c7e7fd0042bb361fd0d7eb", "967658ccc323379eaf7c13b7382e1ba476cc04a4"),
+    "common/src/main/java/dev/openallay/guide/e2e/GuideClientE2EController.java":
+        ("547ca254c43a042c46bd1587dd0a3c07ce8b102d", "4491dd00306488751b0ff84ad585a1cb6c44dbeb"),
+    "common/src/main/java/dev/openallay/guide/e2e/GuideProbeWorldSettings.java":
+        ("61dc3b454ff811d09a1baa5c93522b7220a840b1", "60fae2153f90856c27cd69922416258be77f6f85"),
+}
+
+
+def mainline_path(path):
+    return path.replace("adapters/minecraft-26.2/", "adapters/minecraft/")
+
+
+def mainline_text(text):
+    return text.replace("adapters:minecraft-26.2", "adapters:minecraft")
+
+
+def git_tree(root, sha):
+    entries = {}
+    for record in git(root, "ls-tree", "-r", "-z", sha).split("\0"):
+        if not record:
+            continue
+        metadata, path = record.split("\t", 1)
+        mode, kind, blob = metadata.split()
+        canonical = mainline_path(path)
+        if canonical in entries:
+            raise ValueError("competing renamed module paths: " + canonical)
+        entries[canonical] = (mode, kind, blob, path)
+    return entries
+
+
+def validate_mainline_closure(root, source_sha, candidate_sha, *, fixture_bridge=False):
+    """Exact current 26.2 closure only; never claim JAR byte equivalence."""
+    source_sha, candidate_sha = commit_sha(root, source_sha), commit_sha(root, candidate_sha)
+    before, after = git_tree(root, source_sha), git_tree(root, candidate_sha)
+    rename_owners = {"settings.gradle", "fabric/build.gradle", "neoforge/build.gradle",
+                     "gradle/early-neoforge-inputs.gradle"}
+    for owner in MAINLINE_SELECTION_OWNERS:
+        left = git(root, "show", source_sha + ":" + owner)
+        right = git(root, "show", candidate_sha + ":" + owner)
+        if (mainline_text(left) if owner in rename_owners else left) != (mainline_text(right) if owner in rename_owners else right):
+            raise ValueError("unproved 26.2 selection owner change: " + owner)
+    # The exact selection map is read from both immutable commits, not HEAD files.
+    selector = git(root, "show", source_sha + ":gradle/minecraft-targets.gradle")
+    families = re.search(r"def nativeFamilies = \[(.*?)\]", selector)
+    parents = re.search(r"def nativeFamilyParents = \[(.*?)\]", selector)
+    if not families or not parents:
+        raise ValueError("unproved current native family map")
+    pairs = lambda match: dict(re.findall(r"'([^']+)': '([^']+)'", match.group(1)))
+    if pairs(families).get("26.2") != "26.2" or "26.2" in pairs(parents):
+        raise ValueError("26.2 closure has inherited native families")
+    changed, fixture_changes = [], []
+    for path in sorted(before.keys() | after.keys()):
+        left, right = before.get(path), after.get(path)
+        if left and right and left[:3] == right[:3]:
+            continue
+        changed.append(path)
+        if not package_input_changed(path, "26.2") or path == "adapters/minecraft/README.md":
+            continue
+        if left and right and left[:2] == right[:2] and path in rename_owners:
+            if mainline_text(git(root, "show", source_sha + ":" + left[3])) == mainline_text(git(root, "show", candidate_sha + ":" + right[3])):
+                continue
+        target = re.fullmatch(r"(?:common|fabric|neoforge)/src/targets/([^/]+)/.+", path)
+        if target and target.group(1) != "26.2":
+            continue  # Only 26.2, with no parent families, is selected by the verified owners.
+        if path.startswith("native-builds/early-neoforge/") or path in {
+                "gradle/capture-early-neoforge-pipeline.init.gradle", "scripts/capture-early-neoforge-pipeline.py"}:
+            continue  # Isolated old-target recipe; verified owners do not include/invoke it on 26.2.
+        if (fixture_bridge and path in FIXTURE_BRIDGE and left and right
+                and left[:2] == right[:2] == ("100644", "blob")
+                and (left[2], right[2]) == FIXTURE_BRIDGE[path]):
+            fixture_changes.append(path)
+            continue
+        raise ValueError("unproved 26.2 behavior/package input change: " + (right or left)[3])
+    return {"sourceSha": source_sha, "candidateSha": candidate_sha, "target": "26.2",
+            "changedPaths": changed, "reviewedFixtureOnlyBridge": fixture_changes,
+            "productionBehaviorInputs": "identical", "binaryByteEquivalence": "not-claimed"}
 
 
 def validate_source_job(run, jobs, run_id, source_sha, repository, target, run_head_sha=None, *,

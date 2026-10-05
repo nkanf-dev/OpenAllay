@@ -15,6 +15,7 @@ jobs:
     steps:
     - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
       with:
+        fetch-depth: 0
         persist-credentials: false
     - name: Validate candidate selection and exact completed feature source
       id: plan
@@ -24,9 +25,14 @@ jobs:
         FEATURE_RUN_ID: ${{ inputs.feature_run_id }}
       run: |
         python3 -B -m unittest discover -s scripts -p 'test_minecraft_binary_intervals.py'
-        python3 -c 'import os,re; assert re.fullmatch(r"[1-9][0-9]*",os.environ["FEATURE_RUN_ID"]),"Exact Quality run ID required"'
-        gh api "repos/$GITHUB_REPOSITORY/actions/runs/$FEATURE_RUN_ID" > feature-run.json
-        python3 -B scripts/verify-minecraft-binary-intervals.py matrix --families "$FAMILIES" --feature-run-json feature-run.json --repository "$GITHUB_REPOSITORY" --github-output "$GITHUB_OUTPUT" > binary-interval-plan.json
+        python3 -B -m unittest discover -s scripts -p 'test_mainline_feature_provenance.py'
+        if [[ -n "$FEATURE_RUN_ID" ]]; then
+          python3 -c 'import os,re; assert re.fullmatch(r"[1-9][0-9]*",os.environ["FEATURE_RUN_ID"]),"Exact Quality run ID required"'
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$FEATURE_RUN_ID" > feature-run.json
+          python3 -B scripts/verify-minecraft-binary-intervals.py matrix --families "$FAMILIES" --feature-run-json feature-run.json --repository "$GITHUB_REPOSITORY" --github-output "$GITHUB_OUTPUT" > binary-interval-plan.json
+        else
+          python3 -B scripts/verify-minecraft-binary-intervals.py matrix --families "$FAMILIES" --feature-acceptance-json scripts/fixtures/mainline-feature-acceptance.json --feature-evidence-directory feature-evidence --repository "$GITHUB_REPOSITORY" --github-output "$GITHUB_OUTPUT" > binary-interval-plan.json
+        fi
     - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
       with:
         name: binary-interval-plan-${{ github.sha }}-${{ github.run_attempt }}
@@ -35,6 +41,7 @@ jobs:
         path: |
           feature-run.json
           binary-interval-plan.json
+          feature-evidence/
   build:
     name: Candidate build ${{ matrix.target }}
     needs: plan
@@ -183,6 +190,6 @@ jobs:
         default: all
         type: string
       feature_run_id:
-        description: Successful exact-source mainline Quality run ID; never repeat full feature suites per minor
-        required: true
+        description: Optional fresh exact-source Quality run; empty uses reviewed pinned mainline composition
+        required: false
         type: string

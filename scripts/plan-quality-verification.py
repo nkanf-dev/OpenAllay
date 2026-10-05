@@ -60,9 +60,7 @@ def make_plan(root, mode, client_loaders, *, candidate_sha, current_run_id, repo
             raise ValueError("reuse must identify a prior artifact run, not this run")
         changed = [path for path in shared.git(root, "diff", "--name-only", "--no-renames", "-z",
                                                source_sha, candidate_sha, "--").split("\0") if path]
-        blocked = [path for path in changed if shared.package_input_changed(path, TARGET)]
-        if blocked:
-            raise ValueError("cannot reuse 26.2: changed package inputs: " + ", ".join(blocked))
+        shared.validate_mainline_closure(root, source_sha, candidate_sha)
         if source_run is None or source_jobs is None:
             source_run = json.loads(shared.command("gh", "api", "repos/" + repository + "/actions/runs/" + source_run_id))
             pages = json.loads(shared.command("gh", "api", "--paginate", "--slurp", "repos/" + repository

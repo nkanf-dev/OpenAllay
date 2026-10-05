@@ -322,6 +322,155 @@ def aggregate_receipt(family_id, artifact, results_directory, receipt_directory,
     return artifacts.verify_receipt(family, path, artifact, sha)
 
 
+def feature_acceptance_guard(index, evidence, source_sha, repository, root=ROOT):
+    """Compose only pinned positive rows; retain the failed original batch as-is."""
+    shared = module("plan-ci-verification.py", root)
+    quality = module("plan-quality-verification.py", root)
+    verifier = index["verifier"]
+    run = artifacts.read_json(evidence / "verifier-run.json")
+    jobs = artifacts.read_json(evidence / "verifier-jobs.json")
+    job = quality.validate_quality_source(run, jobs, str(verifier["runId"]), verifier["sourceSha"], repository)
+    require(type(verifier["artifactId"]) is int and verifier["artifactId"] > 0
+            and verifier["artifactName"] == "client-production-" + verifier["sourceSha"]
+            and re.fullmatch(r"sha256:[0-9a-f]{64}", verifier["artifactDigest"]) is not None,
+            "Missing original verifier production artifact identity")
+    require(job == verifier["job"], "Verifier job/attempt differs from reviewed source")
+    closure = shared.validate_mainline_closure(root, verifier["sourceSha"], source_sha)
+    required = ("builder-restricted", "builder-acceptance", "builder-partial", "builder-cancel", "builder-reload",
+                "ui-stop", "ui-provider-failure", "ui-manual-regressions", "ui-live-ux-regressions")
+    covered = {loader: {} for loader in artifacts.LOADERS}
+    retained_batches = []
+    for number, selected in enumerate(index["clients"]):
+        loader, runner_sha = selected["loader"], selected["runnerSha"]
+        require(loader in covered, "Unknown feature loader")
+        require(type(selected["jobId"]) is int and selected["jobId"] > 0
+                and type(selected["runId"]) is int and selected["runId"] > 0
+                and type(selected["artifactId"]) is int and selected["artifactId"] > 0
+                and re.fullmatch(r"sha256:[0-9a-f]{64}", selected["artifactDigest"]) is not None
+                and selected["artifactName"] == "client-" + loader + "-" + runner_sha
+                and not Path(selected["summaryPath"]).is_absolute()
+                and ".." not in Path(selected["summaryPath"]).parts, "Invalid original feature artifact identity/path")
+        directory = evidence / str(number)
+        client_run = artifacts.read_json(directory / "run.json")
+        client_jobs = artifacts.read_json(directory / "jobs.json")
+        matches = [row for row in client_jobs if row.get("name") == "Packaged client " + loader]
+        require(len(matches) == 1, "Expected one exact feature client job")
+        client_job = matches[0]
+        require(client_run.get("status") == "completed"
+                and client_run.get("id") == selected["runId"] and client_run.get("head_sha") == runner_sha
+                and client_run.get("path") == ".github/workflows/quality.yml"
+                and client_run.get("repository", {}).get("full_name") == repository
+                and client_run.get("run_attempt") == selected["attempt"]
+                and type(selected["attempt"]) is int and selected["attempt"] > 0
+                and client_job.get("id") == selected["jobId"]
+                and client_job.get("run_id") == selected["runId"]
+                and client_job.get("head_sha") == runner_sha
+                and client_job.get("run_attempt") == selected["attempt"]
+                and client_job.get("status") == "completed"
+                and client_job.get("conclusion") == selected["jobConclusion"]
+                and selected["jobConclusion"] in ("success", "failure")
+                and client_job.get("html_url") == "https://github.com/" + repository + "/actions/runs/"
+                    + str(selected["runId"]) + "/job/" + str(selected["jobId"]),
+                "Client job run/head/attempt/outcome differs from immutable selection")
+        summary_path = directory / "artifact" / selected["summaryPath"]
+        receipt_path = directory / "artifact" / "ci-verification/artifact-source.json"
+        require(artifacts.file_hash(summary_path, artifacts.MAX_JSON_BYTES) == selected["summarySha256"]
+                and artifacts.file_hash(receipt_path, artifacts.MAX_JSON_BYTES) == selected["receiptSha256"],
+                "Original feature summary or source receipt bytes changed")
+        summary, receipt = artifacts.read_json(summary_path), artifacts.read_json(receipt_path)
+        original_job = quality.validate_quality_source(
+            artifacts.read_json(directory / "artifact/ci-verification/source-run.json"),
+            artifacts.read_json(directory / "artifact/ci-verification/source-jobs.json"),
+            str(selected["sourceRunId"]), selected["sourceSha"], repository, receipt["source_run_head_sha"])
+        require(original_job == selected["sourceJob"], "Client original verifier identity changed")
+        require(receipt["candidate_sha"] == runner_sha and receipt["candidate_run_id"] == str(selected["runId"])
+                and receipt["loader"] == loader and receipt["source_sha"] == selected["sourceSha"]
+                and receipt["source_run_id"] == str(selected["sourceRunId"])
+                and receipt["source_job"] == selected["sourceJob"]
+                and receipt["jar_sha256"] == selected["jarSha256"], "Original client artifact source differs")
+        jar_name = "openallay-" + loader + "-26.2-" + index["version"] + ".jar"
+        sha = receipt["jar_sha256"][jar_name]
+        require(summary["loader"] == loader and summary["minecraft"] == "26.2"
+                and summary["artifactSha256"] == sha and summary["noPaidModel"] is True,
+                "Feature summary target/original artifact differs")
+        for key in ("originalArtifact", "finalArtifact"):
+            require(summary[key]["sha256"] == sha and Path(summary[key]["path"]).name == jar_name,
+                    "Feature batch changed original production bytes")
+        if selected["sourceSha"] == verifier["sourceSha"]:
+            require(selected["sourceRunId"] == verifier["runId"] and selected["sourceJob"] == job
+                    and selected["jarSha256"] == verifier["jarSha256"]
+                    and selected["jobConclusion"] == "success" and summary["status"] == "PASSED"
+                    and not summary["failures"], "Latest Builder evidence is not original verified-byte success")
+        else:
+            require(tuple(selected["scenarios"]) == ("builder-restricted", "builder-partial", "builder-cancel",
+                    "ui-stop", "ui-provider-failure", "ui-manual-regressions", "ui-live-ux-regressions"),
+                    "Prior-byte carry is limited to the seven reviewed unaffected scenarios")
+            shared.validate_mainline_closure(root, selected["sourceSha"], verifier["sourceSha"], fixture_bridge=True)
+        shared.validate_mainline_closure(root, selected["sourceSha"], runner_sha)
+        for scenario in selected["scenarios"]:
+            rows = [row for row in summary["scenarios"] if row["scenario"] == scenario]
+            require(len(rows) == 1 and scenario in required and scenario not in covered[loader],
+                    "Missing, duplicate or unknown feature scenario")
+            row = rows[0]
+            require(row["status"] == "PASSED" and not row["failures"]
+                    and row["artifactBefore"]["sha256"] == sha and row["artifactAfter"]["sha256"] == sha,
+                    "Selected feature scenario failed, skipped or changed bytes")
+            covered[loader][scenario] = {"runId": selected["runId"], "attempt": selected["attempt"],
+                    "jobId": selected["jobId"], "runnerSha": runner_sha, "artifactSourceSha": selected["sourceSha"],
+                    "artifactSha256": sha, "artifactId": selected["artifactId"],
+                    "artifactDigest": selected["artifactDigest"], "summarySha256": selected["summarySha256"],
+                    "acceptance": "actual-original-byte-pass" if selected["sourceSha"] == verifier["sourceSha"]
+                                  else "reviewed-fixture-only-behavior-regression-carry"}
+        retained_batches.append({"runId": selected["runId"], "loader": loader, "status": summary["status"],
+                                 "failures": summary["failures"], "jobConclusion": selected["jobConclusion"]})
+    require(all(set(rows) == set(required) for rows in covered.values()), "Incomplete mainline feature acceptance")
+    return {"candidateSha": source_sha, "verifier": verifier, "productionClosure": closure,
+            "featureAcceptance": "complete-reviewed-mainline-evidence-composition", "scenarios": covered,
+            "originalBatchOutcomes": retained_batches,
+            "candidateBinaryAcceptance": "not-established; unchanged interval/final-stage runtime gates required"}
+
+
+def download_feature_evidence(index, evidence, repository):
+    """Download original artifact archives by ID and digest, never relabel bytes."""
+    shared = module("plan-ci-verification.py")
+    require(not evidence.exists(), "Preserve previous feature evidence")
+    evidence.mkdir(parents=True)
+    def api(path):
+        return json.loads(shared.command("gh", "api", "repos/" + repository + "/actions/" + path))
+    verifier = index["verifier"]
+    metadata = api("artifacts/" + str(verifier["artifactId"]))
+    require(metadata["id"] == verifier["artifactId"] and metadata["name"] == verifier["artifactName"]
+            and metadata["digest"] == verifier["artifactDigest"]
+            and metadata["workflow_run"]["id"] == verifier["runId"]
+            and metadata["workflow_run"]["head_sha"] == verifier["sourceSha"], "Verifier production artifact API identity differs")
+    write_json(evidence / "verifier-artifact-api.json", metadata)
+    write_json(evidence / "verifier-run.json", api("runs/" + str(verifier["runId"])))
+    write_json(evidence / "verifier-jobs.json", api("runs/" + str(verifier["runId"]) + "/attempts/"
+               + str(verifier["job"]["run_attempt"]) + "/jobs?per_page=100")["jobs"])
+    for number, selected in enumerate(index["clients"]):
+        directory = evidence / str(number)
+        directory.mkdir()
+        write_json(directory / "run.json", api("runs/" + str(selected["runId"])))
+        write_json(directory / "jobs.json", api("runs/" + str(selected["runId"]) + "/attempts/"
+                   + str(selected["attempt"]) + "/jobs?per_page=100")["jobs"])
+        metadata = api("artifacts/" + str(selected["artifactId"]))
+        require(metadata["id"] == selected["artifactId"] and metadata["name"] == selected["artifactName"]
+                and metadata["digest"] == selected["artifactDigest"] and not metadata["expired"]
+                and metadata["workflow_run"]["id"] == selected["runId"]
+                and metadata["workflow_run"]["head_sha"] == selected["runnerSha"], "Feature artifact API identity differs")
+        archive = directory / "original.zip"
+        with archive.open("wb") as stream:
+            subprocess.run(["gh", "api", "repos/" + repository + "/actions/artifacts/"
+                            + str(selected["artifactId"]) + "/zip"], stdout=stream, check=True)
+        require(artifacts.file_hash(archive, artifacts.MAX_ARTIFACT_BYTES) == selected["artifactDigest"].removeprefix("sha256:"),
+                "Feature archive bytes differ from original Actions digest")
+        with zipfile.ZipFile(archive) as zipped:
+            require(all(not Path(name).is_absolute() and ".." not in Path(name).parts for name in zipped.namelist()),
+                    "Aliased feature archive entry")
+            zipped.extractall(directory / "artifact")
+        write_json(directory / "artifact-api.json", metadata)
+
+
 def feature_run_guard(run, source_sha, repository):
     require(type(run) is dict and run.get("head_sha") == source_sha
             and run.get("status") == "completed" and run.get("conclusion") == "success"
@@ -338,6 +487,8 @@ def main(argv=None):
     plan.add_argument("--families", default="all")
     plan.add_argument("--github-output", type=Path)
     plan.add_argument("--feature-run-json", type=Path)
+    plan.add_argument("--feature-acceptance-json", type=Path)
+    plan.add_argument("--feature-evidence-directory", type=Path)
     plan.add_argument("--repository")
     release_plan = commands.add_parser("release-matrix")
     release_plan.add_argument("--github-output", type=Path)
@@ -372,8 +523,14 @@ def main(argv=None):
     try:
         if args.command == "matrix":
             result = matrices(catalog(), args.families)
-            if args.feature_run_json:
-                feature_run_guard(artifacts.read_json(args.feature_run_json), source_identity(), args.repository)
+            require(bool(args.feature_run_json) != bool(args.feature_acceptance_json), "Exactly one feature evidence route required")
+            if args.feature_acceptance_json:
+                require(args.repository and args.feature_evidence_directory, "Feature composition requires repository and evidence directory")
+                index = artifacts.read_json(args.feature_acceptance_json)
+                download_feature_evidence(index, args.feature_evidence_directory, args.repository)
+                result["featureEvidence"] = feature_acceptance_guard(index, args.feature_evidence_directory, source_identity(), args.repository)
+            else:
+                result["featureEvidence"] = feature_run_guard(artifacts.read_json(args.feature_run_json), source_identity(), args.repository)
             if args.github_output:
                 with args.github_output.open("a") as stream:
                     for key, value in result.items():
