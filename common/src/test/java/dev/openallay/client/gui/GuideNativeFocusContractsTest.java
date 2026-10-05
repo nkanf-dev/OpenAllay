@@ -11,7 +11,7 @@ final class GuideNativeFocusContractsTest {
     @Test
     void defaultFocusPortKeepsNativeScreenClearAndFloorUsesTheSameTypedPathOperations() throws Exception {
         String main = source("common/src/main/java/dev/openallay/client/gui/GuideNativeFocus.java");
-        String floor = source("common/src/targets/1.20.1/java/dev/openallay/client/gui/GuideNativeFocus.java");
+        String floor = source("common/src/targets/1.20.2/java/dev/openallay/client/gui/GuideNativeFocus.java");
         assertTrue(main.contains("public static void clear(Screen screen)"));
         assertTrue(main.contains("screen.clearFocus();"));
         assertFalse(main.contains("getCurrentFocusPath()"));

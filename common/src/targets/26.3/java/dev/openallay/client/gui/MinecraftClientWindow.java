@@ -6,57 +6,60 @@ import net.minecraft.client.gui.components.toasts.ToastManager;
 import net.minecraft.client.gui.screens.Overlay;
 import net.minecraft.client.gui.screens.Screen;
 
-/** Native client window ownership and HUD access for the Minecraft 26.1 family. */
+/** Native client window ownership and HUD access for the Minecraft 26.3 family. */
 public final class MinecraftClientWindow {
     private MinecraftClientWindow() {}
 
     /** Programmatic native resize. Each binding completes its own window notification contract. */
     public static void setWindowed(Minecraft minecraft, int width, int height) {
         minecraft.getWindow().setWindowed(width, height);
+        // SDL setMode refreshes framebuffer dimensions before its queued resize event.
+        // Finish the same native notification now, before this frame's GUI extraction.
+        minecraft.framebufferSizeChanged();
     }
 
 
     public static Screen screen(Minecraft minecraft) {
-        return minecraft.screen;
+        return minecraft.gui.screen();
     }
 
     public static void setScreen(Minecraft minecraft, Screen screen) {
-        minecraft.setScreen(screen);
+        minecraft.gui.setScreen(screen);
     }
 
     public static Overlay overlay(Minecraft minecraft) {
-        return minecraft.getOverlay();
+        return minecraft.gui.overlay();
     }
 
     public static boolean canInterruptScreen(Minecraft minecraft) {
-        return !((MinecraftTeardownState) minecraft).openallay$teardownInProgress();
+        return minecraft.gui.canInterruptScreen();
     }
 
     public static boolean hudHidden(Minecraft minecraft) {
-        return minecraft.options.hideGui;
+        return minecraft.gui.hud.isHidden();
     }
 
     public static boolean debugScreenVisible(Minecraft minecraft) {
-        return minecraft.gui.getDebugOverlay().showDebugScreen();
+        return minecraft.gui.hud.getDebugOverlay().showDebugScreen();
     }
 
     public static void extractDeferredSubtitles(Minecraft minecraft, GuideGraphics graphics) {
-        GuideNativeSubtitleRender.render(minecraft, graphics.nativeGraphics());
+        minecraft.gui.hud.extractDeferredSubtitles();
     }
 
     public static ToastManager toastManager(Minecraft minecraft) {
-        return minecraft.getToastManager();
+        return minecraft.gui.toastManager();
     }
 
     public static RenderTarget mainRenderTarget(Minecraft minecraft) {
-        return minecraft.getMainRenderTarget();
+        return minecraft.gameRenderer.mainRenderTarget();
     }
-    public static net.minecraft.client.Camera camera(Minecraft client) { return client.gameRenderer.getMainCamera(); }
+    public static net.minecraft.client.Camera camera(Minecraft client) { return client.gameRenderer.mainCamera(); }
+    public static net.minecraft.client.renderer.state.GameRenderState renderState(Minecraft client) { return client.gameRenderer.gameRenderState(); }
     public static void showScreen(Minecraft minecraft, Screen screen) {
-        minecraft.forceSetScreen(screen);
+        minecraft.setScreenAndShow(screen);
     }
     public static boolean isInGameUi(Minecraft minecraft, Screen screen) {
-        return screen instanceof GuideNativeScreen guide ? guide.isInGameUi()
-                : minecraft.level != null && !screen.isPauseScreen();
+        return screen.isInGameUi();
     }
 }

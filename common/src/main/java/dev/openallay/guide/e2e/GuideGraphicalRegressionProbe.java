@@ -99,6 +99,9 @@ final class GuideGraphicalRegressionProbe {
     private String liveReaderAnchor;
     private CompletableFuture<Integer> liveTransportRelease;
     private String liveToastQuestion;
+    private OpenAllayScreen liveHeaderOwner;
+    private Object liveHeaderWidget;
+    private long liveHeaderFrame;
     private NativeScreenTransition<Screen> liveGuideReopen;
     private LiveGuideReopenOwner liveGuideReopenOwner;
     private record LiveGuideReopenOwner(GuideChatLiteScreen reader,
@@ -209,7 +212,7 @@ final class GuideGraphicalRegressionProbe {
             case 0 -> {
                 requireLoopbackFixture();
                 require("zh_cn".equals(client.options.languageCode), "Chinese language must be prepared before launch");
-                client.getWindow().setWindowed(850, 480);
+                MinecraftClientWindow.setWindowed(client, 850, 480);
                 OpenAllayKeyMappings.INTERACT_HUD.setKey(GuideNativeInput.keyboardType().getOrCreate(InputConstants.KEY_F8));
                 KeyMapping.resetMapping();
                 report.put("interactKeyDuring", OpenAllayKeyMappings.INTERACT_HUD.saveString());
@@ -514,7 +517,7 @@ final class GuideGraphicalRegressionProbe {
                 require(expectedName.equals(settings.snapshot().display().assistantName()), "ESC lost the dirty name");
                 exits.add(Map.of("entry", "nativeEscape", "savedName", expectedName, "ackBeforeClose", true));
                 checkpoint("exit-escape-saved", true);
-                client.getWindow().setWindowed(320, 480);
+                MinecraftClientWindow.setWindowed(client, 320, 480);
                 press("screen.openallay.settings.short");
                 advance();
             }
@@ -535,7 +538,7 @@ final class GuideGraphicalRegressionProbe {
                 require(expectedName.equals(settings.snapshot().display().assistantName()), "Native Back lost the dirty name");
                 exits.add(Map.of("entry", "nativeBackButton", "savedName", expectedName, "ackBeforeClose", true));
                 checkpoint("exit-back-saved", true);
-                client.getWindow().setWindowed(850, 480);
+                MinecraftClientWindow.setWindowed(client, 850, 480);
                 press("screen.openallay.settings.short");
                 advance();
             }
@@ -855,7 +858,7 @@ final class GuideGraphicalRegressionProbe {
                 require("key.keyboard.f8".equals(OpenAllayKeyMappings.INTERACT_HUD.saveString()),
                         "Fresh native profile must retain the new F8 default without a harness override");
                 liveHeaderName = settings.snapshot().display().assistantName();
-                client.getWindow().setWindowed(850, 480);
+                MinecraftClientWindow.setWindowed(client, 850, 480);
                 OpenAllayKeyMappings.VOICE_PTT.setKey(GuideNativeInput.keyboardType().getOrCreate(InputConstants.KEY_V));
                 KeyMapping.resetMapping();
                 openGuide.accept(service);
@@ -868,7 +871,7 @@ final class GuideGraphicalRegressionProbe {
                 checkpoint("live-01-initial-character-focus", true);
                 clickAt(guide(), 1, 1, "blank-outside-composer");
                 require(guide().getFocused() != composer(), "Blank click did not blur native text input");
-                client.getWindow().setWindowed(900, 540);
+                MinecraftClientWindow.setWindowed(client, 900, 540);
                 advance();
             }
             case 2 -> {
@@ -1214,13 +1217,59 @@ final class GuideGraphicalRegressionProbe {
                 if (toastRequest == null || !toastRequest.terminal()) { waitFor("real gameplay toast task completion"); return; }
                 validateLiveRequest(toastRequest);
                 require(liveHeaderName.equals(settings.snapshot().display().assistantName()), "Live UI scenario changed assistant full name");
-                JsonObject header = jsonReceipt(guide(), "e2eHeaderReceipt");
+                OpenAllayScreen owner = guide();
+                require(liveHeaderOwner == null || liveHeaderOwner == owner,
+                        "Live terminal header screen owner was replaced");
+                Object title = readField(owner, "headerTitleWidget");
+                long frame = number(jsonReceipt(owner, "e2eToolsReceipt"), "lastNativeFrame");
+                if (liveHeaderOwner == null || liveHeaderWidget != title) {
+                    liveHeaderOwner = owner;
+                    liveHeaderWidget = title;
+                    liveHeaderFrame = frame;
+                }
+                JsonObject header = jsonReceipt(owner, "e2eHeaderReceipt");
+                Map<String, Object> terminalHeader = liveTerminalHeaderDiagnostic(owner, title, frame, header);
+                report.put("liveTerminalHeader", terminalHeader);
+                // Terminal projection can recreate HeaderTitle on this end-tick, before extraction.
+                // Wait for this exact widget, not an old screen/header or a fabricated visible verdict.
+                if (frame <= liveHeaderFrame || readField(title, "paintedTitle") == null) {
+                    report.put("liveTerminalHeaderAwaitingExtraction", terminalHeader);
+                    waitFor("current terminal header native extraction"); return;
+                }
                 require(header.get("fullVisible").getAsBoolean(), "Live header clipped the existing full title");
                 stage = 39; stageWait = 0;
             }
             case 39, 40 -> runStage();
             default -> throw new IllegalStateException("Unknown live native stage " + stage);
         }
+    }
+
+    /** Read-only state at the terminal header assertion, including unpainted-widget waits. */
+    private Map<String, Object> liveTerminalHeaderDiagnostic(
+            OpenAllayScreen owner, Object title, long frame, JsonObject header) {
+        var window = client.getWindow();
+        var layout = (dev.openallay.guide.ui.GuideUiLayout) readField(owner, "layout");
+        Map<String, Object> receipt = new LinkedHashMap<>();
+        receipt.put("stage", stage);
+        receipt.put("capturedAt", Instant.now().toString());
+        receipt.put("requestId", toastRequest.requestId().toString());
+        receipt.put("requestStatus", toastRequest.status().name());
+        receipt.put("screenIdentity", System.identityHashCode(owner));
+        receipt.put("titleWidgetIdentity", System.identityHashCode(title));
+        receipt.put("nativeExtractionFrame", frame);
+        receipt.put("terminalWidgetFrameFence", liveHeaderFrame);
+        receipt.put("titleExtracted", readField(title, "paintedTitle") != null);
+        receipt.put("screenWidth", owner.width);
+        receipt.put("screenHeight", owner.height);
+        receipt.put("guiWidth", window.getGuiScaledWidth());
+        receipt.put("guiHeight", window.getGuiScaledHeight());
+        receipt.put("windowLogicalWidth", window.getScreenWidth());
+        receipt.put("windowLogicalHeight", window.getScreenHeight());
+        receipt.put("framebufferWidth", window.getWidth());
+        receipt.put("framebufferHeight", window.getHeight());
+        receipt.put("titleBounds", layout.header().title());
+        receipt.put("header", header);
+        return Map.copyOf(receipt);
     }
 
     /** Reopen once. Observation capture/custody/release can install the owner on later client turns. */
@@ -2006,7 +2055,7 @@ final class GuideGraphicalRegressionProbe {
 
     private void restoreKey() {
         client.options.guiScale().set(originalGuiScale);
-        client.getWindow().setWindowed(originalWindowWidth, originalWindowHeight);
+        MinecraftClientWindow.setWindowed(client, originalWindowWidth, originalWindowHeight);
         report.put("windowRestorationRequested", Map.of("width", originalWindowWidth, "height", originalWindowHeight,
                 "guiScale", client.options.guiScale().get(), "originalGuiScaleRestored", client.options.guiScale().get() == originalGuiScale));
         OpenAllayKeyMappings.VOICE_PTT.setKey(originalPttKey);

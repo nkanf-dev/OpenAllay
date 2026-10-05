@@ -161,6 +161,37 @@ def pure_subtitle_accessor(text):
             and re.search(r'@(Accessor|Invoker)\("[^"]+"\).*;', text) is not None)
 
 
+def immediate_1211_frame_contract(text):
+    """Exact callback boundaries; official 1.21.1 render has one final flush, not two."""
+    text = re.sub(r"/\*.*?\*/|//[^\r\n]*", "", text, flags=re.DOTALL)
+    compact = lambda value: re.sub(r"\s+", "", value)
+    method = 'method="render(Lnet/minecraft/client/DeltaTracker;Z)V"'
+    constructor = ('Lnet/minecraft/client/gui/GuiGraphics;<init>'
+                   '(Lnet/minecraft/client/Minecraft;'
+                   'Lnet/minecraft/client/renderer/MultiBufferSource$BufferSource;)V')
+    expected = {
+        "worldFrame": (method + ',at=@At(value="INVOKE",target="' + constructor
+                       + '",shift=At.Shift.AFTER),require=1', "beforeGui"),
+        "gameUiFrame": (method + ',at=@At(value="INVOKE",'
+                        'target="Lnet/minecraft/client/gui/GuiGraphics;flush()V",'
+                        'ordinal=0,shift=At.Shift.AFTER),require=1', "afterGui")}
+    callbacks = re.findall(
+        r"@Inject\((.*?)\)\s*private\s+void\s+openallay\$(\w+)"
+        r"\(([^)]*)\)\s*\{([^{}]*)\}", text, re.DOTALL)
+    if len(callbacks) != 2 or {name for _, name, _, _ in callbacks} != expected.keys():
+        return False
+    for annotation, name, parameters, body in callbacks:
+        selector, capture = expected[name]
+        if (compact(annotation) != selector
+                or compact(parameters) != "DeltaTrackerdeltaTracker,booleanadvanceGameTime,CallbackInfocallback"
+                or compact(body) != ("MinecraftClientViewCapture." + capture
+                                     + "(Minecraft.getInstance(),advanceGameTime);")):
+            return False
+    return ("@Mixin(GameRenderer.class)" in compact(text)
+            and "import net.minecraft.client.DeltaTracker;" in text
+            and len(re.findall(r"@Inject\(", text)) == 2)
+
+
 class MinecraftTargetMixinHelpersTest(unittest.TestCase):
     def source(self, path):
         return source(path)
@@ -399,6 +430,49 @@ class MinecraftTargetMixinHelpersTest(unittest.TestCase):
         both = {"one.json": {"package": package, "mixins": ["Active"], "server": ["Unused"]}}
         self.assertEqual(({"demo.mixin.Active", "demo.mixin.Unused"}, {}),
                          configured_bindings(java, both, texts.__getitem__))
+
+    def test_1_21_1_frame_hooks_use_sole_final_flush_and_keep_native_capture_admission(self):
+        relative = "dev/openallay/client/gui/mixin/GameRendererObservationMixin.java"
+        expected = ROOT / "common/src/targets/1.21.1/java" / relative
+        for target in ("1.21", "1.21.1"):
+            with self.subTest(target=target):
+                java = selected_files(ROOT, "common", target, "java")
+                self.assertEqual(expected, java[relative])
+                text = self.source(java[relative])
+                self.assertTrue(immediate_1211_frame_contract(text))
+                config = json.loads(self.source(selected_files(ROOT, "common", target, "resources")
+                                                ["openallay.client.mixins.json"]))
+                self.assertTrue(config["required"])
+                self.assertEqual(1, config["injectors"]["defaultRequire"])
+                self.assertIn("GameRendererObservationMixin", config["client"])
+                readback = self.source(java["dev/openallay/client/observation/MinecraftNativeImageCapture.java"])
+                self.assertIn("Screenshot.takeScreenshot(Objects.requireNonNull(target", readback)
+                self.assertIn("CompletableFuture.completedFuture(", readback)
+        # Keep the native break local: other immediate/deferred/float render families are unchanged.
+        for target in declared_map(ROOT, "nativeFamilies"):
+            if target not in ("1.21", "1.21.1"):
+                self.assertNotEqual(expected, selected_files(ROOT, "common", target, "java")[relative])
+        text = self.source(expected)
+        for old, new in (("ordinal = 0", "ordinal = 1"),
+                         ("At.Shift.AFTER", "At.Shift.BEFORE"),
+                         ('value = "INVOKE"', 'value = "TAIL"'),
+                         ('render(Lnet/minecraft/client/DeltaTracker;Z)V', 'render'),
+                         ("require = 1", "require = 0"),
+                         ("advanceGameTime);", "true);"),
+                         ("beforeGui(", "afterGui("),
+                         ("afterGui(", "beforeGui("),
+                         ("MinecraftClientViewCapture.afterGui(", "Minecraft.setScreen(")):
+            with self.subTest(mutation=new):
+                self.assertFalse(immediate_1211_frame_contract(text.replace(old, new)))
+        capture = self.source(ROOT / "common/src/main/java/dev/openallay/client/observation/MinecraftClientViewCapture.java")
+        for hook, target in (("beforeGui", "WORLD"), ("afterGui", "GAME_UI")):
+            body = re.search(r"public static void " + hook + r"\([^)]*\)\s*\{(.*?)\n    \}",
+                             capture, re.DOTALL).group(1)
+            self.assertIn("!advanceGameTime || client.level == null", body)
+            self.assertIn("GuideNativeWindowState.frameReady(client)", body)
+            self.assertIn("capture.frame(WorldViewRequest.Target." + target + ");", body)
+        self.assertIn("MinecraftNativeImageCapture.capture(nativeTarget)", capture)
+        self.assertNotIn("setScreen(", capture)
 
     def test_1_20_1_frame_admission_still_rejects_native_teardown(self):
         text = self.source(ROOT / "common/src/targets/1.20.1/java" / WINDOW_STATE)

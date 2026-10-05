@@ -321,7 +321,7 @@ final class GuideBuilderE2EProbe {
         if (javascript.isEmpty()) throw new IllegalArgumentException("Builder JavaScript Tool result is missing");
         if (!fixtureOutcomes(request, javascript))
             throw new IllegalArgumentException("Builder ordered Tool outcomes do not match the fixture contract");
-        var receipt = scalarReceipt(javascript.getLast());
+        var receipt = scalarReceipt(javascript.get(javascript.size() - 1));
         String scenario = string(receipt, "scenario");
         if (!fixtureHistory(scenario, request, javascript, receipt))
             throw new IllegalArgumentException("Builder Tool history or native receipts do not match the fixture contract");
@@ -381,7 +381,7 @@ final class GuideBuilderE2EProbe {
         for (var tool : request.tools()) if (!callIds.add(tool.invocationId())) return false;
         if (tools.size() == 1) return request.tools().stream().allMatch(GuideBuilderE2EProbe::succeeded);
         if (request.tools().size() != tools.size() + 1) return false;
-        var skill = request.tools().getFirst();
+        var skill = request.tools().get(0);
         if (!"openallay:load_skill".equals(skill.toolId()) || !succeeded(skill)
                 || !"minecraft-builder".equals(string(skill.invocationArguments(), "name"))) return false;
         for (int index = 1; index < request.tools().size(); index++)
@@ -402,7 +402,7 @@ final class GuideBuilderE2EProbe {
             if (tools.size() != 3 || !failed(tools.get(1), code)) return false;
             return standaloneHistory(scenario, tools, receipt);
         }
-        return tools.size() == 1 && succeeded(tools.getFirst());
+        return tools.size() == 1 && succeeded(tools.get(0));
     }
 
     private static boolean acceptanceHistory(List<GuideToolActivity> tools, JsonObject finalReceipt) {
@@ -552,7 +552,7 @@ final class GuideBuilderE2EProbe {
                     && "minecraft-builder".equals(string(value.invocationArguments(), "name")));
         }
         if (scenario.equals("builder-server-denied")) {
-            var tool = javascript.getLast();
+            var tool = javascript.get(javascript.size() - 1);
             return javascript.size() == 1 && failed(tool, "javascript_error")
                     && string(tool.normalized(), "message").startsWith("ReferenceError: \"Java\" is not defined.");
         }

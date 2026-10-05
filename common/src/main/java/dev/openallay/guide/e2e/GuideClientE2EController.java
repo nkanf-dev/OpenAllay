@@ -831,11 +831,11 @@ public final class GuideClientE2EController {
             case 5 -> {
                 screenshot(client, "05-wide-model-selector.png");
                 screen.closeModelSelectorForDevelopmentProbe();
-                client.getWindow().setWindowed(640, 480);
+                MinecraftClientWindow.setWindowed(client, 640, 480);
             }
             case 6 -> screenshot(client, "06-narrow-tool-detail.png");
             case 7 -> {
-                client.getWindow().setWindowed(originalWindowWidth, originalWindowHeight);
+                MinecraftClientWindow.setWindowed(client, originalWindowWidth, originalWindowHeight);
                 if (clientSettings == null) {
                     finishScreenshotProbe();
                     break;

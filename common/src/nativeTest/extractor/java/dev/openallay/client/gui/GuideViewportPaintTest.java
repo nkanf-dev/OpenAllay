@@ -184,5 +184,33 @@ final class GuideViewportPaintTest {
         assertEquals(1, entered.get());
     }
 
+    @Test void synchronousResizeNotificationMustRetireTheOldGuiViewportBeforeExtraction() {
+        // Retained crash witness: framebuffer 640x480, prior surface/gui geometry 1100x700.
+        var oldViewport = new ScreenRectangle(0, 0, 1100, 700);
+        var resizedViewport = new ScreenRectangle(0, 0, 640, 480);
+        var oldParameters = new ActiveTextCollector.Parameters(new Matrix3x2f(), 1.0F, oldViewport);
+        var staleClip = oldParameters.withScissor(900, 1000, 600, 620).scissor();
+        assertEquals(new ScreenRectangle(900, 600, 100, 20), staleClip);
+        assertEquals(0, Math.max(0, Math.min(staleClip.right(), 640) - staleClip.left()));
+        assertEquals(0, Math.max(0, Math.min(staleClip.bottom(), 480) - staleClip.top()));
+        var staleDraw = new ColoredRectangleRenderState(null, null, new Matrix3x2f(),
+                900, 600, 1000, 620, -1, -1, staleClip);
+        assertNotNull(staleDraw.bounds(), "The prior viewport admits a future zero-scissor draw");
+        var freshParameters = new ActiveTextCollector.Parameters(new Matrix3x2f(), 1.0F, resizedViewport);
+        var freshClip = freshParameters.withScissor(900, 1000, 600, 620).scissor();
+        assertEquals(ScreenRectangle.empty(), freshClip);
+        var freshDraw = new ColoredRectangleRenderState(null, null, new Matrix3x2f(),
+                900, 600, 1000, 620, -1, -1, freshClip);
+        assertNull(freshDraw.bounds());
+        var state = new GuiRenderState();
+        state.addGuiElement(freshDraw);
+        var draws = new AtomicInteger();
+        state.forEachElement(ignored -> draws.incrementAndGet(), GuiRenderState.TraverseRange.ALL);
+        assertEquals(0, draws.get(), "Native null-bounds admission rejects the offscreen draw");
+        assertEquals(new ScreenRectangle(620, 460, 20, 20),
+                freshParameters.withScissor(620, 680, 460, 520).scissor(),
+                "Partial content remains its exact visible intersection");
+    }
+
     private static ScreenRectangle viewport() { return new ScreenRectangle(0, 0, 100, 80); }
 }

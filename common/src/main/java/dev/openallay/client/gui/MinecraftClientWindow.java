@@ -10,6 +10,12 @@ import net.minecraft.client.gui.screens.Screen;
 public final class MinecraftClientWindow {
     private MinecraftClientWindow() {}
 
+    /** Programmatic native resize. Each binding completes its own window notification contract. */
+    public static void setWindowed(Minecraft minecraft, int width, int height) {
+        minecraft.getWindow().setWindowed(width, height);
+    }
+
+
     public static Screen screen(Minecraft minecraft) {
         return minecraft.gui.screen();
     }
