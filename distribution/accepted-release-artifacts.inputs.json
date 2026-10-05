@@ -1,0 +1,2034 @@
+{
+  "archives": [
+    {
+      "headSha": "77e3b8b87a876dc367a3746f9db1b1704144db0d",
+      "id": 11338055928,
+      "jobId": 111709237999,
+      "jobName": "Native 26.3",
+      "name": "compat-production-26.3-77e3b8b87a876dc367a3746f9db1b1704144db0d",
+      "runAttempt": 1,
+      "runId": 37293481461,
+      "sha256": "99a6838b33f1cc2ef5683933ae21c488a4af5963fb9292f1fdd58ae62bd26c66",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "77e3b8b87a876dc367a3746f9db1b1704144db0d",
+      "id": 11338540762,
+      "jobId": 111712670879,
+      "jobName": "Native smoke 26.3 / fabric",
+      "name": "compat-client-26.3-fabric-77e3b8b87a876dc367a3746f9db1b1704144db0d",
+      "runAttempt": 1,
+      "runId": 37293481461,
+      "sha256": "0c1eabafd1e9b51543483ca408e3da8f8b8db7d37ac38c7f49a882259d0baf6c",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "77e3b8b87a876dc367a3746f9db1b1704144db0d",
+      "id": 11338670569,
+      "jobId": 111712670925,
+      "jobName": "Native smoke 26.3 / neoforge",
+      "name": "compat-client-26.3-neoforge-77e3b8b87a876dc367a3746f9db1b1704144db0d",
+      "runAttempt": 1,
+      "runId": 37293481461,
+      "sha256": "68ec4796cf08a0c1138e63480d70b2131320af2ab5ba0d9746e5a5bf072ef310",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "afdcd1f9d184077f81ca1eb76ad564ff3f90439f",
+      "id": 11339000841,
+      "jobId": 111716600352,
+      "jobName": "Native 1.20.1",
+      "name": "compat-production-1.20.1-afdcd1f9d184077f81ca1eb76ad564ff3f90439f",
+      "runAttempt": 1,
+      "runId": 37295782567,
+      "sha256": "30d6f0da827254194d253a271ae45baa7bb492560f670a8ccefe8fe8c9ef71d9",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "afdcd1f9d184077f81ca1eb76ad564ff3f90439f",
+      "id": 11339136598,
+      "jobId": 111718986021,
+      "jobName": "Native smoke 1.20.1 / fabric",
+      "name": "compat-client-1.20.1-fabric-afdcd1f9d184077f81ca1eb76ad564ff3f90439f",
+      "runAttempt": 1,
+      "runId": 37295782567,
+      "sha256": "45b5d2b268e4ee2eaabebd4d5ccc9ada6a4869d6a9560c2abaf00a577fa0f020",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "1e8d57e06ed86744b6f5527dd86dcfef02bbe93b",
+      "id": 11340083136,
+      "jobId": 111722140324,
+      "jobName": "Packaged client fabric",
+      "name": "client-fabric-1e8d57e06ed86744b6f5527dd86dcfef02bbe93b",
+      "runAttempt": 1,
+      "runId": 37296617243,
+      "sha256": "8311088077d413cec7c9d17cb960cf2efa568f00c3c4b7e42e3ecf5f1585ba91",
+      "workflowPath": ".github/workflows/quality.yml"
+    },
+    {
+      "headSha": "afdcd1f9d184077f81ca1eb76ad564ff3f90439f",
+      "id": 11340290479,
+      "jobId": 111718986204,
+      "jobName": "Native smoke 1.20.1 / neoforge",
+      "name": "compat-client-1.20.1-neoforge-afdcd1f9d184077f81ca1eb76ad564ff3f90439f",
+      "runAttempt": 1,
+      "runId": 37295782567,
+      "sha256": "eee1d23591a991fd61dac4bf178d570100ef8b926211a3da9c3bfd3156adc9d5",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "1e8d57e06ed86744b6f5527dd86dcfef02bbe93b",
+      "id": 11340303193,
+      "jobId": 111722140510,
+      "jobName": "Packaged client neoforge",
+      "name": "client-neoforge-1e8d57e06ed86744b6f5527dd86dcfef02bbe93b",
+      "runAttempt": 1,
+      "runId": 37296617243,
+      "sha256": "fbcda7dbc8b6ae55b97c19794d38b9d994a5514faf00aa8eca5d318f01309b6b",
+      "workflowPath": ".github/workflows/quality.yml"
+    },
+    {
+      "headSha": "8739119ce1b1f1c3a4ce5df4bcc403deb59fab41",
+      "id": 11341544493,
+      "jobId": 111735152109,
+      "jobName": "Minecraft 26.2",
+      "name": "client-production-8739119ce1b1f1c3a4ce5df4bcc403deb59fab41",
+      "runAttempt": 1,
+      "runId": 37301511571,
+      "sha256": "7bd5edec510b9c42bc5bff7ca28759f1a5212d56cc0dc6298f0dc193453baa1a",
+      "workflowPath": ".github/workflows/quality.yml"
+    },
+    {
+      "headSha": "70dfe769f2d83f287af52ac6c537b6d70e2839ed",
+      "id": 11342659167,
+      "jobId": 111744759510,
+      "jobName": "Packaged client neoforge",
+      "name": "client-neoforge-70dfe769f2d83f287af52ac6c537b6d70e2839ed",
+      "runAttempt": 1,
+      "runId": 37304458209,
+      "sha256": "1b81c9d23b27526de975df4e4a569b793bfd8aea699918a17566d52981c362ad",
+      "workflowPath": ".github/workflows/quality.yml"
+    },
+    {
+      "headSha": "70dfe769f2d83f287af52ac6c537b6d70e2839ed",
+      "id": 11342674064,
+      "jobId": 111744759634,
+      "jobName": "Packaged client fabric",
+      "name": "client-fabric-70dfe769f2d83f287af52ac6c537b6d70e2839ed",
+      "runAttempt": 1,
+      "runId": 37304458209,
+      "sha256": "366e5befba48abfa0565e08580f62e5529499025af521037368e2326d283b6cd",
+      "workflowPath": ".github/workflows/quality.yml"
+    },
+    {
+      "headSha": "605beef6f1601d528ef80166abdc60aab70b05ef",
+      "id": 11343804917,
+      "jobId": 111755268973,
+      "jobName": "Candidate build 26.1",
+      "name": "binary-production-26.1-605beef6f1601d528ef80166abdc60aab70b05ef-1",
+      "runAttempt": 1,
+      "runId": 37307662453,
+      "sha256": "b0720f6de053a9a41a5fbeafc2cbf3c9c48163f0b66ca2397c36fe6557924fef",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "605beef6f1601d528ef80166abdc60aab70b05ef",
+      "id": 11344197819,
+      "jobId": 111755268899,
+      "jobName": "Candidate build 1.21.9",
+      "name": "binary-production-1.21.9-605beef6f1601d528ef80166abdc60aab70b05ef-1",
+      "runAttempt": 1,
+      "runId": 37307662453,
+      "sha256": "235c5dd74368b2346d215a85d23554f78ceaa85d279354d2fec5eaf94faa25f1",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "605beef6f1601d528ef80166abdc60aab70b05ef",
+      "id": 11344980496,
+      "jobId": 111755269039,
+      "jobName": "Candidate build 1.21.7",
+      "name": "binary-production-1.21.7-605beef6f1601d528ef80166abdc60aab70b05ef-1",
+      "runAttempt": 1,
+      "runId": 37307662453,
+      "sha256": "90b94107e414f35b41ae02602ca50c29be8b4cb709cb3971cd0d99a04565de8c",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "605beef6f1601d528ef80166abdc60aab70b05ef",
+      "id": 11345400579,
+      "jobId": 111755268874,
+      "jobName": "Candidate build 1.21.2",
+      "name": "binary-production-1.21.2-605beef6f1601d528ef80166abdc60aab70b05ef-1",
+      "runAttempt": 1,
+      "runId": 37307662453,
+      "sha256": "f67f552550840b9e1538827b36f749d42872be7798066192c5f8fcaa122ad456",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "605beef6f1601d528ef80166abdc60aab70b05ef",
+      "id": 11345450291,
+      "jobId": 111755269065,
+      "jobName": "Candidate build 1.21",
+      "name": "binary-production-1.21-605beef6f1601d528ef80166abdc60aab70b05ef-1",
+      "runAttempt": 1,
+      "runId": 37307662453,
+      "sha256": "c5c096a623f5774892de7be752d9ccc59b78c7e01b18dd4cb74c732c59977109",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "4f85b836d518e9d1986fcd4d8c528e28ce22c1d9",
+      "id": 11345634120,
+      "jobId": 111771395415,
+      "jobName": "Same JAR fabric-26.1-through-26.1.2 on 26.1",
+      "name": "binary-client-fabric-26.1-through-26.1.2-26.1-4f85b836d518e9d1986fcd4d8c528e28ce22c1d9-1",
+      "runAttempt": 1,
+      "runId": 37312555350,
+      "sha256": "fb81b1bf8a9b337660b0757b29b68ed85d30b20afc2636b6cc506c97c369eb1d",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "4f85b836d518e9d1986fcd4d8c528e28ce22c1d9",
+      "id": 11345763808,
+      "jobId": 111771395431,
+      "jobName": "Same JAR fabric-26.1-through-26.1.2 on 26.1.1",
+      "name": "binary-client-fabric-26.1-through-26.1.2-26.1.1-4f85b836d518e9d1986fcd4d8c528e28ce22c1d9-1",
+      "runAttempt": 1,
+      "runId": 37312555350,
+      "sha256": "706dd6fbd6417f0cfad2cce7759ee2247b05eff5dff94dd0cb8bafd49272a629",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "4f85b836d518e9d1986fcd4d8c528e28ce22c1d9",
+      "id": 11346249638,
+      "jobId": 111771397270,
+      "jobName": "Same JAR fabric-1.21.2-through-1.21.3 on 1.21.3",
+      "name": "binary-client-fabric-1.21.2-through-1.21.3-1.21.3-4f85b836d518e9d1986fcd4d8c528e28ce22c1d9-1",
+      "runAttempt": 1,
+      "runId": 37312555350,
+      "sha256": "79215ee8d66626267d611ab9f85ca0464066290ffecbf3ded45bd6432fa173e4",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "4f85b836d518e9d1986fcd4d8c528e28ce22c1d9",
+      "id": 11346448882,
+      "jobId": 111771395503,
+      "jobName": "Same JAR fabric-1.21.7-through-1.21.8 on 1.21.8",
+      "name": "binary-client-fabric-1.21.7-through-1.21.8-1.21.8-4f85b836d518e9d1986fcd4d8c528e28ce22c1d9-1",
+      "runAttempt": 1,
+      "runId": 37312555350,
+      "sha256": "867dece8fcdee1a976583382cae9f0c3555419df141f7f6ce988f4b50d5cf58c",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "4f85b836d518e9d1986fcd4d8c528e28ce22c1d9",
+      "id": 11346493572,
+      "jobId": 111771395393,
+      "jobName": "Same JAR fabric-1.21.9-through-1.21.10 on 1.21.10",
+      "name": "binary-client-fabric-1.21.9-through-1.21.10-1.21.10-4f85b836d518e9d1986fcd4d8c528e28ce22c1d9-1",
+      "runAttempt": 1,
+      "runId": 37312555350,
+      "sha256": "5b5786ee699c7fd6c935be38923cfdeff0d9f7c606218fb2343cfd342e63d704",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "4f85b836d518e9d1986fcd4d8c528e28ce22c1d9",
+      "id": 11346532745,
+      "jobId": 111771395518,
+      "jobName": "Same JAR fabric-26.1-through-26.1.2 on 26.1.2",
+      "name": "binary-client-fabric-26.1-through-26.1.2-26.1.2-4f85b836d518e9d1986fcd4d8c528e28ce22c1d9-1",
+      "runAttempt": 1,
+      "runId": 37312555350,
+      "sha256": "41b838b6a5c56518232736d1fed1591550d60c13cac2491507d2661c55eff8e1",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "4f85b836d518e9d1986fcd4d8c528e28ce22c1d9",
+      "id": 11346539453,
+      "jobId": 111771397942,
+      "jobName": "Same JAR neoforge-1.21.2-through-1.21.3 on 1.21.3",
+      "name": "binary-client-neoforge-1.21.2-through-1.21.3-1.21.3-4f85b836d518e9d1986fcd4d8c528e28ce22c1d9-1",
+      "runAttempt": 1,
+      "runId": 37312555350,
+      "sha256": "2ccc237ec448ba30b81c268142e09e139df696ffb174cdb3b05e2e2d50f771cc",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "4f85b836d518e9d1986fcd4d8c528e28ce22c1d9",
+      "id": 11346554460,
+      "jobId": 111771397710,
+      "jobName": "Same JAR fabric-1.21-through-1.21.1 on 1.21",
+      "name": "binary-client-fabric-1.21-through-1.21.1-1.21-4f85b836d518e9d1986fcd4d8c528e28ce22c1d9-1",
+      "runAttempt": 1,
+      "runId": 37312555350,
+      "sha256": "a00f6a3def0360742eeb2c7f615eaac98641da603a2a73cc97f17395f7814085",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "4f85b836d518e9d1986fcd4d8c528e28ce22c1d9",
+      "id": 11346693817,
+      "jobId": 111771397341,
+      "jobName": "Same JAR fabric-1.21.2-through-1.21.3 on 1.21.2",
+      "name": "binary-client-fabric-1.21.2-through-1.21.3-1.21.2-4f85b836d518e9d1986fcd4d8c528e28ce22c1d9-1",
+      "runAttempt": 1,
+      "runId": 37312555350,
+      "sha256": "9a11b6f30286fe5b4ad7fe2d68dc4eb1093764ddf18b586d2a88df2cf0075fce",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "4f85b836d518e9d1986fcd4d8c528e28ce22c1d9",
+      "id": 11346816185,
+      "jobId": 111771395619,
+      "jobName": "Same JAR fabric-1.21.7-through-1.21.8 on 1.21.7",
+      "name": "binary-client-fabric-1.21.7-through-1.21.8-1.21.7-4f85b836d518e9d1986fcd4d8c528e28ce22c1d9-1",
+      "runAttempt": 1,
+      "runId": 37312555350,
+      "sha256": "dd6f4db48b3c0abb7cb7faaf862221f08e23b75ca61a7eab1ccb906ba24c5a07",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "4f85b836d518e9d1986fcd4d8c528e28ce22c1d9",
+      "id": 11346850231,
+      "jobId": 111771395358,
+      "jobName": "Same JAR fabric-1.21.9-through-1.21.10 on 1.21.9",
+      "name": "binary-client-fabric-1.21.9-through-1.21.10-1.21.9-4f85b836d518e9d1986fcd4d8c528e28ce22c1d9-1",
+      "runAttempt": 1,
+      "runId": 37312555350,
+      "sha256": "b2218cdf7893c3f88a031080f7ff21169fc558cf343dbd87d96b9cb6cc823eb5",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "2090449bf7de44703330641b6bf23a8b869765ad",
+      "id": 11346958285,
+      "jobId": 111780162107,
+      "jobName": "Same JAR neoforge-1.21.2-through-1.21.3 on 1.21.2",
+      "name": "binary-client-neoforge-1.21.2-through-1.21.3-1.21.2-2090449bf7de44703330641b6bf23a8b869765ad-1",
+      "runAttempt": 1,
+      "runId": 37315201589,
+      "sha256": "91e0b086ca3f746d516fc0ddbe3cf37866db6258e84dea3507030a44b24edc3e",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "915ef77582deb692423deea275dfe9bf1232f057",
+      "id": 11347094899,
+      "jobId": 111785176478,
+      "jobName": "Same JAR neoforge-26.1-through-26.1.2 on 26.1.1",
+      "name": "binary-client-neoforge-26.1-through-26.1.2-26.1.1-915ef77582deb692423deea275dfe9bf1232f057-1",
+      "runAttempt": 1,
+      "runId": 37316689772,
+      "sha256": "1de5c6051bca325e9dddd2df202bada93dd44cc775afd76af5fff4df56cfb132",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "915ef77582deb692423deea275dfe9bf1232f057",
+      "id": 11347114861,
+      "jobId": 111785176400,
+      "jobName": "Same JAR neoforge-26.1-through-26.1.2 on 26.1.2",
+      "name": "binary-client-neoforge-26.1-through-26.1.2-26.1.2-915ef77582deb692423deea275dfe9bf1232f057-1",
+      "runAttempt": 1,
+      "runId": 37316689772,
+      "sha256": "4ee524f9cde8f6920db3329a786e5169eec09a9edf7a2a7c336e4e40aede2a52",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "915ef77582deb692423deea275dfe9bf1232f057",
+      "id": 11347334977,
+      "jobId": 111785176572,
+      "jobName": "Same JAR fabric-1.20.3-through-1.20.4 on 1.20.4",
+      "name": "binary-client-fabric-1.20.3-through-1.20.4-1.20.4-915ef77582deb692423deea275dfe9bf1232f057-1",
+      "runAttempt": 1,
+      "runId": 37316689772,
+      "sha256": "94303c21e87668ce28614a2fbea9ff7965fed24bacb579ac00b1c8422d415b67",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "0d888c1a85f265d0aba8d3092b1df6cf66110b97",
+      "id": 11347348669,
+      "jobId": 111781609862,
+      "jobName": "Candidate build 1.20.3",
+      "name": "binary-production-1.20.3-0d888c1a85f265d0aba8d3092b1df6cf66110b97-1",
+      "runAttempt": 1,
+      "runId": 37315631733,
+      "sha256": "94bd8c89ee67b53f3d5baff69bcb2b50b4369be295be053b5275de30ec4beb17",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "4f85b836d518e9d1986fcd4d8c528e28ce22c1d9",
+      "id": 11347370265,
+      "jobId": 111771397800,
+      "jobName": "Same JAR fabric-1.21-through-1.21.1 on 1.21.1",
+      "name": "binary-client-fabric-1.21-through-1.21.1-1.21.1-4f85b836d518e9d1986fcd4d8c528e28ce22c1d9-1",
+      "runAttempt": 1,
+      "runId": 37312555350,
+      "sha256": "b44b39b68c16d9b5a0f395f5b27fe165f2d5d780f52f33a83d0c7fa1b3660d7f",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "4f85b836d518e9d1986fcd4d8c528e28ce22c1d9",
+      "id": 11347605353,
+      "jobId": 111771398016,
+      "jobName": "Same JAR neoforge-1.21-through-1.21.1 on 1.21.1",
+      "name": "binary-client-neoforge-1.21-through-1.21.1-1.21.1-4f85b836d518e9d1986fcd4d8c528e28ce22c1d9-1",
+      "runAttempt": 1,
+      "runId": 37312555350,
+      "sha256": "1dd23eba487b4c27531e1715562fc2efd0a01c72c3169ecddeb008ef8f7fc958",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "0d888c1a85f265d0aba8d3092b1df6cf66110b97",
+      "id": 11347663185,
+      "jobId": 111781609948,
+      "jobName": "Candidate build 26.1",
+      "name": "binary-production-26.1-0d888c1a85f265d0aba8d3092b1df6cf66110b97-1",
+      "runAttempt": 1,
+      "runId": 37315631733,
+      "sha256": "2272b5572c02e25821ebbaaa438ed83187caaeaf718f3937cb694767df0a1829",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "915ef77582deb692423deea275dfe9bf1232f057",
+      "id": 11347849518,
+      "jobId": 111785176560,
+      "jobName": "Same JAR neoforge-26.1-through-26.1.2 on 26.1",
+      "name": "binary-client-neoforge-26.1-through-26.1.2-26.1-915ef77582deb692423deea275dfe9bf1232f057-1",
+      "runAttempt": 1,
+      "runId": 37316689772,
+      "sha256": "69dbe6cf92a92c05583320a630fca8c845c951cfd2166ca87927ce4dedc0a083",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "2090449bf7de44703330641b6bf23a8b869765ad",
+      "id": 11348147020,
+      "jobId": 111780162075,
+      "jobName": "Same JAR neoforge-1.21-through-1.21.1 on 1.21",
+      "name": "binary-client-neoforge-1.21-through-1.21.1-1.21-2090449bf7de44703330641b6bf23a8b869765ad-1",
+      "runAttempt": 1,
+      "runId": 37315201589,
+      "sha256": "069eee23827431fb3a068150325c8a5331ee079422de7d3bc993bc04ac0f540b",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "915ef77582deb692423deea275dfe9bf1232f057",
+      "id": 11348440569,
+      "jobId": 111785176630,
+      "jobName": "Same JAR fabric-1.20.3-through-1.20.4 on 1.20.3",
+      "name": "binary-client-fabric-1.20.3-through-1.20.4-1.20.3-915ef77582deb692423deea275dfe9bf1232f057-1",
+      "runAttempt": 1,
+      "runId": 37316689772,
+      "sha256": "ebf898077f350d33d224ea7ddf629e57cb0d49c206633f64b62e1fe30f46a286",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "906c7475ae21e0126b22cd88a4060bc695756993",
+      "id": 11348535305,
+      "jobId": 111784993514,
+      "jobName": "Candidate build 1.21.7",
+      "name": "binary-production-1.21.7-906c7475ae21e0126b22cd88a4060bc695756993-1",
+      "runAttempt": 1,
+      "runId": 37316631216,
+      "sha256": "4ce5b7f24ffbc31615488034bb5e97dc27053392931854e864370b51166706e3",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "7135e042d7244701d464f61b97f7fa0d1ae18cee",
+      "id": 11348661157,
+      "jobId": 111788491395,
+      "jobName": "Same JAR neoforge-1.21.7-through-1.21.8 on 1.21.7",
+      "name": "binary-client-neoforge-1.21.7-through-1.21.8-1.21.7-7135e042d7244701d464f61b97f7fa0d1ae18cee-1",
+      "runAttempt": 1,
+      "runId": 37317663638,
+      "sha256": "92a68ed7bc7c707f61cc47a410f4ad0bd22a78e1b5e255d8cdfbaafa2bac0996",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "f5d834c7d789096e7e8acfe0f3299a93ef4dbc23",
+      "id": 11348688389,
+      "jobId": 111793629690,
+      "jobName": "Same JAR neoforge-1.21.9-through-1.21.10 on 1.21.10",
+      "name": "binary-client-neoforge-1.21.9-through-1.21.10-1.21.10-f5d834c7d789096e7e8acfe0f3299a93ef4dbc23-1",
+      "runAttempt": 1,
+      "runId": 37319177276,
+      "sha256": "15d369163975f1e4cedee5cb8c1e9e76d6bf6e078c9a5a9b64dd77934aa54e69",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "37e5678d6e194fc4af8eb5c66ec24a391ddb433b",
+      "id": 11349002739,
+      "jobId": 111791220383,
+      "jobName": "Candidate build 1.21.9",
+      "name": "binary-production-1.21.9-37e5678d6e194fc4af8eb5c66ec24a391ddb433b-1",
+      "runAttempt": 1,
+      "runId": 37318470796,
+      "sha256": "76348d64d02ffdd7417d6e64e8d63e2a5fffbc7089e2323801361e1101ba33e9",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "7135e042d7244701d464f61b97f7fa0d1ae18cee",
+      "id": 11349071296,
+      "jobId": 111788491190,
+      "jobName": "Same JAR neoforge-1.21.7-through-1.21.8 on 1.21.8",
+      "name": "binary-client-neoforge-1.21.7-through-1.21.8-1.21.8-7135e042d7244701d464f61b97f7fa0d1ae18cee-1",
+      "runAttempt": 1,
+      "runId": 37317663638,
+      "sha256": "5452df98621fb939faf87b0d32e8c7f889ffb9afb7dff5e3e5ed023659e60c80",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "6264b8346769e1df9fa7f430aeb067cfb65b28c3",
+      "id": 11350012224,
+      "jobId": 111799292203,
+      "jobName": "Candidate build 1.20.5",
+      "name": "binary-production-1.20.5-6264b8346769e1df9fa7f430aeb067cfb65b28c3-1",
+      "runAttempt": 1,
+      "runId": 37320844096,
+      "sha256": "658f83229bc771fd9afd78b55da51c881006e8cab5760b5fa534d20e3bdafecf",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "c1b72e79f39664dd091de16a8f16fa7fc9715a99",
+      "id": 11350023976,
+      "jobId": 111805948315,
+      "jobName": "Same JAR fabric-1.21.4 on 1.21.4",
+      "name": "binary-client-fabric-1.21.4-1.21.4-c1b72e79f39664dd091de16a8f16fa7fc9715a99-1",
+      "runAttempt": 1,
+      "runId": 37322721335,
+      "sha256": "32cbf6b6df9b71299172f1ba15c0d02431ed99c1d00a39915f022cff799cca66",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "433c68fe514ca47facb814333bca640fe89de419",
+      "id": 11350154778,
+      "jobId": 111808430352,
+      "jobName": "Same JAR neoforge-1.21.11 on 1.21.11",
+      "name": "binary-client-neoforge-1.21.11-1.21.11-433c68fe514ca47facb814333bca640fe89de419-1",
+      "runAttempt": 1,
+      "runId": 37323528726,
+      "sha256": "f528ec140052db4966cd6ea25bc5fb3837ba82d2c2e5cbd2a05c4f60306a093b",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "c1b72e79f39664dd091de16a8f16fa7fc9715a99",
+      "id": 11350253487,
+      "jobId": 111805948911,
+      "jobName": "Same JAR fabric-1.20.5-through-1.20.6 on 1.20.5",
+      "name": "binary-client-fabric-1.20.5-through-1.20.6-1.20.5-c1b72e79f39664dd091de16a8f16fa7fc9715a99-1",
+      "runAttempt": 1,
+      "runId": 37322721335,
+      "sha256": "4ce0d80dafffc7d62cbc2ff799fcebfeb0d57ad6428e3f6dcff131df67482405",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "c1b72e79f39664dd091de16a8f16fa7fc9715a99",
+      "id": 11350283006,
+      "jobId": 111805948273,
+      "jobName": "Same JAR neoforge-1.20.5-through-1.20.6 on 1.20.5",
+      "name": "binary-client-neoforge-1.20.5-through-1.20.6-1.20.5-c1b72e79f39664dd091de16a8f16fa7fc9715a99-1",
+      "runAttempt": 1,
+      "runId": 37322721335,
+      "sha256": "e57eef9a6ddd0891f2de28155ed9a3de21ac1683b53d5b1531b01d176e09995f",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "6264b8346769e1df9fa7f430aeb067cfb65b28c3",
+      "id": 11350442346,
+      "jobId": 111799292143,
+      "jobName": "Candidate build 1.21.6",
+      "name": "binary-production-1.21.6-6264b8346769e1df9fa7f430aeb067cfb65b28c3-1",
+      "runAttempt": 1,
+      "runId": 37320844096,
+      "sha256": "4acf4bab3268c8f4dd3755ffc62416900e9db3859145b5fa613c6346b37ab2cc",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "c1b72e79f39664dd091de16a8f16fa7fc9715a99",
+      "id": 11350529242,
+      "jobId": 111805948409,
+      "jobName": "Same JAR fabric-1.21.5 on 1.21.5",
+      "name": "binary-client-fabric-1.21.5-1.21.5-c1b72e79f39664dd091de16a8f16fa7fc9715a99-1",
+      "runAttempt": 1,
+      "runId": 37322721335,
+      "sha256": "12b40ef956ee5975baadc258f8dd4666289df3cb41c18fa7802bf3334cd44176",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "c1b72e79f39664dd091de16a8f16fa7fc9715a99",
+      "id": 11350628191,
+      "jobId": 111805948646,
+      "jobName": "Same JAR neoforge-1.20.5-through-1.20.6 on 1.20.6",
+      "name": "binary-client-neoforge-1.20.5-through-1.20.6-1.20.6-c1b72e79f39664dd091de16a8f16fa7fc9715a99-1",
+      "runAttempt": 1,
+      "runId": 37322721335,
+      "sha256": "2f33f97537930f968d424c0d97e6d0460a3e1252dec7674fbf2f042c16fa8670",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "6264b8346769e1df9fa7f430aeb067cfb65b28c3",
+      "id": 11350686947,
+      "jobId": 111799292082,
+      "jobName": "Candidate build 1.21.5",
+      "name": "binary-production-1.21.5-6264b8346769e1df9fa7f430aeb067cfb65b28c3-1",
+      "runAttempt": 1,
+      "runId": 37320844096,
+      "sha256": "58b216b0c14f54a533cc5c19dcb85254deffca267458af3189cf5f8536175a27",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "f5d834c7d789096e7e8acfe0f3299a93ef4dbc23",
+      "id": 11350730033,
+      "jobId": 111793629741,
+      "jobName": "Same JAR neoforge-1.21.9-through-1.21.10 on 1.21.9",
+      "name": "binary-client-neoforge-1.21.9-through-1.21.10-1.21.9-f5d834c7d789096e7e8acfe0f3299a93ef4dbc23-1",
+      "runAttempt": 1,
+      "runId": 37319177276,
+      "sha256": "620732b195923618f47e9790c56642d8018cc54493168312becaa8348df3ec3b",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "433c68fe514ca47facb814333bca640fe89de419",
+      "id": 11350793361,
+      "jobId": 111808430425,
+      "jobName": "Same JAR fabric-1.21.11 on 1.21.11",
+      "name": "binary-client-fabric-1.21.11-1.21.11-433c68fe514ca47facb814333bca640fe89de419-1",
+      "runAttempt": 1,
+      "runId": 37323528726,
+      "sha256": "4bd723d2c965878f25b7ddbd1592802ace21d691123cf155f83c58be85a67183",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "6264b8346769e1df9fa7f430aeb067cfb65b28c3",
+      "id": 11350810875,
+      "jobId": 111799291874,
+      "jobName": "Candidate build 1.21.4",
+      "name": "binary-production-1.21.4-6264b8346769e1df9fa7f430aeb067cfb65b28c3-1",
+      "runAttempt": 1,
+      "runId": 37320844096,
+      "sha256": "9a81cf24f4c48f82a4db4d095cbe3affefab917aa32ff9a519fda70a69ae8bea",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "c1b72e79f39664dd091de16a8f16fa7fc9715a99",
+      "id": 11351210486,
+      "jobId": 111805948327,
+      "jobName": "Same JAR fabric-1.20.5-through-1.20.6 on 1.20.6",
+      "name": "binary-client-fabric-1.20.5-through-1.20.6-1.20.6-c1b72e79f39664dd091de16a8f16fa7fc9715a99-1",
+      "runAttempt": 1,
+      "runId": 37322721335,
+      "sha256": "7e3fd1ee7a6d4df208bb9f368522bfbe7b1e42436f7fb61300113fc85717845a",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "9283e42941cc7eea2aa8cff0498dbad96b59ae22",
+      "id": 11351290793,
+      "jobId": 111805428917,
+      "jobName": "Candidate build 1.21.11",
+      "name": "binary-production-1.21.11-9283e42941cc7eea2aa8cff0498dbad96b59ae22-1",
+      "runAttempt": 1,
+      "runId": 37322649360,
+      "sha256": "650bcd286f19da8ecfa82e86cf89af037c0a889531e2a387649017aa8409dfd8",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "c1b72e79f39664dd091de16a8f16fa7fc9715a99",
+      "id": 11351366287,
+      "jobId": 111805948469,
+      "jobName": "Same JAR fabric-1.21.6 on 1.21.6",
+      "name": "binary-client-fabric-1.21.6-1.21.6-c1b72e79f39664dd091de16a8f16fa7fc9715a99-1",
+      "runAttempt": 1,
+      "runId": 37322721335,
+      "sha256": "995521ca1c2a0f2219e2b9dc23d2cc6cd76079626efac62bae50bdb10f19bba0",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "4c2d3889cb4fbc46cf8760a583f41eac09b1fdd4",
+      "id": 11351634185,
+      "jobId": 111817689114,
+      "jobName": "Candidate build 1.21.6",
+      "name": "binary-production-1.21.6-4c2d3889cb4fbc46cf8760a583f41eac09b1fdd4-1",
+      "runAttempt": 1,
+      "runId": 37326235039,
+      "sha256": "2d5444b314387cfe25d1cc77a57fa56d9379d82f21a6ce40dcf22f519e6df720",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "4c2d3889cb4fbc46cf8760a583f41eac09b1fdd4",
+      "id": 11351789018,
+      "jobId": 111817688914,
+      "jobName": "Candidate build 1.20.4",
+      "name": "binary-production-1.20.4-4c2d3889cb4fbc46cf8760a583f41eac09b1fdd4-1",
+      "runAttempt": 1,
+      "runId": 37326235039,
+      "sha256": "a609ce0caa274e368ed75013ce73b5e51803eae4726e95b93d331aaaedeec700",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "e3c77715f0bc562f36fcf434a6696c3b3e27c6f1",
+      "id": 11352245227,
+      "jobId": 111809845298,
+      "jobName": "Candidate build 1.20.3",
+      "name": "binary-production-1.20.3-e3c77715f0bc562f36fcf434a6696c3b3e27c6f1-1",
+      "runAttempt": 1,
+      "runId": 37323889829,
+      "sha256": "99ba4f92b31b6ab201a6552f36535ab62ae10cc55a9920eb388d4d56effda529",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "42e80b3dadc1061b14f1abcd92714a667fb5c9d9",
+      "id": 11352294166,
+      "jobId": 111822556364,
+      "jobName": "Same JAR neoforge-1.21.5 on 1.21.5",
+      "name": "binary-client-neoforge-1.21.5-1.21.5-42e80b3dadc1061b14f1abcd92714a667fb5c9d9-1",
+      "runAttempt": 1,
+      "runId": 37327684375,
+      "sha256": "e81fcc0fe28df6848dc6d855d4f1f2fcf59c3c8e847e60a92ef67126f05870d0",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "42e80b3dadc1061b14f1abcd92714a667fb5c9d9",
+      "id": 11352423925,
+      "jobId": 111822556682,
+      "jobName": "Same JAR neoforge-1.21.4 on 1.21.4",
+      "name": "binary-client-neoforge-1.21.4-1.21.4-42e80b3dadc1061b14f1abcd92714a667fb5c9d9-1",
+      "runAttempt": 1,
+      "runId": 37327684375,
+      "sha256": "babc1c72c8ba46cfaf88c2d8270c51364f3a3949c844e0b3b91b1af6ea570a14",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "4c2d3889cb4fbc46cf8760a583f41eac09b1fdd4",
+      "id": 11352567067,
+      "jobId": 111817688962,
+      "jobName": "Candidate build 1.21.4",
+      "name": "binary-production-1.21.4-4c2d3889cb4fbc46cf8760a583f41eac09b1fdd4-1",
+      "runAttempt": 1,
+      "runId": 37326235039,
+      "sha256": "16c873abcc89d784f54019a6748afa08d3d1d2cf1f1b91f1ffa44a7125836728",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "4c2d3889cb4fbc46cf8760a583f41eac09b1fdd4",
+      "id": 11352621940,
+      "jobId": 111817688793,
+      "jobName": "Candidate build 1.21.5",
+      "name": "binary-production-1.21.5-4c2d3889cb4fbc46cf8760a583f41eac09b1fdd4-1",
+      "runAttempt": 1,
+      "runId": 37326235039,
+      "sha256": "7e3856dd618fec1a1e8d327c967cb260443af319c916b1247ffe3ca8c9c57033",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "e7b7be4c72d269d501b3f1af51a1dbe8b0efa68d",
+      "id": 11352939030,
+      "jobId": 111823649261,
+      "jobName": "Candidate build 1.20.2",
+      "name": "binary-production-1.20.2-e7b7be4c72d269d501b3f1af51a1dbe8b0efa68d-1",
+      "runAttempt": 1,
+      "runId": 37328001106,
+      "sha256": "86a3b35b2f5f347df5a8066dacfef9904e301f908dba07ab50d892e4856ea100",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "808bf04368e3ec09ed4d8b5a567244cd3e759b35",
+      "id": 11353085470,
+      "jobId": 111821268768,
+      "jobName": "Same JAR neoforge-1.20.3 on 1.20.3",
+      "name": "binary-client-neoforge-1.20.3-1.20.3-808bf04368e3ec09ed4d8b5a567244cd3e759b35-1",
+      "runAttempt": 1,
+      "runId": 37327292158,
+      "sha256": "9392a29aec1152a4a3fb428ebd61d8749182a9114849ab98dff4df5930087683",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "42e80b3dadc1061b14f1abcd92714a667fb5c9d9",
+      "id": 11353291120,
+      "jobId": 111822557223,
+      "jobName": "Same JAR neoforge-1.21.6 on 1.21.6",
+      "name": "binary-client-neoforge-1.21.6-1.21.6-42e80b3dadc1061b14f1abcd92714a667fb5c9d9-1",
+      "runAttempt": 1,
+      "runId": 37327684375,
+      "sha256": "c0d4a5e1d79766901c6ab851860b21767c16921d58dffdebd91dac01f4c6114f",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "42e80b3dadc1061b14f1abcd92714a667fb5c9d9",
+      "id": 11353390656,
+      "jobId": 111822556425,
+      "jobName": "Same JAR neoforge-1.20.4 on 1.20.4",
+      "name": "binary-client-neoforge-1.20.4-1.20.4-42e80b3dadc1061b14f1abcd92714a667fb5c9d9-1",
+      "runAttempt": 1,
+      "runId": 37327684375,
+      "sha256": "6628c57097b0505ceca55ec8dc5be17d4b727a9a12072087c4c1a93f302f8789",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "b70924c7317e395c65c0afdf263f2cb65d1dbda2",
+      "id": 11353846166,
+      "jobId": 111827881640,
+      "jobName": "Same JAR neoforge-1.20.2 on 1.20.2",
+      "name": "binary-client-neoforge-1.20.2-1.20.2-b70924c7317e395c65c0afdf263f2cb65d1dbda2-1",
+      "runAttempt": 1,
+      "runId": 37329238381,
+      "sha256": "9122017f0ac89f9260360ea5d9d9b1e50477d6eefc0f74173771ce1164f5e8bb",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    },
+    {
+      "headSha": "b70924c7317e395c65c0afdf263f2cb65d1dbda2",
+      "id": 11353851071,
+      "jobId": 111827881728,
+      "jobName": "Same JAR fabric-1.20.2 on 1.20.2",
+      "name": "binary-client-fabric-1.20.2-1.20.2-b70924c7317e395c65c0afdf263f2cb65d1dbda2-1",
+      "runAttempt": 1,
+      "runId": 37329238381,
+      "sha256": "d8c13e39adc3cc376a28c9b44862bb31711161c8a67292b4fd92bc01bee7e619",
+      "workflowPath": ".github/workflows/minecraft-native.yml"
+    }
+  ],
+  "families": [
+    {
+      "artifactSha256": null,
+      "engineEntries": null,
+      "familyId": "fabric-1.20.1",
+      "filename": "openallay-fabric-1.20.1-0.4.2.jar",
+      "production": {
+        "archiveId": 11339000841,
+        "path": "openallay-fabric-1.20.1-0.4.2.jar"
+      },
+      "runs": [
+        {
+          "profile": {
+            "archiveId": 11339136598,
+            "path": "e2e/runtime/1.20.1/minecraft/.provision/fabric-runtime.json"
+          },
+          "result": null,
+          "sourceReceipt": {
+            "archiveId": 11339136598,
+            "path": "ci-verification/artifact-source.json"
+          },
+          "summary": {
+            "archiveId": 11339136598,
+            "path": "e2e/ci-client/fabric/smoke-afdcd1f9d184077f81ca1eb76ad564ff3f90439f-fabric/summary.json"
+          },
+          "target": "1.20.1"
+        }
+      ],
+      "sourceSha": "afdcd1f9d184077f81ca1eb76ad564ff3f90439f",
+      "stageRecord": null
+    },
+    {
+      "artifactSha256": null,
+      "engineEntries": null,
+      "familyId": "fabric-1.20.2",
+      "filename": "openallay-fabric-1.20.2-0.4.2.jar",
+      "production": {
+        "archiveId": 11352939030,
+        "path": "openallay-fabric-1.20.2-0.4.2.jar"
+      },
+      "runs": [
+        {
+          "profile": {
+            "archiveId": 11353851071,
+            "path": "e2e/runtime/1.20.2/minecraft/.provision/fabric-runtime.json"
+          },
+          "result": {
+            "archiveId": 11353851071,
+            "path": "ci-binary-interval/fabric-1.20.2-1.20.2.json"
+          },
+          "sourceReceipt": null,
+          "summary": {
+            "archiveId": 11353851071,
+            "path": "e2e/ci-client/fabric/interval-37329238381-1-1-20-2/summary.json"
+          },
+          "target": "1.20.2"
+        }
+      ],
+      "sourceSha": "e7b7be4c72d269d501b3f1af51a1dbe8b0efa68d",
+      "stageRecord": {
+        "archiveId": 11352939030,
+        "path": "build-record.json"
+      }
+    },
+    {
+      "artifactSha256": null,
+      "engineEntries": null,
+      "familyId": "fabric-26.3",
+      "filename": "openallay-fabric-26.3-0.4.2.jar",
+      "production": {
+        "archiveId": 11338055928,
+        "path": "openallay-fabric-26.3-0.4.2.jar"
+      },
+      "runs": [
+        {
+          "profile": {
+            "archiveId": 11338540762,
+            "path": "e2e/runtime/26.3/minecraft/.provision/fabric-runtime.json"
+          },
+          "result": null,
+          "sourceReceipt": {
+            "archiveId": 11338540762,
+            "path": "ci-verification/artifact-source.json"
+          },
+          "summary": {
+            "archiveId": 11338540762,
+            "path": "e2e/ci-client/fabric/smoke-77e3b8b87a876dc367a3746f9db1b1704144db0d-fabric/summary.json"
+          },
+          "target": "26.3"
+        }
+      ],
+      "sourceSha": "77e3b8b87a876dc367a3746f9db1b1704144db0d",
+      "stageRecord": null
+    },
+    {
+      "artifactSha256": "78569ad3f62171ee909cc4287b19f92f67508546cfd2c62a94ad19423214afd3",
+      "engineEntries": null,
+      "familyId": "fabric-26.2",
+      "filename": "openallay-fabric-26.2-0.4.2.jar",
+      "production": {
+        "archiveId": 11341544493,
+        "path": "openallay-fabric-26.2-0.4.2.jar"
+      },
+      "runs": [
+        {
+          "profile": {
+            "archiveId": 11342674064,
+            "path": "e2e/runtime/26.2/minecraft/.provision/fabric-runtime.json"
+          },
+          "result": null,
+          "sourceReceipt": {
+            "archiveId": 11342674064,
+            "path": "ci-verification/artifact-source.json"
+          },
+          "summary": {
+            "archiveId": 11342674064,
+            "path": "e2e/ci-client/fabric/ci-70dfe769f2d83f287af52ac6c537b6d70e2839ed-fabric/summary.json"
+          },
+          "target": "26.2"
+        }
+      ],
+      "sourceSha": "8739119ce1b1f1c3a4ce5df4bcc403deb59fab41",
+      "stageRecord": null
+    },
+    {
+      "artifactSha256": null,
+      "engineEntries": null,
+      "familyId": "neoforge-1.20.1",
+      "filename": "openallay-neoforge-1.20.1-0.4.2.jar",
+      "production": {
+        "archiveId": 11339000841,
+        "path": "openallay-neoforge-1.20.1-0.4.2.jar"
+      },
+      "runs": [
+        {
+          "profile": {
+            "archiveId": 11340290479,
+            "path": "e2e/runtime/1.20.1/minecraft/.provision/neoforge-runtime.json"
+          },
+          "result": null,
+          "sourceReceipt": {
+            "archiveId": 11340290479,
+            "path": "ci-verification/artifact-source.json"
+          },
+          "summary": {
+            "archiveId": 11340290479,
+            "path": "e2e/ci-client/neoforge/smoke-afdcd1f9d184077f81ca1eb76ad564ff3f90439f-neoforge/summary.json"
+          },
+          "target": "1.20.1"
+        }
+      ],
+      "sourceSha": "afdcd1f9d184077f81ca1eb76ad564ff3f90439f",
+      "stageRecord": null
+    },
+    {
+      "artifactSha256": null,
+      "engineEntries": null,
+      "familyId": "neoforge-1.20.2",
+      "filename": "openallay-neoforge-1.20.2-0.4.2.jar",
+      "production": {
+        "archiveId": 11352939030,
+        "path": "openallay-neoforge-1.20.2-0.4.2.jar"
+      },
+      "runs": [
+        {
+          "profile": {
+            "archiveId": 11353846166,
+            "path": "e2e/runtime/1.20.2/minecraft/.provision/neoforge-runtime.json"
+          },
+          "result": {
+            "archiveId": 11353846166,
+            "path": "ci-binary-interval/neoforge-1.20.2-1.20.2.json"
+          },
+          "sourceReceipt": null,
+          "summary": {
+            "archiveId": 11353846166,
+            "path": "e2e/ci-client/neoforge/interval-37329238381-1-1-20-2/summary.json"
+          },
+          "target": "1.20.2"
+        }
+      ],
+      "sourceSha": "e7b7be4c72d269d501b3f1af51a1dbe8b0efa68d",
+      "stageRecord": {
+        "archiveId": 11352939030,
+        "path": "build-record.json"
+      }
+    },
+    {
+      "artifactSha256": null,
+      "engineEntries": null,
+      "familyId": "neoforge-26.3",
+      "filename": "openallay-neoforge-26.3-0.4.2.jar",
+      "production": {
+        "archiveId": 11338055928,
+        "path": "openallay-neoforge-26.3-0.4.2.jar"
+      },
+      "runs": [
+        {
+          "profile": {
+            "archiveId": 11338670569,
+            "path": "e2e/runtime/26.3/minecraft/.provision/neoforge-runtime.json"
+          },
+          "result": null,
+          "sourceReceipt": {
+            "archiveId": 11338670569,
+            "path": "ci-verification/artifact-source.json"
+          },
+          "summary": {
+            "archiveId": 11338670569,
+            "path": "e2e/ci-client/neoforge/smoke-77e3b8b87a876dc367a3746f9db1b1704144db0d-neoforge/summary.json"
+          },
+          "target": "26.3"
+        }
+      ],
+      "sourceSha": "77e3b8b87a876dc367a3746f9db1b1704144db0d",
+      "stageRecord": null
+    },
+    {
+      "artifactSha256": "7b169a916d254298ca4322be4facd2bdd9c0921ce065c31833ed6afee675c18b",
+      "engineEntries": null,
+      "familyId": "neoforge-26.2",
+      "filename": "openallay-neoforge-26.2-0.4.2.jar",
+      "production": {
+        "archiveId": 11341544493,
+        "path": "openallay-neoforge-26.2-0.4.2.jar"
+      },
+      "runs": [
+        {
+          "profile": {
+            "archiveId": 11342659167,
+            "path": "e2e/runtime/26.2/minecraft/.provision/neoforge-runtime.json"
+          },
+          "result": null,
+          "sourceReceipt": {
+            "archiveId": 11342659167,
+            "path": "ci-verification/artifact-source.json"
+          },
+          "summary": {
+            "archiveId": 11342659167,
+            "path": "e2e/ci-client/neoforge/ci-70dfe769f2d83f287af52ac6c537b6d70e2839ed-neoforge/summary.json"
+          },
+          "target": "26.2"
+        }
+      ],
+      "sourceSha": "8739119ce1b1f1c3a4ce5df4bcc403deb59fab41",
+      "stageRecord": null
+    },
+    {
+      "artifactSha256": "d557ae8f899ec9f73222a57e0d8f42e89d2d3a6a4731ad19dd68f1502806a3ee",
+      "engineEntries": null,
+      "familyId": "fabric-26.1-through-26.1.2",
+      "filename": "openallay-fabric-26.1-through-26.1.2-0.4.2.jar",
+      "production": {
+        "archiveId": 11343804917,
+        "path": "openallay-fabric-26.1-through-26.1.2-0.4.2.jar"
+      },
+      "runs": [
+        {
+          "profile": {
+            "archiveId": 11345634120,
+            "path": "e2e/runtime/26.1/minecraft/.provision/fabric-runtime.json"
+          },
+          "result": {
+            "archiveId": 11345634120,
+            "path": "ci-binary-interval/fabric-26.1-through-26.1.2-26.1.json"
+          },
+          "sourceReceipt": null,
+          "summary": {
+            "archiveId": 11345634120,
+            "path": "e2e/ci-client/fabric/interval-37312555350-1-26-1/summary.json"
+          },
+          "target": "26.1"
+        },
+        {
+          "profile": {
+            "archiveId": 11345763808,
+            "path": "e2e/runtime/26.1.1/minecraft/.provision/fabric-runtime.json"
+          },
+          "result": {
+            "archiveId": 11345763808,
+            "path": "ci-binary-interval/fabric-26.1-through-26.1.2-26.1.1.json"
+          },
+          "sourceReceipt": null,
+          "summary": {
+            "archiveId": 11345763808,
+            "path": "e2e/ci-client/fabric/interval-37312555350-1-26-1-1/summary.json"
+          },
+          "target": "26.1.1"
+        },
+        {
+          "profile": {
+            "archiveId": 11346532745,
+            "path": "e2e/runtime/26.1.2/minecraft/.provision/fabric-runtime.json"
+          },
+          "result": {
+            "archiveId": 11346532745,
+            "path": "ci-binary-interval/fabric-26.1-through-26.1.2-26.1.2.json"
+          },
+          "sourceReceipt": null,
+          "summary": {
+            "archiveId": 11346532745,
+            "path": "e2e/ci-client/fabric/interval-37312555350-1-26-1-2/summary.json"
+          },
+          "target": "26.1.2"
+        }
+      ],
+      "sourceSha": "605beef6f1601d528ef80166abdc60aab70b05ef",
+      "stageRecord": {
+        "archiveId": 11343804917,
+        "path": "build-record.json"
+      }
+    },
+    {
+      "artifactSha256": null,
+      "engineEntries": null,
+      "familyId": "neoforge-26.1-through-26.1.2",
+      "filename": "openallay-neoforge-26.1-through-26.1.2-0.4.2.jar",
+      "production": {
+        "archiveId": 11347663185,
+        "path": "openallay-neoforge-26.1-through-26.1.2-0.4.2.jar"
+      },
+      "runs": [
+        {
+          "profile": {
+            "archiveId": 11347849518,
+            "path": "e2e/runtime/26.1/minecraft/.provision/neoforge-runtime.json"
+          },
+          "result": {
+            "archiveId": 11347849518,
+            "path": "ci-binary-interval/neoforge-26.1-through-26.1.2-26.1.json"
+          },
+          "sourceReceipt": null,
+          "summary": {
+            "archiveId": 11347849518,
+            "path": "e2e/ci-client/neoforge/interval-37316689772-1-26-1/summary.json"
+          },
+          "target": "26.1"
+        },
+        {
+          "profile": {
+            "archiveId": 11347094899,
+            "path": "e2e/runtime/26.1.1/minecraft/.provision/neoforge-runtime.json"
+          },
+          "result": {
+            "archiveId": 11347094899,
+            "path": "ci-binary-interval/neoforge-26.1-through-26.1.2-26.1.1.json"
+          },
+          "sourceReceipt": null,
+          "summary": {
+            "archiveId": 11347094899,
+            "path": "e2e/ci-client/neoforge/interval-37316689772-1-26-1-1/summary.json"
+          },
+          "target": "26.1.1"
+        },
+        {
+          "profile": {
+            "archiveId": 11347114861,
+            "path": "e2e/runtime/26.1.2/minecraft/.provision/neoforge-runtime.json"
+          },
+          "result": {
+            "archiveId": 11347114861,
+            "path": "ci-binary-interval/neoforge-26.1-through-26.1.2-26.1.2.json"
+          },
+          "sourceReceipt": null,
+          "summary": {
+            "archiveId": 11347114861,
+            "path": "e2e/ci-client/neoforge/interval-37316689772-1-26-1-2/summary.json"
+          },
+          "target": "26.1.2"
+        }
+      ],
+      "sourceSha": "0d888c1a85f265d0aba8d3092b1df6cf66110b97",
+      "stageRecord": {
+        "archiveId": 11347663185,
+        "path": "build-record.json"
+      }
+    },
+    {
+      "artifactSha256": "06bcbeffc2f5ac228bcb7e7fd7e53a758a9978e89ef48273d30c2be9aaa968f3",
+      "engineEntries": null,
+      "familyId": "fabric-1.21.9-through-1.21.10",
+      "filename": "openallay-fabric-1.21.9-through-1.21.10-0.4.2.jar",
+      "production": {
+        "archiveId": 11344197819,
+        "path": "openallay-fabric-1.21.9-through-1.21.10-0.4.2.jar"
+      },
+      "runs": [
+        {
+          "profile": {
+            "archiveId": 11346850231,
+            "path": "e2e/runtime/1.21.9/minecraft/.provision/fabric-runtime.json"
+          },
+          "result": {
+            "archiveId": 11346850231,
+            "path": "ci-binary-interval/fabric-1.21.9-through-1.21.10-1.21.9.json"
+          },
+          "sourceReceipt": null,
+          "summary": {
+            "archiveId": 11346850231,
+            "path": "e2e/ci-client/fabric/interval-37312555350-1-1-21-9/summary.json"
+          },
+          "target": "1.21.9"
+        },
+        {
+          "profile": {
+            "archiveId": 11346493572,
+            "path": "e2e/runtime/1.21.10/minecraft/.provision/fabric-runtime.json"
+          },
+          "result": {
+            "archiveId": 11346493572,
+            "path": "ci-binary-interval/fabric-1.21.9-through-1.21.10-1.21.10.json"
+          },
+          "sourceReceipt": null,
+          "summary": {
+            "archiveId": 11346493572,
+            "path": "e2e/ci-client/fabric/interval-37312555350-1-1-21-10/summary.json"
+          },
+          "target": "1.21.10"
+        }
+      ],
+      "sourceSha": "605beef6f1601d528ef80166abdc60aab70b05ef",
+      "stageRecord": {
+        "archiveId": 11344197819,
+        "path": "build-record.json"
+      }
+    },
+    {
+      "artifactSha256": null,
+      "engineEntries": null,
+      "familyId": "neoforge-1.21.9-through-1.21.10",
+      "filename": "openallay-neoforge-1.21.9-through-1.21.10-0.4.2.jar",
+      "production": {
+        "archiveId": 11349002739,
+        "path": "openallay-neoforge-1.21.9-through-1.21.10-0.4.2.jar"
+      },
+      "runs": [
+        {
+          "profile": {
+            "archiveId": 11350730033,
+            "path": "e2e/runtime/1.21.9/minecraft/.provision/neoforge-runtime.json"
+          },
+          "result": {
+            "archiveId": 11350730033,
+            "path": "ci-binary-interval/neoforge-1.21.9-through-1.21.10-1.21.9.json"
+          },
+          "sourceReceipt": null,
+          "summary": {
+            "archiveId": 11350730033,
+            "path": "e2e/ci-client/neoforge/interval-37319177276-1-1-21-9/summary.json"
+          },
+          "target": "1.21.9"
+        },
+        {
+          "profile": {
+            "archiveId": 11348688389,
+            "path": "e2e/runtime/1.21.10/minecraft/.provision/neoforge-runtime.json"
+          },
+          "result": {
+            "archiveId": 11348688389,
+            "path": "ci-binary-interval/neoforge-1.21.9-through-1.21.10-1.21.10.json"
+          },
+          "sourceReceipt": null,
+          "summary": {
+            "archiveId": 11348688389,
+            "path": "e2e/ci-client/neoforge/interval-37319177276-1-1-21-10/summary.json"
+          },
+          "target": "1.21.10"
+        }
+      ],
+      "sourceSha": "37e5678d6e194fc4af8eb5c66ec24a391ddb433b",
+      "stageRecord": {
+        "archiveId": 11349002739,
+        "path": "build-record.json"
+      }
+    },
+    {
+      "artifactSha256": "e452547f8e897745924b599c9e9a327f01f9a65e4ed16aada8114a83b59347b8",
+      "engineEntries": null,
+      "familyId": "fabric-1.21.7-through-1.21.8",
+      "filename": "openallay-fabric-1.21.7-through-1.21.8-0.4.2.jar",
+      "production": {
+        "archiveId": 11344980496,
+        "path": "openallay-fabric-1.21.7-through-1.21.8-0.4.2.jar"
+      },
+      "runs": [
+        {
+          "profile": {
+            "archiveId": 11346816185,
+            "path": "e2e/runtime/1.21.7/minecraft/.provision/fabric-runtime.json"
+          },
+          "result": {
+            "archiveId": 11346816185,
+            "path": "ci-binary-interval/fabric-1.21.7-through-1.21.8-1.21.7.json"
+          },
+          "sourceReceipt": null,
+          "summary": {
+            "archiveId": 11346816185,
+            "path": "e2e/ci-client/fabric/interval-37312555350-1-1-21-7/summary.json"
+          },
+          "target": "1.21.7"
+        },
+        {
+          "profile": {
+            "archiveId": 11346448882,
+            "path": "e2e/runtime/1.21.8/minecraft/.provision/fabric-runtime.json"
+          },
+          "result": {
+            "archiveId": 11346448882,
+            "path": "ci-binary-interval/fabric-1.21.7-through-1.21.8-1.21.8.json"
+          },
+          "sourceReceipt": null,
+          "summary": {
+            "archiveId": 11346448882,
+            "path": "e2e/ci-client/fabric/interval-37312555350-1-1-21-8/summary.json"
+          },
+          "target": "1.21.8"
+        }
+      ],
+      "sourceSha": "605beef6f1601d528ef80166abdc60aab70b05ef",
+      "stageRecord": {
+        "archiveId": 11344980496,
+        "path": "build-record.json"
+      }
+    },
+    {
+      "artifactSha256": null,
+      "engineEntries": null,
+      "familyId": "neoforge-1.21.7-through-1.21.8",
+      "filename": "openallay-neoforge-1.21.7-through-1.21.8-0.4.2.jar",
+      "production": {
+        "archiveId": 11348535305,
+        "path": "openallay-neoforge-1.21.7-through-1.21.8-0.4.2.jar"
+      },
+      "runs": [
+        {
+          "profile": {
+            "archiveId": 11348661157,
+            "path": "e2e/runtime/1.21.7/minecraft/.provision/neoforge-runtime.json"
+          },
+          "result": {
+            "archiveId": 11348661157,
+            "path": "ci-binary-interval/neoforge-1.21.7-through-1.21.8-1.21.7.json"
+          },
+          "sourceReceipt": null,
+          "summary": {
+            "archiveId": 11348661157,
+            "path": "e2e/ci-client/neoforge/interval-37317663638-1-1-21-7/summary.json"
+          },
+          "target": "1.21.7"
+        },
+        {
+          "profile": {
+            "archiveId": 11349071296,
+            "path": "e2e/runtime/1.21.8/minecraft/.provision/neoforge-runtime.json"
+          },
+          "result": {
+            "archiveId": 11349071296,
+            "path": "ci-binary-interval/neoforge-1.21.7-through-1.21.8-1.21.8.json"
+          },
+          "sourceReceipt": null,
+          "summary": {
+            "archiveId": 11349071296,
+            "path": "e2e/ci-client/neoforge/interval-37317663638-1-1-21-8/summary.json"
+          },
+          "target": "1.21.8"
+        }
+      ],
+      "sourceSha": "906c7475ae21e0126b22cd88a4060bc695756993",
+      "stageRecord": {
+        "archiveId": 11348535305,
+        "path": "build-record.json"
+      }
+    },
+    {
+      "artifactSha256": null,
+      "engineEntries": null,
+      "familyId": "fabric-1.21.2-through-1.21.3",
+      "filename": "openallay-fabric-1.21.2-through-1.21.3-0.4.2.jar",
+      "production": {
+        "archiveId": 11345400579,
+        "path": "openallay-fabric-1.21.2-through-1.21.3-0.4.2.jar"
+      },
+      "runs": [
+        {
+          "profile": {
+            "archiveId": 11346693817,
+            "path": "e2e/runtime/1.21.2/minecraft/.provision/fabric-runtime.json"
+          },
+          "result": {
+            "archiveId": 11346693817,
+            "path": "ci-binary-interval/fabric-1.21.2-through-1.21.3-1.21.2.json"
+          },
+          "sourceReceipt": null,
+          "summary": {
+            "archiveId": 11346693817,
+            "path": "e2e/ci-client/fabric/interval-37312555350-1-1-21-2/summary.json"
+          },
+          "target": "1.21.2"
+        },
+        {
+          "profile": {
+            "archiveId": 11346249638,
+            "path": "e2e/runtime/1.21.3/minecraft/.provision/fabric-runtime.json"
+          },
+          "result": {
+            "archiveId": 11346249638,
+            "path": "ci-binary-interval/fabric-1.21.2-through-1.21.3-1.21.3.json"
+          },
+          "sourceReceipt": null,
+          "summary": {
+            "archiveId": 11346249638,
+            "path": "e2e/ci-client/fabric/interval-37312555350-1-1-21-3/summary.json"
+          },
+          "target": "1.21.3"
+        }
+      ],
+      "sourceSha": "605beef6f1601d528ef80166abdc60aab70b05ef",
+      "stageRecord": {
+        "archiveId": 11345400579,
+        "path": "build-record.json"
+      }
+    },
+    {
+      "artifactSha256": null,
+      "engineEntries": null,
+      "familyId": "neoforge-1.21.2-through-1.21.3",
+      "filename": "openallay-neoforge-1.21.2-through-1.21.3-0.4.2.jar",
+      "production": {
+        "archiveId": 11345400579,
+        "path": "openallay-neoforge-1.21.2-through-1.21.3-0.4.2.jar"
+      },
+      "runs": [
+        {
+          "profile": {
+            "archiveId": 11346958285,
+            "path": "e2e/runtime/1.21.2/minecraft/.provision/neoforge-runtime.json"
+          },
+          "result": {
+            "archiveId": 11346958285,
+            "path": "ci-binary-interval/neoforge-1.21.2-through-1.21.3-1.21.2.json"
+          },
+          "sourceReceipt": null,
+          "summary": {
+            "archiveId": 11346958285,
+            "path": "e2e/ci-client/neoforge/interval-37315201589-1-1-21-2/summary.json"
+          },
+          "target": "1.21.2"
+        },
+        {
+          "profile": {
+            "archiveId": 11346539453,
+            "path": "e2e/runtime/1.21.3/minecraft/.provision/neoforge-runtime.json"
+          },
+          "result": {
+            "archiveId": 11346539453,
+            "path": "ci-binary-interval/neoforge-1.21.2-through-1.21.3-1.21.3.json"
+          },
+          "sourceReceipt": null,
+          "summary": {
+            "archiveId": 11346539453,
+            "path": "e2e/ci-client/neoforge/interval-37312555350-1-1-21-3/summary.json"
+          },
+          "target": "1.21.3"
+        }
+      ],
+      "sourceSha": "605beef6f1601d528ef80166abdc60aab70b05ef",
+      "stageRecord": {
+        "archiveId": 11345400579,
+        "path": "build-record.json"
+      }
+    },
+    {
+      "artifactSha256": null,
+      "engineEntries": null,
+      "familyId": "fabric-1.21-through-1.21.1",
+      "filename": "openallay-fabric-1.21-through-1.21.1-0.4.2.jar",
+      "production": {
+        "archiveId": 11345450291,
+        "path": "openallay-fabric-1.21-through-1.21.1-0.4.2.jar"
+      },
+      "runs": [
+        {
+          "profile": {
+            "archiveId": 11346554460,
+            "path": "e2e/runtime/1.21/minecraft/.provision/fabric-runtime.json"
+          },
+          "result": {
+            "archiveId": 11346554460,
+            "path": "ci-binary-interval/fabric-1.21-through-1.21.1-1.21.json"
+          },
+          "sourceReceipt": null,
+          "summary": {
+            "archiveId": 11346554460,
+            "path": "e2e/ci-client/fabric/interval-37312555350-1-1-21/summary.json"
+          },
+          "target": "1.21"
+        },
+        {
+          "profile": {
+            "archiveId": 11347370265,
+            "path": "e2e/runtime/1.21.1/minecraft/.provision/fabric-runtime.json"
+          },
+          "result": {
+            "archiveId": 11347370265,
+            "path": "ci-binary-interval/fabric-1.21-through-1.21.1-1.21.1.json"
+          },
+          "sourceReceipt": null,
+          "summary": {
+            "archiveId": 11347370265,
+            "path": "e2e/ci-client/fabric/interval-37312555350-1-1-21-1/summary.json"
+          },
+          "target": "1.21.1"
+        }
+      ],
+      "sourceSha": "605beef6f1601d528ef80166abdc60aab70b05ef",
+      "stageRecord": {
+        "archiveId": 11345450291,
+        "path": "build-record.json"
+      }
+    },
+    {
+      "artifactSha256": null,
+      "engineEntries": null,
+      "familyId": "neoforge-1.21-through-1.21.1",
+      "filename": "openallay-neoforge-1.21-through-1.21.1-0.4.2.jar",
+      "production": {
+        "archiveId": 11345450291,
+        "path": "openallay-neoforge-1.21-through-1.21.1-0.4.2.jar"
+      },
+      "runs": [
+        {
+          "profile": {
+            "archiveId": 11348147020,
+            "path": "e2e/runtime/1.21/minecraft/.provision/neoforge-runtime.json"
+          },
+          "result": {
+            "archiveId": 11348147020,
+            "path": "ci-binary-interval/neoforge-1.21-through-1.21.1-1.21.json"
+          },
+          "sourceReceipt": null,
+          "summary": {
+            "archiveId": 11348147020,
+            "path": "e2e/ci-client/neoforge/interval-37315201589-1-1-21/summary.json"
+          },
+          "target": "1.21"
+        },
+        {
+          "profile": {
+            "archiveId": 11347605353,
+            "path": "e2e/runtime/1.21.1/minecraft/.provision/neoforge-runtime.json"
+          },
+          "result": {
+            "archiveId": 11347605353,
+            "path": "ci-binary-interval/neoforge-1.21-through-1.21.1-1.21.1.json"
+          },
+          "sourceReceipt": null,
+          "summary": {
+            "archiveId": 11347605353,
+            "path": "e2e/ci-client/neoforge/interval-37312555350-1-1-21-1/summary.json"
+          },
+          "target": "1.21.1"
+        }
+      ],
+      "sourceSha": "605beef6f1601d528ef80166abdc60aab70b05ef",
+      "stageRecord": {
+        "archiveId": 11345450291,
+        "path": "build-record.json"
+      }
+    },
+    {
+      "artifactSha256": null,
+      "engineEntries": null,
+      "familyId": "fabric-1.20.3-through-1.20.4",
+      "filename": "openallay-fabric-1.20.3-through-1.20.4-0.4.2.jar",
+      "production": {
+        "archiveId": 11347348669,
+        "path": "openallay-fabric-1.20.3-through-1.20.4-0.4.2.jar"
+      },
+      "runs": [
+        {
+          "profile": {
+            "archiveId": 11348440569,
+            "path": "e2e/runtime/1.20.3/minecraft/.provision/fabric-runtime.json"
+          },
+          "result": {
+            "archiveId": 11348440569,
+            "path": "ci-binary-interval/fabric-1.20.3-through-1.20.4-1.20.3.json"
+          },
+          "sourceReceipt": null,
+          "summary": {
+            "archiveId": 11348440569,
+            "path": "e2e/ci-client/fabric/interval-37316689772-1-1-20-3/summary.json"
+          },
+          "target": "1.20.3"
+        },
+        {
+          "profile": {
+            "archiveId": 11347334977,
+            "path": "e2e/runtime/1.20.4/minecraft/.provision/fabric-runtime.json"
+          },
+          "result": {
+            "archiveId": 11347334977,
+            "path": "ci-binary-interval/fabric-1.20.3-through-1.20.4-1.20.4.json"
+          },
+          "sourceReceipt": null,
+          "summary": {
+            "archiveId": 11347334977,
+            "path": "e2e/ci-client/fabric/interval-37316689772-1-1-20-4/summary.json"
+          },
+          "target": "1.20.4"
+        }
+      ],
+      "sourceSha": "0d888c1a85f265d0aba8d3092b1df6cf66110b97",
+      "stageRecord": {
+        "archiveId": 11347348669,
+        "path": "build-record.json"
+      }
+    },
+    {
+      "artifactSha256": null,
+      "engineEntries": null,
+      "familyId": "neoforge-1.20.3",
+      "filename": "openallay-neoforge-1.20.3-0.4.2.jar",
+      "production": {
+        "archiveId": 11352245227,
+        "path": "openallay-neoforge-1.20.3-0.4.2.jar"
+      },
+      "runs": [
+        {
+          "profile": {
+            "archiveId": 11353085470,
+            "path": "e2e/runtime/1.20.3/minecraft/.provision/neoforge-runtime.json"
+          },
+          "result": {
+            "archiveId": 11353085470,
+            "path": "ci-binary-interval/neoforge-1.20.3-1.20.3.json"
+          },
+          "sourceReceipt": null,
+          "summary": {
+            "archiveId": 11353085470,
+            "path": "e2e/ci-client/neoforge/interval-37327292158-1-1-20-3/summary.json"
+          },
+          "target": "1.20.3"
+        }
+      ],
+      "sourceSha": "e3c77715f0bc562f36fcf434a6696c3b3e27c6f1",
+      "stageRecord": {
+        "archiveId": 11352245227,
+        "path": "build-record.json"
+      }
+    },
+    {
+      "artifactSha256": null,
+      "engineEntries": null,
+      "familyId": "fabric-1.20.5-through-1.20.6",
+      "filename": "openallay-fabric-1.20.5-through-1.20.6-0.4.2.jar",
+      "production": {
+        "archiveId": 11350012224,
+        "path": "openallay-fabric-1.20.5-through-1.20.6-0.4.2.jar"
+      },
+      "runs": [
+        {
+          "profile": {
+            "archiveId": 11350253487,
+            "path": "e2e/runtime/1.20.5/minecraft/.provision/fabric-runtime.json"
+          },
+          "result": {
+            "archiveId": 11350253487,
+            "path": "ci-binary-interval/fabric-1.20.5-through-1.20.6-1.20.5.json"
+          },
+          "sourceReceipt": null,
+          "summary": {
+            "archiveId": 11350253487,
+            "path": "e2e/ci-client/fabric/interval-37322721335-1-1-20-5/summary.json"
+          },
+          "target": "1.20.5"
+        },
+        {
+          "profile": {
+            "archiveId": 11351210486,
+            "path": "e2e/runtime/1.20.6/minecraft/.provision/fabric-runtime.json"
+          },
+          "result": {
+            "archiveId": 11351210486,
+            "path": "ci-binary-interval/fabric-1.20.5-through-1.20.6-1.20.6.json"
+          },
+          "sourceReceipt": null,
+          "summary": {
+            "archiveId": 11351210486,
+            "path": "e2e/ci-client/fabric/interval-37322721335-1-1-20-6/summary.json"
+          },
+          "target": "1.20.6"
+        }
+      ],
+      "sourceSha": "6264b8346769e1df9fa7f430aeb067cfb65b28c3",
+      "stageRecord": {
+        "archiveId": 11350012224,
+        "path": "build-record.json"
+      }
+    },
+    {
+      "artifactSha256": null,
+      "engineEntries": null,
+      "familyId": "fabric-1.21.11",
+      "filename": "openallay-fabric-1.21.11-0.4.2.jar",
+      "production": {
+        "archiveId": 11351290793,
+        "path": "openallay-fabric-1.21.11-0.4.2.jar"
+      },
+      "runs": [
+        {
+          "profile": {
+            "archiveId": 11350793361,
+            "path": "e2e/runtime/1.21.11/minecraft/.provision/fabric-runtime.json"
+          },
+          "result": {
+            "archiveId": 11350793361,
+            "path": "ci-binary-interval/fabric-1.21.11-1.21.11.json"
+          },
+          "sourceReceipt": null,
+          "summary": {
+            "archiveId": 11350793361,
+            "path": "e2e/ci-client/fabric/interval-37323528726-1-1-21-11/summary.json"
+          },
+          "target": "1.21.11"
+        }
+      ],
+      "sourceSha": "9283e42941cc7eea2aa8cff0498dbad96b59ae22",
+      "stageRecord": {
+        "archiveId": 11351290793,
+        "path": "build-record.json"
+      }
+    },
+    {
+      "artifactSha256": "2584c5193b001f85b66414040c53d8d4081742bce64c670b1f57e6fe63e8dd21",
+      "engineEntries": null,
+      "familyId": "fabric-1.21.4",
+      "filename": "openallay-fabric-1.21.4-0.4.2.jar",
+      "production": {
+        "archiveId": 11350810875,
+        "path": "openallay-fabric-1.21.4-0.4.2.jar"
+      },
+      "runs": [
+        {
+          "profile": {
+            "archiveId": 11350023976,
+            "path": "e2e/runtime/1.21.4/minecraft/.provision/fabric-runtime.json"
+          },
+          "result": {
+            "archiveId": 11350023976,
+            "path": "ci-binary-interval/fabric-1.21.4-1.21.4.json"
+          },
+          "sourceReceipt": null,
+          "summary": {
+            "archiveId": 11350023976,
+            "path": "e2e/ci-client/fabric/interval-37322721335-1-1-21-4/summary.json"
+          },
+          "target": "1.21.4"
+        }
+      ],
+      "sourceSha": "6264b8346769e1df9fa7f430aeb067cfb65b28c3",
+      "stageRecord": {
+        "archiveId": 11350810875,
+        "path": "build-record.json"
+      }
+    },
+    {
+      "artifactSha256": "e3fdb106fd75a2aae6bd75e958f26dfb4a505ce4029bfe601f36099534260a39",
+      "engineEntries": null,
+      "familyId": "fabric-1.21.5",
+      "filename": "openallay-fabric-1.21.5-0.4.2.jar",
+      "production": {
+        "archiveId": 11350686947,
+        "path": "openallay-fabric-1.21.5-0.4.2.jar"
+      },
+      "runs": [
+        {
+          "profile": {
+            "archiveId": 11350529242,
+            "path": "e2e/runtime/1.21.5/minecraft/.provision/fabric-runtime.json"
+          },
+          "result": {
+            "archiveId": 11350529242,
+            "path": "ci-binary-interval/fabric-1.21.5-1.21.5.json"
+          },
+          "sourceReceipt": null,
+          "summary": {
+            "archiveId": 11350529242,
+            "path": "e2e/ci-client/fabric/interval-37322721335-1-1-21-5/summary.json"
+          },
+          "target": "1.21.5"
+        }
+      ],
+      "sourceSha": "6264b8346769e1df9fa7f430aeb067cfb65b28c3",
+      "stageRecord": {
+        "archiveId": 11350686947,
+        "path": "build-record.json"
+      }
+    },
+    {
+      "artifactSha256": "f196e2179664cbbe5c7e03668dbbd71b2aa7de618525e06b3e34cd7d6aef7e54",
+      "engineEntries": null,
+      "familyId": "fabric-1.21.6",
+      "filename": "openallay-fabric-1.21.6-0.4.2.jar",
+      "production": {
+        "archiveId": 11350442346,
+        "path": "openallay-fabric-1.21.6-0.4.2.jar"
+      },
+      "runs": [
+        {
+          "profile": {
+            "archiveId": 11351366287,
+            "path": "e2e/runtime/1.21.6/minecraft/.provision/fabric-runtime.json"
+          },
+          "result": {
+            "archiveId": 11351366287,
+            "path": "ci-binary-interval/fabric-1.21.6-1.21.6.json"
+          },
+          "sourceReceipt": null,
+          "summary": {
+            "archiveId": 11351366287,
+            "path": "e2e/ci-client/fabric/interval-37322721335-1-1-21-6/summary.json"
+          },
+          "target": "1.21.6"
+        }
+      ],
+      "sourceSha": "6264b8346769e1df9fa7f430aeb067cfb65b28c3",
+      "stageRecord": {
+        "archiveId": 11350442346,
+        "path": "build-record.json"
+      }
+    },
+    {
+      "artifactSha256": null,
+      "engineEntries": null,
+      "familyId": "neoforge-1.20.5-through-1.20.6",
+      "filename": "openallay-neoforge-1.20.5-through-1.20.6-0.4.2.jar",
+      "production": {
+        "archiveId": 11350012224,
+        "path": "openallay-neoforge-1.20.5-through-1.20.6-0.4.2.jar"
+      },
+      "runs": [
+        {
+          "profile": {
+            "archiveId": 11350283006,
+            "path": "e2e/runtime/1.20.5/minecraft/.provision/neoforge-runtime.json"
+          },
+          "result": {
+            "archiveId": 11350283006,
+            "path": "ci-binary-interval/neoforge-1.20.5-through-1.20.6-1.20.5.json"
+          },
+          "sourceReceipt": null,
+          "summary": {
+            "archiveId": 11350283006,
+            "path": "e2e/ci-client/neoforge/interval-37322721335-1-1-20-5/summary.json"
+          },
+          "target": "1.20.5"
+        },
+        {
+          "profile": {
+            "archiveId": 11350628191,
+            "path": "e2e/runtime/1.20.6/minecraft/.provision/neoforge-runtime.json"
+          },
+          "result": {
+            "archiveId": 11350628191,
+            "path": "ci-binary-interval/neoforge-1.20.5-through-1.20.6-1.20.6.json"
+          },
+          "sourceReceipt": null,
+          "summary": {
+            "archiveId": 11350628191,
+            "path": "e2e/ci-client/neoforge/interval-37322721335-1-1-20-6/summary.json"
+          },
+          "target": "1.20.6"
+        }
+      ],
+      "sourceSha": "6264b8346769e1df9fa7f430aeb067cfb65b28c3",
+      "stageRecord": {
+        "archiveId": 11350012224,
+        "path": "build-record.json"
+      }
+    },
+    {
+      "artifactSha256": null,
+      "engineEntries": null,
+      "familyId": "neoforge-1.21.11",
+      "filename": "openallay-neoforge-1.21.11-0.4.2.jar",
+      "production": {
+        "archiveId": 11351290793,
+        "path": "openallay-neoforge-1.21.11-0.4.2.jar"
+      },
+      "runs": [
+        {
+          "profile": {
+            "archiveId": 11350154778,
+            "path": "e2e/runtime/1.21.11/minecraft/.provision/neoforge-runtime.json"
+          },
+          "result": {
+            "archiveId": 11350154778,
+            "path": "ci-binary-interval/neoforge-1.21.11-1.21.11.json"
+          },
+          "sourceReceipt": null,
+          "summary": {
+            "archiveId": 11350154778,
+            "path": "e2e/ci-client/neoforge/interval-37323528726-1-1-21-11/summary.json"
+          },
+          "target": "1.21.11"
+        }
+      ],
+      "sourceSha": "9283e42941cc7eea2aa8cff0498dbad96b59ae22",
+      "stageRecord": {
+        "archiveId": 11351290793,
+        "path": "build-record.json"
+      }
+    },
+    {
+      "artifactSha256": null,
+      "engineEntries": null,
+      "familyId": "neoforge-1.21.4",
+      "filename": "openallay-neoforge-1.21.4-0.4.2.jar",
+      "production": {
+        "archiveId": 11352567067,
+        "path": "openallay-neoforge-1.21.4-0.4.2.jar"
+      },
+      "runs": [
+        {
+          "profile": {
+            "archiveId": 11352423925,
+            "path": "e2e/runtime/1.21.4/minecraft/.provision/neoforge-runtime.json"
+          },
+          "result": {
+            "archiveId": 11352423925,
+            "path": "ci-binary-interval/neoforge-1.21.4-1.21.4.json"
+          },
+          "sourceReceipt": null,
+          "summary": {
+            "archiveId": 11352423925,
+            "path": "e2e/ci-client/neoforge/interval-37327684375-1-1-21-4/summary.json"
+          },
+          "target": "1.21.4"
+        }
+      ],
+      "sourceSha": "4c2d3889cb4fbc46cf8760a583f41eac09b1fdd4",
+      "stageRecord": {
+        "archiveId": 11352567067,
+        "path": "build-record.json"
+      }
+    },
+    {
+      "artifactSha256": null,
+      "engineEntries": null,
+      "familyId": "neoforge-1.21.5",
+      "filename": "openallay-neoforge-1.21.5-0.4.2.jar",
+      "production": {
+        "archiveId": 11352621940,
+        "path": "openallay-neoforge-1.21.5-0.4.2.jar"
+      },
+      "runs": [
+        {
+          "profile": {
+            "archiveId": 11352294166,
+            "path": "e2e/runtime/1.21.5/minecraft/.provision/neoforge-runtime.json"
+          },
+          "result": {
+            "archiveId": 11352294166,
+            "path": "ci-binary-interval/neoforge-1.21.5-1.21.5.json"
+          },
+          "sourceReceipt": null,
+          "summary": {
+            "archiveId": 11352294166,
+            "path": "e2e/ci-client/neoforge/interval-37327684375-1-1-21-5/summary.json"
+          },
+          "target": "1.21.5"
+        }
+      ],
+      "sourceSha": "4c2d3889cb4fbc46cf8760a583f41eac09b1fdd4",
+      "stageRecord": {
+        "archiveId": 11352621940,
+        "path": "build-record.json"
+      }
+    },
+    {
+      "artifactSha256": null,
+      "engineEntries": null,
+      "familyId": "neoforge-1.21.6",
+      "filename": "openallay-neoforge-1.21.6-0.4.2.jar",
+      "production": {
+        "archiveId": 11351634185,
+        "path": "openallay-neoforge-1.21.6-0.4.2.jar"
+      },
+      "runs": [
+        {
+          "profile": {
+            "archiveId": 11353291120,
+            "path": "e2e/runtime/1.21.6/minecraft/.provision/neoforge-runtime.json"
+          },
+          "result": {
+            "archiveId": 11353291120,
+            "path": "ci-binary-interval/neoforge-1.21.6-1.21.6.json"
+          },
+          "sourceReceipt": null,
+          "summary": {
+            "archiveId": 11353291120,
+            "path": "e2e/ci-client/neoforge/interval-37327684375-1-1-21-6/summary.json"
+          },
+          "target": "1.21.6"
+        }
+      ],
+      "sourceSha": "4c2d3889cb4fbc46cf8760a583f41eac09b1fdd4",
+      "stageRecord": {
+        "archiveId": 11351634185,
+        "path": "build-record.json"
+      }
+    },
+    {
+      "artifactSha256": null,
+      "engineEntries": null,
+      "familyId": "neoforge-1.20.4",
+      "filename": "openallay-neoforge-1.20.4-0.4.2.jar",
+      "production": {
+        "archiveId": 11351789018,
+        "path": "openallay-neoforge-1.20.4-0.4.2.jar"
+      },
+      "runs": [
+        {
+          "profile": {
+            "archiveId": 11353390656,
+            "path": "e2e/runtime/1.20.4/minecraft/.provision/neoforge-runtime.json"
+          },
+          "result": {
+            "archiveId": 11353390656,
+            "path": "ci-binary-interval/neoforge-1.20.4-1.20.4.json"
+          },
+          "sourceReceipt": null,
+          "summary": {
+            "archiveId": 11353390656,
+            "path": "e2e/ci-client/neoforge/interval-37327684375-1-1-20-4/summary.json"
+          },
+          "target": "1.20.4"
+        }
+      ],
+      "sourceSha": "4c2d3889cb4fbc46cf8760a583f41eac09b1fdd4",
+      "stageRecord": {
+        "archiveId": 11351789018,
+        "path": "build-record.json"
+      }
+    }
+  ],
+  "releaseVersion": "0.4.2",
+  "repository": "nkanf-dev/OpenAllay"
+}

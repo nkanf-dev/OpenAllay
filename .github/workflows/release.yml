@@ -1,5 +1,6 @@
 name: Release
 'on':
+  workflow_dispatch:
   push:
     tags:
     - v*
@@ -12,7 +13,7 @@ jobs:
   publish:
     name: Publish verified unchanged ${{ github.ref_name }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 90
     env:
       OPENALLAY_MINECRAFT_TARGET: '26.2'
       OPENALLAY_MINECRAFT_RECEIPT_DIRECTORY: build/release-receipts
