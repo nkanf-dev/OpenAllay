@@ -35,7 +35,7 @@ public final class ServerBridgeSession {
     private final FeatureServices runtime;
     private final Transport transport;
     private final BridgeJsonCodec codec = new BridgeJsonCodec();
-    private final Gson gson = new Gson();
+    private final Gson gson = dev.openallay.json.EngineJson.withInstant(new Gson());
     private final ServerAgentEventCodec agentEvents = new ServerAgentEventCodec(gson);
     private ServerAgentRequestChunker.Reassembler requestChunks;
     private final dev.openallay.bridge.protocol.ServerAgentSteerChunker.Reassembler steerChunks =

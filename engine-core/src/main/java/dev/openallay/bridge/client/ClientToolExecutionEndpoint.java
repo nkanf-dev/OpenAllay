@@ -102,7 +102,7 @@ public final class ClientToolExecutionEndpoint {
         }
         this.contexts = java.util.Objects.requireNonNull(contexts, "contexts");
         this.responses = java.util.Objects.requireNonNull(responses, "responses");
-        this.gson = java.util.Objects.requireNonNull(gson, "gson");
+        this.gson = dev.openallay.json.EngineJson.withInstant(java.util.Objects.requireNonNull(gson, "gson"));
         this.transportChunkBytes = transportChunkBytes;
         this.worker = java.util.Objects.requireNonNull(worker, "worker");
         arguments = new ToolArgumentCodec(gson);

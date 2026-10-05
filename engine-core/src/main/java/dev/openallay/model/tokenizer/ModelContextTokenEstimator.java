@@ -31,7 +31,7 @@ public final class ModelContextTokenEstimator implements ContextTokenEstimator {
     private final Encoding encoding;
     private final Encoding alternative;
     private final TokenizerMetadata metadata;
-    private final Gson gson = new Gson();
+    private final Gson gson = dev.openallay.json.EngineJson.withInstant(new Gson());
     private final OpenAiJsonCodec openAi = new OpenAiJsonCodec(gson);
     private final AnthropicJsonCodec anthropic = new AnthropicJsonCodec(gson);
 

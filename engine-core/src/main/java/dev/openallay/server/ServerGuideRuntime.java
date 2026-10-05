@@ -93,7 +93,7 @@ public record ServerGuideRuntime(
         if (!config.enabled()) {
             return new ToolResult.Failure<>("model_disabled", "Server model is disabled");
         }
-        Gson gson = new Gson();
+        Gson gson = dev.openallay.json.EngineJson.withInstant(new Gson());
         ModelClient raw = switch (config.protocol()) {
             case ANTHROPIC_MESSAGES -> new AnthropicMessagesClient(config, gson);
             case OPENAI_CHAT -> new OpenAiChatClient(config, gson);

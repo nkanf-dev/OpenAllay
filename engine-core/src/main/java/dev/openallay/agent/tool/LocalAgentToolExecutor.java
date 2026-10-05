@@ -35,7 +35,7 @@ public final class LocalAgentToolExecutor implements AgentToolExecutor {
 
     public LocalAgentToolExecutor(ToolRuntimeCatalog tools, Gson gson) {
         this.tools = Objects.requireNonNull(tools, "tools");
-        this.gson = Objects.requireNonNull(gson, "gson");
+        this.gson = dev.openallay.json.EngineJson.withInstant(Objects.requireNonNull(gson, "gson"));
         List<ToolDescriptor<?, ?>> descriptors = tools.descriptors();
         names = new ToolNameCodec(descriptors.stream().map(ToolDescriptor::id).toList());
         arguments = new ToolArgumentCodec(gson);

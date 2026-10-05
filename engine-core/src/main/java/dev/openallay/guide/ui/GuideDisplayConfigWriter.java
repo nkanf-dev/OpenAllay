@@ -7,10 +7,10 @@ import java.util.Objects;
 
 /** Canonical credential-free encoder for local Guide presentation settings. */
 public final class GuideDisplayConfigWriter {
-    private static final Gson GSON = new GsonBuilder()
+    private static final Gson GSON = dev.openallay.json.EngineJson.withInstant(new GsonBuilder()
             .disableHtmlEscaping()
             .setPrettyPrinting()
-            .create();
+            .create());
 
     public String encode(GuideDisplayConfig config) {
         Objects.requireNonNull(config, "config");

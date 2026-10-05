@@ -97,7 +97,7 @@ public final class ClientModelRuntimeRegistry implements GuideLocalEndpoint {
         if (loaded instanceof ToolResult.Failure<ModelProfilesConfigLoader.Load> failure) {
             return new ToolResult.Failure<>(failure.code(), failure.message());
         }
-        Gson gson = new Gson();
+        Gson gson = dev.openallay.json.EngineJson.withInstant(new Gson());
         ModelProfilesConfigLoader.Load value =
                 ((ToolResult.Success<ModelProfilesConfigLoader.Load>) loaded).value();
         return new ToolResult.Success<>(create(

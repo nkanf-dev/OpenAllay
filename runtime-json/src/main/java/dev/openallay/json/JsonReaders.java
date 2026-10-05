@@ -2,6 +2,7 @@ package dev.openallay.json;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
+import com.google.gson.JsonArray;
 import com.google.gson.TypeAdapter;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.MalformedJsonException;
@@ -19,6 +20,13 @@ public final class JsonReaders {
         JsonReader reader = new JsonReader(new StrictCharacters(Objects.requireNonNull(source, "source")));
         reader.setLenient(false);
         return reader;
+    }
+
+    /** Read-only snapshot for consumers of the host's Iterable JsonArray ABI. */
+    public static java.util.List<JsonElement> elements(JsonArray array) {
+        java.util.List<JsonElement> values = new java.util.ArrayList<>(array.size());
+        array.forEach(values::add);
+        return java.util.List.copyOf(values);
     }
 
     /** The public adapter does not temporarily enable lenient parsing, unlike older JsonParser. */

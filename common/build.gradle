@@ -42,7 +42,7 @@ dependencies {
     implementation("org.commonmark:commonmark-ext-gfm-tables:${commonmark_version}")
     implementation(project(':runtime-rhino'))
     implementation("com.knuddels:jtokkit:${jtokkit_version}")
-    testImplementation('com.google.code.gson:gson:2.10')
+    testImplementation('com.google.code.gson:gson:2.8.9')
     testImplementation('org.junit.jupiter:junit-jupiter:5.11.4')
     testRuntimeOnly('org.junit.platform:junit-platform-launcher:1.11.4')
     testRuntimeOnly("org.xerial:sqlite-jdbc:${sqlite_jdbc_version}")

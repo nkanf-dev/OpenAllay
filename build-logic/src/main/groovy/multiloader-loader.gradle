@@ -47,7 +47,7 @@ def loaderMixinSelection = commonProject.selectConfiguredMinecraftMixins(
         commonProject.minecraftMixinSelection)
 
 dependencies {
-    testImplementation('com.google.code.gson:gson:2.10')
+    testImplementation('com.google.code.gson:gson:2.8.9')
     testImplementation('org.junit.jupiter:junit-jupiter:5.11.4')
     testRuntimeOnly('org.junit.platform:junit-platform-launcher:1.11.4')
     compileOnly(project(':common')) {

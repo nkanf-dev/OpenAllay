@@ -397,7 +397,7 @@ final class GuideGraphicalRegressionProbe {
                         .map(dev.openallay.guide.GuideTimelineEntry.Assistant.class::cast)
                         .reduce((earlierAssistant, laterAssistant) -> laterAssistant).orElseThrow();
                 String tailNode = finalAssistant.semantic().blocks().get(finalAssistant.semantic().blocks().size() - 1).nodeId();
-                require(receipt.getAsJsonArray("renderedNodeIds").asList().stream()
+                require(dev.openallay.json.JsonReaders.elements(receipt.getAsJsonArray("renderedNodeIds")).stream()
                                 .anyMatch(value -> tailNode.equals(value.getAsString())),
                         "Actual HUD extracted nodes do not include the full response's final text block");
                 String paintedTail = receipt.has("lastRenderedText") ? receipt.get("lastRenderedText").getAsString().strip() : "";
@@ -1128,7 +1128,7 @@ final class GuideGraphicalRegressionProbe {
                 latestRequest = next;
                 JsonObject receipt = jsonReceipt(lite(), "resultReceipt");
                 require(number(receipt, "scroll") == liveReaderScroll
-                        && receipt.getAsJsonArray("renderedRowIds").asList().stream().anyMatch(value -> value.getAsString().equals(liveReaderAnchor)),
+                        && dev.openallay.json.JsonReaders.elements(receipt.getAsJsonArray("renderedRowIds")).stream().anyMatch(value -> value.getAsString().equals(liveReaderAnchor)),
                         "New actual content displaced the reader's wheel-up anchor");
                 report.put("readerAnchorAfterActualNewContent", receipt);
                 checkpoint("live-13-reader-anchor-with-new-content", false);
@@ -1143,7 +1143,7 @@ final class GuideGraphicalRegressionProbe {
                 JsonObject receipt = jsonReceipt(lite(), "resultReceipt");
                 require(number(receipt, "scroll") == 0 && number(receipt, "toolRows") > 0,
                         "Full native reader cannot reach prior loaded request Tool cards");
-                require(receipt.getAsJsonArray("renderedRowIds").asList().stream()
+                require(dev.openallay.json.JsonReaders.elements(receipt.getAsJsonArray("renderedRowIds")).stream()
                         .anyMatch(value -> value.getAsString().contains(request.requestId().toString())),
                         "Reader first page lost the prior original request identity");
                 report.put("priorRequestReader", receipt);
@@ -1430,7 +1430,7 @@ final class GuideGraphicalRegressionProbe {
     private JsonObject revealToolSummary(GuideRequestSnapshot value, int index) {
         String expected = "tool:" + value.requestId() + ":" + value.tools().get(index).invocationId();
         JsonObject tools = jsonReceipt(guide(), "e2eToolsReceipt");
-        JsonObject found = tools.getAsJsonArray("toolSummaries").asList().stream().map(element -> element.getAsJsonObject())
+        JsonObject found = dev.openallay.json.JsonReaders.elements(tools.getAsJsonArray("toolSummaries")).stream().map(element -> element.getAsJsonObject())
                 .filter(summary -> expected.equals(summary.get("id").getAsString())).findFirst().orElse(null);
         if (found == null) {
             var virtualizer = (dev.openallay.guide.ui.GuideTranscriptVirtualizer) readField(guide(), "virtualizer");
@@ -1478,7 +1478,7 @@ final class GuideGraphicalRegressionProbe {
         }
         require(number(tools, "lastNativeFrame") > nativeRecipeFrame, "Actual detail receipt is stale");
         nativeRecipeFrame = number(tools, "lastNativeFrame");
-        require(tools.getAsJsonArray("detailNativeRecipeIds").asList().stream().allMatch(value -> value.getAsString().startsWith(toolId + ":")),
+        require(dev.openallay.json.JsonReaders.elements(tools.getAsJsonArray("detailNativeRecipeIds")).stream().allMatch(value -> value.getAsString().startsWith(toolId + ":")),
                 "Painted native recipe detail has another Tool identity");
         return true;
     }
@@ -1490,10 +1490,10 @@ final class GuideGraphicalRegressionProbe {
                 .map(dev.openallay.guide.GuideTimelineEntry.Assistant.class::cast)
                 .reduce((earlierAssistant, laterAssistant) -> laterAssistant).orElseThrow();
         String nodeId = finalAssistant.semantic().blocks().get(finalAssistant.semantic().blocks().size() - 1).nodeId();
-        require(receipt.getAsJsonArray("renderedRowIds").asList().stream()
+        require(dev.openallay.json.JsonReaders.elements(receipt.getAsJsonArray("renderedRowIds")).stream()
                         .anyMatch(value -> value.getAsString().contains(source.requestId().toString())),
                 "Native HUD tail has another request source identity");
-        require(receipt.getAsJsonArray("renderedNodeIds").asList().stream().anyMatch(value -> value.getAsString().equals(nodeId)),
+        require(dev.openallay.json.JsonReaders.elements(receipt.getAsJsonArray("renderedNodeIds")).stream().anyMatch(value -> value.getAsString().equals(nodeId)),
                 "Native latest tail does not include source final semantic node");
         String painted = receipt.get("lastRenderedText").getAsString().strip();
         String expectedTail = "ui-live-ux-regressions".equals(config.scenario()) ? LIVE_TAIL : "全文末尾：原生图形长回复验收完成。";

@@ -648,7 +648,7 @@ public final class PlayerClientToolRouter {
         if (!complete.isJsonPrimitive() || !complete.getAsJsonPrimitive().isBoolean()) return false;
         for (String field : List.of("availableReferences", "allowedTools")) {
             var value = output.get(field);
-            if (!value.isJsonArray() || value.getAsJsonArray().asList().stream()
+            if (!value.isJsonArray() || dev.openallay.json.JsonReaders.elements(value.getAsJsonArray()).stream()
                     .anyMatch(item -> !item.isJsonPrimitive()
                             || !item.getAsJsonPrimitive().isString())) return false;
         }

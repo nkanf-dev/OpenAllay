@@ -58,7 +58,7 @@ public final class RemoteToolServer {
         this.contexts = contexts;
         this.responses = responses;
         this.correlations = correlations;
-        this.gson = gson;
+        this.gson = dev.openallay.json.EngineJson.withInstant(gson);
         this.transportChunkBytes = transportChunkBytes;
         arguments = new ToolArgumentCodec(gson);
         normalizer = new ToolResultNormalizer(gson);

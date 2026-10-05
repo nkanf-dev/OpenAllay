@@ -76,7 +76,8 @@ final class EngineJsonTest {
         Gson source = new GsonBuilder().serializeNulls().disableHtmlEscaping()
                 .registerTypeAdapterFactory(factory).create();
         Gson gson = EngineJson.withInstant(source);
-        assertSame(source, gson);
+        assertNotSame(source, gson);
+        assertSame(gson, EngineJson.withInstant(gson));
         var value = new Detached(UUID.randomUUID(), Instant.ofEpochSecond(-1, 7), List.of(Instant.EPOCH));
         assertEquals(value, gson.fromJson(gson.toJson(value), Detached.class));
         assertEquals("caller:" + value.capturedAt(), gson.toJsonTree(value).getAsJsonObject().get("capturedAt").getAsString());

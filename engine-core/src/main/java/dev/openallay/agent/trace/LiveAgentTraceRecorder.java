@@ -19,7 +19,7 @@ public final class LiveAgentTraceRecorder {
     private final List<LiveTraceEvent> events = new ArrayList<>();
 
     public LiveAgentTraceRecorder(Gson gson, AgentRequest request) {
-        this.gson = gson;
+        this.gson = dev.openallay.json.EngineJson.withInstant(gson);
         this.request = request;
         JsonObject initial = new JsonObject();
         initial.addProperty("userMessage", request.userMessage());

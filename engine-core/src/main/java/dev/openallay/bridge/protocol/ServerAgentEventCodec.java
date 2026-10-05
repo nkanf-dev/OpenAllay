@@ -20,7 +20,7 @@ public final class ServerAgentEventCodec {
             new dev.openallay.agent.context.ModelContextCodec();
 
     public ServerAgentEventCodec(Gson gson) {
-        this.gson = Objects.requireNonNull(gson, "gson");
+        this.gson = dev.openallay.json.EngineJson.withInstant(Objects.requireNonNull(gson, "gson"));
     }
 
     public ServerAgentEventPayload encode(UUID requestId, AgentEvent event) {

@@ -3,7 +3,6 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
-  actions: read
 concurrency:
   group: mature-forge-native-${{ github.ref }}
   cancel-in-progress: false
@@ -23,15 +22,28 @@ jobs:
             17
             21
             25
-      - name: Reuse the original strictly verified Forge product
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
         with:
-          github-token: ${{ github.token }}
-          run-id: 37380001204
-          artifact-ids: 11372734283
-          path: build/original-native-product
-      - name: Verify and stage original bytes without recompilation
-        run: python3 -B scripts/stage-original-forge-product.py
+          cache-provider: basic
+          cache-read-only: true
+      - name: Prepare the exact independent universal Builder source
+        run: python3 -B scripts/prepare-distribution.py
+      - name: Package the new bundled Forge product without repeating shared feature suites
+        shell: bash
+        run: |
+          ./gradlew --max-workers=2 --stacktrace -PminecraftTarget=1.19.2 :engine-core:test --tests dev.openallay.json.EngineJsonTest --tests dev.openallay.json.JsonReadersTest --tests dev.openallay.guide.e2e.GuideE2EReportJsonTest --tests dev.openallay.context.ContextSnapshotMetricsJsonTest --tests dev.openallay.trace.replay.ToolArgumentCodecTest --tests dev.openallay.trace.replay.ToolCodecAndNormalizerTest --tests dev.openallay.guide.ui.GuideToolDetailPresenterTest --tests dev.openallay.bridge.protocol.BridgeJsonCodecTest --tests dev.openallay.bridge.server.RemoteToolServerTest --tests dev.openallay.bridge.client.ClientToolExecutionEndpointTest --tests dev.openallay.bridge.PlayerClientToolRouterTest --tests dev.openallay.json.RecordJsonAdapterTest --tests dev.openallay.bridge.protocol.ServerAgentEventCodecTest --tests dev.openallay.agent.trace.LiveTraceStoreTest -x :runtime-maven:test :forge:assemble :forge:captureNativeCommandContracts
+          python3 -B scripts/verify-native-target-package.py --target 1.19.2 --bundled-builder
+          python3 -B scripts/stage-ci-client-production.py --minecraft-target 1.19.2
+      - name: Retain the exact packaged product bytes
+        if: ${{ always() && hashFiles('forge/build/libs/openallay-forge-1.19.2-0.4.2.jar') != '' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: mature-forge-production-1.19.2-${{ github.sha }}-${{ github.run_attempt }}
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            build/ci-client-production/
+            forge/build/libs/openallay-forge-1.19.2-0.4.2.jar
       - name: Install the isolated headless display and compact evidence tools
         run: |
           sudo apt-get update
@@ -46,7 +58,7 @@ jobs:
         env:
           LIBGL_ALWAYS_SOFTWARE: '1'
           ALSOFT_DRIVERS: 'null'
-          OPENALLAY_E2E_SOURCE_REVISION: 9cb05cd1105ee93e4f69850154642f38354441e3
+          OPENALLAY_E2E_SOURCE_REVISION: ${{ github.sha }}
         run: |
           xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24 +extension GLX +render -noreset" --error-file="$PWD/build/ci-xvfb.log"             python3 -B scripts/run-ci-game-workflow.py --loader forge --minecraft-target 1.19.2 --java "$JAVA_HOME_17_X64/bin/java" --batch-id forge1192-${{ github.run_id }} --scenarios builder-acceptance builder-reload ui-live-ux-regressions
       - name: Preserve bounded generated native command source facts
@@ -66,7 +78,6 @@ jobs:
             build/forge-native-contracts/
             forge/build/native-engine/receipt.json
             build/ci-runtime-receipt.json
-            build/original-native-product-receipt.json
             build/ci-xvfb.log
             build/e2e/runtime/1.19.2/minecraft/.provision/*.json
             build/e2e/ci-client/forge/forge1192-${{ github.run_id }}/summary.json
@@ -74,3 +85,5 @@ jobs:
             build/e2e/ci-client-compact/forge/forge1192-${{ github.run_id }}/
             build/reports/problems/
             forge/build/reports/
+            engine-core/build/test-results/test/
+            engine-core/build/reports/tests/test/

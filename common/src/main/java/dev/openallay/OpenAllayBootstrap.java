@@ -75,7 +75,7 @@ public final class OpenAllayBootstrap {
         }
 
         PlatformService platform = PlatformServices.load();
-        Gson gson = new Gson();
+        Gson gson = dev.openallay.json.EngineJson.withInstant(new Gson());
         AgentResultWorkspaceRegistry javascriptWorkspaces =
                 new AgentResultWorkspaceRegistry();
         KnowledgeRegistry knowledge = new KnowledgeRegistry();
@@ -252,7 +252,7 @@ public final class OpenAllayBootstrap {
     }
 
     static List<Tool<?, ?>> builtinTools(PlatformService platform) {
-        return builtinTools(platform, new Gson(), new AgentResultWorkspaceRegistry());
+        return builtinTools(platform, dev.openallay.json.EngineJson.withInstant(new Gson()), new AgentResultWorkspaceRegistry());
     }
 
     static List<Tool<?, ?>> builtinTools(

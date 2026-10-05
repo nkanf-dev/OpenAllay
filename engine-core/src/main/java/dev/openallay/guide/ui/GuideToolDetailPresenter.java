@@ -109,7 +109,7 @@ public final class GuideToolDetailPresenter {
 
     private static Projection javascriptItemCards(JsonObject value, JsonElement preview) {
         List<JsonElement> encoded = preview.isJsonArray()
-                ? preview.getAsJsonArray().asList()
+                ? dev.openallay.json.JsonReaders.elements(preview.getAsJsonArray())
                 : List.of(preview);
         List<GuideItemView> items = new ArrayList<>();
         for (JsonElement element : encoded) {

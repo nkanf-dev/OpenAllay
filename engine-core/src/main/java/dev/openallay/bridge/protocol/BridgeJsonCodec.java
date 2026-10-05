@@ -61,7 +61,7 @@ public final class BridgeJsonCodec {
     }
 
     public BridgeJsonCodec(Gson gson) {
-        this.gson = gson;
+        this.gson = dev.openallay.json.EngineJson.withInstant(gson);
     }
 
     public String encode(Object payload) {

@@ -1,9 +1,7 @@
 package dev.openallay.json;
 
 import com.google.gson.Gson;
-import com.google.gson.JsonIOException;
 import com.google.gson.JsonParseException;
-import com.google.gson.ReflectionAccessFilter;
 import com.google.gson.TypeAdapter;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonToken;
@@ -17,23 +15,49 @@ import java.util.Objects;
 public final class EngineJson {
     private EngineJson() {}
 
-    /** Add the engine default only when the supplied Gson has no explicit Instant adapter. */
+    /** Bind typed timestamps and canonical record construction on the shared host Gson ABI.
+     * Caller adapters and builder options are retained. Factories wrapping Gson's reflective
+     * record implementation are not supported; use an explicit record adapter instead.
+     */
     public static Gson withInstant(Gson source) {
         Objects.requireNonNull(source, "source");
-        boolean[] reflectionReached = {false};
-        Gson probe = source.newBuilder().addReflectionAccessFilter(type -> {
-            if (type == Instant.class) {
-                reflectionReached[0] = true;
-                return ReflectionAccessFilter.FilterResult.BLOCK_ALL;
+        if (source.getAdapter(Binding.class) instanceof BindingAdapter) return source;
+        return source.newBuilder().registerTypeAdapterFactory(new EngineJsonFactory(source)).create();
+    }
+
+    private static final class Binding {}
+    private static final class BindingAdapter extends TypeAdapter<Binding> {
+        @Override public void write(JsonWriter out, Binding value) { throw new UnsupportedOperationException(); }
+        @Override public Binding read(JsonReader in) { throw new UnsupportedOperationException(); }
+    }
+
+    private static final class EngineJsonFactory implements com.google.gson.TypeAdapterFactory {
+        private final Gson source;
+        private EngineJsonFactory(Gson source) { this.source = source; }
+
+        @SuppressWarnings("unchecked")
+        @Override public <T> TypeAdapter<T> create(Gson gson, com.google.gson.reflect.TypeToken<T> type) {
+            Class<?> raw = type.getRawType();
+            if (raw == Binding.class) return (TypeAdapter<T>) new BindingAdapter();
+            if (raw != Instant.class && !raw.isRecord()) return null;
+            RecordJsonAdapter.Fields fields = RecordJsonAdapter.fields(source, type);
+            if (raw == Instant.class) {
+                return fields.reflectionReached()
+                        ? (TypeAdapter<T>) new InstantAdapter().nullSafe()
+                        : gson.getDelegateAdapter(this, type);
             }
-            return ReflectionAccessFilter.FilterResult.INDECISIVE;
-        }).create();
-        try {
-            probe.getAdapter(Instant.class);
-            return source;
-        } catch (JsonIOException missingAdapter) {
-            if (!reflectionReached[0]) throw missingAdapter;
-            return source.newBuilder().registerTypeAdapter(Instant.class, new InstantAdapter().nullSafe()).create();
+            if (fields.reflectionReached()) return RecordJsonAdapter.create(gson, type, fields).nullSafe();
+            // No included record fields: either an explicit caller adapter or an empty/excluded
+            // native shape. InstanceCreator changes only the native construction path; explicit
+            // adapters retain precedence. Nested types still use this configured Gson.
+            var creator = (com.google.gson.InstanceCreator<T>) ignored -> RecordJsonAdapter.defaults(type);
+            com.google.gson.TypeAdapterFactory nested = new com.google.gson.TypeAdapterFactory() {
+                @Override public <V> TypeAdapter<V> create(Gson delegate, com.google.gson.reflect.TypeToken<V> candidate) {
+                    return candidate.equals(type) ? null : EngineJsonFactory.this.create(gson, candidate);
+                }
+            };
+            return source.newBuilder().registerTypeAdapter(type.getType(), creator)
+                    .registerTypeAdapterFactory(nested).create().getAdapter(type);
         }
     }
 

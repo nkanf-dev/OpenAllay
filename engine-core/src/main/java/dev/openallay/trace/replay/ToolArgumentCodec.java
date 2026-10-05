@@ -10,7 +10,7 @@ public final class ToolArgumentCodec {
     private final Gson gson;
 
     public ToolArgumentCodec(Gson gson) {
-        this.gson = Objects.requireNonNull(gson, "gson");
+        this.gson = dev.openallay.json.EngineJson.withInstant(Objects.requireNonNull(gson, "gson"));
     }
 
     public <I> ToolResult<I> decode(JsonObject arguments, Class<I> inputType) {
@@ -29,7 +29,7 @@ public final class ToolArgumentCodec {
                             && list.getRawType() == java.util.List.class
                             && java.util.Arrays.equals(list.getActualTypeArguments(), new java.lang.reflect.Type[] {String.class})
                             && value != null && !value.isJsonNull()
-                            && (!value.isJsonArray() || value.getAsJsonArray().asList().stream().anyMatch(item ->
+                            && (!value.isJsonArray() || dev.openallay.json.JsonReaders.elements(value.getAsJsonArray()).stream().anyMatch(item ->
                                     !item.isJsonPrimitive() || !item.getAsJsonPrimitive().isString()))) {
                         return new ToolResult.Failure<>(
                                 "invalid_arguments", component.getName() + " must be an array of text");
