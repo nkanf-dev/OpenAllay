@@ -34,8 +34,8 @@ class CommandSelectionTest(unittest.TestCase):
                     str(ROOT / "gradlew"), "--max-workers=2", "-PminecraftTarget=" + target,
                     "-PtestBundledExtensions=false", ":fabric:assemble", ":neoforge:assemble"], "root")])
 
-    def test_only_two_failed_targets_use_actual_isolated_export(self):
-        for target in ("1.20.2", "1.20.3"):
+    def test_pom_only_targets_use_actual_isolated_export(self):
+        for target in ("1.20.2", "1.20.3", "1.20.5"):
             command, native = recipe.commands(ROOT, target)
             self.assertEqual(command[0][-2:], [":fabric:assemble", ":neoforge:exportEarlyNeoForgeInputs"])
             self.assertEqual(native[1], "java21")
@@ -102,9 +102,9 @@ class SourceReuseContractTest(unittest.TestCase):
     def text(self, relative):
         return (ROOT / relative).read_text()
 
-    def test_guard_precedes_modern_loader_plugin_only_for_two_targets(self):
+    def test_guard_precedes_modern_loader_plugin_for_pom_only_targets(self):
         source = self.text("neoforge/build.gradle")
-        self.assertIn("if (minecraftTarget in ['1.20.2', '1.20.3'])", source)
+        self.assertIn("if (minecraftTarget in ['1.20.2', '1.20.3', '1.20.5'])", source)
         self.assertLess(source.index("early-neoforge-inputs.gradle"), source.index("pluginManager.apply("))
         self.assertIn("return\n}", source)
         self.assertIn("def legacyNativeLoader = minecraftTarget == '1.20.1'", source)
@@ -120,10 +120,24 @@ class SourceReuseContractTest(unittest.TestCase):
         self.assertIn("source(nativeInputs.nativeSources.collect", source)
         self.assertIn("java.setSrcDirs([])", source)
         self.assertIn("accessTransformers.files.from", source)
-        self.assertIn("options.release = 17", source)
+        self.assertIn("options.release = profileJavaVersion", source)
+        self.assertIn("java { toolchain.languageVersion = JavaLanguageVersion.of(profileJavaVersion) }", source)
+        self.assertIn("if (profileJavaVersion == 21)", source)
+        self.assertIn("tasks.withType(DecompilerExecute).configureEach", source)
         self.assertIn("output.classesDirs.from(directories(nativeInputs.engine) + directories(nativeInputs.adapter))", source)
         self.assertNotIn("net.neoforged:forge", source)
         self.assertNotIn("reflection", source)
+
+    def test_exact_userdev_profiles_keep_older_abi_and_1205_java21(self):
+        for path in ("gradle/early-neoforge-inputs.gradle", "native-builds/early-neoforge/build.gradle"):
+            source = self.text(path)
+            self.assertIn("'1.20.2': [javaVersion: 17, loader: '20.2.93', descriptor: 'META-INF/mods.toml']", source)
+            self.assertIn("'1.20.3': [javaVersion: 17, loader: '20.3.8-beta', descriptor: 'META-INF/mods.toml']", source)
+            self.assertIn("'1.20.5': [javaVersion: 21, loader: '20.5.21-beta', descriptor: 'META-INF/neoforge.mods.toml']", source)
+            self.assertIn("userdevProfile.javaVersion.toString()", source)
+            self.assertIn("userdevProfile.loader", source)
+        source = self.text("native-builds/early-neoforge/build.gradle")
+        self.assertIn("!names.contains(userdevProfile.descriptor) || names.contains(otherDescriptor)", source)
 
     def test_root_input_hashes_and_native_package_guards_remain_explicit(self):
         source = self.text("native-builds/early-neoforge/build.gradle")

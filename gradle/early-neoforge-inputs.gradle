@@ -2,8 +2,14 @@ import groovy.json.JsonOutput
 import java.security.MessageDigest
 
 // Applied only after the existing loader convention selected its exact raw sources.
-if (!(minecraftTarget in ['1.20.2', '1.20.3']) || java_version != '17') {
-    throw new GradleException('The isolated early NeoForge exporter serves only Java17 Minecraft 1.20.2/1.20.3')
+def userdevProfiles = [
+        '1.20.2': [javaVersion: 17, loader: '20.2.93', descriptor: 'META-INF/mods.toml'],
+        '1.20.3': [javaVersion: 17, loader: '20.3.8-beta', descriptor: 'META-INF/mods.toml'],
+        '1.20.5': [javaVersion: 21, loader: '20.5.21-beta', descriptor: 'META-INF/neoforge.mods.toml']]
+def userdevProfile = userdevProfiles[minecraftTarget]
+if (userdevProfile == null || java_version != userdevProfile.javaVersion.toString()
+        || neoforge_version != userdevProfile.loader) {
+    throw new GradleException('The isolated NeoForge exporter requires its exact game, Java ABI, and loader profile')
 }
 evaluationDependsOn(':engine-core')
 evaluationDependsOn(':adapters:minecraft')
@@ -11,7 +17,7 @@ evaluationDependsOn(':extension-api')
 evaluationDependsOn(':runtime-rhino')
 sourceSets.main.resources {
     srcDir 'src/generated/resources'
-    exclude 'META-INF/neoforge.mods.toml'
+    exclude userdevProfile.descriptor == 'META-INF/mods.toml' ? 'META-INF/neoforge.mods.toml' : 'META-INF/mods.toml'
 }
 
 // A direct root request must not silently package vanilla/empty loader classes.
@@ -61,8 +67,9 @@ tasks.register('exportEarlyNeoForgeInputs') {
         if (project(':extension-api').version.toString() != '0.4.0') {
             throw new GradleException('Early native build requires the one current public SDK 0.4.0')
         }
-        def expectedLoader = ['1.20.2': '20.2.93', '1.20.3': '20.3.8-beta'][minecraftTarget]
-        if (neoforge_version != expectedLoader) throw new GradleException('Early NeoForge pin differs')
+        if (neoforge_version != userdevProfile.loader || java_version != userdevProfile.javaVersion.toString()) {
+            throw new GradleException('Isolated NeoForge profile differs')
+        }
         def nativeSources = (sourceSets.main.allJava.files + commonSources.allJava.files).unique()
                 .sort { it.absolutePath }.collect { fileRecord(it) }
         def engine = outputRecords(engineOutput)

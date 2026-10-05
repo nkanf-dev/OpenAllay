@@ -1,5 +1,6 @@
 import org.gradle.util.GradleVersion
 import net.neoforged.gradle.common.runtime.tasks.JavaSourceTransformer
+import net.neoforged.gradle.common.runtime.tasks.DecompilerExecute
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
 import java.security.MessageDigest
@@ -62,9 +63,13 @@ nativeInputs.nativeSources.each { recordFields(it, []) }
 if (nativeInputs.accessTransformer != null) recordFields(nativeInputs.accessTransformer, [])
 [nativeInputs.sdk, nativeInputs.rhino].each { recordFields(it, ['group', 'name', 'version']) }
 [nativeInputs.engine, nativeInputs.adapter, nativeInputs.resources].each { entries -> entries.each { recordFields(it, ['entry']) } }
-def expectedLoader = ['1.20.2': '20.2.93', '1.20.3': '20.3.8-beta'][nativeInputs.target]
-if (expectedLoader == null || nativeInputs.properties.neoforge_version != expectedLoader
-        || nativeInputs.properties.java_version != '17' || nativeInputs.sdk.version != '0.4.0') {
+def userdevProfiles = [
+        '1.20.2': [javaVersion: 17, loader: '20.2.93', descriptor: 'META-INF/mods.toml'],
+        '1.20.3': [javaVersion: 17, loader: '20.3.8-beta', descriptor: 'META-INF/mods.toml'],
+        '1.20.5': [javaVersion: 21, loader: '20.5.21-beta', descriptor: 'META-INF/neoforge.mods.toml']]
+def userdevProfile = userdevProfiles[nativeInputs.target]
+if (userdevProfile == null || nativeInputs.properties.neoforge_version != userdevProfile.loader
+        || nativeInputs.properties.java_version != userdevProfile.javaVersion.toString() || nativeInputs.sdk.version != '0.4.0') {
     throw new GradleException('Unexpected early NeoForge target, Java ABI, loader, or SDK pin')
 }
 def paths = [] as Set
@@ -156,8 +161,18 @@ if (!(nativeInputs.properties.archiveName ==~ /openallay-neoforge-[0-9][0-9a-z.-
     throw new GradleException('Unsafe selected native archive name')
 }
 base { archivesName = nativeInputs.properties.archiveName }
-java { toolchain.languageVersion = JavaLanguageVersion.of(17) }
-// JST is a build tool that requires Java 21; native compilation stays on Java 17.
+int profileJavaVersion = userdevProfile.javaVersion
+java { toolchain.languageVersion = JavaLanguageVersion.of(profileJavaVersion) }
+// Original NeoForm config owns tool coordinates/arguments. Java21 game sources
+// need a Java21 decompiler host; keep the accepted Java17 tool route unchanged.
+if (profileJavaVersion == 21) {
+    tasks.withType(DecompilerExecute).configureEach {
+        javaLauncher.set(javaToolchains.launcherFor {
+            languageVersion = JavaLanguageVersion.of(21)
+        })
+    }
+}
+// JST requires Java21 for every profile; the native ABI follows the game profile.
 tasks.withType(JavaSourceTransformer).configureEach {
     javaLauncher.set(javaToolchains.launcherFor {
         languageVersion = JavaLanguageVersion.of(21)
@@ -184,7 +199,7 @@ sourceSets {
 }
 tasks.named('compileJava', JavaCompile) {
     source(nativeInputs.nativeSources.collect { file(it.path) })
-    options.release = 17
+    options.release = profileJavaVersion
     options.encoding = 'UTF-8'
 }
 // Configure the two real artifact variants before root JarJar resolution.
@@ -314,7 +329,9 @@ def verifyReusedPackage = tasks.register('verifyReusedPackage') {
                     throw new GradleException("SDK/Rhino JarJar identity or singleton range differs: ${record.name}")
                 }
             }
-            if (!names.contains('META-INF/mods.toml') || names.contains('META-INF/neoforge.mods.toml')
+            def otherDescriptor = userdevProfile.descriptor == 'META-INF/mods.toml'
+                    ? 'META-INF/neoforge.mods.toml' : 'META-INF/mods.toml'
+            if (!names.contains(userdevProfile.descriptor) || names.contains(otherDescriptor)
                     || names.any { it.startsWith('dev/openallay/api/') && it.endsWith('.class') }) {
                 throw new GradleException('Competing loader descriptor or duplicated top-level SDK identity')
             }

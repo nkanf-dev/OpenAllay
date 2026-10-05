@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Select only the two old NeoForge native recipes; every other root recipe stays unchanged."""
+"""Select POM-only NeoForge userdev recipes; every other root recipe stays unchanged."""
 import argparse
 import json
 import os
@@ -8,7 +8,7 @@ import re
 import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
-EARLY = frozenset(("1.20.2", "1.20.3"))
+EARLY = frozenset(("1.20.2", "1.20.3", "1.20.5"))
 
 
 def target_exists(root, target):
@@ -68,7 +68,7 @@ def compile_target(root, target, environment=None, execute=subprocess.run, *,
                    loaders=("fabric", "neoforge"), artifact_ids=None, candidate_ids=None):
     selected = commands(root, target, loaders=loaders, artifact_ids=artifact_ids, candidate_ids=candidate_ids)
     environment = dict(os.environ if environment is None else environment)
-    # Validate the installed older build JVM before allocating any native build output.
+    # Validate the installed isolated build JVM before allocating any native build output.
     isolated_env = java21_environment(environment) if any(runtime == "java21" for _, runtime in selected) else None
     for command, runtime in selected:
         execute(command, cwd=root, env=isolated_env if runtime == "java21" else environment, check=True)
