@@ -89,19 +89,26 @@ public record ServerAgentHistoryContent(
     }
 
     public static ServerAgentHistoryContent from(ModelContent content) {
-        return switch (content) {
-            case ModelContent.Image value -> new ServerAgentHistoryContent(
+        java.util.Objects.requireNonNull(content);
+        if (content instanceof ModelContent.Image value) {
+            return new ServerAgentHistoryContent(
                     Kind.IMAGE, null, null, null, null, null, value.reference(), null, value.originToolUseId());
-            case ModelContent.Text value -> new ServerAgentHistoryContent(
+        } else if (content instanceof ModelContent.Text value) {
+            return new ServerAgentHistoryContent(
                     Kind.TEXT, value.text(), null, null, null, null);
-            case ModelContent.ToolUse value -> new ServerAgentHistoryContent(
+        } else if (content instanceof ModelContent.ToolUse value) {
+            return new ServerAgentHistoryContent(
                     Kind.TOOL_USE, null, value.id(), value.name(), value.input().toString(), null);
-            case ModelContent.ToolResult value -> new ServerAgentHistoryContent(
+        } else if (content instanceof ModelContent.ToolResult value) {
+            return new ServerAgentHistoryContent(
                     Kind.TOOL_RESULT, null, value.toolUseId(), null,
                     value.value().toString(), value.error(), null, value.images());
-            case ModelContent.Reasoning ignored -> throw new IllegalArgumentException(
+        } else if (content instanceof ModelContent.Reasoning) {
+            throw new IllegalArgumentException(
                     "Reasoning content cannot enter durable bridge history");
-        };
+        } else {
+            throw new IncompatibleClassChangeError();
+        }
     }
 
     public ModelContent toModelContent() {

@@ -70,46 +70,41 @@ public final class SemanticDocumentCodec {
 
     private static JsonObject block(SemanticBlock value) {
         JsonObject object = typed(value.nodeId());
-        switch (value) {
-            case SemanticBlock.Paragraph paragraph -> {
-                object.addProperty("type", "paragraph");
-                object.add("content", inlines(paragraph.content()));
-            }
-            case SemanticBlock.Heading heading -> {
-                object.addProperty("type", "heading");
-                object.addProperty("level", heading.level());
-                object.add("content", inlines(heading.content()));
-            }
-            case SemanticBlock.ListBlock list -> {
-                object.addProperty("type", "list");
-                object.addProperty("ordered", list.ordered());
-                object.addProperty("start", list.start());
-                JsonArray items = new JsonArray();
-                list.items().forEach(item -> items.add(blocks(item)));
-                object.add("items", items);
-            }
-            case SemanticBlock.Quote quote -> {
-                object.addProperty("type", "quote");
-                object.add("content", blocks(quote.content()));
-            }
-            case SemanticBlock.CodeBlock code -> {
-                object.addProperty("type", "code");
-                object.addProperty("info", code.info());
-                object.addProperty("code", code.code());
-            }
-            case SemanticBlock.Table table -> {
-                object.addProperty("type", "table");
-                object.add("header", row(table.header()));
-                JsonArray rows = new JsonArray();
-                table.rows().forEach(valueRow -> rows.add(row(valueRow)));
-                object.add("rows", rows);
-            }
-            case SemanticBlock.ThematicBreak ignored ->
-                    object.addProperty("type", "thematic_break");
-            case SemanticBlock.Component component -> {
-                object.addProperty("type", "component");
-                object.add("component", component(component.component()));
-            }
+        java.util.Objects.requireNonNull(value);
+        if (value instanceof SemanticBlock.Paragraph paragraph) {
+            object.addProperty("type", "paragraph");
+            object.add("content", inlines(paragraph.content()));
+        } else if (value instanceof SemanticBlock.Heading heading) {
+            object.addProperty("type", "heading");
+            object.addProperty("level", heading.level());
+            object.add("content", inlines(heading.content()));
+        } else if (value instanceof SemanticBlock.ListBlock list) {
+            object.addProperty("type", "list");
+            object.addProperty("ordered", list.ordered());
+            object.addProperty("start", list.start());
+            JsonArray items = new JsonArray();
+            list.items().forEach(item -> items.add(blocks(item)));
+            object.add("items", items);
+        } else if (value instanceof SemanticBlock.Quote quote) {
+            object.addProperty("type", "quote");
+            object.add("content", blocks(quote.content()));
+        } else if (value instanceof SemanticBlock.CodeBlock code) {
+            object.addProperty("type", "code");
+            object.addProperty("info", code.info());
+            object.addProperty("code", code.code());
+        } else if (value instanceof SemanticBlock.Table table) {
+            object.addProperty("type", "table");
+            object.add("header", row(table.header()));
+            JsonArray rows = new JsonArray();
+            table.rows().forEach(valueRow -> rows.add(row(valueRow)));
+            object.add("rows", rows);
+        } else if (value instanceof SemanticBlock.ThematicBreak ignored) {
+            object.addProperty("type", "thematic_break");
+        } else if (value instanceof SemanticBlock.Component component) {
+            object.addProperty("type", "component");
+            object.add("component", component(component.component()));
+        } else {
+            throw new IncompatibleClassChangeError();
         }
         return object;
     }
@@ -183,31 +178,27 @@ public final class SemanticDocumentCodec {
         JsonArray encoded = new JsonArray();
         for (SemanticInline value : values) {
             JsonObject object = typed(value.nodeId());
-            switch (value) {
-                case SemanticInline.Text text -> {
-                    object.addProperty("type", "text");
-                    object.addProperty("text", text.text());
-                }
-                case SemanticInline.Emphasis emphasis -> {
-                    object.addProperty("type", "emphasis");
-                    object.add("children", inlines(emphasis.children()));
-                }
-                case SemanticInline.Strong strong -> {
-                    object.addProperty("type", "strong");
-                    object.add("children", inlines(strong.children()));
-                }
-                case SemanticInline.Code code -> {
-                    object.addProperty("type", "code");
-                    object.addProperty("text", code.text());
-                }
-                case SemanticInline.Break lineBreak -> {
-                    object.addProperty("type", "break");
-                    object.addProperty("hard", lineBreak.hard());
-                }
-                case SemanticInline.Reference reference -> {
-                    object.addProperty("type", "reference");
-                    object.add("reference", reference(reference.reference()));
-                }
+            java.util.Objects.requireNonNull(value);
+            if (value instanceof SemanticInline.Text text) {
+                object.addProperty("type", "text");
+                object.addProperty("text", text.text());
+            } else if (value instanceof SemanticInline.Emphasis emphasis) {
+                object.addProperty("type", "emphasis");
+                object.add("children", inlines(emphasis.children()));
+            } else if (value instanceof SemanticInline.Strong strong) {
+                object.addProperty("type", "strong");
+                object.add("children", inlines(strong.children()));
+            } else if (value instanceof SemanticInline.Code code) {
+                object.addProperty("type", "code");
+                object.addProperty("text", code.text());
+            } else if (value instanceof SemanticInline.Break lineBreak) {
+                object.addProperty("type", "break");
+                object.addProperty("hard", lineBreak.hard());
+            } else if (value instanceof SemanticInline.Reference reference) {
+                object.addProperty("type", "reference");
+                object.add("reference", reference(reference.reference()));
+            } else {
+                throw new IncompatibleClassChangeError();
             }
             encoded.add(object);
         }
@@ -316,87 +307,90 @@ public final class SemanticDocumentCodec {
     }
 
     private static String componentType(RichComponent value) {
-        return switch (value) {
-            case RichComponent.ItemRow ignored -> "item_row";
-            case RichComponent.RecipeGrid ignored -> "recipe_grid";
-            case RichComponent.IngredientCheck ignored -> "ingredient_check";
-            case RichComponent.CraftabilitySummary ignored -> "craftability_summary";
-            case RichComponent.ProgressSteps ignored -> "progress_steps";
-            case RichComponent.SourceSummary ignored -> "source_summary";
-            case RichComponent.StatusBadge ignored -> "status_badge";
-            case RichComponent.ChoiceGroup ignored -> "choice_group";
-        };
+        java.util.Objects.requireNonNull(value);
+        if (value instanceof RichComponent.ItemRow ignored) {
+            return "item_row";
+        } else if (value instanceof RichComponent.RecipeGrid ignored) {
+            return "recipe_grid";
+        } else if (value instanceof RichComponent.IngredientCheck ignored) {
+            return "ingredient_check";
+        } else if (value instanceof RichComponent.CraftabilitySummary ignored) {
+            return "craftability_summary";
+        } else if (value instanceof RichComponent.ProgressSteps ignored) {
+            return "progress_steps";
+        } else if (value instanceof RichComponent.SourceSummary ignored) {
+            return "source_summary";
+        } else if (value instanceof RichComponent.StatusBadge ignored) {
+            return "status_badge";
+        } else if (value instanceof RichComponent.ChoiceGroup ignored) {
+            return "choice_group";
+        }
+        throw new IncompatibleClassChangeError();
     }
 
     private static JsonObject componentProperties(RichComponent value) {
         JsonObject properties = new JsonObject();
-        switch (value) {
-            case RichComponent.ItemRow row -> {
-                JsonArray items = new JsonArray();
-                row.items().forEach(item -> items.add(item(item)));
-                properties.add("items", items);
+        java.util.Objects.requireNonNull(value);
+        if (value instanceof RichComponent.ItemRow row) {
+            JsonArray items = new JsonArray();
+            row.items().forEach(item -> items.add(item(item)));
+            properties.add("items", items);
+        } else if (value instanceof RichComponent.RecipeGrid grid) {
+            recipe(properties, grid.recipe(), grid.originInvocationId());
+            properties.addProperty("label", grid.label());
+        } else if (value instanceof RichComponent.IngredientCheck check) {
+            JsonArray ingredients = new JsonArray();
+            for (RichComponent.Ingredient ingredient : check.ingredients()) {
+                JsonObject item = new JsonObject();
+                item.addProperty("itemId", ingredient.itemId());
+                item.addProperty("required", ingredient.required());
+                item.addProperty("available", ingredient.available());
+                item.addProperty("label", ingredient.label());
+                item.addProperty("originInvocationId", ingredient.originInvocationId());
+                ingredients.add(item);
             }
-            case RichComponent.RecipeGrid grid -> {
-                recipe(properties, grid.recipe(), grid.originInvocationId());
-                properties.addProperty("label", grid.label());
+            properties.add("ingredients", ingredients);
+        } else if (value instanceof RichComponent.CraftabilitySummary summary) {
+            recipe(properties, summary.recipe(), summary.originInvocationId());
+            properties.addProperty("craftable", summary.craftable());
+            properties.addProperty("conclusive", summary.conclusive());
+            properties.addProperty("requestedCrafts", summary.requestedCrafts());
+            properties.addProperty("maximumCrafts", summary.maximumCrafts());
+        } else if (value instanceof RichComponent.ProgressSteps progress) {
+            JsonArray steps = new JsonArray();
+            for (RichComponent.Step step : progress.steps()) {
+                JsonObject encoded = new JsonObject();
+                encoded.addProperty("id", step.id());
+                encoded.addProperty("label", step.label());
+                encoded.addProperty("state", step.state().name());
+                steps.add(encoded);
             }
-            case RichComponent.IngredientCheck check -> {
-                JsonArray ingredients = new JsonArray();
-                for (RichComponent.Ingredient ingredient : check.ingredients()) {
-                    JsonObject item = new JsonObject();
-                    item.addProperty("itemId", ingredient.itemId());
-                    item.addProperty("required", ingredient.required());
-                    item.addProperty("available", ingredient.available());
-                    item.addProperty("label", ingredient.label());
-                    item.addProperty("originInvocationId", ingredient.originInvocationId());
-                    ingredients.add(item);
-                }
-                properties.add("ingredients", ingredients);
+            properties.add("steps", steps);
+        } else if (value instanceof RichComponent.SourceSummary summary) {
+            JsonArray sources = new JsonArray();
+            for (RichComponent.Source source : summary.sources()) {
+                JsonObject encoded = new JsonObject();
+                encoded.addProperty("sourceId", source.sourceId());
+                encoded.addProperty("label", source.label());
+                encoded.addProperty("originInvocationId", source.originInvocationId());
+                sources.add(encoded);
             }
-            case RichComponent.CraftabilitySummary summary -> {
-                recipe(properties, summary.recipe(), summary.originInvocationId());
-                properties.addProperty("craftable", summary.craftable());
-                properties.addProperty("conclusive", summary.conclusive());
-                properties.addProperty("requestedCrafts", summary.requestedCrafts());
-                properties.addProperty("maximumCrafts", summary.maximumCrafts());
+            properties.add("sources", sources);
+        } else if (value instanceof RichComponent.StatusBadge badge) {
+            properties.addProperty("state", badge.state().name());
+            properties.addProperty("label", badge.label());
+        } else if (value instanceof RichComponent.ChoiceGroup group) {
+            properties.addProperty("prompt", group.prompt());
+            JsonArray choices = new JsonArray();
+            for (RichComponent.Choice choice : group.choices()) {
+                JsonObject encoded = new JsonObject();
+                encoded.addProperty("id", choice.id());
+                encoded.addProperty("label", choice.label());
+                choices.add(encoded);
             }
-            case RichComponent.ProgressSteps progress -> {
-                JsonArray steps = new JsonArray();
-                for (RichComponent.Step step : progress.steps()) {
-                    JsonObject encoded = new JsonObject();
-                    encoded.addProperty("id", step.id());
-                    encoded.addProperty("label", step.label());
-                    encoded.addProperty("state", step.state().name());
-                    steps.add(encoded);
-                }
-                properties.add("steps", steps);
-            }
-            case RichComponent.SourceSummary summary -> {
-                JsonArray sources = new JsonArray();
-                for (RichComponent.Source source : summary.sources()) {
-                    JsonObject encoded = new JsonObject();
-                    encoded.addProperty("sourceId", source.sourceId());
-                    encoded.addProperty("label", source.label());
-                    encoded.addProperty("originInvocationId", source.originInvocationId());
-                    sources.add(encoded);
-                }
-                properties.add("sources", sources);
-            }
-            case RichComponent.StatusBadge badge -> {
-                properties.addProperty("state", badge.state().name());
-                properties.addProperty("label", badge.label());
-            }
-            case RichComponent.ChoiceGroup group -> {
-                properties.addProperty("prompt", group.prompt());
-                JsonArray choices = new JsonArray();
-                for (RichComponent.Choice choice : group.choices()) {
-                    JsonObject encoded = new JsonObject();
-                    encoded.addProperty("id", choice.id());
-                    encoded.addProperty("label", choice.label());
-                    choices.add(encoded);
-                }
-                properties.add("choices", choices);
-            }
+            properties.add("choices", choices);
+        } else {
+            throw new IncompatibleClassChangeError();
         }
         return properties;
     }
@@ -620,22 +614,23 @@ public final class SemanticDocumentCodec {
 
     private static void collect(SemanticBlock block, Set<String> ids) {
         add(block.nodeId(), ids);
-        switch (block) {
-            case SemanticBlock.Paragraph paragraph -> paragraph.content()
-                    .forEach(value -> collect(value, ids));
-            case SemanticBlock.Heading heading -> heading.content()
-                    .forEach(value -> collect(value, ids));
-            case SemanticBlock.ListBlock list -> list.items()
-                    .forEach(item -> item.forEach(value -> collect(value, ids)));
-            case SemanticBlock.Quote quote -> quote.content()
-                    .forEach(value -> collect(value, ids));
-            case SemanticBlock.Table table -> {
-                collect(table.header(), ids);
-                table.rows().forEach(row -> collect(row, ids));
-            }
-            case SemanticBlock.CodeBlock ignored -> { }
-            case SemanticBlock.ThematicBreak ignored -> { }
-            case SemanticBlock.Component ignored -> { }
+        java.util.Objects.requireNonNull(block);
+        if (block instanceof SemanticBlock.Paragraph paragraph) {
+            paragraph.content().forEach(value -> collect(value, ids));
+        } else if (block instanceof SemanticBlock.Heading heading) {
+            heading.content().forEach(value -> collect(value, ids));
+        } else if (block instanceof SemanticBlock.ListBlock list) {
+            list.items().forEach(item -> item.forEach(value -> collect(value, ids)));
+        } else if (block instanceof SemanticBlock.Quote quote) {
+            quote.content().forEach(value -> collect(value, ids));
+        } else if (block instanceof SemanticBlock.Table table) {
+            collect(table.header(), ids);
+            table.rows().forEach(row -> collect(row, ids));
+        } else if (block instanceof SemanticBlock.CodeBlock ignored) {
+        } else if (block instanceof SemanticBlock.ThematicBreak ignored) {
+        } else if (block instanceof SemanticBlock.Component ignored) {
+        } else {
+            throw new IncompatibleClassChangeError();
         }
     }
 
@@ -645,15 +640,17 @@ public final class SemanticDocumentCodec {
 
     private static void collect(SemanticInline inline, Set<String> ids) {
         add(inline.nodeId(), ids);
-        switch (inline) {
-            case SemanticInline.Emphasis emphasis -> emphasis.children()
-                    .forEach(value -> collect(value, ids));
-            case SemanticInline.Strong strong -> strong.children()
-                    .forEach(value -> collect(value, ids));
-            case SemanticInline.Text ignored -> { }
-            case SemanticInline.Code ignored -> { }
-            case SemanticInline.Break ignored -> { }
-            case SemanticInline.Reference ignored -> { }
+        java.util.Objects.requireNonNull(inline);
+        if (inline instanceof SemanticInline.Emphasis emphasis) {
+            emphasis.children().forEach(value -> collect(value, ids));
+        } else if (inline instanceof SemanticInline.Strong strong) {
+            strong.children().forEach(value -> collect(value, ids));
+        } else if (inline instanceof SemanticInline.Text ignored) {
+        } else if (inline instanceof SemanticInline.Code ignored) {
+        } else if (inline instanceof SemanticInline.Break ignored) {
+        } else if (inline instanceof SemanticInline.Reference ignored) {
+        } else {
+            throw new IncompatibleClassChangeError();
         }
     }
 

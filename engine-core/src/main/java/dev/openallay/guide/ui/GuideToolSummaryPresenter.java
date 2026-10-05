@@ -43,21 +43,20 @@ public final class GuideToolSummaryPresenter {
             for (int cardIndex = 0; cardIndex < detail.cards().size() && capsules.size() < MAX_CAPSULES; cardIndex++) {
                 GuideDetailCard card = detail.cards().get(cardIndex);
                 String cardId = id + ":card:" + cardIndex;
-                switch (card) {
-                    case GuideDetailCard.ItemGrid grid -> {
-                        for (int itemIndex = 0; itemIndex < grid.items().size() && capsules.size() < MAX_CAPSULES; itemIndex++) {
-                            capsules.add(new Item(cardId + ":item:" + itemIndex, origin, grid.items().get(itemIndex)));
-                        }
+                Objects.requireNonNull(card);
+                if (card instanceof GuideDetailCard.ItemGrid grid) {
+                    for (int itemIndex = 0; itemIndex < grid.items().size() && capsules.size() < MAX_CAPSULES; itemIndex++) {
+                        capsules.add(new Item(cardId + ":item:" + itemIndex, origin, grid.items().get(itemIndex)));
                     }
-                    case GuideDetailCard.Recipe value -> {
-                        GuideRecipeCard recipe = value.recipe();
-                        if (!recipe.outputs().isEmpty()) {
-                            GuideRecipeCard.Output output = recipe.outputs().getFirst();
-                            capsules.add(new Recipe(cardId + ":recipe", origin,
-                                    new GuideItemView(output.itemId(), output.displayName(), output.count()), recipe));
-                        }
+                } else if (card instanceof GuideDetailCard.Recipe value) {
+                    GuideRecipeCard recipe = value.recipe();
+                    if (!recipe.outputs().isEmpty()) {
+                        GuideRecipeCard.Output output = recipe.outputs().get(0);
+                        capsules.add(new Recipe(cardId + ":recipe", origin,
+                                new GuideItemView(output.itemId(), output.displayName(), output.count()), recipe));
                     }
-                    default -> { /* Other complete card families belong only in the detail drawer. */ }
+                } else {
+                    /* Other complete card families belong only in the detail drawer. */
                 }
             }
         }

@@ -20,7 +20,7 @@ import org.junit.jupiter.api.Test;
 
 final class JdkHttpTransportTest {
     @Test
-    void usesJdkAsyncExchangeAndVirtualResponseDecoderWithoutFollowingRedirects()
+    void usesJdkAsyncExchangeAndNamedDaemonDecoderWithoutFollowingRedirects()
             throws Exception {
         HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         server.createContext("/redirect", exchange -> {
@@ -52,7 +52,8 @@ final class JdkHttpTransportTest {
                     request,
                     new CancellationSignal(),
                     (status, headers, body) -> {
-                        assertTrue(Thread.currentThread().isVirtual());
+                        assertTrue(Thread.currentThread().isDaemon());
+                        assertTrue(!Thread.currentThread().getName().equals("main"));
                         assertEquals("test-http-decoder", Thread.currentThread().getName());
                         return status + ":" + new String(body.readAllBytes(), StandardCharsets.UTF_8);
                     }).join();

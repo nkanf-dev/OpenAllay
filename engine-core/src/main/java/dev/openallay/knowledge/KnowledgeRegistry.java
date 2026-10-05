@@ -144,7 +144,7 @@ public final class KnowledgeRegistry {
                 ? KnowledgeSourceSnapshot.State.UNAVAILABLE
                 : partial ? KnowledgeSourceSnapshot.State.PARTIAL : KnowledgeSourceSnapshot.State.AVAILABLE;
         String code = load.diagnostics().isEmpty()
-                ? (partial ? "knowledge_incomplete" : null) : load.diagnostics().getFirst().code();
+                ? (partial ? "knowledge_incomplete" : null) : load.diagnostics().get(0).code();
         return new KnowledgeSourceSnapshot.Source(
                 sourceId, state == KnowledgeSourceSnapshot.State.UNAVAILABLE ? null : generation,
                 state, unknown && count == 0 ? null : count, code);

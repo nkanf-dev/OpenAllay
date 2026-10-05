@@ -137,8 +137,8 @@ final class GuideUsageTracker {
             for (var candidate : pricing.tiers()) {
                 if (usage.inputTokens() >= candidate.minInputTokens()) tier = candidate;
             }
-        } else if (pricing.tiers().size() == 1 && pricing.tiers().getFirst().minInputTokens() == 0) {
-            tier = pricing.tiers().getFirst();
+        } else if (pricing.tiers().size() == 1 && pricing.tiers().get(0).minInputTokens() == 0) {
+            tier = pricing.tiers().get(0);
         }
         if (tier == null) return new Quote(null, true);
         Component[] parts = {

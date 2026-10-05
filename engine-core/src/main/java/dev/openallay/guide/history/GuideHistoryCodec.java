@@ -186,11 +186,15 @@ public final class GuideHistoryCodec {
     }
 
     private JsonObject encodeEntryObject(GuideTimelineEntry entry) {
-        return switch (entry) {
-            case GuideTimelineEntry.User user -> encodeUser(user);
-            case GuideTimelineEntry.Assistant assistant -> encodeAssistant(assistant);
-            case GuideTimelineEntry.Tool tool -> encodeTool(tool);
-        };
+        java.util.Objects.requireNonNull(entry);
+        if (entry instanceof GuideTimelineEntry.User user) {
+            return encodeUser(user);
+        } else if (entry instanceof GuideTimelineEntry.Assistant assistant) {
+            return encodeAssistant(assistant);
+        } else if (entry instanceof GuideTimelineEntry.Tool tool) {
+            return encodeTool(tool);
+        }
+        throw new IncompatibleClassChangeError();
     }
 
     private GuideTimelineEntry decodeEntryObject(JsonObject object) {

@@ -1,5 +1,6 @@
 package dev.openallay.net;
 
+import dev.openallay.concurrent.NamedThreads;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.http.HttpClient;
@@ -25,9 +26,7 @@ public final class JdkHttpTransport implements HttpTransport {
                 .connectTimeout(policy.connectTimeout())
                 .followRedirects(HttpClient.Redirect.NEVER)
                 .build();
-        decoderExecutor = command -> Thread.ofVirtual()
-                .name(policy.decoderThreadName())
-                .start(command);
+        decoderExecutor = command -> NamedThreads.startDaemon(policy.decoderThreadName(), command);
     }
 
     @Override
@@ -128,7 +127,7 @@ public final class JdkHttpTransport implements HttpTransport {
             });
         });
 
-        Thread watchdog = Thread.ofVirtual().name(policy.decoderThreadName() + "-watchdog").unstarted(() -> {
+        Thread watchdog = NamedThreads.unstartedDaemon(policy.decoderThreadName() + "-watchdog", () -> {
             try {
                 while (!settled.get()) {
                     long remaining = deadlineNanos - System.nanoTime();
@@ -136,7 +135,7 @@ public final class JdkHttpTransport implements HttpTransport {
                         fail.accept(new HttpTimeoutException("HTTP response timed out"));
                         return;
                     }
-                    Thread.sleep(java.time.Duration.ofNanos(remaining));
+                    java.util.concurrent.TimeUnit.NANOSECONDS.sleep(remaining);
                 }
             } catch (InterruptedException ignored) {
                 // Decoder completion or explicit cancellation owns the terminal result.

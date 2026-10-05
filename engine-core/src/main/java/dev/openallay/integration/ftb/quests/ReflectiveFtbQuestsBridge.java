@@ -148,7 +148,7 @@ public final class ReflectiveFtbQuestsBridge implements FtbQuestsBridge {
             throw new IllegalArgumentException(
                     "Expected one public " + name + "/" + arity + " on " + type.getName());
         }
-        return matches.getFirst();
+        return matches.get(0);
     }
 
     private String id(Object object) {

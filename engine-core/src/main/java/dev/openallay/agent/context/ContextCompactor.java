@@ -147,7 +147,7 @@ public final class ContextCompactor {
             List<AgentToolResult> freshResults) {
         ContextStructure.units(messages);
         if (!freshResults.isEmpty() && (messages.isEmpty()
-                || messages.getLast().content().size() != freshResults.size())) {
+                || messages.get(messages.size() - 1).content().size() != freshResults.size())) {
             throw new IllegalArgumentException("Fresh results do not match the completed exchange");
         }
         ResultValues values = new ResultValues(messages);
@@ -216,7 +216,7 @@ public final class ContextCompactor {
             List<ModelMessage> receipts, List<AgentToolResult> freshResults) {
         int count = 0;
         if (!freshResults.isEmpty()) {
-            for (ModelContent item : source.getLast().content()) {
+            for (ModelContent item : source.get(source.size() - 1).content()) {
                 if (item instanceof ModelContent.ToolResult result && !result.error()
                         && !values.instructions.contains(result)) count++;
             }
@@ -428,10 +428,10 @@ public final class ContextCompactor {
         if (!units.isEmpty()) {
             // Always keep at least one complete unit and the latest real user turn, even if a
             // caller supplies the end of history. A derived-memory message is not a new turn.
-            protectedEnd = Math.min(protectedEnd, units.getLast().fromIndex());
+            protectedEnd = Math.min(protectedEnd, units.get(units.size() - 1).fromIndex());
             for (int index = units.size() - 1; index >= 0; index--) {
                 ContextStructure.Unit unit = units.get(index);
-                ModelMessage first = unit.messages().getFirst();
+                ModelMessage first = unit.messages().get(0);
                 if (!unit.toolExchange() && first.role() == ModelRole.USER && !derivedMemory(first)) {
                     protectedEnd = Math.min(protectedEnd, unit.fromIndex());
                     break;
@@ -466,7 +466,7 @@ public final class ContextCompactor {
     }
 
     private static boolean derivedMemory(ModelMessage message) {
-        return !message.content().isEmpty() && message.content().getFirst() instanceof ModelContent.Text text
+        return !message.content().isEmpty() && message.content().get(0) instanceof ModelContent.Text text
                 && text.text().startsWith(DERIVED_PREFIX);
     }
 

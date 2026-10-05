@@ -55,7 +55,7 @@ public record GuideEvidencePresentation(
                             .max(Instant::compareTo).orElseThrow());
         }
 
-        public GuideEvidencePresentation presentation() { return from(records.getFirst()); }
+        public GuideEvidencePresentation presentation() { return from(records.get(0)); }
     }
 
     public record Identity(

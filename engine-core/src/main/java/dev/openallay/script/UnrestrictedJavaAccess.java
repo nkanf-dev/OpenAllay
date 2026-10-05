@@ -244,7 +244,7 @@ final class UnrestrictedJavaAccess {
         List<Class<?>> declarations = selector.declaringClass() == null
                 ? hierarchy(target.type()) : List.of(declaringClass(target, selector.declaringClass()));
         ClassLoader loader = selector.declaringClass() == null
-                ? target.type().getClassLoader() : declarations.getFirst().getClassLoader();
+                ? target.type().getClassLoader() : declarations.get(0).getClassLoader();
         Class<?>[] types = parameterTypes(typesValue, loader);
         if (selector.parameterTypes() != null
                 && !Arrays.equals(types, parameterTypes(selector.parameterTypes(), loader))) {

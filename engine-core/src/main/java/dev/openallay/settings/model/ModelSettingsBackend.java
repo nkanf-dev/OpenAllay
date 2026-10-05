@@ -208,7 +208,7 @@ public final class ModelSettingsBackend implements ClientSettingsService.ModelAc
         }
         return new ToolResult.Success<>(
                 ((ToolResult.Success<ModelProfilesConfigLoader.Load>) loaded)
-                        .value().profiles().getFirst());
+                        .value().profiles().get(0));
     }
 
     @Override

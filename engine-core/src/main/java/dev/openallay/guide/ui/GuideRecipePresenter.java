@@ -114,7 +114,7 @@ public final class GuideRecipePresenter {
                     requiredString(reference, "recipeId")));
         }
         if (!references.contains(primary)) {
-            references.addFirst(primary);
+            references.add(0, primary);
         }
         return List.copyOf(references);
     }

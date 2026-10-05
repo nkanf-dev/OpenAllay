@@ -80,7 +80,7 @@ public final class RecipeCatalogMerger {
         List<RecipeEntrySnapshot> ordered = variants.stream().sorted(RECIPE_ORDER).toList();
         return new RecipeSemanticGroup(
                 fingerprint,
-                ordered.getFirst(),
+                ordered.get(0),
                 ordered.stream().map(RecipeEntrySnapshot::reference).toList(),
                 ordered.stream().map(RecipeEntrySnapshot::evidence).toList());
     }

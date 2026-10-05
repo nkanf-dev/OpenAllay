@@ -22,20 +22,25 @@ public final class SemanticDocumentValidator {
 
     private static void validateBlock(
             SemanticBlock block, SemanticReferenceIndex references) {
-        switch (block) {
-            case SemanticBlock.Paragraph paragraph -> validateInlines(paragraph.content(), references);
-            case SemanticBlock.Heading heading -> validateInlines(heading.content(), references);
-            case SemanticBlock.ListBlock list -> list.items().forEach(item ->
+        Objects.requireNonNull(block);
+        if (block instanceof SemanticBlock.Paragraph paragraph) {
+            validateInlines(paragraph.content(), references);
+        } else if (block instanceof SemanticBlock.Heading heading) {
+            validateInlines(heading.content(), references);
+        } else if (block instanceof SemanticBlock.ListBlock list) {
+            list.items().forEach(item ->
                     item.forEach(value -> validateBlock(value, references)));
-            case SemanticBlock.Quote quote -> quote.content().forEach(value ->
-                    validateBlock(value, references));
-            case SemanticBlock.Table table -> {
-                validateRow(table.header(), references);
-                table.rows().forEach(row -> validateRow(row, references));
-            }
-            case SemanticBlock.CodeBlock ignored -> { }
-            case SemanticBlock.ThematicBreak ignored -> { }
-            case SemanticBlock.Component component -> validateComponent(component.component(), references);
+        } else if (block instanceof SemanticBlock.Quote quote) {
+            quote.content().forEach(value -> validateBlock(value, references));
+        } else if (block instanceof SemanticBlock.Table table) {
+            validateRow(table.header(), references);
+            table.rows().forEach(row -> validateRow(row, references));
+        } else if (block instanceof SemanticBlock.CodeBlock ignored) {
+        } else if (block instanceof SemanticBlock.ThematicBreak ignored) {
+        } else if (block instanceof SemanticBlock.Component component) {
+            validateComponent(component.component(), references);
+        } else {
+            throw new IncompatibleClassChangeError();
         }
     }
 
@@ -47,13 +52,18 @@ public final class SemanticDocumentValidator {
     private static void validateInlines(
             List<SemanticInline> inlines, SemanticReferenceIndex references) {
         for (SemanticInline inline : inlines) {
-            switch (inline) {
-                case SemanticInline.Reference value -> validateReference(value.reference(), references);
-                case SemanticInline.Emphasis value -> validateInlines(value.children(), references);
-                case SemanticInline.Strong value -> validateInlines(value.children(), references);
-                case SemanticInline.Text ignored -> { }
-                case SemanticInline.Code ignored -> { }
-                case SemanticInline.Break ignored -> { }
+            Objects.requireNonNull(inline);
+            if (inline instanceof SemanticInline.Reference value) {
+                validateReference(value.reference(), references);
+            } else if (inline instanceof SemanticInline.Emphasis value) {
+                validateInlines(value.children(), references);
+            } else if (inline instanceof SemanticInline.Strong value) {
+                validateInlines(value.children(), references);
+            } else if (inline instanceof SemanticInline.Text ignored) {
+            } else if (inline instanceof SemanticInline.Code ignored) {
+            } else if (inline instanceof SemanticInline.Break ignored) {
+            } else {
+                throw new IncompatibleClassChangeError();
             }
         }
     }
@@ -69,23 +79,28 @@ public final class SemanticDocumentValidator {
 
     private static void validateComponent(
             RichComponent component, SemanticReferenceIndex references) {
-        switch (component) {
-            case RichComponent.ItemRow row -> row.items().forEach(item -> require(
+        Objects.requireNonNull(component);
+        if (component instanceof RichComponent.ItemRow row) {
+            row.items().forEach(item -> require(
                     references, SemanticReferenceKind.ITEM,
                     item.itemId(), item.originInvocationId()));
-            case RichComponent.RecipeGrid recipe -> requireRecipe(
-                    references, recipe.recipe(), recipe.originInvocationId());
-            case RichComponent.IngredientCheck check -> check.ingredients().forEach(item -> require(
+        } else if (component instanceof RichComponent.RecipeGrid recipe) {
+            requireRecipe(references, recipe.recipe(), recipe.originInvocationId());
+        } else if (component instanceof RichComponent.IngredientCheck check) {
+            check.ingredients().forEach(item -> require(
                     references, SemanticReferenceKind.ITEM,
                     item.itemId(), item.originInvocationId()));
-            case RichComponent.CraftabilitySummary summary -> requireRecipe(
-                    references, summary.recipe(), summary.originInvocationId());
-            case RichComponent.SourceSummary summary -> summary.sources().forEach(source -> require(
+        } else if (component instanceof RichComponent.CraftabilitySummary summary) {
+            requireRecipe(references, summary.recipe(), summary.originInvocationId());
+        } else if (component instanceof RichComponent.SourceSummary summary) {
+            summary.sources().forEach(source -> require(
                     references, SemanticReferenceKind.SOURCE,
                     source.sourceId(), source.originInvocationId()));
-            case RichComponent.ProgressSteps ignored -> { }
-            case RichComponent.StatusBadge ignored -> { }
-            case RichComponent.ChoiceGroup ignored -> { }
+        } else if (component instanceof RichComponent.ProgressSteps ignored) {
+        } else if (component instanceof RichComponent.StatusBadge ignored) {
+        } else if (component instanceof RichComponent.ChoiceGroup ignored) {
+        } else {
+            throw new IncompatibleClassChangeError();
         }
     }
 

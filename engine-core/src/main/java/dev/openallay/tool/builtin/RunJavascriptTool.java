@@ -1,5 +1,6 @@
 package dev.openallay.tool.builtin;
 
+import dev.openallay.concurrent.NamedThreads;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import dev.openallay.agent.tool.ToolDescription;
@@ -244,9 +245,9 @@ public final class RunJavascriptTool
         }
         CompletableFuture<ToolResult<Output>> future = new CompletableFuture<>();
         try {
-            Thread worker = Thread.ofVirtual()
-                    .name("openallay-javascript-" + context.correlationId())
-                    .start(() -> execute(context, input, cancellation, scope, future));
+            Thread worker = NamedThreads.startDaemon(
+                    "openallay-javascript-" + context.correlationId(),
+                    () -> execute(context, input, cancellation, scope, future));
             java.lang.ref.WeakReference<Thread> reference = new java.lang.ref.WeakReference<>(worker);
             cancellation.onCancel(() -> {
                 Thread current = reference.get();

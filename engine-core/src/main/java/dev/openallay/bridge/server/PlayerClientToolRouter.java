@@ -1,5 +1,6 @@
 package dev.openallay.bridge.server;
 
+import dev.openallay.concurrent.NamedThreads;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -108,7 +109,7 @@ public final class PlayerClientToolRouter {
     public PlayerClientToolRouter(
             ToolRegistry tools, Gson gson, Transport transport, Duration resultTimeout) {
         this(tools, gson, transport, resultTimeout,
-                command -> Thread.ofVirtual().name("openallay-client-tool-result").start(command));
+                command -> NamedThreads.startDaemon("openallay-client-tool-result", command));
     }
 
     /** Explicit executor lets tests drive assembly and image admission without native threads. */

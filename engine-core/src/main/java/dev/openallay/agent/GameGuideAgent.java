@@ -439,7 +439,7 @@ public final class GameGuideAgent {
                         actual, tools.definitions(), freshResults);
                 if (fitted.isPresent()) updated = new ArrayList<>(fitted.orElseThrow().messages());
             }
-            List<ModelContent> initialResults = updated.getLast().content();
+            List<ModelContent> initialResults = updated.get(updated.size() - 1).content();
             List<ModelMessage> updatedComplete = new ArrayList<>(completeMessages);
             updatedComplete.add(new ModelMessage(ModelRole.USER, initialResults));
             updatedComplete = new ArrayList<>(dev.openallay.agent.context.ModelContextCodec.safe(updatedComplete));
@@ -615,8 +615,8 @@ public final class GameGuideAgent {
     private static List<ModelMessage> captureInitialResultProjection(
             List<ModelMessage> original, List<ModelMessage> projected) {
         if (original.isEmpty() || projected.isEmpty()) return original;
-        ModelMessage originalLast = original.getLast();
-        ModelMessage projectedLast = projected.getLast();
+        ModelMessage originalLast = original.get(original.size() - 1);
+        ModelMessage projectedLast = projected.get(projected.size() - 1);
         if (originalLast.content().stream().allMatch(ModelContent.ToolResult.class::isInstance)
                 && projectedLast.content().stream().allMatch(ModelContent.ToolResult.class::isInstance)) {
             List<String> originalIds = originalLast.content().stream()

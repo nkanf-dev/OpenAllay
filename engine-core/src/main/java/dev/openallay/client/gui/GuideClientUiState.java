@@ -298,7 +298,7 @@ public final class GuideClientUiState implements AutoCloseable {
         if (draft == null) return InsertionResult.REJECTED;
         if (draft.revision != capture.revision) {
             draft.pending.add(new PendingInsertion(UUID.randomUUID(), capture.session, transcript, pendingAnchor(capture, observation)));
-            if (draft.pending.getLast().observation().isPresent()) retainImages();
+            if (draft.pending.get(draft.pending.size() - 1).observation().isPresent()) retainImages();
             changed();
             return InsertionResult.PENDING;
         }
@@ -317,7 +317,7 @@ public final class GuideClientUiState implements AutoCloseable {
         Draft draft = drafts.get(capture.session());
         if (draft == null) return false;
         draft.pending.add(new PendingInsertion(UUID.randomUUID(), capture.session(), transcript, pendingAnchor(capture, observation)));
-        if (draft.pending.getLast().observation().isPresent()) retainImages();
+        if (draft.pending.get(draft.pending.size() - 1).observation().isPresent()) retainImages();
         changed();
         return true;
     }

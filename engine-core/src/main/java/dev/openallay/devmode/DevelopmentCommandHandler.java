@@ -20,10 +20,12 @@ public final class DevelopmentCommandHandler {
     }
 
     public String invoke(ToolInvocationContext context, String id) {
-        return switch (inspector.invokeNoArgument(context, id)) {
-            case ToolResult.Success<?> success -> "SUCCESS " + success.value();
-            case ToolResult.Failure<?> failure ->
-                "FAILURE " + failure.code() + ": " + failure.message();
-        };
+        ToolResult<?> result = java.util.Objects.requireNonNull(inspector.invokeNoArgument(context, id));
+        if (result instanceof ToolResult.Success<?> success) {
+            return "SUCCESS " + success.value();
+        } else if (result instanceof ToolResult.Failure<?> failure) {
+            return "FAILURE " + failure.code() + ": " + failure.message();
+        }
+        throw new IncompatibleClassChangeError();
     }
 }

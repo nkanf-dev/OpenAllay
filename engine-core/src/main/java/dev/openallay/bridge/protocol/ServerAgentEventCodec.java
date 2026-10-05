@@ -261,35 +261,39 @@ public final class ServerAgentEventCodec {
     }
 
     private static String type(AgentEvent event) {
-        return switch (event) {
-            case AgentEvent.StateChanged ignored -> "state";
-            case AgentEvent.ContextCompacted ignored -> "context_compacted";
-            case AgentEvent.ContextUpdated ignored -> "context_updated";
-            case AgentEvent.ContextFinalized ignored -> "context_finalized";
-            case AgentEvent.SteerApplied ignored -> "steer_applied";
-            case AgentEvent.SteerRejected ignored -> "steer_rejected";
-            case AgentEvent.ToolStarted ignored -> "tool_started";
-            case AgentEvent.ToolCompleted ignored -> "tool_completed";
-            case AgentEvent.FinalText ignored -> "final_text";
-            case AgentEvent.Failed ignored -> "failed";
-            case AgentEvent.RequestReleased ignored -> "request_released";
-            case AgentEvent.ModelUsageStarted ignored -> "model_usage_started";
-            case AgentEvent.ModelUsageObserved ignored -> "model_usage_observed";
-            case AgentEvent.ModelProgress progress -> switch (progress.event()) {
-                case ModelEvent.TextDelta ignored -> "text_delta";
-                case ModelEvent.ReasoningDelta ignored -> "reasoning_delta";
-                case ModelEvent.ToolUseComplete ignored -> "tool_use_complete";
-                case ModelEvent.UsageUpdate ignored -> "usage";
-                case ModelEvent.UsageStarted ignored -> throw new IllegalArgumentException(
-                        "Usage starts must use AgentEvent.ModelUsageStarted");
-                case ModelEvent.UsageObserved ignored -> throw new IllegalArgumentException(
-                        "Usage receipts must use AgentEvent.ModelUsageObserved");
-                case ModelEvent.AttemptStarted ignored -> "model_attempt_started";
-                case ModelEvent.ResponseStarted ignored -> "model_response_started";
-                case ModelEvent.RateLimited ignored -> "rate_limited";
-                case ModelEvent.MessageComplete ignored -> "model_complete";
-                case ModelFailure ignored -> "model_failure";
-            };
-        };
+        Objects.requireNonNull(event);
+        if (event instanceof AgentEvent.StateChanged) return "state";
+        if (event instanceof AgentEvent.ContextCompacted) return "context_compacted";
+        if (event instanceof AgentEvent.ContextUpdated) return "context_updated";
+        if (event instanceof AgentEvent.ContextFinalized) return "context_finalized";
+        if (event instanceof AgentEvent.SteerApplied) return "steer_applied";
+        if (event instanceof AgentEvent.SteerRejected) return "steer_rejected";
+        if (event instanceof AgentEvent.ToolStarted) return "tool_started";
+        if (event instanceof AgentEvent.ToolCompleted) return "tool_completed";
+        if (event instanceof AgentEvent.FinalText) return "final_text";
+        if (event instanceof AgentEvent.Failed) return "failed";
+        if (event instanceof AgentEvent.RequestReleased) return "request_released";
+        if (event instanceof AgentEvent.ModelUsageStarted) return "model_usage_started";
+        if (event instanceof AgentEvent.ModelUsageObserved) return "model_usage_observed";
+        if (event instanceof AgentEvent.ModelProgress progress) {
+            ModelEvent modelEvent = Objects.requireNonNull(progress.event());
+            if (modelEvent instanceof ModelEvent.TextDelta) return "text_delta";
+            if (modelEvent instanceof ModelEvent.ReasoningDelta) return "reasoning_delta";
+            if (modelEvent instanceof ModelEvent.ToolUseComplete) return "tool_use_complete";
+            if (modelEvent instanceof ModelEvent.UsageUpdate) return "usage";
+            if (modelEvent instanceof ModelEvent.UsageStarted) {
+                throw new IllegalArgumentException("Usage starts must use AgentEvent.ModelUsageStarted");
+            }
+            if (modelEvent instanceof ModelEvent.UsageObserved) {
+                throw new IllegalArgumentException("Usage receipts must use AgentEvent.ModelUsageObserved");
+            }
+            if (modelEvent instanceof ModelEvent.AttemptStarted) return "model_attempt_started";
+            if (modelEvent instanceof ModelEvent.ResponseStarted) return "model_response_started";
+            if (modelEvent instanceof ModelEvent.RateLimited) return "rate_limited";
+            if (modelEvent instanceof ModelEvent.MessageComplete) return "model_complete";
+            if (modelEvent instanceof ModelFailure) return "model_failure";
+            throw new IncompatibleClassChangeError();
+        }
+        throw new IncompatibleClassChangeError();
     }
 }

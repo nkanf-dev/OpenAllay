@@ -16,6 +16,6 @@ public final class PlatformServices {
             throw new IllegalStateException(
                     "Expected exactly one PlatformService, found " + services.size());
         }
-        return services.getFirst();
+        return services.get(0);
     }
 }

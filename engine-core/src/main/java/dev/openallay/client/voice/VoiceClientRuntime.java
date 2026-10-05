@@ -1,5 +1,6 @@
 package dev.openallay.client.voice;
 
+import dev.openallay.concurrent.NamedThreads;
 import dev.openallay.model.config.CredentialReference;
 import dev.openallay.model.config.LocalCredentialStore;
 import dev.openallay.model.config.SecretValue;
@@ -27,7 +28,9 @@ public final class VoiceClientRuntime implements AutoCloseable {
     private final NativeModelInstaller installer;
     private final ExecutorService settingsWorker;
     private final ExecutorService inferenceWorker;
-    private final ExecutorService captureWorker;
+    private final Executor captureWorker;
+    private final Object captureAdmission = new Object();
+    private boolean captureShutdown;
     private final VoiceRuntime input;
     private final Settings actions = new Settings();
     private volatile List<AudioCapture.Device> devices = List.of();
@@ -50,10 +53,17 @@ public final class VoiceClientRuntime implements AutoCloseable {
         credentials = new LocalCredentialStore(directory.resolve("voice-credentials.sqlite3"), Clock.systemUTC());
         credentialResolver = dev.openallay.model.config.CredentialResolver.composite(credentials, credentialEnvironment);
         installer = new NativeModelInstaller(directory.resolve("voice-models"));
-        ThreadFactory factory = Thread.ofVirtual().name("openallay-voice-", 0).factory();
+        ThreadFactory factory = NamedThreads.daemonFactory("openallay-voice-", 0);
         settingsWorker = Executors.newSingleThreadExecutor(factory);
         inferenceWorker = Executors.newSingleThreadExecutor(factory);
-        captureWorker = Executors.newThreadPerTaskExecutor(factory);
+        // Every capture/cancellation task has its own worker; native close cannot queue
+        // behind a blocked recorder. Shutdown rejects new tasks without interrupting owners.
+        captureWorker = command -> {
+            synchronized (captureAdmission) {
+                if (captureShutdown) throw new java.util.concurrent.RejectedExecutionException("Voice capture worker is closed");
+                factory.newThread(command).start();
+            }
+        };
         // A dedicated serial inference slot prevents competing native processes/resource spikes.
         input = new VoiceRuntime(drafts, captures, this::backend, store::config, captureWorker, dispatcher);
         input.setFeedbackVisible(false);
@@ -251,9 +261,10 @@ public final class VoiceClientRuntime implements AutoCloseable {
         input.close();
         VoiceCancellation current = download;
         if (current != null) captureWorker.execute(current::cancel);
-        settingsWorker.shutdown(); inferenceWorker.shutdown(); captureWorker.shutdown();
+        settingsWorker.shutdown(); inferenceWorker.shutdown();
+        synchronized (captureAdmission) { captureShutdown = true; }
         // Store close runs behind already admitted settings work, not on the game thread.
-        Thread.ofVirtual().name("openallay-voice-cleanup").start(() -> {
+        NamedThreads.startDaemon("openallay-voice-cleanup", () -> {
             try { settingsWorker.awaitTermination(10, java.util.concurrent.TimeUnit.SECONDS); }
             catch (InterruptedException interrupted) { Thread.currentThread().interrupt(); }
             credentials.close();

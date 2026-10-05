@@ -84,7 +84,7 @@ final class AnthropicStreamAccumulator {
         } else if (type.equals("tool_use")) {
             block.id = content.get("id").getAsString();
             block.name = content.get("name").getAsString();
-            if (content.has("input") && !content.getAsJsonObject("input").isEmpty()) {
+            if (content.has("input") && content.getAsJsonObject("input").size() != 0) {
                 block.value.append(content.get("input").toString());
             }
         }

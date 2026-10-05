@@ -113,7 +113,7 @@ public final class BenchmarkTraceAuditor {
                         : BenchmarkTraceAudit.Disposition.UNRESOLVED;
         BenchmarkTraceAudit.RootCauseDomain domain =
                 domains.size() == 1
-                        ? domains.getFirst()
+                        ? domains.get(0)
                         : BenchmarkTraceAudit.RootCauseDomain.UNRESOLVED;
         String diagnostic = domains.isEmpty()
                 ? "No stable failure-domain evidence; inspect the retained raw trace"

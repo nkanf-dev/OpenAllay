@@ -20,30 +20,46 @@ final class SemanticPlainText {
     static String inline(List<SemanticInline> values) {
         StringBuilder text = new StringBuilder();
         for (SemanticInline value : values) {
-            switch (value) {
-                case SemanticInline.Text literal -> text.append(literal.text());
-                case SemanticInline.Emphasis emphasis -> text.append(inline(emphasis.children()));
-                case SemanticInline.Strong strong -> text.append(inline(strong.children()));
-                case SemanticInline.Code code -> text.append(code.text());
-                case SemanticInline.Break ignored -> text.append('\n');
-                case SemanticInline.Reference reference ->
-                    text.append(reference.reference().displayText());
+            java.util.Objects.requireNonNull(value);
+            if (value instanceof SemanticInline.Text literal) {
+                text.append(literal.text());
+            } else if (value instanceof SemanticInline.Emphasis emphasis) {
+                text.append(inline(emphasis.children()));
+            } else if (value instanceof SemanticInline.Strong strong) {
+                text.append(inline(strong.children()));
+            } else if (value instanceof SemanticInline.Code code) {
+                text.append(code.text());
+            } else if (value instanceof SemanticInline.Break ignored) {
+                text.append('\n');
+            } else if (value instanceof SemanticInline.Reference reference) {
+                text.append(reference.reference().displayText());
+            } else {
+                throw new IncompatibleClassChangeError();
             }
         }
         return text.toString();
     }
 
     private static String block(SemanticBlock value, int depth) {
-        return switch (value) {
-            case SemanticBlock.Paragraph paragraph -> inline(paragraph.content());
-            case SemanticBlock.Heading heading -> inline(heading.content());
-            case SemanticBlock.Quote quote -> prefix(blocks(quote.content(), depth + 1), "> ");
-            case SemanticBlock.CodeBlock code -> code.code();
-            case SemanticBlock.ThematicBreak ignored -> "---";
-            case SemanticBlock.ListBlock list -> list(list, depth);
-            case SemanticBlock.Table table -> table(table);
-            case SemanticBlock.Component component -> component.component().fallbackText();
-        };
+        java.util.Objects.requireNonNull(value);
+        if (value instanceof SemanticBlock.Paragraph paragraph) {
+            return inline(paragraph.content());
+        } else if (value instanceof SemanticBlock.Heading heading) {
+            return inline(heading.content());
+        } else if (value instanceof SemanticBlock.Quote quote) {
+            return prefix(blocks(quote.content(), depth + 1), "> ");
+        } else if (value instanceof SemanticBlock.CodeBlock code) {
+            return code.code();
+        } else if (value instanceof SemanticBlock.ThematicBreak ignored) {
+            return "---";
+        } else if (value instanceof SemanticBlock.ListBlock list) {
+            return list(list, depth);
+        } else if (value instanceof SemanticBlock.Table table) {
+            return table(table);
+        } else if (value instanceof SemanticBlock.Component component) {
+            return component.component().fallbackText();
+        }
+        throw new IncompatibleClassChangeError();
     }
 
     private static String blocks(List<SemanticBlock> values, int depth) {

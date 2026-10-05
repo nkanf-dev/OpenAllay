@@ -134,25 +134,27 @@ public record GuideUiView(
         List<GuideUiRow> rows = new ArrayList<>();
         rows.add(new GuideUiRow.User(request.requestId(), request.userMessage()));
         for (GuideTimelineEntry entry : request.timeline()) {
-            switch (entry) {
-                case GuideTimelineEntry.User user -> rows.add(
-                        new GuideUiRow.User(user.messageId(), user.text()));
-                case GuideTimelineEntry.Assistant assistant -> rows.add(
-                        new GuideUiRow.Assistant(
-                                request.requestId(),
-                                assistant.ordinal(),
-                                assistant.text(),
-                                assistant.semantic(),
-                                assistant.streaming(),
-                                assistant.sources()));
-                case GuideTimelineEntry.Tool tool -> rows.add(
-                        new GuideUiRow.Tool(
-                                request.requestId(),
-                                tool.ordinal(),
-                                tool.activity(),
-                                GuideToolDetailPresenter.project(
-                                        tool.activity(), displayConfig.debugMode())
-                                        .forRequest(request.terminal())));
+            java.util.Objects.requireNonNull(entry);
+            if (entry instanceof GuideTimelineEntry.User user) {
+                rows.add(new GuideUiRow.User(user.messageId(), user.text()));
+            } else if (entry instanceof GuideTimelineEntry.Assistant assistant) {
+                rows.add(new GuideUiRow.Assistant(
+                        request.requestId(),
+                        assistant.ordinal(),
+                        assistant.text(),
+                        assistant.semantic(),
+                        assistant.streaming(),
+                        assistant.sources()));
+            } else if (entry instanceof GuideTimelineEntry.Tool tool) {
+                rows.add(new GuideUiRow.Tool(
+                        request.requestId(),
+                        tool.ordinal(),
+                        tool.activity(),
+                        GuideToolDetailPresenter.project(
+                                tool.activity(), displayConfig.debugMode())
+                                .forRequest(request.terminal())));
+            } else {
+                throw new IncompatibleClassChangeError();
             }
         }
         if (request.status() == GuideRequestStatus.FAILED

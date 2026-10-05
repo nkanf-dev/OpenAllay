@@ -1,5 +1,6 @@
 package dev.openallay.model.metadata;
 
+import dev.openallay.concurrent.NamedThreads;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -41,7 +42,7 @@ public final class ModelMetadataCache {
 
     private final Path path;
     private final ExecutorService worker = Executors.newSingleThreadExecutor(
-            Thread.ofVirtual().name("openallay-model-metadata-cache", 0).factory());
+            NamedThreads.daemonFactory("openallay-model-metadata-cache", 0));
     private Snapshot state;
     private boolean closed;
 

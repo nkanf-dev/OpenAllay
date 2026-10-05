@@ -414,7 +414,7 @@ public final class SettingsDiagnosticsAggregator {
         return session.requests().stream()
                 .filter(request -> !request.terminal())
                 .reduce((first, second) -> second)
-                .or(() -> Optional.of(session.requests().getLast()));
+                .or(() -> Optional.of(session.requests().get(session.requests().size() - 1)));
     }
 
     private static SettingsDiagnosticCard card(

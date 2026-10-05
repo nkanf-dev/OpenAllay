@@ -23,39 +23,37 @@ public final class ModelContextCodec {
             JsonArray content = new JsonArray();
             for (ModelContent item : message.content()) {
                 JsonObject value = new JsonObject();
-                switch (item) {
-                    case ModelContent.Text text -> {
-                        value.addProperty("type", "text");
-                        value.addProperty("text", text.text());
+                java.util.Objects.requireNonNull(item);
+                if (item instanceof ModelContent.Text text) {
+                    value.addProperty("type", "text");
+                    value.addProperty("text", text.text());
+                } else if (item instanceof ModelContent.Image image) {
+                    value.addProperty("type", "image");
+                    var reference = image.reference();
+                    addImageReference(value, reference);
+                    if (image.originToolUseId() == null) value.add("originToolUseId", com.google.gson.JsonNull.INSTANCE);
+                    else value.addProperty("originToolUseId", image.originToolUseId());
+                } else if (item instanceof ModelContent.ToolUse use) {
+                    value.addProperty("type", "tool_use");
+                    value.addProperty("id", use.id());
+                    value.addProperty("name", use.name());
+                    value.add("input", use.input());
+                } else if (item instanceof ModelContent.ToolResult result) {
+                    value.addProperty("type", "tool_result");
+                    value.addProperty("toolUseId", result.toolUseId());
+                    value.add("value", result.value());
+                    value.addProperty("error", result.error());
+                    JsonArray images = new JsonArray();
+                    for (var reference : result.images()) {
+                        JsonObject image = new JsonObject();
+                        addImageReference(image, reference);
+                        images.add(image);
                     }
-                    case ModelContent.Image image -> {
-                        value.addProperty("type", "image");
-                        var reference = image.reference();
-                        addImageReference(value, reference);
-                        if (image.originToolUseId() == null) value.add("originToolUseId", com.google.gson.JsonNull.INSTANCE);
-                        else value.addProperty("originToolUseId", image.originToolUseId());
-                    }
-                    case ModelContent.ToolUse use -> {
-                        value.addProperty("type", "tool_use");
-                        value.addProperty("id", use.id());
-                        value.addProperty("name", use.name());
-                        value.add("input", use.input());
-                    }
-                    case ModelContent.ToolResult result -> {
-                        value.addProperty("type", "tool_result");
-                        value.addProperty("toolUseId", result.toolUseId());
-                        value.add("value", result.value());
-                        value.addProperty("error", result.error());
-                        JsonArray images = new JsonArray();
-                        for (var reference : result.images()) {
-                            JsonObject image = new JsonObject();
-                            addImageReference(image, reference);
-                            images.add(image);
-                        }
-                        value.add("images", images);
-                    }
-                    case ModelContent.Reasoning ignored -> throw new IllegalStateException(
-                            "private reasoning reached safe model context");
+                    value.add("images", images);
+                } else if (item instanceof ModelContent.Reasoning) {
+                    throw new IllegalStateException("private reasoning reached safe model context");
+                } else {
+                    throw new IncompatibleClassChangeError();
                 }
                 content.add(value);
             }

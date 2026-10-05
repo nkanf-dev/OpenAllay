@@ -1,5 +1,6 @@
 package dev.openallay.guide.history;
 
+import dev.openallay.concurrent.NamedThreads;
 import dev.openallay.model.ModelMessage;
 import java.util.List;
 import java.util.Objects;
@@ -22,10 +23,7 @@ public final class GuideHistoryRepository implements GuideHistoryAccess {
     public GuideHistoryRepository(GuideHistoryStore store) {
         this(
                 store,
-                Executors.newSingleThreadExecutor(Thread.ofPlatform()
-                        .name("openallay-history-", 0)
-                        .daemon(true)
-                        .factory()));
+                Executors.newSingleThreadExecutor(NamedThreads.daemonFactory("openallay-history-", 0)));
     }
 
     GuideHistoryRepository(GuideHistoryStore store, ExecutorService worker) {

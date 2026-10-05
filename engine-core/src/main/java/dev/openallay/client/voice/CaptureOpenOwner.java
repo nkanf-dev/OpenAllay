@@ -1,5 +1,6 @@
 package dev.openallay.client.voice;
 
+import dev.openallay.concurrent.NamedThreads;
 import java.time.Duration;
 import java.util.Objects;
 import java.util.concurrent.CancellationException;
@@ -47,7 +48,7 @@ final class CaptureOpenOwner {
         Opening opening = new Opening(deviceId, cancellation);
         boolean transferred = false;
         try (AutoCloseable hook = cancellation.onCancel(opening::abort)) {
-            opening.thread = Thread.ofVirtual().name("openallay-microphone-open").unstarted(opening::run);
+            opening.thread = NamedThreads.unstartedDaemon("openallay-microphone-open", opening::run);
             opening.thread.start();
             try {
                 AudioCapture capture = opening.result.get(Math.max(1, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
@@ -97,7 +98,7 @@ final class CaptureOpenOwner {
             Prepared capture = selected.get();
             if (capture != null && closeScheduled.compareAndSet(false, true)) {
                 // Never block a game-thread cancellation callback on native close.
-                Thread.ofVirtual().name("openallay-microphone-open-close").start(capture::close);
+                NamedThreads.startDaemon("openallay-microphone-open-close", capture::close);
             }
         }
         private void run() {

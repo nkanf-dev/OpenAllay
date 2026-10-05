@@ -191,45 +191,43 @@ public final class GuideSessionExporter {
                         });
                     });
                     for (ModelContent content : message.content()) {
-                        switch (content) {
-                            case ModelContent.Text text -> {
-                                if (message.role() == dev.openallay.model.ModelRole.USER
-                                        && firstUserText && text.text().equals(request.userMessage())) {
-                                    firstUserText = false;
-                                    continue;
-                                }
-                                result.append(message.role()).append('\n')
-                                        .append(formatText(text.text())).append("\n\n");
+                        Objects.requireNonNull(content);
+                        if (content instanceof ModelContent.Text text) {
+                            if (message.role() == dev.openallay.model.ModelRole.USER
+                                    && firstUserText && text.text().equals(request.userMessage())) {
+                                firstUserText = false;
+                                continue;
                             }
-                            case ModelContent.Image image -> {
-                                ImageReference reference = image.reference();
-                                if (image.originToolUseId() == null) {
-                                    result.append(message.role()).append(" · IMAGE\n");
-                                } else {
-                                    result.append("Tool observation · ").append(formatText(image.originToolUseId()))
-                                            .append(" · IMAGE\n");
-                                }
+                            result.append(message.role()).append('\n')
+                                    .append(formatText(text.text())).append("\n\n");
+                        } else if (content instanceof ModelContent.Image image) {
+                            ImageReference reference = image.reference();
+                            if (image.originToolUseId() == null) {
+                                result.append(message.role()).append(" · IMAGE\n");
+                            } else {
+                                result.append("Tool observation · ").append(formatText(image.originToolUseId()))
+                                        .append(" · IMAGE\n");
+                            }
+                            appendImage(result, reference);
+                        } else if (content instanceof ModelContent.ToolUse call) {
+                            tools.put(call.id(), call.name());
+                            recordedCalls.add(call.id());
+                            result.append("Tool · ").append(safeToolName(call.name()))
+                                    .append(" · SUBMITTED\nInvocation ID: ")
+                                    .append(formatText(call.id())).append("\nSubmitted arguments\n")
+                                    .append(call.input())
+                                    .append("\n\n");
+                        } else if (content instanceof ModelContent.ToolResult outcome) {
+                            appendOutcome(result, tools.getOrDefault(outcome.toolUseId(), "unknown_tool"), outcome);
+                            for (ImageReference reference : outcome.images()) {
+                                result.append("Tool observation · ").append(formatText(outcome.toolUseId()))
+                                        .append(" · IMAGE\n");
                                 appendImage(result, reference);
                             }
-                            case ModelContent.ToolUse call -> {
-                                tools.put(call.id(), call.name());
-                                recordedCalls.add(call.id());
-                                result.append("Tool · ").append(safeToolName(call.name()))
-                                        .append(" · SUBMITTED\nInvocation ID: ")
-                                        .append(formatText(call.id())).append("\nSubmitted arguments\n")
-                                        .append(call.input())
-                                        .append("\n\n");
-                            }
-                            case ModelContent.ToolResult outcome -> {
-                                appendOutcome(result, tools.getOrDefault(outcome.toolUseId(), "unknown_tool"), outcome);
-                                for (ImageReference reference : outcome.images()) {
-                                    result.append("Tool observation · ").append(formatText(outcome.toolUseId()))
-                                            .append(" · IMAGE\n");
-                                    appendImage(result, reference);
-                                }
-                            }
-                            case ModelContent.Reasoning ignored ->
-                                    throw new IllegalArgumentException("export cannot contain reasoning");
+                        } else if (content instanceof ModelContent.Reasoning ignored) {
+                            throw new IllegalArgumentException("export cannot contain reasoning");
+                        } else {
+                            throw new IncompatibleClassChangeError();
                         }
                     }
                 }
@@ -253,30 +251,29 @@ public final class GuideSessionExporter {
             StringBuilder result, GuideSessionExportSnapshot.Request request,
             Set<String> recordedCalls, boolean hasOriginalContext) {
         for (var entry : request.timeline()) {
-            switch (entry) {
-                case GuideSessionExportSnapshot.Entry.User user -> {
-                    if (!hasOriginalContext) {
-                        result.append("User (supplemental instruction)\n")
-                                .append(formatText(user.text())).append("\n\n");
-                    }
+            Objects.requireNonNull(entry);
+            if (entry instanceof GuideSessionExportSnapshot.Entry.User user) {
+                if (!hasOriginalContext) {
+                    result.append("User (supplemental instruction)\n")
+                            .append(formatText(user.text())).append("\n\n");
                 }
-                case GuideSessionExportSnapshot.Entry.Assistant assistant -> {
-                    if (!hasOriginalContext) {
-                        result.append(assistant.streaming() ? "Assistant (in progress)\n" : "Assistant\n")
-                                .append(formatText(assistant.text())).append("\n\n");
-                    } else if (assistant.streaming()) {
-                        result.append("Visible unfinished assistant text (display snapshot, not an additional message)\n")
-                                .append(formatText(assistant.text())).append("\n\n");
-                    }
+            } else if (entry instanceof GuideSessionExportSnapshot.Entry.Assistant assistant) {
+                if (!hasOriginalContext) {
+                    result.append(assistant.streaming() ? "Assistant (in progress)\n" : "Assistant\n")
+                            .append(formatText(assistant.text())).append("\n\n");
+                } else if (assistant.streaming()) {
+                    result.append("Visible unfinished assistant text (display snapshot, not an additional message)\n")
+                            .append(formatText(assistant.text())).append("\n\n");
                 }
-                case GuideSessionExportSnapshot.Entry.Tool tool -> {
-                    if (!recordedCalls.contains(tool.invocationId())) {
-                        result.append("Tool · ").append(safeToolName(tool.toolId()))
-                                .append(" · ").append(tool.status()).append("\nInvocation ID: ")
-                                .append(formatText(tool.invocationId()))
-                                .append("\n[No completed model-visible result was recorded.]\n\n");
-                    }
+            } else if (entry instanceof GuideSessionExportSnapshot.Entry.Tool tool) {
+                if (!recordedCalls.contains(tool.invocationId())) {
+                    result.append("Tool · ").append(safeToolName(tool.toolId()))
+                            .append(" · ").append(tool.status()).append("\nInvocation ID: ")
+                            .append(formatText(tool.invocationId()))
+                            .append("\n[No completed model-visible result was recorded.]\n\n");
                 }
+            } else {
+                throw new IncompatibleClassChangeError();
             }
         }
     }

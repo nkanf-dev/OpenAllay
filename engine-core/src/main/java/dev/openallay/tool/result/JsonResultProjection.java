@@ -207,7 +207,7 @@ public final class JsonResultProjection {
     }
 
     private static void appendFieldNames(StringBuilder line, JsonObject value, int maximumBytes) {
-        if (value.isEmpty()) return;
+        if (value.size() == 0) return;
         line.append(" fields[");
         boolean first = true;
         for (String field : value.keySet()) {
@@ -264,7 +264,7 @@ public final class JsonResultProjection {
                 first = false;
             }
         } else {
-            if (value.getAsJsonObject().isEmpty()) {
+            if (value.getAsJsonObject().size() == 0) {
                 output.append(padding).append(listPrefix == null ? "" : listPrefix).append("(empty object)");
                 return;
             }

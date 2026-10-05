@@ -8,16 +8,16 @@ plugins {
 }
 
 // This value is independent of minecraftTarget and the native java_version.
-// Java 21 supports current Rhino and shared runtime features; Java 17 needs one central port.
-def engineJavaVersion = 21
+// One Java17 production ABI serves all accepted native families. Test sources use the installed Java21 compiler.
+def engineJavaVersion = 17
 base { archivesName = 'openallay-engine-core' }
 java {
-    toolchain.languageVersion = JavaLanguageVersion.of(engineJavaVersion)
+    toolchain.languageVersion = JavaLanguageVersion.of(21)
     withSourcesJar()
     withJavadocJar()
 }
 tasks.withType(JavaCompile).configureEach {
-    options.release = engineJavaVersion
+    options.release = name in ['compileTestJava', 'compileTestFixturesJava'] ? 21 : engineJavaVersion
     options.encoding = 'UTF-8'
 }
 tasks.withType(Jar).configureEach {
@@ -30,9 +30,9 @@ dependencies {
     // Host-supplied public SDK stays separately packaged, never shaded into the engine.
     api(project(':extension-api'))
     compileOnlyApi(project(':runtime-json'))
-    api('com.google.code.gson:gson:2.10.1')
-    api('org.slf4j:slf4j-api:2.0.9')
-    api("dev.latvian.mods:rhino:${rhino_version}")
+    api('com.google.code.gson:gson:2.10')
+    api('org.slf4j:slf4j-api:2.0.1')
+    api(project(':runtime-rhino'))
     implementation('org.apache.maven:maven-artifact:3.9.9')
     implementation("org.commonmark:commonmark:${commonmark_version}")
     implementation("org.commonmark:commonmark-ext-gfm-tables:${commonmark_version}")
@@ -52,7 +52,10 @@ sourceSets.main.output.dir([builtBy: jsonSupport.tasks.named('classes')],
 // Enforce actual resolved production classpaths, not names appearing in source comments.
 def productionCoordinates = [
     'com.google.code.gson:gson', 'com.google.errorprone:error_prone_annotations', 'org.slf4j:slf4j-api',
-    'dev.latvian.mods:rhino', 'org.apache.maven:maven-artifact',
+    'dev.latvian.mods:rhino', 'com.google.guava:guava', 'com.google.guava:failureaccess',
+    'com.google.guava:listenablefuture', 'com.google.code.findbugs:jsr305',
+    'org.checkerframework:checker-qual', 'com.google.j2objc:j2objc-annotations',
+    'org.apache.maven:maven-artifact',
     'org.codehaus.plexus:plexus-utils',
     'org.commonmark:commonmark', 'org.commonmark:commonmark-ext-gfm-tables',
     'com.knuddels:jtokkit', 'org.xerial:sqlite-jdbc'
@@ -71,7 +74,7 @@ def verifyProductionDependencies = tasks.register('verifyProductionDependencies'
             configuration.incoming.resolutionResult.allComponents.each { component ->
                 def id = component.id
                 if (id instanceof ProjectComponentIdentifier) {
-                    if (!(id.projectPath in [project.path, ':extension-api', ':runtime-json'])) {
+                    if (!(id.projectPath in [project.path, ':extension-api', ':runtime-json', ':runtime-rhino'])) {
                         throw new GradleException("Engine cannot depend on native project ${id.projectPath}")
                     }
                 } else if (id instanceof ModuleComponentIdentifier) {

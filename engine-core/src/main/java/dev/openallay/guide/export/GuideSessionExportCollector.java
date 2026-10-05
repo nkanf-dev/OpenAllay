@@ -197,17 +197,18 @@ public final class GuideSessionExportCollector {
     }
 
     private static GuideSessionExportSnapshot.Entry projectEntry(GuideTimelineEntry entry) {
-        return switch (entry) {
-            case GuideTimelineEntry.User user ->
-                    new GuideSessionExportSnapshot.Entry.User(user.messageId(), user.text());
-            case GuideTimelineEntry.Assistant assistant ->
-                    new GuideSessionExportSnapshot.Entry.Assistant(
-                            assistant.text(), assistant.streaming());
-            case GuideTimelineEntry.Tool tool ->
-                    new GuideSessionExportSnapshot.Entry.Tool(
-                            tool.activity().invocationId(), tool.activity().toolId(),
-                            tool.activity().status());
-        };
+        Objects.requireNonNull(entry);
+        if (entry instanceof GuideTimelineEntry.User user) {
+            return new GuideSessionExportSnapshot.Entry.User(user.messageId(), user.text());
+        } else if (entry instanceof GuideTimelineEntry.Assistant assistant) {
+            return new GuideSessionExportSnapshot.Entry.Assistant(
+                    assistant.text(), assistant.streaming());
+        } else if (entry instanceof GuideTimelineEntry.Tool tool) {
+            return new GuideSessionExportSnapshot.Entry.Tool(
+                    tool.activity().invocationId(), tool.activity().toolId(),
+                    tool.activity().status());
+        }
+        throw new IncompatibleClassChangeError();
     }
 
     private static GuideHistoryException exportFailure(Throwable failure) {

@@ -39,82 +39,84 @@ public final class SemanticLayoutEngine {
             int width,
             Measurer measurer,
             List<SemanticLayout.Line> output) {
-        switch (block) {
-            case SemanticBlock.Paragraph value -> addWrapped(
+        java.util.Objects.requireNonNull(block);
+        if (block instanceof SemanticBlock.Paragraph value) {
+            addWrapped(
                     value.nodeId(), SemanticLayout.Kind.TEXT, indent,
                     runs(value.content(), SemanticLayout.Style.NORMAL), width, measurer, output);
-            case SemanticBlock.Heading value -> addWrapped(
+        } else if (block instanceof SemanticBlock.Heading value) {
+            addWrapped(
                     value.nodeId(), SemanticLayout.Kind.HEADING, indent,
                     runs(value.content(), SemanticLayout.Style.STRONG), width, measurer, output);
-            case SemanticBlock.Quote value -> {
-                int from = output.size();
-                value.content().forEach(child -> flatten(child, indent + 8, width, measurer, output));
-                for (int index = from; index < output.size(); index++) {
-                    SemanticLayout.Line line = output.get(index);
-                    if (line.kind() != SemanticLayout.Kind.COMPONENT) {
-                        output.set(index, new SemanticLayout.Line(
-                                line.nodeId(), SemanticLayout.Kind.QUOTE, line.indent(),
-                                line.height(), line.runs(), null));
-                    }
+        } else if (block instanceof SemanticBlock.Quote value) {
+            int from = output.size();
+            value.content().forEach(child -> flatten(child, indent + 8, width, measurer, output));
+            for (int index = from; index < output.size(); index++) {
+                SemanticLayout.Line line = output.get(index);
+                if (line.kind() != SemanticLayout.Kind.COMPONENT) {
+                    output.set(index, new SemanticLayout.Line(
+                            line.nodeId(), SemanticLayout.Kind.QUOTE, line.indent(),
+                            line.height(), line.runs(), null));
                 }
             }
-            case SemanticBlock.CodeBlock value -> {
-                String[] codeLines = value.code().split("\\R", -1);
-                for (int index = 0; index < codeLines.length; index++) {
-                    addWrapped(value.nodeId() + "-" + index, SemanticLayout.Kind.CODE, indent + 4,
+        } else if (block instanceof SemanticBlock.CodeBlock value) {
+            String[] codeLines = value.code().split("\\R", -1);
+            for (int index = 0; index < codeLines.length; index++) {
+                addWrapped(value.nodeId() + "-" + index, SemanticLayout.Kind.CODE, indent + 4,
+                        List.of(new SemanticLayout.Run(
+                                codeLines[index], SemanticLayout.Style.CODE, null)),
+                        width, measurer, output);
+            }
+        } else if (block instanceof SemanticBlock.ListBlock value) {
+            int number = value.start();
+            int itemIndex = 0;
+            for (List<SemanticBlock> item : value.items()) {
+                String marker = value.ordered() ? number++ + ". " : "• ";
+                int contentIndent = indent + Math.max(
+                        1, measurer.width(marker, SemanticLayout.Style.STRONG));
+                int firstParagraph = firstParagraph(item);
+                if (firstParagraph < 0) {
+                    output.add(new SemanticLayout.Line(
+                            value.nodeId() + "-marker-" + itemIndex,
+                            SemanticLayout.Kind.TEXT,
+                            indent,
+                            measurer.lineHeight(SemanticLayout.Kind.TEXT),
                             List.of(new SemanticLayout.Run(
-                                    codeLines[index], SemanticLayout.Style.CODE, null)),
-                            width, measurer, output);
+                                    marker, SemanticLayout.Style.STRONG, null)),
+                            null));
                 }
-            }
-            case SemanticBlock.ListBlock value -> {
-                int number = value.start();
-                int itemIndex = 0;
-                for (List<SemanticBlock> item : value.items()) {
-                    String marker = value.ordered() ? number++ + ". " : "• ";
-                    int contentIndent = indent + Math.max(
-                            1, measurer.width(marker, SemanticLayout.Style.STRONG));
-                    int firstParagraph = firstParagraph(item);
-                    if (firstParagraph < 0) {
-                        output.add(new SemanticLayout.Line(
-                                value.nodeId() + "-marker-" + itemIndex,
-                                SemanticLayout.Kind.TEXT,
-                                indent,
-                                measurer.lineHeight(SemanticLayout.Kind.TEXT),
-                                List.of(new SemanticLayout.Run(
-                                        marker, SemanticLayout.Style.STRONG, null)),
-                                null));
+                for (int childIndex = 0; childIndex < item.size(); childIndex++) {
+                    SemanticBlock child = item.get(childIndex);
+                    if (childIndex == firstParagraph) {
+                        SemanticBlock.Paragraph paragraph = (SemanticBlock.Paragraph) child;
+                        ArrayList<SemanticLayout.Run> marked = new ArrayList<>();
+                        marked.add(new SemanticLayout.Run(
+                                marker, SemanticLayout.Style.STRONG, null));
+                        marked.addAll(runs(paragraph.content(), SemanticLayout.Style.NORMAL));
+                        addWrapped(
+                                paragraph.nodeId(), SemanticLayout.Kind.TEXT,
+                                indent, contentIndent, marked, width, measurer, output);
+                    } else {
+                        flatten(child, contentIndent, width, measurer, output);
                     }
-                    for (int childIndex = 0; childIndex < item.size(); childIndex++) {
-                        SemanticBlock child = item.get(childIndex);
-                        if (childIndex == firstParagraph) {
-                            SemanticBlock.Paragraph paragraph = (SemanticBlock.Paragraph) child;
-                            ArrayList<SemanticLayout.Run> marked = new ArrayList<>();
-                            marked.add(new SemanticLayout.Run(
-                                    marker, SemanticLayout.Style.STRONG, null));
-                            marked.addAll(runs(paragraph.content(), SemanticLayout.Style.NORMAL));
-                            addWrapped(
-                                    paragraph.nodeId(), SemanticLayout.Kind.TEXT,
-                                    indent, contentIndent, marked, width, measurer, output);
-                        } else {
-                            flatten(child, contentIndent, width, measurer, output);
-                        }
-                    }
-                    itemIndex++;
                 }
+                itemIndex++;
             }
-            case SemanticBlock.Table value -> {
-                SemanticLayout.TableBox table = table(value, Math.max(1, width - indent), measurer);
-                output.add(new SemanticLayout.Line(
-                        value.nodeId(), SemanticLayout.Kind.TABLE, indent,
-                        table.height(), List.of(), null, table));
-            }
-            case SemanticBlock.ThematicBreak value -> output.add(new SemanticLayout.Line(
+        } else if (block instanceof SemanticBlock.Table value) {
+            SemanticLayout.TableBox table = table(value, Math.max(1, width - indent), measurer);
+            output.add(new SemanticLayout.Line(
+                    value.nodeId(), SemanticLayout.Kind.TABLE, indent,
+                    table.height(), List.of(), null, table));
+        } else if (block instanceof SemanticBlock.ThematicBreak value) {
+            output.add(new SemanticLayout.Line(
                     value.nodeId(), SemanticLayout.Kind.RULE, indent,
                     measurer.lineHeight(SemanticLayout.Kind.RULE), List.of(), null));
-            case SemanticBlock.Component value -> output.add(new SemanticLayout.Line(
+        } else if (block instanceof SemanticBlock.Component value) {
+            output.add(new SemanticLayout.Line(
                     value.nodeId(), SemanticLayout.Kind.COMPONENT, indent,
                     componentHeight(value.component(), measurer), List.of(), value.component()));
+        } else {
+            throw new IncompatibleClassChangeError();
         }
     }
 
@@ -419,20 +421,23 @@ public final class SemanticLayoutEngine {
             List<SemanticInline> inlines, SemanticLayout.Style inherited) {
         ArrayList<SemanticLayout.Run> result = new ArrayList<>();
         for (SemanticInline inline : inlines) {
-            switch (inline) {
-                case SemanticInline.Text value -> result.add(new SemanticLayout.Run(
-                        value.text(), inherited, null));
-                case SemanticInline.Code value -> result.add(new SemanticLayout.Run(
-                        value.text(), SemanticLayout.Style.CODE, null));
-                case SemanticInline.Break ignored -> result.add(new SemanticLayout.Run(
-                        "\n", inherited, null));
-                case SemanticInline.Emphasis value -> result.addAll(runs(
-                        value.children(), SemanticLayout.Style.EMPHASIS));
-                case SemanticInline.Strong value -> result.addAll(runs(
-                        value.children(), SemanticLayout.Style.STRONG));
-                case SemanticInline.Reference value -> result.add(new SemanticLayout.Run(
+            java.util.Objects.requireNonNull(inline);
+            if (inline instanceof SemanticInline.Text value) {
+                result.add(new SemanticLayout.Run(value.text(), inherited, null));
+            } else if (inline instanceof SemanticInline.Code value) {
+                result.add(new SemanticLayout.Run(value.text(), SemanticLayout.Style.CODE, null));
+            } else if (inline instanceof SemanticInline.Break ignored) {
+                result.add(new SemanticLayout.Run("\n", inherited, null));
+            } else if (inline instanceof SemanticInline.Emphasis value) {
+                result.addAll(runs(value.children(), SemanticLayout.Style.EMPHASIS));
+            } else if (inline instanceof SemanticInline.Strong value) {
+                result.addAll(runs(value.children(), SemanticLayout.Style.STRONG));
+            } else if (inline instanceof SemanticInline.Reference value) {
+                result.add(new SemanticLayout.Run(
                         value.reference().displayText(), SemanticLayout.Style.REFERENCE,
                         value.reference()));
+            } else {
+                throw new IncompatibleClassChangeError();
             }
         }
         return List.copyOf(result);
@@ -440,15 +445,24 @@ public final class SemanticLayoutEngine {
 
     private static int componentHeight(RichComponent component, Measurer measurer) {
         int line = measurer.lineHeight(SemanticLayout.Kind.COMPONENT);
-        return switch (component) {
-            case RichComponent.ItemRow value -> Math.max(22, 22 * value.items().size());
-            case RichComponent.RecipeGrid ignored -> Math.max(136, line * 13);
-            case RichComponent.IngredientCheck value -> Math.max(22, 22 * value.ingredients().size());
-            case RichComponent.CraftabilitySummary ignored -> 40;
-            case RichComponent.ProgressSteps value -> 12 * (value.steps().size() + 1);
-            case RichComponent.SourceSummary value -> 12 * (value.sources().size() + 1);
-            case RichComponent.StatusBadge ignored -> 16;
-            case RichComponent.ChoiceGroup value -> 12 * (value.choices().size() + 1);
-        };
+        java.util.Objects.requireNonNull(component);
+        if (component instanceof RichComponent.ItemRow value) {
+            return Math.max(22, 22 * value.items().size());
+        } else if (component instanceof RichComponent.RecipeGrid ignored) {
+            return Math.max(136, line * 13);
+        } else if (component instanceof RichComponent.IngredientCheck value) {
+            return Math.max(22, 22 * value.ingredients().size());
+        } else if (component instanceof RichComponent.CraftabilitySummary ignored) {
+            return 40;
+        } else if (component instanceof RichComponent.ProgressSteps value) {
+            return 12 * (value.steps().size() + 1);
+        } else if (component instanceof RichComponent.SourceSummary value) {
+            return 12 * (value.sources().size() + 1);
+        } else if (component instanceof RichComponent.StatusBadge ignored) {
+            return 16;
+        } else if (component instanceof RichComponent.ChoiceGroup value) {
+            return 12 * (value.choices().size() + 1);
+        }
+        throw new IncompatibleClassChangeError();
     }
 }

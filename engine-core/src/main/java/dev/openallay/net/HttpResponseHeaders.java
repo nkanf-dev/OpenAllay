@@ -17,6 +17,6 @@ public record HttpResponseHeaders(Map<String, List<String>> values) {
 
     public Optional<String> firstValue(String name) {
         List<String> found = values.get(name.toLowerCase(Locale.ROOT));
-        return found == null || found.isEmpty() ? Optional.empty() : Optional.of(found.getFirst());
+        return found == null || found.isEmpty() ? Optional.empty() : Optional.of(found.get(0));
     }
 }

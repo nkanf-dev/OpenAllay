@@ -165,43 +165,40 @@ public final class AnthropicJsonCodec {
             ProviderToolIds toolIds,
             Function<ImageReference, JsonObject> imageEncoder) {
         JsonObject encoded = new JsonObject();
-        switch (block) {
-            case ModelContent.Text text -> {
-                encoded.addProperty("type", "text");
-                encoded.addProperty("text", text.text());
+        Objects.requireNonNull(block);
+        if (block instanceof ModelContent.Text text) {
+            encoded.addProperty("type", "text");
+            encoded.addProperty("text", text.text());
+        } else if (block instanceof ModelContent.Image image) {
+            return imageEncoder.apply(image.reference());
+        } else if (block instanceof ModelContent.Reasoning reasoning) {
+            encoded.addProperty("type", "thinking");
+            encoded.addProperty("thinking", reasoning.text());
+            if (reasoning.signature() != null) {
+                encoded.addProperty("signature", reasoning.signature());
             }
-            case ModelContent.Image image -> {
-                return imageEncoder.apply(image.reference());
+        } else if (block instanceof ModelContent.ToolUse toolUse) {
+            encoded.addProperty("type", "tool_use");
+            encoded.addProperty("id", toolIds.encode(toolUse.id()));
+            encoded.addProperty("name", toolUse.name());
+            encoded.add("input", toolUse.input());
+        } else if (block instanceof ModelContent.ToolResult result) {
+            encoded.addProperty("type", "tool_result");
+            encoded.addProperty("tool_use_id", toolIds.encode(result.toolUseId()));
+            if (result.images().isEmpty()) {
+                encoded.addProperty("content", providerToolResult(result.value()));
+            } else {
+                JsonArray content = new JsonArray();
+                JsonObject text = new JsonObject();
+                text.addProperty("type", "text");
+                text.addProperty("text", providerToolResult(result.value()));
+                content.add(text);
+                result.images().forEach(image -> content.add(imageEncoder.apply(image)));
+                encoded.add("content", content);
             }
-            case ModelContent.Reasoning reasoning -> {
-                encoded.addProperty("type", "thinking");
-                encoded.addProperty("thinking", reasoning.text());
-                if (reasoning.signature() != null) {
-                    encoded.addProperty("signature", reasoning.signature());
-                }
-            }
-            case ModelContent.ToolUse toolUse -> {
-                encoded.addProperty("type", "tool_use");
-                encoded.addProperty("id", toolIds.encode(toolUse.id()));
-                encoded.addProperty("name", toolUse.name());
-                encoded.add("input", toolUse.input());
-            }
-            case ModelContent.ToolResult result -> {
-                encoded.addProperty("type", "tool_result");
-                encoded.addProperty("tool_use_id", toolIds.encode(result.toolUseId()));
-                if (result.images().isEmpty()) {
-                    encoded.addProperty("content", providerToolResult(result.value()));
-                } else {
-                    JsonArray content = new JsonArray();
-                    JsonObject text = new JsonObject();
-                    text.addProperty("type", "text");
-                    text.addProperty("text", providerToolResult(result.value()));
-                    content.add(text);
-                    result.images().forEach(image -> content.add(imageEncoder.apply(image)));
-                    encoded.add("content", content);
-                }
-                encoded.addProperty("is_error", result.error());
-            }
+            encoded.addProperty("is_error", result.error());
+        } else {
+            throw new IncompatibleClassChangeError();
         }
         return encoded;
     }
@@ -289,15 +286,20 @@ public final class AnthropicJsonCodec {
     }
 
     private static void emitCompleteBlock(ModelContent block, Consumer<ModelEvent> events) {
-        switch (block) {
-            case ModelContent.Text text -> events.accept(new ModelEvent.TextDelta(text.text()));
-            case ModelContent.Reasoning reasoning ->
-                events.accept(new ModelEvent.ReasoningDelta(reasoning.text()));
-            case ModelContent.ToolUse toolUse -> events.accept(new ModelEvent.ToolUseComplete(
+        Objects.requireNonNull(block);
+        if (block instanceof ModelContent.Text text) {
+            events.accept(new ModelEvent.TextDelta(text.text()));
+        } else if (block instanceof ModelContent.Reasoning reasoning) {
+            events.accept(new ModelEvent.ReasoningDelta(reasoning.text()));
+        } else if (block instanceof ModelContent.ToolUse toolUse) {
+            events.accept(new ModelEvent.ToolUseComplete(
                     toolUse.id(), toolUse.name(), toolUse.input()));
-            case ModelContent.Image ignored -> throw new IllegalArgumentException(
-                    "Anthropic image blocks are input-only");
-            case ModelContent.ToolResult ignored -> {}
+        } else if (block instanceof ModelContent.Image) {
+            throw new IllegalArgumentException("Anthropic image blocks are input-only");
+        } else if (block instanceof ModelContent.ToolResult) {
+            // Tool results do not emit complete provider blocks.
+        } else {
+            throw new IncompatibleClassChangeError();
         }
     }
 

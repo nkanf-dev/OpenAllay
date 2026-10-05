@@ -404,7 +404,7 @@ public record ClientSettingsRuntime(
                     initialUnrestricted,
                     historyActions,
                     dispatcher,
-                    command -> Thread.startVirtualThread(command),
+                    command -> dev.openallay.concurrent.NamedThreads.startDaemon("openallay-settings-connection-test", command),
                     startupNotice);
             service.bindKnowledgeSources(product.knowledge()::sourceSnapshot);
             serviceReference.set(service);

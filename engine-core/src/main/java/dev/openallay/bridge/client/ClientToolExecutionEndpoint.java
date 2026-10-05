@@ -1,5 +1,6 @@
 package dev.openallay.bridge.client;
 
+import dev.openallay.concurrent.NamedThreads;
 import com.google.gson.Gson;
 import dev.openallay.agent.tool.ToolRuntimeCatalog;
 import dev.openallay.bridge.protocol.BridgeProtocol;
@@ -87,9 +88,7 @@ public final class ClientToolExecutionEndpoint {
                 responses,
                 gson,
                 transportChunkBytes,
-                command -> Thread.ofVirtual()
-                        .name("openallay-client-tool-worker")
-                        .start(command));
+                command -> NamedThreads.startDaemon("openallay-client-tool-worker", command));
     }
 
     ClientToolExecutionEndpoint(

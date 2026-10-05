@@ -1,9 +1,7 @@
 {
   "source_archive": {
-    "path": "/Users/nkanf/docs/OpenAllay/release-0.4.1-and-minecraft-compatibility-20261004-162537/central-java17-runtime-port/rhino-2101.2.8-build.91-sources.jar",
     "coordinate": "dev.latvian.mods:rhino:2101.2.8-build.91:sources",
     "bytes": 654451,
-    "mtime_ns": 1791165626292554031,
     "sha256": "bc5b779005b68ce8d00f775aae2b44db82d0c8636264a1d26955c486ee0fe8b8"
   },
   "patch": {

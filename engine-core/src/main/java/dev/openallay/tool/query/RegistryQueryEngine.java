@@ -194,7 +194,7 @@ public final class RegistryQueryEngine {
             fields.forEach(field -> {
                 List<JsonElement> found = values(row, field);
                 if (found.isEmpty()) return;
-                if (found.size() == 1) selected.add(field, found.getFirst().deepCopy());
+                if (found.size() == 1) selected.add(field, found.get(0).deepCopy());
                 else {
                     JsonArray array = new JsonArray();
                     found.forEach(value -> array.add(value.deepCopy()));
@@ -389,7 +389,7 @@ public final class RegistryQueryEngine {
 
     private static JsonElement direct(JsonObject row, String path) {
         List<JsonElement> found = values(row, path);
-        return found.size() == 1 ? found.getFirst() : null;
+        return found.size() == 1 ? found.get(0) : null;
     }
 
     private static void replace(JsonObject row, String path, JsonElement replacement) {
@@ -428,7 +428,7 @@ public final class RegistryQueryEngine {
 
     private static JsonElement single(JsonObject row, String field) {
         List<JsonElement> found = values(row, field);
-        return found.isEmpty() ? JsonNull.INSTANCE : found.getFirst();
+        return found.isEmpty() ? JsonNull.INSTANCE : found.get(0);
     }
 
     private static void requireSingleScalar(JsonObject row, String field, String operation) {

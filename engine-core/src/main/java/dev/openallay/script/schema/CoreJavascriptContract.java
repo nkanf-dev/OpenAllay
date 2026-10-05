@@ -102,17 +102,25 @@ public final class CoreJavascriptContract {
     }
 
     private static String display(HostSchema schema) {
-        return switch (schema) {
-            case HostSchema.Scalar scalar -> scalar.kind();
-            case HostSchema.Enumeration enumeration ->
-                    "enum(" + String.join("|", enumeration.values()) + ")";
-            case HostSchema.Sequence sequence -> "array<" + display(sequence.elements()) + ">";
-            case HostSchema.OptionalValue optional -> display(optional.value()) + "?";
-            case HostSchema.Dictionary dictionary ->
-                    "map<string," + display(dictionary.values()) + ">";
-            case HostSchema.RecordValue ignored -> "record";
-            case HostSchema.DynamicJson ignored -> "dynamic-json";
-            case HostSchema.DynamicDetached ignored -> "extension-value";
-        };
+        Objects.requireNonNull(schema);
+        if (schema instanceof HostSchema.Scalar scalar) {
+            return scalar.kind();
+        } else if (schema instanceof HostSchema.Enumeration enumeration) {
+            return "enum(" + String.join("|", enumeration.values()) + ")";
+        } else if (schema instanceof HostSchema.Sequence sequence) {
+            return "array<" + display(sequence.elements()) + ">";
+        } else if (schema instanceof HostSchema.OptionalValue optional) {
+            return display(optional.value()) + "?";
+        } else if (schema instanceof HostSchema.Dictionary dictionary) {
+            return "map<string," + display(dictionary.values()) + ">";
+        } else if (schema instanceof HostSchema.RecordValue) {
+            return "record";
+        } else if (schema instanceof HostSchema.DynamicJson) {
+            return "dynamic-json";
+        } else if (schema instanceof HostSchema.DynamicDetached) {
+            return "extension-value";
+        } else {
+            throw new IncompatibleClassChangeError();
+        }
     }
 }

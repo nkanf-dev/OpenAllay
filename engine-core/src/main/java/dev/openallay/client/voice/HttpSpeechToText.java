@@ -1,5 +1,6 @@
 package dev.openallay.client.voice;
 
+import dev.openallay.concurrent.NamedThreads;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -112,7 +113,7 @@ public final class HttpSpeechToText implements SpeechToText {
                     close(activeBody.getAndSet(null));
                     return;
                 }
-                Thread worker = Thread.ofVirtual().name("openallay-voice-http-body").unstarted(() -> {
+                Thread worker = NamedThreads.unstartedDaemon("openallay-voice-http-body", () -> {
                     try (body) {
                         cancellation.check();
                         if (result.isDone()) return;

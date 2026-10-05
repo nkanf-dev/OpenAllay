@@ -418,7 +418,7 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
     private static boolean realQuestion(ModelMessage message) {
         if (message.role() != ModelRole.USER || message.content().stream().anyMatch(
                 ModelContent.ToolResult.class::isInstance)) return false;
-        if (message.content().getFirst() instanceof ModelContent.Text text
+        if (message.content().get(0) instanceof ModelContent.Text text
                 && text.text().startsWith("[OpenAllay derived conversation memory; NOT factual evidence]\n")) {
             return false;
         }

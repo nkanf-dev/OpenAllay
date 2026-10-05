@@ -6,10 +6,10 @@ plugins {
 base { archivesName = 'openallay-runtime-json' }
 version = rootProject.version
 java {
-    toolchain.languageVersion = JavaLanguageVersion.of(21)
+    toolchain.languageVersion = JavaLanguageVersion.of(17)
 }
 tasks.withType(JavaCompile).configureEach {
-    options.release = 21
+    options.release = 17
     options.encoding = 'UTF-8'
 }
 tasks.withType(Jar).configureEach {
@@ -17,7 +17,7 @@ tasks.withType(Jar).configureEach {
     reproducibleFileOrder = true
 }
 dependencies {
-    api('com.google.code.gson:gson:2.10.1')
+    api('com.google.code.gson:gson:2.10')
 }
 
 tasks.register('verifyProductionDependencies') {

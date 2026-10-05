@@ -234,20 +234,25 @@ public record ExtensionSettingsProjection(
         if (depth >= 5) {
             return schema.kind();
         }
-        return switch (schema) {
-            case HostSchema.Scalar scalar -> scalar.kind();
-            case HostSchema.Enumeration enumeration ->
-                    enumeration.kind() + "(" + String.join(" | ", enumeration.values()) + ")";
-            case HostSchema.Sequence sequence ->
-                    "array<" + renderSchema(sequence.elements(), depth + 1) + ">";
-            case HostSchema.OptionalValue optional ->
-                    renderSchema(optional.value(), depth + 1) + "?";
-            case HostSchema.Dictionary dictionary ->
-                    "map<string, " + renderSchema(dictionary.values(), depth + 1) + ">";
-            case HostSchema.DynamicJson ignored -> "dynamic JSON";
-            case HostSchema.DynamicDetached ignored -> "declared extension value";
-            case HostSchema.RecordValue record -> renderRecord(record, depth);
-        };
+        Objects.requireNonNull(schema);
+        if (schema instanceof HostSchema.Scalar scalar) {
+            return scalar.kind();
+        } else if (schema instanceof HostSchema.Enumeration enumeration) {
+            return enumeration.kind() + "(" + String.join(" | ", enumeration.values()) + ")";
+        } else if (schema instanceof HostSchema.Sequence sequence) {
+            return "array<" + renderSchema(sequence.elements(), depth + 1) + ">";
+        } else if (schema instanceof HostSchema.OptionalValue optional) {
+            return renderSchema(optional.value(), depth + 1) + "?";
+        } else if (schema instanceof HostSchema.Dictionary dictionary) {
+            return "map<string, " + renderSchema(dictionary.values(), depth + 1) + ">";
+        } else if (schema instanceof HostSchema.DynamicJson ignored) {
+            return "dynamic JSON";
+        } else if (schema instanceof HostSchema.DynamicDetached ignored) {
+            return "declared extension value";
+        } else if (schema instanceof HostSchema.RecordValue record) {
+            return renderRecord(record, depth);
+        }
+        throw new IncompatibleClassChangeError();
     }
 
     private static String renderRecord(HostSchema.RecordValue record, int depth) {

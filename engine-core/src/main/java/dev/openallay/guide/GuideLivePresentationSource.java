@@ -123,15 +123,19 @@ final class GuideLivePresentationSource {
         }
     }
     private static String componentTitle(RichComponent value) {
-        return switch (value) {
-            case RichComponent.RecipeGrid recipe -> recipe.label();
-            case RichComponent.ChoiceGroup choices -> choices.prompt();
-            case RichComponent.ItemRow items -> labels(items.items().stream().map(RichComponent.Item::label).toList());
-            case RichComponent.IngredientCheck ingredients ->
-                    labels(ingredients.ingredients().stream().map(RichComponent.Ingredient::label).toList());
-            case RichComponent.SourceSummary sources -> labels(sources.sources().stream().map(RichComponent.Source::label).toList());
-            default -> "";
-        };
+        java.util.Objects.requireNonNull(value);
+        if (value instanceof RichComponent.RecipeGrid recipe) {
+            return recipe.label();
+        } else if (value instanceof RichComponent.ChoiceGroup choices) {
+            return choices.prompt();
+        } else if (value instanceof RichComponent.ItemRow items) {
+            return labels(items.items().stream().map(RichComponent.Item::label).toList());
+        } else if (value instanceof RichComponent.IngredientCheck ingredients) {
+            return labels(ingredients.ingredients().stream().map(RichComponent.Ingredient::label).toList());
+        } else if (value instanceof RichComponent.SourceSummary sources) {
+            return labels(sources.sources().stream().map(RichComponent.Source::label).toList());
+        }
+        return "";
     }
     private static String labels(List<String> labels) {
         return labels.stream().filter(label -> !label.isBlank()).distinct()
@@ -139,17 +143,19 @@ final class GuideLivePresentationSource {
     }
     private static GuideToolIntent cardSummary(GuideDetailCard card) {
         // Use only canonical typed display fields. Never read execution arguments or normalized raw values here.
-        return switch (card) {
-            case GuideDetailCard.ItemGrid items -> new GuideToolIntent(
+        java.util.Objects.requireNonNull(card);
+        if (card instanceof GuideDetailCard.ItemGrid items) {
+            return new GuideToolIntent(
                     labels(items.items().stream().map(dev.openallay.guide.ui.GuideItemView::displayName).toList()),
                     items.items().stream().map(item -> item.displayName() + " × " + item.count())
                             .reduce((first, next) -> first + ", " + next).orElse(""));
-            case GuideDetailCard.Recipe recipe -> new GuideToolIntent(
+        } else if (card instanceof GuideDetailCard.Recipe recipe) {
+            return new GuideToolIntent(
                     labels(recipe.recipe().outputs().stream().map(dev.openallay.guide.ui.GuideRecipeCard.Output::displayName).toList()),
                     recipe.recipe().outputs().stream().map(output -> output.displayName() + " × " + output.count())
                             .reduce((first, next) -> first + ", " + next).orElse(""));
-            default -> GuideToolIntent.none();
-        };
+        }
+        return GuideToolIntent.none();
     }
     private void add(Admission admission, List<GuidePresentationEvent.ContentRef> cards,
                      List<GuidePresentationEvent.CardPreview> previews, int ordinal,

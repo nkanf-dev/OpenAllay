@@ -1,5 +1,6 @@
 package dev.openallay.world;
 
+import dev.openallay.concurrent.NamedThreads;
 import dev.openallay.context.EvidenceMetadata;
 import dev.openallay.model.CancellationSignal;
 import dev.openallay.model.image.ImageAttachmentStore;
@@ -68,7 +69,7 @@ public final class WorldObservationRuntime {
             request.imports.add(result);
         }
         try {
-            Thread.ofVirtual().name("openallay-observation-image").start(() -> {
+            NamedThreads.startDaemon("openallay-observation-image", () -> {
                 ImageAttachmentStore store = null;
                 String owner = "observation-producer:" + UUID.randomUUID();
                 boolean retained = false;
@@ -161,7 +162,7 @@ public final class WorldObservationRuntime {
             if (failure == null) result.complete(null);
             else result.completeExceptionally(failure);
         };
-        try { Thread.ofVirtual().name("openallay-observation-release").start(release); }
+        try { NamedThreads.startDaemon("openallay-observation-release", release); }
         catch (Throwable rejected) { release.run(); }
         return result;
     }
@@ -231,7 +232,7 @@ public final class WorldObservationRuntime {
             synchronized (request) { request.associations.remove(result); }
         });
         try {
-            Thread.ofVirtual().name("openallay-associated-view").start(() -> {
+            NamedThreads.startDaemon("openallay-associated-view", () -> {
                 ImageAttachmentStore store = null;
                 String owner = "observation-association:" + UUID.randomUUID();
                 boolean retained = false;

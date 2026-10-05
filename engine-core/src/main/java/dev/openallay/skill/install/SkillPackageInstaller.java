@@ -336,7 +336,7 @@ public final class SkillPackageInstaller {
         if (entries.size() != 1) {
             throw new IllegalArgumentException("Skill package must contain exactly one SKILL.md");
         }
-        Path entry = entries.getFirst();
+        Path entry = entries.get(0);
         Path packageRoot = entry.getParent();
         Path relativeRoot = extracted.relativize(packageRoot);
         if (relativeRoot.getNameCount() > 1) {

@@ -283,11 +283,11 @@ public final class NativeModelInstaller {
     }
     private static void download(Download download, Path file, VoiceCancellation cancellation, Progress progress) throws Exception {
         if (!"https".equals(download.uri().getScheme())) throw new IOException("HTTPS is required");
-        // shutdownNow is nonblocking; HttpClient.close can wait indefinitely on a stuck body.
+        // Reuse one Java17 client. Every request and response body has its own cancellation
+        // and deadline hooks; neither caller nor game thread waits for client shutdown.
         // No audio or credentials are sent by this installer.
-        HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(30))
-                .followRedirects(HttpClient.Redirect.NORMAL).build();
-        try {
+        HttpClient client = DownloadClient.INSTANCE;
+        {
             HttpRequest request = HttpRequest.newBuilder(download.uri()).timeout(Duration.ofSeconds(60)).GET().build();
             var future = client.sendAsync(request, HttpResponse.BodyHandlers.ofInputStream());
             future.thenAccept(response -> { if (cancellation.cancelled()) close(response.body()); });
@@ -317,7 +317,12 @@ public final class NativeModelInstaller {
                     } finally { timeout.cancel(false); }
                 }
             }
-        } finally { client.shutdownNow(); }
+        }
+    }
+    private static final class DownloadClient {
+        private static final HttpClient INSTANCE = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(30))
+                .followRedirects(HttpClient.Redirect.NORMAL).build();
     }
     private static void close(InputStream input) { try { input.close(); } catch (IOException ignored) {} }
     private static void deleteStaging(Path staging) {

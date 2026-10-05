@@ -1,5 +1,6 @@
 package dev.openallay.model.scheduling;
 
+import dev.openallay.concurrent.NamedThreads;
 import dev.openallay.model.CancellationSignal;
 import dev.openallay.model.ModelClient;
 import dev.openallay.model.ModelClientException;
@@ -286,8 +287,7 @@ public final class ModelRequestScheduler implements ModelClient {
     private static void expireRecovery(Pending pending) {
         // Revoke the exchange before publishing a future whose consumers may block.
         // Transport cleanup must not depend on CompletableFuture callback order.
-        pending.exchangeCancellation.cancel(notifications -> Thread.ofVirtual()
-                .name("openallay-model-recovery-cancel").start(notifications));
+        pending.exchangeCancellation.cancel(notifications -> NamedThreads.startDaemon("openallay-model-recovery-cancel", notifications));
         boolean cancelled = pending.cancellation.isCancelled();
         pending.result.completeExceptionally(new ModelClientException(new ModelFailure(
                 cancelled ? "agent_cancelled" : "model_timeout",
@@ -297,13 +297,13 @@ public final class ModelRequestScheduler implements ModelClient {
     private static ScheduledFuture<?> scheduleRecovery(Runnable action, long delayNanos) {
         // Never let a decoder, cancellation listener, or consumer occupy the shared timer.
         return RETRY_TIMERS.schedule(
-                () -> Thread.ofVirtual().name("openallay-model-recovery-task").start(action),
+                () -> NamedThreads.startDaemon("openallay-model-recovery-task", action),
                 delayNanos, TimeUnit.NANOSECONDS);
     }
 
     private static ScheduledThreadPoolExecutor retryTimers() {
         ScheduledThreadPoolExecutor timers = new ScheduledThreadPoolExecutor(
-                1, Thread.ofPlatform().daemon().name("openallay-model-recovery").factory());
+                1, NamedThreads.daemonFactory("openallay-model-recovery"));
         timers.setRemoveOnCancelPolicy(true);
         return timers;
     }
@@ -335,7 +335,7 @@ public final class ModelRequestScheduler implements ModelClient {
             return;
         }
         wakeScheduled = true;
-        Thread.ofVirtual().name("openallay-model-rate-wait").start(() -> {
+        NamedThreads.startDaemon("openallay-model-rate-wait", () -> {
             try {
                 long remaining = delayNanos;
                 while (remaining > 0) {

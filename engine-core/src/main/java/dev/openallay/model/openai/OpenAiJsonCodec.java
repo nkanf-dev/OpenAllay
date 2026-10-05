@@ -167,29 +167,32 @@ public final class OpenAiJsonCodec {
         StringBuilder reasoning = new StringBuilder();
         JsonArray toolCalls = new JsonArray();
         for (ModelContent block : message.content()) {
-            switch (block) {
-                case ModelContent.Text value -> {
-                    if (multipart) {
-                        JsonObject part = new JsonObject();
-                        part.addProperty("type", "text");
-                        part.addProperty("text", value.text());
-                        parts.add(part);
-                    } else {
-                        text.append(value.text());
-                    }
+            Objects.requireNonNull(block);
+            if (block instanceof ModelContent.Text value) {
+                if (multipart) {
+                    JsonObject part = new JsonObject();
+                    part.addProperty("type", "text");
+                    part.addProperty("text", value.text());
+                    parts.add(part);
+                } else {
+                    text.append(value.text());
                 }
-                case ModelContent.Image value -> {
-                    if (value.originToolUseId() != null) {
-                        JsonObject label = new JsonObject();
-                        label.addProperty("type", "text");
-                        label.addProperty("text", dev.openallay.model.image.ModelImages.observationLabel(value.originToolUseId()));
-                        parts.add(label);
-                    }
-                    parts.add(imageEncoder.apply(value.reference()));
+            } else if (block instanceof ModelContent.Image value) {
+                if (value.originToolUseId() != null) {
+                    JsonObject label = new JsonObject();
+                    label.addProperty("type", "text");
+                    label.addProperty("text", dev.openallay.model.image.ModelImages.observationLabel(value.originToolUseId()));
+                    parts.add(label);
                 }
-                case ModelContent.Reasoning value -> reasoning.append(value.text());
-                case ModelContent.ToolUse value -> toolCalls.add(encodeToolCall(value, toolIds));
-                case ModelContent.ToolResult ignored -> throw new IllegalStateException();
+                parts.add(imageEncoder.apply(value.reference()));
+            } else if (block instanceof ModelContent.Reasoning value) {
+                reasoning.append(value.text());
+            } else if (block instanceof ModelContent.ToolUse value) {
+                toolCalls.add(encodeToolCall(value, toolIds));
+            } else if (block instanceof ModelContent.ToolResult) {
+                throw new IllegalStateException();
+            } else {
+                throw new IncompatibleClassChangeError();
             }
         }
         message.inputObservation().ifPresent(anchor -> {

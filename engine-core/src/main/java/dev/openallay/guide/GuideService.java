@@ -187,7 +187,7 @@ public final class GuideService implements GuideHistoryAdministration {
         if (selected == null) return GuideTelemetrySnapshot.unknown(
                 snapshot.selectedSession(), snapshot.modelSelection());
         GuideUsageTracker usage = selected.usage;
-        GuideRequestSnapshot latest = selected.requests.isEmpty() ? null : selected.requests.getLast();
+        GuideRequestSnapshot latest = selected.requests.isEmpty() ? null : selected.requests.get(selected.requests.size() - 1);
         GuideUsageSnapshot requestUsage = latest == null ? GuideUsageSnapshot.empty() : latest.usageProjection();
         return new GuideTelemetrySnapshot(selected.id, snapshot.modelSelection(),
                 latest == null ? null : latest.requestId(), contextEstimate().orElse(null),
@@ -212,7 +212,7 @@ public final class GuideService implements GuideHistoryAdministration {
         }
         GuideRequestSnapshot request = selected.requests().stream().filter(value -> !value.terminal())
                 .reduce((first, second) -> second)
-                .orElse(selected.requests().getLast());
+                .orElse(selected.requests().get(selected.requests().size() - 1));
         if (!request.modelSelection().equals(selected.modelSelection())) {
             return java.util.Optional.empty();
         }
@@ -1489,11 +1489,11 @@ public final class GuideService implements GuideHistoryAdministration {
                 source.requestSequences.getOrDefault(message.requestId(), Long.MAX_VALUE)
                         <= mutation.cutoff().sequence()).count();
         return new GuideHistoryForkResult(new GuideHistoryMetadata.Session(mutation.sessionId(), mutation.ordinal(),
-                mutation.modelSelection(), inherited.size(), cursors.getFirst(), cursors.getLast(),
+                mutation.modelSelection(), inherited.size(), cursors.get(0), cursors.get(cursors.size() - 1),
                 GuideUsageSnapshot.empty(), inherited.stream().map(GuideRequestSnapshot::usageProjection)
                         .reduce(GuideUsageSnapshot.empty(), GuideUsageSnapshot::plus),
                 GuideUsageSnapshot.empty(), inheritedMessageCount),
-                new GuideHistoryPage(mutation.sessionId(), inherited, cursors.getFirst(), cursors.getLast(), false, false),
+                new GuideHistoryPage(mutation.sessionId(), inherited, cursors.get(0), cursors.get(cursors.size() - 1), false, false),
                 boundary.messages(), boundary.checkpoints().stream().map(checkpoint ->
                         new ContextCheckpoint(UUID.randomUUID(), checkpoint.sourceFromIndex(),
                                 checkpoint.sourceToIndexExclusive(), checkpoint.sourceHash(), checkpoint.modelIdentifier(),
@@ -2746,7 +2746,7 @@ public final class GuideService implements GuideHistoryAdministration {
         if (session == null || session.requests.isEmpty()) {
             return null;
         }
-        GuideRequestSnapshot latest = session.requests.getLast();
+        GuideRequestSnapshot latest = session.requests.get(session.requests.size() - 1);
         return latest.terminal() ? null : latest;
     }
 
@@ -3020,9 +3020,9 @@ public final class GuideService implements GuideHistoryAdministration {
         List<GuideRequestSnapshot> loadedDurable = session.requests.stream()
                 .filter(GuideRequestSnapshot::terminal).toList();
         session.firstLoaded = loadedDurable.isEmpty() ? null : cursor(
-                session, loadedDurable.getFirst());
+                session, loadedDurable.get(0));
         session.lastLoaded = loadedDurable.isEmpty() ? null : cursor(
-                session, loadedDurable.getLast());
+                session, loadedDurable.get(loadedDurable.size() - 1));
         session.hasEarlier = session.firstLoaded != null && session.firstAvailable != null
                 && session.firstLoaded.sequence() > session.firstAvailable.sequence();
         session.hasLater = session.lastLoaded != null && session.lastAvailable != null
@@ -3541,23 +3541,39 @@ public final class GuideService implements GuideHistoryAdministration {
         }
 
         private String sessionOf(GuideHistoryMutation mutation) {
-            return switch (mutation) {
-                case GuideHistoryMutation.UpsertSession row -> row.sessionId();
-                case GuideHistoryMutation.UpsertSessionUsage row -> row.sessionId();
-                case GuideHistoryMutation.UpsertMessage row -> row.sessionId();
-                case GuideHistoryMutation.ReplaceContext row -> row.sessionId();
-                case GuideHistoryMutation.UpsertCheckpoint row -> row.sessionId();
-                case GuideHistoryMutation.AppendCheckpoint row -> row.sessionId();
-                case GuideHistoryMutation.DeleteSession row -> row.sessionId();
-                case GuideHistoryMutation.ClearSession row -> row.sessionId();
-                case GuideHistoryMutation.UpsertRequest row -> row.request().sessionId();
-                case GuideHistoryMutation.UpsertTimelineEntry row -> sessionOf(row.requestId());
-                case GuideHistoryMutation.ReplaceRequestSources row -> sessionOf(row.requestId());
-                case GuideHistoryMutation.ReplaceRequestContext row -> sessionOf(row.requestId());
-                case GuideHistoryMutation.CaptureRequestBoundary row -> sessionOf(row.requestId());
-                case GuideHistoryMutation.ForkSession row -> row.sessionId();
-                case GuideHistoryMutation.UpsertPartition ignored -> null;
-            };
+            Objects.requireNonNull(mutation);
+            if (mutation instanceof GuideHistoryMutation.UpsertSession row) {
+                return row.sessionId();
+            } else if (mutation instanceof GuideHistoryMutation.UpsertSessionUsage row) {
+                return row.sessionId();
+            } else if (mutation instanceof GuideHistoryMutation.UpsertMessage row) {
+                return row.sessionId();
+            } else if (mutation instanceof GuideHistoryMutation.ReplaceContext row) {
+                return row.sessionId();
+            } else if (mutation instanceof GuideHistoryMutation.UpsertCheckpoint row) {
+                return row.sessionId();
+            } else if (mutation instanceof GuideHistoryMutation.AppendCheckpoint row) {
+                return row.sessionId();
+            } else if (mutation instanceof GuideHistoryMutation.DeleteSession row) {
+                return row.sessionId();
+            } else if (mutation instanceof GuideHistoryMutation.ClearSession row) {
+                return row.sessionId();
+            } else if (mutation instanceof GuideHistoryMutation.UpsertRequest row) {
+                return row.request().sessionId();
+            } else if (mutation instanceof GuideHistoryMutation.UpsertTimelineEntry row) {
+                return sessionOf(row.requestId());
+            } else if (mutation instanceof GuideHistoryMutation.ReplaceRequestSources row) {
+                return sessionOf(row.requestId());
+            } else if (mutation instanceof GuideHistoryMutation.ReplaceRequestContext row) {
+                return sessionOf(row.requestId());
+            } else if (mutation instanceof GuideHistoryMutation.CaptureRequestBoundary row) {
+                return sessionOf(row.requestId());
+            } else if (mutation instanceof GuideHistoryMutation.ForkSession row) {
+                return row.sessionId();
+            } else if (mutation instanceof GuideHistoryMutation.UpsertPartition ignored) {
+                return null;
+            }
+            throw new IncompatibleClassChangeError();
         }
 
         private String sessionOf(UUID requestId) {
@@ -3569,38 +3585,39 @@ public final class GuideService implements GuideHistoryAdministration {
         }
 
         private MutationKey key(GuideHistoryMutation mutation) {
-            return switch (mutation) {
-                case GuideHistoryMutation.UpsertPartition ignored ->
-                        new MutationKey(mutation.getClass(), "partition", 0);
-                case GuideHistoryMutation.UpsertSession row ->
-                        new MutationKey(mutation.getClass(), row.sessionId(), 0);
-                case GuideHistoryMutation.UpsertSessionUsage row ->
-                        new MutationKey(mutation.getClass(), row.sessionId(), 0);
-                case GuideHistoryMutation.UpsertRequest row ->
-                        new MutationKey(mutation.getClass(), row.request().requestId(), 0);
-                case GuideHistoryMutation.UpsertMessage row ->
-                        new MutationKey(mutation.getClass(), row.sessionId(), row.ordinal());
-                case GuideHistoryMutation.UpsertTimelineEntry row ->
-                        new MutationKey(mutation.getClass(), row.requestId(), row.entry().ordinal());
-                case GuideHistoryMutation.ReplaceRequestSources row ->
-                        new MutationKey(mutation.getClass(), row.requestId(), 0);
-                case GuideHistoryMutation.ReplaceContext row ->
-                        new MutationKey(mutation.getClass(), row.sessionId(), 0);
-                case GuideHistoryMutation.ReplaceRequestContext row ->
-                        new MutationKey(mutation.getClass(), row.requestId(), 0);
-                case GuideHistoryMutation.CaptureRequestBoundary row ->
-                        new MutationKey(mutation.getClass(), row.requestId(), 0);
-                case GuideHistoryMutation.ForkSession row ->
-                        new MutationKey(mutation.getClass(), row.sessionId(), 0);
-                case GuideHistoryMutation.AppendCheckpoint row ->
-                        new MutationKey(mutation.getClass(), row.checkpoint().checkpointId(), 0);
-                case GuideHistoryMutation.UpsertCheckpoint row ->
-                        new MutationKey(mutation.getClass(), row.sessionId(), row.ordinal());
-                case GuideHistoryMutation.DeleteSession row ->
-                        new MutationKey(mutation.getClass(), row.sessionId(), 0);
-                case GuideHistoryMutation.ClearSession row ->
-                        new MutationKey(mutation.getClass(), row.sessionId(), 0);
-            };
+            Objects.requireNonNull(mutation);
+            if (mutation instanceof GuideHistoryMutation.UpsertPartition ignored) {
+                return new MutationKey(mutation.getClass(), "partition", 0);
+            } else if (mutation instanceof GuideHistoryMutation.UpsertSession row) {
+                return new MutationKey(mutation.getClass(), row.sessionId(), 0);
+            } else if (mutation instanceof GuideHistoryMutation.UpsertSessionUsage row) {
+                return new MutationKey(mutation.getClass(), row.sessionId(), 0);
+            } else if (mutation instanceof GuideHistoryMutation.UpsertRequest row) {
+                return new MutationKey(mutation.getClass(), row.request().requestId(), 0);
+            } else if (mutation instanceof GuideHistoryMutation.UpsertMessage row) {
+                return new MutationKey(mutation.getClass(), row.sessionId(), row.ordinal());
+            } else if (mutation instanceof GuideHistoryMutation.UpsertTimelineEntry row) {
+                return new MutationKey(mutation.getClass(), row.requestId(), row.entry().ordinal());
+            } else if (mutation instanceof GuideHistoryMutation.ReplaceRequestSources row) {
+                return new MutationKey(mutation.getClass(), row.requestId(), 0);
+            } else if (mutation instanceof GuideHistoryMutation.ReplaceContext row) {
+                return new MutationKey(mutation.getClass(), row.sessionId(), 0);
+            } else if (mutation instanceof GuideHistoryMutation.ReplaceRequestContext row) {
+                return new MutationKey(mutation.getClass(), row.requestId(), 0);
+            } else if (mutation instanceof GuideHistoryMutation.CaptureRequestBoundary row) {
+                return new MutationKey(mutation.getClass(), row.requestId(), 0);
+            } else if (mutation instanceof GuideHistoryMutation.ForkSession row) {
+                return new MutationKey(mutation.getClass(), row.sessionId(), 0);
+            } else if (mutation instanceof GuideHistoryMutation.AppendCheckpoint row) {
+                return new MutationKey(mutation.getClass(), row.checkpoint().checkpointId(), 0);
+            } else if (mutation instanceof GuideHistoryMutation.UpsertCheckpoint row) {
+                return new MutationKey(mutation.getClass(), row.sessionId(), row.ordinal());
+            } else if (mutation instanceof GuideHistoryMutation.DeleteSession row) {
+                return new MutationKey(mutation.getClass(), row.sessionId(), 0);
+            } else if (mutation instanceof GuideHistoryMutation.ClearSession row) {
+                return new MutationKey(mutation.getClass(), row.sessionId(), 0);
+            }
+            throw new IncompatibleClassChangeError();
         }
 
         private List<GuideHistoryMutation> take() {
@@ -3636,35 +3653,39 @@ public final class GuideService implements GuideHistoryAdministration {
 
         private void acknowledge(List<GuideHistoryMutation> changes) {
             for (GuideHistoryMutation mutation : changes) {
-                switch (mutation) {
-                    case GuideHistoryMutation.UpsertPartition row -> selectedSession = row.selectedSession();
-                    case GuideHistoryMutation.UpsertSession row -> sessions.put(
+                Objects.requireNonNull(mutation);
+                if (mutation instanceof GuideHistoryMutation.UpsertPartition row) {
+                    selectedSession = row.selectedSession();
+                } else if (mutation instanceof GuideHistoryMutation.UpsertSession row) {
+                    sessions.put(
                             row.sessionId(), new SessionProjection(row.ordinal(), row.modelSelection()));
-                    case GuideHistoryMutation.UpsertSessionUsage row -> controlUsage.put(
-                            row.sessionId(), row.controlUsage());
-                    case GuideHistoryMutation.UpsertRequest row -> requests.put(
-                            row.request().requestId(), row.request());
-                    case GuideHistoryMutation.UpsertTimelineEntry row -> timeline.put(
-                            new TimelineKey(row.requestId(), row.entry().ordinal()), row.entry());
-                    case GuideHistoryMutation.ReplaceRequestSources row -> sources.put(
-                            row.requestId(), row.sources());
-                    case GuideHistoryMutation.UpsertMessage row -> messages.put(
-                            new MessageKey(row.sessionId(), row.ordinal()), row.message());
-                    case GuideHistoryMutation.UpsertCheckpoint row -> {
-                        checkpoints.put(new CheckpointKey(row.sessionId(), row.ordinal()), row.checkpoint());
-                        checkpointPayloads.put(row.checkpoint().checkpointId(), row.checkpoint());
-                        checkpointSessions.put(row.checkpoint().checkpointId(), row.sessionId());
-                    }
-                    case GuideHistoryMutation.AppendCheckpoint row -> {
-                        checkpointPayloads.put(row.checkpoint().checkpointId(), row.checkpoint());
-                        checkpointSessions.put(row.checkpoint().checkpointId(), row.sessionId());
-                    }
-                    case GuideHistoryMutation.DeleteSession row -> removeSession(row.sessionId());
-                    case GuideHistoryMutation.ClearSession row -> clearSession(row.sessionId());
-                    case GuideHistoryMutation.ReplaceContext ignored -> { }
-                    case GuideHistoryMutation.ReplaceRequestContext ignored -> { }
-                    case GuideHistoryMutation.CaptureRequestBoundary ignored -> { }
-                    case GuideHistoryMutation.ForkSession ignored -> { }
+                } else if (mutation instanceof GuideHistoryMutation.UpsertSessionUsage row) {
+                    controlUsage.put(row.sessionId(), row.controlUsage());
+                } else if (mutation instanceof GuideHistoryMutation.UpsertRequest row) {
+                    requests.put(row.request().requestId(), row.request());
+                } else if (mutation instanceof GuideHistoryMutation.UpsertTimelineEntry row) {
+                    timeline.put(new TimelineKey(row.requestId(), row.entry().ordinal()), row.entry());
+                } else if (mutation instanceof GuideHistoryMutation.ReplaceRequestSources row) {
+                    sources.put(row.requestId(), row.sources());
+                } else if (mutation instanceof GuideHistoryMutation.UpsertMessage row) {
+                    messages.put(new MessageKey(row.sessionId(), row.ordinal()), row.message());
+                } else if (mutation instanceof GuideHistoryMutation.UpsertCheckpoint row) {
+                    checkpoints.put(new CheckpointKey(row.sessionId(), row.ordinal()), row.checkpoint());
+                    checkpointPayloads.put(row.checkpoint().checkpointId(), row.checkpoint());
+                    checkpointSessions.put(row.checkpoint().checkpointId(), row.sessionId());
+                } else if (mutation instanceof GuideHistoryMutation.AppendCheckpoint row) {
+                    checkpointPayloads.put(row.checkpoint().checkpointId(), row.checkpoint());
+                    checkpointSessions.put(row.checkpoint().checkpointId(), row.sessionId());
+                } else if (mutation instanceof GuideHistoryMutation.DeleteSession row) {
+                    removeSession(row.sessionId());
+                } else if (mutation instanceof GuideHistoryMutation.ClearSession row) {
+                    clearSession(row.sessionId());
+                } else if (mutation instanceof GuideHistoryMutation.ReplaceContext ignored) {
+                } else if (mutation instanceof GuideHistoryMutation.ReplaceRequestContext ignored) {
+                } else if (mutation instanceof GuideHistoryMutation.CaptureRequestBoundary ignored) {
+                } else if (mutation instanceof GuideHistoryMutation.ForkSession ignored) {
+                } else {
+                    throw new IncompatibleClassChangeError();
                 }
             }
         }

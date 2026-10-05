@@ -176,8 +176,8 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
             List<SequencedRequest> loaded = readPage(connection, request);
             List<GuideRequestSnapshot> snapshots = loaded.stream()
                     .map(SequencedRequest::request).toList();
-            GuideHistoryCursor first = loaded.isEmpty() ? null : loaded.getFirst().cursor();
-            GuideHistoryCursor last = loaded.isEmpty() ? null : loaded.getLast().cursor();
+            GuideHistoryCursor first = loaded.isEmpty() ? null : loaded.get(0).cursor();
+            GuideHistoryCursor last = loaded.isEmpty() ? null : loaded.get(loaded.size() - 1).cursor();
             boolean hasEarlier = first != null && requestExists(
                     connection, request.scope().scopeId(), request.sessionId(),
                     "sequence < ?", first.sequence());
@@ -413,7 +413,7 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
                 while (result.next()) source.add(readRequestRow(connection, scopeId, result));
             }
         }
-        if (source.isEmpty() || !source.getLast().cursor().equals(fork.cutoff())
+        if (source.isEmpty() || !source.get(source.size() - 1).cursor().equals(fork.cutoff())
                 || source.stream().anyMatch(row -> !row.request().terminal())) {
             throw new GuideHistoryException(
                     "fork_boundary_unavailable", "Fork requires an exact completed request boundary");
@@ -485,11 +485,11 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
         }
         List<SequencedRequest> window = readPage(connection, new GuideHistoryPageRequest(
                 scope, fork.sessionId(), GuideHistoryPageRequest.Direction.NEWEST, null, 120));
-        GuideHistoryCursor first = cursor(connection, scopeId, fork.sessionId(), source.getFirst().cursor().sequence());
+        GuideHistoryCursor first = cursor(connection, scopeId, fork.sessionId(), source.get(0).cursor().sequence());
         GuideHistoryCursor last = cursor(connection, scopeId, fork.sessionId(), fork.cutoff().sequence());
         GuideHistoryPage page = new GuideHistoryPage(fork.sessionId(),
                 window.stream().map(SequencedRequest::request).toList(),
-                window.getFirst().cursor(), window.getLast().cursor(), source.size() > window.size(), false);
+                window.get(0).cursor(), window.get(window.size() - 1).cursor(), source.size() > window.size(), false);
         return new GuideHistoryForkResult(new GuideHistoryMetadata.Session(
                 fork.sessionId(), ordinal, fork.modelSelection(), source.size(), first, last,
                 GuideUsageSnapshot.empty(), sessionUsage(connection, scopeId, fork.sessionId(), true),
@@ -575,18 +575,23 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
         boolean durable = false;
         try (GuideImageOwnership.Guard ignored = imageOwnership.lock();
                 Connection connection = open()) {
-            List<GuideHistoryScope> affected = switch (scope) {
-                case GuideHistoryDeleteScope.Partition partition -> List.of(partition.scope());
-                case GuideHistoryDeleteScope.Actor actor -> readScopes(connection).stream()
+            List<GuideHistoryScope> affected;
+            if (scope instanceof GuideHistoryDeleteScope.Partition partition) {
+                affected = List.of(partition.scope());
+            } else if (scope instanceof GuideHistoryDeleteScope.Actor actor) {
+                affected = readScopes(connection).stream()
                         .filter(existing -> existing.actorId().equals(actor.actorId())).toList();
-            };
+            } else {
+                throw new IncompatibleClassChangeError();
+            }
             connection.setAutoCommit(false);
             try {
-                switch (scope) {
-                    case GuideHistoryDeleteScope.Partition partition ->
-                        deletePartition(connection, partition.scope());
-                    case GuideHistoryDeleteScope.Actor actor ->
-                        deleteActor(connection, actor.actorId());
+                if (scope instanceof GuideHistoryDeleteScope.Partition partition) {
+                    deletePartition(connection, partition.scope());
+                } else if (scope instanceof GuideHistoryDeleteScope.Actor actor) {
+                    deleteActor(connection, actor.actorId());
+                } else {
+                    throw new IncompatibleClassChangeError();
                 }
                 failureInjector.beforeCommit(Mutation.DELETE);
                 connection.commit();
@@ -672,23 +677,39 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
     }
 
     private static boolean changesImageOwnership(GuideHistoryMutation mutation) {
-        return switch (mutation) {
-            case GuideHistoryMutation.UpsertPartition ignored -> false;
-            case GuideHistoryMutation.UpsertSession ignored -> false;
-            case GuideHistoryMutation.UpsertSessionUsage ignored -> false;
-            case GuideHistoryMutation.UpsertRequest ignored -> false;
-            case GuideHistoryMutation.UpsertMessage ignored -> false;
-            case GuideHistoryMutation.UpsertTimelineEntry ignored -> false;
-            case GuideHistoryMutation.ReplaceRequestSources ignored -> false;
-            case GuideHistoryMutation.UpsertCheckpoint ignored -> false;
-            case GuideHistoryMutation.AppendCheckpoint ignored -> false;
-            case GuideHistoryMutation.ReplaceContext ignored -> true;
-            case GuideHistoryMutation.ReplaceRequestContext ignored -> true;
-            case GuideHistoryMutation.CaptureRequestBoundary ignored -> true;
-            case GuideHistoryMutation.ForkSession ignored -> true;
-            case GuideHistoryMutation.DeleteSession ignored -> true;
-            case GuideHistoryMutation.ClearSession ignored -> true;
-        };
+        Objects.requireNonNull(mutation);
+        if (mutation instanceof GuideHistoryMutation.UpsertPartition ignored) {
+            return false;
+        } else if (mutation instanceof GuideHistoryMutation.UpsertSession ignored) {
+            return false;
+        } else if (mutation instanceof GuideHistoryMutation.UpsertSessionUsage ignored) {
+            return false;
+        } else if (mutation instanceof GuideHistoryMutation.UpsertRequest ignored) {
+            return false;
+        } else if (mutation instanceof GuideHistoryMutation.UpsertMessage ignored) {
+            return false;
+        } else if (mutation instanceof GuideHistoryMutation.UpsertTimelineEntry ignored) {
+            return false;
+        } else if (mutation instanceof GuideHistoryMutation.ReplaceRequestSources ignored) {
+            return false;
+        } else if (mutation instanceof GuideHistoryMutation.UpsertCheckpoint ignored) {
+            return false;
+        } else if (mutation instanceof GuideHistoryMutation.AppendCheckpoint ignored) {
+            return false;
+        } else if (mutation instanceof GuideHistoryMutation.ReplaceContext ignored) {
+            return true;
+        } else if (mutation instanceof GuideHistoryMutation.ReplaceRequestContext ignored) {
+            return true;
+        } else if (mutation instanceof GuideHistoryMutation.CaptureRequestBoundary ignored) {
+            return true;
+        } else if (mutation instanceof GuideHistoryMutation.ForkSession ignored) {
+            return true;
+        } else if (mutation instanceof GuideHistoryMutation.DeleteSession ignored) {
+            return true;
+        } else if (mutation instanceof GuideHistoryMutation.ClearSession ignored) {
+            return true;
+        }
+        throw new IncompatibleClassChangeError();
     }
 
     private void ensureImageOwnership(Connection connection, GuideHistoryScope scope)
@@ -1227,200 +1248,192 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
             GuideHistoryScope scope,
             GuideHistoryMutation mutation) throws SQLException {
         String scopeId = scope.scopeId();
-        switch (mutation) {
-            case GuideHistoryMutation.UpsertPartition partition -> {
-                try (PreparedStatement statement = connection.prepareStatement("""
-                        insert into partitions(
-                            scope_id, actor_id, connection_kind, selected_session,
-                            capture_mode, updated_at)
-                        values (?, ?, ?, ?, 'NORMAL', ?)
-                        on conflict(scope_id) do update set
-                            selected_session = excluded.selected_session,
-                            updated_at = excluded.updated_at
-                        """)) {
-                    statement.setString(1, scopeId);
-                    statement.setString(2, scope.actorId().toString());
-                    statement.setString(3, scope.kind().name());
-                    statement.setString(4, partition.selectedSession());
-                    statement.setString(5, partition.updatedAt().toString());
-                    statement.executeUpdate();
-                }
+        Objects.requireNonNull(mutation);
+        if (mutation instanceof GuideHistoryMutation.UpsertPartition partition) {
+            try (PreparedStatement statement = connection.prepareStatement("""
+                    insert into partitions(
+                        scope_id, actor_id, connection_kind, selected_session,
+                        capture_mode, updated_at)
+                    values (?, ?, ?, ?, 'NORMAL', ?)
+                    on conflict(scope_id) do update set
+                        selected_session = excluded.selected_session,
+                        updated_at = excluded.updated_at
+                    """)) {
+                statement.setString(1, scopeId);
+                statement.setString(2, scope.actorId().toString());
+                statement.setString(3, scope.kind().name());
+                statement.setString(4, partition.selectedSession());
+                statement.setString(5, partition.updatedAt().toString());
+                statement.executeUpdate();
             }
-            case GuideHistoryMutation.UpsertSession session -> {
-                try (PreparedStatement statement = connection.prepareStatement("""
-                        insert into sessions(scope_id, session_id, ordinal, model_selection_json, control_usage_json)
-                        values (?, ?, ?, ?, ?)
-                        on conflict(scope_id, session_id) do update set
-                            ordinal = excluded.ordinal,
-                            model_selection_json = excluded.model_selection_json
-                        """)) {
-                    statement.setString(1, scopeId);
-                    statement.setString(2, session.sessionId());
-                    statement.setInt(3, session.ordinal());
-                    statement.setString(4, codec.encodeModelSelection(session.modelSelection()));
-                    statement.setString(5, codec.encodeUsageProjection(GuideUsageSnapshot.empty()));
-                    statement.executeUpdate();
-                }
+        } else if (mutation instanceof GuideHistoryMutation.UpsertSession session) {
+            try (PreparedStatement statement = connection.prepareStatement("""
+                    insert into sessions(scope_id, session_id, ordinal, model_selection_json, control_usage_json)
+                    values (?, ?, ?, ?, ?)
+                    on conflict(scope_id, session_id) do update set
+                        ordinal = excluded.ordinal,
+                        model_selection_json = excluded.model_selection_json
+                    """)) {
+                statement.setString(1, scopeId);
+                statement.setString(2, session.sessionId());
+                statement.setInt(3, session.ordinal());
+                statement.setString(4, codec.encodeModelSelection(session.modelSelection()));
+                statement.setString(5, codec.encodeUsageProjection(GuideUsageSnapshot.empty()));
+                statement.executeUpdate();
             }
-            case GuideHistoryMutation.UpsertSessionUsage usage -> {
-                try (PreparedStatement statement = connection.prepareStatement("""
-                        update sessions set control_usage_json = ? where scope_id = ? and session_id = ?
-                        """)) {
-                    statement.setString(1, codec.encodeUsageProjection(usage.controlUsage()));
-                    statement.setString(2, scopeId);
-                    statement.setString(3, usage.sessionId());
-                    if (statement.executeUpdate() != 1) throw new IllegalArgumentException("Session usage owner is absent");
-                }
+        } else if (mutation instanceof GuideHistoryMutation.UpsertSessionUsage usage) {
+            try (PreparedStatement statement = connection.prepareStatement("""
+                    update sessions set control_usage_json = ? where scope_id = ? and session_id = ?
+                    """)) {
+                statement.setString(1, codec.encodeUsageProjection(usage.controlUsage()));
+                statement.setString(2, scopeId);
+                statement.setString(3, usage.sessionId());
+                if (statement.executeUpdate() != 1) throw new IllegalArgumentException("Session usage owner is absent");
             }
-            case GuideHistoryMutation.UpsertRequest request ->
-                    upsertRequest(connection, scopeId, request.sequence(), request.request());
-            case GuideHistoryMutation.UpsertMessage message ->
-                    upsertMessage(connection, scopeId, message);
-            case GuideHistoryMutation.UpsertTimelineEntry timeline -> {
-                try (PreparedStatement statement = connection.prepareStatement("""
-                        insert into timeline_entries(scope_id, request_id, ordinal, payload_json)
+        } else if (mutation instanceof GuideHistoryMutation.UpsertRequest request) {
+            upsertRequest(connection, scopeId, request.sequence(), request.request());
+        } else if (mutation instanceof GuideHistoryMutation.UpsertMessage message) {
+            upsertMessage(connection, scopeId, message);
+        } else if (mutation instanceof GuideHistoryMutation.UpsertTimelineEntry timeline) {
+            try (PreparedStatement statement = connection.prepareStatement("""
+                    insert into timeline_entries(scope_id, request_id, ordinal, payload_json)
+                    values (?, ?, ?, ?)
+                    on conflict(scope_id, request_id, ordinal) do update set
+                        payload_json = excluded.payload_json
+                    """)) {
+                statement.setString(1, scopeId);
+                statement.setString(2, timeline.requestId().toString());
+                statement.setInt(3, timeline.entry().ordinal());
+                statement.setString(4, codec.encodeEntry(timeline.entry()));
+                statement.executeUpdate();
+            }
+        } else if (mutation instanceof GuideHistoryMutation.ReplaceRequestSources sources) {
+            try (PreparedStatement delete = connection.prepareStatement("""
+                    delete from request_sources where scope_id = ? and request_id = ?
+                    """)) {
+                delete.setString(1, scopeId);
+                delete.setString(2, sources.requestId().toString());
+                delete.executeUpdate();
+            }
+            for (int ordinal = 0; ordinal < sources.sources().size(); ordinal++) {
+                try (PreparedStatement insert = connection.prepareStatement("""
+                        insert into request_sources(
+                            scope_id, request_id, ordinal, payload_json)
                         values (?, ?, ?, ?)
-                        on conflict(scope_id, request_id, ordinal) do update set
-                            payload_json = excluded.payload_json
                         """)) {
-                    statement.setString(1, scopeId);
-                    statement.setString(2, timeline.requestId().toString());
-                    statement.setInt(3, timeline.entry().ordinal());
-                    statement.setString(4, codec.encodeEntry(timeline.entry()));
-                    statement.executeUpdate();
+                    insert.setString(1, scopeId);
+                    insert.setString(2, sources.requestId().toString());
+                    insert.setInt(3, ordinal);
+                    insert.setString(4, codec.encodeSources(
+                            List.of(sources.sources().get(ordinal))));
+                    insert.executeUpdate();
                 }
             }
-            case GuideHistoryMutation.ReplaceRequestSources sources -> {
-                try (PreparedStatement delete = connection.prepareStatement("""
-                        delete from request_sources where scope_id = ? and request_id = ?
-                        """)) {
-                    delete.setString(1, scopeId);
-                    delete.setString(2, sources.requestId().toString());
-                    delete.executeUpdate();
-                }
-                for (int ordinal = 0; ordinal < sources.sources().size(); ordinal++) {
-                    try (PreparedStatement insert = connection.prepareStatement("""
-                            insert into request_sources(
-                                scope_id, request_id, ordinal, payload_json)
-                            values (?, ?, ?, ?)
-                            """)) {
-                        insert.setString(1, scopeId);
-                        insert.setString(2, sources.requestId().toString());
-                        insert.setInt(3, ordinal);
-                        insert.setString(4, codec.encodeSources(
-                                List.of(sources.sources().get(ordinal))));
-                        insert.executeUpdate();
-                    }
+        } else if (mutation instanceof GuideHistoryMutation.ReplaceContext context) {
+            try (PreparedStatement statement = connection.prepareStatement("""
+                    insert into model_context(scope_id, session_id, payload_json)
+                    values (?, ?, ?)
+                    on conflict(scope_id, session_id) do update set
+                        payload_json = excluded.payload_json
+                    """)) {
+                statement.setString(1, scopeId);
+                statement.setString(2, context.sessionId());
+                statement.setString(3, modelContexts.encode(context.messages()));
+                statement.executeUpdate();
+            }
+        } else if (mutation instanceof GuideHistoryMutation.ReplaceRequestContext context) {
+            try (PreparedStatement statement = connection.prepareStatement("""
+                    insert into request_model_context(scope_id, request_id, payload_json)
+                    values (?, ?, ?)
+                    on conflict(scope_id, request_id) do update set
+                        payload_json = excluded.payload_json
+                    """)) {
+                statement.setString(1, scopeId);
+                statement.setString(2, context.requestId().toString());
+                statement.setString(3, modelContexts.encode(context.messages()));
+                statement.executeUpdate();
+            }
+        } else if (mutation instanceof GuideHistoryMutation.UpsertCheckpoint checkpoint) {
+            try (PreparedStatement statement = connection.prepareStatement("""
+                    insert into compaction_checkpoints(
+                        scope_id, session_id, ordinal, checkpoint_id, payload_json)
+                    values (?, ?, ?, ?, ?)
+                    on conflict(scope_id, session_id, ordinal) do update set
+                        checkpoint_id = excluded.checkpoint_id,
+                        payload_json = excluded.payload_json
+                    """)) {
+                statement.setString(1, scopeId);
+                statement.setString(2, checkpoint.sessionId());
+                statement.setInt(3, checkpoint.ordinal());
+                statement.setString(4, checkpoint.checkpoint().checkpointId().toString());
+                statement.setString(5, codec.encodeCheckpoint(checkpoint.checkpoint()));
+                statement.executeUpdate();
+            }
+        } else if (mutation instanceof GuideHistoryMutation.AppendCheckpoint checkpoint) {
+            Integer existingOrdinal = null;
+            try (PreparedStatement query = connection.prepareStatement("""
+                    select ordinal from compaction_checkpoints
+                    where scope_id = ? and session_id = ? and checkpoint_id = ?
+                    """)) {
+                query.setString(1, scopeId);
+                query.setString(2, checkpoint.sessionId());
+                query.setString(3, checkpoint.checkpoint().checkpointId().toString());
+                try (ResultSet result = query.executeQuery()) {
+                    if (result.next()) existingOrdinal = result.getInt("ordinal");
                 }
             }
-            case GuideHistoryMutation.ReplaceContext context -> {
-                try (PreparedStatement statement = connection.prepareStatement("""
-                        insert into model_context(scope_id, session_id, payload_json)
-                        values (?, ?, ?)
-                        on conflict(scope_id, session_id) do update set
-                            payload_json = excluded.payload_json
-                        """)) {
-                    statement.setString(1, scopeId);
-                    statement.setString(2, context.sessionId());
-                    statement.setString(3, modelContexts.encode(context.messages()));
-                    statement.executeUpdate();
-                }
-            }
-            case GuideHistoryMutation.ReplaceRequestContext context -> {
-                try (PreparedStatement statement = connection.prepareStatement("""
-                        insert into request_model_context(scope_id, request_id, payload_json)
-                        values (?, ?, ?)
-                        on conflict(scope_id, request_id) do update set
-                            payload_json = excluded.payload_json
-                        """)) {
-                    statement.setString(1, scopeId);
-                    statement.setString(2, context.requestId().toString());
-                    statement.setString(3, modelContexts.encode(context.messages()));
-                    statement.executeUpdate();
-                }
-            }
-            case GuideHistoryMutation.UpsertCheckpoint checkpoint -> {
+            if (existingOrdinal != null) {
+                applyMutation(connection, scope, new GuideHistoryMutation.UpsertCheckpoint(
+                        checkpoint.sessionId(), existingOrdinal, checkpoint.checkpoint()));
+            } else {
                 try (PreparedStatement statement = connection.prepareStatement("""
                         insert into compaction_checkpoints(
                             scope_id, session_id, ordinal, checkpoint_id, payload_json)
-                        values (?, ?, ?, ?, ?)
-                        on conflict(scope_id, session_id, ordinal) do update set
-                            checkpoint_id = excluded.checkpoint_id,
-                            payload_json = excluded.payload_json
+                        select ?, ?, coalesce(max(ordinal), -1) + 1, ?, ?
+                        from compaction_checkpoints where scope_id = ? and session_id = ?
                         """)) {
                     statement.setString(1, scopeId);
                     statement.setString(2, checkpoint.sessionId());
-                    statement.setInt(3, checkpoint.ordinal());
-                    statement.setString(4, checkpoint.checkpoint().checkpointId().toString());
-                    statement.setString(5, codec.encodeCheckpoint(checkpoint.checkpoint()));
+                    statement.setString(3, checkpoint.checkpoint().checkpointId().toString());
+                    statement.setString(4, codec.encodeCheckpoint(checkpoint.checkpoint()));
+                    statement.setString(5, scopeId);
+                    statement.setString(6, checkpoint.sessionId());
+                    // The scoped checkpoint identity constraint rejects another session's ID.
                     statement.executeUpdate();
                 }
             }
-            case GuideHistoryMutation.AppendCheckpoint checkpoint -> {
-                Integer existingOrdinal = null;
-                try (PreparedStatement query = connection.prepareStatement("""
-                        select ordinal from compaction_checkpoints
-                        where scope_id = ? and session_id = ? and checkpoint_id = ?
-                        """)) {
-                    query.setString(1, scopeId);
-                    query.setString(2, checkpoint.sessionId());
-                    query.setString(3, checkpoint.checkpoint().checkpointId().toString());
-                    try (ResultSet result = query.executeQuery()) {
-                        if (result.next()) existingOrdinal = result.getInt("ordinal");
-                    }
-                }
-                if (existingOrdinal != null) {
-                    applyMutation(connection, scope, new GuideHistoryMutation.UpsertCheckpoint(
-                            checkpoint.sessionId(), existingOrdinal, checkpoint.checkpoint()));
-                } else {
-                    try (PreparedStatement statement = connection.prepareStatement("""
-                            insert into compaction_checkpoints(
-                                scope_id, session_id, ordinal, checkpoint_id, payload_json)
-                            select ?, ?, coalesce(max(ordinal), -1) + 1, ?, ?
-                            from compaction_checkpoints where scope_id = ? and session_id = ?
-                            """)) {
-                        statement.setString(1, scopeId);
-                        statement.setString(2, checkpoint.sessionId());
-                        statement.setString(3, checkpoint.checkpoint().checkpointId().toString());
-                        statement.setString(4, codec.encodeCheckpoint(checkpoint.checkpoint()));
-                        statement.setString(5, scopeId);
-                        statement.setString(6, checkpoint.sessionId());
-                        // The scoped checkpoint identity constraint rejects another session's ID.
-                        statement.executeUpdate();
-                    }
-                }
+        } else if (mutation instanceof GuideHistoryMutation.CaptureRequestBoundary boundary) {
+            captureRequestBoundary(connection, scopeId, boundary);
+        } else if (mutation instanceof GuideHistoryMutation.ForkSession fork) {
+            applyForkSession(connection, scope, fork);
+        } else if (mutation instanceof GuideHistoryMutation.DeleteSession session) {
+            try (PreparedStatement statement = connection.prepareStatement("""
+                    delete from sessions where scope_id = ? and session_id = ?
+                    """)) {
+                statement.setString(1, scopeId);
+                statement.setString(2, session.sessionId());
+                statement.executeUpdate();
             }
-            case GuideHistoryMutation.CaptureRequestBoundary boundary ->
-                    captureRequestBoundary(connection, scopeId, boundary);
-            case GuideHistoryMutation.ForkSession fork -> applyForkSession(connection, scope, fork);
-            case GuideHistoryMutation.DeleteSession session -> {
-                try (PreparedStatement statement = connection.prepareStatement("""
-                        delete from sessions where scope_id = ? and session_id = ?
-                        """)) {
+        } else if (mutation instanceof GuideHistoryMutation.ClearSession session) {
+            applyMutation(connection, scope, new GuideHistoryMutation.UpsertSessionUsage(
+                    session.sessionId(), GuideUsageSnapshot.empty()));
+            for (String table : List.of("messages", "compaction_checkpoints", "model_context")) {
+                try (PreparedStatement statement = connection.prepareStatement(
+                        "delete from " + table + " where scope_id = ? and session_id = ?")) {
                     statement.setString(1, scopeId);
                     statement.setString(2, session.sessionId());
                     statement.executeUpdate();
                 }
             }
-            case GuideHistoryMutation.ClearSession session -> {
-                applyMutation(connection, scope, new GuideHistoryMutation.UpsertSessionUsage(
-                        session.sessionId(), GuideUsageSnapshot.empty()));
-                for (String table : List.of("messages", "compaction_checkpoints", "model_context")) {
-                    try (PreparedStatement statement = connection.prepareStatement(
-                            "delete from " + table + " where scope_id = ? and session_id = ?")) {
-                        statement.setString(1, scopeId);
-                        statement.setString(2, session.sessionId());
-                        statement.executeUpdate();
-                    }
-                }
-                try (PreparedStatement statement = connection.prepareStatement("""
-                        delete from requests where scope_id = ? and session_id = ?
-                        """)) {
-                    statement.setString(1, scopeId);
-                    statement.setString(2, session.sessionId());
-                    statement.executeUpdate();
-                }
+            try (PreparedStatement statement = connection.prepareStatement("""
+                    delete from requests where scope_id = ? and session_id = ?
+                    """)) {
+                statement.setString(1, scopeId);
+                statement.setString(2, session.sessionId());
+                statement.executeUpdate();
             }
+        } else {
+            throw new IncompatibleClassChangeError();
         }
     }
 
@@ -1781,8 +1794,8 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
                             connection, scope.scopeId(), request.sessionId());
                     if (current.isEmpty()) {
                         current = original;
-                    } else if (missingOriginal && !current.getLast().equals(acceptedUser)
-                            && !(current.size() >= 2 && current.getLast().equals(INTERRUPTION_NOTE)
+                    } else if (missingOriginal && !current.get(current.size() - 1).equals(acceptedUser)
+                            && !(current.size() >= 2 && current.get(current.size() - 1).equals(INTERRUPTION_NOTE)
                                     && current.get(current.size() - 2).equals(acceptedUser))) {
                         List<ModelMessage> withUser = new ArrayList<>(current);
                         withUser.add(acceptedUser);
@@ -1819,7 +1832,7 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
     }
 
     private static List<ModelMessage> withInterruptionNote(List<ModelMessage> messages) {
-        if (!messages.isEmpty() && messages.getLast().equals(INTERRUPTION_NOTE)) {
+        if (!messages.isEmpty() && messages.get(messages.size() - 1).equals(INTERRUPTION_NOTE)) {
             return messages;
         }
         List<ModelMessage> retained = new ArrayList<>(messages);
@@ -1899,7 +1912,7 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
                     if (decoded.size() != 1) {
                         throw new IllegalArgumentException("durable source row must contain one source");
                     }
-                    sources.add(decoded.getFirst());
+                    sources.add(decoded.get(0));
                 }
             }
         }
