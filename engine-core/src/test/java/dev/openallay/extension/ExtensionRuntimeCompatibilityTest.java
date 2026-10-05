@@ -20,13 +20,13 @@ final class ExtensionRuntimeCompatibilityTest {
         assertEquals("", environment.incompatibility(descriptor("[0.2.0,0.3.0)")));
     }
     @Test void additiveImplementedApisPreserveTheLegacyCoordinateAndAcceptEachActualApi() {
-        var environment = new OpenAllayExtensionEnvironment("fabric", "26.2", "0.2.2", Set.of("0.2.2", "0.3.0"));
+        var environment = new OpenAllayExtensionEnvironment("fabric", "26.2", "0.2.2", Set.of("0.2.2", "0.4.0"));
         assertEquals("0.2.2", environment.openAllayApiVersion());
-        assertEquals("", environment.incompatibility(descriptor("[0.3.0,0.4.0)")));
+        assertEquals("", environment.incompatibility(descriptor("[0.4.0,0.5.0)")));
         assertEquals("", environment.incompatibility(descriptor("[0.2.0,0.3.0)")));
-        assertEquals("incompatible_openallay_api", environment.incompatibility(descriptor("[0.4.0,0.5.0)")));
+        assertEquals("incompatible_openallay_api", environment.incompatibility(descriptor("[0.3.0,0.4.0)")));
         assertThrows(IllegalArgumentException.class,
-                () -> new OpenAllayExtensionEnvironment("fabric", "26.2", "0.2.2", Set.of("0.3.0")));
+                () -> new OpenAllayExtensionEnvironment("fabric", "26.2", "0.2.2", Set.of("0.4.0")));
     }
     private static OpenAllayExtensionDescriptor descriptor(String range) {
         return new OpenAllayExtensionDescriptor("test:version", "Test", "1.0.0", "Test", "Test", Set.of("fabric"), "[26.2,26.3)", range, "test");

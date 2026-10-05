@@ -26,9 +26,9 @@ class UniversalExtensionSupportTest {
         assertEquals("", UniversalExtensionSupport.incompatibility(support,
                 UniversalExtensionFixtures.environment()));
         for (var env : List.of(
-                new ExtensionEnvironment("forge", "26.2", "0.5.0", Set.of("0.3.0"), 25, Set.of()),
-                new ExtensionEnvironment("fabric", "1.12.2", "0.5.0", Set.of("0.3.0"), 25, Set.of()),
-                new ExtensionEnvironment("fabric", "26.2", "0.4.1", Set.of("0.3.0"), 25, Set.of()),
+                new ExtensionEnvironment("forge", "26.2", "0.5.0", Set.of("0.4.0"), 25, Set.of()),
+                new ExtensionEnvironment("fabric", "1.12.2", "0.5.0", Set.of("0.4.0"), 25, Set.of()),
+                new ExtensionEnvironment("fabric", "26.2", "0.4.1", Set.of("0.4.0"), 25, Set.of()),
                 new ExtensionEnvironment("fabric", "26.2", "0.5.0", Set.of("0.2.2"), 25, Set.of()))) {
             assertTrue(UniversalExtensionSupport.matchingTarget(support, env).isEmpty());
         }
@@ -37,15 +37,15 @@ class UniversalExtensionSupportTest {
         var support = new SupportDeclaration(List.of(UniversalExtensionFixtures.target()), 21,
                 Set.of("test:feature"), Set.of());
         assertEquals("incompatible_java_version", UniversalExtensionSupport.incompatibility(support,
-                new ExtensionEnvironment("fabric", "26.2", "0.5.0", Set.of("0.3.0"), 8, Set.of())));
+                new ExtensionEnvironment("fabric", "26.2", "0.5.0", Set.of("0.4.0"), 8, Set.of())));
         assertEquals("incompatible_host_features", UniversalExtensionSupport.incompatibility(support,
                 UniversalExtensionFixtures.environment()));
         assertTrue(UniversalExtensionSupport.matchingTarget(support,
-                new ExtensionEnvironment("fabric", "26.2", "0.5.0", Set.of("0.3.0"), 25,
+                new ExtensionEnvironment("fabric", "26.2", "0.5.0", Set.of("0.4.0"), 25,
                         Set.of("test:feature"))).isPresent());
     }
     @Test void exactIntervalsUseTheMatureCoreComparator() {
-        var target = new SupportTarget("fabric", "[26.2]", "[0.5.0]", "[0.3.0]");
+        var target = new SupportTarget("fabric", "[26.2]", "[0.5.0]", "[0.4.0]");
         assertEquals(target, UniversalExtensionSupport.matchingTarget(
                 new SupportDeclaration(List.of(target), 8, Set.of(), Set.of()),
                 UniversalExtensionFixtures.environment()).orElseThrow());
