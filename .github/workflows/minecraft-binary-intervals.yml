@@ -101,7 +101,7 @@ jobs:
     needs:
     - plan
     - build
-    if: ${{ always() && !cancelled() && needs.plan.result == 'success' }}
+    if: ${{ needs.plan.result == 'success' && needs.build.result == 'success' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     strategy:
@@ -130,6 +130,7 @@ jobs:
       run: |
         java_version=$(python3 -B scripts/minecraft-target.py --target "$TARGET" --property java_version)
         printf 'java_version=%s\n' "$java_version" >> "$GITHUB_OUTPUT"
+        printf 'batch_id=interval-%s-%s-%s\n' "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "${TARGET//./-}" >> "$GITHUB_OUTPUT"
     - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
       with:
         distribution: temurin
@@ -155,13 +156,12 @@ jobs:
       run: |
         xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24 +extension GLX +render -noreset" --error-file="$PWD/build/ci-xvfb.log" \
           python3 -B scripts/run-ci-software-graphics.py --loader "$LOADER" --minecraft-target "$TARGET" --minecraft-root "$PWD/build/e2e/runtime/$TARGET/minecraft" --output "$PWD/build/ci-graphics/$TARGET-$LOADER" -- \
-          python3 -B scripts/verify-minecraft-binary-intervals.py run-runtime --family "$FAMILY" --loader "$LOADER" --target "$TARGET" --directory build/ci-binary-production --java "$JAVA_HOME/bin/java" --batch-id "interval-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.target }}"
+          python3 -B scripts/verify-minecraft-binary-intervals.py run-runtime --family "$FAMILY" --loader "$LOADER" --target "$TARGET" --directory build/ci-binary-production --java "$JAVA_HOME/bin/java" --batch-id "${{ steps.game.outputs.batch_id }}"
     - name: Preserve compact native diagnostics and lossless images
-      if: always()
+      if: ${{ always() && steps.game.outcome == 'success' }}
       env:
         LOADER: ${{ matrix.loader }}
-      run: build/ci-tools/bin/python -B scripts/compact-ci-game-evidence.py --loader "$LOADER" --batch-id "interval-${{ github.run_id
-        }}-${{ github.run_attempt }}-${{ matrix.target }}"
+      run: build/ci-tools/bin/python -B scripts/compact-ci-game-evidence.py --loader "$LOADER" --batch-id "${{ steps.game.outputs.batch_id }}"
     - name: Retain mechanical acceptance or failed linkage with exact source/SHA identity
       if: always()
       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -179,9 +179,9 @@ jobs:
           build/ci-graphics/${{ matrix.target }}-${{ matrix.loader }}/*.log.gz
           build/e2e/runtime/${{ matrix.target }}/minecraft/.provision/*.json
           build/e2e/runtime/${{ matrix.target }}/minecraft/.provision/*.log
-          build/e2e/ci-client/${{ matrix.loader }}/interval-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.target }}/summary.json
-          build/e2e/ci-client/${{ matrix.loader }}/interval-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.target }}/*.log
-          build/e2e/ci-client-compact/${{ matrix.loader }}/interval-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.target }}/
+          build/e2e/ci-client/${{ matrix.loader }}/${{ steps.game.outputs.batch_id }}/summary.json
+          build/e2e/ci-client/${{ matrix.loader }}/${{ steps.game.outputs.batch_id }}/*.log
+          build/e2e/ci-client-compact/${{ matrix.loader }}/${{ steps.game.outputs.batch_id }}/
 'on':
   workflow_dispatch:
     inputs:
