@@ -204,7 +204,7 @@ public final class MinecraftGuideContextProvider implements GuideContextProvider
             List<KnowledgeSourceProvider> providers = new ArrayList<>();
             providers.add(new PatchouliKnowledgeProvider(
                     new MinecraftClientResourceAccess(client.getResourceManager()),
-                    client.getLanguageManager().getSelected(),
+                    MinecraftNativeClientFacts.selectedLanguage(client),
                     runtime.patchouliMultiblocks(),
                     runtime.platform().gameVersion(),
                     runtime.platform().platformName()));

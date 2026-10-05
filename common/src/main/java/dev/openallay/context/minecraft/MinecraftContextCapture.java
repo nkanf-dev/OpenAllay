@@ -166,7 +166,7 @@ public final class MinecraftContextCapture {
         }
         if (authorizedWorldQuery(source, WorldQueryOperation.DIFFICULTY)) {
             queries.put("difficulty", serverQuery(
-                    "difficulty", level.getDifficulty().getSerializedName()));
+                    "difficulty", MinecraftDifficultyFacts.name(level.getDifficulty())));
         }
         if (authorizedWorldQuery(source, WorldQueryOperation.WORLD_BORDER)) {
             queries.put("world_border", serverQuery("world_border",
@@ -273,7 +273,7 @@ public final class MinecraftContextCapture {
         return new PlayerSnapshot(
                 player.getUUID(),
                 player.getName().getString(),
-                dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(player.level().dimension()).toString(),
+                dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(MinecraftServerPlayerLevel.get(player).dimension()).toString(),
                 new BlockPositionSnapshot(position.getX(), position.getY(), position.getZ()),
                 dev.openallay.context.minecraft.MinecraftPlayerFacts.gameMode(player).getName(),
                 inventorySnapshot,

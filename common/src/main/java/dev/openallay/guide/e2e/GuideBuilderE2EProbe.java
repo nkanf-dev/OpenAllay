@@ -55,7 +55,7 @@ final class GuideBuilderE2EProbe {
                         || (resumed && !List.of("builder-reload", "builder-live-undo").contains(scenario))
                         || !world.equals(server.getWorldData().getLevelName())
                         || server.getWorldData().getGameType() != net.minecraft.world.level.GameType.SURVIVAL
-                        || GuideProbeWorldSettings.commandsAllowed(server) || !server.getWorldData().isFlatWorld()
+                        || GuideProbeWorldSettings.commandsAllowed(server) || !GuideProbeWorldSettings.isFlat(server)
                         || dev.openallay.context.minecraft.MinecraftServerPlayerLevel.get(player).getSeed() != 17L
                         || !server.getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT).toAbsolutePath().normalize()
                                 .equals(client.gameDirectory.toPath().resolve("saves").resolve(world).toAbsolutePath().normalize()))
@@ -63,7 +63,7 @@ final class GuideBuilderE2EProbe {
                 GuideProbeWorldSettings.prepareBuilderFixture(server, resumed);
                 Anchor anchor = new Anchor((int)Math.floor(player.getX()) + 8,
                         (int)Math.floor(player.getY()) - 1, (int)Math.floor(player.getZ()) + 8,
-                        dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(player.level().dimension()).toString());
+                        dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(dev.openallay.context.minecraft.MinecraftServerPlayerLevel.get(player).dimension()).toString());
                 client.execute(() -> success.accept(anchor));
             } catch (RuntimeException error) { client.execute(() -> failure.accept(error.toString())); }
         });
@@ -268,7 +268,7 @@ final class GuideBuilderE2EProbe {
                 result.addProperty("worldName", server.getWorldData().getLevelName());
                 result.addProperty("survival", server.getWorldData().getGameType() == net.minecraft.world.level.GameType.SURVIVAL);
                 result.addProperty("cheatsOff", !GuideProbeWorldSettings.commandsAllowed(server));
-                result.addProperty("flatWorld", server.getWorldData().isFlatWorld());
+                result.addProperty("flatWorld", GuideProbeWorldSettings.isFlat(server));
                 JsonObject origin = new JsonObject(); origin.addProperty("x", anchor.x()); origin.addProperty("y", anchor.y()); origin.addProperty("z", anchor.z());
                 result.add("independentAnchor", origin);
                 JsonArray checks = new JsonArray(); boolean passed = extensionActive;

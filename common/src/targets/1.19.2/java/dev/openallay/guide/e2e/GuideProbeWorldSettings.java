@@ -19,6 +19,9 @@ final class GuideProbeWorldSettings {
         if (!resumed) rules.getRule(key).set(0, server);
         if (rules.getInt(key) != 0) throw new IllegalStateException("Disposable Builder fixture requires random tick speed zero");
     }
+    static boolean isFlat(net.minecraft.server.MinecraftServer server) {
+        return server.getWorldData().worldGenSettings().isFlatWorld();
+    }
     static boolean commandsAllowed(net.minecraft.server.MinecraftServer server) {
         return server.getWorldData().getAllowCommands();
     }

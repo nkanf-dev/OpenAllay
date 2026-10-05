@@ -301,16 +301,16 @@ public final class ClientContextCapture {
         add(values, "position", "y", Double.toString(player.getY()));
         add(values, "position", "z", Double.toString(player.getZ()));
         add(values, "position", "block", player.blockPosition().toShortString());
-        add(values, "position", "dimension", dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(player.level().dimension()).toString());
+        add(values, "position", "dimension", dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(dev.openallay.client.MinecraftLocalPlayerLevel.get(player).dimension()).toString());
         add(values, "position", "direction", player.getDirection().getName());
         add(values, "position", "yaw", Float.toString(player.getYRot()));
         add(values, "position", "pitch", Float.toString(player.getXRot()));
-        player.level().getBiome(player.blockPosition()).unwrapKey().ifPresent(key ->
+        dev.openallay.client.MinecraftLocalPlayerLevel.get(player).getBiome(player.blockPosition()).unwrapKey().ifPresent(key ->
                 add(values, "position", "biome", dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(key).toString()));
 
         Runtime runtime = Runtime.getRuntime();
-        add(values, "performance", "fps", Integer.toString(client.getFps()));
-        add(values, "performance", "frame_time_ns", Long.toString(client.getFrameTimeNs()));
+        add(values, "performance", "fps", Integer.toString(dev.openallay.client.MinecraftNativeClientFacts.fps(client)));
+        add(values, "performance", "frame_time_ns", Long.toString(dev.openallay.client.MinecraftNativeClientFacts.frameTimeNanos(client)));
         add(values, "performance", "gpu_utilization", Double.toString(client.getGpuUtilization()));
         add(values, "performance", "heap_used_bytes",
                 Long.toString(runtime.totalMemory() - runtime.freeMemory()));
@@ -391,7 +391,7 @@ public final class ClientContextCapture {
         values.put("weather", clientQuery("weather",
                 client.level.isThundering() ? "thunder" : client.level.isRaining() ? "rain" : "clear"));
         values.put("difficulty", clientQuery(
-                "difficulty", client.level.getDifficulty().getSerializedName()));
+                "difficulty", dev.openallay.context.minecraft.MinecraftDifficultyFacts.name(client.level.getDifficulty())));
         var border = client.level.getWorldBorder();
         values.put("world_border", clientQuery("world_border",
                 "center=" + border.getCenterX() + "," + border.getCenterZ()
@@ -455,7 +455,7 @@ public final class ClientContextCapture {
         return new PlayerSnapshot(
                 player.getUUID(),
                 player.getName().getString(),
-                dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(player.level().dimension()).toString(),
+                dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(dev.openallay.client.MinecraftLocalPlayerLevel.get(player).dimension()).toString(),
                 new BlockPositionSnapshot(position.getX(), position.getY(), position.getZ()),
                 mode,
                 inventorySnapshot,

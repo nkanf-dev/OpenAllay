@@ -64,7 +64,7 @@ public final class MinecraftCommandCapture {
                             "command_connection_unavailable",
                             "Player command connection is unavailable");
                 }
-                client.getConnection().sendCommand(command);
+                MinecraftNativeCommandSubmission.send(client, command);
                 result.complete(null);
             } catch (RuntimeException failure) {
                 result.completeExceptionally(failure);

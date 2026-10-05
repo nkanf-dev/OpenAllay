@@ -351,7 +351,7 @@ public final class GuideClientE2EController {
                 || !graphicalFreshWorldName.equals(server.getWorldData().getLevelName())
                 || GuideProbeWorldSettings.commandsAllowed(server)
                 || server.getWorldData().getGameType() != net.minecraft.world.level.GameType.SURVIVAL
-                || !server.getWorldData().isFlatWorld()
+                || !GuideProbeWorldSettings.isFlat(server)
                 || !server.getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT).toAbsolutePath().normalize()
                         .equals(client.gameDirectory.toPath().resolve("saves").resolve(graphicalFreshWorldName)
                                 .toAbsolutePath().normalize()))

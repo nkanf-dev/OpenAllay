@@ -16,7 +16,8 @@
     "LegacyWidgetFocusAccess",
     "GuiComponentTextureAccess",
     "GuiComponentScissorMixin",
-    "LegacyEditBoxHintMixin"
+    "LegacyEditBoxHintMixin",
+    "MinecraftFpsAccess"
   ],
   "injectors": {
     "defaultRequire": 1

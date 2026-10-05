@@ -75,7 +75,7 @@ public final class MinecraftServerWorldObservationCoordinator
         schedule(() -> {
             try {
                 ServerPlayer player = verifyAvailable(cancellation);
-                var level = player.level();
+                var level = dev.openallay.context.minecraft.MinecraftServerPlayerLevel.get(player);
                 WorldBounds bounds = request.bounds();
                 AABB box = new AABB(
                         bounds.from().x(),
@@ -154,7 +154,7 @@ public final class MinecraftServerWorldObservationCoordinator
     private void captureBlockSlice(BlockCapture capture) {
         try {
             ServerPlayer player = verifyAvailable(capture.cancellation);
-            var level = player.level();
+            var level = dev.openallay.context.minecraft.MinecraftServerPlayerLevel.get(player);
             WorldBounds bounds = capture.request.bounds();
             long volume = bounds.volume();
             int processed = 0;
@@ -266,7 +266,7 @@ public final class MinecraftServerWorldObservationCoordinator
             throw cancelled();
         }
         if (!expectedDimension.equals(
-                dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(player.level().dimension()).toString())) {
+                dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(dev.openallay.context.minecraft.MinecraftServerPlayerLevel.get(player).dimension()).toString())) {
             throw new JavascriptExecutionException(
                     "world_observation_unavailable",
                     "Player changed dimension during world observation");
