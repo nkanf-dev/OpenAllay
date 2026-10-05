@@ -169,7 +169,7 @@ class MinecraftTargetToolingTest(unittest.TestCase):
         self.assertIn('python3 "$repository/scripts/build-minecraft-artifacts.py" "${arguments[@]}"', distribution)
 
     def test_ci_target_matches_gradle_java_and_packaging_arguments(self):
-        for workflow in ("quality.yml", "release.yml"):
+        for workflow in ("quality.yml",):
             text = self.source(".github/workflows/" + workflow)
             self.assertRegex(text, r"OPENALLAY_MINECRAFT_TARGET: [\"']26\.2[\"']")
             self.assertRegex(text, r'--target "\$OPENALLAY_MINECRAFT_TARGET"\s+(?:\\s+)?--property java_version')
@@ -193,22 +193,16 @@ class MinecraftTargetToolingTest(unittest.TestCase):
                 self.assertIn('-PminecraftTarget="$OPENALLAY_MINECRAFT_TARGET" clean :extension-api:test :common:test :fabric:build :neoforge:build', text)
                 self.assertIn('--fabric "fabric/build/libs/openallay-fabric-${minecraft_version}-${version}.jar"', text)
                 self.assertIn('--neoforge "neoforge/build/libs/openallay-neoforge-${minecraft_version}-${version}.jar"', text)
-            else:
-                stage, runtime = text.split("\n  runtime:\n", 1)
-                runtime, publish = runtime.split("\n  publish:\n", 1)
-                self.assertNotIn("strategy:", stage, "Build accepted binary families once")
-                self.assertIn("max-parallel: 3", runtime)
-                self.assertNotIn("build-and-stage", publish)
-                self.assertIn('python3 scripts/build-minecraft-artifacts.py build-and-stage release', text)
-                wiring = self.source("scripts/build-minecraft-artifacts.py")
-                self.assertIn('compiler.compile_target(ROOT, target, loaders=tuple(family["loader"] for family in families)', wiring)
-                self.assertIn('artifact_ids=selection', wiring)
-                compiler = (ROOT / "scripts/compile-native-target.py").read_text()
-                self.assertIn('"-PminecraftArtifact=" + artifact_ids', compiler)
-                self.assertIn('"-PtestBundledExtensions=true", ":extension-api:test", ":common:test", ":fabric:test", ":neoforge:test"', wiring)
-                self.assertNotIn('"clean", ":common:test"', wiring)
-                self.assertIn('tokenizer.verify(path, family["loader"])', wiring)
-                self.assertIn('scripts/verify-sqlite-packaging.sh', wiring)
+
+    def test_release_promotes_accepted_original_files_without_native_build_or_game_matrix(self):
+        text = self.source(".github/workflows/release.yml")
+        self.assertIn("scripts/fill-original-selection-entries.py", text)
+        self.assertIn("scripts/promote-accepted-artifacts.py stage", text)
+        self.assertNotIn("./gradlew", text)
+        self.assertNotIn("run-ci-game-workflow.py", text)
+        self.assertNotIn("strategy:", text)
+        self.assertIn("release/accepted-originals.json", text)
+        self.assertIn("release-publication-records.json", text)
 
 
 if __name__ == "__main__":
