@@ -1,65 +1,64 @@
-# Controlled Extension host methods (API 0.2.2)
+# Controlled Extension host methods
 
-An Extension is trusted loader code. Its authority does not become the Agent's
-Java/JVM authority. A safe script can call only the methods that the Extension
-registers through `JavascriptHostBinding`, using `require(bindingId)`.
+The native-neutral public SDK 0.4.0 exposes trusted Extension methods through
+`JavascriptHostBinding`. Ordinary JavaScript calls these methods with `require(bindingId)`;
+it does not need Java/JVM access to use an enabled Extension's normal functions.
 
-The public contribution keeps the original four-list and five-list constructors.
-The current constructor appends `hostBindings` and `capabilities`, in that order.
-Existing 0.2.x binaries keep their constructor contracts. Independently released
-Extensions that use the new contracts must require API 0.2.2 or later.
+## Current declaration contract
 
-## Method contract
+Public `ExtensionContribution` contains five lists: JavaScript modules, Skills,
+result views, invocation participants and host bindings. `JavascriptHostMethod`
+contains a method name, ordered parameter types, result type and trusted invoker.
+There are no Extension-private capability declarations or required-permission sets.
+The core's separate legacy loader-mod contribution retains its released four-list
+and five-list constructors; its current internal representation has six lists.
 
-`JavascriptHostMethod` declares an exact method name, ordered parameter types,
-return type, required capability IDs, and a trusted Java implementation.
-`JavascriptHostValueType` accepts `STRING`, `BOOLEAN`, `INTEGER`, `NUMBER`,
-`JSON`, or `NULL`. Integers must be exact safe integers. Numbers must be finite.
-The callback receives detached Gson `JsonElement` arguments, not Rhino values.
-It returns detached JSON, not a Java session, game object, function, or callback.
-The bridge rejects Java wrappers, executable values, cycles, and undefined data.
+Public invokers receive detached JSON argument strings and return one JSON value
+as a string. The core bridge parses, validates types and detaches results. It does
+not forward Java sessions, live game objects, Rhino values or callbacks into the
+host implementation. Exact arity, finite numbers, JSON shape and nesting validation
+remain in place.
 
-Every invocation uses the same Extension-owned `JavascriptInvocationContext`
-for its participant and host methods. Another Extension's grants are not present.
-Every method call checks activity, worker identity, and declared capabilities.
-The implementation must repeat activity/capability checks immediately before
-native owner-thread actions and revalidate its exact backend/session identity.
-It owns thread scheduling, cooperative cancellation, native deadlines, and cleanup.
-A game owner thread must never run an Agent JavaScript callback or wait for a worker.
+## Invocation lifetime
 
-## Grants
+Each active Extension receives its own `ExtensionInvocation` identity for that
+admitted execution. It exposes scoped caller identity, cancellation, active-state
+checks, evidence and normal completion. It contains no private grant API.
 
-Installing an Extension registers its read APIs. It grants no world action or JVM
-access. Each actual operation scope is declared as an `ExtensionCapability` with
-user-facing risk text. The Extension detail page offers a separate default-off
-switch for each declared scope. There is no global “all native” switch.
+Every host call checks active lifetime and the exact script worker. Before queued
+native work, implementations recheck activity and their exact connection/player/
+world session. They own native scheduling, cooperative cancellation and cleanup.
+A game owner thread must not run Agent JavaScript callbacks or wait for a worker.
+Cancelling or closing the invocation revokes queued native activity; it does not
+roll back completed operations.
 
-Grants are persisted independently in `extension-capabilities.json` with the
-exact latest-only shape `{"grants":{"extension:id":["scope:id"]}}`. Unknown
-Extension/scope pairs do not become runtime authority. Missing/invalid settings
-fail closed. Publication follows successful atomic persistence.
+## Player access
 
-Client-local requests freeze their active declared grants at request start.
-Server-origin requests freeze an empty grant set. Changing settings affects new
-requests. Request cancellation/close revokes admitted work, including queued
-native actions. The independent unrestricted-Java setting stays default-off;
-its previous enabled state never implies an Extension grant.
+Enabling Minecraft Builder includes building operations in ordinary JavaScript
+mode. No additional private write switch or grant store is involved. Full-access
+JavaScript includes game commands and enabled Extension operations; the lower
+OpenAllay command-only toggle does not block full access. Actual Minecraft server
+permissions and native session validity remain authoritative.
+
+Do not create an Extension-private permission system. If a host API genuinely
+provides a standardized permission, use that API contract. Do not add an independent
+approval barrier when the framework has no such permission, or build a new permission
+framework merely to justify a redundant gate.
 
 ## Resource domains
 
 Only the trusted host implementation's native execution/wait time is excluded
 from the safe interpreter deadline. Argument/result validation and subsequent
-JavaScript keep the interpreter budget. Cancellation and interruption remain
-active. This does not enable Java classes or make pure JavaScript loops unlimited.
+JavaScript retain the interpreter budget. Cancellation and interruption remain
+active. This does not expose Java classes or make pure JavaScript loops unlimited.
 
-Host transport is exact, not a model preview. Large native batch-plan strings are
-not truncated or limited by model-result preview budgets. Closed JSON transport
-retains nesting/cycle/type checks. Final Agent return normalization, workspace
-results, source limits, and model-context projection remain their own domains.
+Host transport is exact, not a model preview. Large native plan strings are not
+truncated by model-result preview budgets. Final return normalization, canonical
+workspace results and model-context projection remain independent mechanisms.
 
 ## Errors
 
-A reviewed `JavascriptExecutionException` preserves its stable domain code and
-safe message. Other native exceptions/errors become
-`javascript_extension_host_failed` without native messages or stacks. Extensions
-must not put unchecked backend exception text into their domain messages.
+Declared domain failures retain stable codes and player-safe summaries. Other host
+failures become controlled Extension-host failures without foreign native messages
+or stacks. Report verified partial progress and actual readback separately from a
+normal method return; never turn a missing or cancelled operation into success.

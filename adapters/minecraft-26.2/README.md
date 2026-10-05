@@ -31,9 +31,10 @@ bindings. Individual native methods also require an admitted server-owner action
 `context`, `dimension`, `artifacts`, and world identity reads dispatch their own
 owner action from the worker, including cache-hit identity checks.
 
-`openallay_builder:world_write` is checked before writes, repair hooks, physics,
-and native saved-identity creation. Capture and read-only access do not create
-world identity. `existingWorldId()` does not create or dirty native SavedData.
+Writes, repair hooks, physics, and native saved-identity creation require an
+active invocation, an admitted owner action, and the exact bound native session.
+There is no Extension-private world-write grant. Capture and read-only access do not
+create world identity. `existingWorldId()` does not create or dirty native SavedData.
 Invocation cancellation calls the bridge's idempotent close. Queued work is revoked.
 A started bounded commit finishes native replacement and actual readback before
 its worker resumes, including interruption/cancellation accounting.
@@ -91,10 +92,10 @@ both loader integrations. Native acceptance must then cover live read/preview,
 block-entity placement/readback/undo, cancellation, reconnect/dimension changes,
 loaded chunks, canonical-air proofs, terrain, native repair, and physics.
 
-## Current verified boundary
+## Historical exact-artifact verification
 
 The adapter is loaded lazily through the core's `MinecraftWorldAccess` interface.
-Current development Fabric and NeoForge 26.2 clients have exercised the same Java-8
+Earlier development Fabric and NeoForge 26.2 clients exercised the same Java-8
 SDK fixture through normal universal discovery and actual player-scoped RunJS calls.
 Default-off native writes and identity creation were denied; a request frozen before
 a later grant stayed denied. A fresh granted request wrote and restored stone and a
@@ -102,7 +103,9 @@ real chest containing three diamonds, with independent owner-thread readback and
 opaque block-entity SNBT equality. All 47 current material roles came from strict native
 registry/property validation. Close and worker scope release passed.
 
-These proofs used an explicit no-legacy-Builder fixture package, not the production
+These proofs describe the earlier private-grant implementation and its exact tested
+artifact. They do not verify the current SDK 0.4.0 player-authority behavior.
+They used an explicit no-legacy-Builder fixture package, not the production
 Builder business implementation. Mid-action cancellation, connection replacement,
 dimension switch, remote topology and old/new game versions remain separate native
 acceptance work. The 18 module tests cover detached ownership and architecture; they do

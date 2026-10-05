@@ -43,13 +43,14 @@ OPENALLAY_CURL_PROXY=socks5h://127.0.0.1:7890 ./gradlew-curl build
 
 ### Default distribution
 
-The development distribution bundles **one universal Builder 0.3.0 JAR** from
+The development distribution bundles **one universal Builder 0.4.0 JAR** from
 `OpenAllay-Extensions`. The current lock at `distribution/extensions.lock.json`
-pins source `7c43a2162cf34501c4383e28481d4c63c2e057c0` and one artifact path.
+pins source `367556f2e5f9baf377532b4bde016dee5dfd7d50` and one artifact path.
 Both loaders contain the same raw resource at
-`META-INF/openallay/bundled-extensions/openallay-builder-universal-0.3.0.jar`.
+`META-INF/openallay/bundled-extensions/openallay-builder-universal-0.4.0.jar`.
 Builder is not registered as a Fabric or NeoForge mod. The host supplies public
-Extension API 0.3.0, the native game adapter and frozen world-write grants.
+Extension API 0.4.0 and the native game adapter. Enabling Builder includes building
+and world writes; there is no separate Extension-private approval.
 Builder's domain code, Skills, JavaScript, templates and journals remain one
 Java-8 Extension payload with privately shaded Gson.
 
@@ -667,12 +668,14 @@ succeeded. Closing revokes scope lifetime. Queued owner-thread actions must
 recheck scope and exact connection/world identity. Participants alone add no live
 host binding or domain Tool.
 
-API 0.2.2 adds namespaced `JavascriptHostBinding` methods and independently
-declared `ExtensionCapability` scopes. Trusted Extensions expose explicit methods
-with controlled argument/return types, not arbitrary Java reflection. World-action
-grants are separate per Extension, default off, and frozen when a request starts.
-Installation, read access, and server-origin callbacks do not inherit a local
-world-write grant. These grants do not enable unrestricted Agent Java/JVM access.
+Legacy API 0.2.2 introduced namespaced `JavascriptHostBinding` methods.
+The current native-neutral SDK 0.4.0 exposes explicit methods with controlled
+argument/return types, not arbitrary Java reflection. It has no Extension-private
+capability declarations, grant files, or approval switches. Enabling an Extension
+makes its registered operations available to future requests. Each invocation still
+checks its active scope, cancellation, owning Extension, and exact native session.
+Unrestricted JavaScript includes game commands and enabled Extension operations;
+it does not bypass Minecraft server permissions or missing components.
 
 Skills use advisory `openallay/requires-capabilities`,
 `openallay/requires-extensions`, and `openallay/requires-skills` metadata;
@@ -684,14 +687,14 @@ authorization. Required-mods compatibility and actual Tool policy remain separat
 See [decision 035](isme/decisions/2026-09-30-035-advisory-extension-skill-requirements.md).
 
 Builder code, Skill, modules, native scheduling, templates, and journals belong
-to `OpenAllay-Extensions`, not core. Development Builder 0.3.0 declares current
-26.2 Fabric and NeoForge targets, product `[0.4.1,)`, public Extension API
-`[0.3.0,0.4.0)`, and the actual `minecraft:world-access` host feature. The native
-adapter uses the active integrated server through invocation-scoped `WorldSession`
-operations. The published v0.4.1 Builder 0.2.1 contract remains historical.
-World mutation
-requires the client-local `openallay_builder:world_write` grant for
-`openallay:builder`, not unrestricted JavaScript. It does not edit client world
+to `OpenAllay-Extensions`, not core. Development Builder 0.4.0 declares exact
+candidate target/loader pairs, product `[0.4.1,)`, public Extension API
+`[0.4.0,0.5.0)`, and the actual `minecraft:world-access` host feature. These source
+declarations do not establish game acceptance or widen the published binary ranges.
+The native adapter uses the active integrated server through invocation-scoped
+`WorldSession` operations. The published v0.4.1 Builder 0.2.1 contract remains historical.
+Enabling Builder includes its building and world-write operations. It does not need
+unrestricted JavaScript or another private grant. It does not edit client world
 mirrors, open offline saves, add a remote write protocol, or fall back to commands.
 Unsupported contexts fail explicitly. Native scans, geometry, paste, and undo
 batch owner-thread work; a cooperative quantum is scheduling, not a volume cap.
@@ -716,8 +719,10 @@ unchanged online authority and partial-failure boundaries.
 
 ### Experimental commands
 
-`config/openallay/experimental-commands.json` controls a separate default-off
-capability. Authorized future requests expose the binding directly:
+In isolated JavaScript mode, `config/openallay/experimental-commands.json`
+controls the optional game-command setting. Unrestricted JavaScript already includes
+game commands. A request captures that effective choice and the actual player route
+before execution. When the route is available, it exposes the binding directly:
 
 ```javascript
 commands.list()
@@ -725,8 +730,9 @@ commands.describe(path)
 commands.run(command)
 ```
 
-This is a top-level binding, not `mc.commands`. When disabled, the binding and
-matching Skill are absent. The detached Brigadier catalog includes
+This is a top-level binding, not `mc.commands`. Without an effective command
+setting and a captured player route, the binding and matching Skill are absent.
+Explicitly disabled Tools, Skills, and Extensions remain disabled. The detached Brigadier catalog includes
 all vanilla/server/loader/mod commands visible to that player. Execution removes
 at most one leading slash, then uses the normal player route on the client
 thread. OpenAllay adds no allowlist, argument restriction, or call-count cap;

@@ -12,7 +12,8 @@ for Fabric and NeoForge. Development still defaults to `26.2`. Existing names
 remain `openallay-fabric-26.2-{version}.jar` and
 `openallay-neoforge-26.2-{version}.jar`. This source packet does not rebuild,
 replace, relabel, or republish immutable v0.4.1 artifacts. It does not change the
-Builder 0.3 manifest, whose game declaration remains 26.2 only.
+published Builder contract. Development Builder 0.4.0 declares exact candidate
+target/loader pairs; those declarations do not widen accepted binary families.
 
 Candidate intervals are explicitly nonpublishing. The listed sets are research
 inputs from source reuse, not promised final splits. Older targets remain source
