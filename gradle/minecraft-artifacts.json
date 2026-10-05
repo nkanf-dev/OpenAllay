@@ -184,6 +184,16 @@
         "1.21.11"
       ],
       "publishing": false
+    },
+    {
+      "loaders": [
+        "neoforge"
+      ],
+      "buildTarget": "1.20.3",
+      "targets": [
+        "1.20.3"
+      ],
+      "publishing": false
     }
   ]
 }
