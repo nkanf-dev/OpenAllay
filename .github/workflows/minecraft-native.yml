@@ -1,347 +1,43 @@
-name: Minecraft native compatibility
-
+name: Mature Forge backport
 on:
-  pull_request:
-    paths:
-      - "common/**"
-      - "fabric/**"
-      - "neoforge/**"
-      - "native-builds/early-neoforge/**"
-      - "adapters/**"
-      - "gradle/**"
-      - "build-logic/**"
-      - "distribution/**"
-      - "engine-core/**"
-      - "extension-api/**"
-      - "runtime-json/**"
-      - "runtime-maven/**"
-      - "runtime-rhino/**"
-      - "*.gradle"
-      - "gradle.properties"
-      - "gradlew*"
-      - "scripts/plan-ci-verification.py"
-      - "scripts/test_plan_ci_verification.py"
-      - "scripts/compile-native-target.py"
-      - "scripts/test_early_neoforge_recipe.py"
-      - "scripts/run-ci-software-graphics.py"
-      - "scripts/test_ci_software_graphics.py"
-      - ".github/workflows/minecraft-native.yml"
   workflow_dispatch:
-    inputs:
-      native_targets:
-        description: "Exact native target CSV; all for full coverage, none to skip builds"
-        type: string
-        required: true
-        default: none
-      smoke_targets:
-        description: "Exact target/loader CSV; default for six key smokes, none to skip"
-        type: string
-        required: true
-        default: none
-      capture_early_pipeline:
-        description: "Diagnostic-only original patch producer capture; select only 1.20.2,1.20.3 and no smokes"
-        type: boolean
-        required: false
-        default: false
-      artifact_run_id:
-        description: "Successful native artifact run ID, only for smoke targets not rebuilt"
-        type: string
-        required: false
-      artifact_source_sha:
-        description: "Exact 40-character source head of that artifact run"
-        type: string
-        required: false
-
 permissions:
   contents: read
-  actions: read
-
 concurrency:
-  # Independent native repair and carried-artifact smoke dispatches do not cancel each other.
-  group: minecraft-native-${{ github.ref }}-${{ github.event_name }}-${{ inputs.native_targets || 'all' }}-${{ inputs.smoke_targets || 'default' }}
-  cancel-in-progress: true
-
+  group: mature-forge-first-anchor-${{ github.ref }}
+  cancel-in-progress: false
 jobs:
-  plan:
-    name: Select native verification jobs
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    outputs:
-      run_native: ${{ steps.plan.outputs.run_native }}
-      run_smoke: ${{ steps.plan.outputs.run_smoke }}
-      native_matrix: ${{ steps.plan.outputs.native_matrix }}
-      smoke_matrix: ${{ steps.plan.outputs.smoke_matrix }}
-    steps:
-      - name: Check out candidate and artifact source history
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-
-      - name: Test selective job and artifact-source decisions
-        run: |
-          python3 -B -m unittest discover -s scripts -p 'test_plan_ci_verification.py'
-          python3 -B -m unittest discover -s scripts -p 'test_ci_software_graphics.py'
-
-      - name: Select exact failed or affected jobs
-        id: plan
-        env:
-          GH_TOKEN: ${{ github.token }}
-          NATIVE_TARGETS: ${{ github.event_name == 'pull_request' && 'all' || inputs.native_targets }}
-          SMOKE_TARGETS: ${{ github.event_name == 'pull_request' && 'default' || inputs.smoke_targets }}
-          SOURCE_RUN_ID: ${{ inputs.artifact_run_id }}
-          SOURCE_SHA: ${{ inputs.artifact_source_sha }}
-          RUN_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: |
-          python3 -B scripts/plan-ci-verification.py \
-            --native-targets "$NATIVE_TARGETS" --smoke-targets "$SMOKE_TARGETS" \
-            --candidate-sha "$GITHUB_SHA" --current-run-id "$GITHUB_RUN_ID" --current-run-head-sha "$RUN_HEAD_SHA" \
-            --repository "$GITHUB_REPOSITORY" \
-            --source-run-id "$SOURCE_RUN_ID" --source-sha "$SOURCE_SHA" \
-            --report ci-verification-plan.json --github-output "$GITHUB_OUTPUT"
-
-      - name: Retain exact job selection and artifact source
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: compat-plan-${{ github.run_id }}-${{ github.run_attempt }}
-          retention-days: 7
-          if-no-files-found: error
-          path: ci-verification-plan.json
-
-      - name: Record selection without relabeling carried results
-        run: |
-          printf '### Native verification plan\n\nCandidate runner/source: `%s`. Production JAR sources are recorded per smoke row. Prior successful jobs remain evidence for their original source SHA only.\n\n```json\n' "$GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
-          cat ci-verification-plan.json >> "$GITHUB_STEP_SUMMARY"
-          printf '\n```\n' >> "$GITHUB_STEP_SUMMARY"
-
   native:
-    # Actual native API families; full feature acceptance runs once in mainline Quality.
-    name: Native ${{ matrix.target }}
-    needs: plan
-    if: ${{ needs.plan.outputs.run_native == 'true' }}
+    name: Forge 1.19.2 native compilation
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
-    strategy:
-      fail-fast: false
-      max-parallel: 3
-      matrix: ${{ fromJSON(needs.plan.outputs.native_matrix) }}
-    env:
-      OPENALLAY_MINECRAFT_TARGET: ${{ matrix.target }}
+    timeout-minutes: 30
     steps:
-      - name: Check out source
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
           persist-credentials: false
-
-      - name: Read target Java pin
-        id: target
-        run: |
-          java_version=$(python3 scripts/minecraft-target.py --target "$OPENALLAY_MINECRAFT_TARGET" --property java_version)
-          printf 'java_version=%s\n' "$java_version" >> "$GITHUB_OUTPUT"
-
-      - name: Set up compiler toolchains and build JVM
-        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
         with:
           distribution: temurin
-          # Loom runs on a modern JVM. Source toolchains/release and package checks
-          # still enforce each game's actual Java floor; test tooling uses Java 21.
-          # setup-java selects the last installed version as JAVA_HOME.
           java-version: |
             17
             21
             25
-
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
+      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
         with:
           cache-provider: basic
           cache-read-only: true
-
-      - name: Validate target and artifact tooling
-        run: |
-          python3 -B -m unittest discover -s scripts -p 'test_minecraft_target*.py'
-          python3 -B -m unittest discover -s scripts -p 'test_minecraft_artifacts.py'
-          python3 -B -m unittest discover -s scripts -p 'test_native_target_package.py'
-          python3 -B -m unittest discover -s scripts -p 'test_early_neoforge_recipe.py'
-
-      - name: Prepare the pinned shared Builder source
-        run: python3 -B scripts/prepare-distribution.py
-
-      - name: Capture only the genuine failed early NeoForge patch producer
-        if: ${{ inputs.capture_early_pipeline == true }}
-        run: python3 -B scripts/capture-early-neoforge-pipeline.py --target "$OPENALLAY_MINECRAFT_TARGET"
-
-      - name: Compile and package both native loaders with the same SDK and Builder
-        if: ${{ inputs.capture_early_pipeline != true }}
-        # Feature tests run in mainline Quality and pinned Shared Builder quality.
-        # These jobs check native linkage/package shape, not per-target feature copies.
-        run: python3 -B scripts/compile-native-target.py --target "$OPENALLAY_MINECRAFT_TARGET"
-
-      - name: Verify native package engine identity and metadata
-        if: ${{ inputs.capture_early_pipeline != true }}
-        run: python3 -B scripts/verify-native-target-package.py --target "$OPENALLAY_MINECRAFT_TARGET" --bundled-builder | tee native-package-check.json
-
-      - name: Stage the exact native production JARs
-        if: ${{ inputs.capture_early_pipeline != true }}
-        run: python3 -B scripts/stage-ci-client-production.py --minecraft-target "$OPENALLAY_MINECRAFT_TARGET"
-
-      - name: Retain exact compatibility production artifacts
-        if: ${{ inputs.capture_early_pipeline != true }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: compat-production-${{ matrix.target }}-${{ github.sha }}
-          retention-days: 7
-          if-no-files-found: error
-          path: |
-            build/ci-client-production/*.jar
-            build/ci-client-production/SHA256SUMS
-
-      - name: Retain native packages and build reports
+      - name: Compile the selected native closure without repeating feature suites
+        shell: bash
+        run: ./gradlew --max-workers=2 --stacktrace -PminecraftTarget=1.19.2 -PbundleExtensions=false :forge:assemble
+      - name: Retain compact source-bound build diagnostics
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: native-${{ matrix.target }}-${{ github.sha }}
+          name: mature-forge-1.19.2-compile-${{ github.sha }}-${{ github.run_attempt }}
           retention-days: 7
           if-no-files-found: ignore
           path: |
-            native-package-check.json
-            fabric/build/libs/*.jar
-            neoforge/build/libs/*.jar
-            build/early-neoforge/**/inputs.json
-            native-builds/early-neoforge/build/reports/
-            native-builds/early-neoforge/build/intermediates/*.jar
+            forge/build/libs/*.jar
+            common/build/reports/problems/
+            forge/build/reports/
             build/reports/problems/
-            common/build/reports/
-
-      - name: Record native package checks in the job summary
-        if: always()
-        run: |
-          if test -f native-package-check.json; then
-            printf '### Native package check\n```json\n' >> "$GITHUB_STEP_SUMMARY"
-            cat native-package-check.json >> "$GITHUB_STEP_SUMMARY"
-            printf '\n```\n' >> "$GITHUB_STEP_SUMMARY"
-          fi
-
-  smoke:
-    name: Native smoke ${{ matrix.target }} / ${{ matrix.loader }}
-    needs: [plan, native]
-    # A failed unrelated native row must not hide successful endpoint artifacts.
-    if: ${{ always() && !cancelled() && needs.plan.result == 'success' && needs.plan.outputs.run_smoke == 'true' }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 35
-    strategy:
-      fail-fast: false
-      max-parallel: 3
-      matrix: ${{ fromJSON(needs.plan.outputs.smoke_matrix) }}
-    env:
-      LIBGL_ALWAYS_SOFTWARE: "1"
-      ALSOFT_DRIVERS: "null"
-      # The packaged JAR source is not the newer workflow/test runner source.
-      OPENALLAY_E2E_SOURCE_REVISION: ${{ matrix.source_sha }}
-    steps:
-      - name: Check out candidate smoke runner source
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          persist-credentials: false
-
-      - name: Download this run's exact verification plan
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
-        with:
-          name: compat-plan-${{ github.run_id }}-${{ github.run_attempt }}
-          path: build/ci-verification
-
-      - name: Read the exact native artifact source run and jobs
-        env:
-          GH_TOKEN: ${{ github.token }}
-          SOURCE_RUN_ID: ${{ matrix.source_run_id }}
-        run: |
-          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID" > build/ci-verification/source-run.json
-          gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID/jobs?filter=latest&per_page=100" > build/ci-verification/source-job-pages.json
-          python3 -c 'import json; from pathlib import Path; p = Path("build/ci-verification"); pages = json.loads((p / "source-job-pages.json").read_text()); (p / "source-jobs.json").write_text(json.dumps([job for page in pages for job in page["jobs"]]))'
-
-      - name: Download the exact native production artifacts
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
-        with:
-          name: compat-production-${{ matrix.target }}-${{ matrix.source_sha }}
-          run-id: ${{ matrix.source_run_id }}
-          github-token: ${{ github.token }}
-          path: build/ci-client-production
-
-      - name: Verify original production artifact bytes
-        run: sha256sum --check SHA256SUMS
-        working-directory: build/ci-client-production
-
-      - name: Record exact source job and original JAR SHA-256
-        env:
-          TARGET: ${{ matrix.target }}
-          LOADER: ${{ matrix.loader }}
-        run: |
-          python3 -B scripts/plan-ci-verification.py --repository "$GITHUB_REPOSITORY" \
-            --report build/ci-verification/ci-verification-plan.json \
-            --receipt-target "$TARGET" --receipt-loader "$LOADER" \
-            --artifact-directory build/ci-client-production \
-            --source-run-json build/ci-verification/source-run.json \
-            --source-jobs-json build/ci-verification/source-jobs.json \
-            --receipt build/ci-verification/artifact-source.json
-          printf '### Exact native smoke artifact source\n```json\n' >> "$GITHUB_STEP_SUMMARY"
-          cat build/ci-verification/artifact-source.json >> "$GITHUB_STEP_SUMMARY"
-          printf '\n```\n' >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Read the exact game Java pin
-        id: game
-        run: |
-          java_version=$(python3 -B scripts/minecraft-target.py --target "${{ matrix.target }}" --property java_version)
-          printf 'java_version=%s\n' "$java_version" >> "$GITHUB_OUTPUT"
-
-      - name: Set up the game runtime
-        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
-        with:
-          distribution: temurin
-          java-version: ${{ steps.game.outputs.java_version }}
-
-      - name: Install headless software graphics and lossless image tools
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 libegl-mesa0 mesa-utils libvulkan1 mesa-vulkan-drivers vulkan-tools libopenal1 webp
-          python3 -m venv build/ci-tools
-          build/ci-tools/bin/python -m pip install Pillow==11.3.0
-
-      - name: Provision the exact official target runtime
-        run: |
-          python3 -B scripts/prepare-ci-minecraft-runtime.py --loader "${{ matrix.loader }}" --minecraft-target "${{ matrix.target }}" --java "$JAVA_HOME/bin/java" --minecraft-root "$PWD/build/e2e/runtime/${{ matrix.target }}/minecraft" > build/ci-runtime-receipt.json
-
-      - name: Prepare verified official target assets
-        run: |
-          python3 -B scripts/run-packaged-builder-acceptance.py --prepare-assets --minecraft-target "${{ matrix.target }}" --minecraft-root "$PWD/build/e2e/runtime/${{ matrix.target }}/minecraft" --assets-root "$PWD/build/e2e/runtime/${{ matrix.target }}/assets"
-
-      - name: Run key native compatibility scenarios
-        run: |
-          xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24 +extension GLX +render -noreset" --error-file="$PWD/build/ci-xvfb.log" \
-            python3 -B scripts/run-ci-software-graphics.py --loader "${{ matrix.loader }}" --minecraft-target "${{ matrix.target }}" \
-            --minecraft-root "$PWD/build/e2e/runtime/${{ matrix.target }}/minecraft" --output "$PWD/build/ci-graphics/${{ matrix.target }}-${{ matrix.loader }}" -- \
-            python3 -B scripts/run-ci-game-workflow.py --loader "${{ matrix.loader }}" --minecraft-target "${{ matrix.target }}" --java "$JAVA_HOME/bin/java" --batch-id "smoke-${{ github.sha }}-${{ matrix.loader }}" --scenarios builder-restricted builder-cancel ui-stop
-
-      - name: Preserve compact native evidence
-        if: always()
-        run: |
-          build/ci-tools/bin/python -B scripts/compact-ci-game-evidence.py --loader "${{ matrix.loader }}" --batch-id "smoke-${{ github.sha }}-${{ matrix.loader }}"
-
-      - name: Retain necessary smoke diagnostics and lossless screenshots
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: compat-client-${{ matrix.target }}-${{ matrix.loader }}-${{ github.sha }}
-          retention-days: 7
-          if-no-files-found: warn
-          path: |
-            build/ci-verification/*.json
-            build/ci-client-production/SHA256SUMS
-            build/ci-runtime-receipt.json
-            build/ci-xvfb.log
-            build/ci-graphics/${{ matrix.target }}-${{ matrix.loader }}/*.json
-            build/ci-graphics/${{ matrix.target }}-${{ matrix.loader }}/*.log.gz
-            build/e2e/runtime/${{ matrix.target }}/minecraft/.provision/*.json
-            build/e2e/runtime/${{ matrix.target }}/minecraft/.provision/*.log
-            build/e2e/ci-client/${{ matrix.loader }}/smoke-${{ github.sha }}-${{ matrix.loader }}/summary.json
-            build/e2e/ci-client/${{ matrix.loader }}/smoke-${{ github.sha }}-${{ matrix.loader }}/*.log
-            build/e2e/ci-client-compact/${{ matrix.loader }}/smoke-${{ github.sha }}-${{ matrix.loader }}/
