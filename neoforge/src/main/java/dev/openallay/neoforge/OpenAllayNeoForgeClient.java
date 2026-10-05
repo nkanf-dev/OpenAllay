@@ -56,7 +56,7 @@ public final class OpenAllayNeoForgeClient {
             Minecraft client,
             java.util.function.Function<Runnable, Runnable> resourceReloadRegistration) {
         if (!STARTED.compareAndSet(false, true)) return;
-        Gson gson = new Gson();
+        Gson gson = dev.openallay.json.EngineJson.withInstant(new Gson());
         java.time.Clock clock = java.time.Clock.systemUTC();
         var dispatcher = (dev.openallay.client.ClientEventDispatcher)
                 client::execute;
@@ -228,7 +228,7 @@ public final class OpenAllayNeoForgeClient {
             String modVersion = NeoForgeNativeLoaderFacts.modVersion();
             GuideClientE2EController controller = new GuideClientE2EController(
                     config,
-                    "neoforge",
+                    runtime.platform().platformName().toLowerCase(java.util.Locale.ROOT),
                     runtime.platform().gameVersion(),
                     modVersion,
                     services,

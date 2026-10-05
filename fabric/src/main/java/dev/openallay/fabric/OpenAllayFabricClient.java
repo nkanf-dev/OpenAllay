@@ -45,7 +45,7 @@ public final class OpenAllayFabricClient implements ClientModInitializer {
         });
         FabricClientBridge bridge = new FabricClientBridge();
         bridge.register();
-        Gson gson = new Gson();
+        Gson gson = dev.openallay.json.EngineJson.withInstant(new Gson());
         java.time.Clock clock = java.time.Clock.systemUTC();
         var dispatcher = (dev.openallay.client.ClientEventDispatcher)
                 runnable -> Minecraft.getInstance().execute(runnable);

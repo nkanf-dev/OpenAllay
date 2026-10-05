@@ -50,7 +50,7 @@ public final class FabricServerBridge {
     }
 
     private void started(MinecraftServer server) {
-        session.started(new MinecraftServerGuideContextProvider(runtime, server, new Gson()),
+        session.started(new MinecraftServerGuideContextProvider(runtime, server, dev.openallay.json.EngineJson.withInstant(new Gson())),
                 FabricLoader.getInstance().getConfigDir().resolve("openallay/server-model.json"),
                 System.getenv(), server.getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT)
                         .resolve("openallay/images"));
