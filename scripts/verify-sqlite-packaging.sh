@@ -2,6 +2,14 @@
 set -euo pipefail
 
 repository=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+if (( $# != 0 && $# != 2 )); then
+  printf 'usage: verify-sqlite-packaging.sh [fabric|neoforge artifact-path]\n' >&2
+  exit 1
+fi
+if (( $# == 2 )) && [[ "$1" != fabric && "$1" != neoforge ]]; then
+  printf 'unknown SQLite packaging loader: %s\n' "$1" >&2
+  exit 1
+fi
 proof_dir=$(mktemp -d "${TMPDIR:-/tmp}/openallay-sqlite-packaging.XXXXXX")
 version=$(sed -n 's/^version=//p' "$repository/gradle.properties")
 minecraft_target=${OPENALLAY_MINECRAFT_TARGET-26.2}
@@ -54,14 +62,20 @@ verify_loader() {
     "$loader" "$(sha256 "$mod_jar")" "$(sha256 "$extracted")" "$probe"
 }
 
-verify_loader \
-  fabric \
-  "$repository/fabric/build/libs/openallay-fabric-${minecraft_version}-${version}.jar" \
-  "META-INF/jars/sqlite-jdbc-${sqlite_version}.jar"
-verify_loader \
-  neoforge \
-  "$repository/neoforge/build/libs/openallay-neoforge-${minecraft_version}-${version}.jar" \
-  "META-INF/jarjar/sqlite-jdbc-${sqlite_version}.jar"
+if (( $# == 2 )); then
+  nested_directory=jars
+  if [[ "$1" == neoforge ]]; then nested_directory=jarjar; fi
+  verify_loader "$1" "$2" "META-INF/$nested_directory/sqlite-jdbc-${sqlite_version}.jar"
+else
+  verify_loader \
+    fabric \
+    "$repository/fabric/build/libs/openallay-fabric-${minecraft_version}-${version}.jar" \
+    "META-INF/jars/sqlite-jdbc-${sqlite_version}.jar"
+  verify_loader \
+    neoforge \
+    "$repository/neoforge/build/libs/openallay-neoforge-${minecraft_version}-${version}.jar" \
+    "META-INF/jarjar/sqlite-jdbc-${sqlite_version}.jar"
+fi
 
 printf 'native_targets=Linux/x86_64,Linux/aarch64,Mac/x86_64,Mac/aarch64,Windows/x86_64,Windows/aarch64\n'
 printf 'proof_directory=%s\n' "$proof_dir"

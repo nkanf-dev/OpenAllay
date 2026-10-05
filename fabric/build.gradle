@@ -114,7 +114,7 @@ if (remapMinecraft) {
     }
     def packaged = tasks.register('packageSharedEngineJar', Jar) {
         dependsOn(remappedNative, ':engine-core:classes')
-        archiveFileName.set("${mod_id}-fabric-${minecraft_version}-${project.version}.jar")
+        archiveFileName.set("${base.archivesName.get()}-${project.version}.jar")
         destinationDirectory.set(layout.buildDirectory.dir('libs'))
         def engineOutput = project(':engine-core').sourceSets.main.output
         def engineEntryNames = providers.provider {

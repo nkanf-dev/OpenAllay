@@ -1,10 +1,31 @@
+import groovy.json.JsonSlurper
+
 plugins {
     id 'java-library'
     id 'maven-publish'
 }
 
+// Ordinary exact-target builds never become a wider advertised binary family.
+// Accepted interval naming is a deliberate opt-in with the same buildTarget.
+def selectedArtifacts = [:]
+def artifactSelection = providers.gradleProperty('minecraftArtifact')
+if (artifactSelection.isPresent()) {
+    def selection = providers.exec {
+        commandLine 'python3', rootProject.file('scripts/build-minecraft-artifacts.py'),
+                'select', '--target', minecraftTarget, '--families', artifactSelection.get(),
+                '--version', project.version.toString()
+    }
+    selection.result.get().assertNormalExitValue()
+    selectedArtifacts = new JsonSlurper().parseText(selection.standardOutput.asText.get())
+}
+def selectedArtifact = selectedArtifacts[project.name]
+def minecraftPredicate = selectedArtifact != null ? selectedArtifact.fabricMinecraftPredicate : minecraft_version
+def minecraftRange = selectedArtifact != null ? selectedArtifact.minecraftMavenRange : "[${minecraft_version}]"
+
 base {
-    archivesName = "${mod_id}-${project.name}-${minecraft_version}"
+    archivesName = selectedArtifact != null
+            ? selectedArtifact.filenameTemplate.replace('-{version}.jar', '')
+            : "${mod_id}-${project.name}-${minecraft_version}"
 }
 
 java {
@@ -41,7 +62,7 @@ processResources {
             'version'                      : version,
             'group'                        : project.group, //Else we target the task's group.
             'minecraft_version'            : minecraft_version,
-            'minecraft_version_range'      : minecraft_version_range,
+            'minecraft_version_range'      : minecraftRange,
             'fabric_version'               : fabric_version,
             'fabric_loader_version'        : fabric_loader_version,
             'mod_name'                     : mod_name,
@@ -65,8 +86,15 @@ processResources {
 
     filesMatching(['pack.mcmeta', 'fabric.mod.json', '*.mixins.json']) {
         expand jsonExpandProps
+        if (name == 'fabric.mod.json') {
+            // Target resource overlays use the same template. Do not edit every overlay.
+            filter { line -> line.replace('"minecraft": "~' + minecraft_version + '"',
+                    '"minecraft": "' + minecraftPredicate + '"') }
+        }
     }
 
+    inputs.property('minecraftArtifact', artifactSelection.getOrElse(''))
+    inputs.property('fabricMinecraftPredicate', minecraftPredicate)
     inputs.properties(expandProps)
 }
 

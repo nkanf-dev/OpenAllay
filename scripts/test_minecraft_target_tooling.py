@@ -116,31 +116,37 @@ class MinecraftTargetToolingTest(unittest.TestCase):
         self.assertEqual(result.stdout, "26.2\n")
 
     def test_production_metadata_checks_reject_renamed_wrong_target_jars(self):
-        script = self.source("scripts/verify-distribution.sh")
-        for loader, entry, matching, wrong, selected in [
-            ("fabric", "fabric.mod.json",
-             json.dumps({"id": "openallay", "name": "OpenAllay", "version": "0.4.1", "environment": "*",
-                         "depends": {"minecraft": "~26.2"}}),
-             json.dumps({"id": "openallay", "name": "OpenAllay", "version": "0.4.1", "environment": "*",
-                         "depends": {"minecraft": "~26.3"}}), "26.2"),
-            ("neoforge", "META-INF/neoforge.mods.toml",
-             '[[mods]]\nmodId="openallay"\ndisplayName="OpenAllay"\nversion="0.4.1"\n'
-             '[[dependencies.openallay]]\nmodId="minecraft"\nversionRange="[26.2, 26.3)"\n',
-             '[[mods]]\nmodId="openallay"\ndisplayName="OpenAllay"\nversion="0.4.1"\n'
-             '[[dependencies.openallay]]\nmodId="minecraft"\nversionRange="[26.3]"\n', "[26.2, 26.3)"),
-        ]:
-            pattern = (r'python3 - "\$' + loader + r'_jar"[^\n]* <<\'PY\'\n(.*?)\nPY')
-            match = re.search(pattern, script, re.DOTALL)
-            self.assertIsNotNone(match)
-            for metadata, success in [(matching, True), (wrong, False)]:
+        # Metadata checks moved to one Python verifier; retain executable behavior,
+        # not source-shaped heredoc guards that prevent meaningful gate refactoring.
+        from importlib.util import module_from_spec, spec_from_file_location
+        spec = spec_from_file_location("accepted_distribution_wiring", ROOT / "scripts/build-minecraft-artifacts.py")
+        wiring = module_from_spec(spec)
+        spec.loader.exec_module(wiring)
+        for loader in ("fabric", "neoforge"):
+            family = wiring.artifacts.resolve(wiring.catalog(), "26.2", loader)
+            for target, success in (("26.2", True), ("26.3", False)):
+                entries = {name: b"synthetic fixture" for name in (
+                    "dev/openallay/OpenAllayBootstrap.class", "dev/openallay/guide/history/SqliteGuideHistoryStore.class",
+                    "dev/openallay/guide/semantic/SemanticMessageParser.class")}
+                nested = "META-INF/jars/" if loader == "fabric" else "META-INF/jarjar/"
+                entries.update({nested + name: b"synthetic fixture" for name in (
+                    "commonmark-0.28.0.jar", "commonmark-ext-gfm-tables-0.28.0.jar", "sqlite-jdbc-3.50.3.0.jar")})
+                if loader == "fabric":
+                    entries["fabric.mod.json"] = json.dumps({"id": "openallay", "name": "OpenAllay", "version": "0.4.1",
+                        "environment": "*", "depends": {"minecraft": target}})
+                else:
+                    entries["META-INF/neoforge.mods.toml"] = ('[[mods]]\nmodId="openallay"\ndisplayName="OpenAllay"\nversion="0.4.1"\n'
+                        '[[dependencies.openallay]]\nmodId="minecraft"\nversionRange="[' + target + ']"\n')
+                jar = self.fixture / (loader + ".jar")
+                with zipfile.ZipFile(jar, "w") as archive:
+                    for entry, content in entries.items():
+                        archive.writestr(entry, content)
                 with self.subTest(loader=loader, success=success):
-                    jar = self.fixture / (loader + ".jar")
-                    with zipfile.ZipFile(jar, "w") as archive:
-                        archive.writestr(entry, metadata)
-                    result = subprocess.run([sys.executable, "-B", "-", str(jar), "0.4.1", selected],
-                                            input=match.group(1), text=True, stdout=subprocess.PIPE,
-                                            stderr=subprocess.PIPE, check=False)
-                    self.assertEqual(result.returncode == 0, success, result.stderr)
+                    if success:
+                        wiring.metadata(jar, family, "0.4.1")
+                    else:
+                        with self.assertRaises(ValueError):
+                            wiring.metadata(jar, family, "0.4.1")
 
     def test_shell_selection_cli_contract_and_publication_gate_order(self):
         for filename in ("verify-distribution.sh", "verify-sqlite-packaging.sh", "publish-modrinth.sh"):
@@ -156,21 +162,30 @@ class MinecraftTargetToolingTest(unittest.TestCase):
         self.assertIn('-PminecraftTarget="$minecraft_target"', sqlite)
         self.assertIn(":engine-core:testClasses :engine-core:printSqliteProofSupportClasspath", sqlite)
         publish = self.source("scripts/publish-modrinth.sh")
-        gate = 'OPENALLAY_MINECRAFT_TARGET="$minecraft_target" "$repository/scripts/verify-distribution.sh"'
+        gate = 'publication_records=$(python3 "$repository/scripts/build-minecraft-artifacts.py"'
         self.assertLess(publish.index(gate), publish.index("api=https://api.modrinth.com/v2"))
+        self.assertIn('python3 "$repository/scripts/build-minecraft-artifacts.py" "${arguments[@]}"', distribution)
 
     def test_ci_target_matches_gradle_java_and_packaging_arguments(self):
         for workflow in ("quality.yml", "release.yml"):
             text = self.source(".github/workflows/" + workflow)
             self.assertIn('OPENALLAY_MINECRAFT_TARGET: "26.2"', text)
             self.assertIn('--target "$OPENALLAY_MINECRAFT_TARGET" --property java_version', text)
-            self.assertIn("java-version: ${{ steps.minecraft_target.outputs.java_version }}", text)
-            self.assertIn('-PminecraftTarget="$OPENALLAY_MINECRAFT_TARGET" clean :common:test :fabric:build :neoforge:build', text)
+            self.assertIn("${{ steps.minecraft_target.outputs.java_version }}", text)
             self.assertIn("-p 'test_minecraft_target*.py'", text)
             self.assertNotIn("s/^minecraft_version=//p", text)
             self.assertNotIn("matrix:", text)
-            self.assertIn('--fabric "fabric/build/libs/openallay-fabric-${minecraft_version}-${version}.jar"', text)
-            self.assertIn('--neoforge "neoforge/build/libs/openallay-neoforge-${minecraft_version}-${version}.jar"', text)
+            if workflow == "quality.yml":
+                self.assertIn('-PminecraftTarget="$OPENALLAY_MINECRAFT_TARGET" clean :common:test :fabric:build :neoforge:build', text)
+                self.assertIn('--fabric "fabric/build/libs/openallay-fabric-${minecraft_version}-${version}.jar"', text)
+                self.assertIn('--neoforge "neoforge/build/libs/openallay-neoforge-${minecraft_version}-${version}.jar"', text)
+            else:
+                self.assertIn('python3 scripts/build-minecraft-artifacts.py build-and-stage release', text)
+                wiring = self.source("scripts/build-minecraft-artifacts.py")
+                self.assertIn('"-PminecraftTarget=" + target, "-PminecraftArtifact=" + selection', wiring)
+                self.assertIn('"clean", ":common:test"', wiring)
+                self.assertIn('tokenizer.verify(path, family["loader"])', wiring)
+                self.assertIn('scripts/verify-sqlite-packaging.sh', wiring)
 
 
 if __name__ == "__main__":
