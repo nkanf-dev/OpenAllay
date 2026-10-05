@@ -66,6 +66,8 @@ allprojects {
             url = uri('https://maven.aliyun.com/repository/public')
             content {
                 excludeGroupByRegex('net\\.fabricmc(\\..*)?')
+                // Forge owns these launcher coordinates; a Central mirror cannot list their dynamic versions.
+                excludeGroup('cpw.mods')
             }
         }
     }
