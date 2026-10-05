@@ -213,7 +213,7 @@ def maven_path(coordinate):
     spec = coordinate.split("@")
     require(len(spec) in (1, 2), "Unsafe Maven extension")
     extension = spec[1] if len(spec) == 2 else "jar"
-    require(extension in ("jar", "zip", "txt"), "Unsupported official Maven extension")
+    require(extension in ("jar", "zip", "txt", "tsrg.lzma"), "Unsupported official Maven extension")
     parts = spec[0].split(":")
     require(len(parts) in (3, 4) and all(re.fullmatch(r"[A-Za-z0-9_][A-Za-z0-9_+.-]*", part)
             and part not in (".", "..") for part in parts), "Unsafe Maven coordinate: " + coordinate)
@@ -269,24 +269,53 @@ def processor_outputs(root, install):
          "--ann-fix", "--ids-fix", "--src-fix", "--record-fix"],
         ["--clean", "{MC_SRG}", "--output", "{PATCHED}", "--apply", "{BINPATCH}"],
     ]
-    libraries = {library["name"] for library in install.get("libraries", [])}
+    # Additional shapes from the published mapped-client installers. Match the
+    # processor owner and arguments, not Minecraft or tool version numbers.
+    mapped_owner = ("net.neoforged.installertools", "installertools")
+    mapped = [
+        ["--task", "MERGE_MAPPING", "--merge", "{MAPPINGS}", "--base", "{MOJMAPS}",
+         "--output", "{MERGED_MAPPINGS}", "--reverse-base"],
+        ["--task", "PROCESS_MINECRAFT_JAR", "--input", "{MINECRAFT_JAR}",
+         "--input-mappings", "{MOJMAPS}", "--output", "{PATCHED}",
+         "--extract-libraries-to", "{ROOT}/libraries/", "--neoform-data", None,
+         "--apply-patches", "{BINPATCH}"],
+    ]
+    def matches(args, templates):
+        return any(len(args) == len(template) and all(expected is None or actual == expected
+                   for actual, expected in zip(args, template)) for template in templates)
+
+    # Omitted @jar and explicit @jar name the same Maven artifact. Keep all
+    # other coordinate fields exact and bind identity to the verified download.
+    libraries = set()
+    for library in install.get("libraries", []):
+        identity = maven_path(library["name"])
+        artifact = library.get("downloads", {}).get("artifact")
+        require(not artifact or artifact.get("path") == identity,
+                "Official processor library path differs from its Maven coordinate")
+        libraries.add(identity)
     for processor in processors:
         args = processor.get("args", [])
-        require(any(len(args) == len(template) and all(expected is None or actual == expected
-                    for actual, expected in zip(args, template)) for template in allowed),
+        jar = processor.get("jar", "")
+        require(matches(args, allowed) or (tuple(jar.split(":")[:2]) == mapped_owner and matches(args, mapped)),
                 "Unknown official client processor mechanism; inspect before admitting")
-        require(processor.get("jar") in libraries and isinstance(processor.get("classpath"), list)
-                and all(coordinate in libraries for coordinate in processor["classpath"]),
+        require(maven_path(jar) in libraries and isinstance(processor.get("classpath"), list)
+                and all(maven_path(coordinate) in libraries for coordinate in processor["classpath"]),
                 "Official client processor dependency is absent from verified metadata")
         for option in ("--output", "--slim", "--extra"):
             if option in args:
                 value = args[args.index(option) + 1]
                 require(re.fullmatch(r"\{[A-Z_]+\}", value), "Unsafe processor output reference")
                 keys.add(value[1:-1])
-        if "MCP_DATA" in args:
-            coordinate = args[args.index("--input") + 1]
-            require(coordinate.startswith("[") and coordinate.endswith("]") and coordinate[1:-1] in libraries,
+        if "MCP_DATA" in args or "--neoform-data" in args:
+            option = "--neoform-data" if "--neoform-data" in args else "--input"
+            coordinate = args[args.index(option) + 1]
+            require(isinstance(coordinate, str) and coordinate.startswith("[") and coordinate.endswith("]")
+                    and maven_path(coordinate[1:-1]) in libraries,
                     "Official mapping archive must be a verified installer dependency")
+            if option == "--neoform-data":
+                require(coordinate[1:-1].startswith("net.neoforged:neoform:")
+                        and coordinate.endswith(":mappings@tsrg.lzma]"),
+                        "Expected official NeoForm compressed mapping dependency")
     require("PATCHED" in keys, "Official processor must produce a patched client")
     return {key: data_library(root, install, key) for key in keys}
 
