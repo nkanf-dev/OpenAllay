@@ -1,12 +1,15 @@
 plugins {
     id 'multiloader-common'
-    id 'net.neoforged.moddev'
 }
+
+def legacyNativeGame = minecraftTarget == '1.20.1'
+pluginManager.apply(legacyNativeGame ? 'net.neoforged.moddev.legacyforge' : 'net.neoforged.moddev')
 
 apply from: rootProject.file('gradle/minecraft-source-family.gradle')
 
-neoForge {
-    neoFormVersion = neo_form_version
+configure(extensions.getByName(legacyNativeGame ? 'legacyForge' : 'neoForge')) {
+    if (legacyNativeGame) mcpVersion = neo_form_version
+    else neoFormVersion = neo_form_version
     // Automatically enable AccessTransformers if the file exists
     def at = selectedMinecraftTargetResource('META-INF/accesstransformer.cfg')
     if (at.exists()) {
@@ -14,7 +17,7 @@ neoForge {
     }
 }
 
-def viewerApiLoader = java_version == '21' ? 'neoforge' : 'fabric'
+def viewerApiLoader = minecraftTarget == '1.20.1' ? 'forge' : (minecraftTarget.startsWith('1.') ? 'neoforge' : 'fabric')
 
 dependencies {
     api(project(":engine-core"))
@@ -33,9 +36,9 @@ dependencies {
     compileOnly("dev.architectury:architectury-${viewerApiLoader}:${architectury_version}")
     implementation("org.commonmark:commonmark:${commonmark_version}")
     implementation("org.commonmark:commonmark-ext-gfm-tables:${commonmark_version}")
-    implementation("dev.latvian.mods:rhino:${rhino_version}")
+    implementation(project(':runtime-rhino'))
     implementation("com.knuddels:jtokkit:${jtokkit_version}")
-    testImplementation('com.google.code.gson:gson:2.10.1')
+    testImplementation('com.google.code.gson:gson:2.10')
     testImplementation('org.junit.jupiter:junit-jupiter:5.11.4')
     testRuntimeOnly('org.junit.platform:junit-platform-launcher:1.11.4')
     testRuntimeOnly("org.xerial:sqlite-jdbc:${sqlite_jdbc_version}")

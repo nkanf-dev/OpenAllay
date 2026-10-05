@@ -2,7 +2,7 @@ plugins {
     id 'multiloader-loader'
 }
 // Select before configuring Loom; both IDs use the same cached implementation.
-def remapMinecraft = java_version == '21'
+def remapMinecraft = minecraftTarget.startsWith('1.')
 pluginManager.apply(remapMinecraft ? 'net.fabricmc.fabric-loom-remap' : 'net.fabricmc.fabric-loom')
 def modImplementationConfiguration = remapMinecraft ? 'modImplementation' : 'implementation'
 def modCompileOnlyConfiguration = remapMinecraft ? 'modCompileOnly' : 'compileOnly'
@@ -47,6 +47,9 @@ loom {
             sourceSet sourceSets.main
             sourceSet project(':engine-core').sourceSets.main
         }
+    }
+    if (minecraftTarget == '1.20.1') {
+        mixin { defaultRefmapName.set('openallay.refmap.json') }
     }
     def aw = project(':common').selectedMinecraftTargetResource("${mod_id}.accesswidener")
     if (aw.exists()) {

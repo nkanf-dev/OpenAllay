@@ -4,6 +4,7 @@ plugins {
     id 'net.fabricmc.fabric-loom-remap' version '1.17.21' apply false
     // see https://projects.neoforged.net/neoforged/moddevgradle for new versions
     id 'net.neoforged.moddev' version '2.0.148' apply false
+    id 'net.neoforged.moddev.legacyforge' version '2.0.148' apply false
 }
 
 // Select native game pins before distribution or subprojects read them.

@@ -1,0 +1,23 @@
+{
+  "required": true,
+  "package": "dev.openallay.client.gui.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "client": [
+    "MultiLineEditBoxAccessor",
+    "MultilineTextFieldAccessor",
+    "AbstractContainerScreenObservationAccessor",
+    "GameRendererObservationMixin",
+    "KeyboardHandlerObservationMixin",
+    "GameRendererFovAccess",
+    "MinecraftTeardownStateMixin",
+    "GuiSubtitleAccess",
+    "ToastInstanceCompletionMixin",
+    "GuiGraphicsTextureAccess",
+    "ScreenTooltipScopeMixin",
+    "MultiLineEditBoxHeightAccess"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "refmap": "openallay.refmap.json"
+}

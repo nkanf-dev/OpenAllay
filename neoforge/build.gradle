@@ -1,7 +1,10 @@
 plugins {
     id 'multiloader-loader'
-    id 'net.neoforged.moddev'
 }
+
+def legacyNativeLoader = minecraftTarget == '1.20.1'
+pluginManager.apply(legacyNativeLoader ? 'net.neoforged.moddev.legacyforge' : 'net.neoforged.moddev')
+def viewerApiLoader = legacyNativeLoader ? 'forge' : 'neoforge'
 
 dependencies {
     implementation(project(":engine-core"))
@@ -21,15 +24,18 @@ dependencies {
     jarJar(project(':runtime-rhino'))
     implementation("com.knuddels:jtokkit:${jtokkit_version}")
     jarJar("com.knuddels:jtokkit:${jtokkit_version}")
-    compileOnly("mezz.jei:jei-${jeiArtifactTarget}-neoforge-api:${jei_version}")
-    compileOnly("me.shedaniel:RoughlyEnoughItems-api-neoforge:${rei_version}")
-    compileOnly("dev.architectury:architectury-neoforge:${architectury_version}")
+    compileOnly("mezz.jei:jei-${jeiArtifactTarget}-${viewerApiLoader}-api:${jei_version}")
+    compileOnly("me.shedaniel:RoughlyEnoughItems-api-${viewerApiLoader}:${rei_version}")
+    compileOnly("dev.architectury:architectury-${viewerApiLoader}:${architectury_version}")
 }
 
 evaluationDependsOn(':adapters:minecraft-26.2')
 
-neoForge {
-    version = neoforge_version
+configure(extensions.getByName(legacyNativeLoader ? 'legacyForge' : 'neoForge')) {
+    if (legacyNativeLoader) {
+        // Early NeoForge publishes Forge-shaped APIs under net.neoforged:forge.
+        enable { neoForgeVersion = neoforge_version }
+    } else version = neoforge_version
     // Automatically enable neoforge AccessTransformers if the file exists
     def at = project(':common').selectedMinecraftTargetResource('META-INF/accesstransformer.cfg')
     if (at.exists()) {
@@ -49,7 +55,7 @@ neoForge {
             }
         }
         data {
-            clientData()
+            if (legacyNativeLoader) data() else clientData()
             gameDirectory = this.mkdir(this.file('runs/data'))
             // DataGen can be run by - "./gradlew :neoforge:runData" in Terminal.
             // Specify the modid for data generation, where to output the resulting resource, and where to look for existing resources.
@@ -79,7 +85,11 @@ tasks.matching { it.name == 'runClient' }.configureEach {
             .each { key, value -> systemProperty(key.toString(), value.toString()) }
 }
 
-sourceSets.main.resources { srcDir 'src/generated/resources' }
+sourceSets.main.resources {
+    srcDir 'src/generated/resources'
+    // Old loader descriptors have a different external filename, not a second mod identity.
+    if (minecraftNativeSourceFamilies.contains('1.20.4')) exclude 'META-INF/neoforge.mods.toml'
+}
 
 // Implement mcgradleconventions loader attribute
 def loaderAttribute = Attribute.of('io.github.mcgradleconventions.loader', String)
@@ -109,4 +119,15 @@ tasks.named('jar', Jar) {
 tasks.named('jar', Jar) {
     dependsOn(':engine-core:classes')
     from({ project(':engine-core').sourceSets.main.output })
+}
+
+if (legacyNativeLoader) {
+    dependencies { annotationProcessor('org.spongepowered:mixin:0.8.5:processor') }
+    mixin {
+        add sourceSets.main, 'openallay.refmap.json'
+        config 'openallay.client.mixins.json'
+    }
+    tasks.named('jar', Jar) {
+        manifest.attributes('MixinConfigs': 'openallay.client.mixins.json')
+    }
 }
