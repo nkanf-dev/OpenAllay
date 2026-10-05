@@ -21,6 +21,7 @@ import shutil
 import signal
 import subprocess
 import sys
+import time
 import uuid
 from urllib.parse import urlsplit
 from urllib.request import urlopen
@@ -1080,6 +1081,60 @@ def audit_builder_persistence(output, manifest, repo=REPO):
     write_json(output / "persistence-audit.json", proof)
 
 
+def startup_failure(output, manifest, previous_crashes=()):
+    game = Path(manifest["gameDirectory"])
+    for path in sorted((game / "crash-reports").glob("crash-*.txt")):
+        if path in previous_crashes or path.is_symlink() or not path.is_file() or path.stat().st_size > 1024 * 1024:
+            continue
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        # FML writes the UUID after the diagnostic stack and system details.
+        if (text.startswith("---- Minecraft Crash Report ----")
+                and "Description: Mod loading error has occurred" in text
+                and "java.lang.Exception: Mod Loading has failed" in text
+                and re.search(r"\n\tCrash Report UUID: [0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\n", text)
+                and re.search(r"\n\t(?:Forge|NeoForge): [^\r\n]+\n?\Z", text)):
+            cause = re.search(r"(?:Caused by \d+: |Exception message: )(\S+(?:Exception|Error):[^\r\n]*)", text)
+            return {"stage": "MOD_LOADING", "reason": cause.group(1) if cause else "Mod Loading has failed",
+                    "sharedBootstrap": True, "evidence": str(path)}
+    log = Path(output) / "client.log"
+    if log.is_file():
+        try:
+            with log.open("rb") as stream:
+                stream.seek(max(0, log.stat().st_size - 256 * 1024))
+                text = stream.read(256 * 1024).decode("utf-8", errors="replace")
+        except OSError:
+            return None
+        fatal = re.search(r'^Exception in thread "main" ([^\r\n]+)\n\s+at ', text, re.MULTILINE)
+        if fatal:
+            return {"stage": "UNCAUGHT_MAIN", "reason": fatal.group(1),
+                    "sharedBootstrap": False, "evidence": str(log)}
+    return None
+
+def wait_for_client(process, output, manifest, previous_crashes):
+    deadline = time.monotonic() + manifest.get("wallTimeoutSeconds", 600)
+    while True:
+        failure = startup_failure(output, manifest, previous_crashes)
+        if failure:
+            identity = {key: manifest[key] for key in ("packagedArtifact", "scenario", "runId", "loader", "minecraft")}
+            manifest["startupFailure"] = {**failure, **identity}
+            write_json(Path(output) / "launch.json", manifest)
+            raise ValueError("Confirmed native " + failure["stage"] + " failure: " + failure["reason"]
+                             + "; original diagnostics: " + failure["evidence"])
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise subprocess.TimeoutExpired(manifest["command"], manifest.get("wallTimeoutSeconds", 600))
+        try:
+            code = process.wait(timeout=min(1, remaining))
+        except subprocess.TimeoutExpired:
+            continue
+        failure = startup_failure(output, manifest, previous_crashes)
+        if failure:
+            continue
+        return code
+
 def launch_prepared(path, repo=REPO):
     output = safe_output(path, repo)
     manifest = json.loads((output / "launch.json").read_text(encoding="utf-8"))
@@ -1169,14 +1224,15 @@ def launch_prepared(path, repo=REPO):
     def terminate_requested(signum, frame):
         raise KeyboardInterrupt
     signal.signal(signal.SIGTERM, terminate_requested)
+    previous_crashes = set((game / "crash-reports").glob("crash-*.txt"))
     with (output / "client.log").open("wb") as log:
         try:
             process = subprocess.Popen(manifest["command"], cwd=game, stdout=log, stderr=subprocess.STDOUT,
                                        start_new_session=True, env=launch_environment)
             manifest["clientPid"] = process.pid
             write_json(output / "launch.json", manifest)
-            exit_code = process.wait(timeout=manifest.get("wallTimeoutSeconds", 600))
-        except (subprocess.TimeoutExpired, KeyboardInterrupt):
+            exit_code = wait_for_client(process, output, manifest, previous_crashes)
+        except (subprocess.TimeoutExpired, KeyboardInterrupt, ValueError) as failure:
             if process is not None and process.poll() is None:
                 os.killpg(process.pid, signal.SIGTERM)
                 try:
@@ -1184,7 +1240,12 @@ def launch_prepared(path, repo=REPO):
                 except subprocess.TimeoutExpired:
                     os.killpg(process.pid, signal.SIGKILL)
                     process.wait()
-            raise ValueError("Packaged acceptance client stopped after timeout or interrupt")
+            if "startupFailure" in manifest:
+                manifest["clientExitCode"] = process.returncode
+                manifest["closedAt"] = datetime.now(timezone.utc).isoformat()
+                write_json(output / "launch.json", manifest)
+                raise
+            raise ValueError("Packaged acceptance client stopped after timeout or interrupt") from failure
         finally:
             signal.signal(signal.SIGTERM, previous_term_handler)
     manifest["clientExitCode"] = exit_code

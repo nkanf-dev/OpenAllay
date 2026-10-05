@@ -1103,6 +1103,82 @@ def read_json(path):
     def test_offline_identity_matches_java_name_uuid(self):
         self.assertEqual("0ca3b4023d2036a9b3f027e089e111ae", launcher.offline_uuid("BuilderAcceptance"))
 
+    def test_startup_detector_requires_complete_native_failure_not_log_warnings(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            output = Path(temporary); game = output / "game"
+            (game / "crash-reports").mkdir(parents=True)
+            manifest, log = {"gameDirectory": str(game)}, output / "client.log"
+            log.write_text("[main/WARN] Mixin minVersion missing; assets union; font; optional provider\n"
+                           "[Render thread/ERROR] Failed to retrieve profile key pair\n"
+                           "java.lang.NoClassDefFoundError: optional/Provider\n")
+            self.assertIsNone(launcher.startup_failure(output, manifest))
+            crash = game / "crash-reports/crash-unit-fml.txt"
+            text = ("---- Minecraft Crash Report ----\nDescription: Mod loading error has occurred\n"
+                    "java.lang.Exception: Mod Loading has failed\n"
+                    "Caused by 0: java.lang.NoClassDefFoundError: com/google/gson/ReflectionAccessFilter\n"
+                    "\tCrash Report UUID: d8aaaefa-7cf2-4396-ba3c-9a57fd921e9a\n\tForge: net.minecraftforge:43.5.0")
+            crash.write_text(text[:-len("\tForge: net.minecraftforge:43.5.0")])
+            self.assertIsNone(launcher.startup_failure(output, manifest))
+            crash.write_text(text)
+            failure = launcher.startup_failure(output, manifest)
+            self.assertEqual("MOD_LOADING", failure["stage"])
+            self.assertIn("ReflectionAccessFilter", failure["reason"])
+            self.assertTrue(failure["sharedBootstrap"])
+            with patch.object(Path, "read_text", side_effect=PermissionError), patch.object(Path, "open", side_effect=PermissionError):
+                self.assertIsNone(launcher.startup_failure(output, manifest))
+            log.write_text('Exception in thread "main" java.lang.NoClassDefFoundError: missing/Class\n\tat Bootstrap.main(Bootstrap.java:1)\n')
+            failure = launcher.startup_failure(output, manifest, {crash})
+            self.assertEqual("UNCAUGHT_MAIN", failure["stage"])
+
+    def test_confirmed_startup_failure_reaps_only_owned_child_and_retains_identity(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            repo = Path(temporary) / "repo"; self.artifact(repo)
+            mcroot, cache, java = self.environment(repo)
+            args = launcher.parser().parse_args(["fabric", "--run-id", "fatal", "--minecraft-root", str(mcroot),
+                                                 "--gradle-cache", str(cache), "--java", str(java)])
+            output, _ = launcher.prepare(args, repo)
+            process = unittest.mock.Mock(pid=23456, returncode=-15)
+            process.poll.return_value, process.wait.return_value = None, -15
+            failure = {"stage": "MOD_LOADING", "sharedBootstrap": True, "reason": "missing runtime class", "evidence": "original-crash"}
+            with patch.object(launcher.subprocess, "Popen", return_value=process), \
+                    patch.object(launcher, "startup_failure", return_value=failure), \
+                    patch.object(launcher.os, "killpg") as stop, \
+                    patch.dict(launcher.os.environ, {"OPENALLAY_E2E_FIXTURE_KEY": "fixture-only"}):
+                with self.assertRaisesRegex(ValueError, "Confirmed native MOD_LOADING"):
+                    launcher.launch_prepared(output, repo)
+            stop.assert_called_once_with(23456, launcher.signal.SIGTERM)
+            process.wait.assert_called_once_with(timeout=10)
+            receipt = json.loads((output / "launch.json").read_text())
+            self.assertEqual(receipt["packagedArtifact"], receipt["startupFailure"]["packagedArtifact"])
+            self.assertEqual(-15, receipt["clientExitCode"])
+    def test_shared_bootstrap_failure_skips_same_jar_batch_as_not_run(self):
+        from test_ci_client_acceptance import ClientAcceptanceTests, runner
+        case = ClientAcceptanceTests(); case.setUp()
+        try:
+            original_command = case.simulator.command
+            def fail_bootstrap(command, *args, **kwargs):
+                result = original_command(command, *args, **kwargs)
+                if "--launch-prepared" in command:
+                    directory = Path(command[command.index("--launch-prepared") + 1])
+                    manifest = runner.read_json(directory / "launch.json")
+                    manifest["startupFailure"] = {"stage": "MOD_LOADING", "sharedBootstrap": True,
+                        "reason": "missing runtime class", "packagedArtifact": case.simulator.identity(),
+                        "scenario": manifest["scenario"], "runId": manifest["runId"],
+                        "loader": manifest["loader"], "minecraft": manifest["minecraft"]}
+                    runner.write_json(directory / "launch.json", manifest)
+                    raise ValueError("Confirmed native MOD_LOADING failure")
+                return result
+            case.simulator.command = fail_bootstrap
+            code, summary, _ = case.run_batch()
+            self.assertEqual((1, 2), (code, len(case.simulator.calls)))
+            self.assertEqual("FAILED", summary["scenarios"][0]["status"])
+            for record in summary["scenarios"][1:]:
+                self.assertEqual("NOT_RUN", record["status"])
+                self.assertIn("Prior confirmed", record["notRunReason"])
+            self.assertEqual("FAILED", summary["status"])
+        finally:
+            case.doCleanups()
+
     def test_launch_supervises_java_and_checks_native_passed_report(self):
         with tempfile.TemporaryDirectory() as directory:
             repo = Path(directory) / "repo"
@@ -1121,7 +1197,7 @@ def read_json(path):
                 launcher.launch_prepared(output, repo)
             self.assertTrue(start.call_args.kwargs["start_new_session"])
             self.assertEqual(output / "game", start.call_args.kwargs["cwd"])
-            process.wait.assert_called_once_with(timeout=360)
+            process.wait.assert_called_once_with(timeout=1)
             updated = json.loads((output / "launch.json").read_text())
             self.assertEqual(12345, updated["clientPid"])
             self.assertEqual(0, updated["clientExitCode"])
@@ -1136,8 +1212,9 @@ def read_json(path):
             output, _ = launcher.prepare(args, repo)
             process = unittest.mock.Mock(pid=23456)
             process.poll.return_value = None
-            process.wait.side_effect = [launcher.subprocess.TimeoutExpired("java", 600), 143]
+            process.wait.return_value = 143
             with patch.object(launcher.subprocess, "Popen", return_value=process), \
+                 patch.object(launcher, "wait_for_client", side_effect=launcher.subprocess.TimeoutExpired("java", 600)), \
                  patch.object(launcher.os, "killpg") as stop, \
                  patch.dict(launcher.os.environ, {"OPENALLAY_E2E_FIXTURE_KEY": "fixture-only"}):
                 with self.assertRaisesRegex(ValueError, "timeout or interrupt"):

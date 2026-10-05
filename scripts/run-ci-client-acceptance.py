@@ -486,10 +486,15 @@ def run_batch(args, repo=REPO):
         summary["fixture"]["pid"] = fixture.process.pid
         accepted = None
         fatal = None
+        bootstrap_failure = None
         for record in records:
             scenario = record["scenario"]
             directory = None
             try:
+                if bootstrap_failure:
+                    record["notRunReason"] = "Prior confirmed shared bootstrap failure: " + bootstrap_failure["reason"]
+                    record["priorStartupFailure"] = bootstrap_failure
+                    continue
                 if fatal:
                     raise ValueError("Not run after batch integrity failure: " + fatal)
                 fixture.check()
@@ -535,6 +540,15 @@ def run_batch(args, repo=REPO):
                 record["status"] = "FAILED"
                 record["failures"].append(str(failure) or type(failure).__name__)
                 (output / (scenario + ".runner-error.log")).write_text(traceback.format_exc(), encoding="utf-8")
+                if directory is not None and (directory / "launch.json").is_file():
+                    failed = read_json(directory / "launch.json")
+                    startup = failed.get("startupFailure", {})
+                    if (startup.get("sharedBootstrap") is True and startup.get("stage") == "MOD_LOADING"
+                            and startup.get("packagedArtifact") == summary["packagedArtifact"]
+                            and startup.get("loader") == args.loader and startup.get("minecraft") == args.minecraft_version
+                            and startup.get("scenario") == scenario and startup.get("runId") == record["runId"]):
+                        record["startupFailure"] = startup
+                        bootstrap_failure = startup
                 if isinstance(failure, KeyboardInterrupt):
                     fatal = "runner interrupted"
             finally:
@@ -564,7 +578,7 @@ def run_batch(args, repo=REPO):
             summary["failures"].append("Owned fixture cleanup failed: " + str(failure))
         signal.signal(signal.SIGTERM, previous_term)
         for record in records:
-            if record["status"] == "NOT_RUN":
+            if record["status"] == "NOT_RUN" and "notRunReason" not in record:
                 record["status"] = "FAILED"
                 record["failures"].append("Scenario was not run; see batch failures")
         try:
