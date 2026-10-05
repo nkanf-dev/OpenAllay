@@ -42,6 +42,22 @@ class ClientWorkflowGlueTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "changed"):
                 WORKFLOW.run("fabric", Path("/fixture/java"), "ci-run", root)
 
+    def test_batch_orchestration_logs_are_retained_by_exact_inventory(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve()
+            batch = root / "build/e2e/ci-client/fabric/ci-run"
+            batch.mkdir(parents=True)
+            log = batch / "builder-acceptance.prepare.log"
+            log.write_bytes(b"prepare failure")
+            (batch / "summary.json").write_text(json.dumps({"scenarios": [], "diagnostics": {"logFiles": [str(log)]}}))
+            scripts = root / "scripts"
+            scripts.mkdir()
+            (scripts / "prepare-ci-diagnostics.py").write_bytes(Path(__file__).with_name("prepare-ci-diagnostics.py").read_bytes())
+            output, passed = EVIDENCE.compact("fabric", "ci-run", root)
+            self.assertTrue(passed)
+            self.assertEqual((output / "run-0" / log.name).read_bytes(), log.read_bytes())
+            self.assertTrue(log.is_file())
+
     def test_evidence_exact_copy_hash_and_original_preservation(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary).resolve()

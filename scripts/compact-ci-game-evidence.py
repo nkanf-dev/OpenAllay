@@ -78,6 +78,12 @@ def compact(loader, batch_id, root=ROOT):
             raise ValueError("Diagnostic source escaped the disposable CI tree or contains symlinks")
         includes = ["game/logs/" + name for name in ("latest.log", "debug.log")
                     if (source / "game/logs" / name).is_file()]
+        if source == batch:
+            for log in value.get("diagnostics", {}).get("logFiles", []):
+                path = Path(log)
+                if path.parent != batch or path.suffix != ".log" or path.resolve(strict=True) != path:
+                    raise ValueError("Orchestration log escaped its owned batch root")
+                includes.append(path.name)
         try:
             receipts.append(diagnostics.prepare(source, output / ("run-" + str(index)), includes=includes, repo=root))
         except (ValueError, OSError) as failure:

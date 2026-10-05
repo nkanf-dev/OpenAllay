@@ -176,5 +176,6 @@ jobs:
             build/e2e/runtime/minecraft/.provision/*.json
             build/e2e/runtime/minecraft/.provision/*.log
             build/e2e/ci-client/${{ matrix.loader }}/ci-${{ github.sha }}-${{ matrix.loader }}/summary.json
+            build/e2e/ci-client/${{ matrix.loader }}/ci-${{ github.sha }}-${{ matrix.loader }}/*.log
             build/e2e/ci-client/${{ matrix.loader }}/ci-${{ github.sha }}-${{ matrix.loader }}/logs/*.log
             build/e2e/ci-client-compact/${{ matrix.loader }}/ci-${{ github.sha }}-${{ matrix.loader }}/
