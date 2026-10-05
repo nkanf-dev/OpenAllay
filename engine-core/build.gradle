@@ -62,8 +62,9 @@ def mergePrivateMaven = tasks.register('mergePrivateMaven', Sync) {
     into(privateMavenOutput)
 }
 sourceSets.main.output.dir([builtBy: mergePrivateMaven], privateMavenOutput)
-// Loom's normal dev mod classpath reads classesDirs, not extra output dirs.
-sourceSets.main.output.classesDirs.from(privateMavenOutput)
+// Keep the producer dependency on the directory for every classpath consumer,
+// including test fixtures and Loom's normal development mod classpath.
+sourceSets.main.output.classesDirs.from(files(privateMavenOutput).builtBy(mergePrivateMaven))
 tasks.named('classes') { dependsOn(mergePrivateMaven) }
 
 // Enforce actual resolved production classpaths, not names appearing in source comments.
