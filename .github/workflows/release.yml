@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     env:
-      # Only the accepted default target is gated/published here; no target matrix.
+      # The default pin selects tooling. Artifact groups come only from acceptedFamilies.
       OPENALLAY_MINECRAFT_TARGET: "26.2"
     permissions:
       attestations: write
@@ -43,7 +43,11 @@ jobs:
         uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
         with:
           distribution: temurin
-          java-version: ${{ steps.minecraft_target.outputs.java_version }}
+          # Engine tests/native targets need 21/17. Run tooling on the default Java25 pin.
+          java-version: |
+            17
+            21
+            ${{ steps.minecraft_target.outputs.java_version }}
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
@@ -70,36 +74,9 @@ jobs:
       - name: Prepare pinned Extension source
         run: python3 scripts/prepare-distribution.py
 
-      - name: Run clean test and loader build gate
-        run: ./gradlew -PminecraftTarget="$OPENALLAY_MINECRAFT_TARGET" clean :common:test :fabric:build :neoforge:build
-
-      - name: Verify SQLite packaging
-        run: ./scripts/verify-sqlite-packaging.sh
-
-      - name: Verify tokenizer packaging
-        run: |
-          minecraft_version=$(python3 scripts/minecraft-target.py \
-            --target "$OPENALLAY_MINECRAFT_TARGET" --property minecraft_version)
-          version=$(sed -n 's/^version=//p' gradle.properties)
-          python3 scripts/verify-tokenizer-packaging.py \
-            --fabric "fabric/build/libs/openallay-fabric-${minecraft_version}-${version}.jar" \
-            --neoforge "neoforge/build/libs/openallay-neoforge-${minecraft_version}-${version}.jar"
-
-      - name: Verify built distribution
-        run: ./scripts/verify-distribution.sh
-
-      - name: Stage the two production artifacts
-        shell: bash
-        run: |
-          set -euo pipefail
-          version="${GITHUB_REF_NAME#v}"
-          minecraft_version=$(python3 scripts/minecraft-target.py \
-            --target "$OPENALLAY_MINECRAFT_TARGET" --property minecraft_version)
-          mkdir release
-          cp "fabric/build/libs/openallay-fabric-${minecraft_version}-${version}.jar" release/
-          cp "neoforge/build/libs/openallay-neoforge-${minecraft_version}-${version}.jar" release/
-          ./scripts/verify-distribution.sh release
-          (cd release && sha256sum openallay-*.jar > SHA256SUMS)
+      - name: Build, verify, and stage accepted native artifact families
+        # Sequential deduplicated buildTargets. No per-minor matrix or candidate release.
+        run: python3 scripts/build-minecraft-artifacts.py build-and-stage release
 
       - name: Generate release notes
         env:
@@ -113,7 +90,7 @@ jobs:
       - name: Publish Fabric and NeoForge to Modrinth
         env:
           MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
-        run: ./scripts/publish-modrinth.sh "${GITHUB_REF_NAME}"
+        run: ./scripts/publish-modrinth.sh "${GITHUB_REF_NAME}" release
 
       - name: Attest release artifacts
         uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1

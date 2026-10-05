@@ -9,8 +9,8 @@ fail() {
   exit 1
 }
 
-if (( $# != 1 )); then
-  fail 'usage: publish-modrinth.sh <v-prefixed-version>'
+if (( $# < 1 || $# > 2 )); then
+  fail 'usage: publish-modrinth.sh <v-prefixed-version> [staged-release-directory]'
 fi
 
 tag=$1
@@ -25,9 +25,14 @@ minecraft_version=$(python3 "$repository/scripts/minecraft-target.py" \
 [[ "$configured_version" == "$version" ]] \
   || fail "tag version $version does not match Gradle version $configured_version"
 
-# A profile is only a pin tuple. Require matching built metadata and the existing
-# full package/Extension gate before any Modrinth API activity.
-OPENALLAY_MINECRAFT_TARGET="$minecraft_target" "$repository/scripts/verify-distribution.sh"
+# Verify every selected artifact before any API activity. A receipt checks final
+# staged-byte consistency; reviewed source catalog entries remain the admission.
+distribution=${2:-release}
+publication_arguments=(publication-records "$distribution")
+if [[ -n "${OPENALLAY_MINECRAFT_RECEIPT_DIRECTORY:-}" ]]; then
+  publication_arguments+=(--receipt-directory "$OPENALLAY_MINECRAFT_RECEIPT_DIRECTORY")
+fi
+publication_records=$(python3 "$repository/scripts/build-minecraft-artifacts.py" "${publication_arguments[@]}")
 
 api=https://api.modrinth.com/v2
 slug=openallay
@@ -148,46 +153,67 @@ fi
 publish_loader() {
   local loader=$1
   local artifact=$2
-  local dependency_project=${3:-}
-  local versions_response="$work/${loader}-versions.json"
+  local family_id=$3
+  local game_versions=$4
+  local expected_sha256=$5
+  local dependency_project=${6:-}
+  local versions_response="$work/${family_id}-versions.json"
   local encoded_loaders encoded_versions
   encoded_loaders=$(python3 -c 'import json,sys,urllib.parse; print(urllib.parse.quote(json.dumps([sys.argv[1]])))' "$loader")
-  encoded_versions=$(python3 -c 'import json,sys,urllib.parse; print(urllib.parse.quote(json.dumps([sys.argv[1]])))' "$minecraft_version")
+  encoded_versions=$(python3 -c 'import sys,urllib.parse; print(urllib.parse.quote(sys.argv[1]))' "$game_versions")
   local status
   status=$(api_status GET \
     "$api/project/$project_id/version?loaders=$encoded_loaders&game_versions=$encoded_versions&include_changelog=false" \
     "$versions_response")
   [[ "$status" == 200 ]] || fail "$loader version lookup returned HTTP $status"
 
-  if python3 - "$versions_response" "$version" <<'PY'
+  # Never treat the same product version for another family/bytes as a match.
+  # Refuse mismatched existing releases; do not overwrite delivered artifacts.
+  if python3 - "$versions_response" "$version" "$game_versions" "$loader" "$artifact" <<'PY'
+import hashlib
 import json
+from pathlib import Path
 import sys
 versions = json.load(open(sys.argv[1], encoding="utf-8"))
-raise SystemExit(0 if any(v.get("version_number") == sys.argv[2] for v in versions) else 1)
+version, targets, loader, artifact = sys.argv[2:]
+matching = [item for item in versions if item.get("version_number") == version]
+if not matching:
+    raise SystemExit(1)
+sha512 = hashlib.sha512(Path(artifact).read_bytes()).hexdigest()
+for item in matching:
+    if (sorted(item.get("game_versions", [])) != sorted(json.loads(targets))
+            or item.get("loaders") != [loader]
+            or not any(file.get("filename") == Path(artifact).name and file.get("hashes", {}).get("sha512") == sha512
+                       for file in item.get("files", []))):
+        raise SystemExit(2)
+raise SystemExit(0)
 PY
   then
-    printf 'modrinth_loader=%s status=already_published version=%s\n' "$loader" "$version"
+    printf 'modrinth_family=%s status=already_published version=%s\n' "$family_id" "$version"
     return
+  else
+    local existing_status=$?
+    [[ "$existing_status" == 1 ]] || fail "existing $family_id version has different targets/bytes; release is immutable"
   fi
 
   [[ -f "$artifact" ]] || fail "missing $loader artifact: $artifact"
-  python3 - "$work/$loader-version.json" "$project_id" "$version" \
-    "$minecraft_version" "$loader" "$release_type" "$dependency_project" <<'PY'
+  python3 - "$work/$family_id-version.json" "$project_id" "$version" \
+    "$game_versions" "$loader" "$release_type" "$dependency_project" "$family_id" <<'PY'
 import json
 import pathlib
 import sys
 
-output, project_id, version, game_version, loader, release_type, dependency = sys.argv[1:]
+output, project_id, version, game_versions, loader, release_type, dependency, family_id = sys.argv[1:]
 dependencies = []
 if dependency:
     dependencies.append({"project_id": dependency, "dependency_type": "required"})
 payload = {
     "project_id": project_id,
-    "name": f"OpenAllay {version} ({loader.title()})",
+    "name": f"OpenAllay {version} ({family_id})",
     "version_number": version,
     "changelog": f"See https://github.com/nkanf-dev/OpenAllay/releases/tag/v{version}",
     "dependencies": dependencies,
-    "game_versions": [game_version],
+    "game_versions": json.loads(game_versions),
     "version_type": release_type,
     "loaders": [loader],
     "featured": False,
@@ -198,18 +224,33 @@ payload = {
 pathlib.Path(output).write_text(json.dumps(payload), encoding="utf-8")
 PY
 
-  status=$(api_status POST "$api/version" "$work/$loader-response.json" \
-    --form "data=<$work/$loader-version.json;type=application/json" \
+  python3 - "$repository" "$artifact" "$expected_sha256" <<'PY'
+from importlib.util import module_from_spec, spec_from_file_location
+from pathlib import Path
+import sys
+root, artifact, expected = sys.argv[1:]
+spec = spec_from_file_location("publication_artifact_hash", Path(root) / "scripts/minecraft-artifacts.py")
+catalog = module_from_spec(spec)
+spec.loader.exec_module(catalog)
+if catalog.file_hash(Path(artifact), catalog.MAX_ARTIFACT_BYTES) != expected:
+    raise SystemExit("Final staged artifact changed after verification; refusing upload")
+PY
+  status=$(api_status POST "$api/version" "$work/$family_id-response.json" \
+    --form "data=<$work/$family_id-version.json;type=application/json" \
     --form "file=@$artifact;type=application/java-archive")
   [[ "$status" == 200 ]] || fail "$loader version creation returned HTTP $status"
-  printf 'modrinth_loader=%s status=published version=%s\n' "$loader" "$version"
+  printf 'modrinth_family=%s status=published version=%s\n' "$family_id" "$version"
 }
 
-publish_loader fabric \
-  "fabric/build/libs/openallay-fabric-${minecraft_version}-${version}.jar" \
-  P7dR8mSH
-publish_loader neoforge \
-  "neoforge/build/libs/openallay-neoforge-${minecraft_version}-${version}.jar"
+while IFS=$'\t' read -r loader artifact family_id game_versions artifact_sha256; do
+  dependency_project=
+  if [[ "$loader" == fabric ]]; then dependency_project=P7dR8mSH; fi
+  publish_loader "$loader" "$artifact" "$family_id" "$game_versions" "$artifact_sha256" "$dependency_project"
+done < <(python3 -c '
+import json, sys
+for item in json.loads(sys.argv[1]):
+    print("\t".join((item["loader"], item["artifactPath"], item["id"], json.dumps(item["supportedTargets"], separators=(",", ":")), item["artifactSha256"])))
+' "$publication_records")
 
 if [[ "$project_review_status" == draft ]]; then
   printf '{"requested_status":"approved"}' > "$work/submit.json"
