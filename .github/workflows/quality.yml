@@ -71,6 +71,26 @@ jobs:
       - name: Run clean test and loader build gate
         run: ./gradlew -PminecraftTarget="$OPENALLAY_MINECRAFT_TARGET" clean :extension-api:test :common:test :fabric:build :neoforge:build
 
+      - name: Retain shared test and build diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: mainline-test-reports-${{ github.sha }}
+          retention-days: 7
+          if-no-files-found: ignore
+          path: |
+            extension-api/build/test-results/
+            extension-api/build/reports/
+            engine-core/build/test-results/
+            engine-core/build/reports/
+            common/build/test-results/
+            common/build/reports/
+            fabric/build/test-results/
+            fabric/build/reports/
+            neoforge/build/test-results/
+            neoforge/build/reports/
+            build/reports/problems/
+
       - name: Verify SQLite packaging
         run: ./scripts/verify-sqlite-packaging.sh
 

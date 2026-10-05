@@ -1,9 +1,6 @@
 name: Minecraft native compatibility
 
 on:
-  push:
-    branches:
-      - "mc/**"
   pull_request:
     paths:
       - "common/**"
@@ -12,27 +9,109 @@ on:
       - "adapters/**"
       - "gradle/**"
       - "build-logic/**"
+      - "distribution/**"
+      - "engine-core/**"
+      - "extension-api/**"
+      - "runtime-json/**"
+      - "runtime-rhino/**"
+      - "*.gradle"
+      - "gradle.properties"
+      - "gradlew*"
+      - "scripts/plan-ci-verification.py"
+      - "scripts/test_plan_ci_verification.py"
       - ".github/workflows/minecraft-native.yml"
   workflow_dispatch:
+    inputs:
+      native_targets:
+        description: "Exact native target CSV; all for full coverage, none to skip builds"
+        type: string
+        required: true
+        default: none
+      smoke_targets:
+        description: "Exact target/loader CSV; default for six key smokes, none to skip"
+        type: string
+        required: true
+        default: none
+      artifact_run_id:
+        description: "Successful native artifact run ID, only for smoke targets not rebuilt"
+        type: string
+        required: false
+      artifact_source_sha:
+        description: "Exact 40-character source head of that artifact run"
+        type: string
+        required: false
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
-  group: minecraft-native-${{ github.ref }}
+  # Independent native repair and carried-artifact smoke dispatches do not cancel each other.
+  group: minecraft-native-${{ github.ref }}-${{ github.event_name }}-${{ inputs.native_targets || 'all' }}-${{ inputs.smoke_targets || 'default' }}
   cancel-in-progress: true
 
 jobs:
+  plan:
+    name: Select native verification jobs
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      run_native: ${{ steps.plan.outputs.run_native }}
+      run_smoke: ${{ steps.plan.outputs.run_smoke }}
+      native_matrix: ${{ steps.plan.outputs.native_matrix }}
+      smoke_matrix: ${{ steps.plan.outputs.smoke_matrix }}
+    steps:
+      - name: Check out candidate and artifact source history
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Test selective job and artifact-source decisions
+        run: python3 -B -m unittest discover -s scripts -p 'test_plan_ci_verification.py'
+
+      - name: Select exact failed or affected jobs
+        id: plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NATIVE_TARGETS: ${{ github.event_name == 'pull_request' && 'all' || inputs.native_targets }}
+          SMOKE_TARGETS: ${{ github.event_name == 'pull_request' && 'default' || inputs.smoke_targets }}
+          SOURCE_RUN_ID: ${{ inputs.artifact_run_id }}
+          SOURCE_SHA: ${{ inputs.artifact_source_sha }}
+          RUN_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          python3 -B scripts/plan-ci-verification.py \
+            --native-targets "$NATIVE_TARGETS" --smoke-targets "$SMOKE_TARGETS" \
+            --candidate-sha "$GITHUB_SHA" --current-run-id "$GITHUB_RUN_ID" --current-run-head-sha "$RUN_HEAD_SHA" \
+            --repository "$GITHUB_REPOSITORY" \
+            --source-run-id "$SOURCE_RUN_ID" --source-sha "$SOURCE_SHA" \
+            --report ci-verification-plan.json --github-output "$GITHUB_OUTPUT"
+
+      - name: Retain exact job selection and artifact source
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: compat-plan-${{ github.run_id }}-${{ github.run_attempt }}
+          retention-days: 7
+          if-no-files-found: error
+          path: ci-verification-plan.json
+
+      - name: Record selection without relabeling carried results
+        run: |
+          printf '### Native verification plan\n\nCandidate runner/source: `%s`. Production JAR sources are recorded per smoke row. Prior successful jobs remain evidence for their original source SHA only.\n\n```json\n' "$GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
+          cat ci-verification-plan.json >> "$GITHUB_STEP_SUMMARY"
+          printf '\n```\n' >> "$GITHUB_STEP_SUMMARY"
+
   native:
     # Actual native API families; full feature acceptance runs once in mainline Quality.
     name: Native ${{ matrix.target }}
+    needs: plan
+    if: ${{ needs.plan.outputs.run_native == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     strategy:
       fail-fast: false
       max-parallel: 3
-      matrix:
-        target: ["26.3", "26.1", "1.21.11", "1.21.10", "1.21.8", "1.21.6", "1.21.5", "1.21.4", "1.21.3", "1.21.1", "1.20.6", "1.20.4", "1.20.3", "1.20.2", "1.20.1"]
+      matrix: ${{ fromJSON(needs.plan.outputs.native_matrix) }}
     env:
       OPENALLAY_MINECRAFT_TARGET: ${{ matrix.target }}
     steps:
@@ -120,24 +199,68 @@ jobs:
 
   smoke:
     name: Native smoke ${{ matrix.target }} / ${{ matrix.loader }}
-    needs: native
+    needs: [plan, native]
+    # A failed unrelated native row must not hide successful endpoint artifacts.
+    if: ${{ always() && !cancelled() && needs.plan.result == 'success' && needs.plan.outputs.run_smoke == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     strategy:
       fail-fast: false
       max-parallel: 3
-      matrix:
-        target: ["26.3", "1.21.1", "1.20.1"]
-        loader: [fabric, neoforge]
+      matrix: ${{ fromJSON(needs.plan.outputs.smoke_matrix) }}
     env:
       LIBGL_ALWAYS_SOFTWARE: "1"
       ALSOFT_DRIVERS: "null"
-      OPENALLAY_E2E_SOURCE_REVISION: ${{ github.sha }}
+      # The packaged JAR source is not the newer workflow/test runner source.
+      OPENALLAY_E2E_SOURCE_REVISION: ${{ matrix.source_sha }}
     steps:
-      - name: Check out the tested source
+      - name: Check out candidate smoke runner source
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
+
+      - name: Download this run's exact verification plan
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
+        with:
+          name: compat-plan-${{ github.run_id }}-${{ github.run_attempt }}
+          path: build/ci-verification
+
+      - name: Read the exact native artifact source run and jobs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN_ID: ${{ matrix.source_run_id }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID" > build/ci-verification/source-run.json
+          gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID/jobs?filter=latest&per_page=100" > build/ci-verification/source-job-pages.json
+          python3 -c 'import json; from pathlib import Path; p = Path("build/ci-verification"); pages = json.loads((p / "source-job-pages.json").read_text()); (p / "source-jobs.json").write_text(json.dumps([job for page in pages for job in page["jobs"]]))'
+
+      - name: Download the exact native production artifacts
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
+        with:
+          name: compat-production-${{ matrix.target }}-${{ matrix.source_sha }}
+          run-id: ${{ matrix.source_run_id }}
+          github-token: ${{ github.token }}
+          path: build/ci-client-production
+
+      - name: Verify original production artifact bytes
+        run: sha256sum --check SHA256SUMS
+        working-directory: build/ci-client-production
+
+      - name: Record exact source job and original JAR SHA-256
+        env:
+          TARGET: ${{ matrix.target }}
+          LOADER: ${{ matrix.loader }}
+        run: |
+          python3 -B scripts/plan-ci-verification.py --repository "$GITHUB_REPOSITORY" \
+            --report build/ci-verification/ci-verification-plan.json \
+            --receipt-target "$TARGET" --receipt-loader "$LOADER" \
+            --artifact-directory build/ci-client-production \
+            --source-run-json build/ci-verification/source-run.json \
+            --source-jobs-json build/ci-verification/source-jobs.json \
+            --receipt build/ci-verification/artifact-source.json
+          printf '### Exact native smoke artifact source\n```json\n' >> "$GITHUB_STEP_SUMMARY"
+          cat build/ci-verification/artifact-source.json >> "$GITHUB_STEP_SUMMARY"
+          printf '\n```\n' >> "$GITHUB_STEP_SUMMARY"
 
       - name: Read the exact game Java pin
         id: game
@@ -157,16 +280,6 @@ jobs:
           sudo apt-get install -y xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 libopenal1 webp
           python3 -m venv build/ci-tools
           build/ci-tools/bin/python -m pip install Pillow==11.3.0
-
-      - name: Download the exact native production artifacts
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
-        with:
-          name: compat-production-${{ matrix.target }}-${{ github.sha }}
-          path: build/ci-client-production
-
-      - name: Verify original production artifact bytes
-        run: sha256sum --check SHA256SUMS
-        working-directory: build/ci-client-production
 
       - name: Provision the exact official target runtime
         run: |
@@ -193,6 +306,8 @@ jobs:
           retention-days: 7
           if-no-files-found: warn
           path: |
+            build/ci-verification/*.json
+            build/ci-client-production/SHA256SUMS
             build/ci-runtime-receipt.json
             build/e2e/runtime/${{ matrix.target }}/minecraft/.provision/*.json
             build/e2e/runtime/${{ matrix.target }}/minecraft/.provision/*.log
