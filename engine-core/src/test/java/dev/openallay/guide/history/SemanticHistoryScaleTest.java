@@ -35,7 +35,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 /** Evidence-scale gate. Counts are coverage fixtures, not product limits. */
-final class Phase4SemanticHistoryScaleTest {
+final class SemanticHistoryScaleTest {
     private static final int REQUESTS = 10_000;
     private static final int TIMELINE_ROWS = REQUESTS * 3;
     private static final Instant NOW = Instant.parse("2026-07-18T16:00:00Z");
@@ -209,7 +209,7 @@ final class Phase4SemanticHistoryScaleTest {
             int pageObjects,
             int contextObjects,
             int visibleRows) throws Exception {
-        Path output = Path.of("build/reports/openallay/phase4j-scale.json");
+        Path output = Path.of("build/reports/openallay/semantic-history-scale.json");
         Files.createDirectories(output.getParent());
         Files.writeString(output, """
                 {

@@ -85,7 +85,7 @@ public final class SkillParser {
         return new SkillDocument(metadata, parsed.body(), references);
     }
 
-    /** Compatibility for pre-Phase-4 in-memory callers; filesystem packages never use this form. */
+    /** In-memory Skill descriptors; filesystem packages use their explicit manifest form. */
     private static SkillDocument parseLegacySkill(
             SkillSource source, String root, ParsedFrontmatter parsed) {
         List<String> referencePaths = parsed.list("references");

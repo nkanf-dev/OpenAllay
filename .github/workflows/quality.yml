@@ -66,9 +66,6 @@ jobs:
       - name: Run clean test and loader build gate
         run: ./gradlew -PminecraftTarget="$OPENALLAY_MINECRAFT_TARGET" clean :common:test :fabric:build :neoforge:build
 
-      - name: Verify Phase 4 package
-        run: ./scripts/verify-phase4-package.sh
-
       - name: Verify SQLite packaging
         run: ./scripts/verify-sqlite-packaging.sh
 

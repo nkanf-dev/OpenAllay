@@ -145,10 +145,10 @@ if [[ ${#client_args[@]} -gt 0 ]]; then
 fi
 gradle_command+=(
   -Dopenallay.e2e.enabled=true \
-  -Dopenallay.e2e.question="${OPENALLAY_E2E_QUESTION:-请查询铁块的配方，精确读取后检查库存并计算是否可制作，最后列出当前知识来源。}" \
+  -Dopenallay.e2e.question="${OPENALLAY_E2E_QUESTION:-请用 JavaScript 查询铁块配方，读取实际库存并判断材料是否足够，保留真实配方引用。}" \
   -Dopenallay.e2e.report="$report" \
   -Dopenallay.e2e.trace="$trace" \
-  -Dopenallay.e2e.scenario="${OPENALLAY_E2E_SCENARIO:-phase-4-semantic-history}" \
+  -Dopenallay.e2e.scenario="${OPENALLAY_E2E_SCENARIO:-live-rhino-crafting}" \
   -Dopenallay.e2e.session="${OPENALLAY_E2E_SESSION:-e2e}" \
   -Dopenallay.e2e.modelMode="$model_mode" \
   -Dopenallay.e2e.historySeedRequests="${OPENALLAY_E2E_HISTORY_SEED_REQUESTS:-0}" \
@@ -217,84 +217,7 @@ if scenario.startswith("live-rhino-"):
             raise SystemExit(
                 "Live Rhino E2E did not load required module: " + required_module)
     raise SystemExit(0)
-if scenario == "phase-4-game-state":
-    tool_ids = report.get("toolIds", [])
-    expected_sections = [
-        "OVERVIEW", "MODS", "OPTIONS", "PACKS", "SHADERS",
-        "DIAGNOSTICS", "PLAYER", "WORLD_QUERY",
-    ]
-    probes = report.get("toolProbes", [])
-    if tool_ids != ["openallay:inspect_game_state"] * len(expected_sections):
-        raise SystemExit("E2E did not inspect every registered outer game-state section")
-    if len(probes) != len(expected_sections):
-        raise SystemExit("E2E game-state probe count is incomplete")
-    for expected, probe in zip(expected_sections[:7], probes[:7]):
-        if (probe.get("toolId") != "openallay:inspect_game_state"
-                or probe.get("status") != "SUCCEEDED"
-                or probe.get("section") != expected
-                or probe.get("failureCode") is not None):
-            raise SystemExit("E2E game-state section did not complete successfully: "
-                             + repr({"expected": expected, "probe": probe}))
-    world_query = probes[-1]
-    if not (
-            world_query.get("toolId") == "openallay:inspect_game_state"
-            and (world_query.get("status") == "SUCCEEDED"
-                 or (world_query.get("status") == "FAILED"
-                     and world_query.get("failureCode") == "permission_denied"))):
-        raise SystemExit("E2E world query did not preserve read-only authority: "
-                         + repr(world_query))
-    if metrics.get("assistantSegments", 0) < 9:
-        raise SystemExit("E2E did not preserve game-state tool chronology")
-    raise SystemExit(0)
-if scenario == "phase-4-server-client-tools":
-    if report.get("topology") != "SERVER":
-        raise SystemExit("E2E did not use the server-hosted model topology")
-    probes = report.get("toolProbes", [])
-    expected_sections = [
-        "OVERVIEW", "MODS", "OPTIONS", "PACKS", "SHADERS",
-        "DIAGNOSTICS", "PLAYER", "WORLD_QUERY",
-    ]
-    if report.get("toolIds", []) != ["openallay:inspect_game_state"] * 8:
-        raise SystemExit("E2E did not route the complete game-state Tool sequence")
-    for expected, probe in zip(expected_sections[:7], probes[:7]):
-        if (probe.get("section") != expected or probe.get("status") != "SUCCEEDED"):
-            raise SystemExit("E2E client Tool section failed: " + repr(probe))
-    if len(probes) != 8 or not (
-            probes[-1].get("status") == "SUCCEEDED"
-            or (probes[-1].get("status") == "FAILED"
-                and probes[-1].get("failureCode") == "permission_denied")):
-        raise SystemExit("E2E server-owned world query did not preserve authority")
-    if metrics.get("assistantSegments", 0) < 9:
-        raise SystemExit("E2E did not continue after the complete Tool chronology")
-    raise SystemExit(0)
-if metrics.get("assistantSegments", 0) < 6:
-    raise SystemExit("E2E did not preserve assistant/tool chronology")
-required_components = {
-    "item_row", "recipe_grid", "ingredient_check", "craftability_summary",
-    "progress_steps", "source_summary", "status_badge", "choice_group",
-}
-observed_components = set(report.get("controlledComponentTypes", []))
-if not required_components.issubset(observed_components):
-    raise SystemExit("E2E did not retain the complete controlled component catalog: "
-                     + repr(sorted(required_components - observed_components)))
-if metrics.get("controlledComponents", 0) < len(required_components):
-    raise SystemExit("E2E controlled component count is incomplete")
-if metrics.get("semanticFallbacks", 0) < 1:
-    raise SystemExit("E2E did not retain malformed-component fallback")
-if "semantic_component_unsupported" not in report.get("semanticDiagnosticCodes", []):
-    raise SystemExit("E2E missing redacted fallback diagnostic")
-if "openallay:list_knowledge_sources" not in report.get("toolIds", []):
-    raise SystemExit("E2E missing knowledge-source tool")
-minimum_history = int(__import__("os").environ.get(
-    "OPENALLAY_E2E_MIN_HISTORY_REQUESTS", "1"))
-history = report.get("historyMetrics", {})
-if history.get("totalRequests", 0) < minimum_history:
-    raise SystemExit("E2E history total is below the required minimum")
-if __import__("os").environ.get("OPENALLAY_E2E_REQUIRE_PAGED_HISTORY") == "true":
-    if history.get("loadedRequests", 0) >= history.get("totalRequests", 0):
-        raise SystemExit("E2E did not restore a windowed history projection")
-    if history.get("hasEarlier") != 1:
-        raise SystemExit("E2E history window does not expose earlier requests")
+raise SystemExit("Unsupported current E2E scenario: " + str(scenario))
 PY
 echo "E2E report: $report"
 if [[ "$use_existing_profile" == "true" ]]; then

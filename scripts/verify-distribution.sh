@@ -52,8 +52,21 @@ verify_zip() {
   if grep -Eiq "(^|/)${legacy_namespace}(/|\\.|$)|^dev/${legacy_namespace}/" <<< "$listing"; then
     fail "legacy package branding is present in $jar"
   fi
-  grep -Fqx 'dev/openallay/OpenAllayBootstrap.class' <<< "$listing" \
-    || fail "OpenAllay common bootstrap is missing from $jar"
+  for entry in \
+    'dev/openallay/OpenAllayBootstrap.class' \
+    'dev/openallay/guide/history/SqliteGuideHistoryStore.class' \
+    'dev/openallay/guide/semantic/SemanticMessageParser.class'; do
+    grep -Fqx "$entry" <<< "$listing" \
+      || fail "required product class $entry is missing from $jar"
+  done
+  for dependency in \
+    'commonmark-0.28.0.jar' \
+    'commonmark-ext-gfm-tables-0.28.0.jar' \
+    'sqlite-jdbc-3.50.3.0.jar'; do
+    grep -Fq "META-INF/jars/$dependency" <<< "$listing" \
+      || grep -Fq "META-INF/jarjar/$dependency" <<< "$listing" \
+      || fail "required product dependency $dependency is missing from $jar"
+  done
 }
 
 verify_zip "$fabric_jar"
@@ -70,6 +83,7 @@ with zipfile.ZipFile(path) as archive:
 assert metadata["id"] == "openallay", metadata
 assert metadata["name"] == "OpenAllay", metadata
 assert metadata["version"] == version, metadata
+assert metadata["environment"] == "*", metadata
 assert metadata["depends"]["minecraft"] == "~" + minecraft_version, metadata
 PY
 

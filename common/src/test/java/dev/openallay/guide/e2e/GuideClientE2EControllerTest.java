@@ -67,7 +67,7 @@ final class GuideClientE2EControllerTest {
     void distinctLiveNativeScenarioReusesGuardedGraphicalLifecycleOnly() {
         assertTrue(GuideClientE2EController.graphicalScenario("ui-manual-regressions"));
         assertTrue(GuideClientE2EController.graphicalScenario("ui-live-ux-regressions"));
-        assertFalse(GuideClientE2EController.graphicalScenario("phase-4-semantic-history"));
+        assertFalse(GuideClientE2EController.graphicalScenario("retired-semantic-history"));
         assertFalse(GuideClientE2EController.graphicalScenario("ui-stop"));
     }
 
