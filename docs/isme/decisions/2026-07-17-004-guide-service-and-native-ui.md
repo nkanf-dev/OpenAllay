@@ -1,4 +1,4 @@
-# SKMB-2026-07-17-004: Phase 3 Product State
+# SKMB-2026-07-17-004: Guide Service and Native UI
 
 - status: accepted
 - decided_by: designer
@@ -12,11 +12,11 @@
   - D_external_dependency
   - E_security_boundary
   - F_fail_semantics
-- scope: Phase 3 GuideService, grounded tools, client GUI, and real-game E2E
+- scope: GuideService, grounded tools, client GUI, and real-game E2E
 
 ## Context
 
-Phase 3 adds one persistent client-facing state source consumed by both commands
+This decision adds one persistent client-facing state source consumed by both commands
 and a full-screen GUI. Requests may wait on models, rate gates, local tools, or
 remote tools. Multiple sessions and model locations coexist, while disconnect
 and capability changes can invalidate connection-scoped context.
@@ -26,7 +26,7 @@ on the condition that decisions remain persisted and traceable.
 
 ## Decision
 
-Phase 3 uses one common GuideService and immutable GuideSnapshot event store.
+The product uses one common GuideService and immutable GuideSnapshot event store.
 Commands and GUI are projections over this service and never own independent
 Agent, model-mode, context, or network state.
 

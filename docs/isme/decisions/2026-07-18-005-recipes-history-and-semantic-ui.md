@@ -1,4 +1,4 @@
-# SKMB-2026-07-18-005: Phase 4 Product State
+# SKMB-2026-07-18-005: Recipes, History, and Semantic UI
 
 - status: accepted
 - decided_by: designer
@@ -13,7 +13,7 @@
   - E_security_boundary
   - F_fail_semantics
   - G_irreversible_action
-- scope: Phase 4 recipe sources, durable history, context compaction, semantic rich UI, developer diagnostics, and modded client smoke
+- scope: recipe sources, durable history, context compaction, semantic rich UI, developer diagnostics, and modded client smoke
 
 ## Context
 

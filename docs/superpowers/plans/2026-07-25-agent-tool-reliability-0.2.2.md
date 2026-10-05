@@ -69,9 +69,8 @@ GitHub Actions, Modrinth v2 API.
 - [ ] Run:
   `./gradlew :common:test --tests 'dev.openallay.agent.AgentSystemPromptTest' --tests 'dev.openallay.script.schema.CoreJavascriptContractTest' --tests 'dev.openallay.skill.BundledSkillsTest' --tests 'dev.openallay.script.command.JavascriptCommandBridgeTest' --tests 'dev.openallay.world.JavascriptWorldBridgeTest' --tests 'dev.openallay.client.gui.export.GuideSessionExporterTest'`
 - [ ] Run `./gradlew clean :common:test :fabric:build :neoforge:build`.
-- [ ] Run `./scripts/verify-phase4-package.sh`,
-  `./scripts/verify-sqlite-packaging.sh`, and
-  `./scripts/verify-distribution.sh`.
+- [ ] Run `./scripts/verify-distribution.sh` and
+  `./scripts/verify-sqlite-packaging.sh`.
 
 ### Task 5: Prepare and publish 0.2.2
 

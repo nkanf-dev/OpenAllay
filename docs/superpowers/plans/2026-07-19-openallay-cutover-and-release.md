@@ -22,7 +22,7 @@ Run:
 
 ```bash
 ./gradlew clean :common:test :fabric:build :neoforge:build
-./scripts/verify-phase4-package.sh
+./scripts/verify-distribution.sh
 ./scripts/verify-sqlite-packaging.sh
 ```
 
@@ -234,7 +234,7 @@ Run:
 
 ```bash
 ./gradlew clean :common:test :fabric:build :neoforge:build
-./scripts/verify-phase4-package.sh
+./scripts/verify-distribution.sh
 ./scripts/verify-sqlite-packaging.sh
 git diff --check
 ```

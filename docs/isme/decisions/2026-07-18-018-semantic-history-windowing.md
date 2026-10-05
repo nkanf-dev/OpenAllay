@@ -211,5 +211,5 @@ tool invocations, validates three controlled component types, and retains one
 `semantic_component_unsupported` fallback without exposing its payload. It
 completed in real Fabric and NeoForge 26.2 clients. A subsequent NeoForge
 restart reported one hydrated request out of 51 durable requests with an
-earlier-page cursor. Redacted reports and the claim matrix are retained under
-`docs/verification/phase-4-final-acceptance/`.
+earlier-page cursor. Redacted reports and the claim matrix are retained in the
+[early-development archive](../../verification/legacy-development-evidence.md#durable-history-and-semantic-presentation).

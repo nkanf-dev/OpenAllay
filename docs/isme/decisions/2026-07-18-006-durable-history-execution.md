@@ -14,7 +14,7 @@
   - G_irreversible_action
 - scope: Phase 4 durable history loading, transaction ordering, partition identity, recovery, and disconnect behavior
 - implemented_by: a0eaeff, 19ab90f, c6ca6bc
-- deterministic_verification: Phase 4B clean gate recorded in docs/superpowers/plans/2026-07-18-phase-4b-durable-history.md
+- deterministic_verification: original clean gate retained with the [early-development archive](../../verification/legacy-development-evidence.md#durable-history-and-semantic-presentation)
 
 ## Context
 

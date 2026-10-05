@@ -12,11 +12,11 @@ historical checkpoints are not approval of a later release candidate.
 | SKMB-2026-07-17-001 | accepted | Phase 2 client-first Agent runtime | A, B, C, D, E, F, G | decisions/2026-07-17-001-client-first-agent-runtime.md | 77b4970 |
 | SKMB-2026-07-17-002 | accepted | shared server model queue | A, B, C, D, F | decisions/2026-07-17-002-shared-server-model-queue.md | fc55c60 |
 | SKMB-2026-07-17-003 | accepted | multi-session endpoint rate scheduling | A, B, C, D, F | decisions/2026-07-17-003-multi-session-rate-scheduling.md | 17b2f20 |
-| SKMB-2026-07-17-004 | accepted | Phase 3 product state | A, B, C, D, E, F | decisions/2026-07-17-004-phase-3-product-state.md | e4a77ad |
-| SKMB-2026-07-18-005 | accepted | Phase 4 product state | A, B, C, D, E, F, G | decisions/2026-07-18-005-phase-4-product-state.md | ad8ad52 |
-| SKMB-2026-07-18-006 | reviewable_default | Phase 4 durable history execution | A, B, C, E, F, G | decisions/2026-07-18-006-durable-history-execution.md | cb77181 |
-| SKMB-2026-07-18-007 | reviewable_default | Phase 4 recipe provider execution | A, B, D, E, F | decisions/2026-07-18-007-recipe-provider-execution.md | 7e89bed |
-| SKMB-2026-07-18-008 | reviewable_default | Phase 4 context compaction execution | A, B, C, D, E, F | decisions/2026-07-18-008-context-compaction-execution.md | pending |
+| SKMB-2026-07-17-004 | accepted | GuideService, grounded tools, and native UI | A, B, C, D, E, F | decisions/2026-07-17-004-guide-service-and-native-ui.md | e4a77ad |
+| SKMB-2026-07-18-005 | accepted | recipes, durable history, and semantic UI | A, B, C, D, E, F, G | decisions/2026-07-18-005-recipes-history-and-semantic-ui.md | ad8ad52 |
+| SKMB-2026-07-18-006 | reviewable_default | durable history execution | A, B, C, E, F, G | decisions/2026-07-18-006-durable-history-execution.md | cb77181 |
+| SKMB-2026-07-18-007 | reviewable_default | recipe provider execution | A, B, D, E, F | decisions/2026-07-18-007-recipe-provider-execution.md | 7e89bed |
+| SKMB-2026-07-18-008 | reviewable_default | context compaction execution | A, B, C, D, E, F | decisions/2026-07-18-008-context-compaction-execution.md | pending |
 | SKMB-2026-07-18-009 | accepted | per-session model selection and metadata discovery | B, C, D, E, F | decisions/2026-07-18-009-session-model-selection.md | 98a40bf, e63ecb4, 558ba67, fc20505, 7e2a735, 555ed3c |
 | SKMB-2026-07-18-010 | accepted | normal/debug UI projection | B, E, F | decisions/2026-07-18-010-debug-ui-projection.md | 11a6ace |
 | SKMB-2026-07-18-011 | accepted | pre-release durable schema policy | B, F, G | decisions/2026-07-18-011-pre-release-durable-schema.md | pending |
@@ -51,24 +51,26 @@ historical checkpoints are not approval of a later release candidate.
 | SKMB-2026-10-01-041 | accepted; verified in source | execution independent of origins, lazy data access, real model history, compact source details and batch Builder journals | A, B, C, E, F, G | decisions/2026-10-01-041-execution-context-simplification.md | pending |
 
 SKMB-2026-07-18-006 is implemented by `a0eaeff`, `19ab90f`, and `c6ca6bc`.
-Its deterministic clean-build and packaged-driver evidence is recorded in the
-Phase 4B durable-history plan. Earlier 50-request seed and 51-request
-windowed-restart reports remain under
-`docs/verification/phase-4-final-acceptance/`; they predate SKMB-019 and do not
-close its manual-acceptance corrections.
+Its deterministic clean-build, packaged-driver, 50-request seed, and 51-request
+windowed-restart evidence is retained in the
+[early-development archive](../verification/legacy-development-evidence.md#durable-history-and-semantic-presentation).
+The seed and restart reports predate SKMB-019 and do not close its
+manual-acceptance corrections.
 
 SKMB-2026-07-18-007 is implemented through `5af5b4e`. Its deterministic
 provider/catalog/navigation coverage and retained Fabric JEI/REI/Farmer's
-Delight graphical evidence are recorded in the Phase 4C plan and
-`docs/verification/phase-4c-all-known-recipes/`. Final NeoForge acceptance used
+Delight graphical evidence are retained in the
+[recipe integration archive](../verification/legacy-development-evidence.md#recipe-integration).
+Final NeoForge acceptance used
 JEI plus Cooking for Blockheads; REI is explicitly unavailable in that profile
 after its upstream `@OnlyIn` loading warning.
 
 SKMB-2026-07-18-015 and the model-administration slice of
 SKMB-2026-07-18-016 are implemented through `6498516`. Their deterministic
 atomicity, redaction, generation-race, responsive UI, localization, and
-both-loader evidence is recorded in the Phase 4G plan and
-`docs/verification/phase-4g-native-model-settings/`. The opt-in live probe was
+both-loader evidence is retained in the
+[settings and diagnostics archive](../verification/legacy-development-evidence.md#settings-and-diagnostics).
+The opt-in live probe was
 not run when no credential was exported to the verification process.
 
 SKMB-2026-07-18-017 was implemented through `771cc94`. Its earlier combined
@@ -89,8 +91,9 @@ SKMB-2026-07-18-016 are implemented through `a3ae197`. The service-owned,
 one-use history confirmations, actor-scoped deletion gates, live shared display
 runtime, privacy-separated diagnostics, and Fabric/NeoForge lifecycle parity
 have deterministic coverage. Retained graphical evidence for those earlier
-slices is recorded under `docs/verification/phase-4-final-acceptance/`, but it
-does not prove the SKMB-019 correction set.
+slices is retained in the
+[early-development archive](../verification/legacy-development-evidence.md#durable-history-and-semantic-presentation),
+but it does not prove the SKMB-019 correction set.
 
 SKMB-2026-07-18-010/016/018 now use display schema 3 with assistant name
 `OpenAllay`, Debug Mode off, and presentation animation on by default. The
@@ -98,7 +101,7 @@ assistant name and animation are presentation-only, while
 normal history diagnostics expose friendly on-demand/page state and Debug Mode
 adds only redacted performance counts. The final presentation implementation
 is recorded in `11a6ace`; deterministic scale/package evidence is retained in
-the Phase 4J verification report.
+the [semantic presentation archive](../verification/legacy-development-evidence.md#durable-history-and-semantic-presentation).
 
 SKMB-2026-07-19-019 is the accepted correction contract after the first normal
 full-mod walkthrough. Its implementation and corrected graphical acceptance

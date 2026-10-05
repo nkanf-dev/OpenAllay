@@ -209,7 +209,8 @@ scenario with all eight sections, exact successful section probes, and exact
 Agent/tool chronology. The latest clean common/Fabric/NeoForge gate passed with
 525 tests, package and SQLite verification passed, and the final
 credential/diff/report/hash/manifest and screenshot audits passed. The retained
-closing evidence is under `docs/verification/phase-4-final-corrections/`.
+closing evidence is retained in the
+[native interaction archive](../../verification/legacy-development-evidence.md#native-interaction-and-model-boundaries).
 
 ## Applies To
 

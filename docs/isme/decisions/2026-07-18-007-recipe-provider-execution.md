@@ -113,8 +113,8 @@ The retained Fabric 26.2 client smoke installed JEI, REI, and Farmer's Delight
 Refabricated together. It completed the all-known six-tool scenario and opened
 the exact JEI apple-cider cooking page from OpenAllay. Artifact provenance,
 redacted report/log, screenshots, hashes, the Patchouli resource-fixture
-boundary, and the explicit no-EMI/no-Patchouli-runtime claim are recorded under
-`docs/verification/phase-4c-all-known-recipes/`.
+boundary, and the explicit no-EMI/no-Patchouli-runtime claim are retained in the
+[recipe integration archive](../../verification/legacy-development-evidence.md#recipe-integration).
 
 The smoke observed no need for a recipe-count or time cap. Unsupported viewer
 layouts remained provider-local partial diagnostics; in particular, REI could

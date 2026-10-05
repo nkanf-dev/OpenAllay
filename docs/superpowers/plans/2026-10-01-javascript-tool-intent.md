@@ -18,8 +18,8 @@ or model-catalog changes. Do not commit or push; root reviews and integrates one
 feature commit. No Gradle until root grants an explicit slot. No game, provider,
 network or graphical acceptance operation belongs to this implementation.
 
-Read AGENTS, README, development guide, SKMB, decisions 010, 025, 028, 032,
-and the Phase 4 persistence/card design before code. Implementation confirms
+Read AGENTS, README, development guide, SKMB, decisions 005, 010, 018, 025,
+028, and 032 before code. Implementation confirms
 that live invocation arguments are not durable or sent in server ToolStarted
 messages. Schema-5 history stores only roots/handles/modules and existing closed
 presentation messages. Preserve that privacy contract; do not persist source or

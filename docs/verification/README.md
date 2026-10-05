@@ -6,7 +6,10 @@ checksums may therefore display the former identity. Those artifacts describe
 historical test runs and are not current product metadata or compatibility
 aliases.
 
-Post-cutover evidence is stored under `openallay-cutover/`.
+Post-cutover evidence is stored under `openallay-cutover/`. Retired
+Phase 3/4 directories are preserved outside Git; the
+[archive index](legacy-development-evidence.md) records their scope. Historical
+reports are immutable and their old paths or commands are not current gates.
 
 Current 0.2 platform evidence:
 

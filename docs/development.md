@@ -799,7 +799,7 @@ or grant authority.
 
 Run common tests and both loader builds after relevant changes; use the full
 pinned-distribution gate before shipping. The `Quality` workflow also validates
-automation, distribution scripts, Phase 4/SQLite packaging, and one production
+automation, distribution scripts, distribution/SQLite packaging, and one production
 JAR per loader. Deterministic tests/builds do not establish graphical gameplay or
 paid-provider acceptance. OpenAI-compatible optional `tool_calls`, usage, and
 usage-detail fields may be absent/null; invalid non-null shapes and malformed
@@ -960,12 +960,9 @@ acceptance; every selected native check must pass.
 
 For detailed history rather than current-gate claims, see:
 
-- [Phase 4C recipes](verification/phase-4c-all-known-recipes/README.md)
-- [Phase 4 acceptance](verification/phase-4-final-acceptance/README.md) and
-  [closing corrections](verification/phase-4-final-corrections/README.md)
-- [Native model settings](verification/phase-4g-native-model-settings/README.md),
-  [history diagnostics](verification/phase-4i-native-settings/README.md), and
-  [semantic history](verification/phase-4j-semantic-history/README.md)
+- [Archived early-development evidence](verification/legacy-development-evidence.md)
+  for recipe integration, durable restart, semantic presentation, native settings,
+  and the original interaction corrections
 - [Rhino live acceptance](verification/rhino-agent-runtime/live-javascript-agent.md)
 - [UI polish plan](superpowers/plans/2026-10-01-ui-ux-polish.md) and
   [decision index](isme/SKMB.md)
