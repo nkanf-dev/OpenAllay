@@ -7,7 +7,7 @@ import re
 FIELDS = set("""java_version minecraft_version minecraft_version_range neo_form_version
 fabric_version fabric_loader_version neoforge_version neoforge_loader_version_range
 jei_version rei_version architectury_version fabric_command_api_version
-fabric_resource_loader_version fabric_networking_api_version fabric_lifecycle_events_version
+fabric_resource_loader_version fabric_networking_api_version fabric_message_api_version fabric_lifecycle_events_version
 fabric_key_mapping_api_version fabric_rendering_version""".split())
 
 

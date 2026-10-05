@@ -14,13 +14,14 @@ PROFILE_FIELDS = {
     "java_version", "minecraft_version", "minecraft_version_range", "neo_form_version",
     "fabric_version", "fabric_loader_version", "neoforge_version", "neoforge_loader_version_range",
     "jei_version", "rei_version", "architectury_version", "fabric_command_api_version",
-    "fabric_resource_loader_version", "fabric_networking_api_version", "fabric_lifecycle_events_version",
+    "fabric_resource_loader_version", "fabric_networking_api_version", "fabric_message_api_version", "fabric_lifecycle_events_version",
     "fabric_key_mapping_api_version", "fabric_rendering_version",
 }
 FABRIC_COMPONENTS = {
     "fabric-command-api-v2": "fabric_command_api_version",
     "fabric-resource-loader-v1": "fabric_resource_loader_version",
     "fabric-networking-api-v1": "fabric_networking_api_version",
+    "fabric-message-api-v1": "fabric_message_api_version",
     "fabric-lifecycle-events-v1": "fabric_lifecycle_events_version",
     "fabric-key-mapping-api-v1": "fabric_key_mapping_api_version",
     "fabric-rendering-v1": "fabric_rendering_version",
@@ -31,7 +32,7 @@ PINS_26_2 = {
     "neoforge_version": "26.2.0.25-beta", "neoforge_loader_version_range": "[4,)",
     "jei_version": "30.13.0.86", "rei_version": "26.2.820", "architectury_version": "21.0.4",
     "fabric_command_api_version": "3.1.0+00cb03469c", "fabric_resource_loader_version": "2.0.13+9edec1269c",
-    "fabric_networking_api_version": "6.3.3+72073ef033", "fabric_lifecycle_events_version": "4.1.3+4575b05f9c",
+    "fabric_networking_api_version": "6.3.3+72073ef033", "fabric_message_api_version": "7.0.7+086d547a9c", "fabric_lifecycle_events_version": "4.1.3+4575b05f9c",
     "fabric_key_mapping_api_version": "2.0.5+e2bdee789c", "fabric_rendering_version": "25.1.6+46a6d00c9c",
 }
 PINS_26_3 = {
@@ -40,7 +41,7 @@ PINS_26_3 = {
     "neoforge_version": "26.3.0.48-beta", "neoforge_loader_version_range": "[12,)",
     "jei_version": "31.9.0.57", "rei_version": "26.3.823", "architectury_version": "22.0.3",
     "fabric_command_api_version": "3.1.2+fcdff87f5d", "fabric_resource_loader_version": "3.0.4+fcdff87f5d",
-    "fabric_networking_api_version": "6.3.8+fcdff87f5d", "fabric_lifecycle_events_version": "4.1.9+ffef5f675d",
+    "fabric_networking_api_version": "6.3.8+fcdff87f5d", "fabric_message_api_version": "7.0.10+3434d6d95d", "fabric_lifecycle_events_version": "4.1.9+ffef5f675d",
     "fabric_key_mapping_api_version": "2.0.8+3434d6d95d", "fabric_rendering_version": "27.0.14+901a437c5d",
 }
 
