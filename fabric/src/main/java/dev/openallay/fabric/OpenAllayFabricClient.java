@@ -30,7 +30,6 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
-import dev.openallay.fabric.network.FabricBridgePayloads;
 import dev.openallay.fabric.network.FabricClientBridge;
 
 public final class OpenAllayFabricClient implements ClientModInitializer {
@@ -44,7 +43,6 @@ public final class OpenAllayFabricClient implements ClientModInitializer {
                         client.player.getUUID(), message.getString());
             }
         });
-        FabricBridgePayloads.register();
         FabricClientBridge bridge = new FabricClientBridge();
         bridge.register();
         Gson gson = new Gson();

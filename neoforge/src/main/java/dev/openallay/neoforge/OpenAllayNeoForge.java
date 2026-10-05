@@ -17,11 +17,12 @@ public final class OpenAllayNeoForge {
     }
 
     public OpenAllayNeoForge(IEventBus modBus) {
+        NeoForgeNativeModBus.install(modBus);
         OpenAllayRuntime runtime = OpenAllayBootstrap.initialize();
-        NeoForgeBridgePayloads.register(modBus, runtime);
+        NeoForgeBridgePayloads.register(runtime);
         NeoForgeDevelopmentCommands.register(runtime);
         if (NeoForgeNativeEnvironment.isClient()) {
-            OpenAllayNeoForgeClient.initialize(runtime, modBus);
+            OpenAllayNeoForgeClient.initialize(runtime);
         }
     }
 }

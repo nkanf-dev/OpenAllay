@@ -7,14 +7,13 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.neoforged.bus.api.IEventBus;
 
 public final class NeoForgeBridgePayloads {
     private NeoForgeBridgePayloads() {}
 
-    public static void register(IEventBus modBus, OpenAllayRuntime runtime) {
+    public static void register(OpenAllayRuntime runtime) {
         NeoForgeServerBridge server = new NeoForgeServerBridge(runtime);
-        NeoForgeNativePayloadRegistration.register(modBus, server::receive);
+        NeoForgeNativePayloadRegistration.register(server::receive);
         server.registerLifecycle();
     }
 

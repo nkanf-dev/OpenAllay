@@ -2,6 +2,7 @@ package dev.openallay.client;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import com.google.gson.Gson;
 import dev.openallay.OpenAllayRuntime;
@@ -221,11 +222,14 @@ final class ClientArchitectureTest {
                 "neoforge/src/main/java/dev/openallay/neoforge/NeoForgeNativeClientLifecycle.java"));
         assertTrue(neoForgeClient.contains("NeoForgeNativeClientLifecycle.onStarted(client -> start(runtime, bridge, client))"));
         assertTrue(neoForgeLifecycle.contains("(ClientStartedEvent event) -> started.accept(event.getClient())"));
-        assertTrue(neoForgeClient.contains("RegisterGuiLayersEvent"));
-        assertTrue(neoForgeClient.contains("VanillaGuiLayers.CHAT"));
-        assertTrue(neoForgeClient.indexOf("modBus.addListener((RegisterGuiLayersEvent")
+        String neoHud = Files.readString(root.resolve(
+                "neoforge/src/main/java/dev/openallay/neoforge/NeoForgeNativeHudRegistration.java"));
+        assertTrue(neoHud.contains("RegisterGuiLayersEvent"));
+        assertTrue(neoHud.contains("VanillaGuiLayers.CHAT"));
+        assertTrue(neoHud.contains("render.accept(GuideGraphics.wrap(graphics))"));
+        assertTrue(neoForgeClient.indexOf("NeoForgeNativeHudRegistration.register(")
                 < neoForgeClient.indexOf("private static void start("));
-        assertTrue(neoForgeClient.contains("if (current != null) current.extractRenderState(dev.openallay.client.gui.GuideGraphics.wrap(graphics))"));
+        assertTrue(neoForgeClient.contains("if (current != null) current.extractRenderState(graphics)"));
         assertTrue(neoForgeClient.contains("coordinator::openGuide"));
         assertTrue(neoForgeClient.contains("coordinator.tick()"));
         assertTrue(neoForgeClient.contains("coordinator.disconnect()"));
@@ -247,21 +251,27 @@ final class ClientArchitectureTest {
                 "engine-core/src/main/java/dev/openallay/bridge/protocol/BridgeProtocol.java"));
         assertTrue(!protocol.contains("VERSION"));
         assertTrue(!protocol.contains("requireVersion"));
+        String serverSession = Files.readString(root.resolve(
+                "engine-core/src/main/java/dev/openallay/bridge/server/ServerBridgeSession.java"));
+        assertTrue(serverSession.contains("ServerModelCapabilityProjection.from("));
+        assertTrue(serverSession.contains("if (remoteTools != null) return;"));
         for (Path bridge : List.of(
                 root.resolve("fabric/src/main/java/dev/openallay/fabric/network/FabricServerBridge.java"),
                 root.resolve("neoforge/src/main/java/dev/openallay/neoforge/network/NeoForgeServerBridge.java"))) {
             String source = Files.readString(bridge);
-            assertTrue(
-                    source.contains("ServerModelCapabilityProjection.from("),
-                    bridge::toString);
-            assertTrue(source.contains("ensureServices"), bridge::toString);
+            assertTrue(source.contains("new ServerBridgeSession(runtime,"), bridge::toString);
+            assertTrue(source.contains("session.started("), bridge::toString);
+            assertFalse(source.contains("ServerModelCapabilityProjection.from("), bridge::toString);
         }
         assertTrue(Files.readString(root.resolve(
                         "fabric/src/main/java/dev/openallay/fabric/network/FabricServerBridge.java"))
-                .contains("SERVER_STARTED.register(bridge::ensureServices)"));
+                .contains("SERVER_STARTED.register(bridge::started)"));
         assertTrue(Files.readString(root.resolve(
                         "neoforge/src/main/java/dev/openallay/neoforge/network/NeoForgeServerBridge.java"))
-                .contains("ServerStartedEvent"));
+                .contains("NeoForgeNativeServerLifecycle.register(this::started"));
+        assertTrue(Files.readString(root.resolve(
+                        "neoforge/src/main/java/dev/openallay/neoforge/network/NeoForgeNativeServerLifecycle.java"))
+                .contains("(ServerStartedEvent event) -> started.accept(event.getServer())"));
 
         try (var files = Files.walk(root.resolve("common/src/main/java"))) {
             List<Path> violations = files.filter(path -> path.toString().endsWith(".java"))

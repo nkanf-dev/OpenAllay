@@ -16,11 +16,12 @@ final class ClientBridgeCancellationArchitectureTest {
             throws Exception {
         for (Path bridge : clientBridges()) {
             String source = Files.readString(bridge);
-            String cancel = block(source, "public boolean cancelServer(UUID requestId)");
+            String cancel = block(source, "public final boolean cancelServer(UUID requestId)");
             assertTrue(source.contains("Map<UUID, ServerRequest> serverRequests"), bridge::toString);
-            String ask = block(source, "public boolean askServer(");
+            String ask = block(source, "public final boolean askServer(");
             assertTrue(ask.contains("new ServerRequest("), bridge::toString);
-            assertTrue(ask.contains("client.player.getUUID(), client.getConnection(), connectionScope"), bridge::toString);
+            assertTrue(ask.contains("captured.actorId(), captured.current(), connectionScope"), bridge::toString);
+            assertTrue(ask.contains("host.captureConnection()"), bridge::toString);
             assertTrue(ask.contains("serverRequests.put(request.requestId()")
                     || ask.contains("serverRequests.putIfAbsent(request.requestId()"), bridge::toString);
             assertTrue(ask.indexOf("serverRequests.put") < ask.indexOf("requestChunker.split("),
@@ -50,7 +51,7 @@ final class ClientBridgeCancellationArchitectureTest {
                 "private void receiveAgentEvent(ServerAgentEventPayload event)",
                 "private void receiveAgentEventChunk(ServerAgentEventChunkPayload chunk)",
                 "private void clearAgentEventChunksLocked(UUID requestId)",
-                "public void disconnectState()");
+                "public final void disconnectState()");
         for (String declaration : sharedBlocks) {
             assertEquals(block(fabric, declaration), block(neoForge, declaration), declaration);
         }
@@ -88,7 +89,7 @@ final class ClientBridgeCancellationArchitectureTest {
             assertTrue(chunk.contains("agentEventChunks.accept(chunk.asRemoteChunk())"),
                     bridge::toString);
             assertTrue(chunk.contains("receiveAgentEvent(completed)"), bridge::toString);
-            String disconnect = block(source, "public void disconnectState()");
+            String disconnect = block(source, "public final void disconnectState()");
             assertTrue(disconnect.contains("serverRequests.clear()"), bridge::toString);
             assertTrue(disconnect.contains("agentEventIds.clear()"), bridge::toString);
             assertTrue(disconnect.contains("agentEventChunks.clear()"), bridge::toString);
@@ -99,7 +100,7 @@ final class ClientBridgeCancellationArchitectureTest {
     void bothLoadersFenceQueuedImageReadsContextCaptureAndEveryNativeResultSend() throws Exception {
         for (Path bridge : clientBridges()) {
             String source = Files.readString(bridge);
-            String prepare = block(source, "public void configureResultImages(");
+            String prepare = block(source, "public final void configureResultImages(");
             assertTrue(prepare.contains("endpoint.configureResultImages("), bridge::toString);
             assertTrue(prepare.contains("store.read(request.actorId, reference)"), bridge::toString);
             assertTrue(prepare.indexOf("requireCurrent(requestId, request)")
@@ -110,30 +111,65 @@ final class ClientBridgeCancellationArchitectureTest {
             assertTrue(close.contains("contexts.closeRequest(requestId.toString())"), bridge::toString);
             assertFalse(close.contains("releaseObservationImages"), bridge::toString);
             String queued = block(source, "private void queueClientToolResult(");
-            assertTrue(queued.contains("Minecraft.getInstance().execute("), bridge::toString);
+            assertTrue(queued.contains("dispatcher.execute("), bridge::toString);
             assertTrue(queued.lastIndexOf("current(chunk.requestId(), request)")
-                    > queued.indexOf("Minecraft.getInstance().execute("), bridge::toString);
+                    > queued.indexOf("dispatcher.execute("), bridge::toString);
             assertTrue(queued.lastIndexOf("current(chunk.requestId(), request)")
                     < queued.indexOf("send(\"client_tool_result\""), bridge::toString);
             String identity = block(source, "private boolean current(UUID requestId, ServerRequest request)");
             assertTrue(identity.contains("serverRequests.get(requestId) == request"), bridge::toString);
             assertTrue(identity.contains("request.connectionScope == connectionScope"), bridge::toString);
-            assertTrue(identity.contains("getConnection() == request.connection"), bridge::toString);
-            String admission = block(source, "public java.util.function.BooleanSupplier clientToolAdmission(");
+            assertTrue(identity.contains("request.connectionCurrent.getAsBoolean()"), bridge::toString);
+            String admission = block(source, "public final java.util.function.BooleanSupplier clientToolAdmission(");
             assertTrue(admission.contains("current(requestId, request)"), bridge::toString);
         }
     }
 
-    private static List<Path> clientBridges() {
+    @Test
+    void bothNativeFacadesKeepExactConnectionChecksWithoutDuplicatingFeatureState() throws Exception {
+        Path root = repositoryRoot();
+        for (String relative : List.of(
+                "fabric/src/main/java/dev/openallay/fabric/network/FabricClientBridge.java",
+                "neoforge/src/main/java/dev/openallay/neoforge/network/NeoForgeClientBridge.java")) {
+            String facade = Files.readString(root.resolve(relative));
+            assertTrue(facade.contains("extends ClientBridgeSession"), relative);
+            assertTrue(facade.contains("client.player.getUUID()"), relative);
+            assertTrue(facade.contains("getConnection() == connection"), relative);
+            assertTrue(facade.contains("inboundCallback("), relative);
+            String nativePath = relative.replace("ClientBridge.java", "NativeClientPayloads.java");
+            String nativePort = Files.readString(root.resolve(nativePath));
+            if (relative.startsWith("fabric/")) {
+                assertTrue(facade.contains("FabricNativeClientPayloads.register("), relative);
+                assertTrue(nativePort.contains("ClientPlayNetworking.registerGlobalReceiver"));
+                assertTrue(nativePort.contains("context.client().getConnection() == connection"));
+                assertTrue(nativePort.indexOf("receiver.apply(packet") < nativePort.indexOf("context.client().execute(callback)"));
+            } else {
+                assertTrue(facade.contains("NeoForgeNativeClientPayloads.register("), relative);
+                assertTrue(nativePort.contains("RegisterClientPayloadHandlersEvent"));
+                assertTrue(nativePort.contains("receiver.apply(packet).run()"));
+                assertFalse(nativePort.contains("execute(callback)"), "Modern NeoForge owns dispatch; no second queued hop");
+            }
+            assertFalse(facade.contains("Map<UUID, ServerRequest>"), relative);
+            assertFalse(facade.contains("requestChunker.split("), relative);
+        }
+        String shared = Files.readString(clientBridges().get(0));
+        String inbound = block(shared, "protected final Runnable inboundCallback(");
+        assertTrue(inbound.contains("scope != connectionScope"));
+        assertTrue(inbound.contains("!connectionCurrent.getAsBoolean()"));
+    }
+
+    private static Path repositoryRoot() {
         Path current = Path.of("").toAbsolutePath().normalize();
-        Path root = current.getFileName() != null
-                && current.getFileName().toString().equals("common")
-                ? current.getParent() : current;
-        return List.of(
-                root.resolve("fabric/src/main/java/dev/openallay/fabric/network/"
-                        + "FabricClientBridge.java"),
-                root.resolve("neoforge/src/main/java/dev/openallay/neoforge/network/"
-                        + "NeoForgeClientBridge.java"));
+        while (current != null && !Files.isRegularFile(current.resolve("settings.gradle"))) current = current.getParent();
+        if (current == null) throw new IllegalStateException("Repository root unavailable");
+        return current;
+    }
+
+    private static List<Path> clientBridges() {
+        Path owner = repositoryRoot().resolve(
+                "engine-core/src/main/java/dev/openallay/bridge/client/ClientBridgeSession.java");
+        // Both loader facades inherit this exact owner; their transport edges are checked separately.
+        return List.of(owner, owner);
     }
 
     private static String block(String source, String declaration) {

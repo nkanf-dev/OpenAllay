@@ -1,20 +1,21 @@
 package dev.openallay.neoforge.network;
 
-import net.neoforged.bus.api.IEventBus;
+import dev.openallay.neoforge.NeoForgeNativeModBus;
+import java.util.function.Function;
+import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
+import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import net.neoforged.neoforge.client.network.event.RegisterClientPayloadHandlersEvent;
-import net.neoforged.neoforge.network.handling.IPayloadHandler;
 
-/** Client-only native registration and sending; bridge behavior stays shared. */
+/** Actual modern client registration; receiving thread is the loader's main-thread default. */
 final class NeoForgeNativeClientPayloads {
     private NeoForgeNativeClientPayloads() {}
-
-    static void register(IEventBus modBus, IPayloadHandler<NeoForgeBridgePayloads.Packet> receiver) {
-        modBus.addListener((RegisterClientPayloadHandlersEvent event) ->
-                event.register(NeoForgeBridgePayloads.Packet.TYPE, receiver));
+    static void register(Function<NeoForgeBridgePayloads.Packet, Runnable> receiver) {
+        NeoForgeNativeModBus.get().addListener((RegisterClientPayloadHandlersEvent event) ->
+                event.register(NeoForgeBridgePayloads.Packet.TYPE, (packet, context) -> receiver.apply(packet).run()));
     }
-
-    static void send(NeoForgeBridgePayloads.Packet packet) {
-        ClientPacketDistributor.sendToServer(packet);
+    static void onDisconnected(Runnable disconnected) {
+        NeoForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.LoggingOut event) -> disconnected.run());
     }
+    static void send(NeoForgeBridgePayloads.Packet packet) { ClientPacketDistributor.sendToServer(packet); }
 }

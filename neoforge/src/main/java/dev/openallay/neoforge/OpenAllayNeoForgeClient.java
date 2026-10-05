@@ -1,6 +1,5 @@
 package dev.openallay.neoforge;
 
-import dev.openallay.platform.minecraft.MinecraftResourceIds;
 
 import dev.openallay.OpenAllayRuntime;
 import dev.openallay.client.ClientModelRuntimeRegistry;
@@ -19,20 +18,12 @@ import dev.openallay.guide.e2e.GuideClientE2EConfig;
 import dev.openallay.guide.e2e.GuideClientE2EController;
 import dev.openallay.client.gui.OpenAllayKeyMappings;
 import dev.openallay.client.gui.GuideClientUiCoordinator;
-import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
 import dev.openallay.guide.ui.GuideDisplayRuntime;
 import dev.openallay.settings.ClientSettingsHistoryBinding;
 import dev.openallay.tool.ToolResult;
 import dev.openallay.recipe.config.RecipeClientRuntime;
 import net.minecraft.client.Minecraft;
-import net.neoforged.fml.ModList;
-import net.neoforged.fml.loading.FMLPaths;
-import net.neoforged.bus.api.IEventBus;
 import dev.openallay.neoforge.network.NeoForgeClientBridge;
-import net.neoforged.neoforge.client.event.ClientChatReceivedEvent;
-import net.neoforged.neoforge.client.event.ClientTickEvent;
-import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
-import net.neoforged.neoforge.common.NeoForge;
 
 public final class OpenAllayNeoForgeClient {
     private static final java.util.concurrent.atomic.AtomicBoolean REGISTERED =
@@ -45,25 +36,16 @@ public final class OpenAllayNeoForgeClient {
 
     private OpenAllayNeoForgeClient() {}
 
-    public static void initialize(OpenAllayRuntime runtime, IEventBus modBus) {
+    public static void initialize(OpenAllayRuntime runtime) {
         if (!REGISTERED.compareAndSet(false, true)) return;
-        NeoForge.EVENT_BUS.addListener((ClientChatReceivedEvent.System event) -> {
-            Minecraft client = Minecraft.getInstance();
-            if (!event.isOverlay() && client.player != null) {
-                runtime.commands().acceptFeedback(
-                        client.player.getUUID(), event.getMessage().getString());
-            }
-        });
+        NeoForgeNativeClientEvents.onSystemChat(runtime.commands()::acceptFeedback);
         NeoForgeClientBridge bridge = new NeoForgeClientBridge();
-        bridge.register(modBus);
-        modBus.addListener((RegisterKeyMappingsEvent event) -> NeoForgeNativeKeyRegistration.register(event));
-        modBus.addListener((RegisterGuiLayersEvent event) -> event.registerBelow(
-                net.neoforged.neoforge.client.gui.VanillaGuiLayers.CHAT,
-                MinecraftResourceIds.fromNamespaceAndPath("openallay", "guide_hud"),
-                (graphics, deltaTracker) -> {
-                    GuideClientUiCoordinator current = ui;
-                    if (current != null) current.extractRenderState(dev.openallay.client.gui.GuideGraphics.wrap(graphics));
-                }));
+        bridge.register();
+        NeoForgeNativeClientEvents.registerKeys();
+        NeoForgeNativeHudRegistration.register(graphics -> {
+            GuideClientUiCoordinator current = ui;
+            if (current != null) current.extractRenderState(graphics);
+        });
         NeoForgeNativeClientLifecycle.onStarted(client -> start(runtime, bridge, client));
     }
 
@@ -76,7 +58,7 @@ public final class OpenAllayNeoForgeClient {
         java.time.Clock clock = java.time.Clock.systemUTC();
         var dispatcher = (dev.openallay.client.ClientEventDispatcher)
                 client::execute;
-        java.nio.file.Path configDirectory = FMLPaths.CONFIGDIR.get().resolve("openallay");
+        java.nio.file.Path configDirectory = NeoForgeNativeLoaderFacts.configDir().resolve("openallay");
         GuideDisplayRuntime display = new GuideDisplayRuntime(
                 configDirectory.resolve("display.json"));
         ClientSettingsHistoryBinding historySettings = new ClientSettingsHistoryBinding();
@@ -169,11 +151,11 @@ public final class OpenAllayNeoForgeClient {
                 dispatcher);
         dev.openallay.model.image.ImageAttachmentStore imageStore =
                 new dev.openallay.model.image.FileImageAttachmentStore(
-                        FMLPaths.CONFIGDIR.get().resolve("openallay/images"));
+                        NeoForgeNativeLoaderFacts.configDir().resolve("openallay/images"));
         runtime.worldObservations().configureImages(actor -> imageStore);
         bridge.configureResultImages(imageStore, contexts);
         GuideHistoryRepository history = new GuideHistoryRepository(new SqliteGuideHistoryStore(
-                FMLPaths.CONFIGDIR.get().resolve("openallay/history.sqlite3"),
+                NeoForgeNativeLoaderFacts.configDir().resolve("openallay/history.sqlite3"),
                 clock,
                 new GuideHistoryCodec(), imageStore));
         GuideServiceManager services = new GuideServiceManager(
@@ -231,7 +213,7 @@ public final class OpenAllayNeoForgeClient {
                 services,
                 contexts,
                 screens));
-        NeoForge.EVENT_BUS.addListener((ClientTickEvent.Post event) -> {
+        NeoForgeNativeClientEvents.onEndTick(() -> {
             while (OpenAllayKeyMappings.OPEN_GUIDE.consumeClick()) {
                 if (client.player != null && client.level != null
                         && dev.openallay.client.gui.MinecraftClientWindow.screen(client) == null && dev.openallay.client.gui.MinecraftClientWindow.overlay(client) == null) {
@@ -241,9 +223,7 @@ public final class OpenAllayNeoForgeClient {
             coordinator.tick();
         });
         GuideClientE2EConfig.from(System.getProperties()).ifPresent(config -> {
-            String modVersion = ModList.get().getModContainerById("openallay")
-                    .map(container -> container.getModInfo().getVersion().toString())
-                    .orElse("unknown");
+            String modVersion = NeoForgeNativeLoaderFacts.modVersion();
             GuideClientE2EController controller = new GuideClientE2EController(
                     config,
                     "neoforge",
@@ -258,7 +238,7 @@ public final class OpenAllayNeoForgeClient {
             controller.attachGraphicalProbe(ui::openGuide, ui::e2eHudReceipt, ui::e2eVoiceSettings);
             if (Boolean.getBoolean(GuideClientE2EConfig.ENABLED))
                 controller.attachGraphicalToastReceipt(ui::e2eNotificationReceipt);
-            NeoForge.EVENT_BUS.addListener((ClientTickEvent.Post event) -> {
+            NeoForgeNativeClientEvents.onEndTick(() -> {
                 controller.tick(client.player == null ? null : client.player.getUUID());
             });
         });

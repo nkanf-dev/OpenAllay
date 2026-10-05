@@ -1,18 +1,18 @@
 package dev.openallay.neoforge.network;
 
-import net.neoforged.bus.api.IEventBus;
+import java.util.function.Function;
+import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
+import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.network.PacketDistributor;
-import net.neoforged.neoforge.network.handling.IPayloadHandler;
 
-/** Legacy native sending and directional registration; no bridge behavior fork. */
+/** Actual modern client registration; receiving thread is the loader's main-thread default. */
 final class NeoForgeNativeClientPayloads {
     private NeoForgeNativeClientPayloads() {}
-
-    static void register(IEventBus modBus, IPayloadHandler<NeoForgeBridgePayloads.Packet> receiver) {
+    static void register(Function<NeoForgeBridgePayloads.Packet, Runnable> receiver) {
         NeoForgeNativePayloadRegistration.registerClient(receiver);
     }
-
-    static void send(NeoForgeBridgePayloads.Packet packet) {
-        PacketDistributor.sendToServer(packet);
+    static void onDisconnected(Runnable disconnected) {
+        NeoForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.LoggingOut event) -> disconnected.run());
     }
+    static void send(NeoForgeBridgePayloads.Packet packet) { PacketDistributor.sendToServer(packet); }
 }

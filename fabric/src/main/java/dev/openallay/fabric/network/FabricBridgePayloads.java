@@ -2,24 +2,13 @@ package dev.openallay.fabric.network;
 
 import dev.openallay.platform.minecraft.MinecraftResourceIds;
 
-import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 
 public final class FabricBridgePayloads {
-    private static boolean registered;
-
     private FabricBridgePayloads() {}
-
-    public static synchronized void register() {
-        if (registered) {
-            return;
-        }
-        registered = true;
-        FabricNativePayloadRegistration.register();
-    }
 
     public record Packet(String kind, String json) implements CustomPacketPayload {
         public static final Type<Packet> TYPE = new Type<>(
