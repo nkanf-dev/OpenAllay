@@ -1,0 +1,336 @@
+import org.gradle.util.GradleVersion
+import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
+import java.security.MessageDigest
+import java.nio.file.Files
+import java.nio.charset.StandardCharsets
+import java.util.zip.ZipFile
+
+plugins {
+    id 'net.neoforged.gradle.userdev' version '7.1.39'
+}
+
+if (GradleVersion.current() != GradleVersion.version('8.14') || JavaVersion.current() != JavaVersion.VERSION_21) {
+    throw new GradleException('This target-only native recipe requires official Gradle 8.14 on JDK21')
+}
+def receiptProperty = providers.gradleProperty('openallayNativeInputs')
+if (!receiptProperty.isPresent()) throw new GradleException('Missing -PopenallayNativeInputs from the root exporter')
+def receiptFile = file(receiptProperty.get()).canonicalFile
+def sha256 = { File input -> MessageDigest.getInstance('SHA-256').digest(input.bytes).encodeHex().toString() }
+if (!receiptFile.isFile()) throw new GradleException("Missing native input receipt ${receiptFile}")
+def receiptBytes = receiptFile.bytes
+def receiptSha256 = MessageDigest.getInstance('SHA-256').digest(receiptBytes).encodeHex().toString()
+ext.earlyInputs = new JsonSlurper().parseText(new String(receiptBytes, StandardCharsets.UTF_8))
+def data = earlyInputs
+def fields = { value, expected, context ->
+    if (!(value instanceof Map) || value.keySet() != expected.toSet()) {
+        throw new GradleException("Unexpected native input fields: ${context}")
+    }
+}
+fields(data, ['root', 'target', 'properties', 'nativeSources', 'engine', 'adapter', 'resources',
+              'sdk', 'rhino', 'accessTransformer'], receiptFile)
+fields(data.properties, ['version', 'group', 'mod_id', 'mod_name', 'mod_author', 'java_version',
+        'neoforge_version', 'jeiArtifactTarget', 'jei_version', 'rei_version', 'architectury_version',
+        'sqlite_jdbc_version', 'commonmark_version', 'jtokkit_version'], 'properties')
+if (!(data.root instanceof String) || !(data.target instanceof String)
+        || data.properties.values().any { !(it instanceof String) || it.isEmpty() }) {
+    throw new GradleException("Invalid native input values in ${receiptFile}")
+}
+['nativeSources', 'engine', 'adapter', 'resources'].each { name ->
+    if (!(data[name] instanceof List) || data[name].empty) {
+        throw new GradleException("Native input set must be a nonempty list: ${name}")
+    }
+}
+def dataSha256 = MessageDigest.getInstance('SHA-256')
+        .digest(JsonOutput.toJson(data).getBytes(StandardCharsets.UTF_8)).encodeHex().toString()
+def sourceRoot = file('../..').canonicalFile
+def expectedReceipt = new File(sourceRoot, "build/early-neoforge/${data.target}/inputs.json").canonicalFile
+if (file(data.root).canonicalFile != sourceRoot || receiptFile.canonicalFile != expectedReceipt) {
+    throw new GradleException('Native input receipt must come from this checkout and exact target')
+}
+def records = data.nativeSources + data.engine + data.adapter + data.resources + [data.sdk, data.rhino]
+if (data.accessTransformer != null) records += data.accessTransformer
+def recordFields = { record, extra ->
+    fields(record, ['path', 'sha256'] + extra, 'record')
+    if (record.values().any { !(it instanceof String) || it.isEmpty() }
+            || !(record.sha256 ==~ /[0-9a-f]{64}/) || !new File(record.path).isAbsolute()) {
+        throw new GradleException('Invalid native input record values')
+    }
+}
+data.nativeSources.each { recordFields(it, []) }
+if (data.accessTransformer != null) recordFields(data.accessTransformer, [])
+[data.sdk, data.rhino].each { recordFields(it, ['group', 'name', 'version']) }
+[data.engine, data.adapter, data.resources].each { entries -> entries.each { recordFields(it, ['entry']) } }
+def expectedLoader = ['1.20.2': '20.2.93', '1.20.3': '20.3.8-beta'][data.target]
+if (expectedLoader == null || data.properties.neoforge_version != expectedLoader
+        || data.properties.java_version != '17' || data.sdk.version != '0.4.0') {
+    throw new GradleException('Unexpected early NeoForge target, Java ABI, loader, or SDK pin')
+}
+def paths = [] as Set
+records.each { record ->
+    def input = file(record.path).absoluteFile
+    if (input.toPath() != input.canonicalFile.toPath() || !paths.add(input.canonicalPath)) {
+        throw new GradleException("Aliased or duplicated native input path ${input}")
+    }
+}
+def reusedRoots = [:]
+def reusedEntries = [] as Set
+['engine', 'adapter', 'resources'].each { name ->
+    data[name].each { record ->
+        def segments = record.entry.split('/', -1)
+        if (record.entry.contains('\\') || segments.any { it.isEmpty() || (it in ['.', '..']) }
+                || !reusedEntries.add(record.entry)) {
+            throw new GradleException("Unsafe or colliding reused entry ${record.entry}")
+        }
+        def input = file(record.path).canonicalFile.toPath()
+        def root = input
+        segments.each { root = root?.parent }
+        if (root == null || root == sourceRoot.toPath() || !root.startsWith(sourceRoot.toPath())
+                || root.resolve(record.entry) != input) {
+            throw new GradleException("Inconsistent reused root/entry for ${input}")
+        }
+        def existing = reusedRoots[root]
+        if (existing != null && existing.owner != name) {
+            throw new GradleException("Colliding reused input root ${root}")
+        }
+        if (existing == null) reusedRoots[root] = [owner: name, entries: [:]]
+        reusedRoots[root].entries[record.entry] = record
+    }
+}
+def roots = reusedRoots.keySet().toList()
+roots.eachWithIndex { root, index ->
+    roots.drop(index + 1).each { other ->
+        if (root.startsWith(other) || other.startsWith(root)) {
+            throw new GradleException("Overlapping reused input roots ${root} and ${other}")
+        }
+    }
+}
+data.nativeSources.each { record ->
+    def relative = sourceRoot.toPath().relativize(file(record.path).canonicalFile.toPath()).toString().replace('\\', '/')
+    if (!(relative.startsWith('common/src/') || relative.startsWith('neoforge/src/')) || !relative.endsWith('.java')) {
+        throw new GradleException("Feature or non-native Java source in isolated compiler: ${relative}")
+    }
+}
+// Pin the exact receipt bytes and parsed data, then check only represented consumer roots.
+// No copies, root rebuild, repair, or directory-wide raw-source inference occurs here.
+def validateInputs = {
+    if (!receiptFile.isFile() || receiptFile.toPath() != receiptFile.canonicalFile.toPath()
+            || sha256(receiptFile) != receiptSha256
+            || MessageDigest.getInstance('SHA-256').digest(JsonOutput.toJson(data)
+                    .getBytes(StandardCharsets.UTF_8)).encodeHex().toString() != dataSha256) {
+        throw new GradleException("Native input receipt changed after setup: ${receiptFile}")
+    }
+    records.each { record ->
+        def input = file(record.path)
+        if (!input.isFile() || input.toPath() != input.canonicalFile.toPath()
+                || !input.canonicalFile.toPath().startsWith(sourceRoot.toPath()) || sha256(input) != record.sha256) {
+            throw new GradleException("Missing, external, or changed shared/native input ${input}")
+        }
+    }
+    reusedRoots.each { root, expected ->
+        if (!Files.isDirectory(root)) throw new GradleException("Missing reused input root ${root}")
+        def seen = [] as Set
+        // Files.walk includes hidden files and has no fileTree default exclusions.
+        def contents = Files.walk(root)
+        try {
+            contents.forEach { path ->
+                if (Files.isSymbolicLink(path)) throw new GradleException("Aliased reused input ${path}")
+                if (!Files.isDirectory(path)) {
+                    def entry = root.relativize(path).toString().replace('\\', '/')
+                    def record = expected.entries[entry]
+                    if (record == null || !Files.isRegularFile(path) || path != file(record.path).toPath()
+                            || sha256(path.toFile()) != record.sha256 || !seen.add(entry)) {
+                        throw new GradleException("Unlisted, colliding, or changed reused input ${path}")
+                    }
+                }
+            }
+        } finally { contents.close() }
+        if (seen != expected.entries.keySet()) throw new GradleException("Missing reused entries under ${root}")
+    }
+}
+validateInputs()
+group = data.properties.group
+version = data.properties.version
+base { archivesName = "openallay-neoforge-${data.target}" }
+java { toolchain.languageVersion = JavaLanguageVersion.of(17) }
+minecraft.modIdentifier.set(data.properties.mod_id)
+
+def directories = { entries ->
+    entries.collect { record ->
+        def root = file(record.path).toPath()
+        record.entry.tokenize('/').each { root = root.parent }
+        root.toFile()
+    }.unique()
+}
+sourceSets {
+    main {
+        // Existing raw source paths only. NeoGradle supplies actual patched NeoForge classes.
+        java.setSrcDirs([])
+        resources.setSrcDirs(directories(data.resources))
+        // NeoGradle builds MOD_CLASSES from classesDirs (not extra output.dir entries).
+        // Reused engine/resources/JSON/adapter roots must remain in the native mod layer.
+        output.classesDirs.from(directories(data.engine) + directories(data.adapter))
+    }
+}
+tasks.named('compileJava', JavaCompile) {
+    source(data.nativeSources.collect { file(it.path) })
+    options.release = 17
+    options.encoding = 'UTF-8'
+}
+// Configure the two real artifact variants before root JarJar resolution.
+evaluationDependsOn(':extension-api')
+evaluationDependsOn(':runtime-rhino')
+repositories {
+    mavenCentral()
+    maven { url = uri('https://maven.neoforged.net/releases') }
+    maven { url = uri('https://maven.fabricmc.net'); content { includeGroupByRegex('net\\.fabricmc(\\..*)?') } }
+    maven { url = uri('https://maven.blamejared.com'); content { includeGroup('mezz.jei') } }
+    maven { url = uri('https://maven.shedaniel.me'); content {
+        includeGroupByRegex('me\\.shedaniel(\\..*)?'); includeGroup('dev.architectury')
+    } }
+}
+def props = data.properties
+def sdk = files(data.sdk.path)
+def rhino = files(data.rhino.path)
+dependencies {
+    implementation("net.neoforged:neoforge:${props.neoforge_version}")
+    implementation(files(directories(data.engine) + directories(data.adapter)))
+    implementation(sdk)
+    implementation(rhino)
+    // Rhino root runtime dependencies stay explicit, never a second upstream runtime JAR.
+    implementation('com.google.guava:guava:31.1-jre')
+    implementation('org.slf4j:slf4j-api:2.0.1')
+    compileOnly('net.fabricmc:sponge-mixin:0.17.3+mixin.0.8.7') { transitive = false }
+    compileOnly(annotationProcessor('io.github.llamalad7:mixinextras-common:0.5.3'))
+    compileOnly("mezz.jei:jei-${props.jeiArtifactTarget}-neoforge-api:${props.jei_version}")
+    compileOnly("me.shedaniel:RoughlyEnoughItems-api-neoforge:${props.rei_version}")
+    compileOnly("dev.architectury:architectury-neoforge:${props.architectury_version}")
+    jarJar(project(':extension-api'))
+    jarJar(project(':runtime-rhino'))
+    ["org.xerial:sqlite-jdbc:${props.sqlite_jdbc_version}",
+     "org.commonmark:commonmark:${props.commonmark_version}",
+     "org.commonmark:commonmark-ext-gfm-tables:${props.commonmark_version}",
+     "com.knuddels:jtokkit:${props.jtokkit_version}"].each { coordinate ->
+        implementation(coordinate)
+        def parts = coordinate.split(':')
+        jarJar("${parts[0]}:${parts[1]}:[${parts[2]}]") { version { prefer(parts[2]) } }
+    }
+}
+if (data.accessTransformer != null) {
+    accessTransformers.files.from(file(data.accessTransformer.path))
+}
+runs {
+    configureEach {
+        modSource sourceSets.main
+        systemProperties.put('neoforge.enabledGameTestNamespaces', props.mod_id)
+        System.properties.findAll { key, value -> key.toString().startsWith('openallay.e2e.') }
+                .each { key, value -> systemProperties.put(key.toString(), value.toString()) }
+    }
+    client {
+        runType 'client'
+        workingDirectory.set(new File(sourceRoot, 'neoforge/runs/client'))
+        def world = System.getProperty('openallay.e2e.quickPlayWorld')
+        if (world != null && !world.isBlank()) arguments.addAll('--quickPlaySingleplayer', world)
+    }
+    server {
+        runType 'server'
+        workingDirectory.set(new File(sourceRoot, 'neoforge/runs/server'))
+    }
+    data {
+        runType 'data'
+        workingDirectory.set(new File(sourceRoot, 'neoforge/runs/data'))
+        arguments.addAll('--mod', props.mod_id, '--all', '--output',
+                new File(sourceRoot, 'neoforge/src/generated/resources').absolutePath,
+                '--existing', new File(sourceRoot, 'neoforge/src/main/resources').absolutePath)
+    }
+}
+tasks.matching { it.name == 'runServer' }.configureEach { standardInput = System.in }
+tasks.withType(Jar).configureEach {
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
+}
+def thin = tasks.named('jar', Jar) {
+    archiveClassifier.set('thin')
+    // Keep the thin JAR out of the current native package/staging production directory.
+    destinationDirectory.set(layout.buildDirectory.dir('intermediates'))
+    duplicatesStrategy = DuplicatesStrategy.FAIL
+    from(new File(sourceRoot, 'LICENSE')) { rename { "LICENSE_${props.mod_name}" } }
+    manifest.attributes('Specification-Title': props.mod_name, 'Specification-Vendor': props.mod_author,
+            'Specification-Version': project.version.toString(), 'Implementation-Title': 'neoforge',
+            'Implementation-Version': project.version.toString(), 'Implementation-Vendor': props.mod_author,
+            'Built-On-Minecraft': data.target, 'MixinConfigs': 'openallay.client.mixins.json')
+}
+def production = tasks.named('jarJar') {
+    archiveClassifier.set('')
+    destinationDirectory.set(new File(sourceRoot, 'neoforge/build/libs'))
+    duplicatesStrategy = DuplicatesStrategy.FAIL
+}
+def verifyReusedPackage = tasks.register('verifyReusedPackage') {
+    dependsOn production
+    inputs.file(receiptFile)
+    inputs.file(production.flatMap { it.archiveFile })
+    def outputReceipt = layout.buildDirectory.file('reports/reused-package.json')
+    outputs.file(outputReceipt)
+    outputs.upToDateWhen { false }
+    doLast {
+        def archive = production.get().archiveFile.get().asFile
+        new ZipFile(archive).withCloseable { jar ->
+            def names = [] as Set
+            jar.entries().each { entry ->
+                if (!names.add(entry.name)) throw new GradleException("Duplicate native JAR entry ${entry.name}")
+            }
+            (data.engine + data.adapter + data.resources).each { record ->
+                def entry = jar.getEntry(record.entry)
+                if (entry == null || MessageDigest.getInstance('SHA-256')
+                        .digest(jar.getInputStream(entry).bytes).encodeHex().toString() != record.sha256) {
+                    throw new GradleException("Reused shared/native resource bytes differ: ${record.entry}")
+                }
+            }
+            [data.sdk, data.rhino].each { record ->
+                def name = 'META-INF/jarjar/' + file(record.path).name
+                def entry = jar.getEntry(name)
+                if (entry == null || MessageDigest.getInstance('SHA-256')
+                        .digest(jar.getInputStream(entry).bytes).encodeHex().toString() != record.sha256) {
+                    throw new GradleException("Reused artifact bytes differ: ${name}")
+                }
+            }
+            def metadata = new JsonSlurper().parse(jar.getInputStream(jar.getEntry('META-INF/jarjar/metadata.json')))
+            [data.sdk, data.rhino].each { record ->
+                def included = metadata.jars.findAll { item ->
+                    item.identifier.group == record.group && item.identifier.artifact == record.name
+                }
+                if (included.size() != 1 || included[0].version.artifactVersion != record.version
+                        || !(included[0].version.range in ["[${record.version}]".toString(), "[${record.version},${record.version}]".toString()])) {
+                    throw new GradleException("SDK/Rhino JarJar identity or singleton range differs: ${record.name}")
+                }
+            }
+            if (!names.contains('META-INF/mods.toml') || names.contains('META-INF/neoforge.mods.toml')
+                    || names.any { it.startsWith('dev/openallay/api/') && it.endsWith('.class') }) {
+                throw new GradleException('Competing loader descriptor or duplicated top-level SDK identity')
+            }
+        }
+        def destination = outputReceipt.get().asFile
+        destination.parentFile.mkdirs()
+        destination.text = JsonOutput.prettyPrint(JsonOutput.toJson([
+                target: data.target, loader: props.neoforge_version, inputReceiptSha256: sha256(receiptFile),
+                productionJar: archive.absolutePath, productionSha256: sha256(archive),
+                reusedEngineEntries: data.engine.size(), reusedAdapterEntries: data.adapter.size(),
+                reusedResources: data.resources.size(), sdkSha256: data.sdk.sha256,
+                rhinoSha256: data.rhino.sha256])) + '\n'
+    }
+}
+tasks.named('assemble') { dependsOn verifyReusedPackage }
+
+// The dependency runs even if a consumer is UP-TO-DATE or NO-SOURCE. doFirst
+// rechecks at execution, including dev runs (NeoGradle 7.1.39 RunsUtil: JavaExec).
+def inputPrecheck = tasks.register('validateEarlyNeoForgeInputs') {
+    doLast { validateInputs() }
+}
+tasks.matching { it.name in ['compileJava', 'processResources', 'jar', 'jarJar', 'verifyReusedPackage'] }.configureEach {
+    dependsOn inputPrecheck
+    doFirst { validateInputs() }
+}
+tasks.withType(JavaExec).configureEach {
+    dependsOn inputPrecheck
+    doFirst { validateInputs() }
+}

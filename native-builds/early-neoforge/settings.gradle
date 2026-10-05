@@ -1,0 +1,11 @@
+pluginManagement {
+    repositories {
+        maven { url = uri('https://maven.neoforged.net/releases') }
+        gradlePluginPortal()
+        mavenCentral()
+    }
+}
+
+rootProject.name = 'OpenAllay-early-neoforge-native'
+// Source-free artifacts retain the real root project identities for official JarJar.
+include('extension-api', 'runtime-rhino')

@@ -6,6 +6,7 @@ on:
       - "common/**"
       - "fabric/**"
       - "neoforge/**"
+      - "native-builds/early-neoforge/**"
       - "adapters/**"
       - "gradle/**"
       - "build-logic/**"
@@ -20,6 +21,8 @@ on:
       - "gradlew*"
       - "scripts/plan-ci-verification.py"
       - "scripts/test_plan_ci_verification.py"
+      - "scripts/compile-native-target.py"
+      - "scripts/test_early_neoforge_recipe.py"
       - "scripts/run-ci-software-graphics.py"
       - "scripts/test_ci_software_graphics.py"
       - ".github/workflows/minecraft-native.yml"
@@ -154,6 +157,7 @@ jobs:
           python3 -B -m unittest discover -s scripts -p 'test_minecraft_target*.py'
           python3 -B -m unittest discover -s scripts -p 'test_minecraft_artifacts.py'
           python3 -B -m unittest discover -s scripts -p 'test_native_target_package.py'
+          python3 -B -m unittest discover -s scripts -p 'test_early_neoforge_recipe.py'
 
       - name: Prepare the pinned shared Builder source
         run: python3 -B scripts/prepare-distribution.py
@@ -161,7 +165,7 @@ jobs:
       - name: Compile and package both native loaders with the same SDK and Builder
         # Feature tests run in mainline Quality and pinned Shared Builder quality.
         # These jobs check native linkage/package shape, not per-target feature copies.
-        run: ./gradlew --max-workers=2 -PminecraftTarget="$OPENALLAY_MINECRAFT_TARGET" -PtestBundledExtensions=false :fabric:assemble :neoforge:assemble
+        run: python3 -B scripts/compile-native-target.py --target "$OPENALLAY_MINECRAFT_TARGET"
 
       - name: Verify native package engine identity and metadata
         run: python3 -B scripts/verify-native-target-package.py --target "$OPENALLAY_MINECRAFT_TARGET" --bundled-builder | tee native-package-check.json
@@ -190,6 +194,9 @@ jobs:
             native-package-check.json
             fabric/build/libs/*.jar
             neoforge/build/libs/*.jar
+            build/early-neoforge/**/inputs.json
+            native-builds/early-neoforge/build/reports/
+            native-builds/early-neoforge/build/intermediates/*.jar
             build/reports/problems/
             common/build/reports/
 

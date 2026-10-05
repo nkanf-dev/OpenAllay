@@ -2,6 +2,13 @@ plugins {
     id 'multiloader-loader'
 }
 
+// These two actual old userdev publications need the isolated NeoGradle recipe.
+// Root still owns shared compilation/resources; no modern loader capabilities are invented.
+if (minecraftTarget in ['1.20.2', '1.20.3']) {
+    apply from: rootProject.file('gradle/early-neoforge-inputs.gradle')
+    return
+}
+
 def legacyNativeLoader = minecraftTarget == '1.20.1'
 pluginManager.apply(legacyNativeLoader ? 'net.neoforged.moddev.legacyforge' : 'net.neoforged.moddev')
 def viewerApiLoader = legacyNativeLoader ? 'forge' : 'neoforge'

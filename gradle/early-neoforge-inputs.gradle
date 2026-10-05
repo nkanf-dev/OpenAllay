@@ -1,0 +1,96 @@
+import groovy.json.JsonOutput
+import java.security.MessageDigest
+
+// Applied only after the existing loader convention selected its exact raw sources.
+if (!(minecraftTarget in ['1.20.2', '1.20.3']) || java_version != '17') {
+    throw new GradleException('The isolated early NeoForge exporter serves only Java17 Minecraft 1.20.2/1.20.3')
+}
+evaluationDependsOn(':engine-core')
+evaluationDependsOn(':adapters:minecraft-26.2')
+evaluationDependsOn(':extension-api')
+evaluationDependsOn(':runtime-rhino')
+sourceSets.main.resources {
+    srcDir 'src/generated/resources'
+    exclude 'META-INF/neoforge.mods.toml'
+}
+
+// A direct root request must not silently package vanilla/empty loader classes.
+tasks.matching { it.name in ['compileJava', 'jar', 'assemble', 'build'] }.configureEach {
+    doFirst {
+        throw new GradleException('Use python3 -B scripts/compile-native-target.py --target ' + minecraftTarget
+                + ' for the actual early NeoForge userdev build')
+    }
+}
+
+def commonSources = project(':common').sourceSets.main
+def engineOutput = project(':engine-core').sourceSets.main.output
+def adapterOutput = project(':adapters:minecraft-26.2').sourceSets.main.output
+def sdkJar = project(':extension-api').tasks.named('jar', Jar)
+def rhinoJar = project(':runtime-rhino').tasks.named('jar', Jar)
+def resourceOutput = sourceSets.main.output.resourcesDir
+def receipt = rootProject.layout.buildDirectory.file("early-neoforge/${minecraftTarget}/inputs.json")
+def sha256 = { File file -> MessageDigest.getInstance('SHA-256').digest(file.bytes).encodeHex().toString() }
+def fileRecord = { File file -> [path: file.absolutePath, sha256: sha256(file)] }
+def outputRecords = { output ->
+    def entries = [:]
+    output.files.findAll { it.isDirectory() }.each { directory ->
+        rootProject.fileTree(directory).files.sort { it.absolutePath }.each { file ->
+            def name = directory.toPath().relativize(file.toPath()).toString().replace('\\', '/')
+            def record = fileRecord(file) + [entry: name]
+            if (entries.containsKey(name) && entries[name].sha256 != record.sha256) {
+                throw new GradleException("Conflicting reused output ${name}")
+            }
+            entries[name] = record
+        }
+    }
+    entries.values().sort { it.entry }
+}
+
+tasks.register('exportEarlyNeoForgeInputs') {
+    group = 'build'
+    description = 'Export verified shared bytes and exact selected raw native paths for the isolated old userdev compiler.'
+    dependsOn 'validateMinecraftTargetSources', 'processResources', ':engine-core:classes',
+            ':adapters:minecraft-26.2:classes', sdkJar, rhinoJar
+    inputs.property('minecraftTarget', minecraftTarget)
+    inputs.files(sourceSets.main.allJava, commonSources.allJava, engineOutput, adapterOutput,
+            sdkJar.flatMap { it.archiveFile }, rhinoJar.flatMap { it.archiveFile })
+    outputs.file(receipt)
+    // Source paths and provenance must be freshly recorded for the separate build.
+    outputs.upToDateWhen { false }
+    doLast {
+        if (project(':extension-api').version.toString() != '0.4.0') {
+            throw new GradleException('Early native build requires the one current public SDK 0.4.0')
+        }
+        def expectedLoader = ['1.20.2': '20.2.93', '1.20.3': '20.3.8-beta'][minecraftTarget]
+        if (neoforge_version != expectedLoader) throw new GradleException('Early NeoForge pin differs')
+        def nativeSources = (sourceSets.main.allJava.files + commonSources.allJava.files).unique()
+                .sort { it.absolutePath }.collect { fileRecord(it) }
+        def engine = outputRecords(engineOutput)
+        def adapter = outputRecords(adapterOutput)
+        def resources = outputRecords(files(resourceOutput))
+        if (nativeSources.empty || engine.empty || adapter.empty || resources.empty) {
+            throw new GradleException('Missing selected native/shared output')
+        }
+        def at = project(':common').selectedMinecraftTargetResource('META-INF/accesstransformer.cfg')
+        def artifact = { artifactProject, task ->
+            fileRecord(task.get().archiveFile.get().asFile) + [group: artifactProject.group.toString(),
+                    name: artifactProject.name, version: artifactProject.version.toString()]
+        }
+        def data = [root: rootProject.rootDir.absolutePath, target: minecraftTarget,
+                    properties: [version: project.version.toString(), group: project.group.toString(),
+                                 mod_id: mod_id, mod_name: mod_name, mod_author: mod_author,
+                                 java_version: java_version, neoforge_version: neoforge_version,
+                                 jeiArtifactTarget: jeiArtifactTarget, jei_version: jei_version,
+                                 rei_version: rei_version, architectury_version: architectury_version,
+                                 sqlite_jdbc_version: sqlite_jdbc_version, commonmark_version: commonmark_version,
+                                 jtokkit_version: jtokkit_version],
+                    nativeSources: nativeSources, engine: engine, adapter: adapter, resources: resources,
+                    sdk: artifact(project(':extension-api'), sdkJar),
+                    rhino: artifact(project(':runtime-rhino'), rhinoJar),
+                    accessTransformer: at.isFile() ? fileRecord(at) : null]
+        def file = receipt.get().asFile
+        file.parentFile.mkdirs()
+        file.text = JsonOutput.prettyPrint(JsonOutput.toJson(data)) + '\n'
+        println("Early NeoForge input receipt: ${file}")
+    }
+}
