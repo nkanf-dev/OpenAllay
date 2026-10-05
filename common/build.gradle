@@ -83,3 +83,18 @@ sourceSets.configureEach {
         }
     }
 }
+
+// Shared fixtures use Java21. This affects tests only; native production keeps its selected Java ABI.
+def nativeTestJavaVersion = Math.max(21, java_version.toInteger())
+['testCompileClasspath', 'testRuntimeClasspath'].each { name ->
+    configurations.named(name) {
+        attributes.attribute(org.gradle.api.attributes.java.TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE, nativeTestJavaVersion)
+    }
+}
+tasks.named('compileTestJava', JavaCompile) {
+    javaCompiler = javaToolchains.compilerFor { languageVersion = JavaLanguageVersion.of(nativeTestJavaVersion) }
+    options.release = nativeTestJavaVersion
+}
+tasks.withType(Test).configureEach {
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(nativeTestJavaVersion) }
+}
