@@ -297,44 +297,51 @@ def records(selection_path, cache, directory, receipt_directory, stage=False):
     lock = build.builder.prepare.load_manifest(ROOT / "distribution/extensions.lock.json")
     result = []
     builder_digest = None
+    rejected = []
     for row in data["families"]:
-        family = families[row["familyId"]]
-        original, proofs = original_proofs(data, cache, row, family)
-        path = (directory / row["filename"]).resolve()
-        if stage:
-            shutil.copyfile(original, path)
-        require(artifacts.file_hash(path, artifacts.MAX_ARTIFACT_BYTES) == row["artifactSha256"], "Final-path JAR differs from original accepted bytes")
-        module("verify-minecraft-binary-intervals.py").package_guard(path, family, data["releaseVersion"])
-        # Original artifact entry inventory is backed by the successful producer job.
-        # It is not current-source compiled-engine output or new independent proof.
-        with zipfile.ZipFile(path) as archive:
-            for name, digest in row["engineEntries"].items():
-                require(hashlib.sha256(archive.read(name)).hexdigest() == digest, "Original shared-engine entry changed: " + name)
-        digest = build.builder.verify_package(path, family["loader"], lock)
-        require(builder_digest is None or builder_digest == digest, "Families must bundle the same accepted universal Builder")
-        builder_digest = digest
-        build.builder_support(path, family, lock)
-        build.tokenizer.verify(path, family["loader"])
-        receipt_path = receipt_directory / (family["id"] + ".json")
-        if stage:
-            runs = []
-            for run, summary_path in proofs:
-                evidence_name = family["id"] + "-" + run["target"] + ".original-summary.json"
-                destination = receipt_directory / evidence_name
-                require(not destination.exists(), "Preserve original runtime evidence")
-                shutil.copyfile(summary_path, destination)
-                runs.append({"target": run["target"], "loader": family["loader"], "artifactPath": str(path), "artifactSha256": row["artifactSha256"],
-                             "kind": "runtime", "outcome": "passed", "evidencePath": evidence_name,
-                             "evidenceSha256": artifacts.file_hash(destination, artifacts.MAX_EVIDENCE_BYTES)})
-            write_json(receipt_path, {"familyId": family["id"], "loader": family["loader"], "artifactPath": str(path),
-                                     "artifactSha256": row["artifactSha256"], "runs": runs})
-        artifacts.verify_receipt(family, receipt_path, path, row["artifactSha256"])
-        receipt = artifacts.read_json(receipt_path)
-        for entry, (_, summary_path) in zip(receipt["runs"], proofs):
-            require(entry["evidenceSha256"] == artifacts.file_hash(summary_path, artifacts.MAX_EVIDENCE_BYTES), "Final receipt differs from original accepted summary")
-        result.append({**artifacts.describe(family, data["releaseVersion"]), "artifactPath": str(path), "artifactSha256": row["artifactSha256"],
-                       "originalSourceSha": row["sourceSha"], "originalProductionArchive": row["production"], "originalRuns": row["runs"],
-                       **({"mainlineFeatureComposition": composition} if family["supportedTargets"] == ["26.2"] else {})})
+        try:
+            family = families[row["familyId"]]
+            original, proofs = original_proofs(data, cache, row, family)
+            path = (directory / row["filename"]).resolve()
+            if stage:
+                shutil.copyfile(original, path)
+            require(artifacts.file_hash(path, artifacts.MAX_ARTIFACT_BYTES) == row["artifactSha256"], "Final-path JAR differs from original accepted bytes")
+            package_report = module("verify-minecraft-binary-intervals.py").package_guard(
+                path, family, data["releaseVersion"], accepted_original_runtime_sha=row["artifactSha256"])
+            # Original artifact entry inventory is backed by the successful producer job.
+            # It is not current-source compiled-engine output or new independent proof.
+            with zipfile.ZipFile(path) as archive:
+                for name, digest in row["engineEntries"].items():
+                    require(hashlib.sha256(archive.read(name)).hexdigest() == digest, "Original shared-engine entry changed: " + name)
+            digest = build.builder.verify_package(path, family["loader"], lock)
+            require(builder_digest is None or builder_digest == digest, "Families must bundle the same accepted universal Builder")
+            builder_digest = digest
+            build.builder_support(path, family, lock)
+            build.tokenizer.verify(path, family["loader"])
+            receipt_path = receipt_directory / (family["id"] + ".json")
+            if stage:
+                runs = []
+                for run, summary_path in proofs:
+                    evidence_name = family["id"] + "-" + run["target"] + ".original-summary.json"
+                    destination = receipt_directory / evidence_name
+                    require(not destination.exists(), "Preserve original runtime evidence")
+                    shutil.copyfile(summary_path, destination)
+                    runs.append({"target": run["target"], "loader": family["loader"], "artifactPath": str(path), "artifactSha256": row["artifactSha256"],
+                                 "kind": "runtime", "outcome": "passed", "evidencePath": evidence_name,
+                                 "evidenceSha256": artifacts.file_hash(destination, artifacts.MAX_EVIDENCE_BYTES)})
+                write_json(receipt_path, {"familyId": family["id"], "loader": family["loader"], "artifactPath": str(path),
+                                         "artifactSha256": row["artifactSha256"], "runs": runs})
+            artifacts.verify_receipt(family, receipt_path, path, row["artifactSha256"])
+            receipt = artifacts.read_json(receipt_path)
+            for entry, (_, summary_path) in zip(receipt["runs"], proofs):
+                require(entry["evidenceSha256"] == artifacts.file_hash(summary_path, artifacts.MAX_EVIDENCE_BYTES), "Final receipt differs from original accepted summary")
+            result.append({**artifacts.describe(family, data["releaseVersion"]), "artifactPath": str(path), "artifactSha256": row["artifactSha256"],
+                           "originalSourceSha": row["sourceSha"], "originalProductionArchive": row["production"], "originalRuns": row["runs"],
+                           "nonfatalPackageFindings": package_report["findings"],
+                           **({"mainlineFeatureComposition": composition} if family["supportedTargets"] == ["26.2"] else {})})
+        except (OSError, ValueError, TypeError, KeyError, IndexError, zipfile.BadZipFile) as failure:
+            rejected.append({"familyId": row["familyId"], "reason": str(failure)})
+    require(not rejected, "Original publication family checks failed: " + json.dumps(rejected, sort_keys=True))
     require(sorted(p.name for p in directory.glob("*.jar")) == sorted(row["filename"] for row in data["families"]), "Extra or missing release JAR")
     sums = "".join(row["artifactSha256"] + "  " + row["filename"] + "\n" for row in result)
     if stage:

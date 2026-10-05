@@ -101,12 +101,17 @@ def matrices(data, selection="all"):
     return {"build_matrix": {"include": builds}, "runtime_matrix": {"include": runtimes}}
 
 
-def package_guard(path, family, version, root=ROOT):
+def package_guard(path, family, version, root=ROOT, *, accepted_original_runtime_sha=None):
     """Exact family predicates plus real loader pins; never rewrite packaged metadata."""
     build = module("build-minecraft-artifacts.py", root)
     build.metadata(path, family, version)
     target_reader = module("minecraft-target.py", root)
     profile = target_reader.read_profile(root, family["buildTarget"])
+    runtime_proven = accepted_original_runtime_sha is not None
+    if runtime_proven:
+        require(artifacts.file_hash(path, artifacts.MAX_ARTIFACT_BYTES) == accepted_original_runtime_sha,
+                "Accepted runtime bytes differ at the package boundary")
+    findings = []
     with zipfile.ZipFile(path) as archive:
         names = archive.namelist()
         if family["loader"] == "fabric":
@@ -134,9 +139,14 @@ def package_guard(path, family, version, root=ROOT):
                         owner = (config["package"] + "." + binding).replace(".", "/") + ".class"
                         require(owner in names, "Configured native Mixin class missing: " + owner)
                 if "refmap" in config:
-                    require(config["refmap"] in names, "Configured native Mixin refmap missing")
-                    require(type(json.loads(archive.read(config["refmap"]))) is dict, "Invalid native refmap")
-    return {"packageRejectionGates": "passed", "runtimeAcceptance": "not-established"}
+                    if config["refmap"] not in names:
+                        require(runtime_proven, "Configured native Mixin refmap missing")
+                        findings.append({"severity": "nonfatal", "kind": "missing-refmap",
+                                         "config": name, "refmap": config["refmap"],
+                                         "artifactSha256": accepted_original_runtime_sha})
+                    else:
+                        require(type(json.loads(archive.read(config["refmap"]))) is dict, "Invalid native refmap")
+    return {"packageRejectionGates": "passed", "runtimeAcceptance": "not-established", "findings": findings}
 
 
 def write_json(path, value):

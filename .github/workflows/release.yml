@@ -52,15 +52,17 @@ jobs:
         python3 -B scripts/promote-accepted-artifacts.py stage > release-publication-records.json
         python3 -B scripts/build-minecraft-artifacts.py publication-records release --receipt-directory build/release-receipts > release-publication-records.json
     - name: Retain final-byte receipts and publication records
+      if: always()
       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
       with:
         name: release-receipts-${{ github.sha }}-${{ github.run_attempt }}
         retention-days: 7
-        if-no-files-found: error
+        if-no-files-found: warn
         path: |-
           build/release-receipts/
           release-publication-records.json
           build/accepted-original-members.json
+          distribution/accepted-release-artifacts.json
     - name: Generate release notes
       env:
         GH_TOKEN: ${{ github.token }}
