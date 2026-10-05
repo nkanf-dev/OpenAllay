@@ -17,7 +17,8 @@
     "GuiComponentTextureAccess",
     "GuiComponentScissorMixin",
     "LegacyEditBoxHintMixin",
-    "MinecraftFpsAccess"
+    "MinecraftFpsAccess",
+    "GuideProbeMouseInvoker"
   ],
   "injectors": {
     "defaultRequire": 1

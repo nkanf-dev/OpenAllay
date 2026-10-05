@@ -2066,6 +2066,27 @@ final class GuideGraphicalRegressionProbe {
         report.put("interactKeyRestored", originalInteractBinding.equals(OpenAllayKeyMappings.INTERACT_HUD.saveString()));
     }
 
+    /** Retain nested native causes within fixed report-size bounds. */
+    private static List<Map<String, Object>> nativeFailureCauseChain(Throwable failure) {
+        List<Map<String, Object>> causes = new ArrayList<>();
+        var seen = new java.util.IdentityHashMap<Throwable, Boolean>();
+        Throwable cause = failure;
+        while (cause != null && causes.size() < 16 && seen.put(cause, Boolean.TRUE) == null) {
+            Map<String, Object> entry = new LinkedHashMap<>();
+            String description = cause.toString();
+            entry.put("exception", description.length() <= 4096 ? description : description.substring(0, 4096));
+            entry.put("exceptionTruncated", description.length() > 4096);
+            var stack = cause.getStackTrace();
+            entry.put("stack", java.util.Arrays.stream(stack).limit(64).map(Object::toString).toList());
+            entry.put("stackTruncated", stack.length > 64);
+            Throwable next = cause.getCause();
+            entry.put("causeChainTruncated", next != null && (causes.size() == 15 || seen.containsKey(next)));
+            causes.add(Map.copyOf(entry));
+            cause = next;
+        }
+        return List.copyOf(causes);
+    }
+
     private void fail(RuntimeException failure) {
         done = true;
         report.put("outcome", "HARNESS_FAILED");
@@ -2075,6 +2096,7 @@ final class GuideGraphicalRegressionProbe {
         report.put("failureException", failure.toString());
         report.put("failureStack", java.util.Arrays.stream(failure.getStackTrace()).map(Object::toString).toList());
         if (failure.getCause() != null) report.put("failureCause", failure.getCause().toString());
+        report.put("failureCauseChain", nativeFailureCauseChain(failure));
         report.put("elapsedMillis", Duration.between(started, Instant.now()).toMillis());
         if ("ui-live-ux-regressions".equals(config.scenario()) && (stage == 27 || stage == 127)) {
             try { report.put("readerSendAtFailure", readerSendDiagnostic()); }
