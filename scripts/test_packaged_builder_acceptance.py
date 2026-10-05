@@ -123,17 +123,48 @@ class PackagedBuilderLauncherTests(unittest.TestCase):
                 launcher.safe_output(repo / "build/e2e/../../../saves", repo)
 
     def artifact(self, repo, loader="fabric", bootstrap=True):
-        path = repo / loader / "build/libs" / f"openallay-{loader}-26.2-0.2.3.jar"
+        path = repo / loader / "build/libs" / f"openallay-{loader}-26.2-0.4.1.jar"
         path.parent.mkdir(parents=True)
-        (repo / "gradle.properties").write_text("version=0.2.3\n", encoding="utf-8")
-        nested_path = "META-INF/jars/openallay-builder-fabric-26.2-0.1.0.jar"
+        (repo / "gradle.properties").write_text("version=0.4.1\n", encoding="utf-8")
+        lock_path = repo / "distribution/extensions.lock.json"
+        lock_path.parent.mkdir(parents=True, exist_ok=True)
+        lock_path.write_bytes((launcher.REPO / "distribution/extensions.lock.json").read_bytes())
+        verifier = launcher.bundled_extension_verifier()
+        lock = verifier.prepare.load_manifest(lock_path)
+        builder_path = verifier.resource_path(lock)
+        descriptor = {"schemaVersion": 2, "id": lock["extensionId"], "name": "Minecraft Builder",
+                      "version": lock["version"], "entrypoint": "dev.openallay.builder.BuilderExtension",
+                      "provider": "OpenAllay", "summary": "Construction on the integrated server.",
+                      "source": "https://github.com/nkanf-dev/OpenAllay-Extensions",
+                      "support": {"targets": [{"loader": target, "minecraftVersionRange": "26.2",
+                                                "openAllayVersionRange": "[0.4.1,)",
+                                                "openAllayApiVersionRange": "[0.3.0,0.4.0)"}
+                                               for target in ("fabric", "neoforge")],
+                                  "minimumJavaVersion": 8,
+                                  "requiredHostFeatures": ["minecraft:world-access"], "validatedTargetIds": []},
+                      "requirements": {"capabilities": ["openallay_builder:world_write"],
+                                       "extensions": [], "skills": []}}
         embedded = io.BytesIO()
         with zipfile.ZipFile(embedded, "w") as builder:
-            builder.writestr("assets/openallay_builder/building.js", "return {};")
+            for name in sorted(verifier.SHARED_ENTRIES):
+                # Header-only fixtures meet the verifier's actual class checks.
+                # They are not JVM-linkable and do not prove Minecraft behavior.
+                content = (b"\xca\xfe\xba\xbe\x00\x00\x00\x34" if name.endswith(".class")
+                           else b"canonical resource")
+                builder.writestr(name, json.dumps(descriptor) if name == verifier.DESCRIPTOR else content)
+        builder_content = embedded.getvalue()
+        provenance = {"source": {**lock["source"], "dirty": False, "pinned": True},
+                      **{key: lock[key] for key in ("project", "version", "extensionId", "openAllayApiVersion")},
+                      "artifact": {"path": builder_path,
+                                   "sha256": launcher.hashlib.sha256(builder_content).hexdigest()}}
         with zipfile.ZipFile(path, "w") as archive:
-            archive.writestr("fabric.mod.json", json.dumps({"id": "openallay", "version": "0.2.3",
-                                                          "jars": [{"file": nested_path}]}))
-            archive.writestr(nested_path, embedded.getvalue())
+            if loader == "fabric":
+                archive.writestr("fabric.mod.json", json.dumps({"id": "openallay", "version": "0.4.1", "jars": []}))
+            else:
+                archive.writestr("META-INF/neoforge.mods.toml", 'modId="openallay"\nversion="0.4.1"\n')
+                archive.writestr("META-INF/jarjar/metadata.json", json.dumps({"jars": []}))
+            archive.writestr(builder_path, builder_content)
+            archive.writestr(verifier.PROVENANCE, json.dumps(provenance))
             archive.writestr("dev/openallay/guide/e2e/GuideClientE2EController.class",
                              b"openallay.e2e.createWorld" if bootstrap else b"old production controller")
         return path
@@ -145,6 +176,8 @@ class PackagedBuilderLauncherTests(unittest.TestCase):
         (version / "26.2.jar").write_bytes(b"official Minecraft")
         launcher.write_json(version / "26.2.json", {
             "id": "26.2", "javaVersion": {"majorVersion": 25}, "libraries": [], "assetIndex": {"id": "32"},
+            "downloads": {"client": {"sha1": launcher.digest_with(version / "26.2.jar", "sha1"),
+                                     "size": (version / "26.2.jar").stat().st_size}},
             "arguments": {"jvm": [{"rules": [{"action": "allow", "os": {"name": "osx"}}],
                                    "value": "-XstartOnFirstThread"}, "-cp", "${classpath}"],
                           "game": ["--gameDir", "${game_directory}", "--assetsDir", "${assets_root}",
@@ -160,14 +193,261 @@ class PackagedBuilderLauncherTests(unittest.TestCase):
         with zipfile.ZipFile(loader_dir / "fabric-loader-0.19.3.jar", "w") as archive:
             archive.writestr("fabric-installer.json", json.dumps({"libraries": {"common": []},
                                                                "mainClass": {"client": "net.fabricmc.loader.impl.launch.knot.KnotClient"}}))
-        api = repo / "fabric/runs/client/mods/fabric-api-0.155.2+26.2.jar"
+        profile = repo / "gradle/minecraft-targets/26.2.properties"
+        profile.parent.mkdir(parents=True)
+        profile.write_bytes((launcher.REPO / "gradle/minecraft-targets/26.2.properties").read_bytes())
+        fabric_id = "fabric-loader-0.19.3-26.2"
+        fabric_profile = mcroot / "versions" / fabric_id / (fabric_id + ".json")
+        fabric_profile.parent.mkdir(parents=True)
+        launcher.write_json(fabric_profile, {"id": fabric_id, "inheritsFrom": "26.2",
+                                             "mainClass": "net.fabricmc.loader.impl.launch.knot.KnotClient",
+                                             "arguments": {"jvm": ["-DFabricMcEmu= net.minecraft.client.main.Main "],
+                                                           "game": []}})
+        api = repo / "fabric/runs/client/mods/fabric-api-0.152.1+26.2.jar"
         api.parent.mkdir(parents=True)
         with zipfile.ZipFile(api, "w") as archive:
-            archive.writestr("fabric.mod.json", json.dumps({"id": "fabric-api", "version": "0.155.2+26.2"}))
+            archive.writestr("fabric.mod.json", json.dumps({"id": "fabric-api", "version": "0.152.1+26.2"}))
         java = repo.parent / "java"
         java.write_text("#!/bin/sh\necho 'openjdk version \"25.0.2\"' >&2\n", encoding="utf-8")
         java.chmod(0o755)
         return mcroot, cache, java
+
+    def rewrite_archive(self, path, entries):
+        with zipfile.ZipFile(path, "w") as archive:
+            for name, content in entries.items():
+                archive.writestr(name, content)
+
+    def artifact_entries(self, path):
+        with zipfile.ZipFile(path) as archive:
+            return {name: archive.read(name) for name in archive.namelist()}
+
+    def change_builder_resources(self, entries, change):
+        resource = next(name for name in entries if "openallay-builder-" in name)
+        with zipfile.ZipFile(io.BytesIO(entries[resource])) as builder:
+            resources = {name: builder.read(name) for name in builder.namelist()}
+        change(resources)
+        embedded = io.BytesIO()
+        with zipfile.ZipFile(embedded, "w") as builder:
+            for name, content in resources.items():
+                builder.writestr(name, content)
+        entries[resource] = embedded.getvalue()
+        provenance_path = "META-INF/openallay/distribution.json"
+        provenance = json.loads(entries[provenance_path])
+        provenance["artifact"]["sha256"] = launcher.hashlib.sha256(entries[resource]).hexdigest()
+        entries[provenance_path] = json.dumps(provenance)
+
+    def test_both_loaders_verify_current_raw_universal_builder_and_identity(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory) / "repo"
+            identities = []
+            for loader in ("fabric", "neoforge"):
+                artifact = self.artifact(repo, loader)
+                identity = launcher.packaged_artifact(artifact, loader, repo=repo)
+                identities.append(identity)
+                self.assertEqual("META-INF/openallay/bundled-extensions/openallay-builder-universal-0.3.0.jar",
+                                 identity["bundledBuilder"])
+                self.assertNotIn("nestedBuilder", identity)
+            self.assertEqual(identities[0]["bundledBuilderSha256"], identities[1]["bundledBuilderSha256"])
+
+    def test_packaged_builder_requires_exact_hash_and_pinned_clean_source_provenance(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory) / "repo"
+            artifact = self.artifact(repo)
+            original = self.artifact_entries(artifact)
+            for field, value, expected in (("revision", "0" * 40, "Source revision mismatch"),
+                                           ("dirty", True, "Dirty Extension"),
+                                           ("pinned", False, "Unpinned development"),
+                                           ("sha256", "0" * 64, "SHA-256 mismatch")):
+                with self.subTest(field=field):
+                    entries = dict(original)
+                    path = "META-INF/openallay/distribution.json"
+                    provenance = json.loads(entries[path])
+                    provenance["artifact" if field == "sha256" else "source"][field] = value
+                    entries[path] = json.dumps(provenance)
+                    self.rewrite_archive(artifact, entries)
+                    with self.assertRaisesRegex(ValueError, expected):
+                        launcher.packaged_artifact(artifact, "fabric", repo=repo)
+
+    def test_packaged_builder_rejects_loader_registration_and_renamed_duplicate_payloads(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory) / "repo"
+            for loader in ("fabric", "neoforge"):
+                artifact = self.artifact(repo, loader)
+                entries = self.artifact_entries(artifact)
+                resource = next(name for name in entries if "openallay-builder-" in name)
+                if loader == "fabric":
+                    metadata = json.loads(entries["fabric.mod.json"])
+                    metadata["jars"] = [{"file": resource}]
+                    entries["fabric.mod.json"] = json.dumps(metadata)
+                else:
+                    entries["META-INF/jarjar/metadata.json"] = json.dumps({"jars": [{"path": resource}]})
+                self.rewrite_archive(artifact, entries)
+                with self.assertRaisesRegex(ValueError, "must not be loader registered"):
+                    launcher.packaged_artifact(artifact, loader, repo=repo)
+                entries["fabric.mod.json" if loader == "fabric" else "META-INF/jarjar/metadata.json"] = (
+                    json.dumps({"id": "openallay", "version": "0.4.1", "jars": []}) if loader == "fabric"
+                    else json.dumps({"jars": []}))
+                entries["META-INF/jars/renamed.jar"] = entries[resource]
+                self.rewrite_archive(artifact, entries)
+                with self.assertRaisesRegex(ValueError, "Duplicate bundled Builder"):
+                    launcher.packaged_artifact(artifact, loader, repo=repo)
+
+    def test_packaged_builder_rejects_duplicate_archive_entries(self):
+        import warnings
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory) / "repo"
+            artifact = self.artifact(repo)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", UserWarning)
+                with zipfile.ZipFile(artifact, "a") as archive:
+                    archive.writestr("fabric.mod.json", archive.read("fabric.mod.json"))
+            with self.assertRaisesRegex(ValueError, "Duplicate entries"):
+                launcher.packaged_artifact(artifact, "fabric", repo=repo)
+
+    def test_packaged_builder_rejects_native_loader_classes_and_non_java8_header(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory) / "repo"
+            artifact = self.artifact(repo)
+            original = self.artifact_entries(artifact)
+            for name, content, expected in (
+                ("fabric.mod.json", b'{}', "Nonportable or legacy"),
+                ("net/minecraft/Bad.class", b"\xca\xfe\xba\xbe\x00\x00\x00\x34", "Nonportable or legacy"),
+                ("dev/openallay/builder/BuilderExtension.class", b"\xca\xfe\xba\xbe\x00\x00\x00\x45", "Non-Java8")):
+                with self.subTest(name=name):
+                    entries = dict(original)
+                    self.change_builder_resources(entries, lambda resources: resources.update({name: content}))
+                    self.rewrite_archive(artifact, entries)
+                    with self.assertRaisesRegex(ValueError, expected):
+                        launcher.packaged_artifact(artifact, "fabric", repo=repo)
+
+    def test_packaged_builder_rejects_old_api_and_wrong_java_manifest_floor(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory) / "repo"
+            artifact = self.artifact(repo)
+            original = self.artifact_entries(artifact)
+            for field in ("api", "java", "minecraft"):
+                entries = dict(original)
+                def change(resources):
+                    manifest = json.loads(resources["META-INF/openallay-extension.json"])
+                    if field == "api":
+                        manifest["support"]["targets"][0]["openAllayApiVersionRange"] = "[0.1.0,0.2.0)"
+                    elif field == "minecraft":
+                        manifest["support"]["targets"][0]["minecraftVersionRange"] = "[1.21.1,26.3)"
+                    else:
+                        manifest["support"]["minimumJavaVersion"] = 17
+                    resources["META-INF/openallay-extension.json"] = json.dumps(manifest)
+                self.change_builder_resources(entries, change)
+                self.rewrite_archive(artifact, entries)
+                expected = {"api": "SDK support range", "java": "Java8 support", "minecraft": "exactly Minecraft26.2"}
+                with self.assertRaisesRegex(ValueError, expected[field]):
+                    launcher.packaged_artifact(artifact, "fabric", repo=repo)
+
+    def runtime_record(self, path):
+        return {"sha256": launcher.digest(path), "sha1": launcher.digest_with(path, "sha1"),
+                "size": path.stat().st_size}
+
+    def isolated_environment(self, repo):
+        repo = repo.resolve()
+        mcroot, cache, java = self.environment(repo)
+        isolated = repo / "build/e2e/runtime/minecraft"
+        isolated.parent.mkdir(parents=True)
+        launcher.shutil.move(str(mcroot), str(isolated))
+        loader = isolated / "libraries/net/fabricmc/fabric-loader/0.19.3/fabric-loader-0.19.3.jar"
+        loader.parent.mkdir(parents=True)
+        loader.write_bytes((cache / "net.fabricmc/fabric-loader/0.19.3/hash/fabric-loader-0.19.3.jar").read_bytes())
+        api = isolated / "libraries/net/fabricmc/fabric-api/fabric-api/0.152.1+26.2/fabric-api-0.152.1+26.2.jar"
+        api.parent.mkdir(parents=True)
+        api.write_bytes((repo / "fabric/runs/client/mods/fabric-api-0.152.1+26.2.jar").read_bytes())
+        files = {path.relative_to(isolated).as_posix(): self.runtime_record(path)
+                 for path in isolated.rglob("*") if path.is_file()}
+        receipt = {"loader": "fabric", "minecraft": "26.2", "javaRequired": 25, "java": str(java),
+                   "minecraftRoot": str(isolated), "profile": "fabric-loader-0.19.3-26.2", "fabricApi": str(api),
+                   "sourceProfile": "gradle/minecraft-targets/26.2.properties",
+                   "sourceProfileSha256": launcher.digest(repo / "gradle/minecraft-targets/26.2.properties"),
+                   "pins": {"minecraft_version": "26.2", "java_version": "25", "fabric_loader_version": "0.19.3",
+                            "fabric_version": "0.152.1+26.2", "neoforge_version": "26.2.0.25-beta"},
+                   "files": files, "mechanism": "official-client-installer"}
+        receipt_path = isolated / ".provision/fabric-runtime.json"
+        receipt_path.parent.mkdir()
+        launcher.write_json(receipt_path, receipt)
+        return isolated, cache, java, receipt_path
+
+    def test_isolated_runtime_prepares_hash_verified_classpath_and_real_profile_arguments(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory) / "repo"
+            self.artifact(repo)
+            mcroot, cache, java, receipt = self.isolated_environment(repo)
+            args = launcher.parser().parse_args(["fabric", "--run-id", "isolated", "--minecraft-root", str(mcroot),
+                                                 "--gradle-cache", str(cache), "--java", str(java)])
+            output, manifest = launcher.prepare(args, repo)
+            self.assertEqual({"path": str(receipt), "sha256": launcher.digest(receipt)}, manifest["runtimeProvision"])
+            self.assertTrue(all(Path(path).is_relative_to(mcroot) for path in manifest["classPath"]))
+            self.assertIn("-DFabricMcEmu= net.minecraft.client.main.Main ", manifest["command"])
+            self.assertEqual("0", manifest["command"][manifest["command"].index("--accessToken") + 1])
+            self.assertEqual([], list((output / "game/saves").iterdir()))
+            self.assertTrue((output / "game/mods/fabric-api-0.152.1+26.2.jar").is_file())
+
+    def test_isolated_runtime_rejects_missing_receipt_wrong_pins_and_modified_files(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory) / "repo"
+            self.artifact(repo)
+            mcroot, cache, java, receipt_path = self.isolated_environment(repo)
+            receipt = json.loads(receipt_path.read_text())
+            receipt_path.unlink()
+            with self.assertRaisesRegex(ValueError, "requires its official provision manifest"):
+                launcher.read_runtime_provision(mcroot, "fabric", repo)
+            for field, value in (("loader", "neoforge"), ("minecraft", "1.21.1"), ("javaRequired", 21),
+                                 ("sourceProfileSha256", "0" * 64), ("pins", {})):
+                with self.subTest(field=field):
+                    launcher.write_json(receipt_path, {**receipt, field: value})
+                    with self.assertRaisesRegex(ValueError, "current26.2 target"):
+                        launcher.read_runtime_provision(mcroot, "fabric", repo)
+            launcher.write_json(receipt_path, receipt)
+            loader_jar = mcroot / "libraries/net/fabricmc/fabric-loader/0.19.3/fabric-loader-0.19.3.jar"
+            loader_jar.unlink()
+            with self.assertRaisesRegex(ValueError, "isolated official runtime library is missing"):
+                launcher.cached_library("net.fabricmc:fabric-loader:0.19.3", mcroot, cache, allow_gradle=False)
+            game_jar = mcroot / "versions/26.2/26.2.jar"
+            game_jar.write_bytes(b"modified runtime")
+            with self.assertRaisesRegex(ValueError, "does not match provision manifest"):
+                launcher.validate_runtime_classpath([str(game_jar)], mcroot, "fabric", repo)
+
+    def test_runtime_classpath_rejects_project_build_gradle_fallback_and_wrong_isolation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory) / "repo"
+            self.artifact(repo)
+            mcroot, cache, java, receipt = self.isolated_environment(repo)
+            for path in (repo / "common/build/classes/java/main", repo / "fabric/build/moddev/a.jar",
+                         repo / ".gradle/caches/minecraft/a.jar", cache / "native-game.jar",
+                         mcroot / "versions/1.21.1/1.21.1.jar"):
+                with self.subTest(path=path):
+                    with self.assertRaisesRegex(ValueError, "project source classes or Gradle"):
+                        launcher.validate_runtime_classpath([str(path)], mcroot, "fabric", repo)
+            wrong = repo / "build/e2e/another-runtime/minecraft"
+            with self.assertRaisesRegex(ValueError, "project source classes or Gradle"):
+                launcher.validate_runtime_classpath([str(wrong / "libraries/a.jar")], wrong, "fabric", repo)
+            external = repo.parent / "installed-minecraft"
+            self.assertIsNone(launcher.validate_runtime_classpath([str(external / "libraries/a.jar")], external,
+                                                                  "fabric", repo))
+
+    def test_missing_installed_fabric_profile_fails_instead_of_synthetic_native_alias(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory) / "repo"
+            self.artifact(repo)
+            mcroot, cache, java = self.environment(repo)
+            profile = mcroot / "versions/fabric-loader-0.19.3-26.2/fabric-loader-0.19.3-26.2.json"
+            profile.unlink()
+            args = launcher.parser().parse_args(["fabric", "--minecraft-root", str(mcroot),
+                                                 "--gradle-cache", str(cache), "--java", str(java)])
+            with self.assertRaisesRegex(ValueError, "locally installed Minecraft version metadata is missing"):
+                launcher.prepare(args, repo)
+
+    def test_linux_rules_keep_current_host_artifacts_and_natives_arguments(self):
+        self.assertTrue(launcher.rules_allow([{"action": "allow", "os": {"name": "linux", "arch": "x86_64"}}],
+                                            os_name="linux", arch="x86_64"))
+        self.assertFalse(launcher.rules_allow([{"action": "allow", "os": {"name": "osx"}}], os_name="linux"))
+        self.assertEqual(["-Djava.library.path=/runtime/native path"], launcher.expand_arguments(
+            ["-Djava.library.path=${natives_directory}"], {"natives_directory": "/runtime/native path"}))
 
     def test_prepare_loads_only_packaged_mod_and_keeps_default_authority_off(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -428,16 +708,26 @@ class PackagedBuilderLauncherTests(unittest.TestCase):
     def replacement_artifact(self, original, directory, change_builder=False):
         destination = Path(directory) / original.name
         destination.parent.mkdir(parents=True)
-        with zipfile.ZipFile(original) as old, zipfile.ZipFile(destination, "w") as new:
-            for name in old.namelist():
-                content = old.read(name)
-                if name.endswith("GuideClientE2EController.class"):
-                    content += b"fixed retained-anchor development harness"
-                if change_builder and "openallay-builder-" in name:
-                    embedded = io.BytesIO()
-                    with zipfile.ZipFile(embedded, "w") as builder:
-                        builder.writestr("assets/openallay_builder/building.js", "return {changed:true};")
-                    content = embedded.getvalue()
+        with zipfile.ZipFile(original) as old:
+            entries = {name: old.read(name) for name in old.namelist()}
+        for name in entries:
+            if name.endswith("GuideClientE2EController.class"):
+                entries[name] += b"fixed retained-anchor development harness"
+            if change_builder and "openallay-builder-" in name:
+                with zipfile.ZipFile(io.BytesIO(entries[name])) as builder:
+                    resources = {entry: builder.read(entry) for entry in builder.namelist()}
+                resources["assets/openallay_builder/building.js"] = b"return {changed:true};"
+                embedded = io.BytesIO()
+                with zipfile.ZipFile(embedded, "w") as builder:
+                    for entry, content in resources.items():
+                        builder.writestr(entry, content)
+                entries[name] = embedded.getvalue()
+                provenance_path = "META-INF/openallay/distribution.json"
+                provenance = json.loads(entries[provenance_path])
+                provenance["artifact"]["sha256"] = launcher.hashlib.sha256(entries[name]).hexdigest()
+                entries[provenance_path] = json.dumps(provenance).encode("utf-8")
+        with zipfile.ZipFile(destination, "w") as new:
+            for name, content in entries.items():
                 new.writestr(name, content)
         return destination
 
@@ -460,8 +750,8 @@ class PackagedBuilderLauncherTests(unittest.TestCase):
             self.assertNotEqual(upgrade["oldSha256"], upgrade["newSha256"])
             self.assertEqual(launcher.digest(replacement), upgrade["newSha256"])
             self.assertEqual(upgrade["oldSha256"], launcher.digest(upgrade["originalArtifactEvidence"]))
-            self.assertEqual(manifest["previousPackagedArtifact"]["nestedBuilderSha256"],
-                             manifest["newPackagedArtifact"]["nestedBuilderSha256"])
+            self.assertEqual(manifest["previousPackagedArtifact"]["bundledBuilderSha256"],
+                             manifest["newPackagedArtifact"]["bundledBuilderSha256"])
             installed = previous / "game/mods" / replacement.name
             self.assertEqual(upgrade["newSha256"], launcher.digest(installed))
             self.assertEqual(upgrade["newSha256"], manifest["preparedFiles"]["mods/" + installed.name])
@@ -476,7 +766,7 @@ class PackagedBuilderLauncherTests(unittest.TestCase):
             args = launcher.parser().parse_args(["--resume-prepared", str(previous), "--run-id", "bad-upgrade",
                                                  "--scenario", "builder-reload", "--enable-unrestricted",
                                                  "--jar", str(replacement)])
-            with self.assertRaisesRegex(ValueError, "exact nested Builder bytes"):
+            with self.assertRaisesRegex(ValueError, "exact bundled Builder bytes"):
                 launcher.prepare_resume(args, repo)
             after = {str(path.relative_to(previous)): path.read_bytes() for path in previous.rglob("*") if path.is_file()}
             self.assertEqual(before, after)
@@ -633,35 +923,35 @@ class PackagedBuilderLauncherTests(unittest.TestCase):
             repo = Path(directory) / "repo"
             old_artifact = self.artifact(repo)
             mcroot, cache, java = self.environment(repo)
-            new_artifact = old_artifact.with_name("openallay-fabric-26.2-0.2.4.jar")
+            new_artifact = old_artifact.with_name("openallay-fabric-26.2-0.4.2.jar")
             with zipfile.ZipFile(old_artifact) as old, zipfile.ZipFile(new_artifact, "w") as new:
                 for name in old.namelist():
                     content = old.read(name)
                     if name == "fabric.mod.json":
                         metadata = json.loads(content)
-                        metadata["version"] = "0.2.4"
+                        metadata["version"] = "0.4.2"
                         content = json.dumps(metadata).encode()
                     new.writestr(name, content)
-            (repo / "gradle.properties").write_text("version=0.2.4\n", encoding="utf-8")
+            (repo / "gradle.properties").write_text("version=0.4.2\n", encoding="utf-8")
             args = launcher.parser().parse_args(["fabric", "--run-id", "new-release", "--scenario", "ui-provider-failure",
                                                  "--minecraft-root", str(mcroot), "--gradle-cache", str(cache), "--java", str(java)])
             _, manifest = launcher.prepare(args, repo)
-            self.assertEqual("0.2.4", manifest["packagedArtifact"]["modVersion"])
+            self.assertEqual("0.4.2", manifest["packagedArtifact"]["modVersion"])
             self.assertEqual(new_artifact.name, manifest["packagedArtifact"]["name"])
-            self.assertEqual("0.2.3", launcher.packaged_artifact(old_artifact, "fabric", "0.2.3")["modVersion"])
+            self.assertEqual("0.4.1", launcher.packaged_artifact(old_artifact, "fabric", "0.4.1")["modVersion"])
             with self.assertRaises(ValueError):
-                launcher.packaged_artifact(new_artifact, "fabric", "0.2.3")
+                launcher.packaged_artifact(new_artifact, "fabric", "0.4.1")
 
     def test_resume_uses_prior_manifest_version_not_current_gradle_release(self):
         with tempfile.TemporaryDirectory() as directory:
             repo = Path(directory) / "repo"
             previous, prior, original = self.accepted_original(repo)
-            (repo / "gradle.properties").write_text("version=0.2.4\n", encoding="utf-8")
+            (repo / "gradle.properties").write_text("version=0.4.2\n", encoding="utf-8")
             replacement = self.replacement_artifact(original, Path(directory) / "replacement")
             args = launcher.parser().parse_args(["--resume-prepared", str(previous), "--run-id", "retained-old-version",
                                                  "--scenario", "builder-reload", "--enable-unrestricted", "--jar", str(replacement)])
             _, manifest = launcher.prepare_resume(args, repo)
-            self.assertEqual("0.2.3", manifest["packagedArtifact"]["modVersion"])
+            self.assertEqual("0.4.1", manifest["packagedArtifact"]["modVersion"])
 
     def test_manual_graphical_report_requires_real_frame_hash_and_restore(self):
         with tempfile.TemporaryDirectory() as directory:
