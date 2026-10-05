@@ -8,7 +8,6 @@ import java.util.function.Consumer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.MultiLineEditBox;
-import net.minecraft.client.gui.screens.options.controls.KeyBindsScreen;
 import dev.openallay.client.gui.GuideInputKey;
 import dev.openallay.client.gui.GuideNativeInput;
 
@@ -22,7 +21,7 @@ public final class ObservationMenuKeyHandler {
     public static void afterUnhandledKey(Minecraft client, int action, GuideInputKey event) {
         if (action != 1 || client.player == null || client.level == null || MinecraftClientWindow.overlay(client) != null) return;
         var screen = MinecraftClientWindow.screen(client);
-        if (screen == null || MinecraftClientViewCapture.owns(screen) || screen instanceof KeyBindsScreen
+        if (screen == null || MinecraftClientViewCapture.owns(screen) || dev.openallay.client.gui.GuideNativeWindowState.keyBindingScreen(screen)
                 || screen.getFocused() instanceof EditBox || screen.getFocused() instanceof MultiLineEditBox
                 || !GuideNativeInput.matches(OpenAllayKeyMappings.OPEN_GUIDE, event)) return;
         Consumer<Minecraft> current = opener;

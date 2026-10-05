@@ -47,14 +47,7 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.util.context.ContextMap;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraft.world.item.crafting.RecipeHolder;
-import net.minecraft.world.item.crafting.display.SlotDisplayContext;
-import net.minecraft.world.item.crafting.display.RecipeDisplay;
-import net.minecraft.world.item.crafting.display.ShapedCraftingRecipeDisplay;
-import net.minecraft.world.item.crafting.display.ShapelessCraftingRecipeDisplay;
 
 public final class MinecraftContextCapture {
     private static final String CAPTURE_GENERATION_PLACEHOLDER = "0".repeat(64);
@@ -322,80 +315,13 @@ public final class MinecraftContextCapture {
 
     private RecipeProviderSnapshot captureRecipeManager(
             CommandSourceStack source, java.time.Instant capturedAt) {
-        ContextMap displayContext = SlotDisplayContext.fromLevel(source.getLevel());
-        List<RecipeEntrySnapshot> recipes = source.getServer().getRecipeManager().getRecipes()
-                .stream()
-                .map(holder -> captureRecipe(holder, displayContext, capturedAt))
-                .sorted(Comparator.comparing(RecipeEntrySnapshot::id))
-                .toList();
+        List<RecipeEntrySnapshot> recipes = MinecraftRecipeSnapshots.capture(
+                MinecraftRecipeCapture.serverRecipes(source), "minecraft:recipe_manager",
+                dev.openallay.recipe.RecipeUnlockState.UNKNOWN,
+                evidence(DataCompleteness.COMPLETE, capturedAt,
+                        "minecraft:recipe_manager", RECIPE_PROVENANCE));
         return RecipeProviderSnapshot.available(
                 "minecraft:recipe_manager", DataCompleteness.COMPLETE, recipes, List.of());
-    }
-
-    private RecipeEntrySnapshot captureRecipe(
-            RecipeHolder<?> holder,
-            ContextMap displayContext,
-            java.time.Instant capturedAt) {
-        List<IngredientRequirementSnapshot> ingredients = new ArrayList<>();
-        List<Ingredient> rawIngredients = holder.value().placementInfo().ingredients();
-        for (int index = 0; index < rawIngredients.size(); index++) {
-            ingredients.add(captureIngredient(index, rawIngredients.get(index)));
-        }
-        List<RecipeDisplay> displays = holder.value().display();
-        List<RecipeOutputSnapshot> outputs = displays.stream()
-                .flatMap(display -> display.result().resolveForStacks(displayContext).stream())
-                .map(value -> new RecipeOutputSnapshot(captureStack(value), 1.0D))
-                .toList();
-        var type = Objects.requireNonNull(
-                BuiltInRegistries.RECIPE_TYPE.getKey(holder.value().getType()));
-        RecipeDisplay primary = displays.isEmpty() ? null : displays.getFirst();
-        RecipeLayoutSnapshot layout = primary instanceof ShapedCraftingRecipeDisplay shaped
-                ? new RecipeLayoutSnapshot(shaped.width(), shaped.height(), true)
-                : primary instanceof ShapelessCraftingRecipeDisplay
-                        ? new RecipeLayoutSnapshot(0, 0, false)
-                        : RecipeLayoutSnapshot.unknown();
-        String workstation = primary == null
-                ? null
-                : primary.craftingStation().resolveForStacks(displayContext).stream()
-                        .filter(value -> !value.isEmpty())
-                        .map(value -> BuiltInRegistries.ITEM.getKey(value.getItem()).toString())
-                        .findFirst()
-                        .orElse(null);
-        String recipeId = dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(holder.id()).toString();
-        EvidenceMetadata recipeEvidence = evidence(
-                DataCompleteness.COMPLETE,
-                capturedAt,
-                "minecraft:recipe_manager",
-                RECIPE_PROVENANCE);
-        return new RecipeEntrySnapshot(
-                new RecipeReference(
-                        "minecraft:recipe_manager", CAPTURE_GENERATION_PLACEHOLDER, recipeId),
-                recipeId,
-                type.toString(),
-                layout,
-                workstation,
-                ingredients,
-                List.of(),
-                List.of(),
-                outputs,
-                List.of(),
-                RecipeProcessingSnapshot.unknown(),
-                List.of(),
-                Map.of(),
-                recipeEvidence);
-    }
-
-    private IngredientRequirementSnapshot captureIngredient(int index, Ingredient ingredient) {
-        List<IngredientAlternativeSnapshot> alternatives = dev.openallay.context.minecraft.MinecraftIngredientItems.items(ingredient)
-                .map(holder -> {
-                    String id = dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(holder.unwrapKey()
-                            .orElseThrow(() -> new IllegalStateException("Unbound recipe item"))
-                            )
-                            .toString();
-                    return new IngredientAlternativeSnapshot("item", id, List.of(id));
-                })
-                .toList();
-        return new IngredientRequirementSnapshot("input-" + index, 1, true, alternatives);
     }
 
     private ItemStackSnapshot captureStack(ItemStack stack) {

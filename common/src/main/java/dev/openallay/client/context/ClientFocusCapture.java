@@ -3,7 +3,6 @@ package dev.openallay.client.context;
 import dev.openallay.client.gui.MinecraftClientWindow;
 
 import com.google.gson.JsonObject;
-import com.mojang.serialization.JsonOps;
 import dev.openallay.client.gui.mixin.AbstractContainerScreenObservationAccessor;
 import dev.openallay.context.DataAuthority;
 import dev.openallay.context.DataCompleteness;
@@ -18,7 +17,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.Slot;
@@ -62,7 +60,7 @@ public final class ClientFocusCapture {
         details.put("minecraft:dimension", dimension);
         details.put("minecraft:camera_source", "minecraft:main_camera");
         details.put("minecraft:target_source", "minecraft:client_hit_result");
-        details.put("minecraft:component_scope", "effective_persistent_components;transient_components_excluded");
+        details.put("minecraft:component_scope", dev.openallay.context.minecraft.MinecraftItemDataFacts.persistentScope());
         details.put("minecraft:menu_scope", "identity_carried_and_slot_count;slot_contents_not_scanned");
         if (overlay) {
             details.put("minecraft:overlay_class", MinecraftClientWindow.overlay(client).getClass().getName());
@@ -119,7 +117,7 @@ public final class ClientFocusCapture {
                             blockPosition(blockPos),
                             blockHit.getDirection().getName(),
                             blockHit.isInside(),
-                            blockHit.isWorldBorderHit(),
+                            dev.openallay.client.observation.MinecraftHitFacts.worldBorderHit(client, blockHit),
                             properties,
                             fluid.isEmpty() ? "" : BuiltInRegistries.FLUID.getKey(fluid.getType()).toString()),
                     null);
@@ -220,8 +218,8 @@ public final class ClientFocusCapture {
         boolean available = false;
         String diagnostic;
         try {
-            var ops = client.level.registryAccess().createSerializationContext(JsonOps.INSTANCE);
-            var encoded = DataComponentMap.CODEC.encodeStart(ops, stack.getComponents());
+            var encoded = dev.openallay.context.minecraft.MinecraftItemDataFacts
+                    .persistentData(stack, client.level.registryAccess());
             var result = encoded.result();
             if (result.isEmpty()) {
                 // A partial codec result is not a complete persistent component map.

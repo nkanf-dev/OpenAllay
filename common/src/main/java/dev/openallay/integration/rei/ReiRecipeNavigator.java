@@ -1,6 +1,7 @@
 package dev.openallay.integration.rei;
 
 import dev.openallay.platform.minecraft.MinecraftResourceIds;
+import dev.openallay.client.gui.GuideNativeItemLookup;
 
 import dev.openallay.context.RecipeReference;
 import dev.openallay.recipe.RecipeNavigationResult;
@@ -49,7 +50,7 @@ final class ReiRecipeNavigator implements RecipeViewerNavigator {
             return RecipeNavigationResult.failed("unknown_item", "Item is not registered");
         }
         try {
-            var entry = EntryStacks.of(new ItemStack(BuiltInRegistries.ITEM.getValue(id)));
+            var entry = EntryStacks.of(new ItemStack(GuideNativeItemLookup.item(itemId)));
             ViewSearchBuilder builder = ViewSearchBuilder.builder();
             boolean opened = recipes
                     ? builder.addRecipesFor(entry).open()

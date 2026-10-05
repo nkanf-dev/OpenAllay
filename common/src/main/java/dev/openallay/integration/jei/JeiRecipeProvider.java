@@ -177,7 +177,7 @@ final class JeiRecipeProvider implements RecipeKnowledgeProvider {
         int inputIndex = 0;
         int catalystIndex = 0;
         for (IRecipeSlotView slot : slots) {
-            List<ITypedIngredient<?>> values = slot.getAllIngredientsList();
+            List<ITypedIngredient<?>> values = MinecraftJeiRecipeApi.slotValues(slot);
             if (values.isEmpty() || slot.getRole() == RecipeIngredientRole.RENDER_ONLY) {
                 continue;
             }
@@ -223,7 +223,7 @@ final class JeiRecipeProvider implements RecipeKnowledgeProvider {
             throw new UnsupportedRecipe("empty_ingredient", "JEI item slot is empty");
         }
         rejectComponents(stacks);
-        int count = stacks.getFirst().getCount();
+        int count = stacks.get(0).getCount();
         if (count <= 0 || stacks.stream().anyMatch(stack -> stack.getCount() != count)) {
             throw new UnsupportedRecipe(
                     "alternative_count_mismatch", "JEI item alternatives use different counts");
@@ -269,20 +269,23 @@ final class JeiRecipeProvider implements RecipeKnowledgeProvider {
             throw new UnsupportedRecipe(
                     "alternative_fluid", "JEI fluid slot contains alternatives");
         }
-        FluidValue fluid = fluids.getFirst();
+        FluidValue fluid = fluids.get(0);
         if (fluid.amount <= 0) {
             throw new UnsupportedRecipe("invalid_fluid_amount", "JEI fluid amount is not positive");
         }
         return new FluidRequirementSnapshot(fluid.id, fluid.amount, true);
     }
 
-    @SuppressWarnings({"rawtypes", "unchecked"})
-    private FluidValue fluid(ITypedIngredient<?> value) {
-        IIngredientType type = value.getType();
-        IIngredientHelper helper = runtime.getIngredientManager().getIngredientHelper(type);
-        Object ingredient = value.getIngredient();
+    private <T> FluidValue fluid(ITypedIngredient<T> value) {
+        IIngredientType<T> type = value.getType();
+        IIngredientHelper<T> helper = runtime.getIngredientManager().getIngredientHelper(type);
+        T ingredient = value.getIngredient();
         var id = MinecraftJeiResourceIds.ingredient(helper, ingredient);
-        return new FluidValue(id.toString(), helper.getAmount(ingredient));
+        long amount = MinecraftJeiRecipeApi.amount(helper, ingredient)
+                .orElseThrow(() -> new UnsupportedRecipe(
+                        "fluid_amount_unavailable",
+                        "JEI does not expose the fluid ingredient amount"));
+        return new FluidValue(id.toString(), amount);
     }
 
     private boolean allFluids(List<ITypedIngredient<?>> values) {
@@ -297,7 +300,7 @@ final class JeiRecipeProvider implements RecipeKnowledgeProvider {
     }
 
     private static void rejectComponents(List<ItemStack> stacks) {
-        if (stacks.stream().anyMatch(stack -> !stack.getComponentsPatch().isEmpty())) {
+        if (stacks.stream().anyMatch(stack -> dev.openallay.context.minecraft.MinecraftItemDataFacts.hasCustomData(stack))) {
             throw new UnsupportedRecipe(
                     "item_components_unsupported",
                     "JEI item stack has components that cannot be represented losslessly");

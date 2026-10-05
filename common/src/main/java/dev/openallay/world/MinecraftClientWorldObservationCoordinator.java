@@ -130,11 +130,11 @@ public final class MinecraftClientWorldObservationCoordinator
                 WorldObservationCoverage coverage =
                         WorldObservationCoverageCalculator.calculate(
                                 bounds,
-                                level.getMinY(),
-                                level.getMaxY(),
+                                dev.openallay.context.minecraft.MinecraftWorldHeight.min(level),
+                                dev.openallay.context.minecraft.MinecraftWorldHeight.max(level),
                                 (chunkX, chunkZ) -> level.hasChunkAt(new BlockPos(
                                         chunkX << 4,
-                                        Math.max(bounds.from().y(), level.getMinY()),
+                                        Math.max(bounds.from().y(), dev.openallay.context.minecraft.MinecraftWorldHeight.min(level)),
                                         chunkZ << 4)));
                 ArrayList<WorldEntitySummary> summaries = new ArrayList<>(captured.size());
                 for (Entity entity : captured) {
@@ -267,9 +267,7 @@ public final class MinecraftClientWorldObservationCoordinator
             data.put("maxHealth", living.getMaxHealth());
             data.put("armor", living.getArmorValue());
             data.put("effects", living.getActiveEffects().stream()
-                    .map(effect -> effect.getEffect().unwrapKey()
-                            .map(key -> dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(key).toString())
-                            .orElse("unknown"))
+                    .map(dev.openallay.context.minecraft.MinecraftActiveEffectFacts::id)
                     .sorted()
                     .toList());
         }

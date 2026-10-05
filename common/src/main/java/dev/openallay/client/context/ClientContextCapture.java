@@ -51,14 +51,9 @@ import java.util.TreeMap;
 import java.util.Optional;
 import java.util.Set;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.screens.recipebook.RecipeCollection;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.crafting.display.RecipeDisplayEntry;
-import net.minecraft.world.item.crafting.display.ShapedCraftingRecipeDisplay;
-import net.minecraft.world.item.crafting.display.ShapelessCraftingRecipeDisplay;
-import net.minecraft.world.item.crafting.display.SlotDisplayContext;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
 
@@ -336,9 +331,7 @@ public final class ClientContextCapture {
                 Integer.toString(dev.openallay.context.minecraft.MinecraftPlayerFacts.selectedSlot(player.getInventory())));
         add(values, "player", "camera", client.options.getCameraType().name().toLowerCase(Locale.ROOT));
         add(values, "player", "active_effects", player.getActiveEffects().stream()
-                .map(effect -> effect.getEffect().unwrapKey()
-                        .map(key -> dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(key).toString())
-                        .orElse("unknown"))
+                .map(dev.openallay.context.minecraft.MinecraftActiveEffectFacts::id)
                 .sorted()
                 .toList().toString());
 
@@ -576,78 +569,15 @@ public final class ClientContextCapture {
 
     private RecipeProviderSnapshot vanillaRecipes(
             LocalPlayer player, Minecraft client, Instant capturedAt) {
-        Set<Integer> seen = new HashSet<>();
-        List<RecipeEntrySnapshot> recipes = new ArrayList<>();
-        var context = SlotDisplayContext.fromLevel(client.level);
-        for (RecipeCollection collection : player.getRecipeBook().getCollections()) {
-            for (RecipeDisplayEntry entry : collection.getRecipes()) {
-                if (!seen.add(entry.id().index())) {
-                    continue;
-                }
-                List<IngredientRequirementSnapshot> ingredients = new ArrayList<>();
-                List<net.minecraft.world.item.crafting.Ingredient> requirements =
-                        entry.craftingRequirements().orElse(List.of());
-                for (int index = 0; index < requirements.size(); index++) {
-                    net.minecraft.world.item.crafting.Ingredient ingredient = requirements.get(index);
-                    ingredients.add(new IngredientRequirementSnapshot(
-                            "input-" + index,
-                            1,
-                            true,
-                            dev.openallay.context.minecraft.MinecraftIngredientItems.items(ingredient).map(holder -> {
-                                String id = dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(holder.unwrapKey().orElseThrow()).toString();
-                                return new IngredientAlternativeSnapshot("item", id, List.of(id));
-                            }).toList()));
-                }
-                List<RecipeOutputSnapshot> outputs = entry.resultItems(context).stream()
-                        .map(value -> new RecipeOutputSnapshot(stack(value), 1.0D))
-                        .toList();
-                String recipeId = "openallay:client_recipe_display/" + entry.id().index();
-                RecipeLayoutSnapshot layout = entry.display() instanceof ShapedCraftingRecipeDisplay shaped
-                        ? new RecipeLayoutSnapshot(shaped.width(), shaped.height(), true)
-                        : entry.display() instanceof ShapelessCraftingRecipeDisplay
-                                ? new RecipeLayoutSnapshot(0, 0, false)
-                                : RecipeLayoutSnapshot.unknown();
-                String workstation = entry.display().craftingStation().resolveForStacks(context).stream()
-                        .filter(value -> !value.isEmpty())
-                        .map(value -> BuiltInRegistries.ITEM.getKey(value.getItem()).toString())
-                        .findFirst()
-                        .orElse(null);
-                EvidenceMetadata recipeEvidence = evidence(
-                        DataCompleteness.PARTIAL,
-                        capturedAt,
-                        "minecraft:client_recipe_book",
-                        "minecraft:client_recipe_display");
-                recipes.add(new RecipeEntrySnapshot(
-                        new RecipeReference(
-                                "minecraft:client_recipe_book",
-                                CAPTURE_GENERATION_PLACEHOLDER,
-                                recipeId),
-                        recipeId,
-                        java.util.Objects.requireNonNull(
-                                        BuiltInRegistries.RECIPE_DISPLAY.getKey(entry.display().type()))
-                                .toString(),
-                        layout,
-                        workstation,
-                        ingredients,
-                        List.of(),
-                        List.of(),
-                        outputs,
-                        List.of(),
-                        RecipeProcessingSnapshot.unknown(),
-                        List.of(),
-                        Map.of(),
-                        RecipeUnlockState.UNLOCKED,
-                        recipeEvidence));
-            }
-        }
-        recipes.sort(Comparator.comparing(RecipeEntrySnapshot::id));
+        List<RecipeEntrySnapshot> recipes = dev.openallay.context.minecraft.MinecraftRecipeSnapshots.capture(
+                dev.openallay.context.minecraft.MinecraftRecipeCapture.clientRecipes(player, client),
+                "minecraft:client_recipe_book", RecipeUnlockState.UNLOCKED,
+                evidence(DataCompleteness.PARTIAL, capturedAt,
+                        "minecraft:client_recipe_book", "minecraft:client_recipe_book"));
         return RecipeProviderSnapshot.available(
-                "minecraft:client_recipe_book",
-                DataCompleteness.PARTIAL,
-                recipes,
+                "minecraft:client_recipe_book", DataCompleteness.PARTIAL, recipes,
                 List.of(new dev.openallay.recipe.RecipeProviderDiagnostic(
-                        "minecraft:client_recipe_book",
-                        "recipe_book_only",
+                        "minecraft:client_recipe_book", "recipe_book_only",
                         "Only synchronized unlocked recipe-book entries are visible")));
     }
 

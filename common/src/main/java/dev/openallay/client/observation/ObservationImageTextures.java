@@ -14,7 +14,7 @@ import net.minecraft.client.Minecraft;
 
 /** View-owned textures decoded only from the service's actual managed image bytes. */
 public final class ObservationImageTextures implements AutoCloseable {
-    private static final Executor DECODE = job -> Thread.ofVirtual().name("openallay-observation-preview").start(job);
+    private static final Executor DECODE = job -> dev.openallay.concurrent.NamedThreads.startDaemon("openallay-observation-preview", job);
     private static final int MAX_TEXTURE_DIMENSION = 1024;
     private static final int MAX_TEXTURES = 8;
     private final Minecraft client;
@@ -70,7 +70,7 @@ public final class ObservationImageTextures implements AutoCloseable {
                         try {
                             int[] pixels = preview.argb();
                             for (int y = 0; y < preview.height(); y++) {
-                                for (int x = 0; x < preview.width(); x++) image.setPixel(x, y, pixels[y * preview.width() + x]);
+                                for (int x = 0; x < preview.width(); x++) MinecraftImagePixels.setArgb(image, x, y, pixels[y * preview.width() + x]);
                             }
                             String texture = "openallay:observation/" + owner + "/" + reference.sha256();
                             MinecraftImageTextures.register(client.getTextureManager(), texture, () -> "OpenAllay observation", image);

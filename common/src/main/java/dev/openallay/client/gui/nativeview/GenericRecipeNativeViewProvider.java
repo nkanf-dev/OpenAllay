@@ -139,9 +139,9 @@ final class GenericRecipeNativeViewProvider implements NativeDomainViewProvider 
         }
 
         private static String ingredientItem(GuideRecipeCard.Ingredient ingredient) {
-            GuideRecipeCard.Alternative alternative = ingredient.alternatives().getFirst();
+            GuideRecipeCard.Alternative alternative = ingredient.alternatives().get(0);
             return alternative.resolvedItems().isEmpty()
-                    ? alternative.id() : alternative.resolvedItems().getFirst();
+                    ? alternative.id() : alternative.resolvedItems().get(0);
         }
 
         private static void renderSlot(
@@ -161,7 +161,7 @@ final class GenericRecipeNativeViewProvider implements NativeDomainViewProvider 
                 return;
             }
             ItemStack stack = new ItemStack(
-                    BuiltInRegistries.ITEM.getValue(id),
+                    dev.openallay.client.gui.GuideNativeItemLookup.item(id.toString()),
                     (int) Math.min(Integer.MAX_VALUE, Math.max(1, count)));
             graphics.item(stack, x + 1, y + 1);
             graphics.itemDecorations(font, stack, x + 1, y + 1);

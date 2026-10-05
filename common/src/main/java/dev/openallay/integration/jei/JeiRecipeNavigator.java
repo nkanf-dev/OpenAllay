@@ -1,6 +1,7 @@
 package dev.openallay.integration.jei;
 
 import dev.openallay.platform.minecraft.MinecraftResourceIds;
+import dev.openallay.client.gui.GuideNativeItemLookup;
 
 import dev.openallay.context.RecipeReference;
 import dev.openallay.recipe.RecipeNavigationResult;
@@ -24,7 +25,7 @@ final class JeiRecipeNavigator implements RecipeViewerNavigator {
 
     @Override
     public boolean supportsExactRecipe() {
-        return true;
+        return MinecraftJeiRecipeApi.supportsExactRecipe();
     }
 
     @Override
@@ -46,6 +47,9 @@ final class JeiRecipeNavigator implements RecipeViewerNavigator {
         if (reference == null || !reference.sourceId().equals(viewerId())) {
             return RecipeNavigationResult.failed(
                     "invalid_reference", "Recipe reference does not belong to JEI");
+        }
+        if (!supportsExactRecipe()) {
+            return exactUnsupported();
         }
         IJeiRuntime runtime = OpenAllayJeiBridge.runtime();
         try {
@@ -77,7 +81,7 @@ final class JeiRecipeNavigator implements RecipeViewerNavigator {
             return RecipeNavigationResult.failed("unknown_item", "Item is not registered");
         }
         IJeiRuntime runtime = OpenAllayJeiBridge.runtime();
-        ItemStack stack = new ItemStack(BuiltInRegistries.ITEM.getValue(id));
+        ItemStack stack = new ItemStack(GuideNativeItemLookup.item(itemId));
         try {
             runtime.getRecipesGui().show(runtime.getJeiHelpers()
                     .getFocusFactory()
@@ -103,8 +107,9 @@ final class JeiRecipeNavigator implements RecipeViewerNavigator {
             if (provider.referenceIdIfSupported(category, recipe)
                     .filter(recipeId::equals)
                     .isPresent()) {
-                runtime.getRecipesGui().showRecipes(category, List.of(recipe), List.of());
-                return RecipeNavigationResult.success();
+                return MinecraftJeiRecipeApi.showExact(runtime.getRecipesGui(), category, recipe)
+                        ? RecipeNavigationResult.success()
+                        : exactUnsupported();
             }
         }
         return null;
@@ -123,6 +128,11 @@ final class JeiRecipeNavigator implements RecipeViewerNavigator {
             }
         }
         return RecipeNavigationResult.failed("stale_reference", "Recipe reference is stale");
+    }
+
+    private static RecipeNavigationResult exactUnsupported() {
+        return RecipeNavigationResult.failed(
+                "exact_unsupported", "JEI does not expose an exact recipe selector");
     }
 
     private static RecipeNavigationResult readiness() {

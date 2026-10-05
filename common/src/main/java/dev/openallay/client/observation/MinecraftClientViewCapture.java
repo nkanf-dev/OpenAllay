@@ -87,7 +87,7 @@ public final class MinecraftClientViewCapture implements AutoCloseable {
 
     /** Exact native pre-GUI frame hook. One readback serves each target group. */
     public static void beforeGui(Minecraft client, boolean advanceGameTime) {
-        if (!client.isGameLoadFinished() || !advanceGameTime || client.level == null) return;
+        if (!dev.openallay.client.gui.GuideNativeWindowState.frameReady(client) || !advanceGameTime || client.level == null) return;
         for (MinecraftClientViewCapture capture : ACTIVE) {
             if (capture.client == client) capture.frame(WorldViewRequest.Target.WORLD);
         }
@@ -95,7 +95,7 @@ public final class MinecraftClientViewCapture implements AutoCloseable {
 
     /** Exact native post-final-GUI frame hook. Native game UI only, never Guide pixels. */
     public static void afterGui(Minecraft client, boolean advanceGameTime) {
-        if (!client.isGameLoadFinished() || !advanceGameTime || client.level == null) return;
+        if (!dev.openallay.client.gui.GuideNativeWindowState.frameReady(client) || !advanceGameTime || client.level == null) return;
         for (MinecraftClientViewCapture capture : ACTIVE) {
             if (capture.client == client) capture.frame(WorldViewRequest.Target.GAME_UI);
         }
@@ -143,7 +143,7 @@ public final class MinecraftClientViewCapture implements AutoCloseable {
     private void nativeReady(Frame frame, List<Pending> selected, NativeImage image) {
         try {
             if (selected.stream().noneMatch(value -> available(value))) { image.close(); return; }
-            Thread.ofVirtual().name("openallay-native-view-encode").start(() -> encode(frame, selected, image));
+            dev.openallay.concurrent.NamedThreads.startDaemon("openallay-native-view-encode", () -> encode(frame, selected, image));
         } catch (Throwable failure) {
             try { image.close(); } catch (Throwable ignored) {}
             selected.forEach(value -> value.result.completeExceptionally(failure));
@@ -158,7 +158,7 @@ public final class MinecraftClientViewCapture implements AutoCloseable {
             try (image) {
                 width = image.getWidth();
                 height = image.getHeight();
-                pixels = image.getPixels();
+                pixels = MinecraftImagePixels.argb(image);
             }
             if (selected.stream().noneMatch(this::available)) return;
             BufferedImage bitmap = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);

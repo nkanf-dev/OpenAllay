@@ -17,8 +17,7 @@ import net.minecraft.server.level.ServerPlayer;
  * Common owning-thread server context adapter shared by Fabric and NeoForge.
  */
 public final class MinecraftServerGuideContextProvider
-        implements ServerAgentService.ContextProvider,
-                dev.openallay.bridge.server.RemoteToolServer.ContextProvider {
+        implements dev.openallay.bridge.server.ServerBridgeSession.ContextProvider {
     private final OpenAllayRuntime runtime;
     private final MinecraftServer server;
     private final Gson gson;

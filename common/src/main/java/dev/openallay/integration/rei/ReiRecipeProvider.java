@@ -181,7 +181,7 @@ final class ReiRecipeProvider implements RecipeKnowledgeProvider {
             throw new UnsupportedRecipe("empty_ingredient", "REI item input is empty");
         }
         rejectComponents(stacks);
-        int count = stacks.getFirst().getCount();
+        int count = stacks.get(0).getCount();
         if (count <= 0 || stacks.stream().anyMatch(stack -> stack.getCount() != count)) {
             throw new UnsupportedRecipe(
                     "alternative_count_mismatch", "REI item alternatives use different counts");
@@ -227,7 +227,7 @@ final class ReiRecipeProvider implements RecipeKnowledgeProvider {
                 .map(EntryStack::getValue)
                 .map(FluidStack.class::cast)
                 .map(stack -> {
-                    if (!stack.getPatch().isEmpty()) {
+                    if (dev.openallay.context.minecraft.MinecraftItemDataFacts.Fluids.hasCustomData(stack)) {
                         throw new UnsupportedRecipe(
                                 "fluid_components_unsupported",
                                 "REI fluid has components that cannot be represented losslessly");
@@ -238,11 +238,11 @@ final class ReiRecipeProvider implements RecipeKnowledgeProvider {
                 })
                 .distinct()
                 .toList();
-        if (fluids.size() != 1 || fluids.getFirst().amount <= 0) {
+        if (fluids.size() != 1 || fluids.get(0).amount <= 0) {
             throw new UnsupportedRecipe(
                     "alternative_fluid", "REI fluid input contains alternatives or an invalid amount");
         }
-        FluidValue fluid = fluids.getFirst();
+        FluidValue fluid = fluids.get(0);
         return new FluidRequirementSnapshot(fluid.id, fluid.amount, true);
     }
 
@@ -255,7 +255,7 @@ final class ReiRecipeProvider implements RecipeKnowledgeProvider {
     }
 
     private static void rejectComponents(List<ItemStack> stacks) {
-        if (stacks.stream().anyMatch(stack -> !stack.getComponentsPatch().isEmpty())) {
+        if (stacks.stream().anyMatch(stack -> dev.openallay.context.minecraft.MinecraftItemDataFacts.hasCustomData(stack))) {
             throw new UnsupportedRecipe(
                     "item_components_unsupported",
                     "REI item stack has components that cannot be represented losslessly");

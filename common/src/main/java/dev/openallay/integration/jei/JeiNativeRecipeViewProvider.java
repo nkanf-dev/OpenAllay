@@ -57,7 +57,8 @@ final class JeiNativeRecipeViewProvider implements NativeDomainViewProvider {
         IRecipeLayoutDrawable<?> layout = find(current, references, exact).orElse(null);
         return layout == null
                 ? new Attempt.Unsupported("native_view_unavailable")
-                : new Attempt.Ready(new View(layout, runtime, current));
+                : new Attempt.Ready(new View(
+                        layout, runtime, current, MinecraftJeiRecipeApi.layoutGameTick(layout)));
     }
 
     static boolean currentGenerationContains(
@@ -113,7 +114,8 @@ final class JeiNativeRecipeViewProvider implements NativeDomainViewProvider {
     private record View(
             IRecipeLayoutDrawable<?> layout,
             Supplier<IJeiRuntime> runtime,
-            IJeiRuntime capturedRuntime) implements NativeDomainView {
+            IJeiRuntime capturedRuntime,
+            Optional<Runnable> nativeGameTick) implements NativeDomainView {
         @Override
         public String providerId() {
             return "viewer:jei";
@@ -129,7 +131,9 @@ final class JeiNativeRecipeViewProvider implements NativeDomainViewProvider {
             if (runtime.get() != capturedRuntime) {
                 throw new IllegalStateException("JEI runtime generation changed");
             }
-            layout.tick();
+            // Draw-only JEI publications have no layout game-tick callback. The runtime
+            // generation guard still runs on every tick; native drawing remains in render.
+            nativeGameTick.ifPresent(Runnable::run);
         }
 
         @Override
