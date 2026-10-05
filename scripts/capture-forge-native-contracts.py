@@ -11,6 +11,7 @@ import zipfile
 CLASSES = {
     "net.minecraft.client.player.LocalPlayer": ("commandSigned", "sendCommand", "sendChat"),
     "net.minecraft.client.gui.screens.ChatScreen": ("handleChatInput",),
+    "net.minecraft.server.commands.HelpCommand": ("register", "lambda$register$1", "<clinit>"),
 }
 OUTPUT_LIMIT = 100 * 1024
 TRANSIENT_LIMIT = 400 * 1024
@@ -32,6 +33,9 @@ def method_blocks(text):
         declaration = match.group(1)
         name = declaration.split("(", 1)[0].rsplit(" ", 1)[-1]
         methods.setdefault(name, []).append(text[match.start():end].rstrip() + "\n")
+    initializer = re.search(r"(?m)^  static \{\};$", text)
+    if initializer:
+        methods["<clinit>"] = [text[initializer.start():text.rfind("\n}")].rstrip() + "\n"]
     return methods
 
 

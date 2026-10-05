@@ -805,10 +805,50 @@ def validate_fixture_receipts(phase):
     return final, final_rows, expected, actor
 
 
+def validate_native_command_warmup(report, native, manifest, actor):
+    if manifest.get("minecraft") != "1.19.2" or manifest.get("loader") != "forge":
+        return
+    warmup = report.get("nativeCommandWarmup")
+    require(isinstance(warmup, dict) and warmup == native.get("nativeCommandWarmup"),
+            "Missing or inconsistent actual Forge command warmup")
+    require(warmup.get("outcome") == "PASSED" and warmup.get("actorId") == actor,
+            "Native command warmup outcome/actor differs")
+    for name in ("nativeFeedbackEvidence", "offOwnerCaptureRejected", "closedCapabilityRemoved",
+                 "closedBridgeRemoved", "cancelledReuseRejected", "serverReadbackOwnerThread",
+                 "cheatsOffAfter", "survivalAfter", "javascriptSettingRestored"):
+        require(warmup.get(name) is True, "Native command gate was not observed: " + name)
+    require(warmup.get("worldAuthorityChanged") is False
+            and warmup.get("initialUnrestrictedSetting") is manifest.get("unrestrictedOptIn", False)
+            and warmup.get("restoredUnrestrictedSetting") is warmup.get("initialUnrestrictedSetting"),
+            "Native command warmup changed Builder authority baseline")
+    token = warmup.get("token")
+    require(isinstance(token, str) and re.fullmatch(r"openallay_native_command_[a-f0-9]{32}", token),
+            "Native command token identity differs")
+    commands = warmup.get("commands", {})
+    previous = None
+    for name, submitted in (("help", "help me"), ("signed", "me " + token),
+                            ("error", "help " + token + "_missing")):
+        result = commands.get(name, {})
+        messages = result.get("messages")
+        sequence = integral_count(result.get("sequence"))
+        require(result.get("actorId") == actor and result.get("command") == submitted
+                and result.get("state") == "feedback" and result.get("feedbackObserved") is True
+                and isinstance(messages, list) and messages and all(isinstance(value, str) for value in messages)
+                and sequence is not None and sequence > 0 and (previous is None or sequence == previous + 1),
+                "Native command receipt lacks actual sequential actor-bound feedback: " + name)
+        previous = sequence
+    require(any("/me " in value for value in commands["help"]["messages"])
+            and any(token in value for value in commands["signed"]["messages"])
+            and commands["error"]["messages"] != commands["help"]["messages"]
+            and not any("/me " in value for value in commands["error"]["messages"]),
+            "Native command help/token/invalid-path feedback differs")
+
+
 def validate_acceptance(directory, repo=REPO, reload_directory=None):
     phase = load_phase(directory, "builder-acceptance", repo, allow_fixture_failures=True)
     require(not phase["manifest"].get("resumeFrom"), "Acceptance must use the exact original disposable world")
     receipt, rows, expected, actor = validate_fixture_receipts(phase)
+    validate_native_command_warmup(phase["report"], phase["native"], phase["manifest"], actor)
     world_id, identity_path, data_version = native_world_identity(phase["game"], phase["manifest"])
     loaded = journals(phase["game"], rows)
     actual = {journal["id"]: (path, journal, entries) for path, journal, entries in loaded}

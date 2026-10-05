@@ -78,6 +78,14 @@ public final class GuideClientE2EController {
     private GuideBuilderE2EProbe.Anchor currentPlayerAnchor;
     private boolean unrestrictedAtStart;
     private boolean nativeProbePending;
+    private dev.openallay.OpenAllayRuntime nativeCommandRuntime;
+    private dev.openallay.client.MinecraftGuideContextProvider nativeCommandContexts;
+    private dev.openallay.model.CancellationSignal nativeCommandCancellation;
+    private com.google.gson.JsonObject nativeCommandWarmup;
+    private Boolean nativeCommandOriginalSetting;
+    private java.util.concurrent.CompletableFuture<ToolResult<Boolean>> nativeCommandEnable;
+    private java.util.concurrent.CompletableFuture<Boolean> nativeCommandRestore;
+    private String nativeCommandPendingFinish;
     private UUID screenshotActor;
     private dev.openallay.guide.ui.GuideDisplayConfig screenshotOriginalDisplay;
     private boolean screenshotActionPending;
@@ -190,6 +198,15 @@ public final class GuideClientE2EController {
         graphicalToastReceipt = java.util.Objects.requireNonNull(toastReceipt, "toastReceipt");
     }
 
+    /** Actual product owners for the separate development-only native command warmup. */
+    public void attachNativeCommandProbe(dev.openallay.OpenAllayRuntime runtime,
+            dev.openallay.client.MinecraftGuideContextProvider contexts) {
+        if (!developmentProbeEnabled || started)
+            throw new IllegalStateException("Native command probe must attach before development startup");
+        nativeCommandRuntime = java.util.Objects.requireNonNull(runtime, "runtime");
+        nativeCommandContexts = java.util.Objects.requireNonNull(contexts, "contexts");
+    }
+
     static boolean graphicalScenario(String scenario) {
         return "ui-manual-regressions".equals(scenario) || "ui-live-ux-regressions".equals(scenario);
     }
@@ -277,11 +294,104 @@ public final class GuideClientE2EController {
                     failWithoutRequest("native_anchor_failed", failure.toString());
                     return;
                 }
-                selectSession(service);
+                if (config.scenario().equals("builder-acceptance") && "1.19.2".equals(gameVersion)
+                        && "forge".equals(loader)) {
+                    if (nativeCommandRuntime == null || nativeCommandContexts == null) {
+                        failWithoutRequest("native_command_owner_unavailable", "Actual product command owners are unavailable");
+                        return;
+                    }
+                    startNativeCommandWarmup(actor, service);
+                } else selectSession(service);
             }, failure -> failWithoutRequest("native_capture_failed", failure));
         } else {
             selectSession(service);
         }
+    }
+
+    /** Change only this isolated development profile, then restore before Builder admission. */
+    private void startNativeCommandWarmup(UUID actor, GuideService service) {
+        if (clientSettings == null) {
+            failWithoutRequest("native_command_settings_unavailable", "Actual client settings are unavailable");
+            return;
+        }
+        nativeProbePending = true;
+        nativeCommandOriginalSetting = clientSettings.snapshot().unrestrictedJavascript().enabled();
+        nativeCommandWarmup = new com.google.gson.JsonObject();
+        nativeCommandWarmup.addProperty("outcome", "WAITING");
+        nativeCommandWarmup.addProperty("initialUnrestrictedSetting", nativeCommandOriginalSetting);
+        nativeCommandWarmup.addProperty("javascriptSettingTemporarilyEnabled", !nativeCommandOriginalSetting);
+        nativeCommandWarmup.addProperty("worldAuthorityChanged", false);
+        // Use the same typed async settings action as the real settings UI; never block a tick.
+        nativeCommandEnable = nativeCommandOriginalSetting
+                ? java.util.concurrent.CompletableFuture.completedFuture(new ToolResult.Success<>(true))
+                : clientSettings.saveUnrestrictedJavascript(true);
+        nativeCommandEnable.whenComplete((enabled, failure) ->
+                net.minecraft.client.Minecraft.getInstance().execute(() -> {
+                    if (finished || nativeCommandPendingFinish != null) return;
+                    if (failure != null || !(enabled instanceof ToolResult.Success<Boolean>)
+                            || !clientSettings.snapshot().unrestrictedJavascript().enabled()) {
+                        nativeCommandWarmup.addProperty("outcome", "FAILED");
+                        nativeCommandWarmup.addProperty("failure", "Actual unrestricted settings action failed");
+                        finishNativeCommandWarmup(service);
+                        return;
+                    }
+                    try {
+                        nativeCommandCancellation = GuideNativeCommandE2EProbe.start(
+                                nativeCommandRuntime, nativeCommandContexts, actor, receipt -> {
+                                    if (finished || nativeCommandPendingFinish != null) return;
+                                    receipt.addProperty("initialUnrestrictedSetting", nativeCommandOriginalSetting);
+                                    receipt.addProperty("javascriptSettingTemporarilyEnabled", !nativeCommandOriginalSetting);
+                                    nativeCommandWarmup = receipt;
+                                    finishNativeCommandWarmup(service);
+                                });
+                    } catch (RuntimeException error) {
+                        nativeCommandWarmup.addProperty("outcome", "FAILED");
+                        nativeCommandWarmup.addProperty("failure", error.toString());
+                        finishNativeCommandWarmup(service);
+                    }
+                }));
+    }
+
+    private void finishNativeCommandWarmup(GuideService service) {
+        restoreNativeCommandSetting().whenComplete((restored, failure) ->
+                net.minecraft.client.Minecraft.getInstance().execute(() -> {
+                    nativeProbePending = false;
+                    if (finished || nativeCommandPendingFinish != null) return;
+                    if (failure != null || !Boolean.TRUE.equals(restored)
+                            || !"PASSED".equals(nativeCommandWarmup.get("outcome").getAsString())) {
+                        failWithoutRequest("native_command_warmup_failed", "Native command warmup failed; inspect its receipt");
+                        return;
+                    }
+                    selectSession(service);
+                }));
+    }
+
+    /** One serialized restoration, including harness timeout while enable is still pending. */
+    private java.util.concurrent.CompletableFuture<Boolean> restoreNativeCommandSetting() {
+        if (nativeCommandRestore != null) return nativeCommandRestore;
+        nativeCommandRestore = new java.util.concurrent.CompletableFuture<>();
+        nativeCommandEnable.whenComplete((ignored, enableFailure) ->
+                net.minecraft.client.Minecraft.getInstance().execute(() -> {
+                    boolean original = nativeCommandOriginalSetting;
+                    var restoration = clientSettings.snapshot().unrestrictedJavascript().enabled() == original
+                            ? java.util.concurrent.CompletableFuture.<ToolResult<Boolean>>completedFuture(
+                                    new ToolResult.Success<>(true))
+                            : clientSettings.saveUnrestrictedJavascript(original);
+                    restoration.whenComplete((result, failure) ->
+                            net.minecraft.client.Minecraft.getInstance().execute(() -> {
+                                boolean actual = clientSettings.snapshot().unrestrictedJavascript().enabled();
+                                boolean restored = failure == null && result instanceof ToolResult.Success<Boolean>
+                                        && actual == original;
+                                nativeCommandWarmup.addProperty("restoredUnrestrictedSetting", actual);
+                                nativeCommandWarmup.addProperty("javascriptSettingRestored", restored);
+                                if (!restored) {
+                                    nativeCommandWarmup.addProperty("outcome", "FAILED");
+                                    nativeCommandWarmup.addProperty("restorationFailure", "Actual unrestricted settings restore failed");
+                                }
+                                nativeCommandRestore.complete(restored);
+                            }));
+                }));
+        return nativeCommandRestore;
     }
 
     /** Setup-only native recipe unlock; never a model Tool, inventory grant, or accepted UI action. */
@@ -758,6 +868,11 @@ public final class GuideClientE2EController {
             GuideBuilderE2EProbe.verify(config.scenario(), snapshot.actorId(), builderAnchor,
                     request, clientSettings, unrestrictedAtStart, probe -> {
                 nativeProbePending = false;
+                if (nativeCommandWarmup != null) {
+                    probe.add("nativeCommandWarmup", nativeCommandWarmup);
+                    if (!"PASSED".equals(nativeCommandWarmup.get("outcome").getAsString()))
+                        probe.addProperty("outcome", "FAILED");
+                }
                 if (currentPlayerAnchor != null) probe.add("currentPlayerAnchor", gson.toJsonTree(currentPlayerAnchor));
                 if (config.scenario().equals("builder-reload") || config.scenario().equals("builder-live-undo"))
                     probe.addProperty("originSource", "prior-passed-independent-native-receipt");
@@ -1238,7 +1353,33 @@ public final class GuideClientE2EController {
 
     private void finish(String report) {
         if (finished) return;
+        if (nativeCommandOriginalSetting != null
+                && (nativeCommandRestore == null || !nativeCommandRestore.isDone())) {
+            if (nativeCommandPendingFinish != null) return;
+            nativeCommandPendingFinish = report;
+            if (nativeCommandCancellation != null) nativeCommandCancellation.cancel();
+            restoreNativeCommandSetting().whenComplete((restored, failure) ->
+                    net.minecraft.client.Minecraft.getInstance().execute(() -> {
+                        String pending = nativeCommandPendingFinish;
+                        nativeCommandPendingFinish = null;
+                        if (failure != null || !Boolean.TRUE.equals(restored)) {
+                            var retained = com.google.gson.JsonParser.parseString(pending).getAsJsonObject();
+                            retained.addProperty("outcome", "HARNESS_FAILED");
+                            retained.addProperty("failureCode", "native_command_setting_restore_failed");
+                            retained.addProperty("failureMessage", "Actual client setting restoration failed");
+                            pending = gson.toJson(retained);
+                        }
+                        finish(pending);
+                    }));
+            return;
+        }
         finished = true;
+        if (nativeCommandCancellation != null) nativeCommandCancellation.cancel();
+        if (nativeCommandWarmup != null) {
+            var retained = com.google.gson.JsonParser.parseString(report).getAsJsonObject();
+            retained.add("nativeCommandWarmup", nativeCommandWarmup);
+            report = gson.toJson(retained);
+        }
         if (subscription != null) subscription.close();
         if (graphicalRecipeSeedReceipt != null) {
             var retained = com.google.gson.JsonParser.parseString(report).getAsJsonObject();

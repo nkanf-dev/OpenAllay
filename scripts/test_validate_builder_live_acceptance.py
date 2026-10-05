@@ -650,6 +650,13 @@ class DurableAcceptanceAuditTests(unittest.TestCase):
         self.mutate(self.directory / "launch.json", lambda value: value.update(minecraft="1.19.2", loader="forge"))
         self.mutate(self.template_path, lambda value: value.update(gameVersion="1.19.2", dataVersion=3120))
 
+        _, warmup = NativeCommandWarmupTests().valid()
+        warmup["actorId"] = self.actor
+        for result in warmup["commands"].values():
+            result["actorId"] = self.actor
+        self.mutate(self.directory / "report.json", lambda value: (
+            value.update(nativeCommandWarmup=warmup), value["nativeAcceptance"].update(nativeCommandWarmup=warmup)))
+
     def test_forge_1192_full_acceptance_and_exact_original_reload(self):
         self.forge_identity()
         directory = self.reload_phase()
@@ -707,3 +714,43 @@ class DurableAcceptanceAuditTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+class NativeCommandWarmupTests(unittest.TestCase):
+    def valid(self):
+        actor = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+        token = "openallay_native_command_" + "a" * 32
+        warmup = {"outcome": "PASSED", "actorId": actor, "token": token,
+                  "worldAuthorityChanged": False, "initialUnrestrictedSetting": False,
+                  "restoredUnrestrictedSetting": False}
+        for name in ("nativeFeedbackEvidence", "offOwnerCaptureRejected", "closedCapabilityRemoved",
+                     "closedBridgeRemoved", "cancelledReuseRejected", "serverReadbackOwnerThread",
+                     "cheatsOffAfter", "survivalAfter", "javascriptSettingRestored"):
+            warmup[name] = True
+        warmup["commands"] = {}
+        for index, (name, command, message) in enumerate((
+                ("help", "help me", "/me <action>"),
+                ("signed", "me " + token, "Player " + token),
+                ("error", "help " + token + "_missing", "Native error")), 1):
+            warmup["commands"][name] = {"actorId": actor, "command": command, "state": "feedback",
+                                       "feedbackObserved": True, "messages": [message], "sequence": float(index)}
+        return actor, warmup
+
+    def test_exact_forge_warmup_requires_feedback_and_restored_builder_baseline(self):
+        actor, warmup = self.valid()
+        manifest = {"minecraft": "1.19.2", "loader": "forge", "unrestrictedOptIn": False}
+        validator.validate_native_command_warmup({"nativeCommandWarmup": warmup}, {"nativeCommandWarmup": warmup}, manifest, actor)
+        for key, value in (("javascriptSettingRestored", False), ("restoredUnrestrictedSetting", True),
+                           ("nativeFeedbackEvidence", False)):
+            invalid = copy.deepcopy(warmup); invalid[key] = value
+            with self.assertRaises(ValueError):
+                validator.validate_native_command_warmup({"nativeCommandWarmup": invalid}, {"nativeCommandWarmup": invalid}, manifest, actor)
+        with self.assertRaises(ValueError):
+            validator.validate_native_command_warmup({}, {}, manifest, actor)
+
+    def test_actor_token_sequence_cannot_be_replaced(self):
+        actor, warmup = self.valid()
+        manifest = {"minecraft": "1.19.2", "loader": "forge"}
+        for key, value in (("actorId", "different"), ("sequence", 1.5), ("messages", ["unrelated"])):
+            invalid = copy.deepcopy(warmup); invalid["commands"]["signed"][key] = value
+            with self.assertRaises(ValueError):
+                validator.validate_native_command_warmup({"nativeCommandWarmup": invalid}, {"nativeCommandWarmup": invalid}, manifest, actor)

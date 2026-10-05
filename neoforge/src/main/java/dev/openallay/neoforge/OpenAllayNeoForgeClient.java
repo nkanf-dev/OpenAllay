@@ -238,8 +238,10 @@ public final class OpenAllayNeoForgeClient {
                     settings == null ? null : settings.settings(),
                     modelRegistry == null ? null : modelRegistry::encodedTrace);
             controller.attachGraphicalProbe(ui::openGuide, ui::e2eHudReceipt, ui::e2eVoiceSettings);
-            if (Boolean.getBoolean(GuideClientE2EConfig.ENABLED))
+            if (Boolean.getBoolean(GuideClientE2EConfig.ENABLED)) {
                 controller.attachGraphicalToastReceipt(ui::e2eNotificationReceipt);
+                controller.attachNativeCommandProbe(runtime, contexts);
+            }
             NeoForgeNativeClientEvents.onEndTick(() -> {
                 controller.tick(client.player == null ? null : client.player.getUUID());
             });
