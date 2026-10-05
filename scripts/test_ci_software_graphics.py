@@ -13,20 +13,23 @@ SPEC.loader.exec_module(GRAPHICS)
 
 
 class SoftwareGraphicsTest(unittest.TestCase):
-    def make_runtime(self, base, sdl=True):
+    def make_runtime(self, base, sdl=True, target="26.3", loader="fabric"):
         root = Path(base).resolve()
-        runtime = root / "build/e2e/runtime/26.3/minecraft"
+        runtime = root / "build/e2e/runtime" / target / "minecraft"
         (runtime / ".provision").mkdir(parents=True)
-        profile = root / "gradle/minecraft-targets/26.3.properties"
+        profile = root / "gradle/minecraft-targets" / (target + ".properties")
         profile.parent.mkdir(parents=True)
-        profile.write_text("minecraft_version=26.3\njava_version=25\n")
+        profile.write_text("minecraft_version=" + target + "\njava_version=25\n")
+        (root / "gradle/minecraft-target-loaders.json").write_text(json.dumps({
+            "26.3": {"loaders": ["fabric", "neoforge"], "nativeToolchain": "neoForge"},
+            "1.19.2": {"loaders": ["forge"], "nativeToolchain": "legacyForge"}}))
         records = {}
         def record(path):
             data = path.read_bytes()
             value = {"sha1": hashlib.sha1(data).hexdigest(), "sha256": hashlib.sha256(data).hexdigest(), "size": len(data)}
             records[path.relative_to(runtime).as_posix()] = value
             return value
-        metadata = {"id": "26.3", "libraries": []}
+        metadata = {"id": target, "libraries": []}
         native = runtime / "libraries/org/lwjgl/lwjgl-sdl/3.4.3/lwjgl-sdl-3.4.3-natives-linux.jar"
         if sdl:
             native.parent.mkdir(parents=True)
@@ -49,14 +52,14 @@ class SoftwareGraphicsTest(unittest.TestCase):
                 value = record(path)
                 metadata["libraries"].append({"name": coordinate, "rules": rules, "downloads": {"artifact": {
                     "path": path.relative_to(runtime / "libraries").as_posix(), "sha1": value["sha1"], "size": value["size"]}}})
-        version = runtime / "versions/26.3/26.3.json"
+        version = runtime / "versions" / target / (target + ".json")
         version.parent.mkdir(parents=True)
         version.write_text(json.dumps(metadata))
         record(version)
-        receipt = {"loader": "fabric", "minecraft": "26.3", "minecraftRoot": str(runtime),
+        receipt = {"loader": loader, "minecraft": target, "minecraftRoot": str(runtime),
                    "mechanism": "official-client-installer", "sourceProfileSha256": hashlib.sha256(profile.read_bytes()).hexdigest(),
                    "files": records}
-        (runtime / ".provision/fabric-runtime.json").write_text(json.dumps(receipt))
+        (runtime / ".provision" / (loader + "-runtime.json")).write_text(json.dumps(receipt))
         return root, runtime, native
 
     def test_verified_supplier_and_class_bytes_are_recorded(self):
@@ -207,6 +210,29 @@ class SoftwareGraphicsTest(unittest.TestCase):
                 result = GRAPHICS.preflight({"fixture": True}, output, {"DISPLAY": ":99", "LIBGL_ALWAYS_SOFTWARE": "1"})
                 self.assertFalse(result["ready"])
                 self.assertIn("closure", result["failure"])
+
+    def test_forge_1192_glfw_delegates_exact_command_without_sdl_probe(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root, runtime, _ = self.make_runtime(temporary, False, "1.19.2", "forge")
+            self.assertIsNone(GRAPHICS.select_native(runtime, "forge", "1.19.2", root))
+            original = {"DISPLAY": ":99", "LIBGL_ALWAYS_SOFTWARE": "1"}
+            command = ["python3", "-B", "scripts/run-ci-game-workflow.py", "--loader", "forge", "--minecraft-target", "1.19.2"]
+            with mock.patch.dict(GRAPHICS.os.environ, original, clear=True), mock.patch.object(GRAPHICS, "preflight") as probe, mock.patch.object(GRAPHICS.subprocess, "run", return_value=mock.Mock(returncode=7)) as launched:
+                self.assertEqual(7, GRAPHICS.run(runtime, "forge", "1.19.2", root / "build/ci-graphics/forge-1192", command, root))
+                self.assertEqual(command, launched.call_args.args[0])
+                self.assertEqual(original, launched.call_args.kwargs["env"])
+                probe.assert_not_called()
+            report = json.loads((root / "build/ci-graphics/forge-1192/readiness.json").read_text())
+            self.assertEqual("NOT_APPLICABLE", report["preflight"])
+            self.assertEqual("unchanged GLFW environment", report["baseline"])
+            self.assertIsNone(report["ready"])
+
+    def test_actual_target_map_refuses_forge_as_neoforge_or_modern_forge_alias(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root, runtime, _ = self.make_runtime(temporary, False, "1.19.2", "forge")
+            for loader, target in (("neoforge", "1.19.2"), ("fabric", "1.19.2"), ("forge", "26.3")):
+                with self.subTest(loader=loader, target=target), self.assertRaisesRegex(ValueError, "Invalid runtime target/loader"):
+                    GRAPHICS.select_native(runtime, loader, target, root)
 
 
 if __name__ == "__main__":

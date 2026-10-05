@@ -3,8 +3,8 @@
 
 Reads only packaged acceptance reports, production traces, templates and journals.
 It does not launch Minecraft, call a provider, inspect save chunks or modify files.
-For acceptance, reads ONLY the exact mainline 26.2 native Builder identity SavedData
-under the manifest original disposable world. It never reads chunks or other saves.
+For acceptance, reads ONLY the exact native Builder identity SavedData for
+26.2 or Forge 1.19.2 under the original disposable world. No chunks or other saves.
 Printed JSON is derived evidence, not a model-authored acceptance claim.
 """
 
@@ -562,12 +562,18 @@ FAILURES = (("invalid_native_input", "Builder native operation failed; inspect t
 
 
 def native_world_identity(game, manifest):
-    """Only the exact 26.2 overworld SavedData identity; no save walk/chunks."""
-    require(manifest.get("minecraft") == "26.2", "Bounded native identity parser supports verified mainline 26.2 only")
+    """Exact native producer path for two explicitly bound targets; no search/fallback."""
+    target = manifest.get("minecraft")
+    if target == "26.2":
+        # 26.2 stores even the overworld under its Identifier path.
+        relative = "dimensions/minecraft/overworld/data/openallay_builder/world_identity.dat"
+    elif target == "1.19.2" and manifest.get("loader") == "forge":
+        # Inherited NativeWorldIdentity STORAGE_ID plus 1.19.2's overworld data folder.
+        relative = "data/openallay_builder_world_identity.dat"
+    else:
+        raise ValueError("Bounded native identity parser supports verified 26.2 and Forge 1.19.2 only")
     require(re.fullmatch(r"openallay-builder-[a-zA-Z0-9_.-]+", manifest["world"]), "Invalid disposable world name")
-    # 26.2 stores every dimension, including overworld, under its Identifier path.
-    path = under(game / "saves" / manifest["world"]
-                 / "dimensions/minecraft/overworld/data/openallay_builder/world_identity.dat", game)
+    path = under(game / "saves" / manifest["world"] / relative, game)
     compressed = read_bytes(path, 65536)
     require(compressed.startswith(b"\x1f\x8b"), "Native identity is not gzip NBT")
     decoder = zlib.decompressobj(16 + zlib.MAX_WBITS)
@@ -613,6 +619,8 @@ def native_world_identity(game, manifest):
     fields(identity, ("data", "DataVersion"))
     fields(identity["data"], ("uuid",))
     integer(identity["DataVersion"])
+    if target == "1.19.2":
+        require(identity["DataVersion"] == 3120, "Native identity DataVersion differs from Minecraft 1.19.2")
     return canonical_uuid(identity["data"]["uuid"]), path, identity["DataVersion"]
 
 
@@ -898,6 +906,8 @@ def validate_acceptance(directory, repo=REPO, reload_directory=None):
     if reload_directory is not None:
         reload = load_phase(reload_directory, "builder-reload", repo)
         require(reload["game"] == phase["game"] and Path(reload["manifest"].get("resumeFrom", "")).absolute() == phase["directory"]
+                and reload["manifest"].get("minecraft") == phase["manifest"].get("minecraft")
+                and reload["manifest"].get("loader") == phase["manifest"].get("loader")
                 and reload["manifest"]["world"] == phase["manifest"]["world"] and reload["native"].get("exactPersistencePassed") is True,
                 "Reload does not independently resume exact original acceptance world")
         reload_receipt = scalar_receipt(reload["pairs"][-1][1])

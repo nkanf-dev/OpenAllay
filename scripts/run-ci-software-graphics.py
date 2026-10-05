@@ -17,6 +17,8 @@ import subprocess
 import sys
 import zipfile
 
+from minecraft_target_loaders import LOADERS, target_loaders
+
 ROOT = Path(__file__).resolve().parents[1]
 MAX_NATIVE = 16 * 1024 * 1024
 MAX_LOG = 2 * 1024 * 1024
@@ -68,7 +70,7 @@ def linux_rules(rules):
 
 def select_native(runtime, loader, target, root=ROOT):
     root, runtime = Path(root).resolve(), Path(runtime).resolve()
-    require(loader in ("fabric", "neoforge") and re.fullmatch(r"[A-Za-z0-9_.-]+", target), "Invalid runtime target/loader")
+    require(loader in target_loaders(root, target)["loaders"], "Invalid runtime target/loader")
     require(runtime == root / "build/e2e/runtime" / target / "minecraft", "Graphics probe must use the exact isolated official runtime")
     receipt_path = runtime / ".provision" / (loader + "-runtime.json")
     receipt = json.loads(receipt_path.read_text())
@@ -355,7 +357,7 @@ def run(runtime, loader, target, output, command, root=ROOT):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--loader", choices=("fabric", "neoforge"))
+    parser.add_argument("--loader", choices=sorted(LOADERS))
     parser.add_argument("--minecraft-target")
     parser.add_argument("--minecraft-root", type=Path)
     parser.add_argument("--output", type=Path)

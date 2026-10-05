@@ -8,6 +8,8 @@ from pathlib import Path
 import re
 import shutil
 
+from minecraft_target_loaders import LOADERS
+
 ROOT = Path(__file__).resolve().parents[1]
 MAX_FILE = 128 * 1024 * 1024
 MAX_TOTAL = 512 * 1024 * 1024
@@ -55,6 +57,8 @@ def exact_copy(record, output, root, totals):
 
 def compact(loader, batch_id, root=ROOT):
     root = root.resolve()
+    if loader not in LOADERS:
+        raise ValueError("Unknown actual client loader")
     if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,55}", batch_id):
         raise ValueError("Unsafe client batch id")
     spec = importlib.util.spec_from_file_location("ci_lossless_diagnostics", root / "scripts/prepare-ci-diagnostics.py")
@@ -121,7 +125,7 @@ def compact(loader, batch_id, root=ROOT):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--loader", required=True, choices=("fabric", "neoforge"))
+    parser.add_argument("--loader", required=True, choices=sorted(LOADERS))
     parser.add_argument("--batch-id", required=True)
     arguments = parser.parse_args()
     try:

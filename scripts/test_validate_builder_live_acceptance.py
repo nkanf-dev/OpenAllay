@@ -641,6 +641,69 @@ class DurableAcceptanceAuditTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Duplicate native identity NBT"):
             self.audit()
 
+    def forge_identity(self):
+        # Synthetic 1.19.2 SavedData at the producer's single exact path.
+        self.identity_path.unlink()
+        self.identity_path = self.game / "saves" / self.world / "data/openallay_builder_world_identity.dat"
+        self.identity_path.parent.mkdir(parents=True, exist_ok=True)
+        self.identity_path.write_bytes(gzip.compress(identity_nbt(self.world_id, 3120), mtime=0))
+        self.mutate(self.directory / "launch.json", lambda value: value.update(minecraft="1.19.2", loader="forge"))
+        self.mutate(self.template_path, lambda value: value.update(gameVersion="1.19.2", dataVersion=3120))
+
+    def test_forge_1192_full_acceptance_and_exact_original_reload(self):
+        self.forge_identity()
+        directory = self.reload_phase()
+        self.mutate(directory / "launch.json", lambda value: value.update(minecraft="1.19.2", loader="forge"))
+        proof = validator.validate_acceptance(self.directory, self.repo, reload_directory=directory)
+        self.assertEqual(str(self.identity_path), proof["identity"])
+        self.assertEqual(3120, proof["nativeDataVersion"])
+        self.assertEqual(self.actor, proof["actorUuid"])
+        self.assertEqual(self.world_id, proof["worldId"])
+        self.assertEqual(14, len(proof["journalRows"]))
+        self.assertEqual(85, proof["landmarkCount"])
+        self.assertEqual(hashlib.sha256(self.template_path.read_bytes()).hexdigest(), proof["templateSha256"])
+        self.assertIn("reloadReportSha256", proof)
+
+    def test_forge_1192_identity_alias_mainline_path_and_wrong_external_version_refuse(self):
+        self.forge_identity()
+        data = self.identity_path.read_bytes()
+        self.identity_path.unlink()
+        mainline = self.game / "saves" / self.world / "dimensions/minecraft/overworld/data/openallay_builder/world_identity.dat"
+        mainline.write_bytes(data)
+        self.identity_path.with_name("world_identity.dat").write_bytes(data)
+        with self.assertRaisesRegex(ValueError, "Missing"):
+            self.audit()
+        # Matching synthetic template version cannot disguise the wrong native game version.
+        self.identity_path.write_bytes(gzip.compress(identity_nbt(self.world_id, 3121)))
+        self.mutate(self.template_path, lambda value: value.update(dataVersion=3121))
+        with self.assertRaisesRegex(ValueError, "DataVersion differs"):
+            self.audit()
+
+    def test_identity_unverified_targets_and_1192_wrong_loader_remain_closed(self):
+        self.forge_identity()
+        for target, loader in (("1.20.1", "neoforge"), ("1.20.4", "fabric"), ("26.3", "fabric"),
+                               ("1.19.2", "fabric"), ("1.19.2", "neoforge"), ("1.19.2", None)):
+            with self.subTest(target=target, loader=loader):
+                self.mutate(self.directory / "launch.json", lambda value: value.update(minecraft=target, loader=loader))
+                with self.assertRaisesRegex(ValueError, "supports verified"):
+                    self.audit()
+
+    def test_forge_reload_target_loader_game_path_and_native_anchor_remain_exact(self):
+        self.forge_identity()
+        directory = self.reload_phase()
+        self.mutate(directory / "launch.json", lambda value: value.update(minecraft="1.19.2", loader="forge"))
+        manifest = validator.read_json(directory / "launch.json")
+        for mutation in (lambda value: value.update(minecraft="26.2"), lambda value: value.update(loader="neoforge"),
+                         lambda value: value.update(gameDirectory=str(directory / "game"))):
+            write_json(directory / "launch.json", manifest)
+            self.mutate(directory / "launch.json", mutation)
+            with self.assertRaises(ValueError):
+                validator.validate_acceptance(self.directory, self.repo, reload_directory=directory)
+        write_json(directory / "launch.json", manifest)
+        self.mutate(directory / "report.json", lambda value: value["nativeAcceptance"].update(independentAnchor={"x": 999, "y": -61, "z": 8}))
+        with self.assertRaises(ValueError):
+            validator.validate_acceptance(self.directory, self.repo, reload_directory=directory)
+
 
 if __name__ == "__main__":
     unittest.main()
