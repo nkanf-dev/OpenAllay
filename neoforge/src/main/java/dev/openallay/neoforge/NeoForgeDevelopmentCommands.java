@@ -16,8 +16,6 @@ import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.network.chat.Component;
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.RegisterCommandsEvent;
 
 public final class NeoForgeDevelopmentCommands {
     private NeoForgeDevelopmentCommands() {}
@@ -25,9 +23,8 @@ public final class NeoForgeDevelopmentCommands {
     public static void register(OpenAllayRuntime runtime) {
         DevelopmentCommandHandler handler =
                 new DevelopmentCommandHandler(runtime.developmentTools());
-        NeoForge.EVENT_BUS.addListener((RegisterCommandsEvent event) ->
-                event.getDispatcher()
-                        .register(literal("openallay")
+        NeoForgeNativeCommandRegistration.server(dispatcher ->
+                dispatcher.register(literal("openallay")
                                 .then(literal("dev")
                                         .requires(source -> dev.openallay.context.minecraft.MinecraftCommandPermissions.canReadWorld(source))
                                         .then(literal("tools").executes(context -> {
@@ -61,29 +58,24 @@ public final class NeoForgeDevelopmentCommands {
 
     private static CompletableFuture<Suggestions> suggestTraces(
             OpenAllayRuntime runtime, CommandSourceStack source, SuggestionsBuilder builder) {
-        return switch (runtime.traceReplay().traceIds(source)) {
-            case ToolResult.Success<?> success -> SharedSuggestionProvider.suggest(
-                    ((java.util.List<?>) success.value()).stream()
-                            .map(Object::toString)
-                            .toList(),
-                    builder);
-            case ToolResult.Failure<?> failure -> builder.buildFuture();
-        };
+        ToolResult<java.util.List<String>> result = runtime.traceReplay().traceIds(source);
+        if (result instanceof ToolResult.Success<java.util.List<String>> success) {
+            return SharedSuggestionProvider.suggest(success.value(), builder);
+        }
+        return builder.buildFuture();
     }
 
     private static int replay(
             OpenAllayRuntime runtime, CommandSourceStack source, String traceId) {
-        return switch (runtime.traceReplay().replay(source, traceId)) {
-            case ToolResult.Success<ReplayReport> success -> {
-                success.value().chatLines().forEach(line ->
-                        source.sendSuccess(() -> Component.literal(line), false));
-                yield success.value().passed() ? 1 : 0;
-            }
-            case ToolResult.Failure<ReplayReport> failure -> {
-                source.sendFailure(Component.literal(
-                        "FAILURE " + failure.code() + ": " + failure.message()));
-                yield 0;
-            }
-        };
+        ToolResult<ReplayReport> result = runtime.traceReplay().replay(source, traceId);
+        if (result instanceof ToolResult.Success<ReplayReport> success) {
+            success.value().chatLines().forEach(line ->
+                    source.sendSuccess(() -> Component.literal(line), false));
+            return success.value().passed() ? 1 : 0;
+        }
+        ToolResult.Failure<ReplayReport> failure = (ToolResult.Failure<ReplayReport>) result;
+        source.sendFailure(Component.literal(
+                "FAILURE " + failure.code() + ": " + failure.message()));
+        return 0;
     }
 }

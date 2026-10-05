@@ -14,14 +14,12 @@ import java.util.function.Consumer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.network.chat.Component;
-import net.neoforged.neoforge.client.event.RegisterClientCommandsEvent;
-import net.neoforged.neoforge.common.NeoForge;
 
 public final class NeoForgeGuideCommands {
     private NeoForgeGuideCommands() {}
 
     public static void register(GuideCommandFacade guide) {
-        NeoForge.EVENT_BUS.addListener((RegisterClientCommandsEvent event) -> event.getDispatcher().register(
+        NeoForgeNativeCommandRegistration.client(dispatcher -> dispatcher.register(
                 literal("guide")
                         .executes(context -> invoke(context.getSource(), sink -> guide.open(actor(), sink)))
                         .then(literal("cancel").executes(context -> invoke(
