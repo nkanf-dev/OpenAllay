@@ -212,7 +212,7 @@ dependencies {
     implementation('org.slf4j:slf4j-api:2.0.1')
     compileOnly('net.fabricmc:sponge-mixin:0.17.3+mixin.0.8.7') { transitive = false }
     compileOnly(annotationProcessor('io.github.llamalad7:mixinextras-common:0.5.3'))
-    compileOnly("mezz.jei:jei-${props.jeiArtifactTarget}-neoforge-api:${props.jei_version}")
+    compileOnly("mezz.jei:jei-${props.jeiArtifactTarget}-common-api:${props.jei_version}")
     compileOnly("me.shedaniel:RoughlyEnoughItems-api-neoforge:${props.rei_version}")
     compileOnly("dev.architectury:architectury-neoforge:${props.architectury_version}")
     jarJar(project(':extension-api'))
