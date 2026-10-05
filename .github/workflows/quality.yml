@@ -4,21 +4,96 @@ on:
   push:
     branches:
       - main
-      - "mc/**"
       - "feat/**"
   pull_request:
+  # Validation branches dispatch full batches or only failed/affected clients.
   workflow_dispatch:
+    inputs:
+      mode:
+        description: "full runs all gates and both clients; clients reuses verified JARs"
+        type: choice
+        options: [clients, full]
+        required: true
+        default: clients
+      client_loaders:
+        description: "Exact failed/affected fabric,neoforge CSV; none selects no clients"
+        type: string
+        required: true
+        default: none
+      artifact_run_id:
+        description: "Prior successful Quality verifier run ID, only for selected clients"
+        type: string
+        required: false
+      artifact_source_sha:
+        description: "Exact 40-character source SHA of that verified production artifact"
+        type: string
+        required: false
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
-  group: quality-${{ github.workflow }}-${{ github.ref }}
+  # Client-only repair dispatches do not cancel independent full verification.
+  group: quality-${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}-${{ inputs.mode || 'full' }}-${{ inputs.client_loaders || 'none' }}
   cancel-in-progress: true
 
 jobs:
+  plan:
+    name: Select mainline verification jobs
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      run_verify: ${{ steps.plan.outputs.run_verify }}
+      run_client: ${{ steps.plan.outputs.run_client }}
+      client_matrix: ${{ steps.plan.outputs.client_matrix }}
+    steps:
+      - name: Check out candidate and artifact source history
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Test exact client selection and artifact-source decisions
+        run: |
+          python3 -B -m unittest discover -s scripts -p 'test_plan_ci_verification.py'
+          python3 -B -m unittest discover -s scripts -p 'test_plan_quality_verification.py'
+
+      - name: Select only requested failed or affected clients
+        id: plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MODE: ${{ github.event_name == 'workflow_dispatch' && (inputs.mode || 'clients') || 'full' }}
+          CLIENT_LOADERS: ${{ github.event_name == 'workflow_dispatch' && inputs.client_loaders || 'none' }}
+          SOURCE_RUN_ID: ${{ inputs.artifact_run_id }}
+          SOURCE_SHA: ${{ inputs.artifact_source_sha }}
+          RUN_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          python3 -B scripts/plan-quality-verification.py \
+            --mode "$MODE" --client-loaders "$CLIENT_LOADERS" \
+            --candidate-sha "$GITHUB_SHA" --current-run-id "$GITHUB_RUN_ID" --current-run-head-sha "$RUN_HEAD_SHA" \
+            --repository "$GITHUB_REPOSITORY" \
+            --source-run-id "$SOURCE_RUN_ID" --source-sha "$SOURCE_SHA" \
+            --report quality-verification-plan.json --github-output "$GITHUB_OUTPUT"
+
+      - name: Retain exact Quality job selection and original artifact source
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: quality-plan-${{ github.run_id }}-${{ github.run_attempt }}
+          retention-days: 7
+          if-no-files-found: error
+          path: quality-verification-plan.json
+
+      - name: Record runner and production artifact identities separately
+        run: |
+          printf '### Mainline verification plan\n\nCandidate runner: `%s`. Prior successful verifier evidence belongs to its original source SHA. Production JAR source is recorded per client.\n\n```json\n' "$GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
+          cat quality-verification-plan.json >> "$GITHUB_STEP_SUMMARY"
+          printf '\n```\n' >> "$GITHUB_STEP_SUMMARY"
+
   verify:
     name: Minecraft 26.2
+    needs: plan
+    if: ${{ needs.plan.outputs.run_verify == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     env:
@@ -122,19 +197,21 @@ jobs:
 
   client:
     name: Packaged client ${{ matrix.loader }}
-    needs: verify
+    needs: [plan, verify]
+    # In clients mode the verifier is intentionally skipped, not rerun.
+    if: ${{ always() && !cancelled() && needs.plan.result == 'success' && needs.plan.outputs.run_client == 'true' && (needs.plan.outputs.run_verify == 'false' || needs.verify.result == 'success') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     strategy:
       fail-fast: false
-      matrix:
-        loader: [fabric, neoforge]
+      matrix: ${{ fromJSON(needs.plan.outputs.client_matrix) }}
     env:
       LIBGL_ALWAYS_SOFTWARE: "1"
       ALSOFT_DRIVERS: "null"
-      OPENALLAY_E2E_SOURCE_REVISION: ${{ github.sha }}
+      # JAR source stays exact even when the repair runner has a newer head.
+      OPENALLAY_E2E_SOURCE_REVISION: ${{ matrix.source_sha }}
     steps:
-      - name: Check out the tested source
+      - name: Check out the candidate client runner source
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
@@ -157,15 +234,46 @@ jobs:
           build/ci-tools/bin/python -B -m unittest discover -s scripts -p 'test_ci_*.py' -v
           build/ci-tools/bin/python -B -m unittest discover -s scripts -p 'test_packaged_builder_acceptance.py' -v
 
+      - name: Download this run's exact Quality verification plan
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
+        with:
+          name: quality-plan-${{ github.run_id }}-${{ github.run_attempt }}
+          path: build/ci-verification
+
+      - name: Read the exact successful Quality artifact source job
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN_ID: ${{ matrix.source_run_id }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID" > build/ci-verification/source-run.json
+          gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID/jobs?filter=latest&per_page=100" > build/ci-verification/source-job-pages.json
+          python3 -c 'import json; from pathlib import Path; p = Path("build/ci-verification"); pages = json.loads((p / "source-job-pages.json").read_text()); (p / "source-jobs.json").write_text(json.dumps([job for page in pages for job in page["jobs"]]))'
+
       - name: Download the exact verified production JARs
         uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
         with:
-          name: client-production-${{ github.sha }}
+          name: client-production-${{ matrix.source_sha }}
+          run-id: ${{ matrix.source_run_id }}
+          github-token: ${{ github.token }}
           path: build/ci-client-production
 
       - name: Verify the downloaded original artifact checksums
         run: sha256sum --check SHA256SUMS
         working-directory: build/ci-client-production
+
+      - name: Retain exact verifier source, attempt and original JAR SHA-256
+        env:
+          LOADER: ${{ matrix.loader }}
+        run: |
+          python3 -B scripts/plan-quality-verification.py --repository "$GITHUB_REPOSITORY" \
+            --report build/ci-verification/quality-verification-plan.json --receipt-loader "$LOADER" \
+            --artifact-directory build/ci-client-production \
+            --source-run-json build/ci-verification/source-run.json \
+            --source-jobs-json build/ci-verification/source-jobs.json \
+            --receipt build/ci-verification/artifact-source.json
+          printf '### Exact mainline client artifact source\n```json\n' >> "$GITHUB_STEP_SUMMARY"
+          cat build/ci-verification/artifact-source.json >> "$GITHUB_STEP_SUMMARY"
+          printf '\n```\n' >> "$GITHUB_STEP_SUMMARY"
 
       - name: Provision the official isolated game runtime
         run: |
@@ -192,6 +300,8 @@ jobs:
           retention-days: 7
           if-no-files-found: warn
           path: |
+            build/ci-verification/*.json
+            build/ci-client-production/SHA256SUMS
             build/ci-runtime-receipt.json
             build/e2e/runtime/26.2/minecraft/.provision/*.json
             build/e2e/runtime/26.2/minecraft/.provision/*.log

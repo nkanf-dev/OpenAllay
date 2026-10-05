@@ -117,9 +117,13 @@ class PlanTest(unittest.TestCase):
         self.write("docs/dispatch.md", "dispatch repair\n")
         self.write("extension-api/README.md", "SDK documentation repair\n")
         self.write("adapters/minecraft-26.2/README.md", "historical native receipt wording\n")
+        self.write("scripts/fixtures/minecraft-launch/1.20.1.json", "official offline argument fixture\n")
+        self.write("scripts/fixtures/minecraft-launch/1.21.1.json", "official offline argument fixture\n")
+        self.write("scripts/fixtures/minecraft-launch/README.md", "fixture source provenance\n")
         self.write("common/src/test/java/Test.java", "new test\n")
         self.write(".github/workflows/minecraft-native.yml", "fixed workflow\n")
         self.write("scripts/run-ci-game-workflow.py", "fixed runner\n")
+        self.write("scripts/run-ci-software-graphics.py", "fixed CI graphics probe\n")
         self.commit("non-production repair")
         plan = self.reuse()
         self.assertNotEqual(self.source_sha, plan["candidate_sha"])
@@ -180,6 +184,17 @@ class PlanTest(unittest.TestCase):
             with self.subTest(field=field), self.assertRaises(ValueError):
                 planner.validate_source_job(run, jobs, "123", self.source_sha,
                                             "owner/OpenAllay", "26.3")
+
+    def test_source_job_requires_positive_attempt_and_exact_job_url_id(self):
+        for attempt in (None, 0, True, "2"):
+            run, jobs = self.source_run()
+            run["run_attempt"] = jobs[0]["run_attempt"] = attempt
+            with self.subTest(attempt=attempt), self.assertRaises(ValueError):
+                planner.validate_source_job(run, jobs, "123", self.source_sha, "owner/OpenAllay", "26.3")
+        run, jobs = self.source_run()
+        jobs[0]["html_url"] = "https://github.com/owner/OpenAllay/actions/runs/123/job/987"
+        with self.assertRaises(ValueError):
+            planner.validate_source_job(run, jobs, "123", self.source_sha, "owner/OpenAllay", "26.3")
 
     def test_aggregate_failure_does_not_invalidate_successful_target_source_job(self):
         run, jobs = self.source_run()

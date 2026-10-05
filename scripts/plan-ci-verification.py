@@ -23,11 +23,15 @@ MODULES = "common|fabric|neoforge|engine-core|extension-api|runtime-json|runtime
 NON_PACKAGE_FILES = {
     "README.md", "README.zh-CN.md", "AGENTS.md", ".gitignore",
     "extension-api/README.md", "adapters/minecraft-26.2/README.md",
+    "scripts/fixtures/minecraft-launch/1.20.1.json",
+    "scripts/fixtures/minecraft-launch/1.21.1.json",
+    "scripts/fixtures/minecraft-launch/README.md",
 }
 NON_PACKAGE_RUNNERS = {
-    "scripts/plan-ci-verification.py", "scripts/prepare-ci-diagnostics.py",
+    "scripts/plan-ci-verification.py", "scripts/plan-quality-verification.py", "scripts/prepare-ci-diagnostics.py",
     "scripts/prepare-ci-minecraft-runtime.py", "scripts/run-ci-client-acceptance.py",
     "scripts/run-ci-game-workflow.py", "scripts/run-packaged-builder-acceptance.py",
+    "scripts/run-ci-software-graphics.py",
     "scripts/compact-ci-game-evidence.py", "scripts/e2e-builder-fixture.js", "scripts/e2e-model-fixture.py",
     "scripts/run-real-client-e2e.sh", "scripts/validate-builder-live-acceptance.py",
 }
@@ -105,25 +109,30 @@ def package_input_changed(path, target):
     return True
 
 
-def validate_source_job(run, jobs, run_id, source_sha, repository, target, run_head_sha=None):
+def validate_source_job(run, jobs, run_id, source_sha, repository, target, run_head_sha=None, *,
+                        workflow_path=".github/workflows/minecraft-native.yml", job_name=None):
     # PR jobs package the tested merge SHA; the Actions run API identifies the
     # contributing branch head. Keep both identities, never substitute one.
     run_head_sha = run_head_sha or source_sha
+    job_name = job_name or "Native " + target
     if (str(run.get("id")) != run_id or run.get("head_sha") != run_head_sha
-            or run.get("path") != ".github/workflows/minecraft-native.yml"
+            or run.get("path") != workflow_path
             or run.get("repository", {}).get("full_name") != repository):
         raise ValueError("artifact source run does not match repository, workflow, run ID and source SHA")
-    matches = [job for job in jobs if job.get("name") == "Native " + target]
+    matches = [job for job in jobs if job.get("name") == job_name]
     if len(matches) != 1:
-        raise ValueError("artifact source must have one exact Native " + target + " job")
+        raise ValueError("artifact source must have one exact " + job_name + " job")
     job = matches[0]
     if (job.get("status") != "completed" or job.get("conclusion") != "success"
             or job.get("head_sha") != run_head_sha or str(job.get("run_id")) != run_id
             or job.get("run_attempt") != run.get("run_attempt")):
-        raise ValueError("artifact source Native " + target + " job is not successful at its exact run head/attempt")
-    if not isinstance(job.get("id"), int) or not str(job.get("html_url", "")).startswith(
-            "https://github.com/" + repository + "/actions/runs/" + run_id + "/job/"):
-        raise ValueError("artifact source job has no verified job identity/URL")
+        raise ValueError("artifact source " + job_name + " job is not successful at its exact run head/attempt")
+    if (type(run.get("run_attempt")) is not int or run["run_attempt"] < 1
+            or type(job.get("run_attempt")) is not int or job["run_attempt"] < 1
+            or type(job.get("id")) is not int or job["id"] < 1
+            or job.get("html_url") != "https://github.com/" + repository + "/actions/runs/" + run_id
+            + "/job/" + str(job["id"])):
+        raise ValueError("artifact source job has no verified positive attempt/job identity/URL")
     return {"id": job["id"], "url": job["html_url"], "run_attempt": job["run_attempt"], "conclusion": "success"}
 
 
