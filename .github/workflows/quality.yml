@@ -60,6 +60,11 @@ jobs:
       - name: Test distribution automation
         run: python3 -m unittest discover -s scripts -p 'test_distribution*.py'
 
+      - name: Test client acceptance tooling
+        run: |
+          python3 -B -m unittest discover -s scripts -p 'test_ci_*.py'
+          python3 -B -m unittest discover -s scripts -p 'test_packaged_builder_acceptance.py'
+
       - name: Prepare pinned Extension source
         run: python3 scripts/prepare-distribution.py
 
@@ -80,3 +85,96 @@ jobs:
 
       - name: Verify distribution
         run: ./scripts/verify-distribution.sh
+
+      - name: Stage the exact production JARs for client acceptance
+        run: |
+          python3 -B scripts/stage-ci-client-production.py
+
+      - name: Retain the exact tested production JARs
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: client-production-${{ github.sha }}
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            build/ci-client-production/*.jar
+            build/ci-client-production/SHA256SUMS
+
+  client:
+    name: Packaged client ${{ matrix.loader }}
+    needs: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        loader: [fabric, neoforge]
+    env:
+      LIBGL_ALWAYS_SOFTWARE: "1"
+      ALSOFT_DRIVERS: "null"
+      OPENALLAY_E2E_SOURCE_REVISION: ${{ github.sha }}
+    steps:
+      - name: Check out the tested source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Set up the real game Java runtime
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
+        with:
+          distribution: temurin
+          java-version: "25"
+
+      - name: Install the headless display and software graphics tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 libopenal1 webp
+          python3 -m venv build/ci-tools
+          build/ci-tools/bin/python -m pip install Pillow==11.3.0
+
+      - name: Verify client orchestration and lossless image tooling
+        run: |
+          build/ci-tools/bin/python -B -m unittest discover -s scripts -p 'test_ci_*.py' -v
+          build/ci-tools/bin/python -B -m unittest discover -s scripts -p 'test_packaged_builder_acceptance.py' -v
+
+      - name: Download the exact verified production JARs
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
+        with:
+          name: client-production-${{ github.sha }}
+          path: build/ci-client-production
+
+      - name: Verify the downloaded original artifact checksums
+        run: sha256sum --check SHA256SUMS
+        working-directory: build/ci-client-production
+
+      - name: Provision the official isolated game runtime
+        run: |
+          python3 -B scripts/prepare-ci-minecraft-runtime.py             --loader "${{ matrix.loader }}" --java "$JAVA_HOME/bin/java"             --minecraft-root "$PWD/build/e2e/runtime/minecraft"             > build/ci-runtime-receipt.json
+
+      - name: Prepare verified official game assets
+        run: |
+          python3 -B scripts/run-packaged-builder-acceptance.py --prepare-assets             --minecraft-root "$PWD/build/e2e/runtime/minecraft"             --assets-root "$PWD/build/e2e/runtime/assets"
+
+      - name: Run all deterministic real client acceptance scenarios
+        run: |
+          xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24"             python3 -B scripts/run-ci-game-workflow.py --loader "${{ matrix.loader }}"             --java "$JAVA_HOME/bin/java" --batch-id "ci-${{ github.sha }}-${{ matrix.loader }}"
+
+      - name: Preserve compact native reports and lossless screenshots
+        if: always()
+        run: |
+          build/ci-tools/bin/python -B scripts/compact-ci-game-evidence.py             --loader "${{ matrix.loader }}" --batch-id "ci-${{ github.sha }}-${{ matrix.loader }}"
+
+      - name: Retain useful client diagnostics and compressed evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: client-${{ matrix.loader }}-${{ github.sha }}
+          retention-days: 7
+          if-no-files-found: warn
+          path: |
+            build/ci-runtime-receipt.json
+            build/e2e/runtime/minecraft/.provision/*.json
+            build/e2e/runtime/minecraft/.provision/*.log
+            build/e2e/ci-client/${{ matrix.loader }}/ci-${{ github.sha }}-${{ matrix.loader }}/summary.json
+            build/e2e/ci-client/${{ matrix.loader }}/ci-${{ github.sha }}-${{ matrix.loader }}/logs/*.log
+            build/e2e/ci-client-compact/${{ matrix.loader }}/ci-${{ github.sha }}-${{ matrix.loader }}/
