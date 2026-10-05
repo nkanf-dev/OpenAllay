@@ -28,7 +28,7 @@ dependencies {
     implementation(include("org.xerial:sqlite-jdbc:${sqlite_jdbc_version}"))
     implementation(include("org.commonmark:commonmark:${commonmark_version}"))
     implementation(include("org.commonmark:commonmark-ext-gfm-tables:${commonmark_version}"))
-    implementation(include("dev.latvian.mods:rhino:${rhino_version}"))
+    implementation(include(project(':runtime-rhino')))
     implementation(include("com.knuddels:jtokkit:${jtokkit_version}"))
     if (minecraftNativeSourceFamilies.contains('1.21.3') || minecraftTarget == '1.21.4') {
         // These targets use the independently published named common API.
