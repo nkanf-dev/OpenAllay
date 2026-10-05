@@ -20,6 +20,10 @@ on:
         type: string
         required: true
         default: none
+      client_scenarios:
+        description: "Optional exact diagnostic scenarios; empty runs the complete suite"
+        type: string
+        required: false
       artifact_run_id:
         description: "Prior successful Quality verifier run ID, only for selected clients"
         type: string
@@ -283,9 +287,16 @@ jobs:
         run: |
           python3 -B scripts/run-packaged-builder-acceptance.py --prepare-assets             --minecraft-root "$PWD/build/e2e/runtime/26.2/minecraft"             --assets-root "$PWD/build/e2e/runtime/26.2/assets"
 
-      - name: Run all deterministic real client acceptance scenarios
+      - name: Run deterministic real client acceptance scenarios
+        env:
+          CLIENT_SCENARIOS: ${{ inputs.client_scenarios }}
         run: |
-          xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24"             python3 -B scripts/run-ci-game-workflow.py --loader "${{ matrix.loader }}"             --java "$JAVA_HOME/bin/java" --batch-id "ci-${{ github.sha }}-${{ matrix.loader }}"
+          scenario_args=()
+          if [[ -n "$CLIENT_SCENARIOS" ]]; then
+            read -r -a scenarios <<< "$CLIENT_SCENARIOS"
+            scenario_args=(--scenarios "${scenarios[@]}")
+          fi
+          xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24"             python3 -B scripts/run-ci-game-workflow.py --loader "${{ matrix.loader }}"             --java "$JAVA_HOME/bin/java" --batch-id "ci-${{ github.sha }}-${{ matrix.loader }}" "${scenario_args[@]}"
 
       - name: Preserve compact native reports and lossless screenshots
         if: always()
