@@ -29,6 +29,9 @@ jobs:
       - name: Compile the selected native closure without repeating feature suites
         shell: bash
         run: ./gradlew --max-workers=2 --stacktrace -PminecraftTarget=1.19.2 -PbundleExtensions=false :forge:assemble
+      - name: Retain exact native command source contracts
+        if: always()
+        run: python3 -B scripts/capture-forge-native-contracts.py
       - name: Retain compact source-bound build diagnostics
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -41,3 +44,4 @@ jobs:
             common/build/reports/problems/
             forge/build/reports/
             build/reports/problems/
+            build/forge-native-contracts/
