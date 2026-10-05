@@ -119,9 +119,9 @@ class MinecraftTargetToolingTest(unittest.TestCase):
         script = self.source("scripts/verify-distribution.sh")
         for loader, entry, matching, wrong, selected in [
             ("fabric", "fabric.mod.json",
-             json.dumps({"id": "openallay", "name": "OpenAllay", "version": "0.4.1",
+             json.dumps({"id": "openallay", "name": "OpenAllay", "version": "0.4.1", "environment": "*",
                          "depends": {"minecraft": "~26.2"}}),
-             json.dumps({"id": "openallay", "name": "OpenAllay", "version": "0.4.1",
+             json.dumps({"id": "openallay", "name": "OpenAllay", "version": "0.4.1", "environment": "*",
                          "depends": {"minecraft": "~26.3"}}), "26.2"),
             ("neoforge", "META-INF/neoforge.mods.toml",
              '[[mods]]\nmodId="openallay"\ndisplayName="OpenAllay"\nversion="0.4.1"\n'
@@ -154,7 +154,7 @@ class MinecraftTargetToolingTest(unittest.TestCase):
         self.assertIn("verify-distribution.sh [staged-release-directory]", distribution)
         sqlite = self.source("scripts/verify-sqlite-packaging.sh")
         self.assertIn('-PminecraftTarget="$minecraft_target"', sqlite)
-        self.assertIn(":common:testClasses :common:printSqliteProofSupportClasspath", sqlite)
+        self.assertIn(":engine-core:testClasses :engine-core:printSqliteProofSupportClasspath", sqlite)
         publish = self.source("scripts/publish-modrinth.sh")
         gate = 'OPENALLAY_MINECRAFT_TARGET="$minecraft_target" "$repository/scripts/verify-distribution.sh"'
         self.assertLess(publish.index(gate), publish.index("api=https://api.modrinth.com/v2"))

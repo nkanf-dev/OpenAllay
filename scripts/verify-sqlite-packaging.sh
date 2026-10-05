@@ -15,7 +15,7 @@ test -n "$sqlite_version"
 support_classpath=$(
   cd "$repository"
   ./gradlew -PminecraftTarget="$minecraft_target" -q \
-    :common:testClasses :common:printSqliteProofSupportClasspath | tail -n 1
+    :engine-core:testClasses :engine-core:printSqliteProofSupportClasspath | tail -n 1
 )
 
 sha256() {

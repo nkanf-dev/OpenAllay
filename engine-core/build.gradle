@@ -149,3 +149,10 @@ tasks.withType(Test).configureEach {
     useJUnitPlatform()
     dependsOn(verifyProductionDependencies)
 }
+
+// The standalone SQLite packaging probe belongs to the native-free engine tests.
+tasks.register('printSqliteProofSupportClasspath') {
+    doLast {
+        println(sourceSets.test.runtimeClasspath.asPath)
+    }
+}

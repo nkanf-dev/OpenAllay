@@ -55,12 +55,6 @@ tasks.withType(Test).configureEach {
 configurations.testCompileClasspath.extendsFrom(configurations.compileClasspath)
 configurations.testRuntimeClasspath.extendsFrom(configurations.compileClasspath)
 
-tasks.register('printSqliteProofSupportClasspath') {
-    doLast {
-        println(sourceSets.test.runtimeClasspath.asPath)
-    }
-}
-
 // Loaders consume these selected SourceDirectorySets directly. A single outgoing
 // directory artifact cannot represent base files plus file-level replacements.
 
