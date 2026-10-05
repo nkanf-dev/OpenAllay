@@ -477,7 +477,10 @@ public final class ServerAgentService {
     public boolean hasRequest(UUID actor, UUID requestId) {
         Owner owner = active.get(requestId);
         if (owner == null) owner = pendingRelease.get(requestId);
-        return owner != null && owner.actorId().equals(actor);
+        if (owner == null) return false;
+        synchronized (owner) {
+            return !owner.released && owner.actorId().equals(actor);
+        }
     }
 
     public int activeRequests() {

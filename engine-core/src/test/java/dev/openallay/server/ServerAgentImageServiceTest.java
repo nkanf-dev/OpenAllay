@@ -528,8 +528,16 @@ final class ServerAgentImageServiceTest {
                     (actor, event) -> {
                         events.add(event);
                         if (event.eventType().equals("failed")) failure.complete((AgentEvent.Failed) decode(event));
-                        if (event.eventType().equals("request_released")) released(event.requestId()).complete(null);
+                        if (event.eventType().equals("request_released")) {
+                            assertReleasedCorrelation(actor, event.requestId());
+                            released(event.requestId()).complete(null);
+                        }
                     }, gson, "system", cancellation -> CompletableFuture.completedFuture(null), store, capability);
+        }
+
+        private void assertReleasedCorrelation(UUID actor, UUID requestId) {
+            assertFalse(service.hasRequest(actor, requestId),
+                    "The released event must not expose a live request correlation");
         }
 
         private CompletableFuture<Void> released(UUID requestId) {
