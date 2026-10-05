@@ -39,7 +39,7 @@ def engine_files(root):
     return files
 
 
-def verify(path, loader, target, java, original_engine):
+def verify(path, loader, target, java, original_engine, bundled_builder=False):
     with zipfile.ZipFile(path) as archive:
         counts = Counter(archive.namelist())
         check(all(count == 1 for count in counts.values()), "Duplicate package entries: " + str(path))
@@ -71,8 +71,21 @@ def verify(path, loader, target, java, original_engine):
                 mixins = json.loads(archive.read("openallay.client.mixins.json"))
                 check(mixins.get("refmap") == "openallay.refmap.json" and counts["openallay.refmap.json"] == 1,
                       "Legacy native Mixin refmap missing")
-        check(not any(name.startswith("META-INF/openallay/bundled-extensions/") for name in counts),
-              "Old native validation must not widen bundled Builder support")
+        if bundled_builder:
+            import importlib.util
+            spec = importlib.util.spec_from_file_location("native_builder_package", ROOT / "scripts/verify-bundled-extensions.py")
+            builder = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(builder)
+            lock = builder.prepare.load_manifest(ROOT / "distribution/extensions.lock.json")
+            builder.verify_package(path, loader, lock)
+            from io import BytesIO
+            with zipfile.ZipFile(BytesIO(archive.read(builder.resource_path(lock)))) as payload:
+                declaration = builder.verify_manifest(payload.read(builder.DESCRIPTOR), lock)
+            check(any(item["loader"] == loader and item["minecraftVersionRange"] == target
+                      for item in declaration["support"]["targets"]), "Builder does not declare this exact native target")
+        else:
+            check(not any(name.startswith("META-INF/openallay/bundled-extensions/") for name in counts),
+                  "Core-only native check cannot silently include unverified Builder bytes")
     return {"loader": loader, "target": target, "path": str(path),
             "sha256": hashlib.sha256(path.read_bytes()).hexdigest(), "sharedEngineEntries": len(original_engine)}
 
@@ -80,6 +93,7 @@ def verify(path, loader, target, java, original_engine):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--target", required=True)
+    parser.add_argument("--bundled-builder", action="store_true")
     args = parser.parse_args()
     try:
         profile = read_properties(ROOT / "gradle/minecraft-targets" / (args.target + ".properties"))
@@ -87,7 +101,7 @@ def main():
         version = read_properties(ROOT / "gradle.properties")["version"]
         original = engine_files(ROOT)
         packages = [verify(ROOT / loader / "build/libs" / ("openallay-" + loader + "-" + args.target + "-" + version + ".jar"),
-                           loader, args.target, int(profile["java_version"]), original) for loader in ("fabric", "neoforge")]
+                           loader, args.target, int(profile["java_version"]), original, args.bundled_builder) for loader in ("fabric", "neoforge")]
         print(json.dumps({"nativePackageChecks": "passed", "packages": packages,
                           "gameMixinAndSameJarRangeAcceptance": "not established"}, indent=2))
     except (OSError, ValueError, KeyError, zipfile.BadZipFile) as error:

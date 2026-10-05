@@ -28,7 +28,7 @@ class ClientWorkflowGlueTest(unittest.TestCase):
             jar.write_bytes(b"synthetic artifact")
             sha = hashlib.sha256(jar.read_bytes()).hexdigest()
             (staged / "SHA256SUMS").write_text(sha + "  " + jar.name + "\n")
-            runtime = root / "build/e2e/runtime/minecraft"
+            runtime = root / "build/e2e/runtime/26.2/minecraft"
             (runtime / ".provision").mkdir(parents=True)
             (runtime / ".provision/fabric-runtime.json").write_text(json.dumps({
                 "loader": "fabric", "minecraft": "26.2", "minecraftRoot": str(runtime), "fabricApi": str(runtime / "libraries/api.jar")}))

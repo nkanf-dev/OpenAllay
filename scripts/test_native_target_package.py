@@ -54,7 +54,7 @@ class NativeTargetPackageTest(unittest.TestCase):
 
     def test_bundled_builder_not_admitted_on_old_native_target(self):
         self.write({"META-INF/openallay/bundled-extensions/builder.jar": b"synthetic"})
-        with self.assertRaisesRegex(ValueError, "Builder support"):
+        with self.assertRaisesRegex(ValueError, "unverified Builder"):
             PACKAGE.verify(self.path, "fabric", "1.20.4", 17, self.engine)
 
     def test_wrong_target_metadata_refused(self):

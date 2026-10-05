@@ -69,7 +69,7 @@ jobs:
         run: python3 scripts/prepare-distribution.py
 
       - name: Run clean test and loader build gate
-        run: ./gradlew -PminecraftTarget="$OPENALLAY_MINECRAFT_TARGET" clean :common:test :fabric:build :neoforge:build
+        run: ./gradlew -PminecraftTarget="$OPENALLAY_MINECRAFT_TARGET" clean :extension-api:test :common:test :fabric:build :neoforge:build
 
       - name: Verify SQLite packaging
         run: ./scripts/verify-sqlite-packaging.sh
@@ -149,11 +149,11 @@ jobs:
 
       - name: Provision the official isolated game runtime
         run: |
-          python3 -B scripts/prepare-ci-minecraft-runtime.py             --loader "${{ matrix.loader }}" --java "$JAVA_HOME/bin/java"             --minecraft-root "$PWD/build/e2e/runtime/minecraft"             > build/ci-runtime-receipt.json
+          python3 -B scripts/prepare-ci-minecraft-runtime.py             --loader "${{ matrix.loader }}" --java "$JAVA_HOME/bin/java"             --minecraft-root "$PWD/build/e2e/runtime/26.2/minecraft"             > build/ci-runtime-receipt.json
 
       - name: Prepare verified official game assets
         run: |
-          python3 -B scripts/run-packaged-builder-acceptance.py --prepare-assets             --minecraft-root "$PWD/build/e2e/runtime/minecraft"             --assets-root "$PWD/build/e2e/runtime/assets"
+          python3 -B scripts/run-packaged-builder-acceptance.py --prepare-assets             --minecraft-root "$PWD/build/e2e/runtime/26.2/minecraft"             --assets-root "$PWD/build/e2e/runtime/26.2/assets"
 
       - name: Run all deterministic real client acceptance scenarios
         run: |
@@ -173,8 +173,8 @@ jobs:
           if-no-files-found: warn
           path: |
             build/ci-runtime-receipt.json
-            build/e2e/runtime/minecraft/.provision/*.json
-            build/e2e/runtime/minecraft/.provision/*.log
+            build/e2e/runtime/26.2/minecraft/.provision/*.json
+            build/e2e/runtime/26.2/minecraft/.provision/*.log
             build/e2e/ci-client/${{ matrix.loader }}/ci-${{ github.sha }}-${{ matrix.loader }}/summary.json
             build/e2e/ci-client/${{ matrix.loader }}/ci-${{ github.sha }}-${{ matrix.loader }}/*.log
             build/e2e/ci-client/${{ matrix.loader }}/ci-${{ github.sha }}-${{ matrix.loader }}/logs/*.log

@@ -7,13 +7,13 @@ import shutil
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def stage(root=ROOT):
+def stage(root=ROOT, minecraft_target="26.2"):
     version = next(line.split("=", 1)[1] for line in (root / "gradle.properties").read_text().splitlines()
                    if line.startswith("version="))
     output = root / "build/ci-client-production"
     if output.exists():
         raise ValueError("Client production staging already exists")
-    inputs = [root / loader / "build/libs" / ("openallay-" + loader + "-26.2-" + version + ".jar")
+    inputs = [root / loader / "build/libs" / ("openallay-" + loader + "-" + minecraft_target + "-" + version + ".jar")
               for loader in ("fabric", "neoforge")]
     if any(not path.is_file() or path.is_symlink() for path in inputs):
         raise ValueError("Missing default verified production JAR")
@@ -32,4 +32,8 @@ def stage(root=ROOT):
 
 
 if __name__ == "__main__":
-    stage()
+    import argparse
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--minecraft-target", default="26.2")
+    args = parser.parse_args()
+    stage(minecraft_target=args.minecraft_target)

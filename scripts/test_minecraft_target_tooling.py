@@ -184,7 +184,7 @@ class MinecraftTargetToolingTest(unittest.TestCase):
                 self.assertIn("client-production-${{ github.sha }}", verify)
                 self.assertIn("client-production-${{ github.sha }}", client)
                 self.assertIn("sha256sum --check SHA256SUMS", client)
-                self.assertIn('-PminecraftTarget="$OPENALLAY_MINECRAFT_TARGET" clean :common:test :fabric:build :neoforge:build', text)
+                self.assertIn('-PminecraftTarget="$OPENALLAY_MINECRAFT_TARGET" clean :extension-api:test :common:test :fabric:build :neoforge:build', text)
                 self.assertIn('--fabric "fabric/build/libs/openallay-fabric-${minecraft_version}-${version}.jar"', text)
                 self.assertIn('--neoforge "neoforge/build/libs/openallay-neoforge-${minecraft_version}-${version}.jar"', text)
             else:

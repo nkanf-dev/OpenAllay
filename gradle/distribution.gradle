@@ -18,6 +18,7 @@ def booleanProperty = { String name, String defaultValue ->
     value == 'true'
 }
 ext.bundleExtensions = booleanProperty('bundleExtensions', 'true')
+ext.testBundledExtensions = booleanProperty('testBundledExtensions', 'true')
 
 if (bundleExtensions) {
     def sourceDirectory = providers.gradleProperty('openallayExtensionsDir')
@@ -60,9 +61,9 @@ if (bundleExtensions) {
         doFirst {
             def command = [wrapper, '--no-daemon', '--console=plain', '--gradle-user-home', gradle.gradleUserHomeDir,
                     '-p', extensionProject, "-PopenallayExtensionApiJar=${sdkJar.get().absolutePath}",
-                    'build', 'verifyUniversalPackage']
+                    testBundledExtensions ? 'build' : 'assemble', 'verifyUniversalPackage']
             if (gradle.startParameter.taskNames.any { it == 'clean' || it == ':clean' }) {
-                command.add(command.indexOf('build'), 'clean')
+                command.add(command.indexOf(testBundledExtensions ? 'build' : 'assemble'), 'clean')
             }
             if (gradle.startParameter.offline) command.add('--offline')
             commandLine command
