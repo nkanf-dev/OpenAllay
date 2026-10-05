@@ -278,6 +278,50 @@ final class ClientToolExecutionEndpointTest {
     }
 
     @Test
+    void serverRequestSkillCatalogUsesOnlyItsFrozenCommandChoiceNotClientLocalFullAccess() {
+        dev.openallay.skill.SkillRepository repository = new dev.openallay.skill.SkillRepository(
+                new dev.openallay.skill.SkillParser(), java.util.Set.of("openallay:run_javascript"));
+        assertTrue(repository.reload(new dev.openallay.skill.BundledSkillLoader().load(), java.util.Set.of()));
+        // This global view represents client-local full access. It must not leak into callbacks.
+        var fullAccessSkills = repository.snapshot(java.util.Set.of()).forRequest(true, true);
+        CommandCapabilityRuntime commands = new CommandCapabilityRuntime();
+        ToolRegistry registry = new ToolRegistry();
+        registry.register("test", List.of(new RunJavascriptTool(new RhinoJavascriptRuntime(),
+                MinecraftAgentHostGraph::new, new AgentResultWorkspaceRegistry(),
+                new JavascriptResultPresenter(), commands), new dev.openallay.skill.LoadSkillTool(fullAccessSkills)));
+        List<ClientToolResultChunkPayload> sent = new ArrayList<>();
+        ClientToolExecutionEndpoint endpoint = new ClientToolExecutionEndpoint(
+                (capabilities, correlation, cancellation) -> CompletableFuture.completedFuture(
+                        ToolInvocationContext.developmentConsole(correlation)),
+                sent::add, new Gson(), 128, (java.util.concurrent.Executor) Runnable::run);
+        ToolRuntimeCatalog catalog = ToolRuntimeCatalog.from(registry.registrations(), java.util.Set.of());
+        for (boolean commandSetting : List.of(false, true)) {
+            commands.replace(new CommandCapabilityConfig(commandSetting));
+            UUID requestId = UUID.randomUUID();
+            var opened = assertInstanceOf(ToolResult.Success.class, endpoint.open(requestId, "main", catalog));
+            var request = (ClientToolExecutionEndpoint.OpenedRequest) opened.value();
+            assertEquals(commandSetting, request.clientToolIds()
+                    .contains(ClientToolExecutionEndpoint.EXPERIMENTAL_COMMANDS_CAPABILITY));
+            assertEquals(new dev.openallay.skill.LoadSkillTool(fullAccessSkills.forRequest(false, commandSetting),
+                    "client").catalogManifest(), request.skillDocuments());
+            commands.replace(new CommandCapabilityConfig(!commandSetting));
+            assertEquals(commandSetting, commands.enabledFor(requestId.toString()));
+            for (String skill : List.of("run-game-commands", "unrestricted-javascript")) {
+                sent.clear();
+                endpoint.handle(new ClientToolCallPayload(requestId, UUID.randomUUID(), "main",
+                        "openallay:load_skill", "{\"name\":\"" + skill + "\"}"));
+                var result = JsonParser.parseString(reassemble(sent)).getAsJsonObject();
+                assertEquals(commandSetting && skill.equals("run-game-commands") ? "success" : "failure",
+                        result.get("status").getAsString());
+                if (result.get("status").getAsString().equals("failure"))
+                    assertEquals("skill_not_found", result.get("code").getAsString());
+            }
+            endpoint.close(requestId);
+        }
+        endpoint.disconnect();
+    }
+
+    @Test
     void freezesClientSkillMetadataAndAlwaysReturnsFreshPlaintext() {
         dev.openallay.skill.SkillRepository repository = new dev.openallay.skill.SkillRepository(
                 new dev.openallay.skill.SkillParser(), java.util.Set.of());

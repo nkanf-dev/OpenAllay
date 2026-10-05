@@ -766,100 +766,156 @@ final class ClientModelRuntimeRegistryTest {
     }
 
     @Test
-    void metadataCannotOverwriteExperimentalCommandCapabilityRefreshInEitherDirection() throws Exception {
+    void metadataCannotOverwriteEffectiveFullAccessCommandRefreshInEitherDirection() throws Exception {
         for (boolean enableCommands : List.of(true, false)) {
             for (boolean metadataCompletionFirst : List.of(true, false)) {
-                String suffix = enableCommands + "-" + metadataCompletionFirst;
-                var initial = load("a", "a");
-                Path profiles = temporary.resolve("command-models-" + suffix + ".json");
-                Files.writeString(profiles, new dev.openallay.model.config.ModelProfilesConfigWriter()
-                        .encode(initial.config()));
-                OpenAllayRuntime product = runtimeWithFactTool();
-                assertTrue(product.skills().reload(List.of(new dev.openallay.skill.SkillSource(
-                        "test", "run-game-commands/SKILL.md", Map.of("run-game-commands/SKILL.md", """
-                        ---
-                        name: run-game-commands
-                        description: Synthetic experimental-command capability
-                        allowed-tools: test:fact
-                        ---
-                        Command refresh publication sentinel.
-                        """))), Set.of()));
-                product.tools().register("test-skills", List.of(new dev.openallay.skill.LoadSkillTool(product.skills())));
-                product.tools().register("test-javascript", List.of(new dev.openallay.tool.builtin.RunJavascriptTool(
-                        new dev.openallay.script.RhinoJavascriptRuntime(),
-                        dev.openallay.script.data.MinecraftAgentHostGraph::new,
-                        new dev.openallay.script.workspace.AgentResultWorkspaceRegistry(),
-                        new dev.openallay.script.workspace.JavascriptResultPresenter(), product.commands())));
-                var prior = new dev.openallay.script.command.CommandCapabilityConfig(!enableCommands);
-                product.commands().replace(prior);
-                product.skills().setRuntimeDisabledSkills(prior.enabled() ? Set.of() : Set.of("run-game-commands"));
-                RecordingModel model = new RecordingModel("model-a");
-                var registry = registry(product, initial, Map.of("a", model));
-                var capabilities = new dev.openallay.settings.capability.CapabilitySettingsBackend(
-                        temporary.resolve("command-capabilities-" + suffix + ".json"), product, registry);
-                var commandStore = new dev.openallay.script.command.CommandCapabilityConfigStore(
-                        temporary.resolve("commands-" + suffix + ".json"));
-                assertInstanceOf(ToolResult.Success.class, commandStore.save(prior));
-                var publishCommandConfig = dev.openallay.settings.ClientSettingsRuntime.class.getDeclaredMethod(
-                        "publishCommandConfig", ToolResult.class,
-                        dev.openallay.script.command.CommandCapabilityConfigStore.class,
-                        dev.openallay.FeatureServices.class,
-                        dev.openallay.settings.capability.CapabilitySettingsBackend.class);
-                publishCommandConfig.setAccessible(true);
-                ManualExecutor worker = new ManualExecutor();
-                ManualExecutor dispatcher = new ManualExecutor();
-                try (var credentials = new dev.openallay.model.config.LocalCredentialStore(
-                        temporary.resolve("command-credentials-" + suffix + ".sqlite3"), java.time.Clock.systemUTC())) {
-                    var backend = new dev.openallay.settings.model.ModelSettingsBackend(profiles,
-                            () -> Map.of("KEY_A", "fixture-a"), registry, unusedProbe(), credentials);
-                    var service = new dev.openallay.settings.ClientSettingsService(
-                            dev.openallay.guide.ui.GuideDisplayConfig.defaults(), unusedDisplayActions(), backend.state(initial), Set.of(),
-                            backend, metadataActions(), capabilities.currentView(), capabilities,
-                            dev.openallay.settings.capability.RecipeSettingsView.defaults(), unusedRecipeActions(),
-                            dev.openallay.settings.skill.SkillSettingsView.empty(), unusedSkillActions(),
-                            dev.openallay.settings.extension.ExtensionSettingsView.defaults(), prior,
-                            new dev.openallay.settings.ClientSettingsService.CommandActions() {
-                                public ToolResult<dev.openallay.script.command.CommandCapabilityConfig> save(
-                                        dev.openallay.script.command.CommandCapabilityConfig candidate) {
-                                    try {
-                                        @SuppressWarnings("unchecked")
-                                        var result = (ToolResult<dev.openallay.script.command.CommandCapabilityConfig>)
-                                                publishCommandConfig.invoke(null, commandStore.save(candidate),
-                                                        commandStore, product, capabilities);
-                                        return result;
-                                    } catch (ReflectiveOperationException failure) {
-                                        throw new AssertionError(failure);
+                for (boolean unrestricted : List.of(false, true)) {
+                    String suffix = enableCommands + "-" + metadataCompletionFirst + "-" + unrestricted;
+                    var initial = load("a", "a");
+                    Path profiles = temporary.resolve("command-models-" + suffix + ".json");
+                    Files.writeString(profiles, new dev.openallay.model.config.ModelProfilesConfigWriter()
+                            .encode(initial.config()));
+                    OpenAllayRuntime product = runtimeWithFactTool();
+                    assertTrue(product.skills().reload(List.of(new dev.openallay.skill.SkillSource(
+                            "test", "run-game-commands/SKILL.md", Map.of("run-game-commands/SKILL.md", """
+                            ---
+                            name: run-game-commands
+                            description: Synthetic experimental-command capability
+                            allowed-tools: test:fact
+                            ---
+                            Command refresh publication sentinel.
+                            """))), Set.of()));
+                    product.tools().register("test-skills", List.of(new dev.openallay.skill.LoadSkillTool(product.skills())));
+                    product.tools().register("test-javascript", List.of(new dev.openallay.tool.builtin.RunJavascriptTool(
+                            new dev.openallay.script.RhinoJavascriptRuntime(),
+                            dev.openallay.script.data.MinecraftAgentHostGraph::new,
+                            new dev.openallay.script.workspace.AgentResultWorkspaceRegistry(),
+                            new dev.openallay.script.workspace.JavascriptResultPresenter(), product.commands())));
+                    var prior = new dev.openallay.script.command.CommandCapabilityConfig(!enableCommands);
+                    product.commands().replace(prior);
+                    var unrestrictedRuntime = new dev.openallay.script.UnrestrictedJavascriptRuntime();
+                    unrestrictedRuntime.replace(new dev.openallay.script.UnrestrictedJavascriptConfig(unrestricted));
+                    product.skills().setRuntimeDisabledSkills(prior.enabled() || unrestricted
+                            ? Set.of() : Set.of("run-game-commands"));
+                    RecordingModel model = new RecordingModel("model-a");
+                    var registry = registry(product, initial, Map.of("a", model));
+                    var capabilities = new dev.openallay.settings.capability.CapabilitySettingsBackend(
+                            temporary.resolve("command-capabilities-" + suffix + ".json"), product, registry);
+                    var commandStore = new dev.openallay.script.command.CommandCapabilityConfigStore(
+                            temporary.resolve("commands-" + suffix + ".json"));
+                    assertInstanceOf(ToolResult.Success.class, commandStore.save(prior));
+                    var publishCommandConfig = dev.openallay.settings.ClientSettingsRuntime.class.getDeclaredMethod(
+                            "publishCommandConfig", ToolResult.class,
+                            dev.openallay.script.command.CommandCapabilityConfigStore.class,
+                            dev.openallay.FeatureServices.class,
+                            dev.openallay.settings.capability.CapabilitySettingsBackend.class,
+                            dev.openallay.script.UnrestrictedJavascriptRuntime.class);
+                    publishCommandConfig.setAccessible(true);
+                    ManualExecutor worker = new ManualExecutor();
+                    ManualExecutor dispatcher = new ManualExecutor();
+                    try (var credentials = new dev.openallay.model.config.LocalCredentialStore(
+                            temporary.resolve("command-credentials-" + suffix + ".sqlite3"), java.time.Clock.systemUTC())) {
+                        var backend = new dev.openallay.settings.model.ModelSettingsBackend(profiles,
+                                () -> Map.of("KEY_A", "fixture-a"), registry, unusedProbe(), credentials);
+                        var service = new dev.openallay.settings.ClientSettingsService(
+                                dev.openallay.guide.ui.GuideDisplayConfig.defaults(), unusedDisplayActions(), backend.state(initial), Set.of(),
+                                backend, metadataActions(), capabilities.currentView(), capabilities,
+                                dev.openallay.settings.capability.RecipeSettingsView.defaults(), unusedRecipeActions(),
+                                dev.openallay.settings.skill.SkillSettingsView.empty(), unusedSkillActions(),
+                                dev.openallay.settings.extension.ExtensionSettingsView.defaults(), prior,
+                                new dev.openallay.settings.ClientSettingsService.CommandActions() {
+                                    public ToolResult<dev.openallay.script.command.CommandCapabilityConfig> save(
+                                            dev.openallay.script.command.CommandCapabilityConfig candidate) {
+                                        try {
+                                            @SuppressWarnings("unchecked")
+                                            var result = (ToolResult<dev.openallay.script.command.CommandCapabilityConfig>)
+                                                    publishCommandConfig.invoke(null, commandStore.save(candidate),
+                                                            commandStore, product, capabilities, unrestrictedRuntime);
+                                            return result;
+                                        } catch (ReflectiveOperationException failure) {
+                                            throw new AssertionError(failure);
+                                        }
                                     }
-                                }
-                                public ToolResult<dev.openallay.script.command.CommandCapabilityConfig> reload() {
-                                    throw new AssertionError("Command reload is outside this test");
-                                }
-                            }, unusedHistoryActions(), dispatcher::execute, worker, null);
-                    service.acceptMetadataUpdate(new dev.openallay.model.metadata.ModelMetadataUpdate(Map.of(), null));
-                    worker.runNext();
-                    var save = service.saveExperimentalCommands(enableCommands);
-                    worker.runNext(); // Actual command helper refreshes and publishes capabilities on the worker.
-                    var latest = registry.capabilities();
-                    assertEquals(enableCommands, latest.skills().metadata().stream()
-                            .anyMatch(skill -> skill.name().equals("run-game-commands")));
-                    if (!metadataCompletionFirst) dispatcher.runLast();
-                    dispatcher.runAll();
-                    worker.runAll();
-                    dispatcher.runAll();
+                                    public ToolResult<dev.openallay.script.command.CommandCapabilityConfig> reload() {
+                                        throw new AssertionError("Command reload is outside this test");
+                                    }
+                                }, unusedHistoryActions(), dispatcher::execute, worker, null);
+                        service.acceptMetadataUpdate(new dev.openallay.model.metadata.ModelMetadataUpdate(Map.of(), null));
+                        worker.runNext();
+                        var save = service.saveExperimentalCommands(enableCommands);
+                        worker.runNext(); // Actual command helper refreshes and publishes capabilities on the worker.
+                        var latest = registry.capabilities();
+                        assertEquals(enableCommands || unrestricted, latest.skills().metadata().stream()
+                                .anyMatch(skill -> skill.name().equals("run-game-commands")));
+                        if (!metadataCompletionFirst) dispatcher.runLast();
+                        dispatcher.runAll();
+                        worker.runAll();
+                        dispatcher.runAll();
 
-                    assertInstanceOf(ToolResult.Success.class, save.join());
-                    assertSame(latest, registry.capabilities());
-                    assertEquals(enableCommands, service.snapshot().experimentalCommands().enabled());
-                    String correlation = "command-refresh-publication-" + suffix;
-                    product.commands().capture(correlation, UUID.randomUUID(),
-                            new dev.openallay.script.command.CommandCatalogSnapshot(java.time.Instant.EPOCH, List.of()),
-                            (actor, command, cancellation) -> CompletableFuture.completedFuture(null));
-                    registry.ask("a", UUID.randomUUID(), "main", UUID.randomUUID(), "future question",
-                            ToolInvocationContext.developmentConsole(correlation), ignored -> {}).join();
-                    assertEquals(enableCommands, model.requests.getFirst().systemPrompt()
-                            .contains("<name>run-game-commands</name>"));
+                        assertInstanceOf(ToolResult.Success.class, save.join());
+                        assertSame(latest, registry.capabilities());
+                        assertEquals(enableCommands, service.snapshot().experimentalCommands().enabled());
+                        String correlation = "command-refresh-publication-" + suffix;
+                        product.commands().freezeRequest(correlation, unrestricted);
+                        product.commands().capture(correlation, UUID.randomUUID(),
+                                new dev.openallay.script.command.CommandCatalogSnapshot(java.time.Instant.EPOCH, List.of()),
+                                (actor, command, cancellation) -> CompletableFuture.completedFuture(null));
+                        var base = ToolInvocationContext.developmentConsole(correlation);
+                        var context = new ToolInvocationContext(correlation, base.capturedAt(), base.caller(),
+                                base.player(), base.registries(), base.recipes(), base.observableGameState(),
+                                base.metrics(), unrestricted);
+                        registry.ask("a", UUID.randomUUID(), "main", UUID.randomUUID(), "future question",
+                                context, ignored -> {}).join();
+                        String prompt = model.requests.getFirst().systemPrompt();
+                        assertEquals(enableCommands || unrestricted, prompt.contains("<name>run-game-commands</name>"));
+                        assertEquals(enableCommands || unrestricted,
+                                prompt.contains("commands.list(), commands.describe(path), and commands.run(text)"));
+                        assertEquals(!(enableCommands || unrestricted),
+                                prompt.contains("The commands binding is not present for this request"));
+                    }
                 }
             }
+        }
+    }
+
+    @Test
+    void fullAccessCommandPromptMatchesTheCapturedRouteRatherThanThePermissionFlag() {
+        for (boolean capturedRoute : List.of(false, true)) {
+            OpenAllayRuntime product = runtimeWithFactTool();
+            assertTrue(product.skills().reload(List.of(new dev.openallay.skill.SkillSource(
+                    "test", "run-game-commands/SKILL.md", Map.of("run-game-commands/SKILL.md", """
+                    ---
+                    name: run-game-commands
+                    description: Use when the player needs commands
+                    allowed-tools: test:fact
+                    ---
+                    Use the captured player command route.
+                    """))), Set.of()));
+            product.tools().register("test-skills", List.of(new dev.openallay.skill.LoadSkillTool(product.skills())));
+            product.tools().register("test-javascript", List.of(new dev.openallay.tool.builtin.RunJavascriptTool(
+                    new dev.openallay.script.RhinoJavascriptRuntime(),
+                    dev.openallay.script.data.MinecraftAgentHostGraph::new,
+                    new dev.openallay.script.workspace.AgentResultWorkspaceRegistry(),
+                    new dev.openallay.script.workspace.JavascriptResultPresenter(), product.commands())));
+            RecordingModel model = new RecordingModel("model-a");
+            var registry = registry(product, load("a", "a"), Map.of("a", model));
+            String correlation = "full-route-" + capturedRoute;
+            assertTrue(product.commands().freezeRequest(correlation, true));
+            assertFalse(product.commands().enabled());
+            if (capturedRoute) product.commands().capture(correlation, UUID.randomUUID(),
+                    new dev.openallay.script.command.CommandCatalogSnapshot(java.time.Instant.EPOCH, List.of()),
+                    (actor, command, cancellation) -> CompletableFuture.completedFuture(null));
+            var base = ToolInvocationContext.developmentConsole(correlation);
+            var context = new ToolInvocationContext(correlation, base.capturedAt(), base.caller(), base.player(),
+                    base.registries(), base.recipes(), base.observableGameState(), base.metrics(), true);
+            registry.ask("a", UUID.randomUUID(), "main", UUID.randomUUID(), "future question",
+                    context, ignored -> {}).join();
+            String prompt = model.requests.getFirst().systemPrompt();
+            assertEquals(capturedRoute, prompt.contains("<name>run-game-commands</name>"));
+            assertEquals(capturedRoute,
+                    prompt.contains("commands.list(), commands.describe(path), and commands.run(text)"));
+            assertEquals(!capturedRoute, prompt.contains("The commands binding is not present for this request"));
+            assertTrue(prompt.contains("Use Java APIs as needed for the player's task"));
         }
     }
 

@@ -1,6 +1,6 @@
 ---
 name: run-game-commands
-description: Use when a player explicitly asks to discover or execute a Minecraft command through the enabled experimental command capability.
+description: Use when a player asks to discover or execute a Minecraft command through the available player command route.
 metadata:
   openallay/version: "0.2.2"
 allowed-tools: "openallay:run_javascript"
@@ -9,8 +9,9 @@ Use this Skill when the player explicitly asks OpenAllay to execute a Minecraft
 command, or when the task must discover the exact syntax of an installed
 mod's command before executing it.
 
-The `commands` object exists only because the player enabled the experimental
-command capability for this request:
+The `commands` object is available when this request captured the player's
+Minecraft command route. Client-local unrestricted JavaScript includes commands;
+otherwise the player can enable the experimental command-only setting:
 
 - `commands.list()` returns the complete Brigadier tree visible to the current
   player. It contains vanilla, server, loader, and mod-registered nodes.

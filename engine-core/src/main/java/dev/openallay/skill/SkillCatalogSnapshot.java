@@ -22,7 +22,7 @@ public final class SkillCatalogSnapshot implements SkillCatalog {
     }
 
     private SkillCatalogSnapshot(
-            Map<String, SkillDocument> skills, boolean unrestrictedJavascript, boolean experimentalCommands) {
+            Map<String, SkillDocument> skills, boolean unrestrictedJavascript, boolean commandsAvailable) {
         TreeMap<String, SkillDocument> canonical = new TreeMap<>(skills);
         canonical.forEach((name, document) -> {
             if (!name.equals(document.metadata().name())) {
@@ -33,7 +33,7 @@ public final class SkillCatalogSnapshot implements SkillCatalog {
         if (!unrestrictedJavascript) {
             canonical.remove(UNRESTRICTED_JAVASCRIPT);
         }
-        if (!experimentalCommands) {
+        if (!commandsAvailable) {
             canonical.remove(GAME_COMMANDS);
         }
         this.skills = Collections.unmodifiableMap(canonical);
@@ -41,12 +41,13 @@ public final class SkillCatalogSnapshot implements SkillCatalog {
 
     /** Selects guidance from captured documents, never from a mutable setting or repository. */
     public SkillCatalogSnapshot forRequest(boolean unrestrictedJavascript) {
-        return forRequest(unrestrictedJavascript, skills.containsKey(GAME_COMMANDS));
+        return forRequest(unrestrictedJavascript,
+                unrestrictedJavascript || skills.containsKey(GAME_COMMANDS));
     }
 
-    /** Command guidance follows the captured bridge, independently of the JavaScript mode. */
-    public SkillCatalogSnapshot forRequest(boolean unrestrictedJavascript, boolean experimentalCommands) {
-        return new SkillCatalogSnapshot(eligibleSkills, unrestrictedJavascript, experimentalCommands);
+    /** Explicit route availability controls guidance, even when full access has no bound route. */
+    public SkillCatalogSnapshot forRequest(boolean unrestrictedJavascript, boolean commandsAvailable) {
+        return new SkillCatalogSnapshot(eligibleSkills, unrestrictedJavascript, commandsAvailable);
     }
 
     @Override

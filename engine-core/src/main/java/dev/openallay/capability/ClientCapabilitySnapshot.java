@@ -13,17 +13,20 @@ public record ClientCapabilitySnapshot(
         ToolRuntimeCatalog localTools,
         SkillCatalogSnapshot skills,
         Set<ContextCapability> requiredContext) {
-    /** Builds matching prompt and load_skill catalogs for one frozen invocation context. */
+    /** Selects eligible full-access guidance without capturing a native execution route. */
     public ClientCapabilitySnapshot forRequest(boolean unrestrictedJavascript) {
         return withRequestSkills(skills.forRequest(unrestrictedJavascript));
     }
 
     /** Reserves the complete eligible guidance before a request captures its optional routes. */
-    public ClientCapabilitySnapshot forRequest(boolean unrestrictedJavascript, boolean experimentalCommands) {
-        return withRequestSkills(skills.forRequest(unrestrictedJavascript, experimentalCommands));
+    public ClientCapabilitySnapshot forRequest(boolean unrestrictedJavascript, boolean commandsAvailable) {
+        return withRequestSkills(skills.forRequest(unrestrictedJavascript, commandsAvailable));
     }
 
-    /** Selects optional command guidance from the exact route that Rhino will bind. */
+    /**
+     * Selects command guidance from the exact route that Rhino will bind. Full access enables
+     * capture, but cannot manufacture a missing route or re-enable a user-disabled Tool/Skill.
+     */
     public ClientCapabilitySnapshot forRequest(dev.openallay.context.ToolInvocationContext context) {
         return withRequestSkills(skills.forRequest(
                 context.unrestrictedJavascript(), commandCapabilityAvailable(context.correlationId())));

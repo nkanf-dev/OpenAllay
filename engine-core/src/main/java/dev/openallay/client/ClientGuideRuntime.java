@@ -580,6 +580,7 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
             ToolInvocationContext context,
             Consumer<AgentEvent> events) {
         ClientCapabilitySnapshot requestCapabilities = capabilities.forRequest(context);
+        // Command permission was frozen before capture; expose only the route Rhino will bind.
         PromptModes modes = new PromptModes(context.unrestrictedJavascript(),
                 requestCapabilities.commandCapabilityAvailable(context.correlationId()));
         ClientGuideRuntime requestRuntime = withCapabilities(requestCapabilities, modes);

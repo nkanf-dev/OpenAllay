@@ -34,12 +34,14 @@ final class JavascriptCommandBridgeTest {
     }
 
     @Test
-    void commandGlobalIsIndependentOfSafeOrUnrestrictedJavascriptMode() {
+    void fullAccessIncludesCommandsWhileRestrictedModeUsesTheCommandOnlyToggle() {
         for (boolean unrestricted : List.of(false, true)) {
             for (boolean enabled : List.of(false, true)) {
                 CommandCapabilityRuntime commands = runtime();
                 commands.replace(new CommandCapabilityConfig(enabled));
+                commands.freezeRequest("request", unrestricted);
                 commands.capture("request", ACTOR, catalog(), successful(commands, List.of()));
+                boolean effective = unrestricted || enabled;
                 JsonElement result = new RhinoJavascriptRuntime().execute(
                         """
                         return {
@@ -54,13 +56,13 @@ final class JavascriptCommandBridgeTest {
                         Map.of(), Map.of(), Map.of(), new CancellationSignal(),
                         commands.bridge("request", new CancellationSignal()).orElse(null), null,
                         unrestricted).value();
-                assertEquals(enabled ? "object" : "undefined",
+                assertEquals(effective ? "object" : "undefined",
                         result.getAsJsonObject().get("binding").getAsString());
                 assertEquals(unrestricted ? "object" : "undefined",
                         result.getAsJsonObject().get("java").getAsString());
-                assertEquals(enabled ? catalog().nodes().size() : 0,
+                assertEquals(effective ? catalog().nodes().size() : 0,
                         result.getAsJsonObject().get("listed").getAsInt());
-                assertEquals(enabled ? List.of("function", "function", "function") : List.of(),
+                assertEquals(effective ? List.of("function", "function", "function") : List.of(),
                         result.getAsJsonObject().getAsJsonArray("methods").asList().stream()
                                 .map(JsonElement::getAsString).toList());
                 assertEquals("undefined", result.getAsJsonObject().get("mcCommands").getAsString());
@@ -89,6 +91,46 @@ final class JavascriptCommandBridgeTest {
         commands.capture(
                 "disabled-request", ACTOR, catalog(), successful(commands, List.of()));
         assertFalse(commands.bridge("disabled-request", new CancellationSignal()).isPresent());
+    }
+
+    @Test
+    void capturedFullAccessIsImmutableAndNeverChangesTheStoredCommandOnlyToggle() {
+        CommandCapabilityRuntime commands = runtime();
+        assertTrue(commands.freezeRequest("full", true));
+        assertFalse(commands.enabled());
+        assertFalse(commands.freezeRequest("restricted", false));
+        assertFalse(commands.freezeRequest("restricted", true));
+        commands.replace(new CommandCapabilityConfig(true));
+        assertTrue(commands.freezeRequest("full", false));
+        assertFalse(commands.freezeRequest("restricted", true));
+        commands.replace(CommandCapabilityConfig.defaults());
+        commands.capture("full", ACTOR, catalog(), successful(commands, List.of()));
+        assertTrue(commands.availableFor("full"));
+        assertFalse(commands.freezeRequest("next", false));
+        commands.closeRequest("full");
+        assertFalse(commands.availableFor("full"));
+        assertFalse(commands.freezeRequest("full", false));
+    }
+
+    @Test
+    void repeatedCaptureKeepsTheOriginalRouteCatalogAndSequence() {
+        CommandCapabilityRuntime commands = runtime();
+        commands.freezeRequest("request", true);
+        List<String> original = new ArrayList<>();
+        List<String> replacement = new ArrayList<>();
+        commands.capture("request", ACTOR, catalog(), successful(commands, original));
+        assertEquals(1, run(commands, "request", "say first", new CancellationSignal())
+                .getAsJsonObject().get("sequence").getAsInt());
+        commands.capture("request", UUID.randomUUID(),
+                new CommandCatalogSnapshot(Instant.EPOCH, List.of()), successful(commands, replacement));
+        JsonElement listed = new RhinoJavascriptRuntime().execute("return commands.list();",
+                Map.of(), Map.of(), new CancellationSignal(),
+                commands.bridge("request", new CancellationSignal()).orElseThrow()).value();
+        assertEquals(catalog().nodes().size(), listed.getAsJsonObject().getAsJsonArray("nodes").size());
+        assertEquals(2, run(commands, "request", "say second", new CancellationSignal())
+                .getAsJsonObject().get("sequence").getAsInt());
+        assertEquals(List.of("say first", "say second"), original);
+        assertTrue(replacement.isEmpty());
     }
 
     @Test
@@ -262,8 +304,8 @@ final class JavascriptCommandBridgeTest {
     @Test
     void parserAndPermissionRejectionsRemainObservedMinecraftFeedback() {
         CommandCapabilityRuntime commands = runtime();
-        commands.replace(new CommandCapabilityConfig(
-                true));
+        commands.freezeRequest("request", true);
+        assertFalse(commands.enabled());
         commands.capture(
                 "request",
                 ACTOR,
@@ -341,8 +383,9 @@ final class JavascriptCommandBridgeTest {
     @Test
     void cancellationWhileWaitingForThePlayerLockPreventsDispatch() throws Exception {
         CommandCapabilityRuntime commands = new CommandCapabilityRuntime(10, 5_000);
-        commands.replace(new CommandCapabilityConfig(
-                true));
+        commands.freezeRequest("session-a", true);
+        commands.freezeRequest("session-b", true);
+        assertFalse(commands.enabled());
         CountDownLatch firstDispatched = new CountDownLatch(1);
         CompletableFuture<Void> firstSubmission = new CompletableFuture<>();
         AtomicInteger secondDispatches = new AtomicInteger();

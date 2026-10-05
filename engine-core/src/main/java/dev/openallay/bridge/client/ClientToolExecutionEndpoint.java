@@ -116,11 +116,17 @@ public final class ClientToolExecutionEndpoint {
             return new ToolResult.Failure<>("invalid_session", "Invalid Agent session ID");
         }
         java.util.Objects.requireNonNull(frozenTools, "frozenTools");
+        // This endpoint serves server-origin requests: freeze only the command-only setting.
+        boolean commandsEnabled = frozenTools.find("openallay:run_javascript")
+                .filter(dev.openallay.tool.builtin.RunJavascriptTool.class::isInstance)
+                .map(dev.openallay.tool.builtin.RunJavascriptTool.class::cast)
+                .map(tool -> tool.freezeCommandCapability(requestId.toString()))
+                .orElse(false);
         ToolRuntimeCatalog requestTools = ToolRuntimeCatalog.from(
                 frozenTools.registrations().stream()
                         .map(registration -> registration.tool() instanceof LoadSkillTool skill
                                 ? new RegisteredTool(registration.providerId(),
-                                        skill.withOwner("client"))
+                                        skill.forRequest(false, commandsEnabled, "client"))
                                 : registration)
                         .toList(),
                 Set.of());
@@ -136,11 +142,7 @@ public final class ClientToolExecutionEndpoint {
                 .map(descriptor -> descriptor.id())
                 .sorted()
                 .toList());
-        requestTools.find("openallay:run_javascript")
-                .filter(dev.openallay.tool.builtin.RunJavascriptTool.class::isInstance)
-                .map(dev.openallay.tool.builtin.RunJavascriptTool.class::cast)
-                .filter(tool -> tool.freezeCommandCapability(requestId.toString()))
-                .ifPresent(ignored -> exported.add(EXPERIMENTAL_COMMANDS_CAPABILITY));
+        if (commandsEnabled) exported.add(EXPERIMENTAL_COMMANDS_CAPABILITY);
         RequestState state = new RequestState(
                 sessionId,
                 requestTools,

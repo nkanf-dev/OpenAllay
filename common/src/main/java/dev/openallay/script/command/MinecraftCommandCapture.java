@@ -24,7 +24,6 @@ public final class MinecraftCommandCapture {
             CommandCapabilityRuntime runtime,
             String correlationId,
             Instant capturedAt) {
-        runtime.freezeRequest(correlationId);
         if (!runtime.enabledFor(correlationId)) {
             return;
         }

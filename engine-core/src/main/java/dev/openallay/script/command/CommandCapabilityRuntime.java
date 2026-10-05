@@ -17,7 +17,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * Owns the default-off setting and immutable per-request command capability captures.
+ * Owns the command-only setting and immutable per-request effective command captures.
  *
  * <p>Captures, not the current toggle, determine active-request behavior.
  */
@@ -70,9 +70,9 @@ public final class CommandCapabilityRuntime {
             requests.remove(correlationId);
             return;
         }
-        requests.put(
+        requests.computeIfAbsent(
                 correlationId,
-                new RequestCapability(
+                ignored -> new RequestCapability(
                         this, actorId, catalog, submitter, new AtomicLong()));
     }
 
@@ -104,10 +104,21 @@ public final class CommandCapabilityRuntime {
                         capability, cancellation, evidence, recordEvidence));
     }
 
-    /** Freezes the current toggle once for a future request. */
+    /** Freezes the command-only toggle for a request with no captured full-access authority. */
     public boolean freezeRequest(String correlationId) {
+        return freezeRequest(correlationId, false);
+    }
+
+    /**
+     * Freezes effective authority once: captured client-local full access includes commands.
+     *
+     * <p>Later settings or repeated captures cannot change this request's decision. The caller
+     * supplies an already frozen full-access flag, never the current JVM-wide setting.
+     */
+    public boolean freezeRequest(String correlationId, boolean unrestrictedJavascript) {
         requireCorrelation(correlationId);
-        return requestSettings.computeIfAbsent(correlationId, ignored -> enabled());
+        return requestSettings.computeIfAbsent(
+                correlationId, ignored -> unrestrictedJavascript || enabled());
     }
 
     public boolean enabledFor(String correlationId) {

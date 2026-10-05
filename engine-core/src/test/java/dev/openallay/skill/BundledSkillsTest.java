@@ -43,6 +43,10 @@ final class BundledSkillsTest {
         assertFalse(gameState.instructions().contains("`openallay:inspect_game_state`"));
         SkillDocument commands = repository.find("run-game-commands").orElseThrow();
         assertEquals(Set.of("references/commands.md"), commands.references().keySet());
+        assertTrue(commands.instructions().contains("Client-local unrestricted JavaScript includes commands"));
+        assertTrue(commands.instructions().contains("experimental command-only setting"));
+        assertTrue(commands.instructions().contains("captured the player's"));
+        assertTrue(commands.instructions().contains("Minecraft remains authoritative for parsing and permissions"));
         assertTrue(commands.instructions().contains("`commands.list()`"));
         assertTrue(commands.instructions().contains("never rolled back"));
         assertTrue(commands.instructions().contains("`commands.run(...)` is synchronous"));
@@ -116,6 +120,20 @@ final class BundledSkillsTest {
                 instanceof dev.openallay.tool.ToolResult.Success<?>);
         assertTrue(tool.invoke(authorized, new LoadSkillTool.Input("unrestricted-javascript", "references/java-jvm.md"))
                 instanceof dev.openallay.tool.ToolResult.Success<?>);
+    }
+
+    @Test
+    void fullAccessPureSelectionIncludesEligibleCommandsButExactRouteSelectionStillControlsGuidance() {
+        SkillRepository repository = new SkillRepository(new SkillParser(), Set.of("openallay:run_javascript"));
+        assertTrue(repository.reload(new BundledSkillLoader().load(), Set.of("ftbquests")));
+        SkillCatalogSnapshot captured = repository.snapshot(Set.of()).forRequest(false, false);
+        assertTrue(captured.find(SkillCatalogSnapshot.GAME_COMMANDS).isEmpty());
+        assertTrue(captured.forRequest(true).find(SkillCatalogSnapshot.GAME_COMMANDS).isPresent());
+        assertTrue(captured.forRequest(true, false).find(SkillCatalogSnapshot.GAME_COMMANDS).isEmpty());
+        assertTrue(captured.forRequest(false, true).find(SkillCatalogSnapshot.GAME_COMMANDS).isPresent());
+        SkillCatalogSnapshot denied = repository.snapshot(Set.of(SkillCatalogSnapshot.GAME_COMMANDS));
+        assertTrue(denied.forRequest(true).find(SkillCatalogSnapshot.GAME_COMMANDS).isEmpty());
+        assertTrue(denied.forRequest(true, true).find(SkillCatalogSnapshot.GAME_COMMANDS).isEmpty());
     }
 
     @Test

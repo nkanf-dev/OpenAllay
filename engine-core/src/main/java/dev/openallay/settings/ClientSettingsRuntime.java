@@ -246,9 +246,7 @@ public record ClientSettingsRuntime(
             if (loadedUnrestricted instanceof ToolResult.Failure<UnrestrictedJavascriptConfig> f && startupNotice == null) {
                 startupNotice = SettingsNotice.failure(f.code(), f.message());
             }
-            product.skills().setRuntimeDisabledSkills(initialCommands.enabled()
-                    ? Set.of()
-                    : Set.of("run-game-commands"));
+            updateCommandGuidance(product, unrestrictedRuntime);
             Set<String> installedSkillMods = installedSkillMods(product);
             SkillSettingsBackend skills = new SkillSettingsBackend(
                     configDirectory.resolve("skills"), product.skills(), installedSkillMods);
@@ -316,7 +314,8 @@ public record ClientSettingsRuntime(
                                     commandStore.save(candidate),
                                     commandStore,
                                     product,
-                                    capabilities);
+                                    capabilities,
+                                    unrestrictedRuntime);
                         }
 
                         @Override
@@ -325,7 +324,8 @@ public record ClientSettingsRuntime(
                                     commandStore.reload(),
                                     commandStore,
                                     product,
-                                    capabilities);
+                                    capabilities,
+                                    unrestrictedRuntime);
                         }
             };
             RecipeSettingsBackend recipes = new RecipeSettingsBackend(recipesPath, recipeRuntime);
@@ -391,14 +391,12 @@ public record ClientSettingsRuntime(
                     commandActions,
                     new ClientSettingsService.UnrestrictedJavascriptActions() {
                         public ToolResult<UnrestrictedJavascriptConfig> save(UnrestrictedJavascriptConfig c) {
-                            var result = unrestrictedStore.save(c);
-                            if (result instanceof ToolResult.Success<UnrestrictedJavascriptConfig> s) unrestrictedRuntime.replace(s.value());
-                            return result;
+                            return publishUnrestrictedConfig(unrestrictedStore.save(c), unrestrictedStore,
+                                    unrestrictedRuntime, product, capabilities);
                         }
                         public ToolResult<UnrestrictedJavascriptConfig> reload() {
-                            var result = unrestrictedStore.reload();
-                            if (result instanceof ToolResult.Success<UnrestrictedJavascriptConfig> s) unrestrictedRuntime.replace(s.value());
-                            return result;
+                            return publishUnrestrictedConfig(unrestrictedStore.reload(), unrestrictedStore,
+                                    unrestrictedRuntime, product, capabilities);
                         }
                     },
                     initialUnrestricted,
@@ -429,7 +427,8 @@ public record ClientSettingsRuntime(
             ToolResult<CommandCapabilityConfig> loaded,
             CommandCapabilityConfigStore store,
             FeatureServices product,
-            CapabilitySettingsBackend capabilities) {
+            CapabilitySettingsBackend capabilities,
+            UnrestrictedJavascriptRuntime unrestrictedRuntime) {
         if (loaded instanceof ToolResult.Failure<CommandCapabilityConfig> failure) {
             return failure;
         }
@@ -438,20 +437,48 @@ public record ClientSettingsRuntime(
         CommandCapabilityConfig prior = new CommandCapabilityConfig(
                 product.commands().enabled());
         product.commands().replace(candidate);
-        product.skills().setRuntimeDisabledSkills(candidate.enabled()
-                ? Set.of()
-                : Set.of("run-game-commands"));
+        updateCommandGuidance(product, unrestrictedRuntime);
         ToolResult<CapabilitySettingsView> published = capabilities.refreshCapabilities();
         if (published instanceof ToolResult.Failure<CapabilitySettingsView> failure) {
             product.commands().replace(prior);
-            product.skills().setRuntimeDisabledSkills(prior.enabled()
-                    ? Set.of()
-                    : Set.of("run-game-commands"));
+            updateCommandGuidance(product, unrestrictedRuntime);
             store.save(prior);
             capabilities.refreshCapabilities();
             return new ToolResult.Failure<>(failure.code(), failure.message());
         }
         return new ToolResult.Success<>(candidate);
+    }
+
+    private static ToolResult<UnrestrictedJavascriptConfig> publishUnrestrictedConfig(
+            ToolResult<UnrestrictedJavascriptConfig> loaded,
+            UnrestrictedJavascriptConfigStore store,
+            UnrestrictedJavascriptRuntime unrestrictedRuntime,
+            FeatureServices product,
+            CapabilitySettingsBackend capabilities) {
+        if (loaded instanceof ToolResult.Failure<UnrestrictedJavascriptConfig> failure) {
+            return failure;
+        }
+        UnrestrictedJavascriptConfig candidate =
+                ((ToolResult.Success<UnrestrictedJavascriptConfig>) loaded).value();
+        UnrestrictedJavascriptConfig prior = new UnrestrictedJavascriptConfig(unrestrictedRuntime.enabled());
+        unrestrictedRuntime.replace(candidate);
+        updateCommandGuidance(product, unrestrictedRuntime);
+        ToolResult<CapabilitySettingsView> published = capabilities.refreshCapabilities();
+        if (published instanceof ToolResult.Failure<CapabilitySettingsView> failure) {
+            unrestrictedRuntime.replace(prior);
+            updateCommandGuidance(product, unrestrictedRuntime);
+            store.save(prior);
+            capabilities.refreshCapabilities();
+            return new ToolResult.Failure<>(failure.code(), failure.message());
+        }
+        return new ToolResult.Success<>(candidate);
+    }
+
+    private static void updateCommandGuidance(
+            FeatureServices product, UnrestrictedJavascriptRuntime unrestrictedRuntime) {
+        product.skills().setRuntimeDisabledSkills(unrestrictedRuntime.enabled() || product.commands().enabled()
+                ? Set.of()
+                : Set.of(dev.openallay.skill.SkillCatalogSnapshot.GAME_COMMANDS));
     }
 
     private static ClientSettingsService.DisplayActions unavailableDisplayActions() {

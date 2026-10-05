@@ -127,6 +127,22 @@ public final class LoadSkillTool
     }
 
     public LoadSkillTool withOwner(String replacement) { return new LoadSkillTool(catalog, replacement); }
+
+    /** Captures optional guidance for the request, preserving eligible documents and explicit denies. */
+    public LoadSkillTool forRequest(boolean unrestrictedJavascript, boolean commandsAvailable, String owner) {
+        SkillCatalogSnapshot captured;
+        if (catalog instanceof SkillCatalogSnapshot snapshot) {
+            captured = snapshot;
+        } else {
+            Map<String, SkillDocument> documents = new java.util.TreeMap<>();
+            for (SkillMetadata metadata : catalog.metadata()) {
+                catalog.find(metadata.name()).ifPresent(document -> documents.put(metadata.name(), document));
+            }
+            captured = new SkillCatalogSnapshot(documents);
+        }
+        return new LoadSkillTool(captured.forRequest(unrestrictedJavascript, commandsAvailable), owner);
+    }
+
     public SkillCatalogManifest catalogManifest() { return manifest; }
 
     /** Validates retained instruction results against this Tool's captured Skill catalog. */

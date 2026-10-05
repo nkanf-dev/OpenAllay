@@ -71,10 +71,16 @@ public final class MinecraftGuideContextProvider implements GuideContextProvider
 
     @Override
     public void freezeRequest(String correlationId, boolean clientLocalModel) {
-        runtime.commands().freezeRequest(correlationId);
-        runtime.extensions().freezeJavascriptRequest(correlationId, clientLocalModel);
+        freezeJavascriptAndCommands(correlationId, clientLocalModel);
+    }
+
+    private boolean freezeJavascriptAndCommands(String correlationId, boolean clientLocalModel) {
         var javascript = unrestrictedJavascript;
-        if (javascript != null && clientLocalModel) javascript.freeze(correlationId);
+        if (javascript != null && !clientLocalModel) javascript.freezeDisabled(correlationId);
+        boolean unrestricted = clientLocalModel && javascript != null
+                && javascript.freeze(correlationId);
+        runtime.commands().freezeRequest(correlationId, unrestricted);
+        return unrestricted;
     }
 
     @Override
@@ -116,7 +122,7 @@ public final class MinecraftGuideContextProvider implements GuideContextProvider
 
     private ToolResult<ToolInvocationContext> capture(
             Set<ContextCapability> capabilities, String correlationId, boolean clientLocalModel) {
-        runtime.extensions().freezeJavascriptRequest(correlationId, clientLocalModel);
+        boolean unrestricted = freezeJavascriptAndCommands(correlationId, clientLocalModel);
         if (client.player == null) {
             return new ToolResult.Failure<>(
                     "player_required", "No client player is connected");
@@ -126,8 +132,6 @@ public final class MinecraftGuideContextProvider implements GuideContextProvider
             if (refreshed instanceof ToolResult.Failure<Integer> failure) {
                 return new ToolResult.Failure<>(failure.code(), failure.message());
             }
-            boolean unrestricted = clientLocalModel && unrestrictedJavascript != null
-                    && unrestrictedJavascript.freeze(correlationId);
             ToolInvocationContext context =
                     new ClientContextCapture(gson, runtime.platform(), recipeClient)
                             .capture(client, capabilities, correlationId, unrestricted);
