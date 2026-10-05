@@ -1,6 +1,12 @@
 name: Release
 'on':
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing annotated release tag; original artifact builds stay unchanged
+        required: true
+        default: v0.4.2
+        type: string
   push:
     tags:
     - v*
@@ -11,10 +17,11 @@ concurrency:
   cancel-in-progress: false
 jobs:
   publish:
-    name: Publish verified unchanged ${{ github.ref_name }}
+    name: Publish verified unchanged ${{ inputs.release_tag || github.ref_name }}
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     env:
+      RELEASE_TAG: ${{ inputs.release_tag || github.ref_name }}
       OPENALLAY_MINECRAFT_TARGET: '26.2'
       OPENALLAY_MINECRAFT_RECEIPT_DIRECTORY: build/release-receipts
     permissions:
@@ -30,7 +37,7 @@ jobs:
     - name: Validate tag and release vacancy
       env:
         GH_TOKEN: ${{ github.token }}
-      run: ./scripts/verify-release-tag.sh "${GITHUB_REF_NAME}" "${GITHUB_SHA}"
+      run: ./scripts/verify-release-tag.sh "$RELEASE_TAG"
     - name: Validate Modrinth credential
       env:
         MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
@@ -57,12 +64,12 @@ jobs:
     - name: Generate release notes
       env:
         GH_TOKEN: ${{ github.token }}
-      run: python3 scripts/generate-release-notes.py "${GITHUB_REF_NAME}" --repository "${GITHUB_REPOSITORY}" --output
+      run: python3 scripts/generate-release-notes.py "$RELEASE_TAG" --repository "${GITHUB_REPOSITORY}" --output
         release-notes.md
     - name: Publish Fabric and NeoForge to Modrinth
       env:
         MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
-      run: ./scripts/publish-modrinth.sh "${GITHUB_REF_NAME}" release
+      run: ./scripts/publish-modrinth.sh "$RELEASE_TAG" release
     - name: Publish GitHub release
       env:
         GH_TOKEN: ${{ github.token }}
@@ -70,10 +77,10 @@ jobs:
       run: |
         set -euo pipefail
         release_flags=()
-        if [[ "${GITHUB_REF_NAME}" == *-* ]]; then
+        if [[ "$RELEASE_TAG" == *-* ]]; then
           release_flags+=(--prerelease)
         fi
-        gh release create "${GITHUB_REF_NAME}" \
+        gh release create "$RELEASE_TAG" \
           release/openallay-*.jar \
           release/SHA256SUMS \
           release/accepted-originals.json \

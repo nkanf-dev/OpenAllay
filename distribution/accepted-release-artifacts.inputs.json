@@ -796,7 +796,7 @@
         {
           "profile": {
             "archiveId": 11339136598,
-            "path": "e2e/runtime/1.20.1/minecraft/.provision/fabric-runtime.json"
+            "path": "ci-runtime-receipt.json"
           },
           "result": null,
           "sourceReceipt": {
@@ -826,7 +826,7 @@
         {
           "profile": {
             "archiveId": 11353851071,
-            "path": "e2e/runtime/1.20.2/minecraft/.provision/fabric-runtime.json"
+            "path": "ci-runtime-receipt.json"
           },
           "result": {
             "archiveId": 11353851071,
@@ -859,7 +859,7 @@
         {
           "profile": {
             "archiveId": 11338540762,
-            "path": "e2e/runtime/26.3/minecraft/.provision/fabric-runtime.json"
+            "path": "ci-runtime-receipt.json"
           },
           "result": null,
           "sourceReceipt": {
@@ -889,7 +889,7 @@
         {
           "profile": {
             "archiveId": 11342674064,
-            "path": "e2e/runtime/26.2/minecraft/.provision/fabric-runtime.json"
+            "path": "ci-runtime-receipt.json"
           },
           "result": null,
           "sourceReceipt": {
@@ -919,7 +919,7 @@
         {
           "profile": {
             "archiveId": 11340290479,
-            "path": "e2e/runtime/1.20.1/minecraft/.provision/neoforge-runtime.json"
+            "path": "ci-runtime-receipt.json"
           },
           "result": null,
           "sourceReceipt": {
@@ -949,7 +949,7 @@
         {
           "profile": {
             "archiveId": 11353846166,
-            "path": "e2e/runtime/1.20.2/minecraft/.provision/neoforge-runtime.json"
+            "path": "ci-runtime-receipt.json"
           },
           "result": {
             "archiveId": 11353846166,
@@ -982,7 +982,7 @@
         {
           "profile": {
             "archiveId": 11338670569,
-            "path": "e2e/runtime/26.3/minecraft/.provision/neoforge-runtime.json"
+            "path": "ci-runtime-receipt.json"
           },
           "result": null,
           "sourceReceipt": {
@@ -1012,7 +1012,7 @@
         {
           "profile": {
             "archiveId": 11342659167,
-            "path": "e2e/runtime/26.2/minecraft/.provision/neoforge-runtime.json"
+            "path": "ci-runtime-receipt.json"
           },
           "result": null,
           "sourceReceipt": {
@@ -1042,7 +1042,7 @@
         {
           "profile": {
             "archiveId": 11345634120,
-            "path": "e2e/runtime/26.1/minecraft/.provision/fabric-runtime.json"
+            "path": "ci-runtime-receipt.json"
           },
           "result": {
             "archiveId": 11345634120,
@@ -1058,7 +1058,7 @@
         {
           "profile": {
             "archiveId": 11345763808,
-            "path": "e2e/runtime/26.1.1/minecraft/.provision/fabric-runtime.json"
+            "path": "ci-runtime-receipt.json"
           },
           "result": {
             "archiveId": 11345763808,
@@ -1074,7 +1074,7 @@
         {
           "profile": {
             "archiveId": 11346532745,
-            "path": "e2e/runtime/26.1.2/minecraft/.provision/fabric-runtime.json"
+            "path": "ci-runtime-receipt.json"
           },
           "result": {
             "archiveId": 11346532745,
@@ -1107,7 +1107,7 @@
         {
           "profile": {
             "archiveId": 11347849518,
-            "path": "e2e/runtime/26.1/minecraft/.provision/neoforge-runtime.json"
+            "path": "ci-runtime-receipt.json"
           },
           "result": {
             "archiveId": 11347849518,
@@ -1123,7 +1123,7 @@
         {
           "profile": {
             "archiveId": 11347094899,
-            "path": "e2e/runtime/26.1.1/minecraft/.provision/neoforge-runtime.json"
+            "path": "ci-runtime-receipt.json"
           },
           "result": {
             "archiveId": 11347094899,
@@ -1139,7 +1139,7 @@
         {
           "profile": {
             "archiveId": 11347114861,
-            "path": "e2e/runtime/26.1.2/minecraft/.provision/neoforge-runtime.json"
+            "path": "ci-runtime-receipt.json"
           },
           "result": {
             "archiveId": 11347114861,
@@ -1172,7 +1172,7 @@
         {
           "profile": {
             "archiveId": 11346850231,
-            "path": "e2e/runtime/1.21.9/minecraft/.provision/fabric-runtime.json"
+            "path": "ci-runtime-receipt.json"
           },
           "result": {
             "archiveId": 11346850231,
@@ -1188,7 +1188,7 @@
         {
           "profile": {
             "archiveId": 11346493572,
-            "path": "e2e/runtime/1.21.10/minecraft/.provision/fabric-runtime.json"
+            "path": "ci-runtime-receipt.json"
           },
           "result": {
             "archiveId": 11346493572,
@@ -1221,7 +1221,7 @@
         {
           "profile": {
             "archiveId": 11350730033,
-            "path": "e2e/runtime/1.21.9/minecraft/.provision/neoforge-runtime.json"
+            "path": "ci-runtime-receipt.json"
           },
           "result": {
             "archiveId": 11350730033,
@@ -1237,7 +1237,7 @@
         {
           "profile": {
             "archiveId": 11348688389,
-            "path": "e2e/runtime/1.21.10/minecraft/.provision/neoforge-runtime.json"
+            "path": "ci-runtime-receipt.json"
           },
           "result": {
             "archiveId": 11348688389,
@@ -1270,7 +1270,7 @@
         {
           "profile": {
             "archiveId": 11346816185,
-            "path": "e2e/runtime/1.21.7/minecraft/.provision/fabric-runtime.json"
+            "path": "ci-runtime-receipt.json"
           },
           "result": {
             "archiveId": 11346816185,
@@ -1286,7 +1286,7 @@
         {
           "profile": {
             "archiveId": 11346448882,
-            "path": "e2e/runtime/1.21.8/minecraft/.provision/fabric-runtime.json"
+            "path": "ci-runtime-receipt.json"
           },
           "result": {
             "archiveId": 11346448882,
@@ -1319,7 +1319,7 @@
         {
           "profile": {
             "archiveId": 11348661157,
-            "path": "e2e/runtime/1.21.7/minecraft/.provision/neoforge-runtime.json"
+            "path": "ci-runtime-receipt.json"
           },
           "result": {
             "archiveId": 11348661157,
@@ -1335,7 +1335,7 @@
         {
           "profile": {
             "archiveId": 11349071296,
-            "path": "e2e/runtime/1.21.8/minecraft/.provision/neoforge-runtime.json"
+            "path": "ci-runtime-receipt.json"
           },
           "result": {
             "archiveId": 11349071296,
@@ -1368,7 +1368,7 @@
         {
           "profile": {
             "archiveId": 11346693817,
-            "path": "e2e/runtime/1.21.2/minecraft/.provision/fabric-runtime.json"
+            "path": "ci-runtime-receipt.json"
           },
           "result": {
             "archiveId": 11346693817,
@@ -1384,7 +1384,7 @@
         {
           "profile": {
             "archiveId": 11346249638,
-            "path": "e2e/runtime/1.21.3/minecraft/.provision/fabric-runtime.json"
+            "path": "ci-runtime-receipt.json"
           },
           "result": {
             "archiveId": 11346249638,
@@ -1417,7 +1417,7 @@
         {
           "profile": {
             "archiveId": 11346958285,
-            "path": "e2e/runtime/1.21.2/minecraft/.provision/neoforge-runtime.json"
+            "path": "ci-runtime-receipt.json"
           },
           "result": {
             "archiveId": 11346958285,
@@ -1433,7 +1433,7 @@
         {
           "profile": {
             "archiveId": 11346539453,
-            "path": "e2e/runtime/1.21.3/minecraft/.provision/neoforge-runtime.json"
+            "path": "ci-runtime-receipt.json"
           },
           "result": {
             "archiveId": 11346539453,
@@ -1466,7 +1466,7 @@
         {
           "profile": {
             "archiveId": 11346554460,
-            "path": "e2e/runtime/1.21/minecraft/.provision/fabric-runtime.json"
+            "path": "ci-runtime-receipt.json"
           },
           "result": {
             "archiveId": 11346554460,
@@ -1482,7 +1482,7 @@
         {
           "profile": {
             "archiveId": 11347370265,
-            "path": "e2e/runtime/1.21.1/minecraft/.provision/fabric-runtime.json"
+            "path": "ci-runtime-receipt.json"
           },
           "result": {
             "archiveId": 11347370265,
@@ -1515,7 +1515,7 @@
         {
           "profile": {
             "archiveId": 11348147020,
-            "path": "e2e/runtime/1.21/minecraft/.provision/neoforge-runtime.json"
+            "path": "ci-runtime-receipt.json"
           },
           "result": {
             "archiveId": 11348147020,
@@ -1531,7 +1531,7 @@
         {
           "profile": {
             "archiveId": 11347605353,
-            "path": "e2e/runtime/1.21.1/minecraft/.provision/neoforge-runtime.json"
+            "path": "ci-runtime-receipt.json"
           },
           "result": {
             "archiveId": 11347605353,
@@ -1564,7 +1564,7 @@
         {
           "profile": {
             "archiveId": 11348440569,
-            "path": "e2e/runtime/1.20.3/minecraft/.provision/fabric-runtime.json"
+            "path": "ci-runtime-receipt.json"
           },
           "result": {
             "archiveId": 11348440569,
@@ -1580,7 +1580,7 @@
         {
           "profile": {
             "archiveId": 11347334977,
-            "path": "e2e/runtime/1.20.4/minecraft/.provision/fabric-runtime.json"
+            "path": "ci-runtime-receipt.json"
           },
           "result": {
             "archiveId": 11347334977,
@@ -1613,7 +1613,7 @@
         {
           "profile": {
             "archiveId": 11353085470,
-            "path": "e2e/runtime/1.20.3/minecraft/.provision/neoforge-runtime.json"
+            "path": "ci-runtime-receipt.json"
           },
           "result": {
             "archiveId": 11353085470,
@@ -1646,7 +1646,7 @@
         {
           "profile": {
             "archiveId": 11350253487,
-            "path": "e2e/runtime/1.20.5/minecraft/.provision/fabric-runtime.json"
+            "path": "ci-runtime-receipt.json"
           },
           "result": {
             "archiveId": 11350253487,
@@ -1662,7 +1662,7 @@
         {
           "profile": {
             "archiveId": 11351210486,
-            "path": "e2e/runtime/1.20.6/minecraft/.provision/fabric-runtime.json"
+            "path": "ci-runtime-receipt.json"
           },
           "result": {
             "archiveId": 11351210486,
@@ -1695,7 +1695,7 @@
         {
           "profile": {
             "archiveId": 11350793361,
-            "path": "e2e/runtime/1.21.11/minecraft/.provision/fabric-runtime.json"
+            "path": "ci-runtime-receipt.json"
           },
           "result": {
             "archiveId": 11350793361,
@@ -1728,7 +1728,7 @@
         {
           "profile": {
             "archiveId": 11350023976,
-            "path": "e2e/runtime/1.21.4/minecraft/.provision/fabric-runtime.json"
+            "path": "ci-runtime-receipt.json"
           },
           "result": {
             "archiveId": 11350023976,
@@ -1761,7 +1761,7 @@
         {
           "profile": {
             "archiveId": 11350529242,
-            "path": "e2e/runtime/1.21.5/minecraft/.provision/fabric-runtime.json"
+            "path": "ci-runtime-receipt.json"
           },
           "result": {
             "archiveId": 11350529242,
@@ -1794,7 +1794,7 @@
         {
           "profile": {
             "archiveId": 11351366287,
-            "path": "e2e/runtime/1.21.6/minecraft/.provision/fabric-runtime.json"
+            "path": "ci-runtime-receipt.json"
           },
           "result": {
             "archiveId": 11351366287,
@@ -1827,7 +1827,7 @@
         {
           "profile": {
             "archiveId": 11350283006,
-            "path": "e2e/runtime/1.20.5/minecraft/.provision/neoforge-runtime.json"
+            "path": "ci-runtime-receipt.json"
           },
           "result": {
             "archiveId": 11350283006,
@@ -1843,7 +1843,7 @@
         {
           "profile": {
             "archiveId": 11350628191,
-            "path": "e2e/runtime/1.20.6/minecraft/.provision/neoforge-runtime.json"
+            "path": "ci-runtime-receipt.json"
           },
           "result": {
             "archiveId": 11350628191,
@@ -1876,7 +1876,7 @@
         {
           "profile": {
             "archiveId": 11350154778,
-            "path": "e2e/runtime/1.21.11/minecraft/.provision/neoforge-runtime.json"
+            "path": "ci-runtime-receipt.json"
           },
           "result": {
             "archiveId": 11350154778,
@@ -1909,7 +1909,7 @@
         {
           "profile": {
             "archiveId": 11352423925,
-            "path": "e2e/runtime/1.21.4/minecraft/.provision/neoforge-runtime.json"
+            "path": "ci-runtime-receipt.json"
           },
           "result": {
             "archiveId": 11352423925,
@@ -1942,7 +1942,7 @@
         {
           "profile": {
             "archiveId": 11352294166,
-            "path": "e2e/runtime/1.21.5/minecraft/.provision/neoforge-runtime.json"
+            "path": "ci-runtime-receipt.json"
           },
           "result": {
             "archiveId": 11352294166,
@@ -1975,7 +1975,7 @@
         {
           "profile": {
             "archiveId": 11353291120,
-            "path": "e2e/runtime/1.21.6/minecraft/.provision/neoforge-runtime.json"
+            "path": "ci-runtime-receipt.json"
           },
           "result": {
             "archiveId": 11353291120,
@@ -2008,7 +2008,7 @@
         {
           "profile": {
             "archiveId": 11353390656,
-            "path": "e2e/runtime/1.20.4/minecraft/.provision/neoforge-runtime.json"
+            "path": "ci-runtime-receipt.json"
           },
           "result": {
             "archiveId": 11353390656,
