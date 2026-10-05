@@ -3,6 +3,7 @@ package dev.openallay.settings;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.JsonObject;
@@ -119,9 +120,11 @@ final class CommandSettingsRequestBindingTest {
             capture(fixture, "next-disabled");
             var next = context("next-disabled", false);
             assertBinding(fixture, settings.models().capabilities().forRequest(next), next, false);
+            fixture.cancellations.get("submitted-enabled").cancel();
             fixture.contexts.closeRequest("submitted-enabled");
             assertFalse(fixture.commands.availableFor("submitted-enabled"));
             assertFalse(fixture.commands.freezeRequest("submitted-enabled"));
+            assertClosed(fixture, enabled);
         }
     }
 
@@ -133,6 +136,7 @@ final class CommandSettingsRequestBindingTest {
             fixture.contexts.freezeRequest("before-full", true);
             assertInstanceOf(ToolResult.Success.class,
                     settings.settings().saveUnrestrictedJavascript(true).join());
+            fixture.contexts.freezeRequest("before-full", true);
             capture(fixture, "before-full");
             var before = context("before-full", settings.unrestrictedJavascript().enabledFor("before-full"));
             assertBinding(fixture, settings.models().capabilities().forRequest(before), before, false);
@@ -145,6 +149,14 @@ final class CommandSettingsRequestBindingTest {
             var full = context("captured-full", settings.unrestrictedJavascript().enabledFor("captured-full"));
             assertTrue(full.unrestrictedJavascript());
             assertBinding(fixture, settings.models().capabilities().forRequest(full), full, true);
+            fixture.commands.capture("captured-full", ACTOR,
+                    new CommandCatalogSnapshot(Instant.EPOCH, List.of()),
+                    (actor, command, cancellation) -> {
+                        fixture.submissions.add(new Submission("replacement-route", actor, command));
+                        fixture.commands.acceptFeedback(actor, "replacement route feedback");
+                        return CompletableFuture.completedFuture(null);
+                    });
+            assertBinding(fixture, settings.models().capabilities().forRequest(full), full, true);
             assertFalse(settings.settings().snapshot().experimentalCommands().enabled());
             assertFalse(fixture.commands.enabled());
             assertFalse(settings.models().capabilities().skills()
@@ -154,9 +166,11 @@ final class CommandSettingsRequestBindingTest {
             capture(fixture, "after-full");
             var after = context("after-full", settings.unrestrictedJavascript().enabledFor("after-full"));
             assertBinding(fixture, settings.models().capabilities().forRequest(after), after, false);
+            fixture.cancellations.get("captured-full").cancel();
             fixture.contexts.closeRequest("captured-full");
             assertFalse(fixture.commands.availableFor("captured-full"));
             assertFalse(settings.unrestrictedJavascript().enabledFor("captured-full"));
+            assertClosed(fixture, full);
         }
     }
 
@@ -340,7 +354,10 @@ final class CommandSettingsRequestBindingTest {
             var request = settings.models().capabilities().forRequest(context);
             assertFalse(request.skills().find(SkillCatalogSnapshot.GAME_COMMANDS).isPresent());
             assertTrue(request.commandCapabilityAvailable(context.correlationId()));
-            assertEquals("object", invoke(fixture, context).get("commands").getAsString());
+            int before = fixture.submissions.size();
+            JsonObject actual = invoke(fixture, context);
+            assertEquals("object", actual.get("commands").getAsString());
+            assertDispatch(fixture, context, true, before, 1, actual);
         }
     }
 
@@ -363,6 +380,14 @@ final class CommandSettingsRequestBindingTest {
             assertTrue(request.localTools().find(RunJavascriptTool.ID).isEmpty());
             assertFalse(request.commandCapabilityAvailable("disabled-tool"));
             assertTrue(request.skills().find(SkillCatalogSnapshot.GAME_COMMANDS).isEmpty());
+            var arguments = new JsonObject();
+            arguments.addProperty("source", "return commands.run('say disabled-tool');");
+            var result = new dev.openallay.agent.tool.LocalAgentToolExecutor(request.localTools(),
+                    new com.google.gson.Gson()).execute("openallay__run_javascript", arguments,
+                            context("disabled-tool", true), new CancellationSignal()).join();
+            assertTrue(result.failure());
+            assertEquals("tool_unavailable", result.normalized().get("code").getAsString());
+            assertTrue(fixture.submissions.isEmpty());
         }
     }
 
@@ -426,6 +451,10 @@ final class CommandSettingsRequestBindingTest {
                     .find(SkillCatalogSnapshot.GAME_COMMANDS).isPresent());
             assertFalse(success(store.reload()).value().enabled());
             assertEquals(commandDocument, Files.readString(directory.resolve("experimental-commands.json")));
+            fixture.contexts.freezeRequest("after-failed-publication", true);
+            capture(fixture, "after-failed-publication");
+            var after = context("after-failed-publication", false);
+            assertBinding(fixture, settings.models().capabilities().forRequest(after), after, false);
         }
     }
 
@@ -454,7 +483,11 @@ final class CommandSettingsRequestBindingTest {
                 SkillCatalogSnapshot.GAME_COMMANDS));
         if (enabled) assertInstanceOf(ToolResult.Success.class, guide);
         else assertEquals("skill_not_found", assertInstanceOf(ToolResult.Failure.class, guide).code());
+        int before = fixture.submissions.size();
+        long firstSequence = fixture.submissions.stream()
+                .filter(submission -> submission.correlation().equals(context.correlationId())).count() + 1;
         JsonObject actual = invoke(fixture, context);
+        assertDispatch(fixture, context, enabled, before, firstSequence, actual);
         assertEquals(enabled ? "object" : "undefined", actual.get("commands").getAsString());
         assertEquals(context.unrestrictedJavascript() ? "object" : "undefined",
                 actual.get("java").getAsString());
@@ -466,27 +499,94 @@ final class CommandSettingsRequestBindingTest {
     }
 
     private JsonObject invoke(Fixture fixture, ToolInvocationContext context) {
+        String correlation = context.correlationId();
+        String source = """
+                var first = null;
+                var second = null;
+                var unavailable = false;
+                try {
+                  first = commands.run(%s);
+                  second = commands.run(%s);
+                } catch (error) {
+                  if (typeof commands !== "undefined" || error.name !== "ReferenceError") throw error;
+                  unavailable = true;
+                }
+                return {
+                  commands: typeof commands,
+                  java: typeof Java,
+                  mcCommands: typeof mc.commands,
+                  methods: typeof commands === "object"
+                    ? [typeof commands.list, typeof commands.describe, typeof commands.run] : [],
+                  nodes: typeof commands === "object" ? commands.list().nodes.length : 0,
+                  schemaHasCommands: schema.list().some(root => root.name === "commands"),
+                  unavailable: unavailable,
+                  runs: first === null ? [] : [first, second]
+                };
+                """.formatted(new com.google.gson.Gson().toJson("  /say " + correlation + " first  "),
+                        new com.google.gson.Gson().toJson("say " + correlation + " second"));
         ToolResult.Success<RunJavascriptTool.Output> result = success(fixture.javascript.invokeAsync(
-                context, new RunJavascriptTool.Input("""
-                    return {
-                      commands: typeof commands,
-                      java: typeof Java,
-                      mcCommands: typeof mc.commands,
-                      methods: typeof commands === "object"
-                        ? [typeof commands.list, typeof commands.describe, typeof commands.run] : [],
-                      nodes: typeof commands === "object" ? commands.list().nodes.length : 0,
-                      schemaHasCommands: schema.list().some(root => root.name === "commands")
-                    };
-                    """, List.of()), new CancellationSignal()).join());
-        return fixture.workspaces.open(context.correlationId()).open(result.value().handle()).getAsJsonObject();
+                context, new RunJavascriptTool.Input(source, List.of()),
+                fixture.cancellations.computeIfAbsent(correlation, ignored -> new CancellationSignal()))
+                .orTimeout(10, java.util.concurrent.TimeUnit.SECONDS).join());
+        return fixture.workspaces.open(correlation).open(result.value().handle()).getAsJsonObject();
     }
 
     private static void capture(Fixture fixture, String correlation) {
-        fixture.commands.capture(correlation, ACTOR,
+        // Distinct request actors make copying another request's route observable.
+        UUID actor = UUID.nameUUIDFromBytes(correlation.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        fixture.actors.putIfAbsent(correlation, actor);
+        fixture.commands.capture(correlation, actor,
                 new CommandCatalogSnapshot(Instant.EPOCH, List.of(
                         new CommandCatalogSnapshot.CommandNodeSnapshot("say", "say", "literal", "",
                                 true, "", List.of(), List.of()))),
-                (actor, command, cancellation) -> CompletableFuture.completedFuture(null));
+                (submittedActor, command, cancellation) -> {
+                    cancellation.throwIfCancelled();
+                    fixture.submissions.add(new Submission(correlation, submittedActor, command));
+                    fixture.commands.acceptFeedback(ACTOR, "unrelated actor feedback");
+                    fixture.commands.acceptFeedback(submittedActor, "observed: " + command);
+                    fixture.commands.acceptFeedback(submittedActor, "route: " + correlation);
+                    return CompletableFuture.completedFuture(null);
+                });
+    }
+
+    private static void assertDispatch(Fixture fixture, ToolInvocationContext context,
+            boolean enabled, int before, long firstSequence, JsonObject actual) {
+        String correlation = context.correlationId();
+        assertEquals(!enabled, actual.get("unavailable").getAsBoolean());
+        var runs = actual.getAsJsonArray("runs");
+        assertEquals(enabled ? 2 : 0, runs.size());
+        List<Submission> expected = enabled ? List.of(
+                new Submission(correlation, fixture.actors.get(correlation), "say " + correlation + " first"),
+                new Submission(correlation, fixture.actors.get(correlation), "say " + correlation + " second")) : List.of();
+        assertEquals(expected, List.copyOf(fixture.submissions.subList(before, fixture.submissions.size())));
+        for (int index = 0; index < expected.size(); index++) {
+            Submission submitted = expected.get(index);
+            JsonObject run = runs.get(index).getAsJsonObject();
+            assertEquals(firstSequence + index, run.get("sequence").getAsLong());
+            assertEquals(submitted.actor().toString(), run.get("actorId").getAsString());
+            assertEquals(submitted.command(), run.get("command").getAsString());
+            assertEquals("feedback", run.get("state").getAsString());
+            assertTrue(run.get("feedbackObserved").getAsBoolean());
+            assertEquals(List.of("observed: " + submitted.command(), "route: " + correlation),
+                    run.getAsJsonArray("messages").asList().stream().map(value -> value.getAsString()).toList());
+            assertTrue(run.get("durationMillis").getAsLong() >= 0);
+        }
+    }
+
+    private static void assertClosed(Fixture fixture, ToolInvocationContext context) {
+        int before = fixture.submissions.size();
+        assertTrue(fixture.commands.bridge(context.correlationId(),
+                fixture.cancellations.get(context.correlationId())).isEmpty());
+        var cancelled = assertThrows(java.util.concurrent.CompletionException.class,
+                () -> fixture.javascript.invokeAsync(context,
+                        new RunJavascriptTool.Input("return commands.run('say after-close');", List.of()),
+                        fixture.cancellations.get(context.correlationId()))
+                        .orTimeout(10, java.util.concurrent.TimeUnit.SECONDS).join());
+        var failure = assertInstanceOf(dev.openallay.model.ModelClientException.class, cancelled.getCause());
+        assertEquals("agent_cancelled", failure.failure().code());
+        assertEquals(before, fixture.submissions.size());
+        fixture.javascript.closeRequestScope(context.correlationId());
+        assertTrue(fixture.workspaces.existing(context.correlationId()).isEmpty());
     }
 
     private static ToolInvocationContext context(String correlation, boolean unrestricted) {
@@ -520,7 +620,8 @@ final class CommandSettingsRequestBindingTest {
         // freeze/close need no live Minecraft instance. Capture is supplied deterministically above.
         var contexts = new MinecraftGuideContextProvider(product, null, new com.google.gson.Gson(),
                 getClass().getClassLoader());
-        return new Fixture(product, commands, javascript, workspaces, contexts);
+        return new Fixture(product, commands, javascript, workspaces, contexts,
+                new java.util.ArrayList<>(), new java.util.HashMap<>(), new java.util.HashMap<>());
     }
 
     @SuppressWarnings("unchecked")
@@ -530,7 +631,10 @@ final class CommandSettingsRequestBindingTest {
 
     private record Fixture(OpenAllayRuntime product, CommandCapabilityRuntime commands,
             RunJavascriptTool javascript, AgentResultWorkspaceRegistry workspaces,
-            MinecraftGuideContextProvider contexts) {}
+            MinecraftGuideContextProvider contexts, List<Submission> submissions, Map<String, UUID> actors,
+            Map<String, CancellationSignal> cancellations) {}
+
+    private record Submission(String correlation, UUID actor, String command) {}
 
     private static final class FakePlatform implements PlatformService {
         public String platformName() { return "test"; }

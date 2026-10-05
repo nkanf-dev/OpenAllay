@@ -44,15 +44,32 @@ class UniversalExtensionDiscoveryTest {
                         "dev/openallay/bridge/protocol/BridgeJsonCodec.class", new byte[] {1}));
         jar(directory.resolve("e-native.jar"), manifest,
                 Map.of("community/Entry.class", entrypoint, "native/lib.dll", new byte[] {1}));
-        try (var discovery = discovery(directory)) {
+        String retiredManifest = UniversalExtensionFixtures.manifest("test:retired_sdk", "community.Entry")
+                .replace("[0.4,0.5)", "[0.3,0.4)");
+        jar(directory.resolve("f-retired-sdk.jar"), retiredManifest,
+                Map.of("community/Entry.class", compile("community", "Entry", property, "public",
+                        "test:retired_sdk", "[0.3,0.4)")));
+        var registry = UniversalExtensionFixtures.registry();
+        AtomicInteger worldOpens = new AtomicInteger();
+        var beforeAdmission = registry.snapshot();
+        try (var discovery = new UniversalExtensionDiscovery(directory, registry,
+                UniversalExtensionFixtures.host(worldOpens), getClass().getClassLoader())) {
             var results = discovery.discover();
-            assertEquals(List.of("a-incompatible.jar", "b-malformed.jar", "c-sdk-shadow.jar", "d-core-shadow.jar", "e-native.jar"),
+            assertEquals(List.of("a-incompatible.jar", "b-malformed.jar", "c-sdk-shadow.jar", "d-core-shadow.jar",
+                    "e-native.jar", "f-retired-sdk.jar"),
                     results.stream().map(UniversalExtensionDiscovery.DiscoveryResult::filename).toList());
             assertEquals(OpenAllayExtensionState.INCOMPATIBLE, results.getFirst().state(),
                     results.getFirst().toString());
-            assertTrue(results.stream().skip(1).allMatch(value -> value.state() == OpenAllayExtensionState.UNAVAILABLE));
-            assertNull(System.getProperty(property + ".init"));
-            assertNull(System.getProperty(property + ".contribution"));
+            assertTrue(results.stream().skip(1).limit(4)
+                    .allMatch(value -> value.state() == OpenAllayExtensionState.UNAVAILABLE));
+            var retired = results.getLast();
+            assertEquals(OpenAllayExtensionState.INCOMPATIBLE, retired.state(), retired.toString());
+            assertEquals("incompatible_support_target", retired.diagnostic());
+            assertNull(System.getProperty(property + ".init"), "Rejected packages must not initialize any entrypoint");
+            assertNull(System.getProperty(property + ".contribution"), "Rejected packages must not call contribution");
+            assertEquals(beforeAdmission, registry.snapshot(), "Rejected packages must not publish declarations");
+            assertTrue(registry.javascriptInvocationParticipants().isEmpty());
+            assertEquals(0, worldOpens.get());
         } finally { clear(property); }
     }
     @Test void duplicateIdsAreRejectedAsAnAmbiguousBatchBeforeClassInitialization() throws Exception {
@@ -161,6 +178,11 @@ class UniversalExtensionDiscoveryTest {
     }
     private byte[] compile(String packageName, String name, String property, boolean mismatch,
             String constructorAccess) throws IOException {
+        return compile(packageName, name, property, constructorAccess,
+                mismatch ? "test:mismatch" : "test:extension", "[0.4,0.5)");
+    }
+    private byte[] compile(String packageName, String name, String property, String constructorAccess,
+            String extensionId, String apiRange) throws IOException {
         Path output = Files.createTempDirectory(temporary, "compiler-");
         Path source = output.resolve(name + ".java");
         String code = """
@@ -173,7 +195,7 @@ class UniversalExtensionDiscoveryTest {
                     public ExtensionDescriptor descriptor() {
                         return new ExtensionDescriptor("%s", "Test", "1.0.0", "Test", "Test Extension", "test:source",
                             new SupportDeclaration(Arrays.asList(new SupportTarget("fabric", "[26.2,26.3)",
-                                "[0.5,0.6)", "[0.4,0.5)")), 8, Collections.<String>emptySet(),
+                                "[0.5,0.6)", "%s")), 8, Collections.<String>emptySet(),
                                 Collections.<String>emptySet()), ExtensionRequirements.EMPTY);
                     }
                     public ExtensionContribution contribution(ExtensionHost host) {
@@ -182,7 +204,7 @@ class UniversalExtensionDiscoveryTest {
                     }
                 }
                 """.formatted(packageName, name, property, constructorAccess, name,
-                        mismatch ? "test:mismatch" : "test:extension", property);
+                        extensionId, apiRange, property);
         Files.writeString(source, code);
         var compiler = ToolProvider.getSystemJavaCompiler();
         assertNotNull(compiler, "Discovery fixtures require the root's native JDK test environment");

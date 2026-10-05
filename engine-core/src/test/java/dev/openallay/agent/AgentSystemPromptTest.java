@@ -104,11 +104,13 @@ final class AgentSystemPromptTest {
         for (boolean unrestricted : new boolean[] {false, true}) {
             String available = AgentSystemPrompt.compose("", contract, unrestricted, "", true);
             assertTrue(available.contains("commands.list(), commands.describe(path), and commands.run(text)"));
-            assertTrue(available.contains("top-level JavaScript methods for this request"));
+            assertTrue(available.contains("are available as top-level JavaScript methods for this request through the player's Minecraft route."));
             assertFalse(available.contains("The commands binding is not present"));
 
             String absent = AgentSystemPrompt.compose("", contract, unrestricted, "", false);
             assertTrue(absent.contains("The commands binding is not present for this request"));
+            assertFalse(absent.contains("are available as top-level JavaScript methods for this request through the player's Minecraft route."));
+            assertTrue(absent.contains(contract), "Descriptor guidance does not grant request availability");
             assertTrue(absent.contains("Use available capabilities to complete the player's task"));
             String mode = unrestricted ? "Use Java APIs as needed for the player's task"
                     : "JavaScript uses the default isolated mode";

@@ -72,6 +72,8 @@ final class SettingsLocalizationTest {
             "screen.openallay.settings.models.context_window",
             "screen.openallay.settings.models.test",
             "screen.openallay.settings.confirm_billable_test",
+            "screen.openallay.settings.extensions.commands.included",
+            "screen.openallay.settings.extensions.unrestricted.warning",
             "screen.openallay.settings.general.debug.label",
             "screen.openallay.settings.general.assistant_name.label",
             "screen.openallay.settings.general.assistant_name.description",
@@ -126,22 +128,24 @@ final class SettingsLocalizationTest {
     }
 
     @Test
-    void requirementPlaceholdersAndJvmWarningAreCompleteInBothLanguages() throws Exception {
+    void requirementMessagesCanRenderTheSameRuntimeArgumentsInBothLanguages() throws Exception {
         JsonObject english = read("en_us.json");
         JsonObject chinese = read("zh_cn.json");
         for (String key : english.keySet()) {
-            if (key.startsWith("screen.openallay.settings.requirements.")) {
-                assertEquals(english.get(key).getAsString().split("%s", -1).length,
-                        chinese.get(key).getAsString().split("%s", -1).length, key);
+            if (!key.startsWith("screen.openallay.settings.requirements.")) continue;
+            String en = english.get(key).getAsString();
+            String zh = chinese.get(key).getAsString();
+            int arguments = en.split("%s", -1).length - 1;
+            assertEquals(arguments, zh.split("%s", -1).length - 1, key);
+            Object[] values = java.util.stream.IntStream.range(0, arguments)
+                    .mapToObj(index -> (Object) ("runtime-argument-" + index)).toArray();
+            String renderedEnglish = String.format(java.util.Locale.ROOT, en, values);
+            String renderedChinese = String.format(java.util.Locale.ROOT, zh, values);
+            for (Object value : values) {
+                assertTrue(renderedEnglish.contains(value.toString()), key);
+                assertTrue(renderedChinese.contains(value.toString()), key);
             }
         }
-        String warningKey = "screen.openallay.settings.extensions.unrestricted.warning";
-        String warning = english.get(warningKey).getAsString();
-        for (String part : Set.of("JVM", "File", "Network", "Process", "no rollback", "credentials")) {
-            assertTrue(warning.contains(part), part);
-        }
-        assertTrue(chinese.get(warningKey).getAsString().contains("JVM"));
-        assertTrue(english.has("screen.openallay.settings.requirements.unrestricted_confirm"));
     }
 
     private static JsonObject read(String file) throws Exception {

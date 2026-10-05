@@ -573,7 +573,8 @@ final class ClientModelRuntimeRegistryTest {
                 tools.register("test:javascript", List.of(javascript));
                 SkillRepository skills = new SkillRepository(new SkillParser(), List.of(dev.openallay.tool.builtin.RunJavascriptTool.ID));
                 assertTrue(skills.reload(new dev.openallay.skill.BundledSkillLoader().load(), Set.of()));
-                skills.setRuntimeDisabledSkills(enabled ? Set.of() : Set.of("run-game-commands"));
+                boolean effective = enabled || unrestricted;
+                skills.setRuntimeDisabledSkills(effective ? Set.of() : Set.of("run-game-commands"));
                 tools.register("test:skills", List.of(new dev.openallay.skill.LoadSkillTool(skills)));
                 OpenAllayRuntime product = new OpenAllayRuntime(new PlatformService() {
                     public String platformName() { return "test"; }
@@ -585,38 +586,36 @@ final class ClientModelRuntimeRegistryTest {
                         skills, new DevelopmentToolInspector(tools), null,
                         new dev.openallay.capability.CapabilitySettingsCatalog());
                 String correlation = "commands-" + enabled + "-java-" + unrestricted;
-                commands.capture(correlation, UUID.randomUUID(),
-                        new dev.openallay.script.command.CommandCatalogSnapshot(java.time.Instant.EPOCH, List.of()),
-                        (actor, command, cancellation) -> CompletableFuture.completedFuture(null));
+                UUID actor = UUID.nameUUIDFromBytes(correlation.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                List<CommandSubmission> submissions = new ArrayList<>();
+                commands.freezeRequest(correlation, unrestricted);
+                captureCommands(commands, correlation, actor, submissions);
                 var base = ToolInvocationContext.developmentConsole(correlation);
                 var context = new ToolInvocationContext(correlation, base.capturedAt(), base.caller(),
                         base.player(), base.registries(), base.recipes(), base.observableGameState(),
                         base.metrics(), unrestricted);
-                var toolInput = new com.google.gson.JsonObject();
-                toolInput.addProperty("source", "return {commands: typeof commands, java: typeof Java};");
-                CompletableFuture<ModelTurn> tool = CompletableFuture.completedFuture(new ModelTurn(
-                        "test", "model-a", List.of(new ModelContent.ToolUse("inspect-binding",
-                                "openallay__run_javascript", toolInput)), "tool_use", ModelUsage.empty()));
+                CompletableFuture<ModelTurn> tool = CompletableFuture.completedFuture(commandTurn(correlation));
                 ToolSequenceModel model = new ToolSequenceModel(tool);
                 ClientModelRuntimeRegistry registry = registry(product, load("a", "a"), Map.of("a", model));
 
-                List<dev.openallay.agent.AgentEvent> executionEvents = new ArrayList<>();
-                assertTrue(registry.ask("a", UUID.randomUUID(), "main", UUID.randomUUID(), "inspect binding",
-                        context, executionEvents::add).join().successful());
+                List<dev.openallay.agent.AgentEvent.ToolCompleted> completed = new ArrayList<>();
+                List<com.google.gson.JsonObject> canonicalToolResults = new ArrayList<>();
+                assertTrue(registry.ask("a", actor, "main", UUID.randomUUID(), "inspect binding", context,
+                        event -> inspectAgentToolCompleted(event, correlation, workspaces,
+                                completed, canonicalToolResults))
+                        .orTimeout(10, java.util.concurrent.TimeUnit.SECONDS).join().successful());
 
                 String prompt = model.requests.getFirst().systemPrompt();
-                assertEquals(enabled, prompt.contains("<name>run-game-commands</name>"));
-                assertEquals(enabled, prompt.contains("commands.run(text) are available as top-level"));
-                assertEquals(!enabled, prompt.contains("The commands binding is not present for this request"));
+                assertEquals(effective, prompt.contains("<name>run-game-commands</name>"));
+                assertEquals(effective, prompt.contains(
+                        "- commands.list(), commands.describe(path), and commands.run(text) are available as top-level JavaScript methods for this request through the player's Minecraft route."));
+                assertEquals(!effective, prompt.contains("The commands binding is not present for this request"));
                 assertEquals(unrestricted, prompt.contains("<name>unrestricted-javascript</name>"));
-                dev.openallay.agent.AgentEvent.ToolCompleted result = executionEvents.stream()
-                        .filter(dev.openallay.agent.AgentEvent.ToolCompleted.class::isInstance)
-                        .map(dev.openallay.agent.AgentEvent.ToolCompleted.class::cast)
-                        .findFirst().orElseThrow();
-                assertFalse(result.failure());
-                var preview = result.normalized().getAsJsonObject("value").getAsJsonObject("preview");
-                assertEquals(enabled ? "object" : "undefined", preview.get("commands").getAsString());
-                assertEquals(unrestricted ? "object" : "undefined", preview.get("java").getAsString());
+                assertCommandExecution(correlation, actor, effective, unrestricted,
+                        submissions, completed, canonicalToolResults);
+                assertEquals(enabled, commands.enabled());
+                assertFalse(commands.availableFor(correlation));
+                assertTrue(workspaces.existing(correlation).isEmpty());
             }
         }
     }
@@ -786,10 +785,10 @@ final class ClientModelRuntimeRegistryTest {
                             Command refresh publication sentinel.
                             """))), Set.of()));
                     product.tools().register("test-skills", List.of(new dev.openallay.skill.LoadSkillTool(product.skills())));
+                    var workspaces = new dev.openallay.script.workspace.AgentResultWorkspaceRegistry();
                     product.tools().register("test-javascript", List.of(new dev.openallay.tool.builtin.RunJavascriptTool(
                             new dev.openallay.script.RhinoJavascriptRuntime(),
-                            dev.openallay.script.data.MinecraftAgentHostGraph::new,
-                            new dev.openallay.script.workspace.AgentResultWorkspaceRegistry(),
+                            dev.openallay.script.data.MinecraftAgentHostGraph::new, workspaces,
                             new dev.openallay.script.workspace.JavascriptResultPresenter(), product.commands())));
                     var prior = new dev.openallay.script.command.CommandCapabilityConfig(!enableCommands);
                     product.commands().replace(prior);
@@ -797,7 +796,8 @@ final class ClientModelRuntimeRegistryTest {
                     unrestrictedRuntime.replace(new dev.openallay.script.UnrestrictedJavascriptConfig(unrestricted));
                     product.skills().setRuntimeDisabledSkills(prior.enabled() || unrestricted
                             ? Set.of() : Set.of("run-game-commands"));
-                    RecordingModel model = new RecordingModel("model-a");
+                    CompletableFuture<ModelTurn> tool = new CompletableFuture<>();
+                    ToolSequenceModel model = new ToolSequenceModel(tool);
                     var registry = registry(product, initial, Map.of("a", model));
                     var capabilities = new dev.openallay.settings.capability.CapabilitySettingsBackend(
                             temporary.resolve("command-capabilities-" + suffix + ".json"), product, registry);
@@ -856,22 +856,49 @@ final class ClientModelRuntimeRegistryTest {
                         assertSame(latest, registry.capabilities());
                         assertEquals(enableCommands, service.snapshot().experimentalCommands().enabled());
                         String correlation = "command-refresh-publication-" + suffix;
-                        product.commands().freezeRequest(correlation, unrestricted);
-                        product.commands().capture(correlation, UUID.randomUUID(),
-                                new dev.openallay.script.command.CommandCatalogSnapshot(java.time.Instant.EPOCH, List.of()),
-                                (actor, command, cancellation) -> CompletableFuture.completedFuture(null));
+                        UUID actor = UUID.nameUUIDFromBytes(correlation.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                        List<CommandSubmission> submissions = new ArrayList<>();
+                        var contexts = new MinecraftGuideContextProvider(product, null, new Gson(),
+                                getClass().getClassLoader());
+                        contexts.setUnrestrictedJavascriptRuntime(unrestrictedRuntime);
+                        contexts.freezeRequest(correlation, true);
+                        captureCommands(product.commands(), correlation, actor, submissions);
                         var base = ToolInvocationContext.developmentConsole(correlation);
                         var context = new ToolInvocationContext(correlation, base.capturedAt(), base.caller(),
                                 base.player(), base.registries(), base.recipes(), base.observableGameState(),
-                                base.metrics(), unrestricted);
-                        registry.ask("a", UUID.randomUUID(), "main", UUID.randomUUID(), "future question",
-                                context, ignored -> {}).join();
+                                base.metrics(), unrestrictedRuntime.enabledFor(correlation));
+                        List<dev.openallay.agent.AgentEvent.ToolCompleted> completed = new ArrayList<>();
+                        List<com.google.gson.JsonObject> canonicalToolResults = new ArrayList<>();
+                        var active = registry.ask("a", actor, "main", UUID.randomUUID(), "future question", context,
+                                event -> inspectAgentToolCompleted(event, correlation, workspaces,
+                                        completed, canonicalToolResults));
                         String prompt = model.requests.getFirst().systemPrompt();
                         assertEquals(enableCommands || unrestricted, prompt.contains("<name>run-game-commands</name>"));
-                        assertEquals(enableCommands || unrestricted,
-                                prompt.contains("commands.list(), commands.describe(path), and commands.run(text)"));
+                        assertEquals(enableCommands || unrestricted, prompt.contains(
+                                "- commands.list(), commands.describe(path), and commands.run(text) are available as top-level JavaScript methods for this request through the player's Minecraft route."));
                         assertEquals(!(enableCommands || unrestricted),
                                 prompt.contains("The commands binding is not present for this request"));
+                        assertFalse(active.isDone());
+                        assertTrue(submissions.isEmpty());
+                        // Change both live settings while the Agent's first model turn is pending.
+                        product.commands().replace(new dev.openallay.script.command.CommandCapabilityConfig(!enableCommands));
+                        unrestrictedRuntime.replace(new dev.openallay.script.UnrestrictedJavascriptConfig(!unrestricted));
+                        contexts.freezeRequest(correlation, true);
+                        captureCommands(product.commands(), correlation, actor, submissions);
+                        tool.complete(commandTurn(correlation));
+                        assertTrue(active.orTimeout(10, java.util.concurrent.TimeUnit.SECONDS).join().successful());
+                        assertCommandExecution(correlation, actor, enableCommands || unrestricted, unrestricted,
+                                submissions, completed, canonicalToolResults);
+                        assertSame(latest, registry.capabilities());
+                        assertEquals(enableCommands, service.snapshot().experimentalCommands().enabled());
+                        var persisted = assertInstanceOf(dev.openallay.script.command.CommandCapabilityConfig.class,
+                                assertInstanceOf(ToolResult.Success.class, commandStore.reload()).value());
+                        assertEquals(enableCommands, persisted.enabled());
+                        assertEquals(!enableCommands, product.commands().enabled());
+                        assertFalse(product.commands().availableFor(correlation));
+                        assertTrue(workspaces.existing(correlation).isEmpty());
+                        contexts.closeRequest(correlation);
+                        assertFalse(unrestrictedRuntime.enabledFor(correlation));
                     }
                 }
             }
@@ -892,32 +919,156 @@ final class ClientModelRuntimeRegistryTest {
                     Use the captured player command route.
                     """))), Set.of()));
             product.tools().register("test-skills", List.of(new dev.openallay.skill.LoadSkillTool(product.skills())));
+            var workspaces = new dev.openallay.script.workspace.AgentResultWorkspaceRegistry();
             product.tools().register("test-javascript", List.of(new dev.openallay.tool.builtin.RunJavascriptTool(
                     new dev.openallay.script.RhinoJavascriptRuntime(),
-                    dev.openallay.script.data.MinecraftAgentHostGraph::new,
-                    new dev.openallay.script.workspace.AgentResultWorkspaceRegistry(),
+                    dev.openallay.script.data.MinecraftAgentHostGraph::new, workspaces,
                     new dev.openallay.script.workspace.JavascriptResultPresenter(), product.commands())));
-            RecordingModel model = new RecordingModel("model-a");
+            CompletableFuture<ModelTurn> tool = new CompletableFuture<>();
+            ToolSequenceModel model = new ToolSequenceModel(tool);
             var registry = registry(product, load("a", "a"), Map.of("a", model));
             String correlation = "full-route-" + capturedRoute;
-            assertTrue(product.commands().freezeRequest(correlation, true));
+            var unrestrictedRuntime = new dev.openallay.script.UnrestrictedJavascriptRuntime();
+            unrestrictedRuntime.replace(new dev.openallay.script.UnrestrictedJavascriptConfig(true));
+            var contexts = new MinecraftGuideContextProvider(product, null, new Gson(), getClass().getClassLoader());
+            contexts.setUnrestrictedJavascriptRuntime(unrestrictedRuntime);
+            contexts.freezeRequest(correlation, true);
+            assertTrue(product.commands().enabledFor(correlation));
             assertFalse(product.commands().enabled());
-            if (capturedRoute) product.commands().capture(correlation, UUID.randomUUID(),
-                    new dev.openallay.script.command.CommandCatalogSnapshot(java.time.Instant.EPOCH, List.of()),
-                    (actor, command, cancellation) -> CompletableFuture.completedFuture(null));
+            UUID actor = UUID.nameUUIDFromBytes(correlation.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            List<CommandSubmission> submissions = new ArrayList<>();
+            if (capturedRoute) captureCommands(product.commands(), correlation, actor, submissions);
             var base = ToolInvocationContext.developmentConsole(correlation);
             var context = new ToolInvocationContext(correlation, base.capturedAt(), base.caller(), base.player(),
-                    base.registries(), base.recipes(), base.observableGameState(), base.metrics(), true);
-            registry.ask("a", UUID.randomUUID(), "main", UUID.randomUUID(), "future question",
-                    context, ignored -> {}).join();
+                    base.registries(), base.recipes(), base.observableGameState(), base.metrics(),
+                    unrestrictedRuntime.enabledFor(correlation));
+            List<dev.openallay.agent.AgentEvent.ToolCompleted> completed = new ArrayList<>();
+            List<com.google.gson.JsonObject> canonicalToolResults = new ArrayList<>();
+            var active = registry.ask("a", actor, "main", UUID.randomUUID(), "future question", context,
+                    event -> inspectAgentToolCompleted(event, correlation, workspaces,
+                            completed, canonicalToolResults));
             String prompt = model.requests.getFirst().systemPrompt();
             assertEquals(capturedRoute, prompt.contains("<name>run-game-commands</name>"));
-            assertEquals(capturedRoute,
-                    prompt.contains("commands.list(), commands.describe(path), and commands.run(text)"));
+            assertEquals(capturedRoute, prompt.contains(
+                    "- commands.list(), commands.describe(path), and commands.run(text) are available as top-level JavaScript methods for this request through the player's Minecraft route."));
             assertEquals(!capturedRoute, prompt.contains("The commands binding is not present for this request"));
             assertTrue(prompt.contains("Use Java APIs as needed for the player's task"));
+            assertFalse(active.isDone());
+            assertTrue(submissions.isEmpty());
+            unrestrictedRuntime.replace(new dev.openallay.script.UnrestrictedJavascriptConfig(false));
+            // Full authority stays frozen even after its current toggle is revoked.
+            contexts.freezeRequest(correlation, true);
+            tool.complete(commandTurn(correlation));
+            assertTrue(active.orTimeout(10, java.util.concurrent.TimeUnit.SECONDS).join().successful());
+            assertCommandExecution(correlation, actor, capturedRoute, true,
+                    submissions, completed, canonicalToolResults);
+            assertFalse(product.commands().enabled());
+            assertFalse(product.commands().availableFor(correlation));
+            assertTrue(workspaces.existing(correlation).isEmpty());
+            contexts.closeRequest(correlation);
+            assertFalse(unrestrictedRuntime.enabledFor(correlation));
         }
     }
+
+    private static com.google.gson.JsonObject commandProbe(String correlation) {
+        var input = new com.google.gson.JsonObject();
+        input.addProperty("source", """
+                var first = null;
+                var second = null;
+                var unavailable = false;
+                try {
+                  first = commands.run(%s);
+                  second = commands.run(%s);
+                } catch (error) {
+                  if (typeof commands !== "undefined" || error.name !== "ReferenceError") throw error;
+                  unavailable = true;
+                }
+                return {commands: typeof commands, java: typeof Java,
+                        unavailable: unavailable, runs: first === null ? [] : [first, second]};
+                """.formatted(new Gson().toJson("  /say " + correlation + " first  "),
+                        new Gson().toJson("say " + correlation + " second")));
+        return input;
+    }
+
+    private static ModelTurn commandTurn(String correlation) {
+        return new ModelTurn("test", "model-a", List.of(new ModelContent.ToolUse(
+                "inspect-binding", "openallay__run_javascript", commandProbe(correlation))),
+                "tool_use", ModelUsage.empty());
+    }
+
+    private static void captureCommands(dev.openallay.script.command.CommandCapabilityRuntime commands,
+            String correlation, UUID actor, List<CommandSubmission> submissions) {
+        commands.capture(correlation, actor,
+                new dev.openallay.script.command.CommandCatalogSnapshot(java.time.Instant.EPOCH, List.of()),
+                (submittedActor, command, cancellation) -> {
+                    cancellation.throwIfCancelled();
+                    submissions.add(new CommandSubmission(correlation, submittedActor, command));
+                    commands.acceptFeedback(UUID.fromString("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"),
+                            "unrelated actor feedback");
+                    commands.acceptFeedback(submittedActor, "observed: " + command);
+                    commands.acceptFeedback(submittedActor, "route: " + correlation);
+                    return CompletableFuture.completedFuture(null);
+                });
+    }
+
+    private static void inspectAgentToolCompleted(dev.openallay.agent.AgentEvent event, String correlation,
+            dev.openallay.script.workspace.AgentResultWorkspaceRegistry workspaces,
+            List<dev.openallay.agent.AgentEvent.ToolCompleted> completed,
+            List<com.google.gson.JsonObject> canonicalToolResults) {
+        if (event instanceof dev.openallay.agent.AgentEvent.ToolCompleted result) {
+            assertEquals("inspect-binding", result.invocationId());
+            assertEquals(dev.openallay.tool.builtin.RunJavascriptTool.ID, result.toolId());
+            assertFalse(result.failure());
+            assertEquals("success", result.normalized().get("status").getAsString());
+            var output = result.normalized().getAsJsonObject("value");
+            // Read before GameGuideAgent's terminal owner closes the actual Tool request scope.
+            var canonical = workspaces.existing(correlation).orElseThrow()
+                    .open(output.get("handle").getAsString()).getAsJsonObject();
+            canonicalToolResults.add(canonical.deepCopy());
+            // The producer intentionally previews one container row; it is not canonical storage.
+            var preview = output.getAsJsonObject("preview");
+            assertEquals(canonical.get("commands"), preview.get("commands"));
+            assertEquals(canonical.get("java"), preview.get("java"));
+            assertEquals(canonical.get("unavailable"), preview.get("unavailable"));
+            var runs = canonical.getAsJsonArray("runs");
+            assertEquals(runs.isEmpty() ? 0 : 1, preview.getAsJsonArray("runs").size());
+            if (!runs.isEmpty()) assertEquals(runs.get(0), preview.getAsJsonArray("runs").get(0));
+            assertEquals(runs.isEmpty(), output.get("complete").getAsBoolean());
+            completed.add(result);
+        }
+    }
+
+    private static void assertCommandExecution(String correlation, UUID actor, boolean effective,
+            boolean unrestricted, List<CommandSubmission> submissions,
+            List<dev.openallay.agent.AgentEvent.ToolCompleted> completed,
+            List<com.google.gson.JsonObject> canonicalToolResults) {
+        assertEquals(1, completed.size());
+        assertEquals(1, canonicalToolResults.size());
+        var canonical = canonicalToolResults.getFirst();
+        assertEquals(effective ? "object" : "undefined", canonical.get("commands").getAsString());
+        assertEquals(unrestricted ? "object" : "undefined", canonical.get("java").getAsString());
+        assertEquals(!effective, canonical.get("unavailable").getAsBoolean());
+        List<CommandSubmission> expected = effective ? List.of(
+                new CommandSubmission(correlation, actor, "say " + correlation + " first"),
+                new CommandSubmission(correlation, actor, "say " + correlation + " second")) : List.of();
+        assertEquals(expected, List.copyOf(submissions));
+        var runs = canonical.getAsJsonArray("runs");
+        assertEquals(expected.size(), runs.size());
+        for (int index = 0; index < expected.size(); index++) {
+            var submitted = expected.get(index);
+            var run = runs.get(index).getAsJsonObject();
+            assertEquals(index + 1, run.get("sequence").getAsInt());
+            assertEquals(actor.toString(), run.get("actorId").getAsString());
+            assertEquals(submitted.command(), run.get("command").getAsString());
+            assertEquals("feedback", run.get("state").getAsString());
+            assertTrue(run.get("feedbackObserved").getAsBoolean());
+            assertEquals(List.of("observed: " + submitted.command(), "route: " + correlation),
+                    run.getAsJsonArray("messages").asList().stream().map(value -> value.getAsString()).toList());
+            assertTrue(run.get("durationMillis").getAsLong() >= 0);
+        }
+    }
+
+    private record CommandSubmission(String correlation, UUID actor, String command) {}
 
     private static dev.openallay.settings.ClientSettingsService.DisplayActions unusedDisplayActions() {
         return new dev.openallay.settings.ClientSettingsService.DisplayActions() {
