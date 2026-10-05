@@ -30,8 +30,10 @@ class MinecraftTargetToolingTest(unittest.TestCase):
         (self.fixture / "scripts").mkdir()
         self.cli = self.fixture / "scripts/minecraft-target.py"
         shutil.copyfile(ROOT / "scripts/minecraft-target.py", self.cli)
+        shutil.copyfile(ROOT / "scripts/minecraft_target_loaders.py", self.fixture / "scripts/minecraft_target_loaders.py")
         self.profiles = self.fixture / "gradle/minecraft-targets"
         self.profiles.mkdir(parents=True)
+        shutil.copyfile(ROOT / "gradle/minecraft-target-loaders.json", self.fixture / "gradle/minecraft-target-loaders.json")
         for target in ("26.2", "26.3"):
             shutil.copyfile(ROOT / "gradle/minecraft-targets" / (target + ".properties"),
                             self.profiles / (target + ".properties"))

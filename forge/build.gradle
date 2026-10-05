@@ -1,0 +1,10 @@
+plugins {
+    id 'multiloader-loader'
+}
+
+// Official Forge has its own project/artifact identity. The convention selects
+// the shared FML SourceDirectorySets from neoforge plus this module's exact leaves.
+if (minecraftTargetLoaders != ['forge'] || minecraftNativeToolchain != 'legacyForge') {
+    throw new GradleException('Forge project requires its real Forge target/toolchain selection')
+}
+apply from: rootProject.file('gradle/fml-loader.gradle')

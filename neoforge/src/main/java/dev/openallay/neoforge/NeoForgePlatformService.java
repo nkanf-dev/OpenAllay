@@ -7,7 +7,7 @@ import java.util.List;
 public final class NeoForgePlatformService implements PlatformService {
     @Override
     public String platformName() {
-        return "NeoForge";
+        return NeoForgeNativeLoaderFacts.platformName();
     }
 
     @Override

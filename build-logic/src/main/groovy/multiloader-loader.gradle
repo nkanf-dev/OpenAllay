@@ -12,9 +12,15 @@ def commonSources = commonProject.sourceSets.main
 def nativeFamily = rootProject.ext.minecraftNativeFamily
 def selectedTarget = rootProject.ext.minecraftTarget
 def families = rootProject.ext.minecraftNativeSourceFamilies
-def javaRoots = [file('src/main/java')] + families.collect { file("src/targets/${it}/java") }
-def resourceRoots = [file('src/main/resources')] + families.collect { file("src/targets/${it}/resources") }
+// Forge reuses the selected FML integration; feature sources are never copied.
+def loaderSourceRoot = project.name == 'forge' ? rootProject.file('neoforge') : projectDir
+def javaRoots = [new File(loaderSourceRoot, 'src/main/java')] + families.collect { new File(loaderSourceRoot, "src/targets/${it}/java") }
+def resourceRoots = [new File(loaderSourceRoot, 'src/main/resources')] + families.collect { new File(loaderSourceRoot, "src/targets/${it}/resources") }
 if (!families.contains(selectedTarget)) {
+    javaRoots.add(new File(loaderSourceRoot, "src/targets/${selectedTarget}/java"))
+    resourceRoots.add(new File(loaderSourceRoot, "src/targets/${selectedTarget}/resources"))
+}
+if (loaderSourceRoot != projectDir) {
     javaRoots.add(file("src/targets/${selectedTarget}/java"))
     resourceRoots.add(file("src/targets/${selectedTarget}/resources"))
 }
@@ -24,11 +30,11 @@ def overridden = { element, List<File> roots ->
     index >= 0 && roots.drop(index + 1).any { new File(it, element.relativePath.pathString).isFile() }
 }
 sourceSets.main.java {
-    javaRoots.drop(1).each { srcDir(it) }
+    setSrcDirs(javaRoots)
     exclude { element -> overridden(element, javaRoots) }
 }
 sourceSets.main.resources {
-    resourceRoots.drop(1).each { srcDir(it) }
+    setSrcDirs(resourceRoots)
     exclude { element -> overridden(element, resourceRoots) }
 }
 

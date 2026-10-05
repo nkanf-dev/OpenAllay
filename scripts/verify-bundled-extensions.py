@@ -240,7 +240,7 @@ def reject_builder_registration(archive: zipfile.ZipFile, entries: list[str], lo
 
 def verify_package(path: Path, loader: str, lock: dict, allow_unpinned: bool = False) -> str:
     prepare.validate_manifest(lock)
-    require(loader in {"fabric", "neoforge"}, "Unknown core loader")
+    require(loader in {"fabric", "forge", "neoforge"}, "Unknown core loader")
     with zipfile.ZipFile(path) as archive:
         entries = archive_entries(archive, "product JAR")
         require(not any(name.startswith("dev/openallay/builder/") for name in entries),

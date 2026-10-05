@@ -158,7 +158,7 @@ class MinecraftTargetProfileSourceTest(unittest.TestCase):
         self.assertIn("'1.21.3': '1.21.1'", selector)
         self.assertIn("'1.21.6': '1.21.5'", selector)
         self.assertIn(".getOrDefault(selectedTarget, selectedTarget)", selector)
-        for relative in ("common/build.gradle", "fabric/build.gradle", "neoforge/build.gradle"):
+        for relative in ("common/build.gradle", "fabric/build.gradle", "gradle/fml-loader.gradle"):
             source = self.source(relative)
             self.assertIn("jei-${jeiArtifactTarget}", source)
             self.assertNotIn("jei-${minecraft_version}", source)

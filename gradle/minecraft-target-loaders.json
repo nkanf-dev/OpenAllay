@@ -1,0 +1,169 @@
+{
+  "1.19.2": {
+    "loaders": [
+      "forge"
+    ],
+    "nativeToolchain": "legacyForge"
+  },
+  "1.20.1": {
+    "loaders": [
+      "fabric",
+      "neoforge"
+    ],
+    "nativeToolchain": "legacyForge"
+  },
+  "1.20.2": {
+    "loaders": [
+      "fabric",
+      "neoforge"
+    ],
+    "nativeToolchain": "neoForge"
+  },
+  "1.20.3": {
+    "loaders": [
+      "fabric",
+      "neoforge"
+    ],
+    "nativeToolchain": "neoForge"
+  },
+  "1.20.4": {
+    "loaders": [
+      "fabric",
+      "neoforge"
+    ],
+    "nativeToolchain": "neoForge"
+  },
+  "1.20.5": {
+    "loaders": [
+      "fabric",
+      "neoforge"
+    ],
+    "nativeToolchain": "neoForge"
+  },
+  "1.20.6": {
+    "loaders": [
+      "fabric",
+      "neoforge"
+    ],
+    "nativeToolchain": "neoForge"
+  },
+  "1.21": {
+    "loaders": [
+      "fabric",
+      "neoforge"
+    ],
+    "nativeToolchain": "neoForge"
+  },
+  "1.21.1": {
+    "loaders": [
+      "fabric",
+      "neoforge"
+    ],
+    "nativeToolchain": "neoForge"
+  },
+  "1.21.10": {
+    "loaders": [
+      "fabric",
+      "neoforge"
+    ],
+    "nativeToolchain": "neoForge"
+  },
+  "1.21.11": {
+    "loaders": [
+      "fabric",
+      "neoforge"
+    ],
+    "nativeToolchain": "neoForge"
+  },
+  "1.21.2": {
+    "loaders": [
+      "fabric",
+      "neoforge"
+    ],
+    "nativeToolchain": "neoForge"
+  },
+  "1.21.3": {
+    "loaders": [
+      "fabric",
+      "neoforge"
+    ],
+    "nativeToolchain": "neoForge"
+  },
+  "1.21.4": {
+    "loaders": [
+      "fabric",
+      "neoforge"
+    ],
+    "nativeToolchain": "neoForge"
+  },
+  "1.21.5": {
+    "loaders": [
+      "fabric",
+      "neoforge"
+    ],
+    "nativeToolchain": "neoForge"
+  },
+  "1.21.6": {
+    "loaders": [
+      "fabric",
+      "neoforge"
+    ],
+    "nativeToolchain": "neoForge"
+  },
+  "1.21.7": {
+    "loaders": [
+      "fabric",
+      "neoforge"
+    ],
+    "nativeToolchain": "neoForge"
+  },
+  "1.21.8": {
+    "loaders": [
+      "fabric",
+      "neoforge"
+    ],
+    "nativeToolchain": "neoForge"
+  },
+  "1.21.9": {
+    "loaders": [
+      "fabric",
+      "neoforge"
+    ],
+    "nativeToolchain": "neoForge"
+  },
+  "26.1": {
+    "loaders": [
+      "fabric",
+      "neoforge"
+    ],
+    "nativeToolchain": "neoForge"
+  },
+  "26.1.1": {
+    "loaders": [
+      "fabric",
+      "neoforge"
+    ],
+    "nativeToolchain": "neoForge"
+  },
+  "26.1.2": {
+    "loaders": [
+      "fabric",
+      "neoforge"
+    ],
+    "nativeToolchain": "neoForge"
+  },
+  "26.2": {
+    "loaders": [
+      "fabric",
+      "neoforge"
+    ],
+    "nativeToolchain": "neoForge"
+  },
+  "26.3": {
+    "loaders": [
+      "fabric",
+      "neoforge"
+    ],
+    "nativeToolchain": "neoForge"
+  }
+}

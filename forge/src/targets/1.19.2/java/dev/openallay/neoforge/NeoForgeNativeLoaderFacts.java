@@ -7,7 +7,7 @@ import net.minecraftforge.fml.loading.FMLPaths;
 /** Config/metadata values detached from actual loader API. */
 public final class NeoForgeNativeLoaderFacts {
     private NeoForgeNativeLoaderFacts() {}
-    static String platformName() { return "NeoForge"; }
+    static String platformName() { return "Forge"; }
     public static Path configDir() { return FMLPaths.CONFIGDIR.get(); }
     static String modVersion() {
         return ModList.get().getModContainerById("openallay")

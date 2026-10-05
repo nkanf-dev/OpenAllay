@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import re
 import subprocess
+from minecraft_target_loaders import target_loaders
 
 ROOT = Path(__file__).resolve().parents[1]
 EARLY = frozenset(("1.20.2", "1.20.3", "1.20.5"))
@@ -35,10 +36,12 @@ def java21_environment(environment):
     return result
 
 
-def commands(root, target, *, loaders=("fabric", "neoforge"), artifact_ids=None, candidate_ids=None):
+def commands(root, target, *, loaders=None, artifact_ids=None, candidate_ids=None):
     target_exists(root, target)
-    if not loaders or len(set(loaders)) != len(loaders) or any(loader not in ("fabric", "neoforge") for loader in loaders):
-        raise ValueError("Expected distinct Fabric/NeoForge loaders")
+    allowed = target_loaders(root, target)["loaders"]
+    loaders = tuple(allowed) if loaders is None else tuple(loaders)
+    if not loaders or len(set(loaders)) != len(loaders) or any(loader not in allowed for loader in loaders):
+        raise ValueError("Expected distinct actual loaders for " + target + ": " + ",".join(allowed))
     if artifact_ids is not None and candidate_ids is not None:
         raise ValueError("Accepted and candidate family selection are mutually exclusive")
     selection = artifact_ids if artifact_ids is not None else candidate_ids
@@ -65,7 +68,7 @@ def commands(root, target, *, loaders=("fabric", "neoforge"), artifact_ids=None,
 
 
 def compile_target(root, target, environment=None, execute=subprocess.run, *,
-                   loaders=("fabric", "neoforge"), artifact_ids=None, candidate_ids=None):
+                   loaders=None, artifact_ids=None, candidate_ids=None):
     selected = commands(root, target, loaders=loaders, artifact_ids=artifact_ids, candidate_ids=candidate_ids)
     environment = dict(os.environ if environment is None else environment)
     # Validate the installed isolated build JVM before allocating any native build output.
@@ -77,14 +80,14 @@ def compile_target(root, target, environment=None, execute=subprocess.run, *,
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--target", required=True)
-    parser.add_argument("--loaders", default="fabric,neoforge", help="Comma-separated selected native loaders")
+    parser.add_argument("--loaders", help="Comma-separated actual native loaders; default comes from the target selector")
     selection = parser.add_mutually_exclusive_group()
     selection.add_argument("--families", help="Explicit reviewed accepted family IDs")
     selection.add_argument("--candidate-families", help="Validation-only candidate IDs; does not admit release support")
     parser.add_argument("--plan", action="store_true", help="Print exact commands without starting Gradle")
     args = parser.parse_args()
     try:
-        options = dict(loaders=tuple(args.loaders.split(",")), artifact_ids=args.families,
+        options = dict(loaders=tuple(args.loaders.split(",")) if args.loaders else None, artifact_ids=args.families,
                        candidate_ids=args.candidate_families)
         if args.plan:
             print(json.dumps([{"command": command, "runtime": runtime}

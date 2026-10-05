@@ -1,17 +1,33 @@
 import java.util.Properties
+import groovy.json.JsonSlurper
 
 // External target pins only. This is not an internal format/version registry.
 if (project != rootProject) {
     throw new GradleException('Minecraft target profiles must be selected by the root project')
 }
-def nativeFamilies = ['1.20.1': '1.20.1', '1.20.2': '1.20.2', '1.20.3': '1.20.3', '1.20.4': '1.20.4', '1.20.5': '1.20.6', '1.20.6': '1.20.6', '1.21': '1.21.1', '1.21.1': '1.21.1', '1.21.2': '1.21.3', '1.21.3': '1.21.3', '1.21.4': '1.21.4', '1.21.5': '1.21.5', '1.21.6': '1.21.6', '1.21.7': '1.21.8', '1.21.8': '1.21.8', '1.21.9': '1.21.10', '1.21.10': '1.21.10', '1.21.11': '1.21.11', '26.1': '26.1', '26.1.1': '26.1', '26.1.2': '26.1', '26.2': '26.2', '26.3': '26.3']
-def nativeFamilyParents = ['1.20.1': '1.20.2', '1.20.2': '1.20.3', '1.20.3': '1.20.4', '1.20.4': '1.20.6', '1.20.6': '1.21.1', '1.21.1': '1.21.3', '1.21.3': '1.21.4', '1.21.4': '1.21.5', '1.21.5': '1.21.6', '1.21.6': '1.21.8', '1.21.8': '1.21.10', '1.21.10': '1.21.11']
-def supportedTargets = nativeFamilies.keySet().toList()
+def nativeFamilies = ['1.19.2': '1.19.2', '1.20.1': '1.20.1', '1.20.2': '1.20.2', '1.20.3': '1.20.3', '1.20.4': '1.20.4', '1.20.5': '1.20.6', '1.20.6': '1.20.6', '1.21': '1.21.1', '1.21.1': '1.21.1', '1.21.2': '1.21.3', '1.21.3': '1.21.3', '1.21.4': '1.21.4', '1.21.5': '1.21.5', '1.21.6': '1.21.6', '1.21.7': '1.21.8', '1.21.8': '1.21.8', '1.21.9': '1.21.10', '1.21.10': '1.21.10', '1.21.11': '1.21.11', '26.1': '26.1', '26.1.1': '26.1', '26.1.2': '26.1', '26.2': '26.2', '26.3': '26.3']
+def nativeFamilyParents = ['1.19.2': '1.20.1', '1.20.1': '1.20.2', '1.20.2': '1.20.3', '1.20.3': '1.20.4', '1.20.4': '1.20.6', '1.20.6': '1.21.1', '1.21.1': '1.21.3', '1.21.3': '1.21.4', '1.21.4': '1.21.5', '1.21.5': '1.21.6', '1.21.6': '1.21.8', '1.21.8': '1.21.10', '1.21.10': '1.21.11']
+def loaderMapFile = rootProject.file('gradle/minecraft-target-loaders.json')
+def targetLoaders = new JsonSlurper().parse(loaderMapFile)
+if (!(targetLoaders instanceof Map) || targetLoaders.keySet() != nativeFamilies.keySet()) {
+    throw new GradleException('Target loader map must exactly match native source target selectors')
+}
+targetLoaders.each { target, entry ->
+    if (!(entry instanceof Map) || entry.keySet() != (['loaders', 'nativeToolchain'] as Set)
+            || !(entry.loaders instanceof List) || entry.loaders.empty
+            || entry.loaders.any { !(it in ['fabric', 'forge', 'neoforge']) }
+            || entry.loaders.toSet().size() != entry.loaders.size()
+            || !(entry.nativeToolchain in ['legacyForge', 'neoForge'])
+            || (entry.loaders.contains('forge') && (entry.nativeToolchain != 'legacyForge' || entry.loaders.contains('neoforge')))) {
+        throw new GradleException("Invalid actual target loader selection: ${target}")
+    }
+}
+def supportedTargets = targetLoaders.keySet().toList()
 def selectedTarget = providers.gradleProperty('minecraftTarget').getOrElse('26.2')
 if (!(selectedTarget in supportedTargets)) {
     throw new GradleException("Unknown minecraftTarget '${selectedTarget}'; choose ${supportedTargets.join(', ')}")
 }
-def profileFields = [
+def modernProfileFields = [
     'java_version',
     'minecraft_version',
     'minecraft_version_range',
@@ -31,6 +47,13 @@ def profileFields = [
     'fabric_key_mapping_api_version',
     'fabric_rendering_version'
 ] as Set
+def forgeProfileFields = ['java_version', 'minecraft_version', 'minecraft_version_range',
+        'mcp_version', 'forge_version', 'forge_loader_version_range',
+        'jei_version', 'rei_version', 'architectury_version'] as Set
+def selectedLoaders = targetLoaders[selectedTarget].loaders.asImmutable()
+def nativeToolchain = targetLoaders[selectedTarget].nativeToolchain
+def profileFields = selectedLoaders.contains('forge') ? forgeProfileFields : modernProfileFields
+def allProfileFields = modernProfileFields + forgeProfileFields
 
 def profileFile = rootProject.file("gradle/minecraft-targets/${selectedTarget}.properties")
 if (!profileFile.isFile()) {
@@ -64,12 +87,12 @@ if (profile.minecraft_version != selectedTarget || !(profile.java_version ==~ /[
     throw new GradleException('Minecraft target profile must match its native game version and declare a Java major')
 }
 // No command-line/user/root property may silently compete with the selected tuple.
-profileFields.each { key ->
+allProfileFields.each { key ->
     if (providers.gradleProperty(key).isPresent()) {
         throw new GradleException("Minecraft target field '${key}' collides with a Gradle property; select minecraftTarget instead")
     }
 }
-def reservedExtraFields = profileFields + ['minecraftTargetProfile']
+def reservedExtraFields = allProfileFields + ['minecraftTargetProfile', 'minecraftTargetLoaders', 'minecraftNativeToolchain']
 allprojects { candidate ->
     reservedExtraFields.each { key ->
         if (candidate.extensions.extraProperties.has(key)) {
@@ -79,6 +102,8 @@ allprojects { candidate ->
 }
 allprojects { candidate ->
     candidate.extensions.extraProperties.set('minecraftTarget', selectedTarget)
+    candidate.extensions.extraProperties.set('minecraftTargetLoaders', selectedLoaders)
+    candidate.extensions.extraProperties.set('minecraftNativeToolchain', nativeToolchain)
     candidate.extensions.extraProperties.set('minecraftNativeFamily', nativeFamilies[selectedTarget])
     def family = nativeFamilies[selectedTarget]
     def roots = [family]
@@ -92,10 +117,12 @@ allprojects { candidate ->
 tasks.register('printMinecraftTarget') {
     group = 'help'
     description = 'Print selected native game pins; a profile is not a support declaration.'
-    inputs.file(profileFile)
+    inputs.files(profileFile, loaderMapFile)
     inputs.property('minecraftTarget', selectedTarget)
     doLast {
         println("minecraftTarget=${selectedTarget}")
+        println("minecraftTargetLoaders=${selectedLoaders.join(',')}")
+        println("minecraftNativeToolchain=${nativeToolchain}")
         profile.each { key, value -> println("${key}=${value}") }
     }
 }

@@ -27,7 +27,7 @@ class CommandSelectionTest(unittest.TestCase):
         targets = [file.stem for file in (PROFILE_ROOT / "gradle/minecraft-targets").glob("*.properties")]
         self.assertGreaterEqual(len(targets), 15)
         for target in targets:
-            if target in recipe.EARLY:
+            if target in recipe.EARLY or target == "1.19.2":
                 continue
             with self.subTest(target=target):
                 self.assertEqual(recipe.commands(ROOT, target), [([
@@ -105,9 +105,9 @@ class SourceReuseContractTest(unittest.TestCase):
     def test_guard_precedes_modern_loader_plugin_for_pom_only_targets(self):
         source = self.text("neoforge/build.gradle")
         self.assertIn("if (minecraftTarget in ['1.20.2', '1.20.3', '1.20.5'])", source)
-        self.assertLess(source.index("early-neoforge-inputs.gradle"), source.index("pluginManager.apply("))
+        self.assertLess(source.index("early-neoforge-inputs.gradle"), source.index("fml-loader.gradle"))
         self.assertIn("return\n}", source)
-        self.assertIn("def legacyNativeLoader = minecraftTarget == '1.20.1'", source)
+        self.assertIn("def legacyNativeLoader = minecraftNativeToolchain == 'legacyForge'", self.text("gradle/fml-loader.gradle"))
 
     def test_standalone_has_no_copied_feature_sources_or_root_plugin_framework(self):
         settings = self.text("native-builds/early-neoforge/settings.gradle")

@@ -88,7 +88,7 @@ if (bundleExtensions) {
         if (allowUnpinned) args '--allow-unpinned'
     }
 
-    ['fabric', 'neoforge'].each { loader ->
+    minecraftTargetLoaders.each { loader ->
         project(":${loader}") {
             tasks.withType(ProcessResources).configureEach {
                 if (name == 'processResources') {

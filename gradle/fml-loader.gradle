@@ -1,0 +1,130 @@
+def actualForge = project.name == 'forge'
+def legacyNativeLoader = minecraftNativeToolchain == 'legacyForge'
+pluginManager.apply(legacyNativeLoader ? 'net.neoforged.moddev.legacyforge' : 'net.neoforged.moddev')
+def viewerApiLoader = legacyNativeLoader ? 'forge' : 'neoforge'
+
+dependencies {
+    implementation(project(":engine-core"))
+    implementation(project(":adapters:minecraft"))
+    // Native code belongs in the game mod layer, not an independently loaded library layer.
+    implementation(project(":extension-api"))
+    jarJar(project(":extension-api"))
+    implementation("org.xerial:sqlite-jdbc:${sqlite_jdbc_version}")
+    jarJar("org.xerial:sqlite-jdbc:${sqlite_jdbc_version}")
+    implementation("org.commonmark:commonmark:${commonmark_version}")
+    jarJar("org.commonmark:commonmark:${commonmark_version}")
+    implementation("org.commonmark:commonmark-ext-gfm-tables:${commonmark_version}")
+    jarJar("org.commonmark:commonmark-ext-gfm-tables:${commonmark_version}")
+    implementation(project(':runtime-rhino'))
+    jarJar(project(':runtime-rhino'))
+    implementation("com.knuddels:jtokkit:${jtokkit_version}")
+    jarJar("com.knuddels:jtokkit:${jtokkit_version}")
+    compileOnly("mezz.jei:jei-${jeiArtifactTarget}-${viewerApiLoader}-api:${jei_version}")
+    compileOnly("me.shedaniel:RoughlyEnoughItems-api-${viewerApiLoader}:${rei_version}")
+    compileOnly("dev.architectury:architectury-${viewerApiLoader}:${architectury_version}")
+}
+
+evaluationDependsOn(':adapters:minecraft')
+
+configure(extensions.getByName(legacyNativeLoader ? 'legacyForge' : 'neoForge')) {
+    if (actualForge) {
+        version = forge_version
+    } else if (legacyNativeLoader) {
+        // Early NeoForge publishes Forge-shaped APIs under net.neoforged:forge.
+        enable { neoForgeVersion = neoforge_version }
+    } else version = neoforge_version
+    // Automatically enable neoforge AccessTransformers if the file exists
+    def at = project(':common').selectedMinecraftTargetResource('META-INF/accesstransformer.cfg')
+    if (at.exists()) {
+        accessTransformers.from(at.absolutePath)
+    }
+    runs {
+        configureEach {
+            systemProperty(actualForge ? 'forge.enabledGameTestNamespaces' : 'neoforge.enabledGameTestNamespaces', mod_id)
+            ideName = "${actualForge ? 'Forge' : 'NeoForge'} ${it.name.capitalize()} (${project.path})" // Unify the run config names with fabric
+        }
+        client {
+            client()
+            gameDirectory = this.mkdir(this.file('runs/client'))
+            def quickPlayWorld = System.getProperty('openallay.e2e.quickPlayWorld')
+            if (quickPlayWorld != null && !quickPlayWorld.isBlank()) {
+                programArguments.addAll '--quickPlaySingleplayer', quickPlayWorld
+            }
+        }
+        data {
+            if (legacyNativeLoader) data() else clientData()
+            gameDirectory = this.mkdir(this.file('runs/data'))
+            // DataGen can be run by - "./gradlew :neoforge:runData" in Terminal.
+            // Specify the modid for data generation, where to output the resulting resource, and where to look for existing resources.
+            programArguments.addAll '--mod', project.mod_id, '--all', '--output', file('src/generated/resources/').getAbsolutePath(), '--existing', file('src/main/resources/').getAbsolutePath()
+        }
+        server {
+            server()
+            this.file('runs/server').createParentDirectories()
+            gameDirectory = this.mkdir(this.file('runs/server'))
+        }
+    }
+    mods {
+        "${mod_id}" {
+            sourceSet sourceSets.main
+            sourceSet project(':engine-core').sourceSets.main
+            sourceSet project(':adapters:minecraft').sourceSets.main
+        }
+    }
+}
+
+tasks.named('runServer') {
+    standardInput = System.in
+}
+
+tasks.matching { it.name == 'runClient' }.configureEach {
+    System.properties.findAll { key, value -> key.toString().startsWith('openallay.e2e.') }
+            .each { key, value -> systemProperty(key.toString(), value.toString()) }
+}
+
+sourceSets.main.resources {
+    srcDir 'src/generated/resources'
+    // Old loader descriptors have a different external filename, not a second mod identity.
+    if (minecraftNativeSourceFamilies.contains('1.20.4')) exclude 'META-INF/neoforge.mods.toml'
+}
+
+// Implement mcgradleconventions loader attribute
+def loaderAttribute = Attribute.of('io.github.mcgradleconventions.loader', String)
+['apiElements', 'runtimeElements', 'sourcesElements', 'javadocElements'].each { variant ->
+    configurations.named(variant) {
+        attributes {
+            attribute(loaderAttribute, project.name)
+        }
+    }
+}
+sourceSets.configureEach {
+    [it.compileClasspathConfigurationName, it.runtimeClasspathConfigurationName, it.getTaskName(null, 'jarJar')].each { variant ->
+        configurations.named(variant) {
+            attributes {
+                attribute(loaderAttribute, project.name)
+            }
+        }
+    }
+}
+
+// Keep source/build isolation while loading native game adapters with the core mod.
+tasks.named('jar', Jar) {
+    from(project(':adapters:minecraft').sourceSets.main.output)
+}
+
+// Feature code is compiled once without game dependencies and reused in the game mod layer.
+tasks.named('jar', Jar) {
+    dependsOn(':engine-core:classes')
+    from({ project(':engine-core').sourceSets.main.output })
+}
+
+if (legacyNativeLoader) {
+    dependencies { annotationProcessor('org.spongepowered:mixin:0.8.5:processor') }
+    mixin {
+        add sourceSets.main, 'openallay.refmap.json'
+        config 'openallay.client.mixins.json'
+    }
+    tasks.named('jar', Jar) {
+        manifest.attributes('MixinConfigs': 'openallay.client.mixins.json')
+    }
+}
