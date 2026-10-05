@@ -14,13 +14,12 @@ profile supplies the native compile artifact, Java toolchain, and loader pins.
 an earlier file only at the same relative path. This keeps common SDK behavior in
 one implementation and limits overrides to actual native API differences.
 
-Source-family reuse does not prove that one compiled JAR works across those targets.
-`gradle/minecraft-artifacts.json` separately records accepted binary families and
-nonpublishing candidate intervals. Its accepted targets currently remain 26.2 for
-Fabric and NeoForge. Wider intervals require unchanged-JAR proof on every exact
-native target before admission; the neutral module name adds no supported range.
+`gradle/minecraft-artifacts.json` defines the verified binary release families for
+Fabric and NeoForge. Each family lists its build target and supported Minecraft
+versions. Candidate intervals are verified with the same JAR on each target before
+being added to the release catalog.
 
-The directory/project rename does not rename Java packages or classes. The existing
+The module retains its existing Java packages and classes. The existing
 `dev.openallay.adapter.minecraft.v26_2.world.Minecraft26WorldAccess` factory and
 resource paths remain unchanged, as do native behavior and target-specific artifact
 names. The `v26_2` package is the retained implementation identity, not a declaration

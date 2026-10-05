@@ -2,7 +2,7 @@
 
 OpenAllay 0.4.2 uses Minecraft 26.2 and Java 25 as the feature mainline and
 implements public Extension API 0.4.0. Accepted release intervals are recorded in
-`gradle/minecraft-artifacts.json`; candidate profiles alone do not establish support. Product and public API versions are independent.
+`gradle/minecraft-artifacts.json`. Product and public API versions are independent.
 Use the checked-in Gradle wrapper; a system Gradle installation is not needed.
 
 See the [0.4.2 release notes](releases/0.4.2.md) for the current product changes.
@@ -56,13 +56,11 @@ roots under `src/targets/<family>/`, followed by an exact-target root when neede
 override only matching relative paths through `gradle/minecraft-source-family.gradle`.
 Loader integration remains in `fabric/` and `neoforge/`, outside the shared SDK.
 
-The neutral directory/project name changes neither the existing `v26_2` Java
-package and `Minecraft26WorldAccess` factory nor target-specific artifact names.
-Source reuse is not evidence that one JAR supports every source target.
-`gradle/minecraft-artifacts.json` separately controls accepted binary families;
-its current accepted targets remain 26.2 for both loaders. Candidate intervals
-stay nonpublishing until the same unchanged JAR passes each exact native target
-and the resulting evidence is reviewed. This naming change does not widen support.
+The module retains the existing `v26_2` Java package, `Minecraft26WorldAccess`
+factory, and target-specific artifact names. `gradle/minecraft-artifacts.json`
+defines the verified binary release families for Fabric and NeoForge, including
+each family's build target and supported Minecraft versions. Candidate intervals
+are verified with the same JAR on each target and reviewed before admission.
 
 ### Default distribution
 
