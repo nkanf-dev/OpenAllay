@@ -208,10 +208,13 @@ if (actualForge) {
                 if (matches.size() != 1) throw new GradleException("Missing or competing atomic runtime ${artifact}")
                 def item = matches[0]
                 def nested = new File(directory, item.path)
+                def acceptedRanges = ["[${version},)", "[${version}]", "[${version},${version}]"].collect { it.toString() }
                 if (!nested.isFile() || !nested.toPath().normalize().startsWith(directory.toPath().normalize())
-                        || item.version.artifactVersion != version
-                        || !(item.version.range in ["[${version},)", "[${version}]", "[${version},${version}]"])) {
-                    throw new GradleException("Unexpected atomic runtime identity ${artifact}")
+                        || item.version.artifactVersion != version.toString()
+                        || !acceptedRanges.contains(item.version.range.toString())) {
+                    throw new GradleException("Unexpected atomic runtime identity ${artifact}: path=${item.path}, "
+                            + "exists=${nested.isFile()}, artifactVersion=${item.version.artifactVersion}, "
+                            + "expectedVersion=${version}, range=${item.version.range}")
                 }
                 item.version.range = "[${version}]".toString()
             }
