@@ -1,0 +1,500 @@
+{
+  "source_archive_sha256": "bc5b779005b68ce8d00f775aae2b44db82d0c8636264a1d26955c486ee0fe8b8",
+  "patch_sha256": "27e9651645794fe094f00be2245451271ac4ef58ba4c8031005618af6debcaae",
+  "files": [
+    {
+      "old_path": "dev/latvian/mods/rhino/AccessorSlot.java",
+      "path": "dev/latvian/mods/rhino/AccessorSlot.java",
+      "hunks": [
+        {
+          "old_start": 5,
+          "old_count": 6,
+          "new_start": 5,
+          "new_count": 8,
+          "before": " * file, You can obtain one at http://mozilla.org/MPL/2.0/. */\n\npackage dev.latvian.mods.rhino;\n\n/**\n * This is a specialization of Slot to store various types of values that are retrieved dynamically\n",
+          "after": " * file, You can obtain one at http://mozilla.org/MPL/2.0/. */\n\npackage dev.latvian.mods.rhino;\n\nimport dev.latvian.mods.rhino.util.ListCompat;\n\n/**\n * This is a specialization of Slot to store various types of values that are retrieved dynamically\n"
+        },
+        {
+          "old_start": 216,
+          "old_count": 7,
+          "new_start": 218,
+          "new_count": 7,
+          "before": "\t\t\tvar pTypes = member.parameters().types();\n\t\t\t// XXX: cache tag since it is already calculated in\n\t\t\t// defineProperty ?\n\t\t\tClass<?> valueType = pTypes.getLast();\n\t\t\tint tag = FunctionObject.getTypeTag(valueType);\n\t\t\tObject actualArg = FunctionObject.convertArg(cx, start, value, tag);\n\t\t\tif (member.delegateTo == null) {\n",
+          "after": "\t\t\tvar pTypes = member.parameters().types();\n\t\t\t// XXX: cache tag since it is already calculated in\n\t\t\t// defineProperty ?\n\t\t\tClass<?> valueType = ListCompat.getLast(pTypes);\n\t\t\tint tag = FunctionObject.getTypeTag(valueType);\n\t\t\tObject actualArg = FunctionObject.convertArg(cx, start, value, tag);\n\t\t\tif (member.delegateTo == null) {\n"
+        }
+      ]
+    },
+    {
+      "old_path": "dev/latvian/mods/rhino/Context.java",
+      "path": "dev/latvian/mods/rhino/Context.java",
+      "hunks": [
+        {
+          "old_start": 164,
+          "old_count": 11,
+          "new_start": 164,
+          "new_count": 12,
+          "before": "\t\t\te = ((InvocationTargetException) e).getTargetException();\n\t\t}\n\n\t\tswitch (e) {\n\t\t\tcase Error err -> throw err; // special handling of Error so scripts would not catch them\n\t\t\tcase RhinoException err -> throw err;\n\t\t\tcase null, default -> throw new WrappedException(cx, e);\n\t\t}\n\t}\n\n\tstatic Evaluator createInterpreter() {\n",
+          "after": "\t\t\te = ((InvocationTargetException) e).getTargetException();\n\t\t}\n\n\t\tif (e instanceof Error err) {\n\t\t\tthrow err; // special handling of Error so scripts would not catch them\n\t\t} else if (e instanceof RhinoException err) {\n\t\t\tthrow err;\n\t\t}\n\t\tthrow new WrappedException(cx, e);\n\t}\n\n\tstatic Evaluator createInterpreter() {\n"
+        },
+        {
+          "old_start": 1320,
+          "old_count": 16,
+          "new_start": 1321,
+          "new_count": 21,
+          "before": "\t\t\treturn len == 0 ? ArrayValueProvider.EMPTY : new ArrayValueProvider.FromJavaArray(value, len);\n\t\t}\n\n\t\treturn switch (value) {\n\t\t\tcase NativeArray array -> ArrayValueProvider.fromNativeArray(array);\n\t\t\t// special casing this because it can wrap i.e. sets as well\n\t\t\tcase NativeJavaList list -> ArrayValueProvider.fromJavaList(list.list, list);\n\t\t\tcase NativeJavaArray array -> arrayValueProviderOf(array.array);\n\t\t\tcase Wrapper w -> arrayValueProviderOf(w.unwrap()); // other stuff like NJO wrapping set falls through to this\n\t\t\tcase List<?> list -> ArrayValueProvider.fromJavaList(list, list);\n\t\t\tcase Iterable<?> itr -> ArrayValueProvider.fromIterable(itr);\n\t\t\tcase null, default -> value == null ? ArrayValueProvider.FromObject.FROM_NULL : new ArrayValueProvider.FromObject(value);\n\t\t};\n\t}\n\n\tpublic Object arrayOf(@Nullable Object from, TypeInfo target) {\n",
+          "after": "\t\t\treturn len == 0 ? ArrayValueProvider.EMPTY : new ArrayValueProvider.FromJavaArray(value, len);\n\t\t}\n\n\t\tif (value instanceof NativeArray array) {\n\t\t\treturn ArrayValueProvider.fromNativeArray(array);\n\t\t// special casing this because it can wrap i.e. sets as well\n\t\t} else if (value instanceof NativeJavaList list) {\n\t\t\treturn ArrayValueProvider.fromJavaList(list.list, list);\n\t\t} else if (value instanceof NativeJavaArray array) {\n\t\t\treturn arrayValueProviderOf(array.array);\n\t\t} else if (value instanceof Wrapper w) {\n\t\t\treturn arrayValueProviderOf(w.unwrap()); // other stuff like NJO wrapping set falls through to this\n\t\t} else if (value instanceof List<?> list) {\n\t\t\treturn ArrayValueProvider.fromJavaList(list, list);\n\t\t} else if (value instanceof Iterable<?> itr) {\n\t\t\treturn ArrayValueProvider.fromIterable(itr);\n\t\t}\n\t\treturn value == null ? ArrayValueProvider.FromObject.FROM_NULL : new ArrayValueProvider.FromObject(value);\n\t}\n\n\tpublic Object arrayOf(@Nullable Object from, TypeInfo target) {\n"
+        },
+        {
+          "old_start": 1568,
+          "old_count": 12,
+          "new_start": 1574,
+          "new_count": 14,
+          "before": "\t\t} else if (from instanceof Boolean) {\n\t\t\treturn JSTYPE_BOOLEAN;\n\t\t} else if (from instanceof Scriptable) {\n\t\t\treturn switch (from) {\n\t\t\t\tcase NativeJavaClass ignore -> JSTYPE_JAVA_CLASS;\n\t\t\t\tcase NativeJavaArray ignore -> JSTYPE_JAVA_ARRAY;\n\t\t\t\tcase Wrapper ignore -> JSTYPE_JAVA_OBJECT;\n\t\t\t\tdefault -> JSTYPE_OBJECT;\n\t\t\t};\n\t\t} else if (from instanceof Class) {\n\t\t\treturn JSTYPE_JAVA_CLASS;\n\t\t} else {\n",
+          "after": "\t\t} else if (from instanceof Boolean) {\n\t\t\treturn JSTYPE_BOOLEAN;\n\t\t} else if (from instanceof Scriptable) {\n\t\t\tif (from instanceof NativeJavaClass) {\n\t\t\t\treturn JSTYPE_JAVA_CLASS;\n\t\t\t} else if (from instanceof NativeJavaArray) {\n\t\t\t\treturn JSTYPE_JAVA_ARRAY;\n\t\t\t} else if (from instanceof Wrapper) {\n\t\t\t\treturn JSTYPE_JAVA_OBJECT;\n\t\t\t}\n\t\t\treturn JSTYPE_OBJECT;\n\t\t} else if (from instanceof Class) {\n\t\t\treturn JSTYPE_JAVA_CLASS;\n\t\t} else {\n"
+        }
+      ]
+    },
+    {
+      "old_path": "dev/latvian/mods/rhino/FunctionObject.java",
+      "path": "dev/latvian/mods/rhino/FunctionObject.java",
+      "hunks": [
+        {
+          "old_start": 7,
+          "old_count": 6,
+          "new_start": 7,
+          "new_count": 8,
+          "before": "// API class\n\npackage dev.latvian.mods.rhino;\n\nimport java.util.List;\n\n",
+          "after": "// API class\n\npackage dev.latvian.mods.rhino;\n\nimport dev.latvian.mods.rhino.util.ListCompat;\n\nimport java.util.List;\n\n"
+        },
+        {
+          "old_start": 192,
+          "old_count": 12,
+          "new_start": 194,
+          "new_count": 12,
+          "before": "\t\tif (arity == 4 && (types.get(1).isArray() || types.get(2).isArray())) {\n\t\t\t// Either variable args or an error.\n\t\t\tif (types.get(1).isArray()) {\n\t\t\t\tif (!isStatic || types.getFirst() != ScriptRuntime.ContextClass || types.get(1).getComponentType() != ScriptRuntime.ObjectClass || types.get(2) != ScriptRuntime.FunctionClass || types.get(3) != Boolean.TYPE) {\n\t\t\t\t\tthrow Context.reportRuntimeError1(\"msg.varargs.ctor\", methodName, cx);\n\t\t\t\t}\n\t\t\t\tparmsLength = VARARGS_CTOR;\n\t\t\t} else {\n\t\t\t\tif (!isStatic || types.getFirst() != ScriptRuntime.ContextClass || types.get(1) != ScriptRuntime.ScriptableClass || types.get(2).getComponentType() != ScriptRuntime.ObjectClass || types.get(3) != ScriptRuntime.FunctionClass) {\n\t\t\t\t\tthrow Context.reportRuntimeError1(\"msg.varargs.fun\", methodName, cx);\n\t\t\t\t}\n\t\t\t\tparmsLength = VARARGS_METHOD;\n",
+          "after": "\t\tif (arity == 4 && (types.get(1).isArray() || types.get(2).isArray())) {\n\t\t\t// Either variable args or an error.\n\t\t\tif (types.get(1).isArray()) {\n\t\t\t\tif (!isStatic || ListCompat.getFirst(types) != ScriptRuntime.ContextClass || types.get(1).getComponentType() != ScriptRuntime.ObjectClass || types.get(2) != ScriptRuntime.FunctionClass || types.get(3) != Boolean.TYPE) {\n\t\t\t\t\tthrow Context.reportRuntimeError1(\"msg.varargs.ctor\", methodName, cx);\n\t\t\t\t}\n\t\t\t\tparmsLength = VARARGS_CTOR;\n\t\t\t} else {\n\t\t\t\tif (!isStatic || ListCompat.getFirst(types) != ScriptRuntime.ContextClass || types.get(1) != ScriptRuntime.ScriptableClass || types.get(2).getComponentType() != ScriptRuntime.ObjectClass || types.get(3) != ScriptRuntime.FunctionClass) {\n\t\t\t\t\tthrow Context.reportRuntimeError1(\"msg.varargs.fun\", methodName, cx);\n\t\t\t\t}\n\t\t\t\tparmsLength = VARARGS_METHOD;\n"
+        }
+      ]
+    },
+    {
+      "old_path": "dev/latvian/mods/rhino/JavaMembers.java",
+      "path": "dev/latvian/mods/rhino/JavaMembers.java",
+      "hunks": [
+        {
+          "old_start": 5,
+          "old_count": 6,
+          "new_start": 5,
+          "new_count": 8,
+          "before": " * file, You can obtain one at http://mozilla.org/MPL/2.0/. */\n\npackage dev.latvian.mods.rhino;\n\nimport dev.latvian.mods.rhino.type.TypeInfo;\nimport dev.latvian.mods.rhino.util.ClassVisibilityContext;\n",
+          "after": " * file, You can obtain one at http://mozilla.org/MPL/2.0/. */\n\npackage dev.latvian.mods.rhino;\n\nimport dev.latvian.mods.rhino.util.ListCompat;\n\nimport dev.latvian.mods.rhino.type.TypeInfo;\nimport dev.latvian.mods.rhino.util.ClassVisibilityContext;\n"
+        },
+        {
+          "old_start": 113,
+          "old_count": 14,
+          "new_start": 115,
+          "new_count": 14,
+          "before": "\t\t\t\t\tvar params = method.parameters().types();\n\t\t\t\t\tif (params.size() == 1) {\n\t\t\t\t\t\tif (pass == 1) {\n\t\t\t\t\t\t\tif (params.getFirst() == type) {\n\t\t\t\t\t\t\t\treturn method;\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t} else {\n\t\t\t\t\t\t\tif (pass != 2) {\n\t\t\t\t\t\t\t\tKit.codeBug();\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\tif (params.getFirst().isAssignableFrom(type)) {\n\t\t\t\t\t\t\t\treturn method;\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t}\n",
+          "after": "\t\t\t\t\tvar params = method.parameters().types();\n\t\t\t\t\tif (params.size() == 1) {\n\t\t\t\t\t\tif (pass == 1) {\n\t\t\t\t\t\t\tif (ListCompat.getFirst(params) == type) {\n\t\t\t\t\t\t\t\treturn method;\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t} else {\n\t\t\t\t\t\t\tif (pass != 2) {\n\t\t\t\t\t\t\t\tKit.codeBug();\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\tif (ListCompat.getFirst(params).isAssignableFrom(type)) {\n\t\t\t\t\t\t\t\treturn method;\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t}\n"
+        },
+        {
+          "old_start": 282,
+          "old_count": 7,
+          "new_start": 284,
+          "new_count": 7,
+          "before": "\t\t\t// main setter. Otherwise, let the NativeJavaMethod decide which\n\t\t\t// setter to use:\n\t\t\tif (bp.setters == null || value == null) {\n\t\t\t\tObject[] args = {cx.jsToJava(value, bp.setter.parameters().typeInfos().getFirst())};\n\t\t\t\ttry {\n\t\t\t\t\tbp.setter.invoke(javaObject, args, cx, scope);\n\t\t\t\t} catch (Exception ex) {\n",
+          "after": "\t\t\t// main setter. Otherwise, let the NativeJavaMethod decide which\n\t\t\t// setter to use:\n\t\t\tif (bp.setters == null || value == null) {\n\t\t\t\tObject[] args = {cx.jsToJava(value, ListCompat.getFirst(bp.setter.parameters().typeInfos()))};\n\t\t\t\ttry {\n\t\t\t\t\tbp.setter.invoke(javaObject, args, cx, scope);\n\t\t\t\t} catch (Exception ex) {\n"
+        }
+      ]
+    },
+    {
+      "old_path": "dev/latvian/mods/rhino/MethodSignature.java",
+      "path": "dev/latvian/mods/rhino/MethodSignature.java",
+      "hunks": [
+        {
+          "old_start": 12,
+          "old_count": 7,
+          "new_start": 12,
+          "new_count": 9,
+          "before": "\n\t@Override\n\tpublic boolean equals(Object o) {\n\t\tif (o instanceof MethodSignature(String name1, Class<?>[] args1)) {\n\t\t\treturn name1.equals(name) && Arrays.equals(args, args1);\n\t\t}\n\n",
+          "after": "\n\t@Override\n\tpublic boolean equals(Object o) {\n\t\tif (o instanceof MethodSignature signature) {\n\t\t\tString name1 = signature.name();\n\t\t\tClass<?>[] args1 = signature.args();\n\t\t\treturn name1.equals(name) && Arrays.equals(args, args1);\n\t\t}\n\n"
+        }
+      ]
+    },
+    {
+      "old_path": "dev/latvian/mods/rhino/NativeArray.java",
+      "path": "dev/latvian/mods/rhino/NativeArray.java",
+      "hunks": [
+        {
+          "old_start": 5,
+          "old_count": 6,
+          "new_start": 5,
+          "new_count": 8,
+          "before": " * file, You can obtain one at http://mozilla.org/MPL/2.0/. */\n\npackage dev.latvian.mods.rhino;\n\nimport dev.latvian.mods.rhino.ArrayLikeAbstractOperations.IterativeOperation;\nimport dev.latvian.mods.rhino.ArrayLikeAbstractOperations.ReduceOperation;\n",
+          "after": " * file, You can obtain one at http://mozilla.org/MPL/2.0/. */\n\npackage dev.latvian.mods.rhino;\n\nimport dev.latvian.mods.rhino.util.ListCompat;\n\nimport dev.latvian.mods.rhino.ArrayLikeAbstractOperations.IterativeOperation;\nimport dev.latvian.mods.rhino.ArrayLikeAbstractOperations.ReduceOperation;\n"
+        },
+        {
+          "old_start": 2381,
+          "old_count": 7,
+          "new_start": 2383,
+          "new_count": 7,
+          "before": "\t\t\tthrow new ArrayIndexOutOfBoundsException(\"Array doesn't contain any objects\");\n\t\t}\n\n\t\treturn list.getFirst();\n\t}\n\n\t@Override\n",
+          "after": "\t\t\tthrow new ArrayIndexOutOfBoundsException(\"Array doesn't contain any objects\");\n\t\t}\n\n\t\treturn ListCompat.getFirst(list);\n\t}\n\n\t@Override\n"
+        }
+      ]
+    },
+    {
+      "old_path": "dev/latvian/mods/rhino/NativeGSON.java",
+      "path": "dev/latvian/mods/rhino/NativeGSON.java",
+      "hunks": [
+        {
+          "old_start": 28,
+          "old_count": 57,
+          "new_start": 28,
+          "new_count": 59,
+          "before": "\t}\n\n\tpublic static JsonElement stringify0(Context cx, Object v) {\n\t\treturn switch (v) {\n\t\t\tcase null -> JsonNull.INSTANCE;\n\t\t\tcase JsonElement json -> json;\n\t\t\tcase Boolean b -> new JsonPrimitive(b);\n\t\t\tcase CharSequence ignore -> new JsonPrimitive(v.toString());\n\t\t\tcase Number n -> numberPrimitive(n);\n\t\t\tcase NativeString ignore -> new JsonPrimitive(ScriptRuntime.toString(cx, v));\n\t\t\tcase NativeNumber ignore -> numberPrimitive(ScriptRuntime.toNumber(cx, v));\n\t\t\tcase NativeObject obj -> {\n\t\t\t\tvar json = new JsonObject();\n\n\t\t\t\tfor (Object id : obj.getIds(cx)) {\n\t\t\t\t\tObject value = id instanceof Integer index ? obj.get(cx, index, obj) : obj.get(cx, String.valueOf(id), obj);\n\t\t\t\t\tvalue = Wrapper.unwrapped(value);\n\n\t\t\t\t\tif (doesNotSerialize(value)) {\n\t\t\t\t\t\tcontinue;\n\t\t\t\t\t}\n\n\t\t\t\t\tjson.add(String.valueOf(id), stringify0(cx, value));\n\t\t\t\t}\n\n\t\t\t\tyield json;\n\t\t\t}\n\t\t\tcase Map<?, ?> map -> {\n\t\t\t\tvar json = new JsonObject();\n\n\t\t\t\tfor (var entry : map.entrySet()) {\n\t\t\t\t\tif (!doesNotSerialize(entry.getValue())) {\n\t\t\t\t\t\tjson.add(entry.getKey().toString(), stringify0(cx, entry.getValue()));\n\t\t\t\t\t}\n\t\t\t\t}\n\n\t\t\t\tyield json;\n\t\t\t}\n\t\t\tcase Iterable<?> itr -> {\n\t\t\t\tvar json = new JsonArray();\n\n\t\t\t\tfor (var o : itr) {\n\t\t\t\t\tjson.add(stringify0(cx, o));\n\t\t\t\t}\n\n\t\t\t\tyield json;\n\t\t\t}\n\t\t\tcase Object o when doesNotSerialize(o) -> JsonNull.INSTANCE;\n\t\t\tdefault -> {\n\t\t\t\tvar json = new JsonArray();\n\t\t\t\tcx.getCachedClassStorage(false).get(Wrapper.unwrapped(v).getClass()).getDebugInfo().forEach(json::add);\n\t\t\t\tyield json;\n\t\t\t}\n\t\t};\n\t}\n\n\tprivate static JsonElement numberPrimitive(Number n) {\n",
+          "after": "\t}\n\n\tpublic static JsonElement stringify0(Context cx, Object v) {\n\t\tif (v == null) {\n\t\t\treturn JsonNull.INSTANCE;\n\t\t} else if (v instanceof JsonElement json) {\n\t\t\treturn json;\n\t\t} else if (v instanceof Boolean b) {\n\t\t\treturn new JsonPrimitive(b);\n\t\t} else if (v instanceof CharSequence) {\n\t\t\treturn new JsonPrimitive(v.toString());\n\t\t} else if (v instanceof Number n) {\n\t\t\treturn numberPrimitive(n);\n\t\t} else if (v instanceof NativeString) {\n\t\t\treturn new JsonPrimitive(ScriptRuntime.toString(cx, v));\n\t\t} else if (v instanceof NativeNumber) {\n\t\t\treturn numberPrimitive(ScriptRuntime.toNumber(cx, v));\n\t\t} else if (v instanceof NativeObject obj) {\n\t\t\tvar json = new JsonObject();\n\n\t\t\tfor (Object id : obj.getIds(cx)) {\n\t\t\t\tObject value = id instanceof Integer index ? obj.get(cx, index, obj) : obj.get(cx, String.valueOf(id), obj);\n\t\t\t\tvalue = Wrapper.unwrapped(value);\n\n\t\t\t\tif (doesNotSerialize(value)) {\n\t\t\t\t\tcontinue;\n\t\t\t\t}\n\n\t\t\t\tjson.add(String.valueOf(id), stringify0(cx, value));\n\t\t\t}\n\n\t\t\treturn json;\n\t\t} else if (v instanceof Map<?, ?> map) {\n\t\t\tvar json = new JsonObject();\n\n\t\t\tfor (var entry : map.entrySet()) {\n\t\t\t\tif (!doesNotSerialize(entry.getValue())) {\n\t\t\t\t\tjson.add(entry.getKey().toString(), stringify0(cx, entry.getValue()));\n\t\t\t\t}\n\t\t\t}\n\n\t\t\treturn json;\n\t\t} else if (v instanceof Iterable<?> itr) {\n\t\t\tvar json = new JsonArray();\n\n\t\t\tfor (var o : itr) {\n\t\t\t\tjson.add(stringify0(cx, o));\n\t\t\t}\n\n\t\t\treturn json;\n\t\t} else if (doesNotSerialize(v)) {\n\t\t\treturn JsonNull.INSTANCE;\n\t\t}\n\t\tvar json = new JsonArray();\n\t\tcx.getCachedClassStorage(false).get(Wrapper.unwrapped(v).getClass()).getDebugInfo().forEach(json::add);\n\t\treturn json;\n\t}\n\n\tprivate static JsonElement numberPrimitive(Number n) {\n"
+        }
+      ]
+    },
+    {
+      "old_path": "dev/latvian/mods/rhino/NativeJavaClass.java",
+      "path": "dev/latvian/mods/rhino/NativeJavaClass.java",
+      "hunks": [
+        {
+          "old_start": 5,
+          "old_count": 6,
+          "new_start": 5,
+          "new_count": 8,
+          "before": " * file, You can obtain one at http://mozilla.org/MPL/2.0/. */\n\npackage dev.latvian.mods.rhino;\n\nimport dev.latvian.mods.rhino.type.TypeInfo;\nimport dev.latvian.mods.rhino.util.DefaultValueTypeHint;\n",
+          "after": " * file, You can obtain one at http://mozilla.org/MPL/2.0/. */\n\npackage dev.latvian.mods.rhino;\n\nimport dev.latvian.mods.rhino.util.ListCompat;\n\nimport dev.latvian.mods.rhino.type.TypeInfo;\nimport dev.latvian.mods.rhino.util.DefaultValueTypeHint;\n"
+        },
+        {
+          "old_start": 57,
+          "old_count": 10,
+          "new_start": 59,
+          "new_count": 10,
+          "before": "\t\t\t// is given and it is a Java or ECMA array.\n\t\t\tif (args.length == argTypes.size() && (args[args.length - 1] == null || args[args.length - 1] instanceof NativeArray || args[args.length - 1] instanceof NativeJavaArray)) {\n\t\t\t\t// convert the ECMA array into a native array\n\t\t\t\tvarArgs = cx.jsToJava(args[args.length - 1], argTypes.getLast());\n\t\t\t} else {\n\t\t\t\t// marshall the variable parameter\n\t\t\t\tvar componentType = argTypes.getLast().componentType();\n\t\t\t\tvarArgs = componentType.newArray(args.length - argTypes.size() + 1);\n\t\t\t\tint len = Array.getLength(varArgs);\n\t\t\t\tfor (int i = 0; i < len; i++) {\n",
+          "after": "\t\t\t// is given and it is a Java or ECMA array.\n\t\t\tif (args.length == argTypes.size() && (args[args.length - 1] == null || args[args.length - 1] instanceof NativeArray || args[args.length - 1] instanceof NativeJavaArray)) {\n\t\t\t\t// convert the ECMA array into a native array\n\t\t\t\tvarArgs = cx.jsToJava(args[args.length - 1], ListCompat.getLast(argTypes));\n\t\t\t} else {\n\t\t\t\t// marshall the variable parameter\n\t\t\t\tvar componentType = ListCompat.getLast(argTypes).componentType();\n\t\t\t\tvarArgs = componentType.newArray(args.length - argTypes.size() + 1);\n\t\t\t\tint len = Array.getLength(varArgs);\n\t\t\t\tfor (int i = 0; i < len; i++) {\n"
+        }
+      ]
+    },
+    {
+      "old_path": "dev/latvian/mods/rhino/NativeJavaList.java",
+      "path": "dev/latvian/mods/rhino/NativeJavaList.java",
+      "hunks": [
+        {
+          "old_start": 4,
+          "old_count": 6,
+          "new_start": 4,
+          "new_count": 8,
+          "before": " * License, v. 2.0. If a copy of the MPL was not distributed with this\n * file, You can obtain one at http://mozilla.org/MPL/2.0/. */\npackage dev.latvian.mods.rhino;\n\nimport dev.latvian.mods.rhino.type.TypeInfo;\nimport dev.latvian.mods.rhino.util.Deletable;\n",
+          "after": " * License, v. 2.0. If a copy of the MPL was not distributed with this\n * file, You can obtain one at http://mozilla.org/MPL/2.0/. */\npackage dev.latvian.mods.rhino;\n\nimport dev.latvian.mods.rhino.util.ListCompat;\n\nimport dev.latvian.mods.rhino.type.TypeInfo;\nimport dev.latvian.mods.rhino.util.Deletable;\n"
+        },
+        {
+          "old_start": 190,
+          "old_count": 7,
+          "new_start": 192,
+          "new_count": 7,
+          "before": "\t\t\treturn Undefined.INSTANCE;\n\t\t}\n\n\t\treturn list.removeLast();\n\t}\n\n\tprivate Object shift(Context cx) {\n",
+          "after": "\t\t\treturn Undefined.INSTANCE;\n\t\t}\n\n\t\treturn ListCompat.removeLast(list);\n\t}\n\n\tprivate Object shift(Context cx) {\n"
+        },
+        {
+          "old_start": 198,
+          "old_count": 12,
+          "new_start": 200,
+          "new_count": 12,
+          "before": "\t\t\treturn Undefined.INSTANCE;\n\t\t}\n\n\t\treturn list.removeFirst();\n\t}\n\n\tprivate int unshift(Context cx, Object[] args) {\n\t\tfor (int i = args.length - 1; i >= 0; i--) {\n\t\t\tlist.addFirst(cx.jsToJava(args[i], listType));\n\t\t}\n\n\t\treturn list.size();\n",
+          "after": "\t\t\treturn Undefined.INSTANCE;\n\t\t}\n\n\t\treturn ListCompat.removeFirst(list);\n\t}\n\n\tprivate int unshift(Context cx, Object[] args) {\n\t\tfor (int i = args.length - 1; i >= 0; i--) {\n\t\t\tListCompat.addFirst(list, cx.jsToJava(args[i], listType));\n\t\t}\n\n\t\treturn list.size();\n"
+        },
+        {
+          "old_start": 223,
+          "old_count": 7,
+          "new_start": 225,
+          "new_count": 7,
+          "before": "\t\tif (list.isEmpty()) {\n\t\t\treturn \"\";\n\t\t} else if (list.size() == 1) {\n\t\t\treturn ScriptRuntime.toString(cx, list.getFirst());\n\t\t}\n\n\t\tString j = ScriptRuntime.toString(cx, args[0]);\n",
+          "after": "\t\tif (list.isEmpty()) {\n\t\t\treturn \"\";\n\t\t} else if (list.size() == 1) {\n\t\t\treturn ScriptRuntime.toString(cx, ListCompat.getFirst(list));\n\t\t}\n\n\t\tString j = ScriptRuntime.toString(cx, args[0]);\n"
+        },
+        {
+          "old_start": 317,
+          "old_count": 7,
+          "new_start": 319,
+          "new_count": 7,
+          "before": "\t\tif (list.isEmpty()) {\n\t\t\treturn Undefined.INSTANCE;\n\t\t} else if (list.size() == 1) {\n\t\t\treturn list.getFirst();\n\t\t}\n\n\t\tBinaryOperator operator = (BinaryOperator) args[0];\n",
+          "after": "\t\tif (list.isEmpty()) {\n\t\t\treturn Undefined.INSTANCE;\n\t\t} else if (list.size() == 1) {\n\t\t\treturn ListCompat.getFirst(list);\n\t\t}\n\n\t\tBinaryOperator operator = (BinaryOperator) args[0];\n"
+        },
+        {
+          "old_start": 334,
+          "old_count": 7,
+          "new_start": 336,
+          "new_count": 7,
+          "before": "\t\tif (list.isEmpty()) {\n\t\t\treturn Undefined.INSTANCE;\n\t\t} else if (list.size() == 1) {\n\t\t\treturn list.getFirst(); // might not be correct start index\n\t\t}\n\n\t\tBinaryOperator operator = (BinaryOperator) args[0];\n",
+          "after": "\t\tif (list.isEmpty()) {\n\t\t\treturn Undefined.INSTANCE;\n\t\t} else if (list.size() == 1) {\n\t\t\treturn ListCompat.getFirst(list); // might not be correct start index\n\t\t}\n\n\t\tBinaryOperator operator = (BinaryOperator) args[0];\n"
+        }
+      ]
+    },
+    {
+      "old_path": "dev/latvian/mods/rhino/NativeJavaMethod.java",
+      "path": "dev/latvian/mods/rhino/NativeJavaMethod.java",
+      "hunks": [
+        {
+          "old_start": 5,
+          "old_count": 6,
+          "new_start": 5,
+          "new_count": 8,
+          "before": " * file, You can obtain one at http://mozilla.org/MPL/2.0/. */\n\npackage dev.latvian.mods.rhino;\n\nimport dev.latvian.mods.rhino.type.ParameterizedTypeInfo;\nimport dev.latvian.mods.rhino.type.TypeConsolidator;\n",
+          "after": " * file, You can obtain one at http://mozilla.org/MPL/2.0/. */\n\npackage dev.latvian.mods.rhino;\n\nimport dev.latvian.mods.rhino.util.ListCompat;\n\nimport dev.latvian.mods.rhino.type.ParameterizedTypeInfo;\nimport dev.latvian.mods.rhino.type.TypeConsolidator;\n"
+        },
+        {
+          "old_start": 235,
+          "old_count": 8,
+          "new_start": 237,
+          "new_count": 8,
+          "before": "\tprivate static int preferSignature(Context cx, Object[] args, List<TypeInfo> sig1, boolean vararg1, List<TypeInfo> sig2, boolean vararg2) {\n\t\tint totalPreference = 0;\n\t\tfor (int j = 0; j < args.length; j++) {\n\t\t\tvar type1 = vararg1 && j >= sig1.size() ? sig1.getLast() : sig1.get(j);\n\t\t\tvar type2 = vararg2 && j >= sig2.size() ? sig2.getLast() : sig2.get(j);\n\n\t\t\tif (type1.equals(type2)) {\n\t\t\t\tcontinue;\n",
+          "after": "\tprivate static int preferSignature(Context cx, Object[] args, List<TypeInfo> sig1, boolean vararg1, List<TypeInfo> sig2, boolean vararg2) {\n\t\tint totalPreference = 0;\n\t\tfor (int j = 0; j < args.length; j++) {\n\t\t\tvar type1 = vararg1 && j >= sig1.size() ? ListCompat.getLast(sig1) : sig1.get(j);\n\t\t\tvar type2 = vararg2 && j >= sig2.size() ? ListCompat.getLast(sig2) : sig2.get(j);\n\n\t\t\tif (type1.equals(type2)) {\n\t\t\t\tcontinue;\n"
+        },
+        {
+          "old_start": 364,
+          "old_count": 10,
+          "new_start": 366,
+          "new_count": 10,
+          "before": "\t\t\t// is given and it is a Java or ECMA array or is null.\n\t\t\tif (args.length == argTypes.size() && (args[args.length - 1] == null || args[args.length - 1] instanceof NativeArray || args[args.length - 1] instanceof NativeJavaArray)) {\n\t\t\t\t// convert the ECMA array into a native array\n\t\t\t\tvarArgs = cx.jsToJava(args[args.length - 1], argTypes.getLast());\n\t\t\t} else {\n\t\t\t\t// marshall the variable parameters\n\t\t\t\tvar componentType = argTypes.getLast().componentType();\n\t\t\t\tvarArgs = Array.newInstance(componentType.asClass(), args.length - argTypes.size() + 1);\n\t\t\t\tint len = Array.getLength(varArgs);\n\t\t\t\tfor (int i = 0; i < len; i++) {\n",
+          "after": "\t\t\t// is given and it is a Java or ECMA array or is null.\n\t\t\tif (args.length == argTypes.size() && (args[args.length - 1] == null || args[args.length - 1] instanceof NativeArray || args[args.length - 1] instanceof NativeJavaArray)) {\n\t\t\t\t// convert the ECMA array into a native array\n\t\t\t\tvarArgs = cx.jsToJava(args[args.length - 1], ListCompat.getLast(argTypes));\n\t\t\t} else {\n\t\t\t\t// marshall the variable parameters\n\t\t\t\tvar componentType = ListCompat.getLast(argTypes).componentType();\n\t\t\t\tvarArgs = Array.newInstance(componentType.asClass(), args.length - argTypes.size() + 1);\n\t\t\t\tint len = Array.getLength(varArgs);\n\t\t\t\tfor (int i = 0; i < len; i++) {\n"
+        }
+      ]
+    },
+    {
+      "old_path": "dev/latvian/mods/rhino/Parser.java",
+      "path": "dev/latvian/mods/rhino/Parser.java",
+      "hunks": [
+        {
+          "old_start": 5,
+          "old_count": 6,
+          "new_start": 5,
+          "new_count": 8,
+          "before": " * file, You can obtain one at http://mozilla.org/MPL/2.0/. */\n\npackage dev.latvian.mods.rhino;\n\nimport dev.latvian.mods.rhino.ast.ArrayComprehension;\nimport dev.latvian.mods.rhino.ast.ArrayComprehensionLoop;\n",
+          "after": " * file, You can obtain one at http://mozilla.org/MPL/2.0/. */\n\npackage dev.latvian.mods.rhino;\n\nimport dev.latvian.mods.rhino.util.ListCompat;\n\nimport dev.latvian.mods.rhino.ast.ArrayComprehension;\nimport dev.latvian.mods.rhino.ast.ArrayComprehensionLoop;\n"
+        },
+        {
+          "old_start": 517,
+          "old_count": 8,
+          "new_start": 519,
+          "new_count": 8,
+          "before": "\t}\n\n\tprivate void exitLoop() {\n\t\tloopSet.removeLast();\n\t\tloopAndSwitchSet.removeLast();\n\t\tpopScope();\n\t}\n\n",
+          "after": "\t}\n\n\tprivate void exitLoop() {\n\t\tListCompat.removeLast(loopSet);\n\t\tListCompat.removeLast(loopAndSwitchSet);\n\t\tpopScope();\n\t}\n\n"
+        },
+        {
+          "old_start": 536,
+          "old_count": 7,
+          "new_start": 538,
+          "new_count": 7,
+          "before": "\t}\n\n\tprivate void exitSwitch() {\n\t\tloopAndSwitchSet.removeLast();\n\t}\n\n\t/**\n",
+          "after": "\t}\n\n\tprivate void exitSwitch() {\n\t\tListCompat.removeLast(loopAndSwitchSet);\n\t}\n\n\t/**\n"
+        },
+        {
+          "old_start": 605,
+          "old_count": 7,
+          "new_start": 607,
+          "new_count": 7,
+          "before": "\t\t\t\t\t\tbreak;\n\t\t\t\t\t}\n\t\t\t\t} else if (tt == Token.COMMENT) {\n\t\t\t\t\tn = scannedComments.getLast();\n\t\t\t\t\tconsumeToken();\n\t\t\t\t} else {\n\t\t\t\t\tn = statement();\n",
+          "after": "\t\t\t\t\t\tbreak;\n\t\t\t\t\t}\n\t\t\t\t} else if (tt == Token.COMMENT) {\n\t\t\t\t\tn = ListCompat.getLast(scannedComments);\n\t\t\t\t\tconsumeToken();\n\t\t\t\t} else {\n\t\t\t\t\tn = statement();\n"
+        },
+        {
+          "old_start": 693,
+          "old_count": 7,
+          "new_start": 695,
+          "new_count": 7,
+          "before": "\t\t\t\t\t\t\tbreak bodyLoop;\n\t\t\t\t\t\tcase Token.COMMENT:\n\t\t\t\t\t\t\tconsumeToken();\n\t\t\t\t\t\t\tn = scannedComments.getLast();\n\t\t\t\t\t\t\tbreak;\n\t\t\t\t\t\tcase Token.FUNCTION:\n\t\t\t\t\t\t\tconsumeToken();\n",
+          "after": "\t\t\t\t\t\t\tbreak bodyLoop;\n\t\t\t\t\t\tcase Token.COMMENT:\n\t\t\t\t\t\t\tconsumeToken();\n\t\t\t\t\t\t\tn = ListCompat.getLast(scannedComments);\n\t\t\t\t\t\t\tbreak;\n\t\t\t\t\t\tcase Token.FUNCTION:\n\t\t\t\t\t\t\tconsumeToken();\n"
+        },
+        {
+          "old_start": 1110,
+          "old_count": 8,
+          "new_start": 1112,
+          "new_count": 8,
+          "before": "\t\t\t\t\taddStrictWarning(pn instanceof EmptyStatement ? \"msg.extra.trailing.semi\" : \"msg.no.side.effects\", \"\", beg, nodeEnd(pn) - beg);\n\t\t\t\t}\n\t\t\t\tint ntt = peekToken();\n\t\t\t\tif (ntt == Token.COMMENT && pn.getLineno() == scannedComments.getLast().getLineno()) {\n\t\t\t\t\tpn.setInlineComment(scannedComments.getLast());\n\t\t\t\t\tconsumeToken();\n\t\t\t\t}\n\t\t\t\treturn pn;\n",
+          "after": "\t\t\t\t\taddStrictWarning(pn instanceof EmptyStatement ? \"msg.extra.trailing.semi\" : \"msg.no.side.effects\", \"\", beg, nodeEnd(pn) - beg);\n\t\t\t\t}\n\t\t\t\tint ntt = peekToken();\n\t\t\t\tif (ntt == Token.COMMENT && pn.getLineno() == ListCompat.getLast(scannedComments).getLineno()) {\n\t\t\t\t\tpn.setInlineComment(ListCompat.getLast(scannedComments));\n\t\t\t\t\tconsumeToken();\n\t\t\t\t}\n\t\t\t\treturn pn;\n"
+        },
+        {
+          "old_start": 1233,
+          "old_count": 7,
+          "new_start": 1235,
+          "new_count": 7,
+          "before": "\t\t\t\treturn pn;  // LabeledStatement\n\t\t\tcase Token.COMMENT:\n\t\t\t\t//Do not consume token here\n\t\t\t\tpn = scannedComments.getLast();\n\t\t\t\treturn pn;\n\t\t\tdefault:\n\t\t\t\tlineno = ts.lineno;\n",
+          "after": "\t\t\t\treturn pn;  // LabeledStatement\n\t\t\tcase Token.COMMENT:\n\t\t\t\t//Do not consume token here\n\t\t\t\tpn = ListCompat.getLast(scannedComments);\n\t\t\t\treturn pn;\n\t\t\tdefault:\n\t\t\t\tlineno = ts.lineno;\n"
+        },
+        {
+          "old_start": 1288,
+          "old_count": 7,
+          "new_start": 1290,
+          "new_count": 7,
+          "before": "\t\tif (matchToken(Token.ELSE, true)) {\n\t\t\tint tt = peekToken();\n\t\t\tif (tt == Token.COMMENT) {\n\t\t\t\tpn.setElseKeyWordInlineComment(scannedComments.getLast());\n\t\t\t\tconsumeToken();\n\t\t\t}\n\t\t\telsePos = ts.tokenBeg - pos;\n",
+          "after": "\t\tif (matchToken(Token.ELSE, true)) {\n\t\t\tint tt = peekToken();\n\t\t\tif (tt == Token.COMMENT) {\n\t\t\t\tpn.setElseKeyWordInlineComment(ListCompat.getLast(scannedComments));\n\t\t\t\tconsumeToken();\n\t\t\t}\n\t\t\telsePos = ts.tokenBeg - pos;\n"
+        },
+        {
+          "old_start": 1355,
+          "old_count": 7,
+          "new_start": 1357,
+          "new_count": 7,
+          "before": "\t\t\t\t\t\tmustMatchToken(Token.COLON, \"msg.no.colon.case\", true);\n\t\t\t\t\t\tbreak;\n\t\t\t\t\tcase Token.COMMENT:\n\t\t\t\t\t\tAstNode n = scannedComments.getLast();\n\t\t\t\t\t\tpn.addChild(n);\n\t\t\t\t\t\tcontinue switchLoop;\n\t\t\t\t\tdefault:\n",
+          "after": "\t\t\t\t\t\tmustMatchToken(Token.COLON, \"msg.no.colon.case\", true);\n\t\t\t\t\t\tbreak;\n\t\t\t\t\tcase Token.COMMENT:\n\t\t\t\t\t\tAstNode n = ListCompat.getLast(scannedComments);\n\t\t\t\t\t\tpn.addChild(n);\n\t\t\t\t\t\tcontinue switchLoop;\n\t\t\t\t\tdefault:\n"
+        },
+        {
+          "old_start": 1370,
+          "old_count": 7,
+          "new_start": 1372,
+          "new_count": 7,
+          "before": "\n\t\t\t\twhile ((tt = peekToken()) != Token.RC && tt != Token.CASE && tt != Token.DEFAULT && tt != Token.EOF) {\n\t\t\t\t\tif (tt == Token.COMMENT) {\n\t\t\t\t\t\tComment inlineComment = scannedComments.getLast();\n\t\t\t\t\t\tif (caseNode.getInlineComment() == null && inlineComment.getLineno() == caseNode.getLineno()) {\n\t\t\t\t\t\t\tcaseNode.setInlineComment(inlineComment);\n\t\t\t\t\t\t} else {\n",
+          "after": "\n\t\t\t\twhile ((tt = peekToken()) != Token.RC && tt != Token.CASE && tt != Token.DEFAULT && tt != Token.EOF) {\n\t\t\t\t\tif (tt == Token.COMMENT) {\n\t\t\t\t\t\tComment inlineComment = ListCompat.getLast(scannedComments);\n\t\t\t\t\t\tif (caseNode.getInlineComment() == null && inlineComment.getLineno() == caseNode.getLineno()) {\n\t\t\t\t\t\t\tcaseNode.setInlineComment(inlineComment);\n\t\t\t\t\t\t} else {\n"
+        },
+        {
+          "old_start": 1663,
+          "old_count": 7,
+          "new_start": 1665,
+          "new_count": 7,
+          "before": "\t\t//Hnadled comment here because there should not be try without LC\n\t\tint lctt = peekToken();\n\t\tif (lctt == Token.COMMENT) {\n\t\t\tComment commentNode = scannedComments.getLast();\n\t\t\tpn.setInlineComment(commentNode);\n\t\t\tconsumeToken();\n\t\t\tlctt = peekToken();\n",
+          "after": "\t\t//Hnadled comment here because there should not be try without LC\n\t\tint lctt = peekToken();\n\t\tif (lctt == Token.COMMENT) {\n\t\t\tComment commentNode = ListCompat.getLast(scannedComments);\n\t\t\tpn.setInlineComment(commentNode);\n\t\t\tconsumeToken();\n\t\t\tlctt = peekToken();\n"
+        },
+        {
+          "old_start": 1834,
+          "old_count": 7,
+          "new_start": 1836,
+          "new_count": 7,
+          "before": "\t\t\tif (loopAndSwitchSet == null || loopAndSwitchSet.size() == 0) {\n\t\t\t\treportError(\"msg.bad.break\", pos, end - pos);\n\t\t\t} else {\n\t\t\t\tbreakTarget = loopAndSwitchSet.getLast();\n\t\t\t}\n\t\t}\n\n",
+          "after": "\t\t\tif (loopAndSwitchSet == null || loopAndSwitchSet.size() == 0) {\n\t\t\t\treportError(\"msg.bad.break\", pos, end - pos);\n\t\t\t} else {\n\t\t\t\tbreakTarget = ListCompat.getLast(loopAndSwitchSet);\n\t\t\t}\n\t\t}\n\n"
+        },
+        {
+          "old_start": 1867,
+          "old_count": 7,
+          "new_start": 1869,
+          "new_count": 7,
+          "before": "\t\t\tif (loopSet == null || loopSet.size() == 0) {\n\t\t\t\treportError(\"msg.continue.outside\");\n\t\t\t} else {\n\t\t\t\ttarget = loopSet.getLast();\n\t\t\t}\n\t\t} else {\n\t\t\tif (labels == null || !(labels.getStatement() instanceof Loop)) {\n",
+          "after": "\t\t\tif (loopSet == null || loopSet.size() == 0) {\n\t\t\t\treportError(\"msg.continue.outside\");\n\t\t\t} else {\n\t\t\t\ttarget = ListCompat.getLast(loopSet);\n\t\t\t}\n\t\t} else {\n\t\t\tif (labels == null || !(labels.getStatement() instanceof Loop)) {\n"
+        },
+        {
+          "old_start": 2087,
+          "old_count": 8,
+          "new_start": 2089,
+          "new_count": 8,
+          "before": "\t\t\tif (stmt == null) {\n\t\t\t\tstmt = statementHelper();\n\t\t\t\tint ntt = peekToken();\n\t\t\t\tif (ntt == Token.COMMENT && stmt.getLineno() == scannedComments.getLast().getLineno()) {\n\t\t\t\t\tstmt.setInlineComment(scannedComments.getLast());\n\t\t\t\t\tconsumeToken();\n\t\t\t\t}\n\t\t\t}\n",
+          "after": "\t\t\tif (stmt == null) {\n\t\t\t\tstmt = statementHelper();\n\t\t\t\tint ntt = peekToken();\n\t\t\t\tif (ntt == Token.COMMENT && stmt.getLineno() == ListCompat.getLast(scannedComments).getLineno()) {\n\t\t\t\t\tstmt.setInlineComment(ListCompat.getLast(scannedComments));\n\t\t\t\t\tconsumeToken();\n\t\t\t\t}\n\t\t\t}\n"
+        },
+        {
+          "old_start": 3067,
+          "old_count": 7,
+          "new_start": 3069,
+          "new_count": 7,
+          "before": "\t\t\t\t}\n\t\t\t\tbreak;\n\t\t\t} else if (tt == Token.FOR && !after_lb_or_comma && elements.size() == 1) {\n\t\t\t\treturn arrayComprehension(elements.getFirst(), pos);\n\t\t\t} else if (tt == Token.EOF) {\n\t\t\t\treportError(\"msg.no.bracket.arg\");\n\t\t\t\tbreak;\n",
+          "after": "\t\t\t\t}\n\t\t\t\tbreak;\n\t\t\t} else if (tt == Token.FOR && !after_lb_or_comma && elements.size() == 1) {\n\t\t\t\treturn arrayComprehension(ListCompat.getFirst(elements), pos);\n\t\t\t} else if (tt == Token.EOF) {\n\t\t\t\treportError(\"msg.no.bracket.arg\");\n\t\t\t\tbreak;\n"
+        }
+      ]
+    },
+    {
+      "old_path": "dev/latvian/mods/rhino/ast/LabeledStatement.java",
+      "path": "dev/latvian/mods/rhino/ast/LabeledStatement.java",
+      "hunks": [
+        {
+          "old_start": 5,
+          "old_count": 6,
+          "new_start": 5,
+          "new_count": 8,
+          "before": " * file, You can obtain one at http://mozilla.org/MPL/2.0/. */\n\npackage dev.latvian.mods.rhino.ast;\n\nimport dev.latvian.mods.rhino.Token;\n\n",
+          "after": " * file, You can obtain one at http://mozilla.org/MPL/2.0/. */\n\npackage dev.latvian.mods.rhino.ast;\n\nimport dev.latvian.mods.rhino.util.ListCompat;\n\nimport dev.latvian.mods.rhino.Token;\n\n"
+        },
+        {
+          "old_start": 105,
+          "old_count": 7,
+          "new_start": 107,
+          "new_count": 7,
+          "before": "\t}\n\n\tpublic Label getFirstLabel() {\n\t\treturn labels.getFirst();\n\t}\n\n\t@Override\n",
+          "after": "\t}\n\n\tpublic Label getFirstLabel() {\n\t\treturn ListCompat.getFirst(labels);\n\t}\n\n\t@Override\n"
+        }
+      ]
+    },
+    {
+      "old_path": "dev/latvian/mods/rhino/type/JSOrTypeInfo.java",
+      "path": "dev/latvian/mods/rhino/type/JSOrTypeInfo.java",
+      "hunks": [
+        {
+          "old_start": 13,
+          "old_count": 7,
+          "new_start": 13,
+          "new_count": 8,
+          "before": "\n\t@Override\n\tpublic TypeInfo or(TypeInfo info) {\n\t\tif (info instanceof JSOrTypeInfo(List<TypeInfo> types1)) {\n\t\t\tvar list = new ArrayList<TypeInfo>(types.size() + types1.size());\n\t\t\tlist.addAll(types);\n\t\t\tlist.addAll(types1);\n",
+          "after": "\n\t@Override\n\tpublic TypeInfo or(TypeInfo info) {\n\t\tif (info instanceof JSOrTypeInfo other) {\n\t\t\tList<TypeInfo> types1 = other.types();\n\t\t\tvar list = new ArrayList<TypeInfo>(types.size() + types1.size());\n\t\t\tlist.addAll(types);\n\t\t\tlist.addAll(types1);\n"
+        }
+      ]
+    },
+    {
+      "old_path": "dev/latvian/mods/rhino/type/TypeConsolidator.java",
+      "path": "dev/latvian/mods/rhino/type/TypeConsolidator.java",
+      "hunks": [
+        {
+          "old_start": 1,
+          "old_count": 4,
+          "new_start": 1,
+          "new_count": 6,
+          "before": "package dev.latvian.mods.rhino.type;\n\nimport org.jetbrains.annotations.NotNull;\nimport org.jetbrains.annotations.Nullable;\n",
+          "after": "package dev.latvian.mods.rhino.type;\n\nimport dev.latvian.mods.rhino.util.ListCompat;\n\nimport org.jetbrains.annotations.NotNull;\nimport org.jetbrains.annotations.Nullable;\n"
+        },
+        {
+          "old_start": 79,
+          "old_count": 8,
+          "new_start": 81,
+          "new_count": 8,
+          "before": "\t\tif (len == 0) {\n\t\t\treturn original;\n\t\t} else if (len == 1) {\n\t\t\tvar consolidated = original.getFirst().consolidate(mapping);\n\t\t\treturn consolidated != original.getFirst() ? List.of(consolidated) : original;\n\t\t}\n\t\tvar transformed = original;\n\t\tfor (int i = 0; i < len; i++) {\n",
+          "after": "\t\tif (len == 0) {\n\t\t\treturn original;\n\t\t} else if (len == 1) {\n\t\t\tvar consolidated = ListCompat.getFirst(original).consolidate(mapping);\n\t\t\treturn consolidated != ListCompat.getFirst(original) ? List.of(consolidated) : original;\n\t\t}\n\t\tvar transformed = original;\n\t\tfor (int i = 0; i < len; i++) {\n"
+        }
+      ]
+    },
+    {
+      "old_path": "dev/latvian/mods/rhino/type/TypeInfoFactory.java",
+      "path": "dev/latvian/mods/rhino/type/TypeInfoFactory.java",
+      "hunks": [
+        {
+          "old_start": 19,
+          "old_count": 7,
+          "new_start": 19,
+          "new_count": 7,
+          "before": " *\n * <p>Adapted from upstream's {@code org.mozilla.javascript.lc.type.TypeInfoFactory}.\n * The fork drops the {@code VarScope}-bound dispatch and the Android-target\n * fallback (this fork is JDK-21 only).\n */\npublic interface TypeInfoFactory {\n\n",
+          "after": " *\n * <p>Adapted from upstream's {@code org.mozilla.javascript.lc.type.TypeInfoFactory}.\n * The fork drops the {@code VarScope}-bound dispatch and the Android-target\n * fallback (this source port targets JDK 17).\n */\npublic interface TypeInfoFactory {\n\n"
+        },
+        {
+          "old_start": 30,
+          "old_count": 25,
+          "new_start": 30,
+          "new_count": 27,
+          "before": "\tVariableTypeInfo create(TypeVariable<?> typeVariable);\n\n\tdefault TypeInfo create(Type type) {\n\t\treturn switch (type) {\n\t\t\tcase Class<?> clz -> create(clz);\n\t\t\tcase ParameterizedType paramType -> create(paramType.getRawType()).withParams(createArray(paramType.getActualTypeArguments()));\n\t\t\tcase GenericArrayType arrType -> create(arrType.getGenericComponentType()).asArray();\n\t\t\tcase TypeVariable<?> variable -> create(variable);\n\t\t\tcase WildcardType wildcard -> {\n\t\t\t\tvar lower = wildcard.getLowerBounds();\n\t\t\t\tif (lower.length == 0) {\n\t\t\t\t\tvar upper = wildcard.getUpperBounds();\n\t\t\t\t\tif (upper.length == 0 || upper[0] == Object.class) {\n\t\t\t\t\t\tyield TypeInfo.NONE;\n\t\t\t\t\t}\n\t\t\t\t\tyield create(upper[0]);\n\t\t\t\t} else {\n\t\t\t\t\tyield create(lower[0]);\n\t\t\t\t}\n\t\t\t}\n\t\t\tcase null, default -> TypeInfo.NONE;\n\t\t};\n\t}\n\n\tdefault TypeInfo[] createArray(Type[] array) {\n",
+          "after": "\tVariableTypeInfo create(TypeVariable<?> typeVariable);\n\n\tdefault TypeInfo create(Type type) {\n\t\tif (type instanceof Class<?> clz) {\n\t\t\treturn create(clz);\n\t\t} else if (type instanceof ParameterizedType paramType) {\n\t\t\treturn create(paramType.getRawType()).withParams(createArray(paramType.getActualTypeArguments()));\n\t\t} else if (type instanceof GenericArrayType arrType) {\n\t\t\treturn create(arrType.getGenericComponentType()).asArray();\n\t\t} else if (type instanceof TypeVariable<?> variable) {\n\t\t\treturn create(variable);\n\t\t} else if (type instanceof WildcardType wildcard) {\n\t\t\tvar lower = wildcard.getLowerBounds();\n\t\t\tif (lower.length == 0) {\n\t\t\t\tvar upper = wildcard.getUpperBounds();\n\t\t\t\tif (upper.length == 0 || upper[0] == Object.class) {\n\t\t\t\t\treturn TypeInfo.NONE;\n\t\t\t\t}\n\t\t\t\treturn create(upper[0]);\n\t\t\t} else {\n\t\t\t\treturn create(lower[0]);\n\t\t\t}\n\t\t}\n\t\treturn TypeInfo.NONE;\n\t}\n\n\tdefault TypeInfo[] createArray(Type[] array) {\n"
+        }
+      ]
+    },
+    {
+      "old_path": "dev/latvian/mods/rhino/util/ToStringJS.java",
+      "path": "dev/latvian/mods/rhino/util/ToStringJS.java",
+      "hunks": [
+        {
+          "old_start": 9,
+          "old_count": 48,
+          "new_start": 9,
+          "new_count": 47,
+          "before": "\tstatic String toStringJS(Context cx, Object o) {\n\t\to = Wrapper.unwrapped(o);\n\n\t\treturn switch (o) {\n\t\t\tcase null -> \"null\";\n\t\t\tcase ToStringJS toStringJS -> toStringJS.toStringJS(cx);\n\t\t\tcase Iterable<?> itr -> {\n\t\t\t\tvar sb = new StringBuilder();\n\t\t\t\tsb.append('[');\n\t\t\t\tvar first = true;\n\n\t\t\t\tfor (var i : itr) {\n\t\t\t\t\tif (!first) {\n\t\t\t\t\t\tsb.append(\", \");\n\t\t\t\t\t}\n\n\t\t\t\t\tsb.append(toStringJS(cx, i));\n\t\t\t\t\tfirst = false;\n\t\t\t\t}\n\n\t\t\t\tsb.append(']');\n\t\t\t\tyield sb.toString();\n\t\t\t}\n\t\t\tcase Map<?, ?> map -> {\n\t\t\t\tvar sb = new StringBuilder();\n\t\t\t\tboolean first = true;\n\n\t\t\t\tsb.append('{');\n\n\t\t\t\tfor (var entry : map.entrySet()) {\n\t\t\t\t\tif (!first) {\n\t\t\t\t\t\tsb.append(\", \");\n\t\t\t\t\t}\n\n\t\t\t\t\tsb.append(toStringJS(cx, entry.getKey()));\n\t\t\t\t\tsb.append(\": \");\n\t\t\t\t\tsb.append(toStringJS(cx, entry.getValue()));\n\t\t\t\t\tfirst = false;\n\t\t\t\t}\n\n\t\t\t\tsb.append('}');\n\t\t\t\tyield sb.toString();\n\t\t\t}\n\t\t\tdefault -> o.toString();\n\t\t};\n\t}\n\n\tdefault String toStringJS(Context cx) {\n",
+          "after": "\tstatic String toStringJS(Context cx, Object o) {\n\t\to = Wrapper.unwrapped(o);\n\n\t\tif (o == null) {\n\t\t\treturn \"null\";\n\t\t} else if (o instanceof ToStringJS toStringJS) {\n\t\t\treturn toStringJS.toStringJS(cx);\n\t\t} else if (o instanceof Iterable<?> itr) {\n\t\t\tvar sb = new StringBuilder();\n\t\t\tsb.append('[');\n\t\t\tvar first = true;\n\n\t\t\tfor (var i : itr) {\n\t\t\t\tif (!first) {\n\t\t\t\t\tsb.append(\", \");\n\t\t\t\t}\n\n\t\t\t\tsb.append(toStringJS(cx, i));\n\t\t\t\tfirst = false;\n\t\t\t}\n\n\t\t\tsb.append(']');\n\t\t\treturn sb.toString();\n\t\t} else if (o instanceof Map<?, ?> map) {\n\t\t\tvar sb = new StringBuilder();\n\t\t\tboolean first = true;\n\n\t\t\tsb.append('{');\n\n\t\t\tfor (var entry : map.entrySet()) {\n\t\t\t\tif (!first) {\n\t\t\t\t\tsb.append(\", \");\n\t\t\t\t}\n\n\t\t\t\tsb.append(toStringJS(cx, entry.getKey()));\n\t\t\t\tsb.append(\": \");\n\t\t\t\tsb.append(toStringJS(cx, entry.getValue()));\n\t\t\t\tfirst = false;\n\t\t\t}\n\n\t\t\tsb.append('}');\n\t\t\treturn sb.toString();\n\t\t}\n\t\treturn o.toString();\n\t}\n\n\tdefault String toStringJS(Context cx) {\n"
+        }
+      ]
+    },
+    {
+      "old_path": null,
+      "path": "dev/latvian/mods/rhino/util/ListCompat.java",
+      "hunks": [
+        {
+          "old_start": 0,
+          "old_count": 0,
+          "new_start": 1,
+          "new_count": 71,
+          "before": "",
+          "after": "/*\n * This Source Code Form is subject to the terms of the Mozilla Public\n * License, v. 2.0. If a copy of the MPL was not distributed with this\n * file, You can obtain one at http://mozilla.org/MPL/2.0/.\n */\npackage dev.latvian.mods.rhino.util;\n\nimport java.util.Deque;\nimport java.util.List;\nimport java.util.NoSuchElementException;\n\n/** Java 17 equivalents of the Java 21 List first/last default methods. */\npublic final class ListCompat {\n\tprivate ListCompat() {\n\t}\n\n\t@SuppressWarnings(\"unchecked\")\n\tpublic static <E> E getFirst(List<E> list) {\n\t\tif (list instanceof Deque<?> deque) {\n\t\t\treturn ((Deque<E>) deque).getFirst();\n\t\t}\n\t\tif (list.isEmpty()) {\n\t\t\tthrow new NoSuchElementException();\n\t\t}\n\t\treturn list.get(0);\n\t}\n\n\t@SuppressWarnings(\"unchecked\")\n\tpublic static <E> E getLast(List<E> list) {\n\t\tif (list instanceof Deque<?> deque) {\n\t\t\treturn ((Deque<E>) deque).getLast();\n\t\t}\n\t\tint size = list.size();\n\t\tif (size == 0) {\n\t\t\tthrow new NoSuchElementException();\n\t\t}\n\t\treturn list.get(size - 1);\n\t}\n\n\t@SuppressWarnings(\"unchecked\")\n\tpublic static <E> E removeFirst(List<E> list) {\n\t\tif (list instanceof Deque<?> deque) {\n\t\t\treturn ((Deque<E>) deque).removeFirst();\n\t\t}\n\t\tif (list.isEmpty()) {\n\t\t\tthrow new NoSuchElementException();\n\t\t}\n\t\treturn list.remove(0);\n\t}\n\n\t@SuppressWarnings(\"unchecked\")\n\tpublic static <E> E removeLast(List<E> list) {\n\t\tif (list instanceof Deque<?> deque) {\n\t\t\treturn ((Deque<E>) deque).removeLast();\n\t\t}\n\t\tint size = list.size();\n\t\tif (size == 0) {\n\t\t\tthrow new NoSuchElementException();\n\t\t}\n\t\treturn list.remove(size - 1);\n\t}\n\n\t@SuppressWarnings(\"unchecked\")\n\tpublic static <E> void addFirst(List<E> list, E value) {\n\t\tif (list instanceof Deque<?> deque) {\n\t\t\t((Deque<E>) deque).addFirst(value);\n\t\t} else {\n\t\t\tlist.add(0, value);\n\t\t}\n\t}\n}\n"
+        }
+      ]
+    }
+  ]
+}

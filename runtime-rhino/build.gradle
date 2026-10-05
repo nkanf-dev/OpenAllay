@@ -1,0 +1,57 @@
+plugins {
+    id 'java-library'
+}
+
+// One current Rhino ABI compiled for Java17, shared by every Minecraft target.
+base { archivesName = 'openallay-rhino' }
+version = rhino_version
+java { toolchain.languageVersion = JavaLanguageVersion.of(17) }
+tasks.withType(JavaCompile).configureEach {
+    options.release = 17
+    options.encoding = 'UTF-8'
+}
+tasks.withType(Jar).configureEach {
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
+}
+configurations {
+    upstreamSources { canBeConsumed = false; canBeResolved = true; transitive = false }
+}
+dependencies {
+    upstreamSources("dev.latvian.mods:rhino:${rhino_version}:sources@jar")
+    api('com.google.code.gson:gson:2.10')
+    implementation('com.google.guava:guava:31.1-jre')
+    compileOnly('org.jetbrains:annotations:24.1.0')
+}
+def generatedSources = layout.buildDirectory.dir('generated/upstream')
+def prepare = tasks.register('prepareUpstreamSources', Exec) {
+    inputs.files(configurations.upstreamSources)
+    inputs.files('patches/rhino-source-manifest.json', 'patches/rhino-java17-hunks.json',
+            rootProject.file('scripts/prepare-rhino-sources.py'))
+    outputs.dir(generatedSources)
+    doFirst {
+        commandLine 'python3', rootProject.file('scripts/prepare-rhino-sources.py'),
+                configurations.upstreamSources.singleFile,
+                file('patches/rhino-source-manifest.json'), file('patches/rhino-java17-hunks.json'),
+                generatedSources.get().asFile
+    }
+}
+sourceSets.main.java.setSrcDirs([generatedSources.map { it.dir('java') }])
+sourceSets.main.resources.setSrcDirs([generatedSources.map { it.dir('resources') }])
+tasks.named('compileJava') { dependsOn prepare }
+tasks.named('processResources') { dependsOn prepare }
+tasks.named('jar', Jar) {
+    from(['LICENSE-MPL-2.0.txt', 'THIRD-PARTY-NOTICES.txt']) { into 'META-INF/licenses/rhino' }
+    from('patches/rhino-java17.patch') { into 'META-INF/openallay/rhino-source-changes' }
+    manifest.attributes('Implementation-Title': 'OpenAllay Rhino Java17 runtime',
+            'Implementation-Version': project.version,
+            'Rhino-Upstream-Sources': "dev.latvian.mods:rhino:${rhino_version}:sources")
+}
+// Modified covered sources accompany the ordinary runtime publication for MPL access.
+tasks.register('sourcesJar', Jar) {
+    dependsOn prepare
+    archiveClassifier = 'sources'
+    from(sourceSets.main.allSource)
+    from(['LICENSE-MPL-2.0.txt', 'THIRD-PARTY-NOTICES.txt'])
+}
+tasks.named('assemble') { dependsOn 'sourcesJar' }
