@@ -36,7 +36,7 @@ final class GuideBuilderE2EProbe {
                 "builder-cancel", "builder-undo", "builder-server-denied", "builder-live-copy", "builder-live-undo").contains(scenario);
     }
 
-    static void captureAnchor(UUID actor, Consumer<Anchor> success, Consumer<String> failure) {
+    static void captureAnchor(String scenario, UUID actor, Consumer<Anchor> success, Consumer<String> failure) {
         Minecraft client = Minecraft.getInstance();
         var server = client.getSingleplayerServer();
         if (server == null) { failure.accept("No authoritative integrated server"); return; }
@@ -44,6 +44,23 @@ final class GuideBuilderE2EProbe {
             try {
                 var player = server.getPlayerList().getPlayer(actor);
                 if (player == null) throw new IllegalStateException("Native player is unavailable");
+                String create = System.getProperty("openallay.e2e.createWorld", "");
+                String resume = System.getProperty("openallay.e2e.resumeWorld", "");
+                boolean resumed = create.isBlank();
+                String world = resumed ? resume : create;
+                if (!Boolean.getBoolean(GuideClientE2EConfig.ENABLED) || !enabled(scenario)
+                        || !server.isSameThread() || server != client.getSingleplayerServer() || server.isPublished()
+                        || !world.matches("openallay-builder-[a-zA-Z0-9_.-]+")
+                        || (!resumed && !resume.isBlank())
+                        || (resumed && !List.of("builder-reload", "builder-live-undo").contains(scenario))
+                        || !world.equals(server.getWorldData().getLevelName())
+                        || server.getWorldData().getGameType() != net.minecraft.world.level.GameType.SURVIVAL
+                        || GuideProbeWorldSettings.commandsAllowed(server) || !server.getWorldData().isFlatWorld()
+                        || dev.openallay.context.minecraft.MinecraftServerPlayerLevel.get(player).getSeed() != 17L
+                        || !server.getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT).toAbsolutePath().normalize()
+                                .equals(client.gameDirectory.toPath().resolve("saves").resolve(world).toAbsolutePath().normalize()))
+                    throw new IllegalStateException("Builder setup requires the explicitly launched disposable fixture world");
+                GuideProbeWorldSettings.prepareBuilderFixture(server, resumed);
                 Anchor anchor = new Anchor((int)Math.floor(player.getX()) + 8,
                         (int)Math.floor(player.getY()) - 1, (int)Math.floor(player.getZ()) + 8,
                         dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(player.level().dimension()).toString());

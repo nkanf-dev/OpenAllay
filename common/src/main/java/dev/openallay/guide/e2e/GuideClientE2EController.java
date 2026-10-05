@@ -264,7 +264,11 @@ public final class GuideClientE2EController {
         subscription = service.subscribe(this::observe);
         unrestrictedAtStart = clientSettings != null && clientSettings.snapshot().unrestrictedJavascript().enabled();
         if (GuideBuilderE2EProbe.enabled(config.scenario())) {
-            GuideBuilderE2EProbe.captureAnchor(actor, anchor -> {
+            if (!developmentProbeEnabled || !worldLaunchStarted) {
+                failWithoutRequest("unsafe_builder_fixture", "Builder acceptance requires this controller's disposable world launch");
+                return;
+            }
+            GuideBuilderE2EProbe.captureAnchor(config.scenario(), actor, anchor -> {
                 if (finished) return;
                 currentPlayerAnchor = anchor;
                 try {
