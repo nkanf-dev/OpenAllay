@@ -592,6 +592,350 @@ def builder_retained_anchor(user_text):
     return anchor
 
 
+BUILDER_OPERATION_NAMES = ("house", "skyscraper", "cottage", "windmill", "farm", "dock",
+                           "geometry_decoration", "terrain", "templates")
+BUILDER_FAILURE_CODES = {"partial": "invalid_native_input", "cancel": "session_closed"}
+BUILDER_FAILURE_MESSAGES = {"partial": "Builder native operation failed; inspect the session status",
+                            "cancel": "Builder session is closed or cancelled"}
+
+
+def builder_require(condition, message):
+    if not condition:
+        raise ValueError(message)
+
+
+def builder_journals(rows):
+    builder_require(isinstance(rows, list), "Builder durable operations must be an exact list")
+    result = {}
+    for row in rows:
+        builder_require(isinstance(row, dict) and set(row) == {"id", "label", "status", "entries"},
+                        "Builder durable operation row has a non-public shape")
+        builder_require(all(isinstance(row[key], str) and row[key] for key in ("id", "label", "status"))
+                        and row["status"] in ("completed", "failed", "cancelled", "interrupted", "running")
+                        and type(row["entries"]) is int and row["entries"] >= 0,
+                        "Builder durable operation fields are invalid")
+        builder_require(row["id"] not in result, "Builder durable operation ID is duplicated")
+        result[row["id"]] = row
+    return result
+
+
+def builder_context(value):
+    builder_require(isinstance(value, dict) and set(value) == {"dimension", "playerUuid"}
+                    and all(isinstance(item, str) and item for item in value.values()),
+                    "Builder context did not retain dimension and exact player")
+    return value
+
+
+def builder_anchor(value):
+    builder_require(isinstance(value, dict) and set(value) == {"x", "y", "z"}
+                    and all(type(item) is int and -2147483648 <= item <= 2147483647 for item in value.values()),
+                    "Builder anchor is not exact native coordinates")
+    return value
+
+
+def builder_positions(anchor, kind, composite):
+    x, z = (44, {"partial": 32, "cancel": 34, "undo": 36}[kind]) if composite else (0, 0)
+    return [{"x": anchor["x"] + x + dx, "y": anchor["y"] + 1, "z": anchor["z"] + z} for dx in (0, 1)]
+
+
+def builder_images(images, ids):
+    builder_require(isinstance(images, list) and len(images) == len(ids), "Builder native image count differs")
+    for image, expected in zip(images, ids):
+        builder_require(isinstance(image, dict) and image.get("id") == expected
+                        and isinstance(image.get("properties"), dict)
+                        and all(isinstance(key, str) and isinstance(value, str)
+                                for key, value in image["properties"].items()),
+                        "Builder native image differs from the controlled marker")
+        builder_require(set(image) == {"id", "properties"} and image["properties"] == {},
+                        "Builder native marker image contains unexpected properties or block entity")
+    return images
+
+
+def builder_probe_label(token, kind):
+    builder_require(isinstance(token, str) and token and len(token) <= 128,
+                    "Builder probe token is invalid")
+    return "OpenAllay E2E lifecycle " + token + " " + kind
+
+
+def builder_success(text, scenario, stage):
+    value = parse_result_preview(text)
+    builder_require(isinstance(value, str), "Builder result must be a complete scalar JSON receipt")
+    try:
+        receipt = json.loads(value, object_pairs_hook=builder_unique_fields, parse_constant=builder_invalid_constant)
+    except (json.JSONDecodeError, TypeError) as failure:
+        raise ValueError("Builder scalar receipt is not exact JSON") from failure
+    builder_require(isinstance(receipt, dict) and receipt.get("scenario") == "builder_" + scenario
+                    and receipt.get("stage") == stage, "Builder result identified the wrong scenario or stage")
+    builder_context(receipt.get("context")); builder_anchor(receipt.get("anchor"))
+    builder_probe_label(receipt.get("probeToken"), "partial")
+    return receipt
+
+
+def builder_invalid_constant(value):
+    raise ValueError("Builder receipt contains a non-JSON numeric constant: " + value)
+
+
+def builder_unique_fields(pairs):
+    result = {}
+    for key, value in pairs:
+        builder_require(key not in result, "Builder scalar receipt has duplicate JSON fields")
+        result[key] = value
+    return result
+
+
+def builder_same_origin(receipt, baseline):
+    for key in ("context", "anchor", "probeToken"):
+        builder_require(receipt.get(key) == baseline.get(key), "Builder observation changed its native " + key)
+
+
+def builder_completed(status, writes=None):
+    builder_require(isinstance(status, dict) and status.get("state") == "completed",
+                    "Builder observation did not finish its genuine native session")
+    if writes is not None:
+        builder_require(type(status.get("writes")) is int and status["writes"] == writes,
+                        "Builder observation unexpectedly wrote to the world")
+
+
+def builder_baseline(receipt, scenario):
+    composite = scenario == "acceptance"
+    records = builder_journals(receipt.get("baselineOperations"))
+    builder_completed(receipt.get("status"), None if composite else 0)
+    kinds = ("partial", "cancel", "undo") if composite else (scenario,)
+    lifecycle = receipt.get("lifecycle")
+    builder_require(isinstance(lifecycle, dict) and set(lifecycle) == set(kinds),
+                    "Builder prerequisite lifecycle cases differ")
+    for kind in kinds:
+        item = lifecycle[kind]
+        builder_require(isinstance(item, dict) and set(item) == {"positions", "beforeImages"}
+                        and item["positions"] == builder_positions(receipt["anchor"], kind, composite),
+                        "Builder prerequisite positions differ")
+        builder_images(item["beforeImages"], ["minecraft:air", "minecraft:air"])
+    if composite:
+        operations = receipt.get("operations")
+        builder_require(isinstance(operations, list) and len(operations) == 9,
+                        "Builder build did not retain all nine completed operations")
+        ids = set()
+        for name, operation in zip(BUILDER_OPERATION_NAMES, operations):
+            builder_require(isinstance(operation, dict) and operation.get("name") == name
+                            and operation.get("state") == "completed"
+                            and isinstance(operation.get("operationId"), str)
+                            and operation["operationId"] not in ids,
+                            "Builder build operation order, state or ID differs")
+            ids.add(operation["operationId"])
+            record = records.get(operation["operationId"])
+            builder_require(record is not None and record["status"] == "completed" and record["entries"] > 0
+                            and record["label"] == "OpenAllay E2E Builder acceptance",
+                            "Builder completed operation lacks its exact durable record")
+        builder_require(set(records) == ids, "Builder build has extra unlinked durable operations")
+        builder_require(receipt["status"].get("operationId") == operations[-1]["operationId"],
+                        "Builder completed build status lost its exact last operation")
+        actions = receipt.get("actions")
+        builder_require(isinstance(actions, list), "Builder build actions are not an exact list")
+        paths = [action for action in actions if isinstance(action, dict)
+                 and action.get("name") in ("terrain_path", "terrain_smart_path")]
+        builder_require(len(paths) == 2 and {item["name"] for item in paths} == {"terrain_path", "terrain_smart_path"}
+                        and all(item.get("status") == "built" for item in paths),
+                        "Builder completed build lost its actual built path receipts")
+        templates = receipt.get("templates")
+        builder_require(isinstance(templates, dict) and templates.get("listed") is True
+                        and templates.get("saved") == ["openallay_e2e_builder_native"],
+                        "Builder build did not save and list the actual native template")
+    else:
+        builder_require(not records, "Standalone lifecycle baseline contains earlier operations")
+    return records
+
+
+def builder_observation(receipt, baseline, previous, kind, failure):
+    builder_same_origin(receipt, baseline)
+    builder_completed(receipt.get("observationStatus"), 0)
+    records = builder_journals(receipt.get("durableOperations"))
+    builder_require(all(records.get(key) == row for key, row in previous.items()),
+                    "Builder observation changed a baseline durable operation")
+    new = set(records) - set(previous)
+    builder_require(len(new) == 1, "Builder expected failure did not add exactly one new durable operation")
+    journal = records[next(iter(new))]
+    expected_state = {"partial": "failed", "cancel": "cancelled"}[kind]
+    builder_require(journal["label"] == builder_probe_label(baseline["probeToken"], kind)
+                    and journal["status"] == expected_state and journal["entries"] == 1,
+                    "Builder expected failure lacks its exact terminal durable receipt")
+    lifecycle = receipt.get("lifecycle")
+    builder_require(isinstance(lifecycle, dict) and set(lifecycle) == {kind},
+                    "Builder observation identified the wrong lifecycle case")
+    item = lifecycle[kind]
+    builder_require(isinstance(item, dict) and set(item) == {"failure", "journal", "positions", "beforeImages", "afterImages"}
+                    and item["failure"] == failure and item["journal"] == journal
+                    and item["positions"] == baseline["lifecycle"][kind]["positions"]
+                    and item["beforeImages"] == baseline["lifecycle"][kind]["beforeImages"],
+                    "Builder observation lost actual failure, journal or before-image identity")
+    builder_images(item["afterImages"], ["minecraft:gold_block" if kind == "partial" else "minecraft:diamond_block", "minecraft:air"])
+    return records, item
+
+
+def builder_undo_receipt(receipt, baseline, previous):
+    builder_same_origin(receipt, baseline)
+    records = builder_journals(receipt.get("durableOperations"))
+    builder_require(all(records.get(key) == row for key, row in previous.items()),
+                    "Builder undo changed an earlier durable operation")
+    lifecycle = receipt.get("lifecycle")
+    builder_require(isinstance(lifecycle, dict) and set(lifecycle) == {"undo"},
+                    "Builder undo stage identified the wrong lifecycle case")
+    item = lifecycle["undo"]
+    builder_require(isinstance(item, dict) and set(item) == {"result", "status", "originalStatus", "interventionStatus", "positions", "beforeImages", "afterImages"},
+                    "Builder undo receipt has a wrong shape")
+    before = baseline["lifecycle"]["undo"]
+    builder_require(item["positions"] == before["positions"] and item["beforeImages"] == before["beforeImages"],
+                    "Builder undo before-images or positions differ")
+    added = {}
+    for key, entries, label in (("originalStatus", 2, "undo original"), ("interventionStatus", 1, "undo intervention"), ("status", 1, None)):
+        status = item[key]; builder_completed(status)
+        id_ = status.get("operationId")
+        row = records.get(id_)
+        builder_require(row is not None and id_ not in previous and id_ not in added
+                        and row["status"] == "completed" and row["entries"] == entries,
+                        "Builder undo operation lacks exact new completed journal")
+        expected_label = "Undo " + item["originalStatus"].get("operationId", "") if label is None else builder_probe_label(baseline["probeToken"], label)
+        builder_require(row["label"] == expected_label, "Builder undo journal label differs")
+        added[id_] = row
+    builder_require(set(records) - set(previous) == set(added), "Builder undo added unlinked durable operations")
+    result = item["result"]
+    builder_require(isinstance(result, dict) and result.get("restored") == 1 and type(result["restored"]) is int
+                    and result.get("conflicts") == [before["positions"][1]] and result.get("uncertain") == []
+                    and result.get("operationId") == item["status"].get("operationId"),
+                    "Builder undo did not retain exact restore and conflicting cell")
+    builder_images(item["afterImages"], ["minecraft:air", "minecraft:diamond_block"])
+    return records, item
+
+
+def builder_expected_failure(text, kind):
+    failure = parse_tool_failure(text)
+    builder_require(failure is not None and failure["code"] == BUILDER_FAILURE_CODES[kind]
+                    and failure["message"] == BUILDER_FAILURE_MESSAGES[kind],
+                    "Builder " + kind + " probe did not return its exact expected native failure")
+    return failure
+
+
+def builder_source(source, title, description):
+    return {"source": source, "title": title, "description": description}
+
+
+def builder_native_open(label):
+    return ('var building=require("openallay_builder:building");\n'
+            'var b=building.open({seed:17,label:' + json.dumps(label) + '});\n')
+
+
+def builder_stage_header(baseline, label, full=False):
+    if not full:
+        baseline = {key: baseline[key] for key in ("context", "anchor", "probeToken", "lifecycle", "baselineOperations")}
+    return (builder_native_open(label) + 'var expected=' + json.dumps(baseline, separators=(",", ":")) + ';\n'
+            'var c=b.context(),context={dimension:c.dimension,playerUuid:c.player.uuid};\n'
+            'if(context.dimension!==expected.context.dimension || context.playerUuid!==expected.context.playerUuid) '
+            'throw new Error("Builder active world context changed");\n')
+
+
+def builder_failure_arguments(baseline, kind):
+    label = builder_probe_label(baseline["probeToken"], kind)
+    source = builder_stage_header(baseline, label)
+    source += 'var positions=expected.lifecycle.' + kind + '.positions;\n'
+    source += 'var images=b.get_blocks(positions).map(function(cell){return cell.state;}); if(JSON.stringify(images)!==JSON.stringify(expected.lifecycle.' + kind + '.beforeImages)) throw new Error("Lifecycle before-images changed");\n'
+    source += 'var p=positions[0],q=positions[1]; b.place_block(p.x,p.y,p.z,' + json.dumps("gold_block" if kind == "partial" else "diamond_block") + ');\n'
+    if kind == "cancel":
+        source += 'b.cancel();\n'
+    source += 'b.place_block(q.x,q.y,q.z,' + json.dumps("openallay_e2e:missing_native_block" if kind == "partial" else "gold_block") + ');\n'
+    source += 'throw new Error("Expected native rejection unexpectedly returned");'
+    return builder_source(source, "检查真实 Builder 终止失败", "调用真实原生操作并保留其失败；后续独立调用读取实际日志和方块。")
+
+
+def builder_observation_arguments(scenario, baseline, kind, failure):
+    stage = kind + "_observation" if scenario == "acceptance" else "final"
+    source = builder_stage_header(baseline, "OpenAllay E2E lifecycle observation")
+    source += 'var positions=expected.lifecycle.' + kind + '.positions;\n'
+    source += 'var receipt={scenario:' + json.dumps("builder_" + scenario) + ',stage:' + json.dumps(stage) + ',probeToken:expected.probeToken,anchor:expected.anchor,context:context,lifecycle:{},durableOperations:b.list_operations()};\n'
+    source += 'var matches=receipt.durableOperations.filter(function(row){return row.label===' + json.dumps(builder_probe_label(baseline["probeToken"], kind)) + ';}); if(matches.length!==1) throw new Error("Lifecycle journal is not unique");\n'
+    source += 'receipt.lifecycle.' + kind + '={failure:' + json.dumps(failure, separators=(",", ":")) + ',journal:matches[0],positions:positions,beforeImages:expected.lifecycle.' + kind + '.beforeImages,afterImages:b.get_blocks(positions).map(function(cell){return cell.state;})};\n'
+    source += 'receipt.observationStatus=b.finish();'
+    if scenario != "acceptance":
+        source += 'receipt.status=receipt.observationStatus;receipt.baselineOperations=expected.baselineOperations;'
+    source += 'return JSON.stringify(receipt);'
+    return builder_source(source, "读取实际 Builder 终止日志", "在新的在线会话读取唯一持久日志与实际方块，不重放写入或恢复已关闭会话。")
+
+
+def builder_undo_arguments(baseline):
+    source = builder_stage_header(baseline, builder_probe_label(baseline["probeToken"], "undo original"))
+    source += 'var positions=expected.lifecycle.undo.positions,before=b.get_blocks(positions).map(function(cell){return cell.state;}); if(JSON.stringify(before)!==JSON.stringify(expected.lifecycle.undo.beforeImages)) throw new Error("Undo before-images changed");\n'
+    source += 'for(var i=0;i<positions.length;i++){var p=positions[i];b.place_block(p.x,p.y,p.z,"gold_block");} var original=b.finish();\n'
+    source += 'var intervention=building.open({seed:17,label:' + json.dumps(builder_probe_label(baseline["probeToken"], "undo intervention")) + '}); var q=positions[1];intervention.place_block(q.x,q.y,q.z,"diamond_block"); var intervened=intervention.finish();\n'
+    source += 'var result=b.undo(original.operationId),status=b.finish();\n'
+    source += 'return JSON.stringify({scenario:"builder_acceptance",stage:"undo",probeToken:expected.probeToken,anchor:expected.anchor,context:context,durableOperations:b.list_operations(),lifecycle:{undo:{result:result,status:status,originalStatus:original,interventionStatus:intervened,positions:positions,beforeImages:before,afterImages:b.get_blocks(positions).map(function(cell){return cell.state;})}}});'
+    return builder_source(source, "检查真实撤销与冲突", "明确撤销实际操作 ID，保留外部改动，并读取真实还原数、冲突位置和方块。")
+
+
+def builder_final_arguments(baseline, lifecycle):
+    combined = dict(baseline); combined.update(stage="final", lifecycle=lifecycle)
+    source = builder_stage_header(combined, "OpenAllay E2E final read-only observation", full=True)
+    source += 'expected.context=context;expected.durableOperations=b.list_operations();\n'
+    source += 'for(var kind in expected.lifecycle) if(Object.prototype.hasOwnProperty.call(expected.lifecycle,kind)) expected.lifecycle[kind].afterImages=b.get_blocks(expected.lifecycle[kind].positions).map(function(cell){return cell.state;});\n'
+    source += 'expected.observationStatus=b.finish();return JSON.stringify(expected);'
+    return builder_source(source, "复核完整原生验收记录", "重新读取持久日志和生命周期方块，保留先前成功与失败 Tool 的真实结果。")
+
+
+def builder_baseline_arguments(scenario, token):
+    source = builder_native_open("OpenAllay E2E lifecycle baseline")
+    source += 'var c=b.context(),p=c.player,anchor={x:Math.floor(p.x)+8,y:Math.floor(p.y)-1,z:Math.floor(p.z)+8};\n'
+    source += 'var positions=[{x:anchor.x,y:anchor.y+1,z:anchor.z},{x:anchor.x+1,y:anchor.y+1,z:anchor.z}]; var images=b.get_blocks(positions).map(function(cell){return cell.state;});\n'
+    source += 'for(var i=0;i<images.length;i++) if(images[i].id!=="minecraft:air") throw new Error("Lifecycle prerequisite is not air");\n'
+    source += 'return JSON.stringify({scenario:' + json.dumps("builder_" + scenario) + ',stage:"baseline",probeToken:' + json.dumps(token) + ',anchor:anchor,context:{dimension:c.dimension,playerUuid:p.uuid},baselineOperations:b.list_operations(),status:b.finish(),lifecycle:{' + scenario + ':{positions:positions,beforeImages:images}}});'
+    return builder_source(source, "记录实际生命周期前置状态", "读取受限 Builder 的实际坐标、空气前置状态和日志基线，不执行写入。")
+
+
+def builder_multistage(scenario, results, token):
+    if len(results) == 1:
+        if scenario == "acceptance":
+            arguments = builder_arguments(scenario)
+            arguments["source"] = 'var fixtureProbeToken=' + json.dumps(token) + ';\n' + arguments["source"]
+            return (JAVASCRIPT_TOOL, arguments), None
+        return (JAVASCRIPT_TOOL, builder_baseline_arguments(scenario, token)), None
+    baseline = builder_success(results[1].get("content", ""), scenario, "build" if scenario == "acceptance" else "baseline")
+    builder_require(baseline["probeToken"] == token, "Builder returned a different invocation probe token")
+    previous = builder_baseline(baseline, scenario)
+    kinds = ("partial", "cancel") if scenario == "acceptance" else (scenario,)
+    lifecycle = {}
+    index = 2
+    for kind in kinds:
+        if len(results) == index:
+            return (JAVASCRIPT_TOOL, builder_failure_arguments(baseline, kind)), None
+        failure = builder_expected_failure(results[index].get("content", ""), kind)
+        if len(results) == index + 1:
+            return (JAVASCRIPT_TOOL, builder_observation_arguments(scenario, baseline, kind, failure)), None
+        stage = kind + "_observation" if scenario == "acceptance" else "final"
+        observation = builder_success(results[index + 1].get("content", ""), scenario, stage)
+        previous, lifecycle[kind] = builder_observation(observation, baseline, previous, kind, failure)
+        index += 2
+    if scenario == "acceptance":
+        if len(results) == index:
+            return (JAVASCRIPT_TOOL, builder_undo_arguments(baseline)), None
+        undo = builder_success(results[index].get("content", ""), scenario, "undo")
+        previous, lifecycle["undo"] = builder_undo_receipt(undo, baseline, previous)
+        index += 1
+        if len(results) == index:
+            return (JAVASCRIPT_TOOL, builder_final_arguments(baseline, lifecycle)), None
+        final = builder_success(results[index].get("content", ""), scenario, "final")
+        builder_same_origin(final, baseline); builder_completed(final.get("observationStatus"), 0)
+        builder_require(builder_journals(final.get("durableOperations")) == previous,
+                        "Builder final observation changed exact durable operation receipts")
+        for key in ("operations", "actions", "templates", "status", "baselineOperations", "terrain", "sites", "seed", "provider"):
+            builder_require(final.get(key) == baseline.get(key), "Builder final receipt changed completed build " + key)
+        builder_require(final.get("lifecycle") == lifecycle, "Builder final observation changed prior lifecycle outcomes")
+        index += 1
+    else:
+        builder_completed(observation.get("status"), 0)
+        builder_require(observation.get("baselineOperations") == baseline["baselineOperations"],
+                        "Builder final observation changed the baseline")
+    builder_require(len(results) == index, "Builder fixture has unexpected extra current Tool results")
+    return None, ("# Deterministic Builder real-client fixture\n\nActual completed build/readback receipts and exact expected failed Tools are retained separately. "
+                  "Fresh native observations retain their durable terminal journals and world effects. "
+                  "The independent controller readback determines acceptance. This loopback response is pre-authored test content, not a live model.")
+
+
 def builder_arguments(scenario, retained_anchor=None):
     """Actual Extension/native programs, not fixture backends or claimed geometry."""
     if scenario == "acceptance":
@@ -610,20 +954,8 @@ var x=Math.floor(p.x)+8,y=Math.floor(p.y)-1,z=Math.floor(p.z)+8;
             source += '''b.place_block(x,y+1,z,"gold_block");
 return JSON.stringify({scenario:"builder_restricted",status:b.finish(),readback:b.get_block(x,y+1,z)});
 '''
-        elif scenario == "partial":
-            source += '''b.place_block(x,y+1,z,"gold_block");
-var caught=null;
-try { b.place_block(x+1,y+1,z,"openallay_e2e:missing_native_block"); }
-catch (error) { caught=String(error); }
-return JSON.stringify({scenario:"builder_partial",failure:caught,status:b.status(),operations:b.list_operations()});
-'''
-        elif scenario == "cancel":
-            source += '''b.place_block(x,y+1,z,"diamond_block");
-var cancelled=b.cancel(),caught=null;
-try { b.place_block(x+1,y+1,z,"gold_block"); }
-catch (error) { caught=String(error); }
-return JSON.stringify({scenario:"builder_cancel",deniedAfterCancel:caught,status:cancelled});
-'''
+        elif scenario in ("partial", "cancel"):
+            return builder_baseline_arguments(scenario, "unit-only-probe")
         elif scenario == "undo":
             source += '''b.place_block(x,y+1,z,"gold_block");
 b.place_block(x+1,y+1,z,"gold_block");
@@ -671,52 +1003,42 @@ def parse_tool_failure(text):
 
 
 def builder_result(text, scenario):
-    """Read the complete current scalar receipt; native readback owns the verdict."""
+    """Single successful native programs only; staged lifecycle requires complete history."""
+    builder_require(scenario in ("restricted", "undo", "reload"),
+                    "Builder lifecycle receipt requires its ordered current Tool history")
     value = parse_result_preview(text)
-    if not isinstance(value, str):
-        raise ValueError("Builder result must be a complete scalar JSON receipt")
+    builder_require(isinstance(value, str), "Builder result must be a complete scalar JSON receipt")
     try:
-        receipt = json.loads(value)
+        receipt = json.loads(value, object_pairs_hook=builder_unique_fields, parse_constant=builder_invalid_constant)
     except json.JSONDecodeError as failure:
         raise ValueError("Builder scalar receipt is not JSON") from failure
-    if not isinstance(receipt, dict) or receipt.get("scenario") != "builder_" + scenario:
-        raise ValueError("native Builder result did not identify the requested scenario")
-    status = receipt.get("status")
-    expected_state = {"partial": "failed-partial", "cancel": "cancelled-partial"}.get(scenario, "completed")
-    if not isinstance(status, dict) or status.get("state") != expected_state:
-        raise ValueError("native Builder result did not retain its actual session state")
-    if scenario == "restricted" and receipt.get("readback") != "minecraft:gold_block":
-        raise ValueError("native Builder restricted result did not read back the gold block")
-    if scenario == "partial" and (not isinstance(receipt.get("failure"), str) or not receipt["failure"]):
-        raise ValueError("native Builder partial result did not retain its failure")
-    if scenario == "cancel" and (not isinstance(receipt.get("deniedAfterCancel"), str) or not receipt["deniedAfterCancel"]):
-        raise ValueError("native Builder cancel result did not retain the denied write")
-    if scenario == "acceptance":
-        operations = receipt.get("operations")
-        names = ["house", "skyscraper", "cottage", "windmill", "farm", "dock",
-                 "geometry_decoration", "terrain", "templates"]
-        if (not isinstance(operations, list) or len(operations) != len(names)
-                or any(not isinstance(operation, dict) or operation.get("name") != name
-                       or operation.get("state") != "completed"
-                       or not isinstance(operation.get("operationId"), str)
-                       or not operation["operationId"]
-                       for name, operation in zip(names, operations))):
-            raise ValueError("Builder receipt did not retain all nine actual completed operations")
+    builder_require(isinstance(receipt, dict) and receipt.get("scenario") == "builder_" + scenario,
+                    "native Builder result did not identify the requested scenario")
+    builder_completed(receipt.get("status"))
+    if scenario == "restricted":
+        builder_require(receipt.get("readback") == "minecraft:gold_block",
+                        "native Builder restricted result did not read back the gold block")
     return receipt
 
 
-def builder_turn(scenario, turn_messages, user_text=""):
+def builder_turn(scenario, turn_messages, user_text="", probe_token="unit-only-probe"):
     """Validate the real current Tool results; never manufacture acceptance."""
     calls = {}
     results = []
+    result_ids = set()
     for message in turn_messages:
         if message.get("role") == "assistant":
             for call in message.get("tool_calls", []):
-                if call.get("id") in calls:
-                    raise ValueError("Builder turn contains a duplicate Tool call ID")
-                calls[call.get("id")] = call.get("function", {}).get("name")
+                if (not isinstance(call.get("id"), str) or not call["id"] or call["id"] in calls):
+                    raise ValueError("Builder turn contains an invalid or duplicate Tool call ID")
+                calls[call.get("id")] = call
         if message.get("role") == "tool":
-            name = message.get("name", calls.get(message.get("tool_call_id")))
+            if scenario in ("acceptance", "partial", "cancel"):
+                result_id = message.get("tool_call_id")
+                builder_require(isinstance(result_id, str) and result_id in calls and result_id not in result_ids,
+                                "Builder staged result lacks a unique preceding current Tool call")
+                result_ids.add(result_id)
+            name = message.get("name", calls.get(message.get("tool_call_id"), {}).get("function", {}).get("name"))
             expected = BUILDER_SKILL_TOOL if scenario != "server-denied" and not results else JAVASCRIPT_TOOL
             if name != expected:
                 raise ValueError("Builder result is not from the requested current Tool")
@@ -732,6 +1054,27 @@ def builder_turn(scenario, turn_messages, user_text=""):
                 or "\nstate: complete\n" not in header + "\n"
                 or "\ncomplete: true\n" not in header + "\n"):
             raise ValueError("bundled Builder Skill was not completely loaded")
+        if scenario in ("acceptance", "partial", "cancel"):
+            builder_require(len(calls) == len(results), "Builder staged turn has unpaired Tool calls")
+            if len(results) >= 2:
+                builder_require(results[1].get("tool_call_id") == probe_token,
+                                "Builder probe token is not the actual first JavaScript call ID")
+            # Each result must come from the exact current call generated for its stage.
+            for ordinal, message in enumerate(results, 1):
+                call = calls.get(message.get("tool_call_id"))
+                builder_require(isinstance(call, dict), "Builder staged result lacks its actual current Tool call")
+                if ordinal == 1:
+                    expected_call = (BUILDER_SKILL_TOOL, {"name": "minecraft-builder"})
+                else:
+                    expected_call, _ = builder_multistage(scenario, results[:ordinal - 1], probe_token)
+                builder_require(expected_call is not None and call.get("function", {}).get("name") == expected_call[0],
+                                "Builder staged call name differs")
+                arguments = call.get("function", {}).get("arguments")
+                if isinstance(arguments, str):
+                    try: arguments = json.loads(arguments, object_pairs_hook=builder_unique_fields, parse_constant=builder_invalid_constant)
+                    except json.JSONDecodeError as failure: raise ValueError("Builder call arguments are malformed") from failure
+                builder_require(arguments == expected_call[1], "Builder staged call arguments differ from the actual requested probe")
+            return builder_multistage(scenario, results, probe_token)
         if len(results) == 1:
             anchor = builder_retained_anchor(user_text) if scenario == "reload" else None
             return (JAVASCRIPT_TOOL, builder_arguments(scenario, anchor)), None
@@ -848,7 +1191,7 @@ class Handler(BaseHTTPRequestHandler):
         world_query_permission_denied = False
         try:
             builder = builder_scenario(user_text)
-            builder_step, builder_content = builder_turn(builder, turn_messages, user_text) if builder else (None, None)
+            builder_step, builder_content = builder_turn(builder, turn_messages, user_text, fixture_tool_call_id(request, 2)) if builder else (None, None)
             if ui_provider_failure or ui_stop:
                 builder_step = (JAVASCRIPT_TOOL, ui_stop_arguments() if ui_stop else ui_provider_failure_arguments())
                 builder_content = ("# Deterministic UI Stop fixture\n\nStarting real cancellable read-only Rhino work for an explicit Stop action. No result is pre-authored."

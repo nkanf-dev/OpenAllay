@@ -647,7 +647,7 @@ class RecipeProgramContractTests(unittest.TestCase):
             "evidence": {"completeness": "COMPLETE"}}}, "knowledge": []}
         payload = {"mc": mc, "native": fixture.manual_recipe_arguments()["source"],
                    "analysis": fixture.javascript_arguments()["source"], "module": str(
-                       MODULE_PATH.parent.parent / "engine-core/src/main/resources/assets/openallay/openallay_js_modules/crafting.js")}
+                       Path(__import__("os").environ.get("OPENALLAY_SOURCE_ROOT", MODULE_PATH.parent.parent)) / "engine-core/src/main/resources/assets/openallay/openallay_js_modules/crafting.js")}
         program = ("const input=JSON.parse(require('fs').readFileSync(0,'utf8'));"
                    "const mc=input.mc; const crafting=require(input.module);"
                    "const call=source=>new Function('mc','require',source)(mc,id=>{"
@@ -678,12 +678,276 @@ class RecipeProgramContractTests(unittest.TestCase):
 
 
 class BuilderFixtureTests(unittest.TestCase):
+    """Unit-only source/receipt checks. No test here executes Minecraft or certifies a world."""
+    def image(self, id_="air"):
+        return {"id": "minecraft:" + id_, "properties": {}}
+
+    def status(self, id_=None, writes=0):
+        result = {"state": "completed", "reads": 2, "writes": writes, "detail": ""}
+        if id_ is not None: result["operationId"] = id_
+        return result
+
+    def row(self, id_, label, state="completed", entries=1):
+        return {"id": id_, "label": label, "status": state, "entries": entries}
+
+    def baseline(self, scenario, token):
+        anchor = {"x": -1, "y": -61, "z": 4}
+        kinds = ("partial", "cancel", "undo") if scenario == "acceptance" else (scenario,)
+        receipt = {"scenario": "builder_" + scenario, "stage": "build" if scenario == "acceptance" else "baseline",
+                   "probeToken": token, "anchor": anchor,
+                   "context": {"dimension": "minecraft:overworld", "playerUuid": "unit-only-player"},
+                   "lifecycle": {kind: {"positions": fixture.builder_positions(anchor, kind, scenario == "acceptance"),
+                                         "beforeImages": [self.image(), self.image()]} for kind in kinds},
+                   "status": self.status(), "baselineOperations": []}
+        if scenario == "acceptance":
+            receipt.update(operations=[{"name": name, "operationId": "unit-" + name, "state": "completed",
+                                        "reads": 2, "writes": 30, "detail": ""} for name in fixture.BUILDER_OPERATION_NAMES],
+                           actions=[{"name": name, "status": "built", "writes": 7} for name in ("terrain_path", "terrain_smart_path")],
+                           templates={"saved": ["openallay_e2e_builder_native"], "listed": True},
+                           provider="deterministic_loopback_fixture_not_live_model", seed=17, terrain={}, sites={})
+            receipt["baselineOperations"] = [self.row("unit-" + name, "OpenAllay E2E Builder acceptance", entries=3)
+                                               for name in fixture.BUILDER_OPERATION_NAMES]
+            receipt["status"] = self.status("unit-templates", writes=300)
+        return receipt
+
+    def outputs(self, scenario, token):
+        import copy
+        baseline = self.baseline(scenario, token)
+        outputs = [baseline]
+        rows = copy.deepcopy(baseline["baselineOperations"])
+        lifecycle = {}
+        for kind in (("partial", "cancel") if scenario == "acceptance" else (scenario,)):
+            failure = {"status": "failure", "code": fixture.BUILDER_FAILURE_CODES[kind],
+                       "message": fixture.BUILDER_FAILURE_MESSAGES[kind]}
+            outputs.append("status: failure\ncode: " + failure["code"] + "\nmessage: " + failure["message"])
+            journal = self.row("unit-" + kind, fixture.builder_probe_label(token, kind),
+                               "failed" if kind == "partial" else "cancelled")
+            rows.append(journal)
+            item = {**copy.deepcopy(baseline["lifecycle"][kind]), "failure": failure, "journal": journal,
+                    "afterImages": [self.image("gold_block" if kind == "partial" else "diamond_block"), self.image()]}
+            lifecycle[kind] = item
+            receipt = {key: copy.deepcopy(baseline[key]) for key in ("scenario", "probeToken", "context", "anchor")}
+            receipt.update(stage=kind + "_observation" if scenario == "acceptance" else "final",
+                           observationStatus=self.status(), durableOperations=copy.deepcopy(rows), lifecycle={kind: copy.deepcopy(item)})
+            if scenario != "acceptance": receipt.update(status=self.status(), baselineOperations=[])
+            outputs.append(receipt)
+        if scenario == "acceptance":
+            before = baseline["lifecycle"]["undo"]
+            undo = {"positions": copy.deepcopy(before["positions"]), "beforeImages": copy.deepcopy(before["beforeImages"]),
+                    "afterImages": [self.image(), self.image("diamond_block")],
+                    "originalStatus": self.status("unit-undo-original", 2),
+                    "interventionStatus": self.status("unit-intervention", 1),
+                    "status": self.status("unit-undo", 3),
+                    "result": {"operationId": "unit-undo", "restored": 1, "conflicts": [before["positions"][1]], "uncertain": []}}
+            rows.extend([self.row("unit-undo-original", fixture.builder_probe_label(token, "undo original"), entries=2),
+                         self.row("unit-intervention", fixture.builder_probe_label(token, "undo intervention")),
+                         self.row("unit-undo", "Undo unit-undo-original")])
+            receipt = {key: copy.deepcopy(baseline[key]) for key in ("scenario", "probeToken", "context", "anchor")}
+            receipt.update(stage="undo", durableOperations=copy.deepcopy(rows), lifecycle={"undo": undo})
+            outputs.append(receipt); lifecycle["undo"] = copy.deepcopy(undo)
+            final = copy.deepcopy(baseline)
+            final.update(stage="final", lifecycle=lifecycle, durableOperations=copy.deepcopy(rows), observationStatus=self.status())
+            outputs.append(final)
+        return outputs
+
+    def add_call(self, messages, call, ordinal, result):
+        call_id = "unit-call-" + str(ordinal)
+        messages.append({"role": "assistant", "tool_calls": [{"id": call_id, "type": "function",
+                         "function": {"name": call[0], "arguments": json.dumps(call[1])}}]})
+        message = builder_skill_message() if call[0] == fixture.BUILDER_SKILL_TOOL else (
+            {"role": "tool", "content": result} if isinstance(result, str) else tool_message(json.dumps(result)))
+        message["tool_call_id"] = call_id
+        message["name"] = call[0]
+        messages.append(message)
+
+    def run_sequence(self, scenario="acceptance", mutate=None, through=None):
+        token = "unit-call-2"
+        messages = []
+        call, content = fixture.builder_turn(scenario, messages, probe_token=token)
+        self.add_call(messages, call, 1, None)
+        outputs = self.outputs(scenario, token)
+        for index, result in enumerate(outputs):
+            call, content = fixture.builder_turn(scenario, messages, probe_token=token)
+            self.assertIsNotNone(call)
+            if mutate is not None: result = mutate(index, json.loads(json.dumps(result)))
+            self.add_call(messages, call, index + 2, result)
+            if through == index: break
+        return messages, fixture.builder_turn(scenario, messages, probe_token=token)
+
+    def test_exact_actual_failure_projection_is_not_arbitrary_native_failure(self):
+        for kind, code in fixture.BUILDER_FAILURE_CODES.items():
+            text = "status: failure\ncode: " + code + "\nmessage: " + fixture.BUILDER_FAILURE_MESSAGES[kind]
+            self.assertEqual(code, fixture.builder_expected_failure(text, kind)["code"])
+            for bad in (text.replace(code, "native_failure"), text.replace("status: failure", "status: success"),
+                        text.replace(fixture.BUILDER_FAILURE_MESSAGES[kind], "different cause"), json.dumps({"code": code})):
+                with self.subTest(kind=kind, text=bad), self.assertRaises(ValueError):
+                    fixture.builder_expected_failure(bad, kind)
+
+    def test_all_ordered_success_and_failed_tools_are_retained(self):
+        for scenario, count in (("acceptance", 8), ("partial", 4), ("cancel", 4)):
+            messages, (call, content) = self.run_sequence(scenario)
+            self.assertIsNone(call)
+            self.assertIn("independent controller readback", content)
+            self.assertNotIn("PASSED", content)
+            tools = [message for message in messages if message["role"] == "tool"]
+            self.assertEqual(count, len(tools))
+            self.assertEqual(2 if scenario == "acceptance" else 1,
+                             sum(message["content"].startswith("status: failure") for message in tools))
+            self.assertIn("Fresh native observations", content)
+
+    def test_each_success_stage_rejects_actual_failed_tool(self):
+        for index in (0, 2, 4, 5, 6):
+            with self.subTest(index=index), self.assertRaises(ValueError):
+                self.run_sequence(mutate=lambda at, value: ACTUAL_MISSING_NATIVE_RECIPE if at == index else value)
+
+    def test_failure_stages_reject_success_or_wrong_cause(self):
+        for index in (1, 3):
+            for bad in (self.baseline("acceptance", "unit-call-2"), ACTUAL_MISSING_NATIVE_RECIPE,
+                        "status: failure\ncode: agent_cancelled\nmessage: Agent request was cancelled"):
+                with self.subTest(index=index, bad=bad), self.assertRaises(ValueError):
+                    self.run_sequence(mutate=lambda at, value: bad if at == index else value)
+
+    def test_native_observation_rejects_mutated_terminal_rows_and_images(self):
+        mutations = (
+            lambda r: r["lifecycle"]["partial"]["journal"].update(entries=0),
+            lambda r: r["lifecycle"]["partial"]["journal"].update(status="completed"),
+            lambda r: r["lifecycle"]["partial"]["journal"].update(label="unrelated"),
+            lambda r: r["lifecycle"]["partial"]["journal"].update(id="unit-house"),
+            lambda r: r["lifecycle"]["partial"]["afterImages"][0].update(id="minecraft:air"),
+            lambda r: r["lifecycle"]["partial"]["afterImages"][1].update(id="minecraft:gold_block"),
+            lambda r: r["lifecycle"]["partial"]["beforeImages"][0].update(id="minecraft:stone"),
+            lambda r: r["lifecycle"]["partial"]["positions"][1].update(x=999),
+            lambda r: r["lifecycle"]["partial"].update(status={"state": "failed-partial"}),
+            lambda r: r["context"].update(playerUuid="foreign-player"),
+            lambda r: r["context"].update(dimension="minecraft:the_nether"),
+            lambda r: r["anchor"].update(x=999),
+            lambda r: r["durableOperations"][0].update(entries=4),
+            lambda r: r["durableOperations"].append(r["durableOperations"][-1]),
+            lambda r: r["observationStatus"].update(writes=1),
+        )
+        for mutate in mutations:
+            def alter(index, value):
+                if index == 2: mutate(value)
+                return value
+            with self.subTest(mutate=mutate), self.assertRaises(ValueError): self.run_sequence(mutate=alter)
+
+    def test_undo_and_final_reject_conflict_count_id_or_changed_history(self):
+        mutations = ((5, lambda r: r["lifecycle"]["undo"]["result"].update(restored=0)),
+                     (5, lambda r: r["lifecycle"]["undo"]["result"].update(restored=True)),
+                     (5, lambda r: r["lifecycle"]["undo"]["result"].update(conflicts=[])),
+                     (5, lambda r: r["lifecycle"]["undo"]["result"]["conflicts"][0].update(x=999)),
+                     (5, lambda r: r["lifecycle"]["undo"]["result"].update(uncertain=[{"x": 1}])),
+                     (5, lambda r: r["durableOperations"][-1].update(entries=2)),
+                     (5, lambda r: r["lifecycle"]["undo"]["status"].update(operationId="unit-house")),
+                     (6, lambda r: r["operations"].pop()),
+                     (6, lambda r: r["durableOperations"].pop()),
+                     (6, lambda r: r["lifecycle"]["cancel"]["afterImages"][0].update(id="minecraft:air")),
+                     (6, lambda r: r["status"].update(state="failed-partial")))
+        for at, mutate in mutations:
+            def alter(index, value):
+                if index == at: mutate(value)
+                return value
+            with self.subTest(stage=at, mutate=mutate), self.assertRaises(ValueError): self.run_sequence(mutate=alter)
+
+    def test_build_baseline_requires_nine_distinct_completed_native_receipts(self):
+        mutations = (lambda r: r["operations"].pop(), lambda r: r["operations"][0].update(state="running"),
+                     lambda r: r["operations"][0].update(operationId="unit-templates"),
+                     lambda r: r["baselineOperations"][0].update(status="interrupted"),
+                     lambda r: r["baselineOperations"][0].update(label="unrelated"),
+                     lambda r: r["lifecycle"]["undo"]["beforeImages"][0].update(id="minecraft:stone"))
+        for mutate in mutations:
+            def alter(index, value):
+                if index == 0: mutate(value)
+                return value
+            with self.subTest(mutate=mutate), self.assertRaises(ValueError): self.run_sequence(mutate=alter)
+
+    def test_current_call_identity_arguments_order_and_duplicates_fail_closed(self):
+        import copy
+        messages, _ = self.run_sequence()
+        cases = []
+        changed = copy.deepcopy(messages); changed[5]["tool_call_id"] = changed[3]["tool_call_id"]; cases.append(changed)
+        changed = copy.deepcopy(messages); changed[4]["tool_calls"][0]["function"]["arguments"] = '{}'; cases.append(changed)
+        changed = copy.deepcopy(messages); changed[4], changed[6] = changed[6], changed[4]; cases.append(changed)
+        changed = copy.deepcopy(messages); changed[5]["name"] = fixture.BUILDER_SKILL_TOOL; cases.append(changed)
+        cases.append(copy.deepcopy(messages) + [copy.deepcopy(messages[-2]), copy.deepcopy(messages[-1])])
+        for changed in cases:
+            with self.subTest(changed=changed[4:6]), self.assertRaises(ValueError):
+                fixture.builder_turn("acceptance", changed, probe_token="unit-call-2")
+
+    def test_complete_scalar_only_no_duplicate_json_no_partial_projection(self):
+        baseline = self.baseline("acceptance", "unit-call-2")
+        text = tool_message(json.dumps(baseline))["content"]
+        for bad in (tool_message(baseline)["content"], text.replace("scope: complete", "scope: preview"),
+                    tool_message('{"scenario":"builder_acceptance","scenario":"builder_acceptance"}')["content"],
+                    tool_message(json.dumps(baseline)[:-1] + ',"notJson":NaN}')["content"]):
+            with self.assertRaises(ValueError): fixture.builder_success(bad, "acceptance", "build")
+
+    def test_programs_keep_native_api_rejection_separate_and_never_catch_terminal_control_errors(self):
+        baseline = self.baseline("acceptance", "unit-call-2")
+        source = fixture.builder_arguments("acceptance")["source"]
+        self.assertIn('crops:[{block:"beetroots",age:3}]', source)
+        self.assertIn('stage:"build"', source)
+        self.assertNotIn("unknown_block", source)
+        self.assertNotIn(".cancel()", source)
+        self.assertNotIn("catch (", source)
+        for kind in ("partial", "cancel"):
+            source = fixture.builder_failure_arguments(baseline, kind)["source"]
+            self.assertEqual(2, source.count("b.place_block("))
+            self.assertNotIn("catch", source)
+            self.assertNotIn("b.finish()", source)
+            self.assertIn("b.cancel()" if kind == "cancel" else "missing_native_block", source)
+            failure = {"status": "failure", "code": fixture.BUILDER_FAILURE_CODES[kind], "message": fixture.BUILDER_FAILURE_MESSAGES[kind]}
+            observer = fixture.builder_observation_arguments("acceptance", baseline, kind, failure)["source"]
+            self.assertIn("b.list_operations()", observer)
+            self.assertIn("b.get_blocks(positions)", observer)
+            self.assertNotIn("place_block", observer)
+            self.assertNotIn("failed-partial", observer)
+
+    def test_server_java_isolation_negative_remains_exact_and_no_success_claim(self):
+        result = {"role": "tool", "name": fixture.JAVASCRIPT_TOOL,
+                  "content": 'status: failure\ncode: javascript_error\nmessage: ReferenceError: "Java" is not defined. (openallay-agent.js#1)'}
+        call, content = fixture.builder_turn("server-denied", [result])
+        self.assertIsNone(call); self.assertIn("No success is claimed", content)
+        with self.assertRaises(ValueError): fixture.builder_turn("server-denied", [{**result, "content": ACTUAL_MISSING_NATIVE_RECIPE}])
+
+    def test_restricted_success_and_unexpected_failure_remain_strict(self):
+        result = tool_message(json.dumps(builder_receipt("restricted")))
+        self.assertIsNone(fixture.builder_turn("restricted", [builder_skill_message(), result])[0])
+        for scenario in ("restricted", "reload", "undo"):
+            with self.assertRaises(ValueError): fixture.builder_turn(scenario, [builder_skill_message(), {**result, "content": ACTUAL_MISSING_NATIVE_RECIPE}])
+
+    def test_reload_keeps_exact_retained_origin_and_current_read_only_contract(self):
+        question = "OpenAllay E2E Builder reload\nE2E retained native anchor: x=-1,y=-61,z=4"
+        anchor = fixture.builder_retained_anchor(question)
+        self.assertEqual((-1, -61, 4), anchor)
+        source = fixture.builder_arguments("reload", anchor)["source"]
+        self.assertIn("x=-1;y=-61;z=4;", source)
+        self.assertIn("b.list_operations()", source)
+        self.assertNotIn("place_block", source)
+        with self.assertRaises(ValueError): fixture.builder_arguments("reload")
+
+    def test_each_stage_javascript_has_valid_syntax(self):
+        if not shutil.which("node"): self.skipTest("optional Node parser unavailable")
+        messages, _ = self.run_sequence()
+        sources = [json.loads(m["tool_calls"][0]["function"]["arguments"])["source"] for m in messages
+                   if m["role"] == "assistant" and m["tool_calls"][0]["function"]["name"] == fixture.JAVASCRIPT_TOOL]
+        for scenario in ("partial", "cancel"):
+            messages, _ = self.run_sequence(scenario)
+            sources += [json.loads(m["tool_calls"][0]["function"]["arguments"])["source"] for m in messages
+                        if m["role"] == "assistant" and m["tool_calls"][0]["function"]["name"] == fixture.JAVASCRIPT_TOOL]
+        for index, source in enumerate(sources):
+            self.assertLessEqual(len(source), 65536)
+            result = subprocess.run([shutil.which("node"), "--check"], input=source, text=True, capture_output=True)
+            self.assertEqual(0, result.returncode, str(index) + result.stderr)
+
+
     def test_builder_is_explicit_and_unknown_phase_fails(self):
         self.assertIsNone(fixture.builder_scenario("ordinary build request"))
         self.assertEqual("acceptance", fixture.builder_scenario("OpenAllay E2E Builder acceptance"))
         self.assertEqual("restricted", fixture.builder_scenario("OpenAllay E2E Builder restricted"))
         with self.assertRaises(ValueError):
             fixture.builder_scenario("OpenAllay E2E Builder fabricated")
+
 
     def test_restricted_uses_ordinary_sdk_and_one_gold_block_at_positive_anchor(self):
         arguments = fixture.builder_arguments("restricted")
@@ -703,6 +967,7 @@ class BuilderFixtureTests(unittest.TestCase):
         self.assertIn("受限 JavaScript", arguments["title"])
         self.assertIn("Builder SDK", arguments["description"])
 
+
     def test_acceptance_loads_real_module_and_not_injected_backend(self):
         arguments = fixture.builder_arguments("acceptance")
         source = arguments["source"]
@@ -716,18 +981,6 @@ class BuilderFixtureTests(unittest.TestCase):
             self.assertIn("b." + method + "(", source)
         self.assertIn('scenario:"builder_acceptance"', source)
 
-    def test_skill_load_precedes_native_execution(self):
-        call, content = fixture.builder_turn("acceptance", [])
-        self.assertEqual((fixture.BUILDER_SKILL_TOOL, {"name": "minecraft-builder"}), call)
-        self.assertIsNone(content)
-        call, content = fixture.builder_turn("acceptance", [builder_skill_message()])
-        self.assertEqual(fixture.JAVASCRIPT_TOOL, call[0])
-        self.assertIn('require("openallay_builder:building")', call[1]["source"])
-        for text in ("status: failure\ncode: missing_skill\nmessage: minecraft-builder unavailable",
-                     BUILDER_SKILL_CONTENT.replace("complete: true", "complete: false"),
-                     BUILDER_SKILL_CONTENT.replace("state: complete", "state: preview")):
-            with self.subTest(text=text), self.assertRaises(ValueError):
-                fixture.builder_turn("acceptance", [{**builder_skill_message(), "content": text}])
 
     def test_native_failure_never_becomes_pre_authored_success(self):
         skill = builder_skill_message()
@@ -743,6 +996,7 @@ class BuilderFixtureTests(unittest.TestCase):
                   "content": ACTUAL_MISSING_NATIVE_RECIPE}
         with self.assertRaisesRegex(ValueError, "javascript_error: Error: Current native recipe is unavailable"):
             fixture.builder_turn("restricted", [skill, result])
+
 
     def test_server_denied_continuation_requires_java_isolation_failure_projection(self):
         # Unit-only renderer-shaped input. The actual Java isolation is exercised by the client probe.
@@ -772,6 +1026,7 @@ class BuilderFixtureTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "native Builder fixture failed: javascript_error"):
             fixture.builder_turn("restricted", [builder_skill_message(), result])
 
+
     def test_restricted_complete_scalar_receipt_requires_completed_and_actual_gold_readback(self):
         # Unit-only receipt data. Native success still requires the actual current Tool result and controller readback.
         receipt = builder_receipt("restricted")
@@ -795,6 +1050,7 @@ class BuilderFixtureTests(unittest.TestCase):
             with self.subTest(receipt=altered), self.assertRaises(ValueError):
                 fixture.builder_turn("restricted", [builder_skill_message(), tool_message(json.dumps(altered))])
 
+
     def test_restricted_does_not_fall_back_to_object_or_partial_preview(self):
         receipt = builder_receipt("restricted")
         complete = tool_message(json.dumps(receipt))["content"]
@@ -812,91 +1068,6 @@ class BuilderFixtureTests(unittest.TestCase):
             with self.subTest(content=result["content"]), self.assertRaises(ValueError):
                 fixture.builder_turn("restricted", [builder_skill_message(), result])
 
-    def test_success_continuation_uses_complete_scalar_receipt_not_claimed_geometry(self):
-        for scenario in ("restricted", "acceptance", "partial", "cancel", "undo", "reload"):
-            receipt = builder_receipt(scenario)
-            result = tool_message(json.dumps(receipt))
-            with self.subTest(scenario=scenario):
-                self.assertEqual(receipt, fixture.builder_result(result["content"], scenario))
-                call, content = fixture.builder_turn(scenario, [builder_skill_message(), result])
-                self.assertIsNone(call)
-                self.assertIn("independent controller readback", content)
-                self.assertIn("pre-authored", content)
-        for value in (builder_receipt(), {"status": "success", "value": builder_receipt()},
-                      'result: handle\nscope: complete\npreview:\n' + json.dumps(builder_receipt())):
-            result = tool_message(value)
-            with self.subTest(value=value), self.assertRaises(ValueError):
-                fixture.builder_turn("acceptance", [builder_skill_message(), result])
-
-    def test_acceptance_scalar_receipt_preserves_all_nine_actual_status_rows(self):
-        receipt = builder_receipt()
-        observed = fixture.builder_result(tool_message(json.dumps(receipt))["content"], "acceptance")
-        self.assertEqual(receipt, observed)
-        self.assertEqual(9, len(observed["operations"]))
-        self.assertEqual(2, len(observed["actions"]))
-        self.assertEqual(1, len(observed["lifecycle"]["undo"]["result"]["conflicts"]))
-        self.assertEqual([], observed["lifecycle"]["undo"]["result"]["uncertain"])
-        self.assertEqual("failed-partial", observed["lifecycle"]["partial"]["status"]["state"])
-        self.assertEqual("cancelled-partial", observed["lifecycle"]["cancel"]["status"]["state"])
-        for mutation in (lambda result: result["operations"].pop(),
-                         lambda result: result["operations"][2].update(state="failed-partial"),
-                         lambda result: result["operations"][2].update(operationId=None),
-                         lambda result: result.update(status={"state": "running"}),
-                         lambda result: result.update(scenario="builder_other")):
-            altered = json.loads(json.dumps(receipt))
-            mutation(altered)
-            with self.assertRaises(ValueError):
-                fixture.builder_result(tool_message(json.dumps(altered))["content"], "acceptance")
-        incomplete = tool_message(json.dumps(receipt))["content"].replace("scope: complete", "scope: preview")
-        with self.assertRaises(ValueError):
-            fixture.builder_result(incomplete, "acceptance")
-
-    def test_builder_requires_current_tool_ids_and_no_extra_or_duplicate_calls(self):
-        result = tool_message(json.dumps(builder_receipt()))
-        for wrong in ("other_tool", fixture.BUILDER_SKILL_TOOL):
-            with self.subTest(wrong=wrong), self.assertRaises(ValueError):
-                fixture.builder_turn("acceptance", [builder_skill_message(), {**result, "name": wrong}])
-        with self.assertRaises(ValueError):
-            fixture.builder_turn("acceptance", [builder_skill_message(), result, result])
-        skill = builder_skill_message()
-        skill.pop("name")
-        skill["tool_call_id"] = "skill-current"
-        result.pop("name")
-        result["tool_call_id"] = "js-current"
-        messages = [{"role": "assistant", "tool_calls": [{"id": "skill-current", "function": {"name": fixture.BUILDER_SKILL_TOOL}}]}, skill,
-                    {"role": "assistant", "tool_calls": [{"id": "js-current", "function": {"name": fixture.JAVASCRIPT_TOOL}}]}, result]
-        self.assertIsNone(fixture.builder_turn("acceptance", messages)[0])
-        with self.assertRaises(ValueError):
-            fixture.builder_turn("acceptance", messages + [messages[0]])
-
-    def test_http_builder_positive_receipt_completes_without_extra_tool_or_world_claim(self):
-        for scenario in ("restricted", "acceptance"):
-            text = "OpenAllay E2E Builder " + scenario
-            request = {"messages": [{"role": "user", "content": CurrentOpenAiContentPartsTests().parts(text)},
-                                    builder_skill_message(), tool_message(json.dumps(builder_receipt(scenario)))]}
-            with self.subTest(scenario=scenario):
-                handler, events, calls = CurrentOpenAiContentPartsTests().endpoint(request)
-                self.assertEqual([], handler.errors)
-                self.assertEqual([200], handler.codes)
-                self.assertEqual([], calls)
-                self.assertEqual("stop", events[-1]["choices"][0]["finish_reason"])
-                content = "".join(event["choices"][0]["delta"].get("content", "") for event in events)
-                self.assertIn("independent controller readback determines acceptance", content)
-                self.assertNotIn("PASSED", content)
-
-    def test_http_unexpected_positive_native_failure_stays_422_with_actual_failure(self):
-        for scenario in ("restricted", "acceptance"):
-            request = {"messages": [{"role": "user", "content": "OpenAllay E2E Builder " + scenario},
-                                    builder_skill_message(),
-                                    {"role": "tool", "name": fixture.JAVASCRIPT_TOOL,
-                                     "content": ACTUAL_MISSING_NATIVE_RECIPE}]}
-            with self.subTest(scenario=scenario):
-                handler, events, calls = CurrentOpenAiContentPartsTests().endpoint(request)
-                self.assertEqual([], handler.codes)
-                self.assertEqual([], events)
-                self.assertEqual([], calls)
-                self.assertEqual([(422, "native Builder fixture failed: javascript_error: "
-                                   "Error: Current native recipe is unavailable\nat openallay-agent.js:1")], handler.errors)
 
     def test_ui_stop_runs_actual_cancellable_read_only_rhino_not_a_fake_result(self):
         arguments = fixture.ui_stop_arguments()
@@ -908,6 +1079,7 @@ class BuilderFixtureTests(unittest.TestCase):
         self.assertTrue(arguments["title"])
         self.assertTrue(arguments["description"])
         self.assertNotIn("success", arguments["description"])
+
 
     def test_ui_failure_continuation_returns_actual_http_503(self):
         request = {"messages": [
@@ -925,6 +1097,7 @@ class BuilderFixtureTests(unittest.TestCase):
         fixture.Handler.do_POST(handler)
         self.assertEqual([(503, "Deterministic E2E continuation transport failure")], handler.errors)
 
+
     def test_ui_transport_failure_starts_with_actual_read_only_javascript(self):
         arguments = fixture.ui_provider_failure_arguments()
         self.assertNotIn("roots", arguments)
@@ -933,6 +1106,7 @@ class BuilderFixtureTests(unittest.TestCase):
         self.assertNotIn("building", arguments["source"])
         self.assertTrue(arguments["title"])
         self.assertTrue(arguments["description"])
+
 
     def test_fixture_javascript_intents_describe_work_not_preclaimed_results(self):
         for scenario in fixture.BUILDER_SCENARIOS:
@@ -944,6 +1118,7 @@ class BuilderFixtureTests(unittest.TestCase):
         recipe = fixture.javascript_arguments()
         self.assertTrue(recipe["title"])
         self.assertTrue(recipe["description"])
+
 
     def test_reload_uses_recorded_origin_not_moved_player_and_rejects_missing_origin(self):
         question = "OpenAllay E2E Builder reload\nE2E retained native anchor: x=-1,y=-61,z=4"
@@ -963,6 +1138,7 @@ class BuilderFixtureTests(unittest.TestCase):
             with self.subTest(invalid=invalid), self.assertRaises(ValueError):
                 fixture.builder_retained_anchor(invalid)
 
+
     def test_server_authority_probe_does_not_confuse_missing_module_with_java_denial(self):
         call, content = fixture.builder_turn("server-denied", [])
         self.assertEqual(fixture.JAVASCRIPT_TOOL, call[0])
@@ -970,13 +1146,15 @@ class BuilderFixtureTests(unittest.TestCase):
         self.assertNotIn("BuilderRuntime", call[1]["source"])
         self.assertNotIn("openallay_builder", call[1]["source"])
 
+
     def test_both_loader_opt_in_ticks_include_native_startup(self):
-        root = MODULE_PATH.parent.parent
+        root = Path(__import__("os").environ.get("OPENALLAY_SOURCE_ROOT", MODULE_PATH.parent.parent))
         for path in ("fabric/src/main/java/dev/openallay/fabric/OpenAllayFabricClient.java",
                      "neoforge/src/main/java/dev/openallay/neoforge/OpenAllayNeoForgeClient.java"):
             source = (root / path).read_text()
             self.assertIn("GuideClientE2EConfig.from(System.getProperties()).ifPresent", source)
             self.assertIn("controller.tick(client.player == null ? null : client.player.getUUID())", source)
+
 
     def test_every_positive_builder_program_returns_current_complete_scalar_json(self):
         for scenario in ("restricted", "acceptance", "partial", "cancel", "undo", "reload"):
@@ -986,16 +1164,64 @@ class BuilderFixtureTests(unittest.TestCase):
                 self.assertNotIn('return {scenario:"builder_' + scenario + '"', source)
                 self.assertNotIn("Java.type", source)
 
-    def test_lifecycle_programs_use_real_native_sessions(self):
-        for scenario in ("partial", "cancel", "undo", "reload"):
-            source = fixture.builder_arguments(scenario, (-1, -61, 4) if scenario == "reload" else None)["source"]
-            self.assertIn('require("openallay_builder:building")', source)
-            self.assertIn("building.open(", source)
-            self.assertIn('scenario:"builder_' + scenario + '"', source)
-        self.assertIn("b.cancel()", fixture.builder_arguments("cancel")["source"])
-        self.assertIn("b.undo(original.operationId)", fixture.builder_arguments("undo")["source"])
-        self.assertIn("b.load_template", fixture.builder_arguments("reload", (-1, -61, 4))["source"])
+    def test_http_chronology_retains_expected_failures_and_finishes_only_after_actual_observations(self):
+        for scenario in ("acceptance", "partial", "cancel"):
+            request = {"messages": [{"role": "user", "content": "OpenAllay E2E Builder " + scenario}],
+                       "tools": [{"function": {"name": name}} for name in (fixture.BUILDER_SKILL_TOOL, fixture.JAVASCRIPT_TOOL)]}
+            token = fixture.fixture_tool_call_id(request, 2)
+            outputs = [None] + self.outputs(scenario, token)
+            for output in outputs:
+                handler, events, calls = CurrentOpenAiContentPartsTests().endpoint(request)
+                self.assertEqual([], handler.errors)
+                self.assertEqual([200], handler.codes)
+                self.assertEqual(1, len(calls))
+                call = calls[0]
+                request["messages"].append({"role": "assistant", "tool_calls": [call]})
+                result = builder_skill_message() if output is None else (
+                    {"role": "tool", "content": output} if isinstance(output, str) else tool_message(json.dumps(output)))
+                result["tool_call_id"] = call["id"]
+                result["name"] = call["function"]["name"]
+                request["messages"].append(result)
+            handler, events, calls = CurrentOpenAiContentPartsTests().endpoint(request)
+            self.assertEqual([], handler.errors); self.assertEqual([200], handler.codes); self.assertEqual([], calls)
+            self.assertEqual("stop", events[-1]["choices"][0]["finish_reason"])
+            text = "".join(e["choices"][0]["delta"].get("content", "") for e in events)
+            self.assertIn("exact expected failed Tools", text)
+            self.assertNotIn("PASSED", text)
+            # A changed native terminal code is a real fixture failure, even with the same old success tail.
+            for message in request["messages"]:
+                if message.get("role") == "tool" and message.get("content", "").startswith("status: failure"):
+                    message["content"] = ACTUAL_MISSING_NATIVE_RECIPE
+                    break
+            handler, events, calls = CurrentOpenAiContentPartsTests().endpoint(request)
+            self.assertEqual([], handler.codes); self.assertEqual([], calls)
+            self.assertEqual(422, handler.errors[0][0])
 
+    def test_no_single_scalar_can_replace_ordered_lifecycle_history(self):
+        for scenario in ("acceptance", "partial", "cancel"):
+            with self.assertRaises(ValueError):
+                fixture.builder_result(tool_message(json.dumps(builder_receipt(scenario)))["content"], scenario)
+
+    def test_failure_probe_does_not_finalize_the_journal_before_actual_failure(self):
+        baseline = self.baseline("acceptance", "unit-call-2")
+        for kind in ("partial", "cancel"):
+            source = fixture.builder_failure_arguments(baseline, kind)["source"]
+            self.assertNotIn("b.finish()", source)
+            self.assertNotIn("b.close()", source)
+            self.assertNotIn("return JSON.stringify", source)
+            self.assertLess(source.index("b.place_block("), source.rindex("b.place_block("))
+            if kind == "cancel":
+                self.assertLess(source.index("b.place_block("), source.index("b.cancel()"))
+                self.assertLess(source.index("b.cancel()"), source.rindex("b.place_block("))
+
+    def test_missing_future_or_unpaired_calls_cannot_link_a_terminal_journal(self):
+        import copy
+        messages, _ = self.run_sequence()
+        for change in (lambda value: value.pop(4),
+                       lambda value: value[5].pop("tool_call_id"),
+                       lambda value: value.append({"role": "assistant", "tool_calls": [{"id": "extra", "function": {"name": fixture.JAVASCRIPT_TOOL, "arguments": "{}"}}]})):
+            altered = copy.deepcopy(messages); change(altered)
+            with self.assertRaises(ValueError): fixture.builder_turn("acceptance", altered, probe_token="unit-call-2")
 
 if __name__ == "__main__":
     unittest.main()

@@ -76,7 +76,7 @@ expect("windmill_sail_wool",39,6,0,"white_wool");
 expect("windmill_roof",38,7,3,"spruce_planks");
 phase("windmill");
 p = site("farm",0,18);
-action("farm",b.build_farm(p.x,p.y,p.z,{width:3,depth:3,crops:["beetroots"],facing:"north"}));
+action("farm",b.build_farm(p.x,p.y,p.z,{width:3,depth:3,crops:[{block:"beetroots",age:3}],facing:"north"}));
 expect("farm_soil",0,0,18,"farmland",{moisture:"7"});
 expect("farm_crop",0,1,18,"beetroots",{age:"3"});
 expect("farm_water",-1,0,18,"water",{level:"0"});
@@ -227,57 +227,22 @@ expect("template_combined_chest",35,1,32,"chest",{facing:"north",type:"single"})
 expect("template_combined_air",36,1,33,"air");
 phase("templates");
 
-// Terminal-state checks use separate real sessions. Their markers stay inspectable.
-function openLifecycle(name) {
-    return require("openallay_builder:building").open({seed:17,label:"OpenAllay E2E Builder "+name});
+// Capture prerequisites before the separate failed Tools. No terminal failure is caught here.
+function lifecyclePrerequisite(x,z) {
+    var positions=[point(x,1,z),point(x+1,1,z)];
+    var images=b.get_blocks(positions).map(function(cell){return cell.state;});
+    for (var i=0;i<images.length;i++) if (images[i].id!=="minecraft:air")
+        throw new Error("Lifecycle marker prerequisite is not air");
+    return {positions:positions,beforeImages:images};
 }
-function requireAir(session,x,z) {
-    var state=session.get_block_full(anchor.x+x,anchor.y+1,anchor.z+z);
-    if (state.id!=="minecraft:air") throw new Error("Lifecycle marker prerequisite is not air at "+[x,1,z]);
-    return state;
-}
-var partial=openLifecycle("partial");
-var partialBefore=[requireAir(partial,44,32),requireAir(partial,45,32)];
-partial.place_block(anchor.x+44,anchor.y+1,anchor.z+32,"gold_block");
-var partialFailure=null;
-try { partial.place_block(anchor.x+45,anchor.y+1,anchor.z+32,"openallay_e2e:unknown_block"); }
-catch (partialError) { partialFailure=String(partialError); }
-if (partialFailure===null) throw new Error("Invalid native block unexpectedly succeeded");
-var partialStatus=partial.status();
-expect("lifecycle_partial_marker",44,1,32,"gold_block");
-expect("lifecycle_partial_invalid_untouched",45,1,32,"air");
-
-var cancelled=openLifecycle("cancel");
-var cancelBefore=[requireAir(cancelled,44,34),requireAir(cancelled,45,34)];
-cancelled.place_block(anchor.x+44,anchor.y+1,anchor.z+34,"diamond_block");
-var cancelStatus=cancelled.cancel(), deniedAfterCancel=false, cancelFailure=null;
-try { cancelled.place_block(anchor.x+45,anchor.y+1,anchor.z+34,"gold_block"); }
-catch (cancelError) { deniedAfterCancel=true; cancelFailure=String(cancelError); }
-if (!deniedAfterCancel) throw new Error("Cancelled native session unexpectedly accepted another write");
-expect("lifecycle_cancel_marker",44,1,34,"diamond_block");
-expect("lifecycle_cancel_untouched",45,1,34,"air");
-
-var undoSession=openLifecycle("undo original");
-var undoBefore=[requireAir(undoSession,44,36),requireAir(undoSession,45,36)];
-undoSession.place_block(anchor.x+44,anchor.y+1,anchor.z+36,"gold_block");
-undoSession.place_block(anchor.x+45,anchor.y+1,anchor.z+36,"gold_block");
-var originalStatus=undoSession.finish();
-var intervention=openLifecycle("undo intervention");
-intervention.place_block(anchor.x+45,anchor.y+1,anchor.z+36,"diamond_block");
-var interventionStatus=intervention.finish();
-var undoResult=undoSession.undo(originalStatus.operationId);
-var undoStatus=undoSession.finish();
-expect("lifecycle_undo_restored",44,1,36,"air");
-expect("lifecycle_undo_conflict_preserved",45,1,36,"diamond_block");
-var lifecycle={partial:{failure:partialFailure,status:partialStatus,beforeImages:partialBefore},
-    cancel:{deniedAfterCancel:deniedAfterCancel,failure:cancelFailure,status:cancelled.status(),beforeImages:cancelBefore},
-    undo:{result:undoResult,status:undoStatus,originalStatus:originalStatus,interventionStatus:interventionStatus,beforeImages:undoBefore}};
-
-// Return a complete scalar JSON receipt, not a sampled container array.
-// Declared checks stay in this source; only independent native readback is the verdict.
-return JSON.stringify({scenario:"builder_acceptance",provider:"deterministic_loopback_fixture_not_live_model",
-    seed:17,anchor:anchor,sites:sites,actions:actions,operations:operations,
-    status:b.status(),lifecycle:lifecycle,templates:{saved:[templateName],listed:listed.indexOf(templateName)>=0,
+var lifecycle={partial:lifecyclePrerequisite(44,32),cancel:lifecyclePrerequisite(44,34),undo:lifecyclePrerequisite(44,36)};
+var baselineOperations=b.list_operations();
+// Return completed build evidence BEFORE any intentionally rejected native operation.
+return JSON.stringify({scenario:"builder_acceptance",stage:"build",probeToken:fixtureProbeToken,
+    provider:"deterministic_loopback_fixture_not_live_model",seed:17,anchor:anchor,
+    context:{dimension:c.dimension,playerUuid:c.player.uuid},sites:sites,actions:actions,operations:operations,
+    status:b.status(),baselineOperations:baselineOperations,lifecycle:lifecycle,
+    templates:{saved:[templateName],listed:listed.indexOf(templateName)>=0,
         size:loaded.size,blockCount:loaded.blocks.length,paletteSize:loaded.palette.length},
     terrain:{scanTerrain:terrainScan,scanGround:groundScan,bounds:terrainBounds,fullHeightGround:fullHeightScan}});
 /* END BUILDER_ACCEPTANCE */

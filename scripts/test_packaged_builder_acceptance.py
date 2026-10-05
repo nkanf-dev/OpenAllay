@@ -79,6 +79,29 @@ class PackagedBuilderLauncherTests(unittest.TestCase):
                 # This header-only fixture verifies declarations; it does not widen
                 # distribution/support admission or constitute real-game acceptance.
 
+    def test_postclosure_persistence_audit_and_reload_hash_binding(self):
+        from types import SimpleNamespace
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory).resolve()
+            original = repo / "build/e2e/original"
+            reload = original / "phases/reload"
+            reload.mkdir(parents=True)
+            script = repo / "scripts/validate-builder-live-acceptance.py"
+            script.parent.mkdir()
+            script.write_text("""def validate_acceptance(original, repo, reload=None):
+    return {"templateSha256": "actual-hash", "journalRows": {"actual-id": {"status": "completed"}}}
+def read_json(path):
+    import json
+    return json.loads(path.read_text())
+""")
+            launcher.audit_builder_persistence(original, {"scenario": "builder-acceptance"}, repo)
+            self.assertTrue((original / "persistence-audit.json").is_file())
+            launcher.audit_builder_persistence(reload, {"scenario": "builder-reload", "resumeFrom": str(original)}, repo)
+            self.assertTrue((reload / "persistence-audit.json").is_file())
+            launcher.write_json(original / "persistence-audit.json", {"templateSha256": "changed", "journalRows": {}})
+            with self.assertRaisesRegex(ValueError, "Reload changed verified native persistence"):
+                launcher.audit_builder_persistence(reload, {"scenario": "builder-reload", "resumeFrom": str(original)}, repo)
+
     def official_launch_contract(self, target):
         path = MODULE_PATH.parent / "fixtures/minecraft-launch" / (target + ".json")
         expected = {"1.20.1": "d47ff966c68b13fac17d214eea8acfe45b1f08a15c432cdd2136e36c3d315de3",

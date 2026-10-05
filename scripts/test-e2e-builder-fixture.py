@@ -52,7 +52,7 @@ class BuilderFixtureSourceTests(unittest.TestCase):
         self.assertIn('width:5,depth:5,floors:2,floorHeight:3', SOURCE)
         self.assertIn('width:5,depth:5,height:3,facing:"north"', SOURCE)
         self.assertIn('radius:2,height:6,bladeLength:1', SOURCE)
-        self.assertIn('width:3,depth:3,crops:["beetroots"]', SOURCE)
+        self.assertIn('width:3,depth:3,crops:[{block:"beetroots",age:3}]', SOURCE)
         self.assertIn('width:2,length:4,pilingDepth:2', SOURCE)
 
     def test_declares_concrete_preset_landmarks_and_linked_supports(self):
@@ -137,9 +137,9 @@ class BuilderFixtureSourceTests(unittest.TestCase):
                           "geometry_decoration", "terrain", "templates"], phases)
         self.assertIn("status:b.status()", SOURCE)
         self.assertIn("templates:{saved:[templateName]", SOURCE)
-        self.assertNotIn("list_operations()", SOURCE)
+        self.assertIn("baselineOperations=b.list_operations()", SOURCE)
         self.assertNotIn("success:true", SOURCE)
-        summary = SOURCE[SOURCE.index('// Return a complete scalar JSON receipt'):]
+        summary = SOURCE[SOURCE.index('// Return completed build evidence'):]
         self.assertNotIn("template:template", summary)
         self.assertNotIn("loaded:loaded", summary)
         self.assertIn('return JSON.stringify({scenario:"builder_acceptance"', summary)
@@ -152,24 +152,21 @@ class BuilderFixtureSourceTests(unittest.TestCase):
         self.assertNotIn("anchor.y-4 < c.minY", SOURCE)
         self.assertIn("bounds:{x1:anchor.x,z1:anchor.z+34,x2:anchor.x+6,z2:anchor.z+35}", SOURCE)
 
-    def test_terminal_lifecycle_cases_use_independent_native_sessions(self):
-        self.assertIn('return require("openallay_builder:building").open({seed:17,label:"OpenAllay E2E Builder "+name})', SOURCE)
-        self.assertIn('state.id!=="minecraft:air"', SOURCE)
-        self.assertIn('partial.place_block(anchor.x+45,anchor.y+1,anchor.z+32,"openallay_e2e:unknown_block")', SOURCE)
-        self.assertIn("var cancelStatus=cancelled.cancel()", SOURCE)
-        self.assertIn("deniedAfterCancel=true", SOURCE)
-        self.assertIn("undoSession.undo(originalStatus.operationId)", SOURCE)
-        self.assertIn("status:b.status(),lifecycle:lifecycle", SOURCE)
-        fixed = {
-            "lifecycle_partial_marker": (44, 1, 32, "gold_block"),
-            "lifecycle_partial_invalid_untouched": (45, 1, 32, "air"),
-            "lifecycle_cancel_marker": (44, 1, 34, "diamond_block"),
-            "lifecycle_cancel_untouched": (45, 1, 34, "air"),
-            "lifecycle_undo_restored": (44, 1, 36, "air"),
-            "lifecycle_undo_conflict_preserved": (45, 1, 36, "diamond_block"),
-        }
-        for name, expected in fixed.items():
-            self.assertEqual(expected, EXPECTATIONS[name])
+    def test_build_finishes_all_nine_operations_before_separate_terminal_failure_tools(self):
+        tail = SOURCE[SOURCE.index('// Capture prerequisites'):]
+        self.assertIn('stage:"build"', tail)
+        self.assertIn('probeToken:fixtureProbeToken', tail)
+        self.assertIn('context:{dimension:c.dimension,playerUuid:c.player.uuid}', tail)
+        self.assertIn('partial:lifecyclePrerequisite(44,32)', tail)
+        self.assertIn('cancel:lifecyclePrerequisite(44,34)', tail)
+        self.assertIn('undo:lifecyclePrerequisite(44,36)', tail)
+        self.assertIn('images[i].id!=="minecraft:air"', tail)
+        self.assertIn('positions:positions,beforeImages:images', tail)
+        self.assertNotIn('catch', tail)
+        self.assertNotIn('.cancel()', SOURCE)
+        self.assertNotIn('unknown_block', SOURCE)
+        self.assertNotIn('.undo(', SOURCE)
+        self.assertGreater(SOURCE.index('baselineOperations=b.list_operations()'), SOURCE.index('phase("templates")'))
 
     @unittest.skipUnless(shutil.which("node"), "optional Node syntax parser not installed")
     def test_script_is_valid_javascript_syntax(self):

@@ -986,6 +986,22 @@ def validate_final_screenshot(manifest):
         raise ValueError("Screenshot matrix did not retain its final PNG capture")
 
 
+def audit_builder_persistence(output, manifest, repo=REPO):
+    from importlib.util import module_from_spec, spec_from_file_location
+    if manifest.get("scenario") not in ("builder-acceptance", "builder-reload"):
+        return
+    spec = spec_from_file_location("builder_persistence_audit", repo / "scripts/validate-builder-live-acceptance.py")
+    audit = module_from_spec(spec)
+    spec.loader.exec_module(audit)
+    original = Path(manifest["resumeFrom"]) if manifest["scenario"] == "builder-reload" else output
+    proof = audit.validate_acceptance(original, repo, output if manifest["scenario"] == "builder-reload" else None)
+    if manifest["scenario"] == "builder-reload":
+        prior = audit.read_json(original / "persistence-audit.json")
+        if proof["templateSha256"] != prior["templateSha256"] or proof["journalRows"] != prior["journalRows"]:
+            raise ValueError("Reload changed verified native persistence")
+    write_json(output / "persistence-audit.json", proof)
+
+
 def launch_prepared(path, repo=REPO):
     output = safe_output(path, repo)
     manifest = json.loads((output / "launch.json").read_text(encoding="utf-8"))
@@ -1085,6 +1101,7 @@ def launch_prepared(path, repo=REPO):
     else:
         validate_report(manifest["report"])
         validate_final_screenshot(manifest)
+        audit_builder_persistence(output, manifest, repo)
         print("Packaged Builder native acceptance PASSED: " + manifest["report"], flush=True)
 
 

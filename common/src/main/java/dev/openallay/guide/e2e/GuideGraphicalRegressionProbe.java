@@ -44,6 +44,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -98,6 +99,11 @@ final class GuideGraphicalRegressionProbe {
     private String liveReaderAnchor;
     private CompletableFuture<Integer> liveTransportRelease;
     private String liveToastQuestion;
+    private NativeScreenTransition<Screen> liveGuideReopen;
+    private LiveGuideReopenOwner liveGuideReopenOwner;
+    private record LiveGuideReopenOwner(GuideChatLiteScreen reader,
+            dev.openallay.client.gui.GuideClientUiState state, long generation,
+            Object world, UUID actor, UUID sessionOwner) {}
     private final Path frameRoot;
     private final int originalWindowWidth;
     private final int originalWindowHeight;
@@ -1139,7 +1145,23 @@ final class GuideGraphicalRegressionProbe {
                         "Reader first page lost the prior original request identity");
                 report.put("priorRequestReader", receipt);
                 checkpoint("live-15-reader-prior-request-cards", false);
-                lite().onClose(); openGuide.accept(service); press("screen.openallay.settings.short"); advance();
+                beginReaderGuideReopen();
+                stage = 130; stageWait = 0;
+            }
+            case 130 -> {
+                if (!readerGuideReopenReady()) return;
+                requireReaderGuideReopenOwner();
+                liveGuideReopen.consume(() -> MinecraftClientWindow.screen(client), screen -> {
+                    Button button = findButton(screen, "screen.openallay.settings.short", true);
+                    require(button != null, "Reopened Guide lost its initialized Settings button");
+                    GuideNativeInput.press(button, GuideNativeInput.keyEvent(InputConstants.KEY_RETURN, 0));
+                    recordAction("native-button", "screen.openallay.settings.short");
+                    require(readField(screen, "attachment") == null,
+                            "Settings callback did not detach the exact reopened Guide");
+                });
+                require(readField(settingsScreen(), "service") == settings,
+                        "Settings callback opened another settings coordinator");
+                stage = 31; stageWait = 0;
             }
             case 31 -> { navigate("screen.openallay.settings.ui"); advance(); }
             case 32 -> { press("screen.openallay.settings.ui.notifications"); advance(); }
@@ -1198,6 +1220,129 @@ final class GuideGraphicalRegressionProbe {
             }
             case 39, 40 -> runStage();
             default -> throw new IllegalStateException("Unknown live native stage " + stage);
+        }
+    }
+
+    /** Reopen once. Observation capture/custody/release can install the owner on later client turns. */
+    private void beginReaderGuideReopen() {
+        GuideChatLiteScreen reader = (GuideChatLiteScreen) lite();
+        var state = (dev.openallay.client.gui.GuideClientUiState) readField(reader, "state");
+        require(readField(reader, "service") == service
+                && config.sessionId().equals(readField(reader, "session"))
+                && readField(reader, "attachment") != null,
+                "Reader reopen source is not the attached scenario service/session");
+        require(client.player != null && client.level != null, "Reader reopen lost its native connection");
+        liveGuideReopenOwner = new LiveGuideReopenOwner(reader, state, state.generation(),
+                client.level, client.player.getUUID(), service.presentationSessionOwner(config.sessionId()).orElseThrow());
+        requireReaderGuideReopenOwner();
+        require(liveGuideReopen == null, "Reader Guide reopen was already requested");
+        liveGuideReopen = new NativeScreenTransition<>(reader);
+        report.put("readerGuideReopenRequested", readerGuideReopenDiagnostic(reader));
+        liveGuideReopen.request(() -> MinecraftClientWindow.screen(client), () -> {
+            reader.onClose();
+            recordAction("native-screen-close", "HUD-reader-before-Guide-reopen");
+            require(readField(reader, "attachment") == null
+                    && !state.visible(dev.openallay.client.gui.GuideClientUiState.Surface.HUD_INPUT, config.sessionId()),
+                    "Closed HUD reader retained its native view attachment");
+        }, () -> {
+            openGuide.accept(service);
+            recordAction("coordinator-open-guide", "reader-same-service-session-once");
+        });
+    }
+
+    private void requireReaderGuideReopenOwner() {
+        LiveGuideReopenOwner owner = liveGuideReopenOwner;
+        require(owner != null && !owner.state().closed() && owner.state().generation() == owner.generation()
+                && client.level == owner.world() && client.player != null
+                && owner.actor().equals(client.player.getUUID()) && owner.actor().equals(service.snapshot().actorId())
+                && config.sessionId().equals(service.snapshot().selectedSession())
+                && config.sessionId().equals(owner.state().selectedSession())
+                && service.presentationSessionOwner(config.sessionId()).filter(owner.sessionOwner()::equals).isPresent(),
+                "Reader Guide reopen lost its captured connection/state/session owner");
+    }
+
+    private boolean readerGuideReopenReady() {
+        requireReaderGuideReopenOwner();
+        Screen current = MinecraftClientWindow.screen(client);
+        report.put("readerGuideReopenAwaiting", readerGuideReopenDiagnostic(current));
+        boolean ready = liveGuideReopen.ready(current, screen -> screen instanceof OpenAllayScreen
+                && readField(screen, "service") == service
+                && readField(screen, "uiState") == liveGuideReopenOwner.state()
+                && config.sessionId().equals(((dev.openallay.guide.ui.GuideUiView) readField(screen, "view")).selectedSession()),
+                screen -> {
+                    long frame = number(jsonReceipt(screen, "e2eToolsReceipt"), "lastNativeFrame");
+                    if (frame == 0) return false;
+                    var state = liveGuideReopenOwner.state();
+                    var custody = state.observationImagesSettled();
+                    require(state.observationInitialized(config.sessionId()),
+                            "Reopened Guide lost its captured observation producer state");
+                    if (!custody.isDone()) return false;
+                    require(custody.join() instanceof ToolResult.Success<Boolean> success && Boolean.TRUE.equals(success.value()),
+                            "Reopened Guide observation producer custody failed");
+                    require(readField(screen, "attachment") != null && screen.width > 0 && screen.height > 0
+                            && screen.children().stream().anyMatch(child -> child == readField(screen, "composer"))
+                            && findButton(screen, "screen.openallay.settings.short", true) != null,
+                            "Reopened Guide native extraction has no initialized owned composer/Settings widgets");
+                    return true;
+                });
+        if (!ready) { waitFor("one captured reader-to-Guide owner installation and actual native extraction"); return false; }
+        report.put("readerGuideReopenReady", readerGuideReopenDiagnostic(current));
+        return true;
+    }
+
+    private Map<String, Object> readerGuideReopenDiagnostic(Screen screen) {
+        LiveGuideReopenOwner owner = liveGuideReopenOwner;
+        Map<String, Object> receipt = new LinkedHashMap<>();
+        receipt.put("sourceScreenIdentity", System.identityHashCode(owner.reader()));
+        receipt.put("currentScreenIdentity", screen == null ? 0 : System.identityHashCode(screen));
+        receipt.put("currentScreen", screen == null ? "gameplay" : screen.getClass().getName());
+        receipt.put("uiOwnerId", owner.state().ownerId());
+        receipt.put("uiGeneration", owner.generation());
+        receipt.put("sessionId", config.sessionId());
+        receipt.put("sessionOwner", owner.sessionOwner().toString());
+        receipt.put("observationInitialized", owner.state().observationInitialized(config.sessionId()));
+        receipt.put("observationCustodySettled", owner.state().observationImagesSettled().isDone());
+        receipt.put("sourceAttachmentReleased", readField(owner.reader(), "attachment") == null);
+        if (screen instanceof OpenAllayScreen)
+            receipt.put("nativeExtractionFrame", number(jsonReceipt(screen, "e2eToolsReceipt"), "lastNativeFrame"));
+        return Map.copyOf(receipt);
+    }
+
+    /** Test-only arrival latch. A callback can destroy its Screen; never search its widgets afterward. */
+    static final class NativeScreenTransition<S> {
+        private final S source;
+        private S installed;
+        private boolean requested;
+        private boolean arrivalReady;
+        private boolean consumed;
+
+        NativeScreenTransition(S source) { this.source = java.util.Objects.requireNonNull(source, "source"); }
+
+        void request(Supplier<S> current, Runnable closeSource, Runnable openTarget) {
+            require(!requested && current.get() == source, "Native screen transition source was replaced or requested twice");
+            requested = true;
+            closeSource.run();
+            require(current.get() == null, "Native screen transition source did not close to gameplay");
+            openTarget.run();
+        }
+
+        boolean ready(S current, Predicate<S> expectedOwner, Predicate<S> initialized) {
+            require(requested && !consumed, "Native screen transition is not awaiting one arrival");
+            if (installed == null) {
+                if (current == null) return false;
+                require(current != source && expectedOwner.test(current), "Native screen transition installed another owner");
+                installed = current;
+            }
+            require(current == installed && expectedOwner.test(current), "Native screen transition owner was replaced");
+            arrivalReady = initialized.test(installed);
+            return arrivalReady;
+        }
+
+        void consume(Supplier<S> current, Consumer<S> callback) {
+            require(arrivalReady && installed != null && current.get() == installed && !consumed,
+                    "Native screen transition callback target was replaced or already consumed");
+            consumed = true;
+            callback.accept(installed);
         }
     }
 
@@ -1736,8 +1881,13 @@ final class GuideGraphicalRegressionProbe {
     }
 
     private Button findButton(String key, boolean prefix) {
+        return findButton(MinecraftClientWindow.screen(client), key, prefix);
+    }
+
+    private Button findButton(Screen screen, String key, boolean prefix) {
+        require(screen != null, "Actual native button owner is unavailable: " + key);
         String text = Component.translatable(key).getString();
-        return MinecraftClientWindow.screen(client).children().stream().filter(Button.class::isInstance).map(Button.class::cast)
+        return screen.children().stream().filter(Button.class::isInstance).map(Button.class::cast)
                 .filter(value -> value.visible && value.active)
                 .filter(value -> value.getMessage().getString().equals(text)
                         || prefix && value.getMessage().getString().startsWith(text + " · "))
@@ -1874,6 +2024,7 @@ final class GuideGraphicalRegressionProbe {
         report.put("failureStage", stage);
         report.put("failureMessage", failure.getMessage() == null ? failure.getClass().getSimpleName() : failure.getMessage());
         report.put("failureException", failure.toString());
+        report.put("failureStack", java.util.Arrays.stream(failure.getStackTrace()).map(Object::toString).toList());
         if (failure.getCause() != null) report.put("failureCause", failure.getCause().toString());
         report.put("elapsedMillis", Duration.between(started, Instant.now()).toMillis());
         if ("ui-live-ux-regressions".equals(config.scenario()) && (stage == 27 || stage == 127)) {
