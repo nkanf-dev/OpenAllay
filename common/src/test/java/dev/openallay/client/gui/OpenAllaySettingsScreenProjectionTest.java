@@ -86,6 +86,30 @@ final class OpenAllaySettingsScreenProjectionTest {
     }
 
     @Test
+    void fullAccessProjectsIncludedCommandsWithoutChangingCommandOnlyConfiguration() {
+        var definition = profile("alpha");
+        var models = ModelProfileSettingsView.from(new ModelProfilesConfig("alpha", List.of(definition)),
+                List.of(new ModelProfileSettingsView.Resolution(definition, true, 256_000, null)),
+                java.util.Set.of("ALPHA_KEY"), null, null);
+        var commands = dev.openallay.script.command.CommandCapabilityConfig.defaults();
+        var snapshot = new ClientSettingsSnapshot(0, GuideDisplayConfig.defaults(), models,
+                dev.openallay.settings.capability.CapabilitySettingsView.defaults(),
+                dev.openallay.settings.capability.RecipeSettingsView.defaults(), SkillSettingsView.empty(),
+                dev.openallay.settings.extension.ExtensionSettingsView.defaults(), commands,
+                new dev.openallay.script.UnrestrictedJavascriptConfig(true),
+                dev.openallay.settings.history.HistorySettingsView.disconnected(),
+                new dev.openallay.settings.diagnostics.SettingsDiagnosticsSnapshot(List.of(), Optional.empty()),
+                SettingsOperation.idle(), null);
+
+        var projection = OpenAllaySettingsScreen.project(snapshot);
+
+        assertTrue(projection.extensions().unrestrictedJavascript());
+        assertTrue(projection.extensions().experimentalCommands());
+        assertFalse(snapshot.experimentalCommands().enabled());
+        assertEquals(commands, snapshot.experimentalCommands());
+    }
+
+    @Test
     void automaticOutputProjectionKeepsExplicitMillionContextAndUnknownDisabledOutput() {
         var definition = new ModelProfileDefinition("luna", "Luna", true,
                 ModelProtocol.OPENAI_CHAT, URI.create("https://provider.example/v1/"),

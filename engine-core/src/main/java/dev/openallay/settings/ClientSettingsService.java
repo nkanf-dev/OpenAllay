@@ -188,12 +188,6 @@ public final class ClientSettingsService implements AutoCloseable {
 
         ExtensionSettingsView currentView();
 
-        default ToolResult<ExtensionSettingsView> saveCapability(
-                String extensionId, String capabilityId, boolean enabled) {
-            return new ToolResult.Failure<>(
-                    "settings_unavailable", "Extension capability settings are unavailable");
-        }
-
         default CompletableFuture<ToolResult<ExtensionSettingsView>> refreshCommunity(
                 CancellationSignal cancellation) {
             return CompletableFuture.completedFuture(new ToolResult.Failure<>(
@@ -924,26 +918,6 @@ public final class ClientSettingsService implements AutoCloseable {
         return preparePackage(SettingsOperation.domain(SettingsOperation.Kind.IMPORTING_SKILL_PACKAGE),
                 cancellation -> CompletableFuture.completedFuture(
                         skillActions.prepareLocalPackage(source)));
-    }
-
-    public CompletableFuture<ToolResult<Boolean>> saveExtensionCapability(
-            String extensionId, String capabilityId, boolean enabled) {
-        Objects.requireNonNull(extensionId, "extensionId");
-        Objects.requireNonNull(capabilityId, "capabilityId");
-        Reservation reservation = reserve(SettingsOperation.domain(
-                SettingsOperation.Kind.SAVING_EXTENSION_CAPABILITY));
-        if (!reservation.accepted()) {
-            return CompletableFuture.completedFuture(failed(reservation.failureCode()));
-        }
-        CompletableFuture<ToolResult<Boolean>> result = new CompletableFuture<>();
-        worker.execute(() -> {
-            ToolResult<ExtensionSettingsView> saved = safely(
-                    () -> extensionActions.saveCapability(extensionId, capabilityId, enabled),
-                    "settings_save_failed", "Unable to save Extension capability settings");
-            dispatcher.execute(() -> finishExtensionCommunity(
-                    reservation.id(), saved, null, result, "extension_capability_saved"));
-        });
-        return result;
     }
 
     public CompletableFuture<ToolResult<Boolean>> refreshExtensionCommunity() {

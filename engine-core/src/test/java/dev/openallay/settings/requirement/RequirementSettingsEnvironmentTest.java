@@ -128,52 +128,69 @@ final class RequirementSettingsEnvironmentTest {
     }
 
     @Test
-    void extensionCapabilityFactsTrackExactDeclarationsAndNeverOfferAutomaticGrants() {
-        var enabled = scopedExtension("enabled:extension", ExtensionSettingsView.State.ACTIVE,
-                "enabled:world_actions", true);
-        var disabled = scopedExtension("disabled:extension", ExtensionSettingsView.State.ACTIVE,
-                "disabled:world_actions", false);
-        var pending = scopedExtension("pending:extension", ExtensionSettingsView.State.RESTART_REQUIRED,
-                "pending:world_actions", true);
-        var unavailable = scopedExtension("broken:extension", ExtensionSettingsView.State.UNAVAILABLE,
-                "broken:world_actions", true);
-        var community = scopedExtension("community:extension", ExtensionSettingsView.State.COMMUNITY,
-                "community:world_actions", true);
-        var view = new ExtensionSettingsView(List.of(), List.of(), List.of(),
-                List.of(enabled, disabled, pending, unavailable, community));
-        var environment = RequirementSettingsEnvironment.from(CapabilitySettingsView.defaults(),
-                SkillSettingsView.empty(), view, CommandCapabilityConfig.defaults(),
+    void fullAccessSatisfiesCommandsButDoesNotEnableDisabledComponents() {
+        var capabilities = new CapabilitySettingsView(
+                new CapabilityPolicy(Set.of("test:disabled"), Set.of("run-game-commands", "disabled-skill")),
+                new CapabilityCatalogSnapshot(List.of(capability("test:disabled", true, false))),
+                Set.of(), Set.of());
+        var skills = new SkillSettingsView(List.of(skill("run-game-commands"),
+                skill("unrestricted-javascript"), skill("disabled-skill")), List.of());
+        var full = RequirementSettingsEnvironment.from(capabilities, skills,
+                ExtensionSettingsView.defaults(), CommandCapabilityConfig.defaults(),
                 new UnrestrictedJavascriptConfig(true));
-        var report = RequirementEvaluator.evaluate(new RequirementSet(Set.of(
-                "enabled:world_actions", "disabled:world_actions", "pending:world_actions",
-                "broken:world_actions", "community:world_actions", "unknown:world_actions"),
-                Set.of(), Set.of()), environment);
-        Map<String, RequirementStatus> statuses = report.entries().stream().collect(
-                java.util.stream.Collectors.toMap(entry -> entry.id(), entry -> entry.status()));
+        var report = RequirementEvaluator.evaluate(new RequirementSet(
+                Set.of(RequirementSettingsEnvironment.EXPERIMENTAL_COMMANDS,
+                        RequirementSettingsEnvironment.UNRESTRICTED_JAVASCRIPT),
+                Set.of(), Set.of("run-game-commands", "unrestricted-javascript")), full);
 
-        assertEquals(RequirementStatus.SATISFIED, statuses.get("enabled:world_actions"));
-        assertEquals(RequirementStatus.DISABLED, statuses.get("disabled:world_actions"));
-        assertEquals(RequirementStatus.SATISFIED, statuses.get("pending:world_actions"));
-        assertEquals(RequirementStatus.UNAVAILABLE, statuses.get("broken:world_actions"));
-        assertEquals(RequirementStatus.UNAVAILABLE, statuses.get("community:world_actions"));
-        assertEquals(RequirementStatus.UNKNOWN, statuses.get("unknown:world_actions"));
-        assertTrue(RequirementSettingsEnvironment.changes(report, CapabilitySettingsView.defaults()).isEmpty());
-        assertEquals("Native world actions", environment.capabilities().get("disabled:world_actions").name());
-        var withoutJvm = RequirementSettingsEnvironment.from(CapabilitySettingsView.defaults(),
-                SkillSettingsView.empty(), view, CommandCapabilityConfig.defaults(),
-                UnrestrictedJavascriptConfig.defaults());
-        assertEquals(environment.capabilities().get("disabled:world_actions"),
-                withoutJvm.capabilities().get("disabled:world_actions"));
+        assertEquals(RequirementStatus.SATISFIED,
+                full.capabilities().get(RequirementSettingsEnvironment.EXPERIMENTAL_COMMANDS).status());
+        assertEquals(RequirementStatus.SATISFIED,
+                full.skills().get("unrestricted-javascript").status());
+        assertEquals(RequirementStatus.DISABLED, full.skills().get("run-game-commands").status());
+        assertEquals(RequirementStatus.DISABLED, full.skills().get("disabled-skill").status());
+        assertEquals(RequirementStatus.DISABLED, full.capabilities().get("test:disabled").status());
+        assertEquals(List.of(new RequirementChange(RequirementKind.SKILL, "run-game-commands", false)),
+                RequirementSettingsEnvironment.changes(report, capabilities));
     }
 
-    private static ExtensionSettingsView.Extension scopedExtension(
-            String id, ExtensionSettingsView.State state, String scope, boolean enabled) {
-        return new ExtensionSettingsView.Extension(id, id, "1.0", "Test", "Test", state,
-                List.of("fabric"), "[26.2,26.3)", "[0.2,0.3)", "local",
-                new ExtensionSettingsView.Contributions(List.of(), List.of(), List.of(), List.of(), List.of()), "",
-                ExtensionSettingsView.PackageInfo.none(), RequirementSet.EMPTY,
-                List.of(new ExtensionSettingsView.Capability(scope, "Native world actions",
-                        "Can change the local world.", enabled)));
+    @Test
+    void commandGuidanceAvailabilityFollowsCommandOnlyOrFullAccess() {
+        var skills = new SkillSettingsView(List.of(skill("run-game-commands"),
+                skill("unrestricted-javascript")), List.of());
+        for (boolean commandOnly : List.of(false, true)) {
+            for (boolean fullAccess : List.of(false, true)) {
+                var environment = RequirementSettingsEnvironment.from(CapabilitySettingsView.defaults(),
+                        skills, ExtensionSettingsView.defaults(), new CommandCapabilityConfig(commandOnly),
+                        new UnrestrictedJavascriptConfig(fullAccess));
+
+                assertEquals(commandOnly || fullAccess ? RequirementStatus.SATISFIED : RequirementStatus.DISABLED,
+                        environment.capabilities().get(RequirementSettingsEnvironment.EXPERIMENTAL_COMMANDS).status());
+                assertEquals(commandOnly || fullAccess ? RequirementStatus.SATISFIED : RequirementStatus.UNAVAILABLE,
+                        environment.skills().get("run-game-commands").status());
+                assertEquals(fullAccess ? RequirementStatus.SATISFIED : RequirementStatus.UNAVAILABLE,
+                        environment.skills().get("unrestricted-javascript").status());
+            }
+        }
+    }
+
+    @Test
+    void activeExtensionUsesComponentAvailabilityWithoutPrivatePermissionFacts() {
+        var view = new ExtensionSettingsView(List.of(), List.of(), List.of(),
+                List.of(extension("sample:extension", ExtensionSettingsView.State.ACTIVE)));
+        for (boolean fullAccess : List.of(false, true)) {
+            var environment = RequirementSettingsEnvironment.from(CapabilitySettingsView.defaults(),
+                    SkillSettingsView.empty(), view, CommandCapabilityConfig.defaults(),
+                    new UnrestrictedJavascriptConfig(fullAccess));
+            var report = RequirementEvaluator.evaluate(new RequirementSet(
+                    Set.of("sample:world_actions"), Set.of("sample:extension"), Set.of()), environment);
+
+            assertEquals(RequirementStatus.SATISFIED, environment.extensions().get("sample:extension").status());
+            assertFalse(environment.capabilities().containsKey("sample:world_actions"));
+            assertEquals(RequirementStatus.UNKNOWN, report.entries().getFirst().status());
+            assertEquals(RequirementStatus.SATISFIED, report.entries().getLast().status());
+            assertTrue(RequirementSettingsEnvironment.changes(report, CapabilitySettingsView.defaults()).isEmpty());
+        }
     }
 
     private static CapabilitySettingsEntry capability(String id, boolean available, boolean enabled) {

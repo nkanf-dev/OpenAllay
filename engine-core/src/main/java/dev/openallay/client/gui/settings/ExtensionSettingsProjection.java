@@ -10,7 +10,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-/** Player-facing projection of Rhino roots, modules, adapters, and experimental capabilities. */
+/**
+ * Player-facing projection of Rhino roots, modules, adapters, and effective script access.
+ * The command flag includes full access; the command-only setting remains in its settings owner.
+ */
 public record ExtensionSettingsProjection(
         RuntimeCard runtime,
         List<RootCard> roots,
@@ -51,6 +54,7 @@ public record ExtensionSettingsProjection(
             boolean debugMode) {
         Objects.requireNonNull(view, "view");
         Objects.requireNonNull(commands, "commands");
+        Objects.requireNonNull(unrestricted, "unrestricted");
         return new ExtensionSettingsProjection(
                 new RuntimeCard(
                         "openallay:run_javascript",
@@ -103,10 +107,7 @@ public record ExtensionSettingsProjection(
                                 extension.packageInfo().sha256(),
                                 extension.packageInfo().updateAvailable(),
                                 extension.packageInfo().installable(),
-                                RequirementSettingsProjection.evaluate(extension.requirements(), environment),
-                                extension.capabilities().stream().map(capability -> new CapabilityCard(
-                                        capability.id(), capability.name(), capability.description(), capability.enabled()))
-                                        .toList()))
+                                RequirementSettingsProjection.evaluate(extension.requirements(), environment)))
                         .toList(),
                 new CatalogCard(
                         view.catalog().configured(),
@@ -114,12 +115,14 @@ public record ExtensionSettingsProjection(
                         view.catalog().generatedAt().map(Object::toString).orElse(""),
                         view.catalog().notice().map(ExtensionSettingsView.Notice::code).orElse(""),
                         view.catalog().notice().map(ExtensionSettingsView.Notice::message).orElse("")),
-                commands.enabled(),
+                commands.enabled() || unrestricted.enabled(),
                 unrestricted.enabled(),
                 debugMode);
     }
 
+    /** Full access includes commands; only the command-only subset can be toggled here. */
     public ExtensionSettingsProjection toggleExperimentalCommands() {
+        if (unrestrictedJavascript) return this;
         return new ExtensionSettingsProjection(
                 runtime,
                 roots,
@@ -215,10 +218,8 @@ public record ExtensionSettingsProjection(
             String sha256,
             boolean updateAvailable,
             boolean installable,
-            RequirementSettingsProjection requirements,
-            List<CapabilityCard> capabilities) {
+            RequirementSettingsProjection requirements) {
         public ExtensionCard {
-            capabilities = List.copyOf(capabilities);
             loaders = List.copyOf(loaders);
             Objects.requireNonNull(state, "state");
             Objects.requireNonNull(contributions, "contributions");
@@ -227,8 +228,6 @@ public record ExtensionSettingsProjection(
             sha256 = sha256 == null ? "" : sha256;
         }
     }
-
-    public record CapabilityCard(String id, String name, String description, boolean enabled) {}
 
     private static String renderSchema(HostSchema schema, int depth) {
         if (depth >= 5) {

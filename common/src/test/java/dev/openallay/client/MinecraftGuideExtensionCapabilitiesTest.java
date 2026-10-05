@@ -2,6 +2,8 @@ package dev.openallay.client;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -9,8 +11,6 @@ import com.google.gson.Gson;
 import dev.openallay.OpenAllayRuntime;
 import dev.openallay.context.ToolInvocationContext;
 import dev.openallay.devmode.DevelopmentToolInspector;
-import dev.openallay.extension.ExtensionCapability;
-import dev.openallay.extension.ExtensionCapabilityPolicy;
 import dev.openallay.extension.JavascriptInvocationContext;
 import dev.openallay.extension.JavascriptInvocationParticipant;
 import dev.openallay.extension.JavascriptInvocationScope;
@@ -30,58 +30,63 @@ import dev.openallay.tool.ToolRegistry;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 
 final class MinecraftGuideExtensionCapabilitiesTest {
     @Test
-    void localFreezeKeepsIndependentGrantUntilCloseThenNewRequestUsesCurrentPolicy() {
+    void activeExtensionParticipatesWithoutAnAdditionalPlayerGrant() {
         Fixture fixture = new Fixture();
-        fixture.runtime.extensions().replaceCapabilityPolicy(fixture.granted());
-        fixture.provider.freezeRequest("local", true);
-        fixture.runtime.extensions().replaceCapabilityPolicy(ExtensionCapabilityPolicy.defaults());
         fixture.provider.freezeRequest("local", true);
         JavascriptInvocationScope scope = fixture.open("local");
-        assertTrue(fixture.authority.get().hasCapability("sample:world_actions"));
+        JavascriptInvocationContext admitted = fixture.authority.get();
+        admitted.requireActive();
+
+        assertEquals("sample:extension", admitted.extensionId());
+        assertEquals("local", admitted.invocation().correlationId());
         assertFalse(fixture.unrestricted.enabledFor("local"));
         assertEquals(1, fixture.runtime.extensions().activeJavascriptInvocations());
-
         fixture.provider.closeRequest("local");
         assertTrue(scope.cancellation().isCancelled());
-        assertThrows(RuntimeException.class,
-                () -> fixture.authority.get().hasCapability("sample:world_actions"));
+        assertThrows(RuntimeException.class, admitted::requireActive);
         assertEquals(0, fixture.runtime.extensions().activeJavascriptInvocations());
         scope.close();
+
         fixture.provider.freezeRequest("local", true);
         try (JavascriptInvocationScope replacement = fixture.open("local")) {
-            assertFalse(fixture.authority.get().hasCapability("sample:world_actions"));
+            JavascriptInvocationContext readmitted = fixture.authority.get();
+            readmitted.requireActive();
+            assertNotSame(admitted, readmitted);
+            assertEquals("sample:extension", readmitted.extensionId());
+            assertEquals("local", readmitted.invocation().correlationId());
+            assertSame(readmitted.cancellation(), replacement.cancellation());
         }
         fixture.provider.closeRequest("local");
+        assertEquals(0, fixture.runtime.extensions().activeJavascriptInvocations());
     }
 
     @Test
-    void unrestrictedJvmNeverCreatesScopedGrantAndServerFreezeOverridesReusedLocalId() {
+    void fullAccessDoesNotChangeRegisteredComponentAvailabilityOrExecutionLifetime() {
         Fixture fixture = new Fixture();
         fixture.unrestricted.replace(new UnrestrictedJavascriptConfig(true));
         fixture.provider.freezeRequest("jvm", true);
+        JavascriptInvocationContext admitted;
         try (JavascriptInvocationScope scope = fixture.open("jvm")) {
+            admitted = fixture.authority.get();
+            admitted.requireActive();
+            assertEquals("sample:extension", admitted.extensionId());
             assertTrue(fixture.unrestricted.enabledFor("jvm"));
-            assertFalse(fixture.authority.get().hasCapability("sample:world_actions"));
+            assertFalse(scope.cancellation().isCancelled());
         }
+        assertTrue(admitted.cancellation().isCancelled());
+        assertThrows(RuntimeException.class, admitted::requireActive);
         fixture.provider.closeRequest("jvm");
-        fixture.runtime.extensions().replaceCapabilityPolicy(fixture.granted());
-        fixture.provider.freezeRequest("server", true);
-        fixture.provider.freezeRequest("server", false);
-        try (JavascriptInvocationScope scope = fixture.open("server")) {
-            assertFalse(fixture.authority.get().hasCapability("sample:world_actions"));
-        }
-        fixture.provider.closeRequest("server");
+        assertEquals(0, fixture.runtime.extensions().activeJavascriptInvocations());
     }
 
     @Test
-    void capturePathsFreezeExtensionAuthorityBeforeContextCaptureIncludingServerFallback() throws Exception {
+    void capturePathsFreezeSettingsBeforeContextCaptureIncludingServerFallback() throws Exception {
         Path current = Path.of("").toAbsolutePath().normalize();
         Path root = current.getFileName().toString().equals("common") ? current.getParent() : current;
         String source = Files.readString(root.resolve(
@@ -90,8 +95,9 @@ final class MinecraftGuideExtensionCapabilitiesTest {
         int capture = source.indexOf("private ToolResult<ToolInvocationContext> capture(");
         assertTrue(source.substring(server, capture).contains("capture(capabilities, correlationId, false)"));
         String captureBody = source.substring(capture, source.indexOf("public RecipeProviderReadiness", capture));
-        assertTrue(captureBody.contains("freezeJavascriptRequest(correlationId, clientLocalModel)"));
-        assertTrue(captureBody.indexOf("freezeJavascriptRequest(") < captureBody.indexOf("client.player == null"));
+        assertTrue(captureBody.contains("freezeJavascriptAndCommands(correlationId, clientLocalModel)"));
+        assertTrue(captureBody.indexOf("freezeJavascriptAndCommands(") < captureBody.indexOf("client.player == null"));
+        assertFalse(source.contains("runtime.extensions().freezeJavascriptRequest("));
     }
 
     private static final class Fixture {
@@ -112,7 +118,7 @@ final class MinecraftGuideExtensionCapabilitiesTest {
             assertEquals(OpenAllayExtensionState.ACTIVE, runtime.extensions().register(new OpenAllayExtension() {
                 @Override public OpenAllayExtensionDescriptor descriptor() {
                     return new OpenAllayExtensionDescriptor("sample:extension", "Sample", "1.0.0", "Provider",
-                            "Native actions", Set.of("fabric"), "[26.2,26.3)", "[0.2,0.3)", "bundled");
+                            "Native actions", Set.of("fabric"), "[26.2,26.3)", "[0.4,0.5)", "bundled");
                 }
                 @Override public OpenAllayExtensionContribution contribution() {
                     return new OpenAllayExtensionContribution(List.of(), List.of(), List.of(), List.of(),
@@ -122,16 +128,11 @@ final class MinecraftGuideExtensionCapabilitiesTest {
                                     authority.set(context);
                                     return () -> {};
                                 }
-                            }), List.of(), List.of(new ExtensionCapability("sample:world_actions",
-                                    "Native world actions", "Can change the local world.")));
+                            }), List.of());
                 }
             }).state());
             provider = new MinecraftGuideContextProvider(runtime, null, new Gson(), getClass().getClassLoader());
             provider.setUnrestrictedJavascriptRuntime(unrestricted);
-        }
-
-        private ExtensionCapabilityPolicy granted() {
-            return new ExtensionCapabilityPolicy(Map.of("sample:extension", Set.of("sample:world_actions")));
         }
 
         private JavascriptInvocationScope open(String id) {

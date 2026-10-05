@@ -1621,7 +1621,6 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                             extension,
                             Math.max(80, detail.width() - 20),
                             projection.debugMode())));
-            selectedExtension().ifPresent(extension -> addExtensionCapabilityActions(extension, detail));
             int actionY = detail.bottom() - 106;
             if (extensionTab == ExtensionTab.COMMUNITY
                     || selectedExtension().map(
@@ -1668,72 +1667,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
         if (debugMode && !extension.sha256().isBlank()) {
             height += wrappedHeight(Component.literal(extension.sha256()), width, 10) + 12;
         }
-        if (!extension.capabilities().isEmpty()) {
-            height += extensionCapabilityHeaderHeight(width);
-            for (var capability : extension.capabilities()) {
-                height += 26 + wrappedHeight(Component.literal(capability.description()), width, 10) + 8;
-            }
-        }
         return height + 82;
-    }
-
-    private int extensionCapabilityHeaderHeight(int width) {
-        return wrappedHeight(Component.translatable(
-                "screen.openallay.settings.extensions.capabilities.title"), width, 11)
-                + 4 + wrappedHeight(Component.translatable(
-                        "screen.openallay.settings.extensions.capabilities.description"), width, 10) + 8;
-    }
-
-    private int extensionCapabilityActionsY(
-            ExtensionSettingsProjection.ExtensionCard extension, SettingsLayout.Rect area, int width) {
-        Component name = Component.literal(extension.name()).copy().append(" · ")
-                .append(Component.translatable(extensionStateKey(extension)));
-        return area.y() + 32 - pageScroll
-                + wrappedHeight(name, width, 11) + 4
-                + wrappedHeight(Component.literal(extension.summary()), width, 10) + 7
-                + extensionCapabilityHeaderHeight(width);
-    }
-
-    private void addExtensionCapabilityActions(
-            ExtensionSettingsProjection.ExtensionCard extension, SettingsLayout.Rect area) {
-        int x = area.x() + 10;
-        int width = Math.max(80, area.width() - 20);
-        int y = extensionCapabilityActionsY(extension, area, width);
-        int bottomInset = extensionTab == ExtensionTab.COMMUNITY || extension.installable() ? 114 : 62;
-        for (var capability : extension.capabilities()) {
-            Button toggle = addRenderableWidget(OpenAllayButton.create(
-                            Component.translatable(capability.enabled()
-                                            ? "screen.openallay.settings.extensions.capabilities.enabled"
-                                            : "screen.openallay.settings.extensions.capabilities.disabled",
-                                    capability.name()),
-                            ignored -> accept(service.saveExtensionCapability(
-                                    extension.id(), capability.id(), !capability.enabled())))
-                    .selected(capability.enabled())
-                    .tooltip(Tooltip.create(Component.literal(capability.description())))
-                    .bounds(x, y, width, 20).build());
-            toggle.active = snapshot.operation().kind() == SettingsOperation.Kind.IDLE
-                    && (extension.state() == dev.openallay.settings.extension.ExtensionSettingsView.State.ACTIVE
-                            || extension.state() == dev.openallay.settings.extension.ExtensionSettingsView.State.RESTART_REQUIRED);
-            toggle.visible = y >= area.y() + 28 && y + 20 <= area.bottom() - bottomInset;
-            y += 26 + wrappedHeight(Component.literal(capability.description()), width, 10) + 8;
-        }
-    }
-
-    private int renderExtensionCapabilities(
-            GuideGraphics graphics, ExtensionSettingsProjection.ExtensionCard extension,
-            int x, int y, int width) {
-        if (extension.capabilities().isEmpty()) return y;
-        y = renderWrapped(graphics, Component.translatable(
-                "screen.openallay.settings.extensions.capabilities.title"), x, y, width, ACCENT, 11);
-        y = renderWrapped(graphics, Component.translatable(
-                "screen.openallay.settings.extensions.capabilities.description"), x, y + 4, width, MUTED, 10);
-        y += 8;
-        for (var capability : extension.capabilities()) {
-            // The native switch occupies the same scroll position in addExtensionCapabilityActions.
-            y = renderWrapped(graphics, Component.literal(capability.description()),
-                    x, y + 26, width, MUTED, 10) + 8;
-        }
-        return y;
     }
 
     private void addExtensionCommunityActions(
@@ -1800,19 +1734,21 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
             int x,
             int y,
             int width) {
-        Button commands = OpenAllayButton.create(
-                        Component.translatable(
-                                projection.experimentalCommands()
-                                        ? "screen.openallay.settings.extensions.commands.disable"
-                                        : "screen.openallay.settings.extensions.commands.enable"),
-                        ignored -> accept(service.saveExperimentalCommands(
-                                !projection.experimentalCommands())))
-                .bounds(x, y, width, 20)
-                .build();
-        commands.active = snapshot.operation().kind() == SettingsOperation.Kind.IDLE;
-        commands.setTooltip(Tooltip.create(Component.translatable(
-                "screen.openallay.settings.extensions.commands.description")));
-        addRenderableWidget(commands);
+        if (!projection.unrestrictedJavascript()) {
+            Button commands = OpenAllayButton.create(
+                            Component.translatable(
+                                    projection.experimentalCommands()
+                                            ? "screen.openallay.settings.extensions.commands.disable"
+                                            : "screen.openallay.settings.extensions.commands.enable"),
+                            ignored -> accept(service.saveExperimentalCommands(
+                                    !projection.experimentalCommands())))
+                    .bounds(x, y, width, 20)
+                    .build();
+            commands.active = snapshot.operation().kind() == SettingsOperation.Kind.IDLE;
+            commands.setTooltip(Tooltip.create(Component.translatable(
+                    "screen.openallay.settings.extensions.commands.description")));
+            addRenderableWidget(commands);
+        }
         Button unrestricted = OpenAllayButton.create(
                         Component.translatable(projection.unrestrictedJavascript()
                                 ? "screen.openallay.settings.extensions.unrestricted.disable"
@@ -2736,6 +2672,12 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
             return;
         }
         ExtensionSettingsProjection projection = extensionProjection();
+        if (projection.unrestrictedJavascript()) {
+            renderWrapped(graphics, Component.translatable(
+                            "screen.openallay.settings.extensions.commands.included"),
+                    area.x() + 9, area.bottom() - 52,
+                    Math.max(80, area.width() - 18), ACCENT, 10);
+        }
         graphics.text(
                 font,
                 Component.translatable(extensionTab == ExtensionTab.INSTALLED
@@ -2792,7 +2734,6 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                 MUTED,
                 10);
         y += 7;
-        y = renderExtensionCapabilities(graphics, extension, x, y, width);
         y = extensionDetailLine(
                 graphics,
                 "screen.openallay.settings.extensions.detail.version",

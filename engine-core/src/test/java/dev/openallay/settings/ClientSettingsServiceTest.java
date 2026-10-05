@@ -516,39 +516,85 @@ final class ClientSettingsServiceTest {
     }
 
     @Test
-    void extensionCapabilitySaveRunsOnWorkerAndPublishesOnlySuccessfulResult() {
+    void commandOnlySaveRunsOnWorkerAndPublishesOnlySuccessfulResult() {
         FakeModels models = new FakeModels(state(config("alpha")));
         FakeExtensions extensions = new FakeExtensions();
+        FakeDomains domains = new FakeDomains();
         ManualExecutor worker = new ManualExecutor();
-        ClientSettingsService service = service(models, new FakeDomains(),
+        ClientSettingsService service = service(models, domains,
                 new FakeDisplay(GuideDisplayConfig.defaults()), new FakeSkills(), extensions,
                 new FakeHistory(), worker);
         ExtensionSettingsView before = service.snapshot().extensions();
-        CompletableFuture<ToolResult<Boolean>> pending =
-                service.saveExtensionCapability("community:demo", "demo:world_actions", true);
+        CompletableFuture<ToolResult<Boolean>> pending = service.saveExperimentalCommands(true);
 
+        assertEquals(0, domains.commandSaves);
         assertFalse(pending.isDone());
-        assertEquals(0, extensions.capabilitySaves);
-        assertEquals(SettingsOperation.Kind.SAVING_EXTENSION_CAPABILITY, service.snapshot().operation().kind());
-        assertFailure(service.saveExperimentalCommands(true).join(), "settings_busy");
+        assertFalse(service.snapshot().experimentalCommands().enabled());
+        assertEquals(SettingsOperation.Kind.SAVING_EXPERIMENTAL_COMMANDS, service.snapshot().operation().kind());
+        assertFailure(service.saveExperimentalCommands(false).join(), "settings_busy");
         assertEquals(before, service.snapshot().extensions());
         worker.runNext();
         assertSuccess(pending.join());
-        assertEquals(1, extensions.capabilitySaves);
-        assertTrue(service.snapshot().extensions().extensions().stream()
-                .filter(extension -> extension.id().equals("community:demo")).findFirst().orElseThrow()
-                .capabilities().getFirst().enabled());
+        assertTrue(service.snapshot().experimentalCommands().enabled());
         assertFalse(service.snapshot().unrestrictedJavascript().enabled());
-        assertEquals("extension_capability_saved", service.snapshot().notice().code());
+        assertEquals(before, service.snapshot().extensions());
+        assertEquals("experimental_commands_saved", service.snapshot().notice().code());
+        assertEquals(1, domains.commandSaves);
         assertEquals(SettingsOperation.Kind.IDLE, service.snapshot().operation().kind());
-        ExtensionSettingsView published = service.snapshot().extensions();
-        extensions.failCapabilitySave = true;
-        CompletableFuture<ToolResult<Boolean>> failed =
-                service.saveExtensionCapability("community:demo", "demo:world_actions", false);
+
+        domains.commandFailure = new ToolResult.Failure<>("settings_write_failed", "Unable to save settings");
+        CompletableFuture<ToolResult<Boolean>> failed = service.saveExperimentalCommands(false);
+        assertFalse(failed.isDone());
         worker.runNext();
         assertFailure(failed.join(), "settings_write_failed");
-        assertEquals(published, service.snapshot().extensions());
+        assertTrue(service.snapshot().experimentalCommands().enabled());
+        assertEquals(before, service.snapshot().extensions());
         assertEquals(SettingsOperation.Kind.IDLE, service.snapshot().operation().kind());
+        domains.commandFailure = null;
+        CompletableFuture<ToolResult<Boolean>> disabled = service.saveExperimentalCommands(false);
+        worker.runNext();
+        assertSuccess(disabled.join());
+        assertFalse(service.snapshot().experimentalCommands().enabled());
+        assertEquals(before, service.snapshot().extensions());
+        assertEquals(SettingsOperation.Kind.IDLE, service.snapshot().operation().kind());
+    }
+
+    @Test
+    void fullAccessUpdatesCommandRequirementWithoutChangingStoredCommandOnlyChoice() {
+        FakeDomains domains = new FakeDomains();
+        FakeSkills skills = new FakeSkills();
+        skills.requirements = new RequirementSet(
+                Set.of(RequirementSettingsEnvironment.EXPERIMENTAL_COMMANDS), Set.of(), Set.of());
+        ManualExecutor worker = new ManualExecutor();
+        ClientSettingsService service = requirementService(domains, skills, worker);
+        var preparing = service.installCommunitySkill("demo");
+        worker.runAll();
+        assertSuccess(preparing.join());
+        var preview = service.snapshot().requirementReview().orElseThrow();
+        assertEquals(RequirementStatus.DISABLED, preview.report().entries().getFirst().status());
+
+        var fullAccess = service.saveUnrestrictedJavascript(true);
+        assertFalse(fullAccess.isDone());
+        assertFalse(service.snapshot().unrestrictedJavascript().enabled());
+        worker.runAll();
+        assertSuccess(fullAccess.join());
+        assertFalse(service.snapshot().experimentalCommands().enabled());
+        assertEquals(RequirementStatus.SATISFIED,
+                service.snapshot().requirementReview().orElseThrow().report().entries().getFirst().status());
+        assertTrue(service.snapshot().requirementReview().orElseThrow().changes().isEmpty());
+        assertFailure(service.enablePackageRequirement(preview.token(), RequirementKind.CAPABILITY,
+                RequirementSettingsEnvironment.EXPERIMENTAL_COMMANDS, false).join(), "requirement_not_enableable");
+        assertEquals(0, skills.prepared.commits);
+
+        var normal = service.saveUnrestrictedJavascript(false);
+        worker.runAll();
+        assertSuccess(normal.join());
+        assertFalse(service.snapshot().experimentalCommands().enabled());
+        assertEquals(RequirementStatus.DISABLED,
+                service.snapshot().requirementReview().orElseThrow().report().entries().getFirst().status());
+        assertEquals(List.of(new dev.openallay.settings.requirement.RequirementChange(
+                        RequirementKind.CAPABILITY, RequirementSettingsEnvironment.EXPERIMENTAL_COMMANDS, false)),
+                service.snapshot().requirementReview().orElseThrow().changes());
     }
 
     @Test
@@ -1070,6 +1116,8 @@ final class ClientSettingsServiceTest {
                     @Override
                     public ToolResult<CommandCapabilityConfig> save(
                             CommandCapabilityConfig candidate) {
+                        domains.commandSaves++;
+                        if (domains.commandFailure != null) return domains.commandFailure;
                         return new ToolResult.Success<>(candidate);
                     }
 
@@ -1136,6 +1184,8 @@ final class ClientSettingsServiceTest {
                     @Override
                     public ToolResult<CommandCapabilityConfig> save(
                             CommandCapabilityConfig candidate) {
+                        domains.commandSaves++;
+                        if (domains.commandFailure != null) return domains.commandFailure;
                         return new ToolResult.Success<>(candidate);
                     }
 
@@ -1381,6 +1431,8 @@ final class ClientSettingsServiceTest {
                 Set.of());
         private RecipeSettingsView recipes = RecipeSettingsView.defaults();
         private ToolResult.Failure<CapabilitySettingsView> capabilityFailure;
+        private ToolResult.Failure<CommandCapabilityConfig> commandFailure;
+        private int commandSaves;
         private int capabilitySaves;
         private int unrestrictedSaves;
         private int capabilityReloads;
@@ -1560,29 +1612,6 @@ final class ClientSettingsServiceTest {
     private static final class FakeExtensions
             implements ClientSettingsService.ExtensionActions {
         private ExtensionSettingsView current;
-        private int capabilitySaves;
-        private boolean failCapabilitySave;
-
-        @Override
-        public ToolResult<ExtensionSettingsView> saveCapability(
-                String extensionId, String capabilityId, boolean enabled) {
-            capabilitySaves++;
-            if (failCapabilitySave) return new ToolResult.Failure<>("settings_write_failed", "Unable to save settings");
-            ExtensionSettingsView.Extension previous = current.extensions().stream()
-                    .filter(extension -> extension.id().equals(extensionId)).findFirst().orElseThrow();
-            ExtensionSettingsView.Extension replacement = new ExtensionSettingsView.Extension(
-                    previous.id(), previous.name(), previous.version(), previous.provider(), previous.summary(),
-                    previous.state(), previous.loaders(), previous.minecraftVersionRange(),
-                    previous.openAllayApiVersionRange(), previous.source(), previous.contributions(),
-                    previous.diagnostic(), previous.packageInfo(), previous.requirements(),
-                    List.of(new ExtensionSettingsView.Capability(capabilityId, "Native world actions",
-                            "Can change the local world.", enabled)));
-            current = new ExtensionSettingsView(current.roots(), current.bundledModules(), current.adapters(),
-                    current.extensions().stream().map(extension -> extension.id().equals(extensionId)
-                            ? replacement : extension).toList(), current.catalog());
-            return new ToolResult.Success<>(current);
-        }
-
         @Override
         public CompletableFuture<ToolResult<PreparedPackageInstall>> prepareCommunity(
                 String id, CancellationSignal cancellation) {

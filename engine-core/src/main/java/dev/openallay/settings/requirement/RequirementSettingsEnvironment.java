@@ -34,6 +34,7 @@ public final class RequirementSettingsEnvironment {
             CapabilitySettingsView capabilities, SkillSettingsView skills,
             ExtensionSettingsView extensions, CommandCapabilityConfig commands,
             UnrestrictedJavascriptConfig unrestricted) {
+        boolean commandsAvailable = commands.enabled() || unrestricted.enabled();
         Map<String, RequirementAvailability> capabilityFacts = new TreeMap<>();
         for (var entry : capabilities.catalog().entries()) {
             if (entry.kind() == CapabilityKind.SKILL) continue;
@@ -48,17 +49,10 @@ public final class RequirementSettingsEnvironment {
         capabilityFacts.put(UNRESTRICTED_JAVASCRIPT_ALIAS,
                 fact(UNRESTRICTED_JAVASCRIPT_ALIAS, unrestrictedStatus));
         capabilityFacts.put(EXPERIMENTAL_COMMANDS, fact(EXPERIMENTAL_COMMANDS,
-                commands.enabled() ? RequirementStatus.SATISFIED : RequirementStatus.DISABLED));
+                commandsAvailable ? RequirementStatus.SATISFIED : RequirementStatus.DISABLED));
 
         Map<String, RequirementAvailability> extensionFacts = new TreeMap<>();
         for (var extension : extensions.extensions()) {
-            boolean active = extension.state() == ExtensionSettingsView.State.ACTIVE
-                    || extension.state() == ExtensionSettingsView.State.RESTART_REQUIRED;
-            for (var capability : extension.capabilities()) {
-                capabilityFacts.put(capability.id(), fact(capability.name(), !active
-                        ? RequirementStatus.UNAVAILABLE
-                        : capability.enabled() ? RequirementStatus.SATISFIED : RequirementStatus.DISABLED));
-            }
             extensionFacts.put(extension.id(), fact(extension.name(), switch (extension.state()) {
                 case ACTIVE -> RequirementStatus.SATISFIED;
                 case RESTART_REQUIRED -> RequirementStatus.RESTART_REQUIRED;
@@ -69,7 +63,7 @@ public final class RequirementSettingsEnvironment {
         Map<String, RequirementAvailability> skillFacts = new TreeMap<>();
         for (var skill : skills.skills()) {
             String id = skill.metadata().name();
-            boolean runtimeUnavailable = (id.equals("run-game-commands") && !commands.enabled())
+            boolean runtimeUnavailable = (id.equals("run-game-commands") && !commandsAvailable)
                     || (id.equals("unrestricted-javascript") && !unrestricted.enabled());
             skillFacts.put(id, fact(id, runtimeUnavailable ? RequirementStatus.UNAVAILABLE
                     : capabilities.policy().disabledSkills().contains(id)

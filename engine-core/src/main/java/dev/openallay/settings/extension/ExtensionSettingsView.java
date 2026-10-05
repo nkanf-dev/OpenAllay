@@ -4,7 +4,6 @@ import dev.openallay.script.JavascriptModuleCatalog;
 import dev.openallay.requirement.RequirementSet;
 import dev.openallay.script.data.MinecraftAgentHostGraph;
 import dev.openallay.extension.OpenAllayExtensionRegistry;
-import dev.openallay.extension.ExtensionCapabilityPolicy;
 import dev.openallay.script.extension.JavascriptDataModuleRegistry;
 import dev.openallay.script.schema.HostRootDescriptor;
 import dev.openallay.script.schema.HostSchema;
@@ -65,9 +64,8 @@ public record ExtensionSettingsView(
         List<Extension> extensions = new java.util.ArrayList<>();
         extensions.add(core(roots, modules, adapters));
         if (extensionRegistry != null) {
-            ExtensionCapabilityPolicy policy = extensionRegistry.capabilityPolicy();
             extensionRegistry.snapshot().extensions().stream()
-                    .map(extension -> Extension.from(extension, policy))
+                    .map(Extension::from)
                     .forEach(extensions::add);
         }
         return new ExtensionSettingsView(
@@ -251,15 +249,6 @@ public record ExtensionSettingsView(
         }
     }
 
-    /** User-visible risk metadata and independent grant state for one declared scope. */
-    public record Capability(String id, String name, String description, boolean enabled) {
-        public Capability {
-            id = ExtensionCapabilityPolicy.requireCapabilityId(id);
-            name = require(name, "name");
-            description = require(description, "description");
-        }
-    }
-
     public record Extension(
             String id,
             String name,
@@ -274,18 +263,7 @@ public record ExtensionSettingsView(
             Contributions contributions,
             String diagnostic,
             PackageInfo packageInfo,
-            RequirementSet requirements,
-            List<Capability> capabilities) {
-        public Extension(
-                String id, String name, String version, String provider, String summary,
-                State state, List<String> loaders, String minecraftVersionRange,
-                String openAllayApiVersionRange, String source, Contributions contributions,
-                String diagnostic, PackageInfo packageInfo, RequirementSet requirements) {
-            this(id, name, version, provider, summary, state, loaders, minecraftVersionRange,
-                    openAllayApiVersionRange, source, contributions, diagnostic, packageInfo,
-                    requirements, List.of());
-        }
-
+            RequirementSet requirements) {
         public Extension {
             id = require(id, "id");
             name = require(name, "name");
@@ -302,8 +280,6 @@ public record ExtensionSettingsView(
             diagnostic = diagnostic == null ? "" : diagnostic;
             Objects.requireNonNull(packageInfo, "packageInfo");
             Objects.requireNonNull(requirements, "requirements");
-            capabilities = List.copyOf(capabilities).stream()
-                    .sorted(Comparator.comparing(Capability::id)).toList();
         }
 
         public Extension(
@@ -346,7 +322,7 @@ public record ExtensionSettingsView(
         }
 
         private static Extension from(
-                OpenAllayExtensionRegistry.ExtensionView extension, ExtensionCapabilityPolicy policy) {
+                OpenAllayExtensionRegistry.ExtensionView extension) {
             var descriptor = extension.descriptor();
             return new Extension(
                     descriptor.id(),
@@ -368,12 +344,7 @@ public record ExtensionSettingsView(
                             extension.hostBindings()),
                     extension.diagnostic(),
                     PackageInfo.none(),
-                    descriptor.requirements(),
-                    extension.capabilities().stream()
-                            .map(capability -> new Capability(
-                                    capability.id(), capability.name(), capability.description(),
-                                    policy.allows(descriptor.id(), capability.id())))
-                            .toList());
+                    descriptor.requirements());
         }
     }
 
