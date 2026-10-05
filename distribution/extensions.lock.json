@@ -1,7 +1,7 @@
 {
   "source": {
     "repository": "https://github.com/nkanf-dev/OpenAllay-Extensions.git",
-    "revision": "79935e9ce37d74956d1141835869c343491f7d38"
+    "revision": "63535a1a3c327adee81f287097a5760c67a9c237"
   },
   "project": "extensions/minecraft-builder",
   "version": "0.4.0",
