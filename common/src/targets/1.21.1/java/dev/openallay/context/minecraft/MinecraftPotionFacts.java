@@ -7,6 +7,8 @@ import net.minecraft.world.item.alchemy.Potion;
 final class MinecraftPotionFacts {
     private MinecraftPotionFacts() {}
     static String name(Potion potion) {
-        return potion.getName(BuiltInRegistries.POTION.getResourceKey(potion), "");
+        return potion.getName(BuiltInRegistries.POTION.getResourceKey(potion)
+                .flatMap(BuiltInRegistries.POTION::getHolder)
+                .map(holder -> (net.minecraft.core.Holder<Potion>) holder), "");
     }
 }
