@@ -76,7 +76,7 @@ jobs:
         run: ./gradlew --max-workers=2 -PminecraftTarget="$OPENALLAY_MINECRAFT_TARGET" -PbundleExtensions=false :fabric:assemble :neoforge:assemble
 
       - name: Verify native package engine identity and metadata
-        run: python3 -B scripts/verify-native-target-package.py --target "$OPENALLAY_MINECRAFT_TARGET"
+        run: python3 -B scripts/verify-native-target-package.py --target "$OPENALLAY_MINECRAFT_TARGET" | tee native-package-check.json
 
       - name: Retain native packages and build reports
         if: always()
@@ -86,7 +86,17 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
           path: |
+            native-package-check.json
             fabric/build/libs/*.jar
             neoforge/build/libs/*.jar
             build/reports/problems/
             common/build/reports/
+
+      - name: Record native package checks in the job summary
+        if: always()
+        run: |
+          if test -f native-package-check.json; then
+            printf '### Native package check\n```json\n' >> "$GITHUB_STEP_SUMMARY"
+            cat native-package-check.json >> "$GITHUB_STEP_SUMMARY"
+            printf '\n```\n' >> "$GITHUB_STEP_SUMMARY"
+          fi
