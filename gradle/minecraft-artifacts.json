@@ -1,0 +1,135 @@
+{
+  "defaultTarget": "26.2",
+  "targetOrder": [
+    "1.20.1",
+    "1.20.2",
+    "1.20.3",
+    "1.20.4",
+    "1.20.5",
+    "1.20.6",
+    "1.21",
+    "1.21.1",
+    "1.21.2",
+    "1.21.3",
+    "1.21.4",
+    "1.21.5",
+    "1.21.6",
+    "1.21.7",
+    "1.21.8",
+    "1.21.9",
+    "1.21.10",
+    "1.21.11",
+    "26.1",
+    "26.1.1",
+    "26.1.2",
+    "26.2",
+    "26.3"
+  ],
+  "acceptedFamilies": [
+    {
+      "id": "fabric-26.2",
+      "loader": "fabric",
+      "buildTarget": "26.2",
+      "supportedTargets": [
+        "26.2"
+      ],
+      "filenameTemplate": "openallay-fabric-26.2-{version}.jar"
+    },
+    {
+      "id": "neoforge-26.2",
+      "loader": "neoforge",
+      "buildTarget": "26.2",
+      "supportedTargets": [
+        "26.2"
+      ],
+      "filenameTemplate": "openallay-neoforge-26.2-{version}.jar"
+    }
+  ],
+  "candidateIntervals": [
+    {
+      "loaders": [
+        "fabric",
+        "neoforge"
+      ],
+      "buildTarget": "26.1",
+      "targets": [
+        "26.1",
+        "26.1.1",
+        "26.1.2"
+      ],
+      "publishing": false
+    },
+    {
+      "loaders": [
+        "fabric",
+        "neoforge"
+      ],
+      "buildTarget": "1.21.9",
+      "targets": [
+        "1.21.9",
+        "1.21.10"
+      ],
+      "publishing": false
+    },
+    {
+      "loaders": [
+        "fabric",
+        "neoforge"
+      ],
+      "buildTarget": "1.21.7",
+      "targets": [
+        "1.21.7",
+        "1.21.8"
+      ],
+      "publishing": false
+    },
+    {
+      "loaders": [
+        "fabric",
+        "neoforge"
+      ],
+      "buildTarget": "1.21.2",
+      "targets": [
+        "1.21.2",
+        "1.21.3"
+      ],
+      "publishing": false
+    },
+    {
+      "loaders": [
+        "fabric",
+        "neoforge"
+      ],
+      "buildTarget": "1.21",
+      "targets": [
+        "1.21",
+        "1.21.1"
+      ],
+      "publishing": false
+    },
+    {
+      "loaders": [
+        "fabric",
+        "neoforge"
+      ],
+      "buildTarget": "1.20.5",
+      "targets": [
+        "1.20.5",
+        "1.20.6"
+      ],
+      "publishing": false
+    },
+    {
+      "loaders": [
+        "fabric",
+        "neoforge"
+      ],
+      "buildTarget": "1.20.3",
+      "targets": [
+        "1.20.3",
+        "1.20.4"
+      ],
+      "publishing": false
+    }
+  ]
+}
