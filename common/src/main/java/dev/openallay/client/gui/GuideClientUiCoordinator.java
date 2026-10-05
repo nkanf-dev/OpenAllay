@@ -35,10 +35,19 @@ public final class GuideClientUiCoordinator implements AutoCloseable {
     private final GuideHudRenderer renderer;
     private final GuideNativeToastPort notificationPort;
     private final GuidePresentationCoordinator presentation;
+    private final Runnable releaseResourceReload;
 
     public GuideClientUiCoordinator(Minecraft minecraft, GuideServiceManager services,
             RecipeClientRuntime recipes, GuideDisplayRuntime display, ClientSettingsService settings,
             Path configDirectory, ClientEventDispatcher dispatcher, Clock clock) {
+        this(minecraft, services, recipes, display, settings, configDirectory, dispatcher, clock, null);
+    }
+
+    /** The loader installs its native listener early, then binds this renderer's lifetime. */
+    public GuideClientUiCoordinator(Minecraft minecraft, GuideServiceManager services,
+            RecipeClientRuntime recipes, GuideDisplayRuntime display, ClientSettingsService settings,
+            Path configDirectory, ClientEventDispatcher dispatcher, Clock clock,
+            Function<Runnable, Runnable> resourceReloadRegistration) {
         this.minecraft = Objects.requireNonNull(minecraft, "minecraft");
         renderer = new GuideHudRenderer(minecraft);
         notificationPort = new GuideNativeToastPort(minecraft);
@@ -47,8 +56,18 @@ public final class GuideClientUiCoordinator implements AutoCloseable {
                 notificationPort, service -> GuideClientUiStates.create(service, dispatcher),
                 drafts -> VoiceClientRuntimes.create(configDirectory, drafts, dispatcher::execute));
         host.bindHudView(presentation.hud()::view);
-        if (minecraft.getResourceManager() instanceof ReloadableResourceManager resources) {
-            resources.registerReloadListener((ResourceManagerReloadListener) ignored -> renderer.invalidateLayout());
+        Runnable invalidateLayout = () -> {
+            if (!presentation.closed()) renderer.invalidateLayout();
+        };
+        if (resourceReloadRegistration != null) {
+            releaseResourceReload = Objects.requireNonNull(
+                    resourceReloadRegistration.apply(invalidateLayout), "releaseResourceReload");
+        } else {
+            // Preserve the existing Fabric/older-loader registration path and constructor ABI.
+            if (minecraft.getResourceManager() instanceof ReloadableResourceManager resources) {
+                resources.registerReloadListener((ResourceManagerReloadListener) ignored -> invalidateLayout.run());
+            }
+            releaseResourceReload = null;
         }
     }
 
@@ -96,5 +115,8 @@ public final class GuideClientUiCoordinator implements AutoCloseable {
         if (!Boolean.getBoolean("openallay.e2e.enabled")) throw new IllegalStateException("Development probe is disabled");
         return notificationPort.e2eReceipt();
     }
-    @Override public void close() { presentation.close(); }
+    @Override public void close() {
+        if (releaseResourceReload != null) releaseResourceReload.run();
+        presentation.close();
+    }
 }

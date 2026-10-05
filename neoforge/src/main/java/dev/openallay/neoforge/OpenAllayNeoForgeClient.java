@@ -42,17 +42,19 @@ public final class OpenAllayNeoForgeClient {
         NeoForgeClientBridge bridge = new NeoForgeClientBridge();
         bridge.register();
         NeoForgeNativeClientEvents.registerKeys();
+        var resourceReloadRegistration = NeoForgeNativeResourceReloadRegistration.install();
         NeoForgeNativeHudRegistration.register(graphics -> {
             GuideClientUiCoordinator current = ui;
             if (current != null) current.extractRenderState(graphics);
         });
-        NeoForgeNativeClientLifecycle.onStarted(client -> start(runtime, bridge, client));
+        NeoForgeNativeClientLifecycle.onStarted(client -> start(runtime, bridge, client, resourceReloadRegistration));
     }
 
     private static void start(
             OpenAllayRuntime runtime,
             NeoForgeClientBridge bridge,
-            Minecraft client) {
+            Minecraft client,
+            java.util.function.Function<Runnable, Runnable> resourceReloadRegistration) {
         if (!STARTED.compareAndSet(false, true)) return;
         Gson gson = new Gson();
         java.time.Clock clock = java.time.Clock.systemUTC();
@@ -171,7 +173,7 @@ public final class OpenAllayNeoForgeClient {
         historySettings.bind(services);
         GuideClientUiCoordinator coordinator = new GuideClientUiCoordinator(client, services,
                 recipeClient, display, settings == null ? null : settings.settings(),
-                configDirectory, dispatcher, clock);
+                configDirectory, dispatcher, clock, resourceReloadRegistration);
         var observationInput = dev.openallay.client.observation.ObservationUiBindings.bind(
                 client, runtime.platform(), runtime.worldObservations(), coordinator, services);
         ui = coordinator;
