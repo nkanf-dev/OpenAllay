@@ -255,6 +255,8 @@ def prepare_command(args, scenario, run_id, port, repo, accepted=None):
             command += ["--gradle-cache", str(args.gradle_cache)]
         if args.mod_version is not None:
             command += ["--mod-version", args.mod_version]
+    if getattr(args, "artifact_family", None):
+        command += ["--artifact-family", args.artifact_family]
     if scenario == "ui-stop":
         command.append("--cancel-on-tool-start")
     return command
@@ -469,7 +471,7 @@ def run_batch(args, repo=REPO):
             if len(matches) != 1:
                 raise ValueError("Repository release version is missing or ambiguous")
             mod_version = matches[0]
-        summary["packagedArtifact"] = launcher.packaged_artifact(args.jar, args.loader, mod_version, repo, args.minecraft_version)
+        summary["packagedArtifact"] = launcher.packaged_artifact(args.jar, args.loader, mod_version, repo, args.minecraft_version, getattr(args, "artifact_family", None))
         if (summary["packagedArtifact"].get("sha256") != args.artifact_sha256
                 or summary["packagedArtifact"].get("nativeWorldBootstrapPresent") is not True):
             raise ValueError("Exact production artifact must include its opt-in native client bootstrap")
@@ -582,6 +584,7 @@ def parser():
     result.add_argument("loader", choices=("fabric", "neoforge"))
     result.add_argument("--minecraft-target", "--minecraft-version", dest="minecraft_version", default="26.2",
                         choices=load_launcher(REPO).minecraft_targets(REPO))
+    result.add_argument("--artifact-family", help="Explicit catalog interval with unchanged production bytes")
     result.add_argument("--jar", type=Path, required=True)
     result.add_argument("--artifact-sha256", "--jar-sha256", required=True)
     result.add_argument("--java", type=Path, required=True)

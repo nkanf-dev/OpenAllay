@@ -1,0 +1,188 @@
+name: Minecraft binary intervals
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: minecraft-binary-interval-${{ github.sha }}-${{ inputs.families }}
+  cancel-in-progress: false
+jobs:
+  plan:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      build_matrix: ${{ steps.plan.outputs.build_matrix }}
+      runtime_matrix: ${{ steps.plan.outputs.runtime_matrix }}
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      with:
+        persist-credentials: false
+    - name: Validate candidate selection and exact completed feature source
+      id: plan
+      env:
+        GH_TOKEN: ${{ github.token }}
+        FAMILIES: ${{ inputs.families }}
+        FEATURE_RUN_ID: ${{ inputs.feature_run_id }}
+      run: |
+        python3 -B -m unittest discover -s scripts -p 'test_minecraft_binary_intervals.py'
+        python3 -c 'import os,re; assert re.fullmatch(r"[1-9][0-9]*",os.environ["FEATURE_RUN_ID"]),"Exact Quality run ID required"'
+        gh api "repos/$GITHUB_REPOSITORY/actions/runs/$FEATURE_RUN_ID" > feature-run.json
+        python3 -B scripts/verify-minecraft-binary-intervals.py matrix --families "$FAMILIES" --feature-run-json feature-run.json --repository "$GITHUB_REPOSITORY" --github-output "$GITHUB_OUTPUT" > binary-interval-plan.json
+    - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      with:
+        name: binary-interval-plan-${{ github.sha }}-${{ github.run_attempt }}
+        retention-days: 7
+        if-no-files-found: error
+        path: |
+          feature-run.json
+          binary-interval-plan.json
+  build:
+    name: Candidate build ${{ matrix.target }}
+    needs: plan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix: ${{ fromJSON(needs.plan.outputs.build_matrix) }}
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      with:
+        persist-credentials: false
+    - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+      with:
+        distribution: temurin
+        java-version: |
+          17
+          21
+          25
+    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+      with:
+        cache-provider: basic
+        cache-read-only: true
+    - name: Prepare exact pinned shared Builder source
+      run: python3 -B scripts/prepare-distribution.py
+    - name: Build each selected interval loader once with its normal native recipe
+      env:
+        TARGET: ${{ matrix.target }}
+        FAMILIES: ${{ matrix.families }}
+      run: python3 -B scripts/verify-minecraft-binary-intervals.py build-and-stage --target "$TARGET" --families "$FAMILIES"
+        --directory build/ci-binary-production | tee candidate-build.json
+    - name: Retain original interval JARs and SHA256SUMS
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      with:
+        name: binary-production-${{ matrix.target }}-${{ github.sha }}-${{ github.run_attempt }}
+        retention-days: 7
+        if-no-files-found: error
+        path: build/ci-binary-production/
+    - name: Retain failed package/native diagnostics too
+      if: always()
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      with:
+        name: binary-build-${{ matrix.target }}-${{ github.sha }}-${{ github.run_attempt }}
+        retention-days: 7
+        if-no-files-found: ignore
+        path: |
+          candidate-build.json
+          build/early-neoforge/**/inputs.json
+          native-builds/early-neoforge/build/reports/
+          build/reports/problems/
+          fabric/build/reports/
+          neoforge/build/reports/
+  runtime:
+    name: Same JAR ${{ matrix.family }} on ${{ matrix.target }}
+    needs:
+    - plan
+    - build
+    if: ${{ always() && !cancelled() && needs.plan.result == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix: ${{ fromJSON(needs.plan.outputs.runtime_matrix) }}
+    env:
+      LIBGL_ALWAYS_SOFTWARE: '1'
+      ALSOFT_DRIVERS: 'null'
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      with:
+        persist-credentials: false
+    - name: Download original interval bytes from this exact source/run
+      uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+      with:
+        name: binary-production-${{ matrix.build_target }}-${{ github.sha }}-${{ github.run_attempt }}
+        path: build/ci-binary-production
+    - name: Check original interval checksums before runtime allocation
+      run: sha256sum --check SHA256SUMS
+      working-directory: build/ci-binary-production
+    - name: Read exact game Java pin
+      id: game
+      env:
+        TARGET: ${{ matrix.target }}
+      run: |
+        java_version=$(python3 -B scripts/minecraft-target.py --target "$TARGET" --property java_version)
+        printf 'java_version=%s\n' "$java_version" >> "$GITHUB_OUTPUT"
+    - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+      with:
+        distribution: temurin
+        java-version: ${{ steps.game.outputs.java_version }}
+    - name: Install headless graphics and lossless evidence tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 libegl-mesa0 mesa-utils libvulkan1 mesa-vulkan-drivers vulkan-tools libopenal1 webp
+        python3 -m venv build/ci-tools
+        build/ci-tools/bin/python -m pip install Pillow==11.3.0
+    - name: Provision exact official Minecraft, loader, libraries and assets
+      env:
+        TARGET: ${{ matrix.target }}
+        LOADER: ${{ matrix.loader }}
+      run: |
+        python3 -B scripts/prepare-ci-minecraft-runtime.py --loader "$LOADER" --minecraft-target "$TARGET" --java "$JAVA_HOME/bin/java" --minecraft-root "$PWD/build/e2e/runtime/$TARGET/minecraft" > build/ci-runtime-receipt.json
+        python3 -B scripts/run-packaged-builder-acceptance.py --prepare-assets --minecraft-target "$TARGET" --minecraft-root "$PWD/build/e2e/runtime/$TARGET/minecraft" --assets-root "$PWD/build/e2e/runtime/$TARGET/assets"
+    - name: Run unchanged interval JAR with normal exact official target loader
+      env:
+        TARGET: ${{ matrix.target }}
+        LOADER: ${{ matrix.loader }}
+        FAMILY: ${{ matrix.family }}
+      run: |
+        xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24 +extension GLX +render -noreset" --error-file="$PWD/build/ci-xvfb.log" \
+          python3 -B scripts/run-ci-software-graphics.py --loader "$LOADER" --minecraft-target "$TARGET" --minecraft-root "$PWD/build/e2e/runtime/$TARGET/minecraft" --output "$PWD/build/ci-graphics/$TARGET-$LOADER" -- \
+          python3 -B scripts/verify-minecraft-binary-intervals.py run-runtime --family "$FAMILY" --loader "$LOADER" --target "$TARGET" --directory build/ci-binary-production --java "$JAVA_HOME/bin/java" --batch-id "interval-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.target }}"
+    - name: Preserve compact native diagnostics and lossless images
+      if: always()
+      env:
+        LOADER: ${{ matrix.loader }}
+      run: build/ci-tools/bin/python -B scripts/compact-ci-game-evidence.py --loader "$LOADER" --batch-id "interval-${{ github.run_id
+        }}-${{ github.run_attempt }}-${{ matrix.target }}"
+    - name: Retain mechanical acceptance or failed linkage with exact source/SHA identity
+      if: always()
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      with:
+        name: binary-client-${{ matrix.family }}-${{ matrix.target }}-${{ github.sha }}-${{ github.run_attempt }}
+        retention-days: 7
+        if-no-files-found: warn
+        path: |
+          build/ci-binary-interval/
+          build/ci-binary-production/SHA256SUMS
+          build/ci-binary-production/build-record.json
+          build/ci-runtime-receipt.json
+          build/ci-xvfb.log
+          build/ci-graphics/${{ matrix.target }}-${{ matrix.loader }}/*.json
+          build/ci-graphics/${{ matrix.target }}-${{ matrix.loader }}/*.log.gz
+          build/e2e/runtime/${{ matrix.target }}/minecraft/.provision/*.json
+          build/e2e/runtime/${{ matrix.target }}/minecraft/.provision/*.log
+          build/e2e/ci-client/${{ matrix.loader }}/interval-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.target }}/summary.json
+          build/e2e/ci-client/${{ matrix.loader }}/interval-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.target }}/*.log
+          build/e2e/ci-client-compact/${{ matrix.loader }}/interval-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.target }}/
+'on':
+  workflow_dispatch:
+    inputs:
+      families:
+        description: Nonpublishing candidate family IDs CSV; all for seven intervals
+        required: true
+        default: all
+        type: string
+      feature_run_id:
+        description: Successful exact-source mainline Quality run ID; never repeat full feature suites per minor
+        required: true
+        type: string

@@ -40,7 +40,15 @@ def engine_files(root):
     return files
 
 
-def verify(path, loader, target, java, original_engine, bundled_builder=False):
+def verify(path, loader, target, java, original_engine, bundled_builder=False, family=None):
+    if family is not None:
+        check(family['loader'] == loader and family['buildTarget'] == target,
+              'Native candidate must use its real build target and loader')
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('native_interval', ROOT / 'scripts/verify-minecraft-binary-intervals.py')
+        interval = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(interval)
+        interval.package_guard(path, family, read_properties(ROOT / 'gradle.properties')['version'], ROOT)
     with zipfile.ZipFile(path) as archive:
         counts = Counter(archive.namelist())
         check(all(count == 1 for count in counts.values()), "Duplicate package entries: " + str(path))
@@ -63,7 +71,7 @@ def verify(path, loader, target, java, original_engine, bundled_builder=False):
         if loader == "fabric":
             metadata = json.loads(archive.read("fabric.mod.json"))
             check(metadata["id"] == "openallay", "Fabric mod identity differs")
-            check(metadata["depends"]["minecraft"] in (target, "~" + target), "Fabric target metadata differs")
+            check(family is not None or metadata["depends"]["minecraft"] in (target, "~" + target), "Fabric target metadata differs")
             check(metadata["depends"]["java"] == ">=" + str(java), "Fabric Java metadata differs")
         else:
             descriptor = "META-INF/mods.toml" if target in ("1.20.1", "1.20.4", "1.20.3", "1.20.2") else "META-INF/neoforge.mods.toml"
@@ -74,7 +82,7 @@ def verify(path, loader, target, java, original_engine, bundled_builder=False):
             check(re.search(r'(?m)^modId\s*=\s*"openallay"', mod) is not None, "NeoForge mod identity differs")
             blocks = metadata.split("[[dependencies.")[1:]
             minecraft = [block for block in blocks if re.search(r'(?m)^modId\s*=\s*"minecraft"', block)]
-            check(len(minecraft) == 1 and 'versionRange="[' + target + ']"' in minecraft[0].replace(" ", ""), "NeoForge target metadata differs")
+            check(len(minecraft) == 1 and (family is not None or 'versionRange="[' + target + ']"' in minecraft[0].replace(" ", "")), "NeoForge target metadata differs")
             if target == "1.20.1":
                 check('modId="forge"' in metadata.replace(" ", ""), "Early NeoForge must use actual Forge loader dependency")
                 mixins = json.loads(archive.read("openallay.client.mixins.json"))

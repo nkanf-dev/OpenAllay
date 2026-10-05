@@ -9,6 +9,7 @@ import argparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 import hashlib
+import importlib.util
 from http.client import HTTPException
 from io import BytesIO
 import json
@@ -43,7 +44,6 @@ def runtime_pins(minecraft_target, repo=None):
     if minecraft_target not in minecraft_targets(root):
         raise ValueError("Unknown exact Minecraft target: " + minecraft_target)
     return target_reader().read_profile(root, minecraft_target)
-MOD_VERSION = "0.4.1"
 WORLD_PREFIX = "openallay-builder-"
 SCENARIOS = ("builder-restricted", "builder-acceptance", "builder-reload",
              "builder-partial", "builder-cancel", "builder-live", "builder-live-copy", "builder-live-undo",
@@ -318,9 +318,25 @@ def bundled_extension_verifier():
     return verifier
 
 
-def packaged_artifact(path, loader, mod_version=MOD_VERSION, repo=REPO, minecraft_target="26.2"):
+def product_version(repo=REPO):
+    properties = (repo / "gradle.properties").read_text(encoding="utf-8")
+    versions = re.findall(r"^version=([^\r\n]+)$", properties, re.MULTILINE)
+    if len(versions) != 1 or not re.fullmatch(r"[0-9]+(?:[.][0-9]+){2}", versions[0]):
+        raise ValueError("Checked-in Gradle release version is missing, ambiguous, or invalid")
+    return versions[0]
+
+
+def packaged_artifact(path, loader, mod_version=None, repo=REPO, minecraft_target="26.2", artifact_family=None):
+    mod_version = product_version(repo) if mod_version is None else mod_version
     path = path.resolve()
     expected_name = f"openallay-{loader}-{minecraft_target}-{mod_version}.jar"
+    if artifact_family is not None:
+        spec = importlib.util.spec_from_file_location('packaged_interval', repo / 'scripts/verify-minecraft-binary-intervals.py')
+        interval = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(interval)
+        family = interval.family_for_id(interval.catalog(repo), artifact_family, loader, minecraft_target)
+        interval.package_guard(path, family, mod_version, repo)
+        expected_name = interval.artifacts.describe(family, mod_version)['filename']
     if path.name != expected_name or not path.is_file():
         raise ValueError("Use the default built OpenAllay production artifact: " + expected_name)
     verifier = bundled_extension_verifier()
@@ -523,11 +539,7 @@ def prepare(args, repo=REPO):
     if args.professional_screenshots and (not args.screenshot_manual_profile or not args.screenshot_automatic_profile):
         raise ValueError("Professional screenshots require explicit manual and automatic profile IDs")
     if args.mod_version is None:
-        properties = (repo / "gradle.properties").read_text(encoding="utf-8")
-        versions = re.findall(r"^version=([^\r\n]+)$", properties, re.MULTILINE)
-        if len(versions) != 1:
-            raise ValueError("Checked-in Gradle release version is missing or ambiguous")
-        args.mod_version = versions[0]
+        args.mod_version = product_version(repo)
     if not re.fullmatch(r"[0-9]+(?:[.][0-9]+){2}", args.mod_version):
         raise ValueError("mod-version must be an explicit three-part release version")
     if args.review_package and not args.review_package.is_file():
@@ -547,7 +559,7 @@ def prepare(args, repo=REPO):
     if vanilla.get("id") != minecraft_target or vanilla.get("javaVersion", {}).get("majorVersion") != java_required:
         raise ValueError("Minecraft metadata differs from the exact source target/Java pins")
     artifact = args.jar or repo / loader / "build/libs" / f"openallay-{loader}-{minecraft_target}-{args.mod_version}.jar"
-    identity = packaged_artifact(artifact, loader, args.mod_version, repo, minecraft_target)
+    identity = packaged_artifact(artifact, loader, args.mod_version, repo, minecraft_target, getattr(args, "artifact_family", None))
     models = validate_model_config(args.model_config) if args.model_config else fixture_model_config(args.fixture_port)
     libraries = version_libraries(vanilla, mcroot, gradle_cache, allow_gradle=runtime_provision is None)
     extra_jvm, extra_game, loader_files = [], [], []
@@ -799,11 +811,11 @@ def prepare_resume(args, repo=REPO):
     replacement = None
     if args.jar:
         original = game / "mods" / previous_identity["name"]
-        original_identity = packaged_artifact(original, prior["loader"], previous_identity.get("modVersion", MOD_VERSION), repo, prior["minecraft"])
+        original_identity = packaged_artifact(original, prior["loader"], previous_identity["modVersion"], repo, prior["minecraft"])
         if original_identity["sha256"] != previous_identity["sha256"]:
             raise ValueError("Original packaged artifact hash does not match the accepted manifest")
         replacement = args.jar.resolve()
-        new_identity = packaged_artifact(replacement, prior["loader"], previous_identity.get("modVersion", MOD_VERSION), repo, prior["minecraft"])
+        new_identity = packaged_artifact(replacement, prior["loader"], previous_identity["modVersion"], repo, prior["minecraft"])
         identity_fields = ("loader", "minecraft", "modVersion", "bundledBuilder", "bundledBuilderSha256")
         if any(original_identity[field] != new_identity[field] for field in identity_fields):
             raise ValueError("Harness upgrade must preserve loader, Minecraft, OpenAllay version, and exact bundled Builder bytes")
@@ -1127,6 +1139,7 @@ def parser():
     result.add_argument("--low-impact", action="store_true", help="Disposable client only: 854x480, FPS10, 256M/1536M heap; retains render4/simulation5")
     result.add_argument("--http-proxy-from-env", action="store_true", help="Explicit JVM HTTP(S) proxy from conventional env settings; local/credential-free only")
     result.add_argument("--resume-prepared", type=Path, help="Prepare a reload phase using only a prior manifest's disposable world under build/e2e")
+    result.add_argument("--artifact-family", help="Explicit catalog family; exact range metadata required, never compatibility override")
     result.add_argument("--jar", type=Path, help="Default production-named built artifact; no source classes")
     result.add_argument("--model-config", type=Path, help="Explicit secret-free model config with env credential references")
     result.add_argument("--fixture-port", type=int, default=18765, help="Loopback fixture is started separately")

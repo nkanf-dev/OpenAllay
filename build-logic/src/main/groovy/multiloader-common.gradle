@@ -9,10 +9,16 @@ plugins {
 // Accepted interval naming is a deliberate opt-in with the same buildTarget.
 def selectedArtifacts = [:]
 def artifactSelection = providers.gradleProperty('minecraftArtifact')
-if (artifactSelection.isPresent()) {
+def candidateSelection = providers.gradleProperty('minecraftCandidateArtifact')
+if (artifactSelection.isPresent() && candidateSelection.isPresent()) {
+    throw new GradleException('Accepted and validation-only candidate selections cannot compete')
+}
+if (artifactSelection.isPresent() || candidateSelection.isPresent()) {
     def selection = providers.exec {
-        commandLine 'python3', rootProject.file('scripts/build-minecraft-artifacts.py'),
-                'select', '--target', minecraftTarget, '--families', artifactSelection.get(),
+        commandLine 'python3', rootProject.file(candidateSelection.isPresent()
+                ? 'scripts/verify-minecraft-binary-intervals.py' : 'scripts/build-minecraft-artifacts.py'),
+                'select', '--target', minecraftTarget, '--families',
+                candidateSelection.isPresent() ? candidateSelection.get() : artifactSelection.get(),
                 '--version', project.version.toString()
     }
     selection.result.get().assertNormalExitValue()
@@ -94,8 +100,17 @@ processResources {
     }
 
     inputs.property('minecraftArtifact', artifactSelection.getOrElse(''))
+    inputs.property('minecraftCandidateArtifact', candidateSelection.getOrElse(''))
     inputs.property('fabricMinecraftPredicate', minecraftPredicate)
     inputs.properties(expandProps)
+}
+
+tasks.withType(org.gradle.api.publish.maven.tasks.AbstractPublishToMaven).configureEach {
+    doFirst {
+        if (candidateSelection.isPresent()) {
+            throw new GradleException('Candidate interval artifacts are validation-only and cannot publish')
+        }
+    }
 }
 
 publishing {
