@@ -74,6 +74,7 @@ final class ServerClientToolAgentTest {
         RecoveringModel model = new RecoveringModel();
         List<ServerAgentEventPayload> events = new java.util.concurrent.CopyOnWriteArrayList<>();
         CompletableFuture<Void> runtimeClosed = new CompletableFuture<>();
+        CompletableFuture<Void> requestReleased = new CompletableFuture<>();
         ServerAgentService service = new ServerAgentService(
                 (actor, payload) -> {
                     ToolResult<AgentToolExecutor> opened = router.open(
@@ -99,7 +100,10 @@ final class ServerClientToolAgentTest {
                 sessions,
                 (actor, capabilities, correlation, cancellation) -> CompletableFuture.completedFuture(
                         ToolInvocationContext.developmentConsole(correlation)),
-                (actor, event) -> events.add(event),
+                (actor, event) -> {
+                    events.add(event);
+                    if ("request_released".equals(event.eventType())) requestReleased.complete(null);
+                },
                 gson,
                 "system",
                 cancellation -> CompletableFuture.completedFuture(null));
@@ -118,6 +122,7 @@ final class ServerClientToolAgentTest {
         assertInstanceOf(ToolResult.Success.class, accepted);
         try {
             runtimeClosed.get(5, java.util.concurrent.TimeUnit.SECONDS);
+            requestReleased.get(5, java.util.concurrent.TimeUnit.SECONDS);
         } catch (Exception failure) {
             throw new AssertionError("the asynchronous recovered Agent must close its runtime", failure);
         }
