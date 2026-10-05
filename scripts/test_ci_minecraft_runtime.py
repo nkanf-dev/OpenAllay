@@ -7,7 +7,9 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
+from urllib.error import HTTPError, URLError
+from urllib.request import Request
 
 SPEC = importlib.util.spec_from_file_location("ci_runtime", Path(__file__).with_name("prepare-ci-minecraft-runtime.py"))
 runtime = importlib.util.module_from_spec(SPEC)
@@ -24,6 +26,9 @@ class Response(io.BytesIO):
         return self.url
 
 
+URL = 'https://maven.minecraftforge.net/net/minecraftforge/forge/1.19.2-43.5.0/forge-1.19.2-43.5.0-installer.jar.sha1'
+
+
 class RuntimeTests(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
@@ -36,6 +41,51 @@ class RuntimeTests(unittest.TestCase):
 
     def tearDown(self):
         self.temporary.cleanup()
+
+    def test_request_identifies_product_without_browser_spoofing(self):
+        opener=Mock();response=object();opener.open.return_value=response
+        with patch.object(runtime,'build_opener',return_value=opener) as built:
+            self.assertIs(response,runtime.open_official(URL))
+        request=opener.open.call_args.args[0]
+        self.assertIsInstance(request,Request)
+        self.assertEqual(URL,request.full_url)
+        self.assertEqual('OpenAllay-CI-Runtime',request.get_header('User-agent'))
+        self.assertEqual({'timeout':120},opener.open.call_args.kwargs)
+        self.assertIsInstance(built.call_args.args[0],runtime.OfficialRedirect)
+        opener.open.assert_called_once()
+
+    def test_denial_reports_exact_url_and_status_without_retry(self):
+        opener=Mock();original=HTTPError(URL,403,'Forbidden',{},io.BytesIO(b'denied'))
+        opener.open.side_effect=original
+        with patch.object(runtime,'build_opener',return_value=opener):
+            with self.assertRaises(OSError) as captured: runtime.open_official(URL)
+        self.assertIn('HTTP 403 Forbidden',str(captured.exception))
+        self.assertIn(URL,str(captured.exception));self.assertIs(original,captured.exception.__cause__)
+        opener.open.assert_called_once()
+
+    def test_allowed_redirect_error_names_both_urls(self):
+        target='https://maven.minecraftforge.net/allowed/checksum.sha1'
+        opener=Mock();opener.open.side_effect=HTTPError(target,403,'Forbidden',{},None)
+        with patch.object(runtime,'build_opener',return_value=opener):
+            with self.assertRaises(OSError) as captured: runtime.open_official(URL)
+        self.assertIn(target,str(captured.exception));self.assertIn('requested '+URL,str(captured.exception))
+
+    def test_invalid_url_is_rejected_before_opening(self):
+        for url in ('http://maven.minecraftforge.net/a','https://evil.invalid/a','https://u:p@maven.minecraftforge.net/a','https://maven.minecraftforge.net/a?q=secret'):
+            with self.subTest(url=url),patch.object(runtime,'build_opener') as built:
+                with self.assertRaises(ValueError): runtime.open_official(url)
+                built.assert_not_called()
+
+    def test_request_identity_survives_allowed_redirect(self):
+        request=Request(URL,headers={'User-Agent':'OpenAllay-CI-Runtime'})
+        redirected=runtime.OfficialRedirect().redirect_request(request,None,302,'Found',{},'https://maven.minecraftforge.net/checksum.sha1')
+        self.assertEqual('OpenAllay-CI-Runtime',redirected.get_header('User-agent'))
+
+    def test_connection_error_is_not_retried_or_relabelled(self):
+        opener=Mock();original=URLError('offline');opener.open.side_effect=original
+        with patch.object(runtime,'build_opener',return_value=opener):
+            with self.assertRaises(URLError) as captured: runtime.open_official(URL)
+        self.assertIs(original,captured.exception);opener.open.assert_called_once()
 
     def test_all_prepared_exact_target_profiles_are_read_through_one_authority(self):
         targets = runtime.minecraft_targets()
@@ -423,6 +473,7 @@ class RuntimeTests(unittest.TestCase):
         with patch.object(runtime, "check_java", return_value='openjdk version "25"'), patch.object(runtime, "prepare_vanilla", side_effect=vanilla), patch.object(runtime, "prepare_fabric", side_effect=fabric):
             receipt = runtime.provision(SimpleNamespace(loader="fabric", minecraft_target="26.2", java=self.root / "java", minecraft_root=self.mcroot), self.repo)
         self.assertEqual(receipt["minecraftRoot"], str(self.mcroot))
+        self.assertEqual(runtime.HTTP_USER_AGENT, receipt["httpUserAgent"])
         self.assertFalse(receipt["gameLaunched"])
         self.assertFalse(receipt["assetsPrepared"])
         self.assertEqual(receipt["pins"]["fabric_version"], "0.152.1+26.2")

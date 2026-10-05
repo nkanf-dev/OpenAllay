@@ -15,7 +15,8 @@ import re
 import signal
 import subprocess
 from urllib.parse import unquote, urlsplit
-from urllib.request import HTTPRedirectHandler, build_opener
+from urllib.error import HTTPError
+from urllib.request import HTTPRedirectHandler, Request, build_opener
 import uuid
 import zipfile
 from minecraft_target_loaders import target_loaders, read_target_loaders, runtime_pin_fields, fml_runtime_identity
@@ -27,6 +28,7 @@ HOSTS = frozenset(("piston-meta.mojang.com", "piston-data.mojang.com",
                    "launchermeta.mojang.com", "launcher.mojang.com",
                    "libraries.minecraft.net", "maven.fabricmc.net",
                    "meta.fabricmc.net", "maven.neoforged.net", "maven.minecraftforge.net"))
+HTTP_USER_AGENT = "OpenAllay-CI-Runtime"
 MAX_METADATA = 16 * 1024 * 1024
 MAX_ARTIFACT = 512 * 1024 * 1024
 CHUNK = 1024 * 1024
@@ -107,8 +109,17 @@ class OfficialRedirect(HTTPRedirectHandler):
 
 
 def open_official(url):
-    # Per-command opener only. No monkey patches, mirror URLs or global redirects.
-    return build_opener(OfficialRedirect()).open(official_url(url), timeout=120)
+    # Identify this downloader to official hosts. Keep the allowlist and redirects
+    # unchanged; do not impersonate a browser or retry an access denial.
+    url = official_url(url)
+    request = Request(url, headers={"User-Agent": HTTP_USER_AGENT})
+    try:
+        return build_opener(OfficialRedirect()).open(request, timeout=120)
+    except HTTPError as error:
+        failed_url = official_url(error.geturl())
+        raise OSError("Official HTTP request failed: HTTP " + str(error.code)
+                      + " " + str(error.reason) + " for " + failed_url
+                      + " (requested " + url + ")") from error
 
 
 def content_size(response, maximum):
@@ -674,6 +685,7 @@ def provision(args, repo=REPO):
                "java": str(java), "javaInfo": java_info, "minecraftRoot": str(root), "profile": profile_id,
                "fabricApi": str(api) if api else None, "manifest": str(manifest_path),
                "preparedAt": datetime.now(timezone.utc).isoformat(),
+               "httpUserAgent": HTTP_USER_AGENT,
                "sourceProfile": "gradle/minecraft-targets/" + target + ".properties",
                "sourceProfileSha256": file_hash(Path(repo) / "gradle/minecraft-targets" / (target + ".properties")),
                "sourceScriptSha256": file_hash(Path(__file__)),
