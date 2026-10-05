@@ -96,7 +96,7 @@ final class OpenAllayScreenHeaderContractsTest {
                 "common/src/main/java/dev/openallay/client/gui/GuideNativeWidget.java"));
         assertTrue(widgetBinding.contains("extends AbstractWidget"));
         assertTrue(widgetBinding.contains("protected final void extractWidgetRenderState("));
-        assertTrue(widgetBinding.contains("paintGuideWidget(new GuideGraphics(graphics), mouseX, mouseY, delta)"));
+        assertTrue(widgetBinding.contains("paintGuideWidget(GuideGraphics.wrap(graphics), mouseX, mouseY, delta)"));
         assertTrue(title.contains("getMessage()"));
         assertTrue(title.contains("full.getVisualOrderText()"));
         assertTrue(title.contains("plainHeadByWidth(full.getString()"));

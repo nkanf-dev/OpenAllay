@@ -10,7 +10,7 @@ public abstract class GuideNativeButton extends Button {
         super(x, y, width, height, title, press, narration);
     }
     @Override protected final void renderContents(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
-        paintGuideButton(new GuideGraphics(graphics), mouseX, mouseY, delta);
+        paintGuideButton(GuideGraphics.wrap(graphics), mouseX, mouseY, delta);
     }
     protected abstract void paintGuideButton(GuideGraphics graphics, int mouseX, int mouseY, float delta);
     protected final void paintGuideButtonLabel(GuideGraphics graphics, Component label, int padding) {

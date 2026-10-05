@@ -6,14 +6,24 @@ import net.minecraft.client.gui.GuiGraphics;
 
 /** Native callback names/types are bound once; Screen feature painting stays shared. */
 public abstract class GuideNativeScreen extends Screen {
+    protected final void tickGuideWidgets() {} // Native widgets blink from elapsed time.
     protected GuideNativeScreen(Component title) { super(title); }
+    @Override protected final void setInitialFocus() { guideInitialFocus(); }
+    protected void guideInitialFocus() { super.setInitialFocus(); }
+    @Override public final boolean mouseScrolled(double x, double y, double horizontal, double vertical) {
+        return guideMouseScrolled(x, y, horizontal, vertical);
+    }
+    public boolean guideMouseScrolled(double x, double y, double horizontal, double vertical) {
+        return super.mouseScrolled(x, y, horizontal, vertical);
+    }
+
     @Override public final void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
         GuideLegacyCursor.beginFrame();
-        paintGuideScreen(new GuideGraphics(graphics), mouseX, mouseY, delta);
+        paintGuideScreen(GuideGraphics.wrap(graphics), mouseX, mouseY, delta);
     }
     protected abstract void paintGuideScreen(GuideGraphics graphics, int mouseX, int mouseY, float delta);
     @Override public final void renderBackground(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
-        paintGuideBackground(new GuideGraphics(graphics), mouseX, mouseY, delta);
+        paintGuideBackground(GuideGraphics.wrap(graphics), mouseX, mouseY, delta);
     }
     protected void paintGuideBackground(GuideGraphics graphics, int mouseX, int mouseY, float delta) {
         super.renderBackground(graphics.nativeGraphics(), mouseX, mouseY, delta);

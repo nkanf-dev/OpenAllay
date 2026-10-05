@@ -113,7 +113,7 @@ final class OpenAllayScreenInputFocusContractsTest {
         String init = method(screen, "protected void init()");
         assertTrue(init.contains("else if (!presentationInitialized) setInitialFocus(composer)"));
         assertTrue(init.contains("presentationInitialized = true"));
-        String nativeInitial = method(screen, "protected void setInitialFocus()");
+        String nativeInitial = method(screen, "protected void guideInitialFocus()");
         assertFalse(nativeInitial.contains("super.setInitialFocus"));
         assertFalse(nativeInitial.contains("setFocused("));
         String rebuild = method(screen, "private void rebuildPresentationWidgets()");
@@ -138,7 +138,7 @@ final class OpenAllayScreenInputFocusContractsTest {
         assertTrue(invalidate.contains("|| hit.kind() == HitKind.COMPOSER"));
         assertFalse(invalidate.contains("hits.clear()"), "native modal/session routes remain distinct");
         for (String signature : new String[] {"protected void resizeGuide(", "private void rebuildPresentationWidgets()",
-                "private void applyProjection(", "public boolean mouseScrolled(", "private boolean scrollTranscriptKey(",
+                "private void applyProjection(", "public boolean guideMouseScrolled(", "private boolean scrollTranscriptKey(",
                 "private boolean scrollDetailKey("}) {
             assertTrue(method(screen, signature).contains("invalidateContentHits()"), signature);
         }

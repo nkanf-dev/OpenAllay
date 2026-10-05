@@ -1,14 +1,13 @@
 package dev.openallay.client.gui;
 
 import net.minecraft.network.chat.Component;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipPositioner;
 import net.minecraft.util.FormattedCharSequence;
 import java.util.List;
 
 /** Native callback names/types are bound once; Screen feature painting stays shared. */
-public abstract class GuideNativeScreen extends Screen {
+public abstract class GuideNativeScreen extends GuideNativeScreenCallbacks {
     private GuideGraphics paintGraphics;
     private int paintMouseX;
     private int paintMouseY;
@@ -18,7 +17,7 @@ public abstract class GuideNativeScreen extends Screen {
     protected GuideNativeScreen(Component title) { super(title); }
     @Override public final void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
         if (paintGraphics != null) throw new IllegalStateException("Screen paint is already active");
-        GuideGraphics guide = new GuideGraphics(graphics);
+        GuideGraphics guide = GuideGraphics.wrap(graphics);
         PendingTooltip pending = pendingTooltip;
         pendingTooltip = null;
         paintGraphics = guide;
@@ -37,14 +36,14 @@ public abstract class GuideNativeScreen extends Screen {
             paintMouseX = 0;
             paintMouseY = 0;
             // Screen.renderWithTooltip is final. Its native slot must not draw a second tooltip.
-            clearTooltipForNextRenderPass();
+            clearGuideTooltipForNextRenderPass();
         }
     }
 
-    @Override protected final void clearTooltipForNextRenderPass() {
+    @Override protected final void clearGuideTooltipForNextRenderPass() {
         pendingTooltip = null;
         if (paintGraphics != null) paintGraphics.clearTooltipForNextFrame();
-        super.clearTooltipForNextRenderPass();
+        clearNativeTooltipForNextRenderPass();
     }
 
     @Override public final void setTooltipForNextRenderPass(
@@ -57,13 +56,13 @@ public abstract class GuideNativeScreen extends Screen {
         }
     }
     protected abstract void paintGuideScreen(GuideGraphics graphics, int mouseX, int mouseY, float delta);
-    @Override public final void renderBackground(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
+    @Override protected final void paintNativeGuideBackground(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
         GuideGraphics guide = paintGraphics != null && paintGraphics.nativeGraphics() == graphics
-                ? paintGraphics : new GuideGraphics(graphics);
+                ? paintGraphics : GuideGraphics.wrap(graphics);
         guide.paint(() -> paintGuideBackground(guide, mouseX, mouseY, delta));
     }
     protected void paintGuideBackground(GuideGraphics graphics, int mouseX, int mouseY, float delta) {
-        super.renderBackground(graphics.nativeGraphics(), mouseX, mouseY, delta);
+        renderNativeGuideBackground(graphics.nativeGraphics(), mouseX, mouseY, delta);
     }
     protected final void renderGuideWidgets(GuideGraphics graphics, int mouseX, int mouseY, float delta) {
         super.render(graphics.nativeGraphics(), mouseX, mouseY, delta);
@@ -102,7 +101,7 @@ public abstract class GuideNativeScreen extends Screen {
     public boolean guideMouseReleased(GuideInputMouse event) { return super.mouseReleased(event.x(), event.y(), event.button()); }
     @Override public void removed() {
         pendingTooltip = null;
-        clearTooltipForNextRenderPass();
+        clearGuideTooltipForNextRenderPass();
         try { GuideLegacyCursor.close(); } finally { super.removed(); }
     }
     /** Legacy native Screen has no in-game marker; mod screens keep their own explicit policy. */
