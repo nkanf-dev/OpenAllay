@@ -113,7 +113,7 @@ public final class RegistryCatalogCapture {
             entries.add(entry(
                     MinecraftResourceId.from(id.toString()),
                     "potion",
-                    net.minecraft.network.chat.Component.translatable(translationKey).getString(),
+                    dev.openallay.platform.minecraft.MinecraftComponents.translatable(translationKey).getString(),
                     provenance,
                     List.of(MinecraftPotionFacts.name(potion), translationKey),
                     potionTags.getOrDefault(potion, Set.of()),
@@ -145,7 +145,7 @@ public final class RegistryCatalogCapture {
             entries.add(entry(
                     MinecraftResourceId.from(id.toString()),
                     "attribute",
-                    net.minecraft.network.chat.Component.translatable(attribute.getDescriptionId()).getString(),
+                    dev.openallay.platform.minecraft.MinecraftComponents.translatable(attribute.getDescriptionId()).getString(),
                     provenance,
                     List.of(attribute.getDescriptionId()),
                     attributeTags.getOrDefault(attribute, Set.of()),

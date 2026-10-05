@@ -3,6 +3,7 @@ package dev.openallay.client.gui;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.ChatFormatting;
+import dev.openallay.platform.minecraft.MinecraftComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 
@@ -11,13 +12,13 @@ final class GuideMarkup {
     private GuideMarkup() {}
 
     static List<Component> paragraphs(String value) {
-        if (value == null || value.isEmpty()) return List.of(Component.empty());
+        if (value == null || value.isEmpty()) return List.of(MinecraftComponents.empty());
         List<Component> output = new ArrayList<>();
         for (String raw : value.split("\\R", -1)) {
             String line = raw;
-            MutableComponent component = Component.empty();
+            MutableComponent component = MinecraftComponents.empty();
             if (line.startsWith("- ") || line.startsWith("* ")) {
-                component.append(Component.literal("• ").withStyle(ChatFormatting.AQUA));
+                component.append(MinecraftComponents.literal("• ").withStyle(ChatFormatting.AQUA));
                 line = line.substring(2);
             }
             appendInline(component, line);
@@ -32,7 +33,7 @@ final class GuideMarkup {
             if (text.startsWith("**", index)) {
                 int end = text.indexOf("**", index + 2);
                 if (end >= 0) {
-                    target.append(Component.literal(text.substring(index + 2, end)).withStyle(ChatFormatting.BOLD));
+                    target.append(MinecraftComponents.literal(text.substring(index + 2, end)).withStyle(ChatFormatting.BOLD));
                     index = end + 2;
                     continue;
                 }
@@ -41,7 +42,7 @@ final class GuideMarkup {
             if (marker == '`' || marker == '*') {
                 int end = text.indexOf(marker, index + 1);
                 if (end >= 0) {
-                    var styled = Component.literal(text.substring(index + 1, end));
+                    var styled = MinecraftComponents.literal(text.substring(index + 1, end));
                     target.append(marker == '`'
                             ? styled.withStyle(ChatFormatting.GRAY)
                             : styled.withStyle(ChatFormatting.ITALIC));
@@ -53,7 +54,7 @@ final class GuideMarkup {
             while (next < text.length()
                     && text.charAt(next) != '`'
                     && text.charAt(next) != '*') next++;
-            target.append(Component.literal(text.substring(index, next)));
+            target.append(MinecraftComponents.literal(text.substring(index, next)));
             index = next;
         }
     }

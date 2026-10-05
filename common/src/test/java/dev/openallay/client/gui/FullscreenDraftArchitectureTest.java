@@ -49,30 +49,33 @@ final class FullscreenDraftArchitectureTest {
         assertTrue(closeState.indexOf("state.close()") < closeState.indexOf("state = null"));
     }
     @Test void nativeComposerGeometryAndBothClientRegistrationsShipTogether() throws Exception {
-        String geometry = source("common/src/main/java/dev/openallay/client/gui/GuideComposerGeometry.java");
+        String featureGeometry = source("common/src/main/java/dev/openallay/client/gui/GuideComposerGeometry.java");
+        assertTrue(featureGeometry.contains("composer.resize(bounds.width(), bounds.height(), bounds.x(), bounds.y())"));
+        assertFalse(featureGeometry.contains("MultilineTextField"));
+        String geometry = source("common/src/main/java/dev/openallay/client/gui/GuideNativeMultilineEditor.java");
         String widgetMixin = source("common/src/main/java/dev/openallay/client/gui/mixin/MultiLineEditBoxAccessor.java");
         String fieldMixin = source("common/src/main/java/dev/openallay/client/gui/mixin/MultilineTextFieldAccessor.java");
         String mixins = source("common/src/main/resources/openallay.client.mixins.json");
         String fabric = source("fabric/src/main/resources/fabric.mod.json");
         String neo = source("neoforge/src/main/resources/META-INF/neoforge.mods.toml");
-        assertTrue(geometry.contains("NativeAccess widget = (NativeAccess) composer;"));
+        assertTrue(geometry.contains("NativeAccess widget = (NativeAccess) nativeEditor;"));
         assertFalse(geometry.contains("(MultiLineEditBoxAccessor)"));
         assertTrue(geometry.contains("void openallay$refreshScrollAmount();"));
-        int widthChange = geometry.indexOf("if (field.openallay$width() != width) {");
+        int widthChange = geometry.indexOf("if (field.openallay$width() != contentWidth) {");
         int widthChangeEnd = geometry.indexOf("\n        }", widthChange);
         assertTrue(widthChange >= 0 && widthChangeEnd > widthChange);
         String reflow = geometry.substring(widthChange, widthChangeEnd);
-        assertTrue(reflow.contains("field.openallay$width(width);"));
+        assertTrue(reflow.contains("field.openallay$width(contentWidth);"));
         assertTrue(reflow.contains("field.openallay$reflowDisplayLines();"));
         assertTrue(reflow.contains("widget.openallay$refreshScrollAmount();"));
-        assertTrue(reflow.indexOf("field.openallay$width(width);") < reflow.indexOf("field.openallay$reflowDisplayLines();"));
+        assertTrue(reflow.indexOf("field.openallay$width(contentWidth);") < reflow.indexOf("field.openallay$reflowDisplayLines();"));
         assertTrue(reflow.indexOf("field.openallay$reflowDisplayLines();") < reflow.indexOf("widget.openallay$refreshScrollAmount();"));
         assertEquals(1, geometry.split("widget\\.openallay\\$refreshScrollAmount\\(\\);", -1).length - 1);
-        for (String forbidden : new String[]{"new MultiLineEditBox", "new MultilineTextField", ".setValue(",
+        for (String forbidden : new String[]{"new MultiLineEditBox", "new MultilineTextField",
                 "seekCursor", "setSelecting", "setScrollAmount", "composer.refreshScrollAmount()"}) {
             assertFalse(geometry.contains(forbidden), forbidden);
         }
-        assertTrue(widgetMixin.contains("implements GuideComposerGeometry.NativeAccess"));
+        assertTrue(widgetMixin.contains("implements GuideNativeMultilineEditor.NativeAccess"));
         assertTrue(widgetMixin.contains("void openallay$refreshScrollAmount()"));
         assertTrue(widgetMixin.contains("refreshScrollAmount();"));
         String legacyWidgetMixin = source("common/src/targets/1.21.11/java/dev/openallay/client/gui/mixin/MultiLineEditBoxAccessor.java");
@@ -97,7 +100,7 @@ final class FullscreenDraftArchitectureTest {
         String widgetMixin = source("common/src/targets/1.21.3/java/dev/openallay/client/gui/mixin/MultiLineEditBoxAccessor.java");
         assertTrue(widgetMixin.contains("@Mixin(MultiLineEditBox.class)"));
         assertTrue(widgetMixin.contains("extends AbstractScrollWidget"));
-        assertTrue(widgetMixin.contains("implements GuideComposerGeometry.NativeAccess"));
+        assertTrue(widgetMixin.contains("implements GuideNativeMultilineEditor.NativeAccess"));
         assertTrue(widgetMixin.contains("super(x, y, width, height, message)"));
         assertTrue(widgetMixin.contains("@Accessor(\"textField\")"));
         assertTrue(widgetMixin.contains("return totalInnerPadding();"));

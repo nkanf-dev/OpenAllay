@@ -13,6 +13,7 @@ import java.util.UUID;
 import java.util.function.Consumer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.commands.CommandSourceStack;
+import dev.openallay.platform.minecraft.MinecraftComponents;
 import net.minecraft.network.chat.Component;
 
 public final class NeoForgeGuideCommands {
@@ -78,7 +79,7 @@ public final class NeoForgeGuideCommands {
     }
 
     private static void publish(CommandSourceStack source, GuideNotice notice) {
-        Component message = Component.literal("[OpenAllay] " + notice.message());
+        Component message = MinecraftComponents.literal("[OpenAllay] " + notice.message());
         if (notice.level() == GuideNotice.Level.ERROR) {
             source.sendFailure(message);
         } else {

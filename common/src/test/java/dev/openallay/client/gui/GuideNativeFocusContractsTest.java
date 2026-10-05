@@ -36,7 +36,7 @@ final class GuideNativeFocusContractsTest {
         int owners = release.indexOf("for (var child : screen.children())");
         int retire = release.indexOf("GuideNativeInput.releaseTextFocus(child);");
         assertTrue(clear >= 0 && owners > clear && retire > owners);
-        assertTrue(release.contains("child instanceof EditBox || child instanceof MultiLineEditBox"));
+        assertTrue(release.contains("child instanceof EditBox || GuideNativeMultilineText.find(child) != null"));
         assertFalse(release.contains("screen.clearFocus()"));
         assertFalse(release.contains("Minecraft.getInstance()"));
     }

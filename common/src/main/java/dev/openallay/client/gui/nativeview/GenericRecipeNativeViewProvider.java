@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.gui.Font;
 import dev.openallay.platform.minecraft.MinecraftNativeRegistries;
+import dev.openallay.platform.minecraft.MinecraftComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 
@@ -64,12 +65,12 @@ final class GenericRecipeNativeViewProvider implements NativeDomainViewProvider 
             graphics.outline(bounds.x(), bounds.y(), bounds.width(), bounds.height(), BORDER);
             String title = recipe.workstation().isBlank()
                     ? recipe.type() : recipe.workstation();
-            graphics.text(font, Component.translatable(
+            graphics.text(font, MinecraftComponents.translatable(
                             "screen.openallay.native.recipe.title", title),
                     bounds.x() + 6, bounds.y() + 5, ACCENT, false);
 
             int slotY = bounds.y() + 26;
-            graphics.text(font, Component.translatable("screen.openallay.native.recipe.inputs"),
+            graphics.text(font, MinecraftComponents.translatable("screen.openallay.native.recipe.inputs"),
                     bounds.x() + 6, slotY - 10, MUTED, false);
             List<GuideRecipeCard.Ingredient> inputs = new ArrayList<>(recipe.ingredients());
             inputs.addAll(recipe.catalysts());
@@ -95,7 +96,7 @@ final class GenericRecipeNativeViewProvider implements NativeDomainViewProvider 
 
             int arrowX = bounds.x() + bounds.width() - outputWidth - arrowWidth;
             graphics.text(font, "→", arrowX + 5, slotY + 13, ACCENT, false);
-            graphics.text(font, Component.translatable("screen.openallay.native.recipe.outputs"),
+            graphics.text(font, MinecraftComponents.translatable("screen.openallay.native.recipe.outputs"),
                     arrowX + arrowWidth, slotY - 10, MUTED, false);
             int outputX = arrowX + arrowWidth + 4;
             for (int index = 0; index < Math.min(3, recipe.outputs().size()); index++) {
@@ -111,7 +112,7 @@ final class GenericRecipeNativeViewProvider implements NativeDomainViewProvider 
                 graphics.text(font, facts, bounds.x() + 6, factsY, MUTED, false);
             }
             if (!recipe.byproducts().isEmpty()) {
-                graphics.text(font, Component.translatable(
+                graphics.text(font, MinecraftComponents.translatable(
                                 "screen.openallay.native.recipe.byproducts",
                                 recipe.byproducts().size()),
                         bounds.x() + 6, factsY + 11, TEXT, false);
@@ -121,17 +122,17 @@ final class GenericRecipeNativeViewProvider implements NativeDomainViewProvider 
         private static String processingFacts(GuideRecipeCard.Processing processing) {
             List<String> values = new ArrayList<>();
             if (processing.durationTicks() != null) {
-                values.add(Component.translatable(
+                values.add(MinecraftComponents.translatable(
                         "screen.openallay.native.recipe.duration",
                         processing.durationTicks()).getString());
             }
             if (processing.energy() != null) {
-                values.add(Component.translatable(
+                values.add(MinecraftComponents.translatable(
                         "screen.openallay.native.recipe.energy",
                         processing.energy()).getString());
             }
             if (processing.temperature() != null) {
-                values.add(Component.translatable(
+                values.add(MinecraftComponents.translatable(
                         "screen.openallay.native.recipe.temperature",
                         processing.temperature()).getString());
             }

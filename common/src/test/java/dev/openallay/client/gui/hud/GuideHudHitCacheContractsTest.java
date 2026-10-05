@@ -77,12 +77,12 @@ final class GuideHudHitCacheContractsTest {
         assertTrue(init.contains("if (composer == null)"));
         assertTrue(init.contains("GuideComposerGeometry.resize(composer, input)"));
         assertTrue(init.contains("if (!composer.getValue().equals(state.readText(session))) dev.openallay.client.gui.GuideNativeMultilineText.setValue(composer, state.readText(session), true)"));
-        assertTrue(init.contains("addRenderableWidget(composer)"));
-        assertTrue(init.contains("composer.visible = readingLayout.footerFits()"));
+        assertTrue(init.contains("addRenderableWidget(composer.widget())"));
+        assertTrue(init.contains("composer.widget().visible = readingLayout.footerFits()"));
         assertTrue(init.contains("setFocused(null)"));
         String rebuild = lite.substring(reposition, lite.indexOf("public void added()", reposition));
-        assertTrue(rebuild.indexOf("getFocused() == composer") < rebuild.indexOf("rebuildWidgets()"));
-        assertTrue(rebuild.contains("if (composerFocused && composer.visible && composer.active) setFocused(composer)"));
+        assertTrue(rebuild.indexOf("getFocused() == composer.widget()") < rebuild.indexOf("rebuildWidgets()"));
+        assertTrue(rebuild.contains("if (composerFocused && composer.widget().visible && composer.widget().active) setFocused(composer.widget())"));
         assertFalse(rebuild.contains("setFocused(send)"));
         assertTrue(lite.contains("guideInitialFocus() {}"));
     }

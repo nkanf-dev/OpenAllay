@@ -30,7 +30,7 @@ abstract class GuideNativeScreenCallbacks extends Screen {
     protected final void tickGuideWidgets() {
         for (var child : children()) {
             if (child instanceof net.minecraft.client.gui.components.EditBox editor) editor.tick();
-            else if (child instanceof net.minecraft.client.gui.components.MultiLineEditBox editor) editor.tick();
+            else GuideNativeMultilineText.tick(child);
         }
     }
 }

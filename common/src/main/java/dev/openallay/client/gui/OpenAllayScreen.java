@@ -81,7 +81,7 @@ import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.narration.NarratedElementType;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
-import net.minecraft.client.gui.components.MultiLineEditBox;
+import dev.openallay.client.gui.GuideMultilineEditor;
 import dev.openallay.client.gui.GuideTooltip;
 import dev.openallay.guide.ui.GuideEvidencePresentation;
 import dev.openallay.guide.ui.GuideToolDisplayStatus;
@@ -89,6 +89,7 @@ import net.minecraft.client.gui.screens.ConfirmScreen;
 import net.minecraft.client.gui.screens.Screen;
 import dev.openallay.client.gui.GuideInputKey;
 import dev.openallay.client.gui.GuideInputMouse;
+import dev.openallay.platform.minecraft.MinecraftComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import dev.openallay.platform.minecraft.MinecraftNativeRegistries;
@@ -146,7 +147,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
     private HeaderTitle headerTitleWidget;
     private GuideUiLayout.Rect renderedTelemetryBounds;
     private int renderedTelemetryRows;
-    private MultiLineEditBox composer;
+    private GuideMultilineEditor composer;
     private boolean presentationInitialized;
     private Button send;
     private Button stop;
@@ -200,11 +201,11 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
     private GuideDisplayConfig projectedDisplay;
     private long presentationTicks;
     private dev.openallay.guide.GuideTelemetrySnapshot telemetry;
-    private Component telemetryContext = Component.empty();
-    private Component telemetryInput = Component.empty();
-    private Component telemetryOutput = Component.empty();
-    private Component telemetryCost = Component.empty();
-    private Component telemetryCompact = Component.empty();
+    private Component telemetryContext = MinecraftComponents.empty();
+    private Component telemetryInput = MinecraftComponents.empty();
+    private Component telemetryOutput = MinecraftComponents.empty();
+    private Component telemetryCost = MinecraftComponents.empty();
+    private Component telemetryCompact = MinecraftComponents.empty();
     private List<Component> telemetryTooltip = List.of();
     private List<FormattedCharSequence> telemetryTooltipWrapped = List.of();
     private List<String> telemetryTooltipTexts = List.of();
@@ -279,7 +280,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
     private OpenAllayScreen(GuideService service, RecipeClientRuntime recipeClient,
             Supplier<GuideDisplayConfig> display, GuideFailure displayFailure,
             Runnable settingsOpener, GuideClientUiState uiState) {
-        super(Component.translatable("screen.openallay.guide"));
+        super(MinecraftComponents.translatable("screen.openallay.guide"));
         this.service = Objects.requireNonNull(service, "service");
         this.observationSubmission = GuideObservationSubmission.existing(service);
         this.uiState = Objects.requireNonNull(uiState, "uiState");
@@ -290,10 +291,10 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         this.projectedDisplay = currentDisplay();
         this.view = GuideUiView.from(service.snapshot(), projectedDisplay);
         List<String> startupNotices = new ArrayList<>();
-        recipeClient.failure().ifPresent(failure -> startupNotices.add(Component.translatable(
+        recipeClient.failure().ifPresent(failure -> startupNotices.add(MinecraftComponents.translatable(
                 "screen.openallay.recipe.invalid_config", failure.code()).getString()));
         if (displayFailure != null) {
-            startupNotices.add(Component.translatable(
+            startupNotices.add(MinecraftComponents.translatable(
                     "screen.openallay.debug.invalid_config").getString());
         }
         notice = GuideUiNotice.warning(String.join(" · ", startupNotices));
@@ -332,9 +333,9 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         Component title = headerTitle();
         layout = GuideUiLayout.calculate(width, height, detailOpen(),
                 font.width(title.getVisualOrderText()),
-                font.width(Component.translatable("screen.openallay.action.sessions")) + 12,
-                font.width(Component.translatable("screen.openallay.action.export")) + 12,
-                font.width(Component.translatable("screen.openallay.action.refresh")) + 12,
+                font.width(MinecraftComponents.translatable("screen.openallay.action.sessions")) + 12,
+                font.width(MinecraftComponents.translatable("screen.openallay.action.export")) + 12,
+                font.width(MinecraftComponents.translatable("screen.openallay.action.refresh")) + 12,
                 settingsOpener != null, hasComposerImagePreviews(), composerRequestActive(), pendingMessages().size(), railVisible);
         composerExtras = layout.composerExtras(hasComposerImagePreviews(), composerRequestActive(), pendingMessages().size());
         composerLayoutKey = currentComposerLayoutKey();
@@ -343,17 +344,17 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         renderedTelemetryBounds = null;
         renderedTelemetryRows = 0;
         clearToolPaintReceipts();
-        Component sessionsLabel = Component.translatable("screen.openallay.action.sessions");
+        Component sessionsLabel = MinecraftComponents.translatable("screen.openallay.action.sessions");
         Component sessionsText = font.width(sessionsLabel) + 8 <= header.sessions().width()
-                ? sessionsLabel : Component.literal("≡");
+                ? sessionsLabel : MinecraftComponents.literal("≡");
         addRenderableWidget(OpenAllayButton.create(sessionsText, button -> toggleSessions())
                 .bounds(header.sessions().x(), header.sessions().y(), header.sessions().width(), 20)
                 .tooltip(GuideTooltip.create(sessionsLabel))
                 .createNarration(ignored -> sessionsLabel.copy()).build());
-        addRenderableWidget(OpenAllayButton.create(Component.literal("⋯"), button -> overflowOpen = !overflowOpen)
+        addRenderableWidget(OpenAllayButton.create(MinecraftComponents.literal("⋯"), button -> overflowOpen = !overflowOpen)
                 .bounds(header.overflow().x(), header.overflow().y(), header.overflow().width(), 20)
-                .tooltip(GuideTooltip.create(Component.translatable("screen.openallay.action.more")))
-                .createNarration(ignored -> Component.translatable("screen.openallay.action.more")).build());
+                .tooltip(GuideTooltip.create(MinecraftComponents.translatable("screen.openallay.action.more")))
+                .createNarration(ignored -> MinecraftComponents.translatable("screen.openallay.action.more")).build());
         modelSelectorButton = header.model();
         model = addRenderableWidget(OpenAllayButton.create(modelButtonLabel(), button -> {
                     modelSelectorOpen = !modelSelectorOpen;
@@ -364,18 +365,18 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         dev.openallay.client.gui.GuideNativeWidgetTooltips.set(model, GuideTooltip.create(modelButtonDescription()));
         if (settingsOpener != null) {
             addRenderableWidget(OpenAllayButton.create(
-                            Component.translatable("screen.openallay.settings.short"), button -> settingsOpener.run())
+                            MinecraftComponents.translatable("screen.openallay.settings.short"), button -> settingsOpener.run())
                     .bounds(header.settings().x(), header.settings().y(), header.settings().width(), 20)
-                    .tooltip(GuideTooltip.create(Component.translatable("screen.openallay.settings.title")))
-                    .createNarration(ignored -> Component.translatable("screen.openallay.settings.title")).build());
+                    .tooltip(GuideTooltip.create(MinecraftComponents.translatable("screen.openallay.settings.title")))
+                    .createNarration(ignored -> MinecraftComponents.translatable("screen.openallay.settings.title")).build());
         }
 
         GuideUiLayout.ComposerControls controls = layout.composerControls();
         GuideUiLayout.Rect input = composerExtras.input();
         if (composer == null) {
             composer = GuideNativeMultilineText.create(font, input.x(), input.y(), input.width(), input.height(),
-                    Component.translatable("screen.openallay.composer.placeholder"),
-                    Component.translatable("screen.openallay.composer.narration"));
+                    MinecraftComponents.translatable("screen.openallay.composer.placeholder"),
+                    MinecraftComponents.translatable("screen.openallay.composer.narration"));
         } else {
             GuideComposerGeometry.resize(composer, input);
         }
@@ -384,14 +385,14 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
             draft = value;
             uiState.setText(view.selectedSession(), value);
         });
-        addRenderableWidget(composer);
+        addRenderableWidget(composer.widget());
         send = addRenderableWidget(OpenAllayButton.create(
-                        Component.translatable("screen.openallay.action.send"), button -> submit())
+                        MinecraftComponents.translatable("screen.openallay.action.send"), button -> submit())
                 .bounds(controls.send().x(), controls.send().y(), controls.send().width(), 20).build());
         stop = controls.stop().height() == 0 ? null : addRenderableWidget(OpenAllayButton.create(
-                        Component.translatable("screen.openallay.action.stop"), button -> cancel())
+                        MinecraftComponents.translatable("screen.openallay.action.stop"), button -> cancel())
                 .bounds(controls.stop().x(), controls.stop().y(), controls.stop().width(), 20).build());
-        if (stop != null) dev.openallay.client.gui.GuideNativeWidgetTooltips.set(stop, GuideTooltip.create(Component.translatable("screen.openallay.action.stop.description")));
+        if (stop != null) dev.openallay.client.gui.GuideNativeWidgetTooltips.set(stop, GuideTooltip.create(MinecraftComponents.translatable("screen.openallay.action.stop.description")));
         retry = null; // Retry belongs to its factual failed request row.
         microphone = null;
         if (voice != null && voice.enabled()) {
@@ -399,9 +400,9 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
             int micY = action.y() + (stop == null ? 24 : 44);
             if (micY + 18 <= layout.composer().bottom()) {
                 microphone = addRenderableWidget(OpenAllayButton.create(
-                                Component.translatable("screen.openallay.voice.mic_short"), button -> microphoneAction())
+                                MinecraftComponents.translatable("screen.openallay.voice.mic_short"), button -> microphoneAction())
                         .bounds(action.x(), micY, action.width(), 18)
-                        .tooltip(GuideTooltip.create(Component.translatable("screen.openallay.voice.mic"))).build());
+                        .tooltip(GuideTooltip.create(MinecraftComponents.translatable("screen.openallay.voice.mic"))).build());
             }
         }
         updateVirtualRows(Math.max(40, layout.transcript().width() - 18));
@@ -411,7 +412,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         refreshTelemetry();
         updateControls();
         if (detailOpen()) focusDetail();
-        else if (!presentationInitialized) setInitialFocus(composer);
+        else if (!presentationInitialized) setInitialFocus(composer.widget());
         presentationInitialized = true;
     }
 
@@ -509,7 +510,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
     public boolean guideKeyPressed(GuideInputKey event) {
         GuideKeyInput input = GuideKeyInput.from(event);
         if (voice != null && voice.enabled()
-                && voiceKeyAllowed(getFocused() == composer, sessionOverlay || overflowOpen || modelSelectorOpen)
+                && voiceKeyAllowed(composer != null && getFocused() == composer.widget(), sessionOverlay || overflowOpen || modelSelectorOpen)
                 && GuideNativeInput.matches(OpenAllayKeyMappings.VOICE_PTT, event)) {
             if (!voiceKeyHeld) {
                 voiceKeyHeld = true;
@@ -520,7 +521,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         if (overflowOpen && input.intent() == GuideKeyIntent.ESCAPE) { overflowOpen = false; return true; }
         if (sessionOverlay && input.intent() == GuideKeyIntent.ESCAPE) { sessionOverlay = false; return true; }
         if (sessionOverlay && scrollSessionsKey(input.intent())) return true;
-        if (getFocused() != composer && !detailOpen() && !modelSelectorOpen && !sessionOverlay && !overflowOpen && scrollTranscriptKey(input.intent())) return true;
+        if ((composer == null || getFocused() != composer.widget()) && !detailOpen() && !modelSelectorOpen && !sessionOverlay && !overflowOpen && scrollTranscriptKey(input.intent())) return true;
         if (modelSelectorOpen && input.intent() == GuideKeyIntent.ESCAPE) {
             modelSelectorOpen = false;
             return true;
@@ -544,8 +545,8 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
             closeDetail();
             return true;
         }
-        if (detailOpen() && getFocused() != composer && scrollDetailKey(input.intent())) return true;
-        if (composer != null && getFocused() == composer && input.paste()) {
+        if (detailOpen() && (composer == null || getFocused() != composer.widget()) && scrollDetailKey(input.intent())) return true;
+        if (composer != null && getFocused() == composer.widget() && input.paste()) {
             // Preserve Minecraft's text paste and selection semantics, including text+image clipboards.
             synchronizeComposerSession();
             super.guideKeyPressed(event);
@@ -553,7 +554,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
             return true;
         }
         ComposerKeyAction composerAction = composerKeyAction(
-                composer != null && getFocused() == composer,
+                composer != null && getFocused() == composer.widget(),
                 input.confirmation(),
                 input.shift(),
                 input.control());
@@ -787,18 +788,18 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
     private boolean composerContains(double x, double y) {
         if (composer == null) return false;
         GuideUiLayout.Rect input = new GuideUiLayout.Rect(
-                dev.openallay.client.gui.GuideNativeWidgetGeometry.x(composer), dev.openallay.client.gui.GuideNativeWidgetGeometry.y(composer), composer.getWidth(), composer.getHeight());
-        return input.contains(x, y) && composer.isMouseOver(x, y);
+                dev.openallay.client.gui.GuideNativeWidgetGeometry.x(composer.widget()), dev.openallay.client.gui.GuideNativeWidgetGeometry.y(composer.widget()), composer.widget().getWidth(), composer.widget().getHeight());
+        return input.contains(x, y) && composer.widget().isMouseOver(x, y);
     }
 
     /** Only a successful voice draft insertion may request this; never displace a player's focus. */
     public boolean focusComposerAfterVoiceDraft() {
         if (minecraft == null || MinecraftClientWindow.screen(minecraft) != this || composer == null
-                || !composer.active || !composer.visible || getFocused() != null
+                || !composer.widget().active || !composer.widget().visible || getFocused() != null
                 || sessionOverlay || overflowOpen || modelSelectorOpen || detailOpen()
                 || draftIntent().editing()) return false;
-        setFocused(composer);
-        return getFocused() == composer;
+        setFocused(composer.widget());
+        return getFocused() == composer.widget();
     }
 
     @Override
@@ -838,7 +839,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
     }
 
     static Component headerTitle() {
-        return Component.translatable("screen.openallay.guide").withStyle(ChatFormatting.BOLD);
+        return MinecraftComponents.translatable("screen.openallay.guide").withStyle(ChatFormatting.BOLD);
     }
 
     /** A passive native label: Tab reveals and narrates its own complete name, not another button's. */
@@ -857,9 +858,9 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
             Component visible = full;
             if (font.width(full.getVisualOrderText()) > getWidth()) {
                 String prefix = font.getSplitter().plainHeadByWidth(full.getString(),
-                        Math.max(0, getWidth() - font.width(Component.literal("…").withStyle(full.getStyle()))),
+                        Math.max(0, getWidth() - font.width(MinecraftComponents.literal("…").withStyle(full.getStyle()))),
                         full.getStyle());
-                visible = Component.literal(prefix + "…").withStyle(full.getStyle());
+                visible = MinecraftComponents.literal(prefix + "…").withStyle(full.getStyle());
             }
             if (isFocused()) {
                 graphics.outline(getX() - 1, getY() - 1, getWidth() + 2, getHeight() + 2, ACCENT);
@@ -1004,12 +1005,12 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         GuideUiLayout.Rect rail = sessionBounds();
         graphics.fill(rail.x(), rail.y(), rail.right(), rail.bottom(), panelAltColor());
         graphics.outline(rail.x(), rail.y(), rail.width(), rail.height(), OpenAllayWidgetTheme.SLATE_BORDER);
-        graphics.text(font, Component.translatable("screen.openallay.session.title"), rail.x() + 8, rail.y() + 6, ACCENT, false);
+        graphics.text(font, MinecraftComponents.translatable("screen.openallay.session.title"), rail.x() + 8, rail.y() + 6, ACCENT, false);
         if (sessionOverlay) {
             GuideUiLayout.Rect close = new GuideUiLayout.Rect(rail.right() - 22, rail.y() + 2, 20, 18);
             graphics.text(font, "×", close.x() + 5, close.y() + 4, TEXT, false);
             hits.add(new Hit(close, HitKind.SESSION, () -> sessionOverlay = false,
-                    "session:close", Component.translatable("screen.openallay.detail.close").getString()));
+                    "session:close", MinecraftComponents.translatable("screen.openallay.detail.close").getString()));
         }
         int y = rail.y() + 24;
         sessionScroll = Mth.clamp(sessionScroll, 0, maximumSessionScroll());
@@ -1018,7 +1019,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
             GuideUiSession session = view.sessions().get(index);
             GuideUiLayout.Rect row = new GuideUiLayout.Rect(rail.x() + 4, y, rail.width() - 10, 20);
             graphics.fill(row.x(), row.y(), row.right(), row.bottom(), session.selected() ? OpenAllayWidgetTheme.MINT_DARK : panelColor());
-            boundedHeaderText(graphics, Component.literal(session.id() + (session.running() ? " ●" : "")),
+            boundedHeaderText(graphics, MinecraftComponents.literal(session.id() + (session.running() ? " ●" : "")),
                     new GuideUiLayout.Rect(row.x() + 4, row.y() + 6, row.width() - 8, 12), session.selected() ? TEXT : MUTED);
             String id = session.id();
             hits.add(new Hit(row, HitKind.SESSION, () -> {
@@ -1078,7 +1079,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
             if (y + 20 > menu.bottom()) break;
             GuideUiLayout.Rect row = new GuideUiLayout.Rect(menu.x() + 4, y, menu.width() - 8, 20);
             if (row.contains(mouseX, mouseY)) graphics.fill(row.x(), row.y(), row.right(), row.bottom(), OpenAllayWidgetTheme.CHARCOAL_HOVERED);
-            Component label = Component.translatable(labels[index]);
+            Component label = MinecraftComponents.translatable(labels[index]);
             boundedHeaderText(graphics, label, new GuideUiLayout.Rect(row.x() + 4, row.y() + 5, row.width() - 8, 12), TEXT);
             Runnable action = actions[index];
             hits.add(new Hit(row, HitKind.MENU, () -> { overflowOpen = false; action.run(); }, "menu:" + index, label.getString()));
@@ -1090,8 +1091,8 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
 
     private Component voiceFeedback() {
         var feedback = dev.openallay.client.voice.VoiceStatusPresentation.describe(voice.status());
-        MutableComponent text = Component.translatable(feedback.translationKey()).copy();
-        if (!feedback.actionTranslationKey().isBlank()) text.append(" · ").append(Component.translatable(feedback.actionTranslationKey()));
+        MutableComponent text = MinecraftComponents.translatable(feedback.translationKey()).copy();
+        if (!feedback.actionTranslationKey().isBlank()) text.append(" · ").append(MinecraftComponents.translatable(feedback.actionTranslationKey()));
         return text;
     }
 
@@ -1102,16 +1103,16 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
             GuideUiLayout.Rect mic = new GuideUiLayout.Rect(bounds.right() - micWidth, bounds.y(), micWidth, bounds.height());
             graphics.fill(mic.x(), mic.y(), mic.right(), mic.bottom(), panelAltColor());
             Component micLabel = voice.status().active()
-                    ? Component.translatable("screen.openallay.voice.short." + voice.status().state().name().toLowerCase(java.util.Locale.ROOT), voice.status().elapsedMillis() / 1000)
-                    : Component.translatable("screen.openallay.voice.mic_short");
+                    ? MinecraftComponents.translatable("screen.openallay.voice.short." + voice.status().state().name().toLowerCase(java.util.Locale.ROOT), voice.status().elapsedMillis() / 1000)
+                    : MinecraftComponents.translatable("screen.openallay.voice.mic_short");
             boundedHeaderText(graphics, micLabel, mic, voice.status().active() ? OpenAllayWidgetTheme.WARNING : ACCENT);
-            hits.add(new Hit(mic, HitKind.COMPOSER, this::microphoneAction, "voice:mic", Component.translatable("screen.openallay.voice.mic").getString()));
+            hits.add(new Hit(mic, HitKind.COMPOSER, this::microphoneAction, "voice:mic", MinecraftComponents.translatable("screen.openallay.voice.mic").getString()));
             if (mic.contains(mouseX, mouseY)) graphics.setTooltipForNextFrame(font, voiceFeedback(), mouseX, mouseY);
             bounds = new GuideUiLayout.Rect(bounds.x(), bounds.y(), bounds.width() - micWidth - 2, bounds.height());
         }
         if (!notice.empty()) {
-            boundedHeaderText(graphics, Component.literal(notice.message()), bounds, notice.color());
-            if (bounds.contains(mouseX, mouseY)) graphics.setTooltipForNextFrame(font, Component.literal(notice.message()), mouseX, mouseY);
+            boundedHeaderText(graphics, MinecraftComponents.literal(notice.message()), bounds, notice.color());
+            if (bounds.contains(mouseX, mouseY)) graphics.setTooltipForNextFrame(font, MinecraftComponents.literal(notice.message()), mouseX, mouseY);
         } else if (voice != null && voice.status().indicatorVisible()) {
             Component status = voiceFeedback();
             var feedback = dev.openallay.client.voice.VoiceStatusPresentation.describe(voice.status());
@@ -1121,20 +1122,20 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         if (draftIntent().editInvalid()) {
             GuideUiLayout.Rect reset = new GuideUiLayout.Rect(bounds.right() - Math.min(104, bounds.width()), bounds.y(), Math.min(104, bounds.width()), bounds.height());
             graphics.fill(reset.x(), reset.y(), reset.right(), reset.bottom(), panelAltColor());
-            boundedHeaderText(graphics, Component.translatable("screen.openallay.pending.use_as_new"), reset, ACCENT);
+            boundedHeaderText(graphics, MinecraftComponents.translatable("screen.openallay.pending.use_as_new"), reset, ACCENT);
             hits.add(new Hit(reset, HitKind.COMPOSER, () -> {
                 uiState.resetIntent(view.selectedSession());
                 notice = GuideUiNotice.info("");
-            }, "composer:reset-edit", Component.translatable("screen.openallay.pending.use_as_new").getString()));
+            }, "composer:reset-edit", MinecraftComponents.translatable("screen.openallay.pending.use_as_new").getString()));
             return; // The missing pending-edit target requires an explicit player action.
         }
         List<GuideClientUiState.PendingInsertion> pending = uiState.pendingInsertions(view.selectedSession());
         if (!pending.isEmpty()) {
             GuideUiLayout.Rect action = new GuideUiLayout.Rect(bounds.right() - Math.min(100, bounds.width()), bounds.y(), Math.min(100, bounds.width()), bounds.height());
             graphics.fill(action.x(), action.y(), action.right(), action.bottom(), panelAltColor());
-            boundedHeaderText(graphics, Component.translatable("screen.openallay.voice.pending", pending.size()), action, ACCENT);
+            boundedHeaderText(graphics, MinecraftComponents.translatable("screen.openallay.voice.pending", pending.size()), action, ACCENT);
             hits.add(new Hit(action, HitKind.COMPOSER, () -> uiState.applyPendingInsertion(pending.get(0).id()),
-                    "voice:pending", Component.translatable("screen.openallay.voice.pending", pending.size()).getString()));
+                    "voice:pending", MinecraftComponents.translatable("screen.openallay.voice.pending", pending.size()).getString()));
         }
     }
 
@@ -1199,7 +1200,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         if (telemetry == next && telemetryTooltipFont == font
                 && telemetryTooltipLanguage == language && telemetryTooltipWidth == wrapWidth) return;
         telemetry = next;
-        String unknown = Component.translatable("screen.openallay.telemetry.unknown").getString();
+        String unknown = MinecraftComponents.translatable("screen.openallay.telemetry.unknown").getString();
         var context = telemetry.context();
         boolean contextKnown = context != null && context.budget() != null;
         boolean imageUnknown = contextKnown && context.imageAccounting()
@@ -1207,17 +1208,17 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         String occupancy = contextKnown
                 ? "~" + compactTokens(context.estimatedTokens()) + "/" + compactTokens(context.budget().contextWindowTokens())
                 : unknown;
-        if (imageUnknown) occupancy = Component.translatable(
+        if (imageUnknown) occupancy = MinecraftComponents.translatable(
                 "screen.openallay.telemetry.text_estimate", occupancy).getString();
-        telemetryContext = Component.literal(occupancy);
+        telemetryContext = MinecraftComponents.literal(occupancy);
         var usage = telemetry.sessionUsage();
         var rate = usage.cacheHitRate();
         String cache = telemetryCacheText(usage, unknown);
-        telemetryInput = rate == null ? Component.translatable("screen.openallay.telemetry.cache_compact_unknown")
-                : Component.translatable("screen.openallay.telemetry.cache", cache);
+        telemetryInput = rate == null ? MinecraftComponents.translatable("screen.openallay.telemetry.cache_compact_unknown")
+                : MinecraftComponents.translatable("screen.openallay.telemetry.cache", cache);
         String cost = telemetryCostText(usage, unknown);
-        telemetryCost = Component.translatable("screen.openallay.telemetry.cost_compact", cost);
-        telemetryCompact = Component.translatable("screen.openallay.telemetry.compact", occupancy, cache, cost);
+        telemetryCost = MinecraftComponents.translatable("screen.openallay.telemetry.cost_compact", cost);
+        telemetryCompact = MinecraftComponents.translatable("screen.openallay.telemetry.compact", occupancy, cache, cost);
         telemetryTooltip = telemetryTooltipComponents(telemetry, unknown, cost, cache);
         telemetryTooltipWrapped = wrapNativeTooltip(telemetryTooltip, wrapWidth, font::split);
         telemetryTooltipTexts = telemetryTooltip.stream().map(Component::getString).toList();
@@ -1230,35 +1231,35 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
     static List<Component> telemetryTooltipComponents(
             dev.openallay.guide.GuideTelemetrySnapshot telemetry, String unknown, String cost, String cache) {
         List<Component> detail = new ArrayList<>();
-        detail.add(Component.translatable("screen.openallay.telemetry.latest").withStyle(ChatFormatting.BOLD));
+        detail.add(MinecraftComponents.translatable("screen.openallay.telemetry.latest").withStyle(ChatFormatting.BOLD));
         var context = telemetry.context();
         boolean contextKnown = context != null && context.budget() != null;
         if (contextKnown) {
-            detail.add(Component.translatable("screen.openallay.telemetry.budget.input",
+            detail.add(MinecraftComponents.translatable("screen.openallay.telemetry.budget.input",
                     context.estimatedTokens(), context.budget().inputTokens()));
-            detail.add(Component.translatable("screen.openallay.telemetry.budget.window",
+            detail.add(MinecraftComponents.translatable("screen.openallay.telemetry.budget.window",
                     context.budget().contextWindowTokens(), context.budget().reservedTokens(),
                     context.budget().maxOutputTokens()));
         } else {
-            detail.add(Component.translatable("screen.openallay.telemetry.context_unknown"));
+            detail.add(MinecraftComponents.translatable("screen.openallay.telemetry.context_unknown"));
         }
         if (contextKnown && context.imageAccounting()
                 == dev.openallay.model.tokenizer.TokenizerMetadata.ImageAccounting.UNKNOWN) {
-            detail.add(Component.translatable("screen.openallay.telemetry.image_unknown"));
+            detail.add(MinecraftComponents.translatable("screen.openallay.telemetry.image_unknown"));
         }
         var usage = telemetry.sessionUsage();
-        detail.add(Component.translatable("screen.openallay.telemetry.session.calls", usage.actualCalls()));
-        detail.add(Component.translatable("screen.openallay.telemetry.session.cost", cost));
-        detail.add(Component.translatable("screen.openallay.telemetry.cache_detail",
+        detail.add(MinecraftComponents.translatable("screen.openallay.telemetry.session.calls", usage.actualCalls()));
+        detail.add(MinecraftComponents.translatable("screen.openallay.telemetry.session.cost", cost));
+        detail.add(MinecraftComponents.translatable("screen.openallay.telemetry.cache_detail",
                 cache, usage.cacheReadTokens(), usage.inputTokens()));
-        if (usage.costIncomplete()) detail.add(Component.translatable("screen.openallay.telemetry.partial"));
-        if (usage.cacheIncomplete()) detail.add(Component.translatable("screen.openallay.telemetry.cache_unknown"));
+        if (usage.costIncomplete()) detail.add(MinecraftComponents.translatable("screen.openallay.telemetry.partial"));
+        if (usage.cacheIncomplete()) detail.add(MinecraftComponents.translatable("screen.openallay.telemetry.cache_unknown"));
         var inherited = telemetry.inheritedUsage();
         if (inherited.actualCalls() > 0) {
             String reference = telemetryCostText(inherited, unknown);
-            detail.add(Component.translatable("screen.openallay.telemetry.inherited", reference));
+            detail.add(MinecraftComponents.translatable("screen.openallay.telemetry.inherited", reference));
         }
-        detail.add(Component.translatable("screen.openallay.telemetry.price_note"));
+        detail.add(MinecraftComponents.translatable("screen.openallay.telemetry.price_note"));
         return List.copyOf(detail);
     }
 
@@ -1299,7 +1300,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         } else {
             int x = area.x() + 7;
             int y = area.y() + 7;
-            graphics.text(font, Component.translatable("screen.openallay.telemetry.context"), x, y, MUTED, false);
+            graphics.text(font, MinecraftComponents.translatable("screen.openallay.telemetry.context"), x, y, MUTED, false);
             graphics.text(font, telemetryContext, x, y + 12, TEXT, false);
             // Text-only estimates must not look like total image+text occupancy.
             if (telemetryImageBarEligible()) {
@@ -1359,30 +1360,30 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
             GuideUiProgress progress, Instant now, boolean debugMode) {
         Objects.requireNonNull(progress, "progress");
         Objects.requireNonNull(now, "now");
-        MutableComponent message = Component.translatable(progress.activityTranslationKey());
-        message.append(" · ").append(Component.translatable(
+        MutableComponent message = MinecraftComponents.translatable(progress.activityTranslationKey());
+        message.append(" · ").append(MinecraftComponents.translatable(
                 "screen.openallay.progress.elapsed",
                 formatDuration(Duration.between(progress.requestStartedAt(), now))));
         if (progress.retryAt() != null) {
-            message.append(" · ").append(Component.translatable(
+            message.append(" · ").append(MinecraftComponents.translatable(
                     "screen.openallay.progress.retry_in",
                     formatDuration(Duration.between(now, progress.retryAt()))));
             if (progress.attempt() > 0) {
-                message.append(" · ").append(Component.translatable(
+                message.append(" · ").append(MinecraftComponents.translatable(
                         "screen.openallay.progress.attempt", progress.attempt()));
             }
         } else if (progress.deadlineAt() != null) {
-            message.append(" · ").append(Component.translatable(
+            message.append(" · ").append(MinecraftComponents.translatable(
                     "screen.openallay.progress.remaining",
                     formatDuration(Duration.between(now, progress.deadlineAt()))));
         } else if (progress.phase()
                 == dev.openallay.guide.GuideRequestPhase.RESPONSE_STREAMING) {
-            message.append(" · ").append(Component.translatable(
+            message.append(" · ").append(MinecraftComponents.translatable(
                     "screen.openallay.progress.last_update",
                     formatDuration(Duration.between(progress.lastProgressAt(), now))));
         }
         if (debugMode && progress.retryAt() == null && progress.attempt() > 0) {
-            message.append(" · ").append(Component.translatable(
+            message.append(" · ").append(MinecraftComponents.translatable(
                     "screen.openallay.progress.attempt", progress.attempt()));
         }
         return message;
@@ -1410,7 +1411,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         GuideTranscriptVirtualizer.Window window = virtualizer.visible(scroll, viewportHeight, 30);
         int contentTop = area.y() + 7;
         if (view.rows().isEmpty()) {
-            graphics.text(font, Component.translatable(
+            graphics.text(font, MinecraftComponents.translatable(
                             "screen.openallay.transcript.empty",
                             projectedDisplay.assistantName()),
                     area.x() + 9, contentTop, MUTED, false);
@@ -1443,9 +1444,9 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
             GuideUiLayout.Rect bottom = new GuideUiLayout.Rect(area.right() - Math.min(110, area.width()), area.bottom() - 14,
                     Math.min(108, area.width() - 2), 13);
             graphics.fill(bottom.x(), bottom.y(), bottom.right(), bottom.bottom(), panelAltColor());
-            boundedHeaderText(graphics, Component.translatable("screen.openallay.scroll.bottom"), bottom, ACCENT);
+            boundedHeaderText(graphics, MinecraftComponents.translatable("screen.openallay.scroll.bottom"), bottom, ACCENT);
             hits.add(new Hit(bottom, HitKind.CONTENT, () -> { followBottom = true; scroll = virtualizer.maximumScroll(transcriptViewportHeight()); },
-                    "transcript:bottom", Component.translatable("screen.openallay.scroll.bottom").getString()));
+                    "transcript:bottom", MinecraftComponents.translatable("screen.openallay.scroll.bottom").getString()));
         }
     }
 
@@ -1458,7 +1459,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
             int mouseX,
             int mouseY) {
         if (row instanceof GuideUiRow.User user) {
-            graphics.text(font, Component.translatable("screen.openallay.speaker.user"),
+            graphics.text(font, MinecraftComponents.translatable("screen.openallay.speaker.user"),
                     x, y, ACCENT, false);
             renderCopyAction(graphics, row, user.text(), x, y, width);
             renderForkAction(graphics, user.requestId(), user.text(), x, y, width);
@@ -1476,7 +1477,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
             }
             y += 11;
             if (assistant.text().isBlank()) {
-                graphics.text(font, Component.translatable(
+                graphics.text(font, MinecraftComponents.translatable(
                                 "screen.openallay.assistant.preparing"),
                         x + 6, y, MUTED, false);
                 y += 10;
@@ -1547,9 +1548,9 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         if (row instanceof GuideUiRow.Status status && (status.status() == GuideRequestStatus.FAILED
                 || status.status() == GuideRequestStatus.CANCELLED || status.status() == GuideRequestStatus.INTERRUPTED)) {
             GuideUiLayout.Rect retryRow = new GuideUiLayout.Rect(x + 6, y, Math.min(90, width - 12), 14);
-            boundedHeaderText(graphics, Component.translatable("screen.openallay.action.retry"), retryRow, ACCENT);
+            boundedHeaderText(graphics, MinecraftComponents.translatable("screen.openallay.action.retry"), retryRow, ACCENT);
             hits.add(new Hit(retryRow, HitKind.CONTENT, () -> accept(service.retry(status.requestId()), ignored -> notice = GuideUiNotice.info("")),
-                    "retry:" + status.requestId(), Component.translatable("screen.openallay.action.retry").getString()));
+                    "retry:" + status.requestId(), MinecraftComponents.translatable("screen.openallay.action.retry").getString()));
             y += 16;
         }
         return y + rowSpacing();
@@ -1557,14 +1558,14 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
 
     static Component factualRowText(GuideUiRow row) {
         if (row instanceof GuideUiRow.Persistence persistence) {
-            Component message = Component.translatable(persistence.translationKey());
+            Component message = MinecraftComponents.translatable(persistence.translationKey());
             return persistence.failure() == null ? message
                     : message.copy().append(" (" + persistence.failure().code() + ")");
         }
         GuideUiRow.Status status = (GuideUiRow.Status) row;
         return status.status() == GuideRequestStatus.INTERRUPTED
-                ? Component.translatable("screen.openallay.history.interrupted")
-                : Component.literal(status.text());
+                ? MinecraftComponents.translatable("screen.openallay.history.interrupted")
+                : MinecraftComponents.literal(status.text());
     }
 
     private void updateVirtualRows(int width) {
@@ -1622,7 +1623,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         List<Integer> capsules = summary.capsules().stream().map(capsule ->
                 Math.max(22, Math.min(110, 22 + font.width(capsuleLabel(capsule))))).toList();
         return dev.openallay.guide.ui.GuideToolSummaryGeometry.measure(x, y, width,
-                font.width(Component.translatable(summary.status().translationKey())),
+                font.width(MinecraftComponents.translatable(summary.status().translationKey())),
                 capsules, summary.hasDescription(), rowSpacing());
     }
 
@@ -1651,10 +1652,10 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         graphics.text(font, marker, geometry.icon().x(), geometry.icon().y(), statusColor, false);
         Component title = intentTitle(tool.detail().intent(), summary.titleKey());
         renderToolSummaryText(graphics, title, geometry.title(), TEXT, mouseX, mouseY, true);
-        renderToolSummaryText(graphics, Component.translatable(summary.status().translationKey()),
+        renderToolSummaryText(graphics, MinecraftComponents.translatable(summary.status().translationKey()),
                 geometry.status(), statusColor, mouseX, mouseY, false);
         if (summary.hasDescription()) {
-            renderToolSummaryText(graphics, Component.literal(summary.description()), geometry.description(),
+            renderToolSummaryText(graphics, MinecraftComponents.literal(summary.description()), geometry.description(),
                     MUTED, mouseX, mouseY, false);
         }
         List<String> paintedCapsules = new ArrayList<>();
@@ -1671,7 +1672,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         }
         // Child semantic actions are inserted first. The complete card body then opens real detail.
         toolSummaryHit(card, () -> open(tool), summary.id(), title.getString() + " · "
-                + Component.translatable("screen.openallay.tool.view_details").getString());
+                + MinecraftComponents.translatable("screen.openallay.tool.view_details").getString());
         if (Boolean.getBoolean("openallay.e2e.enabled") && intersects(card, layout.transcript())) {
             renderedToolIds.add(summary.id());
             GuideUiLayout.Rect viewport = layout.transcript();
@@ -1705,7 +1706,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
             graphics.item(stack, bounds.x() + 1, bounds.y());
             graphics.itemDecorations(font, stack, bounds.x() + 1, bounds.y());
         }
-        renderToolSummaryText(graphics, Component.literal(capsuleLabel(capsule)),
+        renderToolSummaryText(graphics, MinecraftComponents.literal(capsuleLabel(capsule)),
                 new GuideUiLayout.Rect(bounds.x() + 20, bounds.y() + 3, Math.max(1, bounds.width() - 22), 10),
                 TEXT, mouseX, mouseY, false);
         if (bounds.contains(mouseX, mouseY) && layout.transcript().contains(mouseX, mouseY) && !stack.isEmpty()) {
@@ -1777,7 +1778,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         graphics.text(font, visible, bounds.x(), bounds.y(), color, false);
         if (bounds.contains(mouseX, mouseY) && layout.transcript().contains(mouseX, mouseY)) {
             Component tooltip = detailHint ? text.copy().append("\n")
-                    .append(Component.translatable("screen.openallay.tool.view_details")) : text;
+                    .append(MinecraftComponents.translatable("screen.openallay.tool.view_details")) : text;
             graphics.setTooltipForNextFrame(font, tooltip, mouseX, mouseY);
         }
     }
@@ -1795,8 +1796,8 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         if (detail.failure().isPresent()) {
             GuideToolDetailView.Failure failure = detail.failure().orElseThrow();
             List<Component> lines = new ArrayList<>();
-            if (!failure.code().isBlank()) lines.add(Component.literal(failure.code()));
-            if (!failure.message().isBlank()) lines.add(Component.literal(failure.message()));
+            if (!failure.code().isBlank()) lines.add(MinecraftComponents.literal(failure.code()));
+            if (!failure.message().isBlank()) lines.add(MinecraftComponents.literal(failure.message()));
             if (!lines.isEmpty()) return List.copyOf(lines);
         }
         if (detail.displayStatus() != GuideToolDisplayStatus.FAILED) return List.of();
@@ -1806,7 +1807,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
     private static Component friendlyToolMessage(String toolId, GuideToolMessage message) {
         if ("openallay:run_javascript".equals(toolId)
                 && message.key() == GuideToolMessage.Key.FAILURE_GENERIC) {
-            return Component.translatable("screen.openallay.tool.failure.javascript");
+            return MinecraftComponents.translatable("screen.openallay.tool.failure.javascript");
         }
         return toolMessage(message);
     }
@@ -1823,7 +1824,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         Object[] arguments = message.arguments().stream()
                 .map(Component::literal)
                 .toArray();
-        return Component.translatable(message.key().translationKey(), arguments);
+        return MinecraftComponents.translatable(message.key().translationKey(), arguments);
     }
 
     private int wrappedHeight(List<Component> paragraphs, int width) {
@@ -1841,7 +1842,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
                 java.util.Locale.getDefault().toLanguageTag(), font.getClass().getName(),
                 new SemanticLayoutEngine.Measurer() {
                     @Override public int width(String text, SemanticLayout.Style style) {
-                        return font.width(Component.literal(text).withStyle(switch (style) {
+                        return font.width(MinecraftComponents.literal(text).withStyle(switch (style) {
                             case EMPHASIS -> ChatFormatting.ITALIC;
                             case STRONG -> ChatFormatting.BOLD;
                             case CODE -> ChatFormatting.GRAY;
@@ -1924,7 +1925,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
             openSemanticSource(value.evidenceId(), value.originInvocationId());
         } else if (intent instanceof MinecraftSemanticRenderer.Intent.Choice value) {
             notice = GuideUiNotice.info(
-                    Component.translatable("screen.openallay.choice.unavailable", value.choiceId()).getString());
+                    MinecraftComponents.translatable("screen.openallay.choice.unavailable", value.choiceId()).getString());
         }
     }
 
@@ -1990,11 +1991,11 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
     static Component assistantLabel(GuideDisplayConfig display, boolean streaming) {
         Objects.requireNonNull(display, "display");
         return streaming
-                ? Component.literal(display.assistantName())
+                ? MinecraftComponents.literal(display.assistantName())
                         .append(" · ")
-                        .append(Component.translatable(
+                        .append(MinecraftComponents.translatable(
                                 "screen.openallay.speaker.assistant_thinking"))
-                : Component.literal(display.assistantName());
+                : MinecraftComponents.literal(display.assistantName());
     }
 
     private void renderDetail(GuideGraphics graphics, int mouseX, int mouseY) {
@@ -2012,7 +2013,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         GuideUiLayout.Rect detail = layout.detail();
         graphics.fill(detail.x(), detail.y(), detail.x() + detail.width(), detail.y() + detail.height(), 0xF02A303A);
         graphics.outline(detail.x(), detail.y(), detail.width(), detail.height(), ACCENT);
-        graphics.text(font, Component.translatable("screen.openallay.detail.title"),
+        graphics.text(font, MinecraftComponents.translatable("screen.openallay.detail.title"),
                 detail.x() + 8, detail.y() + 8, ACCENT, false);
         GuideUiLayout.Rect close = detailCloseBounds();
         graphics.fill(close.x(), close.y(), close.right(), close.bottom(), panelAltColor());
@@ -2021,7 +2022,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
             graphics.outline(close.x(), close.y(), close.width(), close.height(), ACCENT);
         }
         hits.add(new Hit(close, HitKind.DETAIL, this::closeDetail, "detail:close",
-                Component.translatable("screen.openallay.detail.close").getString()));
+                MinecraftComponents.translatable("screen.openallay.detail.close").getString()));
         graphics.enableScissor(
                 detail.x() + 1,
                 detail.y() + 21,
@@ -2034,8 +2035,8 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
             GuideToolDetailView toolDetail = selectedTool.detail();
             if (Boolean.getBoolean("openallay.e2e.enabled")) renderedDetailToolId = toolFocusId(selectedTool);
             y = detailLine(graphics,
-                    Component.translatable("screen.openallay.detail.tool.status").getString()
-                            + ": " + Component.translatable(toolDetail.displayStatus().translationKey()).getString(),
+                    MinecraftComponents.translatable("screen.openallay.detail.tool.status").getString()
+                            + ": " + MinecraftComponents.translatable(toolDetail.displayStatus().translationKey()).getString(),
                     detail, y);
             for (DetailSection section : toolDetailSections(toolDetail)) {
                 switch (section) {
@@ -2044,7 +2045,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
                             y = detailLine(graphics, reason.copy().withStyle(ChatFormatting.RED), detail, y);
                         }
                         if (toolDetail.failure().isEmpty()) {
-                            y = detailLine(graphics, Component.translatable("screen.openallay.detail.output"), detail, y + 4);
+                            y = detailLine(graphics, MinecraftComponents.translatable("screen.openallay.detail.output"), detail, y + 4);
                         }
                         for (GuideToolMessage message : toolResultMessages(toolDetail)) {
                             y = detailLine(graphics, toolMessage(message), detail, y);
@@ -2067,13 +2068,13 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
                         }
                     }
                     case PROGRAM -> {
-                        y = detailDisclosure(graphics, Component.translatable("screen.openallay.detail.program"), detail, y + 4, "program");
+                        y = detailDisclosure(graphics, MinecraftComponents.translatable("screen.openallay.detail.program"), detail, y + 4, "program");
                         if (expandedDetails.contains("program")) {
                             y = detailCode(graphics, toolProgram(toolDetail), detail, y, "javascript-source");
                         }
                     }
                     case INTENT -> {
-                        y = detailLine(graphics, Component.translatable("screen.openallay.tool.intent.label"), detail, y + 4);
+                        y = detailLine(graphics, MinecraftComponents.translatable("screen.openallay.tool.intent.label"), detail, y + 4);
                         y = detailLine(graphics, intentTitle(toolDetail.intent(), toolDetail.titleKey()), detail, y);
                         if (!toolDetail.intent().description().isBlank()) {
                             y = detailLine(graphics, toolDescription(toolDetail.intent()), detail, y);
@@ -2083,7 +2084,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
                         y = sourceGroups(graphics, selectedTool.activity().sources(), detail, y + 4);
                     }
                     case DEBUG -> {
-                        y = detailDisclosure(graphics, Component.translatable("screen.openallay.debug.section"),
+                        y = detailDisclosure(graphics, MinecraftComponents.translatable("screen.openallay.debug.section"),
                                 detail, y + 4, "debug-result");
                         if (expandedDetails.contains("debug-result")) {
                             GuideToolDetailView.Debug debug = toolDetail.debug().orElseThrow();
@@ -2098,15 +2099,15 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
                                 y = detailLine(graphics, "validation: " + debug.validationDiagnostic(), detail, y);
                             }
                             if (debug.invocationArguments() != null) {
-                                y = detailLine(graphics, Component.translatable("screen.openallay.detail.input"), detail, y);
+                                y = detailLine(graphics, MinecraftComponents.translatable("screen.openallay.detail.input"), detail, y);
                                 y = detailCode(graphics, DEBUG_GSON.toJson(debug.invocationArguments()),
                                         detail, y, "invocation-arguments");
                             }
                             if (debug.normalized() != null) {
                                 if (!selectedTool.activity().sources().isEmpty()) {
-                                    y = detailLine(graphics, Component.translatable("screen.openallay.evidence.shown_separately"), detail, y);
+                                    y = detailLine(graphics, MinecraftComponents.translatable("screen.openallay.evidence.shown_separately"), detail, y);
                                 }
-                                y = detailLine(graphics, Component.translatable("screen.openallay.debug.normalized_result"), detail, y);
+                                y = detailLine(graphics, MinecraftComponents.translatable("screen.openallay.debug.normalized_result"), detail, y);
                                 y = detailCode(graphics, DEBUG_GSON.toJson(debug.normalized()), detail, y, "normalized-result");
                             }
                         }
@@ -2149,7 +2150,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
 
     private int detailDisclosure(
             GuideGraphics graphics, Component label, GuideUiLayout.Rect detail, int y, String id) {
-        Component text = Component.literal(expandedDetails.contains(id) ? "▼ " : "▶ ").append(label);
+        Component text = MinecraftComponents.literal(expandedDetails.contains(id) ? "▼ " : "▶ ").append(label);
         int bottom = detailLine(graphics, text, detail, y);
         if (visibleDetail(y, bottom - y, detail)) {
             int top = Math.max(y, detail.y() + 21);
@@ -2203,7 +2204,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
             GuideUiLayout.Rect detail,
             int y) {
         int start = y;
-        y = detailLine(graphics, Component.translatable(card.titleKey()).getString(), detail, y);
+        y = detailLine(graphics, MinecraftComponents.translatable(card.titleKey()).getString(), detail, y);
         String header = String.join("  │  ", card.columns());
         y = detailLine(graphics, header, detail, y);
         for (List<String> row : card.rows()) {
@@ -2218,7 +2219,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
             GuideUiLayout.Rect detail,
             int y) {
         int start = y;
-        y = detailLine(graphics, Component.translatable(card.titleKey()).getString(), detail, y);
+        y = detailLine(graphics, MinecraftComponents.translatable(card.titleKey()).getString(), detail, y);
         for (GuideDetailCard.DataCell entry : card.entries()) {
             y = detailLine(graphics, entry.key() + ": " + entry.value(), detail, y);
         }
@@ -2231,7 +2232,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
             GuideUiLayout.Rect detail,
             int y) {
         int start = y;
-        y = detailLine(graphics, Component.translatable(card.titleKey()).getString(), detail, y);
+        y = detailLine(graphics, MinecraftComponents.translatable(card.titleKey()).getString(), detail, y);
         for (GuideDetailCard.DataRow row : card.rows()) {
             String line = row.cells().stream()
                     .map(cell -> cell.key() + ": " + cell.value())
@@ -2255,7 +2256,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         if (visibleDetail(y, height, detail)) {
             detailCardPaintSerial++;
             graphics.fill(left, y, detail.x() + detail.width() - 6, y + height, panelAltColor());
-            graphics.text(font, Component.translatable(card.titleKey()), left + 7, y + 6, TEXT, false);
+            graphics.text(font, MinecraftComponents.translatable(card.titleKey()), left + 7, y + 6, TEXT, false);
             for (int index = 0; index < card.items().size(); index++) {
                 int itemX = left + 7 + (index % columns) * 22;
                 int itemY = y + 19 + (index / columns) * 22;
@@ -2278,11 +2279,11 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
             detailCardPaintSerial++;
             graphics.fill(left, y, detail.x() + detail.width() - 6, y + height, panelAltColor());
             String state = card.craftable()
-                    ? Component.translatable("screen.openallay.craftability.ready").getString()
-                    : Component.translatable("screen.openallay.craftability.missing").getString();
+                    ? MinecraftComponents.translatable("screen.openallay.craftability.ready").getString()
+                    : MinecraftComponents.translatable("screen.openallay.craftability.missing").getString();
             graphics.text(font, state, left + 7, y + 6, card.craftable() ? 0xFF7FC8A9 : 0xFFFFD479, false);
             graphics.text(font,
-                    Component.translatable(
+                    MinecraftComponents.translatable(
                             "screen.openallay.craftability.maximum", card.maximumCrafts()),
                     left + 7,
                     y + 17,
@@ -2303,7 +2304,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
                 }
                 if (requirement.missing() > 0) {
                     graphics.text(font,
-                            Component.translatable(
+                            MinecraftComponents.translatable(
                                     "screen.openallay.craftability.need", requirement.missing()),
                             Math.max(itemX + 3, left + 98),
                             rowY + 17,
@@ -2322,7 +2323,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
             GuideUiLayout.Rect detail,
             int y) {
         int start = y;
-        y = detailLine(graphics, Component.translatable(card.titleKey()).getString(), detail, y);
+        y = detailLine(graphics, MinecraftComponents.translatable(card.titleKey()).getString(), detail, y);
         for (String line : card.lines()) y = detailLine(graphics, line, detail, y);
         return Math.max(y, start + 25);
     }
@@ -2359,24 +2360,24 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         // The native canvas is bounded. These scrollable lines preserve every stored player fact.
         for (var line : dev.openallay.guide.ui.GuideRecipeDetailFacts.project(card)) {
             Object[] arguments = line.arguments().stream().map(Component::literal).toArray();
-            y = detailLine(graphics, Component.translatable(line.key(), arguments), detail, y);
+            y = detailLine(graphics, MinecraftComponents.translatable(line.key(), arguments), detail, y);
         }
         for (GuideRecipeCard.Output output : card.outputs()) {
-            y = detailLine(graphics, Component.literal(output.displayName() + " ×" + output.count()), detail, y + 3);
+            y = detailLine(graphics, MinecraftComponents.literal(output.displayName() + " ×" + output.count()), detail, y + 3);
             int actionX = left + 7;
-            actionX = recipeAction(graphics, Component.translatable("screen.openallay.recipe.recipes"),
+            actionX = recipeAction(graphics, MinecraftComponents.translatable("screen.openallay.recipe.recipes"),
                     actionX, y + 2, recipeClient.canBrowse(), () -> navigate(recipeClient.openRecipes(output.itemId())));
-            recipeAction(graphics, Component.translatable("screen.openallay.recipe.usages"),
+            recipeAction(graphics, MinecraftComponents.translatable("screen.openallay.recipe.usages"),
                     actionX + 7, y + 2, recipeClient.canBrowse(), () -> navigate(recipeClient.openUsages(output.itemId())));
             y += 16;
         }
         var exact = card.references().stream().filter(recipeClient::supportsExact).findFirst();
-        recipeAction(graphics, Component.translatable(exact.isPresent()
+        recipeAction(graphics, MinecraftComponents.translatable(exact.isPresent()
                         ? "screen.openallay.recipe.open_exact" : "screen.openallay.recipe.open_exact_unavailable"),
                 left + 7, y + 2, exact.isPresent(), () -> navigate(recipeClient.openExact(exact.orElseThrow())));
         y += 16;
         if (!recipeClient.canBrowse()) {
-            y = detailLine(graphics, Component.translatable("screen.openallay.recipe.viewer_unavailable")
+            y = detailLine(graphics, MinecraftComponents.translatable("screen.openallay.recipe.viewer_unavailable")
                     .withStyle(ChatFormatting.YELLOW), detail, y);
         }
         return y + 5;
@@ -2448,7 +2449,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
 
     private void navigate(RecipeNavigationResult result) {
         notice = GuideUiNotice.info(result.opened()
-                ? Component.translatable("screen.openallay.recipe.viewer_opened").getString()
+                ? MinecraftComponents.translatable("screen.openallay.recipe.viewer_opened").getString()
                 : navigationFailure(result));
     }
 
@@ -2465,7 +2466,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         };
         return key == null
                 ? result.code() + ": " + result.message()
-                : Component.translatable(key).getString();
+                : MinecraftComponents.translatable(key).getString();
     }
 
     private List<GuideEvidencePresentation.Group> groupedSources(List<GuideSource> sources) {
@@ -2476,7 +2477,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
             GuideGraphics graphics, List<GuideSource> sources, GuideUiLayout.Rect detail, int y) {
         if (sources.isEmpty()) return y;
         List<GuideEvidencePresentation.Group> groups = groupedSources(sources);
-        y = detailDisclosure(graphics, Component.translatable("screen.openallay.evidence.groups",
+        y = detailDisclosure(graphics, MinecraftComponents.translatable("screen.openallay.evidence.groups",
                 groups.size()), detail, y, "sources");
         if (expandedDetails.contains("sources")) {
             for (int index = 0; index < groups.size(); index++) {
@@ -2489,7 +2490,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
     private int sourceGroup(
             GuideGraphics graphics, GuideEvidencePresentation.Group group,
             GuideUiLayout.Rect detail, int y, String id) {
-        y = detailDisclosure(graphics, Component.literal(sourceLabel(group, projectedDisplay.debugMode())),
+        y = detailDisclosure(graphics, MinecraftComponents.literal(sourceLabel(group, projectedDisplay.debugMode())),
                 detail, y, id);
         if (!expandedDetails.contains(id)) return y;
         int width = Math.max(1, detail.width() - 16);
@@ -2514,29 +2515,29 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
     static List<Component> sourceDetailComponents(GuideEvidencePresentation.Group group) {
         List<Component> lines = new ArrayList<>();
         GuideEvidencePresentation evidence = group.presentation();
-        lines.add(Component.translatable(evidence.authorityKey()));
-        lines.add(Component.translatable("screen.openallay.evidence.coverage",
-                Component.translatable(evidence.coverageKey())));
-        lines.add(Component.translatable("screen.openallay.evidence.capture_range",
+        lines.add(MinecraftComponents.translatable(evidence.authorityKey()));
+        lines.add(MinecraftComponents.translatable("screen.openallay.evidence.coverage",
+                MinecraftComponents.translatable(evidence.coverageKey())));
+        lines.add(MinecraftComponents.translatable("screen.openallay.evidence.capture_range",
                 group.firstCapturedAt().toString(), group.lastCapturedAt().toString()));
         var identity = group.identity();
-        lines.add(Component.literal("toolId: " + identity.toolId()));
-        lines.add(Component.literal("sourceId: " + identity.sourceId()));
-        lines.add(Component.literal("provenance: " + identity.provenance()));
-        lines.add(Component.literal("gameVersion: " + identity.gameVersion()));
-        lines.add(Component.literal("loader: " + identity.loader()));
+        lines.add(MinecraftComponents.literal("toolId: " + identity.toolId()));
+        lines.add(MinecraftComponents.literal("sourceId: " + identity.sourceId()));
+        lines.add(MinecraftComponents.literal("provenance: " + identity.provenance()));
+        lines.add(MinecraftComponents.literal("gameVersion: " + identity.gameVersion()));
+        lines.add(MinecraftComponents.literal("loader: " + identity.loader()));
         for (var entry : identity.scope().entrySet()) {
-            lines.add(Component.literal(entry.getKey() + ": " + entry.getValue()));
+            lines.add(MinecraftComponents.literal(entry.getKey() + ": " + entry.getValue()));
         }
         // Shared scope is already above. Every retained observation-specific value stays available.
         for (GuideSource record : group.records()) {
-            lines.add(Component.translatable("screen.openallay.evidence.capture_range",
+            lines.add(MinecraftComponents.translatable("screen.openallay.evidence.capture_range",
                     new dev.openallay.context.SourceObservation(
                             record.evidence(), record.lastCapturedAt()).firstCapturedAt().toString(),
                     record.lastCapturedAt().toString()));
             for (var entry : record.evidence().details().entrySet()) {
                 if (!identity.scope().containsKey(entry.getKey())) {
-                    lines.add(Component.literal(entry.getKey() + ": " + entry.getValue()));
+                    lines.add(MinecraftComponents.literal(entry.getKey() + ": " + entry.getValue()));
                 }
             }
         }
@@ -2570,7 +2571,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
     }
 
     private int detailLine(GuideGraphics graphics, String text, GuideUiLayout.Rect detail, int y) {
-        return detailLine(graphics, Component.literal(text), detail, y);
+        return detailLine(graphics, MinecraftComponents.literal(text), detail, y);
     }
 
     private int detailLine(
@@ -2599,7 +2600,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
             List<FormattedCharSequence> wrapped = new ArrayList<>();
             for (int index = 0; index < sourceLines.length; index++) {
                 String prefix = String.format("%" + digits + "d │ ", index + 1);
-                wrapped.addAll(font.split(Component.literal(prefix + sourceLines[index]), width));
+                wrapped.addAll(font.split(MinecraftComponents.literal(prefix + sourceLines[index]), width));
             }
             cached = new CodeLayout(source, width, List.copyOf(wrapped));
             detailCodeLayouts.put(cacheId, cached);
@@ -2634,7 +2635,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         }
         return detailLine(
                 graphics,
-                Component.translatable(labelKey).getString() + ": " + String.join(", ", values),
+                MinecraftComponents.translatable(labelKey).getString() + ": " + String.join(", ", values),
                 detail,
                 y);
     }
@@ -2709,13 +2710,13 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
 
     private void rebuildPresentationWidgets() {
         invalidateContentHits();
-        boolean composerFocused = composer != null && getFocused() == composer;
+        boolean composerFocused = composer != null && getFocused() == composer.widget();
         AbstractWidget previous = getFocused() instanceof AbstractWidget widget ? widget : null;
         String contentFocus = focusedContentId;
         rebuildWidgets();
         focusedContentId = contentFocus;
         GuideNativeFocus.clear(this);
-        if (composerFocused) setFocused(composer);
+        if (composerFocused) setFocused(composer.widget());
         else if (previous != null) {
             // Recreated controls may retain focus by native type and label; never reattach an old widget.
             children().stream().filter(AbstractWidget.class::isInstance).map(AbstractWidget.class::cast)
@@ -2899,7 +2900,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
             uiState.invalidatePendingEdit(view.selectedSession(), intent.pendingId());
         }
         if (draftIntent().editInvalid()) notice = GuideUiNotice.warning(
-                Component.translatable("screen.openallay.pending.edit_invalid").getString());
+                MinecraftComponents.translatable("screen.openallay.pending.edit_invalid").getString());
     }
 
     private boolean composerRequestActive() {
@@ -2936,8 +2937,8 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
             if (composer != null && !composer.getValue().equals(sharedText)) composer.setValue(sharedText);
         }
         switch (view.selectedSession().equals(uiState.imageNoticeSession()) ? uiState.imageNotice() : ComposerImageDraft.Notice.NONE) {
-            case CLIPBOARD_UNAVAILABLE -> notice = GuideUiNotice.error(Component.translatable("screen.openallay.image.clipboard_unavailable").getString());
-            case IMPORT_FAILED -> notice = GuideUiNotice.error(Component.translatable("screen.openallay.image.import_failed").getString());
+            case CLIPBOARD_UNAVAILABLE -> notice = GuideUiNotice.error(MinecraftComponents.translatable("screen.openallay.image.clipboard_unavailable").getString());
+            case IMPORT_FAILED -> notice = GuideUiNotice.error(MinecraftComponents.translatable("screen.openallay.image.import_failed").getString());
             case PROCESSING, READY, NONE -> { }
         }
         syncComposerTextures();
@@ -2985,7 +2986,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
                     .refresh(uiState, view.selectedSession());
             notice = GuideUiNotice.info("");
         } catch (RuntimeException unavailable) {
-            notice = GuideUiNotice.warning(Component.translatable("screen.openallay.observation.capture_failed").getString());
+            notice = GuideUiNotice.warning(MinecraftComponents.translatable("screen.openallay.observation.capture_failed").getString());
         }
     }
 
@@ -2997,12 +2998,12 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
                     .attachCurrentFrame(uiState, view.selectedSession()).whenComplete((applied, failure) -> minecraft.execute(() -> {
                         observationCapturing = false;
                         if (failure != null && attachment != null) notice = GuideUiNotice.warning(
-                                Component.translatable("screen.openallay.observation.capture_failed").getString());
+                                MinecraftComponents.translatable("screen.openallay.observation.capture_failed").getString());
                         if (attachment != null) sharedDraftChanged();
                     }));
         } catch (RuntimeException unavailable) {
             observationCapturing = false;
-            notice = GuideUiNotice.warning(Component.translatable("screen.openallay.observation.capture_failed").getString());
+            notice = GuideUiNotice.warning(MinecraftComponents.translatable("screen.openallay.observation.capture_failed").getString());
         }
     }
 
@@ -3021,36 +3022,36 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         int imageControls = anchor.flatMap(value -> value.image()).isPresent() ? 48 : 0;
         GuideUiLayout.Rect label = new GuideUiLayout.Rect(row.x() + 2, row.y(),
                 Math.max(0, row.width() - controls - imageControls - 2), rowHeight);
-        Component text = Component.empty();
+        Component text = MinecraftComponents.empty();
         if (anchor.isPresent()) {
             for (var chip : ObservationAnchorPresentation.chips(anchor.orElseThrow())) {
                 if (!text.getString().isEmpty()) text = text.copy().append(" · ");
-                text = text.copy().append(Component.translatable(chip.key(), chip.value()));
+                text = text.copy().append(MinecraftComponents.translatable(chip.key(), chip.value()));
             }
-        } else text = Component.translatable("screen.openallay.observation.add_focus");
+        } else text = MinecraftComponents.translatable("screen.openallay.observation.add_focus");
         boundedHeaderText(graphics, text, label, MUTED);
         if (label.contains(mouseX, mouseY)) graphics.setTooltipForNextFrame(font, text, mouseX, mouseY);
         int x = Math.max(row.x(), row.right() - controls - imageControls);
         if (imageControls > 0) {
             ImageReference reference = anchor.orElseThrow().image().orElseThrow().image();
             GuideUiLayout.Rect image = new GuideUiLayout.Rect(x, row.y(), 32, rowHeight);
-            observationComposerAction(graphics, image, Component.translatable("screen.openallay.observation.frame"),
+            observationComposerAction(graphics, image, MinecraftComponents.translatable("screen.openallay.observation.frame"),
                     () -> openObservationImage(reference), "observation:frame", mouseX, mouseY);
             observationComposerAction(graphics, new GuideUiLayout.Rect(x + 32, row.y(), 16, rowHeight),
-                    Component.literal("×"), () -> uiState.removeObservationImage(view.selectedSession()),
+                    MinecraftComponents.literal("×"), () -> uiState.removeObservationImage(view.selectedSession()),
                     "observation:remove-frame", mouseX, mouseY);
             x += 48;
         }
         if (anchor.isPresent()) {
-            observationComposerAction(graphics, new GuideUiLayout.Rect(x, row.y(), 16, rowHeight), Component.literal("×"),
+            observationComposerAction(graphics, new GuideUiLayout.Rect(x, row.y(), 16, rowHeight), MinecraftComponents.literal("×"),
                     () -> uiState.removeObservation(view.selectedSession()), "observation:remove", mouseX, mouseY);
             x += 16;
         }
         if (observationActions != null) {
-            observationComposerAction(graphics, new GuideUiLayout.Rect(x, row.y(), 16, rowHeight), Component.literal("↻"),
+            observationComposerAction(graphics, new GuideUiLayout.Rect(x, row.y(), 16, rowHeight), MinecraftComponents.literal("↻"),
                     this::refreshObservation, "observation:refresh", mouseX, mouseY);
             observationComposerAction(graphics, new GuideUiLayout.Rect(x + 16, row.y(), 16, rowHeight),
-                    Component.literal(observationCapturing ? "…" : "▧"), this::attachObservationFrame,
+                    MinecraftComponents.literal(observationCapturing ? "…" : "▧"), this::attachObservationFrame,
                     "observation:attach", mouseX, mouseY);
         }
         return observationLayout.remaining();
@@ -3070,7 +3071,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
             case "observation:frame" -> "screen.openallay.observation.open_frame";
             default -> "screen.openallay.observation.remove";
         };
-        Component description = Component.translatable(key);
+        Component description = MinecraftComponents.translatable(key);
         hits.add(new Hit(bounds, HitKind.COMPOSER, action, id, description.getString()));
         if (bounds.contains(mouseX, mouseY)) graphics.setTooltipForNextFrame(font, description, mouseX, mouseY);
     }
@@ -3086,7 +3087,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
 
     private int observationImageDetail(GuideGraphics graphics, ImageReference reference,
             GuideUiLayout.Rect detail, int y, int mouseX, int mouseY, boolean expanded) {
-        y = detailLine(graphics, Component.translatable("screen.openallay.observation.frame_size",
+        y = detailLine(graphics, MinecraftComponents.translatable("screen.openallay.observation.frame_size",
                 reference.width(), reference.height()), detail, y);
         int canvasWidth = Math.max(1, detail.width() - 16);
         int canvasHeight = Math.min(expanded ? 320 : 144,
@@ -3101,16 +3102,16 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
                 int imageHeight = Math.max(1, (int) Math.round(reference.height() * scale));
                 graphics.blitTexture(texture, canvas.x() + (canvas.width() - imageWidth) / 2,
                         canvas.y() + (canvas.height() - imageHeight) / 2, imageWidth, imageHeight, 0, 1, 0, 1);
-            } else boundedHeaderText(graphics, Component.translatable(observationTextures().failed(reference)
+            } else boundedHeaderText(graphics, MinecraftComponents.translatable(observationTextures().failed(reference)
                     ? "screen.openallay.observation.image_unavailable" : "screen.openallay.observation.image_loading"), canvas, MUTED);
             int clippedTop = Math.max(canvas.y(), detail.y() + 21);
             int clippedBottom = Math.min(canvas.bottom(), detail.bottom() - 1);
             if (!expanded && clippedBottom > clippedTop) {
                 GuideUiLayout.Rect hit = new GuideUiLayout.Rect(canvas.x(), clippedTop, canvas.width(), clippedBottom - clippedTop);
                 hits.add(new Hit(hit, HitKind.DETAIL, () -> openObservationImage(reference),
-                        "observation:image:" + reference.sha256(), Component.translatable("screen.openallay.observation.open_frame").getString()));
+                        "observation:image:" + reference.sha256(), MinecraftComponents.translatable("screen.openallay.observation.open_frame").getString()));
                 if (hit.contains(mouseX, mouseY)) graphics.setTooltipForNextFrame(font,
-                        Component.translatable("screen.openallay.observation.open_frame"), mouseX, mouseY);
+                        MinecraftComponents.translatable("screen.openallay.observation.open_frame"), mouseX, mouseY);
             }
         }
         return y + canvasHeight + 5;
@@ -3144,13 +3145,13 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
                 graphics.fill(remove.x(), remove.y(), remove.right(), remove.bottom(), 0xDD181B22);
                 graphics.text(font, "×", remove.x() + 2, remove.y() + 1, TEXT, false);
                 hits.add(new Hit(remove, HitKind.COMPOSER, () -> composerImages.remove(image.id()),
-                        "remove-image:" + image.id(), Component.translatable("screen.openallay.image.remove").getString()));
+                        "remove-image:" + image.id(), MinecraftComponents.translatable("screen.openallay.image.remove").getString()));
                 if (remove.contains(mouseX, mouseY)) graphics.setTooltipForNextFrame(font,
-                        Component.translatable("screen.openallay.image.remove"), mouseX, mouseY);
+                        MinecraftComponents.translatable("screen.openallay.image.remove"), mouseX, mouseY);
                 else if (new GuideUiLayout.Rect(x, strip.y(), cell, cell).contains(mouseX, mouseY)) {
-                    Component tooltip = image.pending() ? Component.translatable("screen.openallay.image.processing")
-                            : Component.translatable("screen.openallay.image.attached", image.reference().width(), image.reference().height());
-                    if (!image.pending()) tooltip = tooltip.copy().append(" · ").append(Component.translatable("screen.openallay.image.cost_unknown"));
+                    Component tooltip = image.pending() ? MinecraftComponents.translatable("screen.openallay.image.processing")
+                            : MinecraftComponents.translatable("screen.openallay.image.attached", image.reference().width(), image.reference().height());
+                    if (!image.pending()) tooltip = tooltip.copy().append(" · ").append(MinecraftComponents.translatable("screen.openallay.image.cost_unknown"));
                     graphics.setTooltipForNextFrame(font, tooltip, mouseX, mouseY);
                 }
             }
@@ -3168,11 +3169,11 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         if (modeWidth > 0) {
             GuideUiLayout.Rect mode = new GuideUiLayout.Rect(footer.x(), footer.y(), modeWidth, footer.height());
             graphics.fill(mode.x(), mode.y(), mode.right() - 2, mode.bottom(), panelAltColor());
-            boundedHeaderText(graphics, Component.translatable(steerMode() ? "screen.openallay.pending.steer" : "screen.openallay.pending.follow_up"), mode, ACCENT);
+            boundedHeaderText(graphics, MinecraftComponents.translatable(steerMode() ? "screen.openallay.pending.steer" : "screen.openallay.pending.follow_up"), mode, ACCENT);
             hits.add(new Hit(mode, HitKind.COMPOSER, () -> uiState.setMode(view.selectedSession(), steerMode() ? GuideClientUiState.DraftMode.FOLLOW_UP : GuideClientUiState.DraftMode.STEER), "composer-mode",
-                    Component.translatable("screen.openallay.pending.mode_description").getString()));
+                    MinecraftComponents.translatable("screen.openallay.pending.mode_description").getString()));
             if (mode.contains(mouseX, mouseY)) graphics.setTooltipForNextFrame(font,
-                    Component.translatable(steerMode() ? "screen.openallay.pending.steer_description" : "screen.openallay.pending.follow_up_description"), mouseX, mouseY);
+                    MinecraftComponents.translatable(steerMode() ? "screen.openallay.pending.steer_description" : "screen.openallay.pending.follow_up_description"), mouseX, mouseY);
         }
         if (pending.isEmpty()) return;
         pendingCursor = Mth.clamp(pendingCursor, 0, pending.size() - 1);
@@ -3192,23 +3193,23 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         graphics.fill(area.x(), area.y(), area.right(), area.bottom(), panelAltColor());
         int textWidth = Math.max(0, area.width() - 42);
         GuideUiLayout.Rect text = new GuideUiLayout.Rect(area.x() + 2, area.y() + 3, textWidth, 12);
-        Component label = Component.literal((navigator ? (pendingCursor + 1) + "/" + count + " " : "")
+        Component label = MinecraftComponents.literal((navigator ? (pendingCursor + 1) + "/" + count + " " : "")
                 + (pending.kind() == GuidePendingMessage.Kind.STEER ? "↪ " : "↳ ") + pending.text());
         boundedHeaderText(graphics, label, text, pending.failure() == null ? MUTED : ERROR);
         if (navigator) hits.add(new Hit(text, HitKind.COMPOSER, () -> pendingCursor = (pendingCursor + 1) % count,
-                "pending-next", Component.translatable("screen.openallay.pending.next").getString()));
+                "pending-next", MinecraftComponents.translatable("screen.openallay.pending.next").getString()));
         GuideUiLayout.Rect edit = new GuideUiLayout.Rect(area.right() - 38, area.y(), 20, area.height());
         GuideUiLayout.Rect cancel = new GuideUiLayout.Rect(area.right() - 18, area.y(), 18, area.height());
         graphics.text(font, "✎", edit.x() + 4, edit.y() + 3, TEXT, false);
         graphics.text(font, "×", cancel.x() + 4, cancel.y() + 3, TEXT, false);
         hits.add(new Hit(edit, HitKind.COMPOSER, () -> editPending(pending), "pending-edit:" + pending.id(),
-                Component.translatable("screen.openallay.pending.edit").getString()));
+                MinecraftComponents.translatable("screen.openallay.pending.edit").getString()));
         hits.add(new Hit(cancel, HitKind.COMPOSER, () -> accept(service.cancelPending(pending.id()), ignored -> {
             uiState.invalidatePendingEdit(view.selectedSession(), pending.id());
             refreshComposerLayout();
-        }), "pending-cancel:" + pending.id(), Component.translatable("screen.openallay.pending.cancel").getString()));
+        }), "pending-cancel:" + pending.id(), MinecraftComponents.translatable("screen.openallay.pending.cancel").getString()));
         if (area.contains(mouseX, mouseY)) {
-            Component tooltip = Component.translatable(cancel.contains(mouseX, mouseY) ? "screen.openallay.pending.cancel"
+            Component tooltip = MinecraftComponents.translatable(cancel.contains(mouseX, mouseY) ? "screen.openallay.pending.cancel"
                     : edit.contains(mouseX, mouseY) ? "screen.openallay.pending.edit" : "screen.openallay.pending.waiting", pending.text());
             if (pending.failure() != null) tooltip = tooltip.copy().append(" · ")
                     .append(pending.failure().code() + ": " + pending.failure().message());
@@ -3227,11 +3228,11 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         pending = view.selectedSession().equals(currentSession)
                 ? currentPending(service.pendingMessages(currentSession), pending.id()) : null;
         if (pending == null) {
-            notice = GuideUiNotice.warning(Component.translatable("screen.openallay.pending.already_consumed").getString());
+            notice = GuideUiNotice.warning(MinecraftComponents.translatable("screen.openallay.pending.already_consumed").getString());
             return;
         }
         if (!draft.isBlank() || !composerImages.empty()) {
-            notice = GuideUiNotice.error(Component.translatable("screen.openallay.pending.draft_not_empty").getString());
+            notice = GuideUiNotice.error(MinecraftComponents.translatable("screen.openallay.pending.draft_not_empty").getString());
             return;
         }
         uiState.beginPendingEdit(view.selectedSession(), pending.id(), pending.kind() == GuidePendingMessage.Kind.STEER
@@ -3244,7 +3245,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         composerImages.restore(pending.message().content().stream().filter(ModelContent.Image.class::isInstance)
                 .map(ModelContent.Image.class::cast).map(ModelContent.Image::reference).toList());
         loadRestoredImagePreviews();
-        setFocused(composer);
+        setFocused(composer.widget());
         updateControls();
     }
 
@@ -3289,7 +3290,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
                     synchronizeComposerSession();
                     notice = completion.successful() ? GuideUiNotice.success(slashCompletionNotice(completion).getString())
                             : GuideUiNotice.error(slashCompletionNotice(completion).getString());
-                    if (!composerImages.empty()) notice = GuideUiNotice.info(notice.message() + " · " + Component.translatable(
+                    if (!composerImages.empty()) notice = GuideUiNotice.info(notice.message() + " · " + MinecraftComponents.translatable(
                             "openallay.guide.slash.attachments_retained").getString());
                     sharedDraftChanged();
                     updateControls();
@@ -3301,7 +3302,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         List<ImageReference> inputImages = uiState.inputImageReferences(view.selectedSession(), observation);
         if (question.isEmpty() && inputImages.isEmpty()) return;
         if (!inputImages.isEmpty() && view.selectedImageInputCapability() != ImageInputCapability.SUPPORTED) {
-            notice = GuideUiNotice.error(Component.translatable("screen.openallay.image.model_unsupported").getString());
+            notice = GuideUiNotice.error(MinecraftComponents.translatable("screen.openallay.image.model_unsupported").getString());
             return;
         }
         boolean active = composerRequestActive();
@@ -3325,7 +3326,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
             observationLease.close();
             uiState.completeIntentSubmission(capturedIntent);
             submittingDraft = false;
-            notice = GuideUiNotice.error(Component.translatable("screen.openallay.composer.submit_failed").getString());
+            notice = GuideUiNotice.error(MinecraftComponents.translatable("screen.openallay.composer.submit_failed").getString());
             updateControls();
             return;
         }
@@ -3346,16 +3347,16 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
                 synchronizeComposerSession();
                 submittingDraft = false;
                 if (failure != null) {
-                    notice = GuideUiNotice.error(Component.translatable("screen.openallay.composer.submit_failed").getString());
+                    notice = GuideUiNotice.error(MinecraftComponents.translatable("screen.openallay.composer.submit_failed").getString());
                 } else if (accepted) {
                     notice = GuideUiNotice.acceptedSubmission(capturedRoute, pendingId, result,
                             service.snapshot(), images.session());
                 } else if (pendingId != null && result instanceof ToolResult.Success<?>) {
-                    notice = GuideUiNotice.warning(Component.translatable("screen.openallay.pending.already_consumed").getString());
+                    notice = GuideUiNotice.warning(MinecraftComponents.translatable("screen.openallay.pending.already_consumed").getString());
                 } else if (result instanceof ToolResult.Failure<?> rejected) {
                     notice = GuideUiNotice.error(rejected.code() + ": " + rejected.message());
                 } else {
-                    notice = GuideUiNotice.error(Component.translatable("screen.openallay.composer.submit_failed").getString());
+                    notice = GuideUiNotice.error(MinecraftComponents.translatable("screen.openallay.composer.submit_failed").getString());
                 }
                 sharedDraftChanged();
                 refreshComposerLayout();
@@ -3372,9 +3373,9 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
 
     static Component slashCompletionNotice(dev.openallay.guide.composer.SlashCommandDispatcher.Completion completion) {
         return completion.successful() && "compact_completed".equals(completion.code()) && completion.result() != null
-                ? Component.translatable("openallay.guide.slash.compact_completed", completion.result().beforeTokens(),
+                ? MinecraftComponents.translatable("openallay.guide.slash.compact_completed", completion.result().beforeTokens(),
                         completion.result().afterTokens(), completion.result().inputBudget())
-                : Component.translatable("openallay.guide.slash." + completion.code());
+                : MinecraftComponents.translatable("openallay.guide.slash." + completion.code());
     }
 
     static boolean submissionAccepted(boolean editing, ToolResult<?> result) {
@@ -3397,18 +3398,18 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
     }
 
     private void forkSelectedSession() {
-        notice = GuideUiNotice.info(Component.translatable("screen.openallay.fork.running").getString());
+        notice = GuideUiNotice.info(MinecraftComponents.translatable("screen.openallay.fork.running").getString());
         accept(service.forkSelectedSession(), id -> {
-            notice = GuideUiNotice.success(Component.translatable("screen.openallay.fork.success", id).getString());
+            notice = GuideUiNotice.success(MinecraftComponents.translatable("screen.openallay.fork.success", id).getString());
             sessionOverlay = false;
             scroll = 0;
         });
     }
 
     private void forkSession(String sourceSessionId, UUID completedRequestId) {
-        notice = GuideUiNotice.info(Component.translatable("screen.openallay.fork.running").getString());
+        notice = GuideUiNotice.info(MinecraftComponents.translatable("screen.openallay.fork.running").getString());
         accept(service.forkSession(sourceSessionId, completedRequestId), id -> {
-            notice = GuideUiNotice.success(Component.translatable("screen.openallay.fork.success", id).getString());
+            notice = GuideUiNotice.success(MinecraftComponents.translatable("screen.openallay.fork.success", id).getString());
             sessionOverlay = false;
             scroll = 0;
         });
@@ -3417,9 +3418,9 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
     private void renderForkAction(GuideGraphics graphics, UUID requestId, String text,
             int x, int y, int width) {
         if (!forkableRequest(service.snapshot(), view.selectedSession(), requestId)) return;
-        Component label = Component.translatable("screen.openallay.action.fork");
+        Component label = MinecraftComponents.translatable("screen.openallay.action.fork");
         int copyWidth = text == null || text.isBlank() ? 0
-                : font.width(Component.translatable("screen.openallay.action.copy")) + 14;
+                : font.width(MinecraftComponents.translatable("screen.openallay.action.copy")) + 14;
         int actionWidth = font.width(label) + 8;
         int actionX = x + width - copyWidth - actionWidth;
         String focusId = "fork:" + requestId;
@@ -3430,7 +3431,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         String source = view.selectedSession();
         hits.add(new Hit(new GuideUiLayout.Rect(actionX - 2, y - 2, actionWidth + 2, 12),
                 HitKind.CONTENT, () -> forkSession(source, requestId), focusId,
-                Component.translatable("screen.openallay.action.fork.description").getString()));
+                MinecraftComponents.translatable("screen.openallay.action.fork.description").getString()));
     }
 
     static boolean completedAssistantBoundary(GuideSnapshot snapshot, String sessionId, GuideUiRow.Assistant row) {
@@ -3477,10 +3478,10 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
                         dev.openallay.client.gui.MinecraftClientWindow.showScreen(minecraft, this);
                     }
                 },
-                Component.translatable("screen.openallay.session.delete.first.title"),
+                MinecraftComponents.translatable("screen.openallay.session.delete.first.title"),
                 deleteConfirmationMessage(sessionId, false),
-                Component.translatable("screen.openallay.session.delete.continue"),
-                Component.translatable("screen.openallay.session.delete.cancel")));
+                MinecraftComponents.translatable("screen.openallay.session.delete.continue"),
+                MinecraftComponents.translatable("screen.openallay.session.delete.cancel")));
     }
 
     private void confirmSessionDeletionAgain(String sessionId) {
@@ -3489,7 +3490,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
                     dev.openallay.client.gui.MinecraftClientWindow.showScreen(minecraft, this);
                     if (confirmed) {
                         accept(service.closeSession(sessionId), deleted -> {
-                            notice = GuideUiNotice.success(Component.translatable(
+                            notice = GuideUiNotice.success(MinecraftComponents.translatable(
                                     deleted
                                             ? "screen.openallay.session.delete.success"
                                             : "screen.openallay.session.delete.missing",
@@ -3498,17 +3499,17 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
                         });
                     }
                 },
-                Component.translatable("screen.openallay.session.delete.second.title"),
+                MinecraftComponents.translatable("screen.openallay.session.delete.second.title"),
                 deleteConfirmationMessage(sessionId, true),
-                Component.translatable("screen.openallay.session.delete.confirm"),
-                Component.translatable("screen.openallay.session.delete.cancel")));
+                MinecraftComponents.translatable("screen.openallay.session.delete.confirm"),
+                MinecraftComponents.translatable("screen.openallay.session.delete.cancel")));
     }
 
     private void exportSession() {
         if (exportRunning) return;
         java.nio.file.Path gameDirectory = minecraft.gameDirectory.toPath();
         exportRunning = true;
-        notice = GuideUiNotice.info(Component.translatable("screen.openallay.session.export.running").getString());
+        notice = GuideUiNotice.info(MinecraftComponents.translatable("screen.openallay.session.export.running").getString());
         exportNotice = notice;
         exportNoticeKey = "screen.openallay.session.export.running";
         updateControls();
@@ -3533,11 +3534,11 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
                             lastExportRequestCount = exported.requestCount();
                         }
                         notice = new GuideUiNotice(failure == null ? GuideUiNotice.Severity.SUCCESS : GuideUiNotice.Severity.ERROR, GuideUiNotice.Placement.COMPOSER, failure == null
-                                ? Component.translatable(
+                                ? MinecraftComponents.translatable(
                                         "screen.openallay.session.export.success",
                                         exported.filename(),
                                         exported.requestCount()).getString()
-                                : Component.translatable(
+                                : MinecraftComponents.translatable(
                                         "screen.openallay.session.export.failed").getString());
                         exportNotice = notice;
                         exportNoticeKey = failure == null ? "screen.openallay.session.export.success"
@@ -3550,7 +3551,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
     private void completeExportFailure() {
         minecraft.execute(() -> {
             exportRunning = false;
-            notice = GuideUiNotice.error(Component.translatable(
+            notice = GuideUiNotice.error(MinecraftComponents.translatable(
                     "screen.openallay.session.export.failed").getString());
             exportNotice = notice;
             exportNoticeKey = "screen.openallay.session.export.failed";
@@ -3566,7 +3567,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
             int y,
             int width) {
         if (text == null || text.isBlank()) return;
-        Component label = Component.translatable("screen.openallay.action.copy");
+        Component label = MinecraftComponents.translatable("screen.openallay.action.copy");
         int actionWidth = font.width(label) + 8;
         int actionX = x + width - actionWidth;
         String focusId = "copy:" + rowId(row);
@@ -3585,9 +3586,9 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
     private void copyChatText(String text) {
         try {
             minecraft.keyboardHandler.setClipboard(text);
-            notice = GuideUiNotice.success(Component.translatable("screen.openallay.copy.success").getString());
+            notice = GuideUiNotice.success(MinecraftComponents.translatable("screen.openallay.copy.success").getString());
         } catch (RuntimeException failure) {
-            notice = GuideUiNotice.error(Component.translatable("screen.openallay.copy.failed").getString());
+            notice = GuideUiNotice.error(MinecraftComponents.translatable("screen.openallay.copy.failed").getString());
         }
     }
 
@@ -3606,7 +3607,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         if (sessionId == null || !sessionId.matches("[a-zA-Z0-9_.-]+")) {
             throw new IllegalArgumentException("invalid session deletion target");
         }
-        return Component.translatable(
+        return MinecraftComponents.translatable(
                 finalConfirmation
                         ? "screen.openallay.session.delete.second.message"
                         : "screen.openallay.session.delete.first.message",
@@ -3650,7 +3651,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         send.active = inWorld && !submittingDraft && !uiState.intentSubmissionInFlight(view.selectedSession()) && (localControl
                 || (editingPending() != null || active || view.canSend()) && content
                         && imageCapable && !composerImages.pending() && !draftIntent().editInvalid());
-        send.setMessage(Component.translatable(localControl ? "screen.openallay.action.send"
+        send.setMessage(MinecraftComponents.translatable(localControl ? "screen.openallay.action.send"
                 : editingPending() != null ? "screen.openallay.pending.save"
                 : active ? steerMode() ? "screen.openallay.pending.steer" : "screen.openallay.pending.follow_up"
                 : "screen.openallay.action.send"));
@@ -3660,7 +3661,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         if (service.compactAvailable() && !dev.openallay.guide.composer.SlashCommandParser.suggestions(draft).isEmpty()) {
             submitHelp = "openallay.guide.slash.compact.help";
         }
-        dev.openallay.client.gui.GuideNativeWidgetTooltips.set(send, GuideTooltip.create(Component.translatable(submitHelp)));
+        dev.openallay.client.gui.GuideNativeWidgetTooltips.set(send, GuideTooltip.create(MinecraftComponents.translatable(submitHelp)));
         if (stop != null) stop.active = view.canCancel();
         model.setMessage(modelButtonLabel());
         dev.openallay.client.gui.GuideNativeWidgetTooltips.set(model, GuideTooltip.create(modelButtonDescription()));
@@ -3668,8 +3669,8 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         model.active = !view.modelChoices().isEmpty();
         if (microphone != null && voice != null) {
             microphone.setMessage(voice.status().active()
-                    ? Component.translatable("screen.openallay.voice.short." + voice.status().state().name().toLowerCase(java.util.Locale.ROOT), voice.status().elapsedMillis() / 1000)
-                    : Component.translatable("screen.openallay.voice.mic_short"));
+                    ? MinecraftComponents.translatable("screen.openallay.voice.short." + voice.status().state().name().toLowerCase(java.util.Locale.ROOT), voice.status().elapsedMillis() / 1000)
+                    : MinecraftComponents.translatable("screen.openallay.voice.mic_short"));
             dev.openallay.client.gui.GuideNativeWidgetTooltips.set(microphone, GuideTooltip.create(voiceFeedback()));
         }
     }
@@ -3686,20 +3687,20 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
 
     private Component modelButtonLabel() {
         Component full = view.modelSwitchPending()
-                ? Component.translatable("screen.openallay.model.next_short", view.selectedModel().displayName()) : modelLabel();
+                ? MinecraftComponents.translatable("screen.openallay.model.next_short", view.selectedModel().displayName()) : modelLabel();
         int available = layout.header().model().width() - 12;
-        if (available < 24) return Component.literal("▾");
+        if (available < 24) return MinecraftComponents.literal("▾");
         if (font.width(full) <= available) return full;
         String shortLabel = view.modelSwitchPending()
-                ? Component.translatable("screen.openallay.model.next_short", view.selectedModel().displayName()).getString()
+                ? MinecraftComponents.translatable("screen.openallay.model.next_short", view.selectedModel().displayName()).getString()
                 : "▾ " + view.selectedModel().displayName();
         String text = font.plainSubstrByWidth(shortLabel,
                 Math.max(1, available - font.width("…")));
-        return Component.literal(text + "…");
+        return MinecraftComponents.literal(text + "…");
     }
 
     private MutableComponent modelButtonDescription() {
-        return Component.translatable("screen.openallay.action.models").append(" · ")
+        return MinecraftComponents.translatable("screen.openallay.action.models").append(" · ")
                 .append(modelStatus()).append(" · ").append(modelLabel());
     }
 
@@ -3708,8 +3709,8 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         Component label = choiceLabel(selected);
         Component value = selected.available()
                 ? label
-                : Component.translatable("screen.openallay.model.unavailable_short", label);
-        return Component.literal("▾ ").append(value).append(" · ").append(imageInputLabel(selected));
+                : MinecraftComponents.translatable("screen.openallay.model.unavailable_short", label);
+        return MinecraftComponents.literal("▾ ").append(value).append(" · ").append(imageInputLabel(selected));
     }
 
     private void revealSelectedModel() {
@@ -3780,10 +3781,10 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
             if (choiceIndex == modelSelectorCursor) {
                 graphics.outline(menu.x() + 2, y + 2, menu.width() - 4, 16, 0xFFFFFFFF);
             }
-            Component label = Component.literal(choice.selected() ? "✓ " : "  ")
+            Component label = MinecraftComponents.literal(choice.selected() ? "✓ " : "  ")
                     .append(choiceLabel(choice));
             if (!choice.available()) {
-                label = label.copy().append(Component.translatable(
+                label = label.copy().append(MinecraftComponents.translatable(
                         "screen.openallay.model.choice_unavailable"));
             }
             label = label.copy().append(" · ").append(imageInputLabel(choice));
@@ -3854,30 +3855,30 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         GuideUiModelChoice selected = view.selectedModel();
         Component selectedLabel = choiceLabel(selected);
         if (!selected.available()) {
-            return Component.translatable(
+            return MinecraftComponents.translatable(
                     "screen.openallay.model.selected_unavailable", selectedLabel);
         }
         if (view.modelSwitchPending()) {
-            return Component.translatable(
+            return MinecraftComponents.translatable(
                     "screen.openallay.model.running_next",
                     choiceLabel(view.runningModel()),
                     selectedLabel);
         }
-        return Component.translatable("screen.openallay.model.using", selectedLabel);
+        return MinecraftComponents.translatable("screen.openallay.model.using", selectedLabel);
     }
 
     static Component imageInputLabel(GuideUiModelChoice choice) {
-        return Component.translatable("screen.openallay.settings.models.builtin.image_input."
+        return MinecraftComponents.translatable("screen.openallay.settings.models.builtin.image_input."
                 + choice.imageInput().encoded());
     }
 
     private static Component choiceLabel(GuideUiModelChoice choice) {
         return choice.selection().kind() == GuideModelSelection.Kind.SERVER
-                ? Component.translatable("screen.openallay.model.server")
+                ? MinecraftComponents.translatable("screen.openallay.model.server")
                         .copy()
                         .append(" · ")
                         .append(choice.displayName())
-                : Component.translatable(
+                : MinecraftComponents.translatable(
                         "screen.openallay.model.client", choice.displayName());
     }
 
@@ -3888,12 +3889,12 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
     static String sourceLabel(GuideSource source, boolean debugMode) {
         if (!debugMode) {
             GuideEvidencePresentation evidence = GuideEvidencePresentation.from(source);
-            return Component.translatable(evidence.sourceKey()).getString() + " · "
-                    + Component.translatable(evidence.coverageKey()).getString();
+            return MinecraftComponents.translatable(evidence.sourceKey()).getString() + " · "
+                    + MinecraftComponents.translatable(evidence.coverageKey()).getString();
         }
-        return Component.translatable("screen.openallay.detail.tool.source").getString()
+        return MinecraftComponents.translatable("screen.openallay.detail.tool.source").getString()
                 + " · " + readableSource(source.evidence().sourceId()) + " · "
-                + Component.translatable(coverageKey(source.evidence().completeness())).getString();
+                + MinecraftComponents.translatable(coverageKey(source.evidence().completeness())).getString();
     }
 
     static String readableSource(String sourceId) {
@@ -3907,7 +3908,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
             case "patchouli:resources" -> "screen.openallay.detail.tool.source.patchouli.resources";
             default -> null;
         };
-        return translationKey == null ? sourceId : Component.translatable(translationKey).getString();
+        return translationKey == null ? sourceId : MinecraftComponents.translatable(translationKey).getString();
     }
 
     private static String coverageKey(dev.openallay.context.DataCompleteness completeness) {
@@ -3923,7 +3924,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
     }
 
     static Component toolStatus(GuideToolStatus status) {
-        return Component.translatable(switch (status) {
+        return MinecraftComponents.translatable(switch (status) {
             case RUNNING -> "screen.openallay.detail.tool.status.running";
             case SUCCEEDED -> "screen.openallay.detail.tool.status.succeeded";
             case FAILED -> "screen.openallay.detail.tool.status.failed";
@@ -3933,16 +3934,16 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
     static Component toolTitle(GuideToolActivity activity) {
         return activity.intent().title().isEmpty()
                 ? friendlyTool(activity.toolId())
-                : Component.literal(activity.intent().title());
+                : MinecraftComponents.literal(activity.intent().title());
     }
 
     private static Component intentTitle(dev.openallay.guide.GuideToolIntent intent, String titleKey) {
         return intent.title().isEmpty()
-                ? Component.translatable(titleKey) : Component.literal(intent.title());
+                ? MinecraftComponents.translatable(titleKey) : MinecraftComponents.literal(intent.title());
     }
 
     static Component toolDescription(dev.openallay.guide.GuideToolIntent intent) {
-        return intent.description().isEmpty() ? Component.empty() : Component.literal(intent.description());
+        return intent.description().isEmpty() ? MinecraftComponents.empty() : MinecraftComponents.literal(intent.description());
     }
 
     static Component toolCardStatus(GuideToolDisplayStatus status) {
@@ -3952,17 +3953,17 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
             case FAILED -> "!";
             case NO_RESULT_RECORDED -> "—";
         };
-        return Component.literal(icon + " ")
-                .append(Component.translatable(status.translationKey()));
+        return MinecraftComponents.literal(icon + " ")
+                .append(MinecraftComponents.translatable(status.translationKey()));
     }
 
     private static Component friendlyTool(String id) {
         int separator = id.indexOf(':');
         String name = separator >= 0 ? id.substring(separator + 1) : id;
         return switch (name) {
-            case "load_skill" -> Component.translatable("screen.openallay.tool.load_skill");
-            case "run_javascript" -> Component.translatable("screen.openallay.tool.run_javascript");
-            default -> Component.literal(name);
+            case "load_skill" -> MinecraftComponents.translatable("screen.openallay.tool.load_skill");
+            case "run_javascript" -> MinecraftComponents.translatable("screen.openallay.tool.run_javascript");
+            default -> MinecraftComponents.literal(name);
         };
     }
 

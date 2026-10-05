@@ -6,6 +6,7 @@ import java.util.Optional;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.screens.Screen;
+import dev.openallay.platform.minecraft.MinecraftComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.inventory.tooltip.TooltipComponent;
@@ -14,7 +15,7 @@ import net.minecraft.world.item.ItemStack;
 /** Native Screen tooltip renderer without changing the displayed screen or UI ownership. */
 final class GuidePoseTooltip extends Screen {
     private GuidePoseTooltip(Font font) {
-        super(Component.empty());
+        super(MinecraftComponents.empty());
         minecraft = Minecraft.getInstance();
         this.font = font;
         itemRenderer = minecraft.getItemRenderer();

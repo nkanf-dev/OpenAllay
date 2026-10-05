@@ -13,6 +13,7 @@ import dev.openallay.client.gui.GuideGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import dev.openallay.client.gui.GuideInputKey;
+import dev.openallay.platform.minecraft.MinecraftComponents;
 import net.minecraft.network.chat.Component;
 
 /** Reviews the already checked candidate; only Continue anyway publishes it. */
@@ -39,7 +40,7 @@ public final class RequirementReviewScreen extends dev.openallay.client.gui.Guid
 
     public RequirementReviewScreen(
             ClientSettingsService service, Screen parent, RequirementReview review) {
-        super(Component.translatable(PREFIX + "title"));
+        super(MinecraftComponents.translatable(PREFIX + "title"));
         this.service = Objects.requireNonNull(service, "service");
         this.parent = Objects.requireNonNull(parent, "parent");
         this.review = Objects.requireNonNull(review, "review");
@@ -57,7 +58,7 @@ public final class RequirementReviewScreen extends dev.openallay.client.gui.Guid
             if (current != null && current.token() == token) {
                 review = current;
             } else if (!actionPending && !finished) {
-                failure = Component.translatable(PREFIX + "expired").getString();
+                failure = MinecraftComponents.translatable(PREFIX + "expired").getString();
             }
             // Minecraft 26.2 calls added() before init(width, height). A local dispatcher
             // may deliver this snapshot inline; retain it, but do not create widgets yet.
@@ -119,14 +120,14 @@ public final class RequirementReviewScreen extends dev.openallay.client.gui.Guid
         int w = panelWidth();
         int half = (w - 6) / 2;
         Button cancel = addRenderableWidget(OpenAllayButton.create(
-                        Component.translatable(PREFIX + "cancel"), ignored -> {
+                        MinecraftComponents.translatable(PREFIX + "cancel"), ignored -> {
                             if (confirming == null) onClose();
                             else { confirming = null; scroll = 0; rebuildWidgets(); }
                         })
                 .bounds(x, height - 29, half, 20).build());
         cancel.active = !actionPending;
         Button proceed = addRenderableWidget(OpenAllayButton.create(
-                        Component.translatable(confirming == null
+                        MinecraftComponents.translatable(confirming == null
                                 ? projection().continueKey() : PREFIX + "confirm_enable"),
                         ignored -> {
                             if (confirming == null) publish();
@@ -150,53 +151,53 @@ public final class RequirementReviewScreen extends dev.openallay.client.gui.Guid
         int start = viewportTop() + 7 - scroll;
         int y = start;
         if (!failure.isBlank()) {
-            y = text(graphics, Component.literal(failure), x, y, w, ERROR) + 12;
+            y = text(graphics, MinecraftComponents.literal(failure), x, y, w, ERROR) + 12;
         }
         if (actionPending) {
-            y = text(graphics, Component.translatable(PREFIX + "working"), x, y, w, ACCENT) + 12;
+            y = text(graphics, MinecraftComponents.translatable(PREFIX + "working"), x, y, w, ACCENT) + 12;
         }
         if (confirming != null) {
-            y = text(graphics, Component.translatable(PREFIX + "enable_change",
-                    Component.translatable(confirming.kindKey()), Component.literal(confirming.id())),
+            y = text(graphics, MinecraftComponents.translatable(PREFIX + "enable_change",
+                    MinecraftComponents.translatable(confirming.kindKey()), MinecraftComponents.literal(confirming.id())),
                     x, y, w, ACCENT);
-            y = text(graphics, Component.translatable(
+            y = text(graphics, MinecraftComponents.translatable(
                     "screen.openallay.settings.extensions.unrestricted.warning"),
                     x, y + 12, w, ERROR);
-            y = text(graphics, Component.translatable(PREFIX + "server_restricted"),
+            y = text(graphics, MinecraftComponents.translatable(PREFIX + "server_restricted"),
                     x, y + 12, w, MUTED);
-            y = text(graphics, Component.translatable(PREFIX + "unrestricted_confirm"),
+            y = text(graphics, MinecraftComponents.translatable(PREFIX + "unrestricted_confirm"),
                     x, y + 12, w, TEXT);
         } else {
-            y = text(graphics, Component.literal(review.name() + " · " + review.version()), x, y, w, TEXT);
-            y = text(graphics, Component.literal(review.id()), x, y + 4, w, MUTED);
-            y = text(graphics, Component.translatable(PREFIX + "advisory"), x, y + 10, w, TEXT);
-            y = text(graphics, Component.translatable(PREFIX + "scope_local"), x, y + 6, w, MUTED);
-            y = text(graphics, Component.translatable(PREFIX + "continue_notice"), x, y + 6, w, MUTED);
+            y = text(graphics, MinecraftComponents.literal(review.name() + " · " + review.version()), x, y, w, TEXT);
+            y = text(graphics, MinecraftComponents.literal(review.id()), x, y + 4, w, MUTED);
+            y = text(graphics, MinecraftComponents.translatable(PREFIX + "advisory"), x, y + 10, w, TEXT);
+            y = text(graphics, MinecraftComponents.translatable(PREFIX + "scope_local"), x, y + 6, w, MUTED);
+            y = text(graphics, MinecraftComponents.translatable(PREFIX + "continue_notice"), x, y + 6, w, MUTED);
             if (review.catalogRequirementsDiffer()) {
-                y = text(graphics, Component.translatable(PREFIX + "package_changed"),
+                y = text(graphics, MinecraftComponents.translatable(PREFIX + "package_changed"),
                         x, y + 8, w, ACCENT);
             }
             if (savedSettings) {
-                y = text(graphics, Component.translatable(PREFIX + "saved_settings"),
+                y = text(graphics, MinecraftComponents.translatable(PREFIX + "saved_settings"),
                         x, y + 8, w, MUTED);
             }
             RequirementSettingsProjection projection = projection();
             if (projection.rows().isEmpty()) {
-                y = text(graphics, Component.translatable(PREFIX + "none"), x, y + 12, w, MUTED);
+                y = text(graphics, MinecraftComponents.translatable(PREFIX + "none"), x, y + 12, w, MUTED);
             }
             for (Row row : projection.rows()) {
                 y = text(graphics, rowLabel(row), x, y + 12, w,
                         row.status() == RequirementStatus.SATISFIED ? ACCENT : TEXT);
                 if (!row.detail().isBlank()) {
-                    y = text(graphics, Component.literal(row.detail()), x, y + 3, w, MUTED);
+                    y = text(graphics, MinecraftComponents.literal(row.detail()), x, y + 3, w, MUTED);
                 }
                 if (row.canEnable()) {
-                    y = text(graphics, Component.translatable(PREFIX + "enable_change",
-                            Component.translatable(row.kindKey()), Component.literal(row.id())),
+                    y = text(graphics, MinecraftComponents.translatable(PREFIX + "enable_change",
+                            MinecraftComponents.translatable(row.kindKey()), MinecraftComponents.literal(row.id())),
                             x, y + 4, w, MUTED);
                     if (buttons) {
                         Button enable = addRenderableWidget(OpenAllayButton.create(
-                                        Component.translatable(PREFIX + "enable", Component.literal(row.id())),
+                                        MinecraftComponents.translatable(PREFIX + "enable", MinecraftComponents.literal(row.id())),
                                         ignored -> requestEnable(row))
                                 .bounds(x, y + 4, w, 20).build());
                         enable.active = ready();
@@ -213,13 +214,13 @@ public final class RequirementReviewScreen extends dev.openallay.client.gui.Guid
         Component identity = row.kind() == dev.openallay.requirement.RequirementKind.CAPABILITY
                         && dev.openallay.settings.requirement.RequirementSettingsEnvironment
                                 .isUnrestrictedJavascript(row.id())
-                ? Component.translatable(PREFIX + "name.unrestricted_javascript")
-                        .append(Component.literal(" (" + row.id() + ")"))
-                : Component.literal(row.name().equals(row.id())
+                ? MinecraftComponents.translatable(PREFIX + "name.unrestricted_javascript")
+                        .append(MinecraftComponents.literal(" (" + row.id() + ")"))
+                : MinecraftComponents.literal(row.name().equals(row.id())
                         ? row.id() : row.name() + " (" + row.id() + ")");
-        return Component.translatable(PREFIX + "row",
-                Component.translatable(row.kindKey()), identity,
-                Component.translatable(row.statusKey()));
+        return MinecraftComponents.translatable(PREFIX + "row",
+                MinecraftComponents.translatable(row.kindKey()), identity,
+                MinecraftComponents.translatable(row.statusKey()));
     }
 
     private int text(GuideGraphics graphics, Component value, int x, int y, int w, int color) {

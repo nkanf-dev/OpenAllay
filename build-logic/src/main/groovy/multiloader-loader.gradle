@@ -21,8 +21,15 @@ if (!families.contains(selectedTarget)) {
     resourceRoots.add(new File(loaderSourceRoot, "src/targets/${selectedTarget}/resources"))
 }
 if (loaderSourceRoot != projectDir) {
-    javaRoots.add(file("src/targets/${selectedTarget}/java"))
-    resourceRoots.add(file("src/targets/${selectedTarget}/resources"))
+    // Exact Forge API leaves follow the same oldest-last override order as common.
+    families.each { family ->
+        javaRoots.add(file("src/targets/${family}/java"))
+        resourceRoots.add(file("src/targets/${family}/resources"))
+    }
+    if (!families.contains(selectedTarget)) {
+        javaRoots.add(file("src/targets/${selectedTarget}/java"))
+        resourceRoots.add(file("src/targets/${selectedTarget}/resources"))
+    }
 }
 def overridden = { element, List<File> roots ->
     if (element.directory) return false

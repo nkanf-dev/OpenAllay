@@ -27,7 +27,7 @@ final class GuideProbeWorldSettings {
     }
     static void open(net.minecraft.client.Minecraft client, String name, Runnable cancelled) {
         client.createWorldOpenFlows().loadLevel(new net.minecraft.client.gui.screens.Screen(
-                net.minecraft.network.chat.Component.empty()) {
+                dev.openallay.platform.minecraft.MinecraftComponents.empty()) {
             private boolean reported;
             @Override
             protected void init() {

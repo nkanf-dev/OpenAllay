@@ -15,6 +15,7 @@ import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.SharedSuggestionProvider;
+import dev.openallay.platform.minecraft.MinecraftComponents;
 import net.minecraft.network.chat.Component;
 
 public final class NeoForgeDevelopmentCommands {
@@ -29,7 +30,7 @@ public final class NeoForgeDevelopmentCommands {
                                         .requires(source -> dev.openallay.context.minecraft.MinecraftCommandPermissions.canReadWorld(source))
                                         .then(literal("tools").executes(context -> {
                                             handler.listTools().forEach(line -> dev.openallay.context.minecraft.MinecraftCommandFeedback.success(context.getSource(),
-                                                            () -> Component.literal(line), false));
+                                                            () -> MinecraftComponents.literal(line), false));
                                             return 1;
                                         }))
                                         .then(literal("replay")
@@ -48,7 +49,7 @@ public final class NeoForgeDevelopmentCommands {
                                                             String id =
                                                                     getString(context, "tool");
                                                             dev.openallay.context.minecraft.MinecraftCommandFeedback.success(context.getSource(),
-                                                                    () -> Component.literal(
+                                                                    () -> MinecraftComponents.literal(
                                                                             handler.invoke(id)),
                                                                     false);
                                                             return 1;
@@ -69,11 +70,11 @@ public final class NeoForgeDevelopmentCommands {
         ToolResult<ReplayReport> result = runtime.traceReplay().replay(source, traceId);
         if (result instanceof ToolResult.Success<ReplayReport> success) {
             success.value().chatLines().forEach(line ->
-                    dev.openallay.context.minecraft.MinecraftCommandFeedback.success(source,() -> Component.literal(line), false));
+                    dev.openallay.context.minecraft.MinecraftCommandFeedback.success(source,() -> MinecraftComponents.literal(line), false));
             return success.value().passed() ? 1 : 0;
         }
         ToolResult.Failure<ReplayReport> failure = (ToolResult.Failure<ReplayReport>) result;
-        source.sendFailure(Component.literal(
+        source.sendFailure(MinecraftComponents.literal(
                 "FAILURE " + failure.code() + ": " + failure.message()));
         return 0;
     }

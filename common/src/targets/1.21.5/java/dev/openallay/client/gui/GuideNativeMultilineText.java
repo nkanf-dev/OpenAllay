@@ -8,9 +8,17 @@ import net.minecraft.network.chat.Component;
 public final class GuideNativeMultilineText {
     private GuideNativeMultilineText() {}
 
-    public static MultiLineEditBox create(Font font, int x, int y, int width, int height,
+    public static GuideMultilineEditor create(Font font, int x, int y, int width, int height,
             Component placeholder, Component narration) {
-        return new MultiLineEditBox(font, x, y, width, height, placeholder, narration);
+        return new GuideNativeMultilineEditor(new MultiLineEditBox(font, x, y, width, height, placeholder, narration));
+    }
+
+    public static GuideMultilineEditor find(net.minecraft.client.gui.components.events.GuiEventListener widget) {
+        return widget instanceof MultiLineEditBox editor ? new GuideNativeMultilineEditor(editor) : null;
+    }
+
+    public static void setValue(GuideMultilineEditor editor, String value, boolean bypassLineLimit) {
+        editor.setValue(value, bypassLineLimit);
     }
 
     public static void setValue(MultiLineEditBox editor, String value, boolean bypassLineLimit) {

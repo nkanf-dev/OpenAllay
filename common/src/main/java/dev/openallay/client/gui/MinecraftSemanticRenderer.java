@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.Font;
+import dev.openallay.platform.minecraft.MinecraftComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.world.item.ItemStack;
@@ -121,10 +122,10 @@ public final class MinecraftSemanticRenderer {
                     } else if (line.kind() == SemanticLayout.Kind.QUOTE) {
                         graphics.fill(left - 4, current, left - 2, current + line.height(), ACCENT);
                     }
-                    MutableComponent rendered = Component.empty();
+                    MutableComponent rendered = MinecraftComponents.empty();
                     int runX = left;
                     for (SemanticLayout.Run run : line.runs()) {
-                        MutableComponent value = Component.literal(run.text());
+                        MutableComponent value = MinecraftComponents.literal(run.text());
                         value = switch (run.style()) {
                             case NORMAL -> value;
                             case EMPHASIS -> value.withStyle(ChatFormatting.ITALIC);
@@ -216,7 +217,7 @@ public final class MinecraftSemanticRenderer {
             List<Hit> hits) {
         int runX = x;
         for (SemanticLayout.Run run : runs) {
-            MutableComponent rendered = Component.literal(run.text());
+            MutableComponent rendered = MinecraftComponents.literal(run.text());
             rendered = switch (run.style()) {
                 case NORMAL -> rendered;
                 case EMPHASIS -> rendered.withStyle(ChatFormatting.ITALIC);
@@ -287,10 +288,10 @@ public final class MinecraftSemanticRenderer {
                 renderItem(graphics, font, item.itemId(), item.label(), item.count(),
                         x + 2, rowY, mouseX, mouseY);
                 int actionX = Math.min(x + width - 54, x + 120);
-                action(graphics, font, Component.translatable(
+                action(graphics, font, MinecraftComponents.translatable(
                                 "screen.openallay.semantic.action.recipes"), actionX, rowY + 4,
                         new Intent.BrowseRecipes(item.itemId()), hits);
-                action(graphics, font, Component.translatable(
+                action(graphics, font, MinecraftComponents.translatable(
                                 "screen.openallay.semantic.action.usages"), actionX + 28, rowY + 4,
                         new Intent.BrowseUsages(item.itemId()), hits);
                 rowY += 22;
@@ -304,20 +305,20 @@ public final class MinecraftSemanticRenderer {
                     mouseX,
                     mouseY,
                     presentationTicks)) {
-                action(graphics, font, Component.translatable(
+                action(graphics, font, MinecraftComponents.translatable(
                                 "screen.openallay.semantic.action.open_recipe"),
                         x + 4, y + height - 11,
                         new Intent.ExactRecipe(value.recipe()), hits);
                 return;
             }
             graphics.text(font, value.label().isBlank()
-                            ? Component.translatable("screen.openallay.semantic.recipe")
-                            : Component.literal(value.label()),
+                            ? MinecraftComponents.translatable("screen.openallay.semantic.recipe")
+                            : MinecraftComponents.literal(value.label()),
                     x + 4, y + 4, ACCENT, false);
-            graphics.text(font, Component.translatable(
+            graphics.text(font, MinecraftComponents.translatable(
                             "screen.openallay.semantic.recipe_verified"),
                     x + 4, y + 18, MUTED, false);
-            action(graphics, font, Component.translatable(
+            action(graphics, font, MinecraftComponents.translatable(
                             "screen.openallay.semantic.action.open_recipe"), x + 4, y + 34,
                     new Intent.ExactRecipe(value.recipe()), hits);
         } else if (component instanceof RichComponent.IngredientCheck value) {
@@ -331,14 +332,14 @@ public final class MinecraftSemanticRenderer {
                 rowY += 22;
             }
         } else if (component instanceof RichComponent.CraftabilitySummary value) {
-            graphics.text(font, Component.translatable(value.craftable()
+            graphics.text(font, MinecraftComponents.translatable(value.craftable()
                             ? "screen.openallay.semantic.craftable"
                             : "screen.openallay.semantic.not_craftable"),
                     x + 4, y + 4, value.craftable() ? SUCCESS : ERROR, false);
-            graphics.text(font, Component.translatable(
+            graphics.text(font, MinecraftComponents.translatable(
                             "screen.openallay.semantic.maximum_crafts", value.maximumCrafts()),
                     x + 4, y + 16, TEXT, false);
-            graphics.text(font, Component.translatable(value.conclusive()
+            graphics.text(font, MinecraftComponents.translatable(value.conclusive()
                             ? "screen.openallay.semantic.conclusive"
                             : "screen.openallay.semantic.incomplete"),
                     x + 4, y + 28, MUTED, false);
@@ -354,7 +355,7 @@ public final class MinecraftSemanticRenderer {
         } else if (component instanceof RichComponent.SourceSummary value) {
             int rowY = y + 2;
             for (RichComponent.Source source : value.sources()) {
-                graphics.text(font, Component.translatable(
+                graphics.text(font, MinecraftComponents.translatable(
                                 "screen.openallay.semantic.source", source.label()),
                         x + 4, rowY, ACCENT, false);
                 hits.add(new Hit(new GuideUiLayout.Rect(x + 2, rowY - 1, width - 4, 11),
@@ -374,7 +375,7 @@ public final class MinecraftSemanticRenderer {
             graphics.text(font, value.prompt(), x + 4, y + 2, TEXT, false);
             int rowY = y + 14;
             for (RichComponent.Choice choice : value.choices()) {
-                action(graphics, font, Component.literal(choice.label()), x + 4, rowY,
+                action(graphics, font, MinecraftComponents.literal(choice.label()), x + 4, rowY,
                         new Intent.Choice(value.nodeId(), choice.id()), hits);
                 rowY += 11;
             }

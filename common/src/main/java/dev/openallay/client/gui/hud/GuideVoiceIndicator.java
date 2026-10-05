@@ -8,6 +8,7 @@ import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.locale.Language;
+import dev.openallay.platform.minecraft.MinecraftComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 
@@ -45,7 +46,7 @@ public final class GuideVoiceIndicator {
     }
 
     private static List<FormattedCharSequence> wrap(Font font, String key, int width) {
-        return key.isEmpty() ? List.of() : font.split(Component.translatable(key), Math.max(1, width));
+        return key.isEmpty() ? List.of() : font.split(MinecraftComponents.translatable(key), Math.max(1, width));
     }
     private record CacheKey(VoiceStatusPresentation.Notice feedback, int width, Font font, Language language) {}
 }

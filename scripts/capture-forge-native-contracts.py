@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Retain small command method bodies from the actual selected named game artifact."""
+"""Retain bounded native contract bodies from the actual selected named game artifact."""
 import argparse
 import hashlib
 import json
@@ -12,6 +12,15 @@ CLASSES = {
     "net.minecraft.client.player.LocalPlayer": ("commandSigned", "sendCommand", "sendChat"),
     "net.minecraft.client.gui.screens.ChatScreen": ("handleChatInput",),
     "net.minecraft.server.commands.HelpCommand": ("register", "lambda$register$1", "<clinit>"),
+}
+# The pre-slotCount manager needs exact admission, clearing and placement bodies.
+# This runs inside the same core compile job, never a lookup-only CI job.
+TOAST_CLASSES = {
+    "net.minecraft.client.gui.components.toasts.ToastComponent": (
+        "net.minecraft.client.gui.components.toasts.ToastComponent", "render", "getToast", "clear", "addToast", "getMinecraft"),
+    "net.minecraft.client.gui.components.toasts.ToastComponent$ToastInstance": (
+        "net.minecraft.client.gui.components.toasts.ToastComponent$ToastInstance", "render", "getToast", "getVisibility"),
+    "net.minecraft.client.gui.components.toasts.Toast": ("render", "width", "height", "getToken"),
 }
 OUTPUT_LIMIT = 100 * 1024
 TRANSIENT_LIMIT = 400 * 1024
@@ -27,7 +36,7 @@ def sha256_file(path):
 
 def method_blocks(text):
     methods = {}
-    starts = list(re.finditer(r"(?m)^  ((?:public|protected|private).*\([^\n]*\)[^\n]*;)$", text))
+    starts = list(re.finditer(r"(?m)^  (\S[^\n]*\([^\n]*\)[^\n]*;)$", text))
     for index, match in enumerate(starts):
         end = starts[index + 1].start() if index + 1 < len(starts) else text.rfind("\n}")
         declaration = match.group(1)
@@ -68,8 +77,13 @@ def capture(game_jar, javap, output, project, target):
                "javap": str(javap.resolve()), "classes": [],
                "gameCommandExecution": "not established by bytecode capture"}
     retained_bytes = 0
+    classes = dict(CLASSES)
+    if target == "1.18.2":
+        classes["net.minecraft.client.player.LocalPlayer"] = ("chat",)
+        classes.update(TOAST_CLASSES)
+        receipt["toastGeometry"] = "functional-pending: inspect manager admission/32px placement/removal before game acceptance"
     with zipfile.ZipFile(game_jar) as archive:
-        for owner, selectors in CLASSES.items():
+        for owner, selectors in classes.items():
             member = owner.replace(".", "/") + ".class"
             record = {"owner": owner, "member": member}
             receipt["classes"].append(record)
@@ -103,7 +117,14 @@ def capture(game_jar, javap, output, project, target):
                 for name in sorted(methods) if re.search(r"command|chat|sign", name, re.I)
                 for body in methods[name]]
             excerpt = "// Named game artifact SHA256: " + receipt["gameJarSha256"] + "\n"
-            excerpt += "// Class: " + owner + "\n" + "\n".join(
+            excerpt += "// Class: " + owner + "\n"
+            if owner in TOAST_CLASSES:
+                # Keep the real field declarations alongside all selected render/admission closures.
+                native_text = result.stdout.decode("utf-8", errors="strict")
+                first_method = re.search(r"(?m)^  \S[^\n]*\([^\n]*\)[^\n]*;$", native_text)
+                if first_method:
+                    excerpt += native_text[:first_method.start()] + "\n"
+            excerpt += "\n".join(
                 body for name in selected for body in methods[name])
             content = excerpt.encode("utf-8")
             if retained_bytes + len(content) > OUTPUT_LIMIT - 8192:

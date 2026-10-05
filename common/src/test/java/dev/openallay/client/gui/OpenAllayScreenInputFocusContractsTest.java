@@ -47,7 +47,7 @@ final class OpenAllayScreenInputFocusContractsTest {
         assertTrue(click.contains("hit.action().run()"));
         assertTrue(click.endsWith("return super.guideMouseClicked(event, doubleClick);\n    }"));
         assertNoDraftMutation(click);
-        assertFalse(click.contains("setFocused(composer)"), "native input dispatch owns click-to-focus");
+        assertFalse(click.contains("setFocused(composer.widget())"), "native input dispatch owns click-to-focus");
     }
 
     @Test
@@ -63,7 +63,7 @@ final class OpenAllayScreenInputFocusContractsTest {
         assertTrue(click.contains("resultAction(hit.action())"));
         assertTrue(click.endsWith("return super.guideMouseClicked(event, doubleClick);\n    }"));
         assertNoDraftMutation(click);
-        assertFalse(click.contains("setFocused(composer)"));
+        assertFalse(click.contains("setFocused(composer.widget())"));
     }
 
     @Test
@@ -72,8 +72,8 @@ final class OpenAllayScreenInputFocusContractsTest {
                 "dev/openallay/client/gui/hud/GuideChatLiteScreen.java"}) {
             String helper = method(source(path), "private boolean composerContains(");
             assertTrue(helper.contains("if (composer == null) return false"));
-            assertTrue(helper.contains("composer.getX(), composer.getY(), composer.getWidth(), composer.getHeight()"));
-            assertTrue(helper.contains("input.contains(x, y) && composer.isMouseOver(x, y)"));
+            assertTrue(helper.contains("GuideNativeWidgetGeometry.x(composer.widget()), dev.openallay.client.gui.GuideNativeWidgetGeometry.y(composer.widget()), composer.widget().getWidth(), composer.widget().getHeight()"));
+            assertTrue(helper.contains("input.contains(x, y) && composer.widget().isMouseOver(x, y)"));
             assertFalse(helper.contains("layout.composer()"));
             assertFalse(helper.contains("composerExtras"));
             assertNoDraftMutation(helper);
@@ -96,12 +96,12 @@ final class OpenAllayScreenInputFocusContractsTest {
         String helper = method(source("dev/openallay/client/gui/OpenAllayScreen.java"),
                 "public boolean focusComposerAfterVoiceDraft()");
         for (String guard : new String[] {"minecraft == null", "MinecraftClientWindow.screen(minecraft) != this", "composer == null",
-                "!composer.active", "!composer.visible", "getFocused() != null", "sessionOverlay",
+                "!composer.widget().active", "!composer.widget().visible", "getFocused() != null", "sessionOverlay",
                 "overflowOpen", "modelSelectorOpen", "detailOpen()", "draftIntent().editing()"}) {
             assertTrue(helper.contains(guard), guard);
         }
-        assertTrue(helper.indexOf("return false") < helper.indexOf("setFocused(composer)"));
-        assertTrue(helper.contains("return getFocused() == composer"));
+        assertTrue(helper.indexOf("return false") < helper.indexOf("setFocused(composer.widget())"));
+        assertTrue(helper.contains("return getFocused() == composer.widget()"));
         assertNoDraftMutation(helper);
         assertFalse(helper.contains("service."));
         assertFalse(helper.contains("GuideNativeFocus.clear(this)"));
@@ -112,16 +112,16 @@ final class OpenAllayScreenInputFocusContractsTest {
     void firstInitializationOwnsTextFocusButNativeResizeRebuildPreservesPriorFocus() throws Exception {
         String screen = source("dev/openallay/client/gui/OpenAllayScreen.java");
         String init = method(screen, "protected void init()");
-        assertTrue(init.contains("else if (!presentationInitialized) setInitialFocus(composer)"));
+        assertTrue(init.contains("else if (!presentationInitialized) setInitialFocus(composer.widget())"));
         assertTrue(init.contains("presentationInitialized = true"));
         String nativeInitial = method(screen, "protected void guideInitialFocus()");
         assertFalse(nativeInitial.contains("super.setInitialFocus"));
         assertFalse(nativeInitial.contains("setFocused("));
         String rebuild = method(screen, "private void rebuildPresentationWidgets()");
-        assertTrue(rebuild.indexOf("getFocused() == composer") < rebuild.indexOf("rebuildWidgets()"));
+        assertTrue(rebuild.indexOf("getFocused() == composer.widget()") < rebuild.indexOf("rebuildWidgets()"));
         assertTrue(rebuild.contains("getFocused() instanceof AbstractWidget widget ? widget : null"));
         assertTrue(rebuild.indexOf("GuideNativeFocus.clear(this)") > rebuild.indexOf("rebuildWidgets()"));
-        assertTrue(rebuild.contains("if (composerFocused) setFocused(composer)"));
+        assertTrue(rebuild.contains("if (composerFocused) setFocused(composer.widget())"));
         assertTrue(rebuild.contains("else if (previous != null)"));
         assertTrue(rebuild.contains("children().stream()"));
         assertTrue(rebuild.contains("widget.getClass() == previous.getClass()"));

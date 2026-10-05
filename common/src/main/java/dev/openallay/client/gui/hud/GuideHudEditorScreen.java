@@ -18,6 +18,7 @@ import dev.openallay.client.gui.GuideNativeSlider;
 import dev.openallay.client.gui.GuideTooltip;
 import net.minecraft.client.gui.screens.Screen;
 import dev.openallay.client.gui.GuideInputMouse;
+import dev.openallay.platform.minecraft.MinecraftComponents;
 import net.minecraft.network.chat.Component;
 
 /** Native, non-pausing HUD editor. Changes stay in memory until the player presses Apply. */
@@ -302,7 +303,7 @@ public final class GuideHudEditorScreen extends dev.openallay.client.gui.GuideNa
                 boundedText(graphics, label("apply_hint"), panelX + 6, panelY + 36, panelWidth - 12, MUTED);
             }
             graphics.enableScissor(panelX + 6, form.bodyTop(), panelX + panelWidth - 6, form.bodyBottom());
-            Component anchor = Component.translatable("screen.openallay.hud.anchor."
+            Component anchor = MinecraftComponents.translatable("screen.openallay.hud.anchor."
                     + hud.anchor().name().toLowerCase(Locale.ROOT));
             if (form.rowVisible(0, formScroll)) {
                 boundedCenteredText(graphics, label("anchor", anchor), form.rowY(0, formScroll) + 4);
@@ -331,14 +332,14 @@ public final class GuideHudEditorScreen extends dev.openallay.client.gui.GuideNa
     }
 
     private static Component label(String key, Object... arguments) {
-        return Component.translatable(PREFIX + key, arguments);
+        return MinecraftComponents.translatable(PREFIX + key, arguments);
     }
 
     private final class HudSlider extends GuideNativeSlider {
         private final boolean scale;
 
         HudSlider(int x, int y, int width, int height, boolean scale) {
-            super(x, y, width, height, Component.empty(),
+            super(x, y, width, height, MinecraftComponents.empty(),
                     scale ? (draft.hud().scale() - 0.75) : draft.hud().backgroundOpacity());
             this.scale = scale;
             setTooltip(GuideTooltip.create(label(scale ? "scale.tooltip" : "opacity.tooltip")));

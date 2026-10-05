@@ -1,6 +1,6 @@
 package dev.openallay.client.gui.mixin;
 
-import dev.openallay.client.gui.GuideComposerGeometry;
+import dev.openallay.client.gui.GuideNativeMultilineEditor;
 import net.minecraft.client.gui.components.AbstractScrollWidget;
 import net.minecraft.client.gui.components.MultiLineEditBox;
 import net.minecraft.client.gui.components.MultilineTextField;
@@ -12,7 +12,7 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 /** Exact Minecraft 1.21.3 access to the live native editor and its scroll-widget superclass. */
 @Mixin(MultiLineEditBox.class)
 public abstract class MultiLineEditBoxAccessor extends AbstractScrollWidget
-        implements GuideComposerGeometry.NativeAccess {
+        implements GuideNativeMultilineEditor.NativeAccess {
     /** Mixin superclass signature only; product code never creates this abstract mixin. */
     protected MultiLineEditBoxAccessor(int x, int y, int width, int height, Component message) {
         super(x, y, width, height, message);

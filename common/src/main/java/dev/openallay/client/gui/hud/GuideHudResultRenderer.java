@@ -28,6 +28,7 @@ import java.util.Map;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.Font;
 import net.minecraft.locale.Language;
+import dev.openallay.platform.minecraft.MinecraftComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 
@@ -140,14 +141,14 @@ public final class GuideHudResultRenderer implements AutoCloseable {
                 for (GuideSource source : selectedSources) {
                     var label = GuideEvidencePresentation.from(source);
                     var evidence = source.evidence();
-                    for (Component component : List.of(Component.translatable(label.sourceKey()),
-                            Component.translatable(label.authorityKey()), Component.translatable(label.coverageKey()),
-                            Component.literal(evidence.sourceId()), Component.literal(evidence.provenance()),
-                            Component.literal(evidence.gameVersion() + " · " + evidence.loader()),
-                            Component.literal(evidence.capturedAt() + " — " + source.lastCapturedAt()))) {
+                    for (Component component : List.of(MinecraftComponents.translatable(label.sourceKey()),
+                            MinecraftComponents.translatable(label.authorityKey()), MinecraftComponents.translatable(label.coverageKey()),
+                            MinecraftComponents.literal(evidence.sourceId()), MinecraftComponents.literal(evidence.provenance()),
+                            MinecraftComponents.literal(evidence.gameVersion() + " · " + evidence.loader()),
+                            MinecraftComponents.literal(evidence.capturedAt() + " — " + source.lastCapturedAt()))) {
                         lines.addAll(font.split(component, measuredWidth));
                     }
-                    evidence.details().forEach((key, value) -> lines.addAll(font.split(Component.literal(key + ": " + value), measuredWidth)));
+                    evidence.details().forEach((key, value) -> lines.addAll(font.split(MinecraftComponents.literal(key + ": " + value), measuredWidth)));
                 }
                 replacement.add(new Row("sources", null, List.copyOf(lines), null, Map.of(), List.of(), Math.max(10, lines.size() * 10 + 8)));
             } else {
@@ -160,24 +161,24 @@ public final class GuideHudResultRenderer implements AutoCloseable {
                     List<FormattedCharSequence> sources = List.of();
                     java.util.Objects.requireNonNull(source);
                     if (source instanceof GuideUiRow.Assistant assistant) {
-                        header.addAll(font.split(Component.literal(view.assistantName()), measuredWidth));
+                        header.addAll(font.split(MinecraftComponents.literal(view.assistantName()), measuredWidth));
                         document = assistant.semantic();
-                        if (!assistant.sources().isEmpty()) sources = font.split(Component.translatable(
+                        if (!assistant.sources().isEmpty()) sources = font.split(MinecraftComponents.translatable(
                                 "screen.openallay.evidence.groups", GuideEvidencePresentation.groups(assistant.sources()).size()), measuredWidth);
                     } else if (source instanceof GuideUiRow.Tool tool) {
-                        header.addAll(font.split(Component.translatable(tool.detail().displayStatus().translationKey())
-                                .copy().append(" · ").append(Component.translatable(tool.detail().titleKey())), measuredWidth));
-                        if (!tool.detail().intent().title().isBlank()) header.addAll(font.split(Component.literal(tool.detail().intent().title()), measuredWidth));
-                        if (!tool.detail().intent().description().isBlank()) header.addAll(font.split(Component.literal(tool.detail().intent().description()), measuredWidth));
-                        tool.detail().narration().forEach(message -> header.addAll(font.split(Component.translatable(
+                        header.addAll(font.split(MinecraftComponents.translatable(tool.detail().displayStatus().translationKey())
+                                .copy().append(" · ").append(MinecraftComponents.translatable(tool.detail().titleKey())), measuredWidth));
+                        if (!tool.detail().intent().title().isBlank()) header.addAll(font.split(MinecraftComponents.literal(tool.detail().intent().title()), measuredWidth));
+                        if (!tool.detail().intent().description().isBlank()) header.addAll(font.split(MinecraftComponents.literal(tool.detail().intent().description()), measuredWidth));
+                        tool.detail().narration().forEach(message -> header.addAll(font.split(MinecraftComponents.translatable(
                                 message.key().translationKey(), message.arguments().toArray()), Math.max(1, cachedWidth))));
-                        tool.detail().failure().ifPresent(failure -> header.addAll(font.split(Component.literal(failure.message()), Math.max(1, cachedWidth))));
-                        var cards = GuideHudToolCards.project(tool, key -> Component.translatable(key).getString());
+                        tool.detail().failure().ifPresent(failure -> header.addAll(font.split(MinecraftComponents.literal(failure.message()), Math.max(1, cachedWidth))));
+                        var cards = GuideHudToolCards.project(tool, key -> MinecraftComponents.translatable(key).getString());
                         document = cards.document();
                         recipes = cards.recipes();
                     } else if (source instanceof GuideUiRow.Status status) {
                         header.addAll(font.split(status.status() == dev.openallay.guide.GuideRequestStatus.INTERRUPTED
-                                ? Component.translatable("screen.openallay.history.interrupted") : Component.literal(status.text()), measuredWidth));
+                                ? MinecraftComponents.translatable("screen.openallay.history.interrupted") : MinecraftComponents.literal(status.text()), measuredWidth));
                     } else {
                         continue;
                     }
@@ -226,7 +227,7 @@ public final class GuideHudResultRenderer implements AutoCloseable {
                 }
                 if (interactive && row.source() instanceof GuideUiRow.Tool) hits.add(new Hit(
                         new GuideUiLayout.Rect(viewport.x(), y, viewport.width(), row.header().size() * 10 + 2), new Action.Tool(row.id()),
-                        row.source() instanceof GuideUiRow.Tool tool ? Component.translatable(tool.detail().titleKey()).getString() : ""));
+                        row.source() instanceof GuideUiRow.Tool tool ? MinecraftComponents.translatable(tool.detail().titleKey()).getString() : ""));
                 if (row.layout() != null) {
                     int first = 0, last = 0, prefix = 0, visibleHeight = 0;
                     int lineY = current;
@@ -282,7 +283,7 @@ public final class GuideHudResultRenderer implements AutoCloseable {
                     int sourceTop = current;
                     for (var line : row.sources()) { graphics.text(font, line, viewport.x() + 3, current, OpenAllayWidgetTheme.MUTED); current += 10; }
                     if (interactive) hits.add(new Hit(new GuideUiLayout.Rect(viewport.x(), sourceTop, viewport.width(), current - sourceTop),
-                            new Action.Sources(assistant.sources()), Component.translatable("screen.openallay.evidence.groups", assistant.sources().size()).getString()));
+                            new Action.Sources(assistant.sources()), MinecraftComponents.translatable("screen.openallay.evidence.groups", assistant.sources().size()).getString()));
                 }
             }
         } finally { graphics.disableScissor(); nativeViews.endFrame(); }
@@ -336,7 +337,7 @@ public final class GuideHudResultRenderer implements AutoCloseable {
     private static SemanticLayoutEngine.Measurer measurer(Font font, GuideUiConfig.Density density) {
         return new SemanticLayoutEngine.Measurer() {
             @Override public int width(String text, SemanticLayout.Style style) {
-                return font.width(Component.literal(text).withStyle(switch (style) {
+                return font.width(MinecraftComponents.literal(text).withStyle(switch (style) {
                     case EMPHASIS -> ChatFormatting.ITALIC;
                     case STRONG -> ChatFormatting.BOLD;
                     case CODE -> ChatFormatting.GRAY;

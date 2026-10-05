@@ -213,6 +213,7 @@ public final class GuideClientE2EController {
 
     /** Runs opt-in startup lifecycle and starts the request once a real client player exists. */
     public void tick(UUID actor) {
+        GuideProbeWorldReload.tick(net.minecraft.client.Minecraft.getInstance());
         if (finished) {
             if (!screenshotActionPending) {
                 try { tickScreenshotProbe(); }

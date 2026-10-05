@@ -1,4 +1,10 @@
 {
+  "1.18.2": {
+    "loaders": [
+      "forge"
+    ],
+    "nativeToolchain": "legacyForge"
+  },
   "1.19.2": {
     "loaders": [
       "forge"

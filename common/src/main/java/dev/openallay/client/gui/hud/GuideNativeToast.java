@@ -8,6 +8,7 @@ import java.util.Objects;
 import net.minecraft.client.gui.Font;
 import dev.openallay.client.gui.GuideGraphics;
 import net.minecraft.client.gui.components.toasts.Toast;
+import dev.openallay.platform.minecraft.MinecraftComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 
@@ -104,33 +105,33 @@ public final class GuideNativeToast extends GuideNativeToastBinding implements G
 
     /** Pure display selection: card facts stay primary; terminal reply/failure remains a separate line. */
     static Display display(GuideNotificationPort.Notification notification, Component guideKey) {
-        Component status = notification.taskFailed() ? Component.translatable("screen.openallay.notification.failed")
+        Component status = notification.taskFailed() ? MinecraftComponents.translatable("screen.openallay.notification.failed")
                 : notification.replyCompleted() || notification.taskCompleted()
-                        ? Component.translatable("screen.openallay.notification.completed") : Component.empty();
+                        ? MinecraftComponents.translatable("screen.openallay.notification.completed") : MinecraftComponents.empty();
         Component title, description, secondary;
         if (!notification.cardPreviews().isEmpty()) {
             var card = notification.cardPreviews().get(0);
-            title = Component.literal(card.title());
-            description = Component.literal(card.description());
-            secondary = notification.preview().isBlank() ? Component.empty()
+            title = MinecraftComponents.literal(card.title());
+            description = MinecraftComponents.literal(card.description());
+            secondary = notification.preview().isBlank() ? MinecraftComponents.empty()
                     : status.copy().append(": ").append(notification.preview());
         } else {
             title = status;
-            description = Component.literal(notification.preview());
-            secondary = Component.empty();
+            description = MinecraftComponents.literal(notification.preview());
+            secondary = MinecraftComponents.empty();
         }
-        var summary = Component.empty();
+        var summary = MinecraftComponents.empty();
         if (notification.cardCount() > 1) {
             if (!summary.getString().isBlank()) summary.append(" · ");
-            summary.append(Component.translatable("screen.openallay.notification.more_cards", notification.cardCount() - 1));
+            summary.append(MinecraftComponents.translatable("screen.openallay.notification.more_cards", notification.cardCount() - 1));
         }
         if (notification.additionalTasks() > 0) {
             if (!summary.getString().isBlank()) summary.append(" · ");
-            summary.append(Component.translatable("screen.openallay.notification.more_tasks", notification.additionalTasks()));
+            summary.append(MinecraftComponents.translatable("screen.openallay.notification.more_tasks", notification.additionalTasks()));
         }
         // 26.2 ToastManager has no native click target. This is the existing generic Guide key only.
-        Component hint = guideKey == null ? Component.empty()
-                : Component.translatable("screen.openallay.notification.view", guideKey);
+        Component hint = guideKey == null ? MinecraftComponents.empty()
+                : MinecraftComponents.translatable("screen.openallay.notification.view", guideKey);
         return new Display(title, description, secondary, summary, hint);
     }
 
@@ -161,8 +162,8 @@ public final class GuideNativeToast extends GuideNativeToastBinding implements G
         List<FormattedCharSequence> visible = new ArrayList<>(all.subList(0, maximumLines));
         StringBuilder last = new StringBuilder();
         visible.get(visible.size() - 1).accept((index, style, codePoint) -> { last.appendCodePoint(codePoint); return true; });
-        String ending = font.substrByWidth(Component.literal(last.toString()), Math.max(1, width - font.width("…"))).getString();
-        visible.set(visible.size() - 1, Component.literal(ending + "…").withStyle(text.getStyle()).getVisualOrderText());
+        String ending = font.substrByWidth(MinecraftComponents.literal(last.toString()), Math.max(1, width - font.width("…"))).getString();
+        visible.set(visible.size() - 1, MinecraftComponents.literal(ending + "…").withStyle(text.getStyle()).getVisualOrderText());
         return List.copyOf(visible);
     }
 

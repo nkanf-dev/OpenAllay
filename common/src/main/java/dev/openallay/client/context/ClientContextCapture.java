@@ -319,7 +319,7 @@ public final class ClientContextCapture {
         add(values, "renderer", "render_distance",
                 Integer.toString(client.options.getEffectiveRenderDistance()));
         add(values, "renderer", "simulation_distance",
-                Integer.toString(client.options.simulationDistance().get()));
+                Integer.toString(dev.openallay.platform.minecraft.MinecraftOptions.simulationDistance(client.options)));
         add(values, "renderer", "entities", Integer.toString(client.level.getEntityCount()));
         add(values, "player", "health", Float.toString(player.getHealth()));
         add(values, "player", "max_health", Float.toString(player.getMaxHealth()));
