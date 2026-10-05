@@ -45,7 +45,7 @@ final class NativeBlockCodec {
     // Verified against the 26.2 container save/load methods and their base classes.
     // Inventory item components are content, not the placed container's orientation.
     private static final Set<String> CONTAINER_FIELDS = Set.of(
-            "id", "x", "y", "z", "Items", "LootTable", "LootTableSeed", "lock", "CustomName", "components");
+            "id", "x", "y", "z", "Items", "LootTable", "LootTableSeed", NativeContainerFieldNames.lock(), "CustomName", "components");
 
     // Native states are canonical immutable values. Keep a bounded, owner-thread-local
     // palette, never world handles, live entities, positions or mutable SNBT compounds.
@@ -266,7 +266,7 @@ final class NativeBlockCodec {
         else return false;
         var id = NativeWorldResourceIds.tryParse(NativeBlockEntityTags.containerTransformId(tag));
         if (id == null || !expected.isValid(state)
-                || BuiltInRegistries.BLOCK_ENTITY_TYPE.get(id).map(holder -> holder.value() != expected).orElse(true)) return false;
+                || NativeWorldRegistries.blockEntity(id.toString()).map(type -> type != expected).orElse(true)) return false;
         if (!NativeBlockEntityTags.hasOnlyContainerFields(tag, CONTAINER_FIELDS)) return false;
         // Unknown attached BE components can contain orientation. Fail rather than guess.
         return !tag.contains("components") || tag.get("components") instanceof CompoundTag components && components.isEmpty();
@@ -293,8 +293,8 @@ final class NativeBlockCodec {
         if (tag != null) {
             String rawId = NativeBlockEntityTags.requiredId(tag);
             var id = NativeWorldResourceIds.parse(rawId, "blockEntity id");
-            BlockEntityType<?> type = BuiltInRegistries.BLOCK_ENTITY_TYPE.get(id)
-                    .orElseThrow(() -> new IllegalArgumentException("Unknown blockEntity id: " + rawId)).value();
+            BlockEntityType<?> type = NativeWorldRegistries.blockEntity(id.toString())
+                    .orElseThrow(() -> new IllegalArgumentException("Unknown blockEntity id: " + rawId));
             if (type != entity.getType() || !type.isValid(state)) {
                 throw new IllegalArgumentException("blockEntity id " + rawId + " does not match block " + json.get("id"));
             }
@@ -314,8 +314,8 @@ final class NativeBlockCodec {
     private static BlockState decode(JsonObject json) {
         String rawId = string(json.get("id"), "id");
         var id = NativeWorldResourceIds.parse(rawId, "block id");
-        Block block = BuiltInRegistries.BLOCK.get(id)
-                .orElseThrow(() -> new IllegalArgumentException("Unknown block id: " + rawId)).value();
+        Block block = NativeWorldRegistries.block(id.toString())
+                .orElseThrow(() -> new IllegalArgumentException("Unknown block id: " + rawId));
         BlockState state = block.defaultBlockState();
         JsonElement properties = json.get("properties");
         if (properties != null) {

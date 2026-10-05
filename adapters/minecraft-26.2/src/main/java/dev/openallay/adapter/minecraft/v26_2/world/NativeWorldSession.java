@@ -126,8 +126,8 @@ final class NativeWorldSession implements WorldSession {
             JsonObject result = new JsonObject();
             result.addProperty("topology", "integrated-server");
             result.addProperty("dimension", dimension);
-            result.addProperty("minY", level.getMinY());
-            result.addProperty("maxY", Math.addExact(level.getMaxY(), 1));
+            result.addProperty("minY", NativeWorldHeight.minY(level));
+            result.addProperty("maxY", NativeWorldHeight.maxYExclusive(level));
             result.addProperty("version", NativeWorldVersionFacts.name());
             result.addProperty("dataVersion", NativeWorldVersionFacts.dataVersion());
             JsonObject who = new JsonObject();

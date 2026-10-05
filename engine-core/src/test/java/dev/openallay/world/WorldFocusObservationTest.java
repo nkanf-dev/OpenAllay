@@ -109,6 +109,20 @@ final class WorldFocusObservationTest {
                 () -> new WorldFocusObservation.Target("entity", null, null, entity));
     }
 
+    @Test
+    void unknownNativeBorderProvenanceRemainsDistinctFromObservedTrueAndFalse() {
+        var gson = new com.google.gson.GsonBuilder().serializeNulls().create();
+        for (Boolean provenance : java.util.Arrays.asList(null, Boolean.FALSE, Boolean.TRUE)) {
+            var value = new WorldFocusObservation.Block("minecraft:stone", new WorldPosition(1, 64, 1),
+                    "north", false, provenance, Map.of(), "");
+            var encoded = gson.toJsonTree(value).getAsJsonObject();
+            assertTrue(encoded.has("worldBorderHit"));
+            if (provenance == null) assertTrue(encoded.get("worldBorderHit").isJsonNull());
+            else assertEquals(provenance.booleanValue(), encoded.get("worldBorderHit").getAsBoolean());
+            assertEquals(provenance, gson.fromJson(encoded, WorldFocusObservation.Block.class).worldBorderHit());
+        }
+    }
+
     private static WorldFocusObservation.Block block() {
         return new WorldFocusObservation.Block(
                 "minecraft:oak_stairs", new WorldPosition(12, 65, -4), "north", true, false,

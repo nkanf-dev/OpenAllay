@@ -82,12 +82,13 @@ public record WorldFocusObservation(
         }
     }
 
+    /** worldBorderHit is null when the native hit object cannot attest border provenance. */
     public record Block(
             String id,
             WorldPosition position,
             String face,
             boolean inside,
-            boolean worldBorderHit,
+            Boolean worldBorderHit,
             Map<String, String> properties,
             String fluid) {
         public Block {
