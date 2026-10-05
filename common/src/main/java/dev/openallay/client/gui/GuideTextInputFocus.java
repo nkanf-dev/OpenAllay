@@ -9,7 +9,7 @@ public final class GuideTextInputFocus {
     private GuideTextInputFocus() {}
 
     public static void release(Screen screen) {
-        screen.clearFocus();
+        GuideNativeFocus.clear(screen);
         for (var child : screen.children()) {
             if (child instanceof EditBox || child instanceof MultiLineEditBox) {
                 GuideNativeInput.releaseTextFocus(child);

@@ -149,7 +149,8 @@ final class MacImageClipboard {
     }
 
     private static BufferedImage readData(long data) throws IOException {
-        long length = JNI.invokePPN(data, NativeApi.selector("length"), NativeApi.SEND);
+        // 64-bit macOS NSUInteger uses LWJGL's retained pointer-width return carrier.
+        long length = JNI.invokePPP(data, NativeApi.selector("length"), NativeApi.SEND);
         if (length <= 0 || length > Integer.MAX_VALUE) return null;
         long bytes = NativeApi.message(data, "bytes");
         if (bytes == 0) return null;
@@ -190,7 +191,7 @@ final class MacImageClipboard {
         private static long argument(long target, String selector, long argument) {
             return JNI.invokePPPP(target, selector(selector), argument, SEND);
         }
-        private static long count(long array) { return JNI.invokePPN(array, selector("count"), SEND); }
+        private static long count(long array) { return JNI.invokePPP(array, selector("count"), SEND); }
         private static long at(long array, long index) { return JNI.invokePPPP(array, selector("objectAtIndex:"), index, SEND); }
         private static void set(long dictionary, long value, long key) {
             JNI.invokePPPPV(dictionary, selector("setObject:forKey:"), value, key, SEND);

@@ -579,7 +579,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
                 }
                 Hit next = focusable.get((current + 1) % focusable.size());
                 focusedContentId = next.focusId();
-                clearFocus();
+                GuideNativeFocus.clear(this);
                 if (minecraft != null && minecraft.getNarrator().isActive()) {
                     dev.openallay.client.gui.GuideNativeNarrator.sayNow(minecraft, next.narration());
                 }
@@ -700,13 +700,13 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
     public boolean guideMouseClicked(GuideInputMouse event, boolean doubleClick) {
         if (GuideNativeInput.isLeftClick(event)) {
             // Clear before routing. Native buttons and the input scrollbar may take focus below.
-            if (!composerContains(event.x(), event.y())) clearFocus();
+            if (!composerContains(event.x(), event.y())) GuideNativeFocus.clear(this);
             if (sessionOverlay || overflowOpen) {
                 HitKind topKind = sessionOverlay ? HitKind.SESSION : HitKind.MENU;
                 for (Hit hit : List.copyOf(hits)) {
                     if (hit.kind() == topKind && hit.rect().contains(event.x(), event.y())) {
                         focusedContentId = hit.focusId();
-                        clearFocus();
+                        GuideNativeFocus.clear(this);
                         hit.action().run();
                         return true;
                     }
@@ -727,7 +727,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
                     if (hit.kind() == HitKind.MODEL
                             && hit.rect().contains(event.x(), event.y())) {
                         focusedContentId = hit.focusId();
-                        clearFocus();
+                        GuideNativeFocus.clear(this);
                         hit.action().run();
                         return true;
                     }
@@ -746,7 +746,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
                 if (route.kind() == GuideUiClickRoute.Kind.ACTION) {
                     Hit selected = detailHits.get(route.actionIndex());
                     focusedContentId = selected.focusId();
-                    clearFocus();
+                    GuideNativeFocus.clear(this);
                     selected.action().run();
                     return true;
                 }
@@ -760,7 +760,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
             if (sessionOverlay) {
                 for (Hit hit : List.copyOf(hits)) {
                     if (hit.kind() == HitKind.SESSION && hit.rect().contains(event.x(), event.y())) {
-                        clearFocus();
+                        GuideNativeFocus.clear(this);
                         hit.action().run();
                         return true;
                     }
@@ -769,7 +769,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
             for (Hit hit : List.copyOf(hits)) {
                 if (hit.rect().contains(event.x(), event.y())) {
                     focusedContentId = hit.focusId();
-                    clearFocus();
+                    GuideNativeFocus.clear(this);
                     hit.action().run();
                     return true;
                 }
@@ -2661,7 +2661,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
 
     private void focusDetail() {
         focusedContentId = "detail:close";
-        clearFocus();
+        GuideNativeFocus.clear(this);
     }
 
     private void open(GuideUiRow.Tool tool) {
@@ -2714,7 +2714,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         String contentFocus = focusedContentId;
         rebuildWidgets();
         focusedContentId = contentFocus;
-        clearFocus();
+        GuideNativeFocus.clear(this);
         if (composerFocused) setFocused(composer);
         else if (previous != null) {
             // Recreated controls may retain focus by native type and label; never reattach an old widget.

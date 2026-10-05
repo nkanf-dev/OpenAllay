@@ -51,6 +51,24 @@ final class ImageClipboardSourceContractTest {
         assertTrue(source("engine-core", "ImageClipboard.java").contains("extends AutoCloseable"));
     }
 
+    @Test
+    void macLengthsAndCountsUseTheRetainedFullWidthJniCarrierBeforeAnyBufferNarrowing() throws IOException {
+        String mac = source("common", "MacImageClipboard.java");
+        String length = "long length = JNI.invokePPP(data, NativeApi.selector(\"length\"), NativeApi.SEND);";
+        String bounds = "if (length <= 0 || length > Integer.MAX_VALUE) return null;";
+        String allocation = "byte[] encoded = new byte[(int) length];";
+        assertTrue(mac.contains(length));
+        assertTrue(mac.indexOf(bounds) > mac.indexOf(length));
+        assertTrue(mac.indexOf(allocation) > mac.indexOf(bounds));
+        assertTrue(mac.contains("private static long count(long array) { return JNI.invokePPP(array, selector(\"count\"), SEND); }"));
+        assertTrue(mac.contains("for (long i = 0, count = NativeApi.count(nativeTypes); i < count; i++)"));
+        assertTrue(mac.contains("for (long i = 0, count = NativeApi.count(urls); i < count; i++)"));
+        assertFalse(mac.contains("JNI.invokePPN("), "LWJGL 3.3.1 has no such overload");
+        assertFalse(mac.contains("JNI.invokePPI("), "NSUInteger is not a 32-bit int");
+        assertFalse(mac.contains("Integer.toUnsignedLong("));
+        assertFalse(mac.contains("getDeclaredMethod("));
+    }
+
     private static String source(String module, String name) throws IOException {
         Path root = Path.of("").toAbsolutePath();
         while (root != null && !Files.isRegularFile(root.resolve("settings.gradle"))) root = root.getParent();

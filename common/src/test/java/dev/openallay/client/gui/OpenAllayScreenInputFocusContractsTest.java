@@ -37,7 +37,7 @@ final class OpenAllayScreenInputFocusContractsTest {
         String click = method(screen, "public boolean guideMouseClicked(");
         assertNativeMouseClickBinding();
         int left = click.indexOf("if (GuideNativeInput.isLeftClick(event))");
-        int blur = click.indexOf("if (!composerContains(event.x(), event.y())) clearFocus()");
+        int blur = click.indexOf("if (!composerContains(event.x(), event.y())) GuideNativeFocus.clear(this)");
         int modal = click.indexOf("if (sessionOverlay || overflowOpen)");
         assertTrue(left >= 0 && blur > left && modal > blur);
         assertTrue(click.contains("return true; // A modal's background never routes hidden transcript actions."));
@@ -55,7 +55,7 @@ final class OpenAllayScreenInputFocusContractsTest {
         String screen = source("dev/openallay/client/gui/hud/GuideChatLiteScreen.java");
         String click = method(screen, "public boolean guideMouseClicked(");
         assertNativeMouseClickBinding();
-        int blur = click.indexOf("if (GuideNativeInput.isLeftClick(event) && !composerContains(event.x(), event.y())) clearFocus()");
+        int blur = click.indexOf("if (GuideNativeInput.isLeftClick(event) && !composerContains(event.x(), event.y())) GuideNativeFocus.clear(this)");
         int scrollbar = click.indexOf("scrollbar.contains(event.x(), event.y())");
         assertTrue(blur >= 0 && scrollbar > blur);
         assertTrue(click.contains("draggingScrollbar = true"));
@@ -104,6 +104,7 @@ final class OpenAllayScreenInputFocusContractsTest {
         assertTrue(helper.contains("return getFocused() == composer"));
         assertNoDraftMutation(helper);
         assertFalse(helper.contains("service."));
+        assertFalse(helper.contains("GuideNativeFocus.clear(this)"));
         assertFalse(helper.contains("clearFocus()"));
     }
 
@@ -119,7 +120,7 @@ final class OpenAllayScreenInputFocusContractsTest {
         String rebuild = method(screen, "private void rebuildPresentationWidgets()");
         assertTrue(rebuild.indexOf("getFocused() == composer") < rebuild.indexOf("rebuildWidgets()"));
         assertTrue(rebuild.contains("getFocused() instanceof AbstractWidget widget ? widget : null"));
-        assertTrue(rebuild.indexOf("clearFocus()") > rebuild.indexOf("rebuildWidgets()"));
+        assertTrue(rebuild.indexOf("GuideNativeFocus.clear(this)") > rebuild.indexOf("rebuildWidgets()"));
         assertTrue(rebuild.contains("if (composerFocused) setFocused(composer)"));
         assertTrue(rebuild.contains("else if (previous != null)"));
         assertTrue(rebuild.contains("children().stream()"));

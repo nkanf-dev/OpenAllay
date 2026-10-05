@@ -4,6 +4,7 @@ import dev.openallay.client.gui.MinecraftClientWindow;
 
 import dev.openallay.client.gui.OpenAllayButton;
 import dev.openallay.client.gui.GuideNativeInput;
+import dev.openallay.client.gui.GuideNativeFocus;
 import dev.openallay.guide.ui.GuideDisplayConfig;
 import dev.openallay.guide.ui.GuideUiConfig;
 import dev.openallay.guide.ui.hud.GuideHudView;
@@ -203,7 +204,7 @@ public final class GuideHudEditorScreen extends dev.openallay.client.gui.GuideNa
         if (!minecraft.isWindowActive()) {
             interaction.cancel();
             setDragging(false);
-            clearFocus();
+            GuideNativeFocus.clear(this);
         }
     }
 
@@ -233,7 +234,7 @@ public final class GuideHudEditorScreen extends dev.openallay.client.gui.GuideNa
             return true;
         }
         if (GuideNativeInput.isLeftClick(event) && interaction.begin(width, height, event.x(), event.y())) {
-            clearFocus();
+            GuideNativeFocus.clear(this);
             return true;
         }
         return super.guideMouseClicked(event, doubleClick);

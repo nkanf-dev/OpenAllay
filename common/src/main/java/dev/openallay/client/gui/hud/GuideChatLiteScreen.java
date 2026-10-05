@@ -12,6 +12,7 @@ import dev.openallay.client.gui.GuideComposerGeometry;
 import dev.openallay.client.gui.GuideKeyInput;
 import dev.openallay.client.gui.GuideKeyIntent;
 import dev.openallay.client.gui.GuideNativeInput;
+import dev.openallay.client.gui.GuideNativeFocus;
 import dev.openallay.client.gui.GuideTextInputFocus;
 import dev.openallay.client.gui.GuideUiNotice;
 import dev.openallay.client.gui.OpenAllayButton;
@@ -537,15 +538,15 @@ public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNat
     }
     @Override public boolean guideMouseClicked(GuideInputMouse event, boolean doubleClick) {
         // Native controls still own dispatch, including the composer's external scrollbar.
-        if (GuideNativeInput.isLeftClick(event) && !composerContains(event.x(), event.y())) clearFocus();
+        if (GuideNativeInput.isLeftClick(event) && !composerContains(event.x(), event.y())) GuideNativeFocus.clear(this);
         if (GuideNativeInput.isLeftClick(event) && scrollbar.contains(event.x(), event.y()) && results.scroll().maximum() > 0) {
             draggingScrollbar = true;
-            clearFocus();
+            GuideNativeFocus.clear(this);
             scrollAt(event.y());
             return true;
         }
         if (GuideNativeInput.isLeftClick(event) && resultBounds.contains(event.x(), event.y())) {
-            clearFocus();
+            GuideNativeFocus.clear(this);
             for (var hit : visibleResultHits()) if (hit.bounds().contains(event.x(), event.y())) {
                 resultAction(hit.action()); return true;
             }
