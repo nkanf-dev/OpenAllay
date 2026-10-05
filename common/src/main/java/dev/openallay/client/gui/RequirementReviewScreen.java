@@ -48,7 +48,7 @@ public final class RequirementReviewScreen extends dev.openallay.client.gui.Guid
     }
 
     @Override
-    public void added() {
+    protected void guideAdded() {
         long epoch = attachment.attach();
         listener = service.listen(next -> {
             if (!attached(epoch)) return;
@@ -114,7 +114,7 @@ public final class RequirementReviewScreen extends dev.openallay.client.gui.Guid
     }
 
     @Override
-    protected void init() {
+    protected void initGuideScreen() {
         int x = left();
         int w = panelWidth();
         int half = (w - 6) / 2;
@@ -303,7 +303,7 @@ public final class RequirementReviewScreen extends dev.openallay.client.gui.Guid
     }
 
     @Override
-    public void removed() {
+    protected void guideRemoved() {
         attachment.detach();
         if (!finished) service.cancelPackageInstall(token);
         if (listener != null) {

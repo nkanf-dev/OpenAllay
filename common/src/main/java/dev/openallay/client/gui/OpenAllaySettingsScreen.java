@@ -197,7 +197,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
     }
 
     @Override
-    protected void init() {
+    protected void initGuideScreen() {
         id = null;
         assistantName = null;
         uiIntegerFields.clear();
@@ -239,7 +239,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
     }
 
     @Override
-    public void added() {
+    protected void guideAdded() {
         listener = service.listen(next -> {
             if (layout != null) {
                 captureDraft();
@@ -317,7 +317,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
     }
 
     @Override
-    public void removed() {
+    protected void guideRemoved() {
         GuideTextInputFocus.release(this);
         voiceApiKeyDraft = "";
         if (!openingRequirementReview) {
@@ -341,7 +341,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
     }
 
     @Override
-    protected void repositionElements() {
+    protected void repositionGuideElements() {
         captureDraft();
         rebuildWidgets();
     }

@@ -63,7 +63,17 @@ public abstract class GuideNativeScreen extends Screen {
     public boolean guideMouseClicked(GuideInputMouse event, boolean doubleClick) { return super.mouseClicked(event.x(), event.y(), event.button()); }
     public boolean guideMouseDragged(GuideInputMouse event, double dx, double dy) { return super.mouseDragged(event.x(), event.y(), event.button(), dx, dy); }
     public boolean guideMouseReleased(GuideInputMouse event) { return super.mouseReleased(event.x(), event.y(), event.button()); }
-    @Override public void removed() { GuideLegacyCursor.close(); super.removed(); }
+    @Override public final void removed() {
+        try { guideRemoved(); }
+        finally { GuideLegacyCursor.close(); super.removed();         }
+    }
     /** Legacy native Screen has no in-game marker; mod screens keep their own explicit policy. */
     public boolean isInGameUi() { return false; }
+    @Override protected final void init() { initGuideScreen(); }
+    protected void initGuideScreen() { super.init(); }
+    @Override public final void added() { guideAdded(); }
+    protected void guideAdded() { super.added(); }
+    protected void guideRemoved() { }
+    @Override protected final void repositionElements() { repositionGuideElements(); }
+    protected void repositionGuideElements() { super.repositionElements(); }
 }

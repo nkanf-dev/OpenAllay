@@ -60,4 +60,12 @@ public abstract class GuideNativeScreen extends Screen {
     public boolean guideMouseClicked(GuideInputMouse event, boolean doubleClick) { return super.mouseClicked(GuideNativeInput.nativeMouse(event), doubleClick); }
     public boolean guideMouseDragged(GuideInputMouse event, double dx, double dy) { return super.mouseDragged(GuideNativeInput.nativeMouse(event), dx, dy); }
     public boolean guideMouseReleased(GuideInputMouse event) { return super.mouseReleased(GuideNativeInput.nativeMouse(event)); }
+    @Override public final void removed() { try { guideRemoved(); } finally { super.removed(); } }
+    @Override protected final void init() { initGuideScreen(); }
+    protected void initGuideScreen() { super.init(); }
+    @Override public final void added() { guideAdded(); }
+    protected void guideAdded() { super.added(); }
+    protected void guideRemoved() { }
+    @Override protected final void repositionElements() { repositionGuideElements(); }
+    protected void repositionGuideElements() { super.repositionElements(); }
 }

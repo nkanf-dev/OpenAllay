@@ -192,7 +192,7 @@ public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNat
     @Override public boolean isInGameUi() { return true; }
     @Override protected void guideInitialFocus() {} // Text focus starts only from a click/explicit navigation.
 
-    @Override protected void init() {
+    @Override protected void initGuideScreen() {
         projectedSnapshot = null; // GUI resize changes native wrap width even without a new snapshot.
         card = Card.calculate(width, height);
         int inner = Math.max(1, card.width() - 16);
@@ -264,14 +264,14 @@ public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNat
         project();
     }
 
-    @Override protected void repositionElements() {
+    @Override protected void repositionGuideElements() {
         boolean composerFocused = composer != null && getFocused() == composer;
         rebuildWidgets();
         // Only the same composer survives the rebuild. Never reattach a discarded button.
         if (composerFocused && composer.visible && composer.active) setFocused(composer);
     }
 
-    @Override public void added() {
+    @Override protected void guideAdded() {
         if (!state.closed()) attachment = state.attach(GuideClientUiState.Surface.HUD_INPUT, session);
     }
 
@@ -673,7 +673,7 @@ public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNat
         GuideVoiceIndicator.extract(graphics, minecraft, voice);
     }
 
-    @Override public void removed() {
+    @Override protected void guideRemoved() {
         GuideTextInputFocus.release(this);
         if (attachment != null) attachment.close();
         attachment = null;

@@ -6,6 +6,7 @@ import net.minecraft.network.chat.Component;
 /** PoseStack screen callbacks; shared screen layout, input policy and state stay unchanged. */
 public abstract class GuideNativeScreen extends GuideNativeScreenCallbacks {
     private GuideGraphics paintGraphics;
+    private boolean guideAttached;
     protected GuideNativeScreen(Component title) { super(title); }
     @Override public final void render(PoseStack pose, int mouseX, int mouseY, float delta) {
         if (paintGraphics != null) throw new IllegalStateException("Screen paint is already active");
@@ -35,7 +36,28 @@ public abstract class GuideNativeScreen extends GuideNativeScreenCallbacks {
     }
     @Override public final void resize(net.minecraft.client.Minecraft client, int width, int height) { resizeGuide(width, height); }
     protected void resizeGuide(int width, int height) { resizeGuideWidgets(width, height); }
-    protected final void resizeGuideWidgets(int width, int height) { super.resize(minecraft, width, height); }
+    protected final void resizeGuideWidgets(int width, int height) {
+        this.width = width;
+        this.height = height;
+        repositionGuideElements();
+    }
+    @Override protected final void init() {
+        if (!guideAttached) {
+            guideAttached = true;
+            try { guideAdded(); }
+            catch (RuntimeException | Error failure) {
+                guideAttached = false;
+                throw failure;
+            }
+        }
+        initGuideScreen();
+    }
+    protected void initGuideScreen() { super.init(); }
+    /** Optional shared attachment hook; this native family attaches through init, not added. */
+    protected void guideAdded() { }
+    protected void guideRemoved() { }
+    protected void repositionGuideElements() { rebuildWidgets(); }
+
 
     @Override public final boolean keyPressed(int key, int scancode, int modifiers) {
         return guideKeyPressed(GuideNativeInput.capture(key, scancode, modifiers));
@@ -65,9 +87,13 @@ public abstract class GuideNativeScreen extends GuideNativeScreenCallbacks {
     public boolean guideMouseClicked(GuideInputMouse event, boolean doubleClick) { return super.mouseClicked(event.x(), event.y(), event.button()); }
     public boolean guideMouseDragged(GuideInputMouse event, double dx, double dy) { return super.mouseDragged(event.x(), event.y(), event.button(), dx, dy); }
     public boolean guideMouseReleased(GuideInputMouse event) { return super.mouseReleased(event.x(), event.y(), event.button()); }
-    @Override public void removed() {
-        clearGuideTooltipForNextRenderPass();
-        try { GuideLegacyCursor.close(); } finally { super.removed(); }
+    @Override public final void removed() {
+        try { guideRemoved(); }
+        finally {
+            guideAttached = false;
+            clearGuideTooltipForNextRenderPass();
+            try { GuideLegacyCursor.close(); } finally { super.removed(); }
+        }
     }
     /** Legacy native Screen has no in-game marker; mod screens keep their own explicit policy. */
     public boolean isInGameUi() { return false; }

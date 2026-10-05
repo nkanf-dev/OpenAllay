@@ -328,7 +328,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
     }
 
     @Override
-    protected void init() {
+    protected void initGuideScreen() {
         Component title = headerTitle();
         layout = GuideUiLayout.calculate(width, height, detailOpen(),
                 font.width(title.getVisualOrderText()),
@@ -431,7 +431,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
     }
 
     @Override
-    public void added() {
+    protected void guideAdded() {
         // Minecraft may return to this same Screen instance from a native confirmation.
         // A removed screen releases every provider view, so each attachment gets a fresh owner.
         nativeViews = new NativeDomainViewRegistry();
@@ -454,7 +454,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
     }
 
     @Override
-    public void removed() {
+    protected void guideRemoved() {
         GuideTextInputFocus.release(this);
         draft = composer == null ? draft : composer.getValue();
         if (subscription != null) {
@@ -478,7 +478,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
     }
 
     @Override
-    protected void repositionElements() {
+    protected void repositionGuideElements() {
         GuideViewportAnchor anchor = layout == null ? null : virtualizer.anchorAt(scroll);
         boolean shouldFollow = followBottom;
         draft = composer == null ? draft : composer.getValue();
@@ -1318,7 +1318,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         renderedTelemetryRows = layout.telemetryCard() ? 3 : 1;
         if (area.contains(mouseX, mouseY) && !modelSelectorOpen && !sessionOverlay && !overflowOpen) {
             graphics.setTooltipForNextFrame(font, telemetryTooltipWrapped,
-                    net.minecraft.client.gui.screens.inventory.tooltip.DefaultTooltipPositioner.INSTANCE,
+                    GuideTooltipPlacement.DEFAULT,
                     mouseX, mouseY, false);
             requestedTelemetryTooltipWidth = telemetryTooltipWidth;
             requestedTelemetryTooltipLines = telemetryTooltipWrapped.size();
@@ -2493,7 +2493,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
                 detail, y, id);
         if (!expandedDetails.contains(id)) return y;
         int width = Math.max(1, detail.width() - 16);
-        String locale = minecraft.getLanguageManager().getSelected();
+        String locale = dev.openallay.client.MinecraftNativeClientFacts.selectedLanguage(minecraft);
         SourceDetailLayout cached = sourceDetailLayouts.get(id);
         if (cached == null || !cached.matches(group, width, locale)) {
             List<FormattedCharSequence> lines = new ArrayList<>();

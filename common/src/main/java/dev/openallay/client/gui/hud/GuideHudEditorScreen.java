@@ -60,7 +60,7 @@ public final class GuideHudEditorScreen extends dev.openallay.client.gui.GuideNa
     }
 
     @Override
-    protected void init() {
+    protected void initGuideScreen() {
         interaction.cancel();
         panelWidth = Math.max(0, Math.min(252, width - 12));
         panelHeight = controlsVisible ? Math.min(190, Math.max(0, height - 12)) : Math.min(24, Math.max(0, height - 12));
@@ -216,12 +216,12 @@ public final class GuideHudEditorScreen extends dev.openallay.client.gui.GuideNa
     }
 
     @Override
-    public void removed() {
+    protected void guideRemoved() {
         interaction.cancel();
         setDragging(false);
         draft.cancel();
         // The native Screen transition owns cursor release/grab and the replacement Screen.
-        super.removed();
+        super.guideRemoved();
     }
 
     @Override
