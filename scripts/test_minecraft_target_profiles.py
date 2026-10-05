@@ -138,7 +138,7 @@ class MinecraftTargetProfileSourceTest(unittest.TestCase):
         self.assertLess(fabric.index("pluginManager.apply("), fabric.index("dependencies {"))
         self.assertIn("mappings(loom.officialMojangMappings())", fabric)
         self.assertIn("if (!remapMinecraft) include(project", fabric)
-        self.assertIn("Integer.parseInt(java_version)", self.source("adapters/minecraft-26.2/build.gradle"))
+        self.assertIn("Integer.parseInt(java_version)", self.source("adapters/minecraft/build.gradle"))
 
     def test_descending_primitive_profiles_reuse_native_families_with_external_component_coordinates(self):
         selector = self.source("gradle/minecraft-targets.gradle")

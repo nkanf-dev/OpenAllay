@@ -22,7 +22,7 @@ MODULES = "common|fabric|neoforge|engine-core|extension-api|runtime-json|runtime
 # Gradle, native overrides, the Builder lock, and newly introduced build inputs.
 NON_PACKAGE_FILES = {
     "README.md", "README.zh-CN.md", "AGENTS.md", ".gitignore",
-    "extension-api/README.md", "adapters/minecraft-26.2/README.md",
+    "extension-api/README.md", "adapters/minecraft/README.md",
     "scripts/fixtures/minecraft-launch/1.20.1.json",
     "scripts/fixtures/minecraft-launch/1.21.1.json",
     "scripts/fixtures/minecraft-launch/README.md",

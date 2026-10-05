@@ -147,7 +147,7 @@ class QualityPlanTest(unittest.TestCase):
         paths = ("common/src/main/java/Feature.java", "fabric/build.gradle", "neoforge/src/main/java/Native.java",
                  "engine-core/src/main/java/Engine.java", "extension-api/src/main/java/API.java",
                  "runtime-rhino/src/main/java/Runtime.java", "build-logic/build.gradle", "gradle/libs.versions.toml",
-                 "gradle/minecraft-targets/26.2.properties", "adapters/minecraft-26.2/src/main/java/Game.java",
+                 "gradle/minecraft-targets/26.2.properties", "adapters/minecraft/src/main/java/Game.java",
                  "distribution/extensions.lock.json", "scripts/prepare-distribution.py",
                  "scripts/stage-ci-client-production.py", "scripts/new-classpath-helper.py", "unknown-input.txt")
         for relative in paths:

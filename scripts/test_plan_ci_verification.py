@@ -116,7 +116,7 @@ class PlanTest(unittest.TestCase):
     def test_docs_tests_workflow_and_runner_changes_preserve_actual_old_jar_source(self):
         self.write("docs/dispatch.md", "dispatch repair\n")
         self.write("extension-api/README.md", "SDK documentation repair\n")
-        self.write("adapters/minecraft-26.2/README.md", "historical native receipt wording\n")
+        self.write("adapters/minecraft/README.md", "historical native receipt wording\n")
         self.write("scripts/fixtures/minecraft-launch/1.20.1.json", "official offline argument fixture\n")
         self.write("scripts/fixtures/minecraft-launch/1.21.1.json", "official offline argument fixture\n")
         self.write("scripts/fixtures/minecraft-launch/README.md", "fixture source provenance\n")
@@ -134,7 +134,7 @@ class PlanTest(unittest.TestCase):
 
     def test_production_native_dependency_builder_and_unknown_changes_block_reuse(self):
         paths = ("common/src/main/java/Feature.java", "fabric/build.gradle",
-                 "adapters/minecraft-26.2/src/targets/26.1/java/Native.java",
+                 "adapters/minecraft/src/targets/26.1/java/Native.java",
                  "gradle/libs.versions.toml", "distribution/extensions.lock.json",
                  "scripts/prepare-distribution.py", "runtime-maven/build.gradle",
                  "runtime-maven/upstream-closure.json", "LICENSE", ".gitattributes", "unknown-input.txt")

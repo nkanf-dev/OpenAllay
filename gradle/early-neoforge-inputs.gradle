@@ -6,7 +6,7 @@ if (!(minecraftTarget in ['1.20.2', '1.20.3']) || java_version != '17') {
     throw new GradleException('The isolated early NeoForge exporter serves only Java17 Minecraft 1.20.2/1.20.3')
 }
 evaluationDependsOn(':engine-core')
-evaluationDependsOn(':adapters:minecraft-26.2')
+evaluationDependsOn(':adapters:minecraft')
 evaluationDependsOn(':extension-api')
 evaluationDependsOn(':runtime-rhino')
 sourceSets.main.resources {
@@ -24,7 +24,7 @@ tasks.matching { it.name in ['compileJava', 'jar', 'assemble', 'build'] }.config
 
 def commonSources = project(':common').sourceSets.main
 def engineOutput = project(':engine-core').sourceSets.main.output
-def adapterOutput = project(':adapters:minecraft-26.2').sourceSets.main.output
+def adapterOutput = project(':adapters:minecraft').sourceSets.main.output
 def sdkJar = project(':extension-api').tasks.named('jar', Jar)
 def rhinoJar = project(':runtime-rhino').tasks.named('jar', Jar)
 def resourceOutput = sourceSets.main.output.resourcesDir
@@ -50,7 +50,7 @@ tasks.register('exportEarlyNeoForgeInputs') {
     group = 'build'
     description = 'Export verified shared bytes and exact selected raw native paths for the isolated old userdev compiler.'
     dependsOn 'validateMinecraftTargetSources', 'processResources', ':engine-core:classes',
-            ':adapters:minecraft-26.2:classes', sdkJar, rhinoJar
+            ':adapters:minecraft:classes', sdkJar, rhinoJar
     inputs.property('minecraftTarget', minecraftTarget)
     inputs.files(sourceSets.main.allJava, commonSources.allJava, engineOutput, adapterOutput,
             sdkJar.flatMap { it.archiveFile }, rhinoJar.flatMap { it.archiveFile })

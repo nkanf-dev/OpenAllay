@@ -43,6 +43,27 @@ It downloads failed dependency URLs with curl retries into ignored
 OPENALLAY_CURL_PROXY=socks5h://127.0.0.1:7890 ./gradlew-curl build
 ```
 
+### Minecraft world adapter
+
+The core-owned [Minecraft world adapter](../adapters/minecraft/README.md) lives in
+`adapters/minecraft/` and is included as `:adapters:minecraft`. It implements the
+one public SDK's `MinecraftWorldAccess` and `WorldSession` ports; it is not a
+version-specific Extension fork. Minecraft 26.2 remains the accepted feature mainline.
+
+The module reuses `src/main/` as its base. The selected profile supplies exact
+Minecraft/native dependency pins and the Java toolchain. Ordered native-family
+roots under `src/targets/<family>/`, followed by an exact-target root when needed,
+override only matching relative paths through `gradle/minecraft-source-family.gradle`.
+Loader integration remains in `fabric/` and `neoforge/`, outside the shared SDK.
+
+The neutral directory/project name changes neither the existing `v26_2` Java
+package and `Minecraft26WorldAccess` factory nor target-specific artifact names.
+Source reuse is not evidence that one JAR supports every source target.
+`gradle/minecraft-artifacts.json` separately controls accepted binary families;
+its current accepted targets remain 26.2 for both loaders. Candidate intervals
+stay nonpublishing until the same unchanged JAR passes each exact native target
+and the resulting evidence is reviewed. This naming change does not widen support.
+
 ### Default distribution
 
 The development distribution bundles **one universal Builder 0.4.0 JAR** from

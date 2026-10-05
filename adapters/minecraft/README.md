@@ -1,18 +1,42 @@
-# Minecraft 26.2 native world adapter
+# Minecraft native world adapter
 
-This core-owned module implements the fixed `MinecraftWorldAccess` and `WorldSession` SDK ports.
-It is not a second Builder domain or an Extension fork.
+This core-owned, version-neutral Gradle module (`:adapters:minecraft`, in
+`adapters/minecraft/`) implements the fixed `MinecraftWorldAccess` and `WorldSession`
+ports of the one public Extension SDK. It is not a second Builder domain or an
+Extension fork. Minecraft 26.2 remains the accepted feature mainline.
+
+## Source reuse and exact native targets
+
+`src/main/` contains the shared base implementation. The root's selected Minecraft
+profile supplies the native compile artifact, Java toolchain, and loader pins.
+`gradle/minecraft-source-family.gradle` adds ordered native-family roots under
+`src/targets/<family>/` and, when needed, an exact-target root. A later root replaces
+an earlier file only at the same relative path. This keeps common SDK behavior in
+one implementation and limits overrides to actual native API differences.
+
+Source-family reuse does not prove that one compiled JAR works across those targets.
+`gradle/minecraft-artifacts.json` separately records accepted binary families and
+nonpublishing candidate intervals. Its accepted targets currently remain 26.2 for
+Fabric and NeoForge. Wider intervals require unchanged-JAR proof on every exact
+native target before admission; the neutral module name adds no supported range.
+
+The directory/project rename does not rename Java packages or classes. The existing
+`dev.openallay.adapter.minecraft.v26_2.world.Minecraft26WorldAccess` factory and
+resource paths remain unchanged, as do native behavior and target-specific artifact
+names. The `v26_2` package is the retained implementation identity, not a declaration
+of the selected target's support range.
 
 ## Boundary
 
 - Public factory: `dev.openallay.adapter.minecraft.v26_2.world.Minecraft26WorldAccess`.
 - Native implementation: package-private `NativeWorldSession`, `NativeBlockCodec`,
   `NativeWorldIdentity`, `OwnerThreadBridge`, and `SessionIdentity`.
-- Production depends on the host SDK and the Minecraft 26.2 NeoForm compile artifact.
-  Gson, Brigadier, Mojang codecs, and native NBT are game libraries. The adapter does not
-  bundle the SDK or another Gson copy. It does not depend on `common`, old core types,
+- Production depends on the host SDK and the selected target's native compile artifact
+  (NeoForm on the 26.2 mainline). Gson, Brigadier, Mojang codecs, and native NBT are
+  game libraries. The adapter does not bundle the SDK or another Gson copy. It does not depend on `common`, old core types,
   the Builder Extension, or its storage/domain types.
-- Java 25 compiles the native module. The separately built public SDK remains Java 8.
+- The selected target profile sets the native Java toolchain (Java 25 on the 26.2
+  mainline). The separately built public SDK remains Java 8.
 - The root project owns settings inclusion, loader packaging, and factory wiring.
   This module defines no run profiles, world creation, or loader integration.
 
@@ -46,8 +70,9 @@ native session. Domain journal and template resource cleanup remains domain-owne
 
 ## Preserved native behavior
 
-The port uses the original Minecraft 26.2 methods, not fake game types or an offline
-region codec. It preserves actual registry defaults and property validation,
+The shared base uses Minecraft 26.2 native methods; selected family/target overrides
+handle native API differences. Neither uses fake game types or an offline region
+codec. The 26.2 base preserves actual registry defaults and property validation,
 opaque full block-entity SNBT through `TagValueInput` and `TagValueOutput`, detached
 block-entity preview, native mirror/rotation restrictions, and flags `18` placement.
 Native replacement hooks, listener/ticker removal, chunk dirtying, client updates,

@@ -10,8 +10,8 @@ def keyApiArtifact = remapMinecraft ? 'fabric-key-binding-api-v1' : 'fabric-key-
 def resourceApiArtifact = minecraftNativeSourceFamilies.contains('1.21.8') ? 'fabric-resource-loader-v0' : 'fabric-resource-loader-v1'
 dependencies {
     implementation(project(":engine-core"))
-    implementation(project(":adapters:minecraft-26.2"))
-    if (!remapMinecraft) include(project(":adapters:minecraft-26.2"))
+    implementation(project(":adapters:minecraft"))
+    if (!remapMinecraft) include(project(":adapters:minecraft"))
     implementation(project(":extension-api"))
     include(project(":extension-api"))
     minecraft("com.mojang:minecraft:${minecraft_version}")
@@ -104,8 +104,8 @@ tasks.named('jar', Jar) {
 // Merge only on the obfuscated family so remapJar transforms the adapter too.
 if (remapMinecraft) {
     tasks.named('jar', Jar) {
-        dependsOn(':adapters:minecraft-26.2:classes')
-        from({ project(':adapters:minecraft-26.2').sourceSets.main.output })
+        dependsOn(':adapters:minecraft:classes')
+        from({ project(':adapters:minecraft').sourceSets.main.output })
     }
     def remappedNative = tasks.named('remapJar') {
         archiveClassifier.set('remapped-native')
