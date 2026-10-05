@@ -14,7 +14,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 NATIVE_TARGETS = ("26.3", "26.1", "1.21.11", "1.21.10", "1.21.8", "1.21.6", "1.21.5",
-                  "1.21.4", "1.21.3", "1.21.1", "1.20.6", "1.20.4", "1.20.3", "1.20.2", "1.20.1")
+                  "1.21.4", "1.21.3", "1.21.1", "1.20.6", "1.20.5", "1.20.4", "1.20.3", "1.20.2", "1.20.1")
 DEFAULT_SMOKES = tuple((target, loader) for target in ("26.3", "1.21.1", "1.20.1")
                        for loader in ("fabric", "neoforge"))
 MODULES = "common|fabric|neoforge|engine-core|extension-api|runtime-json|runtime-maven|runtime-rhino|adapters/[^/]+"
