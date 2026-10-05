@@ -23,7 +23,7 @@ public final class MinecraftClientWindow {
     }
 
     public static boolean canInterruptScreen(Minecraft minecraft) {
-        return !((dev.openallay.client.gui.mixin.MinecraftTeardownAccess) minecraft).openallay$teardownInProgress();
+        return !((MinecraftTeardownState) minecraft).openallay$teardownInProgress();
     }
 
     public static boolean hudHidden(Minecraft minecraft) {
@@ -35,8 +35,7 @@ public final class MinecraftClientWindow {
     }
 
     public static void extractDeferredSubtitles(Minecraft minecraft, GuideGraphics graphics) {
-        ((dev.openallay.client.gui.mixin.GuiSubtitleAccess) minecraft.gui)
-                .openallay$renderSubtitles(graphics.nativeGraphics(), minecraft.getDeltaTracker());
+        GuideNativeSubtitleRender.render(minecraft, graphics.nativeGraphics());
     }
 
     public static ToastManager toastManager(Minecraft minecraft) {

@@ -276,7 +276,7 @@ class MinecraftTargetProfileSourceTest(unittest.TestCase):
         self.assertIn("inputs.property('minecraftTarget', rootProject.ext.minecraftTarget)", loader)
         self.assertIn("duplicatesStrategy = DuplicatesStrategy.FAIL", loader)
         family = self.source("gradle/minecraft-source-family.gradle")
-        self.assertIn("inputs.files(sourceSets.main.allJava)", family)
+        self.assertIn("inputs.files(sourceSets.main.allJava, minecraftMixinSelection.rawJava)", family)
         self.assertIn("inputs.files(sourceSets.main.resources)", family)
         self.assertIn("withPathSensitivity(PathSensitivity.RELATIVE)", family)
         self.assertIn("dependsOn(validateSelection)", family)

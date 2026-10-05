@@ -33,6 +33,13 @@ sourceSets.main.resources {
 }
 
 
+// Share the same configured binding rule; common sources are already selected once.
+commonProject.validateSelectedMinecraftJava([sourceSets.main.allJava, commonSources.allJava])
+commonProject.validateSelectedMinecraftResources([sourceSets.main.resources, commonSources.resources])
+def loaderMixinSelection = commonProject.selectConfiguredMinecraftMixins(
+        sourceSets.main.java, [sourceSets.main.resources, commonSources.resources],
+        commonProject.minecraftMixinSelection)
+
 dependencies {
     testImplementation('com.google.code.gson:gson:2.10')
     testImplementation('org.junit.jupiter:junit-jupiter:5.11.4')
@@ -52,7 +59,8 @@ def validateSelection = tasks.register('validateMinecraftTargetSources') {
     description = 'Reject collisions between loader sources and selected common sources.'
     dependsOn(commonProject.tasks.named('validateMinecraftTargetSources'))
     inputs.property('minecraftTarget', rootProject.ext.minecraftTarget)
-    inputs.files(sourceSets.main.allJava, commonSources.allJava).withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.files(sourceSets.main.allJava, commonSources.allJava, loaderMixinSelection.rawJava)
+            .withPathSensitivity(PathSensitivity.RELATIVE)
     inputs.files(sourceSets.main.resources, commonSources.resources).withPathSensitivity(PathSensitivity.RELATIVE)
     outputs.upToDateWhen { false }
     doLast {

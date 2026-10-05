@@ -24,6 +24,84 @@ sourceSets.main.resources {
     resourceRoots.drop(1).each { srcDir(it) }
     exclude { element -> overridden(element, resourceRoots) }
 }
+// Mixin packages are reserved class-loader namespaces, not ordinary helper packages.
+// Configured bindings, rather than every inherited @Mixin annotation, own compilation.
+def javaPackageName = ~/(?m)^\s*package\s+([\w.$]+)\s*;/
+def mixinDeclaration = ~/(?m)^@(?:org\.spongepowered\.asm\.mixin\.)?Mixin\s*\([^\r\n]*\)\s*(?:public\s+)?(?:abstract\s+)?(?:class|interface)\s+([\w$]+)\b/
+def withoutComments = { String text -> text.replaceAll(/(?s)\/\*.*?\*\/|\/\/[^\r\n]*/, '') }
+ext.selectConfiguredMinecraftMixins = { SourceDirectorySet javaSources,
+        Collection<SourceDirectorySet> resourceSources, Map inherited = null ->
+    // Capture the existing exact-path selection before adding the binding filter.
+    def rawJava = javaSources.files.findAll { it.name.endsWith('.java') }
+    def allJava = (rawJava + (inherited?.rawJava ?: [])).unique()
+    def configs = resourceSources.collectMany { it.files.toList() }
+            .findAll { it.name.endsWith('.mixins.json') }.unique()
+    def packages = [] as Set
+    def configured = [] as Set
+    configs.each { configFile ->
+        def config = new groovy.json.JsonSlurper().parse(configFile)
+        if (!(config.package instanceof String) || config.package.empty) {
+            throw new GradleException("Missing Mixin package: ${configFile}")
+        }
+        packages.add(config.package)
+        ['mixins', 'client', 'server'].each { scope ->
+            def names = config.containsKey(scope) ? config[scope] : []
+            if (!(names instanceof List) || names.any { !(it instanceof String) || it.empty }) {
+                throw new GradleException("Invalid Mixin ${scope} declarations: ${configFile}")
+            }
+            names.each { name ->
+                def identity = "${config.package}.${name}".toString()
+                if (!configured.add(identity)) {
+                    throw new GradleException("Duplicate configured Mixin ${identity}: ${configFile}")
+                }
+            }
+        }
+    }
+    def declarations = allJava.collectEntries { source ->
+        def text = withoutComments(source.getText('UTF-8'))
+        def matcher = javaPackageName.matcher(text)
+        def packageName = matcher.find() ? matcher.group(1) : ''
+        def identity = (packageName.empty ? '' : packageName + '.') + source.name.replaceFirst(/\.java$/, '')
+        def mixin = mixinDeclaration.matcher(text)
+        [(source): [identity: identity, packageName: packageName, text: text,
+                mixin: mixin.find() && mixin.group(1) == source.name.replaceFirst(/\.java$/, '')]]
+    }
+    def duplicates = declarations.values()*.identity.countBy { it }.findAll { identity, count -> count > 1 }
+    if (!duplicates.empty) throw new GradleException("Duplicate selected Java FQN: ${duplicates.keySet()}")
+    configured.each { identity ->
+        def owners = declarations.findAll { source, declaration -> declaration.identity == identity }
+        if (owners.size() != 1 || !owners.values().first().mixin) {
+            throw new GradleException("Configured Mixin must have one actual @Mixin source: ${identity}")
+        }
+    }
+    def excluded = declarations.findAll { source, declaration ->
+        def reserved = packages.any { declaration.packageName == it || declaration.packageName.startsWith(it + '.') }
+        if (reserved && !declaration.mixin) {
+            throw new GradleException("Ordinary Java source in reserved Mixin package: ${source}")
+        }
+        reserved && !configured.contains(declaration.identity)
+    }
+    // Loader configs must preserve the already-selected common binding owners.
+    if (inherited != null && inherited.excluded.any { !excluded.containsKey(it) }) {
+        throw new GradleException('Loader Mixin configuration changes common binding ownership')
+    }
+    declarations.findAll { source, declaration -> !excluded.containsKey(source) }.each { source, declaration ->
+        def references = declaration.text.replaceAll(/"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'/, '')
+        excluded.each { excludedSource, binding ->
+            def simple = binding.identity.substring(binding.identity.lastIndexOf('.') + 1)
+            def qualified = ~/(?<![\w$])${java.util.regex.Pattern.quote(binding.identity)}(?![\w$])/
+            def wildcardImport = ~/(?m)\bimport\s+${java.util.regex.Pattern.quote(binding.packageName)}\s*\.\s*\*\s*;/
+            def visible = declaration.packageName == binding.packageName || wildcardImport.matcher(references).find()
+            def simpleReference = ~/(?<![\w$])${java.util.regex.Pattern.quote(simple)}(?![\w$])/
+            if (qualified.matcher(references).find() || (visible && simpleReference.matcher(references).find())) {
+                throw new GradleException("Java source ${source} references unconfigured Mixin ${binding.identity}")
+            }
+        }
+    }
+    def ownExcluded = excluded.keySet().findAll { rawJava.contains(it) } as Set
+    javaSources.exclude { element -> !element.directory && ownExcluded.contains(element.file) }
+    [rawJava: allJava, configs: configs, excluded: excluded.keySet()]
+}
 // Native plugins use the exact same selected AT/access-widener resource.
 ext.selectedMinecraftTargetResource = { String relativePath ->
     resourceRoots.reverse().collect { new File(it, relativePath) }.find { it.isFile() }
@@ -75,11 +153,17 @@ def validateResources = { Collection<SourceDirectorySet> resourceDirectories ->
 ext.validateSelectedMinecraftJava = validateSources
 ext.validateSelectedMinecraftResources = validateResources
 
+// Validate the raw exact-path units before filtering unconfigured native annotations.
+validateSources([sourceSets.main.allJava])
+validateResources([sourceSets.main.resources])
+ext.minecraftMixinSelection = selectConfiguredMinecraftMixins(
+        sourceSets.main.java, [sourceSets.main.resources])
+
 def validateSelection = tasks.register('validateMinecraftTargetSources') {
     group = 'verification'
     description = 'Reject duplicate selected native/shared Java and resource paths.'
     inputs.property('minecraftTarget', selectedTarget)
-    inputs.files(sourceSets.main.allJava).withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.files(sourceSets.main.allJava, minecraftMixinSelection.rawJava).withPathSensitivity(PathSensitivity.RELATIVE)
     inputs.files(sourceSets.main.resources).withPathSensitivity(PathSensitivity.RELATIVE)
     // Run even when a newly added duplicate has byte-identical contents.
     outputs.upToDateWhen { false }

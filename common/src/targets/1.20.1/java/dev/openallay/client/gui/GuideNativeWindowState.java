@@ -10,7 +10,7 @@ public final class GuideNativeWindowState {
                 && !teardownInProgress(client);
     }
     public static boolean teardownInProgress(Minecraft client) {
-        return ((dev.openallay.client.gui.mixin.MinecraftTeardownAccess) client).openallay$teardownInProgress();
+        return ((MinecraftTeardownState) client).openallay$teardownInProgress();
     }
     public static boolean debugScreenVisible(Minecraft client) { return client.options.renderDebug; }
     public static boolean keyBindingScreen(net.minecraft.client.gui.screens.Screen screen) {

@@ -7,7 +7,7 @@ public final class GuideNativeWindowState {
     private GuideNativeWindowState() {}
     public static boolean frameReady(Minecraft client) { return client.isGameLoadFinished(); }
     public static boolean teardownInProgress(Minecraft client) {
-        return ((dev.openallay.client.gui.mixin.MinecraftTeardownAccess) client).openallay$teardownInProgress();
+        return ((MinecraftTeardownState) client).openallay$teardownInProgress();
     }
     public static boolean debugScreenVisible(Minecraft client) { return client.gui.getDebugOverlay().showDebugScreen(); }
     public static boolean keyBindingScreen(net.minecraft.client.gui.screens.Screen screen) {
