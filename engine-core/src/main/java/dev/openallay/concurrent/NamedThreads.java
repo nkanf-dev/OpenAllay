@@ -4,15 +4,27 @@ import java.util.Objects;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicLong;
 
-/** Named daemon workers. Each call creates a plain JDK thread; no worker pool is shared. */
+/** Named daemon workers with the framework class-loading owner. No worker pool is shared. */
 public final class NamedThreads {
     private NamedThreads() {}
 
     public static Thread unstartedDaemon(String name, Runnable task) {
-        Thread thread = new Thread(Objects.requireNonNull(task, "task"),
-                Objects.requireNonNull(name, "name"));
+        Objects.requireNonNull(task, "task");
+        Thread thread = new Thread(() -> runOwned(task), Objects.requireNonNull(name, "name"));
         thread.setDaemon(true);
         return thread;
+    }
+
+    /** Do not inherit a provider callback's loader or retain an Extension's isolated loader. */
+    private static void runOwned(Runnable task) {
+        Thread current = Thread.currentThread();
+        ClassLoader previous = current.getContextClassLoader();
+        try {
+            current.setContextClassLoader(NamedThreads.class.getClassLoader());
+            task.run();
+        } finally {
+            current.setContextClassLoader(previous);
+        }
     }
 
     public static Thread startDaemon(String name, Runnable task) {

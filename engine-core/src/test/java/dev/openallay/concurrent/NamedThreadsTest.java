@@ -2,6 +2,8 @@ package dev.openallay.concurrent;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -106,5 +108,110 @@ final class NamedThreadsTest {
             assertTrue(first.awaitTermination(2, TimeUnit.SECONDS));
             assertTrue(second.awaitTermination(2, TimeUnit.SECONDS));
         }
+    }
+
+    @Test
+    void foreignCreatorAndLaterWorkerLoaderDoNotReplaceFrameworkOwner() throws Exception {
+        Thread caller = Thread.currentThread();
+        ClassLoader callerBefore = caller.getContextClassLoader();
+        ClassLoader foreignCreator = new ClassLoader(null) {};
+        ClassLoader foreignWorker = new ClassLoader(null) {};
+        AtomicReference<ClassLoader> observed = new AtomicReference<>();
+        AtomicReference<Class<?>> resolvedParent = new AtomicReference<>();
+        AtomicReference<Throwable> failure = new AtomicReference<>();
+        Thread worker;
+        try {
+            caller.setContextClassLoader(foreignCreator);
+            worker = NamedThreads.unstartedDaemon("test-loader-owner", () -> {
+                observed.set(Thread.currentThread().getContextClassLoader());
+                try {
+                    resolvedParent.set(Thread.currentThread().getContextClassLoader()
+                            .loadClass("dev.openallay.model.ModelClientException"));
+                } catch (ClassNotFoundException missing) {
+                    failure.set(missing);
+                }
+            });
+            assertSame(foreignCreator, worker.getContextClassLoader());
+        } finally {
+            caller.setContextClassLoader(callerBefore);
+        }
+        // The execution boundary, not construction-time inheritance, owns class loading.
+        worker.setContextClassLoader(foreignWorker);
+        worker.start();
+        worker.join(2000);
+        assertEquals(Thread.State.TERMINATED, worker.getState());
+        assertSame(NamedThreads.class.getClassLoader(), observed.get());
+        assertSame(dev.openallay.model.ModelClientException.class, resolvedParent.get());
+        assertNull(failure.get());
+        assertSame(foreignWorker, worker.getContextClassLoader());
+        assertSame(callerBefore, caller.getContextClassLoader());
+        assertEquals("test-loader-owner", worker.getName());
+        assertTrue(worker.isDaemon());
+    }
+
+    @Test
+    void finallyRestoresLoaderBeforeUncaughtErrorIsReported() throws Exception {
+        ClassLoader before = new ClassLoader(null) {};
+        ClassLoader changedByTask = new ClassLoader(null) {};
+        AtomicReference<ClassLoader> atFailure = new AtomicReference<>();
+        AtomicReference<Throwable> reported = new AtomicReference<>();
+        AssertionError expected = new AssertionError("worker failure");
+        Thread worker = NamedThreads.unstartedDaemon("test-loader-finally", () -> {
+            assertSame(NamedThreads.class.getClassLoader(),
+                    Thread.currentThread().getContextClassLoader());
+            Thread.currentThread().setContextClassLoader(changedByTask);
+            throw expected;
+        });
+        worker.setContextClassLoader(before);
+        worker.setUncaughtExceptionHandler((thread, failure) -> {
+            atFailure.set(thread.getContextClassLoader());
+            reported.set(failure);
+        });
+        worker.start();
+        worker.join(2000);
+        assertEquals(Thread.State.TERMINATED, worker.getState());
+        assertSame(expected, reported.get());
+        assertSame(before, atFailure.get());
+        assertSame(before, worker.getContextClassLoader());
+    }
+
+    @Test
+    void bothFactoriesUseFrameworkOwnerEvenWhenExecutorCreatesFromForeignThread() throws Exception {
+        var fixed = NamedThreads.daemonFactory("test-owned-fixed");
+        var counted = NamedThreads.daemonFactory("test-owned-counted-", 4);
+        Thread caller = Thread.currentThread();
+        ClassLoader callerBefore = caller.getContextClassLoader();
+        ClassLoader foreign = new ClassLoader(null) {};
+        var first = Executors.newSingleThreadExecutor(fixed);
+        var second = Executors.newSingleThreadExecutor(counted);
+        var third = Executors.newSingleThreadExecutor(counted);
+        try {
+            caller.setContextClassLoader(foreign);
+            java.util.concurrent.Callable<Thread> inspect = () -> {
+                assertSame(NamedThreads.class.getClassLoader(),
+                        Thread.currentThread().getContextClassLoader());
+                return Thread.currentThread();
+            };
+            Thread a = first.submit(inspect).get(2, TimeUnit.SECONDS);
+            Thread b = second.submit(inspect).get(2, TimeUnit.SECONDS);
+            Thread c = third.submit(inspect).get(2, TimeUnit.SECONDS);
+            assertNotSame(a, b);
+            assertNotSame(b, c);
+            assertEquals("test-owned-fixed", a.getName());
+            assertEquals("test-owned-counted-4", b.getName());
+            assertEquals("test-owned-counted-5", c.getName());
+            assertTrue(a.isDaemon());
+            assertTrue(b.isDaemon());
+            assertTrue(c.isDaemon());
+        } finally {
+            caller.setContextClassLoader(callerBefore);
+            first.shutdownNow();
+            second.shutdownNow();
+            third.shutdownNow();
+            assertTrue(first.awaitTermination(2, TimeUnit.SECONDS));
+            assertTrue(second.awaitTermination(2, TimeUnit.SECONDS));
+            assertTrue(third.awaitTermination(2, TimeUnit.SECONDS));
+        }
+        assertSame(callerBefore, caller.getContextClassLoader());
     }
 }

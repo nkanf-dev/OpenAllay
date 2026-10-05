@@ -393,6 +393,118 @@ public final class JavascriptInvocationLifecycleTest {
         assertTrue(shutdown.isDone());
     }
 
+    @Test
+    void completionCallbackCancellationDoesNotInterruptSettledWorkerOrAdmitReuse() throws Exception {
+        for (String source : List.of("return 1;", "throw new Error('failed');")) {
+            Fixture fixture = new Fixture();
+            CountDownLatch entered = new CountDownLatch(1);
+            CountDownLatch release = new CountDownLatch(1);
+            AtomicReference<Thread> worker = new AtomicReference<>();
+            fixture.register("test:completion", List.of(participant("test:gate", context -> {
+                worker.set(Thread.currentThread());
+                entered.countDown();
+                assertTrue(release.await(5, TimeUnit.SECONDS));
+                return () -> {};
+            })));
+            CancellationSignal cancellation = new CancellationSignal();
+            var pending = fixture.invokeAsync("completion-cancel", source, cancellation);
+            try {
+                assertTrue(entered.await(5, TimeUnit.SECONDS));
+                var continuation = pending.handle((result, failure) -> {
+                    assertSame(worker.get(), Thread.currentThread());
+                    assertFalse(Thread.currentThread().isInterrupted());
+                    assertTrue(cancellation.cancel());
+                    assertFalse(Thread.currentThread().isInterrupted(), "Terminal callbacks are not active Tool work");
+                    assertTrue(cancellation.isCancelled());
+                    var denied = assertThrows(java.util.concurrent.CompletionException.class,
+                            () -> fixture.invokeAsync("completion-cancel", "return 2;", cancellation).join());
+                    assertEquals("agent_cancelled", assertInstanceOf(ModelClientException.class,
+                            denied.getCause()).failure().code());
+                    assertFalse(Thread.currentThread().isInterrupted());
+                    return result;
+                });
+                release.countDown();
+                assertNotNull(continuation.get(5, TimeUnit.SECONDS));
+                worker.get().join(2000);
+                assertFalse(worker.get().isInterrupted());
+                assertEquals(0, fixture.registry.activeJavascriptInvocations());
+            } finally {
+                release.countDown();
+                cancellation.cancel();
+            }
+        }
+    }
+
+    @Test
+    void exceptionalCompletionCancellationDoesNotInterruptSettledWorker() throws Exception {
+        Fixture fixture = new Fixture();
+        CountDownLatch entered = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        AtomicReference<Thread> worker = new AtomicReference<>();
+        RunJavascriptTool failing = new RunJavascriptTool(new RhinoJavascriptRuntime(), context -> {
+            worker.set(Thread.currentThread());
+            entered.countDown();
+            try { assertTrue(release.await(5, TimeUnit.SECONDS)); }
+            catch (InterruptedException interrupted) { throw new AssertionError(interrupted); }
+            throw new ModelClientException(new dev.openallay.model.ModelFailure(
+                    "test_failure", "Test model failure", null));
+        }, new AgentResultWorkspaceRegistry(), new JavascriptResultPresenter(),
+                new CommandCapabilityRuntime(), new WorldObservationRuntime(), fixture.registry);
+        CancellationSignal cancellation = new CancellationSignal();
+        var pending = failing.invokeAsync(ToolInvocationContext.developmentConsole("exceptional-completion"),
+                new RunJavascriptTool.Input("return 1;", List.of()), cancellation);
+        try {
+            assertTrue(entered.await(5, TimeUnit.SECONDS));
+            var continuation = pending.handle((result, failure) -> {
+                assertSame(worker.get(), Thread.currentThread());
+                assertInstanceOf(ModelClientException.class, failure);
+                assertFalse(Thread.currentThread().isInterrupted());
+                cancellation.cancel();
+                assertFalse(Thread.currentThread().isInterrupted());
+                return true;
+            });
+            release.countDown();
+            assertTrue(continuation.get(5, TimeUnit.SECONDS));
+            worker.get().join(2000);
+            assertFalse(worker.get().isInterrupted());
+            assertEquals(0, fixture.registry.activeJavascriptInvocations());
+        } finally {
+            release.countDown();
+            cancellation.cancel();
+        }
+    }
+
+    @Test
+    void activeCancellationStillInterruptsBlockingWorkerAndRevokesAdmission() throws Exception {
+        Fixture fixture = new Fixture();
+        CountDownLatch entered = new CountDownLatch(1);
+        CountDownLatch interrupted = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        fixture.register("test:active", List.of(participant("test:interrupt", context -> {
+            entered.countDown();
+            try {
+                assertTrue(release.await(5, TimeUnit.SECONDS));
+            } catch (InterruptedException expected) {
+                interrupted.countDown();
+                throw expected;
+            }
+            return () -> {};
+        })));
+        CancellationSignal cancellation = new CancellationSignal();
+        var pending = fixture.invokeAsync("active-interrupt", "return 1;", cancellation);
+        try {
+            assertTrue(entered.await(5, TimeUnit.SECONDS));
+            assertTrue(cancellation.cancel());
+            assertTrue(cancellation.isCancelled());
+            assertTrue(interrupted.await(5, TimeUnit.SECONDS));
+            pending.handle((result, failure) -> null).get(5, TimeUnit.SECONDS);
+            assertEquals(0, fixture.registry.activeJavascriptInvocations());
+        } finally {
+            release.countDown();
+            cancellation.cancel();
+        }
+    }
+
     private static JavascriptInvocationParticipant participant(String id, Opener opener) {
         return new JavascriptInvocationParticipant() {
             public String id() { return id; }

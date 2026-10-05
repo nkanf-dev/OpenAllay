@@ -31,7 +31,7 @@ jobs:
       - name: Package the new bundled Forge product without repeating shared feature suites
         shell: bash
         run: |
-          ./gradlew --max-workers=2 --stacktrace -PminecraftTarget=1.19.2 :forge:assemble :forge:captureNativeCommandContracts
+          ./gradlew --max-workers=2 --stacktrace -PminecraftTarget=1.19.2 :engine-core:test --tests dev.openallay.concurrent.NamedThreadsTest --tests dev.openallay.extension.JavascriptInvocationLifecycleTest -x :runtime-maven:test :forge:assemble :forge:captureNativeCommandContracts
           python3 -B scripts/verify-native-target-package.py --target 1.19.2 --bundled-builder
           python3 -B scripts/stage-ci-client-production.py --minecraft-target 1.19.2
       - name: Retain the exact packaged product bytes

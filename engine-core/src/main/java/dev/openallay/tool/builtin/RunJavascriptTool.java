@@ -244,17 +244,23 @@ public final class RunJavascriptTool
             return CompletableFuture.failedFuture(failure);
         }
         CompletableFuture<ToolResult<Output>> future = new CompletableFuture<>();
+        java.util.concurrent.atomic.AtomicBoolean settled = new java.util.concurrent.atomic.AtomicBoolean();
         try {
             Thread worker = NamedThreads.startDaemon(
                     "openallay-javascript-" + context.correlationId(),
-                    () -> execute(context, input, cancellation, scope, future));
+                    () -> execute(context, input, cancellation, scope, future, settled));
             java.lang.ref.WeakReference<Thread> reference = new java.lang.ref.WeakReference<>(worker);
             cancellation.onCancel(() -> {
-                Thread current = reference.get();
-                if (current != null) current.interrupt();
+                // Serialize the final active interrupt with terminal publication. A dependent
+                // future callback can cancel on this same worker after the Tool has settled.
+                synchronized (settled) {
+                    Thread current = reference.get();
+                    if (!settled.get() && current != null) current.interrupt();
+                }
             });
         } catch (RuntimeException failure) {
             if (scope != null) scope.close();
+            markSettled(settled);
             future.completeExceptionally(failure);
         }
         return future;
@@ -265,26 +271,37 @@ public final class RunJavascriptTool
             Input input,
             CancellationSignal cancellation,
             JavascriptInvocationScope scope,
-            CompletableFuture<ToolResult<Output>> future) {
+            CompletableFuture<ToolResult<Output>> future,
+            java.util.concurrent.atomic.AtomicBoolean settled) {
         try {
             ToolResult<Output> result;
             try (scope) {
                 result = executeActive(context, input, cancellation, scope);
             }
+            markSettled(settled);
             future.complete(result);
         } catch (ModelClientException cancelled) {
+            markSettled(settled);
             future.completeExceptionally(cancelled);
         } catch (JavascriptExecutionException failure) {
+            markSettled(settled);
             future.complete(new ToolResult.Failure<>(failure.code(), failure.getMessage()));
         } catch (WorkspaceException failure) {
+            markSettled(settled);
             future.complete(new ToolResult.Failure<>(failure.code(), failure.getMessage()));
         } catch (Throwable failure) {
             // Settle even native errors after scope cleanup. Never forward a native stack or
             // an unchecked exception's arbitrary message to the model.
+            markSettled(settled);
             future.complete(new ToolResult.Failure<>(
                     "javascript_failure",
                     dev.openallay.script.JavascriptFailureFormatter.format(failure)));
         }
+    }
+
+    /** Shares the listener's monitor; completion callbacks run only after this lock is released. */
+    private static void markSettled(java.util.concurrent.atomic.AtomicBoolean settled) {
+        synchronized (settled) { settled.set(true); }
     }
 
     private ToolResult<Output> executeActive(
