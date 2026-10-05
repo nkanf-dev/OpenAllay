@@ -82,7 +82,7 @@ public final class NeoForgeGuideCommands {
         if (notice.level() == GuideNotice.Level.ERROR) {
             source.sendFailure(message);
         } else {
-            source.sendSuccess(() -> message, false);
+            dev.openallay.context.minecraft.MinecraftCommandFeedback.success(source, () -> message, false);
         }
     }
 }

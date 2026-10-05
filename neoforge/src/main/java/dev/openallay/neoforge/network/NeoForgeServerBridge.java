@@ -29,7 +29,7 @@ public final class NeoForgeServerBridge {
     void registerLifecycle() {
         NeoForgeNativeServerLifecycle.register(this::started, player -> {
             players.put(player.getUUID(), player);
-            started(player.level().getServer());
+            started(dev.openallay.context.minecraft.MinecraftServerPlayerLevel.get(player).getServer());
             session.connected(player.getUUID());
         }, player -> {
             if (players.remove(player.getUUID(), player)) session.disconnected(player.getUUID());

@@ -28,8 +28,7 @@ public final class NeoForgeDevelopmentCommands {
                                 .then(literal("dev")
                                         .requires(source -> dev.openallay.context.minecraft.MinecraftCommandPermissions.canReadWorld(source))
                                         .then(literal("tools").executes(context -> {
-                                            handler.listTools().forEach(line -> context.getSource()
-                                                    .sendSuccess(
+                                            handler.listTools().forEach(line -> dev.openallay.context.minecraft.MinecraftCommandFeedback.success(context.getSource(),
                                                             () -> Component.literal(line), false));
                                             return 1;
                                         }))
@@ -48,7 +47,7 @@ public final class NeoForgeDevelopmentCommands {
                                                         .executes(context -> {
                                                             String id =
                                                                     getString(context, "tool");
-                                                            context.getSource().sendSuccess(
+                                                            dev.openallay.context.minecraft.MinecraftCommandFeedback.success(context.getSource(),
                                                                     () -> Component.literal(
                                                                             handler.invoke(id)),
                                                                     false);
@@ -70,7 +69,7 @@ public final class NeoForgeDevelopmentCommands {
         ToolResult<ReplayReport> result = runtime.traceReplay().replay(source, traceId);
         if (result instanceof ToolResult.Success<ReplayReport> success) {
             success.value().chatLines().forEach(line ->
-                    source.sendSuccess(() -> Component.literal(line), false));
+                    dev.openallay.context.minecraft.MinecraftCommandFeedback.success(source,() -> Component.literal(line), false));
             return success.value().passed() ? 1 : 0;
         }
         ToolResult.Failure<ReplayReport> failure = (ToolResult.Failure<ReplayReport>) result;
