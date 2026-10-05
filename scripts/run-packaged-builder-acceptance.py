@@ -571,6 +571,7 @@ def prepare(args, repo=REPO):
         if loader_jar not in loader_files:
             raise ValueError("Installed official Fabric profile must declare the pinned loader dependency")
         main_class = fabric["mainClass"]
+        version_type = fabric["type"]
         extra_jvm = fabric.get("arguments", {}).get("jvm", [])
         extra_game = fabric.get("arguments", {}).get("game", [])
         game_jar = mcroot / "versions" / minecraft_target / (minecraft_target + ".jar")
@@ -607,6 +608,7 @@ def prepare(args, repo=REPO):
         libraries = [(name, path) for name, path in libraries if ":".join(name.split(":")[:2]) not in replacements]
         loader_files = [path for _, path in neo_libraries]
         main_class = neo["mainClass"]
+        version_type = neo["type"]
         extra_jvm = neo["arguments"].get("jvm", [])
         extra_game = neo["arguments"].get("game", [])
         if runtime_provision:
@@ -691,7 +693,10 @@ def prepare(args, repo=REPO):
               "version_name": profile_id, "game_directory": game, "assets_root": assets_root.resolve(),
               "assets_index_name": vanilla["assetIndex"]["id"],
               "auth_uuid": offline_uuid("BuilderProbe"),
-              "auth_access_token": "0", "clientid": "", "auth_xuid": "", "version_type": "release",
+              # This harness has one synthetic offline session, not an authenticated account.
+              # Minecraft Main defaults userType to legacy; this path never authenticates an MSA session.
+              "auth_access_token": "0", "clientid": "", "auth_xuid": "", "user_type": "legacy",
+              "version_type": version_type,
               "resolution_width": "850" if graphical else "854" if args.low_impact else "1100",
               "resolution_height": "480" if args.low_impact else "700"}
     if not re.fullmatch(r"[A-Za-z0-9_]{1,16}", values["auth_player_name"]):

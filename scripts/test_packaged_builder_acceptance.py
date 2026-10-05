@@ -79,8 +79,209 @@ class PackagedBuilderLauncherTests(unittest.TestCase):
                 # This header-only fixture verifies declarations; it does not widen
                 # distribution/support admission or constitute real-game acceptance.
 
-    def test_exact_target_fabric_prepare_uses_game_java_and_installed_profile_arguments(self):
-        for target in ("1.20.1", "1.21.1", "26.3"):
+    def official_launch_contract(self, target):
+        path = MODULE_PATH.parent / "fixtures/minecraft-launch" / (target + ".json")
+        expected = {"1.20.1": "d47ff966c68b13fac17d214eea8acfe45b1f08a15c432cdd2136e36c3d315de3",
+                    "1.21.1": "1ed901815b195cc714f36aee0fa4a8ee2bcf6d42154e6fbb346003cfc34d1b0d"}
+        self.assertEqual(expected[target], launcher.digest(path))
+        return json.loads(path.read_text())
+
+    def official_arguments_environment(self, repo, target, loader):
+        repo = repo.resolve()
+        # Only metadata paths/rules/arguments come from the saved official producers.
+        # Small test files replace binaries and get their own exact receipt hashes.
+        # This checks prepare/command assembly, not game execution or account authentication.
+        contract = self.official_launch_contract(target)
+        mcroot = repo / "build/e2e/runtime" / target / "minecraft"
+        mcroot.mkdir(parents=True)
+        profile = repo / "gradle/minecraft-targets" / (target + ".properties")
+        profile.parent.mkdir(parents=True, exist_ok=True)
+        profile.write_bytes((launcher.REPO / "gradle/minecraft-targets" / (target + ".properties")).read_bytes())
+        pins = launcher.runtime_pins(target, repo)
+        index = mcroot / "assets/indexes" / (contract["vanilla"]["assetIndex"]["id"] + ".json")
+        index.parent.mkdir(parents=True)
+        launcher.write_json(index, {"objects": {}})
+        contract["vanilla"]["assetIndex"]["sha1"] = launcher.digest_with(index, "sha1")
+        client = mcroot / "versions" / target / (target + ".jar")
+        client.parent.mkdir(parents=True)
+        client.write_bytes(b"unit fixture client; not executable Minecraft")
+        contract["vanilla"]["downloads"] = {"client": {"size": client.stat().st_size,
+                                                       "sha1": launcher.digest_with(client, "sha1")}}
+        metadata = contract[loader]
+        for owner in (contract["vanilla"], metadata):
+            for library in owner["libraries"]:
+                artifact = library.get("downloads", {}).get("artifact")
+                relative = artifact["path"] if artifact else launcher.maven_path(library["name"])
+                binary = mcroot / "libraries" / relative
+                binary.parent.mkdir(parents=True, exist_ok=True)
+                binary.write_bytes(("unit fixture library " + library["name"]).encode())
+                if artifact is not None:
+                    artifact.update({"sha1": launcher.digest_with(binary, "sha1"), "size": binary.stat().st_size})
+                else:
+                    library.update({"sha1": launcher.digest_with(binary, "sha1"), "size": binary.stat().st_size})
+        profile_path = mcroot / "versions" / metadata["id"] / (metadata["id"] + ".json")
+        profile_path.parent.mkdir(parents=True)
+        launcher.write_json(profile_path, metadata)
+        launcher.write_json(client.with_suffix(".json"), contract["vanilla"])
+        api = None
+        if loader == "fabric":
+            api = mcroot / "libraries" / launcher.maven_path("net.fabricmc.fabric-api:fabric-api:" + pins["fabric_version"])
+            api.parent.mkdir(parents=True, exist_ok=True)
+            with zipfile.ZipFile(api, "w") as archive:
+                archive.writestr("fabric.mod.json", json.dumps({"id": "fabric-api", "version": pins["fabric_version"]}))
+        else:
+            install_path = mcroot / ".provision/neoforge-install_profile.json"
+            install_path.parent.mkdir()
+            launcher.write_json(install_path, contract["install"])
+            coordinates = [contract["install"]["data"][key]["client"][1:-1]
+                           for key in ("PATCHED", "MC_SRG", "MC_EXTRA")]
+            artifact_name = "forge" if target == "1.20.1" else "neoforge"
+            coordinates.append("net.neoforged:" + artifact_name + ":" + pins["neoforge_version"] + ":universal")
+            for coordinate in coordinates:
+                path = mcroot / "libraries" / launcher.maven_path(coordinate)
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(("unit fixture installed client " + coordinate).encode())
+        java = repo.parent / "java"
+        java.write_bytes(b"unit fixture Java path; subprocess.run is mocked")
+        java.chmod(0o755)
+        receipt = {"loader": loader, "minecraft": target, "javaRequired": int(pins["java_version"]),
+                   "java": str(java), "minecraftRoot": str(mcroot), "profile": metadata["id"],
+                   "fabricApi": str(api) if api else None, "sourceProfile": str(profile.relative_to(repo)),
+                   "sourceProfileSha256": launcher.digest(profile),
+                   "pins": {key: pins[key] for key in ("minecraft_version", "java_version", "fabric_loader_version",
+                                                       "fabric_version", "neoforge_version")},
+                   "mechanism": "official-client-installer"}
+        receipt_path = mcroot / ".provision" / (loader + "-runtime.json")
+        receipt_path.parent.mkdir(exist_ok=True)
+        self.refresh_runtime_receipt(mcroot, receipt_path, receipt)
+        return mcroot, repo.parent / "unused-gradle-cache", java, receipt_path, contract
+
+    def refresh_runtime_receipt(self, mcroot, receipt_path, receipt=None):
+        receipt = receipt if receipt is not None else json.loads(receipt_path.read_text())
+        receipt["files"] = {path.relative_to(mcroot).as_posix(): self.runtime_record(path)
+                            for path in mcroot.rglob("*") if path.is_file() and path != receipt_path}
+        launcher.write_json(receipt_path, receipt)
+
+    def test_old_official_metadata_prepares_complete_offline_commands_for_both_loaders(self):
+        from types import SimpleNamespace
+        for target in ("1.20.1", "1.21.1"):
+            for loader in ("fabric", "neoforge"):
+                with self.subTest(target=target, loader=loader), tempfile.TemporaryDirectory() as directory:
+                    repo = Path(directory) / "repo with spaces"
+                    artifact = self.artifact(repo, loader=loader, minecraft_target=target)
+                    mcroot, cache, java, receipt, contract = self.official_arguments_environment(repo, target, loader)
+                    args = launcher.parser().parse_args([loader, "--minecraft-target", target, "--run-id", "official-args",
+                        "--minecraft-root", str(mcroot), "--gradle-cache", str(cache), "--java", str(java), "--jar", str(artifact)])
+                    with patch.object(launcher, "system_name", return_value="linux"), \
+                            patch.object(launcher.platform, "machine", return_value="x86_64"), \
+                            patch.object(launcher.subprocess, "run", return_value=SimpleNamespace(returncode=0,
+                                stdout='openjdk version "' + str(contract["vanilla"]["javaVersion"]["majorVersion"]) + '.0.1"')) as java_run:
+                        output, manifest = launcher.prepare(args, repo)
+                    java_run.assert_called_once()
+                    self.assertEqual([str(java), "-version"], java_run.call_args.args[0])
+                    command = manifest["command"]
+                    main_class = contract[loader]["mainClass"]
+                    self.assertEqual(target, manifest["minecraft"])
+                    self.assertEqual(contract["vanilla"]["javaVersion"]["majorVersion"], manifest["javaRequired"])
+                    self.assertEqual([str(java), "-Xms512M", "-Xmx3G"], command[:3])
+                    substitutions = {"natives_directory": str(output / "natives"),
+                        "launcher_name": "OpenAllayPackagedAcceptance", "launcher_version": "1",
+                        "classpath": os.pathsep.join(manifest["classPath"]), "version_name": contract[loader]["id"],
+                        "library_directory": str(mcroot / "libraries"), "classpath_separator": os.pathsep}
+                    expected_jvm = []
+                    for argument in [item for item in contract["vanilla"]["arguments"]["jvm"] if isinstance(item, str)] + contract[loader]["arguments"]["jvm"]:
+                        for name, value in substitutions.items():
+                            argument = argument.replace("${" + name + "}", value)
+                        expected_jvm.append(argument)
+                    self.assertEqual(expected_jvm, command[3:3 + len(expected_jvm)])
+                    expected_game = ["--username", "BuilderProbe", "--version", contract[loader]["id"],
+                        "--gameDir", str(output / "game"), "--assetsDir", str(mcroot / "assets"),
+                        "--assetIndex", contract["vanilla"]["assetIndex"]["id"], "--uuid", launcher.offline_uuid("BuilderProbe"),
+                        "--accessToken", "0", "--clientId", "", "--xuid", "", "--userType", "legacy",
+                        "--versionType", contract[loader]["type"], "--width", "1100", "--height", "700"]
+                    expected_game += contract[loader]["arguments"]["game"]
+                    self.assertEqual(expected_game, command[command.index(main_class) + 1:])
+                    self.assertFalse(any("${" in argument for argument in command))
+                    self.assertTrue(manifest["noGameLaunched"])
+                    self.assertEqual([], list((output / "game/saves").iterdir()))
+                    self.assertEqual({}, manifest["nativeFiles"])
+                    self.assertEqual(str(output / "natives"), manifest["nativesDirectory"])
+                    self.assertTrue(all(Path(path).is_relative_to(mcroot) for path in manifest["classPath"]))
+                    expected_libraries = []
+                    for owner in (contract["vanilla"], contract[loader]):
+                        selected = [library for library in owner["libraries"]
+                                    if not library.get("rules") or library["rules"] == [{"action": "allow", "os": {"name": "linux"}}]]
+                        if owner is contract[loader]:
+                            replacements = {":".join(library["name"].split(":")[:2]) for library in selected}
+                            expected_libraries = [(name, path) for name, path in expected_libraries
+                                                  if ":".join(name.split(":")[:2]) not in replacements]
+                        for library in selected:
+                            relative = library.get("downloads", {}).get("artifact", {}).get("path") or launcher.maven_path(library["name"])
+                            expected_libraries.append((library["name"], str(mcroot / "libraries" / relative)))
+                    expected_classpath = list(dict.fromkeys(path for _, path in expected_libraries))
+                    if loader == "fabric":
+                        expected_classpath.append(str(mcroot / "versions" / target / (target + ".jar")))
+                    self.assertEqual(expected_classpath, manifest["classPath"])
+                    self.assertTrue(any("natives-linux.jar" in path for path in manifest["classPath"]))
+                    self.assertFalse(any("natives-macos" in path or "natives-windows" in path for path in manifest["classPath"]))
+                    self.assertEqual({"path": str(receipt), "sha256": launcher.digest(receipt)}, manifest["runtimeProvision"])
+                    self.assertEqual(launcher.digest(artifact), manifest["packagedArtifact"]["sha256"])
+                    self.assertEqual({"enabled": False}, json.loads((output / "game/config/openallay/unrestricted-javascript.json").read_text()))
+                    if loader == "neoforge":
+                        module_path = command[command.index("-p") + 1].split(os.pathsep)
+                        self.assertTrue(all(Path(path).is_file() and Path(path).is_relative_to(mcroot / "libraries") for path in module_path))
+                        for key in ("PATCHED", "MC_SRG", "MC_EXTRA"):
+                            relative = "libraries/" + launcher.maven_path(contract["install"]["data"][key]["client"][1:-1]).as_posix()
+                            self.assertIn(relative, json.loads(receipt.read_text())["files"])
+
+    def test_old_official_prepare_keeps_unknown_active_arguments_fail_closed(self):
+        from types import SimpleNamespace
+        for loader in ("fabric", "neoforge"):
+            for kind in ("jvm", "game"):
+                with self.subTest(loader=loader, kind=kind), tempfile.TemporaryDirectory() as directory:
+                    repo = Path(directory) / "repo"
+                    artifact = self.artifact(repo, loader=loader, minecraft_target="1.21.1")
+                    mcroot, cache, java, receipt, contract = self.official_arguments_environment(repo, "1.21.1", loader)
+                    path = mcroot / "versions" / contract[loader]["id"] / (contract[loader]["id"] + ".json")
+                    metadata = json.loads(path.read_text())
+                    metadata["arguments"][kind].append("${unrecognized_account_or_quickplay_value}")
+                    launcher.write_json(path, metadata)
+                    self.refresh_runtime_receipt(mcroot, receipt)
+                    args = launcher.parser().parse_args([loader, "--minecraft-target", "1.21.1", "--run-id", "unknown",
+                        "--minecraft-root", str(mcroot), "--gradle-cache", str(cache), "--java", str(java), "--jar", str(artifact)])
+                    with patch.object(launcher.subprocess, "run", return_value=SimpleNamespace(returncode=0, stdout='openjdk version "21.0.1"')), \
+                            self.assertRaisesRegex(ValueError, "Unsupported launch metadata placeholder: unrecognized_account_or_quickplay_value"):
+                        launcher.prepare(args, repo)
+                    self.assertFalse((repo / "build/e2e/packaged-builder" / loader / "unknown/launch.json").exists())
+
+    def test_version_type_uses_installed_profile_metadata_without_release_fallback(self):
+        from types import SimpleNamespace
+        for loader in ("fabric", "neoforge"):
+            for version_type in ("snapshot", None):
+                with self.subTest(loader=loader, version_type=version_type), tempfile.TemporaryDirectory() as directory:
+                    repo = Path(directory) / "repo"
+                    artifact = self.artifact(repo, loader=loader, minecraft_target="1.21.1")
+                    mcroot, cache, java, receipt, contract = self.official_arguments_environment(repo, "1.21.1", loader)
+                    path = mcroot / "versions" / contract[loader]["id"] / (contract[loader]["id"] + ".json")
+                    metadata = json.loads(path.read_text())
+                    if version_type is None:
+                        del metadata["type"]
+                    else:
+                        metadata["type"] = version_type
+                    launcher.write_json(path, metadata)
+                    self.refresh_runtime_receipt(mcroot, receipt)
+                    args = launcher.parser().parse_args([loader, "--minecraft-target", "1.21.1", "--run-id", "profile-type",
+                        "--minecraft-root", str(mcroot), "--gradle-cache", str(cache), "--java", str(java), "--jar", str(artifact)])
+                    with patch.object(launcher.subprocess, "run", return_value=SimpleNamespace(returncode=0, stdout='openjdk version "21.0.1"')):
+                        if version_type is None:
+                            with self.assertRaisesRegex(KeyError, "type"):
+                                launcher.prepare(args, repo)
+                        else:
+                            _, manifest = launcher.prepare(args, repo)
+                            self.assertEqual(version_type, manifest["command"][manifest["command"].index("--versionType") + 1])
+
+    def test_new_target_fabric_prepare_uses_game_java_and_installed_profile_arguments(self):
+        for target in ("26.3",):
             with self.subTest(target=target), tempfile.TemporaryDirectory() as directory:
                 repo = Path(directory) / "repo"
                 artifact = self.artifact(repo, minecraft_target=target)
@@ -101,7 +302,7 @@ class PackagedBuilderLauncherTests(unittest.TestCase):
                 profile_file = mcroot / "versions" / fabric_id / (fabric_id + ".json")
                 profile_file.parent.mkdir()
                 launcher.write_json(profile_file, {"id": fabric_id, "inheritsFrom": target,
-                    "mainClass": "net.fabricmc.loader.impl.launch.knot.KnotClient",
+                    "type": "release", "mainClass": "net.fabricmc.loader.impl.launch.knot.KnotClient",
                     "libraries": [{"name": "net.fabricmc:fabric-loader:" + pins["fabric_loader_version"], "url": "https://maven.fabricmc.net/"}],
                     "arguments": {"jvm": ["-Dexact.target=" + target], "game": []}})
                 loader = cache / "net.fabricmc/fabric-loader" / pins["fabric_loader_version"] / "hash" / ("fabric-loader-" + pins["fabric_loader_version"] + ".jar")
@@ -284,7 +485,7 @@ class PackagedBuilderLauncherTests(unittest.TestCase):
         version.mkdir(parents=True)
         (version / "26.2.jar").write_bytes(b"official Minecraft")
         launcher.write_json(version / "26.2.json", {
-            "id": "26.2", "javaVersion": {"majorVersion": 25}, "libraries": [], "assetIndex": {"id": "32"},
+            "id": "26.2", "type": "release", "javaVersion": {"majorVersion": 25}, "libraries": [], "assetIndex": {"id": "32"},
             "downloads": {"client": {"sha1": launcher.digest_with(version / "26.2.jar", "sha1"),
                                      "size": (version / "26.2.jar").stat().st_size}},
             "arguments": {"jvm": [{"rules": [{"action": "allow", "os": {"name": "osx"}}],
@@ -308,7 +509,7 @@ class PackagedBuilderLauncherTests(unittest.TestCase):
         fabric_id = "fabric-loader-0.19.3-26.2"
         fabric_profile = mcroot / "versions" / fabric_id / (fabric_id + ".json")
         fabric_profile.parent.mkdir(parents=True)
-        launcher.write_json(fabric_profile, {"id": fabric_id, "inheritsFrom": "26.2",
+        launcher.write_json(fabric_profile, {"id": fabric_id, "inheritsFrom": "26.2", "type": "release",
                                              "mainClass": "net.fabricmc.loader.impl.launch.knot.KnotClient",
                                              "libraries": [{"name": "net.fabricmc:fabric-loader:0.19.3", "url": "https://maven.fabricmc.net/"}],
                                              "arguments": {"jvm": ["-DFabricMcEmu= net.minecraft.client.main.Main "],
