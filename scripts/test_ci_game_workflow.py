@@ -22,6 +22,8 @@ class ClientWorkflowGlueTest(unittest.TestCase):
     def test_exact_staged_jar_and_official_runtime_invocation(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary).resolve()
+            (root / "gradle").mkdir()
+            (root / "gradle/minecraft-target-loaders.json").write_bytes((WORKFLOW.ROOT / "gradle/minecraft-target-loaders.json").read_bytes())
             staged = root / "build/ci-client-production"
             staged.mkdir(parents=True)
             jar = staged / "openallay-fabric-26.2-0.4.1.jar"
@@ -41,6 +43,31 @@ class ClientWorkflowGlueTest(unittest.TestCase):
             jar.write_bytes(b"changed")
             with self.assertRaisesRegex(ValueError, "changed"):
                 WORKFLOW.run("fabric", Path("/fixture/java"), "ci-run", root)
+
+    def test_actual_forge_client_workflow_uses_forge_receipt_without_fabric_api(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve()
+            (root / "gradle").mkdir()
+            (root / "gradle/minecraft-target-loaders.json").write_bytes((WORKFLOW.ROOT / "gradle/minecraft-target-loaders.json").read_bytes())
+            staged = root / "build/ci-client-production"
+            staged.mkdir(parents=True)
+            jar = staged / "openallay-forge-1.19.2-0.4.2.jar"
+            jar.write_bytes(b"synthetic Forge artifact")
+            sha = hashlib.sha256(jar.read_bytes()).hexdigest()
+            (staged / "SHA256SUMS").write_text(sha + "  " + jar.name + "\n")
+            runtime = root / "build/e2e/runtime/1.19.2/minecraft"
+            (runtime / ".provision").mkdir(parents=True)
+            (runtime / ".provision/forge-runtime.json").write_text(json.dumps({
+                "loader": "forge", "minecraft": "1.19.2", "minecraftRoot": str(runtime), "fabricApi": None}))
+            with mock.patch.object(WORKFLOW.subprocess, "run", return_value=mock.Mock(returncode=0)) as command:
+                self.assertEqual(0, WORKFLOW.run("forge", Path("/fixture/java17"), "forge-batch", root, "1.19.2", ["builder-acceptance", "builder-reload"]))
+                arguments = command.call_args.args[0]
+                self.assertEqual("forge", arguments[3])
+                self.assertNotIn("--fabric-api", arguments)
+                self.assertEqual("1.19.2", arguments[arguments.index("--minecraft-target") + 1])
+                self.assertEqual(["builder-acceptance", "builder-reload"], arguments[-2:])
+            with self.assertRaisesRegex(ValueError, "actual source target"):
+                WORKFLOW.run("neoforge", Path("/fixture/java17"), "invalid", root, "1.19.2")
 
     def test_batch_orchestration_logs_are_retained_by_exact_inventory(self):
         with tempfile.TemporaryDirectory() as temporary:

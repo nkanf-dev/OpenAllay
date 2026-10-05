@@ -43,3 +43,34 @@ def target_loaders(root, target):
     if target not in targets:
         raise ValueError("Unknown Minecraft target: " + target)
     return targets[target]
+
+
+def runtime_pin_fields(loader):
+    if loader == "forge":
+        return ("minecraft_version", "java_version", "forge_version")
+    if loader in ("fabric", "neoforge"):
+        # Preserve existing source receipt shape for the unchanged 23 profiles.
+        return ("minecraft_version", "java_version", "fabric_loader_version", "fabric_version", "neoforge_version")
+    raise ValueError("Unknown actual runtime loader: " + loader)
+
+
+def fml_runtime_identity(pins, loader):
+    target = pins["minecraft_version"]
+    if loader == "forge":
+        version = pins["forge_version"]
+        if not version.startswith(target + "-"):
+            raise ValueError("Official Forge coordinate differs from target")
+        return {"group": "net.minecraftforge", "artifact": "forge", "version": version,
+                "profile": target + "-forge-" + version.removeprefix(target + "-"),
+                "maven": "https://maven.minecraftforge.net/",
+                "mainClasses": ("cpw.mods.bootstraplauncher.BootstrapLauncher",)}
+    if loader == "neoforge":
+        version = pins["neoforge_version"]
+        early = target == "1.20.1"
+        if early and not version.startswith(target + "-"):
+            raise ValueError("Early Forge-shaped NeoForge pin differs")
+        return {"group": "net.neoforged", "artifact": "forge" if early else "neoforge", "version": version,
+                "profile": target + "-forge-" + version.removeprefix(target + "-") if early else "neoforge-" + version,
+                "maven": "https://maven.neoforged.net/releases/",
+                "mainClasses": ("net.neoforged.fml.startup.Client", "cpw.mods.bootstraplauncher.BootstrapLauncher")}
+    raise ValueError("Expected actual FML runtime loader")

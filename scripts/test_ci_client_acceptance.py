@@ -171,6 +171,7 @@ class ClientAcceptanceTests(unittest.TestCase):
         self.repo.mkdir()
         (self.repo / "gradle.properties").write_text("version=0.4.1\n")
         (self.repo / "gradle/minecraft-targets").mkdir(parents=True)
+        (self.repo / "gradle/minecraft-target-loaders.json").write_bytes((REFERENCE_REPO / "gradle/minecraft-target-loaders.json").read_bytes())
         (self.repo / "gradle/minecraft-targets/26.2.properties").write_bytes(
             (REFERENCE_REPO / "gradle/minecraft-targets/26.2.properties").read_bytes())
         (self.repo / "scripts").mkdir()
@@ -231,7 +232,7 @@ class ClientAcceptanceTests(unittest.TestCase):
             self.assertEqual(target, alias.minecraft_version)
         choice = next(action for action in runner.parser()._actions if action.dest == "minecraft_version")
         self.assertEqual(set(launcher.minecraft_targets()), set(choice.choices))
-        self.assertEqual(23, len(choice.choices))
+        self.assertEqual(24, len(choice.choices))
 
     def test_default_all_nine_keep_restricted_javascript_and_use_actual_validator_gates(self):
         code, summary, validated = self.run_batch()

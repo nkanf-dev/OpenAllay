@@ -25,6 +25,7 @@ import uuid
 from urllib.parse import urlsplit
 from urllib.request import urlopen
 import zipfile
+from minecraft_target_loaders import target_loaders, read_target_loaders, runtime_pin_fields, fml_runtime_identity
 
 def target_reader():
     from importlib.util import module_from_spec, spec_from_file_location
@@ -36,7 +37,7 @@ def target_reader():
 
 def minecraft_targets(repo=None):
     root = Path(repo) if repo is not None else REPO
-    return tuple(sorted(path.stem for path in (root / "gradle/minecraft-targets").glob("*.properties")))
+    return tuple(read_target_loaders(root))
 
 
 def runtime_pins(minecraft_target, repo=None):
@@ -347,6 +348,8 @@ def product_version(repo=REPO):
 
 
 def packaged_artifact(path, loader, mod_version=None, repo=REPO, minecraft_target="26.2", artifact_family=None):
+    if loader not in target_loaders(repo, minecraft_target)["loaders"]:
+        raise ValueError("Packaged loader is not an actual source target identity")
     mod_version = product_version(repo) if mod_version is None else mod_version
     path = path.resolve()
     expected_name = f"openallay-{loader}-{minecraft_target}-{mod_version}.jar"
@@ -375,9 +378,17 @@ def packaged_artifact(path, loader, mod_version=None, repo=REPO, minecraft_targe
             if metadata["id"] != "openallay" or metadata["version"] != mod_version:
                 raise ValueError("Unexpected packaged OpenAllay identity")
         else:
-            descriptor_path = ("META-INF/mods.toml" if minecraft_target in ("1.20.1", "1.20.2", "1.20.3", "1.20.4")
+            descriptor_path = ("META-INF/mods.toml" if loader == "forge" or minecraft_target in ("1.20.1", "1.20.2", "1.20.3", "1.20.4")
                                else "META-INF/neoforge.mods.toml")
+            other_descriptor = "META-INF/neoforge.mods.toml" if descriptor_path == "META-INF/mods.toml" else "META-INF/mods.toml"
+            if other_descriptor in archive.namelist():
+                raise ValueError("Packaged artifact has competing actual loader descriptors")
             mod_metadata = archive.read(descriptor_path).decode("utf-8")
+            if loader == "forge":
+                blocks = mod_metadata.split("[[dependencies.")[1:]
+                forge = [block for block in blocks if re.search(r'^modId\s*=\s*"forge"', block, re.MULTILINE)]
+                if len(forge) != 1 or any(re.search(r'^modId\s*=\s*"neoforge"', block, re.MULTILINE) for block in blocks):
+                    raise ValueError("Packaged Forge artifact must use its actual loader dependency")
             if (re.search(r'^modId\s*=\s*"openallay"', mod_metadata, re.MULTILINE) is None
                     or re.search(r'^version\s*=\s*"' + re.escape(mod_version) + r'"', mod_metadata, re.MULTILINE) is None):
                 raise ValueError("Unexpected packaged OpenAllay identity")
@@ -477,7 +488,9 @@ def read_runtime_provision(minecraft_root, loader, repo=REPO, minecraft_target="
     receipt = verifier.prepare.decode_json(receipt_path.read_text(encoding="utf-8"))
     profile = repo / "gradle/minecraft-targets" / (minecraft_target + ".properties")
     profile_pins = runtime_pins(minecraft_target, repo)
-    pin_keys = ("minecraft_version", "java_version", "fabric_loader_version", "fabric_version", "neoforge_version")
+    pin_keys = runtime_pin_fields(loader)
+    if loader not in target_loaders(repo, minecraft_target)["loaders"]:
+        raise ValueError("Runtime receipt loader is not an actual source target identity")
     expected_pins = {key: profile_pins[key] for key in pin_keys}
     if (receipt.get("loader") != loader or receipt.get("minecraft") != minecraft_target
             or receipt.get("pins") != expected_pins
@@ -487,6 +500,9 @@ def read_runtime_provision(minecraft_root, loader, repo=REPO, minecraft_target="
             or receipt.get("mechanism") != "official-client-installer"
             or receipt.get("sourceProfileSha256") != digest(profile)):
         raise ValueError("Isolated runtime provision manifest does not match the exact source target")
+    if loader == "forge" and (receipt.get("sourceLoaderMap") != "gradle/minecraft-target-loaders.json"
+            or receipt.get("sourceLoaderMapSha256") != digest(repo / "gradle/minecraft-target-loaders.json")):
+        raise ValueError("Forge runtime receipt does not match the actual source loader selection")
     if not isinstance(receipt.get("files"), dict):
         raise ValueError("Isolated runtime provision manifest has no file hashes")
     return {"path": str(receipt_path), "sha256": digest(receipt_path),
@@ -568,6 +584,8 @@ def prepare(args, repo=REPO):
     if output.exists():
         raise ValueError("Acceptance directory already exists; use a new run-id")
     pins = runtime_pins(minecraft_target, repo)
+    if loader not in target_loaders(repo, minecraft_target)["loaders"]:
+        raise ValueError("Runtime loader is not an actual source target identity")
     java_required = int(pins["java_version"])
     mcroot = args.minecraft_root.resolve()
     gradle_cache = args.gradle_cache.resolve()
@@ -624,17 +642,22 @@ def prepare(args, repo=REPO):
             if apimeta.get("id") != "fabric-api" or apimeta.get("version") != api_version:
                 raise ValueError("Use the Fabric API pin from the exact source target profile")
     else:
-        profile_id = ("1.20.1-forge-" + pins["neoforge_version"].removeprefix("1.20.1-")
-                      if minecraft_target == "1.20.1" else "neoforge-" + pins["neoforge_version"])
+        fml_identity = fml_runtime_identity(pins, loader)
+        profile_id = fml_identity["profile"]
         if runtime_provision:
             if runtime_provision["profile"] != profile_id:
-                raise ValueError("Isolated NeoForge profile does not match the exact source target")
+                raise ValueError("Isolated " + loader + " profile does not match the exact source target")
             verify_runtime_record(mcroot / "versions" / profile_id / (profile_id + ".json"),
                                   mcroot, runtime_provision["files"])
         neo = read_version(mcroot, profile_id)
         if (neo.get("id") != profile_id or neo.get("inheritsFrom") != minecraft_target
-                or neo.get("mainClass") not in ("net.neoforged.fml.startup.Client", "cpw.mods.bootstraplauncher.BootstrapLauncher")):
-            raise ValueError("Installed NeoForge profile does not match the exact source target")
+                or neo.get("mainClass") not in fml_identity["mainClasses"]):
+            raise ValueError("Installed " + loader + " profile does not match the exact source target")
+        if loader == "forge" and runtime_provision:
+            original_version = mcroot / ".provision/forge-version.json"
+            verify_runtime_record(original_version, mcroot, runtime_provision["files"])
+            if neo != bundled_extension_verifier().prepare.decode_json(original_version.read_text(encoding="utf-8")):
+                raise ValueError("Installed Forge version differs from its verified official installer metadata")
         neo_libraries = version_libraries(neo, mcroot, gradle_cache, allow_gradle=runtime_provision is None)
         replacements = {name.split(":")[0] + ":" + name.split(":")[1] for name, _ in neo_libraries}
         libraries = [(name, path) for name, path in libraries if ":".join(name.split(":")[:2]) not in replacements]
@@ -644,18 +667,21 @@ def prepare(args, repo=REPO):
         extra_jvm = neo["arguments"].get("jvm", [])
         extra_game = neo["arguments"].get("game", [])
         if runtime_provision:
-            install_path = mcroot / ".provision/neoforge-install_profile.json"
+            install_path = mcroot / ".provision" / (loader + "-install_profile.json")
             verify_runtime_record(install_path, mcroot, runtime_provision["files"])
             install = bundled_extension_verifier().prepare.decode_json(install_path.read_text(encoding="utf-8"))
             if install.get("minecraft") != minecraft_target or install.get("version") != profile_id:
                 raise ValueError("Official installer data does not match the selected client profile")
+            if loader == "forge":
+                for library in install.get("libraries", []):
+                    for _, path in version_libraries({"libraries": [library]}, mcroot, gradle_cache, allow_gradle=False):
+                        verify_runtime_record(path, mcroot, runtime_provision["files"])
             patched_coordinate = install.get("data", {}).get("PATCHED", {}).get("client", "")
             if not patched_coordinate.startswith("[") or not patched_coordinate.endswith("]"):
                 raise ValueError("Official installer patched client data is missing")
             production = mcroot / "libraries" / maven_path(patched_coordinate[1:-1])
             verify_runtime_record(production.resolve(), mcroot, runtime_provision["files"])
-            artifact_name = "forge" if minecraft_target == "1.20.1" else "neoforge"
-            universal = mcroot / "libraries" / maven_path("net.neoforged:" + artifact_name + ":" + pins["neoforge_version"] + ":universal")
+            universal = mcroot / "libraries" / maven_path(fml_identity["group"] + ":" + fml_identity["artifact"] + ":" + fml_identity["version"] + ":universal")
             verify_runtime_record(universal.resolve(), mcroot, runtime_provision["files"])
             for key in ("MC_SRG", "MC_EXTRA"):
                 if key not in install.get("data", {}):
@@ -739,7 +765,10 @@ def prepare(args, repo=REPO):
     game_args = expand_arguments(vanilla["arguments"]["game"] + extra_game, values, {"has_custom_resolution": True})
     source_files = ["common/src/main/java/dev/openallay/guide/e2e/GuideGraphicalRegressionProbe.java",
                     "common/src/main/java/dev/openallay/guide/e2e/GuideClientE2EController.java",
-                    "scripts/e2e-model-fixture.py", "scripts/run-packaged-builder-acceptance.py"]
+                    "scripts/e2e-model-fixture.py", "scripts/run-packaged-builder-acceptance.py",
+                    "scripts/prepare-ci-minecraft-runtime.py", "scripts/minecraft_target_loaders.py",
+                    "scripts/run-ci-client-acceptance.py", "scripts/run-ci-game-workflow.py",
+                    "gradle/minecraft-target-loaders.json", "gradle/minecraft-targets/" + minecraft_target + ".properties"]
     source_manifest = {"packagedArtifact": identity,
                        "files": {name: digest(repo / name) for name in source_files if (repo / name).is_file()}}
     source_manifest_path = output / "source-manifest.json"
@@ -778,7 +807,7 @@ def prepare(args, repo=REPO):
                 "gameDirectory": str(game), "packagedArtifact": identity,
                 "unrestrictedOptIn": args.enable_unrestricted, "lowImpact": args.low_impact,
                 "modelDiagnostics": args.model_diagnostics, "timeoutSeconds": args.timeout_seconds, "wallTimeoutSeconds": args.timeout_seconds + 60, "command": command,
-                "classPath": classpath, "nativeFiles": native_files, "nativesDirectory": str(output / "natives"),
+                "mainClass": main_class, "classPath": classpath, "nativeFiles": native_files, "nativesDirectory": str(output / "natives"),
                 "runtimeProvision": ({"path": runtime_provision["path"], "sha256": runtime_provision["sha256"]}
                                      if runtime_provision else None),
                 "preparedFiles": {str(p.relative_to(output)): digest(p) for p in files},
@@ -793,9 +822,23 @@ def prepare(args, repo=REPO):
     return output, manifest
 
 
+def resume_main_class(prior, repo=REPO):
+    loader, target = prior["loader"], prior["minecraft"]
+    if loader not in target_loaders(repo, target)["loaders"]:
+        raise ValueError("Resume loader is not an actual source target identity")
+    allowed = (("net.fabricmc.loader.impl.launch.knot.KnotClient",) if loader == "fabric"
+               else fml_runtime_identity(runtime_pins(target, repo), loader)["mainClasses"])
+    declared = prior.get("mainClass")
+    command = prior.get("command", [])
+    if declared not in allowed or command.count(declared) != 1 or sum(command.count(name) for name in allowed) != 1:
+        raise ValueError("Resume must retain one persisted actual pinned loader main class")
+    return declared
+
+
 def prepare_resume(args, repo=REPO):
     previous = safe_output(args.resume_prepared, repo)
     prior = json.loads((previous / "launch.json").read_text(encoding="utf-8"))
+    main_class = resume_main_class(prior, repo)
     if args.timeout_seconds <= 0:
         raise ValueError("Harness timeout must be a positive number of seconds")
     if args.scenario not in ("builder-reload", "builder-live-undo"):
@@ -885,7 +928,6 @@ def prepare_resume(args, repo=REPO):
         command.append(entry)
     command = runtime_native_arguments(command, Path(prior["nativesDirectory"]),
                                        output / "native-runtime", previous / "native-runtime")
-    main_class = "net.fabricmc.loader.impl.launch.knot.KnotClient" if prior["loader"] == "fabric" else "net.neoforged.fml.startup.Client"
     insert = command.index(main_class)
     diagnostics_property = "-Dopenallay.model.diagnostics=true"
     if args.model_diagnostics and diagnostics_property not in command:
@@ -1162,7 +1204,7 @@ def launch_prepared(path, repo=REPO):
 
 def parser():
     result = argparse.ArgumentParser(description=__doc__)
-    result.add_argument("loader", choices=("fabric", "neoforge"), nargs="?")
+    result.add_argument("loader", choices=("fabric", "forge", "neoforge"), nargs="?")
     result.add_argument("--run-id")
     result.add_argument("--minecraft-target", choices=minecraft_targets(), default="26.2")
     result.add_argument("--scenario", choices=SCENARIOS, default="builder-restricted")

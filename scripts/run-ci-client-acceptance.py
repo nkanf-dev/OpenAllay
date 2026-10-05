@@ -396,6 +396,9 @@ def validate_arguments(args, repo):
     if not os.environ.get("DISPLAY"):
         raise ValueError("DISPLAY is missing; the workflow must start Xvfb before the runner")
     target_pins = load_launcher(REPO).runtime_pins(args.minecraft_version, repo)
+    from minecraft_target_loaders import target_loaders
+    if args.loader not in target_loaders(repo, args.minecraft_version)["loaders"]:
+        raise ValueError("CI client loader is not an actual source target identity")
     if target_pins["minecraft_version"] != args.minecraft_version:
         raise ValueError("Exact Minecraft target differs from the source profile")
     if not re.fullmatch(r"[0-9a-f]{64}", args.artifact_sha256):
@@ -581,7 +584,7 @@ def run_batch(args, repo=REPO):
 
 def parser():
     result = argparse.ArgumentParser(description=__doc__)
-    result.add_argument("loader", choices=("fabric", "neoforge"))
+    result.add_argument("loader", choices=("fabric", "forge", "neoforge"))
     result.add_argument("--minecraft-target", "--minecraft-version", dest="minecraft_version", default="26.2",
                         choices=load_launcher(REPO).minecraft_targets(REPO))
     result.add_argument("--artifact-family", help="Explicit catalog interval with unchanged production bytes")

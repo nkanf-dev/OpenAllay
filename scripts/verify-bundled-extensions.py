@@ -13,6 +13,7 @@ from io import BytesIO
 import json
 import os
 from pathlib import Path
+from minecraft_target_loaders import read_target_loaders
 import re
 import subprocess
 import sys
@@ -135,10 +136,10 @@ def verify_manifest(content: bytes, lock: dict) -> dict:
         require(target["openAllayApiVersionRange"] == SDK_SUPPORT_RANGE, "Wrong Builder SDK support range")
         encoded_targets.append(tuple(target[field] for field in sorted(TARGET_FIELDS)))
     require(len(encoded_targets) == len(set(encoded_targets)), "Duplicate support target")
-    intended_games = {path.stem for path in (ROOT / "gradle/minecraft-targets").glob("*.properties")}
+    intended_targets = read_target_loaders(ROOT)
     require({(target["loader"], target["minecraftVersionRange"]) for target in targets}
-        == {(loader, game) for loader in ("fabric", "neoforge") for game in intended_games},
-        "Builder declaration must cover the prepared native target profiles in one payload")
+        == {(loader, game) for game, selected in intended_targets.items() for loader in selected["loaders"]},
+        "Builder declaration must cover the actual prepared native target loaders in one payload")
     requirements = descriptor.get("requirements", {})
     require(isinstance(requirements, dict) and set(requirements) <= {"capabilities", "extensions", "skills"},
         "Invalid universal requirements fields")

@@ -30,6 +30,8 @@ class RuntimeTests(unittest.TestCase):
         self.root = Path(self.temporary.name).resolve()
         self.repo = self.root / "repo"
         self.repo.mkdir()
+        (self.repo / "gradle").mkdir()
+        (self.repo / "gradle/minecraft-target-loaders.json").write_bytes((runtime.REPO / "gradle/minecraft-target-loaders.json").read_bytes())
         self.mcroot = self.repo / "build/e2e/runtime/26.2/minecraft"
 
     def tearDown(self):
@@ -37,7 +39,7 @@ class RuntimeTests(unittest.TestCase):
 
     def test_all_prepared_exact_target_profiles_are_read_through_one_authority(self):
         targets = runtime.minecraft_targets()
-        self.assertEqual(23, len(targets))
+        self.assertEqual(24, len(targets))
         self.assertIn("1.20.1", targets)
         self.assertIn("1.21.1", targets)
         self.assertIn("26.3", targets)
@@ -161,6 +163,25 @@ class RuntimeTests(unittest.TestCase):
                     corrupt = True
                     with self.assertRaisesRegex(ValueError, "client mappings differ"):
                         runtime.prepare_neoforge(root, self.root / "java", pins)
+
+    def test_actual_forge1192_official_metadata_and_source_pin_shape(self):
+        from minecraft_target_loaders import fml_runtime_identity, runtime_pin_fields
+        pins = runtime.read_pins(runtime.REPO, "1.19.2", "forge")
+        self.assertEqual(("minecraft_version", "java_version", "forge_version"), runtime_pin_fields("forge"))
+        identity = fml_runtime_identity(pins, "forge")
+        self.assertEqual("net.minecraftforge", identity["group"])
+        fixture = Path(__file__).with_name("fixtures") / "forge-1.19.2-43.5.0"
+        install = runtime.json_bytes((fixture / "install_profile.json").read_bytes())
+        version = runtime.json_bytes((fixture / "version.json").read_bytes())
+        self.assertEqual("1.19.2-forge-43.5.0", version["id"])
+        self.assertEqual("cpw.mods.bootstraplauncher.BootstrapLauncher", version["mainClass"])
+        self.assertEqual(6, len(runtime.client_processors(install)))
+        self.assertEqual({"MAPPINGS", "MOJMAPS", "MERGED_MAPPINGS", "MC_SLIM", "MC_EXTRA", "MC_SRG", "PATCHED"},
+                         set(runtime.processor_outputs(self.mcroot, install)))
+        runtime.official_url(identity["maven"] + runtime.maven_path("net.minecraftforge:forge:" + pins["forge_version"] + ":installer"))
+        for loader in ("fabric", "neoforge"):
+            with self.assertRaisesRegex(ValueError, "actual source target"):
+                runtime.read_pins(runtime.REPO, "1.19.2", loader)
 
     def test_output_only_isolated_runtime(self):
         self.assertEqual(runtime.safe_root(self.mcroot, self.repo), self.mcroot)

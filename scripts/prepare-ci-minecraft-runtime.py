@@ -18,6 +18,7 @@ from urllib.parse import unquote, urlsplit
 from urllib.request import HTTPRedirectHandler, build_opener
 import uuid
 import zipfile
+from minecraft_target_loaders import target_loaders, read_target_loaders, runtime_pin_fields, fml_runtime_identity
 
 REPO = Path(__file__).resolve().parents[1]
 MANIFEST_URL = "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json"
@@ -25,7 +26,7 @@ FABRIC_INSTALLER = "1.1.0"
 HOSTS = frozenset(("piston-meta.mojang.com", "piston-data.mojang.com",
                    "launchermeta.mojang.com", "launcher.mojang.com",
                    "libraries.minecraft.net", "maven.fabricmc.net",
-                   "meta.fabricmc.net", "maven.neoforged.net"))
+                   "meta.fabricmc.net", "maven.neoforged.net", "maven.minecraftforge.net"))
 MAX_METADATA = 16 * 1024 * 1024
 MAX_ARTIFACT = 512 * 1024 * 1024
 CHUNK = 1024 * 1024
@@ -38,7 +39,7 @@ def target_reader():
 
 
 def minecraft_targets(repo=REPO):
-    return tuple(sorted(path.stem for path in (Path(repo) / "gradle/minecraft-targets").glob("*.properties")))
+    return tuple(read_target_loaders(repo))
 
 
 def require(condition, message):
@@ -225,11 +226,8 @@ def maven_path(coordinate):
 
 
 def neoforge_identity(pins):
-    version = pins["neoforge_version"]
-    if pins["minecraft_version"] == "1.20.1":
-        require(version.startswith("1.20.1-"), "Early Forge-shaped NeoForge pin differs")
-        return "forge", "1.20.1-forge-" + version.removeprefix("1.20.1-")
-    return "neoforge", "neoforge-" + version
+    identity = fml_runtime_identity(pins, "neoforge")
+    return identity["artifact"], identity["profile"]
 
 
 def installer_data(install, key):
@@ -334,10 +332,13 @@ def verify_processor_outputs(root, install, outputs):
             expected = valid_hash(installer_data(install, checksum[1:-1]).strip("'"))
             require(path.is_file() and file_hash(path, "sha1") == expected, "Official processor output checksum differs")
 
-def read_pins(repo=REPO, minecraft_target="26.2"):
+def read_pins(repo=REPO, minecraft_target="26.2", loader=None):
     require(minecraft_target in minecraft_targets(repo), "Unknown exact Minecraft target")
     result = target_reader().read_profile(Path(repo), minecraft_target)
-    for key in ("minecraft_version", "java_version", "fabric_loader_version", "fabric_version", "neoforge_version"):
+    selected = target_loaders(repo, minecraft_target)["loaders"]
+    require(loader is None or loader in selected, "Loader is not an actual source target identity")
+    pin_keys = runtime_pin_fields(loader or selected[0])
+    for key in pin_keys:
         require(re.fullmatch(r"[A-Za-z0-9_][A-Za-z0-9_+.-]*", result[key]), "Unsafe runtime source pin: " + key)
     return result
 
@@ -584,20 +585,20 @@ def prepare_fabric(root, java, pins):
     return profile_id, api_path, files
 
 
-def prepare_neoforge(root, java, pins):
-    version = pins["neoforge_version"]
-    artifact, profile_id = neoforge_identity(pins)
+def prepare_fml(root, java, pins, loader):
+    identity = fml_runtime_identity(pins, loader)
+    version, artifact, profile_id = identity["version"], identity["artifact"], identity["profile"]
     installer = root / ".provision" / (artifact + "-" + version + "-installer.jar")
-    url = "https://maven.neoforged.net/releases/net/neoforged/" + artifact + "/" + version + "/" + installer.name
+    url = identity["maven"] + maven_path(identity["group"] + ":" + artifact + ":" + version + ":installer")
     checksum_artifact(url, installer)
-    install, expected = inspect_installer(installer, "neoforge")
+    install, expected = inspect_installer(installer, loader)
     require(install.get("minecraft") == pins["minecraft_version"] and install.get("version") == profile_id
             and expected.get("id") == profile_id and expected.get("inheritsFrom") == pins["minecraft_version"]
-            and expected.get("mainClass") in ("net.neoforged.fml.startup.Client", "cpw.mods.bootstraplauncher.BootstrapLauncher"),
-            "Official NeoForge installer metadata differs from source pins")
-    write_json(root / ".provision/neoforge-install_profile.json", install)
-    write_json(root / ".provision/neoforge-version.json", expected)
-    files = [installer, root / ".provision/neoforge-install_profile.json", root / ".provision/neoforge-version.json"]
+            and expected.get("mainClass") in identity["mainClasses"],
+            "Official " + loader + " installer metadata differs from source pins")
+    write_json(root / ".provision" / (loader + "-install_profile.json"), install)
+    write_json(root / ".provision" / (loader + "-version.json"), expected)
+    files = [installer, root / ".provision" / (loader + "-install_profile.json"), root / ".provision" / (loader + "-version.json")]
     outputs = processor_outputs(root, install)
     # Regenerate unchecked intermediate/patched output. Never trust opaque caches,
     # and verify every checksum the official installer actually declares.
@@ -614,7 +615,7 @@ def prepare_neoforge(root, java, pins):
         require(type(mappings["size"]) is int and 0 < mappings["size"] <= MAX_ARTIFACT,
                 "Official client mapping byte size is invalid")
     installer_pins = {**pins, "installer_network_policy": "official-mojang-mappings" if mapped_client else "offline"}
-    run_installer(installer_command("neoforge", java, installer, root, installer_pins), root, "neoforge")
+    run_installer(installer_command(loader, java, installer, root, installer_pins), root, loader)
     if mappings:
         path = outputs["MOJMAPS"]
         require(path.is_file() and path.stat().st_size == mappings["size"]
@@ -622,20 +623,28 @@ def prepare_neoforge(root, java, pins):
                 "Official processor Mojang client mappings differ from exact verified vanilla metadata")
     profile_path = root / "versions" / profile_id / (profile_id + ".json")
     actual = json_bytes(profile_path.read_bytes())
-    require(actual == expected, "NeoForge installed profile differs from official installer version.json")
+    require(actual == expected, loader + " installed profile differs from official installer version.json")
     verify_downloaded_libraries(install, root)
     verify_downloaded_libraries(actual, root)
     verify_processor_outputs(root, install, outputs)
-    universal = relative_file(root / "libraries", maven_path("net.neoforged:" + artifact + ":" + version + ":universal"))
-    require(universal.is_file(), "Official NeoForge universal artifact is required")
+    universal = relative_file(root / "libraries", maven_path(identity["group"] + ":" + artifact + ":" + version + ":universal"))
+    require(universal.is_file(), "Official " + loader + " universal artifact is required")
     with zipfile.ZipFile(outputs["PATCHED"]) as archive:
         require(archive.testzip() is None, "Official patched client JAR is corrupt")
     files += [profile_path, universal] + list(outputs.values())
     return profile_id, None, files
 
+def prepare_neoforge(root, java, pins):
+    return prepare_fml(root, java, pins, "neoforge")
+
+
+def prepare_forge(root, java, pins):
+    return prepare_fml(root, java, pins, "forge")
+
+
 def provision(args, repo=REPO):
-    require(args.loader in ("fabric", "neoforge"), "Unknown production loader")
-    pins = read_pins(repo, args.minecraft_target)
+    require(args.loader in ("fabric", "forge", "neoforge"), "Unknown production loader")
+    pins = read_pins(repo, args.minecraft_target, args.loader)
     target = pins["minecraft_version"]
     root = safe_root(args.minecraft_root, repo)
     require(root == Path(repo).resolve() / "build/e2e/runtime" / target / "minecraft",
@@ -651,7 +660,7 @@ def provision(args, repo=REPO):
     if args.loader == "fabric":
         profile_id, api, loader_files = prepare_fabric(root, java, pins)
     else:
-        profile_id, api, loader_files = prepare_neoforge(root, java, pins)
+        profile_id, api, loader_files = prepare_fml(root, java, pins, args.loader)
     claim_root(root, target)
     verify_downloaded_libraries(vanilla, root)
     require(file_hash(vanilla_json) == vanilla_json_sha256,
@@ -668,20 +677,23 @@ def provision(args, repo=REPO):
                "sourceProfile": "gradle/minecraft-targets/" + target + ".properties",
                "sourceProfileSha256": file_hash(Path(repo) / "gradle/minecraft-targets" / (target + ".properties")),
                "sourceScriptSha256": file_hash(Path(__file__)),
-               "pins": {key: pins[key] for key in ("minecraft_version", "java_version", "fabric_loader_version", "fabric_version", "neoforge_version")},
+               "pins": {key: pins[key] for key in runtime_pin_fields(args.loader)},
                "files": {str(path.relative_to(root)): {"sha256": file_hash(path), "sha1": file_hash(path, "sha1"), "size": path.stat().st_size} for path in unique_files},
                "assetsPrepared": False, "gameLaunched": False,
-               "mechanism": "official-client-installer", "patchedCachePolicy": "regenerated-by-official-processor" if args.loader == "neoforge" else None,
-               "installerNetworkPolicy": ("official-mojang-mappings" if args.loader == "neoforge"
-                    and "MOJMAPS" in json_bytes((root / ".provision/neoforge-install_profile.json").read_bytes()).get("data", {})
-                    else "offline" if args.loader == "neoforge" else "official-fabric-installer")}
+               "mechanism": "official-client-installer", "patchedCachePolicy": "regenerated-by-official-processor" if args.loader in ("forge", "neoforge") else None,
+               "installerNetworkPolicy": ("official-mojang-mappings" if args.loader in ("forge", "neoforge")
+                    and "MOJMAPS" in json_bytes((root / ".provision" / (args.loader + "-install_profile.json")).read_bytes()).get("data", {})
+                    else "offline" if args.loader in ("forge", "neoforge") else "official-fabric-installer")}
+    if args.loader == "forge":
+        receipt["sourceLoaderMap"] = "gradle/minecraft-target-loaders.json"
+        receipt["sourceLoaderMapSha256"] = file_hash(Path(repo) / receipt["sourceLoaderMap"])
     write_json(manifest_path, receipt)
     return receipt
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--loader", required=True, choices=("fabric", "neoforge"))
+    parser.add_argument("--loader", required=True, choices=("fabric", "forge", "neoforge"))
     parser.add_argument("--minecraft-target", choices=minecraft_targets(), default="26.2")
     parser.add_argument("--java", required=True, type=Path, help="Explicit source-pinned game Java runtime")
     parser.add_argument("--minecraft-root", required=True, type=Path,

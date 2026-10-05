@@ -7,11 +7,14 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+from minecraft_target_loaders import target_loaders
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def run(loader, java, batch_id, root=ROOT, minecraft_target="26.2", scenarios=None):
+    if loader not in target_loaders(root, minecraft_target)["loaders"]:
+        raise ValueError("Client workflow loader is not an actual source target identity")
     staged = root / "build/ci-client-production"
     checksums = {}
     for line in (staged / "SHA256SUMS").read_text().splitlines():
@@ -42,7 +45,7 @@ def run(loader, java, batch_id, root=ROOT, minecraft_target="26.2", scenarios=No
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--loader", required=True, choices=("fabric", "neoforge"))
+    parser.add_argument("--loader", required=True, choices=("fabric", "forge", "neoforge"))
     parser.add_argument("--java", required=True, type=Path)
     parser.add_argument("--batch-id", required=True)
     parser.add_argument("--minecraft-target", default="26.2")
