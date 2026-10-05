@@ -7,13 +7,13 @@
         "loader": "forge",
         "minecraftVersionRange": "1.12.2",
         "openAllayVersionRange": "[0.4.1,)",
-        "openAllayApiVersionRange": "[0.3.0,0.4.0)"
+        "openAllayApiVersionRange": "[0.4.0,0.5.0)"
       },
       {
         "loader": "future-loader",
         "minecraftVersionRange": "26.3",
         "openAllayVersionRange": "[0.4.1,)",
-        "openAllayApiVersionRange": "[0.3.0,0.4.0)"
+        "openAllayApiVersionRange": "[0.4.0,0.5.0)"
       }
     ],
     "minimumJavaVersion": 8,

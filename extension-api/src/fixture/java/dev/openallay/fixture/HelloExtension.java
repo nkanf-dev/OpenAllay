@@ -10,16 +10,16 @@ public final class HelloExtension implements OpenAllayExtension {
     @Override public ExtensionDescriptor descriptor() {
         return new ExtensionDescriptor("fixture:hello", "Hello", "1.0.0", "OpenAllay", "SDK ABI fixture",
                 "fixture:source", new SupportDeclaration(Arrays.asList(
-                    new SupportTarget("forge", "1.12.2", "[0.4.1,)", "[0.3.0,0.4.0)"),
-                    new SupportTarget("future-loader", "26.3", "[0.4.1,)", "[0.3.0,0.4.0)")),
+                    new SupportTarget("forge", "1.12.2", "[0.4.1,)", "[0.4.0,0.5.0)"),
+                    new SupportTarget("future-loader", "26.3", "[0.4.1,)", "[0.4.0,0.5.0)")),
                     8, Collections.<String>emptySet(), Collections.<String>emptySet()), ExtensionRequirements.EMPTY);
     }
     @Override public ExtensionContribution contribution(ExtensionHost host) {
-        if (!host.environment().openAllayApiVersions().contains("0.3.0"))
-            throw new ExtensionException("fixture_api_missing", "The fixture needs Extension API 0.3.0.");
+        if (!host.environment().openAllayApiVersions().contains("0.4.0"))
+            throw new ExtensionException("fixture_api_missing", "The fixture needs Extension API 0.4.0.");
         // Intentionally never asks for native world access during discovery/contribution.
         JavascriptHostMethod echo = new JavascriptHostMethod("echo", Arrays.asList(JavascriptHostValueType.STRING),
-                JavascriptHostValueType.STRING, Collections.<String>emptySet(), new JavascriptHostMethod.Invoker() {
+                JavascriptHostValueType.STRING, new JavascriptHostMethod.Invoker() {
                     @Override public String invoke(ExtensionInvocation context, List<String> argumentJson) {
                         context.requireActive();
                         return argumentJson.get(0);
@@ -29,15 +29,14 @@ public final class HelloExtension implements OpenAllayExtension {
                 "module.exports = { hello: function() { return 'hello'; } };")),
                 Collections.<SkillSource>emptyList(), Collections.<ResultViewDeclaration>emptyList(),
                 Collections.<JavascriptInvocationParticipant>emptyList(),
-                Arrays.asList(new JavascriptHostBinding("fixture:host", Arrays.asList(echo))),
-                Collections.<ExtensionCapability>emptyList());
+                Arrays.asList(new JavascriptHostBinding("fixture:host", Arrays.asList(echo))));
     }
     public static void main(String[] args) throws Exception {
         HelloExtension extension = new HelloExtension();
         ExtensionHost host = new ExtensionHost() {
             @Override public ExtensionEnvironment environment() {
                 return new ExtensionEnvironment("future-loader", "26.3", "0.4.1",
-                        new HashSet<String>(Arrays.asList("0.2.2", "0.3.0")), 8, Collections.<String>emptySet());
+                        new HashSet<String>(Arrays.asList("0.2.2", "0.4.0")), 8, Collections.<String>emptySet());
             }
             @Override public MinecraftWorldAccess minecraftWorldAccess() {
                 throw new AssertionError("Pure-JS contribution must not capture native state");
@@ -73,10 +72,6 @@ public final class HelloExtension implements OpenAllayExtension {
         @Override public boolean isCancelled() { return cancelled; }
         @Override public void onCancel(Runnable callback) {
             listener = Objects.requireNonNull(callback, "callback"); if (cancelled) callback.run();
-        }
-        @Override public boolean hasCapability(String id) { return false; }
-        @Override public void requireCapability(String id) {
-            throw new ExtensionException("fixture_denied", "The fixture has no operation grants.");
         }
         @Override public boolean completedSuccessfully() { return false; }
         @Override public void recordEvidence(ExtensionEvidence evidence) { Objects.requireNonNull(evidence, "evidence"); }

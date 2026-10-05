@@ -9,7 +9,7 @@ class ApiValueTest {
     private static final SupportTarget OLD = new SupportTarget("forge", "1.12.2", "[0.4.1,)", "[0.3.0,0.4.0)");
     private static JavascriptHostMethod method(String name) {
         return new JavascriptHostMethod(name, Arrays.asList(JavascriptHostValueType.STRING),
-                JavascriptHostValueType.STRING, Collections.<String>emptySet(),
+                JavascriptHostValueType.STRING,
                 new JavascriptHostMethod.Invoker() {
                     @Override public String invoke(ExtensionInvocation context, List<String> json) { return json.get(0); }
                 });
@@ -93,7 +93,6 @@ class ApiValueTest {
         ExtensionDescriptor b = new ExtensionDescriptor("fixture:hello", "Hello", "1.0.0", "Fixture", "Summary", "fixture:src", support, ExtensionRequirements.EMPTY);
         assertEquals(a, b); assertEquals(a.hashCode(), b.hashCode()); assertNotEquals(a, support);
         assertEquals(OLD, new SupportTarget("forge", "1.12.2", "[0.4.1,)", "[0.3.0,0.4.0)"));
-        assertEquals(new ExtensionCapability("fixture:write", "Write", "Write blocks"), new ExtensionCapability("fixture:write", "Write", "Write blocks"));
         assertEquals(new ResultViewDeclaration("fixture:result", ResultViewDeclaration.Kind.TABLE, "Table"),
                 new ResultViewDeclaration("fixture:result", ResultViewDeclaration.Kind.TABLE, "Table"));
         assertEquals(skill("hello"), skill("hello"));
@@ -104,9 +103,9 @@ class ApiValueTest {
     }
     @Test void exactIDsAndTextAreNotSilentlyNormalized() {
         assertThrows(IllegalArgumentException.class, () -> new JavascriptModuleSource(" fixture:module", "x"));
-        assertThrows(IllegalArgumentException.class, () -> new ExtensionCapability("fixture:Bad", "Name", "Description"));
+        assertThrows(IllegalArgumentException.class, () -> new ResultViewDeclaration("fixture:Bad", ResultViewDeclaration.Kind.GENERIC, "Description"));
         assertThrows(IllegalArgumentException.class, () -> new JavascriptModuleSource("fixture:module", "\u2003"));
-        assertThrows(IllegalArgumentException.class, () -> new ExtensionCapability("fixture:cap", "", "Description"));
+        assertThrows(IllegalArgumentException.class, () -> new ResultViewDeclaration("fixture:view", ResultViewDeclaration.Kind.GENERIC, ""));
         assertThrows(NullPointerException.class, () -> new ResultViewDeclaration("fixture:view", null, "View"));
         String source = "  module.exports = {};\n";
         assertEquals(source, new JavascriptModuleSource("fixture:module", source).source());
@@ -137,48 +136,62 @@ class ApiValueTest {
         assertThrows(IllegalArgumentException.class, () -> new ExtensionEvidence(evidence.authority(), evidence.completeness(),
                 Instant.EPOCH, "bad", "fixture:provenance", "1.12.2", "forge", Collections.<String,String>emptyMap()));
     }
-    @Test void methodBindingListsAndRequiredCapabilitiesAreCopied() {
+    @Test void methodAndBindingListsAreCopiedAndValidateTheirFields() {
         JavascriptHostMethod.Invoker invoker = method("echo").invoker();
         List<JavascriptHostValueType> parameters = new ArrayList<JavascriptHostValueType>(Arrays.asList(JavascriptHostValueType.JSON));
-        Set<String> caps = new HashSet<String>(Arrays.asList("fixture:write"));
-        JavascriptHostMethod method = new JavascriptHostMethod("echo", parameters, JavascriptHostValueType.JSON, caps, invoker);
-        parameters.clear(); caps.clear();
+        JavascriptHostMethod method = new JavascriptHostMethod("echo", parameters, JavascriptHostValueType.JSON, invoker);
+        parameters.clear();
+        assertEquals("echo", method.name());
         assertEquals(Arrays.asList(JavascriptHostValueType.JSON), method.parameters());
-        assertEquals(Collections.singleton("fixture:write"), method.requiredCapabilities());
+        assertEquals(JavascriptHostValueType.JSON, method.result());
+        assertSame(invoker, method.invoker());
         assertThrows(UnsupportedOperationException.class, () -> method.parameters().clear());
-        assertThrows(UnsupportedOperationException.class, () -> method.requiredCapabilities().clear());
+        JavascriptHostMethod equal = new JavascriptHostMethod("echo", Arrays.asList(JavascriptHostValueType.JSON),
+                JavascriptHostValueType.JSON, invoker);
+        assertEquals(method, equal); assertEquals(method.hashCode(), equal.hashCode());
+        assertNotEquals(method, new JavascriptHostMethod("other", method.parameters(), method.result(), invoker));
+        assertNotEquals(method, new JavascriptHostMethod("echo", Collections.<JavascriptHostValueType>emptyList(), method.result(), invoker));
+        assertNotEquals(method, new JavascriptHostMethod("echo", method.parameters(), JavascriptHostValueType.NULL, invoker));
+        assertNotEquals(method, new JavascriptHostMethod("echo", method.parameters(), method.result(), method("echo").invoker()));
         List<JavascriptHostMethod> methods = new ArrayList<JavascriptHostMethod>(Arrays.asList(method));
         JavascriptHostBinding binding = new JavascriptHostBinding("fixture:host", methods); methods.clear();
         assertEquals(Arrays.asList(method), binding.methods());
+        assertEquals(binding, new JavascriptHostBinding("fixture:host", Arrays.asList(equal)));
         assertThrows(UnsupportedOperationException.class, () -> binding.methods().clear());
         assertThrows(IllegalArgumentException.class, () -> new JavascriptHostBinding("fixture:host", Arrays.asList(method, method)));
         for (String bad : Arrays.asList("constructor", "__proto__", "prototype", "0bad", "has space"))
             assertThrows(IllegalArgumentException.class, () -> method(bad));
-        assertThrows(IllegalArgumentException.class, () -> new JavascriptHostMethod("echo", Collections.<JavascriptHostValueType>emptyList(),
-                JavascriptHostValueType.NULL, Collections.singleton("not_namespaced"), invoker));
+        assertThrows(NullPointerException.class, () -> new JavascriptHostMethod("echo", null, JavascriptHostValueType.NULL, invoker));
+        assertThrows(NullPointerException.class, () -> new JavascriptHostMethod("echo", Arrays.asList((JavascriptHostValueType)null),
+                JavascriptHostValueType.NULL, invoker));
+        assertThrows(NullPointerException.class, () -> new JavascriptHostMethod("echo", Collections.<JavascriptHostValueType>emptyList(), null, invoker));
+        assertThrows(NullPointerException.class, () -> new JavascriptHostMethod("echo", Collections.<JavascriptHostValueType>emptyList(),
+                JavascriptHostValueType.NULL, null));
     }
     @Test void contributionsCopyCollectionsAndRejectDuplicateRegistrationIDs() {
         JavascriptModuleSource module = new JavascriptModuleSource("fixture:module", "module.exports = {};");
         List<JavascriptModuleSource> modules = new ArrayList<JavascriptModuleSource>(Arrays.asList(module));
-        ExtensionContribution contribution = new ExtensionContribution(modules, Arrays.asList(skill("hello")),
+        List<SkillSource> skills = new ArrayList<SkillSource>(Arrays.asList(skill("hello")));
+        ExtensionContribution contribution = new ExtensionContribution(modules, skills,
                 Collections.<ResultViewDeclaration>emptyList(), Collections.<JavascriptInvocationParticipant>emptyList(),
-                Collections.<JavascriptHostBinding>emptyList(), Collections.<ExtensionCapability>emptyList());
-        modules.clear(); assertEquals(Arrays.asList(module), contribution.javascriptModules());
+                Collections.<JavascriptHostBinding>emptyList());
+        modules.clear(); skills.clear();
+        assertEquals(Arrays.asList(module), contribution.javascriptModules());
+        assertEquals(Arrays.asList(skill("hello")), contribution.skills());
         assertThrows(UnsupportedOperationException.class, () -> contribution.javascriptModules().clear());
         assertThrows(UnsupportedOperationException.class, () -> contribution.skills().clear());
         assertThrows(IllegalArgumentException.class, () -> new ExtensionContribution(Arrays.asList(module,module),
                 Collections.<SkillSource>emptyList(), Collections.<ResultViewDeclaration>emptyList(),
-                Collections.<JavascriptInvocationParticipant>emptyList(), Collections.<JavascriptHostBinding>emptyList(), Collections.<ExtensionCapability>emptyList()));
+                Collections.<JavascriptInvocationParticipant>emptyList(), Collections.<JavascriptHostBinding>emptyList()));
         assertThrows(IllegalArgumentException.class, () -> new ExtensionContribution(Arrays.asList(module),
                 Collections.<SkillSource>emptyList(), Collections.<ResultViewDeclaration>emptyList(),
-                Collections.<JavascriptInvocationParticipant>emptyList(), Arrays.asList(new JavascriptHostBinding("fixture:module", Arrays.asList(method("echo")))),
-                Collections.<ExtensionCapability>emptyList()));
+                Collections.<JavascriptInvocationParticipant>emptyList(), Arrays.asList(new JavascriptHostBinding("fixture:module", Arrays.asList(method("echo"))))));
         assertThrows(IllegalArgumentException.class, () -> new ExtensionContribution(Collections.<JavascriptModuleSource>emptyList(),
                 Arrays.asList(skill("hello"),skill("hello")), Collections.<ResultViewDeclaration>emptyList(),
-                Collections.<JavascriptInvocationParticipant>emptyList(), Collections.<JavascriptHostBinding>emptyList(), Collections.<ExtensionCapability>emptyList()));
+                Collections.<JavascriptInvocationParticipant>emptyList(), Collections.<JavascriptHostBinding>emptyList()));
         assertThrows(NullPointerException.class, () -> new ExtensionContribution(Arrays.asList((JavascriptModuleSource)null),
                 Collections.<SkillSource>emptyList(), Collections.<ResultViewDeclaration>emptyList(),
-                Collections.<JavascriptInvocationParticipant>emptyList(), Collections.<JavascriptHostBinding>emptyList(), Collections.<ExtensionCapability>emptyList()));
+                Collections.<JavascriptInvocationParticipant>emptyList(), Collections.<JavascriptHostBinding>emptyList()));
     }
     @Test void sdkFailureHasStableCodeSafeSummaryAndOptionalDiagnosticCause() {
         RuntimeException cause = new RuntimeException("diagnostic");
@@ -197,30 +210,28 @@ class ApiValueTest {
             @Override public AutoCloseable open(ExtensionInvocation context) { return new AutoCloseable() { @Override public void close() {} }; }
         };
         JavascriptHostBinding binding = new JavascriptHostBinding("fixture:host", Arrays.asList(method("echo")));
-        ExtensionCapability capability = new ExtensionCapability("fixture:write", "Write", "Write blocks");
         List<ResultViewDeclaration> views = new ArrayList<ResultViewDeclaration>(Arrays.asList(view));
         List<JavascriptInvocationParticipant> participants = new ArrayList<JavascriptInvocationParticipant>(Arrays.asList(participant));
         List<JavascriptHostBinding> bindings = new ArrayList<JavascriptHostBinding>(Arrays.asList(binding));
-        List<ExtensionCapability> capabilities = new ArrayList<ExtensionCapability>(Arrays.asList(capability));
         ExtensionContribution contribution = new ExtensionContribution(Collections.<JavascriptModuleSource>emptyList(),
-                Collections.<SkillSource>emptyList(), views, participants, bindings, capabilities);
-        views.clear(); participants.clear(); bindings.clear(); capabilities.clear();
+                Collections.<SkillSource>emptyList(), views, participants, bindings);
+        views.clear(); participants.clear(); bindings.clear();
         assertEquals(Arrays.asList(view), contribution.resultViews());
         assertEquals(Arrays.asList(participant), contribution.javascriptInvocationParticipants());
         assertEquals(Arrays.asList(binding), contribution.hostBindings());
-        assertEquals(Arrays.asList(capability), contribution.capabilities());
         assertThrows(UnsupportedOperationException.class, () -> contribution.resultViews().clear());
         assertThrows(UnsupportedOperationException.class, () -> contribution.javascriptInvocationParticipants().clear());
         assertThrows(UnsupportedOperationException.class, () -> contribution.hostBindings().clear());
-        assertThrows(UnsupportedOperationException.class, () -> contribution.capabilities().clear());
+        ExtensionContribution equal = new ExtensionContribution(Collections.<JavascriptModuleSource>emptyList(),
+                Collections.<SkillSource>emptyList(), Arrays.asList(view), Arrays.asList(participant), Arrays.asList(binding));
+        assertEquals(contribution, equal); assertEquals(contribution.hashCode(), equal.hashCode());
+        assertNotEquals(contribution, ExtensionContribution.empty());
         assertThrows(IllegalArgumentException.class, () -> new ExtensionContribution(Collections.<JavascriptModuleSource>emptyList(),
-                Collections.<SkillSource>emptyList(), Arrays.asList(view,view), Arrays.asList(participant), Arrays.asList(binding), Arrays.asList(capability)));
+                Collections.<SkillSource>emptyList(), Arrays.asList(view,view), Arrays.asList(participant), Arrays.asList(binding)));
         assertThrows(IllegalArgumentException.class, () -> new ExtensionContribution(Collections.<JavascriptModuleSource>emptyList(),
-                Collections.<SkillSource>emptyList(), Arrays.asList(view), Arrays.asList(participant,participant), Arrays.asList(binding), Arrays.asList(capability)));
+                Collections.<SkillSource>emptyList(), Arrays.asList(view), Arrays.asList(participant,participant), Arrays.asList(binding)));
         assertThrows(IllegalArgumentException.class, () -> new ExtensionContribution(Collections.<JavascriptModuleSource>emptyList(),
-                Collections.<SkillSource>emptyList(), Arrays.asList(view), Arrays.asList(participant), Arrays.asList(binding,binding), Arrays.asList(capability)));
-        assertThrows(IllegalArgumentException.class, () -> new ExtensionContribution(Collections.<JavascriptModuleSource>emptyList(),
-                Collections.<SkillSource>emptyList(), Arrays.asList(view), Arrays.asList(participant), Arrays.asList(binding), Arrays.asList(capability,capability)));
+                Collections.<SkillSource>emptyList(), Arrays.asList(view), Arrays.asList(participant), Arrays.asList(binding,binding)));
     }
 
 }

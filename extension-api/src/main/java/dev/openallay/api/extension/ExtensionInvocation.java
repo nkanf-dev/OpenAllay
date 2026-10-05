@@ -4,7 +4,7 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
-/** Revocable invocation identity and frozen own grants, without player or native world handles. */
+/** Revocable invocation identity and lifecycle, without player or native world handles. */
 public interface ExtensionInvocation {
     enum CallerKind { CONSOLE, PLAYER }
     String extensionId();
@@ -18,8 +18,6 @@ public interface ExtensionInvocation {
     boolean isCancelled();
     /** Register a callback, including immediate notification if already cancelled. No listener handle. */
     void onCancel(Runnable listener);
-    boolean hasCapability(String capabilityId);
-    void requireCapability(String capabilityId);
     boolean completedSuccessfully();
     void recordEvidence(ExtensionEvidence evidence);
 }

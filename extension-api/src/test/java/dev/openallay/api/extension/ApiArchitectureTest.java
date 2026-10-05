@@ -2,7 +2,11 @@ package dev.openallay.api.extension;
 
 import org.junit.jupiter.api.Test;
 import java.io.*;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.Type;
 import java.nio.file.*;
 import java.util.*;
 import java.util.stream.Stream;
@@ -14,7 +18,7 @@ class ApiArchitectureTest {
     private static final String[] PUBLIC_TYPES = {
         "OpenAllayExtension", "ExtensionDescriptor", "SupportDeclaration", "SupportTarget",
         "ExtensionRequirements", "ExtensionHost", "ExtensionEnvironment", "ExtensionContribution",
-        "JavascriptModuleSource", "SkillSource", "ResultViewDeclaration", "ExtensionCapability",
+        "JavascriptModuleSource", "SkillSource", "ResultViewDeclaration",
         "JavascriptHostBinding", "JavascriptHostMethod", "JavascriptHostValueType",
         "JavascriptInvocationParticipant", "ExtensionInvocation", "ExtensionEvidence",
         "MinecraftWorldAccess", "WorldSession", "ExtensionException"
@@ -78,12 +82,57 @@ class ApiArchitectureTest {
             }
         }
     }
-    @Test void sdkHasNoGrantMutationOrGenericServiceLocator() throws Exception {
+    @Test void contributionsAndHostMethodsHaveOnlyTheCurrentConstructorAndAccessorContracts() throws Exception {
+        assertValueContract(ExtensionContribution.class,
+                new String[] {"javascriptModules", "skills", "resultViews", "javascriptInvocationParticipants", "hostBindings"},
+                new Class<?>[] {List.class, List.class, List.class, List.class, List.class},
+                new String[] {"empty"});
+        assertEquals("java.util.List<dev.openallay.api.extension.JavascriptModuleSource>",
+                ExtensionContribution.class.getMethod("javascriptModules").getGenericReturnType().getTypeName());
+        assertEquals("java.util.List<dev.openallay.api.extension.SkillSource>",
+                ExtensionContribution.class.getMethod("skills").getGenericReturnType().getTypeName());
+        assertEquals("java.util.List<dev.openallay.api.extension.ResultViewDeclaration>",
+                ExtensionContribution.class.getMethod("resultViews").getGenericReturnType().getTypeName());
+        assertEquals("java.util.List<dev.openallay.api.extension.JavascriptInvocationParticipant>",
+                ExtensionContribution.class.getMethod("javascriptInvocationParticipants").getGenericReturnType().getTypeName());
+        assertEquals("java.util.List<dev.openallay.api.extension.JavascriptHostBinding>",
+                ExtensionContribution.class.getMethod("hostBindings").getGenericReturnType().getTypeName());
+        Method empty = ExtensionContribution.class.getDeclaredMethod("empty");
+        assertTrue(Modifier.isPublic(empty.getModifiers()));
+        assertTrue(Modifier.isStatic(empty.getModifiers()));
+        assertEquals(ExtensionContribution.class, empty.getReturnType());
+        assertEquals(0, empty.getExceptionTypes().length);
+        ExtensionContribution emptyContribution = ExtensionContribution.empty();
+        assertTrue(emptyContribution.javascriptModules().isEmpty());
+        assertTrue(emptyContribution.skills().isEmpty());
+        assertTrue(emptyContribution.resultViews().isEmpty());
+        assertTrue(emptyContribution.javascriptInvocationParticipants().isEmpty());
+        assertTrue(emptyContribution.hostBindings().isEmpty());
+
+        assertValueContract(JavascriptHostMethod.class,
+                new String[] {"name", "parameters", "result", "invoker"},
+                new Class<?>[] {String.class, List.class, JavascriptHostValueType.class, JavascriptHostMethod.Invoker.class},
+                new String[0]);
+        assertEquals("java.util.List<dev.openallay.api.extension.JavascriptHostValueType>",
+                JavascriptHostMethod.class.getMethod("parameters").getGenericReturnType().getTypeName());
+    }
+    @Test void sdkHasNoPrivatePermissionGateOrGenericServiceLocator() throws Exception {
         Set<String> invocation = new HashSet<String>();
-        for (java.lang.reflect.Method method : ExtensionInvocation.class.getDeclaredMethods()) invocation.add(method.getName());
+        for (Method method : ExtensionInvocation.class.getDeclaredMethods()) invocation.add(method.getName());
+        assertEquals(11, ExtensionInvocation.class.getDeclaredMethods().length);
         assertEquals(new HashSet<String>(Arrays.asList("extensionId", "correlationId", "capturedAt", "callerKind", "callerUuid",
-                "playerDimension", "requireActive", "isCancelled", "onCancel", "hasCapability", "requireCapability",
-                "completedSuccessfully", "recordEvidence")), invocation);
+                "playerDimension", "requireActive", "isCancelled", "onCancel", "completedSuccessfully", "recordEvidence")), invocation);
+        assertEquals(String.class, ExtensionInvocation.class.getMethod("extensionId").getReturnType());
+        assertEquals(String.class, ExtensionInvocation.class.getMethod("correlationId").getReturnType());
+        assertEquals(java.time.Instant.class, ExtensionInvocation.class.getMethod("capturedAt").getReturnType());
+        assertEquals(ExtensionInvocation.CallerKind.class, ExtensionInvocation.class.getMethod("callerKind").getReturnType());
+        assertEquals(UUID.class, ExtensionInvocation.class.getMethod("callerUuid").getReturnType());
+        assertEquals("java.util.Optional<java.lang.String>",
+                ExtensionInvocation.class.getMethod("playerDimension").getGenericReturnType().getTypeName());
+        assertEquals(Void.TYPE, ExtensionInvocation.class.getMethod("requireActive").getReturnType());
+        assertEquals(Boolean.TYPE, ExtensionInvocation.class.getMethod("isCancelled").getReturnType());
+        assertEquals(Boolean.TYPE, ExtensionInvocation.class.getMethod("completedSuccessfully").getReturnType());
+        assertEquals(Void.TYPE, ExtensionInvocation.class.getMethod("recordEvidence", ExtensionEvidence.class).getReturnType());
         assertEquals(Void.TYPE, ExtensionInvocation.class.getMethod("onCancel", Runnable.class).getReturnType());
         Set<String> host = new HashSet<String>();
         for (java.lang.reflect.Method method : ExtensionHost.class.getDeclaredMethods()) host.add(method.getName());
@@ -94,6 +143,50 @@ class ApiArchitectureTest {
         assertEquals(0, WorldSession.class.getMethod("close").getExceptionTypes().length);
         assertEquals(new HashSet<ExtensionInvocation.CallerKind>(Arrays.asList(ExtensionInvocation.CallerKind.CONSOLE, ExtensionInvocation.CallerKind.PLAYER)),
                 new HashSet<ExtensionInvocation.CallerKind>(Arrays.asList(ExtensionInvocation.CallerKind.values())));
+    }
+    private static void assertValueContract(Class<?> type, String[] fieldNames, Class<?>[] fieldTypes,
+            String[] additionalMethods) throws Exception {
+        assertEquals(fieldNames.length, type.getDeclaredFields().length, type.getName());
+        Type[] genericFieldTypes = new Type[fieldNames.length];
+        Set<String> expectedMethods = new HashSet<String>(Arrays.asList(fieldNames));
+        expectedMethods.add("equals"); expectedMethods.add("hashCode");
+        expectedMethods.addAll(Arrays.asList(additionalMethods));
+        Set<String> actualMethods = new HashSet<String>();
+        int publicMethodCount = 0;
+        for (Method method : type.getDeclaredMethods()) {
+            if (!Modifier.isPublic(method.getModifiers())) continue;
+            actualMethods.add(method.getName()); publicMethodCount++;
+        }
+        assertEquals(expectedMethods, actualMethods, type.getName());
+        assertEquals(expectedMethods.size(), publicMethodCount, type.getName());
+        for (int i = 0; i < fieldNames.length; i++) {
+            Field field = type.getDeclaredField(fieldNames[i]);
+            assertEquals(fieldTypes[i], field.getType(), field.toString());
+            assertTrue(Modifier.isPrivate(field.getModifiers()), field.toString());
+            assertTrue(Modifier.isFinal(field.getModifiers()), field.toString());
+            assertFalse(Modifier.isStatic(field.getModifiers()), field.toString());
+            genericFieldTypes[i] = field.getGenericType();
+            Method accessor = type.getDeclaredMethod(fieldNames[i]);
+            assertTrue(Modifier.isPublic(accessor.getModifiers()), accessor.toString());
+            assertFalse(Modifier.isStatic(accessor.getModifiers()), accessor.toString());
+            assertEquals(fieldTypes[i], accessor.getReturnType(), accessor.toString());
+            assertEquals(genericFieldTypes[i], accessor.getGenericReturnType(), accessor.toString());
+            assertEquals(0, accessor.getExceptionTypes().length, accessor.toString());
+        }
+        assertEquals(1, type.getDeclaredConstructors().length, type.getName());
+        Constructor<?> constructor = type.getDeclaredConstructors()[0];
+        assertTrue(Modifier.isPublic(constructor.getModifiers()), constructor.toString());
+        assertArrayEquals(fieldTypes, constructor.getParameterTypes(), constructor.toString());
+        assertArrayEquals(genericFieldTypes, constructor.getGenericParameterTypes(), constructor.toString());
+        assertEquals(0, constructor.getExceptionTypes().length, constructor.toString());
+        Method equals = type.getDeclaredMethod("equals", Object.class);
+        assertTrue(Modifier.isPublic(equals.getModifiers()));
+        assertFalse(Modifier.isStatic(equals.getModifiers()));
+        assertEquals(Boolean.TYPE, equals.getReturnType());
+        Method hashCode = type.getDeclaredMethod("hashCode");
+        assertTrue(Modifier.isPublic(hashCode.getModifiers()));
+        assertFalse(Modifier.isStatic(hashCode.getModifiers()));
+        assertEquals(Integer.TYPE, hashCode.getReturnType());
     }
     private static void assertAllowedClass(String name, Path file) {
         if (name.startsWith("[")) {
