@@ -108,8 +108,10 @@ class AdapterArchitectureTest {
             assertTrue(codec.contains(call), "Missing native behavior: " + call);
         String session = Files.readString(source.resolve("NativeWorldSession.java"));
         for (String call : List.of("getChunkNow", "hasPrimedHeightmap", "getBlockEntitiesPos", "updateFromNeighbourShapes",
-                "updateNeighborsAt", "updateNeighbourForOutputSignal", "NativeBlockCodec.sameImage", "openallay_builder:world_write"))
+                "updateNeighborsAt", "updateNeighbourForOutputSignal", "NativeBlockCodec.sameImage", "bridge.checkActive()"))
             assertTrue(session.contains(call), "Missing session behavior: " + call);
+        assertFalse(session.contains("requireCapability"), "World access must not use an Extension-private permission gate");
+        assertFalse(session.contains("world_write"), "Native world access cannot hardcode a Builder-private permission ID");
         String world = Files.readString(source.resolve("NativeWorldIdentity.java"));
         assertTrue(world.contains("NativeWorldResourceIds.fromNamespaceAndPath(\"openallay_builder\",\"world_identity\")"));
         assertTrue(world.contains("getDataStorage().computeIfAbsent(TYPE)"));

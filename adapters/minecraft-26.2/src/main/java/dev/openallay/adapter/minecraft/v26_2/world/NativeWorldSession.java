@@ -28,7 +28,6 @@ final class NativeWorldSession implements WorldSession {
     private String worldId;
     private Path artifacts;
     private final SessionIdentity identity;
-    private final Runnable requireWorldWrite;
     private OwnerThreadBridge bridge;
     private OwnerThreadBridge.Owner clientOwner;
     private OwnerThreadBridge.Owner serverOwner;
@@ -37,10 +36,6 @@ final class NativeWorldSession implements WorldSession {
     private java.util.Map<Long,java.util.Set<Integer>> blockEntitySections;
 
     private NativeWorldSession(Minecraft client, ExtensionInvocation invocation) {
-        requireWorldWrite = () -> {
-            bridge.checkActive();
-            invocation.requireCapability("openallay_builder:world_write");
-        };
         invocation.requireActive();
         if (!client.isSameThread()) throw new ExtensionException("wrong_owner", "Capture requires the client owner thread");
         this.client = client;
@@ -229,17 +224,17 @@ final class NativeWorldSession implements WorldSession {
     }
     @Override public WriteOutcome write(int x, int y, int z, String state) { return write(new BlockPos(x,y,z), state); }
     private WriteOutcome write(BlockPos pos,String state) {
-        requireWorldWrite.run();
+        bridge.checkActive();
         validatePosition(pos);
         try { return write(pos,state,NativeBlockCodec.read(level,pos)); }
         finally { blockEntitySections.clear(); }
     }
     @Override public WriteOutcome write(int x, int y, int z, String state, String before) { return write(new BlockPos(x,y,z), state, before); }
     private WriteOutcome write(BlockPos pos,String state,String before) {
-        requireWorldWrite.run();
+        bridge.checkActive();
         validatePosition(pos);
         try {
-            NativeBlockCodec.VerifiedWrite result = NativeBlockCodec.writeVerified(level,pos,state, () -> { validatePosition(pos); requireWorldWrite.run(); });
+            NativeBlockCodec.VerifiedWrite result = NativeBlockCodec.writeVerified(level,pos,state, () -> { validatePosition(pos); bridge.checkActive(); });
             return new WriteOutcome(result.actual(),result.changed(),null);
         } catch (RuntimeException failure) {
             // This action passed optimistic-before validation. Retain actual outcome even
@@ -260,7 +255,7 @@ final class NativeWorldSession implements WorldSession {
     }
     @Override public RepairOutcome repair(int x, int y, int z) { return repair(new BlockPos(x,y,z)); }
     private RepairOutcome repair(BlockPos pos) {
-        requireWorldWrite.run();
+        bridge.checkActive();
         validatePosition(pos);
         for(net.minecraft.core.Direction direction:net.minecraft.core.Direction.values()) {
             BlockPos neighbour=pos.relative(direction);
@@ -268,7 +263,7 @@ final class NativeWorldSession implements WorldSession {
         }
         NativeBlockCodec.Snapshot before=NativeBlockCodec.snapshot(level,pos);
         try {
-            requireWorldWrite.run();
+            bridge.checkActive();
             validatePosition(pos);
             var current=before.state();
             var updated=net.minecraft.world.level.block.Block.updateFromNeighbourShapes(current,level,pos);
@@ -285,13 +280,13 @@ final class NativeWorldSession implements WorldSession {
     }
     @Override public void notifyNeighbours(int x, int y, int z) { notifyNeighbours(new BlockPos(x,y,z)); }
     private void notifyNeighbours(BlockPos pos) {
-        requireWorldWrite.run();
+        bridge.checkActive();
         validatePosition(pos);
         try {
             var block = level.getBlockState(pos).getBlock();
             level.updateNeighborsAt(pos,block);
             validatePosition(pos);
-            requireWorldWrite.run();
+            bridge.checkActive();
             level.updateNeighbourForOutputSignal(pos,block);
         } finally { blockEntitySections.clear(); }
     }
@@ -299,9 +294,9 @@ final class NativeWorldSession implements WorldSession {
     @Override public String dimension() { return call(() -> dimension); }
     @Override public String worldId() {
         bridge.checkWorker();
-        requireWorldWrite.run();
+        bridge.checkActive();
         return call(() -> {
-            requireWorldWrite.run();
+            bridge.checkActive();
             if (worldId == null)
                 worldId = NativeWorldIdentity.getOrCreate(server.overworld()).id();
             return worldId;

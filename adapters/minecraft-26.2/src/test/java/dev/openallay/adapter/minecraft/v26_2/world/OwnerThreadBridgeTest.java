@@ -205,8 +205,6 @@ class OwnerThreadBridgeTest {
         @Override public void requireActive() { if (cancelled.get()) throw new ExtensionException("session_closed", "Invocation ended"); }
         @Override public boolean isCancelled() { return cancelled.get(); }
         @Override public void onCancel(Runnable listener) { listeners.add(listener); if (cancelled.get()) listener.run(); }
-        @Override public boolean hasCapability(String capabilityId) { return "openallay_builder:world_write".equals(capabilityId); }
-        @Override public void requireCapability(String capabilityId) { requireActive(); if (!hasCapability(capabilityId)) throw new ExtensionException("capability_required", "World write grant is required"); }
         @Override public boolean completedSuccessfully() { return false; }
         @Override public void recordEvidence(ExtensionEvidence evidence) {}
     }
