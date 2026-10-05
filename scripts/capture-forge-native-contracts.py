@@ -9,7 +9,10 @@ OUTPUT = ROOT / "build/forge-native-contracts"
 OUTPUT.mkdir(parents=True, exist_ok=True)
 MEMBERS = ("net/minecraft/client/player/LocalPlayer.java", "net/minecraft/client/gui/screens/ChatScreen.java")
 records = []
-for archive in sorted((ROOT / "common/build/moddev/artifacts").glob("*sources.jar")):
+roots = [ROOT / "common/build/moddev/artifacts", Path.home() / ".gradle/caches/neoformruntime/intermediate_results"]
+archives = sorted({path for root in roots if root.is_dir() for path in root.glob("*.jar")
+                   if "sources" in path.name or "decompile" in path.name})
+for archive in archives:
     with zipfile.ZipFile(archive) as source:
         for name in MEMBERS:
             if name not in source.namelist():
@@ -22,7 +25,7 @@ for archive in sorted((ROOT / "common/build/moddev/artifacts").glob("*sources.ja
                     excerpts.update(range(max(0,index-8), min(len(lines),index+45)))
             destination = OUTPUT / (archive.name + "--" + Path(name).name + ".txt")
             destination.write_text("\n".join(str(index+1)+": "+lines[index] for index in sorted(excerpts))+"\n")
-            records.append({"archive":str(archive.relative_to(ROOT)), "member":name,
+            records.append({"archive":str(archive), "member":name,
                             "memberSha256":hashlib.sha256(content).hexdigest(),
                             "excerpt":destination.name})
 (OUTPUT / "receipt.json").write_text(json.dumps(records,indent=2)+"\n")
