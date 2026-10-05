@@ -115,6 +115,8 @@ class PlanTest(unittest.TestCase):
 
     def test_docs_tests_workflow_and_runner_changes_preserve_actual_old_jar_source(self):
         self.write("docs/dispatch.md", "dispatch repair\n")
+        self.write("extension-api/README.md", "SDK documentation repair\n")
+        self.write("adapters/minecraft-26.2/README.md", "historical native receipt wording\n")
         self.write("common/src/test/java/Test.java", "new test\n")
         self.write(".github/workflows/minecraft-native.yml", "fixed workflow\n")
         self.write("scripts/run-ci-game-workflow.py", "fixed runner\n")

@@ -20,7 +20,10 @@ DEFAULT_SMOKES = tuple((target, loader) for target in ("26.3", "1.21.1", "1.20.1
 MODULES = "common|fabric|neoforge|engine-core|extension-api|runtime-json|runtime-rhino|adapters/[^/]+"
 # Fail closed for other paths, including build helpers, all production sources,
 # Gradle, native overrides, the Builder lock, and newly introduced build inputs.
-NON_PACKAGE_FILES = {"README.md", "README.zh-CN.md", "AGENTS.md", ".gitignore"}
+NON_PACKAGE_FILES = {
+    "README.md", "README.zh-CN.md", "AGENTS.md", ".gitignore",
+    "extension-api/README.md", "adapters/minecraft-26.2/README.md",
+}
 NON_PACKAGE_RUNNERS = {
     "scripts/plan-ci-verification.py", "scripts/prepare-ci-diagnostics.py",
     "scripts/prepare-ci-minecraft-runtime.py", "scripts/run-ci-client-acceptance.py",
