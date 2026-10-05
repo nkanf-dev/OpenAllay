@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.google.gson.JsonNull;
 import com.google.gson.JsonSerializer;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
@@ -20,10 +19,10 @@ final class ContextSnapshotMetricsJsonTest {
         ContextSnapshotMetricsJson metrics = new ContextSnapshotMetricsJson(nativeGson);
         for (var focus : java.util.List.of(Optional.<Map<String, String>>empty(), Optional.of(Map.of("title", "箱子")))) {
             Detached value = new Detached(Instant.EPOCH, focus);
-            Gson expected = nativeGson.newBuilder().registerTypeHierarchyAdapter(Optional.class,
-                    (JsonSerializer<Optional<?>>) (item, type, context) -> item.isPresent()
-                            ? context.serialize(item.orElseThrow()) : JsonNull.INSTANCE).create();
-            assertEquals(expected.toJson(value).getBytes(StandardCharsets.UTF_8).length, metrics.bytes(value));
+            String expected = focus.isPresent()
+                    ? "{\"capturedAt\":{\"seconds\":0,\"nanos\":0},\"focus\":{\"title\":\"箱子\"}}"
+                    : "{\"capturedAt\":{\"seconds\":0,\"nanos\":0}}";
+            assertEquals(expected.getBytes(StandardCharsets.UTF_8).length, metrics.bytes(value));
         }
         assertEquals(0, metrics.bytes(null));
     }

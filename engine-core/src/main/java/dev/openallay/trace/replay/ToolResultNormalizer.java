@@ -4,9 +4,10 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import dev.openallay.tool.ToolResult;
-import dev.openallay.tool.ModelFacingToolOutput;
 import dev.openallay.context.EvidenceBearing;
+import dev.openallay.json.EngineJson;
+import dev.openallay.tool.ModelFacingToolOutput;
+import dev.openallay.tool.ToolResult;
 import java.util.Objects;
 import java.util.TreeSet;
 
@@ -14,7 +15,7 @@ public final class ToolResultNormalizer {
     private final Gson gson;
 
     public ToolResultNormalizer(Gson gson) {
-        this.gson = Objects.requireNonNull(gson, "gson");
+        this.gson = EngineJson.withInstant(Objects.requireNonNull(gson, "gson"));
     }
 
     public JsonObject normalize(ToolResult<?> result, Class<?> outputType) {

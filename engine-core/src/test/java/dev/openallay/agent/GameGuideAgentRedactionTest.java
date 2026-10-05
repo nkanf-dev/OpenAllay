@@ -8,6 +8,7 @@ import dev.openallay.agent.context.*;
 import dev.openallay.agent.session.AgentSessionStore;
 import dev.openallay.agent.tool.*;
 import dev.openallay.context.*;
+import dev.openallay.json.EngineJson;
 import dev.openallay.model.*;
 import java.time.Clock;
 import java.util.*;
@@ -16,7 +17,7 @@ import org.junit.jupiter.api.Test;
 
 final class GameGuideAgentRedactionTest {
     private static final String PLAYER_VALUE = "synthetic-player-value-alpha";
-    private static final Gson GSON = new Gson();
+    private static final Gson GSON = EngineJson.withInstant(new Gson());
 
     @Test
     void preservesPlayerArgumentsResultsNextModelCurrentOriginalHistoryAndUi() {

@@ -12,13 +12,14 @@ import dev.openallay.agent.AgentRequest;
 import dev.openallay.agent.AgentState;
 import dev.openallay.agent.context.ModelContextCodec;
 import dev.openallay.context.ToolInvocationContext;
+import dev.openallay.json.EngineJson;
 import dev.openallay.model.ModelContent;
 import dev.openallay.model.ModelMessage;
 import dev.openallay.model.ModelRequest;
 import dev.openallay.model.ModelRole;
+import dev.openallay.model.ModelToolDefinition;
 import dev.openallay.model.ModelTurn;
 import dev.openallay.model.ModelUsage;
-import dev.openallay.model.ModelToolDefinition;
 import dev.openallay.model.image.ImageReference;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -76,6 +77,12 @@ final class LiveTraceStoreTest {
         assertEquals(1, encodedTrace.getAsJsonArray("events").get(0).getAsJsonObject()
                 .get("elapsedNanos").getAsLong());
         assertEquals(trace.requestId().toString(), encodedTrace.get("requestId").getAsString());
+        for (var time : java.util.Map.of("startedAt", trace.startedAt(), "completedAt", trace.completedAt()).entrySet()) {
+            var expected = JsonParser.parseString("{\"seconds\":" + time.getValue().getEpochSecond()
+                    + ",\"nanos\":" + time.getValue().getNano() + "}");
+            assertEquals(expected, encodedTrace.get(time.getKey()));
+        }
+        assertEquals(trace, EngineJson.withInstant(new Gson()).fromJson(encoded, LiveAgentTrace.class));
         assertEquals("COMPLETED", encodedTrace.get("finalState").getAsString());
         assertEquals("final text 不截断\n".repeat(4096), encodedTrace.get("finalText").getAsString());
         assertEquals(trace, store.find(trace.requestId()).orElseThrow());

@@ -8,14 +8,15 @@ import com.google.gson.JsonParser;
 import com.google.gson.TypeAdapter;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
+import dev.openallay.json.EngineJson;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
-/** Current detached input-reference shape. Gson owns typed records and JavaTime serialization. */
+/** Current detached input-reference shape, with explicit typed timestamp serialization. */
 public final class ClientObservationAnchorJson {
-    private static final Gson GSON = new Gson().newBuilder().serializeNulls().create();
+    private static final Gson GSON = EngineJson.withInstant(new Gson()).newBuilder().serializeNulls().create();
 
     private ClientObservationAnchorJson() {}
 

@@ -8,11 +8,12 @@ import dev.openallay.agent.AgentState;
 import dev.openallay.context.EvidenceMetadata;
 import dev.openallay.context.SourceObservation;
 import dev.openallay.context.SourceObservationCollector;
-import dev.openallay.model.ModelEvent;
-import dev.openallay.model.ModelFailure;
 import dev.openallay.guide.semantic.SemanticMessageParser;
 import dev.openallay.guide.semantic.SemanticReferenceIndex;
 import dev.openallay.guide.semantic.SemanticStreamingState;
+import dev.openallay.json.EngineJson;
+import dev.openallay.model.ModelEvent;
+import dev.openallay.model.ModelFailure;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -30,7 +31,7 @@ public final class GuideStateReducer {
             new ConcurrentHashMap<>();
 
     public GuideStateReducer(Gson gson) {
-        this.gson = Objects.requireNonNull(gson, "gson");
+        this.gson = EngineJson.withInstant(Objects.requireNonNull(gson, "gson"));
     }
 
     public GuideRequestSnapshot apply(

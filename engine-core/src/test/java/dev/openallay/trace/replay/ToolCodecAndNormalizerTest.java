@@ -5,11 +5,17 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import dev.openallay.tool.ToolResult;
+import com.google.gson.JsonSerializer;
 import dev.openallay.context.EvidenceBearing;
 import dev.openallay.context.EvidenceMetadata;
+import dev.openallay.json.EngineJson;
+import dev.openallay.testing.GroundedTestFixtures;
+import dev.openallay.tool.ToolResult;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -70,6 +76,33 @@ final class ToolCodecAndNormalizerTest {
                         UngroundedOutput.class));
 
         assertEquals("Grounded tool output has no evidence", failure.getMessage());
+    }
+
+    @Test
+    void evidenceOutputRoundTripsItsPreciseTypedTimestamp() {
+        var output = new UngroundedOutput("player fact", List.of(GroundedTestFixtures.serverEvidence()));
+        var normalized = new ToolResultNormalizer(gson).normalize(new ToolResult.Success<>(output), UngroundedOutput.class);
+        var value = normalized.getAsJsonObject("value");
+        assertEquals(output, EngineJson.withInstant(gson).fromJson(value, UngroundedOutput.class));
+        var time = output.evidence().getFirst().capturedAt();
+        assertEquals(JsonParser.parseString("{\"seconds\":" + time.getEpochSecond()
+                + ",\"nanos\":" + time.getNano() + "}"),
+                value.getAsJsonArray("evidence").get(0).getAsJsonObject().get("capturedAt"));
+    }
+
+    @Test
+    void suppliedTimestampAdaptersSurviveOutputNormalizationAndRoundTrip() {
+        Gson supplied = new GsonBuilder()
+                .registerTypeAdapter(Instant.class, (JsonSerializer<Instant>) (value, type, context) ->
+                        new com.google.gson.JsonPrimitive("caller:" + value))
+                .registerTypeAdapter(Instant.class, (JsonDeserializer<Instant>) (value, type, context) ->
+                        Instant.parse(value.getAsString().substring("caller:".length()))).create();
+        var output = new UngroundedOutput("unchanged", List.of(GroundedTestFixtures.serverEvidence()));
+        var value = new ToolResultNormalizer(supplied).normalize(new ToolResult.Success<>(output), UngroundedOutput.class)
+                .getAsJsonObject("value");
+        assertEquals("caller:" + output.evidence().getFirst().capturedAt(),
+                value.getAsJsonArray("evidence").get(0).getAsJsonObject().get("capturedAt").getAsString());
+        assertEquals(output, supplied.fromJson(value, UngroundedOutput.class));
     }
 
     private static JsonObject object(String json) {

@@ -7,14 +7,15 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.Gson;
-import dev.openallay.tool.ToolResult;
+import dev.openallay.json.EngineJson;
 import dev.openallay.model.metadata.ModelMetadata;
+import dev.openallay.tool.ToolResult;
 import java.io.StringReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
-import java.time.Instant;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -108,7 +109,7 @@ final class ModelProfilesConfigLoaderTest {
         assertEquals(256_000, fast.runtimeConfig().contextWindowTokens());
         assertEquals("super-secret", fast.runtimeConfig().apiKey().reveal());
         assertFalse(fast.toString().contains("super-secret"));
-        assertFalse(new Gson().toJson(fast.diagnosticView()).contains("super-secret"));
+        assertFalse(EngineJson.withInstant(new Gson()).toJson(fast.diagnosticView()).contains("super-secret"));
 
         ResolvedModelProfile local = loaded.profiles().get(1);
         assertFalse(local.available());

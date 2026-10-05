@@ -13,6 +13,7 @@ import dev.openallay.agent.AgentState;
 import dev.openallay.agent.context.ModelContextCodec;
 import dev.openallay.agent.trace.LiveAgentTraceRecorder;
 import dev.openallay.context.ToolInvocationContext;
+import dev.openallay.json.EngineJson;
 import dev.openallay.model.ModelContent;
 import dev.openallay.model.ModelMessage;
 import dev.openallay.model.ModelRequest;
@@ -200,7 +201,7 @@ final class RetainedModelRequestDiagnosticTest {
         }
         recorder.state(AgentState.COMPLETED);
         // The current nullable source field must survive the outer trace JsonElement serialization.
-        return new Gson().newBuilder().serializeNulls().create()
+        return EngineJson.withInstant(new Gson()).newBuilder().serializeNulls().create()
                 .toJsonTree(recorder.finish(AgentState.COMPLETED, "Done", null)).getAsJsonObject();
     }
 

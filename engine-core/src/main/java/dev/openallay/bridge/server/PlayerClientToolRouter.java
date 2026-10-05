@@ -13,6 +13,7 @@ import dev.openallay.bridge.protocol.ClientToolResultChunkPayload;
 import dev.openallay.bridge.protocol.ResultChunker;
 import dev.openallay.context.ContextCapability;
 import dev.openallay.context.ToolInvocationContext;
+import dev.openallay.json.EngineJson;
 import dev.openallay.model.CancellationSignal;
 import dev.openallay.model.ModelClientException;
 import dev.openallay.model.ModelFailure;
@@ -30,6 +31,7 @@ import dev.openallay.tool.ToolRegistry;
 import dev.openallay.tool.ToolResult;
 import dev.openallay.trace.replay.ToolArgumentCodec;
 import dev.openallay.trace.replay.ToolResultNormalizer;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -39,7 +41,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.time.Duration;
 
 /**
  * Owns server-side correlations for client-resident Tools used by a server-hosted Agent.
@@ -122,7 +123,7 @@ public final class PlayerClientToolRouter {
                 .map(descriptor -> descriptor.id())
                 .collect(java.util.stream.Collectors.toUnmodifiableSet());
         trustedTools = ToolRuntimeCatalog.from(tools.registrations(), nonReadOnly);
-        this.gson = java.util.Objects.requireNonNull(gson, "gson");
+        this.gson = EngineJson.withInstant(java.util.Objects.requireNonNull(gson, "gson"));
         this.transport = java.util.Objects.requireNonNull(transport, "transport");
         this.resultTimeout = java.util.Objects.requireNonNull(resultTimeout, "resultTimeout");
         if (resultTimeout.isZero() || resultTimeout.isNegative()) {

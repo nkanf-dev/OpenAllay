@@ -42,6 +42,7 @@ import dev.openallay.context.RegistryEntrySnapshot;
 import dev.openallay.context.RegistrySnapshot;
 import dev.openallay.context.ToolInvocationContext;
 import dev.openallay.context.game.ObservableGameStateSnapshot;
+import dev.openallay.json.EngineJson;
 import dev.openallay.model.CancellationSignal;
 import dev.openallay.model.ModelClient;
 import dev.openallay.model.anthropic.AnthropicMessagesClient;
@@ -225,7 +226,7 @@ final class LiveAgentBenchmarkAcceptanceTest {
                 selection,
                 new BenchmarkReport(List.of()),
                 List.of(),
-                new GsonBuilder().setPrettyPrinting().create());
+                EngineJson.withInstant(new GsonBuilder().setPrettyPrinting().create()));
         String report = Files.readString(retained, StandardCharsets.UTF_8);
         String audit = Files.readString(auditPath(retained), StandardCharsets.UTF_8);
         assertEquals(Set.of("fixture", "productCommit", "provider", "profileId",
@@ -246,7 +247,7 @@ final class LiveAgentBenchmarkAcceptanceTest {
         Map<String, String> environment = System.getenv();
         Assumptions.assumeTrue(Boolean.parseBoolean(
                 environment.get("OPENALLAY_LIVE_AGENT_BENCHMARK")));
-        Gson gson = new GsonBuilder().setPrettyPrinting().create();
+        Gson gson = EngineJson.withInstant(new GsonBuilder().setPrettyPrinting().create());
         BenchmarkCorpus corpus = corpus();
         int repeats = positive(environment.getOrDefault(
                 "OPENALLAY_BENCHMARK_REPEATS", "3"), "OPENALLAY_BENCHMARK_REPEATS");

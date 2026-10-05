@@ -24,6 +24,14 @@ final class ModelContextImageCodecTest {
         assertEquals(anchor.capturedAt(), restored.capturedAt());
         assertEquals(anchor.focus().actorId(), restored.focus().actorId());
         assertEquals(anchor.image().orElseThrow().capturedAt(), restored.image().orElseThrow().capturedAt());
+        var sourceJson = com.google.gson.JsonParser.parseString(encoded).getAsJsonObject()
+                .getAsJsonArray("messages").get(0).getAsJsonObject().getAsJsonObject("inputObservation");
+        assertEquals(com.google.gson.JsonParser.parseString("{\"seconds\":" + anchor.capturedAt().getEpochSecond()
+                + ",\"nanos\":" + anchor.capturedAt().getNano() + "}"), sourceJson.get("capturedAt"));
+        assertEquals(com.google.gson.JsonParser.parseString("{\"seconds\":"
+                + anchor.image().orElseThrow().capturedAt().getEpochSecond() + ",\"nanos\":"
+                + anchor.image().orElseThrow().capturedAt().getNano() + "}"),
+                sourceJson.getAsJsonObject("image").get("capturedAt"));
         assertEquals(new java.math.BigDecimal("9007199254740993.125"), restored.focus().mainHand().components()
                 .getAsJsonObject("minecraft:custom_data").get("precise").getAsBigDecimal());
         assertEquals(java.util.Set.of("role", "content", "inputObservation"), com.google.gson.JsonParser.parseString(encoded)
@@ -42,7 +50,10 @@ final class ModelContextImageCodecTest {
                 encoded.replace("\"menuSlot\":4", "\"menuSlot\":4.5"),
                 encoded.replace("\"containerId\":3,", ""),
                 encoded.replace("\"initialized\":true", "\"initialized\":\"true\""),
-                encoded.replace("\"pauseScreen\":false", "\"pauseScreen\":false,\"extra\":1"))) {
+                encoded.replace("\"pauseScreen\":false", "\"pauseScreen\":false,\"extra\":1"),
+                encoded.replace("\"nanos\":125000000", "\"nanos\":125000000.0"),
+                encoded.replace("\"nanos\":125000000", "\"nanos\":1000000000"),
+                encoded.replace("\"nanos\":125000000", "\"nanos\":125000000,\"extraTime\":1"))) {
             assertThrows(IllegalArgumentException.class, () -> codec.decode(invalid));
         }
         String firstHash = ContextSourceHash.compute(new com.google.gson.Gson(), List.of(input));

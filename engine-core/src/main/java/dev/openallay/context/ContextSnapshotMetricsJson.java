@@ -3,6 +3,7 @@ package dev.openallay.context;
 import com.google.gson.Gson;
 import com.google.gson.JsonNull;
 import com.google.gson.JsonSerializer;
+import dev.openallay.json.EngineJson;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
@@ -11,7 +12,7 @@ public final class ContextSnapshotMetricsJson {
     private final Gson gson;
 
     public ContextSnapshotMetricsJson(Gson source) {
-        gson = java.util.Objects.requireNonNull(source, "source").newBuilder()
+        gson = EngineJson.withInstant(java.util.Objects.requireNonNull(source, "source")).newBuilder()
                 .registerTypeHierarchyAdapter(Optional.class, (JsonSerializer<Optional<?>>) (value, type, context) ->
                         value.isPresent() ? context.serialize(value.orElseThrow()) : JsonNull.INSTANCE)
                 .create();

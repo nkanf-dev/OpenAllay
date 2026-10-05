@@ -14,9 +14,10 @@ import dev.openallay.agent.AgentState;
 import dev.openallay.context.DataCompleteness;
 import dev.openallay.context.EvidenceMetadata;
 import dev.openallay.context.SourceObservation;
+import dev.openallay.guide.semantic.SemanticInline;
+import dev.openallay.json.EngineJson;
 import dev.openallay.model.ModelEvent;
 import dev.openallay.model.ModelUsage;
-import dev.openallay.guide.semantic.SemanticInline;
 import dev.openallay.testing.GroundedTestFixtures;
 import java.time.Instant;
 import java.util.List;
@@ -470,7 +471,7 @@ final class GuideStateReducerTest {
         JsonObject value = new JsonObject();
         JsonArray sources = new JsonArray();
         for (SourceObservation observation : observations) {
-            sources.add(new Gson().toJsonTree(observation));
+            sources.add(EngineJson.withInstant(new Gson()).toJsonTree(observation));
         }
         value.add("sources", sources);
         result.add("value", value);
@@ -490,7 +491,7 @@ final class GuideStateReducerTest {
         result.addProperty("status", "success");
         JsonObject value = new JsonObject();
         JsonArray evidence = new JsonArray();
-        evidence.add(new Gson().toJsonTree(GroundedTestFixtures.serverEvidence()));
+        evidence.add(EngineJson.withInstant(new Gson()).toJsonTree(GroundedTestFixtures.serverEvidence()));
         value.add("evidence", evidence);
         result.add("value", value);
         return result;

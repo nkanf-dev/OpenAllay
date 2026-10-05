@@ -8,6 +8,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonParser;
 import dev.openallay.guide.GuideRequestStatus;
 import dev.openallay.guide.GuideTopology;
+import dev.openallay.json.EngineJson;
 import dev.openallay.testing.GroundedTestFixtures;
 import java.util.List;
 import java.util.Map;
@@ -64,6 +65,11 @@ final class GuideE2EReportJsonTest {
                 .get(0).getAsJsonObject().get("toolId").getAsString());
         assertEquals("SUCCEEDED", json.getAsJsonArray("toolProbes")
                 .get(0).getAsJsonObject().get("status").getAsString());
+        assertEquals(report, EngineJson.withInstant(new Gson()).fromJson(encoded, GuideE2EReport.class));
+        var evidenceTime = report.evidence().getFirst().capturedAt();
+        assertEquals(JsonParser.parseString("{\"seconds\":" + evidenceTime.getEpochSecond()
+                + ",\"nanos\":" + evidenceTime.getNano() + "}"),
+                json.getAsJsonArray("evidence").get(0).getAsJsonObject().get("capturedAt"));
         assertTrue(encoded.contains("minecraft:recipe_manager"));
         assertTrue(encoded.contains("semantic_component_unsupported"));
         assertFalse(encoded.contains("component payload"));
