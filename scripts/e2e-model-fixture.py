@@ -388,6 +388,33 @@ LIVE_UX_STEER = "OpenAllay E2E UI live UX steer"
 LIVE_UX_RELEASE = threading.Event()
 
 
+def user_message_text(message):
+    """Route current OpenAI text parts without changing visual input or history."""
+    content = message.get("content")
+    if isinstance(content, str):
+        return content
+    if not isinstance(content, list):
+        raise ValueError("user content must be text or current OpenAI content parts")
+    texts = []
+    for part in content:
+        if not isinstance(part, dict):
+            raise ValueError("user content part must be an object")
+        if part.get("type") == "text":
+            if set(part) != {"type", "text"} or not isinstance(part["text"], str):
+                raise ValueError("user text part is malformed")
+            texts.append(part["text"])
+        elif part.get("type") == "image_url":
+            image = part.get("image_url")
+            if (set(part) != {"type", "image_url"} or not isinstance(image, dict)
+                    or set(image) != {"url"} or not isinstance(image["url"], str)
+                    or not image["url"]):
+                raise ValueError("user image_url part is malformed")
+            # The request retains the full part. Never stringify an image as player text.
+        else:
+            raise ValueError("unsupported current OpenAI user content part")
+    return "\n".join(texts)
+
+
 def live_ux_turn(request):
     """Keep actual Tool chronology when a real in-flight Steer appends a user message."""
     messages = request.get("messages", [])
@@ -395,16 +422,15 @@ def live_ux_turn(request):
                    if messages[index].get("role") == "user"), -1)
     if latest < 0:
         return None
-    latest_text = messages[latest].get("content", "")
-    if not (isinstance(latest_text, str) and latest_text.startswith(LIVE_UX_STEER)):
+    latest_text = user_message_text(messages[latest])
+    if not latest_text.startswith(LIVE_UX_STEER):
         return None
     root = next((index for index in range(latest - 1, -1, -1)
                  if messages[index].get("role") == "user"
-                 and isinstance(messages[index].get("content"), str)
-                 and messages[index]["content"].startswith(LIVE_UX_PREFIX)), -1)
+                 and user_message_text(messages[index]).startswith(LIVE_UX_PREFIX)), -1)
     if root < 0:
         raise ValueError("live UX Steer has no actual original request")
-    return messages[root]["content"], messages[root + 1:]
+    return user_message_text(messages[root]), messages[root + 1:]
 
 
 def live_ux_analysis_arguments():
@@ -525,7 +551,7 @@ def validated_game_state_results(turn_messages, allow_world_query_permission_fai
 
 
 BUILDER_PREFIX = "OpenAllay E2E Builder "
-BUILDER_SCENARIOS = ("disabled", "acceptance", "reload", "partial", "cancel", "undo", "server-denied")
+BUILDER_SCENARIOS = ("restricted", "acceptance", "reload", "partial", "cancel", "undo", "server-denied")
 BUILDER_SKILL_TOOL = "openallay__load_skill"
 
 
@@ -574,31 +600,29 @@ def builder_arguments(scenario, retained_anchor=None):
     elif scenario == "server-denied":
         source = ('var System = Java.type("java.lang.System");\n'
                   'return {unexpectedJavaAuthority:true,version:String(System.getProperty("java.version"))};')
-    elif scenario == "disabled":
-        source = ('var building = require("openallay_builder:building");\n'
-                  'var b = building.open({seed:17,label:"OpenAllay E2E denied"});\n'
-                  'var p = b.get_player_pos();\n'
-                  'b.place_block(Math.floor(p.x)+8,Math.floor(p.y),Math.floor(p.z)+8,"gold_block");\n'
-                  'return {unexpectedAuthority:true,status:b.finish()};')
     else:
         source = '''var building = require("openallay_builder:building");
 var b = building.open({seed:17,label:"OpenAllay E2E SCENARIO"});
 var p = b.get_player_pos();
 var x=Math.floor(p.x)+8,y=Math.floor(p.y)-1,z=Math.floor(p.z)+8;
 '''.replace("SCENARIO", scenario)
-        if scenario == "partial":
+        if scenario == "restricted":
+            source += '''b.place_block(x,y+1,z,"gold_block");
+return JSON.stringify({scenario:"builder_restricted",status:b.finish(),readback:b.get_block(x,y+1,z)});
+'''
+        elif scenario == "partial":
             source += '''b.place_block(x,y+1,z,"gold_block");
 var caught=null;
 try { b.place_block(x+1,y+1,z,"openallay_e2e:missing_native_block"); }
 catch (error) { caught=String(error); }
-return {scenario:"builder_partial",failure:caught,status:b.status(),operations:b.list_operations()};
+return JSON.stringify({scenario:"builder_partial",failure:caught,status:b.status(),operations:b.list_operations()});
 '''
         elif scenario == "cancel":
             source += '''b.place_block(x,y+1,z,"diamond_block");
 var cancelled=b.cancel(),caught=null;
 try { b.place_block(x+1,y+1,z,"gold_block"); }
 catch (error) { caught=String(error); }
-return {scenario:"builder_cancel",deniedAfterCancel:caught,status:cancelled};
+return JSON.stringify({scenario:"builder_cancel",deniedAfterCancel:caught,status:cancelled});
 '''
         elif scenario == "undo":
             source += '''b.place_block(x,y+1,z,"gold_block");
@@ -608,7 +632,7 @@ var changed=building.open({seed:17,label:"OpenAllay E2E intervening edit"});
 changed.place_block(x+1,y+1,z,"diamond_block");
 changed.finish();
 var undo=b.undo(original.operationId);
-return {scenario:"builder_undo",undo:undo,status:b.finish()};
+return JSON.stringify({scenario:"builder_undo",undo:undo,status:b.finish()});
 '''
         elif scenario == "reload":
             if retained_anchor is None or len(retained_anchor) != 3:
@@ -619,12 +643,12 @@ var listed=b.list_templates();
 var operations=b.list_operations();
 var readback={house:b.get_block(x,y,z),dock:b.get_block(x+14,y,z+18),
   rotatedStair:b.get_block_full(x+21,y+1,z+32),mirroredChest:b.get_block_full(x+24,y+1,z+33)};
-return {scenario:"builder_reload",template:{name:"openallay_e2e_builder_native",size:template.size},
-  listed:listed,operations:operations,operationCount:operations.length,readback:readback,status:b.finish()};
+return JSON.stringify({scenario:"builder_reload",template:{name:"openallay_e2e_builder_native",size:template.size},
+  listed:listed,operations:operations,operationCount:operations.length,readback:readback,status:b.finish()});
 '''
     intents = {
         "acceptance": ("建造与读取在线验收站点", "调用六个小型预设、几何、地形路径和模板变换，并保留失败、取消及撤销结果供独立原生检查。"),
-        "disabled": ("检查未授权时的 Builder 访问", "尝试打开实际在线 Builder；未启用的 Java 权限应返回工具失败，不宣称世界写入成功。"),
+        "restricted": ("用受限 JavaScript 放置并读取 Builder 标记", "通过已启用的 Builder SDK 放置一个金块，并读取实际方块和会话完成状态。"),
         "reload": ("读取保留的原生站点", "按先前原生记录的坐标读取现存方块、模板及操作日志，不移动玩家或重放写入。"),
         "partial": ("保留部分写入的失败结果", "先写入一个标记，再请求无效方块，读取实际部分失败状态。"),
         "cancel": ("检查明确取消后的写入", "写入标记后取消该在线会话，并检查后续写入是否被拒绝。"),
@@ -635,62 +659,115 @@ return {scenario:"builder_reload",template:{name:"openallay_e2e_builder_native",
     return {"source": source, "title": title, "description": description}
 
 
+def parse_tool_failure(text):
+    """Exact current ModelToolTextRenderer failure fields, not normalized JSON."""
+    import re
+    if not isinstance(text, str) or not text.startswith("status: failure\n"):
+        return None
+    match = re.fullmatch(r"status: failure\ncode: ([a-z0-9_]+)\nmessage: (.+)", text, re.DOTALL)
+    if match is None:
+        raise ValueError("Tool failure projection is malformed")
+    return {"status": "failure", "code": match[1], "message": match[2]}
+
+
+def builder_result(text, scenario):
+    """Read the complete current scalar receipt; native readback owns the verdict."""
+    value = parse_result_preview(text)
+    if not isinstance(value, str):
+        raise ValueError("Builder result must be a complete scalar JSON receipt")
+    try:
+        receipt = json.loads(value)
+    except json.JSONDecodeError as failure:
+        raise ValueError("Builder scalar receipt is not JSON") from failure
+    if not isinstance(receipt, dict) or receipt.get("scenario") != "builder_" + scenario:
+        raise ValueError("native Builder result did not identify the requested scenario")
+    status = receipt.get("status")
+    expected_state = {"partial": "failed-partial", "cancel": "cancelled-partial"}.get(scenario, "completed")
+    if not isinstance(status, dict) or status.get("state") != expected_state:
+        raise ValueError("native Builder result did not retain its actual session state")
+    if scenario == "restricted" and receipt.get("readback") != "minecraft:gold_block":
+        raise ValueError("native Builder restricted result did not read back the gold block")
+    if scenario == "partial" and (not isinstance(receipt.get("failure"), str) or not receipt["failure"]):
+        raise ValueError("native Builder partial result did not retain its failure")
+    if scenario == "cancel" and (not isinstance(receipt.get("deniedAfterCancel"), str) or not receipt["deniedAfterCancel"]):
+        raise ValueError("native Builder cancel result did not retain the denied write")
+    if scenario == "acceptance":
+        operations = receipt.get("operations")
+        names = ["house", "skyscraper", "cottage", "windmill", "farm", "dock",
+                 "geometry_decoration", "terrain", "templates"]
+        if (not isinstance(operations, list) or len(operations) != len(names)
+                or any(not isinstance(operation, dict) or operation.get("name") != name
+                       or operation.get("state") != "completed"
+                       or not isinstance(operation.get("operationId"), str)
+                       or not operation["operationId"]
+                       for name, operation in zip(names, operations))):
+            raise ValueError("Builder receipt did not retain all nine actual completed operations")
+    return receipt
+
+
 def builder_turn(scenario, turn_messages, user_text=""):
     """Validate the real current Tool results; never manufacture acceptance."""
-    results = [message for message in turn_messages if message.get("role") == "tool"]
+    calls = {}
+    results = []
+    for message in turn_messages:
+        if message.get("role") == "assistant":
+            for call in message.get("tool_calls", []):
+                if call.get("id") in calls:
+                    raise ValueError("Builder turn contains a duplicate Tool call ID")
+                calls[call.get("id")] = call.get("function", {}).get("name")
+        if message.get("role") == "tool":
+            name = message.get("name", calls.get(message.get("tool_call_id")))
+            expected = BUILDER_SKILL_TOOL if scenario != "server-denied" and not results else JAVASCRIPT_TOOL
+            if name != expected:
+                raise ValueError("Builder result is not from the requested current Tool")
+            results.append(message)
     if not results:
         if scenario == "server-denied":
             return (JAVASCRIPT_TOOL, builder_arguments(scenario)), None
         return (BUILDER_SKILL_TOOL, {"name": "minecraft-builder"}), None
-    # load_skill has a compact text model projection, not always JSON.
     if scenario != "server-denied":
-        skill_text = str(results[0].get("content", ""))
-        if "minecraft-builder" not in skill_text or "failure" in skill_text[:100]:
-            raise ValueError("bundled Builder Skill was not loaded")
+        skill_text = results[0].get("content", "")
+        header = skill_text.partition("\ncontent:\n")[0] if isinstance(skill_text, str) else ""
+        if (not header.startswith("skill_instructions\nskill: minecraft-builder\n")
+                or "\nstate: complete\n" not in header + "\n"
+                or "\ncomplete: true\n" not in header + "\n"):
+            raise ValueError("bundled Builder Skill was not completely loaded")
         if len(results) == 1:
             anchor = builder_retained_anchor(user_text) if scenario == "reload" else None
             return (JAVASCRIPT_TOOL, builder_arguments(scenario, anchor)), None
     if len(results) != (1 if scenario == "server-denied" else 2):
         raise ValueError("unexpected extra Builder fixture Tool result")
     text = results[-1].get("content", "")
-    parsed = None
-    try:
-        parsed = json.loads(text)
-    except (TypeError, json.JSONDecodeError):
-        pass
-    denied = scenario in ("disabled", "server-denied")
-    if isinstance(parsed, dict):
-        if denied:
-            if parsed.get("status") != "failure" or parsed.get("code") != "javascript_error":
-                raise ValueError("native Builder denial did not return actual JavaScript failure")
-            summary = "Native Builder access was denied by the real JavaScript Tool. No success is claimed."
-        else:
-            if parsed.get("status") != "success":
-                raise ValueError("native Builder fixture failed: " + str(parsed.get("code")))
-            output = parsed.get("value", {})
-            preview = output.get("preview", output) if isinstance(output, dict) else {}
-            if not isinstance(preview, dict) or preview.get("scenario") != "builder_" + scenario.replace("-", "_"):
-                raise ValueError("native Builder result did not identify the requested scenario")
-            summary = "Native Tool returned the requested " + scenario + " result. The independent controller readback determines acceptance."
+    denied = scenario == "server-denied"
+    if not denied:
+        failure = parse_tool_failure(text)
+        if failure is not None:
+            raise ValueError("native Builder fixture failed: " + failure["code"] + ": " + failure["message"])
+        builder_result(text, scenario)
+        summary = "Native Tool returned the requested " + scenario + " result. The independent controller readback determines acceptance."
     else:
-        # ModelToolTextRenderer renders failures as exact named text fields. The
-        # canonical normalized failure remains independently checked by the controller.
-        if denied:
+        parsed = None
+        try:
+            parsed = json.loads(text)
+        except (TypeError, json.JSONDecodeError):
+            pass
+        if isinstance(parsed, dict):
+            if parsed.get("status") != "failure" or parsed.get("code") != "javascript_error":
+                raise ValueError("server Java isolation did not return actual JavaScript failure")
+            message = parsed.get("message")
+        else:
             prefix = "status: failure\ncode: javascript_error\nmessage: "
             if not isinstance(text, str) or not text.startswith(prefix):
-                raise ValueError("native Builder denial projection lacked exact failure status/code")
+                raise ValueError("server Java isolation projection lacked exact failure status/code")
             message = text[len(prefix):]
-            if not message.startswith('ReferenceError: "Java" is not defined.'):
-                raise ValueError("native Builder denial did not show unavailable Java authority")
-            summary = "Native Builder access was denied by the real JavaScript Tool. No success is claimed."
-        else:
-            # Complete unrestricted results contain the actual JSON after preview.
-            if "scope: complete" not in text or '"scenario":"builder_' + scenario.replace("-", "_") + '"' not in text.replace(" ", ""):
-                raise ValueError("native Builder projection was incomplete or malformed")
-            summary = "Native Tool returned the requested " + scenario + " result. The independent controller readback determines acceptance."
+        if not isinstance(message, str) or not message.startswith('ReferenceError: "Java" is not defined.'):
+            raise ValueError("server Java isolation did not show unavailable Java authority")
+        summary = "Server-model Java access was denied by the real JavaScript Tool. No success is claimed."
+    scope = ("It probes the actual JavaScript isolation boundary."
+             if denied else "It invokes the actual bundled Extension.")
     return None, ("# Deterministic Builder real-client fixture\n\n" + summary +
-                  "\n\nThis loopback response is explicitly pre-authored test content, not a live model. "
-                  "It invokes the actual bundled Extension. It does not certify its own geometry or visual quality.")
+                  "\n\nThis loopback response is explicitly pre-authored test content, not a live model. " + scope +
+                  " It does not certify its own geometry or visual quality.")
 
 
 def content_events(content):
@@ -706,7 +783,7 @@ def current_user_turn(request):
     for index, message in enumerate(messages):
         if message.get("role") == "user":
             latest_user = index
-            user_text = message.get("content", "")
+            user_text = user_message_text(message)
     steered = live_ux_turn(request)
     return steered if steered is not None else (user_text, messages[latest_user + 1:])
 
@@ -741,8 +818,12 @@ class Handler(BaseHTTPRequestHandler):
             self.send_error(404)
             return
         length = int(self.headers.get("content-length", "0"))
-        request = json.loads(self.rfile.read(length))
-        user_text, turn_messages = current_user_turn(request)
+        try:
+            request = json.loads(self.rfile.read(length))
+            user_text, turn_messages = current_user_turn(request)
+        except (ValueError, TypeError, AttributeError) as failure:
+            self.send_error(422, "Malformed fixture request: " + str(failure))
+            return
         completed = sum(1 for message in turn_messages
                         if message.get("role") == "tool")
         live_ux = user_text.startswith(LIVE_UX_PREFIX)

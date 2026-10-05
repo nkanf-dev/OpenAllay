@@ -139,9 +139,13 @@ class BuilderFixtureSourceTests(unittest.TestCase):
         self.assertIn("templates:{saved:[templateName]", SOURCE)
         self.assertNotIn("list_operations()", SOURCE)
         self.assertNotIn("success:true", SOURCE)
-        summary = SOURCE[SOURCE.index('// Return only detached compact data'):]
+        summary = SOURCE[SOURCE.index('// Return a complete scalar JSON receipt'):]
         self.assertNotIn("template:template", summary)
         self.assertNotIn("loaded:loaded", summary)
+        self.assertIn('return JSON.stringify({scenario:"builder_acceptance"', summary)
+        self.assertNotIn("checks:checks", summary)
+        self.assertIn("actions:actions,operations:operations", summary)
+        self.assertIn("lifecycle:lifecycle", summary)
 
     def test_superflat_height_and_forced_south_detour_fit_the_native_world(self):
         self.assertIn("anchor.y-3 < c.minY", SOURCE)

@@ -77,12 +77,7 @@ public final class GuideClientE2EController {
     private GuideBuilderE2EProbe.Anchor builderAnchor;
     private GuideBuilderE2EProbe.Anchor currentPlayerAnchor;
     private boolean unrestrictedAtStart;
-    private boolean revocationStarted;
-    private boolean revocationCompleted;
     private boolean nativeProbePending;
-    private Instant revocationCompletedAt;
-    private Instant firstJavascriptObservedAt;
-    private boolean javascriptObservedBeforeRevocation;
     private UUID screenshotActor;
     private dev.openallay.guide.ui.GuideDisplayConfig screenshotOriginalDisplay;
     private boolean screenshotActionPending;
@@ -482,15 +477,13 @@ public final class GuideClientE2EController {
         return client.gameDirectory.toPath().resolve("config/openallay/e2e").resolve(world + suffix);
     }
 
-    private static com.google.gson.JsonObject builderPreview(GuideRequestSnapshot request) {
-        var tool = request.tools().stream().filter(value -> value.toolId().equals("openallay:run_javascript"))
-                .reduce((earlierTool, laterTool) -> laterTool).orElseThrow();
-        return tool.normalized().getAsJsonObject("value").getAsJsonObject("preview");
+    private static com.google.gson.JsonObject builderReceipt(GuideRequestSnapshot request) {
+        return GuideBuilderE2EProbe.builderReceipt(request);
     }
 
     private void retainAcceptancePersistence(GuideRequestSnapshot request, com.google.gson.JsonObject probe) throws IOException {
         if (!config.scenario().equals("builder-acceptance") || !"PASSED".equals(probe.get("outcome").getAsString())) return;
-        var preview = builderPreview(request);
+        var preview = builderReceipt(request);
         com.google.gson.JsonObject receipt = new com.google.gson.JsonObject();
         receipt.addProperty("outcome", "PASSED");
         receipt.addProperty("requestId", request.requestId().toString());
@@ -505,7 +498,7 @@ public final class GuideClientE2EController {
     private void verifyReloadPersistence(GuideRequestSnapshot request, com.google.gson.JsonObject probe) throws IOException {
         var retained = com.google.gson.JsonParser.parseString(Files.readString(builderProofPath(".acceptance.json"))).getAsJsonObject();
         if (!"PASSED".equals(retained.get("outcome").getAsString())) throw new IllegalStateException("Reload lacks prior independently passed acceptance receipt");
-        boolean matched = GuideBuilderE2EProbe.persistedOperationsMatch(retained, builderPreview(request));
+        boolean matched = GuideBuilderE2EProbe.persistedOperationsMatch(retained, builderReceipt(request));
         probe.addProperty("exactPersistencePassed", matched);
         if (!matched) probe.addProperty("outcome", "FAILED");
     }
@@ -633,24 +626,6 @@ public final class GuideClientE2EController {
                 return;
             }
             requestId = ((ToolResult.Success<UUID>) asked).value();
-            if (GuideBuilderE2EProbe.enabled(config.scenario())
-                    && Boolean.getBoolean("openallay.e2e.revokeUnrestrictedAfterCapture")
-                    && !revocationStarted) {
-                revocationStarted = true;
-                if (clientSettings == null || !unrestrictedAtStart) {
-                    failWithoutRequest("revocation_precondition_failed", "Explicit enabled settings are required before the frozen-authority test");
-                    return;
-                }
-                clientSettings.saveUnrestrictedJavascript(false).thenAccept(saved -> {
-                    if (saved instanceof ToolResult.Failure<Boolean> failure) {
-                        failWithoutRequest(failure.code(), failure.message());
-                    } else {
-                        revocationCompleted = !clientSettings.snapshot().unrestrictedJavascript().enabled();
-                        revocationCompletedAt = Instant.now();
-                        observe(service.snapshot());
-                    }
-                });
-            }
             observe(service.snapshot());
         });
     }
@@ -662,12 +637,6 @@ public final class GuideClientE2EController {
                 .filter(value -> value.requestId().equals(requestId))
                 .findFirst().orElse(null);
         if (request == null) return;
-        if (firstJavascriptObservedAt == null && request.tools().stream()
-                .anyMatch(value -> value.toolId().equals("openallay:run_javascript"))) {
-            firstJavascriptObservedAt = Instant.now();
-            javascriptObservedBeforeRevocation = Boolean.getBoolean("openallay.e2e.revokeUnrestrictedAfterCapture")
-                    && !revocationCompleted;
-        }
         if (transitions.isEmpty() || transitions.get(transitions.size() - 1) != request.status()) {
             transitions.add(request.status());
         }
@@ -687,7 +656,6 @@ public final class GuideClientE2EController {
             });
         }
         if (!request.terminal() || nativeProbePending || pendingReport != null || cancelOnToolStartPending) return;
-        if (revocationStarted && !revocationCompleted) return;
         if (seedingHistory) {
             requestId = null;
             remainingHistorySeeds--;
@@ -784,27 +752,11 @@ public final class GuideClientE2EController {
         if (GuideBuilderE2EProbe.enabled(config.scenario())) {
             nativeProbePending = true;
             GuideBuilderE2EProbe.verify(config.scenario(), snapshot.actorId(), builderAnchor,
-                    request, clientSettings, unrestrictedAtStart, revocationCompleted, probe -> {
+                    request, clientSettings, unrestrictedAtStart, probe -> {
                 nativeProbePending = false;
                 if (currentPlayerAnchor != null) probe.add("currentPlayerAnchor", gson.toJsonTree(currentPlayerAnchor));
                 if (config.scenario().equals("builder-reload") || config.scenario().equals("builder-live-undo"))
                     probe.addProperty("originSource", "prior-passed-independent-native-receipt");
-                if (Boolean.getBoolean("openallay.e2e.revokeUnrestrictedAfterCapture")) {
-                    Instant firstNative = request.tools().stream().flatMap(value -> value.sources().stream())
-                            .map(value -> value.evidence())
-                            .filter(value -> value.sourceId().startsWith("openallay_builder:")
-                                    && value.authority() == dev.openallay.context.DataAuthority.SERVER_AUTHORITATIVE)
-                            .map(value -> value.capturedAt()).min(Instant::compareTo).orElse(null);
-                    boolean ordered = GuideBuilderE2EProbe.frozenNativeTiming(
-                            revocationCompletedAt, firstNative, firstJavascriptObservedAt,
-                            javascriptObservedBeforeRevocation);
-                    probe.addProperty("frozenAuthorityTimingPassed", ordered);
-                    probe.addProperty("javascriptObservedBeforeRevocation", javascriptObservedBeforeRevocation);
-                    if (revocationCompletedAt != null) probe.addProperty("revocationCompletedAt", revocationCompletedAt.toString());
-                    if (firstJavascriptObservedAt != null) probe.addProperty("firstJavascriptObservedAt", firstJavascriptObservedAt.toString());
-                    if (firstNative != null) probe.addProperty("firstTrustedNativeEvidenceAt", firstNative.toString());
-                    if (!ordered) probe.addProperty("outcome", "FAILED");
-                }
                 if (config.scenario().equals("builder-reload")) {
                     try { verifyReloadPersistence(request, probe); }
                     catch (IOException | RuntimeException failure) { probe.addProperty("outcome", "FAILED"); probe.addProperty("persistenceFailure", failure.toString()); }

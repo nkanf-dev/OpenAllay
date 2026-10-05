@@ -273,10 +273,11 @@ var lifecycle={partial:{failure:partialFailure,status:partialStatus,beforeImages
     cancel:{deniedAfterCancel:deniedAfterCancel,failure:cancelFailure,status:cancelled.status(),beforeImages:cancelBefore},
     undo:{result:undoResult,status:undoStatus,originalStatus:originalStatus,interventionStatus:interventionStatus,beforeImages:undoBefore}};
 
-// Return only detached compact data. Native controller readback is the verdict.
-return {scenario:"builder_acceptance",provider:"deterministic_loopback_fixture_not_live_model",
-    seed:17,anchor:anchor,sites:sites,checks:checks,actions:actions,operations:operations,
+// Return a complete scalar JSON receipt, not a sampled container array.
+// Declared checks stay in this source; only independent native readback is the verdict.
+return JSON.stringify({scenario:"builder_acceptance",provider:"deterministic_loopback_fixture_not_live_model",
+    seed:17,anchor:anchor,sites:sites,actions:actions,operations:operations,
     status:b.status(),lifecycle:lifecycle,templates:{saved:[templateName],listed:listed.indexOf(templateName)>=0,
         size:loaded.size,blockCount:loaded.blocks.length,paletteSize:loaded.palette.length},
-    terrain:{scanTerrain:terrainScan,scanGround:groundScan,bounds:terrainBounds,fullHeightGround:fullHeightScan}};
+    terrain:{scanTerrain:terrainScan,scanGround:groundScan,bounds:terrainBounds,fullHeightGround:fullHeightScan}});
 /* END BUILDER_ACCEPTANCE */

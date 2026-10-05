@@ -5,6 +5,11 @@ import com.google.gson.JsonObject;
 import dev.openallay.guide.GuideRequestSnapshot;
 import dev.openallay.guide.GuideRequestStatus;
 import dev.openallay.guide.GuideToolActivity;
+import dev.openallay.guide.GuideToolStatus;
+import dev.openallay.json.JsonReaders;
+import com.google.gson.stream.JsonToken;
+import java.io.IOException;
+import java.io.StringReader;
 import dev.openallay.settings.ClientSettingsService;
 import java.util.ArrayList;
 import java.util.List;
@@ -27,7 +32,7 @@ final class GuideBuilderE2EProbe {
     private GuideBuilderE2EProbe() {}
 
     static boolean enabled(String scenario) {
-        return List.of("builder-disabled", "builder-acceptance", "builder-reload", "builder-partial",
+        return List.of("builder-restricted", "builder-acceptance", "builder-reload", "builder-partial",
                 "builder-cancel", "builder-undo", "builder-server-denied", "builder-live-copy", "builder-live-undo").contains(scenario);
     }
 
@@ -69,7 +74,9 @@ final class GuideBuilderE2EProbe {
             } else result.add(new Landmark("live-undo-door-upper", 12, 2, 2, "air"));
             return List.copyOf(result);
         }
-        if (scenario.equals("builder-disabled") || scenario.equals("builder-server-denied"))
+        if (scenario.equals("builder-restricted"))
+            return List.of(new Landmark("restricted-write-readback", 0, 1, 0, "gold_block"));
+        if (scenario.equals("builder-server-denied"))
             return List.of(new Landmark("denied-no-write", 0, 1, 0, "air"));
         if (scenario.equals("builder-partial")) return List.of(new Landmark("earlier-write-retained", 0, 1, 0, "gold_block"),
                 new Landmark("invalid-followup-did-not-write", 1, 1, 0, "air"));
@@ -210,14 +217,13 @@ final class GuideBuilderE2EProbe {
 
     static void verify(String scenario, UUID actor, Anchor anchor,
             GuideRequestSnapshot request, ClientSettingsService settings,
-            boolean unrestrictedAtStart, boolean revocationCompleted,
+            boolean unrestrictedAtStart,
             Consumer<JsonObject> complete) {
         Minecraft client = Minecraft.getInstance();
         var server = client.getSingleplayerServer();
         JsonObject result = resultSummary(request);
         result.addProperty("oracle", "independent-integrated-server-owner-thread-readback");
         result.addProperty("unrestrictedAtStart", unrestrictedAtStart);
-        result.addProperty("revocationCompleted", revocationCompleted);
         boolean extensionActive = settings != null && settings.snapshot().extensions().extensions().stream()
                 .anyMatch(value -> value.id().equals("openallay:builder")
                         && value.state() == dev.openallay.settings.extension.ExtensionSettingsView.State.ACTIVE);
@@ -267,9 +273,7 @@ final class GuideBuilderE2EProbe {
                 boolean toolContract = toolContract(scenario, request);
                 result.addProperty("toolContractPassed", toolContract);
                 passed &= toolContract;
-                if (scenario.equals("builder-disabled")) passed &= !unrestrictedAtStart;
-                else if (!scenario.equals("builder-server-denied")) passed &= unrestrictedAtStart;
-                if (Boolean.getBoolean("openallay.e2e.revokeUnrestrictedAfterCapture")) passed &= revocationCompleted;
+                passed &= startupSettingsMatch(scenario, unrestrictedAtStart);
                 if (scenario.equals("builder-server-denied")) passed &= request.modelSelection().modelMode() == dev.openallay.guide.GuideModelMode.SERVER;
                 passed &= server.getWorldData().getGameType() == net.minecraft.world.level.GameType.SURVIVAL && !GuideProbeWorldSettings.commandsAllowed(server);
                 result.addProperty("outcome", passed ? "PASSED" : "FAILED");
@@ -278,14 +282,48 @@ final class GuideBuilderE2EProbe {
         });
     }
 
+    static boolean startupSettingsMatch(String scenario, boolean unrestrictedAtStart) {
+        return !scenario.equals("builder-restricted") || !unrestrictedAtStart;
+    }
+
+    /** One complete scalar JSON receipt from the actual successful JavaScript Tool. */
+    static JsonObject builderReceipt(GuideRequestSnapshot request) {
+        var tool = request.tools().stream().filter(value -> value.toolId().equals("openallay:run_javascript"))
+                .reduce((earlierTool, laterTool) -> laterTool)
+                .orElseThrow(() -> new IllegalArgumentException("Builder JavaScript Tool result is missing"));
+        var normalized = tool.normalized();
+        if (tool.status() != GuideToolStatus.SUCCEEDED || normalized == null
+                || !"success".equals(string(normalized, "status"))
+                || !normalized.has("value") || !normalized.get("value").isJsonObject())
+            throw new IllegalArgumentException("Builder JavaScript Tool did not succeed");
+        var value = normalized.getAsJsonObject("value");
+        if (!"string".equals(string(value, "resultType"))
+                || !value.has("complete") || !value.get("complete").isJsonPrimitive()
+                || !value.getAsJsonPrimitive("complete").isBoolean() || !value.get("complete").getAsBoolean()
+                || !value.has("preview") || !value.get("preview").isJsonPrimitive()
+                || !value.getAsJsonPrimitive("preview").isString())
+            throw new IllegalArgumentException("Builder result must be a complete string receipt");
+        String json = value.get("preview").getAsString();
+        dev.openallay.bridge.protocol.BridgeJsonCodec.rejectDuplicateFields(json);
+        try (var reader = JsonReaders.strict(new StringReader(json))) {
+            var receipt = JsonReaders.read(reader);
+            if (reader.peek() != JsonToken.END_DOCUMENT || receipt == null || !receipt.isJsonObject())
+                throw new IllegalArgumentException("Builder receipt must contain exactly one JSON object");
+            return receipt.getAsJsonObject();
+        } catch (IOException malformed) {
+            throw new IllegalArgumentException("Builder receipt is not strict JSON", malformed);
+        }
+    }
+
     static boolean toolContract(String scenario, GuideRequestSnapshot request) {
         if (request.status() != GuideRequestStatus.COMPLETED) return false;
         List<GuideToolActivity> javascript = request.tools().stream()
                 .filter(value -> value.toolId().equals("openallay:run_javascript")).toList();
         if (javascript.isEmpty()) return false;
+        // Paid provider turns have their own shape; native evidence still owns their verdict.
         if (scenario.equals("builder-live-copy") || scenario.equals("builder-live-undo")) {
-            boolean success = javascript.stream().allMatch(tool -> tool.normalized() != null
-                    && "success".equals(string(tool.normalized(), "status")));
+            boolean success = javascript.stream().allMatch(tool -> tool.status() == GuideToolStatus.SUCCEEDED
+                    && tool.normalized() != null && "success".equals(string(tool.normalized(), "status")));
             var sources = request.sources().stream().map(value -> value.evidence().sourceId()).collect(java.util.stream.Collectors.toSet());
             boolean evidence = scenario.equals("builder-live-copy")
                     ? sources.contains("openallay_builder:template-save") && sources.contains("openallay_builder:template-load")
@@ -295,59 +333,73 @@ final class GuideBuilderE2EProbe {
                     && request.tools().stream().anyMatch(value -> value.toolId().equals("openallay:load_skill")
                         && value.invocationArguments() != null && "minecraft-builder".equals(string(value.invocationArguments(), "name")));
         }
-        if (scenario.equals("builder-disabled") || scenario.equals("builder-server-denied")) {
-            var value = javascript.get(javascript.size() - 1).normalized();
-            return value != null && value.has("status") && value.get("status").getAsString().equals("failure")
-                    && value.has("code") && value.get("code").getAsString().equals("javascript_error");
+        if (scenario.equals("builder-server-denied")) {
+            var tool = javascript.get(javascript.size() - 1);
+            var value = tool.normalized();
+            return tool.status() == GuideToolStatus.FAILED && value != null
+                    && "failure".equals(string(value, "status"))
+                    && "javascript_error".equals(string(value, "code"))
+                    && string(value, "message") != null
+                    && string(value, "message").startsWith("ReferenceError: \"Java\" is not defined.");
         }
-        var normalized = javascript.get(javascript.size() - 1).normalized();
-        if (normalized == null || !normalized.has("status") || !normalized.get("status").getAsString().equals("success")) return false;
-        if (!normalized.has("value") || !normalized.get("value").isJsonObject()) return false;
-        var output = normalized.getAsJsonObject("value");
-        if (!output.has("preview") || !output.get("preview").isJsonObject()) return false;
-        var preview = output.getAsJsonObject("preview");
-        if (!preview.has("scenario") || !preview.get("scenario").getAsString().equals(scenario.replace('-', '_'))) return false;
-        if (!preview.has("status") || !preview.get("status").isJsonObject()) return false;
-        String state = string(preview.getAsJsonObject("status"), "state");
-        switch (scenario) {
-            case "builder-partial" -> {
-                return "failed-partial".equals(state) && nonempty(preview, "failure");
-            }
-            case "builder-cancel" -> {
-                return "cancelled-partial".equals(state) && nonempty(preview, "deniedAfterCancel");
-            }
-            case "builder-undo" -> {
-                if (!"completed".equals(state) || !preview.has("undo") || !preview.get("undo").isJsonObject()) return false;
-                var undo = preview.getAsJsonObject("undo");
-                return undo.has("restored") && undo.get("restored").getAsLong() == 1
-                        && undo.has("conflicts") && undo.getAsJsonArray("conflicts").size() == 1
-                        && undo.has("uncertain") && undo.getAsJsonArray("uncertain").isEmpty();
-            }
-            case "builder-reload" -> {
-                return "completed".equals(state) && preview.has("operationCount")
-                        && preview.get("operationCount").getAsLong() >= 9
-                        && preview.has("template") && preview.get("template").isJsonObject()
-                        && "openallay_e2e_builder_native".equals(string(preview.getAsJsonObject("template"), "name"));
-            }
-            default -> {
-                if (!"completed".equals(state) || !preview.has("operations") || !preview.has("actions")) return false;
-                var operations = preview.getAsJsonArray("operations");
-                if (operations.size() != 9) return false;
-                for (var item : operations) if (!"completed".equals(string(item.getAsJsonObject(), "state"))) return false;
-                long paths = 0;
-                for (var item : preview.getAsJsonArray("actions")) {
-                    var action = item.getAsJsonObject();
-                    if ("terrain_path".equals(string(action, "name")) || "terrain_smart_path".equals(string(action, "name"))) {
-                        if (!"built".equals(string(action, "status"))) return false;
-                        paths++;
-                    }
+        try {
+            var receipt = builderReceipt(request);
+            if (!scenario.replace('-', '_').equals(string(receipt, "scenario"))) return false;
+            String state = string(receipt.getAsJsonObject("status"), "state");
+            switch (scenario) {
+                case "builder-restricted" -> {
+                    return "completed".equals(state) && "minecraft:gold_block".equals(string(receipt, "readback"));
                 }
-                return paths == 2 && preview.has("templates")
-                        && preview.getAsJsonObject("templates").has("listed")
-                        && preview.getAsJsonObject("templates").get("listed").getAsBoolean()
-                        && compositeLifecycle(preview);
+                case "builder-partial" -> {
+                    return "failed-partial".equals(state) && nonempty(receipt, "failure");
+                }
+                case "builder-cancel" -> {
+                    return "cancelled-partial".equals(state) && nonempty(receipt, "deniedAfterCancel");
+                }
+                case "builder-undo" -> {
+                    if (!"completed".equals(state)) return false;
+                    var undo = receipt.getAsJsonObject("undo");
+                    return undo.get("restored").getAsBigDecimal().longValueExact() == 1
+                            && undo.getAsJsonArray("conflicts").size() == 1
+                            && undo.getAsJsonArray("uncertain").isEmpty();
+                }
+                case "builder-reload" -> {
+                    return "completed".equals(state) && receipt.get("operationCount").getAsBigDecimal().longValueExact() >= 9
+                            && "openallay_e2e_builder_native".equals(string(receipt.getAsJsonObject("template"), "name"));
+                }
+                case "builder-acceptance" -> {
+                    if (!"completed".equals(state)) return false;
+                    var operations = receipt.getAsJsonArray("operations");
+                    var names = List.of("house", "skyscraper", "cottage", "windmill", "farm", "dock",
+                            "geometry_decoration", "terrain", "templates");
+                    if (operations.size() != names.size()) return false;
+                    var ids = new java.util.HashSet<String>();
+                    for (int index = 0; index < names.size(); index++) {
+                        var operation = operations.get(index).getAsJsonObject();
+                        String id = string(operation, "operationId");
+                        if (!names.get(index).equals(string(operation, "name"))
+                                || !"completed".equals(string(operation, "state"))
+                                || id == null || id.isBlank() || !ids.add(id)) return false;
+                    }
+                    var paths = new java.util.HashSet<String>();
+                    for (var item : receipt.getAsJsonArray("actions")) {
+                        var action = item.getAsJsonObject();
+                        String name = string(action, "name");
+                        if ("terrain_path".equals(name) || "terrain_smart_path".equals(name)) {
+                            if (!"built".equals(string(action, "status")) || !paths.add(name)) return false;
+                        }
+                    }
+                    var templates = receipt.getAsJsonObject("templates");
+                    return paths.size() == 2 && templates.get("listed").isJsonPrimitive()
+                            && templates.getAsJsonPrimitive("listed").isBoolean() && templates.get("listed").getAsBoolean()
+                            && templates.getAsJsonArray("saved").asList().stream()
+                                .anyMatch(value -> value.isJsonPrimitive() && value.getAsJsonPrimitive().isString()
+                                        && "openallay_e2e_builder_native".equals(value.getAsString()))
+                            && compositeLifecycle(receipt);
+                }
+                default -> { return false; }
             }
-        }
+        } catch (RuntimeException malformed) { return false; }
     }
 
     static boolean persistedOperationsMatch(JsonObject retained, JsonObject reload) {
@@ -356,32 +408,44 @@ final class GuideBuilderE2EProbe {
             for (var value : reload.getAsJsonArray("operations")) {
                 var item = value.getAsJsonObject();
                 String id = string(item, "id"), status = string(item, "status");
-                if (id == null || status == null || observed.put(id, status) != null) return false;
+                if (id == null || id.isBlank() || status == null || observed.put(id, status) != null) return false;
             }
-            for (var value : retained.getAsJsonArray("operations")) {
-                var item = value.getAsJsonObject();
-                if (!"completed".equals(observed.get(string(item, "operationId")))) return false;
+            var names = List.of("house", "skyscraper", "cottage", "windmill", "farm", "dock",
+                    "geometry_decoration", "terrain", "templates");
+            var operations = retained.getAsJsonArray("operations");
+            if (operations.size() != names.size()) return false;
+            var expectedIds = new java.util.HashSet<String>();
+            for (int index = 0; index < names.size(); index++) {
+                var item = operations.get(index).getAsJsonObject();
+                if (!names.get(index).equals(string(item, "name")) || !"completed".equals(string(item, "state"))
+                        || !persistedOperationMatches(item, "completed", observed, expectedIds)) return false;
             }
             var lifecycle = retained.getAsJsonObject("lifecycle");
-            if (!"failed".equals(observed.get(string(lifecycle.getAsJsonObject("partial").getAsJsonObject("status"), "operationId")))) return false;
-            if (!"cancelled".equals(observed.get(string(lifecycle.getAsJsonObject("cancel").getAsJsonObject("status"), "operationId")))) return false;
+            if (!persistedOperationMatches(lifecycle.getAsJsonObject("partial").getAsJsonObject("status"), "failed", observed, expectedIds)) return false;
+            if (!persistedOperationMatches(lifecycle.getAsJsonObject("cancel").getAsJsonObject("status"), "cancelled", observed, expectedIds)) return false;
             var undo = lifecycle.getAsJsonObject("undo");
             for (String key : List.of("originalStatus", "interventionStatus", "status")) {
-                if (!"completed".equals(observed.get(string(undo.getAsJsonObject(key), "operationId")))) return false;
+                if (!persistedOperationMatches(undo.getAsJsonObject(key), "completed", observed, expectedIds)) return false;
             }
-            var names = new java.util.HashSet<String>();
-            for (var value : reload.getAsJsonArray("listed")) names.add(value.getAsString());
-            for (var name : retained.getAsJsonObject("templates").getAsJsonArray("saved")) if (!names.contains(name.getAsString())) return false;
-            return true;
+            var listed = new java.util.HashSet<String>();
+            for (var value : reload.getAsJsonArray("listed")) {
+                if (!value.isJsonPrimitive() || !value.getAsJsonPrimitive().isString()) return false;
+                listed.add(value.getAsString());
+            }
+            var saved = retained.getAsJsonObject("templates").getAsJsonArray("saved");
+            if (saved.isEmpty()) return false;
+            for (var value : saved) {
+                if (!value.isJsonPrimitive() || !value.getAsJsonPrimitive().isString()
+                        || value.getAsString().isBlank() || !listed.contains(value.getAsString())) return false;
+            }
+            return listed.contains("openallay_e2e_builder_native");
         } catch (RuntimeException malformed) { return false; }
     }
 
-    /** Local controller event/evidence timing only; this is not a provider latency measurement. */
-    static boolean frozenNativeTiming(java.time.Instant revokedAt, java.time.Instant firstNativeAt,
-            java.time.Instant firstJavascriptObservedAt, boolean javascriptObservedBeforeRevocation) {
-        return revokedAt != null && firstNativeAt != null && !firstNativeAt.isBefore(revokedAt)
-                && firstJavascriptObservedAt != null && !firstJavascriptObservedAt.isBefore(revokedAt)
-                && !javascriptObservedBeforeRevocation;
+    private static boolean persistedOperationMatches(JsonObject item, String status, Map<String, String> observed,
+            java.util.Set<String> expectedIds) {
+        String id = string(item, "operationId");
+        return id != null && !id.isBlank() && expectedIds.add(id) && status.equals(observed.get(id));
     }
 
     static boolean compositeLifecycle(JsonObject preview) {
@@ -391,20 +455,30 @@ final class GuideBuilderE2EProbe {
             var cancel = lifecycle.getAsJsonObject("cancel");
             var undo = lifecycle.getAsJsonObject("undo");
             var result = undo.getAsJsonObject("result");
+            var ids = new java.util.HashSet<String>();
+            for (var status : List.of(partial.getAsJsonObject("status"), cancel.getAsJsonObject("status"),
+                    undo.getAsJsonObject("originalStatus"), undo.getAsJsonObject("interventionStatus"), undo.getAsJsonObject("status"))) {
+                String id = string(status, "operationId");
+                if (id == null || id.isBlank() || !ids.add(id)) return false;
+            }
             return "failed-partial".equals(string(partial.getAsJsonObject("status"), "state"))
                     && nonempty(partial, "failure")
                     && "cancelled-partial".equals(string(cancel.getAsJsonObject("status"), "state"))
-                    && cancel.has("deniedAfterCancel") && cancel.get("deniedAfterCancel").getAsBoolean()
+                    && cancel.get("deniedAfterCancel").isJsonPrimitive()
+                    && cancel.getAsJsonPrimitive("deniedAfterCancel").isBoolean() && cancel.get("deniedAfterCancel").getAsBoolean()
                     && nonempty(cancel, "failure")
+                    && "completed".equals(string(undo.getAsJsonObject("originalStatus"), "state"))
+                    && "completed".equals(string(undo.getAsJsonObject("interventionStatus"), "state"))
                     && "completed".equals(string(undo.getAsJsonObject("status"), "state"))
-                    && result.get("restored").getAsLong() == 1
+                    && result.get("restored").getAsBigDecimal().longValueExact() == 1
                     && result.getAsJsonArray("conflicts").size() == 1
                     && result.getAsJsonArray("uncertain").isEmpty();
         } catch (RuntimeException malformed) { return false; }
     }
 
     private static String string(JsonObject value, String key) {
-        return value.has(key) && value.get(key).isJsonPrimitive() ? value.get(key).getAsString() : null;
+        return value != null && value.has(key) && value.get(key).isJsonPrimitive()
+                && value.getAsJsonPrimitive(key).isString() ? value.get(key).getAsString() : null;
     }
     private static boolean nonempty(JsonObject value, String key) {
         String text = string(value, key); return text != null && !text.isBlank();

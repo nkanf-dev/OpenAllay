@@ -24,43 +24,118 @@ final class GuideBuilderE2EProbeTest {
         for (String prefix : List.of("house-", "skyscraper-", "cottage-", "windmill-", "farm-", "dock-"))
             assertTrue(landmarks.stream().anyMatch(value -> value.name().startsWith(prefix)), prefix);
         assertEquals(landmarks, GuideBuilderE2EProbe.landmarks("builder-reload"));
-        assertEquals("minecraft:air", GuideBuilderE2EProbe.landmarks("builder-disabled").getFirst().id());
+        assertEquals(84, landmarks.size()); // The coordinate-dependent checkerboard is the 85th native check.
+        var restricted = GuideBuilderE2EProbe.landmarks("builder-restricted");
+        assertEquals(1, restricted.size());
+        assertEquals("minecraft:gold_block", restricted.getFirst().id());
+        assertEquals(0, restricted.getFirst().x()); assertEquals(1, restricted.getFirst().y()); assertEquals(0, restricted.getFirst().z());
         assertEquals("minecraft:gold_block", GuideBuilderE2EProbe.landmarks("builder-partial").getFirst().id());
         assertEquals("minecraft:diamond_block", GuideBuilderE2EProbe.landmarks("builder-cancel").getFirst().id());
     }
-    @Test void deniedContractRejectsClaimedSuccessOrWrongFailure() {
-        assertTrue(GuideBuilderE2EProbe.toolContract("builder-disabled", request("failure", "javascript_error", null)));
-        assertFalse(GuideBuilderE2EProbe.toolContract("builder-disabled", request("success", null, "builder_disabled")));
-        assertFalse(GuideBuilderE2EProbe.toolContract("builder-disabled", request("failure", "permission_denied", null)));
+    @Test void restrictedBuilderRequiresRealSuccessfulReceiptAndGoldReadback() {
+        var receipt = receipt("builder_restricted", "completed");
+        receipt.addProperty("readback", "minecraft:gold_block");
+        assertTrue(GuideBuilderE2EProbe.toolContract("builder-restricted", request(normalized(receipt))));
+        receipt.addProperty("readback", "minecraft:air");
+        assertFalse(GuideBuilderE2EProbe.toolContract("builder-restricted", request(normalized(receipt))));
+        receipt.remove("readback");
+        assertFalse(GuideBuilderE2EProbe.toolContract("builder-restricted", request(normalized(receipt))));
+        assertFalse(GuideBuilderE2EProbe.toolContract("builder-restricted", request("failure", "javascript_error", null)));
+        assertTrue(GuideBuilderE2EProbe.startupSettingsMatch("builder-restricted", false));
+        assertFalse(GuideBuilderE2EProbe.startupSettingsMatch("builder-restricted", true));
+        for (String scenario : List.of("builder-acceptance", "builder-partial", "builder-cancel", "builder-reload", "builder-undo", "builder-live-copy", "builder-live-undo")) {
+            assertTrue(GuideBuilderE2EProbe.startupSettingsMatch(scenario, false), scenario);
+            assertTrue(GuideBuilderE2EProbe.startupSettingsMatch(scenario, true), scenario);
+        }
+    }
+    @Test void serverJavaDenialRemainsIndependentOfBuilderWrites() {
+        var denied = new JsonObject(); denied.addProperty("status", "failure"); denied.addProperty("code", "javascript_error");
+        denied.addProperty("message", "ReferenceError: \"Java\" is not defined. (openallay-agent.js#1)");
+        assertTrue(GuideBuilderE2EProbe.toolContract("builder-server-denied", request(denied)));
+        denied.addProperty("message", "Error: unknown block");
+        assertFalse(GuideBuilderE2EProbe.toolContract("builder-server-denied", request(denied)));
+        assertFalse(GuideBuilderE2EProbe.toolContract("builder-server-denied", request("failure", "javascript_error", null)));
+        assertFalse(GuideBuilderE2EProbe.toolContract("builder-server-denied", request("success", null, "builder_server_denied")));
+        assertFalse(GuideBuilderE2EProbe.toolContract("builder-server-denied", request("failure", "permission_denied", null)));
         assertFalse(GuideBuilderE2EProbe.toolContract("builder-acceptance", request("success", null, "other_scenario")));
     }
+    @Test void scalarReceiptParserRequiresSuccessCompleteStringAndStrictSingleObject() {
+        var expected = receipt("builder_restricted", "completed");
+        expected.addProperty("readback", "minecraft:gold_block");
+        var good = normalized(expected);
+        assertEquals(expected, GuideBuilderE2EProbe.builderReceipt(request(good)));
+        for (String json : List.of("not JSON", "[]", "null", "{} {}", "{scenario:'builder_restricted'}",
+                "{\"scenario\":\"builder_restricted\",\"scenario\":\"builder_restricted\"}",
+                "{\"status\":TRUE}", "{/*comment*/\"scenario\":\"builder_restricted\"}")) {
+            var invalid = good.deepCopy(); invalid.getAsJsonObject("value").addProperty("preview", json);
+            assertThrows(IllegalArgumentException.class, () -> GuideBuilderE2EProbe.builderReceipt(request(invalid)), json);
+            assertFalse(GuideBuilderE2EProbe.toolContract("builder-restricted", request(invalid)), json);
+        }
+        var oldObjectPreview = good.deepCopy(); oldObjectPreview.getAsJsonObject("value").add("preview", expected);
+        var incomplete = good.deepCopy(); incomplete.getAsJsonObject("value").addProperty("complete", false);
+        var stringComplete = good.deepCopy(); stringComplete.getAsJsonObject("value").addProperty("complete", "true");
+        var wrongType = good.deepCopy(); wrongType.getAsJsonObject("value").addProperty("resultType", "object");
+        var absentType = good.deepCopy(); absentType.getAsJsonObject("value").remove("resultType");
+        var failed = good.deepCopy(); failed.addProperty("status", "failure");
+        for (var invalid : List.of(oldObjectPreview, incomplete, stringComplete, wrongType, absentType, failed)) {
+            assertThrows(IllegalArgumentException.class, () -> GuideBuilderE2EProbe.builderReceipt(request(invalid)));
+            assertFalse(GuideBuilderE2EProbe.toolContract("builder-restricted", request(invalid)));
+        }
+    }
+    @Test void completeAcceptanceReceiptKeepsNineOperationIdsTemplateAndLifecycle() {
+        var receipt = acceptanceReceipt();
+        var parsed = GuideBuilderE2EProbe.builderReceipt(request(normalized(receipt)));
+        assertEquals(receipt, parsed);
+        assertEquals(9, parsed.getAsJsonArray("operations").size());
+        assertTrue(GuideBuilderE2EProbe.toolContract("builder-acceptance", request(normalized(receipt))));
+        for (int index = 0; index < 9; index++) {
+            var altered = receipt.deepCopy(); altered.getAsJsonArray("operations").get(index).getAsJsonObject().remove("operationId");
+            assertFalse(GuideBuilderE2EProbe.toolContract("builder-acceptance", request(normalized(altered))));
+        }
+        var duplicate = receipt.deepCopy(); duplicate.getAsJsonArray("operations").get(1).getAsJsonObject().addProperty("operationId", "unit-house");
+        assertFalse(GuideBuilderE2EProbe.toolContract("builder-acceptance", request(normalized(duplicate))));
+        var absentTemplate = receipt.deepCopy(); absentTemplate.getAsJsonObject("templates").remove("saved");
+        assertFalse(GuideBuilderE2EProbe.toolContract("builder-acceptance", request(normalized(absentTemplate))));
+        var brokenLifecycle = receipt.deepCopy(); brokenLifecycle.getAsJsonObject("lifecycle").getAsJsonObject("cancel").addProperty("deniedAfterCancel", false);
+        assertFalse(GuideBuilderE2EProbe.toolContract("builder-acceptance", request(normalized(brokenLifecycle))));
+    }
     @Test void compositeLifecycleRequiresPartialCancellationAndExactUndoConflict() {
-        var preview = com.google.gson.JsonParser.parseString("""
-                {"lifecycle":{"partial":{"failure":"unknown native block","status":{"state":"failed-partial"}},
-                 "cancel":{"deniedAfterCancel":true,"failure":"session closed","status":{"state":"cancelled-partial"}},
-                 "undo":{"result":{"restored":1,"conflicts":[{"x":1}],"uncertain":[]},"status":{"state":"completed"}}}}
-                """).getAsJsonObject();
+        var preview = acceptanceReceipt();
         assertTrue(GuideBuilderE2EProbe.compositeLifecycle(preview));
         preview.getAsJsonObject("lifecycle").getAsJsonObject("cancel").addProperty("deniedAfterCancel", false);
         assertFalse(GuideBuilderE2EProbe.compositeLifecycle(preview));
         assertFalse(GuideBuilderE2EProbe.compositeLifecycle(new JsonObject()));
+        for (String key : List.of("originalStatus", "interventionStatus", "status")) {
+            var missingId = acceptanceReceipt(); missingId.getAsJsonObject("lifecycle").getAsJsonObject("undo").getAsJsonObject(key).remove("operationId");
+            assertFalse(GuideBuilderE2EProbe.compositeLifecycle(missingId), key);
+        }
     }
-    @Test void reloadRequiresExactPriorIdsAndStatusesNotOnlyOperationCount() {
-        var retained = com.google.gson.JsonParser.parseString("""
-                {"operations":[{"operationId":"source"}],"templates":{"saved":["template"]},
-                 "lifecycle":{"partial":{"status":{"operationId":"partial"}},
-                 "cancel":{"status":{"operationId":"cancel"}},"undo":{"originalStatus":{"operationId":"original"},
-                 "interventionStatus":{"operationId":"intervention"},"status":{"operationId":"undo"}}}}
-                """).getAsJsonObject();
-        var reload = com.google.gson.JsonParser.parseString("""
-                {"listed":["template"],"operations":[{"id":"source","status":"completed"},
-                 {"id":"partial","status":"failed"},{"id":"cancel","status":"cancelled"},
-                 {"id":"original","status":"completed"},{"id":"intervention","status":"completed"},
-                 {"id":"undo","status":"completed"}]}
-                """).getAsJsonObject();
+    @Test void reloadRequiresAllNinePriorIdsLifecycleStatusesAndSavedTemplates() {
+        var retained = GuideBuilderE2EProbe.builderReceipt(request(normalized(acceptanceReceipt())));
+        var reload = receipt("builder_reload", "completed");
+        var listed = new com.google.gson.JsonArray(); listed.add("openallay_e2e_builder_native"); reload.add("listed", listed);
+        var operations = new com.google.gson.JsonArray(); reload.add("operations", operations);
+        for (var value : retained.getAsJsonArray("operations")) {
+            var row = new JsonObject(); row.addProperty("id", value.getAsJsonObject().get("operationId").getAsString());
+            row.addProperty("status", "completed"); operations.add(row);
+        }
+        for (String id : List.of("partial", "cancel", "original", "intervention", "undo")) {
+            var row = new JsonObject(); row.addProperty("id", "unit-" + id);
+            row.addProperty("status", id.equals("partial") ? "failed" : id.equals("cancel") ? "cancelled" : "completed"); operations.add(row);
+        }
         assertTrue(GuideBuilderE2EProbe.persistedOperationsMatch(retained, reload));
-        reload.getAsJsonArray("operations").get(1).getAsJsonObject().addProperty("status", "completed");
-        assertFalse(GuideBuilderE2EProbe.persistedOperationsMatch(retained, reload));
+        for (int index = 0; index < operations.size(); index++) {
+            var altered = reload.deepCopy(); altered.getAsJsonArray("operations").remove(index);
+            assertFalse(GuideBuilderE2EProbe.persistedOperationsMatch(retained, altered), "missing row " + index);
+        }
+        var wrongStatus = reload.deepCopy(); wrongStatus.getAsJsonArray("operations").get(9).getAsJsonObject().addProperty("status", "completed");
+        assertFalse(GuideBuilderE2EProbe.persistedOperationsMatch(retained, wrongStatus));
+        var duplicate = reload.deepCopy(); duplicate.getAsJsonArray("operations").add(duplicate.getAsJsonArray("operations").get(0).deepCopy());
+        assertFalse(GuideBuilderE2EProbe.persistedOperationsMatch(retained, duplicate));
+        var missingTemplate = reload.deepCopy(); missingTemplate.getAsJsonArray("listed").remove(0);
+        assertFalse(GuideBuilderE2EProbe.persistedOperationsMatch(retained, missingTemplate));
+        var incompleteRetained = retained.deepCopy(); incompleteRetained.getAsJsonArray("operations").remove(0);
+        assertFalse(GuideBuilderE2EProbe.persistedOperationsMatch(incompleteRetained, reload));
         assertFalse(GuideBuilderE2EProbe.persistedOperationsMatch(retained, new JsonObject()));
     }
     @Test void reloadUsesPassedRetainedOriginDespiteMovedPlayerAndRejectsForeignEvidence() {
@@ -79,17 +154,6 @@ final class GuideBuilderE2EProbeTest {
         proof.addProperty("outcome", "FAILED");
         assertThrows(IllegalStateException.class, () -> GuideBuilderE2EProbe.retainedOrigin(moved, original, proof, "openallay-builder-test"));
     }
-    @Test void frozenTimingRejectsMissingProofOrAnyNativeUseBeforeRevocation() {
-        var revoked = java.time.Instant.parse("2026-09-30T12:00:00Z");
-        assertTrue(GuideBuilderE2EProbe.frozenNativeTiming(revoked, revoked.plusMillis(1), revoked.plusMillis(1), false));
-        assertFalse(GuideBuilderE2EProbe.frozenNativeTiming(revoked, revoked.minusMillis(1), revoked.plusMillis(1), false));
-        assertFalse(GuideBuilderE2EProbe.frozenNativeTiming(revoked, revoked.plusMillis(1), revoked.plusMillis(1), true));
-        assertFalse(GuideBuilderE2EProbe.frozenNativeTiming(revoked, null, revoked.plusMillis(1), false));
-        assertFalse(GuideBuilderE2EProbe.frozenNativeTiming(null, revoked, revoked.plusMillis(1), false));
-        assertFalse(GuideBuilderE2EProbe.frozenNativeTiming(revoked, revoked.plusMillis(1), null, false));
-        assertFalse(GuideBuilderE2EProbe.frozenNativeTiming(revoked, revoked.plusMillis(1), revoked.minusMillis(1), false));
-        assertTrue(GuideBuilderE2EProbe.frozenNativeTiming(revoked, revoked, revoked, false));
-    }
     @Test void liveCopyRequiresRealRotatedNativeLandmarksBeforeUndo() {
         var checks = GuideBuilderE2EProbe.landmarks("builder-live-copy");
         var door = checks.stream().filter(value -> value.name().equals("live-copy-door-lower")).findFirst().orElseThrow();
@@ -104,15 +168,49 @@ final class GuideBuilderE2EProbeTest {
         assertEquals(25, checks.stream().filter(value -> value.name().startsWith("live-copy-ground-")).count());
         assertTrue(GuideBuilderE2EProbe.enabled("builder-live-copy"));
     }
-    private static GuideRequestSnapshot request(String status, String code, String scenario) {
-        JsonObject normalized = new JsonObject(); normalized.addProperty("status", status);
-        if (code != null) normalized.addProperty("code", code);
-        if (scenario != null) {
-            var preview = new JsonObject(); preview.addProperty("scenario", scenario);
-            var output = new JsonObject(); output.add("preview", preview); normalized.add("value", output);
+    private static JsonObject receipt(String scenario, String state) {
+        var receipt = new JsonObject(); receipt.addProperty("scenario", scenario);
+        var status = new JsonObject(); status.addProperty("state", state); receipt.add("status", status);
+        return receipt;
+    }
+    private static JsonObject acceptanceReceipt() {
+        var receipt = receipt("builder_acceptance", "completed");
+        var operations = new com.google.gson.JsonArray(); receipt.add("operations", operations);
+        for (String name : List.of("house", "skyscraper", "cottage", "windmill", "farm", "dock", "geometry_decoration", "terrain", "templates")) {
+            var row = new JsonObject(); row.addProperty("name", name); row.addProperty("operationId", "unit-" + name);
+            row.addProperty("state", "completed"); operations.add(row);
         }
+        receipt.add("actions", com.google.gson.JsonParser.parseString("""
+                [{"name":"terrain_path","status":"built"},{"name":"terrain_smart_path","status":"built"}]
+                """));
+        receipt.add("templates", com.google.gson.JsonParser.parseString("""
+                {"listed":true,"saved":["openallay_e2e_builder_native"]}
+                """));
+        receipt.add("lifecycle", com.google.gson.JsonParser.parseString("""
+                {"partial":{"failure":"unknown native block","status":{"state":"failed-partial","operationId":"unit-partial"}},
+                 "cancel":{"deniedAfterCancel":true,"failure":"session closed","status":{"state":"cancelled-partial","operationId":"unit-cancel"}},
+                 "undo":{"result":{"restored":1,"conflicts":[{"x":1}],"uncertain":[]},
+                 "originalStatus":{"state":"completed","operationId":"unit-original"},
+                 "interventionStatus":{"state":"completed","operationId":"unit-intervention"},
+                 "status":{"state":"completed","operationId":"unit-undo"}}}
+                """));
+        return receipt;
+    }
+    private static JsonObject normalized(JsonObject receipt) {
+        var normalized = new JsonObject(); normalized.addProperty("status", "success");
+        var output = new JsonObject(); output.addProperty("resultType", "string"); output.addProperty("complete", true);
+        output.addProperty("preview", receipt.toString()); normalized.add("value", output);
+        return normalized;
+    }
+    private static GuideRequestSnapshot request(String status, String code, String scenario) {
+        var normalized = scenario == null ? new JsonObject() : normalized(receipt(scenario, "completed"));
+        normalized.addProperty("status", status);
+        if (code != null) normalized.addProperty("code", code);
+        return request(normalized);
+    }
+    private static GuideRequestSnapshot request(JsonObject normalized) {
         var tool = new GuideToolActivity("fixture-call", 0, "openallay:run_javascript",
-                status.equals("success") ? GuideToolStatus.SUCCEEDED : GuideToolStatus.FAILED,
+                normalized.get("status").getAsString().equals("success") ? GuideToolStatus.SUCCEEDED : GuideToolStatus.FAILED,
                 normalized, List.of(), List.of());
         Instant now = Instant.now();
         return new GuideRequestSnapshot(UUID.randomUUID(), "e2e", GuideTopology.CLIENT_LOCAL,
