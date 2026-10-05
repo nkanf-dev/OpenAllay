@@ -271,7 +271,7 @@ final class GuideBuilderE2EProbeTest {
                     .forEach(entry -> descriptor.append(entry.getKey()).append('=').append(entry.getValue()).append(';'));
             descriptor.append('\n');
         }
-        assertEquals("65b919d96623c3fb5a2252af60b36ff53ccba7b04d7c4da092140ae1bf897ca1", java.util.HexFormat.of().formatHex(
+        assertEquals("3c57b2038c213c6b3d7622a258411e3bb8464b88a4e2c45c31b02653a11f207c", java.util.HexFormat.of().formatHex(
                 java.security.MessageDigest.getInstance("SHA-256").digest(descriptor.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8))));
 
         for (var expected : checks) {
