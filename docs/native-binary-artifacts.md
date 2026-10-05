@@ -1,123 +1,91 @@
 # Native binary release artifacts
 
-Publish one JAR per loader and verified native-binary Minecraft interval, not
-one JAR per minor target. Exact external pins remain in
-`gradle/minecraft-targets/<target>.properties`. Native source families select
-source bindings; they do not declare binary compatibility.
+## Published 0.4.2 files
 
-## Current boundary
+[OpenAllay 0.4.2](https://github.com/nkanf-dev/OpenAllay/releases/tag/v0.4.2)
+publishes **31 JARs** covering **23 Minecraft versions** and **46 version/loader
+pairs**. Choose the file for your exact Minecraft version and loader. Fabric
+requires the matching Fabric API.
 
-`gradle/minecraft-artifacts.json` retains only accepted singleton `26.2` families
-for Fabric and NeoForge. Development still defaults to `26.2`. Existing names
-remain `openallay-fabric-26.2-{version}.jar` and
-`openallay-neoforge-26.2-{version}.jar`. This source packet does not rebuild,
-replace, relabel, or republish immutable v0.4.1 artifacts. It does not change the
-published Builder contract. Development Builder 0.4.0 declares exact candidate
-target/loader pairs; those declarations do not widen accepted binary families.
+Minecraft 26.2 / Java 25 is the development mainline. Release files also cover
+older versions and 26.3. Their native dependency and Java pins live in
+`gradle/minecraft-targets/<target>.properties`.
 
-Candidate intervals are explicitly nonpublishing. The listed sets are research
-inputs from source reuse, not promised final splits. Older targets remain source
-candidates pending compilation and game acceptance; this phase ends at 1.20.1.
-26.3 is also not admitted. The selector refuses every target without a unique
-accepted family. It has no admission command.
+| Exact Minecraft versions | Loader | Java | Published JARs |
+| --- | --- | --- | --- |
+| `1.20.1` | Fabric + NeoForge | 17 | `openallay-fabric-1.20.1-0.4.2.jar`<br>`openallay-neoforge-1.20.1-0.4.2.jar` |
+| `1.20.2` | Fabric + NeoForge | 17 | `openallay-fabric-1.20.2-0.4.2.jar`<br>`openallay-neoforge-1.20.2-0.4.2.jar` |
+| `1.20.3`, `1.20.4` | Fabric | 17 | `openallay-fabric-1.20.3-through-1.20.4-0.4.2.jar` |
+| `1.20.3` | NeoForge | 17 | `openallay-neoforge-1.20.3-0.4.2.jar` |
+| `1.20.4` | NeoForge | 17 | `openallay-neoforge-1.20.4-0.4.2.jar` |
+| `1.20.5`, `1.20.6` | Fabric + NeoForge | 21 | `openallay-fabric-1.20.5-through-1.20.6-0.4.2.jar`<br>`openallay-neoforge-1.20.5-through-1.20.6-0.4.2.jar` |
+| `1.21`, `1.21.1` | Fabric + NeoForge | 21 | `openallay-fabric-1.21-through-1.21.1-0.4.2.jar`<br>`openallay-neoforge-1.21-through-1.21.1-0.4.2.jar` |
+| `1.21.2`, `1.21.3` | Fabric + NeoForge | 21 | `openallay-fabric-1.21.2-through-1.21.3-0.4.2.jar`<br>`openallay-neoforge-1.21.2-through-1.21.3-0.4.2.jar` |
+| `1.21.4` | Fabric + NeoForge | 21 | `openallay-fabric-1.21.4-0.4.2.jar`<br>`openallay-neoforge-1.21.4-0.4.2.jar` |
+| `1.21.5` | Fabric + NeoForge | 21 | `openallay-fabric-1.21.5-0.4.2.jar`<br>`openallay-neoforge-1.21.5-0.4.2.jar` |
+| `1.21.6` | Fabric + NeoForge | 21 | `openallay-fabric-1.21.6-0.4.2.jar`<br>`openallay-neoforge-1.21.6-0.4.2.jar` |
+| `1.21.7`, `1.21.8` | Fabric + NeoForge | 21 | `openallay-fabric-1.21.7-through-1.21.8-0.4.2.jar`<br>`openallay-neoforge-1.21.7-through-1.21.8-0.4.2.jar` |
+| `1.21.9`, `1.21.10` | Fabric + NeoForge | 21 | `openallay-fabric-1.21.9-through-1.21.10-0.4.2.jar`<br>`openallay-neoforge-1.21.9-through-1.21.10-0.4.2.jar` |
+| `1.21.11` | Fabric + NeoForge | 21 | `openallay-fabric-1.21.11-0.4.2.jar`<br>`openallay-neoforge-1.21.11-0.4.2.jar` |
+| `26.1`, `26.1.1`, `26.1.2` | Fabric + NeoForge | 25 | `openallay-fabric-26.1-through-26.1.2-0.4.2.jar`<br>`openallay-neoforge-26.1-through-26.1.2-0.4.2.jar` |
+| `26.2` | Fabric + NeoForge | 25 | `openallay-fabric-26.2-0.4.2.jar`<br>`openallay-neoforge-26.2-0.4.2.jar` |
+| `26.3` | Fabric + NeoForge | 25 | `openallay-fabric-26.3-0.4.2.jar`<br>`openallay-neoforge-26.3-0.4.2.jar` |
 
-Prefer the oldest common retained public native API. Split only at a demonstrated
-native/mapping/Mixin/loader/Java/fixed-dependency break. Do not widen support from
-source families or signatures alone. Share the feature engine and universal
-Builder. Ship one selected native adapter, not all target implementations or a
-reflective runtime dispatcher. Exact loader and dependency pins stay in target
-profiles; this catalog does not invent third-party compatibility ranges.
+Fabric 1.20.3–1.20.4 uses one verified file. NeoForge uses separate files for
+1.20.3 and 1.20.4 because their loader SPI has a binary API boundary. The other
+multi-version files in the table passed actual game checks with the same JAR
+on every listed version.
 
-## Small CLI
+`gradle/minecraft-artifacts.json` is the source catalog for these accepted
+families. Each family owns its loader, build target, supported targets and
+filename. `targetOrder` lists every exact supported version. The catalog rejects
+overlapping families, gaps, unsafe names and duplicate identities. Pending
+candidates remain separate from the published families.
 
-Run from the repository root with Python 3.9 or newer, using only its standard
-library. The staged packet root can run the same commands without a repo copy.
+## Source builds
 
-```text
+The feature engine, public Extension SDK and universal Builder remain shared.
+`adapters/minecraft` and the loader modules select their native source bindings
+through the ordered roots in `gradle/minecraft-source-family.gradle`. Each
+selected profile supplies the actual Minecraft, loader and Java toolchain pins.
+
+For example, resolve a published file from the repository root:
+
+```bash
 python3 -B scripts/minecraft-artifacts.py validate
-python3 -B scripts/minecraft-artifacts.py resolve --loader fabric --version 0.4.2
-python3 -B scripts/minecraft-artifacts.py resolve --loader neoforge --target 26.2
-python3 -B -m unittest discover -s scripts -p 'test_minecraft_artifacts.py' -v
+python3 -B scripts/minecraft-artifacts.py resolve --loader fabric --target 1.20.5 --version 0.4.2
+python3 -B scripts/minecraft-artifacts.py resolve --loader neoforge --target 26.2 --version 0.4.2
 ```
 
-Resolution prints family `id`, `loader`, `buildTarget`, `supportedTargets`, safe
-`filenameTemplate`, and optionally `filename`. It also prints a closed Minecraft
-Maven range and equivalent Fabric predicate from the exact accepted endpoints.
-For the current singleton these are `[26.2]` and `26.2`. These are future-build
-metadata inputs, not claims about the bytes or metadata of existing v0.4.1 JARs.
+Resolution prints the exact family and supported versions, the filename and the
+Minecraft predicate used by that file. Development still defaults to 26.2.
 
-`targetOrder` is the explicit chronological list of stable external Minecraft
-releases in scope. Numeric components order `1.21.9` before `1.21.10`. `1.21` and
-`1.21.0` cannot become separate aliases. Every known intermediate target must be
-included in an interval. Keep that external release list complete when changing
-families. Validation rejects unknown/missing fields, duplicate JSON keys, unsafe
-names, duplicate/overlapping accepted families, target gaps, and publishing
-candidates. The same exact-shape validation applies to receipts. No internal
-schema version, migration, or new framework is introduced.
+## Original-byte publication
 
-## Bounded receipt consistency, not acceptance
+The 0.4.2 release publishes the original JARs that passed acceptance. The release
+job resolves `distribution/accepted-release-artifacts.inputs.json` against the
+original GitHub artifact IDs, archive digests, source commits, jobs and attempts.
+It downloads each original archive once, stages unchanged JARs, and retains the
+original runtime summaries and official runtime profiles.
 
-Build a candidate artifact once. Keep the original immutable path and SHA256.
-Verify those SAME bytes on every included target, including intermediates. A
-rebuild at the same name, identical bytes at another path, wrong loader, absent
-runtime run, or altered evidence must not silently qualify.
+The publication helper binds those proofs to the final release paths. Every
+accepted target must have a successful actual runtime summary for the selected
+JAR hash. Minecraft 26.2 also retains the complete functional evidence
+composition, including Builder's original-world reload and persistence checks.
+Different file families keep their original build-source identities; the release
+tag identifies the release decision.
 
-A private, untracked receipt has exactly these fields:
+The job generates `SHA256SUMS`, `accepted-originals.json` and
+`release-publication-records.json`, then sends the same files to the existing
+GitHub and Modrinth publishers. It runs no compiler or game acceptance matrix.
+Future changes only rebuild or recheck affected files and native boundaries.
 
-- `familyId`, `loader`: the selected accepted or candidate family identity.
-- `artifactPath`: an absolute canonical path to that one original JAR.
-- `artifactSha256`: its lowercase SHA256.
-- `runs`: one entry for each exact target, with no duplicates or extras.
-- Each run has exactly `target`, `loader`, `artifactPath`, `artifactSha256`,
-  `kind`, `outcome`, `evidencePath`, and `evidenceSha256`.
-- The loader/path/SHA fields must match the original JAR. `kind` must be
-  `runtime`, and `outcome` must be `passed`. Compilation or preparation alone
-  is refused. `evidencePath` is a unique safe relative file under the receipt's
-  directory, without symlinks; `evidenceSha256` hashes the retained evidence.
+## Retained per-file receipts
 
-Run `verify-receipt --family FAMILY_ID --loader LOADER --receipt PRIVATE_JSON
---artifact ABSOLUTE_JAR --sha256 ACTUAL_SHA256` with the actual values. The
-command reads files only. Limits are 1 MiB per JSON file, 512 MiB per JAR, 16 MiB
-per evidence file, and at most 128 known targets/families. It rehashes the actual
-artifact before and after checking the per-target receipts. Absolute machine
-paths never belong in the checked-in catalog or this source packet.
+Each final-path receipt contains `familyId`, `loader`, `artifactPath`,
+`artifactSha256` and one `runs` entry for every exact supported target. Each run
+binds its loader, original JAR hash and retained evidence hash. Original archive
+and runtime evidence stay intact alongside the publication selection.
 
-The output says `receiptConsistency: passed` and
-`runtimeAcceptance: requires-external-review`. A declared `runtime` field and
-hashed arbitrary text are NOT proof of a game launch, linkage, mappings,
-Mixins, or correct behavior. This generic reader does not infer proof type from
-a placeholder, file name, or successful compilation. A trusted native acceptance
-runner and reviewer must establish those facts from real retained run evidence.
-The offline unit tests intentionally use synthetic bytes and demonstrate only
-shape, selection, and integrity refusal. They do not establish runtime support.
-
-Receipt inspection works for candidates without publishing them. Moving a
-reviewed interval into `acceptedFamilies` is an explicit source change after
-real acceptance; remove its matching candidate entry. Newly listed families
-also require the full receipt/artifact/SHA trio during `resolve`. Catalog edits
-or receipt inspection alone cannot silently admit ranges. The existing 26.2
-singleton selection retains its current baseline, not newly fabricated receipts.
-
-## Root wiring route (not applied here)
-
-1. Add these four files only. Run the offline tests. Keep current release gates.
-2. Have release callers resolve one target+loader into one family. Build only
-   `buildTarget` once with the current `-PminecraftTarget=...` interface. Do not
-   add a per-minor build/publication matrix. Development pin selection stays exact.
-3. For future builds, feed the family filename and closed Minecraft range/Fabric
-   predicate into existing archive/resource expansion. Preserve current 26.2
-   names and do not modify delivered v0.4.1 bytes. Target profiles still own
-   exact external pins; existing source-family ownership guards stay in force.
-4. Verify the one original artifact on ALL exact `supportedTargets` with actual
-   native game runs and retained evidence. Keep existing loader/metadata,
-   package, Builder, linkage and behavior acceptance checks; do not use this
-   integrity reader as a replacement. Loader ranges need their own evidence.
-5. Before any publish/network call, require reviewed runtime acceptance,
-   `verify-receipt`, family range metadata checks, and existing distribution
-   gates against those same bytes. Publish each loader/family once and pass the
-   exact target list to external release metadata. No range-admission bypass.
-
-Interface choice: closed range derived from accepted exact endpoints (chosen)
-is one range authority. Duplicating legacy metadata ranges in the catalog
-(rejected) would add a second authority and risk treating legacy syntax as new
-binary proof. Existing Gradle, workflows and release scripts are unchanged.
+Published v0.4.1 tags and files remain unchanged. Product 0.4.2, public Extension
+API 0.4.0 and bundled Builder 0.4.0 keep independent version coordinates.

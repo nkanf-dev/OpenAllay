@@ -22,10 +22,20 @@ to work through the task and bring useful answers back into the game.
 
 ## Quick start
 
-OpenAllay **0.4.2** targets **Minecraft 26.2**, **Java 25**, and **Fabric or
-NeoForge**. Use [GitHub Releases](https://github.com/nkanf-dev/OpenAllay/releases)
-for published downloads and choose the JAR for your loader. Fabric also needs
-the matching **Fabric API**.
+OpenAllay **0.4.2** supports **23 Minecraft versions from 1.20.1 through 26.3**
+on **Fabric and NeoForge**. Download the JAR that lists your exact Minecraft
+version and loader from [GitHub Releases](https://github.com/nkanf-dev/OpenAllay/releases/tag/v0.4.2).
+Some files cover multiple versions. Fabric also needs the matching **Fabric API**.
+
+| Minecraft version | Java version |
+| --- | --- |
+| 1.20.1–1.20.4 | 17 |
+| 1.20.5–1.20.6 and 1.21–1.21.11 | 21 |
+| 26.1, 26.1.1, 26.1.2, 26.2, 26.3 | 25 |
+
+Minecraft **26.2 / Java 25** remains the development mainline. See the
+[release compatibility table](docs/native-binary-artifacts.md#published-042-files)
+for the exact versions covered by each download.
 
 1. Put the JAR in your instance's `mods` folder and start Minecraft.
 2. Enter a world and press **K**, or run `/guide`.
@@ -38,7 +48,7 @@ the matching **Fabric API**.
 
 Try: **“How do I make this item, and do I have the ingredients?”**
 
-For Fabric modpacks with Architectury, use **21.0.4** for working text input.
+For **Minecraft 26.2** Fabric modpacks with Architectury, use **21.0.4** for working text input.
 Versions **21.0.2 and earlier** prevent text input in the OpenAllay screen.
 Architectury is not required.
 
@@ -75,12 +85,11 @@ To start building:
 
 1. Open a **single-player world** and select a model profile configured on your
    client, rather than a server-provided model.
-2. In **Settings → Extensions**, select **Minecraft Builder**. Under
-   **Extension native actions**, enable **Builder world writes**.
+2. In **Settings → Extensions**, enable **Minecraft Builder**.
 3. Ask for a build, for example: “Build a small stone tower beside me.”
 
-The world-write setting is off by default and belongs to Builder alone.
-**You do not need unrestricted JavaScript or JVM access.** Builder works in
+Enabling Builder enables its building and world-write operations.
+**You do not need full-access JavaScript or JVM access.** Builder works in
 survival and creative worlds; it does not write to ordinary remote servers.
 Undo covers recorded block changes, not every side effect in the world.
 
@@ -185,13 +194,14 @@ OpenAllay is free and open source. Model providers may charge for API use.
 
 | Setup | What to expect |
 | --- | --- |
-| **Single-player** | Explore your instance and use Builder with its world-write setting enabled. |
+| **Single-player** | Explore your instance and build with Minecraft Builder enabled. |
 | **Ordinary multiplayer server** | Install OpenAllay on your client only. Ask about the game data visible to your client; the server does not need OpenAllay. Builder world edits are not available here. |
 | **Server with OpenAllay** | The server may offer a shared model and additional server-side capabilities. Shared models appear automatically in **Models**, separately from your own profiles. |
 
 Optional **experimental game commands** can be enabled in **Settings →
 Extensions**. They use your normal Minecraft identity and command permissions,
-including available mod commands. This is separate from Builder world writes.
+including available mod commands. Full-access JavaScript includes commands and
+enabled Extension operations. Minecraft server rules and permissions still apply.
 
 ## Community and development
 

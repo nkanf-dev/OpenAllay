@@ -22,11 +22,20 @@
 
 ## 快速上手
 
-OpenAllay **0.4.2** 面向 **Minecraft 26.2**，需要 **Java 25**，支持
-**Fabric 和 NeoForge**。请在
-[GitHub Releases](https://github.com/nkanf-dev/OpenAllay/releases)
-查看已发布的下载包，并选择对应加载器的 JAR。Fabric 还需要安装匹配的
-**Fabric API**。
+OpenAllay **0.4.2** 支持 **从 Minecraft 1.20.1 到 26.3 的 23 个版本**，
+适用于 **Fabric 和 NeoForge**。请在
+[GitHub Releases](https://github.com/nkanf-dev/OpenAllay/releases/tag/v0.4.2)
+选择标有你的准确 Minecraft 版本及加载器的 JAR。部分文件可用于多个版本。
+Fabric 还需要安装匹配的 **Fabric API**。
+
+| Minecraft 版本 | Java 版本 |
+| --- | --- |
+| 1.20.1–1.20.4 | 17 |
+| 1.20.5–1.20.6，以及 1.21–1.21.11 | 21 |
+| 26.1、26.1.1、26.1.2、26.2、26.3 | 25 |
+
+**Minecraft 26.2 / Java 25** 仍是开发主线。各下载文件覆盖的准确版本，见
+[发布兼容表](docs/native-binary-artifacts.md#published-042-files)。
 
 1. 把 JAR 放入游戏实例的 `mods` 文件夹，启动 Minecraft。
 2. 进入世界，按 **K**，或输入 `/guide`。
@@ -39,7 +48,7 @@ OpenAllay **0.4.2** 面向 **Minecraft 26.2**，需要 **Java 25**，支持
 
 不妨先问：**“这个物品怎么合成？我背包里的材料够吗？”**
 
-如果 Fabric 整合包包含 Architectury，请使用 **21.0.4**。
+如果 **Minecraft 26.2** 的 Fabric 整合包包含 Architectury，请使用 **21.0.4**。
 **21.0.2 及更早版本**会导致文字输入失效。Architectury 不是必需项。
 
 ## 探索你的整合包
@@ -71,12 +80,11 @@ Fabric 和 NeoForge 下载包都包含 **Minecraft Builder** 扩展。
 开始建造只需：
 
 1. 进入**单人世界**，选择在自己客户端配置的模型，而不是服务器提供的共享模型。
-2. 打开**设置 → 扩展**，选择 **Minecraft Builder**，在**扩展原生操作**中
-   启用 **Builder world writes（Builder 世界写入）**。
+2. 在**设置 → 扩展**中启用 **Minecraft Builder**。
 3. 提出建造需求，例如：“在我旁边建一座小石塔。”
 
-世界写入默认关闭，只为 Builder 单独开启。
-**不需要启用无限制 JavaScript 或 JVM 访问。** Builder 支持生存与创造世界，
+启用 Builder 即可使用它的建造和世界写入操作。
+**不需要启用完整访问 JavaScript 或 JVM 访问。** Builder 支持生存与创造世界，
 不向普通远程服务器写入方块。撤销针对记录下来的方块改动，不是整个世界的完整回滚。
 
 Builder 在
@@ -175,13 +183,13 @@ OpenAllay 免费且开源，模型服务商可能会收取 API 使用费用。
 
 | 使用环境 | 可以做什么 |
 | --- | --- |
-| **单人游戏** | 探索当前游戏实例；启用世界写入后使用 Builder 建造。 |
+| **单人游戏** | 探索当前游戏实例；启用 Minecraft Builder 后即可建造。 |
 | **普通多人服务器** | 只需在客户端安装 OpenAllay，服务器不必安装。可以查询客户端可见的游戏数据；这里不支持 Builder 世界编辑。 |
 | **安装了 OpenAllay 的服务器** | 服务器可以提供共享模型和额外的服务端能力。共享模型会自动出现在**模型**页面，与自己的配置分开显示。 |
 
 还可以在**设置 → 扩展**中启用可选的**实验性游戏命令**，
 让 OpenAllay 使用你当前 Minecraft 身份已有的命令权限，包括可用的模组命令。
-这与 Builder 世界写入是两项独立能力。
+完整访问 JavaScript 包含命令及已启用扩展的操作。Minecraft 服务端规则和权限仍然适用。
 
 ## 社区与开发
 

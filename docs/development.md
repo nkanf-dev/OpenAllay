@@ -1,8 +1,12 @@
 # Development
 
-OpenAllay 0.4.2 uses Minecraft 26.2 and Java 25 as the feature mainline and
-implements public Extension API 0.4.0. Accepted release intervals are recorded in
-`gradle/minecraft-artifacts.json`. Product and public API versions are independent.
+OpenAllay 0.4.2 publishes 31 JARs for 23 Minecraft versions from 1.20.1 through
+26.3, covering Fabric and NeoForge. The exact download families and Java
+requirements are listed in the [published compatibility table](native-binary-artifacts.md#published-042-files).
+Minecraft 26.2 and Java 25 remain the feature-development mainline, not the only
+release target. Public Extension API 0.4.0 and Builder 0.4.0 have independent
+version coordinates. `gradle/minecraft-artifacts.json` records the accepted
+release families.
 Use the checked-in Gradle wrapper; a system Gradle installation is not needed.
 
 See the [0.4.2 release notes](releases/0.4.2.md) for the current product changes.
@@ -66,7 +70,7 @@ are verified with the same JAR on each target and reviewed before admission.
 
 The development distribution bundles **one universal Builder 0.4.0 JAR** from
 `OpenAllay-Extensions`. The current lock at `distribution/extensions.lock.json`
-pins source `367556f2e5f9baf377532b4bde016dee5dfd7d50` and one artifact path.
+pins source `79935e9ce37d74956d1141835869c343491f7d38` and one artifact path.
 Both loaders contain the same raw resource at
 `META-INF/openallay/bundled-extensions/openallay-builder-universal-0.4.0.jar`.
 Builder is not registered as a Fabric or NeoForge mod. The host supplies public
@@ -708,10 +712,10 @@ authorization. Required-mods compatibility and actual Tool policy remain separat
 See [decision 035](isme/decisions/2026-09-30-035-advisory-extension-skill-requirements.md).
 
 Builder code, Skill, modules, native scheduling, templates, and journals belong
-to `OpenAllay-Extensions`, not core. Development Builder 0.4.0 declares exact
-candidate target/loader pairs, product `[0.4.1,)`, public Extension API
-`[0.4.0,0.5.0)`, and the actual `minecraft:world-access` host feature. These source
-declarations do not establish game acceptance or widen the published binary ranges.
+to `OpenAllay-Extensions`, not core. Bundled Builder 0.4.0 declares the exact
+target/loader pairs, product `[0.4.1,)`, public Extension API `[0.4.0,0.5.0)`,
+and the `minecraft:world-access` host feature. The published file families and
+supported versions are recorded in `gradle/minecraft-artifacts.json`.
 The native adapter uses the active integrated server through invocation-scoped
 `WorldSession` operations. The published v0.4.1 Builder 0.2.1 contract remains historical.
 Enabling Builder includes its building and world-write operations. It does not need
