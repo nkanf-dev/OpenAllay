@@ -19,6 +19,10 @@ public final class GuideNativeMultilineText {
         editor.setValue(value, bypassLineLimit);
     }
 
+    public static void resize(MultiLineEditBox editor, int width, int height, int x, int y) {
+        editor.setRectangle(width, height, x, y);
+    }
+
     public static int defaultTotalPadding() {
         return AbstractTextAreaWidget.DEFAULT_TOTAL_PADDING;
     }

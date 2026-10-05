@@ -84,6 +84,6 @@ final class GuideHudHitCacheContractsTest {
         assertTrue(rebuild.indexOf("getFocused() == composer") < rebuild.indexOf("rebuildWidgets()"));
         assertTrue(rebuild.contains("if (composerFocused && composer.visible && composer.active) setFocused(composer)"));
         assertFalse(rebuild.contains("setFocused(send)"));
-        assertTrue(lite.contains("setInitialFocus() {}"));
+        assertTrue(lite.contains("guideInitialFocus() {}"));
     }
 }

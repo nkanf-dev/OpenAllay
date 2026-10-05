@@ -8,7 +8,6 @@ import java.util.Objects;
 import net.minecraft.client.gui.Font;
 import dev.openallay.client.gui.GuideGraphics;
 import net.minecraft.client.gui.components.toasts.Toast;
-import net.minecraft.client.gui.components.toasts.ToastManager;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 
@@ -48,7 +47,7 @@ public final class GuideNativeToast extends GuideNativeToastBinding implements G
     @Override public Object getToken() { return token; }
     @Override public int width() { return width; }
     @Override public int height() { return HEIGHT; }
-    @Override public int occcupiedSlotCount() { return 2; }
+    @Override protected int guideSlotCount() { return 2; }
     public float yPos(int firstSlotIndex) { return firstSlotIndex * 32.0F; }
 
     private boolean valid() { return !hidden && !finished && notification.fence().valid(); }
@@ -59,12 +58,12 @@ public final class GuideNativeToast extends GuideNativeToastBinding implements G
 
     @Override public void onFinishedRendering() { finished = true; }
 
-    @Override public Visibility getWantedVisibility() {
+    @Override protected Visibility guideWantedVisibility() {
         return valid() && fullyVisible < notification.durationSeconds() * 1000L
                 ? Visibility.SHOW : Visibility.HIDE;
     }
 
-    @Override public void update(ToastManager manager, long fullyVisibleForMs) {
+    @Override protected void updateGuideToast(long fullyVisibleForMs) {
         fullyVisible = fullyVisibleForMs;
     }
 
@@ -110,7 +109,7 @@ public final class GuideNativeToast extends GuideNativeToastBinding implements G
                         ? Component.translatable("screen.openallay.notification.completed") : Component.empty();
         Component title, description, secondary;
         if (!notification.cardPreviews().isEmpty()) {
-            var card = notification.cardPreviews().getFirst();
+            var card = notification.cardPreviews().get(0);
             title = Component.literal(card.title());
             description = Component.literal(card.description());
             secondary = notification.preview().isBlank() ? Component.empty()
@@ -161,7 +160,7 @@ public final class GuideNativeToast extends GuideNativeToastBinding implements G
         if (all.size() <= maximumLines) return all;
         List<FormattedCharSequence> visible = new ArrayList<>(all.subList(0, maximumLines));
         StringBuilder last = new StringBuilder();
-        visible.getLast().accept((index, style, codePoint) -> { last.appendCodePoint(codePoint); return true; });
+        visible.get(visible.size() - 1).accept((index, style, codePoint) -> { last.appendCodePoint(codePoint); return true; });
         String ending = font.substrByWidth(Component.literal(last.toString()), Math.max(1, width - font.width("…"))).getString();
         visible.set(visible.size() - 1, Component.literal(ending + "…").withStyle(text.getStyle()).getVisualOrderText());
         return List.copyOf(visible);
@@ -182,7 +181,7 @@ public final class GuideNativeToast extends GuideNativeToastBinding implements G
         extracted = new ExtractSnapshot(++extractedFrames, notification.connectionGeneration(), notification.actorId(),
                 notification.sessionOwner(), notification.sessionId(), notification.requestId(),
                 cachedDisplay.title().getString(), cachedDisplay.description().getString(), cachedDisplay.hint().getString(),
-                width(), height(), occcupiedSlotCount(), layout.title().size(), layout.description().size());
+                width(), height(), guideSlotCount(), layout.title().size(), layout.description().size());
     }
 
     private static void text(GuideGraphics graphics, Font font,

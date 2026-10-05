@@ -31,7 +31,7 @@ public final class MinecraftSemanticResolver {
             return new ItemPresentation(itemId, fallback, count, ItemStack.EMPTY, false);
         }
         ItemStack stack = new ItemStack(
-                BuiltInRegistries.ITEM.getValue(id),
+                dev.openallay.client.gui.GuideNativeItemLookup.item(id.toString()),
                 (int) Math.min(Integer.MAX_VALUE, Math.max(1, count)));
         String label = suppliedLabel == null || suppliedLabel.isBlank()
                 ? stack.getHoverName().getString() : suppliedLabel;

@@ -105,11 +105,8 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
     private static final int MUTED = OpenAllayWidgetTheme.MUTED_READABLE;
     private static final int ERROR = OpenAllayWidgetTheme.ERROR;
     private static final Gson DEBUG_GSON = new GsonBuilder().setPrettyPrinting().create();
-    private static final Executor EXPORT_EXECUTOR = command -> Thread.ofVirtual()
-            .name("openallay-session-export")
-            .start(command);
-    private static final Executor IMAGE_EXECUTOR = command -> Thread.ofVirtual()
-            .name("openallay-composer-image").start(command);
+    private static final Executor EXPORT_EXECUTOR = command -> dev.openallay.concurrent.NamedThreads.startDaemon("openallay-session-export", command);
+    private static final Executor IMAGE_EXECUTOR = command -> dev.openallay.concurrent.NamedThreads.startDaemon("openallay-composer-image", command);
     private final GuideService service;
     private final ComposerImageDraft composerImages;
     private final GuideClientUiState uiState;
@@ -419,7 +416,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
     }
 
     @Override
-    protected void setInitialFocus() {
+    protected void guideInitialFocus() {
         // init owns first input focus; a native rebuild must not choose a new focused widget.
     }
 
@@ -496,6 +493,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
 
     @Override
     public void tick() {
+        tickGuideWidgets();
         presentationTicks++;
         nativeViews.tick();
         detailNativeViews.tick();
@@ -656,7 +654,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
     }
 
     @Override
-    public boolean mouseScrolled(double x, double y, double scrollX, double scrollY) {
+    public boolean guideMouseScrolled(double x, double y, double scrollX, double scrollY) {
         if (scrollX != 0 || scrollY != 0) invalidateContentHits();
         if (sessionOverlay && sessionBounds().contains(x, y) || layout.sessionRail().contains(x, y)) {
             sessionScroll = Mth.clamp(sessionScroll - (int) Math.signum(scrollY), 0, maximumSessionScroll());
@@ -695,7 +693,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
                     scroll, Math.max(0, layout.transcript().height() - 14));
             return true;
         }
-        return super.mouseScrolled(x, y, scrollX, scrollY);
+        return super.guideMouseScrolled(x, y, scrollX, scrollY);
     }
 
     @Override
@@ -1135,7 +1133,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
             GuideUiLayout.Rect action = new GuideUiLayout.Rect(bounds.right() - Math.min(100, bounds.width()), bounds.y(), Math.min(100, bounds.width()), bounds.height());
             graphics.fill(action.x(), action.y(), action.right(), action.bottom(), panelAltColor());
             boundedHeaderText(graphics, Component.translatable("screen.openallay.voice.pending", pending.size()), action, ACCENT);
-            hits.add(new Hit(action, HitKind.COMPOSER, () -> uiState.applyPendingInsertion(pending.getFirst().id()),
+            hits.add(new Hit(action, HitKind.COMPOSER, () -> uiState.applyPendingInsertion(pending.get(0).id()),
                     "voice:pending", Component.translatable("screen.openallay.voice.pending", pending.size()).getString()));
         }
     }
@@ -1167,18 +1165,27 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
             dev.openallay.guide.GuidePresentationEvent.ContentRef ref, GuideUiRow row) {
         // Tool transcript rows show summaries, not the original tool cards. Never acknowledge those card refs.
         if (ref.contentId().startsWith("tool:")) return false;
-        UUID request = switch (row) {
-            case GuideUiRow.Assistant value -> value.requestId();
-            case GuideUiRow.Tool value -> value.requestId();
-            case GuideUiRow.Status value -> value.requestId();
-            default -> null;
-        };
-        int ordinal = switch (row) {
-            case GuideUiRow.Assistant value -> value.ordinal();
-            case GuideUiRow.Tool value -> value.ordinal();
-            case GuideUiRow.Status ignored -> -1;
-            default -> Integer.MIN_VALUE;
-        };
+        Objects.requireNonNull(row);
+        UUID request;
+        if (row instanceof GuideUiRow.Assistant value) {
+            request = value.requestId();
+        } else if (row instanceof GuideUiRow.Tool value) {
+            request = value.requestId();
+        } else if (row instanceof GuideUiRow.Status value) {
+            request = value.requestId();
+        } else {
+            request = null;
+        }
+        int ordinal;
+        if (row instanceof GuideUiRow.Assistant value) {
+            ordinal = value.ordinal();
+        } else if (row instanceof GuideUiRow.Tool value) {
+            ordinal = value.ordinal();
+        } else if (row instanceof GuideUiRow.Status) {
+            ordinal = -1;
+        } else {
+            ordinal = Integer.MIN_VALUE;
+        }
         if (ref.contentId().equals("reply") && !(row instanceof GuideUiRow.Assistant)) return false;
         if (ref.contentId().startsWith("node:") && !(row instanceof GuideUiRow.Assistant)) return false;
         if (ref.timelineOrdinal() == -1 && !(row instanceof GuideUiRow.Status)) return false;
@@ -1713,13 +1720,14 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
 
     private MinecraftSemanticRenderer.Intent toolSummaryCapsuleIntent(
             dev.openallay.guide.ui.GuideToolSummaryPresenter.Capsule capsule) {
-        return switch (capsule) {
-            case dev.openallay.guide.ui.GuideToolSummaryPresenter.Item value ->
-                    new MinecraftSemanticRenderer.Intent.BrowseRecipes(value.item().itemId());
-            case dev.openallay.guide.ui.GuideToolSummaryPresenter.Recipe value ->
-                    new MinecraftSemanticRenderer.Intent.ExactRecipe(value.recipe().references().stream()
-                            .filter(recipeClient::supportsExact).findFirst().orElse(value.recipe().reference()));
-        };
+        java.util.Objects.requireNonNull(capsule);
+        if (capsule instanceof dev.openallay.guide.ui.GuideToolSummaryPresenter.Item value) {
+            return new MinecraftSemanticRenderer.Intent.BrowseRecipes(value.item().itemId());
+        } else if (capsule instanceof dev.openallay.guide.ui.GuideToolSummaryPresenter.Recipe value) {
+            return new MinecraftSemanticRenderer.Intent.ExactRecipe(value.recipe().references().stream()
+                    .filter(recipeClient::supportsExact).findFirst().orElse(value.recipe().reference()));
+        }
+        throw new IncompatibleClassChangeError();
     }
 
     private Map<String, Object> toolSummaryCapsuleReceipt(
@@ -1848,15 +1856,19 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
     }
 
     private static String rowId(GuideUiRow row) {
-        return switch (row) {
-            case GuideUiRow.Persistence value -> "persistence:" + value.state();
-            case GuideUiRow.User value -> "user:" + value.requestId();
-            case GuideUiRow.Assistant value ->
-                    "assistant:" + value.requestId() + ":" + value.ordinal();
-            case GuideUiRow.Tool value ->
-                    "tool:" + value.requestId() + ":" + value.activity().invocationId();
-            case GuideUiRow.Status value -> "status:" + value.requestId();
-        };
+        java.util.Objects.requireNonNull(row);
+        if (row instanceof GuideUiRow.Persistence value) {
+            return "persistence:" + value.state();
+        } else if (row instanceof GuideUiRow.User value) {
+            return "user:" + value.requestId();
+        } else if (row instanceof GuideUiRow.Assistant value) {
+            return "assistant:" + value.requestId() + ":" + value.ordinal();
+        } else if (row instanceof GuideUiRow.Tool value) {
+            return "tool:" + value.requestId() + ":" + value.activity().invocationId();
+        } else if (row instanceof GuideUiRow.Status value) {
+            return "status:" + value.requestId();
+        }
+        throw new IncompatibleClassChangeError();
     }
 
     private void requestViewportHistory(GuideUiLayout.Rect area) {
@@ -1899,37 +1911,39 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
     }
 
     private void semanticIntent(MinecraftSemanticRenderer.Intent intent) {
-        switch (intent) {
-            case MinecraftSemanticRenderer.Intent.BrowseRecipes value ->
-                    navigate(recipeClient.openRecipes(value.itemId()));
-            case MinecraftSemanticRenderer.Intent.BrowseUsages value ->
-                    navigate(recipeClient.openUsages(value.itemId()));
-            case MinecraftSemanticRenderer.Intent.ExactRecipe value ->
-                    navigate(recipeClient.openExact(value.reference()));
-            case MinecraftSemanticRenderer.Intent.Source value -> openSemanticSource(
-                    value.sourceId(), value.originInvocationId());
-            case MinecraftSemanticRenderer.Intent.Evidence value -> openSemanticSource(
-                    value.evidenceId(), value.originInvocationId());
-            case MinecraftSemanticRenderer.Intent.Choice value -> notice = GuideUiNotice.info(
+        java.util.Objects.requireNonNull(intent);
+        if (intent instanceof MinecraftSemanticRenderer.Intent.BrowseRecipes value) {
+            navigate(recipeClient.openRecipes(value.itemId()));
+        } else if (intent instanceof MinecraftSemanticRenderer.Intent.BrowseUsages value) {
+            navigate(recipeClient.openUsages(value.itemId()));
+        } else if (intent instanceof MinecraftSemanticRenderer.Intent.ExactRecipe value) {
+            navigate(recipeClient.openExact(value.reference()));
+        } else if (intent instanceof MinecraftSemanticRenderer.Intent.Source value) {
+            openSemanticSource(value.sourceId(), value.originInvocationId());
+        } else if (intent instanceof MinecraftSemanticRenderer.Intent.Evidence value) {
+            openSemanticSource(value.evidenceId(), value.originInvocationId());
+        } else if (intent instanceof MinecraftSemanticRenderer.Intent.Choice value) {
+            notice = GuideUiNotice.info(
                     Component.translatable("screen.openallay.choice.unavailable", value.choiceId()).getString());
         }
     }
 
     private static String semanticIntentNarration(MinecraftSemanticRenderer.Intent intent) {
-        return switch (intent) {
-            case MinecraftSemanticRenderer.Intent.BrowseRecipes value ->
-                    "查看 " + value.itemId() + " 的配方";
-            case MinecraftSemanticRenderer.Intent.BrowseUsages value ->
-                    "查看 " + value.itemId() + " 的用途";
-            case MinecraftSemanticRenderer.Intent.ExactRecipe value ->
-                    "打开配方 " + value.reference().recipeId();
-            case MinecraftSemanticRenderer.Intent.Source value ->
-                    "查看来源 " + value.sourceId();
-            case MinecraftSemanticRenderer.Intent.Evidence value ->
-                    "查看证据 " + value.evidenceId();
-            case MinecraftSemanticRenderer.Intent.Choice value ->
-                    "选择 " + value.choiceId();
-        };
+        java.util.Objects.requireNonNull(intent);
+        if (intent instanceof MinecraftSemanticRenderer.Intent.BrowseRecipes value) {
+            return "查看 " + value.itemId() + " 的配方";
+        } else if (intent instanceof MinecraftSemanticRenderer.Intent.BrowseUsages value) {
+            return "查看 " + value.itemId() + " 的用途";
+        } else if (intent instanceof MinecraftSemanticRenderer.Intent.ExactRecipe value) {
+            return "打开配方 " + value.reference().recipeId();
+        } else if (intent instanceof MinecraftSemanticRenderer.Intent.Source value) {
+            return "查看来源 " + value.sourceId();
+        } else if (intent instanceof MinecraftSemanticRenderer.Intent.Evidence value) {
+            return "查看证据 " + value.evidenceId();
+        } else if (intent instanceof MinecraftSemanticRenderer.Intent.Choice value) {
+            return "选择 " + value.choiceId();
+        }
+        throw new IncompatibleClassChangeError();
     }
 
     private static boolean intersects(GuideUiLayout.Rect first, GuideUiLayout.Rect second) {
@@ -1941,11 +1955,16 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
 
     private void openSemanticSource(String sourceId, String invocationId) {
         GuideSource source = view.rows().stream()
-                .flatMap(row -> switch (row) {
-                    case GuideUiRow.Assistant assistant -> assistant.sources().stream();
-                    case GuideUiRow.Tool tool -> tool.activity().invocationId().equals(invocationId)
-                            ? tool.activity().sources().stream() : java.util.stream.Stream.empty();
-                    default -> java.util.stream.Stream.empty();
+                .flatMap(row -> {
+                    java.util.Objects.requireNonNull(row);
+                    if (row instanceof GuideUiRow.Assistant assistant) {
+                        return assistant.sources().stream();
+                    } else if (row instanceof GuideUiRow.Tool tool) {
+                        return tool.activity().invocationId().equals(invocationId)
+                                ? tool.activity().sources().stream() : java.util.stream.Stream.empty();
+                    } else {
+                        return java.util.stream.Stream.empty();
+                    }
                 })
                 .filter(value -> value.evidence().sourceId().equals(sourceId))
                 .findFirst().orElse(null);
@@ -2157,22 +2176,25 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
             int y,
             int mouseX,
             int mouseY) {
-        return switch (card) {
-            case GuideDetailCard.Recipe recipe ->
-                    recipeCard(graphics, recipe.recipe(), cardId, detail, y, mouseX, mouseY);
-            case GuideDetailCard.ItemGrid grid ->
-                    itemGridCard(graphics, grid, detail, y, mouseX, mouseY);
-            case GuideDetailCard.Requirements requirements ->
-                    requirementsCard(graphics, requirements, detail, y, mouseX, mouseY);
-            case GuideDetailCard.Table table ->
-                    tableCard(graphics, table, detail, y);
-            case GuideDetailCard.KeyValue keyValue ->
-                    keyValueCard(graphics, keyValue, detail, y);
-            case GuideDetailCard.DataPreview preview ->
-                    dataPreviewCard(graphics, preview, detail, y);
-            case GuideDetailCard.Text text -> textCard(graphics, text, detail, y);
-            case GuideDetailCard.Error error -> errorCard(graphics, error, detail, y);
-        };
+        java.util.Objects.requireNonNull(card);
+        if (card instanceof GuideDetailCard.Recipe recipe) {
+            return recipeCard(graphics, recipe.recipe(), cardId, detail, y, mouseX, mouseY);
+        } else if (card instanceof GuideDetailCard.ItemGrid grid) {
+            return itemGridCard(graphics, grid, detail, y, mouseX, mouseY);
+        } else if (card instanceof GuideDetailCard.Requirements requirements) {
+            return requirementsCard(graphics, requirements, detail, y, mouseX, mouseY);
+        } else if (card instanceof GuideDetailCard.Table table) {
+            return tableCard(graphics, table, detail, y);
+        } else if (card instanceof GuideDetailCard.KeyValue keyValue) {
+            return keyValueCard(graphics, keyValue, detail, y);
+        } else if (card instanceof GuideDetailCard.DataPreview preview) {
+            return dataPreviewCard(graphics, preview, detail, y);
+        } else if (card instanceof GuideDetailCard.Text text) {
+            return textCard(graphics, text, detail, y);
+        } else if (card instanceof GuideDetailCard.Error error) {
+            return errorCard(graphics, error, detail, y);
+        }
+        throw new IncompatibleClassChangeError();
     }
 
     private int tableCard(
@@ -2320,7 +2342,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         int canvasWidth = Math.max(1, detail.width() - 12);
         int canvasHeight = 126;
         if (visibleDetail(y, canvasHeight, detail)) {
-            String label = card.outputs().isEmpty() ? card.id() : card.outputs().getFirst().displayName();
+            String label = card.outputs().isEmpty() ? card.id() : card.outputs().get(0).displayName();
             var component = new dev.openallay.guide.semantic.RichComponent.RecipeGrid(
                     toolDetailRecipeNodeId(cardId), card.reference(), selectedTool.activity().invocationId(), label, label, label);
             NativeDomainViewBinding.Recipe binding = new NativeDomainViewBinding.Recipe(cardId, component, card);
@@ -2397,7 +2419,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         if (id == null || !BuiltInRegistries.ITEM.containsKey(id)) {
             return ItemStack.EMPTY;
         }
-        return new ItemStack(BuiltInRegistries.ITEM.getValue(id),
+        return new ItemStack(dev.openallay.client.gui.GuideNativeItemLookup.item(id.toString()),
                 (int) Math.min(Integer.MAX_VALUE, Math.max(1, count)));
     }
 
@@ -2534,8 +2556,11 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
     record VisibleDetailLines(int first, int end) {}
 
     static VisibleDetailLines visibleDetailLines(GuideUiLayout.Rect detail, int y, int count) {
-        int first = Math.clamp(Math.ceilDiv(detail.y() + 21 - y, 10), 0, count);
-        int end = Math.clamp(Math.ceilDiv(detail.bottom() - 10 - y, 10), first, count);
+        // Keep native int geometry arithmetic; negate the divisor, never the possibly MIN_VALUE numerator.
+        int firstLine = -Math.floorDiv(detail.y() + 21 - y, -10);
+        if (count < 0) throw new IllegalArgumentException("count must not be negative");
+        int first = Math.max(0, Math.min(firstLine, count));
+        int end = Math.max(first, Math.min(-Math.floorDiv(detail.bottom() - 10 - y, -10), count));
         return new VisibleDetailLines(first, end);
     }
 
@@ -2660,7 +2685,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
                 .filter(tool -> tool.activity().sources().contains(source))
                 .flatMap(tool -> groupedSources(tool.activity().sources()).stream())
                 .filter(value -> value.identity().equals(identity)).findFirst()
-                .orElseGet(() -> GuideEvidencePresentation.groups(List.of(source)).getFirst());
+                .orElseGet(() -> GuideEvidencePresentation.groups(List.of(source)).get(0));
         open(group, "source-detail:" + identity);
     }
 
@@ -2723,10 +2748,15 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
             selectedTool = replacement;
         }
         if (selectedSource != null) {
-            boolean retained = next.rows().stream().anyMatch(row -> switch (row) {
-                case GuideUiRow.Assistant assistant -> groupedSources(assistant.sources()).contains(selectedSource);
-                case GuideUiRow.Tool tool -> groupedSources(tool.activity().sources()).contains(selectedSource);
-                default -> false;
+            boolean retained = next.rows().stream().anyMatch(row -> {
+                java.util.Objects.requireNonNull(row);
+                if (row instanceof GuideUiRow.Assistant assistant) {
+                    return groupedSources(assistant.sources()).contains(selectedSource);
+                } else if (row instanceof GuideUiRow.Tool tool) {
+                    return groupedSources(tool.activity().sources()).contains(selectedSource);
+                } else {
+                    return false;
+                }
             });
             if (!retained) {
                 selectedSource = null;
@@ -2759,10 +2789,11 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         // Keep immutable retained groups across streaming updates; discard only lists no longer present.
         Map<List<GuideSource>, Boolean> retainedSources = new java.util.IdentityHashMap<>();
         for (GuideUiRow row : next.rows()) {
-            switch (row) {
-                case GuideUiRow.Assistant assistant -> retainedSources.put(assistant.sources(), true);
-                case GuideUiRow.Tool tool -> retainedSources.put(tool.activity().sources(), true);
-                default -> { }
+            java.util.Objects.requireNonNull(row);
+            if (row instanceof GuideUiRow.Assistant assistant) {
+                retainedSources.put(assistant.sources(), true);
+            } else if (row instanceof GuideUiRow.Tool tool) {
+                retainedSources.put(tool.activity().sources(), true);
             }
         }
         sourceGroupCache.keySet().removeIf(sources -> !retainedSources.containsKey(sources));
@@ -2928,7 +2959,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
             NativeImage bitmap = new NativeImage(preview.width(), preview.height(), false);
             int[] pixels = preview.argb();
             for (int y = 0; y < preview.height(); y++) {
-                for (int x = 0; x < preview.width(); x++) bitmap.setPixel(x, y, pixels[y * preview.width() + x]);
+                for (int x = 0; x < preview.width(); x++) dev.openallay.client.observation.MinecraftImagePixels.setArgb(bitmap, x, y, pixels[y * preview.width() + x]);
             }
             String texture = "openallay:composer/" + imageDraftOwner + "/" + image.id();
             MinecraftImageTextures.register(minecraft.getTextureManager(), texture, () -> "OpenAllay draft image", bitmap);
@@ -3408,7 +3439,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
                 .flatMap(session -> session.requests().stream())
                 .filter(request -> request.requestId().equals(row.requestId()) && request.terminal())
                 .anyMatch(request -> !request.timeline().isEmpty()
-                        && request.timeline().getLast() instanceof dev.openallay.guide.GuideTimelineEntry.Assistant assistant
+                        && request.timeline().get(request.timeline().size() - 1) instanceof dev.openallay.guide.GuideTimelineEntry.Assistant assistant
                         && assistant.ordinal() == row.ordinal());
     }
 
@@ -3561,11 +3592,14 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
     }
 
     static String copyableText(GuideUiRow row) {
-        return switch (row) {
-            case GuideUiRow.User value -> value.text();
-            case GuideUiRow.Assistant value -> value.text();
-            default -> null;
-        };
+        java.util.Objects.requireNonNull(row);
+        if (row instanceof GuideUiRow.User value) {
+            return value.text();
+        } else if (row instanceof GuideUiRow.Assistant value) {
+            return value.text();
+        } else {
+            return null;
+        }
     }
 
     static Component deleteConfirmationMessage(String sessionId, boolean finalConfirmation) {
@@ -3848,7 +3882,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
     }
 
     static String sourceLabel(GuideEvidencePresentation.Group group, boolean debugMode) {
-        return sourceLabel(group.records().getFirst(), debugMode);
+        return sourceLabel(group.records().get(0), debugMode);
     }
 
     static String sourceLabel(GuideSource source, boolean debugMode) {
@@ -3992,7 +4026,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
                 .map(GuideUiRow.Tool.class::cast)
                 .filter(value -> value.activity().toolId().endsWith(":run_javascript")).toList();
         if (tools.isEmpty()) return false;
-        open(tools.getLast());
+        open(tools.get(tools.size() - 1));
         return true;
     }
 
@@ -4004,7 +4038,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
                 .filter(value -> value.activity().toolId().endsWith(":run_javascript")
                         && !value.activity().sources().isEmpty()).toList();
         if (tools.isEmpty()) return false;
-        open(tools.getLast().activity().sources().getFirst());
+        open(tools.get(tools.size() - 1).activity().sources().get(0));
         return true;
     }
 

@@ -95,7 +95,7 @@ final class OpenAllayScreenProjectionTest {
         assertTrue(inputBinding.contains("return mapping.matches(nativeKey(event))"));
         assertTrue(screen.contains("voice.cancel(dev.openallay.client.voice.VoiceRuntime.CancelReason.SCREEN_CLOSED)"));
         assertTrue(screen.contains("notifications.clearVisibility(service)"));
-        assertTrue(screen.contains("uiState.applyPendingInsertion(pending.getFirst().id())"));
+        assertTrue(screen.contains("uiState.applyPendingInsertion(pending.get(0).id())"));
         assertFalse(screen.contains("voice.status().code()"), "raw backend errors must not become player text");
     }
 

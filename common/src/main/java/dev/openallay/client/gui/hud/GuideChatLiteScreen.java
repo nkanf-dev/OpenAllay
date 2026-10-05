@@ -189,7 +189,7 @@ public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNat
     }
     @Override public boolean isPauseScreen() { return false; }
     @Override public boolean isInGameUi() { return true; }
-    @Override protected void setInitialFocus() {} // Text focus starts only from a click/explicit navigation.
+    @Override protected void guideInitialFocus() {} // Text focus starts only from a click/explicit navigation.
 
     @Override protected void init() {
         projectedSnapshot = null; // GUI resize changes native wrap width even without a new snapshot.
@@ -527,13 +527,13 @@ public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNat
             focusedResult = -1;
         }
     }
-    @Override public boolean mouseScrolled(double x, double y, double scrollX, double scrollY) {
+    @Override public boolean guideMouseScrolled(double x, double y, double scrollX, double scrollY) {
         if (resultBounds.contains(x, y) || scrollbar.contains(x, y)) {
             scrollResults(() -> results.scroll().wheel(scrollY));
             focusedResult = -1;
             return true;
         }
-        return super.mouseScrolled(x, y, scrollX, scrollY);
+        return super.guideMouseScrolled(x, y, scrollX, scrollY);
     }
     @Override public boolean guideMouseClicked(GuideInputMouse event, boolean doubleClick) {
         // Native controls still own dispatch, including the composer's external scrollbar.
@@ -573,19 +573,26 @@ public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNat
     }
     private void resultAction(GuideHudResultRenderer.Action action) {
         focusedResult = -1;
-        switch (action) {
-            case GuideHudResultRenderer.Action.Tool tool -> results.openTool(tool.rowId());
-            case GuideHudResultRenderer.Action.Sources sources -> results.openSources(sources.sources());
-            case GuideHudResultRenderer.Action.Semantic semantic -> {
-                switch (semantic.intent()) {
-                    case dev.openallay.client.gui.MinecraftSemanticRenderer.Intent.BrowseRecipes value -> navigate(recipes.openRecipes(value.itemId()));
-                    case dev.openallay.client.gui.MinecraftSemanticRenderer.Intent.BrowseUsages value -> navigate(recipes.openUsages(value.itemId()));
-                    case dev.openallay.client.gui.MinecraftSemanticRenderer.Intent.ExactRecipe value -> navigate(recipes.openExact(value.reference()));
-                    case dev.openallay.client.gui.MinecraftSemanticRenderer.Intent.Source value -> openSources(value.originInvocationId());
-                    case dev.openallay.client.gui.MinecraftSemanticRenderer.Intent.Evidence value -> openSources(value.originInvocationId());
-                    case dev.openallay.client.gui.MinecraftSemanticRenderer.Intent.Choice value -> notice = GuideUiNotice.warning(
-                            Component.translatable("screen.openallay.choice.unavailable", value.choiceId()).getString());
-                }
+        Objects.requireNonNull(action);
+        if (action instanceof GuideHudResultRenderer.Action.Tool tool) {
+            results.openTool(tool.rowId());
+        } else if (action instanceof GuideHudResultRenderer.Action.Sources sources) {
+            results.openSources(sources.sources());
+        } else if (action instanceof GuideHudResultRenderer.Action.Semantic semantic) {
+            var intent = Objects.requireNonNull(semantic.intent());
+            if (intent instanceof dev.openallay.client.gui.MinecraftSemanticRenderer.Intent.BrowseRecipes value) {
+                navigate(recipes.openRecipes(value.itemId()));
+            } else if (intent instanceof dev.openallay.client.gui.MinecraftSemanticRenderer.Intent.BrowseUsages value) {
+                navigate(recipes.openUsages(value.itemId()));
+            } else if (intent instanceof dev.openallay.client.gui.MinecraftSemanticRenderer.Intent.ExactRecipe value) {
+                navigate(recipes.openExact(value.reference()));
+            } else if (intent instanceof dev.openallay.client.gui.MinecraftSemanticRenderer.Intent.Source value) {
+                openSources(value.originInvocationId());
+            } else if (intent instanceof dev.openallay.client.gui.MinecraftSemanticRenderer.Intent.Evidence value) {
+                openSources(value.originInvocationId());
+            } else if (intent instanceof dev.openallay.client.gui.MinecraftSemanticRenderer.Intent.Choice value) {
+                notice = GuideUiNotice.warning(
+                        Component.translatable("screen.openallay.choice.unavailable", value.choiceId()).getString());
             }
         }
         project();

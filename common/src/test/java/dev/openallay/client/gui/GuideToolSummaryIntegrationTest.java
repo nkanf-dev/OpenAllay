@@ -158,7 +158,7 @@ final class GuideToolSummaryIntegrationTest {
                 "nominal detail-card height is not actual paint");
         assertTrue(detail.contains("sourceGroups(graphics, selectedTool.activity().sources()"));
         String dispatch = between(source, "    private int detailCard(", "    private int tableCard(");
-        assertTrue(dispatch.contains("case GuideDetailCard.Recipe recipe ->"));
+        assertTrue(dispatch.contains("card instanceof GuideDetailCard.Recipe recipe"));
         assertTrue(dispatch.contains("recipeCard(graphics, recipe.recipe(), cardId, detail, y, mouseX, mouseY)"));
         String recipe = between(source, "    private int recipeCard(", "    private int recipeAction(");
         assertTrue(recipe.contains("toolDetailRecipeNodeId(cardId), card.reference()"),

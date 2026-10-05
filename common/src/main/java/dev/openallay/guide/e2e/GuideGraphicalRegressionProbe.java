@@ -208,8 +208,8 @@ final class GuideGraphicalRegressionProbe {
                 KeyMapping.resetMapping();
                 report.put("interactKeyDuring", OpenAllayKeyMappings.INTERACT_HUD.saveString());
                 report.put("world", client.getSingleplayerServer().getWorldData().getLevelName());
-                report.put("commandsAllowed", client.getSingleplayerServer().getWorldData().isAllowCommands());
-                require(!client.getSingleplayerServer().getWorldData().isAllowCommands(), "Disposable world commands must be off");
+                report.put("commandsAllowed", GuideProbeWorldSettings.commandsAllowed(client.getSingleplayerServer()));
+                require(!GuideProbeWorldSettings.commandsAllowed(client.getSingleplayerServer()), "Disposable world commands must be off");
                 openGuide.accept(service);
                 advance();
             }
@@ -232,7 +232,7 @@ final class GuideGraphicalRegressionProbe {
                 require(request.tools().size() == 2 && request.tools().stream().allMatch(value ->
                         value.toolId().equals("openallay:run_javascript") && value.status() == GuideToolStatus.SUCCEEDED
                                 && value.normalized() != null), "Actual two native read-only recipe Tools did not complete");
-                var firstNative = request.tools().getFirst().normalized().getAsJsonObject("value");
+                var firstNative = request.tools().get(0).normalized().getAsJsonObject("value");
                 require("RECIPE".equals(firstNative.get("viewKind").getAsString()),
                         "First Tool did not return an actual trusted native recipe card");
                 require(request.assistantText().contains("全文末尾：原生图形长回复验收完成"), "The full local test response was not retained");
@@ -366,7 +366,7 @@ final class GuideGraphicalRegressionProbe {
                 require(results.width() > 0 && results.height() > 0, "Interactive HUD has no native result viewport");
                 double wheelX = results.x() + results.width() / 2.0;
                 double wheelY = results.y() + results.height() / 2.0;
-                boolean handled = lite.mouseScrolled(wheelX, wheelY, 0, -10000);
+                boolean handled = ((GuideChatLiteScreen) lite).guideMouseScrolled(wheelX, wheelY, 0, -10000);
                 actions.add(Map.of("type", "native-wheel", "target", "interactive-hud-bottom", "stage", stage,
                         "at", Instant.now().toString(), "x", wheelX, "y", wheelY,
                         "scrollX", 0, "scrollY", -10000, "handled", handled, "resultViewport", results));
@@ -385,8 +385,9 @@ final class GuideGraphicalRegressionProbe {
                         "HUD bottom has no actually extracted semantic text-node identity");
                 var finalAssistant = request.timeline().stream()
                         .filter(dev.openallay.guide.GuideTimelineEntry.Assistant.class::isInstance)
-                        .map(dev.openallay.guide.GuideTimelineEntry.Assistant.class::cast).toList().getLast();
-                String tailNode = finalAssistant.semantic().blocks().getLast().nodeId();
+                        .map(dev.openallay.guide.GuideTimelineEntry.Assistant.class::cast)
+                        .reduce((earlierAssistant, laterAssistant) -> laterAssistant).orElseThrow();
+                String tailNode = finalAssistant.semantic().blocks().get(finalAssistant.semantic().blocks().size() - 1).nodeId();
                 require(receipt.getAsJsonArray("renderedNodeIds").asList().stream()
                                 .anyMatch(value -> tailNode.equals(value.getAsString())),
                         "Actual HUD extracted nodes do not include the full response's final text block");
@@ -892,7 +893,7 @@ final class GuideGraphicalRegressionProbe {
             case 4 -> {
                 request = requestFor(config.question());
                 if (request == null || request.tools().isEmpty()
-                        || request.tools().getFirst().status() != GuideToolStatus.SUCCEEDED) {
+                        || request.tools().get(0).status() != GuideToolStatus.SUCCEEDED) {
                     waitFor("actual first native recipe Tool while continuation transport is held"); return;
                 }
                 require(!request.terminal(), "Transport hold did not keep a real task active");
@@ -903,7 +904,7 @@ final class GuideGraphicalRegressionProbe {
             case 6 -> {
                 var pending = session().pendingMessages();
                 if (pending.isEmpty()) { waitFor("actual Follow-up admission receipt"); return; }
-                var follow = pending.getFirst();
+                var follow = pending.get(0);
                 require(follow.kind() == dev.openallay.guide.GuidePendingMessage.Kind.FOLLOW_UP
                         && follow.text().startsWith(LIVE_FOLLOW_UP), "Real Follow-up queue has wrong kind/text");
                 liveFollowUpId = follow.id();
@@ -923,7 +924,7 @@ final class GuideGraphicalRegressionProbe {
                 var pending = session().pendingMessages();
                 if (pending.size() < 2) { waitFor("actual Steer admission receipt"); return; }
                 var steer = pending.get(1);
-                require(pending.getFirst().id().equals(liveFollowUpId)
+                require(pending.get(0).id().equals(liveFollowUpId)
                         && steer.kind() == dev.openallay.guide.GuidePendingMessage.Kind.STEER
                         && steer.text().startsWith(LIVE_STEER) && steer.requestId().equals(request.requestId()),
                         "Actual pending receipt did not preserve Follow-up then Steer order");
@@ -1219,7 +1220,7 @@ final class GuideGraphicalRegressionProbe {
         require(value.status() == GuideRequestStatus.COMPLETED, "Actual live UI request did not complete");
         require(value.tools().size() == 2 && value.tools().stream().allMatch(tool -> tool.toolId().equals("openallay:run_javascript")
                 && tool.status() == GuideToolStatus.SUCCEEDED && tool.normalized() != null), "Actual native recipe Tools are incomplete");
-        require("RECIPE".equals(value.tools().getFirst().normalized().getAsJsonObject("value").get("viewKind").getAsString()),
+        require("RECIPE".equals(value.tools().get(0).normalized().getAsJsonObject("value").get("viewKind").getAsString()),
                 "First actual tool result is not a trusted native recipe");
         require(value.assistantText().contains(LIVE_TAIL) && value.assistantText().contains("本地验收阅读段 48"),
                 "Actual full provider response lost latest48 marker");
@@ -1245,7 +1246,7 @@ final class GuideGraphicalRegressionProbe {
             int currentScroll = (Integer) readField(guide(), "scroll");
             double direction = virtualizer.offset(rowIndex) < currentScroll ? 2 : -2;
             var layout = (dev.openallay.guide.ui.GuideUiLayout) readField(guide(), "layout");
-            guide().mouseScrolled(layout.transcript().x() + layout.transcript().width() / 2.0,
+            guide().guideMouseScrolled(layout.transcript().x() + layout.transcript().width() / 2.0,
                     layout.transcript().y() + layout.transcript().height() / 2.0, 0, direction);
             recordAction("native-wheel", "reveal-real-compact-tool-summary");
             waitFor("actual painted Tool summary");
@@ -1276,7 +1277,7 @@ final class GuideGraphicalRegressionProbe {
         require(toolId.equals(tools.get("detailToolId").getAsString()), "Blank row click opened a different Tool detail");
         if (tools.getAsJsonArray("detailNativeRecipeIds").isEmpty() || tools.getAsJsonArray("detailCardIds").isEmpty()) {
             var layout = (dev.openallay.guide.ui.GuideUiLayout) readField(guide(), "layout");
-            guide().mouseScrolled(layout.detail().x() + layout.detail().width() / 2.0,
+            guide().guideMouseScrolled(layout.detail().x() + layout.detail().width() / 2.0,
                     layout.detail().y() + layout.detail().height() / 2.0, 0, -1);
             recordAction("native-wheel", "reveal-full-native-recipe-in-tool-detail");
             waitFor("actual detail registry render returned true"); return false;
@@ -1292,8 +1293,9 @@ final class GuideGraphicalRegressionProbe {
         require(number(receipt, "maximumScroll") > 0 && number(receipt, "scroll") == number(receipt, "maximumScroll"),
                 "Actual native HUD did not render measured latest-tail offset");
         var finalAssistant = source.timeline().stream().filter(dev.openallay.guide.GuideTimelineEntry.Assistant.class::isInstance)
-                .map(dev.openallay.guide.GuideTimelineEntry.Assistant.class::cast).toList().getLast();
-        String nodeId = finalAssistant.semantic().blocks().getLast().nodeId();
+                .map(dev.openallay.guide.GuideTimelineEntry.Assistant.class::cast)
+                .reduce((earlierAssistant, laterAssistant) -> laterAssistant).orElseThrow();
+        String nodeId = finalAssistant.semantic().blocks().get(finalAssistant.semantic().blocks().size() - 1).nodeId();
         require(receipt.getAsJsonArray("renderedRowIds").asList().stream()
                         .anyMatch(value -> value.getAsString().contains(source.requestId().toString())),
                 "Native HUD tail has another request source identity");
@@ -1337,7 +1339,9 @@ final class GuideGraphicalRegressionProbe {
         var results = GuideHudReadingLayout.calculate(card.x(), card.y(), card.width(), card.height()).results();
         double x = results.x() + results.width() / 2.0;
         double y = results.y() + results.height() / 2.0;
-        require(screen.mouseScrolled(x, y, 0, scrollY), "Actual HUD result viewport did not consume native wheel");
+        require(screen instanceof GuideChatLiteScreen, "Native wheel target is not the owned HUD reader");
+        require(((GuideChatLiteScreen) screen).guideMouseScrolled(x, y, 0, scrollY),
+                "Actual HUD result viewport did not consume native wheel");
         actions.add(Map.of("type", "native-wheel", "stage", stage, "x", x, "y", y, "scrollY", scrollY));
     }
 
@@ -1478,7 +1482,7 @@ final class GuideGraphicalRegressionProbe {
         var area = SettingsLayout.calculate(screen.width, screen.height, SettingsSection.UI).editor();
         double x = area.x() + area.width() / 2.0;
         double y = area.y() + area.height() / 2.0;
-        require(screen.mouseScrolled(x, y, 0, -2), "Actual UI HUD page did not consume native scrolling");
+        require(screen.guideMouseScrolled(x, y, 0, -2), "Actual UI HUD page did not consume native scrolling");
         recordAction("native-wheel", "reveal-visible-Edit-HUD-button");
         waitFor("visible enabled native Edit HUD button");
         return false;
@@ -1583,7 +1587,7 @@ final class GuideGraphicalRegressionProbe {
     }
 
     private boolean nativeRecipePainted() {
-        String expected = "tool:" + request.requestId() + ":" + request.tools().getFirst().invocationId();
+        String expected = "tool:" + request.requestId() + ":" + request.tools().get(0).invocationId();
         JsonObject tools = jsonReceipt(guide(), "e2eToolsReceipt");
         if (!expected.equals(tools.get("detailToolId").getAsString())) {
             JsonObject summary = revealRecipeSummary(request);
@@ -1631,7 +1635,7 @@ final class GuideGraphicalRegressionProbe {
                 .filter(AbstractSliderButton.class::isInstance).map(AbstractSliderButton.class::cast)
                 .filter(value -> value.getMessage().getString().startsWith(label + " · ")).findFirst().orElseThrow();
         if (!slider.visible) {
-            settingsScreen().mouseScrolled(settingsScreen().width / 2.0, settingsScreen().height / 2.0, 0, -2);
+            settingsScreen().guideMouseScrolled(settingsScreen().width / 2.0, settingsScreen().height / 2.0, 0, -2);
             recordAction("native-wheel", "reveal-reply-slider");
             waitFor("actual reply-lines slider visibility");
             return false;

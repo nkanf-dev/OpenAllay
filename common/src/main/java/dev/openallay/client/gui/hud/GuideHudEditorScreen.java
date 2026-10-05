@@ -126,12 +126,12 @@ public final class GuideHudEditorScreen extends dev.openallay.client.gui.GuideNa
     }
 
     @Override
-    public boolean mouseScrolled(double x, double y, double scrollX, double scrollY) {
+    public boolean guideMouseScrolled(double x, double y, double scrollX, double scrollY) {
         if (controlsVisible && form != null && insideControls(x, y) && form.maximumScroll() > 0) {
             scrollForm(scrollY < 0 ? 20 : -20);
             return true;
         }
-        return super.mouseScrolled(x, y, scrollX, scrollY);
+        return super.guideMouseScrolled(x, y, scrollX, scrollY);
     }
 
     private void addButton(String key, int x, int y, int w, int h, Runnable action) {
@@ -193,6 +193,7 @@ public final class GuideHudEditorScreen extends dev.openallay.client.gui.GuideNa
 
     @Override
     public void tick() {
+        tickGuideWidgets();
         if (!ownerValid.getAsBoolean()) {
             interaction.cancel();
             draft.cancel();

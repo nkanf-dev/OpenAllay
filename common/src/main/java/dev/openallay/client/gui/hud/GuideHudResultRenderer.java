@@ -158,28 +158,28 @@ public final class GuideHudResultRenderer implements AutoCloseable {
                     SemanticDocument document = null;
                     Map<String, GuideRecipeCard> recipes = Map.of();
                     List<FormattedCharSequence> sources = List.of();
-                    switch (source) {
-                        case GuideUiRow.Assistant assistant -> {
-                            header.addAll(font.split(Component.literal(view.assistantName()), measuredWidth));
-                            document = assistant.semantic();
-                            if (!assistant.sources().isEmpty()) sources = font.split(Component.translatable(
-                                    "screen.openallay.evidence.groups", GuideEvidencePresentation.groups(assistant.sources()).size()), measuredWidth);
-                        }
-                        case GuideUiRow.Tool tool -> {
-                            header.addAll(font.split(Component.translatable(tool.detail().displayStatus().translationKey())
-                                    .copy().append(" · ").append(Component.translatable(tool.detail().titleKey())), measuredWidth));
-                            if (!tool.detail().intent().title().isBlank()) header.addAll(font.split(Component.literal(tool.detail().intent().title()), measuredWidth));
-                            if (!tool.detail().intent().description().isBlank()) header.addAll(font.split(Component.literal(tool.detail().intent().description()), measuredWidth));
-                            tool.detail().narration().forEach(message -> header.addAll(font.split(Component.translatable(
-                                    message.key().translationKey(), message.arguments().toArray()), Math.max(1, cachedWidth))));
-                            tool.detail().failure().ifPresent(failure -> header.addAll(font.split(Component.literal(failure.message()), Math.max(1, cachedWidth))));
-                            var cards = GuideHudToolCards.project(tool, key -> Component.translatable(key).getString());
-                            document = cards.document();
-                            recipes = cards.recipes();
-                        }
-                        case GuideUiRow.Status status -> header.addAll(font.split(status.status() == dev.openallay.guide.GuideRequestStatus.INTERRUPTED
+                    java.util.Objects.requireNonNull(source);
+                    if (source instanceof GuideUiRow.Assistant assistant) {
+                        header.addAll(font.split(Component.literal(view.assistantName()), measuredWidth));
+                        document = assistant.semantic();
+                        if (!assistant.sources().isEmpty()) sources = font.split(Component.translatable(
+                                "screen.openallay.evidence.groups", GuideEvidencePresentation.groups(assistant.sources()).size()), measuredWidth);
+                    } else if (source instanceof GuideUiRow.Tool tool) {
+                        header.addAll(font.split(Component.translatable(tool.detail().displayStatus().translationKey())
+                                .copy().append(" · ").append(Component.translatable(tool.detail().titleKey())), measuredWidth));
+                        if (!tool.detail().intent().title().isBlank()) header.addAll(font.split(Component.literal(tool.detail().intent().title()), measuredWidth));
+                        if (!tool.detail().intent().description().isBlank()) header.addAll(font.split(Component.literal(tool.detail().intent().description()), measuredWidth));
+                        tool.detail().narration().forEach(message -> header.addAll(font.split(Component.translatable(
+                                message.key().translationKey(), message.arguments().toArray()), Math.max(1, cachedWidth))));
+                        tool.detail().failure().ifPresent(failure -> header.addAll(font.split(Component.literal(failure.message()), Math.max(1, cachedWidth))));
+                        var cards = GuideHudToolCards.project(tool, key -> Component.translatable(key).getString());
+                        document = cards.document();
+                        recipes = cards.recipes();
+                    } else if (source instanceof GuideUiRow.Status status) {
+                        header.addAll(font.split(status.status() == dev.openallay.guide.GuideRequestStatus.INTERRUPTED
                                 ? Component.translatable("screen.openallay.history.interrupted") : Component.literal(status.text()), measuredWidth));
-                        default -> { continue; }
+                    } else {
+                        continue;
                     }
                     SemanticLayout layout = document == null ? null : layouts.get(id, document, measuredWidth,
                             "native-language", "native-font", measurer(font, view.presentation().density()));
@@ -322,12 +322,16 @@ public final class GuideHudResultRenderer implements AutoCloseable {
                 new NativeDomainView.RenderContext(graphics, font, bounds, mouseX, mouseY, ticks));
     }
     public static String rowId(GuideUiRow row) {
-        return switch (row) {
-            case GuideUiRow.Assistant value -> "assistant:" + value.requestId() + ":" + value.ordinal();
-            case GuideUiRow.Tool value -> "tool:" + value.requestId() + ":" + value.activity().invocationId();
-            case GuideUiRow.Status value -> "status:" + value.requestId();
-            default -> throw new IllegalArgumentException("not a HUD task row");
-        };
+        java.util.Objects.requireNonNull(row);
+        if (row instanceof GuideUiRow.Assistant value) {
+            return "assistant:" + value.requestId() + ":" + value.ordinal();
+        } else if (row instanceof GuideUiRow.Tool value) {
+            return "tool:" + value.requestId() + ":" + value.activity().invocationId();
+        } else if (row instanceof GuideUiRow.Status value) {
+            return "status:" + value.requestId();
+        } else {
+            throw new IllegalArgumentException("not a HUD task row");
+        }
     }
     private static SemanticLayoutEngine.Measurer measurer(Font font, GuideUiConfig.Density density) {
         return new SemanticLayoutEngine.Measurer() {

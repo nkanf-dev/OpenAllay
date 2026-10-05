@@ -20,9 +20,13 @@ class GuideHudNativeContractsTest {
         assertTrue(renderer.contains("graphics.pushPose()"));
         assertTrue(renderer.contains("graphics.popPose()"));
         String graphics = source("common/src/main/java/dev/openallay/client/gui/GuideGraphics.java");
-        assertTrue(graphics.contains("GuiGraphicsExtractor"));
-        assertTrue(graphics.contains("graphics.pose().pushMatrix()"));
-        assertTrue(graphics.contains("graphics.pose().popMatrix()"));
+        assertTrue(graphics.contains("extends GuideNativeGraphics"));
+        assertTrue(graphics.contains("nativePushPose()"));
+        assertTrue(graphics.contains("nativePopPose()"));
+        String binding = source("common/src/main/java/dev/openallay/client/gui/GuideNativeGraphics.java");
+        assertTrue(binding.contains("GuiGraphicsExtractor"));
+        assertTrue(binding.contains("graphics.pose().pushMatrix()"));
+        assertTrue(binding.contains("graphics.pose().popMatrix()"));
         assertFalse(renderer.contains(".pose()"));
         assertTrue(renderer.contains("disableScissor()"));
         for (String forbidden : new String[]{"setScreen(", "releaseMouse(", "grabMouse(", "forActor(",
@@ -82,10 +86,12 @@ class GuideHudNativeContractsTest {
         assertTrue(build.contains("fabric-rendering-v1:${fabric_rendering_version}"));
         assertTrue(source("gradle/minecraft-targets/26.2.properties")
                 .contains("fabric_rendering_version=25.1.6+46a6d00c9c"));
-        assertTrue(neo.contains("RegisterGuiLayersEvent"));
-        assertTrue(neo.contains("VanillaGuiLayers.CHAT"));
-        assertTrue(neo.indexOf("modBus.addListener((RegisterGuiLayersEvent") < neo.indexOf("private static void start("));
-        assertTrue(neo.contains("if (current != null) current.extractRenderState(dev.openallay.client.gui.GuideGraphics.wrap(graphics))"));
+        String nativeHud = source("neoforge/src/main/java/dev/openallay/neoforge/NeoForgeNativeHudRegistration.java");
+        assertTrue(nativeHud.contains("RegisterGuiLayersEvent"));
+        assertTrue(nativeHud.contains("VanillaGuiLayers.CHAT"));
+        assertTrue(nativeHud.contains("render.accept(GuideGraphics.wrap(graphics))"));
+        assertTrue(neo.indexOf("NeoForgeNativeHudRegistration.register(") < neo.indexOf("private static void start("));
+        assertTrue(neo.contains("if (current != null) current.extractRenderState(graphics)"));
     }
     @Test void managerBindingOccursBeforeCommandRegistration() throws Exception {
         for (String loader : new String[]{"fabric/src/main/java/dev/openallay/fabric/OpenAllayFabricClient.java",
@@ -108,7 +114,7 @@ class GuideHudNativeContractsTest {
         assertTrue(legacyEditor.contains("new MultiLineEditBox(font, x, y, width, height, placeholder, narration)"));
         assertTrue(legacyEditor.contains("editor.setValue(value)"));
         assertFalse(lite.contains("MultiLineEditBox.builder()"));
-        assertTrue(lite.contains("setInitialFocus() {}"));
+        assertTrue(lite.contains("guideInitialFocus() {}"));
         assertTrue(lite.contains("Surface.HUD_INPUT"));
         assertFalse(lite.contains("KeyMapping.set("));
         assertFalse(lite.contains("releaseMouse("));

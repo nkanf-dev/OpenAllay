@@ -17,7 +17,7 @@ public final class GuideComposerGeometry {
     }
 
     public static void resize(MultiLineEditBox composer, GuideUiLayout.Rect bounds) {
-        composer.setRectangle(bounds.width(), bounds.height(), bounds.x(), bounds.y());
+        GuideNativeMultilineText.resize(composer, bounds.width(), bounds.height(), bounds.x(), bounds.y());
         NativeAccess widget = (NativeAccess) composer;
         MultilineTextFieldAccessor field = (MultilineTextFieldAccessor) widget.openallay$textField();
         int width = contentWidth(bounds.width(), widget.openallay$totalInnerPadding());

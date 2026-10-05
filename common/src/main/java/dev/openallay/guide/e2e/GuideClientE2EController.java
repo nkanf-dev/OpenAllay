@@ -102,7 +102,7 @@ public final class GuideClientE2EController {
     private net.minecraft.client.server.IntegratedServer graphicalSeedServer;
     private boolean graphicalRecipeSeedAdmitted;
     private boolean graphicalRecipeSeedReady;
-    private Set<Integer> graphicalSeedDisplays = Set.of();
+    private Set<String> graphicalSeedRecipes = Set.of();
     private com.google.gson.JsonObject graphicalRecipeSeedReceipt;
 
     public GuideClientE2EController(
@@ -315,12 +315,11 @@ public final class GuideClientE2EController {
                 server.execute(() -> awardGraphicalSeedRecipe(actor, client, server));
                 return false;
             }
-            if (graphicalSeedDisplays.isEmpty()) return false;
-            var context = net.minecraft.world.item.crafting.display.SlotDisplayContext.fromLevel(client.level);
-            boolean synchronizedOutput = client.player.getRecipeBook().getCollections().stream()
-                    .flatMap(collection -> collection.getRecipes().stream())
-                    .anyMatch(entry -> graphicalSeedDisplays.contains(entry.id().index())
-                            && entry.resultItems(context).stream().anyMatch(GuideClientE2EController::positiveIronBlock));
+            if (graphicalSeedRecipes.isEmpty()) return false;
+            boolean synchronizedOutput = dev.openallay.context.minecraft.MinecraftRecipeCapture
+                    .clientRecipes(client.player, client).stream()
+                    .anyMatch(input -> graphicalSeedRecipes.contains(input.id())
+                            && input.outputs().stream().anyMatch(GuideClientE2EController::positiveIronBlock));
             if (!synchronizedOutput) return false;
             if (!graphicalRecipeSeedReady) {
                 var capture = graphicalRecipeCaptureReceipt(client);
@@ -351,7 +350,7 @@ public final class GuideClientE2EController {
                 || (graphicalSeedServer != null && server != graphicalSeedServer)
                 || server.isPublished()
                 || !graphicalFreshWorldName.equals(server.getWorldData().getLevelName())
-                || server.getWorldData().isAllowCommands()
+                || GuideProbeWorldSettings.commandsAllowed(server)
                 || server.getWorldData().getGameType() != net.minecraft.world.level.GameType.SURVIVAL
                 || !server.getWorldData().isFlatWorld()
                 || !server.getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT).toAbsolutePath().normalize()
@@ -370,38 +369,32 @@ public final class GuideClientE2EController {
             if (player == null || dev.openallay.context.minecraft.MinecraftPlayerFacts.gameMode(player) != net.minecraft.world.level.GameType.SURVIVAL
                     || dev.openallay.context.minecraft.MinecraftServerPlayerLevel.get(player).getSeed() != 17L)
                 throw new IllegalStateException("Native bootstrap player or fresh-world seed differs from setup");
-            var manager = server.getRecipeManager();
-            var holder = manager.getRecipes().stream()
-                    .filter(recipe -> "minecraft:iron_block".equals(dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(recipe.id()).toString()))
-                    .findFirst().orElseThrow(() -> new IllegalStateException("Exact native iron-block recipe is unavailable"));
-            List<net.minecraft.world.item.crafting.display.RecipeDisplayEntry> displays = new ArrayList<>();
-            manager.listDisplaysForRecipe(holder.id(), displays::add);
-            var context = net.minecraft.world.item.crafting.display.SlotDisplayContext.fromLevel(player.level());
-            var positiveDisplays = displays.stream()
-                    .filter(entry -> entry.resultItems(context).stream().anyMatch(GuideClientE2EController::positiveIronBlock))
+            var seed = dev.openallay.context.minecraft.MinecraftRecipeCapture.seed(player, "minecraft:iron_block");
+            var positiveInputs = seed.inputs().stream()
+                    .filter(input -> input.outputs().stream().anyMatch(GuideClientE2EController::positiveIronBlock))
                     .toList();
-            if (positiveDisplays.isEmpty()) throw new IllegalStateException("Exact native holder has no positive iron-block output");
+            if (positiveInputs.isEmpty()) throw new IllegalStateException("Exact native holder has no positive iron-block output");
             var receipt = new com.google.gson.JsonObject();
             receipt.addProperty("api", "ServerPlayer.awardRecipes");
             receipt.addProperty("ownerThread", server.isSameThread());
-            receipt.addProperty("recipeHolderId", dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(holder.id()).toString());
-            receipt.addProperty("nativeRecipeClass", holder.value().getClass().getName());
-            receipt.addProperty("knownBefore", player.getRecipeBook().contains(holder.id()));
-            receipt.add("displayIndexes", gson.toJsonTree(positiveDisplays.stream().map(entry -> entry.id().index()).toList()));
-            receipt.add("positiveOutputs", gson.toJsonTree(positiveDisplays.stream()
-                    .flatMap(entry -> entry.resultItems(context).stream())
+            receipt.addProperty("recipeHolderId", seed.holderId());
+            receipt.addProperty("nativeRecipeClass", seed.nativeRecipeClass());
+            receipt.addProperty("knownBefore", seed.known());
+            receipt.add("recipeIds", gson.toJsonTree(positiveInputs.stream().map(input -> input.id()).toList()));
+            receipt.add("positiveOutputs", gson.toJsonTree(positiveInputs.stream()
+                    .flatMap(input -> input.outputs().stream())
                     .filter(GuideClientE2EController::positiveIronBlock)
                     .map(stack -> Map.of("itemId", "minecraft:iron_block", "count", stack.getCount())).toList()));
-            receipt.addProperty("awardedDisplayCount", player.awardRecipes(List.of(holder)));
-            receipt.addProperty("knownAfter", player.getRecipeBook().contains(holder.id()));
-            receipt.addProperty("commandsAllowedAfter", server.getWorldData().isAllowCommands());
-            if (!receipt.get("knownAfter").getAsBoolean() || server.getWorldData().isAllowCommands())
+            receipt.addProperty("awardedRecipeCount", seed.award());
+            receipt.addProperty("knownAfter", seed.known());
+            receipt.addProperty("commandsAllowedAfter", GuideProbeWorldSettings.commandsAllowed(server));
+            if (!receipt.get("knownAfter").getAsBoolean() || GuideProbeWorldSettings.commandsAllowed(server))
                 throw new IllegalStateException("Native recipe award did not preserve bootstrap preconditions");
-            var indexes = Set.copyOf(positiveDisplays.stream().map(entry -> entry.id().index()).toList());
+            var ids = Set.copyOf(positiveInputs.stream().map(input -> input.id()).toList());
             client.execute(() -> {
                 if (finished) return;
                 graphicalRecipeSeedReceipt.add("serverAward", receipt);
-                graphicalSeedDisplays = indexes;
+                graphicalSeedRecipes = ids;
             });
         } catch (RuntimeException failure) {
             client.execute(() -> { if (!finished) failGraphicalRecipePrecondition(failure); });
@@ -415,17 +408,17 @@ public final class GuideClientE2EController {
     }
 
     private com.google.gson.JsonObject graphicalRecipeBookReceipt(net.minecraft.client.Minecraft client) {
-        var collections = client.player.getRecipeBook().getCollections();
-        var context = net.minecraft.world.item.crafting.display.SlotDisplayContext.fromLevel(client.level);
-        var entries = collections.stream().flatMap(collection -> collection.getRecipes().stream())
-                .collect(java.util.stream.Collectors.toMap(entry -> entry.id().index(), entry -> entry, (first, ignored) -> first));
+        var entries = dev.openallay.context.minecraft.MinecraftRecipeCapture.clientRecipes(client.player, client)
+                .stream().collect(java.util.stream.Collectors.toMap(input -> input.id(), input -> input,
+                        (first, ignored) -> first));
         var receipt = new com.google.gson.JsonObject();
-        receipt.addProperty("collectionCount", collections.size());
-        receipt.addProperty("displayCount", entries.size());
-        receipt.addProperty("positiveIronDisplayCount", entries.values().stream()
-                .filter(entry -> entry.resultItems(context).stream().anyMatch(GuideClientE2EController::positiveIronBlock)).count());
+        receipt.addProperty("collectionCount", dev.openallay.context.minecraft.MinecraftRecipeCapture
+                .clientCollectionCount(client.player));
+        receipt.addProperty("recipeCount", entries.size());
+        receipt.addProperty("positiveIronRecipeCount", entries.values().stream()
+                .filter(input -> input.outputs().stream().anyMatch(GuideClientE2EController::positiveIronBlock)).count());
         receipt.addProperty("positiveIronResultCount", entries.values().stream()
-                .flatMap(entry -> entry.resultItems(context).stream()).filter(GuideClientE2EController::positiveIronBlock).count());
+                .flatMap(input -> input.outputs().stream()).filter(GuideClientE2EController::positiveIronBlock).count());
         return receipt;
     }
 
@@ -449,8 +442,7 @@ public final class GuideClientE2EController {
         receipt.addProperty("recipeCount", recipes.size());
         receipt.addProperty("positiveUnlockedIronRecipeCount", positive.size());
         receipt.add("selectedRecipes", gson.toJsonTree(positive.stream()
-                .filter(recipe -> graphicalSeedDisplays.stream().anyMatch(index -> recipe.id()
-                        .equals("openallay:client_recipe_display/" + index)))
+                .filter(recipe -> graphicalSeedRecipes.contains(recipe.id()))
                 .map(recipe -> Map.of("reference", recipe.reference(), "unlockState", recipe.unlockState(),
                         "evidence", recipe.evidence(), "positiveOutputs", recipe.outputs().stream()
                                 .filter(output -> output.stack().count() > 0
@@ -491,7 +483,8 @@ public final class GuideClientE2EController {
     }
 
     private static com.google.gson.JsonObject builderPreview(GuideRequestSnapshot request) {
-        var tool = request.tools().stream().filter(value -> value.toolId().equals("openallay:run_javascript")).toList().getLast();
+        var tool = request.tools().stream().filter(value -> value.toolId().equals("openallay:run_javascript"))
+                .reduce((earlierTool, laterTool) -> laterTool).orElseThrow();
         return tool.normalized().getAsJsonObject("value").getAsJsonObject("preview");
     }
 
@@ -568,16 +561,11 @@ public final class GuideClientE2EController {
             return;
         }
         if (create.isBlank()) {
-            client.createWorldOpenFlows().openWorld(name, () -> failWithoutRequest(
+            GuideProbeWorldSettings.open(client, name, () -> failWithoutRequest(
                     "world_reload_cancelled", "The native world reload did not complete"));
             return;
         }
-        var settings = GuideProbeWorldSettings.create(name);
-        client.createWorldOpenFlows().createFreshLevel(name, settings,
-                new net.minecraft.world.level.levelgen.WorldOptions(17L, false, false),
-                registries -> registries.lookupOrThrow(net.minecraft.core.registries.Registries.WORLD_PRESET)
-                        .getOrThrow(net.minecraft.world.level.levelgen.presets.WorldPresets.FLAT)
-                        .value().createWorldDimensions(), MinecraftClientWindow.screen(client));
+        GuideProbeWorldSettings.createFresh(client, name);
         if (graphicalScenario(config.scenario())) graphicalFreshWorldName = name;
     }
 
@@ -680,7 +668,7 @@ public final class GuideClientE2EController {
             javascriptObservedBeforeRevocation = Boolean.getBoolean("openallay.e2e.revokeUnrestrictedAfterCapture")
                     && !revocationCompleted;
         }
-        if (transitions.isEmpty() || transitions.getLast() != request.status()) {
+        if (transitions.isEmpty() || transitions.get(transitions.size() - 1) != request.status()) {
             transitions.add(request.status());
         }
         if (Boolean.getBoolean("openallay.e2e.cancelOnToolStart") && !cancelOnToolStartRequested
@@ -742,10 +730,16 @@ public final class GuideClientE2EController {
                 request.tools().stream().map(value -> value.toolId()).toList(),
                 request.tools().stream().map(GuideClientE2EController::toolProbe).toList(),
                 request.sources().stream().map(value -> value.evidence()).toList(),
-                request.timeline().stream().map(value -> switch (value) {
-                    case GuideTimelineEntry.User ignored -> "user";
-                    case GuideTimelineEntry.Assistant ignored -> "assistant";
-                    case GuideTimelineEntry.Tool ignored -> "tool";
+                request.timeline().stream().map(value -> {
+                    java.util.Objects.requireNonNull(value);
+                    if (value instanceof GuideTimelineEntry.User ignored) {
+                        return "user";
+                    } else if (value instanceof GuideTimelineEntry.Assistant ignored) {
+                        return "assistant";
+                    } else if (value instanceof GuideTimelineEntry.Tool ignored) {
+                        return "tool";
+                    }
+                    throw new IncompatibleClassChangeError();
                 }).toList(),
                 semantic.metrics(),
                 semantic.diagnosticCodes(),
@@ -1226,30 +1220,39 @@ public final class GuideClientE2EController {
     private static void collect(
             SemanticBlock block, Counter counter, Set<String> componentTypes) {
         counter.blocks++;
-        switch (block) {
-            case SemanticBlock.ListBlock value -> value.items().forEach(
+        java.util.Objects.requireNonNull(block);
+        if (block instanceof SemanticBlock.ListBlock value) {
+            value.items().forEach(
                     item -> item.forEach(child -> collect(child, counter, componentTypes)));
-            case SemanticBlock.Quote value -> value.content().forEach(
+        } else if (block instanceof SemanticBlock.Quote value) {
+            value.content().forEach(
                     child -> collect(child, counter, componentTypes));
-            case SemanticBlock.Component value -> {
-                counter.components++;
-                componentTypes.add(componentType(value.component()));
-            }
-            default -> { }
+        } else if (block instanceof SemanticBlock.Component value) {
+            counter.components++;
+            componentTypes.add(componentType(value.component()));
         }
     }
 
     private static String componentType(RichComponent component) {
-        return switch (component) {
-            case RichComponent.ItemRow ignored -> "item_row";
-            case RichComponent.RecipeGrid ignored -> "recipe_grid";
-            case RichComponent.IngredientCheck ignored -> "ingredient_check";
-            case RichComponent.CraftabilitySummary ignored -> "craftability_summary";
-            case RichComponent.ProgressSteps ignored -> "progress_steps";
-            case RichComponent.SourceSummary ignored -> "source_summary";
-            case RichComponent.StatusBadge ignored -> "status_badge";
-            case RichComponent.ChoiceGroup ignored -> "choice_group";
-        };
+        java.util.Objects.requireNonNull(component);
+        if (component instanceof RichComponent.ItemRow ignored) {
+            return "item_row";
+        } else if (component instanceof RichComponent.RecipeGrid ignored) {
+            return "recipe_grid";
+        } else if (component instanceof RichComponent.IngredientCheck ignored) {
+            return "ingredient_check";
+        } else if (component instanceof RichComponent.CraftabilitySummary ignored) {
+            return "craftability_summary";
+        } else if (component instanceof RichComponent.ProgressSteps ignored) {
+            return "progress_steps";
+        } else if (component instanceof RichComponent.SourceSummary ignored) {
+            return "source_summary";
+        } else if (component instanceof RichComponent.StatusBadge ignored) {
+            return "status_badge";
+        } else if (component instanceof RichComponent.ChoiceGroup ignored) {
+            return "choice_group";
+        }
+        throw new IncompatibleClassChangeError();
     }
 
     private static final class Counter {

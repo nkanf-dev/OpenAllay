@@ -280,94 +280,89 @@ public final class MinecraftSemanticRenderer {
             long presentationTicks,
             RecipeGridRenderer recipeGridRenderer) {
         graphics.fill(x - 2, y - 1, x + width, y + height, PANEL);
-        switch (component) {
-            case RichComponent.ItemRow value -> {
-                int rowY = y;
-                for (RichComponent.Item item : value.items()) {
-                    renderItem(graphics, font, item.itemId(), item.label(), item.count(),
-                            x + 2, rowY, mouseX, mouseY);
-                    int actionX = Math.min(x + width - 54, x + 120);
-                    action(graphics, font, Component.translatable(
-                                    "screen.openallay.semantic.action.recipes"), actionX, rowY + 4,
-                            new Intent.BrowseRecipes(item.itemId()), hits);
-                    action(graphics, font, Component.translatable(
-                                    "screen.openallay.semantic.action.usages"), actionX + 28, rowY + 4,
-                            new Intent.BrowseUsages(item.itemId()), hits);
-                    rowY += 22;
-                }
-            }
-            case RichComponent.RecipeGrid value -> {
-                if (recipeGridRenderer.render(
-                        graphics,
-                        font,
-                        value,
-                        new GuideUiLayout.Rect(x - 2, y - 1, width + 2, height),
-                        mouseX,
-                        mouseY,
-                        presentationTicks)) {
-                    action(graphics, font, Component.translatable(
-                                    "screen.openallay.semantic.action.open_recipe"),
-                            x + 4, y + height - 11,
-                            new Intent.ExactRecipe(value.recipe()), hits);
-                    break;
-                }
-                graphics.text(font, value.label().isBlank()
-                                ? Component.translatable("screen.openallay.semantic.recipe")
-                                : Component.literal(value.label()),
-                        x + 4, y + 4, ACCENT, false);
-                graphics.text(font, Component.translatable(
-                                "screen.openallay.semantic.recipe_verified"),
-                        x + 4, y + 18, MUTED, false);
+        java.util.Objects.requireNonNull(component);
+        if (component instanceof RichComponent.ItemRow value) {
+            int rowY = y;
+            for (RichComponent.Item item : value.items()) {
+                renderItem(graphics, font, item.itemId(), item.label(), item.count(),
+                        x + 2, rowY, mouseX, mouseY);
+                int actionX = Math.min(x + width - 54, x + 120);
                 action(graphics, font, Component.translatable(
-                                "screen.openallay.semantic.action.open_recipe"), x + 4, y + 34,
+                                "screen.openallay.semantic.action.recipes"), actionX, rowY + 4,
+                        new Intent.BrowseRecipes(item.itemId()), hits);
+                action(graphics, font, Component.translatable(
+                                "screen.openallay.semantic.action.usages"), actionX + 28, rowY + 4,
+                        new Intent.BrowseUsages(item.itemId()), hits);
+                rowY += 22;
+            }
+        } else if (component instanceof RichComponent.RecipeGrid value) {
+            if (recipeGridRenderer.render(
+                    graphics,
+                    font,
+                    value,
+                    new GuideUiLayout.Rect(x - 2, y - 1, width + 2, height),
+                    mouseX,
+                    mouseY,
+                    presentationTicks)) {
+                action(graphics, font, Component.translatable(
+                                "screen.openallay.semantic.action.open_recipe"),
+                        x + 4, y + height - 11,
                         new Intent.ExactRecipe(value.recipe()), hits);
+                return;
             }
-            case RichComponent.IngredientCheck value -> {
-                int rowY = y;
-                for (RichComponent.Ingredient ingredient : value.ingredients()) {
-                    renderItem(graphics, font, ingredient.itemId(), ingredient.label(),
-                            ingredient.required(), x + 2, rowY, mouseX, mouseY);
-                    String count = ingredient.available() + "/" + ingredient.required();
-                    graphics.text(font, count, x + width - font.width(count) - 5, rowY + 5,
-                            ingredient.available() >= ingredient.required() ? SUCCESS : ERROR, false);
-                    rowY += 22;
-                }
+            graphics.text(font, value.label().isBlank()
+                            ? Component.translatable("screen.openallay.semantic.recipe")
+                            : Component.literal(value.label()),
+                    x + 4, y + 4, ACCENT, false);
+            graphics.text(font, Component.translatable(
+                            "screen.openallay.semantic.recipe_verified"),
+                    x + 4, y + 18, MUTED, false);
+            action(graphics, font, Component.translatable(
+                            "screen.openallay.semantic.action.open_recipe"), x + 4, y + 34,
+                    new Intent.ExactRecipe(value.recipe()), hits);
+        } else if (component instanceof RichComponent.IngredientCheck value) {
+            int rowY = y;
+            for (RichComponent.Ingredient ingredient : value.ingredients()) {
+                renderItem(graphics, font, ingredient.itemId(), ingredient.label(),
+                        ingredient.required(), x + 2, rowY, mouseX, mouseY);
+                String count = ingredient.available() + "/" + ingredient.required();
+                graphics.text(font, count, x + width - font.width(count) - 5, rowY + 5,
+                        ingredient.available() >= ingredient.required() ? SUCCESS : ERROR, false);
+                rowY += 22;
             }
-            case RichComponent.CraftabilitySummary value -> {
-                graphics.text(font, Component.translatable(value.craftable()
-                                ? "screen.openallay.semantic.craftable"
-                                : "screen.openallay.semantic.not_craftable"),
-                        x + 4, y + 4, value.craftable() ? SUCCESS : ERROR, false);
+        } else if (component instanceof RichComponent.CraftabilitySummary value) {
+            graphics.text(font, Component.translatable(value.craftable()
+                            ? "screen.openallay.semantic.craftable"
+                            : "screen.openallay.semantic.not_craftable"),
+                    x + 4, y + 4, value.craftable() ? SUCCESS : ERROR, false);
+            graphics.text(font, Component.translatable(
+                            "screen.openallay.semantic.maximum_crafts", value.maximumCrafts()),
+                    x + 4, y + 16, TEXT, false);
+            graphics.text(font, Component.translatable(value.conclusive()
+                            ? "screen.openallay.semantic.conclusive"
+                            : "screen.openallay.semantic.incomplete"),
+                    x + 4, y + 28, MUTED, false);
+        } else if (component instanceof RichComponent.ProgressSteps value) {
+            int rowY = y + 2;
+            for (RichComponent.Step step : value.steps()) {
+                String marker = progressMarker(
+                        step.state(), animationsEnabled, presentationTicks);
+                graphics.text(font, marker + " " + step.label(), x + 4, rowY,
+                        step.state() == RichComponent.StepState.FAILED ? ERROR : TEXT, false);
+                rowY += 10;
+            }
+        } else if (component instanceof RichComponent.SourceSummary value) {
+            int rowY = y + 2;
+            for (RichComponent.Source source : value.sources()) {
                 graphics.text(font, Component.translatable(
-                                "screen.openallay.semantic.maximum_crafts", value.maximumCrafts()),
-                        x + 4, y + 16, TEXT, false);
-                graphics.text(font, Component.translatable(value.conclusive()
-                                ? "screen.openallay.semantic.conclusive"
-                                : "screen.openallay.semantic.incomplete"),
-                        x + 4, y + 28, MUTED, false);
+                                "screen.openallay.semantic.source", source.label()),
+                        x + 4, rowY, ACCENT, false);
+                hits.add(new Hit(new GuideUiLayout.Rect(x + 2, rowY - 1, width - 4, 11),
+                        new Intent.Source(source.sourceId(), source.originInvocationId())));
+                rowY += 10;
             }
-            case RichComponent.ProgressSteps value -> {
-                int rowY = y + 2;
-                for (RichComponent.Step step : value.steps()) {
-                    String marker = progressMarker(
-                            step.state(), animationsEnabled, presentationTicks);
-                    graphics.text(font, marker + " " + step.label(), x + 4, rowY,
-                            step.state() == RichComponent.StepState.FAILED ? ERROR : TEXT, false);
-                    rowY += 10;
-                }
-            }
-            case RichComponent.SourceSummary value -> {
-                int rowY = y + 2;
-                for (RichComponent.Source source : value.sources()) {
-                    graphics.text(font, Component.translatable(
-                                    "screen.openallay.semantic.source", source.label()),
-                            x + 4, rowY, ACCENT, false);
-                    hits.add(new Hit(new GuideUiLayout.Rect(x + 2, rowY - 1, width - 4, 11),
-                            new Intent.Source(source.sourceId(), source.originInvocationId())));
-                    rowY += 10;
-                }
-            }
-            case RichComponent.StatusBadge value -> graphics.text(
+        } else if (component instanceof RichComponent.StatusBadge value) {
+            graphics.text(
                     font, value.label(), x + 5, y + 4,
                     switch (value.state()) {
                         case INFO -> ACCENT;
@@ -375,14 +370,13 @@ public final class MinecraftSemanticRenderer {
                         case WARNING -> 0xFFFFD479;
                         case ERROR -> ERROR;
                     }, false);
-            case RichComponent.ChoiceGroup value -> {
-                graphics.text(font, value.prompt(), x + 4, y + 2, TEXT, false);
-                int rowY = y + 14;
-                for (RichComponent.Choice choice : value.choices()) {
-                    action(graphics, font, Component.literal(choice.label()), x + 4, rowY,
-                            new Intent.Choice(value.nodeId(), choice.id()), hits);
-                    rowY += 11;
-                }
+        } else if (component instanceof RichComponent.ChoiceGroup value) {
+            graphics.text(font, value.prompt(), x + 4, y + 2, TEXT, false);
+            int rowY = y + 14;
+            for (RichComponent.Choice choice : value.choices()) {
+                action(graphics, font, Component.literal(choice.label()), x + 4, rowY,
+                        new Intent.Choice(value.nodeId(), choice.id()), hits);
+                rowY += 11;
             }
         }
     }
@@ -440,15 +434,24 @@ public final class MinecraftSemanticRenderer {
     }
 
     private static int componentHeight(RichComponent component) {
-        return switch (component) {
-            case RichComponent.ItemRow value -> Math.max(22, 22 * value.items().size());
-            case RichComponent.RecipeGrid ignored -> 136;
-            case RichComponent.IngredientCheck value -> Math.max(22, 22 * value.ingredients().size());
-            case RichComponent.CraftabilitySummary ignored -> 40;
-            case RichComponent.ProgressSteps value -> 12 * (value.steps().size() + 1);
-            case RichComponent.SourceSummary value -> 12 * (value.sources().size() + 1);
-            case RichComponent.StatusBadge ignored -> 16;
-            case RichComponent.ChoiceGroup value -> 12 * (value.choices().size() + 1);
-        };
+        java.util.Objects.requireNonNull(component);
+        if (component instanceof RichComponent.ItemRow value) {
+            return Math.max(22, 22 * value.items().size());
+        } else if (component instanceof RichComponent.RecipeGrid ignored) {
+            return 136;
+        } else if (component instanceof RichComponent.IngredientCheck value) {
+            return Math.max(22, 22 * value.ingredients().size());
+        } else if (component instanceof RichComponent.CraftabilitySummary ignored) {
+            return 40;
+        } else if (component instanceof RichComponent.ProgressSteps value) {
+            return 12 * (value.steps().size() + 1);
+        } else if (component instanceof RichComponent.SourceSummary value) {
+            return 12 * (value.sources().size() + 1);
+        } else if (component instanceof RichComponent.StatusBadge ignored) {
+            return 16;
+        } else if (component instanceof RichComponent.ChoiceGroup value) {
+            return 12 * (value.choices().size() + 1);
+        }
+        throw new IncompatibleClassChangeError();
     }
 }

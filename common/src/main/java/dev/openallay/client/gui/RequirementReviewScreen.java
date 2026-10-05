@@ -337,7 +337,7 @@ public final class RequirementReviewScreen extends dev.openallay.client.gui.Guid
     }
 
     @Override
-    public boolean mouseScrolled(double x, double y, double dx, double dy) {
+    public boolean guideMouseScrolled(double x, double y, double dx, double dy) {
         scrollBy(-(int) Math.round(dy * 24));
         return true;
     }

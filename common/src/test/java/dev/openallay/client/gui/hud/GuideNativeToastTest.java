@@ -28,14 +28,14 @@ class GuideNativeToastTest {
         var fence = new GuideNotificationPort.Fence();
         var toast = new GuideNativeToast(notification(fence));
         fence.invalidate();
-        assertEquals(Toast.Visibility.HIDE, toast.getWantedVisibility());
+        assertEquals(Toast.Visibility.HIDE, toast.guideWantedVisibility());
         assertDoesNotThrow(() -> toast.extractRenderState(null, null, 0));
-        assertDoesNotThrow(() -> toast.update(null, 0));
+        assertDoesNotThrow(() -> toast.updateGuideToast(0));
     }
     @Test void hideIsOwnedAndMakesExtractionNoOp() {
         var toast = new GuideNativeToast(notification(new GuideNotificationPort.Fence()));
         toast.hide();
-        assertEquals(Toast.Visibility.HIDE, toast.getWantedVisibility());
+        assertEquals(Toast.Visibility.HIDE, toast.guideWantedVisibility());
         assertDoesNotThrow(() -> toast.extractRenderState(null, null, 0));
     }
     @Test void fixedNativeSlotContractSurvivesCoalescedUpdate() {
@@ -43,7 +43,7 @@ class GuideNativeToastTest {
         var toast = new GuideNativeToast(current);
         Object token = toast.getToken();
         assertEquals(64, toast.height());
-        assertEquals(2, toast.occcupiedSlotCount());
+        assertEquals(2, toast.guideSlotCount());
         assertEquals(96, toast.yPos(3));
         toast.update(current);
         assertSame(token, toast.getToken());
@@ -52,10 +52,10 @@ class GuideNativeToastTest {
     @Test void nativeExpirationNeverAcknowledgesUnreadOrRestartsForUpdate() {
         var current = notification(new GuideNotificationPort.Fence());
         var toast = new GuideNativeToast(current);
-        toast.update(null, 6000);
-        assertEquals(Toast.Visibility.HIDE, toast.getWantedVisibility());
+        toast.updateGuideToast(6000);
+        assertEquals(Toast.Visibility.HIDE, toast.guideWantedVisibility());
         toast.update(current);
-        assertEquals(Toast.Visibility.HIDE, toast.getWantedVisibility());
+        assertEquals(Toast.Visibility.HIDE, toast.guideWantedVisibility());
     }
     @Test void actualCardFactsStayPrimaryAfterFinalReplyAndFailureAndCountsStaySecondary() {
         var original = notification(new GuideNotificationPort.Fence());
@@ -88,15 +88,15 @@ class GuideNativeToastTest {
                 current.sessionOwner(), current.sessionId(), UUID.randomUUID(), "Wrong task", 0, List.of(),
                 true, true, false, 3, current.fence());
         toast.update(invalid);
-        toast.update(null, 4000);
-        assertEquals(Toast.Visibility.SHOW, toast.getWantedVisibility(), "other task cannot replace duration or display payload");
+        toast.updateGuideToast(4000);
+        assertEquals(Toast.Visibility.SHOW, toast.guideWantedVisibility(), "other task cannot replace duration or display payload");
         var otherFence = new GuideNotificationPort.Fence();
         var next = new GuideNotificationPort.Notification(current.connectionGeneration(), current.actorId(),
                 current.sessionOwner(), current.sessionId(), current.requestId(), "Rebound", 0, List.of(),
                 true, true, false, 3, otherFence);
         toast.update(next);
         current.fence().invalidate();
-        assertEquals(Toast.Visibility.HIDE, toast.getWantedVisibility(), "old exact owned fence still controls queued object");
+        assertEquals(Toast.Visibility.HIDE, toast.guideWantedVisibility(), "old exact owned fence still controls queued object");
         assertDoesNotThrow(() -> toast.extractRenderState(null, null, 4000));
     }
 
@@ -104,13 +104,13 @@ class GuideNativeToastTest {
         var current = notification(new GuideNotificationPort.Fence());
         var toast = new GuideNativeToast(current);
         toast.queued();
-        assertFalse(toast.finished()); assertEquals(Toast.Visibility.SHOW, toast.getWantedVisibility());
+        assertFalse(toast.finished()); assertEquals(Toast.Visibility.SHOW, toast.guideWantedVisibility());
         toast.update(current); assertFalse(toast.finished());
-        toast.update(null, 6000);
-        assertEquals(Toast.Visibility.HIDE, toast.getWantedVisibility());
+        toast.updateGuideToast(6000);
+        assertEquals(Toast.Visibility.HIDE, toast.guideWantedVisibility());
         assertFalse(toast.finished(), "native hide animation has not finished yet");
         toast.onFinishedRendering(); assertTrue(toast.finished());
-        assertEquals(Toast.Visibility.HIDE, toast.getWantedVisibility());
+        assertEquals(Toast.Visibility.HIDE, toast.guideWantedVisibility());
         assertDoesNotThrow(() -> toast.extractRenderState(null, null, 6000));
         assertNull(toast.e2eReceipt(), "finished objects cannot create a new graphical frame");
         assertTrue(current.fence().valid(), "controller retires the fence after observing native completion");

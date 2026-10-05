@@ -10,6 +10,6 @@ public final class GuideClientUiStates {
 
     public static GuideClientUiState create(GuideService service, ClientEventDispatcher client) {
         return new GuideClientUiState(service, new SystemImageClipboard(),
-                job -> Thread.ofVirtual().name("openallay-draft-image").start(job), client);
+                job -> dev.openallay.concurrent.NamedThreads.startDaemon("openallay-draft-image", job), client);
     }
 }

@@ -18,6 +18,10 @@ public final class GuideNativeMultilineText {
         editor.setValue(value);
     }
 
+    public static void resize(MultiLineEditBox editor, int width, int height, int x, int y) {
+        editor.setRectangle(width, height, x, y);
+    }
+
     public static int defaultTotalPadding() {
         // Native scroll/text-area widgets in this family use four pixels per side.
         return 8;

@@ -70,7 +70,7 @@ public final class OpenAllayButton extends GuideNativeButton {
                     colors.marker());
         }
 
-        paintGuideButtonLabel(graphics, getMessage().copy().withColor(colors.text()), 4);
+        paintGuideButtonLabel(graphics, getMessage().copy().withStyle(getMessage().getStyle().withColor(colors.text())), 4);
     }
 
     public static final class Builder {

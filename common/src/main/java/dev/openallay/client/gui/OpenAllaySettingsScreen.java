@@ -186,13 +186,13 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
         uiDraft = new UiSettingsDraft(snapshot.display());
         selectedSkillName = snapshot.skills().skills().isEmpty()
                 ? null
-                : snapshot.skills().skills().getFirst().metadata().name();
+                : snapshot.skills().skills().get(0).metadata().name();
         selectedCommunitySkillId = snapshot.skillCommunity().packages().isEmpty()
                 ? null
-                : snapshot.skillCommunity().packages().getFirst().id();
+                : snapshot.skillCommunity().packages().get(0).id();
         selectedExtensionId = extensionProjection().installed().isEmpty()
                 ? null
-                : extensionProjection().installed().getFirst().id();
+                : extensionProjection().installed().get(0).id();
         select(snapshot.models().config().defaultProfileId());
     }
 
@@ -280,7 +280,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                 if (selectedSkillName == null || next.skills().find(selectedSkillName).isEmpty()) {
                     selectedSkillName = next.skills().skills().isEmpty()
                             ? null
-                            : next.skills().skills().getFirst().metadata().name();
+                            : next.skills().skills().get(0).metadata().name();
                 }
                 skillEditing = false;
                 skillDraftMarkdown = "";
@@ -290,7 +290,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                     || community.find(selectedCommunitySkillId).isEmpty()) {
                 selectedCommunitySkillId = community.packages().isEmpty()
                         ? null
-                        : community.packages().getFirst().id();
+                        : community.packages().get(0).id();
             }
             ExtensionSettingsProjection extensionProjection = extensionProjection();
             List<ExtensionSettingsProjection.ExtensionCard> cards =
@@ -301,7 +301,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                     && cards.stream()
                             .anyMatch(extension -> extension.id().equals(selectedExtensionId));
             if (!selectionVisible) {
-                selectedExtensionId = cards.isEmpty() ? null : cards.getFirst().id();
+                selectedExtensionId = cards.isEmpty() ? null : cards.get(0).id();
             }
             if (layout != null) {
                 // Background history/source publications must not rebuild a dragged UI slider.
@@ -353,6 +353,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
 
     @Override
     public void tick() {
+        tickGuideWidgets();
         super.tick();
         service.refreshRuntimeState();
         if (voiceActions != null) {
@@ -380,7 +381,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
     }
 
     @Override
-    public boolean mouseScrolled(
+    public boolean guideMouseScrolled(
             double mouseX,
             double mouseY,
             double scrollX,
@@ -478,7 +479,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
             }
             return true;
         }
-        return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+        return super.guideMouseScrolled(mouseX, mouseY, scrollX, scrollY);
     }
 
     @Override
@@ -3823,7 +3824,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                 replacement == ExtensionTab.INSTALLED
                         ? extensionProjection().installed()
                         : extensionProjection().community();
-        selectedExtensionId = cards.isEmpty() ? null : cards.getFirst().id();
+        selectedExtensionId = cards.isEmpty() ? null : cards.get(0).id();
         localNotice = "";
         rebuildWidgets();
         maybeRefreshVisibleCommunity();
@@ -3953,9 +3954,9 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                 .filter(profile -> !profile.id().equals(selectedProfileId))
                 .toList();
         String defaultId = snapshot.models().config().defaultProfileId().equals(selectedProfileId)
-                ? retained.getFirst().id()
+                ? retained.get(0).id()
                 : snapshot.models().config().defaultProfileId();
-        select(retained.getFirst().id());
+        select(retained.get(0).id());
         confirmation = Confirmation.NONE;
         accept(service.saveModels(new ModelProfilesConfig(
                 defaultId, retained)));

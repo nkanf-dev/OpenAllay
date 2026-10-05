@@ -235,7 +235,7 @@ final class GuideBuilderE2EProbe {
                     throw new IllegalStateException("Native dimension changed");
                 result.addProperty("worldName", server.getWorldData().getLevelName());
                 result.addProperty("survival", server.getWorldData().getGameType() == net.minecraft.world.level.GameType.SURVIVAL);
-                result.addProperty("cheatsOff", !server.getWorldData().isAllowCommands());
+                result.addProperty("cheatsOff", !GuideProbeWorldSettings.commandsAllowed(server));
                 result.addProperty("flatWorld", server.getWorldData().isFlatWorld());
                 JsonObject origin = new JsonObject(); origin.addProperty("x", anchor.x()); origin.addProperty("y", anchor.y()); origin.addProperty("z", anchor.z());
                 result.add("independentAnchor", origin);
@@ -271,7 +271,7 @@ final class GuideBuilderE2EProbe {
                 else if (!scenario.equals("builder-server-denied")) passed &= unrestrictedAtStart;
                 if (Boolean.getBoolean("openallay.e2e.revokeUnrestrictedAfterCapture")) passed &= revocationCompleted;
                 if (scenario.equals("builder-server-denied")) passed &= request.modelSelection().modelMode() == dev.openallay.guide.GuideModelMode.SERVER;
-                passed &= server.getWorldData().getGameType() == net.minecraft.world.level.GameType.SURVIVAL && !server.getWorldData().isAllowCommands();
+                passed &= server.getWorldData().getGameType() == net.minecraft.world.level.GameType.SURVIVAL && !GuideProbeWorldSettings.commandsAllowed(server);
                 result.addProperty("outcome", passed ? "PASSED" : "FAILED");
             } catch (RuntimeException failure) { result.addProperty("outcome", "FAILED"); result.addProperty("failure", failure.toString()); }
             client.execute(() -> complete.accept(result));
@@ -296,11 +296,11 @@ final class GuideBuilderE2EProbe {
                         && value.invocationArguments() != null && "minecraft-builder".equals(string(value.invocationArguments(), "name")));
         }
         if (scenario.equals("builder-disabled") || scenario.equals("builder-server-denied")) {
-            var value = javascript.getLast().normalized();
+            var value = javascript.get(javascript.size() - 1).normalized();
             return value != null && value.has("status") && value.get("status").getAsString().equals("failure")
                     && value.has("code") && value.get("code").getAsString().equals("javascript_error");
         }
-        var normalized = javascript.getLast().normalized();
+        var normalized = javascript.get(javascript.size() - 1).normalized();
         if (normalized == null || !normalized.has("status") || !normalized.get("status").getAsString().equals("success")) return false;
         if (!normalized.has("value") || !normalized.get("value").isJsonObject()) return false;
         var output = normalized.getAsJsonObject("value");
