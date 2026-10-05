@@ -38,6 +38,11 @@ on:
         type: string
         required: true
         default: none
+      capture_early_pipeline:
+        description: "Diagnostic-only original patch producer capture; select only 1.20.2,1.20.3 and no smokes"
+        type: boolean
+        required: false
+        default: false
       artifact_run_id:
         description: "Successful native artifact run ID, only for smoke targets not rebuilt"
         type: string
@@ -162,18 +167,26 @@ jobs:
       - name: Prepare the pinned shared Builder source
         run: python3 -B scripts/prepare-distribution.py
 
+      - name: Capture only the genuine failed early NeoForge patch producer
+        if: ${{ inputs.capture_early_pipeline == true }}
+        run: python3 -B scripts/capture-early-neoforge-pipeline.py --target "$OPENALLAY_MINECRAFT_TARGET"
+
       - name: Compile and package both native loaders with the same SDK and Builder
+        if: ${{ inputs.capture_early_pipeline != true }}
         # Feature tests run in mainline Quality and pinned Shared Builder quality.
         # These jobs check native linkage/package shape, not per-target feature copies.
         run: python3 -B scripts/compile-native-target.py --target "$OPENALLAY_MINECRAFT_TARGET"
 
       - name: Verify native package engine identity and metadata
+        if: ${{ inputs.capture_early_pipeline != true }}
         run: python3 -B scripts/verify-native-target-package.py --target "$OPENALLAY_MINECRAFT_TARGET" --bundled-builder | tee native-package-check.json
 
       - name: Stage the exact native production JARs
+        if: ${{ inputs.capture_early_pipeline != true }}
         run: python3 -B scripts/stage-ci-client-production.py --minecraft-target "$OPENALLAY_MINECRAFT_TARGET"
 
       - name: Retain exact compatibility production artifacts
+        if: ${{ inputs.capture_early_pipeline != true }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: compat-production-${{ matrix.target }}-${{ github.sha }}

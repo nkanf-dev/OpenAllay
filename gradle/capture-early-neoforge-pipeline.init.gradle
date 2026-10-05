@@ -1,0 +1,66 @@
+import groovy.json.JsonOutput
+import java.security.MessageDigest
+
+// Observation only: runs immediately before the genuine official userdev patch task.
+// No arguments, inputs, outputs, patch policy, or loader/tool selection are changed.
+gradle.projectsEvaluated {
+    def project = gradle.rootProject
+    def reportDir = new File(project.buildDir, 'reports/early-pipeline-capture')
+    def sha256 = { File input -> MessageDigest.getInstance('SHA-256').digest(input.bytes).encodeHex().toString() }
+    project.tasks.named('neoFormPatchUserDev').configure { patchTask ->
+        doFirst {
+          try {
+            reportDir.mkdirs()
+            def patchInput = [path: patchTask.input.get().asFile.absolutePath,
+                    sha256: sha256(patchTask.input.get().asFile)]
+            new File(reportDir, 'immediate-patch-input.json').text = JsonOutput.prettyPrint(JsonOutput.toJson(patchInput)) + '\n'
+            def data = [gradle: gradle.gradleVersion, patchInput: patchInput, tasks: [:]]
+            ['neoFormMerge', 'neoFormMergeMappings', 'neoFormRename', 'neoFormDecompile',
+             'neoFormInject', 'neoFormPatch', 'neoFormPatchUserDev'].each { name ->
+                def task = project.tasks.findByName(name)
+                if (task != null) {
+                    def record = [type: task.class.superclass.name,
+                            output: task.output.get().asFile.absolutePath]
+                    if (task.hasProperty('executingClasspath')) {
+                        record.classpath = task.executingClasspath.files.sort { it.absolutePath }.collect {
+                            [path: it.absolutePath, sha256: sha256(it)]
+                        }
+                        record.programArguments = task.programArguments.get()
+                        record.runtimeArguments = task.runtimeArguments.get().collectEntries { key, value -> [(key): value.get()] }
+                        record.inputFiles = record.runtimeArguments.findAll { key, value -> new File(value).isFile() }
+                                .collectEntries { key, value -> [(key): [path: value, sha256: sha256(new File(value))]] }
+                        record.jvmArguments = task.jvmArguments.get()
+                        record.mainClass = task.mainClass.get()
+                        record.java = [executable: task.javaLauncher.get().executablePath.asFile.absolutePath,
+                                languageVersion: task.javaLauncher.get().metadata.languageVersion.toString(),
+                                runtimeVersion: task.javaLauncher.get().metadata.javaRuntimeVersion]
+                    }
+                    data.tasks[name] = record
+                }
+            }
+            // These public task FileCollections expose the exact resolved config/patch files.
+            [neoform: project.tasks.getByName('neoFormPatch').neoFormArchive,
+             userdev: patchTask.patchArchive].each { owner, files ->
+                def selected = files.asFileTree.matching { include 'config.json',
+                        'patches/net/minecraft/world/level/block/Blocks.java.patch',
+                        'patches/net/minecraft/world/level/block/ChorusFlowerBlock.java.patch' }
+                data[owner] = []
+                selected.visit { entry ->
+                    if (!entry.directory) {
+                        def destination = new File(reportDir, owner + '/' + entry.relativePath.pathString)
+                        destination.parentFile.mkdirs()
+                        destination.bytes = entry.file.bytes
+                        data[owner] << [path: entry.file.absolutePath, entry: entry.relativePath.pathString,
+                                sha256: sha256(entry.file)]
+                    }
+                }
+            }
+            new File(reportDir, 'resolved-task-inputs.json').text = JsonOutput.prettyPrint(JsonOutput.toJson(data)) + '\n'
+          } catch (Exception observationError) {
+            project.logger.warn('Pipeline observation failed; original patch task remains unchanged', observationError)
+            reportDir.mkdirs()
+            new File(reportDir, 'observation-error.txt').text = observationError.toString() + '\n'
+          }
+        }
+    }
+}
