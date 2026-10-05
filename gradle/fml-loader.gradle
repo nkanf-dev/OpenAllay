@@ -128,3 +128,42 @@ if (legacyNativeLoader) {
         manifest.attributes('MixinConfigs': 'openallay.client.mixins.json')
     }
 }
+
+// ART rewrites every class. Restore the one native-free compiled engine owner only
+// after the supported MDG reobfuscation task has finished writing its native archive.
+if (legacyNativeLoader) {
+    def nativeReobf = tasks.named('reobfJar', net.neoforged.moddevgradle.legacyforge.tasks.RemapJar)
+    def engineOutput = project(':engine-core').sourceSets.main.output
+    def finalArchive = layout.buildDirectory.file(nativeReobf.flatMap { it.archiveFileName }
+            .map { "libs/${it}" })
+    def parityReceipt = layout.buildDirectory.file('native-engine/receipt.json')
+    nativeReobf.configure {
+        destinationDirectory.set(layout.buildDirectory.dir('native-engine/reobf'))
+    }
+    def packageNativeEngine = tasks.register('packageNativeEngine', Exec) {
+        dependsOn(nativeReobf, ':engine-core:classes')
+        inputs.file(nativeReobf.flatMap { it.archiveFile })
+        inputs.files(engineOutput).withPathSensitivity(PathSensitivity.RELATIVE)
+        inputs.file(rootProject.file('scripts/reinject-native-engine.py'))
+        outputs.file(finalArchive)
+        outputs.file(parityReceipt)
+        doFirst {
+            def command = ['python3', '-B', rootProject.file('scripts/reinject-native-engine.py'),
+                    '--input', nativeReobf.get().archiveFile.get().asFile,
+                    '--output', finalArchive.get().asFile,
+                    '--receipt', parityReceipt.get().asFile]
+            engineOutput.files.findAll { it.isDirectory() }.sort { it.absolutePath }.each {
+                command.addAll(['--engine-output', it])
+            }
+            commandLine(command)
+        }
+    }
+    tasks.named('assemble') { dependsOn(packageNativeEngine) }
+    // MDG's reobfuscated Java variants must publish the final product, never the intermediate.
+    ['reobfApiElements', 'reobfRuntimeElements'].each { name ->
+        configurations.named(name) {
+            outgoing.artifacts.clear()
+            outgoing.artifact(finalArchive) { builtBy(packageNativeEngine) }
+        }
+    }
+}
