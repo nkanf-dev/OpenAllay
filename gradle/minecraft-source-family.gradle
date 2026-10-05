@@ -85,8 +85,8 @@ ext.selectConfiguredMinecraftMixins = { SourceDirectorySet javaSources,
     if (inherited != null && inherited.excluded.any { !excluded.containsKey(it) }) {
         throw new GradleException('Loader Mixin configuration changes common binding ownership')
     }
-    declarations.findAll { source, declaration -> !excluded.containsKey(source) }.each { source, declaration ->
-        def references = declaration.text.replaceAll(/"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'/, '')
+    if (!excluded.isEmpty()) declarations.findAll { source, declaration -> !excluded.containsKey(source) }.each { source, declaration ->
+        def references = declaration.text.replaceAll(/"(?:\\.|[^"\\])*+"|'(?:\\.|[^'\\])*+'/, '')
         excluded.each { excludedSource, binding ->
             def simple = binding.identity.substring(binding.identity.lastIndexOf('.') + 1)
             def qualified = ~/(?<![\w$])${java.util.regex.Pattern.quote(binding.identity)}(?![\w$])/
