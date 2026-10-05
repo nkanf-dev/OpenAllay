@@ -17,7 +17,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.IntTag;
 import net.minecraft.server.level.ServerLevel;
@@ -255,7 +254,7 @@ final class NativeBlockCodec {
     }
 
     private static boolean canTransformContainer(BlockState state, CompoundTag tag) {
-        var blockId = BuiltInRegistries.BLOCK.getKey(state.getBlock());
+        var blockId = NativeWorldRegistries.blockId(state.getBlock());
         if (blockId == null || !"minecraft".equals(blockId.getNamespace())) return false;
         Class<?> blockClass = state.getBlock().getClass();
         BlockEntityType<?> expected;
@@ -356,7 +355,7 @@ final class NativeBlockCodec {
 
     private static JsonObject encodeState(BlockState state) {
         JsonObject json = new JsonObject();
-        var id = BuiltInRegistries.BLOCK.getKey(state.getBlock());
+        var id = NativeWorldRegistries.blockId(state.getBlock());
         if (id == null) throw new IllegalArgumentException("Cannot encode an unregistered block");
         json.addProperty("id", id.toString());
         json.add("properties", NativeBlockStateProperties.encode(state));

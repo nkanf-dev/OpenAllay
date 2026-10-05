@@ -78,13 +78,13 @@ final class NativeWorldSession implements WorldSession {
         if (!client.isSameThread()) throw new ExtensionException("wrong_owner", "Client validation requires its owner thread");
         if (client.player == null || !connection.getConnection().isConnected()) throw stale();
         identity.requireClient(client.getConnection(), client.player, client.level, client.getSingleplayerServer(),
-                client.player.getUUID(), NativeWorldResourceIds.keyId(client.player.level().dimension()).toString());
+                client.player.getUUID(), NativeWorldResourceIds.keyId(NativeClientPlayerLevel.get(client.player).dimension()).toString());
     }
 
     private void validateServer() {
         if (!server.isSameThread()) throw new ExtensionException("wrong_owner", "Server validation requires its owner thread");
         if (server.isStopped() || server.isShutdown() || player == null || level == null
-                || player.isRemoved() || !player.connection.isAcceptingMessages()
+                || player.isRemoved() || !NativePlayerConnection.isAcceptingMessages(player)
                 || !connection.getConnection().isConnected()) throw stale();
         identity.requireServer(server.getPlayerList().getPlayer(actor), NativeServerPlayerLevel.get(player), player.getUUID(),
                 NativeWorldResourceIds.keyId(NativeServerPlayerLevel.get(player).dimension()).toString());
@@ -196,8 +196,8 @@ final class NativeWorldSession implements WorldSession {
             terrainHeightmapSafe = true;
             // WORLD_SURFACE tests native isAir, while terrain.js excludes only three IDs.
             // Inspect every possible state once per binding, not every column/default state.
-            for (var block : net.minecraft.core.registries.BuiltInRegistries.BLOCK) {
-                String id = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(block).toString();
+            for (var block : NativeWorldRegistries.blocks()) {
+                String id = NativeWorldRegistries.blockId(block).toString();
                 if (!heightmapCovers(block,id)) { terrainHeightmapSafe = false; break; }
             }
         }
@@ -272,7 +272,7 @@ final class NativeWorldSession implements WorldSession {
             // changed state, retain the exact post-hook BE payload as the old repair
             // adapter did; an in-hook target mutation still fails the before gate.
             JsonObject state=com.google.gson.JsonParser.parseString(NativeBlockCodec.read(level,pos)).getAsJsonObject();
-            state.addProperty("id",net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(updated.getBlock()).toString());
+            state.addProperty("id",NativeWorldRegistries.blockId(updated.getBlock()).toString());
             state.add("properties",NativeBlockStateProperties.encode(updated));
             if(updated.getBlock()!=current.getBlock())state.remove("blockEntity");
             return new RepairOutcome(before.json(),state.toString());
