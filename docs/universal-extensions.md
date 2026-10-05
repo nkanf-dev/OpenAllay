@@ -1,33 +1,31 @@
 # Universal Extensions
 
-The current development core provides the standalone **Extension API 0.3.0** alongside
+The current development core provides the standalone **Extension API 0.4.0** alongside
 the existing 0.2.2 loader-mod API. This integration follows the published 0.4.1 release;
 the published 0.4.1 downloads still expose only API 0.2.2. The new SDK compiles to Java 8 bytecode and has no production
 Minecraft, loader, Rhino, Gson or core dependencies. It lets one Extension payload
 use stable host interfaces instead of linking to a specific game's native classes.
 
-## Current verified boundary
+## Current validation boundary
 
-One unchanged Java-8 Extension fixture has run on JVM 8, 11, 17, 21 and 25.
-The same universal fixture JAR has also been discovered at normal startup in actual
-Minecraft 26.2 Fabric and NeoForge clients. Its registered host method executed
-through RunJS. In that initial bridge test, the legacy Builder 0.2.1 remained active. Real
-framework shutdown completed before accepted package classloaders were released.
+The current SDK 0.4.0 source removes Extension-private permission declarations and
+grants. Its coordinated Builder 0.4.0 source uses host world APIs without an extra
+write approval. This source change is being verified through the normal Java,
+loader packaging and packaged-client CI suites. Earlier SDK/Builder runtime
+receipts remain historical evidence for their exact earlier source and JARs, not
+acceptance of this new public ABI.
 
-This proves the shared SDK and current host integration. It does not yet make the
-current Minecraft 26.2 core executable on stock Forge 1.12.2. The classic game runtime,
-native adapters remain separate work in progress.
-Current development 26.2 client hosts now advertise `minecraft:world-access` only
-when their actual native adapter is installed. The SDK backend has passed native
-permission-freeze and write/read/restore tests on both loaders. The standalone shared
-Builder 0.3.0 business payload has also passed actual 26.2 Fabric and NeoForge
-acceptance with the same Java-8 JAR. The current development distribution now
-bundles that one universal artifact. These development changes do not amend the
-published v0.4.1 downloads or establish older-game support.
+Default development remains Minecraft 26.2. SDK 0.4.0, player access semantics and
+the same universal Builder source belong to all prepared target profiles from 26.3
+through 1.20.1. Native source, compilation, packaging and real-client results are
+tracked separately for each actual API family and loader. Candidate declarations
+do not establish a published runtime interval; only accepted artifact families
+are released. Java 8 SDK bytecode alone is not game-runtime evidence.
+Published v0.4.1 downloads and tags remain unchanged.
 
 ## Build against the SDK
 
-Use `dev.openallay:openallay-extension-api:0.3.0` or the locally built SDK JAR as a
+Use `dev.openallay:openallay-extension-api:0.4.0` or the locally built SDK JAR as a
 compile-only dependency. Target Java 8 when your Extension needs the full supported
 JVM range. Do not put SDK classes, core classes, Minecraft classes or loader entrypoints
 inside the Extension JAR. The core supplies one shared SDK class identity.
@@ -35,14 +33,16 @@ inside the Extension JAR. The core supplies one shared SDK class identity.
 Implement `dev.openallay.api.extension.OpenAllayExtension` with a public no-argument
 constructor. `descriptor()` declares identity and support without accessing a world.
 `contribution(ExtensionHost)` returns JavaScript modules, Skills, semantic result-view
-labels, lifecycle participants, controlled host methods and capability declarations.
+labels, lifecycle participants and controlled host methods.
 Pure JavaScript/Skill Extensions do not need native world access.
 
 `JavascriptHostMethod.Invoker` receives each detached JSON argument as a String and
 returns one JSON value as a String. Core validates declared types and detaches results;
 Gson and Rhino values do not cross the public ABI. `ExtensionInvocation` keeps scoped
-identity, cancellation, evidence and the Extension's own frozen grants. Registration
-and compatibility declarations do not grant world-write permissions.
+identity, cancellation and evidence. Extensions do not declare private permission
+names or ask the player to approve extra operation scopes. An enabled Builder can
+build through the host world API in ordinary JavaScript mode; Java/JVM access is
+not required for that function.
 
 ## One startup package
 
@@ -73,13 +73,13 @@ loader-mod Extensions keep their existing installation and registration path.
         "loader": "fabric",
         "minecraftVersionRange": "26.2",
         "openAllayVersionRange": "[0.4.1,)",
-        "openAllayApiVersionRange": "[0.3.0,0.4.0)"
+        "openAllayApiVersionRange": "[0.4.0,0.5.0)"
       },
       {
         "loader": "neoforge",
         "minecraftVersionRange": "26.2",
         "openAllayVersionRange": "[0.4.1,)",
-        "openAllayApiVersionRange": "[0.3.0,0.4.0)"
+        "openAllayApiVersionRange": "[0.4.0,0.5.0)"
       }
     ],
     "minimumJavaVersion": 8,
@@ -95,8 +95,9 @@ Exact versions, `[exact]` and Maven-style intervals use the core's mature Maven
 version matcher. API versions are independent of the product version.
 `requiredHostFeatures` checks actual host availability, not grants.
 `validatedTargetIds` records independent validation facts and never authorizes or
-expands compatibility. Optional `requirements` keeps advisory capability, Extension
-and Skill requirements; it is not an installation or permission gate.
+expands compatibility. Optional `requirements` describes host feature, Extension and Skill availability.
+It is advisory, not an installation or permission gate. Do not use it to invent an
+Extension-private authorization system.
 
 Startup retains accepted package classloaders for the framework lifetime. Closing a
 world is not framework shutdown. At shutdown, invocation admission closes, native
@@ -124,3 +125,19 @@ belong to the core's game adapters. Builder's geometry, terrain, templates, jour
 Skills and JavaScript should remain one Extension implementation. Native material
 palettes must describe real available blocks and properties; matching JAR bytes alone
 does not make modern blocks exist in an older game.
+
+## Player access hierarchy
+
+Ordinary JavaScript uses the enabled features exposed by the host and Extensions.
+Enabling Minecraft Builder includes its building operations. There is no separate
+Builder write switch.
+
+Unrestricted JavaScript is full OpenAllay access. It includes the command capability
+and must not be blocked by a smaller OpenAllay authorization toggle. Command-only
+access remains available when full access is off. The stored command-only choice is
+not rewritten when full access changes.
+
+Full access does not create a disconnected world, restore a closed invocation, or
+change Minecraft's remote server/operator permissions. Exact player/session identity,
+cancellation, native owner scheduling and world validity still apply to real operations.
+These checks are execution validity, not extra permission approvals.
