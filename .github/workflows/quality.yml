@@ -144,7 +144,7 @@ jobs:
         run: python3 scripts/prepare-distribution.py
 
       - name: Run clean test and loader build gate
-        run: ./gradlew -PminecraftTarget="$OPENALLAY_MINECRAFT_TARGET" clean :extension-api:test :common:test :fabric:build :neoforge:build
+        run: ./gradlew --stacktrace -PminecraftTarget="$OPENALLAY_MINECRAFT_TARGET" clean :extension-api:test :common:test :fabric:build :neoforge:build
 
       - name: Retain shared test and build diagnostics
         if: always()
