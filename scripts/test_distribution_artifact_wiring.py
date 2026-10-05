@@ -38,8 +38,8 @@ class AcceptedSelectionTest(unittest.TestCase):
     def test_current_defaults_and_names_do_not_change(self):
         selected = wiring.select(self.data, "26.2")
         self.assertEqual([family["id"] for family in selected], ["fabric-26.2", "neoforge-26.2"])
-        self.assertEqual([wiring.artifacts.describe(family, "0.4.1")["filename"] for family in selected],
-                         ["openallay-fabric-26.2-0.4.1.jar", "openallay-neoforge-26.2-0.4.1.jar"])
+        self.assertEqual([wiring.artifacts.describe(family, wiring.version())["filename"] for family in selected],
+                         ["openallay-fabric-26.2-0.4.2.jar", "openallay-neoforge-26.2-0.4.2.jar"])
 
     def test_candidate_and_exact_target_does_not_silently_become_family(self):
         with self.assertRaises(ValueError):
@@ -67,21 +67,19 @@ class AcceptedSelectionTest(unittest.TestCase):
         self.add_range()
         with tempfile.TemporaryDirectory(dir=ROOT) as temporary:
             destination = Path(temporary) / "release"
-            def records(families, directory=None):
-                return []
-            with patch.object(wiring, "catalog", return_value=self.data), patch.object(wiring, "verify", side_effect=records), \
-                 patch.object(wiring.subprocess, "run") as run:
+            with patch.object(wiring, "catalog", return_value=self.data), patch.object(wiring, "verify", return_value=[]), \
+                 patch.object(wiring.subprocess, "run") as run, patch.object(wiring.compiler, "compile_target") as compile_target:
                 wiring.build_and_stage(destination)
-            commands = [call.args[0] for call in run.call_args_list]
-            self.assertEqual(len(commands), 2)
-            self.assertIn("-PminecraftArtifact=fabric-26.2,neoforge-26.2", commands[0])
-            self.assertIn("-PminecraftArtifact=" + self.range["id"], commands[1])
-            self.assertEqual(commands[1][-1], ":fabric:build")
-            for command in commands:
-                self.assertIn("clean", command)
-                self.assertIn(":common:test", command)
-                self.assertNotIn("-PbundleExtensions=false", command)
-            self.assertFalse(any("26.1.1" in part or "26.1.2" == part for command in commands for part in command if part.startswith("-PminecraftTarget=")))
+            run.assert_called_once()
+            command = run.call_args.args[0]
+            for gate in ("-PminecraftTarget=26.2", "-PtestBundledExtensions=true", ":extension-api:test", ":common:test",
+                         ":fabric:test", ":neoforge:test", ":stageBundledExtensions"):
+                self.assertIn(gate, command)
+            self.assertNotIn("clean", command)
+            self.assertNotIn("-PbundleExtensions=false", command)
+            self.assertEqual([(call.args[1], call.kwargs) for call in compile_target.call_args_list], [
+                ("26.2", {"loaders": ("fabric", "neoforge"), "artifact_ids": "fabric-26.2,neoforge-26.2"}),
+                ("26.1", {"loaders": ("fabric",), "artifact_ids": self.range["id"]})])
             with self.assertRaises(ValueError):
                 wiring.build_and_stage(destination)
 
@@ -204,7 +202,9 @@ class ProductionRoutingTest(unittest.TestCase):
     def test_gradle_naming_opt_in_and_exact_development_metadata(self):
         source = (ROOT / "build-logic/src/main/groovy/multiloader-common.gradle").read_text()
         self.assertIn("providers.gradleProperty('minecraftArtifact')", source)
-        self.assertIn("'select', '--target', minecraftTarget, '--families', artifactSelection.get()", source)
+        self.assertIn("'select', '--target', minecraftTarget, '--families',", source)
+        self.assertIn("candidateSelection.isPresent() ? candidateSelection.get() : artifactSelection.get()", source)
+        self.assertIn("Accepted and validation-only candidate selections cannot compete", source)
         self.assertIn('selectedArtifact != null ? selectedArtifact.fabricMinecraftPredicate : minecraft_version', source)
         self.assertIn('selectedArtifact != null ? selectedArtifact.minecraftMavenRange : "[${minecraft_version}]"', source)
         self.assertIn("if (name == 'fabric.mod.json')", source)
@@ -257,8 +257,13 @@ class ProductionRoutingTest(unittest.TestCase):
     def test_release_only_builds_accepted_groups_without_new_upload_or_matrix(self):
         source = (ROOT / ".github/workflows/release.yml").read_text()
         self.assertIn('python3 scripts/build-minecraft-artifacts.py build-and-stage release', source)
-        self.assertNotIn('matrix:', source)
-        self.assertNotIn('actions/upload-artifact', source)
+        stage, runtime = source.split("\n  runtime:\n", 1)
+        runtime, publish = runtime.split("\n  publish:\n", 1)
+        self.assertNotIn("strategy:", stage, "Build each final artifact once")
+        self.assertIn("strategy:", runtime)
+        self.assertIn("    - stage\n    - runtime", publish)
+        self.assertNotIn("build-and-stage", publish)
+        self.assertIn("final-stage-receipts", publish)
         self.assertIn('subject-path: release/*', source)
         self.assertIn('release/SHA256SUMS', source)
         self.assertIn('run: ./scripts/publish-modrinth.sh "${GITHUB_REF_NAME}" release', source)

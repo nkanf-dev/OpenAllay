@@ -35,7 +35,7 @@ library. The staged packet root can run the same commands without a repo copy.
 
 ```text
 python3 -B scripts/minecraft-artifacts.py validate
-python3 -B scripts/minecraft-artifacts.py resolve --loader fabric --version 0.4.1
+python3 -B scripts/minecraft-artifacts.py resolve --loader fabric --version 0.4.2
 python3 -B scripts/minecraft-artifacts.py resolve --loader neoforge --target 26.2
 python3 -B -m unittest discover -s scripts -p 'test_minecraft_artifacts.py' -v
 ```

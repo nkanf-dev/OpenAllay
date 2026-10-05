@@ -1,10 +1,12 @@
 # Development
 
-OpenAllay 0.4.1 targets Minecraft 26.2 and Java 25 and implements public
-Extension API 0.2.2. Product and public API versions are independent.
+OpenAllay 0.4.2 uses Minecraft 26.2 and Java 25 as the feature mainline and
+implements public Extension API 0.4.0. Accepted release intervals are recorded in
+`gradle/minecraft-artifacts.json`; candidate profiles alone do not establish support. Product and public API versions are independent.
 Use the checked-in Gradle wrapper; a system Gradle installation is not needed.
 
-See the [0.4.1 release notes](releases/0.4.1.md) for the current product changes.
+See the [0.4.2 release notes](releases/0.4.2.md) for the current product changes.
+The published [0.4.1 notes](releases/0.4.1.md), tags, and downloads remain unchanged.
 Earlier Builder performance, request-control and Skill context evidence remains in
 its [verification record](verification/2026-10-01-builder-performance-runtime-controls.md).
 Historical execution/context receipts remain in the [041 verification record](verification/execution-context-simplification.md).
@@ -649,10 +651,10 @@ a managed name in `mods`. Local imports need no catalog entry. Status stays
 `restart_required` until startup registers the Extension.
 
 The public authoring repository's `examples/hello-extension` builds both loaders.
-Current product 0.4.1 implements public Extension API 0.2.2. Loader product
+Current product 0.4.2 implements public Extension API 0.4.0. Loader product
 ranges and `openAllayApiVersionRange` are separate compatibility contracts:
-`[0.2,0.3)` still accepts API 0.2.2, but a loader product range excluding
-0.4.1 rejects this release. Existing four-list and five-list contribution
+`[0.4.0,0.5.0)` accepts API 0.4.0, but a loader product range excluding
+0.4.2 rejects this release. Existing four-list and five-list contribution
 constructors remain supported. Match each independent Extension's declared
 requirements rather than copying the product version into its API range.
 

@@ -77,7 +77,7 @@ tasks.register('exportEarlyNeoForgeInputs') {
                     name: artifactProject.name, version: artifactProject.version.toString()]
         }
         def data = [root: rootProject.rootDir.absolutePath, target: minecraftTarget,
-                    properties: [version: project.version.toString(), group: project.group.toString(),
+                    properties: [version: project.version.toString(), archiveName: base.archivesName.get(), group: project.group.toString(),
                                  mod_id: mod_id, mod_name: mod_name, mod_author: mod_author,
                                  java_version: java_version, neoforge_version: neoforge_version,
                                  jeiArtifactTarget: jeiArtifactTarget, jei_version: jei_version,

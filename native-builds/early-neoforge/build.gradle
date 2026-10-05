@@ -29,7 +29,7 @@ def fields = { value, expected, context ->
 }
 fields(data, ['root', 'target', 'properties', 'nativeSources', 'engine', 'adapter', 'resources',
               'sdk', 'rhino', 'accessTransformer'], receiptFile)
-fields(data.properties, ['version', 'group', 'mod_id', 'mod_name', 'mod_author', 'java_version',
+fields(data.properties, ['version', 'archiveName', 'group', 'mod_id', 'mod_name', 'mod_author', 'java_version',
         'neoforge_version', 'jeiArtifactTarget', 'jei_version', 'rei_version', 'architectury_version',
         'sqlite_jdbc_version', 'commonmark_version', 'jtokkit_version'], 'properties')
 if (!(data.root instanceof String) || !(data.target instanceof String)
@@ -151,7 +151,10 @@ def validateInputs = {
 validateInputs()
 group = data.properties.group
 version = data.properties.version
-base { archivesName = "openallay-neoforge-${data.target}" }
+if (!(data.properties.archiveName ==~ /openallay-neoforge-[0-9][0-9a-z.-]*/)) {
+    throw new GradleException('Unsafe selected native archive name')
+}
+base { archivesName = data.properties.archiveName }
 java { toolchain.languageVersion = JavaLanguageVersion.of(17) }
 minecraft.modIdentifier.set(data.properties.mod_id)
 

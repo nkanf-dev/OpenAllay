@@ -170,7 +170,7 @@ class MinecraftTargetProfileSourceTest(unittest.TestCase):
                         root_build.index("apply from: 'gradle/distribution.gradle'"))
         shared = properties(self.source("gradle.properties"))
         self.assertFalse(PROFILE_FIELDS.intersection(shared))
-        for key, value in {"version": "0.4.1", "group": "dev.openallay", "sqlite_jdbc_version": "3.50.3.0",
+        for key, value in {"version": "0.4.2", "group": "dev.openallay", "sqlite_jdbc_version": "3.50.3.0",
                            "commonmark_version": "0.28.0", "rhino_version": "2101.2.8-build.91",
                            "jtokkit_version": "1.1.0"}.items():
             self.assertEqual(value, shared[key])

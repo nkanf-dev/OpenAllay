@@ -25,6 +25,7 @@ def module(name, filename):
 artifacts = module("minecraft_artifact_catalog", "minecraft-artifacts.py")
 builder = module("minecraft_artifact_builder", "verify-bundled-extensions.py")
 native = module("minecraft_artifact_engine", "verify-native-target-package.py")
+compiler = module("minecraft_artifact_compiler", "compile-native-target.py")
 tokenizer = module("minecraft_artifact_tokenizer", "verify-tokenizer-packaging.py")
 require = artifacts.require
 
@@ -168,12 +169,17 @@ def build_and_stage(directory):
     require(not directory.exists(), "Refusing to overwrite an existing release directory")
     data = catalog()
     directory.mkdir(parents=True)
+    # Full shared/native feature and pinned Builder tests run once on the mainline.
+    # Native assemblies below reuse that tested Builder, with final byte/identity gates.
+    subprocess.run([str(ROOT / "gradlew"), "--max-workers=2", "-PminecraftTarget=26.2",
+                    "-PtestBundledExtensions=true", ":extension-api:test", ":common:test", ":fabric:test", ":neoforge:test",
+                    ":stageBundledExtensions"], cwd=ROOT, check=True)
     for target, families in groups(data):
         selection = ",".join(family["id"] for family in families)
-        command = [str(ROOT / "gradlew"), "-PminecraftTarget=" + target, "-PminecraftArtifact=" + selection,
-                   "clean", ":common:test"] + [":" + family["loader"] + ":build" for family in families]
-        # No bundleExtensions=false, no per-minor build matrix, no candidate admission.
-        subprocess.run(command, cwd=ROOT, check=True)
+        # The existing compiler owns early NeoForge's actual isolated Java21 route.
+        # No clean between families, no per-minor feature matrix, no candidate admission.
+        compiler.compile_target(ROOT, target, loaders=tuple(family["loader"] for family in families),
+                                artifact_ids=selection)
         for record in verify(families):
             shutil.copyfile(record["artifactPath"], directory / record["filename"])
     records = verify(data["acceptedFamilies"], directory)

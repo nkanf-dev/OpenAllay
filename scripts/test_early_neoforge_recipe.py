@@ -43,6 +43,25 @@ class CommandSelectionTest(unittest.TestCase):
             self.assertIn("-PopenallayNativeInputs=" + str(ROOT / "build/early-neoforge" / target / "inputs.json"), native[0])
             self.assertNotIn(":neoforge:assemble", command[0])
 
+    def test_selected_accepted_or_candidate_ids_reach_actual_native_recipe(self):
+        for keyword, property_name in (("artifact_ids", "minecraftArtifact"), ("candidate_ids", "minecraftCandidateArtifact")):
+            ids = "neoforge-1.20.3-through-1.20.4"
+            commands = recipe.commands(ROOT, "1.20.3", loaders=("neoforge",), **{keyword: ids})
+            self.assertIn("-P" + property_name + "=" + ids, commands[0][0])
+            self.assertEqual(commands[0][0][-1], ":neoforge:exportEarlyNeoForgeInputs")
+            self.assertNotIn(":fabric:assemble", commands[0][0])
+            self.assertEqual(commands[1][1], "java21")
+        fabric = recipe.commands(ROOT, "1.20.3", loaders=("fabric",), artifact_ids="fabric-1.20.3")
+        self.assertEqual(len(fabric), 1)
+        self.assertEqual(fabric[0][0][-1], ":fabric:assemble")
+
+    def test_selection_refuses_bad_loaders_and_competing_or_unsafe_ids(self):
+        for options in ({"loaders": ()}, {"loaders": ("fabric", "fabric")}, {"loaders": ("forge",)},
+                        {"artifact_ids": "../escape"}, {"candidate_ids": ""},
+                        {"artifact_ids": "fabric-26.2", "candidate_ids": "fabric-26.1"}):
+            with self.subTest(options=options), self.assertRaises(ValueError):
+                recipe.commands(ROOT, "26.2", **options)
+
     def test_unknown_target_and_path_escape_fail(self):
         for target in ("unknown", "../1.20.2", "1.20.9", "1.20.2 "):
             with self.subTest(target=target), self.assertRaises(ValueError):
@@ -149,7 +168,7 @@ class InputClosureModel:
         if set(self.data) != {"root", "target", "properties", "nativeSources", "engine", "adapter", "resources",
                               "sdk", "rhino", "accessTransformer"}:
             raise ValueError("model receipt shape")
-        if set(self.data["properties"]) != {"version", "group", "mod_id", "mod_name", "mod_author", "java_version",
+        if set(self.data["properties"]) != {"version", "archiveName", "group", "mod_id", "mod_name", "mod_author", "java_version",
                 "neoforge_version", "jeiArtifactTarget", "jei_version", "rei_version", "architectury_version",
                 "sqlite_jdbc_version", "commonmark_version", "jtokkit_version"}:
             raise ValueError("model properties shape")
@@ -245,7 +264,8 @@ class InputClosureModelTest(unittest.TestCase):
         properties = dict.fromkeys(("version", "group", "mod_id", "mod_name", "mod_author", "java_version",
                 "neoforge_version", "jeiArtifactTarget", "jei_version", "rei_version", "architectury_version",
                 "sqlite_jdbc_version", "commonmark_version", "jtokkit_version"), "fixture")
-        properties.update(java_version="17", neoforge_version="20.2.93", version="0.4.1", group="dev.openallay")
+        properties.update(java_version="17", neoforge_version="20.2.93", version="0.4.1",
+                          archiveName="openallay-neoforge-1.20.2", group="dev.openallay")
         self.data = {"root": str(self.root), "target": "1.20.2", "properties": properties, "accessTransformer": None}
         layouts = {"nativeSources": ["common/src/targets/1.20.2/java/example/A.java"],
                    "engine": ["engine/build/classes/example/Engine.class", "engine/build/resources/data/config.json"],
