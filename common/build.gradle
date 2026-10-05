@@ -7,6 +7,11 @@ pluginManager.apply(legacyNativeGame ? 'net.neoforged.moddev.legacyforge' : 'net
 
 apply from: rootProject.file('gradle/minecraft-source-family.gradle')
 
+// The selected implementation drives native test applicability, not version-name rules.
+if (sourceSets.main.java.files.contains(file('src/main/java/dev/openallay/client/gui/GuideNativeGraphics.java'))) {
+    sourceSets.test.java.srcDir('src/nativeTest/extractor/java')
+}
+
 configure(extensions.getByName(legacyNativeGame ? 'legacyForge' : 'neoForge')) {
     if (legacyNativeGame) mcpVersion = neo_form_version
     else neoFormVersion = neo_form_version

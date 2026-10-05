@@ -18,6 +18,7 @@ import net.minecraft.world.item.ItemStack;
  * This client binding is not part of the native-neutral engine or Extension API.
  */
 public class GuideNativeGraphics {
+    private static final ViewportPaint<GuiGraphicsExtractor> VIEWPORT_PAINT = new ViewportPaint<>();
     private final GuiGraphicsExtractor graphics;
 
     private GuideNativeGraphics(GuiGraphicsExtractor graphics) {
@@ -28,9 +29,51 @@ public class GuideNativeGraphics {
         this.graphics = Objects.requireNonNull(binding, "binding").graphics;
     }
 
-    /** Run one complete paint; the native canvas owns deferred tooltip rendering. */
+    /**
+     * Give native scrolling text a viewport parent, including native widget/viewer extraction.
+     * Install it in screen coordinates, then restore the caller's exact pose before painting.
+     * Empty intersections remain native no-draw; never widen or remove a caller's clip.
+     * Callbacks must balance their own pose/scissor pushes, including on exceptional return.
+     */
     protected final void nativePaint(Runnable paint) {
-        Objects.requireNonNull(paint, "paint").run();
+        int width = graphics.guiWidth();
+        int height = graphics.guiHeight();
+        VIEWPORT_PAINT.paint(graphics, width, height, () -> {
+            graphics.pose().pushMatrix();
+            try {
+                graphics.pose().identity();
+                graphics.enableScissor(0, 0, width, height);
+            } finally {
+                graphics.pose().popMatrix();
+            }
+        }, graphics::disableScissor, paint);
+    }
+
+    /** Canvas identity and balanced scope lifetime only; geometry stays in native scissors. */
+    static final class ViewportPaint<T> {
+        private final ThreadLocal<T> current = new ThreadLocal<>();
+
+        void paint(T canvas, int width, int height, Runnable enter, Runnable exit, Runnable paint) {
+            Objects.requireNonNull(paint, "paint");
+            if (width <= 0 || height <= 0) return;
+            T previous = current.get();
+            if (previous == canvas) {
+                paint.run();
+                return;
+            }
+            enter.run();
+            current.set(canvas);
+            try {
+                paint.run();
+            } finally {
+                try {
+                    exit.run();
+                } finally {
+                    if (previous == null) current.remove();
+                    else current.set(previous);
+                }
+            }
+        }
     }
 
     public static GuideGraphics wrap(GuiGraphicsExtractor graphics) {

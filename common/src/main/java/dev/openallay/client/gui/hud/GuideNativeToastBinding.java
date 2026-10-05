@@ -22,7 +22,8 @@ public abstract class GuideNativeToastBinding implements Toast {
 
     @Override public final void extractRenderState(GuiGraphicsExtractor graphics, Font font, long fullyVisibleMillis) {
         if (!guideToastActive()) return;
-        paintGuideToast(GuideGraphics.wrap(graphics), font, fullyVisibleMillis);
+        GuideGraphics guide = GuideGraphics.wrap(graphics);
+        guide.paint(() -> paintGuideToast(guide, font, fullyVisibleMillis));
     }
     protected abstract void paintGuideToast(GuideGraphics graphics, Font font, long fullyVisibleMillis);
 }

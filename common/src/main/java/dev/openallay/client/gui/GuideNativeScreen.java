@@ -18,11 +18,13 @@ public abstract class GuideNativeScreen extends Screen {
     }
 
     @Override public final void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
-        paintGuideScreen(GuideGraphics.wrap(graphics), mouseX, mouseY, delta);
+        GuideGraphics guide = GuideGraphics.wrap(graphics);
+        guide.paint(() -> paintGuideScreen(guide, mouseX, mouseY, delta));
     }
     protected abstract void paintGuideScreen(GuideGraphics graphics, int mouseX, int mouseY, float delta);
     @Override public final void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
-        paintGuideBackground(GuideGraphics.wrap(graphics), mouseX, mouseY, delta);
+        GuideGraphics guide = GuideGraphics.wrap(graphics);
+        guide.paint(() -> paintGuideBackground(guide, mouseX, mouseY, delta));
     }
     protected void paintGuideBackground(GuideGraphics graphics, int mouseX, int mouseY, float delta) {
         super.extractBackground(graphics.nativeGraphics(), mouseX, mouseY, delta);

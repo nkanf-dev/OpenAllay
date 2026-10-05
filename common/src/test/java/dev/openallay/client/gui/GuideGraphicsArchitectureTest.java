@@ -117,6 +117,71 @@ final class GuideGraphicsArchitectureTest {
         }
     }
 
+    @Test void extractorCallbacksKeepNativeWidgetsAndViewersInsideViewportPaint() throws IOException {
+        Path root = root();
+        String graphics = read(root, BASES.get(0));
+        String paint = graphics.substring(graphics.indexOf("protected final void nativePaint("),
+                graphics.indexOf("public static GuideGraphics wrap("));
+        int identity = paint.indexOf("graphics.pose().identity();");
+        int scissor = paint.indexOf("graphics.enableScissor(0, 0, width, height);");
+        int restorePose = paint.indexOf("graphics.pose().popMatrix();");
+        int lifetime = paint.indexOf("static final class ViewportPaint<T>");
+        assertTrue(identity >= 0 && identity < scissor && scissor < restorePose && restorePose < lifetime);
+        assertTrue(paint.contains("graphics::disableScissor, paint"));
+        assertTrue(graphics.contains("ViewportPaint<GuiGraphicsExtractor>"));
+        for (String callback : List.of("GuideNativeScreen", "GuideNativeButton", "GuideNativeWidget")) {
+            String source = read(root, "common/src/main/java/" + GUI + callback + ".java");
+            assertTrue(source.contains("GuideGraphics guide = GuideGraphics.wrap(graphics);"), callback);
+            assertTrue(source.contains("guide.paint(() -> paintGuide"), callback);
+        }
+        String screen = read(root, "common/src/main/java/" + GUI + "GuideNativeScreen.java");
+        assertEquals(2, occurrences(screen, "guide.paint(() -> paintGuide"), "Both screen and background extraction");
+        assertTrue(screen.contains("super.extractRenderState(graphics.nativeGraphics()"));
+        assertTrue(read(root, "common/src/main/java/" + GUI + "hud/GuideNativeToastBinding.java")
+                .contains("guide.paint(() -> paintGuideToast(guide"));
+        for (String oldBinding : BASES.subList(1, BASES.size())) {
+            assertFalse(read(root, oldBinding).contains("ViewportPaint"), oldBinding);
+        }
+    }
+
+    @Test void extractorTestsFollowActualSelectedGraphicsSourceOwnership() throws IOException {
+        Path root = root();
+        String build = read(root, "common/build.gradle");
+        assertTrue(build.indexOf("apply from: rootProject.file('gradle/minecraft-source-family.gradle')")
+                < build.indexOf("sourceSets.main.java.files.contains(file("));
+        assertTrue(build.contains("sourceSets.main.java.files.contains(file('src/main/java/" + GUI + "GuideNativeGraphics.java'))"));
+        assertTrue(build.contains("sourceSets.test.java.srcDir('src/nativeTest/extractor/java')"));
+        String selector = read(root, "gradle/minecraft-targets.gradle");
+        var families = nativeFamilyMap(selector, "nativeFamilies");
+        var parents = nativeFamilyMap(selector, "nativeFamilyParents");
+        for (String target : List.of("26.1", "26.1.1", "26.1.2", "26.2", "26.3", "1.21.11", "1.21.8", "1.21.5", "1.21.1", "1.20.1")) {
+            var chain = new java.util.ArrayList<String>();
+            String family = families.get(target);
+            assertNotNull(family, target);
+            chain.add(family);
+            while (parents.containsKey(chain.get(0))) chain.add(0, parents.get(chain.get(0)));
+            if (!chain.contains(target)) chain.add(target);
+            Path selected = root.resolve(BASES.get(0));
+            for (String candidate : chain) {
+                Path override = root.resolve("common/src/targets/" + candidate + "/java/" + GUI + "GuideNativeGraphics.java");
+                if (Files.isRegularFile(override)) selected = override;
+            }
+            boolean extractor = selected.equals(root.resolve(BASES.get(0)));
+            assertEquals(java.util.Set.of("26.1", "26.1.1", "26.1.2", "26.2", "26.3").contains(target), extractor, target + " -> " + selected);
+            assertEquals(extractor, Files.readString(selected).contains("GuiGraphicsExtractor"), target);
+        }
+        assertTrue(Files.isRegularFile(root.resolve("common/src/nativeTest/extractor/java/" + GUI + "GuideViewportPaintTest.java")));
+    }
+
+    private static java.util.Map<String, String> nativeFamilyMap(String selector, String name) {
+        var declaration = Pattern.compile("def " + name + " = \\[([^\\n]+)\\]").matcher(selector);
+        assertTrue(declaration.find(), name);
+        var entries = Pattern.compile("'([^']+)': '([^']+)'").matcher(declaration.group(1));
+        var result = new java.util.HashMap<String, String>();
+        while (entries.find()) result.put(entries.group(1), entries.group(2));
+        return result;
+    }
+
     private static List<String> primitiveSignatures(String source) {
         var matcher = Pattern.compile("protected final (void|int) (native\\w+)\\(([^)]*)\\)").matcher(source);
         var signatures = new java.util.ArrayList<String>();
