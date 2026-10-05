@@ -532,7 +532,7 @@ ACCEPTANCE_LANDMARKS = (
     ('terrain-smart-end', 6, 0, 34, 'minecraft:polished_andesite', {}),
     ('terrain-smart-detour', 3, 0, 35, 'minecraft:polished_andesite', {}),
     ('terrain-obstacle', 3, 1, 34, 'minecraft:stone', {}),
-    ('terrain-obstacle-ground', 3, 0, 34, 'minecraft:grass_block', {}),
+    ('terrain-obstacle-ground', 3, 0, 34, 'minecraft:dirt', {}),
     ('template-source-stair', 14, 1, 32, 'minecraft:oak_stairs', {'facing': 'north'}),
     ('template-source-chest', 16, 1, 33, 'minecraft:chest', {'facing': 'east'}),
     ('template-rotation-stair', 21, 1, 32, 'minecraft:oak_stairs', {'facing': 'east'}),
@@ -565,7 +565,9 @@ def native_world_identity(game, manifest):
     """Only the exact 26.2 overworld SavedData identity; no save walk/chunks."""
     require(manifest.get("minecraft") == "26.2", "Bounded native identity parser supports verified mainline 26.2 only")
     require(re.fullmatch(r"openallay-builder-[a-zA-Z0-9_.-]+", manifest["world"]), "Invalid disposable world name")
-    path = under(game / "saves" / manifest["world"] / "data/openallay_builder/world_identity.dat", game)
+    # 26.2 stores every dimension, including overworld, under its Identifier path.
+    path = under(game / "saves" / manifest["world"]
+                 / "dimensions/minecraft/overworld/data/openallay_builder/world_identity.dat", game)
     compressed = read_bytes(path, 65536)
     require(compressed.startswith(b"\x1f\x8b"), "Native identity is not gzip NBT")
     decoder = zlib.decompressobj(16 + zlib.MAX_WBITS)

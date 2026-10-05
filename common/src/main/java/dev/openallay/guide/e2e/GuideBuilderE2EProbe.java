@@ -147,7 +147,7 @@ final class GuideBuilderE2EProbe {
         result.add(new Landmark("terrain-smart-end", 6, 0, 34, "polished_andesite"));
         result.add(new Landmark("terrain-smart-detour", 3, 0, 35, "polished_andesite"));
         result.add(new Landmark("terrain-obstacle", 3, 1, 34, "stone"));
-        result.add(new Landmark("terrain-obstacle-ground", 3, 0, 34, "grass_block"));
+        result.add(new Landmark("terrain-obstacle-ground", 3, 0, 34, "dirt"));
         result.add(state("template-source-stair", 14, 1, 32, "oak_stairs", "facing", "north"));
         result.add(state("template-source-chest", 16, 1, 33, "chest", "facing", "east"));
         result.add(state("template-rotation-stair", 21, 1, 32, "oak_stairs", "facing", "east"));

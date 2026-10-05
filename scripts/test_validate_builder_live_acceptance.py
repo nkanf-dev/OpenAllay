@@ -244,7 +244,7 @@ class DurableAcceptanceAuditTests(unittest.TestCase):
         self.token = "actual-build-call"
         self.journal_dir = self.game / "config/openallay-builder/journals"
         self.template_path = self.game / "config/openallay-builder/templates/openallay_e2e_builder_native.json"
-        self.identity_path = self.game / "saves" / self.world / "data/openallay_builder/world_identity.dat"
+        self.identity_path = self.game / "saves" / self.world / "dimensions/minecraft/overworld/data/openallay_builder/world_identity.dat"
         self.retained_path = self.game / "config/openallay/e2e" / (self.world + ".acceptance.json")
         self.identity_path.parent.mkdir(parents=True)
         self.identity_path.write_bytes(gzip.compress(identity_nbt(self.world_id), mtime=0))

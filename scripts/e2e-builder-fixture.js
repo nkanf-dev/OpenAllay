@@ -163,6 +163,8 @@ b.place_block(anchor.x,anchor.y+1,anchor.z+33,"oak_log");
 b.place_block(anchor.x+2,anchor.y+1,anchor.z+33,"stone");
 action("terrain_clear_vegetation",b.clear_vegetation(anchor.x,anchor.y+1,anchor.z+32,anchor.x+2,anchor.y+1,anchor.z+33));
 action("terrain_clear_all",b.clear_vegetation(anchor.x+2,anchor.y+1,anchor.z+33,anchor.x+2,anchor.y+1,anchor.z+33,{mode:"all"}));
+// Use stable ground under the opaque obstacle; grass decays during real world ticks.
+b.place_block(anchor.x+3,anchor.y,anchor.z+34,"dirt");
 b.place_block(anchor.x+3,anchor.y+1,anchor.z+34,"stone");
 var straight=action("terrain_path",b.build_path(anchor.x,anchor.z+32,anchor.x+6,anchor.z+32,anchor.y,
     {width:1,blocks:["stone_bricks"],clearance:2,seed:17}));
@@ -180,7 +182,7 @@ expect("terrain_smart_start",0,0,34,"polished_andesite");
 expect("terrain_smart_end",6,0,34,"polished_andesite");
 expect("terrain_smart_detour",3,0,35,"polished_andesite");
 expect("terrain_obstacle",3,1,34,"stone");
-expect("terrain_obstacle_ground",3,0,34,"grass_block");
+expect("terrain_obstacle_ground",3,0,34,"dirt");
 phase("terrain");
 
 // Small native-state template: explicit air, directional stair and typed chest BE.
