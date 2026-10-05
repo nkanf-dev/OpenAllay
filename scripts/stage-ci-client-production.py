@@ -3,6 +3,7 @@
 import hashlib
 from pathlib import Path
 import shutil
+from minecraft_target_loaders import target_loaders
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -14,7 +15,7 @@ def stage(root=ROOT, minecraft_target="26.2"):
     if output.exists():
         raise ValueError("Client production staging already exists")
     inputs = [root / loader / "build/libs" / ("openallay-" + loader + "-" + minecraft_target + "-" + version + ".jar")
-              for loader in ("fabric", "neoforge")]
+              for loader in target_loaders(root, minecraft_target)["loaders"]]
     if any(not path.is_file() or path.is_symlink() for path in inputs):
         raise ValueError("Missing default verified production JAR")
     output.mkdir(parents=True)

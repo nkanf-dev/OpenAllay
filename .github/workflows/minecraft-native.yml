@@ -1,16 +1,16 @@
-name: Mature Forge backport
+name: Mature Forge native acceptance
 on:
   workflow_dispatch:
 permissions:
   contents: read
 concurrency:
-  group: mature-forge-first-anchor-${{ github.ref }}
+  group: mature-forge-native-${{ github.ref }}
   cancel-in-progress: false
 jobs:
   native:
-    name: Forge 1.19.2 native compilation
+    name: Forge 1.19.2 bundled product and actual native acceptance
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
@@ -26,22 +26,58 @@ jobs:
         with:
           cache-provider: basic
           cache-read-only: true
-      - name: Compile the selected native closure without repeating feature suites
+      - name: Prepare the exact independent universal Builder source
+        run: python3 -B scripts/prepare-distribution.py
+      - name: Package the new bundled Forge product without repeating shared feature suites
         shell: bash
-        run: ./gradlew --max-workers=2 --stacktrace -PminecraftTarget=1.19.2 -PbundleExtensions=false :forge:assemble
-      - name: Retain exact native command source contracts
+        run: |
+          ./gradlew --max-workers=2 --stacktrace -PminecraftTarget=1.19.2 :forge:assemble
+          python3 -B scripts/verify-native-target-package.py --target 1.19.2 --bundled-builder
+          python3 -B scripts/stage-ci-client-production.py --minecraft-target 1.19.2
+      - name: Retain the exact packaged product bytes
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: mature-forge-production-1.19.2-${{ github.sha }}-${{ github.run_attempt }}
+          retention-days: 7
+          if-no-files-found: error
+          path: build/ci-client-production/
+      - name: Install the isolated headless display and compact evidence tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 libegl-mesa0 libopenal1 webp
+          python3 -m venv build/ci-tools
+          build/ci-tools/bin/python -m pip install Pillow==11.3.0
+      - name: Provision the normal official Forge client and verified assets
+        run: |
+          python3 -B scripts/prepare-ci-minecraft-runtime.py --loader forge --minecraft-target 1.19.2 --java "$JAVA_HOME_17_X64/bin/java" --minecraft-root "$PWD/build/e2e/runtime/1.19.2/minecraft" > build/ci-runtime-receipt.json
+          python3 -B scripts/run-packaged-builder-acceptance.py --prepare-assets --minecraft-target 1.19.2 --minecraft-root "$PWD/build/e2e/runtime/1.19.2/minecraft" --assets-root "$PWD/build/e2e/runtime/1.19.2/assets"
+      - name: Run actual Builder, original-world reload and changed native UI behavior
+        env:
+          LIBGL_ALWAYS_SOFTWARE: '1'
+          ALSOFT_DRIVERS: 'null'
+          OPENALLAY_E2E_SOURCE_REVISION: ${{ github.sha }}
+        run: |
+          xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24 +extension GLX +render -noreset" --error-file="$PWD/build/ci-xvfb.log"             python3 -B scripts/run-ci-game-workflow.py --loader forge --minecraft-target 1.19.2 --java "$JAVA_HOME_17_X64/bin/java" --batch-id forge1192-${{ github.run_id }} --scenarios builder-acceptance builder-reload ui-live-ux-regressions
+      - name: Preserve bounded generated native command source facts
         if: always()
         run: python3 -B scripts/capture-forge-native-contracts.py
-      - name: Retain compact source-bound build diagnostics
+      - name: Compress evidence from actually prepared client phases
+        if: ${{ always() && hashFiles('build/e2e/ci-client/forge/**/summary.json') != '' }}
+        run: build/ci-tools/bin/python -B scripts/compact-ci-game-evidence.py --loader forge --batch-id forge1192-${{ github.run_id }}
+      - name: Retain actual outcomes and compact native diagnostics
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: mature-forge-1.19.2-compile-${{ github.sha }}-${{ github.run_attempt }}
+          name: mature-forge-native-1.19.2-${{ github.sha }}-${{ github.run_attempt }}
           retention-days: 7
           if-no-files-found: ignore
           path: |
-            forge/build/libs/*.jar
-            common/build/reports/problems/
-            forge/build/reports/
-            build/reports/problems/
             build/forge-native-contracts/
+            build/ci-runtime-receipt.json
+            build/ci-xvfb.log
+            build/e2e/runtime/1.19.2/minecraft/.provision/*.json
+            build/e2e/ci-client/forge/forge1192-${{ github.run_id }}/summary.json
+            build/e2e/ci-client/forge/forge1192-${{ github.run_id }}/*.log
+            build/e2e/ci-client-compact/forge/forge1192-${{ github.run_id }}/
+            build/reports/problems/
+            forge/build/reports/
