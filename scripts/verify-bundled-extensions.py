@@ -46,8 +46,8 @@ FORBIDDEN_ENTRIES = {"fabric.mod.json", "META-INF/neoforge.mods.toml", "META-INF
     "mcmod.info", "module-info.class"}
 # This verifier checks the currently pinned independently released Builder package,
 # not community package compatibility. The host uses Maven for range semantics.
-SDK_VERSION = "0.3.0"
-SDK_SUPPORT_RANGE = "[0.3.0,0.4.0)"
+SDK_VERSION = "0.4.0"
+SDK_SUPPORT_RANGE = "[0.4.0,0.5.0)"
 
 _spec = spec_from_file_location("distribution_source", ROOT / "scripts/prepare-distribution.py")
 prepare = module_from_spec(_spec)
@@ -135,8 +135,10 @@ def verify_manifest(content: bytes, lock: dict) -> dict:
         require(target["openAllayApiVersionRange"] == SDK_SUPPORT_RANGE, "Wrong Builder SDK support range")
         encoded_targets.append(tuple(target[field] for field in sorted(TARGET_FIELDS)))
     require(len(encoded_targets) == len(set(encoded_targets)), "Duplicate support target")
-    require({target["loader"] for target in targets} == {"fabric", "neoforge"},
-        "Builder must declare both current loaders in one package")
+    intended_games = {path.stem for path in (ROOT / "gradle/minecraft-targets").glob("*.properties")}
+    require({(target["loader"], target["minecraftVersionRange"]) for target in targets}
+        == {(loader, game) for loader in ("fabric", "neoforge") for game in intended_games},
+        "Builder declaration must cover the prepared native target profiles in one payload")
     requirements = descriptor.get("requirements", {})
     require(isinstance(requirements, dict) and set(requirements) <= {"capabilities", "extensions", "skills"},
         "Invalid universal requirements fields")
@@ -146,8 +148,8 @@ def verify_manifest(content: bytes, lock: dict) -> dict:
         values = strings(requirements.get(field, []), f"requirements.{field}", pattern)
         if field == "skills":
             require(all(len(item) <= 64 for item in values), "Invalid Skill ID length")
-    require(requirements.get("capabilities") == ["openallay_builder:world_write"],
-        "Wrong Builder world-write requirement")
+    require(not any(requirements.get(field, []) for field in ("capabilities", "extensions", "skills")),
+        "Builder must not add an independent permission requirement")
     return descriptor
 
 
@@ -206,8 +208,10 @@ def reject_builder_registration(archive: zipfile.ZipFile, entries: list[str], lo
         metadata = (prepare.decode_json(archive.read("META-INF/jarjar/metadata.json"))
             if "META-INF/jarjar/metadata.json" in entries else {"jars": []})
         registered = [item["path"] for item in metadata["jars"]]
+        descriptors = [name for name in ("META-INF/neoforge.mods.toml", "META-INF/mods.toml") if name in entries]
+        require(len(descriptors) == 1, "Core must contain one actual native loader descriptor")
         require(not re.search(r"\bmodId\s*=\s*['\"]openallay_builder['\"]",
-            archive.read("META-INF/neoforge.mods.toml").decode("utf-8")), "Core is a duplicate Builder mod")
+            archive.read(descriptors[0]).decode("utf-8")), "Core is a duplicate Builder mod")
     require(resource_path(lock) not in registered, "Raw Builder resource must not be loader registered")
     for path in registered:
         require(isinstance(path, str) and path in entries, "Registered loader JAR is missing")

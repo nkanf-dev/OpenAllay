@@ -111,13 +111,12 @@ def builder_support(path, family, lock):
     with zipfile.ZipFile(path) as archive:
         with zipfile.ZipFile(BytesIO(archive.read(builder.resource_path(lock)))) as nested:
             descriptor = builder.verify_manifest(nested.read(builder.DESCRIPTOR), lock)
-    # The pinned Builder declaration is currently 26.2 only. Do not use its Java8
-    # ABI as permission to release it on older games. Broader independently
-    # released Builder support needs a reviewed source change here and to the pin.
-    declared = [item["minecraftVersionRange"] for item in descriptor["support"]["targets"]
-                if item["loader"] == family["loader"]]
-    require(family["supportedTargets"] == ["26.2"] and declared and all(item in ("26.2", "[26.2]") for item in declared),
-            "Pinned Builder has only accepted 26.2 support; older/broader bundled release is blocked")
+    declared = {item["minecraftVersionRange"] for item in descriptor["support"]["targets"]
+                if item["loader"] == family["loader"]}
+    require(set(family["supportedTargets"]).issubset(declared),
+            "Builder declaration does not include every accepted family target")
+    # The reviewed artifact catalog owns release admission. Builder declarations
+    # alone do not admit candidates or prove same-JAR runtime compatibility.
 
 
 def verify(families, directory=None):

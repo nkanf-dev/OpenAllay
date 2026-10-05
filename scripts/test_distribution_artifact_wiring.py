@@ -138,14 +138,20 @@ class MetadataGateTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             wiring.metadata(self.path, family, "0.5.0")
 
-    def test_26_2_only_builder_blocks_older_source_family(self):
+    def test_builder_must_cover_the_exact_accepted_family_without_admitting_candidates(self):
         lock = wiring.builder.prepare.load_manifest(ROOT / "distribution/extensions.lock.json")
         current = {"support": {"targets": [{"loader": "fabric", "minecraftVersionRange": "26.2"}]}}
         self.path.write_bytes(archive({wiring.builder.resource_path(lock): archive({wiring.builder.DESCRIPTOR: b"fixture"})}))
         with patch.object(wiring.builder, "verify_manifest", return_value=current):
             wiring.builder_support(self.path, wiring.catalog()["acceptedFamilies"][0], lock)
-            with self.assertRaisesRegex(ValueError, "blocked"):
+            with self.assertRaisesRegex(ValueError, "include every"):
                 wiring.builder_support(self.path, self.range, lock)
+        intended = {"support": {"targets": [{"loader": "fabric", "minecraftVersionRange": target}
+                                             for target in self.range["supportedTargets"]]}}
+        with patch.object(wiring.builder, "verify_manifest", return_value=intended):
+            wiring.builder_support(self.path, self.range, lock)
+        with self.assertRaises(ValueError):
+            wiring.artifacts.resolve(wiring.catalog(), "26.1", "fabric")
 
 
 

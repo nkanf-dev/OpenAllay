@@ -43,11 +43,12 @@ def descriptor(lock):
         "version": lock["version"], "entrypoint": "dev.openallay.builder.BuilderExtension",
         "provider": "OpenAllay", "summary": "Construction on the integrated server.",
         "source": "https://github.com/nkanf-dev/OpenAllay-Extensions",
-        "support": {"targets": [{"loader": loader, "minecraftVersionRange": "26.2",
-            "openAllayVersionRange": "[0.4.1,)", "openAllayApiVersionRange": "[0.3.0,0.4.0)"}
-            for loader in ("fabric", "neoforge")], "minimumJavaVersion": 8,
+        "support": {"targets": [{"loader": loader, "minecraftVersionRange": target,
+            "openAllayVersionRange": "[0.4.1,)", "openAllayApiVersionRange": "[0.4.0,0.5.0)"}
+            for loader in ("fabric", "neoforge")
+            for target in sorted(path.stem for path in (ROOT / "gradle/minecraft-targets").glob("*.properties"))], "minimumJavaVersion": 8,
             "requiredHostFeatures": ["minecraft:world-access"], "validatedTargetIds": []},
-        "requirements": {"capabilities": ["openallay_builder:world_write"], "extensions": [], "skills": []}}
+        "requirements": {"capabilities": [], "extensions": [], "skills": []}}
 
 
 def universal_entries(lock):
@@ -137,8 +138,8 @@ class SourceLockTest(unittest.TestCase):
 
     def test_duplicate_json_member_fails(self):
         path = self.source / "lock.json"
-        path.write_text(json.dumps(self.lock).replace('"version": "0.3.0"',
-            '"version": "0.3.0", "version": "0.3.0"'))
+        version_field = json.dumps("version") + ": " + json.dumps(self.lock["version"])
+        path.write_text(json.dumps(self.lock).replace(version_field, version_field + ", " + version_field))
         with self.assertRaisesRegex(ValueError, "Duplicate"):
             prepare.load_manifest(path)
 
@@ -176,14 +177,14 @@ class PackageTest(unittest.TestCase):
         # Ordinary loader dependencies remain registered. Builder must not be registered.
         if loader == "fabric":
             entries = {"fabric.mod.json": json.dumps({"id": "openallay",
-                "jars": [{"file": "META-INF/jars/openallay-extension-api-0.3.0.jar"}]}),
-                "META-INF/jars/openallay-extension-api-0.3.0.jar": archive_bytes({})}
+                "jars": [{"file": "META-INF/jars/openallay-extension-api-0.4.0.jar"}]}),
+                "META-INF/jars/openallay-extension-api-0.4.0.jar": archive_bytes({})}
         else:
             entries = {"META-INF/neoforge.mods.toml": '[[mods]]\nmodId="openallay"\n',
                 "META-INF/jarjar/metadata.json": json.dumps({"jars": [{
-                    "path": "META-INF/jarjar/openallay-extension-api-0.3.0.jar", "identifier": {
+                    "path": "META-INF/jarjar/openallay-extension-api-0.4.0.jar", "identifier": {
                         "group": "dev.openallay", "artifact": "openallay-extension-api"}}]}),
-                "META-INF/jarjar/openallay-extension-api-0.3.0.jar": archive_bytes({})}
+                "META-INF/jarjar/openallay-extension-api-0.4.0.jar": archive_bytes({})}
         if mutation:
             mutation(entries, nested, provenance)
         data = archive_bytes(nested)
@@ -200,6 +201,18 @@ class PackageTest(unittest.TestCase):
         self.assertEqual(verify.verify_package(fabric, "fabric", self.lock),
             verify.verify_package(neoforge, "neoforge", self.lock))
         verify.verify_packages(fabric, neoforge, self.lock)
+
+    def test_early_loader_uses_its_single_real_descriptor(self):
+        jar = self.fixture("neoforge")
+        with zipfile.ZipFile(jar) as archive:
+            entries = {name: archive.read(name) for name in archive.namelist()}
+        entries["META-INF/mods.toml"] = entries.pop("META-INF/neoforge.mods.toml")
+        jar.write_bytes(archive_bytes(entries))
+        verify.verify_package(jar, "neoforge", self.lock)
+        entries["META-INF/neoforge.mods.toml"] = entries["META-INF/mods.toml"]
+        jar.write_bytes(archive_bytes(entries))
+        with self.assertRaisesRegex(ValueError, "one actual native loader descriptor"):
+            verify.verify_package(jar, "neoforge", self.lock)
 
     def test_pair_byte_identity_rejects_individually_valid_different_resources(self):
         fabric = self.fixture("fabric")
@@ -422,13 +435,14 @@ class GradleContractTest(unittest.TestCase):
         self.assertIn("dependsOn buildExtensions", text)
         self.assertIn("dependsOn stageExtensions", text)
         self.assertIn("-PopenallayExtensionApiJar=", text)
-        self.assertIn("'build', 'verifyUniversalPackage'", text)
+        self.assertIn("testBundledExtensions ? 'build' : 'assemble', 'verifyUniversalPackage'", text)
+        self.assertIn("booleanProperty('testBundledExtensions', 'true')", text)
         self.assertIn("from(distributionDirectory)", text)
         self.assertIn("tasks.withType(ProcessResources).configureEach", text)
         self.assertIn("if (name == 'processResources')", text)
         self.assertNotIn("tasks.named('processResources'", text)
         self.assertNotIn("tasks.withType(Jar)", text)
-        self.assertIn("command.add(command.indexOf('build'), 'clean')", text)
+        self.assertIn("command.add(command.indexOf(testBundledExtensions ? 'build' : 'assemble'), 'clean')", text)
         self.assertIn("gradle.startParameter.offline", text)
         self.assertIn("outputs.upToDateWhen { false }", text)
         self.assertIn("mustRunAfter tasks.matching { it.name == 'clean' }", text)
