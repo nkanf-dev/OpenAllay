@@ -153,6 +153,13 @@ def verify(families, directory=None):
 
 
 def publication_records(families, directory, receipt_directory=None):
+    original_selection = directory / "accepted-originals.json"
+    if original_selection.exists():
+        require(receipt_directory is not None, "Original accepted publication needs existing final-path receipts")
+        promoter = module("accepted_original_publication", "promote-accepted-artifacts.py")
+        selection_path = ROOT / "distribution/accepted-release-artifacts.json"
+        require(original_selection.read_bytes() == selection_path.read_bytes(), "Original selection differs from checked-in release admission")
+        return promoter.records(selection_path, ROOT / "build/accepted-originals", directory, receipt_directory)
     records = verify(families, directory)
     data = catalog()
     for record in records:

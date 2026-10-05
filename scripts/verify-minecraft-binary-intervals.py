@@ -202,13 +202,13 @@ def staged_artifact(directory, family, version, source_sha):
     return path, expected, record
 
 
-def verify_summary(summary, family, target, sha, jar):
+def verify_summary(summary, family, target, sha, jar, scenarios=SCENARIOS):
     require(summary["loader"] == family["loader"] and summary["minecraft"] == target
             and summary["artifactSha256"] == sha and summary["status"] == "PASSED"
             and summary["noPaidModel"] is True, "Actual exact-target key client batch did not pass")
     require(not summary["failures"], "Actual client batch retains failures")
     rows = summary["scenarios"]
-    require([row["scenario"] for row in rows] == list(SCENARIOS), "Every key scenario must run in order")
+    require([row["scenario"] for row in rows] == list(scenarios), "Every key scenario must run in order")
     for row in rows:
         require(row["status"] == "PASSED" and not row["failures"], "Key scenario failed or was skipped")
         require(row["artifactAfter"]["sha256"] == sha, "Key scenario changed production bytes")

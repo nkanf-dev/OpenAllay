@@ -9,182 +9,16 @@ concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
 jobs:
-  stage:
-    name: Build final release bytes once
-    runs-on: ubuntu-24.04
-    timeout-minutes: 150
-    permissions:
-      contents: read
-    outputs:
-      runtime_matrix: ${{ steps.plan.outputs.runtime_matrix }}
-    env:
-      OPENALLAY_MINECRAFT_TARGET: '26.2'
-    steps:
-    - name: Check out annotated tag history
-      uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
-      with:
-        fetch-depth: 0
-        fetch-tags: true
-        persist-credentials: false
-    - name: Read selected Minecraft target Java pin
-      id: minecraft_target
-      run: |
-        java_version=$(python3 scripts/minecraft-target.py \
-          --target "$OPENALLAY_MINECRAFT_TARGET" --property java_version)
-        printf 'java_version=%s\n' "$java_version" >> "$GITHUB_OUTPUT"
-    - name: Set up target Java
-      uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
-      with:
-        distribution: temurin
-        java-version: |
-          17
-          21
-          ${{ steps.minecraft_target.outputs.java_version }}
-    - name: Set up Gradle
-      uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
-      with:
-        cache-provider: basic
-        cache-read-only: true
-    - name: Validate tag and release vacancy
-      env:
-        GH_TOKEN: ${{ github.token }}
-      run: ./scripts/verify-release-tag.sh "${GITHUB_REF_NAME}" "${GITHUB_SHA}"
-    - name: Test Minecraft target source and tooling contracts
-      run: python3 -m unittest discover -s scripts -p 'test_minecraft_target*.py'
-    - name: Test distribution automation
-      run: python3 -m unittest discover -s scripts -p 'test_distribution*.py'
-    - name: Prepare pinned Extension source
-      run: python3 scripts/prepare-distribution.py
-    - name: Build, verify, and stage accepted native artifact families
-      run: python3 scripts/build-minecraft-artifacts.py build-and-stage release
-    - name: Bind final staged family bytes and select every exact accepted runtime
-      id: plan
-      run: |-
-        python3 -B scripts/verify-minecraft-binary-intervals.py bind-stage --families accepted --directory release
-        python3 -B scripts/verify-minecraft-binary-intervals.py release-matrix --github-output "$GITHUB_OUTPUT" > release-runtime-plan.json
-    - name: Retain final production JARs exactly once
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-      with:
-        name: release-production-${{ github.sha }}-${{ github.run_attempt }}
-        retention-days: 7
-        if-no-files-found: error
-        path: release/
-    - name: Retain exact shared-engine outputs for final package identity checks
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-      with:
-        name: release-engine-${{ github.sha }}-${{ github.run_attempt }}
-        retention-days: 7
-        if-no-files-found: error
-        path: |-
-          engine-core/build/classes/java/main/
-          engine-core/build/resources/main/
-          engine-core/build/generated/private-maven/
-          runtime-json/build/classes/java/main/
-    - name: Retain stage plan and source receipts
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-      with:
-        name: release-plan-${{ github.sha }}-${{ github.run_attempt }}
-        retention-days: 7
-        if-no-files-found: error
-        path: release-runtime-plan.json
-  runtime:
-    name: Final release ${{ matrix.family }} on ${{ matrix.target }}
-    needs:
-    - stage
-    runs-on: ubuntu-24.04
-    timeout-minutes: 35
-    strategy:
-      fail-fast: false
-      max-parallel: 3
-      matrix: ${{ fromJSON(needs.stage.outputs.runtime_matrix) }}
-    env:
-      LIBGL_ALWAYS_SOFTWARE: '1'
-      ALSOFT_DRIVERS: 'null'
-    steps:
-    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
-      with:
-        persist-credentials: false
-    - name: Download exact final staged release bytes; never rebuild
-      uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
-      with:
-        name: release-production-${{ github.sha }}-${{ github.run_attempt }}
-        path: release
-    - name: Check original interval checksums before runtime allocation
-      run: sha256sum --check SHA256SUMS
-      working-directory: release
-    - name: Read exact game Java pin
-      id: game
-      env:
-        TARGET: ${{ matrix.target }}
-      run: |
-        java_version=$(python3 -B scripts/minecraft-target.py --target "$TARGET" --property java_version)
-        printf 'java_version=%s\n' "$java_version" >> "$GITHUB_OUTPUT"
-    - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
-      with:
-        distribution: temurin
-        java-version: ${{ steps.game.outputs.java_version }}
-    - name: Install headless graphics and lossless evidence tools
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 libegl-mesa0 mesa-utils libvulkan1 mesa-vulkan-drivers vulkan-tools libopenal1 webp
-        python3 -m venv build/ci-tools
-        build/ci-tools/bin/python -m pip install Pillow==11.3.0
-    - name: Provision exact official Minecraft, loader, libraries and assets
-      env:
-        TARGET: ${{ matrix.target }}
-        LOADER: ${{ matrix.loader }}
-      run: |
-        python3 -B scripts/prepare-ci-minecraft-runtime.py --loader "$LOADER" --minecraft-target "$TARGET" --java "$JAVA_HOME/bin/java" --minecraft-root "$PWD/build/e2e/runtime/$TARGET/minecraft" > build/ci-runtime-receipt.json
-        python3 -B scripts/run-packaged-builder-acceptance.py --prepare-assets --minecraft-target "$TARGET" --minecraft-root "$PWD/build/e2e/runtime/$TARGET/minecraft" --assets-root "$PWD/build/e2e/runtime/$TARGET/assets"
-    - name: Run unchanged interval JAR with normal exact official target loader
-      env:
-        TARGET: ${{ matrix.target }}
-        LOADER: ${{ matrix.loader }}
-        FAMILY: ${{ matrix.family }}
-      run: |
-        xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24 +extension GLX +render -noreset" --error-file="$PWD/build/ci-xvfb.log" \
-          python3 -B scripts/run-ci-software-graphics.py --loader "$LOADER" --minecraft-target "$TARGET" --minecraft-root "$PWD/build/e2e/runtime/$TARGET/minecraft" --output "$PWD/build/ci-graphics/$TARGET-$LOADER" -- \
-          python3 -B scripts/verify-minecraft-binary-intervals.py run-runtime --family "$FAMILY" --loader "$LOADER" --target "$TARGET" --directory release --java "$JAVA_HOME/bin/java" --batch-id "release-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.target }}"
-    - name: Preserve compact native diagnostics and lossless images
-      if: always()
-      env:
-        LOADER: ${{ matrix.loader }}
-      run: build/ci-tools/bin/python -B scripts/compact-ci-game-evidence.py --loader "$LOADER" --batch-id "release-${{ github.run_id
-        }}-${{ github.run_attempt }}"
-    - name: Retain mechanical acceptance or failed linkage with exact source/SHA identity
-      if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-      with:
-        name: release-client-${{ matrix.family }}-${{ matrix.target }}-${{ github.sha }}-${{ github.run_attempt }}
-        retention-days: 7
-        if-no-files-found: warn
-        path: |
-          build/ci-binary-interval/
-          release/SHA256SUMS
-          release/build-record.json
-          build/ci-runtime-receipt.json
-          build/ci-xvfb.log
-          build/ci-graphics/${{ matrix.target }}-${{ matrix.loader }}/*.json
-          build/ci-graphics/${{ matrix.target }}-${{ matrix.loader }}/*.log.gz
-          build/e2e/runtime/${{ matrix.target }}/minecraft/.provision/*.json
-          build/e2e/runtime/${{ matrix.target }}/minecraft/.provision/*.log
-          build/e2e/ci-client/${{ matrix.loader }}/release-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.target }}/summary.json
-          build/e2e/ci-client/${{ matrix.loader }}/release-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.target }}/*.log
-          build/e2e/ci-client-compact/${{ matrix.loader }}/release-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.target }}/
   publish:
     name: Publish verified unchanged ${{ github.ref_name }}
-    needs:
-    - stage
-    - runtime
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
       OPENALLAY_MINECRAFT_TARGET: '26.2'
       OPENALLAY_MINECRAFT_RECEIPT_DIRECTORY: build/release-receipts
     permissions:
-      attestations: write
       contents: write
-      id-token: write
+      actions: read
     steps:
     - name: Check out annotated tag history
       uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
@@ -192,25 +26,6 @@ jobs:
         fetch-depth: 0
         fetch-tags: true
         persist-credentials: false
-    - name: Read selected Minecraft target Java pin
-      id: minecraft_target
-      run: |
-        java_version=$(python3 scripts/minecraft-target.py \
-          --target "$OPENALLAY_MINECRAFT_TARGET" --property java_version)
-        printf 'java_version=%s\n' "$java_version" >> "$GITHUB_OUTPUT"
-    - name: Set up target Java
-      uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
-      with:
-        distribution: temurin
-        java-version: |
-          17
-          21
-          ${{ steps.minecraft_target.outputs.java_version }}
-    - name: Set up Gradle
-      uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
-      with:
-        cache-provider: basic
-        cache-read-only: true
     - name: Validate tag and release vacancy
       env:
         GH_TOKEN: ${{ github.token }}
@@ -219,30 +34,13 @@ jobs:
       env:
         MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
       run: test -n "${MODRINTH_TOKEN}"
-    - name: Prepare pinned Extension source
-      run: python3 scripts/prepare-distribution.py
-    - name: Download same final staged release bytes
-      uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
-      with:
-        name: release-production-${{ github.sha }}-${{ github.run_attempt }}
-        path: release
-    - name: Download original shared-engine output identity
-      uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
-      with:
-        name: release-engine-${{ github.sha }}-${{ github.run_attempt }}
-        path: .
-    - name: Download all actual exact-target final-byte runtime evidence
-      uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
-      with:
-        pattern: release-client-*-${{ github.sha }}-${{ github.run_attempt }}
-        path: build/release-runtime-evidence
-        merge-multiple: true
-    - name: Check original final bytes and bind existing receipts at this final stage path
-      run: sha256sum --check SHA256SUMS
-      working-directory: release
-    - name: Verify each final exact-target runtime and existing publication receipt boundary
+    - name: Download original immutable accepted artifacts and runtime evidence
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: python3 -B scripts/promote-accepted-artifacts.py download
+    - name: Stage the original bytes and bind existing proof to final release paths
       run: |-
-        python3 -B scripts/verify-minecraft-binary-intervals.py final-stage-receipts --directory release --results-directory build/release-runtime-evidence/build/ci-binary-interval --receipt-directory build/release-receipts
+        python3 -B scripts/promote-accepted-artifacts.py stage > release-publication-records.json
         python3 -B scripts/build-minecraft-artifacts.py publication-records release --receipt-directory build/release-receipts > release-publication-records.json
     - name: Retain final-byte receipts and publication records
       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -256,15 +54,12 @@ jobs:
     - name: Generate release notes
       env:
         GH_TOKEN: ${{ github.token }}
-      run: python3 scripts/generate-release-notes.py "${GITHUB_REF_NAME}" --repository "${GITHUB_REPOSITORY}" --output release-notes.md
+      run: python3 scripts/generate-release-notes.py "${GITHUB_REF_NAME}" --repository "${GITHUB_REPOSITORY}" --output
+        release-notes.md
     - name: Publish Fabric and NeoForge to Modrinth
       env:
         MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
       run: ./scripts/publish-modrinth.sh "${GITHUB_REF_NAME}" release
-    - name: Attest release artifacts
-      uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373
-      with:
-        subject-path: release/*
     - name: Publish GitHub release
       env:
         GH_TOKEN: ${{ github.token }}
@@ -278,6 +73,8 @@ jobs:
         gh release create "${GITHUB_REF_NAME}" \
           release/openallay-*.jar \
           release/SHA256SUMS \
+          release/accepted-originals.json \
+          release-publication-records.json \
           --fail-on-no-commits \
           --notes-file release-notes.md \
           --title "OpenAllay ${GITHUB_REF_NAME}" \
