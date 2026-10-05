@@ -132,7 +132,7 @@ if (legacyNativeLoader) {
 // ART rewrites every class. Restore the one native-free compiled engine owner only
 // after the supported MDG reobfuscation task has finished writing its native archive.
 if (legacyNativeLoader) {
-    def nativeReobf = tasks.named('reobfJar', net.neoforged.moddevgradle.legacyforge.tasks.RemapJar)
+    def nativeReobf = tasks.named('reobfJar')
     def engineOutput = project(':engine-core').sourceSets.main.output
     def finalArchive = layout.buildDirectory.file(nativeReobf.flatMap { it.archiveFileName }
             .map { "libs/${it}" })
@@ -170,7 +170,7 @@ if (legacyNativeLoader) {
 
 // Inspect the existing named native artifact; never request source generation.
 if (actualForge) {
-    def nativeArtifacts = tasks.named('createMinecraftArtifacts', net.neoforged.nfrtgradle.CreateMinecraftArtifacts)
+    def nativeArtifacts = tasks.named('createMinecraftArtifacts')
     def namedGame = nativeArtifacts.flatMap { it.gameJarArtifact }
     def javap = javaToolchains.launcherFor {
         languageVersion = JavaLanguageVersion.of(java_version)
