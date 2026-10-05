@@ -67,7 +67,7 @@ ext.selectConfiguredMinecraftMixins = { SourceDirectorySet javaSources,
                 mixin: mixin.find() && mixin.group(1) == source.name.replaceFirst(/\.java$/, '')]]
     }
     def duplicates = declarations.values()*.identity.countBy { it }.findAll { identity, count -> count > 1 }
-    if (!duplicates.empty) throw new GradleException("Duplicate selected Java FQN: ${duplicates.keySet()}")
+    if (!duplicates.isEmpty()) throw new GradleException("Duplicate selected Java FQN: ${duplicates.keySet()}")
     configured.each { identity ->
         def owners = declarations.findAll { source, declaration -> declaration.identity == identity }
         if (owners.size() != 1 || !owners.values().first().mixin) {
