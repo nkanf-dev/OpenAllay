@@ -102,7 +102,7 @@ final class ToolCodecAndNormalizerTest {
                 .getAsJsonObject("value");
         assertEquals("caller:" + output.evidence().getFirst().capturedAt(),
                 value.getAsJsonArray("evidence").get(0).getAsJsonObject().get("capturedAt").getAsString());
-        assertEquals(output, supplied.fromJson(value, UngroundedOutput.class));
+        assertEquals(output, EngineJson.withInstant(supplied).fromJson(value, UngroundedOutput.class));
     }
 
     private static JsonObject object(String json) {

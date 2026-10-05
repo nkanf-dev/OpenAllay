@@ -472,7 +472,7 @@ final class PlayerClientToolRouterTest {
                 for (int index = 0; index < completed.size(); index++) {
                     var event = completed.get(index);
                     assertFalse(event.failure());
-                    var output = new Gson().fromJson(event.normalized().get("value"),
+                    var output = dev.openallay.json.EngineJson.withInstant(new Gson()).fromJson(event.normalized().get("value"),
                             dev.openallay.skill.LoadSkillTool.Output.class);
                     assertEquals(rawFingerprint, output.fingerprint());
                     assertEquals(currentAsk == 0 && index == 0 ? dev.openallay.skill.LoadSkillTool.LoadState.COMPLETE
@@ -516,7 +516,7 @@ final class PlayerClientToolRouterTest {
             AgentToolResult actual = tools.execute("openallay__load_skill", input,
                     ToolInvocationContext.developmentConsole(id.toString()), new CancellationSignal()).join();
             assertFalse(actual.failure());
-            var output = new Gson().fromJson(actual.normalized().get("value"), dev.openallay.skill.LoadSkillTool.Output.class);
+            var output = dev.openallay.json.EngineJson.withInstant(new Gson()).fromJson(actual.normalized().get("value"), dev.openallay.skill.LoadSkillTool.Output.class);
             assertEquals(body, output.content());
             var manifest = new dev.openallay.skill.LoadSkillTool(snapshot, "server").catalogManifest();
             assertEquals(manifest.documents().getFirst().fingerprint(), output.fingerprint());

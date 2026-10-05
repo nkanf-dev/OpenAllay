@@ -31,7 +31,7 @@ jobs:
       - name: Package the new bundled Forge product without repeating shared feature suites
         shell: bash
         run: |
-          ./gradlew --max-workers=2 --stacktrace -PminecraftTarget=1.19.2 :engine-core:test --tests dev.openallay.json.EngineJsonTest --tests dev.openallay.json.JsonReadersTest --tests dev.openallay.guide.e2e.GuideE2EReportJsonTest --tests dev.openallay.context.ContextSnapshotMetricsJsonTest --tests dev.openallay.trace.replay.ToolArgumentCodecTest --tests dev.openallay.trace.replay.ToolCodecAndNormalizerTest --tests dev.openallay.guide.ui.GuideToolDetailPresenterTest --tests dev.openallay.bridge.protocol.BridgeJsonCodecTest --tests dev.openallay.bridge.server.RemoteToolServerTest --tests dev.openallay.bridge.client.ClientToolExecutionEndpointTest --tests dev.openallay.bridge.PlayerClientToolRouterTest --tests dev.openallay.json.RecordJsonAdapterTest --tests dev.openallay.bridge.protocol.ServerAgentEventCodecTest --tests dev.openallay.agent.trace.LiveTraceStoreTest -x :runtime-maven:test :forge:assemble :forge:captureNativeCommandContracts
+          ./gradlew --max-workers=2 --stacktrace -PminecraftTarget=1.19.2 :engine-core:test --tests dev.openallay.bridge.PlayerClientToolRouterTest --tests dev.openallay.bridge.client.ClientToolExecutionEndpointTest --tests dev.openallay.trace.replay.ToolCodecAndNormalizerTest -x :runtime-maven:test :forge:assemble :forge:captureNativeCommandContracts
           python3 -B scripts/verify-native-target-package.py --target 1.19.2 --bundled-builder
           python3 -B scripts/stage-ci-client-production.py --minecraft-target 1.19.2
       - name: Retain the exact packaged product bytes

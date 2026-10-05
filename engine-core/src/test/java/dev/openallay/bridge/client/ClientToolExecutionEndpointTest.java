@@ -352,7 +352,7 @@ final class ClientToolExecutionEndpointTest {
                     "openallay:load_skill", "{\"name\":\"guide\"}"));
             var normalized = JsonParser.parseString(reassemble(sent)).getAsJsonObject();
             assertEquals("success", normalized.get("status").getAsString());
-            var output = new Gson().fromJson(normalized.get("value"), dev.openallay.skill.LoadSkillTool.Output.class);
+            var output = dev.openallay.json.EngineJson.withInstant(new Gson()).fromJson(normalized.get("value"), dev.openallay.skill.LoadSkillTool.Output.class);
             assertEquals(dev.openallay.skill.LoadSkillTool.LoadState.COMPLETE, output.state());
             assertEquals("Captured client instructions.", output.content());
             assertEquals(request.skillDocuments().documents().getFirst().source(), output.source());
@@ -414,7 +414,7 @@ final class ClientToolExecutionEndpointTest {
             String wire = reassemble(sent);
             var normalized = JsonParser.parseString(wire).getAsJsonObject();
             assertEquals("success", normalized.get("status").getAsString());
-            var output = new Gson().fromJson(normalized.get("value"), dev.openallay.skill.LoadSkillTool.Output.class);
+            var output = dev.openallay.json.EngineJson.withInstant(new Gson()).fromJson(normalized.get("value"), dev.openallay.skill.LoadSkillTool.Output.class);
             String expected = document.equals("SKILL.md") ? contents : referenceContents;
             var identity = request.skillDocuments().documents().stream()
                     .filter(value -> value.document().equals(document)).findFirst().orElseThrow();
