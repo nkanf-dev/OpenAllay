@@ -12,16 +12,12 @@ import net.minecraftforge.common.MinecraftForge;
 final class NeoForgeNativeClientEvents {
     private NeoForgeNativeClientEvents() {}
     static void onSystemChat(BiConsumer<UUID, String> feedback) {
-        MinecraftForge.EVENT_BUS.addListener((ClientChatReceivedEvent.System event) -> {
+        // Forge 43.5.0 posts signed player chat as the base event, System as its subclass.
+        // One listener avoids duplicate feedback and excludes native overlay-only messages.
+        MinecraftForge.EVENT_BUS.addListener((ClientChatReceivedEvent event) -> {
             Minecraft client = Minecraft.getInstance();
-            if (!event.isOverlay() && client.player != null) {
-                feedback.accept(client.player.getUUID(), event.getMessage().getString());
-            }
-        });
-        // Signed command message arguments (for example /me) return player chat, not System chat.
-        MinecraftForge.EVENT_BUS.addListener((ClientChatReceivedEvent.Player event) -> {
-            Minecraft client = Minecraft.getInstance();
-            if (client.player != null) {
+            if (client.player != null
+                    && (!(event instanceof ClientChatReceivedEvent.System system) || !system.isOverlay())) {
                 feedback.accept(client.player.getUUID(), event.getMessage().getString());
             }
         });
