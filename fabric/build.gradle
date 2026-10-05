@@ -30,7 +30,7 @@ dependencies {
     implementation(include("org.commonmark:commonmark-ext-gfm-tables:${commonmark_version}"))
     implementation(include("dev.latvian.mods:rhino:${rhino_version}"))
     implementation(include("com.knuddels:jtokkit:${jtokkit_version}"))
-    if (minecraftTarget in ['1.21.3', '1.21.4']) {
+    if (minecraftNativeSourceFamilies.contains('1.21.3') || minecraftTarget == '1.21.4') {
         // These targets use the independently published named common API.
         // Compile against its actual public contracts; never bundle or remap the API itself.
         compileOnly("mezz.jei:jei-${jeiArtifactTarget}-common-api:${jei_version}") { transitive = false }
