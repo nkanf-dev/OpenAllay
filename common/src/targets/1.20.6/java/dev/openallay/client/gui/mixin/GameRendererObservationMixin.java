@@ -19,7 +19,7 @@ public abstract class GameRendererObservationMixin {
     }
 
     @Inject(method = "render(FJZ)V", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/client/gui/GuiGraphics;flush()V", ordinal = 1, shift = At.Shift.AFTER))
+            target = "Lnet/minecraft/client/gui/GuiGraphics;flush()V", ordinal = 0, shift = At.Shift.AFTER))
     private void openallay$gameUiFrame(float partialTick, long nanoTime, boolean advanceGameTime, CallbackInfo callback) {
         MinecraftClientViewCapture.afterGui(Minecraft.getInstance(), advanceGameTime);
     }
