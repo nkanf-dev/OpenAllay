@@ -76,10 +76,13 @@ class DiagnosticsTests(unittest.TestCase):
     def test_copies_only_diagnostics_and_preserves_original_source(self):
         values = {"report.json": b'{"outcome":"FAILED"}\n', "trace.json": b'{"events":[]}\n',
                   "source-manifest.json": b'{"files":{}}\n', "summary.json": b'{}\n',
+                  "launch.json": b'{"command":["synthetic-offline-session"]}\n',
+                  "native-snapshot-audit.json": b'{"matchesReviewedSnapshot":true}\n',
+                  "persistence-audit.json": b'{"outcome":"PASSED"}\n',
                   "client.log": b"client output\n", "logs/fixture.log": b"fixture output\n"}
         for name, value in values.items():
             self.write(name, value)
-        excluded = ["launch.json", "game/config/openallay/models.json", "game/saves/player/level.dat",
+        excluded = ["game/config/openallay/models.json", "game/saves/player/level.dat",
                     "game/mods/actual-tested.jar", "natives/library.so", "historical.png"]
         for name in excluded:
             self.write(name, b"not diagnostics")

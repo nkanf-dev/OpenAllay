@@ -130,6 +130,26 @@ def expand_arguments(arguments, values, features=None):
     return result
 
 
+def runtime_native_arguments(arguments, prepared_natives, runtime_directory, previous_runtime=None):
+    """Keep reviewed native inputs separate from official library-owned outputs."""
+    owners = {"jna.tmpdir": "jna", "org.lwjgl.system.SharedLibraryExtractPath": "lwjgl",
+              "io.netty.native.workdir": "netty"}
+    result = []
+    for argument in arguments:
+        key, separator, value = argument.removeprefix("-D").partition("=")
+        if argument.startswith("-D") and separator and key in owners:
+            owner = owners[key]
+            supplied = Path(value)
+            allowed = {prepared_natives, prepared_natives / owner, runtime_directory / owner}
+            if previous_runtime is not None:
+                allowed.add(previous_runtime / owner)
+            if not supplied.is_absolute() or supplied not in allowed or supplied.is_symlink():
+                raise ValueError("Official runtime native output has an unexpected owner path: " + key)
+            argument = "-D" + key + "=" + str(runtime_directory / owner)
+        result.append(argument)
+    return result
+
+
 def read_version(minecraft_root, name):
     path = minecraft_root / "versions" / name / (name + ".json")
     if not path.is_file():
@@ -713,7 +733,9 @@ def prepare(args, repo=REPO):
               "resolution_height": "480" if args.low_impact else "700"}
     if not re.fullmatch(r"[A-Za-z0-9_]{1,16}", values["auth_player_name"]):
         raise ValueError("Synthetic Minecraft username must contain 1 to 16 simple characters")
-    jvm = expand_arguments(vanilla["arguments"]["jvm"] + extra_jvm, values)
+    jvm = runtime_native_arguments(
+        expand_arguments(vanilla["arguments"]["jvm"] + extra_jvm, values),
+        output / "natives", output / "native-runtime")
     game_args = expand_arguments(vanilla["arguments"]["game"] + extra_game, values, {"has_custom_resolution": True})
     source_files = ["common/src/main/java/dev/openallay/guide/e2e/GuideGraphicalRegressionProbe.java",
                     "common/src/main/java/dev/openallay/guide/e2e/GuideClientE2EController.java",
@@ -861,6 +883,8 @@ def prepare_resume(args, repo=REPO):
         if entry.startswith("-Dopenallay.e2e."):
             continue
         command.append(entry)
+    command = runtime_native_arguments(command, Path(prior["nativesDirectory"]),
+                                       output / "native-runtime", previous / "native-runtime")
     main_class = "net.fabricmc.loader.impl.launch.knot.KnotClient" if prior["loader"] == "fabric" else "net.neoforged.fml.startup.Client"
     insert = command.index(main_class)
     diagnostics_property = "-Dopenallay.model.diagnostics=true"
@@ -1044,10 +1068,28 @@ def launch_prepared(path, repo=REPO):
     original = safe_output(Path(manifest.get("resumeFrom", output)), repo)
     if native_directory != original / "natives":
         raise ValueError("Prepared native directory must belong to the original disposable run")
+    native_paths = list(native_directory.rglob("*"))
+    native_links = [path.relative_to(native_directory).as_posix()
+                    for path in native_paths if path.is_symlink()]
     native_actual = {path.relative_to(native_directory).as_posix(): digest(path)
-                     for path in native_directory.rglob("*") if path.is_file()}
-    if (native_actual != manifest["nativeFiles"] or any(path.is_symlink() for path in native_directory.rglob("*"))):
+                     for path in native_paths if path.is_file() and not path.is_symlink()}
+    native_expected = manifest["nativeFiles"]
+    # Evidence only. Never change or refresh the reviewed immutable native hashes.
+    write_json(output / "native-snapshot-audit.json", {
+        "nativesDirectory": str(native_directory), "expected": native_expected, "actual": native_actual,
+        "symlinks": native_links,
+        "added": sorted(set(native_actual) - set(native_expected)),
+        "missing": sorted(set(native_expected) - set(native_actual)),
+        "changed": sorted(name for name in native_expected.keys() & native_actual.keys()
+                          if native_expected[name] != native_actual[name]),
+        "matchesReviewedSnapshot": native_actual == native_expected and not native_links})
+    if native_actual != native_expected or native_links or native_directory.is_symlink():
         raise ValueError("Prepared extracted natives changed")
+    runtime_directory = output / "native-runtime"
+    if runtime_directory.exists() or runtime_directory.is_symlink():
+        raise ValueError("Runtime native output must be a new per-phase directory")
+    if runtime_native_arguments(manifest["command"], native_directory, runtime_directory) != manifest["command"]:
+        raise ValueError("Official runtime native output must belong to this phase")
     provision = manifest.get("runtimeProvision")
     if provision:
         mcroot = repo.resolve() / "build/e2e/runtime" / manifest["minecraft"] / "minecraft"
@@ -1072,6 +1114,7 @@ def launch_prepared(path, repo=REPO):
     for profile in models["profiles"]:
         if profile.get("enabled") and not launch_environment.get(profile["credentialRef"].removeprefix("env:")):
             raise ValueError("An enabled acceptance profile has no credential in its referenced environment variable")
+    runtime_directory.mkdir()
     # The runtime command contains only the synthetic Minecraft token '0'. Provider
     # secrets stay in environment variables and are never serialized or printed.
     manifest["noGameLaunched"] = False

@@ -215,6 +215,11 @@ def read_json(path):
                     for argument in [item for item in contract["vanilla"]["arguments"]["jvm"] if isinstance(item, str)] + contract[loader]["arguments"]["jvm"]:
                         for name, value in substitutions.items():
                             argument = argument.replace("${" + name + "}", value)
+                        output_owners = {"jna.tmpdir": "jna", "org.lwjgl.system.SharedLibraryExtractPath": "lwjgl",
+                                         "io.netty.native.workdir": "netty"}
+                        key = argument.removeprefix("-D").partition("=")[0]
+                        if argument.startswith("-D") and key in output_owners:
+                            argument = "-D" + key + "=" + str(output / "native-runtime" / output_owners[key])
                         expected_jvm.append(argument)
                     self.assertEqual(expected_jvm, command[3:3 + len(expected_jvm)])
                     expected_game = ["--username", "BuilderProbe", "--version", contract[loader]["id"],

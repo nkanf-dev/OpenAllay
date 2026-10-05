@@ -20,7 +20,8 @@ import tempfile
 import warnings
 
 REPO = Path(__file__).resolve().parents[1]
-JSON_NAMES = {"report.json", "trace.json", "report.trace.json", "source-manifest.json", "summary.json"}
+JSON_NAMES = {"report.json", "trace.json", "report.trace.json", "source-manifest.json", "summary.json",
+              "launch.json", "native-snapshot-audit.json", "persistence-audit.json"}
 ROOT_LOGS = {"client.log", "fixture.log", "stdout.log", "stderr.log", "latest.log", "debug.log"}
 DENIED = {"config", "configs", "credentials", "accounts", "models", "saves", "worlds", "assets",
           "libraries", "runtime", "runtimes", "natives", "mods", "resourcepacks", "history"}
