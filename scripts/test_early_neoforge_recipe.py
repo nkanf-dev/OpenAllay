@@ -117,11 +117,11 @@ class SourceReuseContractTest(unittest.TestCase):
             self.assertNotIn(forbidden, settings)
         self.assertIn("id 'net.neoforged.gradle.userdev' version '7.1.39'", source)
         self.assertIn('implementation("net.neoforged:neoforge:${props.neoforge_version}")', source)
-        self.assertIn("source(data.nativeSources.collect", source)
+        self.assertIn("source(nativeInputs.nativeSources.collect", source)
         self.assertIn("java.setSrcDirs([])", source)
         self.assertIn("accessTransformers.files.from", source)
         self.assertIn("options.release = 17", source)
-        self.assertIn("output.classesDirs.from(directories(data.engine) + directories(data.adapter))", source)
+        self.assertIn("output.classesDirs.from(directories(nativeInputs.engine) + directories(nativeInputs.adapter))", source)
         self.assertNotIn("net.neoforged:forge", source)
         self.assertNotIn("reflection", source)
 
@@ -131,8 +131,8 @@ class SourceReuseContractTest(unittest.TestCase):
         for contract in ("commonSources.allJava.files", "outputRecords(engineOutput)", "outputRecords(adapterOutput)",
                          "outputRecords(files(resourceOutput))", "sdk: artifact", "rhino: artifact", "accessTransformer:"):
             self.assertIn(contract, exporter)
-        for contract in ("sha256(input) != record.sha256", "data.engine + data.adapter + data.resources",
-                         "[data.sdk, data.rhino]", "SDK/Rhino JarJar identity or singleton range differs",
+        for contract in ("sha256(input) != record.sha256", "nativeInputs.engine + nativeInputs.adapter + nativeInputs.resources",
+                         "[nativeInputs.sdk, nativeInputs.rhino]", "SDK/Rhino JarJar identity or singleton range differs",
                          "MixinConfigs", "verifyReusedPackage", "neoforge/build/libs"):
             self.assertIn(contract, source)
         self.assertIn("project.name == 'extension-api' ? 8 : 17", self.text("native-builds/early-neoforge/artifact-input.gradle"))

@@ -21,35 +21,35 @@ if (!receiptFile.isFile()) throw new GradleException("Missing native input recei
 def receiptBytes = receiptFile.bytes
 def receiptSha256 = MessageDigest.getInstance('SHA-256').digest(receiptBytes).encodeHex().toString()
 ext.earlyInputs = new JsonSlurper().parseText(new String(receiptBytes, StandardCharsets.UTF_8))
-def data = earlyInputs
+def nativeInputs = earlyInputs
 def fields = { value, expected, context ->
     if (!(value instanceof Map) || value.keySet() != expected.toSet()) {
         throw new GradleException("Unexpected native input fields: ${context}")
     }
 }
-fields(data, ['root', 'target', 'properties', 'nativeSources', 'engine', 'adapter', 'resources',
+fields(nativeInputs, ['root', 'target', 'properties', 'nativeSources', 'engine', 'adapter', 'resources',
               'sdk', 'rhino', 'accessTransformer'], receiptFile)
-fields(data.properties, ['version', 'archiveName', 'group', 'mod_id', 'mod_name', 'mod_author', 'java_version',
+fields(nativeInputs.properties, ['version', 'archiveName', 'group', 'mod_id', 'mod_name', 'mod_author', 'java_version',
         'neoforge_version', 'jeiArtifactTarget', 'jei_version', 'rei_version', 'architectury_version',
         'sqlite_jdbc_version', 'commonmark_version', 'jtokkit_version'], 'properties')
-if (!(data.root instanceof String) || !(data.target instanceof String)
-        || data.properties.values().any { !(it instanceof String) || it.isEmpty() }) {
+if (!(nativeInputs.root instanceof String) || !(nativeInputs.target instanceof String)
+        || nativeInputs.properties.values().any { !(it instanceof String) || it.isEmpty() }) {
     throw new GradleException("Invalid native input values in ${receiptFile}")
 }
 ['nativeSources', 'engine', 'adapter', 'resources'].each { name ->
-    if (!(data[name] instanceof List) || data[name].empty) {
+    if (!(nativeInputs[name] instanceof List) || nativeInputs[name].empty) {
         throw new GradleException("Native input set must be a nonempty list: ${name}")
     }
 }
 def dataSha256 = MessageDigest.getInstance('SHA-256')
-        .digest(JsonOutput.toJson(data).getBytes(StandardCharsets.UTF_8)).encodeHex().toString()
+        .digest(JsonOutput.toJson(nativeInputs).getBytes(StandardCharsets.UTF_8)).encodeHex().toString()
 def sourceRoot = file('../..').canonicalFile
-def expectedReceipt = new File(sourceRoot, "build/early-neoforge/${data.target}/inputs.json").canonicalFile
-if (file(data.root).canonicalFile != sourceRoot || receiptFile.canonicalFile != expectedReceipt) {
+def expectedReceipt = new File(sourceRoot, "build/early-neoforge/${nativeInputs.target}/inputs.json").canonicalFile
+if (file(nativeInputs.root).canonicalFile != sourceRoot || receiptFile.canonicalFile != expectedReceipt) {
     throw new GradleException('Native input receipt must come from this checkout and exact target')
 }
-def records = data.nativeSources + data.engine + data.adapter + data.resources + [data.sdk, data.rhino]
-if (data.accessTransformer != null) records += data.accessTransformer
+def records = nativeInputs.nativeSources + nativeInputs.engine + nativeInputs.adapter + nativeInputs.resources + [nativeInputs.sdk, nativeInputs.rhino]
+if (nativeInputs.accessTransformer != null) records += nativeInputs.accessTransformer
 def recordFields = { record, extra ->
     fields(record, ['path', 'sha256'] + extra, 'record')
     if (record.values().any { !(it instanceof String) || it.isEmpty() }
@@ -57,13 +57,13 @@ def recordFields = { record, extra ->
         throw new GradleException('Invalid native input record values')
     }
 }
-data.nativeSources.each { recordFields(it, []) }
-if (data.accessTransformer != null) recordFields(data.accessTransformer, [])
-[data.sdk, data.rhino].each { recordFields(it, ['group', 'name', 'version']) }
-[data.engine, data.adapter, data.resources].each { entries -> entries.each { recordFields(it, ['entry']) } }
-def expectedLoader = ['1.20.2': '20.2.93', '1.20.3': '20.3.8-beta'][data.target]
-if (expectedLoader == null || data.properties.neoforge_version != expectedLoader
-        || data.properties.java_version != '17' || data.sdk.version != '0.4.0') {
+nativeInputs.nativeSources.each { recordFields(it, []) }
+if (nativeInputs.accessTransformer != null) recordFields(nativeInputs.accessTransformer, [])
+[nativeInputs.sdk, nativeInputs.rhino].each { recordFields(it, ['group', 'name', 'version']) }
+[nativeInputs.engine, nativeInputs.adapter, nativeInputs.resources].each { entries -> entries.each { recordFields(it, ['entry']) } }
+def expectedLoader = ['1.20.2': '20.2.93', '1.20.3': '20.3.8-beta'][nativeInputs.target]
+if (expectedLoader == null || nativeInputs.properties.neoforge_version != expectedLoader
+        || nativeInputs.properties.java_version != '17' || nativeInputs.sdk.version != '0.4.0') {
     throw new GradleException('Unexpected early NeoForge target, Java ABI, loader, or SDK pin')
 }
 def paths = [] as Set
@@ -76,7 +76,7 @@ records.each { record ->
 def reusedRoots = [:]
 def reusedEntries = [] as Set
 ['engine', 'adapter', 'resources'].each { name ->
-    data[name].each { record ->
+    nativeInputs[name].each { record ->
         def segments = record.entry.split('/', -1)
         if (record.entry.contains('\\') || segments.any { it.isEmpty() || (it in ['.', '..']) }
                 || !reusedEntries.add(record.entry)) {
@@ -105,18 +105,18 @@ roots.eachWithIndex { root, index ->
         }
     }
 }
-data.nativeSources.each { record ->
+nativeInputs.nativeSources.each { record ->
     def relative = sourceRoot.toPath().relativize(file(record.path).canonicalFile.toPath()).toString().replace('\\', '/')
     if (!(relative.startsWith('common/src/') || relative.startsWith('neoforge/src/')) || !relative.endsWith('.java')) {
         throw new GradleException("Feature or non-native Java source in isolated compiler: ${relative}")
     }
 }
-// Pin the exact receipt bytes and parsed data, then check only represented consumer roots.
+// Pin the exact receipt bytes and parsed nativeInputs, then check only represented consumer roots.
 // No copies, root rebuild, repair, or directory-wide raw-source inference occurs here.
 def validateInputs = {
     if (!receiptFile.isFile() || receiptFile.toPath() != receiptFile.canonicalFile.toPath()
             || sha256(receiptFile) != receiptSha256
-            || MessageDigest.getInstance('SHA-256').digest(JsonOutput.toJson(data)
+            || MessageDigest.getInstance('SHA-256').digest(JsonOutput.toJson(nativeInputs)
                     .getBytes(StandardCharsets.UTF_8)).encodeHex().toString() != dataSha256) {
         throw new GradleException("Native input receipt changed after setup: ${receiptFile}")
     }
@@ -149,14 +149,14 @@ def validateInputs = {
     }
 }
 validateInputs()
-group = data.properties.group
-version = data.properties.version
-if (!(data.properties.archiveName ==~ /openallay-neoforge-[0-9][0-9a-z.-]*/)) {
+group = nativeInputs.properties.group
+version = nativeInputs.properties.version
+if (!(nativeInputs.properties.archiveName ==~ /openallay-neoforge-[0-9][0-9a-z.-]*/)) {
     throw new GradleException('Unsafe selected native archive name')
 }
-base { archivesName = data.properties.archiveName }
+base { archivesName = nativeInputs.properties.archiveName }
 java { toolchain.languageVersion = JavaLanguageVersion.of(17) }
-minecraft.modIdentifier.set(data.properties.mod_id)
+minecraft.modIdentifier.set(nativeInputs.properties.mod_id)
 
 def directories = { entries ->
     entries.collect { record ->
@@ -169,14 +169,14 @@ sourceSets {
     main {
         // Existing raw source paths only. NeoGradle supplies actual patched NeoForge classes.
         java.setSrcDirs([])
-        resources.setSrcDirs(directories(data.resources))
+        resources.setSrcDirs(directories(nativeInputs.resources))
         // NeoGradle builds MOD_CLASSES from classesDirs (not extra output.dir entries).
         // Reused engine/resources/JSON/adapter roots must remain in the native mod layer.
-        output.classesDirs.from(directories(data.engine) + directories(data.adapter))
+        output.classesDirs.from(directories(nativeInputs.engine) + directories(nativeInputs.adapter))
     }
 }
 tasks.named('compileJava', JavaCompile) {
-    source(data.nativeSources.collect { file(it.path) })
+    source(nativeInputs.nativeSources.collect { file(it.path) })
     options.release = 17
     options.encoding = 'UTF-8'
 }
@@ -192,12 +192,12 @@ repositories {
         includeGroupByRegex('me\\.shedaniel(\\..*)?'); includeGroup('dev.architectury')
     } }
 }
-def props = data.properties
-def sdk = files(data.sdk.path)
-def rhino = files(data.rhino.path)
+def props = nativeInputs.properties
+def sdk = files(nativeInputs.sdk.path)
+def rhino = files(nativeInputs.rhino.path)
 dependencies {
     implementation("net.neoforged:neoforge:${props.neoforge_version}")
-    implementation(files(directories(data.engine) + directories(data.adapter)))
+    implementation(files(directories(nativeInputs.engine) + directories(nativeInputs.adapter)))
     implementation(sdk)
     implementation(rhino)
     // Rhino root runtime dependencies stay explicit, never a second upstream runtime JAR.
@@ -219,8 +219,8 @@ dependencies {
         jarJar("${parts[0]}:${parts[1]}:[${parts[2]}]") { version { prefer(parts[2]) } }
     }
 }
-if (data.accessTransformer != null) {
-    accessTransformers.files.from(file(data.accessTransformer.path))
+if (nativeInputs.accessTransformer != null) {
+    accessTransformers.files.from(file(nativeInputs.accessTransformer.path))
 }
 runs {
     configureEach {
@@ -261,7 +261,7 @@ def thin = tasks.named('jar', Jar) {
     manifest.attributes('Specification-Title': props.mod_name, 'Specification-Vendor': props.mod_author,
             'Specification-Version': project.version.toString(), 'Implementation-Title': 'neoforge',
             'Implementation-Version': project.version.toString(), 'Implementation-Vendor': props.mod_author,
-            'Built-On-Minecraft': data.target, 'MixinConfigs': 'openallay.client.mixins.json')
+            'Built-On-Minecraft': nativeInputs.target, 'MixinConfigs': 'openallay.client.mixins.json')
 }
 def production = tasks.named('jarJar') {
     archiveClassifier.set('')
@@ -282,14 +282,14 @@ def verifyReusedPackage = tasks.register('verifyReusedPackage') {
             jar.entries().each { entry ->
                 if (!names.add(entry.name)) throw new GradleException("Duplicate native JAR entry ${entry.name}")
             }
-            (data.engine + data.adapter + data.resources).each { record ->
+            (nativeInputs.engine + nativeInputs.adapter + nativeInputs.resources).each { record ->
                 def entry = jar.getEntry(record.entry)
                 if (entry == null || MessageDigest.getInstance('SHA-256')
                         .digest(jar.getInputStream(entry).bytes).encodeHex().toString() != record.sha256) {
                     throw new GradleException("Reused shared/native resource bytes differ: ${record.entry}")
                 }
             }
-            [data.sdk, data.rhino].each { record ->
+            [nativeInputs.sdk, nativeInputs.rhino].each { record ->
                 def name = 'META-INF/jarjar/' + file(record.path).name
                 def entry = jar.getEntry(name)
                 if (entry == null || MessageDigest.getInstance('SHA-256')
@@ -298,7 +298,7 @@ def verifyReusedPackage = tasks.register('verifyReusedPackage') {
                 }
             }
             def metadata = new JsonSlurper().parse(jar.getInputStream(jar.getEntry('META-INF/jarjar/metadata.json')))
-            [data.sdk, data.rhino].each { record ->
+            [nativeInputs.sdk, nativeInputs.rhino].each { record ->
                 def included = metadata.jars.findAll { item ->
                     item.identifier.group == record.group && item.identifier.artifact == record.name
                 }
@@ -315,11 +315,11 @@ def verifyReusedPackage = tasks.register('verifyReusedPackage') {
         def destination = outputReceipt.get().asFile
         destination.parentFile.mkdirs()
         destination.text = JsonOutput.prettyPrint(JsonOutput.toJson([
-                target: data.target, loader: props.neoforge_version, inputReceiptSha256: sha256(receiptFile),
+                target: nativeInputs.target, loader: props.neoforge_version, inputReceiptSha256: sha256(receiptFile),
                 productionJar: archive.absolutePath, productionSha256: sha256(archive),
-                reusedEngineEntries: data.engine.size(), reusedAdapterEntries: data.adapter.size(),
-                reusedResources: data.resources.size(), sdkSha256: data.sdk.sha256,
-                rhinoSha256: data.rhino.sha256])) + '\n'
+                reusedEngineEntries: nativeInputs.engine.size(), reusedAdapterEntries: nativeInputs.adapter.size(),
+                reusedResources: nativeInputs.resources.size(), sdkSha256: nativeInputs.sdk.sha256,
+                rhinoSha256: nativeInputs.rhino.sha256])) + '\n'
     }
 }
 tasks.named('assemble') { dependsOn verifyReusedPackage }
