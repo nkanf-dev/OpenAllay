@@ -53,6 +53,8 @@ public final class GuideNativeToast extends GuideNativeToastBinding implements G
 
     private boolean valid() { return !hidden && !finished && notification.fence().valid(); }
 
+    @Override protected boolean guideToastActive() { return valid(); }
+
     @Override public boolean finished() { return finished; }
 
     @Override public void onFinishedRendering() { finished = true; }
