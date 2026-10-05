@@ -3,7 +3,7 @@ permissions:
   contents: read
   actions: read
 concurrency:
-  group: minecraft-binary-interval-${{ github.sha }}-${{ inputs.families }}
+  group: minecraft-binary-interval-${{ github.run_id }}
   cancel-in-progress: false
 jobs:
   plan:
