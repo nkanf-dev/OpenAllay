@@ -1,0 +1,72 @@
+import groovy.json.JsonSlurper
+import java.security.MessageDigest
+
+plugins {
+    id 'java-library'
+    id 'com.gradleup.shadow' version '9.6.1'
+}
+
+// Build-only input. Neither the raw Maven module nor its transitive dependencies
+// enter an engine/loader production classpath. This project is not a public SDK.
+base { archivesName = 'openallay-maven-runtime' }
+java { toolchain.languageVersion = JavaLanguageVersion.of(17) }
+tasks.withType(JavaCompile).configureEach {
+    options.release = 17
+    options.encoding = 'UTF-8'
+}
+configurations {
+    upstream { canBeConsumed = false; canBeResolved = true; transitive = false }
+    loaderMaven { canBeConsumed = false; canBeResolved = true; transitive = false }
+    privateRuntime { canBeConsumed = true; canBeResolved = false }
+}
+def closureFile = file('upstream-closure.json')
+def closure = new JsonSlurper().parse(closureFile)
+dependencies {
+    upstream(closure.coordinate)
+    // The real historical loader dependency is used only by the regression test.
+    loaderMaven('org.apache.maven:maven-artifact:3.8.5')
+    testImplementation('org.junit.jupiter:junit-jupiter:5.11.4')
+    testImplementation('org.ow2.asm:asm-commons:9.9')
+    testRuntimeOnly('org.junit.platform:junit-platform-launcher:1.11.4')
+}
+
+def relocated = tasks.named('shadowJar') {
+    archiveClassifier.set('')
+    configurations = []
+    inputs.file(closureFile)
+    inputs.files(project.configurations.upstream)
+    from({ zipTree(project.configurations.upstream.singleFile) }) {
+        include(closure.classes)
+    }
+    from({ zipTree(project.configurations.upstream.singleFile) }) {
+        include(closure.legalResources)
+        eachFile { path = 'META-INF/licenses/maven-artifact/' + name }
+    }
+    includeEmptyDirs = false
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
+    relocate(closure.relocation.from, closure.relocation.to)
+    manifest.attributes('Implementation-Title': 'OpenAllay private Maven versioning runtime',
+            'Implementation-Version': '3.9.9',
+            'Maven-Upstream': closure.coordinate,
+            'Maven-Upstream-SHA-256': closure.sha256)
+    doFirst {
+        def hash = MessageDigest.getInstance('SHA-256')
+                .digest(project.configurations.upstream.singleFile.bytes).encodeHex().toString()
+        if (hash != closure.sha256) throw new GradleException('Maven upstream bytes differ')
+    }
+}
+configurations.privateRuntime.outgoing.artifact(relocated)
+tasks.named('jar') { enabled = false }
+tasks.named('assemble') { dependsOn(relocated) }
+tasks.named('test') {
+    useJUnitPlatform()
+    dependsOn(relocated)
+    inputs.files(relocated.flatMap { it.archiveFile }, configurations.upstream, configurations.loaderMaven)
+    systemProperty('privateMaven.jar', relocated.flatMap { it.archiveFile }.get().asFile.absolutePath)
+    systemProperty('privateMaven.classes', closure.classes.join(','))
+    doFirst {
+        systemProperty('upstreamMaven.jar', configurations.upstream.singleFile.absolutePath)
+        systemProperty('loaderMaven.jar', configurations.loaderMaven.singleFile.absolutePath)
+    }
+}

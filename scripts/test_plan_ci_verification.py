@@ -121,6 +121,7 @@ class PlanTest(unittest.TestCase):
         self.write("scripts/fixtures/minecraft-launch/1.21.1.json", "official offline argument fixture\n")
         self.write("scripts/fixtures/minecraft-launch/README.md", "fixture source provenance\n")
         self.write("common/src/test/java/Test.java", "new test\n")
+        self.write("runtime-maven/src/test/java/Test.java", "private runtime test\n")
         self.write(".github/workflows/minecraft-native.yml", "fixed workflow\n")
         self.write("scripts/run-ci-game-workflow.py", "fixed runner\n")
         self.write("scripts/run-ci-software-graphics.py", "fixed CI graphics probe\n")
@@ -135,7 +136,8 @@ class PlanTest(unittest.TestCase):
         paths = ("common/src/main/java/Feature.java", "fabric/build.gradle",
                  "adapters/minecraft-26.2/src/targets/26.1/java/Native.java",
                  "gradle/libs.versions.toml", "distribution/extensions.lock.json",
-                 "scripts/prepare-distribution.py", "LICENSE", ".gitattributes", "unknown-input.txt")
+                 "scripts/prepare-distribution.py", "runtime-maven/build.gradle",
+                 "runtime-maven/upstream-closure.json", "LICENSE", ".gitattributes", "unknown-input.txt")
         for relative in paths:
             with self.subTest(relative=relative):
                 self.git("reset", "--hard", self.source_sha)

@@ -28,7 +28,6 @@ dependencies {
     api(project(":engine-core"))
     api(project(":extension-api"))
     testImplementation(testFixtures(project(":engine-core")))
-    implementation("org.apache.maven:maven-artifact:3.9.9")
     // Fabric and NeoForge both bundle Fabric Mixin, so it is safe to use it in common
     // If you need to update, check what version they are using to see what is compatible
     // https://github.com/neoforged/NeoForge/blob/26.2.x/gradle.properties#L37

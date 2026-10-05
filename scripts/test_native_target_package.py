@@ -42,6 +42,27 @@ class NativeTargetPackageTest(unittest.TestCase):
         self.assertIn("dev/openallay/FeatureServices.class", files)
         self.assertNotIn("dev/openallay/OpenAllayBootstrap.class", files)
 
+    def test_private_maven_output_is_part_of_the_identical_shared_engine(self):
+        root = Path(self.temporary.name)
+        output = root / "engine-core/build/classes/java/main/dev/openallay"
+        (output / "guide").mkdir(parents=True)
+        (output / "guide/GuideService.class").write_bytes(b"fixture")
+        (output / "FeatureServices.class").write_bytes(b"fixture")
+        private = root / "engine-core/build/generated/private-maven/dev/openallay/internal/maven"
+        private.mkdir(parents=True)
+        (private / "Version.class").write_bytes(b"private fixture")
+        self.assertEqual(PACKAGE.engine_files(root)["dev/openallay/internal/maven/Version.class"],
+                         b"private fixture")
+
+    def test_nested_raw_maven_is_refused_even_if_renamed(self):
+        import io
+        buffer = io.BytesIO()
+        with zipfile.ZipFile(buffer, "w") as raw:
+            raw.writestr("org/apache/maven/artifact/versioning/VersionRange.class", b"fixture")
+        self.write({"META-INF/jarjar/unrelated-name.jar": buffer.getvalue()})
+        with self.assertRaisesRegex(ValueError, "Raw Maven dependency"):
+            PACKAGE.verify(self.path, "fabric", "1.20.4", 17, self.engine)
+
     def test_changed_engine_refused(self):
         self.write({next(iter(self.engine)): b"changed"})
         with self.assertRaisesRegex(ValueError, "Shared engine"):

@@ -12,8 +12,6 @@ dependencies {
     // Native code belongs in the game mod layer, not an independently loaded library layer.
     implementation(project(":extension-api"))
     jarJar(project(":extension-api"))
-    implementation("org.apache.maven:maven-artifact:3.9.9")
-    jarJar("org.apache.maven:maven-artifact:3.9.9")
     implementation("org.xerial:sqlite-jdbc:${sqlite_jdbc_version}")
     jarJar("org.xerial:sqlite-jdbc:${sqlite_jdbc_version}")
     implementation("org.commonmark:commonmark:${commonmark_version}")

@@ -1,0 +1,42 @@
+{
+  "coordinate": "org.apache.maven:maven-artifact:3.9.9",
+  "sha256": "30f015d1c1a393e19c18cd4f43532089c36d4ca328608ce3dda78b74d3d31515",
+  "relocation": {
+    "from": "org.apache.maven",
+    "to": "dev.openallay.internal.maven"
+  },
+  "classes": [
+    "org/apache/maven/artifact/Artifact.class",
+    "org/apache/maven/artifact/handler/ArtifactHandler.class",
+    "org/apache/maven/artifact/metadata/ArtifactMetadata.class",
+    "org/apache/maven/artifact/repository/ArtifactRepository.class",
+    "org/apache/maven/artifact/repository/ArtifactRepositoryPolicy.class",
+    "org/apache/maven/artifact/repository/Authentication.class",
+    "org/apache/maven/artifact/repository/layout/ArtifactRepositoryLayout.class",
+    "org/apache/maven/artifact/repository/metadata/RepositoryMetadataStoreException.class",
+    "org/apache/maven/artifact/resolver/AbstractArtifactResolutionException.class",
+    "org/apache/maven/artifact/resolver/ArtifactResolutionException.class",
+    "org/apache/maven/artifact/resolver/filter/ArtifactFilter.class",
+    "org/apache/maven/artifact/versioning/ArtifactVersion.class",
+    "org/apache/maven/artifact/versioning/ComparableVersion.class",
+    "org/apache/maven/artifact/versioning/ComparableVersion$1.class",
+    "org/apache/maven/artifact/versioning/ComparableVersion$BigIntegerItem.class",
+    "org/apache/maven/artifact/versioning/ComparableVersion$IntItem.class",
+    "org/apache/maven/artifact/versioning/ComparableVersion$Item.class",
+    "org/apache/maven/artifact/versioning/ComparableVersion$ListItem.class",
+    "org/apache/maven/artifact/versioning/ComparableVersion$LongItem.class",
+    "org/apache/maven/artifact/versioning/ComparableVersion$StringItem.class",
+    "org/apache/maven/artifact/versioning/DefaultArtifactVersion.class",
+    "org/apache/maven/artifact/versioning/InvalidVersionSpecificationException.class",
+    "org/apache/maven/artifact/versioning/OverConstrainedVersionException.class",
+    "org/apache/maven/artifact/versioning/Restriction.class",
+    "org/apache/maven/artifact/versioning/VersionRange.class",
+    "org/apache/maven/repository/Proxy.class",
+    "org/apache/maven/repository/legacy/metadata/ArtifactMetadata.class"
+  ],
+  "legalResources": [
+    "META-INF/LICENSE",
+    "META-INF/NOTICE",
+    "META-INF/DEPENDENCIES"
+  ]
+}

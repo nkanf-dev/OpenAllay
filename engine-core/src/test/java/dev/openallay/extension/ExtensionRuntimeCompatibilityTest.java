@@ -13,6 +13,16 @@ final class ExtensionRuntimeCompatibilityTest {
         assertThrows(IllegalArgumentException.class, () -> ExtensionCompatibility.requireRange("(1.12.2)", "game"));
         assertThrows(IllegalArgumentException.class, () -> ExtensionCompatibility.requireRange("[]", "game"));
     }
+    @Test void privateMavenPreservesQualifiersAndUnionIntervals() {
+        assertTrue(ExtensionCompatibility.includes("1.0", "1.0.0-final"));
+        assertTrue(ExtensionCompatibility.includes("[1.0-alpha,1.0)", "1.0-rc1"));
+        assertFalse(ExtensionCompatibility.includes("[1.0-alpha,1.0)", "1.0"));
+        assertTrue(ExtensionCompatibility.includes("(,1.20.1],[1.21.1,)", "1.20.1"));
+        assertFalse(ExtensionCompatibility.includes("(,1.20.1],[1.21.1,)", "1.20.4"));
+        assertTrue(ExtensionCompatibility.includes("(,1.20.1],[1.21.1,)", "1.21.1"));
+        assertThrows(IllegalArgumentException.class,
+                () -> ExtensionCompatibility.requireRange("[2,1]", "game"));
+    }
     @Test void oldConstructorImplementsOnlyItsDeclaredLegacyApi() {
         var environment = new OpenAllayExtensionEnvironment("fabric", "26.2", "0.2.2");
         assertEquals(Set.of("0.2.2"), environment.implementedApiVersions());

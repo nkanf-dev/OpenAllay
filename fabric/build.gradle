@@ -14,8 +14,6 @@ dependencies {
     if (!remapMinecraft) include(project(":adapters:minecraft-26.2"))
     implementation(project(":extension-api"))
     include(project(":extension-api"))
-    implementation("org.apache.maven:maven-artifact:3.9.9")
-    include("org.apache.maven:maven-artifact:3.9.9")
     minecraft("com.mojang:minecraft:${minecraft_version}")
     if (remapMinecraft) mappings(loom.officialMojangMappings())
     add(modImplementationConfiguration, "net.fabricmc:fabric-loader:${fabric_loader_version}")

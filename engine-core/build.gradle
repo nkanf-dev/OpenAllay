@@ -33,7 +33,7 @@ dependencies {
     api('com.google.code.gson:gson:2.10')
     api('org.slf4j:slf4j-api:2.0.1')
     api(project(':runtime-rhino'))
-    implementation('org.apache.maven:maven-artifact:3.9.9')
+    compileOnly(project(path: ':runtime-maven', configuration: 'privateRuntime'))
     implementation("org.commonmark:commonmark:${commonmark_version}")
     implementation("org.commonmark:commonmark-ext-gfm-tables:${commonmark_version}")
     implementation("com.knuddels:jtokkit:${jtokkit_version}")
@@ -49,14 +49,29 @@ def jsonSupport = project(':runtime-json')
 sourceSets.main.output.dir([builtBy: jsonSupport.tasks.named('classes')],
         jsonSupport.sourceSets.main.output.classesDirs.singleFile)
 
+// Merge the one privately relocated Maven closure into the same engine output.
+// It is not a second library layer or a dependency of the public Extension SDK.
+evaluationDependsOn(':runtime-maven')
+def privateMavenJar = project(':runtime-maven').tasks.named('shadowJar', Jar)
+def privateMavenOutput = layout.buildDirectory.dir('generated/private-maven')
+def mergePrivateMaven = tasks.register('mergePrivateMaven', Sync) {
+    dependsOn(privateMavenJar)
+    from({ zipTree(privateMavenJar.get().archiveFile.get().asFile) }) {
+        exclude 'META-INF/MANIFEST.MF'
+    }
+    into(privateMavenOutput)
+}
+sourceSets.main.output.dir([builtBy: mergePrivateMaven], privateMavenOutput)
+// Loom's normal dev mod classpath reads classesDirs, not extra output dirs.
+sourceSets.main.output.classesDirs.from(privateMavenOutput)
+tasks.named('classes') { dependsOn(mergePrivateMaven) }
+
 // Enforce actual resolved production classpaths, not names appearing in source comments.
 def productionCoordinates = [
     'com.google.code.gson:gson', 'com.google.errorprone:error_prone_annotations', 'org.slf4j:slf4j-api',
     'dev.latvian.mods:rhino', 'com.google.guava:guava', 'com.google.guava:failureaccess',
     'com.google.guava:listenablefuture', 'com.google.code.findbugs:jsr305',
     'org.checkerframework:checker-qual', 'com.google.j2objc:j2objc-annotations',
-    'org.apache.maven:maven-artifact',
-    'org.codehaus.plexus:plexus-utils',
     'org.commonmark:commonmark', 'org.commonmark:commonmark-ext-gfm-tables',
     'com.knuddels:jtokkit', 'org.xerial:sqlite-jdbc'
 ] as Set
@@ -74,7 +89,7 @@ def verifyProductionDependencies = tasks.register('verifyProductionDependencies'
             configuration.incoming.resolutionResult.allComponents.each { component ->
                 def id = component.id
                 if (id instanceof ProjectComponentIdentifier) {
-                    if (!(id.projectPath in [project.path, ':extension-api', ':runtime-json', ':runtime-rhino'])) {
+                    if (!(id.projectPath in [project.path, ':extension-api', ':runtime-json', ':runtime-maven', ':runtime-rhino'])) {
                         throw new GradleException("Engine cannot depend on native project ${id.projectPath}")
                     }
                 } else if (id instanceof ModuleComponentIdentifier) {
@@ -151,6 +166,7 @@ tasks.named('check') { dependsOn(verifySourceOwnership) }
 tasks.withType(Test).configureEach {
     useJUnitPlatform()
     dependsOn(verifyProductionDependencies)
+    dependsOn(':runtime-maven:test')
 }
 
 // The standalone SQLite packaging probe belongs to the native-free engine tests.

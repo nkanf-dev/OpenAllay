@@ -1,9 +1,9 @@
 package dev.openallay.extension;
 
-import org.apache.maven.artifact.versioning.ComparableVersion;
-import org.apache.maven.artifact.versioning.DefaultArtifactVersion;
-import org.apache.maven.artifact.versioning.InvalidVersionSpecificationException;
-import org.apache.maven.artifact.versioning.VersionRange;
+import dev.openallay.internal.maven.artifact.versioning.ComparableVersion;
+import dev.openallay.internal.maven.artifact.versioning.DefaultArtifactVersion;
+import dev.openallay.internal.maven.artifact.versioning.InvalidVersionSpecificationException;
+import dev.openallay.internal.maven.artifact.versioning.VersionRange;
 
 /** Public game/core/API ranges use Maven's mature version and interval semantics. */
 public final class ExtensionCompatibility {

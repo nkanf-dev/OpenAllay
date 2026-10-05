@@ -25,7 +25,8 @@ def engine_files(root):
     files = {}
     for directory in [root / "engine-core/build/classes/java/main",
                       root / "engine-core/build/resources/main",
-                      root / "runtime-json/build/classes/java/main"]:
+                      root / "runtime-json/build/classes/java/main",
+                      root / "engine-core/build/generated/private-maven"]:
         if not directory.is_dir():
             continue
         for path in directory.rglob("*"):
@@ -46,6 +47,14 @@ def verify(path, loader, target, java, original_engine, bundled_builder=False):
         for name, blob in original_engine.items():
             check(counts[name] == 1 and archive.read(name) == blob,
                   "Shared engine was changed or omitted: " + name + " in " + str(path))
+        check(not any(name.startswith("org/apache/maven/") for name in counts),
+              "Raw Maven classes must not enter the native mod")
+        from io import BytesIO
+        for name in counts:
+            if name.endswith(".jar") and name.startswith(("META-INF/jars/", "META-INF/jarjar/")):
+                with zipfile.ZipFile(BytesIO(archive.read(name))) as dependency:
+                    check(not any(entry.startswith("org/apache/maven/") for entry in dependency.namelist()),
+                          "Raw Maven dependency must not be nested: " + name)
         for name in counts:
             if name.endswith(".class"):
                 blob = archive.read(name)
