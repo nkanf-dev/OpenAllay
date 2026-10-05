@@ -554,7 +554,7 @@ ACCEPTANCE_LANDMARKS = (
     ('cancel-next-denied', 45, 1, 34, 'minecraft:air', {}),
     ('undo-restored', 44, 1, 36, 'minecraft:air', {}),
     ('undo-conflict-preserved', 45, 1, 36, 'minecraft:diamond_block', {}),
-    ('geometry-floor-parity', 32, 0, 18, 'minecraft:quartz_block', {}),
+    ('geometry-checkerboard-floor', 32, 0, 18, 'minecraft:quartz_block', {}),
 )
 BUILD_NAMES = ("house", "skyscraper", "cottage", "windmill", "farm", "dock", "geometry_decoration", "terrain", "templates")
 FAILURES = (("invalid_native_input", "Builder native operation failed; inspect the session status"),
@@ -686,7 +686,7 @@ def expected_landmarks(anchor):
     origin = position(anchor)
     result = {}
     for name, x, y, z, block, properties in ACCEPTANCE_LANDMARKS:
-        if name == "geometry-floor-parity":
+        if name == "geometry-checkerboard-floor":
             block = "minecraft:quartz_block" if (origin[0] + origin[2] + 50) % 2 == 0 else "minecraft:black_concrete"
         result[name] = (tuple(origin[i] + n for i, n in enumerate((x, y, z))), {"id": block, "properties": properties})
     return result

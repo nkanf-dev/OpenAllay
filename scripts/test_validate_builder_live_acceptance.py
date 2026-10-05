@@ -255,7 +255,7 @@ class DurableAcceptanceAuditTests(unittest.TestCase):
         self.checks = []
         origin = tuple(self.anchor[k] for k in ("x", "y", "z"))
         for name, x, y, z, identifier, properties in validator.ACCEPTANCE_LANDMARKS:
-            if name == "geometry-floor-parity":
+            if name == "geometry-checkerboard-floor":
                 identifier = "minecraft:quartz_block"
             image = {"id": identifier, "properties": properties}
             pos = (origin[0] + x, origin[1] + y, origin[2] + z)
