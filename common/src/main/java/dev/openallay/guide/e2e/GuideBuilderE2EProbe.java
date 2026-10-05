@@ -18,7 +18,7 @@ import java.util.UUID;
 import java.util.function.Consumer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.registries.BuiltInRegistries;
+import dev.openallay.platform.minecraft.MinecraftNativeRegistries;
 import net.minecraft.server.level.ServerLevel;
 
 /** Explicit development-only oracle. No Builder classes or model-facing capability. */
@@ -283,7 +283,7 @@ final class GuideBuilderE2EProbe {
                     check.addProperty("observed", observed); boolean match = false;
                     if (observed) {
                         var state = level.getBlockState(pos);
-                        String id = BuiltInRegistries.BLOCK.getKey(state.getBlock()).toString();
+                        String id = MinecraftNativeRegistries.BLOCK.getKey(state.getBlock()).toString();
                         Map<String, String> properties = new java.util.LinkedHashMap<>();
                         properties.putAll(dev.openallay.context.minecraft.MinecraftBlockStateProperties.capture(state));
                         check.addProperty("actualId", id); JsonObject actualProperties = new JsonObject(); properties.forEach(actualProperties::addProperty); check.add("actualProperties", actualProperties);

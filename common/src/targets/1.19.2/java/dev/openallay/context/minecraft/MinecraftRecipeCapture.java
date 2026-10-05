@@ -1,0 +1,61 @@
+package dev.openallay.context.minecraft;
+
+import java.util.List;
+import java.util.Objects;
+import java.util.TreeMap;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.commands.CommandSourceStack;
+import dev.openallay.platform.minecraft.MinecraftNativeRegistries;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.CraftingRecipe;
+import net.minecraft.world.item.crafting.Recipe;
+import net.minecraft.world.item.crafting.ShapedRecipe;
+
+/** 1.19.2 native recipes carry their own IDs; RecipeHolder does not exist. */
+public final class MinecraftRecipeCapture {
+    private MinecraftRecipeCapture() {}
+    public static List<MinecraftRecipeInput> serverRecipes(CommandSourceStack source) {
+        return source.getServer().getRecipeManager().getRecipes().stream()
+                .map(recipe -> input(recipe)).toList();
+    }
+    public static List<MinecraftRecipeInput> clientRecipes(LocalPlayer player, Minecraft client) {
+        TreeMap<String, MinecraftRecipeInput> known = new TreeMap<>();
+        player.getRecipeBook().getCollections().forEach(collection -> {
+            for (Recipe<?> recipe : collection.getRecipes()) {
+                if (player.getRecipeBook().contains(recipe)) {
+                    MinecraftRecipeInput input = input(recipe);
+                    known.putIfAbsent(input.id(), input);
+                }
+            }
+        });
+        return List.copyOf(known.values());
+    }
+    public static int clientCollectionCount(LocalPlayer player) {
+        return player.getRecipeBook().getCollections().size();
+    }
+    public static MinecraftRecipeSeed seed(ServerPlayer player, String id) {
+        Recipe<?> recipe = MinecraftServerPlayerLevel.get(player).getServer().getRecipeManager().getRecipes().stream()
+                .filter(value -> id.equals(value.getId().toString()))
+                .findFirst().orElseThrow(() -> new IllegalStateException("Exact native recipe is unavailable: " + id));
+        List<MinecraftRecipeInput> inputs = List.of(input(recipe));
+        return new MinecraftRecipeSeed() {
+            public String holderId() { return recipe.getId().toString(); }
+            public String nativeRecipeClass() { return recipe.getClass().getName(); }
+            public List<MinecraftRecipeInput> inputs() { return inputs; }
+            public boolean known() { return player.getRecipeBook().contains(recipe); }
+            public int award() { return player.awardRecipes(List.of(recipe)); }
+        };
+    }
+    private static MinecraftRecipeInput input(Recipe<?> recipe) {
+        boolean shaped = recipe instanceof ShapedRecipe;
+        int width = shaped ? ((ShapedRecipe) recipe).getWidth() : 0;
+        int height = shaped ? ((ShapedRecipe) recipe).getHeight() : 0;
+        ItemStack output = recipe.getResultItem();
+        return new MinecraftRecipeInput(recipe.getId().toString(),
+                Objects.requireNonNull(MinecraftNativeRegistries.RECIPE_TYPE.getKey(recipe.getType())).toString(),
+                recipe.getIngredients(), List.of(output), width, height, shaped,
+                recipe instanceof CraftingRecipe, null);
+    }
+}

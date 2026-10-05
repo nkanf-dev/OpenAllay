@@ -61,7 +61,7 @@ public final class MinecraftRecipeCapture {
         List<RecipeDisplay> displays = holder.value().display();
         RecipeDisplay primary = displays.isEmpty() ? null : displays.get(0);
         return input(dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(holder.id()),
-                Objects.requireNonNull(BuiltInRegistries.RECIPE_TYPE.getKey(holder.value().getType())).toString(),
+                Objects.requireNonNull(dev.openallay.platform.minecraft.MinecraftNativeRegistries.RECIPE_TYPE.getKey(holder.value().getType())).toString(),
                 holder.value().placementInfo().ingredients(),
                 displays.stream().flatMap(display -> display.result().resolveForStacks(context).stream()).toList(),
                 primary, context);
@@ -80,7 +80,7 @@ public final class MinecraftRecipeCapture {
         int width = shaped ? ((ShapedCraftingRecipeDisplay) display).width() : 0;
         int height = shaped ? ((ShapedCraftingRecipeDisplay) display).height() : 0;
         String workstation = display == null ? null : display.craftingStation().resolveForStacks(context).stream()
-                .filter(value -> !value.isEmpty()).map(value -> BuiltInRegistries.ITEM.getKey(value.getItem()).toString())
+                .filter(value -> !value.isEmpty()).map(value -> dev.openallay.platform.minecraft.MinecraftNativeRegistries.ITEM.getKey(value.getItem()).toString())
                 .findFirst().orElse(null);
         return new MinecraftRecipeInput(id, type, ingredients, outputs, width, height, shaped,
                 shaped || display instanceof ShapelessCraftingRecipeDisplay, workstation);

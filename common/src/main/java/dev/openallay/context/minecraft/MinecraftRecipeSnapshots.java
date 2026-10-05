@@ -14,7 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import net.minecraft.core.registries.BuiltInRegistries;
+import dev.openallay.platform.minecraft.MinecraftNativeRegistries;
 import net.minecraft.world.item.ItemStack;
 
 /** One recipe detachment algorithm for every native family and both capture authorities. */
@@ -58,7 +58,7 @@ public final class MinecraftRecipeSnapshots {
     private static ItemStackSnapshot stack(ItemStack stack) {
         if (stack.isEmpty()) return ItemStackSnapshot.empty();
         return new ItemStackSnapshot(
-                BuiltInRegistries.ITEM.getKey(stack.getItem()).toString(),
+                MinecraftNativeRegistries.ITEM.getKey(stack.getItem()).toString(),
                 stack.getCount(), stack.getHoverName().getString());
     }
 }

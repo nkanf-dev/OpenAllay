@@ -52,7 +52,7 @@ import java.util.Optional;
 import java.util.Set;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.core.registries.BuiltInRegistries;
+import dev.openallay.platform.minecraft.MinecraftNativeRegistries;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
@@ -340,11 +340,11 @@ public final class ClientContextCapture {
             if (client.hitResult instanceof BlockHitResult blockHit) {
                 var state = client.level.getBlockState(blockHit.getBlockPos());
                 add(values, "target", "block_id",
-                        BuiltInRegistries.BLOCK.getKey(state.getBlock()).toString());
+                        MinecraftNativeRegistries.BLOCK.getKey(state.getBlock()).toString());
                 add(values, "target", "block_position", blockHit.getBlockPos().toShortString());
             } else if (client.hitResult instanceof EntityHitResult entityHit) {
                 add(values, "target", "entity_type",
-                        BuiltInRegistries.ENTITY_TYPE.getKey(entityHit.getEntity().getType()).toString());
+                        MinecraftNativeRegistries.ENTITY_TYPE.getKey(entityHit.getEntity().getType()).toString());
             }
         }
         if (client.getConnection() != null) {
@@ -585,7 +585,7 @@ public final class ClientContextCapture {
         if (stack.isEmpty()) {
             return ItemStackSnapshot.empty();
         }
-        var id = BuiltInRegistries.ITEM.getKey(stack.getItem());
+        var id = MinecraftNativeRegistries.ITEM.getKey(stack.getItem());
         return new ItemStackSnapshot(id.toString(), stack.getCount(), stack.getHoverName().getString());
     }
 

@@ -1,6 +1,6 @@
 package dev.openallay.context.minecraft;
 
-import net.minecraft.core.registries.BuiltInRegistries;
+import dev.openallay.platform.minecraft.MinecraftNativeRegistries;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
 
@@ -9,7 +9,7 @@ public final class MinecraftActiveEffectFacts {
     private MinecraftActiveEffectFacts() {}
     public static MobEffect effect(MobEffectInstance instance) { return instance.getEffect(); }
     public static String id(MobEffectInstance instance) {
-        var id = BuiltInRegistries.MOB_EFFECT.getKey(instance.getEffect());
+        var id = MinecraftNativeRegistries.MOB_EFFECT.getKey(instance.getEffect());
         return id == null ? "unknown" : id.toString();
     }
 }

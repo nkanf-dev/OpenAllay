@@ -35,7 +35,7 @@ import java.util.Objects;
 import dev.openallay.client.gui.GuideGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.MultiLineEditBox;
-import net.minecraft.client.gui.components.Tooltip;
+import dev.openallay.client.gui.GuideTooltip;
 import net.minecraft.client.gui.screens.Screen;
 import dev.openallay.client.gui.GuideInputKey;
 import dev.openallay.client.gui.GuideInputMouse;
@@ -147,14 +147,14 @@ public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNat
         int x = strip.right() - 64;
         observationRemoveImage = addRenderableWidget(OpenAllayButton.create(Component.literal("×▧"), button -> {
             state.removeObservationImage(session); project();
-        }).bounds(x, strip.y(), 16, 12).tooltip(Tooltip.create(Component.translatable("screen.openallay.observation.remove_frame"))).build());
+        }).bounds(x, strip.y(), 16, 12).tooltip(GuideTooltip.create(Component.translatable("screen.openallay.observation.remove_frame"))).build());
         observationRemove = addRenderableWidget(OpenAllayButton.create(Component.literal("×"), button -> {
             state.removeObservation(session); project();
-        }).bounds(x + 16, strip.y(), 16, 12).tooltip(Tooltip.create(Component.translatable("screen.openallay.observation.remove"))).build());
+        }).bounds(x + 16, strip.y(), 16, 12).tooltip(GuideTooltip.create(Component.translatable("screen.openallay.observation.remove"))).build());
         observationRefresh = addRenderableWidget(OpenAllayButton.create(Component.literal("↻"), button -> refreshObservation())
-                .bounds(x + 32, strip.y(), 16, 12).tooltip(Tooltip.create(Component.translatable("screen.openallay.observation.refresh"))).build());
+                .bounds(x + 32, strip.y(), 16, 12).tooltip(GuideTooltip.create(Component.translatable("screen.openallay.observation.refresh"))).build());
         observationAttach = addRenderableWidget(OpenAllayButton.create(Component.literal("▧"), button -> attachObservationFrame())
-                .bounds(x + 48, strip.y(), 16, 12).tooltip(Tooltip.create(Component.translatable("screen.openallay.observation.attach_frame"))).build());
+                .bounds(x + 48, strip.y(), 16, 12).tooltip(GuideTooltip.create(Component.translatable("screen.openallay.observation.attach_frame"))).build());
     }
 
     private void renderObservationStrip(GuideGraphics graphics, int mouseX, int mouseY) {
@@ -249,7 +249,7 @@ public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNat
         voiceDrafts = addRenderableWidget(OpenAllayButton.create(Component.empty(), button -> openFullscreen.run())
                 .bounds(card.x() + 8 + inner / 3, readingLayout.navigation().y(), Math.max(1, inner / 3 - 4), 14).build());
         voiceDrafts.visible = false;
-        voiceDrafts.setTooltip(Tooltip.create(Component.translatable("screen.openallay.hud.voice_drafts.description")));
+        dev.openallay.client.gui.GuideNativeWidgetTooltips.set(voiceDrafts, GuideTooltip.create(Component.translatable("screen.openallay.hud.voice_drafts.description")));
         if (!readingLayout.footerFits()) {
             composer.visible = false;
             send.visible = false;
@@ -319,7 +319,7 @@ public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNat
             if (latest != null) {
                 int latestWidth = Math.max(1, Math.min(98, recoverable ? inner / 3 - 4 : inner));
                 latest.setWidth(latestWidth);
-                latest.setX(readingLayout.navigation().right() - latestWidth);
+                dev.openallay.client.gui.GuideNativeWidgetGeometry.x(latest, readingLayout.navigation().right() - latestWidth);
             }
         }
         var selected = snapshot.sessions().stream().filter(value -> value.sessionId().equals(session)).findFirst().orElse(null);
@@ -557,7 +557,7 @@ public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNat
     private boolean composerContains(double x, double y) {
         if (composer == null) return false;
         GuideUiLayout.Rect input = new GuideUiLayout.Rect(
-                composer.getX(), composer.getY(), composer.getWidth(), composer.getHeight());
+                dev.openallay.client.gui.GuideNativeWidgetGeometry.x(composer), dev.openallay.client.gui.GuideNativeWidgetGeometry.y(composer), composer.getWidth(), composer.getHeight());
         return input.contains(x, y) && composer.isMouseOver(x, y);
     }
     @Override public boolean guideMouseDragged(GuideInputMouse event, double dx, double dy) {

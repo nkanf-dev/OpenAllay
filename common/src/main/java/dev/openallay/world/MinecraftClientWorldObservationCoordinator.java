@@ -19,7 +19,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.registries.BuiltInRegistries;
+import dev.openallay.platform.minecraft.MinecraftNativeRegistries;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.AABB;
@@ -218,9 +218,9 @@ public final class MinecraftClientWorldObservationCoordinator
                     var fluidState = state.getFluidState();
                     String fluid = fluidState.isEmpty()
                             ? ""
-                            : BuiltInRegistries.FLUID.getKey(fluidState.getType()).toString();
+                            : MinecraftNativeRegistries.FLUID.getKey(fluidState.getType()).toString();
                     capture.blocks.add(new WorldBlockSnapshot(
-                            BuiltInRegistries.BLOCK.getKey(state.getBlock()).toString(),
+                            MinecraftNativeRegistries.BLOCK.getKey(state.getBlock()).toString(),
                             position,
                             position.subtract(bounds.from()),
                             properties,
@@ -323,7 +323,7 @@ public final class MinecraftClientWorldObservationCoordinator
     }
 
     private static String entityType(Entity entity) {
-        return BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString();
+        return MinecraftNativeRegistries.ENTITY_TYPE.getKey(entity.getType()).toString();
     }
 
     private static RuntimeException translate(RuntimeException failure) {

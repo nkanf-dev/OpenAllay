@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Objects;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.screens.inventory.tooltip.DefaultTooltipPositioner;
+import dev.openallay.client.gui.GuideTooltipPlacement;
 import net.minecraft.locale.Language;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
@@ -115,7 +115,7 @@ public final class GuideHudRenderer {
                         OpenAllayKeyMappings.OPEN_GUIDE.isUnbound() ? null : OpenAllayKeyMappings.OPEN_GUIDE.getTranslatedKeyMessage());
                 graphics.setTooltipForNextFrame(font,
                         font.split(tooltip, Math.max(1, Math.min(260, graphics.guiWidth() - 24))),
-                        DefaultTooltipPositioner.INSTANCE, mouseX, mouseY, false);
+                        GuideTooltipPlacement.DEFAULT, mouseX, mouseY, false);
             }
         }
     }

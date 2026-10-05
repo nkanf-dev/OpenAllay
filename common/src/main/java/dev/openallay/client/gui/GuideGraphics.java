@@ -2,7 +2,6 @@ package dev.openallay.client.gui;
 
 import java.util.List;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipPositioner;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.item.ItemStack;
@@ -77,7 +76,7 @@ public final class GuideGraphics extends GuideNativeGraphics {
         nativeTooltip(font, lines, x, y);
     }
     public void setTooltipForNextFrame(
-            Font font, List<FormattedCharSequence> lines, ClientTooltipPositioner positioner,
+            Font font, List<FormattedCharSequence> lines, GuideTooltipPlacement positioner,
             int x, int y, boolean replaceExisting) {
         nativeTooltip(font, lines, positioner, x, y, replaceExisting);
     }

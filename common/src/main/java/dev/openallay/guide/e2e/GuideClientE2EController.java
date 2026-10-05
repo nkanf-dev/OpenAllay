@@ -402,7 +402,7 @@ public final class GuideClientE2EController {
 
     private static boolean positiveIronBlock(net.minecraft.world.item.ItemStack stack) {
         return !stack.isEmpty() && stack.getCount() > 0
-                && "minecraft:iron_block".equals(net.minecraft.core.registries.BuiltInRegistries.ITEM
+                && "minecraft:iron_block".equals(dev.openallay.platform.minecraft.MinecraftNativeRegistries.ITEM
                         .getKey(stack.getItem()).toString());
     }
 

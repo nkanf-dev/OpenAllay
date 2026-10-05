@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Objects;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipPositioner;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
@@ -164,9 +163,9 @@ public class GuideNativeGraphics {
     }
 
     protected final void nativeTooltip(
-            Font font, List<FormattedCharSequence> lines, ClientTooltipPositioner positioner,
+            Font font, List<FormattedCharSequence> lines, GuideTooltipPlacement positioner,
             int x, int y, boolean replaceExisting) {
-        graphics.setTooltipForNextFrame(font, lines, positioner, x, y, replaceExisting);
+        graphics.setTooltipForNextFrame(font, lines, net.minecraft.client.gui.screens.inventory.tooltip.DefaultTooltipPositioner.INSTANCE, x, y, replaceExisting);
     }
 
     /** Normalized texture coordinates; x1 and y1 are destination corners, not sizes. */
@@ -182,5 +181,10 @@ public class GuideNativeGraphics {
             int sourceWidth, int sourceHeight, int textureWidth, int textureHeight) {
         graphics.blit(RenderPipelines.GUI_TEXTURED, MinecraftResourceIds.parse(texture), x, y, u, v, width, height,
                 sourceWidth, sourceHeight, textureWidth, textureHeight);
+    }
+    final void nativeTooltipPositioned(Font font, List<FormattedCharSequence> lines,
+            net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipPositioner positioner,
+            int x, int y, boolean replaceExisting) {
+        graphics.setTooltipForNextFrame(font, lines, positioner, x, y, replaceExisting);
     }
 }

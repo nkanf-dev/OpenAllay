@@ -8,7 +8,7 @@ import dev.openallay.guide.ui.GuideUiLayout;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.gui.Font;
-import net.minecraft.core.registries.BuiltInRegistries;
+import dev.openallay.platform.minecraft.MinecraftNativeRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 
@@ -156,7 +156,7 @@ final class GenericRecipeNativeViewProvider implements NativeDomainViewProvider 
             graphics.fill(x, y, x + 18, y + 18, SLOT);
             graphics.outline(x, y, 18, 18, BORDER);
             var id = MinecraftResourceIds.tryParse(itemId);
-            if (id == null || !BuiltInRegistries.ITEM.containsKey(id)) {
+            if (id == null || !MinecraftNativeRegistries.ITEM.containsKey(id)) {
                 graphics.text(font, "?", x + 6, y + 5, MUTED, false);
                 return;
             }

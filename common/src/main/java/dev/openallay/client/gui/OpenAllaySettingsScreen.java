@@ -12,7 +12,7 @@ import dev.openallay.guide.ui.GuideUiConfig;
 import dev.openallay.client.voice.VoiceSettingsActions;
 import dev.openallay.client.voice.VoiceSettingsView;
 import dev.openallay.client.voice.VoiceConfig;
-import net.minecraft.client.gui.components.AbstractSliderButton;
+import dev.openallay.client.gui.GuideNativeSlider;
 import dev.openallay.client.gui.GuideInputKey;
 import dev.openallay.client.gui.settings.HistorySettingsProjection;
 import dev.openallay.client.gui.settings.ModelProfileDraft;
@@ -52,7 +52,7 @@ import dev.openallay.client.gui.GuideGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.MultiLineEditBox;
-import net.minecraft.client.gui.components.Tooltip;
+import dev.openallay.client.gui.GuideTooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.ConfirmScreen;
 import net.minecraft.network.chat.Component;
@@ -537,7 +537,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                         sectionMenuOpen = false;
                         rebuildWidgets();
                     }).bounds(moreX, y, 22, 20).build());
-            more.setTooltip(Tooltip.create(Component.translatable("screen.openallay.settings.more")));
+            dev.openallay.client.gui.GuideNativeWidgetTooltips.set(more, GuideTooltip.create(Component.translatable("screen.openallay.settings.more")));
         }
         if (layout.showBack()) {
             int backX = layout.header().right() - 62;
@@ -793,7 +793,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                 y += 26;
                 Button edit = uiButton("edit_hud", Component.empty(), x, y, w, this::editHud);
                 edit.active = uiActions != null && snapshot.operation().kind() == SettingsOperation.Kind.IDLE;
-                if (uiActions == null) edit.setTooltip(Tooltip.create(Component.translatable(
+                if (uiActions == null) dev.openallay.client.gui.GuideNativeWidgetTooltips.set(edit, GuideTooltip.create(Component.translatable(
                         "screen.openallay.settings.ui.actions_unavailable")));
                 y += 26;
             }
@@ -829,7 +829,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                 Button preview = uiButton("test_notification", Component.empty(), x, y, w,
                         () -> { if (uiActions != null) uiActions.previewNotification(uiDraft.ui().notifications()); });
                 preview.active = uiActions != null;
-                if (uiActions == null) preview.setTooltip(Tooltip.create(Component.translatable(
+                if (uiActions == null) dev.openallay.client.gui.GuideNativeWidgetTooltips.set(preview, GuideTooltip.create(Component.translatable(
                         "screen.openallay.settings.ui.actions_unavailable")));
                 y += 26;
             }
@@ -1033,7 +1033,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
         }
     }
 
-    private static final class UiSlider extends AbstractSliderButton {
+    private static final class UiSlider extends GuideNativeSlider {
         private final String key;
         private final double minimum;
         private final double maximum;
@@ -1170,7 +1170,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
             y += 26;
             Button notices = voiceButton("runtime_notices", Component.empty(), x, y, w,
                     () -> GuideNativeDialogs.openDirectory(voiceActions.runtimeNoticesDirectory()));
-            notices.setTooltip(Tooltip.create(Component.translatable(
+            dev.openallay.client.gui.GuideNativeWidgetTooltips.set(notices, GuideTooltip.create(Component.translatable(
                     "screen.openallay.settings.voice.runtime_notices.description")));
             y += 26;
         } else {
@@ -1415,7 +1415,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                         ignored -> accept(service.saveDisplay(general.toggleDebug())))
                 .bounds(x, y + 34, width, 22)
                 .build());
-        debug.setTooltip(Tooltip.create(
+        dev.openallay.client.gui.GuideNativeWidgetTooltips.set(debug, GuideTooltip.create(
                 Component.translatable(general.debugDescriptionKey())));
         debug.active = snapshot.operation().kind() == SettingsOperation.Kind.IDLE;
         debug.visible = layout.pageWidgetVisible(y + 34, 22);
@@ -1426,7 +1426,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                         ignored -> accept(service.saveDisplay(general.toggleAnimations())))
                 .bounds(x, y + 64, width, 22)
                 .build());
-        animations.setTooltip(Tooltip.create(
+        dev.openallay.client.gui.GuideNativeWidgetTooltips.set(animations, GuideTooltip.create(
                 Component.translatable(general.animationsDescriptionKey())));
         animations.active = snapshot.operation().kind() == SettingsOperation.Kind.IDLE;
         animations.visible = layout.pageWidgetVisible(y + 64, 22);
@@ -1501,7 +1501,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                             ignored -> activateHistory(row.action()))
                     .bounds(x, y, width, 22)
                     .build();
-            button.setTooltip(Tooltip.create(Component.translatable(row.descriptionKey())));
+            dev.openallay.client.gui.GuideNativeWidgetTooltips.set(button, GuideTooltip.create(Component.translatable(row.descriptionKey())));
             button.active = row.enabled();
             if (y >= area.y() + 48 && y + 22 <= area.bottom() - 4) {
                 addRenderableWidget(button);
@@ -1528,7 +1528,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                     .selected(card.selectionId().equals(selectedModelSelectionId()))
                     .bounds(x, y, buttonWidth, 22)
                     .build());
-            button.setTooltip(Tooltip.create(Component.translatable(
+            dev.openallay.client.gui.GuideNativeWidgetTooltips.set(button, GuideTooltip.create(Component.translatable(
                     "screen.openallay.settings.models.builtin.image_input."
                             + card.imageCapability().capability().encoded())));
             button.active = !card.selectionId().equals(selectedModelSelectionId());
@@ -1714,7 +1714,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                 20,
                 Component.translatable(
                         "screen.openallay.settings.extensions.community.import_path"));
-        extensionImportPath.setHint(Component.translatable(
+        dev.openallay.client.gui.GuideNativeTextHints.setHint(extensionImportPath, Component.translatable(
                 "screen.openallay.settings.extensions.community.import_hint"));
         extensionImportPath.setMaxLength(2048);
         extensionImportPath.setValue(extensionImportPathDraft);
@@ -1745,7 +1745,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                     .bounds(x, y, width, 20)
                     .build();
             commands.active = snapshot.operation().kind() == SettingsOperation.Kind.IDLE;
-            commands.setTooltip(Tooltip.create(Component.translatable(
+            dev.openallay.client.gui.GuideNativeWidgetTooltips.set(commands, GuideTooltip.create(Component.translatable(
                     "screen.openallay.settings.extensions.commands.description")));
             addRenderableWidget(commands);
         }
@@ -1762,7 +1762,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                         })
                 .bounds(x, y + 25, width, 20).build();
         unrestricted.active = snapshot.operation().kind() == SettingsOperation.Kind.IDLE;
-        unrestricted.setTooltip(Tooltip.create(Component.translatable(
+        dev.openallay.client.gui.GuideNativeWidgetTooltips.set(unrestricted, GuideTooltip.create(Component.translatable(
                 "screen.openallay.settings.extensions.unrestricted.warning")));
         addRenderableWidget(unrestricted);
     }
@@ -1966,7 +1966,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
         skillImportPath.setValue(skillImportPathDraft);
         skillImportPath.setMaxLength(Integer.MAX_VALUE);
         skillImportPath.setResponder(value -> skillImportPathDraft = value);
-        skillImportPath.setHint(Component.translatable(
+        dev.openallay.client.gui.GuideNativeTextHints.setHint(skillImportPath, Component.translatable(
                 "screen.openallay.settings.skills.community.import_hint"));
         addRenderableWidget(skillImportPath);
         Button importButton = addRenderableWidget(OpenAllayButton.create(
@@ -2050,7 +2050,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                 inputWidth,
                 "screen.openallay.settings.models.context_window",
                 draft.contextWindowTokens());
-        contextWindow.setTooltip(Tooltip.create(Component.translatable(
+        dev.openallay.client.gui.GuideNativeWidgetTooltips.set(contextWindow, GuideTooltip.create(Component.translatable(
                 "screen.openallay.settings.models.context_window.description")));
         contextWindow.setResponder(value -> {
             confirmation = Confirmation.NONE;
@@ -2064,7 +2064,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
         y += 22;
         maxOutput = field(
                 inputX, y, inputWidth, "screen.openallay.settings.models.max_output", draft.maxOutputTokens());
-        maxOutput.setTooltip(Tooltip.create(Component.translatable(
+        dev.openallay.client.gui.GuideNativeWidgetTooltips.set(maxOutput, GuideTooltip.create(Component.translatable(
                 "screen.openallay.settings.models.max_output.description")));
         maxOutput.setResponder(value -> {
             if (draft != null && !updatingAutomaticOutput) {
@@ -2083,7 +2083,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                             rebuildWidgets();
                         })
                 .bounds(inputX, y, inputWidth, 18).build());
-        effort.setTooltip(Tooltip.create(reasoningExplanation(reasoning)));
+        dev.openallay.client.gui.GuideNativeWidgetTooltips.set(effort, GuideTooltip.create(reasoningExplanation(reasoning)));
         effort.visible = y >= area.y() + 30 && y + 18 <= area.bottom();
         y += 22;
         ModelImageSettingsProjection imageInput = new ModelImageSettingsProjection(
@@ -2097,7 +2097,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                             rebuildWidgets();
                         })
                 .bounds(inputX, y, inputWidth, 18).build());
-        imageChoice.setTooltip(Tooltip.create(Component.translatable(imageInput.explanationKey())));
+        dev.openallay.client.gui.GuideNativeWidgetTooltips.set(imageChoice, GuideTooltip.create(Component.translatable(imageInput.explanationKey())));
         imageChoice.visible = y >= area.y() + 30 && y + 18 <= area.bottom();
         y += 22;
         connectTimeout = field(
@@ -2141,7 +2141,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
         boolean environment = selectedView().map(
                         ModelProfileSettingsView.Profile::credentialFromEnvironment)
                 .orElse(false);
-        field.setHint(Component.translatable(saved
+        dev.openallay.client.gui.GuideNativeTextHints.setHint(field, Component.translatable(saved
                 ? "screen.openallay.settings.models.api_key_saved_hint"
                 : environment
                         ? "screen.openallay.settings.models.api_key_environment_hint"

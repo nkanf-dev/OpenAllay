@@ -14,7 +14,7 @@ import mezz.jei.api.recipe.RecipeIngredientRole;
 import mezz.jei.api.recipe.category.IRecipeCategory;
 import mezz.jei.api.runtime.IJeiRuntime;
 import net.minecraft.client.Minecraft;
-import net.minecraft.core.registries.BuiltInRegistries;
+import dev.openallay.platform.minecraft.MinecraftNativeRegistries;
 import net.minecraft.world.item.ItemStack;
 
 final class JeiRecipeNavigator implements RecipeViewerNavigator {
@@ -77,7 +77,7 @@ final class JeiRecipeNavigator implements RecipeViewerNavigator {
             return readiness;
         }
         var id = MinecraftResourceIds.tryParse(itemId);
-        if (id == null || !BuiltInRegistries.ITEM.containsKey(id)) {
+        if (id == null || !MinecraftNativeRegistries.ITEM.containsKey(id)) {
             return RecipeNavigationResult.failed("unknown_item", "Item is not registered");
         }
         IJeiRuntime runtime = OpenAllayJeiBridge.runtime();

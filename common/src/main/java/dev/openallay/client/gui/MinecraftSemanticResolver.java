@@ -3,7 +3,7 @@ package dev.openallay.client.gui;
 import dev.openallay.platform.minecraft.MinecraftResourceIds;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.core.registries.BuiltInRegistries;
+import dev.openallay.platform.minecraft.MinecraftNativeRegistries;
 import net.minecraft.world.item.ItemStack;
 
 /** Resolves registry IDs on the Minecraft client thread into detached render values. */
@@ -27,7 +27,7 @@ public final class MinecraftSemanticResolver {
             return new ItemPresentation(itemId, fallback, count, ItemStack.EMPTY, false);
         }
         var id = MinecraftResourceIds.tryParse(itemId);
-        if (id == null || !BuiltInRegistries.ITEM.containsKey(id)) {
+        if (id == null || !MinecraftNativeRegistries.ITEM.containsKey(id)) {
             return new ItemPresentation(itemId, fallback, count, ItemStack.EMPTY, false);
         }
         ItemStack stack = new ItemStack(

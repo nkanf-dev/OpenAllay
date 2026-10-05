@@ -7,7 +7,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipPositioner;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.item.ItemStack;
@@ -170,11 +169,11 @@ public class GuideNativeGraphics {
     }
 
     protected final void nativeTooltip(
-            Font font, List<FormattedCharSequence> lines, ClientTooltipPositioner positioner,
+            Font font, List<FormattedCharSequence> lines, GuideTooltipPlacement positioner,
             int x, int y, boolean replaceExisting) {
         List<FormattedCharSequence> captured = List.copyOf(lines);
         if (!captured.isEmpty()) {
-            deferTooltip(() -> graphics.renderTooltip(font, captured, positioner, x, y), replaceExisting);
+            deferTooltip(() -> graphics.renderTooltip(font, captured, net.minecraft.client.gui.screens.inventory.tooltip.DefaultTooltipPositioner.INSTANCE, x, y), replaceExisting);
         }
     }
 
@@ -191,5 +190,13 @@ public class GuideNativeGraphics {
             int sourceWidth, int sourceHeight, int textureWidth, int textureHeight) {
         GuideImmediateGraphicsPrimitives.blit(graphics, texture, x, y, u, v, width, height,
                 sourceWidth, sourceHeight, textureWidth, textureHeight);
+    }
+    final void nativeTooltipPositioned(Font font, List<FormattedCharSequence> lines,
+            net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipPositioner positioner,
+            int x, int y, boolean replaceExisting) {
+        List<FormattedCharSequence> captured = List.copyOf(lines);
+        if (!captured.isEmpty()) {
+            deferTooltip(() -> graphics.renderTooltip(font, captured, positioner, x, y), replaceExisting);
+        }
     }
 }

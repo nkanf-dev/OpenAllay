@@ -17,7 +17,6 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.function.BooleanSupplier;
 import net.minecraft.core.Registry;
-import net.minecraft.core.registries.BuiltInRegistries;
 
 /** Captures public built-in catalog data after the caller has proved Minecraft-thread ownership. */
 public final class RegistryCatalogCapture {
@@ -38,9 +37,9 @@ public final class RegistryCatalogCapture {
             throw new IllegalStateException("Game content catalog must be captured on its Minecraft owning thread");
         }
         List<RegistryEntrySnapshot> entries = new ArrayList<>();
-        Map<net.minecraft.world.item.Item, Set<String>> itemTags = tags(BuiltInRegistries.ITEM);
-        BuiltInRegistries.ITEM.stream().forEach(item -> {
-            var id = Objects.requireNonNull(BuiltInRegistries.ITEM.getKey(item));
+        Map<net.minecraft.world.item.Item, Set<String>> itemTags = tags(dev.openallay.platform.minecraft.MinecraftNativeRegistries.ITEM);
+        dev.openallay.platform.minecraft.MinecraftNativeRegistries.ITEM.stream().forEach(item -> {
+            var id = Objects.requireNonNull(dev.openallay.platform.minecraft.MinecraftNativeRegistries.ITEM.getKey(item));
             var itemData = MinecraftItemDataFacts.defaults(item);
             entries.add(entry(
                     MinecraftResourceId.from(id.toString()),
@@ -53,9 +52,9 @@ public final class RegistryCatalogCapture {
                     properties("item", id.toString(), item, itemData.properties(), propertyContributors)));
         });
 
-        Map<net.minecraft.world.level.block.Block, Set<String>> blockTags = tags(BuiltInRegistries.BLOCK);
-        BuiltInRegistries.BLOCK.stream().forEach(block -> {
-            var id = Objects.requireNonNull(BuiltInRegistries.BLOCK.getKey(block));
+        Map<net.minecraft.world.level.block.Block, Set<String>> blockTags = tags(dev.openallay.platform.minecraft.MinecraftNativeRegistries.BLOCK);
+        dev.openallay.platform.minecraft.MinecraftNativeRegistries.BLOCK.stream().forEach(block -> {
+            var id = Objects.requireNonNull(dev.openallay.platform.minecraft.MinecraftNativeRegistries.BLOCK.getKey(block));
             String properties = block.getStateDefinition().getProperties().stream()
                     .map(property -> property.getName())
                     .sorted()
@@ -74,9 +73,9 @@ public final class RegistryCatalogCapture {
                     properties("block", id.toString(), block, Map.of("minecraft:block", data), propertyContributors)));
         });
 
-        Map<net.minecraft.world.effect.MobEffect, Set<String>> effectTags = tags(BuiltInRegistries.MOB_EFFECT);
-        BuiltInRegistries.MOB_EFFECT.stream().forEach(effect -> {
-            var id = Objects.requireNonNull(BuiltInRegistries.MOB_EFFECT.getKey(effect));
+        Map<net.minecraft.world.effect.MobEffect, Set<String>> effectTags = tags(dev.openallay.platform.minecraft.MinecraftNativeRegistries.MOB_EFFECT);
+        dev.openallay.platform.minecraft.MinecraftNativeRegistries.MOB_EFFECT.stream().forEach(effect -> {
+            var id = Objects.requireNonNull(dev.openallay.platform.minecraft.MinecraftNativeRegistries.MOB_EFFECT.getKey(effect));
             entries.add(entry(
                     MinecraftResourceId.from(id.toString()),
                     "effect",
@@ -92,13 +91,13 @@ public final class RegistryCatalogCapture {
                             "color", effect.getColor())), propertyContributors)));
         });
 
-        Map<net.minecraft.world.item.alchemy.Potion, Set<String>> potionTags = tags(BuiltInRegistries.POTION);
-        BuiltInRegistries.POTION.stream().forEach(potion -> {
-            var id = Objects.requireNonNull(BuiltInRegistries.POTION.getKey(potion));
+        Map<net.minecraft.world.item.alchemy.Potion, Set<String>> potionTags = tags(dev.openallay.platform.minecraft.MinecraftNativeRegistries.POTION);
+        dev.openallay.platform.minecraft.MinecraftNativeRegistries.POTION.stream().forEach(potion -> {
+            var id = Objects.requireNonNull(dev.openallay.platform.minecraft.MinecraftNativeRegistries.POTION.getKey(potion));
             String translationKey = "item.minecraft.potion.effect." + MinecraftPotionFacts.name(potion);
             JsonArray effects = new JsonArray();
             potion.getEffects().forEach(instance -> {
-                var effectId = BuiltInRegistries.MOB_EFFECT.getKey(MinecraftActiveEffectFacts.effect(instance));
+                var effectId = dev.openallay.platform.minecraft.MinecraftNativeRegistries.MOB_EFFECT.getKey(MinecraftActiveEffectFacts.effect(instance));
                 if (effectId == null) return;
                 effects.add(object(
                         "id", effectId.toString(),
@@ -122,9 +121,9 @@ public final class RegistryCatalogCapture {
                     properties("potion", id.toString(), potion, Map.of("minecraft:potion", potionData), propertyContributors)));
         });
 
-        Map<net.minecraft.world.entity.EntityType<?>, Set<String>> entityTags = tags(BuiltInRegistries.ENTITY_TYPE);
-        BuiltInRegistries.ENTITY_TYPE.stream().forEach(entity -> {
-            var id = Objects.requireNonNull(BuiltInRegistries.ENTITY_TYPE.getKey(entity));
+        Map<net.minecraft.world.entity.EntityType<?>, Set<String>> entityTags = tags(dev.openallay.platform.minecraft.MinecraftNativeRegistries.ENTITY_TYPE);
+        dev.openallay.platform.minecraft.MinecraftNativeRegistries.ENTITY_TYPE.stream().forEach(entity -> {
+            var id = Objects.requireNonNull(dev.openallay.platform.minecraft.MinecraftNativeRegistries.ENTITY_TYPE.getKey(entity));
             entries.add(entry(
                     MinecraftResourceId.from(id.toString()),
                     "entity",
@@ -140,9 +139,9 @@ public final class RegistryCatalogCapture {
         });
 
         Map<net.minecraft.world.entity.ai.attributes.Attribute, Set<String>> attributeTags =
-                tags(BuiltInRegistries.ATTRIBUTE);
-        BuiltInRegistries.ATTRIBUTE.stream().forEach(attribute -> {
-            var id = Objects.requireNonNull(BuiltInRegistries.ATTRIBUTE.getKey(attribute));
+                tags(dev.openallay.platform.minecraft.MinecraftNativeRegistries.ATTRIBUTE);
+        dev.openallay.platform.minecraft.MinecraftNativeRegistries.ATTRIBUTE.stream().forEach(attribute -> {
+            var id = Objects.requireNonNull(dev.openallay.platform.minecraft.MinecraftNativeRegistries.ATTRIBUTE.getKey(attribute));
             entries.add(entry(
                     MinecraftResourceId.from(id.toString()),
                     "attribute",

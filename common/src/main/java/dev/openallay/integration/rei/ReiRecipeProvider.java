@@ -34,7 +34,7 @@ import me.shedaniel.rei.api.common.category.CategoryIdentifier;
 import me.shedaniel.rei.api.common.display.Display;
 import me.shedaniel.rei.api.common.entry.EntryIngredient;
 import me.shedaniel.rei.api.common.entry.EntryStack;
-import net.minecraft.core.registries.BuiltInRegistries;
+import dev.openallay.platform.minecraft.MinecraftNativeRegistries;
 import net.minecraft.world.item.ItemStack;
 
 final class ReiRecipeProvider implements RecipeKnowledgeProvider {
@@ -188,7 +188,7 @@ final class ReiRecipeProvider implements RecipeKnowledgeProvider {
         }
         TreeMap<String, IngredientAlternativeSnapshot> alternatives = new TreeMap<>();
         stacks.forEach(stack -> {
-            String id = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
+            String id = MinecraftNativeRegistries.ITEM.getKey(stack.getItem()).toString();
             alternatives.put(id, new IngredientAlternativeSnapshot("item", id, List.of(id)));
         });
         return new IngredientRequirementSnapshot(
@@ -211,13 +211,13 @@ final class ReiRecipeProvider implements RecipeKnowledgeProvider {
         rejectComponents(stacks);
         LinkedHashMap<String, ItemStack> unique = new LinkedHashMap<>();
         stacks.forEach(stack -> unique.putIfAbsent(
-                BuiltInRegistries.ITEM.getKey(stack.getItem()) + "\u0000" + stack.getCount(), stack));
+                MinecraftNativeRegistries.ITEM.getKey(stack.getItem()) + "\u0000" + stack.getCount(), stack));
         if (unique.size() != 1) {
             throw new UnsupportedRecipe(
                     "alternative_output", "REI output contains alternatives");
         }
         ItemStack stack = unique.values().iterator().next();
-        String id = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
+        String id = MinecraftNativeRegistries.ITEM.getKey(stack.getItem()).toString();
         return new RecipeOutputSnapshot(
                 new ItemStackSnapshot(id, stack.getCount(), stack.getHoverName().getString()), 1.0D);
     }
@@ -233,7 +233,7 @@ final class ReiRecipeProvider implements RecipeKnowledgeProvider {
                                 "REI fluid has components that cannot be represented losslessly");
                     }
                     return new FluidValue(
-                            BuiltInRegistries.FLUID.getKey(stack.getFluid()).toString(),
+                            MinecraftNativeRegistries.FLUID.getKey(stack.getFluid()).toString(),
                             stack.getAmount());
                 })
                 .distinct()

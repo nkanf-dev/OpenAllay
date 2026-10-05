@@ -877,7 +877,7 @@ final class GuideGraphicalRegressionProbe {
             case 2 -> {
                 require(guide().getFocused() != composer(), "Resize/rebuild incorrectly refocused blurred composer");
                 require("x".equals(composer().getValue()), "Resize lost player draft");
-                clickAt(guide(), composer().getX() + 8, composer().getY() + 8, "composer-focus");
+                clickAt(guide(), dev.openallay.client.gui.GuideNativeWidgetGeometry.x(composer()) + 8, dev.openallay.client.gui.GuideNativeWidgetGeometry.y(composer()) + 8, "composer-focus");
                 require(guide().getFocused() == composer(), "Native input click did not restore text focus");
                 String beforeTypedPttKey = composer().getValue();
                 boolean endHandled = GuideNativeInput.keyPressed(guide(), GuideNativeInput.keyEvent(InputConstants.KEY_END, 0));
@@ -1686,11 +1686,11 @@ final class GuideGraphicalRegressionProbe {
         Button button = findButton(key, false);
         require(button != null, "Actual visible enabled HUD case button unavailable: " + key);
         Screen screen = MinecraftClientWindow.screen(client);
-        double x = button.getX() + button.getWidth() / 2.0;
-        double y = button.getY() + button.getHeight() / 2.0;
-        require(button.getX() >= 0 && button.getY() >= 0
-                        && button.getX() + button.getWidth() <= screen.width
-                        && button.getY() + button.getHeight() <= screen.height,
+        double x = dev.openallay.client.gui.GuideNativeWidgetGeometry.x(button) + button.getWidth() / 2.0;
+        double y = dev.openallay.client.gui.GuideNativeWidgetGeometry.y(button) + button.getHeight() / 2.0;
+        require(dev.openallay.client.gui.GuideNativeWidgetGeometry.x(button) >= 0 && dev.openallay.client.gui.GuideNativeWidgetGeometry.y(button) >= 0
+                        && dev.openallay.client.gui.GuideNativeWidgetGeometry.x(button) + button.getWidth() <= screen.width
+                        && dev.openallay.client.gui.GuideNativeWidgetGeometry.y(button) + button.getHeight() <= screen.height,
                 "Actual HUD case button is outside the native viewport");
         var event = GuideNativeInput.mouseEvent(x, y, InputConstants.MOUSE_BUTTON_LEFT, 0);
         boolean clicked = GuideNativeInput.mouseClicked(screen, event, false);
@@ -1835,8 +1835,8 @@ final class GuideGraphicalRegressionProbe {
             return false;
         }
         require(slider.active, "Actual reply-lines slider is not enabled");
-        double x = slider.getX() + 4 + selected / 80.0 * (slider.getWidth() - 8);
-        var mouse = GuideNativeInput.mouseEvent(x, slider.getY() + slider.getHeight() / 2.0, 0, 0);
+        double x = dev.openallay.client.gui.GuideNativeWidgetGeometry.x(slider) + 4 + selected / 80.0 * (slider.getWidth() - 8);
+        var mouse = GuideNativeInput.mouseEvent(x, dev.openallay.client.gui.GuideNativeWidgetGeometry.y(slider) + slider.getHeight() / 2.0, 0, 0);
         GuideNativeInput.click(slider, mouse, false);
         GuideNativeInput.release(slider, mouse);
         recordAction("native-slider-click", "reply-lines=" + selected);

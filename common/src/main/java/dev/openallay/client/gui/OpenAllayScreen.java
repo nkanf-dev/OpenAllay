@@ -82,7 +82,7 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.narration.NarratedElementType;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.components.MultiLineEditBox;
-import net.minecraft.client.gui.components.Tooltip;
+import dev.openallay.client.gui.GuideTooltip;
 import dev.openallay.guide.ui.GuideEvidencePresentation;
 import dev.openallay.guide.ui.GuideToolDisplayStatus;
 import net.minecraft.client.gui.screens.ConfirmScreen;
@@ -91,7 +91,7 @@ import dev.openallay.client.gui.GuideInputKey;
 import dev.openallay.client.gui.GuideInputMouse;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.core.registries.BuiltInRegistries;
+import dev.openallay.platform.minecraft.MinecraftNativeRegistries;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.Mth;
@@ -348,11 +348,11 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
                 ? sessionsLabel : Component.literal("≡");
         addRenderableWidget(OpenAllayButton.create(sessionsText, button -> toggleSessions())
                 .bounds(header.sessions().x(), header.sessions().y(), header.sessions().width(), 20)
-                .tooltip(Tooltip.create(sessionsLabel))
+                .tooltip(GuideTooltip.create(sessionsLabel))
                 .createNarration(ignored -> sessionsLabel.copy()).build());
         addRenderableWidget(OpenAllayButton.create(Component.literal("⋯"), button -> overflowOpen = !overflowOpen)
                 .bounds(header.overflow().x(), header.overflow().y(), header.overflow().width(), 20)
-                .tooltip(Tooltip.create(Component.translatable("screen.openallay.action.more")))
+                .tooltip(GuideTooltip.create(Component.translatable("screen.openallay.action.more")))
                 .createNarration(ignored -> Component.translatable("screen.openallay.action.more")).build());
         modelSelectorButton = header.model();
         model = addRenderableWidget(OpenAllayButton.create(modelButtonLabel(), button -> {
@@ -361,12 +361,12 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
                 })
                 .bounds(header.model().x(), header.model().y(), header.model().width(), 20)
                 .createNarration(ignored -> modelButtonDescription()).build());
-        model.setTooltip(Tooltip.create(modelButtonDescription()));
+        dev.openallay.client.gui.GuideNativeWidgetTooltips.set(model, GuideTooltip.create(modelButtonDescription()));
         if (settingsOpener != null) {
             addRenderableWidget(OpenAllayButton.create(
                             Component.translatable("screen.openallay.settings.short"), button -> settingsOpener.run())
                     .bounds(header.settings().x(), header.settings().y(), header.settings().width(), 20)
-                    .tooltip(Tooltip.create(Component.translatable("screen.openallay.settings.title")))
+                    .tooltip(GuideTooltip.create(Component.translatable("screen.openallay.settings.title")))
                     .createNarration(ignored -> Component.translatable("screen.openallay.settings.title")).build());
         }
 
@@ -391,7 +391,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         stop = controls.stop().height() == 0 ? null : addRenderableWidget(OpenAllayButton.create(
                         Component.translatable("screen.openallay.action.stop"), button -> cancel())
                 .bounds(controls.stop().x(), controls.stop().y(), controls.stop().width(), 20).build());
-        if (stop != null) stop.setTooltip(Tooltip.create(Component.translatable("screen.openallay.action.stop.description")));
+        if (stop != null) dev.openallay.client.gui.GuideNativeWidgetTooltips.set(stop, GuideTooltip.create(Component.translatable("screen.openallay.action.stop.description")));
         retry = null; // Retry belongs to its factual failed request row.
         microphone = null;
         if (voice != null && voice.enabled()) {
@@ -401,7 +401,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
                 microphone = addRenderableWidget(OpenAllayButton.create(
                                 Component.translatable("screen.openallay.voice.mic_short"), button -> microphoneAction())
                         .bounds(action.x(), micY, action.width(), 18)
-                        .tooltip(Tooltip.create(Component.translatable("screen.openallay.voice.mic"))).build());
+                        .tooltip(GuideTooltip.create(Component.translatable("screen.openallay.voice.mic"))).build());
             }
         }
         updateVirtualRows(Math.max(40, layout.transcript().width() - 18));
@@ -787,7 +787,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
     private boolean composerContains(double x, double y) {
         if (composer == null) return false;
         GuideUiLayout.Rect input = new GuideUiLayout.Rect(
-                composer.getX(), composer.getY(), composer.getWidth(), composer.getHeight());
+                dev.openallay.client.gui.GuideNativeWidgetGeometry.x(composer), dev.openallay.client.gui.GuideNativeWidgetGeometry.y(composer), composer.getWidth(), composer.getHeight());
         return input.contains(x, y) && composer.isMouseOver(x, y);
     }
 
@@ -847,7 +847,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
 
         private HeaderTitle(Component title, GuideUiLayout.Rect bounds) {
             super(bounds.x(), bounds.y(), bounds.width(), bounds.height(), title);
-            setTooltip(Tooltip.create(title));
+            setTooltip(GuideTooltip.create(title));
         }
 
         @Override
@@ -870,7 +870,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         }
 
         @Override
-        protected void updateWidgetNarration(NarrationElementOutput output) {
+        protected void narrateGuideWidget(NarrationElementOutput output) {
             output.add(NarratedElementType.TITLE, getMessage());
         }
     }
@@ -2416,7 +2416,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
 
     private static ItemStack itemStack(String itemId, long count) {
         var id = MinecraftResourceIds.tryParse(itemId);
-        if (id == null || !BuiltInRegistries.ITEM.containsKey(id)) {
+        if (id == null || !MinecraftNativeRegistries.ITEM.containsKey(id)) {
             return ItemStack.EMPTY;
         }
         return new ItemStack(dev.openallay.client.gui.GuideNativeItemLookup.item(id.toString()),
@@ -3660,17 +3660,17 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         if (service.compactAvailable() && !dev.openallay.guide.composer.SlashCommandParser.suggestions(draft).isEmpty()) {
             submitHelp = "openallay.guide.slash.compact.help";
         }
-        send.setTooltip(Tooltip.create(Component.translatable(submitHelp)));
+        dev.openallay.client.gui.GuideNativeWidgetTooltips.set(send, GuideTooltip.create(Component.translatable(submitHelp)));
         if (stop != null) stop.active = view.canCancel();
         model.setMessage(modelButtonLabel());
-        model.setTooltip(Tooltip.create(modelButtonDescription()));
+        dev.openallay.client.gui.GuideNativeWidgetTooltips.set(model, GuideTooltip.create(modelButtonDescription()));
 
         model.active = !view.modelChoices().isEmpty();
         if (microphone != null && voice != null) {
             microphone.setMessage(voice.status().active()
                     ? Component.translatable("screen.openallay.voice.short." + voice.status().state().name().toLowerCase(java.util.Locale.ROOT), voice.status().elapsedMillis() / 1000)
                     : Component.translatable("screen.openallay.voice.mic_short"));
-            microphone.setTooltip(Tooltip.create(voiceFeedback()));
+            dev.openallay.client.gui.GuideNativeWidgetTooltips.set(microphone, GuideTooltip.create(voiceFeedback()));
         }
     }
 

@@ -27,7 +27,7 @@ public abstract class GuideNativeScreen extends GuideNativeScreenCallbacks {
             GuideLegacyCursor.beginFrame();
             guide.paint(() -> {
                 if (pending != null) {
-                    guide.setTooltipForNextFrame(font, pending.lines(), pending.positioner(), mouseX, mouseY, false);
+                    guide.nativeTooltipPositioned(font, pending.lines(), pending.positioner(), mouseX, mouseY, false);
                 }
                 paintGuideScreen(guide, mouseX, mouseY, delta);
             });
@@ -50,7 +50,7 @@ public abstract class GuideNativeScreen extends GuideNativeScreenCallbacks {
             List<FormattedCharSequence> lines, ClientTooltipPositioner positioner, boolean replaceExisting) {
         if (lines.isEmpty()) return;
         if (paintGraphics != null) {
-            paintGraphics.setTooltipForNextFrame(font, lines, positioner, paintMouseX, paintMouseY, replaceExisting);
+            paintGraphics.nativeTooltipPositioned(font, lines, positioner, paintMouseX, paintMouseY, replaceExisting);
         } else if (pendingTooltip == null || replaceExisting) {
             pendingTooltip = new PendingTooltip(List.copyOf(lines), positioner);
         }

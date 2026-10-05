@@ -7,7 +7,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.RegistryAccess;
-import net.minecraft.core.registries.BuiltInRegistries;
+import dev.openallay.platform.minecraft.MinecraftNativeRegistries;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.CraftingRecipe;
@@ -55,7 +55,7 @@ public final class MinecraftRecipeCapture {
         int height = shaped ? ((ShapedRecipe) recipe).getHeight() : 0;
         ItemStack output = recipe.getResultItem(registries);
         return new MinecraftRecipeInput(recipe.getId().toString(),
-                Objects.requireNonNull(BuiltInRegistries.RECIPE_TYPE.getKey(recipe.getType())).toString(),
+                Objects.requireNonNull(MinecraftNativeRegistries.RECIPE_TYPE.getKey(recipe.getType())).toString(),
                 recipe.getIngredients(), List.of(output), width, height, shaped,
                 recipe instanceof CraftingRecipe, null);
     }

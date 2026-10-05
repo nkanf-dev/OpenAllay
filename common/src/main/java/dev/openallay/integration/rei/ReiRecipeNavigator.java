@@ -9,7 +9,7 @@ import dev.openallay.recipe.RecipeViewerNavigator;
 import me.shedaniel.rei.api.client.view.ViewSearchBuilder;
 import me.shedaniel.rei.api.common.util.EntryStacks;
 import net.minecraft.client.Minecraft;
-import net.minecraft.core.registries.BuiltInRegistries;
+import dev.openallay.platform.minecraft.MinecraftNativeRegistries;
 import net.minecraft.world.item.ItemStack;
 
 final class ReiRecipeNavigator implements RecipeViewerNavigator {
@@ -46,7 +46,7 @@ final class ReiRecipeNavigator implements RecipeViewerNavigator {
                     "wrong_thread", "Recipe viewer navigation requires the client thread");
         }
         var id = MinecraftResourceIds.tryParse(itemId);
-        if (id == null || !BuiltInRegistries.ITEM.containsKey(id)) {
+        if (id == null || !MinecraftNativeRegistries.ITEM.containsKey(id)) {
             return RecipeNavigationResult.failed("unknown_item", "Item is not registered");
         }
         try {

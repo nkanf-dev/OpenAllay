@@ -3,7 +3,7 @@ package dev.openallay.client.gui;
 import java.util.Objects;
 import dev.openallay.client.gui.GuideGraphics;
 import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.Tooltip;
+import dev.openallay.client.gui.GuideTooltip;
 import net.minecraft.network.chat.Component;
 
 /** A compact pixel-style button that keeps Minecraft's input and narration behavior. */
@@ -17,7 +17,7 @@ public final class OpenAllayButton extends GuideNativeButton {
             int height,
             Component message,
             OnPress onPress,
-            CreateNarration createNarration,
+            GuideButtonNarration createNarration,
             boolean selected) {
         super(x, y, width, height, message, onPress, createNarration);
         this.selected = selected;
@@ -76,12 +76,12 @@ public final class OpenAllayButton extends GuideNativeButton {
     public static final class Builder {
         private final Component message;
         private final OnPress onPress;
-        private Tooltip tooltip;
+        private GuideTooltip tooltip;
         private int x;
         private int y;
         private int width = DEFAULT_WIDTH;
         private int height = DEFAULT_HEIGHT;
-        private CreateNarration createNarration = DEFAULT_NARRATION;
+        private GuideButtonNarration createNarration = GuideButtonNarration.DEFAULT;
         private boolean selected;
 
         private Builder(Component message, OnPress onPress) {
@@ -110,12 +110,12 @@ public final class OpenAllayButton extends GuideNativeButton {
             return pos(x, y).size(width, height);
         }
 
-        public Builder tooltip(Tooltip tooltip) {
+        public Builder tooltip(GuideTooltip tooltip) {
             this.tooltip = tooltip;
             return this;
         }
 
-        public Builder createNarration(CreateNarration createNarration) {
+        public Builder createNarration(GuideButtonNarration createNarration) {
             this.createNarration = Objects.requireNonNull(createNarration, "createNarration");
             return this;
         }
@@ -128,7 +128,7 @@ public final class OpenAllayButton extends GuideNativeButton {
         public OpenAllayButton build() {
             OpenAllayButton button = new OpenAllayButton(
                     x, y, width, height, message, onPress, createNarration, selected);
-            button.setTooltip(tooltip);
+            dev.openallay.client.gui.GuideNativeWidgetTooltips.set(button, tooltip);
             return button;
         }
     }

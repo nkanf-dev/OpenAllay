@@ -14,8 +14,8 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import dev.openallay.client.gui.GuideGraphics;
-import net.minecraft.client.gui.components.AbstractSliderButton;
-import net.minecraft.client.gui.components.Tooltip;
+import dev.openallay.client.gui.GuideNativeSlider;
+import dev.openallay.client.gui.GuideTooltip;
 import net.minecraft.client.gui.screens.Screen;
 import dev.openallay.client.gui.GuideInputMouse;
 import net.minecraft.network.chat.Component;
@@ -138,7 +138,7 @@ public final class GuideHudEditorScreen extends dev.openallay.client.gui.GuideNa
     private void addButton(String key, int x, int y, int w, int h, Runnable action) {
         addRenderableWidget(OpenAllayButton.create(label(key), button -> action.run())
                 .bounds(x, y, w, h)
-                .tooltip(Tooltip.create(label(key + ".tooltip")))
+                .tooltip(GuideTooltip.create(label(key + ".tooltip")))
                 .build());
     }
 
@@ -334,14 +334,14 @@ public final class GuideHudEditorScreen extends dev.openallay.client.gui.GuideNa
         return Component.translatable(PREFIX + key, arguments);
     }
 
-    private final class HudSlider extends AbstractSliderButton {
+    private final class HudSlider extends GuideNativeSlider {
         private final boolean scale;
 
         HudSlider(int x, int y, int width, int height, boolean scale) {
             super(x, y, width, height, Component.empty(),
                     scale ? (draft.hud().scale() - 0.75) : draft.hud().backgroundOpacity());
             this.scale = scale;
-            setTooltip(Tooltip.create(label(scale ? "scale.tooltip" : "opacity.tooltip")));
+            setTooltip(GuideTooltip.create(label(scale ? "scale.tooltip" : "opacity.tooltip")));
             updateMessage();
         }
 

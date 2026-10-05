@@ -45,7 +45,7 @@ import java.util.Optional;
 import java.util.Set;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.registries.BuiltInRegistries;
+import dev.openallay.platform.minecraft.MinecraftNativeRegistries;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 
@@ -215,7 +215,7 @@ public final class MinecraftContextCapture {
                                 || serverPlayer.containerMenu == serverPlayer.inventoryMenu
                                         || serverPlayer.containerMenu.getType() == null
                                 ? ""
-                                : BuiltInRegistries.MENU.getKey(
+                                : MinecraftNativeRegistries.MENU.getKey(
                                         serverPlayer.containerMenu.getType()).toString(),
                         playerEvidence,
                         serverPlayer == null
@@ -328,7 +328,7 @@ public final class MinecraftContextCapture {
         if (stack.isEmpty()) {
             return ItemStackSnapshot.empty();
         }
-        var id = Objects.requireNonNull(BuiltInRegistries.ITEM.getKey(stack.getItem()));
+        var id = Objects.requireNonNull(MinecraftNativeRegistries.ITEM.getKey(stack.getItem()));
         return new ItemStackSnapshot(id.toString(), stack.getCount(), stack.getHoverName().getString());
     }
 

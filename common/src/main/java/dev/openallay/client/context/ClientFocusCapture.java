@@ -17,7 +17,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.registries.BuiltInRegistries;
+import dev.openallay.platform.minecraft.MinecraftNativeRegistries;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
@@ -113,13 +113,13 @@ public final class ClientFocusCapture {
                     "block",
                     position,
                     new WorldFocusObservation.Block(
-                            BuiltInRegistries.BLOCK.getKey(state.getBlock()).toString(),
+                            MinecraftNativeRegistries.BLOCK.getKey(state.getBlock()).toString(),
                             blockPosition(blockPos),
                             blockHit.getDirection().getName(),
                             blockHit.isInside(),
                             dev.openallay.client.observation.MinecraftHitFacts.worldBorderHit(client, blockHit),
                             properties,
-                            fluid.isEmpty() ? "" : BuiltInRegistries.FLUID.getKey(fluid.getType()).toString()),
+                            fluid.isEmpty() ? "" : MinecraftNativeRegistries.FLUID.getKey(fluid.getType()).toString()),
                     null);
         }
         if (hit.getType() == HitResult.Type.ENTITY && hit instanceof EntityHitResult entityHit) {
@@ -131,7 +131,7 @@ public final class ClientFocusCapture {
                     new WorldFocusObservation.Entity(
                             entity.getUUID(),
                             entity.getId(),
-                            BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString(),
+                            MinecraftNativeRegistries.ENTITY_TYPE.getKey(entity.getType()).toString(),
                             entity.getName().getString(),
                             position(entity.position()),
                             blockPosition(entity.blockPosition()),
@@ -169,7 +169,7 @@ public final class ClientFocusCapture {
         boolean typeAvailable = false;
         String diagnostic = "";
         try {
-            type = BuiltInRegistries.MENU.getKey(nativeMenu.getType()).toString();
+            type = MinecraftNativeRegistries.MENU.getKey(nativeMenu.getType()).toString();
             typeAvailable = true;
         } catch (UnsupportedOperationException untyped) {
             // Player inventory and creative menus are valid native menus without a MenuType.
@@ -209,7 +209,7 @@ public final class ClientFocusCapture {
     }
 
     private static WorldFocusObservation.Item item(Minecraft client, ItemStack stack) {
-        String id = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
+        String id = MinecraftNativeRegistries.ITEM.getKey(stack.getItem()).toString();
         int count = stack.getCount();
         String name = stack.isEmpty() ? "" : stack.getHoverName().getString();
         int damage = stack.getDamageValue();

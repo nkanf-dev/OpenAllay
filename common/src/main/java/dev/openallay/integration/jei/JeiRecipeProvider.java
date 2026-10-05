@@ -37,7 +37,7 @@ import mezz.jei.api.ingredients.ITypedIngredient;
 import mezz.jei.api.recipe.RecipeIngredientRole;
 import mezz.jei.api.recipe.category.IRecipeCategory;
 import mezz.jei.api.runtime.IJeiRuntime;
-import net.minecraft.core.registries.BuiltInRegistries;
+import dev.openallay.platform.minecraft.MinecraftNativeRegistries;
 import net.minecraft.world.item.ItemStack;
 
 final class JeiRecipeProvider implements RecipeKnowledgeProvider {
@@ -230,7 +230,7 @@ final class JeiRecipeProvider implements RecipeKnowledgeProvider {
         }
         TreeMap<String, IngredientAlternativeSnapshot> alternatives = new TreeMap<>();
         stacks.forEach(stack -> {
-            String id = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
+            String id = MinecraftNativeRegistries.ITEM.getKey(stack.getItem()).toString();
             alternatives.put(id, new IngredientAlternativeSnapshot("item", id, List.of(id)));
         });
         return new IngredientRequirementSnapshot(
@@ -252,13 +252,13 @@ final class JeiRecipeProvider implements RecipeKnowledgeProvider {
         rejectComponents(stacks);
         LinkedHashMap<String, ItemStack> unique = new LinkedHashMap<>();
         stacks.forEach(stack -> unique.putIfAbsent(
-                BuiltInRegistries.ITEM.getKey(stack.getItem()) + "\u0000" + stack.getCount(), stack));
+                MinecraftNativeRegistries.ITEM.getKey(stack.getItem()) + "\u0000" + stack.getCount(), stack));
         if (unique.size() != 1) {
             throw new UnsupportedRecipe(
                     "alternative_output", "JEI output slot contains alternatives");
         }
         ItemStack stack = unique.values().iterator().next();
-        String id = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
+        String id = MinecraftNativeRegistries.ITEM.getKey(stack.getItem()).toString();
         return new RecipeOutputSnapshot(
                 new ItemStackSnapshot(id, stack.getCount(), stack.getHoverName().getString()), 1.0D);
     }

@@ -12,4 +12,11 @@ public abstract class GuideNativeWidget extends AbstractWidget {
         guide.paint(() -> paintGuideWidget(guide, mouseX, mouseY, delta));
     }
     protected abstract void paintGuideWidget(GuideGraphics graphics, int mouseX, int mouseY, float delta);
+    public final void setTooltip(GuideTooltip tooltip) {
+        super.setTooltip(tooltip == null ? null : net.minecraft.client.gui.components.Tooltip.create(tooltip.text()));
+    }
+    @Override protected final void updateWidgetNarration(net.minecraft.client.gui.narration.NarrationElementOutput output) {
+        narrateGuideWidget(output);
+    }
+    protected abstract void narrateGuideWidget(net.minecraft.client.gui.narration.NarrationElementOutput output);
 }
