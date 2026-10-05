@@ -31,15 +31,14 @@ final class ToolSchemaGeneratorTest {
         JsonObject schema = new ToolSchemaGenerator().generate(Input.class);
         assertEquals("object", schema.get("type").getAsString());
         assertFalse(schema.get("additionalProperties").getAsBoolean());
-        assertEquals(List.of("id", "nested"), schema.getAsJsonArray("required").asList().stream()
+        assertEquals(List.of("id", "nested"), dev.openallay.json.JsonReaders.elements(schema.getAsJsonArray("required")).stream()
                 .map(value -> value.getAsString())
                 .toList());
         assertEquals(
                 List.of("FAST", "COMPLETE"),
-                schema.getAsJsonObject("properties")
+                dev.openallay.json.JsonReaders.elements(schema.getAsJsonObject("properties")
                         .getAsJsonObject("mode")
-                        .getAsJsonArray("enum")
-                        .asList()
+                        .getAsJsonArray("enum"))
                         .stream()
                         .map(value -> value.getAsString())
                         .toList());

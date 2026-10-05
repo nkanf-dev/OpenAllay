@@ -81,7 +81,7 @@ final class JavascriptSourceOriginsTest {
                             "return mc.knowledge.map(document => document.documentId);", List.of()),
                             new CancellationSignal()).join());
             var output = (RunJavascriptTool.Output) success.value();
-            assertEquals(List.of("first", "second", "third"), output.preview().getAsJsonArray().asList().stream()
+            assertEquals(List.of("first", "second", "third"), dev.openallay.json.JsonReaders.elements(output.preview().getAsJsonArray()).stream()
                     .map(value -> value.getAsString()).toList());
             assertEquals(List.of(catalog, server, integration), output.sources().stream()
                     .map(source -> source.evidence()).toList());

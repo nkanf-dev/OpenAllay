@@ -148,7 +148,7 @@ final class RhinoJavascriptRuntimeTest {
                 new CancellationSignal());
 
         var value = execution.value().getAsJsonObject();
-        assertTrue(value.getAsJsonArray("roots").asList().stream()
+        assertTrue(dev.openallay.json.JsonReaders.elements(value.getAsJsonArray("roots")).stream()
                 .anyMatch(root -> root.getAsString().equals("registryEntries")));
         assertEquals(
                 "list",

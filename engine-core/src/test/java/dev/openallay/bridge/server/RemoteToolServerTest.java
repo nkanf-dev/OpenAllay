@@ -90,7 +90,7 @@ final class RemoteToolServerTest {
             assertEquals("undefined", preview.get("packages").getAsString());
             var sources = result.getAsJsonObject("value").getAsJsonArray("sources");
             assertFalse(sources.isEmpty());
-            assertTrue(sources.asList().stream().allMatch(source -> source.getAsJsonObject()
+            assertTrue(dev.openallay.json.JsonReaders.elements(sources).stream().allMatch(source -> source.getAsJsonObject()
                     .getAsJsonObject("evidence").get("authority").getAsString().equals("SERVER_AUTHORITATIVE")));
             assertEquals(1, request.graphCaptures.get());
         } finally {

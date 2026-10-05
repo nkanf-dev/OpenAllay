@@ -150,7 +150,7 @@ final class RunJavascriptAcceptanceTest {
         var canonical = workspaces.open(context.correlationId())
                 .open(success.value().handle()).getAsJsonObject();
         assertEquals(56, canonical.get("total").getAsInt());
-        assertEquals(List.of(4, 16, 36), canonical.getAsJsonArray("squares").asList().stream()
+        assertEquals(List.of(4, 16, 36), dev.openallay.json.JsonReaders.elements(canonical.getAsJsonArray("squares")).stream()
                 .map(value -> value.getAsInt()).toList());
         assertTrue(success.value().sources().isEmpty());
         assertTrue(workspaces.open(context.correlationId()).sources(success.value().handle()).isEmpty());
@@ -210,8 +210,8 @@ final class RunJavascriptAcceptanceTest {
                         "return workspace.open('" + first.value().handle() + "').map(value => value * value);",
                         List.of(first.value().handle())), new CancellationSignal()).join());
 
-        assertEquals(List.of(4, 9, 25), workspaces.open(context.correlationId())
-                .open(second.value().handle()).getAsJsonArray().asList().stream()
+        assertEquals(List.of(4, 9, 25), dev.openallay.json.JsonReaders.elements(workspaces.open(context.correlationId())
+                .open(second.value().handle()).getAsJsonArray()).stream()
                 .map(value -> value.getAsInt()).toList());
         assertTrue(first.value().sources().isEmpty());
         assertTrue(second.value().sources().isEmpty());

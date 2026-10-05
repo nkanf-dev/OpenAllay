@@ -434,7 +434,7 @@ final class UnrestrictedJavaAccessTest {
         assertEquals("java.lang", module.get("packageName").getAsString());
         assertFalse(module.get("packageOpenToBridge").getAsBoolean());
         assertTrue(info.get("classLoader").isJsonNull());
-        assertTrue(info.getAsJsonArray("fields").asList().stream()
+        assertTrue(dev.openallay.json.JsonReaders.elements(info.getAsJsonArray("fields")).stream()
                 .anyMatch(field -> field.getAsJsonObject().get("name").getAsString().equals("value")));
         assertFailure("javascript_java_inaccessible", "java.lang.String", "return Java.get('text', 'value');");
     }
@@ -628,7 +628,7 @@ final class UnrestrictedJavaAccessTest {
     }
 
     private static JsonObject findField(JsonObject metadata, String name, String declaringClass) {
-        return metadata.getAsJsonArray("fields").asList().stream().map(JsonElement::getAsJsonObject)
+        return dev.openallay.json.JsonReaders.elements(metadata.getAsJsonArray("fields")).stream().map(JsonElement::getAsJsonObject)
                 .filter(field -> field.get("name").getAsString().equals(name)
                         && field.get("declaringClass").getAsString().equals(declaringClass))
                 .findFirst().orElseThrow();

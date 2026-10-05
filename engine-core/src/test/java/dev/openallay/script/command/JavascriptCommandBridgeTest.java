@@ -63,7 +63,7 @@ final class JavascriptCommandBridgeTest {
                 assertEquals(effective ? catalog().nodes().size() : 0,
                         result.getAsJsonObject().get("listed").getAsInt());
                 assertEquals(effective ? List.of("function", "function", "function") : List.of(),
-                        result.getAsJsonObject().getAsJsonArray("methods").asList().stream()
+                        dev.openallay.json.JsonReaders.elements(result.getAsJsonObject().getAsJsonArray("methods")).stream()
                                 .map(JsonElement::getAsString).toList());
                 assertEquals("undefined", result.getAsJsonObject().get("mcCommands").getAsString());
             }
@@ -165,15 +165,15 @@ final class JavascriptCommandBridgeTest {
 
         assertEquals("argument", result.getAsJsonObject()
                 .getAsJsonObject("node").get("kind").getAsString());
-        assertEquals(List.of(1, 2), result.getAsJsonObject()
-                .getAsJsonArray("sequences").asList().stream()
+        assertEquals(List.of(1, 2), dev.openallay.json.JsonReaders.elements(result.getAsJsonObject()
+                .getAsJsonArray("sequences")).stream()
                 .map(JsonElement::getAsInt).toList());
         assertEquals(List.of("examplemod run @s", "say finished"), submitted);
         assertEquals(ACTOR.toString(), result.getAsJsonObject().get("actor").getAsString());
         assertEquals("feedback", result.getAsJsonObject().get("firstState").getAsString());
         assertEquals(
                 List.of("feedback: examplemod run @s"),
-                result.getAsJsonObject().getAsJsonArray("firstMessages").asList().stream()
+                dev.openallay.json.JsonReaders.elements(result.getAsJsonObject().getAsJsonArray("firstMessages")).stream()
                         .map(JsonElement::getAsString).toList());
     }
 
@@ -296,7 +296,7 @@ final class JavascriptCommandBridgeTest {
         assertEquals("feedback", result.getAsJsonObject().get("state").getAsString());
         assertEquals(
                 List.of("delayed feedback: version"),
-                result.getAsJsonObject().getAsJsonArray("messages").asList().stream()
+                dev.openallay.json.JsonReaders.elements(result.getAsJsonObject().getAsJsonArray("messages")).stream()
                         .map(JsonElement::getAsString)
                         .toList());
     }

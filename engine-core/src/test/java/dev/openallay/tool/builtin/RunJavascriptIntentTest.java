@@ -28,7 +28,7 @@ final class RunJavascriptIntentTest {
     @Test
     void declaresOptionalStringsWithNewCallGuidanceAndNoArbitraryLimits() {
         JsonObject schema = new ToolSchemaGenerator().generate(RunJavascriptTool.Input.class);
-        assertEquals(List.of("source"), schema.getAsJsonArray("required").asList().stream()
+        assertEquals(List.of("source"), dev.openallay.json.JsonReaders.elements(schema.getAsJsonArray("required")).stream()
                 .map(value -> value.getAsString()).toList());
         assertFalse(schema.get("additionalProperties").getAsBoolean());
         for (String field : List.of("title", "description")) {

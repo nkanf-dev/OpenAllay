@@ -1063,7 +1063,7 @@ final class ClientModelRuntimeRegistryTest {
             assertEquals("feedback", run.get("state").getAsString());
             assertTrue(run.get("feedbackObserved").getAsBoolean());
             assertEquals(List.of("observed: " + submitted.command(), "route: " + correlation),
-                    run.getAsJsonArray("messages").asList().stream().map(value -> value.getAsString()).toList());
+                    dev.openallay.json.JsonReaders.elements(run.getAsJsonArray("messages")).stream().map(value -> value.getAsString()).toList());
             assertTrue(run.get("durationMillis").getAsLong() >= 0);
         }
     }

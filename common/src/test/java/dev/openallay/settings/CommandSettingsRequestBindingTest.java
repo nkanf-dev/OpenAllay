@@ -493,7 +493,7 @@ final class CommandSettingsRequestBindingTest {
                 actual.get("java").getAsString());
         assertEquals("undefined", actual.get("mcCommands").getAsString());
         assertEquals(enabled ? List.of("function", "function", "function") : List.of(),
-                actual.getAsJsonArray("methods").asList().stream().map(value -> value.getAsString()).toList());
+                dev.openallay.json.JsonReaders.elements(actual.getAsJsonArray("methods")).stream().map(value -> value.getAsString()).toList());
         assertEquals(enabled ? 1 : 0, actual.get("nodes").getAsInt());
         assertFalse(actual.get("schemaHasCommands").getAsBoolean());
     }
@@ -568,7 +568,7 @@ final class CommandSettingsRequestBindingTest {
             assertEquals("feedback", run.get("state").getAsString());
             assertTrue(run.get("feedbackObserved").getAsBoolean());
             assertEquals(List.of("observed: " + submitted.command(), "route: " + correlation),
-                    run.getAsJsonArray("messages").asList().stream().map(value -> value.getAsString()).toList());
+                    dev.openallay.json.JsonReaders.elements(run.getAsJsonArray("messages")).stream().map(value -> value.getAsString()).toList());
             assertTrue(run.get("durationMillis").getAsLong() >= 0);
         }
     }

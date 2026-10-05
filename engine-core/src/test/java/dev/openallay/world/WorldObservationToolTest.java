@@ -65,7 +65,7 @@ final class WorldObservationToolTest {
         assertEquals(17, stored.get("requestedPositions").getAsLong());
         assertEquals(complete ? 17 : 16, stored.get("loadedPositions").getAsLong());
         assertEquals(complete ? List.of() : List.of("chunk:1,0"),
-                stored.getAsJsonArray("unavailableSections").asList().stream()
+                dev.openallay.json.JsonReaders.elements(stored.getAsJsonArray("unavailableSections")).stream()
                         .map(value -> value.getAsString()).toList());
         assertEquals(WorldObservationTestFixtures.DIMENSION, stored.get("dimension").getAsString());
         assertEquals(coordinator.captured.stream().map(SourceObservation::new).toList(), success.value().sources());
