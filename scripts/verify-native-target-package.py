@@ -34,7 +34,8 @@ def engine_files(root):
                 blob = path.read_bytes()
                 check(name not in files or files[name] == blob, "Conflicting compiled engine entry: " + name)
                 files[name] = blob
-    check(any(name.endswith("OpenAllayBootstrap.class") for name in files), "Compiled engine output missing")
+    check("dev/openallay/guide/GuideService.class" in files
+          and "dev/openallay/FeatureServices.class" in files, "Compiled engine output missing")
     return files
 
 

@@ -31,6 +31,17 @@ class NativeTargetPackageTest(unittest.TestCase):
         self.assertEqual(receipt["sharedEngineEntries"], 1)
         self.assertNotIn("runtimeAcceptance", receipt)
 
+    def test_engine_files_use_actual_feature_owners_not_native_bootstrap(self):
+        root = Path(self.temporary.name)
+        output = root / "engine-core/build/classes/java/main/dev/openallay"
+        (output / "guide").mkdir(parents=True)
+        (output / "guide/GuideService.class").write_bytes(b"fixture")
+        (output / "FeatureServices.class").write_bytes(b"fixture")
+        files = PACKAGE.engine_files(root)
+        self.assertIn("dev/openallay/guide/GuideService.class", files)
+        self.assertIn("dev/openallay/FeatureServices.class", files)
+        self.assertNotIn("dev/openallay/OpenAllayBootstrap.class", files)
+
     def test_changed_engine_refused(self):
         self.write({next(iter(self.engine)): b"changed"})
         with self.assertRaisesRegex(ValueError, "Shared engine"):
