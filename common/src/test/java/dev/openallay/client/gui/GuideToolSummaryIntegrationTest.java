@@ -84,8 +84,8 @@ final class GuideToolSummaryIntegrationTest {
         assertTrue(hit.contains("Math.min(bounds.bottom(), viewport.bottom())"));
         assertTrue(hit.contains("if (right > left && bottom > top)"));
         assertTrue(hit.contains("HitKind.CONTENT, action, id, narration"));
-        String mouse = between(source, "    public boolean mouseClicked(",
-                "    public void extractRenderState(");
+        String mouse = between(source, "    public boolean guideMouseClicked(",
+                "    protected void paintGuideScreen(");
         String contentLoop = mouse.substring(mouse.lastIndexOf("for (Hit hit : List.copyOf(hits))"));
         assertBefore(contentLoop, "hit.rect().contains(event.x(), event.y())", "hit.action().run()");
         assertBefore(contentLoop, "hit.action().run()", "return true");

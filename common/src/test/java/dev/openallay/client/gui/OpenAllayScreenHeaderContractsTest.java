@@ -47,7 +47,8 @@ final class OpenAllayScreenHeaderContractsTest {
         }
         String screen = screenSource();
         int initStart = screen.indexOf("protected void init()");
-        int initEnd = screen.indexOf("public void resize(", initStart);
+        int initEnd = screen.indexOf("protected void resizeGuide(", initStart);
+        assertTrue(initStart >= 0 && initEnd > initStart);
         String init = screen.substring(initStart, initEnd);
         assertTrue(init.contains("Component title = headerTitle()"));
         assertTrue(init.contains("font.width(title.getVisualOrderText())"));
@@ -81,12 +82,21 @@ final class OpenAllayScreenHeaderContractsTest {
     @Test
     void longNamesHaveTheirOwnBoundedNativeTooltipAndKeyboardNarration() throws Exception {
         String screen = screenSource();
-        int start = screen.indexOf("private final class HeaderTitle extends AbstractWidget");
+        int start = screen.indexOf("private final class HeaderTitle extends GuideNativeWidget");
         int end = screen.indexOf("public Map<String, Object> e2eHeaderReceipt()", start);
         assertTrue(start >= 0 && end > start);
         String title = screen.substring(start, end);
         assertTrue(title.contains("super(bounds.x(), bounds.y(), bounds.width(), bounds.height(), title)"));
         assertTrue(title.contains("setTooltip(Tooltip.create(title))"));
+        assertTrue(title.contains("protected void paintGuideWidget("));
+        Path root = Path.of("").toAbsolutePath();
+        while (root != null && !Files.isRegularFile(root.resolve("settings.gradle"))) root = root.getParent();
+        assertNotNull(root);
+        String widgetBinding = Files.readString(root.resolve(
+                "common/src/main/java/dev/openallay/client/gui/GuideNativeWidget.java"));
+        assertTrue(widgetBinding.contains("extends AbstractWidget"));
+        assertTrue(widgetBinding.contains("protected final void extractWidgetRenderState("));
+        assertTrue(widgetBinding.contains("paintGuideWidget(new GuideGraphics(graphics), mouseX, mouseY, delta)"));
         assertTrue(title.contains("getMessage()"));
         assertTrue(title.contains("full.getVisualOrderText()"));
         assertTrue(title.contains("plainHeadByWidth(full.getString()"));

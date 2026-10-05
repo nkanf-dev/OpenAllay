@@ -241,8 +241,10 @@ final class JeiRecipeProviderTest {
         ITypedIngredient<ItemStack> ingredient = proxy(ITypedIngredient.class,
                 (self, method, args) -> switch (method.getName()) {
                     case "getType" -> VanillaTypes.ITEM_STACK;
-                    case "getIngredient" -> stack;
-                    case "normalize" -> self;
+                    case "getIngredient" -> args == null || args.length == 0
+                            ? stack
+                            : ((IIngredientType<?>) args[0]).castIngredient(stack);
+                    case "getItemStack" -> Optional.of(stack);
                     default -> defaultValue(method.getReturnType());
                 });
         return proxy(IRecipeSlotView.class, (self, method, args) -> switch (method.getName()) {

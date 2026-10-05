@@ -51,14 +51,18 @@ final class GuideHudLatestContractsTest {
         int start = keys.indexOf("INTERACT_HUD =");
         int end = keys.indexOf("VOICE_PTT =", start);
         String interaction = keys.substring(start, end);
-        assertTrue(interaction.contains("new KeyMapping("));
-        assertTrue(interaction.contains("\"key.openallay.interact_hud\", InputConstants.KEY_F8, CATEGORY"));
+        assertTrue(interaction.contains("GuideNativeKeyMappings.create("));
+        assertTrue(interaction.contains("\"key.openallay.interact_hud\", InputConstants.KEY_F8"));
         assertFalse(interaction.contains("unbound("));
+        String nativeKeys = source("common/src/main/java/dev/openallay/client/gui/GuideNativeKeyMappings.java");
+        assertTrue(nativeKeys.contains("new KeyMapping(name, key, CATEGORY)"));
+        assertTrue(keys.contains("return GuideNativeKeyMappings.unbound(name)"));
+        assertTrue(nativeKeys.contains("new KeyMapping(name, GuideNativeInput.keyboardType(), InputConstants.UNKNOWN.getValue(), CATEGORY)"));
         for (String mutation : new String[] {".setKey(", ".setDown(", "KeyMapping.resetMapping", "options.save("}) {
-            assertFalse(keys.contains(mutation), mutation);
+            assertFalse((keys + nativeKeys).contains(mutation), mutation);
         }
-        assertTrue(keys.contains("OPEN_GUIDE = new KeyMapping("));
-        assertTrue(keys.contains("\"key.openallay.open_guide\", InputConstants.KEY_K, CATEGORY"));
+        assertTrue(keys.contains("OPEN_GUIDE = GuideNativeKeyMappings.create("));
+        assertTrue(keys.contains("\"key.openallay.open_guide\", InputConstants.KEY_K"));
         assertTrue(keys.contains("VOICE_PTT = unbound(\"key.openallay.voice_ptt\")"));
     }
 

@@ -88,7 +88,11 @@ final class OpenAllayScreenProjectionTest {
                 "common/src/main/java/dev/openallay/client/gui/OpenAllayScreen.java"));
         assertTrue(screen.contains("withVoice(dev.openallay.client.voice.VoiceInputActions voice)"));
         assertTrue(screen.contains("VoiceStatusPresentation.describe(voice.status())"));
-        assertTrue(screen.contains("voiceKeyHeld && OpenAllayKeyMappings.VOICE_PTT.matches(event)"));
+        assertTrue(screen.contains("voiceKeyHeld && GuideNativeInput.matches(OpenAllayKeyMappings.VOICE_PTT, event)"));
+        String inputBinding = java.nio.file.Files.readString(root.resolve(
+                "common/src/main/java/dev/openallay/client/gui/GuideNativeInput.java"));
+        assertTrue(inputBinding.contains("public static boolean matches(KeyMapping mapping, GuideInputKey event)"));
+        assertTrue(inputBinding.contains("return mapping.matches(nativeKey(event))"));
         assertTrue(screen.contains("voice.cancel(dev.openallay.client.voice.VoiceRuntime.CancelReason.SCREEN_CLOSED)"));
         assertTrue(screen.contains("notifications.clearVisibility(service)"));
         assertTrue(screen.contains("uiState.applyPendingInsertion(pending.getFirst().id())"));

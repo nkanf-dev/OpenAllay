@@ -30,11 +30,11 @@ final class SemanticDependencyPackagingTest {
 
     private static Path repositoryRoot() {
         Path current = Path.of("").toAbsolutePath().normalize();
-        if (Files.isDirectory(current.resolve("common"))) {
-            return current;
-        }
-        if (current.getFileName() != null && current.getFileName().toString().equals("common")) {
-            return current.getParent();
+        while (current != null) {
+            if (Files.isRegularFile(current.resolve("settings.gradle"))) {
+                return current;
+            }
+            current = current.getParent();
         }
         throw new IllegalStateException("Unable to locate repository root");
     }

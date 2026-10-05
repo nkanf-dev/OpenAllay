@@ -64,19 +64,20 @@ final class ClipboardImageEncoderDecodeTest {
 
     @Test
     void observationTextureSourceUsesSharedPublicDelegateWithNoSecondOwningImageStream() throws IOException {
-        String textures = source("client/observation/ObservationImageTextures.java");
+        String textures = source("common", "client/observation/ObservationImageTextures.java");
         assertTrue(textures.contains("ClipboardImageEncoder.decode(bytes.value())"));
         assertFalse(textures.contains("MemoryCacheImageInputStream"));
         assertFalse(textures.contains("ImageIO.read("));
-        String encoder = source("client/gui/clipboard/ClipboardImageEncoder.java");
+        String encoder = source("engine-core", "client/gui/clipboard/ClipboardImageEncoder.java");
         assertTrue(encoder.contains("public static BufferedImage decode(byte[] encodedImage) throws IOException"));
         assertTrue(encoder.contains("ClipboardImageDecoder.read(new java.io.ByteArrayInputStream(encodedImage))"));
     }
 
-    private static String source(String relative) throws IOException {
-        Path path = Path.of("src/main/java/dev/openallay").resolve(relative);
-        if (!Files.exists(path)) path = Path.of("common").resolve(path);
-        return Files.readString(path);
+    private static String source(String module, String relative) throws IOException {
+        Path root = Path.of("").toAbsolutePath();
+        while (root != null && !Files.isRegularFile(root.resolve("settings.gradle"))) root = root.getParent();
+        if (root == null) throw new IOException("Unable to locate repository root");
+        return Files.readString(root.resolve(module + "/src/main/java/dev/openallay/" + relative));
     }
 
     private static final class CloseTrackedStream extends FilterInputStream {

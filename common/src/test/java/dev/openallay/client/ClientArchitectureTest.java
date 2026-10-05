@@ -208,25 +208,31 @@ final class ClientArchitectureTest {
         assertTrue(facade.contains("public void close() { presentation.close(); }"));
 
         String fabricClient = Files.readString(entrypoints.getFirst());
-        assertTrue(fabricClient.contains("HudElementRegistry.attachElementBefore(VanillaHudElements.CHAT"));
+        assertTrue(fabricClient.contains("FabricNativeHudRegistration.register(ui)"));
+        String fabricHud = Files.readString(root.resolve(
+                "fabric/src/main/java/dev/openallay/fabric/FabricNativeHudRegistration.java"));
+        assertTrue(fabricHud.contains("HudElementRegistry.attachElementBefore(VanillaHudElements.CHAT"));
         assertTrue(fabricClient.contains("ui::openGuide"));
         assertTrue(fabricClient.contains("ui.tick()"));
         assertTrue(fabricClient.contains("ui.disconnect()"));
         assertTrue(fabricClient.contains("ui.close()"));
         String neoForgeClient = Files.readString(entrypoints.get(1));
-        assertTrue(neoForgeClient.contains("ClientStartedEvent"));
+        String neoForgeLifecycle = Files.readString(root.resolve(
+                "neoforge/src/main/java/dev/openallay/neoforge/NeoForgeNativeClientLifecycle.java"));
+        assertTrue(neoForgeClient.contains("NeoForgeNativeClientLifecycle.onStarted(client -> start(runtime, bridge, client))"));
+        assertTrue(neoForgeLifecycle.contains("(ClientStartedEvent event) -> started.accept(event.getClient())"));
         assertTrue(neoForgeClient.contains("RegisterGuiLayersEvent"));
         assertTrue(neoForgeClient.contains("VanillaGuiLayers.CHAT"));
         assertTrue(neoForgeClient.indexOf("modBus.addListener((RegisterGuiLayersEvent")
                 < neoForgeClient.indexOf("private static void start("));
-        assertTrue(neoForgeClient.contains("if (current != null) current.extractRenderState(graphics)"));
+        assertTrue(neoForgeClient.contains("if (current != null) current.extractRenderState(dev.openallay.client.gui.GuideGraphics.wrap(graphics))"));
         assertTrue(neoForgeClient.contains("coordinator::openGuide"));
         assertTrue(neoForgeClient.contains("coordinator.tick()"));
         assertTrue(neoForgeClient.contains("coordinator.disconnect()"));
         assertTrue(neoForgeClient.contains("coordinator.close()"));
-        assertTrue(neoForgeClient.contains("start(runtime, bridge, event.getClient())"));
+        assertTrue(neoForgeClient.contains("start(runtime, bridge, client)"));
         assertTrue(neoForgeClient.indexOf("new MinecraftGuideHistoryScope(client)")
-                > neoForgeClient.indexOf("ClientStartedEvent"));
+                > neoForgeClient.indexOf("private static void start("));
 
         List<Path> commands = List.of(
                 root.resolve("fabric/src/main/java/dev/openallay/fabric/FabricGuideCommands.java"),

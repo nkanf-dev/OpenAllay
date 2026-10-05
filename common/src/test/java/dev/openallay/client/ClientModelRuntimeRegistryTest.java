@@ -803,7 +803,8 @@ final class ClientModelRuntimeRegistryTest {
                 var publishCommandConfig = dev.openallay.settings.ClientSettingsRuntime.class.getDeclaredMethod(
                         "publishCommandConfig", ToolResult.class,
                         dev.openallay.script.command.CommandCapabilityConfigStore.class,
-                        OpenAllayRuntime.class, dev.openallay.settings.capability.CapabilitySettingsBackend.class);
+                        dev.openallay.FeatureServices.class,
+                        dev.openallay.settings.capability.CapabilitySettingsBackend.class);
                 publishCommandConfig.setAccessible(true);
                 ManualExecutor worker = new ManualExecutor();
                 ManualExecutor dispatcher = new ManualExecutor();

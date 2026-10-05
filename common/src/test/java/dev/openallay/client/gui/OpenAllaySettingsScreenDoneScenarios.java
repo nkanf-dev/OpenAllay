@@ -94,7 +94,7 @@ public final class OpenAllaySettingsScreenDoneScenarios {
             Fixture f = new Fixture();
             set(f.screen, "assistantNameDraft", "Draft from exit");
             f.display.fail = true;
-            if (escape) assertTrue(f.screen.keyPressed(GuideNativeInput.keyEvent(com.mojang.blaze3d.platform.InputConstants.KEY_ESCAPE, 0)));
+            if (escape) assertTrue(f.screen.guideKeyPressed(GuideNativeInput.keyEvent(com.mojang.blaze3d.platform.InputConstants.KEY_ESCAPE, 0)));
             else invoke(f.screen, "backOrClose");
             assertEquals(0, f.closed);
             assertEquals(1, f.worker.tasks.size());
@@ -102,7 +102,7 @@ public final class OpenAllaySettingsScreenDoneScenarios {
             assertEquals(0, f.closed);
             assertEquals("Draft from exit", get(f.screen, "assistantNameDraft"));
             f.display.fail = false;
-            if (escape) f.screen.keyPressed(GuideNativeInput.keyEvent(com.mojang.blaze3d.platform.InputConstants.KEY_ESCAPE, 0));
+            if (escape) f.screen.guideKeyPressed(GuideNativeInput.keyEvent(com.mojang.blaze3d.platform.InputConstants.KEY_ESCAPE, 0));
             else invoke(f.screen, "backOrClose");
             f.ack();
             assertEquals(1, f.closed);

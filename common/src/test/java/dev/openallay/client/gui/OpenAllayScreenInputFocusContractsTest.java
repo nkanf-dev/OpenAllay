@@ -34,7 +34,8 @@ final class OpenAllayScreenInputFocusContractsTest {
     @Test
     void fullscreenBlursBeforeModalOrContentDispatchAndKeepsNativeDispatchLast() throws Exception {
         String screen = source("dev/openallay/client/gui/OpenAllayScreen.java");
-        String click = method(screen, "public boolean mouseClicked(");
+        String click = method(screen, "public boolean guideMouseClicked(");
+        assertNativeMouseClickBinding();
         int left = click.indexOf("if (GuideNativeInput.isLeftClick(event))");
         int blur = click.indexOf("if (!composerContains(event.x(), event.y())) clearFocus()");
         int modal = click.indexOf("if (sessionOverlay || overflowOpen)");
@@ -44,7 +45,7 @@ final class OpenAllayScreenInputFocusContractsTest {
         assertTrue(click.contains("GuideUiClickRoute.resolveDetail("));
         assertTrue(click.contains("closeDetail()"));
         assertTrue(click.contains("hit.action().run()"));
-        assertTrue(click.endsWith("return super.mouseClicked(event, doubleClick);\n    }"));
+        assertTrue(click.endsWith("return super.guideMouseClicked(event, doubleClick);\n    }"));
         assertNoDraftMutation(click);
         assertFalse(click.contains("setFocused(composer)"), "native input dispatch owns click-to-focus");
     }
@@ -52,14 +53,15 @@ final class OpenAllayScreenInputFocusContractsTest {
     @Test
     void liteBlursBeforeScrollbarOrResultRoutingAndKeepsNativeButtonsAndInput() throws Exception {
         String screen = source("dev/openallay/client/gui/hud/GuideChatLiteScreen.java");
-        String click = method(screen, "public boolean mouseClicked(");
+        String click = method(screen, "public boolean guideMouseClicked(");
+        assertNativeMouseClickBinding();
         int blur = click.indexOf("if (GuideNativeInput.isLeftClick(event) && !composerContains(event.x(), event.y())) clearFocus()");
         int scrollbar = click.indexOf("scrollbar.contains(event.x(), event.y())");
         assertTrue(blur >= 0 && scrollbar > blur);
         assertTrue(click.contains("draggingScrollbar = true"));
         assertTrue(click.contains("scrollAt(event.y())"));
         assertTrue(click.contains("resultAction(hit.action())"));
-        assertTrue(click.endsWith("return super.mouseClicked(event, doubleClick);\n    }"));
+        assertTrue(click.endsWith("return super.guideMouseClicked(event, doubleClick);\n    }"));
         assertNoDraftMutation(click);
         assertFalse(click.contains("setFocused(composer)"));
     }
@@ -93,7 +95,7 @@ final class OpenAllayScreenInputFocusContractsTest {
     void voiceDraftFocusCanOnlyRestoreAnUnownedCurrentComposerWithoutPendingEdits() throws Exception {
         String helper = method(source("dev/openallay/client/gui/OpenAllayScreen.java"),
                 "public boolean focusComposerAfterVoiceDraft()");
-        for (String guard : new String[] {"minecraft == null", "minecraft.gui.screen() != this", "composer == null",
+        for (String guard : new String[] {"minecraft == null", "MinecraftClientWindow.screen(minecraft) != this", "composer == null",
                 "!composer.active", "!composer.visible", "getFocused() != null", "sessionOverlay",
                 "overflowOpen", "modelSelectorOpen", "detailOpen()", "draftIntent().editing()"}) {
             assertTrue(helper.contains(guard), guard);
@@ -135,11 +137,14 @@ final class OpenAllayScreenInputFocusContractsTest {
         assertTrue(invalidate.contains("hits.removeIf(hit -> hit.kind() == HitKind.CONTENT || hit.kind() == HitKind.DETAIL"));
         assertTrue(invalidate.contains("|| hit.kind() == HitKind.COMPOSER"));
         assertFalse(invalidate.contains("hits.clear()"), "native modal/session routes remain distinct");
-        for (String signature : new String[] {"public void resize(", "private void rebuildPresentationWidgets()",
+        for (String signature : new String[] {"protected void resizeGuide(", "private void rebuildPresentationWidgets()",
                 "private void applyProjection(", "public boolean mouseScrolled(", "private boolean scrollTranscriptKey(",
                 "private boolean scrollDetailKey("}) {
             assertTrue(method(screen, signature).contains("invalidateContentHits()"), signature);
         }
+        String binding = source("dev/openallay/client/gui/GuideNativeScreen.java");
+        assertTrue(method(binding, "public final void resize(").contains("resizeGuide(width, height)"));
+        assertTrue(method(screen, "protected void resizeGuide(").contains("resizeGuideWidgets(width, height)"));
         String projection = method(screen, "private void applyProjection(");
         assertTrue(projection.indexOf("invalidateContentHits()") < projection.indexOf("retainedSources"));
         String transcript = method(screen, "private boolean scrollTranscriptKey(");
@@ -189,6 +194,16 @@ final class OpenAllayScreenInputFocusContractsTest {
             assertTrue(edit.indexOf(write) > draftGuard, write);
         }
         assertTrue(edit.contains("pending = view.selectedSession().equals(currentSession)"));
+    }
+
+    private static void assertNativeMouseClickBinding() throws Exception {
+        String binding = source("dev/openallay/client/gui/GuideNativeScreen.java");
+        String callback = method(binding, "public final boolean mouseClicked(");
+        assertTrue(callback.contains("return guideMouseClicked(GuideNativeInput.capture(event), doubleClick)"));
+        String delegate = method(binding, "public boolean guideMouseClicked(");
+        assertTrue(delegate.contains("return super.mouseClicked(GuideNativeInput.nativeMouse(event), doubleClick)"));
+        assertNoDraftMutation(callback);
+        assertNoDraftMutation(delegate);
     }
 
     private static void assertNoDraftMutation(String text) {

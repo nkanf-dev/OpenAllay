@@ -19,7 +19,10 @@ final class VoiceSettingsScreenArchitectureTest {
         assertTrue(voice.contains("voiceActions.update(submitted, voiceApiKeyDraft.isBlank()"));
         assertTrue(voice.contains("voiceApiKeyDraft.toCharArray()"));
         assertTrue(voice.contains("voiceButton(\"store_api_key\", Component.empty(), x, y, w, this::applyVoice)"));
-        assertTrue(voice.contains("net.minecraft.util.Util.getPlatform().openPath(voiceActions.runtimeNoticesDirectory())"));
+        assertTrue(voice.contains("GuideNativeDialogs.openDirectory(voiceActions.runtimeNoticesDirectory())"));
+        String dialogs = Files.readString(Path.of("src/main/java/dev/openallay/client/gui/GuideNativeDialogs.java"));
+        assertTrue(dialogs.contains("public static void openDirectory(Path path)"));
+        assertTrue(dialogs.contains("net.minecraft.util.Util.getPlatform().openPath(path)"));
         assertFalse(voice.contains("saveDisplay"));
         assertFalse(voice.contains("ProcessBuilder"));
         assertFalse(voice.contains("Runtime.getRuntime().exec"));

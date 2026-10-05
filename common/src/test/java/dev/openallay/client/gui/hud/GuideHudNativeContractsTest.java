@@ -96,7 +96,10 @@ class GuideHudNativeContractsTest {
     }
     @Test void liteInputIsExplicitNativeAndNeverForwardsGameplayMappings() throws Exception {
         String lite = source("common/src/main/java/dev/openallay/client/gui/hud/GuideChatLiteScreen.java");
-        assertTrue(lite.contains("extends GuideNativeScreen"));
+        assertTrue(lite.contains("extends dev.openallay.client.gui.GuideNativeScreen"));
+        String screenBinding = source("common/src/main/java/dev/openallay/client/gui/GuideNativeScreen.java");
+        assertTrue(screenBinding.contains("extends Screen"));
+        assertTrue(screenBinding.contains("return guideKeyPressed(GuideNativeInput.capture(event))"));
         assertTrue(lite.contains("GuideNativeMultilineText.create("));
         String editor = source("common/src/main/java/dev/openallay/client/gui/GuideNativeMultilineText.java");
         assertTrue(editor.contains("MultiLineEditBox.builder()"));
