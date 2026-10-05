@@ -103,9 +103,20 @@ def verify(path, loader, target, java, original_engine, bundled_builder=False, f
     with zipfile.ZipFile(path) as archive:
         counts = Counter(archive.namelist())
         check(all(count == 1 for count in counts.values()), "Duplicate package entries: " + str(path))
+        mismatches = []
         for name, blob in original_engine.items():
-            check(counts[name] == 1 and archive.read(name) == blob,
-                  "Shared engine was changed or omitted: " + name + " in " + str(path))
+            actual = archive.read(name) if counts[name] == 1 else None
+            if actual != blob:
+                mismatches.append({"entry": name, "count": counts[name],
+                                   "expectedSha256": hashlib.sha256(blob).hexdigest(),
+                                   "actualSha256": hashlib.sha256(actual).hexdigest() if actual is not None else None})
+        if mismatches:
+            diagnostic = ROOT / "build/forge-native-contracts" / (loader + "-engine-parity.json")
+            diagnostic.parent.mkdir(parents=True, exist_ok=True)
+            diagnostic.write_text(json.dumps({"jar": str(path), "jarSha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+                                               "mismatches": mismatches}, indent=2) + "\n")
+        check(not mismatches, "Shared engine was changed or omitted: "
+              + (mismatches[0]["entry"] if mismatches else "") + " in " + str(path))
         check(not any(name.startswith("org/apache/maven/") for name in counts),
               "Raw Maven classes must not enter the native mod")
         from io import BytesIO
