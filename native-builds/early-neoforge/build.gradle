@@ -1,4 +1,5 @@
 import org.gradle.util.GradleVersion
+import net.neoforged.gradle.common.runtime.tasks.JavaSourceTransformer
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
 import java.security.MessageDigest
@@ -156,6 +157,12 @@ if (!(nativeInputs.properties.archiveName ==~ /openallay-neoforge-[0-9][0-9a-z.-
 }
 base { archivesName = nativeInputs.properties.archiveName }
 java { toolchain.languageVersion = JavaLanguageVersion.of(17) }
+// JST is a build tool that requires Java 21; native compilation stays on Java 17.
+tasks.withType(JavaSourceTransformer).configureEach {
+    javaLauncher.set(javaToolchains.launcherFor {
+        languageVersion = JavaLanguageVersion.of(21)
+    })
+}
 minecraft.modIdentifier.set(nativeInputs.properties.mod_id)
 
 def directories = { entries ->
