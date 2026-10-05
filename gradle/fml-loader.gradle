@@ -167,3 +167,26 @@ if (legacyNativeLoader) {
         }
     }
 }
+
+// Inspect the existing named native artifact; never request source generation.
+if (actualForge) {
+    def nativeArtifacts = tasks.named('createMinecraftArtifacts', net.neoforged.nfrtgradle.CreateMinecraftArtifacts)
+    def namedGame = nativeArtifacts.flatMap { it.gameJarArtifact }
+    def javap = javaToolchains.launcherFor {
+        languageVersion = JavaLanguageVersion.of(java_version)
+    }.map { it.metadata.installationPath.file('bin/javap').asFile }
+    tasks.register('captureNativeCommandContracts', Exec) {
+        dependsOn(nativeArtifacts)
+        inputs.file(namedGame)
+        inputs.file(rootProject.file('scripts/capture-forge-native-contracts.py'))
+        inputs.property('minecraftTarget', minecraftTarget)
+        outputs.dir(rootProject.layout.buildDirectory.dir('forge-native-contracts'))
+        doFirst {
+            commandLine 'python3', '-B', rootProject.file('scripts/capture-forge-native-contracts.py'),
+                    '--game-jar', namedGame.get().asFile,
+                    '--javap', javap.get(), '--project', project.path,
+                    '--target', minecraftTarget,
+                    '--output', rootProject.layout.buildDirectory.dir('forge-native-contracts').get().asFile
+        }
+    }
+}

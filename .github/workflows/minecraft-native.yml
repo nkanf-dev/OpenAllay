@@ -31,7 +31,7 @@ jobs:
       - name: Package the new bundled Forge product without repeating shared feature suites
         shell: bash
         run: |
-          ./gradlew --max-workers=2 --stacktrace -PminecraftTarget=1.19.2 :forge:assemble
+          ./gradlew --max-workers=2 --stacktrace -PminecraftTarget=1.19.2 :forge:assemble :forge:captureNativeCommandContracts
           python3 -B scripts/verify-native-target-package.py --target 1.19.2 --bundled-builder
           python3 -B scripts/stage-ci-client-production.py --minecraft-target 1.19.2
       - name: Retain the exact packaged product bytes
@@ -76,6 +76,7 @@ jobs:
           if-no-files-found: ignore
           path: |
             build/forge-native-contracts/
+            forge/build/native-engine/receipt.json
             build/ci-runtime-receipt.json
             build/ci-xvfb.log
             build/e2e/runtime/1.19.2/minecraft/.provision/*.json
