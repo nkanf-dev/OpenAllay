@@ -190,3 +190,32 @@ if (actualForge) {
         }
     }
 }
+
+// MDG defaults project dependencies to open JarJar ranges. SDK and Rhino ship
+// atomically here: register only the exact independently compiled payload versions.
+if (actualForge) {
+    tasks.named('jarJar') {
+        inputs.property('atomicSdkVersion', project(':extension-api').version.toString())
+        inputs.property('atomicRhinoVersion', rhino_version)
+        doLast {
+            def directory = outputDirectory.get().asFile
+            def metadataFile = new File(directory, 'META-INF/jarjar/metadata.json')
+            def metadata = new groovy.json.JsonSlurper().parse(metadataFile)
+            def paths = metadata.jars.collect { it.path }
+            if (paths.size() != paths.toSet().size()) throw new GradleException('Duplicate native JarJar registrations')
+            ['extension-api': project(':extension-api').version.toString(), 'runtime-rhino': rhino_version].each { artifact, version ->
+                def matches = metadata.jars.findAll { it.identifier == [group: 'dev.openallay', artifact: artifact] }
+                if (matches.size() != 1) throw new GradleException("Missing or competing atomic runtime ${artifact}")
+                def item = matches[0]
+                def nested = new File(directory, item.path)
+                if (!nested.isFile() || !nested.toPath().normalize().startsWith(directory.toPath().normalize())
+                        || item.version.artifactVersion != version
+                        || !(item.version.range in ["[${version},)", "[${version}]", "[${version},${version}]"])) {
+                    throw new GradleException("Unexpected atomic runtime identity ${artifact}")
+                }
+                item.version.range = "[${version}]".toString()
+            }
+            metadataFile.setText(groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(metadata)) + '\n', 'UTF-8')
+        }
+    }
+}
