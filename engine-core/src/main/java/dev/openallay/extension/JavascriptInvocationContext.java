@@ -5,36 +5,32 @@ import dev.openallay.context.ToolInvocationContext;
 import dev.openallay.model.CancellationSignal;
 import dev.openallay.script.JavascriptExecutionException;
 import java.util.Objects;
-import java.util.Set;
 import java.util.function.Consumer;
 
 /**
  * Trusted invocation-local authority and evidence sink, never a JavaScript host value.
- * Each Extension receives only its own frozen capability grants. All Extension contexts in
- * this invocation share activity, cancellation, and evidence. Native owner actions must recheck
- * activity and capability immediately before use, then revalidate the exact backend/session.
+ * Each active Extension receives its own context. All Extension contexts in this invocation
+ * share activity, cancellation, and evidence. Native owner actions must recheck activity
+ * immediately before use, then revalidate the exact backend/session.
  */
 public final class JavascriptInvocationContext {
     private final State state;
     private final String extensionId;
-    private final Set<String> capabilities;
     // Owned by this exact Extension execution context, never a process-wide identity cache.
     private dev.openallay.api.extension.ExtensionInvocation sdkInvocation;
 
     JavascriptInvocationContext(ToolInvocationContext invocation, CancellationSignal requestCancellation) {
         state = new State(invocation, requestCancellation);
         extensionId = "";
-        capabilities = Set.of();
     }
 
-    private JavascriptInvocationContext(State state, String extensionId, Set<String> capabilities) {
+    private JavascriptInvocationContext(State state, String extensionId) {
         this.state = state;
-        this.extensionId = extensionId;
-        this.capabilities = Set.copyOf(capabilities);
+        this.extensionId = Objects.requireNonNull(extensionId, "extensionId");
     }
 
-    JavascriptInvocationContext forExtension(String owner, Set<String> grants) {
-        return new JavascriptInvocationContext(state, owner, grants);
+    JavascriptInvocationContext forExtension(String owner) {
+        return new JavascriptInvocationContext(state, owner);
     }
 
     public ToolInvocationContext invocation() { return state.invocation; }
@@ -53,19 +49,6 @@ public final class JavascriptInvocationContext {
 
     /** Becomes cancelled on request cancellation, request close, or execution scope exit. */
     public CancellationSignal cancellation() { return state.cancellation; }
-
-    public boolean hasCapability(String id) {
-        requireActive();
-        return capabilities.contains(id);
-    }
-
-    /** Does not consult Agent Java/JVM settings or another Extension's declarations/grants. */
-    public void requireCapability(String id) {
-        if (!hasCapability(id)) {
-            throw new JavascriptExecutionException("javascript_extension_capability_denied",
-                    "This Extension operation requires an explicit player grant: " + id);
-        }
-    }
 
     /** Normal script return, not a claim that a domain operation or final Tool completed. */
     public boolean completedSuccessfully() {

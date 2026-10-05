@@ -173,7 +173,7 @@ class UniversalExtensionDiscoveryTest {
                     public ExtensionDescriptor descriptor() {
                         return new ExtensionDescriptor("%s", "Test", "1.0.0", "Test", "Test Extension", "test:source",
                             new SupportDeclaration(Arrays.asList(new SupportTarget("fabric", "[26.2,26.3)",
-                                "[0.5,0.6)", "[0.3,0.4)")), 8, Collections.<String>emptySet(),
+                                "[0.5,0.6)", "[0.4,0.5)")), 8, Collections.<String>emptySet(),
                                 Collections.<String>emptySet()), ExtensionRequirements.EMPTY);
                     }
                     public ExtensionContribution contribution(ExtensionHost host) {

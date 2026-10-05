@@ -11,7 +11,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
-/** Trusted public-ABI facade over one Extension's frozen invocation authority. */
+/** Trusted public-ABI facade over one Extension's invocation identity and lifecycle. */
 public final class UniversalInvocationAdapter implements ExtensionInvocation {
     private final JavascriptInvocationContext context;
 
@@ -34,8 +34,6 @@ public final class UniversalInvocationAdapter implements ExtensionInvocation {
     @Override public void requireActive() { context.requireActive(); }
     @Override public boolean isCancelled() { return context.cancellation().isCancelled(); }
     @Override public void onCancel(Runnable listener) { context.cancellation().onCancel(listener); }
-    @Override public boolean hasCapability(String id) { return context.hasCapability(id); }
-    @Override public void requireCapability(String id) { context.requireCapability(id); }
     @Override public boolean completedSuccessfully() { return context.completedSuccessfully(); }
     @Override public void recordEvidence(ExtensionEvidence evidence) {
         context.requireActive();

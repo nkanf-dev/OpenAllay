@@ -162,7 +162,8 @@ public record OpenAllayRuntime(
                 new OpenAllayExtensionEnvironment(
                         platform.platformName(),
                         platform.gameVersion(),
-                        OpenAllayConstants.EXTENSION_API_VERSION),
+                        OpenAllayConstants.EXTENSION_API_VERSION,
+                        java.util.Set.of(OpenAllayConstants.EXTENSION_API_VERSION, "0.4.0")),
                 modules,
                 JavascriptModuleCatalog.bundled(),
                 skills,

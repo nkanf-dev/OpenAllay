@@ -100,9 +100,8 @@ public final class UniversalExtensionBridge implements OpenAllayExtension {
                                 .map(type -> JavascriptHostValueType.valueOf(type.name())).toList();
                         JavascriptHostValueType result = JavascriptHostValueType.valueOf(method.result().name());
                         return new JavascriptHostMethod(method.name(), parameters, result,
-                                method.requiredCapabilities(), (context, arguments) -> {
+                                (context, arguments) -> {
                                     context.requireActive();
-                                    method.requiredCapabilities().forEach(context::requireCapability);
                                     if (arguments.size() != parameters.size()) throw invalidHost();
                                     List<String> json = new ArrayList<>();
                                     for (int index = 0; index < arguments.size(); index++) {
@@ -130,11 +129,8 @@ public final class UniversalExtensionBridge implements OpenAllayExtension {
                                     } catch (RuntimeException invalid) { throw invalidHost(); }
                                 });
                     }).toList())).toList();
-            var capabilities = declared.capabilities().stream().map(value ->
-                    new dev.openallay.extension.ExtensionCapability(value.id(), value.name(), value.description()))
-                    .toList();
             contribution = new OpenAllayExtensionContribution(List.of(), modules, skills, views,
-                    participants, bindings, capabilities);
+                    participants, bindings);
             return contribution;
         } catch (Throwable failure) {
             contributionFailure = safeFailure(null, failure, "extension_registration_failed",

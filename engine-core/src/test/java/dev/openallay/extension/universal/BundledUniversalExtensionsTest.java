@@ -32,7 +32,6 @@ class BundledUniversalExtensionsTest {
             System.clearProperty(marker + "." + suffix + ".contribution");
         }
         assertEquals(0, worldOpens.get(), "Admission must not open a world session");
-        assertTrue(registry.capabilityPolicy().grants().isEmpty());
         assertEquals(0, registry.activeJavascriptInvocations());
     }
 
@@ -227,7 +226,7 @@ class BundledUniversalExtensionsTest {
     private static String provenance(String digest) {
         return """
                 {"source":{"repository":"https://example.invalid/core-fixture","revision":"%s","dirty":false,"pinned":true},
-                "project":"Fixture","version":"1.0.0","extensionId":"test:extension","openAllayApiVersion":"0.3.0",
+                "project":"Fixture","version":"1.0.0","extensionId":"test:extension","openAllayApiVersion":"0.4.0",
                 "artifact":{"path":"%s","sha256":"%s"}}
                 """.formatted("a".repeat(40), RESOURCE, digest);
     }
@@ -246,7 +245,7 @@ class BundledUniversalExtensionsTest {
                     public ExtensionDescriptor descriptor() {
                         return new ExtensionDescriptor("test:extension", "Test", "1.0.0", "Test", "Test Extension", "test:source",
                             new SupportDeclaration(Arrays.asList(new SupportTarget("fabric", "[26.2,26.3)",
-                                "[0.5,0.6)", "[0.3,0.4)")), 8, Collections.<String>emptySet(),
+                                "[0.5,0.6)", "[0.4,0.5)")), 8, Collections.<String>emptySet(),
                                 Collections.<String>emptySet()), ExtensionRequirements.EMPTY);
                     }
                     public ExtensionContribution contribution(ExtensionHost host) {

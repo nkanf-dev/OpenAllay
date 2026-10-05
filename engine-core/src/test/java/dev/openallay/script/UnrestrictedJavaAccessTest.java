@@ -580,7 +580,7 @@ final class UnrestrictedJavaAccessTest {
                 new OpenAllayExtensionEnvironment("fabric", "26.2", "0.2.2"),
                 new JavascriptDataModuleRegistry(), modules, new SkillRepository(new SkillParser(), List.of()), Set.of());
         JavascriptHostMethod echo = new JavascriptHostMethod("echo", List.of(JavascriptHostValueType.STRING),
-                JavascriptHostValueType.STRING, Set.of(), (context, arguments) -> arguments.getFirst());
+                JavascriptHostValueType.STRING, (context, arguments) -> arguments.getFirst());
         assertEquals(OpenAllayExtensionState.ACTIVE, registry.register(new OpenAllayExtension() {
             @Override public OpenAllayExtensionDescriptor descriptor() {
                 return new OpenAllayExtensionDescriptor("test:java_access", "Test", "1.0.0", "Test", "Typed host test",
@@ -588,7 +588,7 @@ final class UnrestrictedJavaAccessTest {
             }
             @Override public OpenAllayExtensionContribution contribution() {
                 return new OpenAllayExtensionContribution(List.of(), List.of(), List.of(), List.of(), List.of(),
-                        List.of(new JavascriptHostBinding("test_java_access:methods", List.of(echo))), List.of());
+                        List.of(new JavascriptHostBinding("test_java_access:methods", List.of(echo))));
             }
         }).state());
         CancellationSignal cancellation = new CancellationSignal();

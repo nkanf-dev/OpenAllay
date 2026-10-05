@@ -43,7 +43,7 @@ public final class OpenAllayBootstrap {
     private static dev.openallay.extension.universal.UniversalExtensionDiscovery universalExtensions;
     private static dev.openallay.extension.universal.BundledUniversalExtensions bundledExtensions;
     private static final Set<String> implementedExtensionApis = Set.of(
-            OpenAllayConstants.EXTENSION_API_VERSION, "0.3.0");
+            OpenAllayConstants.EXTENSION_API_VERSION, "0.4.0");
 
     private OpenAllayBootstrap() {}
 

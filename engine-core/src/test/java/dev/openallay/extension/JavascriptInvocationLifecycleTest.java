@@ -36,6 +36,28 @@ import org.junit.jupiter.api.Test;
 
 public final class JavascriptInvocationLifecycleTest {
     @Test
+    void contributionRetainsFormalLegacyConstructorsAndOnlyCurrentDeclarationFields() throws Exception {
+        assertNotNull(OpenAllayExtensionContribution.class.getConstructor(
+                List.class, List.class, List.class, List.class));
+        assertNotNull(OpenAllayExtensionContribution.class.getConstructor(
+                List.class, List.class, List.class, List.class, List.class));
+        assertNotNull(OpenAllayExtensionContribution.class.getConstructor(
+                List.class, List.class, List.class, List.class, List.class, List.class));
+        assertEquals(Set.of(4, 5, 6), java.util.Arrays.stream(
+                OpenAllayExtensionContribution.class.getConstructors())
+                .map(java.lang.reflect.Constructor::getParameterCount)
+                .collect(java.util.stream.Collectors.toSet()));
+        assertEquals(List.of("dataModules", "javascriptModules", "skills", "resultViews",
+                "javascriptInvocationParticipants", "hostBindings"), java.util.Arrays.stream(
+                OpenAllayExtensionContribution.class.getRecordComponents())
+                .map(java.lang.reflect.RecordComponent::getName).toList());
+        assertTrue(new OpenAllayExtensionContribution(List.of(), List.of(), List.of(), List.of())
+                .hostBindings().isEmpty());
+        assertTrue(new OpenAllayExtensionContribution(List.of(), List.of(), List.of(), List.of(), List.of())
+                .hostBindings().isEmpty());
+    }
+
+    @Test
     void validatesNamespacedIdsAndDuplicatesBeforePublishingOtherContributions() {
         Fixture fixture = new Fixture();
         for (String id : List.of("unqualified", "BAD:identifier")) {

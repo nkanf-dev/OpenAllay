@@ -10,7 +10,6 @@ import dev.openallay.model.ModelClientException;
 import dev.openallay.script.JavascriptExecutionException;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -32,7 +31,7 @@ class UniversalExtensionBridgeTest {
                         Run the contributed module.
                         """))),
                 List.of(new ResultViewDeclaration("test:view", ResultViewDeclaration.Kind.TABLE, "Table")),
-                List.of(), List.of(), List.of(new ExtensionCapability("test:read", "Read", "Read data")));
+                List.of(), List.of());
         var bridge = new UniversalExtensionBridge(new OpenAllayExtension() {
             public ExtensionDescriptor descriptor() { fail("Verified descriptor must not be read again"); return null; }
             public ExtensionContribution contribution(ExtensionHost actual) {
@@ -49,7 +48,7 @@ class UniversalExtensionBridgeTest {
         assertEquals("test-skill", bridge.contribution().skills().getFirst().directoryName());
         assertEquals(dev.openallay.script.result.JavascriptSemanticKind.TABLE,
                 bridge.contribution().resultViews().getFirst().kind());
-        assertEquals("[0.3,0.4)", bridge.descriptor().openAllayApiVersionRange());
+        assertEquals("[0.4,0.5)", bridge.descriptor().openAllayApiVersionRange());
     }
     @Test void duplicateRegistryIdentityNeverCallsAnotherContribution() {
         var registry = UniversalExtensionFixtures.registry();
@@ -131,13 +130,13 @@ class UniversalExtensionBridgeTest {
                 participantView.set(context); opened.add(context); return () -> {};
             }
         };
-        var method = new JavascriptHostMethod("identity", List.of(), JavascriptHostValueType.STRING, Set.of(),
+        var method = new JavascriptHostMethod("identity", List.of(), JavascriptHostValueType.STRING,
                 (context, arguments) -> {
                     assertSame(participantView.get(), context, "One actual invocation must retain SDK identity");
                     return "\"same execution\"";
                 });
         var contribution = new ExtensionContribution(List.of(), List.of(), List.of(), List.of(participant),
-                List.of(new JavascriptHostBinding("test:identity", List.of(method))), List.of());
+                List.of(new JavascriptHostBinding("test:identity", List.of(method))));
         assertEquals(dev.openallay.extension.OpenAllayExtensionState.ACTIVE,
                 registry.register(UniversalExtensionFixtures.bridge("test:identity_extension", contribution)).state());
         for (int index = 0; index < 2; index++) {
@@ -152,7 +151,7 @@ class UniversalExtensionBridgeTest {
         opened.forEach(context -> assertThrows(JavascriptExecutionException.class, context::requireActive));
     }
 
-    @Test void differentExtensionsKeepDifferentSdkFacadesAndFrozenOwnGrants() throws Exception {
+    @Test void differentActiveExtensionsKeepDifferentSdkFacadesAndExactOwners() throws Exception {
         var registry = UniversalExtensionFixtures.registry();
         java.util.Map<String, ExtensionInvocation> participantViews = new java.util.HashMap<>();
         for (String owner : List.of("first", "second")) {
@@ -163,22 +162,18 @@ class UniversalExtensionBridgeTest {
                     participantViews.put(id, context); return () -> {};
                 }
             };
-            var method = new JavascriptHostMethod("identity", List.of(), JavascriptHostValueType.BOOLEAN, Set.of(),
+            var method = new JavascriptHostMethod("identity", List.of(), JavascriptHostValueType.BOOLEAN,
                     (context, arguments) -> {
                         assertSame(participantViews.get(id), context);
                         assertEquals(id, context.extensionId());
-                        assertEquals(owner.equals("first"), context.hasCapability(id + "_write"));
+                        context.requireActive();
                         return "true";
                     });
             var contribution = new ExtensionContribution(List.of(), List.of(), List.of(), List.of(participant),
-                    List.of(new JavascriptHostBinding(id + "_binding", List.of(method))),
-                    List.of(new ExtensionCapability(id + "_write", "Write", "Own fixture grant")));
+                    List.of(new JavascriptHostBinding(id + "_binding", List.of(method))));
             assertEquals(dev.openallay.extension.OpenAllayExtensionState.ACTIVE,
                     registry.register(UniversalExtensionFixtures.bridge(id, contribution)).state());
         }
-        registry.replaceCapabilityPolicy(dev.openallay.extension.ExtensionCapabilityPolicy.defaults()
-                .withGrant("test:first", "test:first_write", true));
-        registry.freezeJavascriptRequest("shared-request", true);
         try (var scope = registry.prepareJavascriptInvocation(
                 ToolInvocationContext.developmentConsole("shared-request"), new CancellationSignal())) {
             scope.open(ignored -> {});
@@ -202,9 +197,9 @@ class UniversalExtensionBridgeTest {
     private static dev.openallay.extension.OpenAllayExtensionRegistry registryWithMethod(
             JavascriptHostValueType result, JavascriptHostMethod.Invoker invoker) {
         var registry = UniversalExtensionFixtures.registry();
-        var method = new JavascriptHostMethod("read", List.of(JavascriptHostValueType.JSON), result, Set.of(), invoker);
+        var method = new JavascriptHostMethod("read", List.of(JavascriptHostValueType.JSON), result, invoker);
         var contribution = new ExtensionContribution(List.of(), List.of(), List.of(), List.of(),
-                List.of(new JavascriptHostBinding("test:binding", List.of(method))), List.of());
+                List.of(new JavascriptHostBinding("test:binding", List.of(method))));
         assertEquals(dev.openallay.extension.OpenAllayExtensionState.ACTIVE,
                 registry.register(UniversalExtensionFixtures.bridge("test:method", contribution)).state());
         return registry;

@@ -31,12 +31,12 @@ public final class JavascriptInvocationScope implements AutoCloseable {
             CancellationSignal cancellation,
             List<Participant> participants,
             List<Binding> bindings,
-            Map<String, Set<String>> grants,
+            Set<String> activeOwners,
             Runnable release) {
         context = new JavascriptInvocationContext(invocation, cancellation);
         this.participants = List.copyOf(participants);
-        grants.forEach((owner, capabilities) -> extensionContexts.put(
-                owner, context.forExtension(owner, capabilities)));
+        Set.copyOf(activeOwners).forEach(owner -> extensionContexts.put(
+                owner, context.forExtension(owner)));
         bindings.forEach(binding -> this.bindings.put(binding.declaration().id(), binding));
         this.release = release;
         // The request signal can outlive this execution. Do not retain its evidence or hooks.
@@ -112,7 +112,7 @@ public final class JavascriptInvocationScope implements AutoCloseable {
             }
         }
         JavascriptInvocationContext authority = extensionContexts.get(binding.owner());
-        method.requiredCapabilities().forEach(authority::requireCapability);
+        authority.requireActive();
         JsonElement value = method.invoker().invoke(authority, arguments);
         authority.requireActive();
         return value;

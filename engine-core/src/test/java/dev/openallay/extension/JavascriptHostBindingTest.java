@@ -8,7 +8,6 @@ import com.google.gson.JsonParser;
 import com.google.gson.JsonPrimitive;
 import dev.openallay.context.ToolInvocationContext;
 import dev.openallay.model.CancellationSignal;
-import dev.openallay.model.ModelClientException;
 import dev.openallay.script.JavascriptExecutionException;
 import dev.openallay.script.JavascriptModuleCatalog;
 import dev.openallay.script.RhinoJavascriptRuntime;
@@ -36,7 +35,6 @@ import org.junit.jupiter.api.Test;
 final class JavascriptHostBindingTest {
     private static final String OWNER = "test:extension";
     private static final String BINDING = "test_native:methods";
-    private static final String WRITE = "test_native:world_write";
 
     @Test
     void safeMethodsUseCanonicalOwnerContextWithoutExposingJavaOrCallbacks() {
@@ -44,7 +42,7 @@ final class JavascriptHostBindingTest {
         AtomicReference<JavascriptInvocationContext> opened = new AtomicReference<>();
         AtomicReference<Thread> worker = new AtomicReference<>();
         fixture.register(OWNER, List.of(method("echo", List.of(JavascriptHostValueType.JSON),
-                JavascriptHostValueType.JSON, Set.of(), (context, arguments) -> {
+                JavascriptHostValueType.JSON, (context, arguments) -> {
                     assertSame(opened.get(), context);
                     assertSame(worker.get(), Thread.currentThread());
                     assertEquals(OWNER, context.extensionId());
@@ -52,7 +50,7 @@ final class JavascriptHostBindingTest {
                     return arguments.getFirst();
                 })), List.of(participant("test:scope", context -> {
                     opened.set(context); worker.set(Thread.currentThread()); return () -> {};
-                })), List.of());
+                })));
         var roundTrip = fixture.success("safe", """
                 const native = require("test_native:methods");
                 const value = native.echo({groups: [{values: [1, 2]}], empty: []});
@@ -80,9 +78,9 @@ final class JavascriptHostBindingTest {
         Fixture fixture = new Fixture();
         AtomicInteger calls = new AtomicInteger();
         fixture.register(OWNER, List.of(method("echo", List.of(JavascriptHostValueType.JSON),
-                JavascriptHostValueType.JSON, Set.of(), (context, arguments) -> {
+                JavascriptHostValueType.JSON, (context, arguments) -> {
                     calls.incrementAndGet(); return arguments.getFirst();
-                })), List.of(), List.of());
+                })), List.of());
         for (String argument : List.of("", "1, 2", "function() {}", "NaN", "undefined",
                 "{field: undefined}", "[undefined]", "Promise.resolve(1)",
                 "(() => { const x = {}; x.self = x; return x; })()")) {
@@ -95,79 +93,83 @@ final class JavascriptHostBindingTest {
     }
 
     @Test
-    void methodDeclarationRejectsConstructorsUndeclaredCapabilitiesAndCollisionsAtomically() {
+    void methodDeclarationRejectsConstructorsDuplicateMethodsAndCollisionsAtomically() {
         assertThrows(IllegalArgumentException.class, () -> method("constructor", List.of(),
-                JavascriptHostValueType.NULL, Set.of(), (context, arguments) -> JsonNull.INSTANCE));
+                JavascriptHostValueType.NULL, (context, arguments) -> JsonNull.INSTANCE));
+        for (String id : java.util.Arrays.asList(null, "", " test:binding", "test:Bad", "binding")) {
+            assertThrows(IllegalArgumentException.class, () -> new JavascriptHostBinding(id, List.of()));
+        }
         Fixture fixture = new Fixture();
-        var denied = fixture.register(OWNER, List.of(method("write", List.of(),
-                JavascriptHostValueType.NULL, Set.of(WRITE), (context, arguments) -> JsonNull.INSTANCE)),
-                List.of(), List.of());
-        assertEquals("extension_registration_failed", denied.diagnostic());
+        JavascriptHostMethod duplicate = writeMethod();
+        var rejected = fixture.register(OWNER, List.of(duplicate, duplicate), List.of());
+        assertEquals("extension_registration_failed", rejected.diagnostic());
         assertEquals(0, fixture.registry.snapshot().generation());
         assertTrue(fixture.modules.ids().isEmpty());
         assertEquals(OpenAllayExtensionState.ACTIVE,
-                fixture.register(OWNER, List.of(), List.of(), List.of()).state());
-        var collision = fixture.register("other:extension", List.of(), List.of(), List.of());
+                fixture.register(OWNER, List.of(writeMethod()), List.of()).state());
+        var collision = fixture.register("other:extension", List.of(), List.of());
         assertEquals("duplicate_contribution_id", collision.diagnostic());
         assertEquals(1, fixture.registry.snapshot().generation());
     }
 
     @Test
-    void registrationUnrestrictedAndServerRequestsNeverGrantWrites() {
+    void activeBindingWritesWithoutAdditionalGrantOrUnrestrictedJavaAccess() {
         Fixture fixture = writeFixture();
-        assertEquals("javascript_extension_capability_denied", fixture.failure("default", false));
-        assertEquals("javascript_extension_capability_denied", fixture.failure("unrestricted", true));
-        fixture.registry.replaceCapabilityPolicy(new ExtensionCapabilityPolicy(Map.of(OWNER, Set.of(WRITE))));
-        fixture.registry.freezeJavascriptRequest("server", false);
-        assertEquals("javascript_extension_capability_denied", fixture.failure("server", true));
-        fixture.registry.freezeJavascriptRequest("approved", true);
-        var value = fixture.success("approved", "return {java: typeof Java, value: require('test_native:methods').write()};");
-        assertEquals("undefined", value.getAsJsonObject().get("java").getAsString());
-        assertEquals("written", value.getAsJsonObject().get("value").getAsString());
+        var restricted = fixture.success("restricted", "return {java: typeof Java, value: require('test_native:methods').write()};");
+        assertEquals("undefined", restricted.getAsJsonObject().get("java").getAsString());
+        assertEquals("written", restricted.getAsJsonObject().get("value").getAsString());
+        var unrestricted = assertInstanceOf(ToolResult.Success.class, fixture.invoke("unrestricted",
+                "return require('test_native:methods').write();", true));
+        assertEquals("written", ((RunJavascriptTool.Output) unrestricted.value()).preview().getAsString());
+        assertEquals(List.of(BINDING), fixture.registry.snapshot().extensions().getFirst().hostBindings());
     }
 
     @Test
-    void requestFreezesOldGrantButNewRequestsUseChangedSettingsAndUnknownGrantsAreNotInherited() {
-        Fixture fixture = writeFixture();
-        fixture.registry.freezeJavascriptRequest("old-denied", true);
-        fixture.registry.replaceCapabilityPolicy(new ExtensionCapabilityPolicy(Map.of(OWNER, Set.of(WRITE))));
-        fixture.registry.freezeJavascriptRequest("approved", true);
-        fixture.registry.replaceCapabilityPolicy(ExtensionCapabilityPolicy.defaults());
-        assertEquals("javascript_extension_capability_denied", fixture.failure("old-denied", false));
-        assertEquals("written", fixture.success("approved", "return require('test_native:methods').write();").getAsString());
-        fixture.registry.freezeJavascriptRequest("new-denied", true);
-        assertEquals("javascript_extension_capability_denied", fixture.failure("new-denied", false));
-        Fixture future = new Fixture();
-        future.registry.replaceCapabilityPolicy(new ExtensionCapabilityPolicy(Map.of(OWNER, Set.of(WRITE))));
-        future.register(OWNER, List.of(writeMethod()), List.of(), List.of(capability()));
-        future.registry.freezeJavascriptRequest("future", true);
-        assertEquals("javascript_extension_capability_denied", future.failure("future", false));
-    }
-
-    @Test
-    void eachExtensionGetsOnlyItsOwnGrantEvenWhenCallerHasOtherExtensionAuthority() {
+    void invocationCapturesOnlyContributionsActiveAtAdmission() throws Exception {
         Fixture fixture = new Fixture();
-        AtomicReference<JavascriptInvocationContext> context = new AtomicReference<>();
-        fixture.register(OWNER, List.of(writeMethod()), List.of(), List.of(capability()));
+        try (var admitted = fixture.registry.prepareJavascriptInvocation(
+                ToolInvocationContext.developmentConsole("before-install"), new CancellationSignal())) {
+            fixture.register(OWNER, List.of(writeMethod()), List.of());
+            admitted.open(ignored -> {});
+            assertTrue(admitted.hostBindings().isEmpty());
+            assertEquals("javascript_module_unavailable", assertThrows(JavascriptExecutionException.class,
+                    () -> admitted.invokeHostMethod(BINDING, "write", List.of())).code());
+        }
+        assertEquals("written", fixture.success("after-install", "return require('test_native:methods').write();").getAsString());
+        assertEquals(0, fixture.registry.activeJavascriptInvocations());
+    }
+
+    @Test
+    void eachActiveExtensionGetsItsOwnContextWithSharedInvocationLifetime() {
+        Fixture fixture = new Fixture();
+        AtomicReference<JavascriptInvocationContext> first = new AtomicReference<>();
+        AtomicReference<JavascriptInvocationContext> second = new AtomicReference<>();
+        fixture.register(OWNER, List.of(writeMethod()), List.of(participant("test:scope", authority -> {
+            first.set(authority);
+            assertEquals(OWNER, authority.extensionId());
+            authority.requireActive();
+            return () -> {};
+        })));
         fixture.registry.register(new OpenAllayExtension() {
             public OpenAllayExtensionDescriptor descriptor() { return descriptorFor("other:extension"); }
             public OpenAllayExtensionContribution contribution() {
                 return new OpenAllayExtensionContribution(List.of(), List.of(), List.of(), List.of(),
                         List.of(participant("other:scope", authority -> {
-                            context.set(authority);
-                            assertFalse(authority.hasCapability(WRITE));
-                            assertEquals("javascript_extension_capability_denied", assertThrows(
-                                    JavascriptExecutionException.class, () -> authority.requireCapability(WRITE)).code());
+                            second.set(authority);
+                            assertEquals("other:extension", authority.extensionId());
+                            authority.requireActive();
                             return () -> {};
-                        })),
-                        List.of(), List.of());
+                        })), List.of());
             }
         });
-        fixture.registry.replaceCapabilityPolicy(new ExtensionCapabilityPolicy(Map.of(OWNER, Set.of(WRITE))));
-        fixture.registry.freezeJavascriptRequest("own", true);
-        fixture.success("own", "return require('test_native:methods').write();");
-        assertEquals("other:extension", context.get().extensionId());
-        assertFalse(context.get().completedSuccessfully() && context.get().invocation().unrestrictedJavascript());
+        assertEquals("written", fixture.success("own", "return require('test_native:methods').write();").getAsString());
+        assertNotSame(first.get(), second.get());
+        assertSame(first.get().invocation(), second.get().invocation());
+        assertTrue(first.get().completedSuccessfully());
+        assertTrue(second.get().completedSuccessfully());
+        assertFalse(second.get().invocation().unrestrictedJavascript());
+        assertThrows(JavascriptExecutionException.class, first.get()::requireActive);
+        assertThrows(JavascriptExecutionException.class, second.get()::requireActive);
     }
 
     @Test
@@ -186,19 +188,19 @@ final class JavascriptHostBindingTest {
     void hostResultContractAndNativeErrorsFailClosedWithoutForeignMessages() {
         Fixture fixture = new Fixture();
         fixture.register(OWNER, List.of(
-                method("badType", List.of(), JavascriptHostValueType.STRING, Set.of(),
+                method("badType", List.of(), JavascriptHostValueType.STRING,
                         (context, arguments) -> new JsonPrimitive(1)),
-                method("nonFinite", List.of(), JavascriptHostValueType.JSON, Set.of(),
+                method("nonFinite", List.of(), JavascriptHostValueType.JSON,
                         (context, arguments) -> new JsonPrimitive(Double.NaN)),
-                method("cycle", List.of(), JavascriptHostValueType.JSON, Set.of(),
+                method("cycle", List.of(), JavascriptHostValueType.JSON,
                         (context, arguments) -> {
                             var value = new com.google.gson.JsonObject(); value.add("self", value); return value;
                         }),
-                method("error", List.of(), JavascriptHostValueType.NULL, Set.of(),
+                method("error", List.of(), JavascriptHostValueType.NULL,
                         (context, arguments) -> { throw new AssertionError("secret-token"); }),
-                method("domain", List.of(), JavascriptHostValueType.NULL, Set.of(),
+                method("domain", List.of(), JavascriptHostValueType.NULL,
                         (context, arguments) -> { throw new JavascriptExecutionException("unsupported_topology", "This topology is unsupported"); })),
-                List.of(), List.of());
+                List.of());
         for (String name : List.of("badType", "nonFinite", "cycle")) {
             assertEquals("javascript_extension_host_invalid", assertInstanceOf(ToolResult.Failure.class,
                     fixture.invoke("bad-result", "return require('test_native:methods')." + name + "();", false)).code());
@@ -212,10 +214,13 @@ final class JavascriptHostBindingTest {
     }
 
     @Test
-    void nativeDenialCannotBecomeAJavaExceptionWrapperInGuestCatchScope() {
-        Fixture fixture = writeFixture();
+    void nativeDomainFailureCannotBecomeAJavaExceptionWrapperInGuestCatchScope() {
+        Fixture fixture = new Fixture();
+        fixture.register(OWNER, List.of(method("fail", List.of(), JavascriptHostValueType.NULL,
+                (context, arguments) -> { throw new JavascriptExecutionException("world_conflict", "World state changed"); })),
+                List.of());
         var result = fixture.invoke("caught-denial", """
-                try { require('test_native:methods').write(); }
+                try { require('test_native:methods').fail(); }
                 catch (error) {
                   return {getClass: typeof error.getClass, javaException: typeof error.javaException,
                     rhinoException: typeof error.rhinoException, hidden: typeof __exception__, java: typeof Java};
@@ -230,7 +235,7 @@ final class JavascriptHostBindingTest {
             }
         } else {
             // Raw control failures are deliberately not catchable in this Rhino build.
-            assertEquals("javascript_extension_capability_denied",
+            assertEquals("world_conflict",
                     assertInstanceOf(ToolResult.Failure.class, result).code());
         }
     }
@@ -239,8 +244,8 @@ final class JavascriptHostBindingTest {
     void internalHostTransportIsExactAndIndependentOfModelResultStringBudget() {
         Fixture fixture = new Fixture();
         fixture.register(OWNER, List.of(method("length", List.of(JavascriptHostValueType.STRING),
-                JavascriptHostValueType.INTEGER, Set.of(), (context, arguments) ->
-                        new JsonPrimitive(arguments.getFirst().getAsString().length()))), List.of(), List.of());
+                JavascriptHostValueType.INTEGER, (context, arguments) ->
+                        new JsonPrimitive(arguments.getFirst().getAsString().length()))), List.of());
         String row = "x".repeat(1000);
         assertEquals(700_000, fixture.success("large-transport",
                 "const rows = []; for (let i = 0; i < 700; i++) rows.push('" + row + "'); "
@@ -250,14 +255,14 @@ final class JavascriptHostBindingTest {
     @Test
     void nativeWaitLongerThanDefaultDeadlineDoesNotSpendInterpreterBudgetButLoopsStillTimeout() {
         Fixture fixture = new Fixture(new RhinoJavascriptRuntime(Duration.ofMillis(300)));
-        fixture.register(OWNER, List.of(method("wait", List.of(), JavascriptHostValueType.STRING, Set.of(),
+        fixture.register(OWNER, List.of(method("wait", List.of(), JavascriptHostValueType.STRING,
                 (context, arguments) -> {
                     CountDownLatch done = new CountDownLatch(1);
                     CompletableFuture.delayedExecutor(2100, TimeUnit.MILLISECONDS).execute(done::countDown);
                     assertTrue(done.await(5, TimeUnit.SECONDS));
                     context.requireActive();
                     return new JsonPrimitive("done");
-                })), List.of(), List.of());
+                })), List.of());
         assertEquals("done", fixture.success("native-wait", "return require('test_native:methods').wait();").getAsString());
         var failed = assertInstanceOf(ToolResult.Failure.class, fixture.invoke("loop",
                 "require('test_native:methods').wait(); while (true) {}", false));
@@ -271,7 +276,7 @@ final class JavascriptHostBindingTest {
         CountDownLatch release = new CountDownLatch(1);
         AtomicInteger closes = new AtomicInteger();
         AtomicReference<Thread> worker = new AtomicReference<>();
-        fixture.register(OWNER, List.of(method("wait", List.of(), JavascriptHostValueType.NULL, Set.of(),
+        fixture.register(OWNER, List.of(method("wait", List.of(), JavascriptHostValueType.NULL,
                 (context, arguments) -> {
                     context.cancellation().onCancel(() -> { throw new Error("secret-token"); });
                     context.cancellation().onCancel(release::countDown);
@@ -282,7 +287,7 @@ final class JavascriptHostBindingTest {
                 })), List.of(participant("test:scope", context -> {
                     worker.set(Thread.currentThread());
                     return () -> { assertSame(worker.get(), Thread.currentThread()); closes.incrementAndGet(); };
-                })), List.of());
+                })));
         CancellationSignal cancellation = new CancellationSignal();
         cancellation.onCancel(() -> { throw new AssertionError("secret-token"); });
         var future = fixture.tool.invokeAsync(ToolInvocationContext.developmentConsole("cancel"),
@@ -311,25 +316,24 @@ final class JavascriptHostBindingTest {
     private static Fixture echoFixture() {
         Fixture fixture = new Fixture();
         fixture.register(OWNER, List.of(method("echo", List.of(JavascriptHostValueType.JSON),
-                JavascriptHostValueType.JSON, Set.of(), (context, arguments) -> arguments.getFirst())),
-                List.of(), List.of());
+                JavascriptHostValueType.JSON, (context, arguments) -> arguments.getFirst())),
+                List.of());
         return fixture;
     }
 
     private static Fixture writeFixture() {
         Fixture fixture = new Fixture();
-        fixture.register(OWNER, List.of(writeMethod()), List.of(), List.of(capability()));
+        fixture.register(OWNER, List.of(writeMethod()), List.of());
         return fixture;
     }
 
-    private static ExtensionCapability capability() { return new ExtensionCapability(WRITE, "World operations", "May change the active world."); }
     private static JavascriptHostMethod writeMethod() {
-        return method("write", List.of(), JavascriptHostValueType.STRING, Set.of(WRITE),
-                (context, arguments) -> { context.requireCapability(WRITE); return new JsonPrimitive("written"); });
+        return method("write", List.of(), JavascriptHostValueType.STRING,
+                (context, arguments) -> { context.requireActive(); return new JsonPrimitive("written"); });
     }
     private static JavascriptHostMethod method(String name, List<JavascriptHostValueType> arguments,
-            JavascriptHostValueType result, Set<String> capabilities, JavascriptHostMethod.Invoker callback) {
-        return new JavascriptHostMethod(name, arguments, result, capabilities, callback);
+            JavascriptHostValueType result, JavascriptHostMethod.Invoker callback) {
+        return new JavascriptHostMethod(name, arguments, result, callback);
     }
     private static JavascriptInvocationParticipant participant(String id, Opener callback) {
         return new JavascriptInvocationParticipant() {
@@ -355,12 +359,12 @@ final class JavascriptHostBindingTest {
                     new CommandCapabilityRuntime(), new WorldObservationRuntime(), registry);
         }
         OpenAllayExtensionRegistry.Registration register(String owner, List<JavascriptHostMethod> methods,
-                List<JavascriptInvocationParticipant> participants, List<ExtensionCapability> capabilities) {
+                List<JavascriptInvocationParticipant> participants) {
             return registry.register(new OpenAllayExtension() {
                 public OpenAllayExtensionDescriptor descriptor() { return descriptorFor(owner); }
                 public OpenAllayExtensionContribution contribution() {
                     return new OpenAllayExtensionContribution(List.of(), List.of(), List.of(), List.of(),
-                            participants, List.of(new JavascriptHostBinding(BINDING, methods)), capabilities);
+                            participants, List.of(new JavascriptHostBinding(BINDING, methods)));
                 }
             });
         }
@@ -374,10 +378,6 @@ final class JavascriptHostBindingTest {
             var result = invoke(id, source, false);
             assertInstanceOf(ToolResult.Success.class, result, result.toString());
             return ((ToolResult.Success<RunJavascriptTool.Output>) result).value().preview();
-        }
-        String failure(String id, boolean unrestricted) {
-            return assertInstanceOf(ToolResult.Failure.class,
-                    invoke(id, "return require('test_native:methods').write();", unrestricted)).code();
         }
     }
 }

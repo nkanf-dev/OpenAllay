@@ -10,7 +10,6 @@ public record JavascriptHostMethod(
         String name,
         List<JavascriptHostValueType> parameters,
         JavascriptHostValueType result,
-        Set<String> requiredCapabilities,
         Invoker invoker) {
     public JavascriptHostMethod {
         if (name == null || !name.matches("[a-zA-Z_$][a-zA-Z0-9_$]*")
@@ -19,8 +18,6 @@ public record JavascriptHostMethod(
         }
         parameters = List.copyOf(parameters);
         Objects.requireNonNull(result, "result");
-        requiredCapabilities = Set.copyOf(requiredCapabilities);
-        requiredCapabilities.forEach(ExtensionCapability::requireIdentity);
         Objects.requireNonNull(invoker, "invoker");
     }
 
@@ -29,7 +26,7 @@ public record JavascriptHostMethod(
         /**
          * Called on the JavaScript worker, never a game owner thread. Arguments are detached
          * JSON copies. Return detached JSON only. Before each queued native action, recheck
-         * context activity, the declared capability, and the exact backend/session identity.
+         * context activity and the exact backend/session identity.
          * Never retain or forward Rhino values, or evaluate Agent callbacks on an owner thread.
          */
         JsonElement invoke(JavascriptInvocationContext context, List<JsonElement> arguments)

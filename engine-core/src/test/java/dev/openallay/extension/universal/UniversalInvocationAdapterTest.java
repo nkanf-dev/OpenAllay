@@ -3,7 +3,6 @@ package dev.openallay.extension.universal;
 import static org.junit.jupiter.api.Assertions.*;
 import dev.openallay.api.extension.*;
 import dev.openallay.context.ToolInvocationContext;
-import dev.openallay.extension.ExtensionCapabilityPolicy;
 import dev.openallay.model.CancellationSignal;
 import dev.openallay.model.ModelClientException;
 import dev.openallay.script.JavascriptExecutionException;
@@ -11,21 +10,17 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 
 class UniversalInvocationAdapterTest {
-    @Test void exposesDetachedConsoleIdentityAndOwnFrozenGrantsOnly() throws Exception {
+    @Test void exposesDetachedConsoleIdentityAndDistinctActiveOwnerContexts() throws Exception {
         var registry = UniversalExtensionFixtures.registry();
         AtomicReference<ExtensionInvocation> first = new AtomicReference<>();
         AtomicReference<ExtensionInvocation> second = new AtomicReference<>();
-        registry.register(UniversalExtensionFixtures.bridge("test:first", contribution("test:a", first, "test:read")));
-        registry.register(UniversalExtensionFixtures.bridge("test:second", contribution("test:b", second, "test:other")));
-        registry.replaceCapabilityPolicy(new ExtensionCapabilityPolicy(Map.of("test:first", Set.of("test:read"))));
-        registry.freezeJavascriptRequest("frozen", true);
-        registry.replaceCapabilityPolicy(ExtensionCapabilityPolicy.defaults());
+        registry.register(UniversalExtensionFixtures.bridge("test:first", contribution("test:a", first)));
+        registry.register(UniversalExtensionFixtures.bridge("test:second", contribution("test:b", second)));
         var scope = registry.prepareJavascriptInvocation(ToolInvocationContext.developmentConsole("frozen"),
                 new CancellationSignal());
         scope.open(ignored -> {});
@@ -34,21 +29,24 @@ class UniversalInvocationAdapterTest {
         assertEquals(ExtensionInvocation.CallerKind.CONSOLE, first.get().callerKind());
         assertNull(first.get().callerUuid());
         assertTrue(first.get().playerDimension().isEmpty());
-        assertTrue(first.get().hasCapability("test:read"));
-        assertFalse(first.get().hasCapability("test:other"));
-        assertFalse(second.get().hasCapability("test:read"));
-        assertFalse(second.get().hasCapability("test:other"));
-        assertThrows(JavascriptExecutionException.class, () -> second.get().requireCapability("test:read"));
+        assertEquals("test:second", second.get().extensionId());
+        assertEquals(first.get().correlationId(), second.get().correlationId());
+        assertNotSame(first.get(), second.get());
+        assertDoesNotThrow(first.get()::requireActive);
+        assertDoesNotThrow(second.get()::requireActive);
         scope.complete();
         scope.close();
         assertTrue(first.get().completedSuccessfully());
         assertTrue(first.get().isCancelled());
         assertThrows(JavascriptExecutionException.class, first.get()::requireActive);
+        assertTrue(second.get().completedSuccessfully());
+        assertTrue(second.get().isCancelled());
+        assertThrows(JavascriptExecutionException.class, second.get()::requireActive);
     }
     @Test void mapsActualEvidenceAndRevokesSinkAndCallbacksWithoutForeignCleanupLeak() {
         var registry = UniversalExtensionFixtures.registry();
         AtomicReference<ExtensionInvocation> context = new AtomicReference<>();
-        registry.register(UniversalExtensionFixtures.bridge("test:first", contribution("test:a", context, "test:read")));
+        registry.register(UniversalExtensionFixtures.bridge("test:first", contribution("test:a", context)));
         CancellationSignal cancellation = new CancellationSignal();
         var scope = registry.prepareJavascriptInvocation(ToolInvocationContext.developmentConsole("cancel"), cancellation);
         var evidence = new ArrayList<dev.openallay.context.EvidenceMetadata>();
@@ -96,7 +94,7 @@ class UniversalInvocationAdapterTest {
             });
         }
         registry.register(UniversalExtensionFixtures.bridge("test:lifecycle", new ExtensionContribution(
-                List.of(), List.of(), List.of(), participants, List.of(), List.of())));
+                List.of(), List.of(), List.of(), participants, List.of())));
         var scope = registry.prepareJavascriptInvocation(ToolInvocationContext.developmentConsole("hooks"),
                 new CancellationSignal());
         scope.open(ignored -> fail("No fabricated evidence"));
@@ -105,13 +103,11 @@ class UniversalInvocationAdapterTest {
         assertEquals(List.of("test:a+", "test:b+", "test:b-", "test:a-"), events);
         assertEquals(0, registry.activeJavascriptInvocations());
     }
-    private static ExtensionContribution contribution(String id, AtomicReference<ExtensionInvocation> context,
-            String capability) {
+    private static ExtensionContribution contribution(String id, AtomicReference<ExtensionInvocation> context) {
         JavascriptInvocationParticipant participant = new JavascriptInvocationParticipant() {
             public String id() { return id; }
             public AutoCloseable open(ExtensionInvocation invocation) { context.set(invocation); return () -> {}; }
         };
-        return new ExtensionContribution(List.of(), List.of(), List.of(), List.of(participant), List.of(),
-                List.of(new ExtensionCapability(capability, "Capability", "Description")));
+        return new ExtensionContribution(List.of(), List.of(), List.of(), List.of(participant), List.of());
     }
 }
