@@ -25,12 +25,27 @@ from urllib.parse import urlsplit
 from urllib.request import urlopen
 import zipfile
 
-MC_VERSION = "26.2"
-FABRIC_LOADER = "0.19.3"
-NEOFORGE_VERSION = "26.2.0.25-beta"
+def target_reader():
+    from importlib.util import module_from_spec, spec_from_file_location
+    spec = spec_from_file_location("acceptance_minecraft_targets", REPO / "scripts/minecraft-target.py")
+    reader = module_from_spec(spec)
+    spec.loader.exec_module(reader)
+    return reader
+
+
+def minecraft_targets(repo=None):
+    root = Path(repo) if repo is not None else REPO
+    return tuple(sorted(path.stem for path in (root / "gradle/minecraft-targets").glob("*.properties")))
+
+
+def runtime_pins(minecraft_target, repo=None):
+    root = Path(repo) if repo is not None else REPO
+    if minecraft_target not in minecraft_targets(root):
+        raise ValueError("Unknown exact Minecraft target: " + minecraft_target)
+    return target_reader().read_profile(root, minecraft_target)
 MOD_VERSION = "0.4.1"
 WORLD_PREFIX = "openallay-builder-"
-SCENARIOS = ("builder-disabled", "builder-acceptance", "builder-reload",
+SCENARIOS = ("builder-restricted", "builder-acceptance", "builder-reload",
              "builder-partial", "builder-cancel", "builder-live", "builder-live-copy", "builder-live-undo",
              "ui-stop", "ui-provider-failure", "ui-manual-regressions", "ui-live-ux-regressions")
 UI_OUTCOMES = {"ui-stop": "CANCELLED", "ui-provider-failure": "FAILED", "ui-manual-regressions": "COMPLETED", "ui-live-ux-regressions": "COMPLETED"}
@@ -86,6 +101,8 @@ def rules_allow(rules, features=None, os_name=None, arch=None):
     arch = arch or platform.machine()
     allowed = False
     for rule in rules:
+        if rule.get("action") not in ("allow", "disallow"):
+            raise ValueError("Invalid installed library rule action")
         os_rule = rule.get("os", {})
         matches = (not os_rule.get("name") or os_rule["name"] == os_name)
         matches = matches and (not os_rule.get("arch") or re.fullmatch(os_rule["arch"], arch) is not None)
@@ -148,14 +165,78 @@ def version_libraries(metadata, minecraft_root, gradle_cache, allow_gradle=True)
             continue
         artifact = library.get("downloads", {}).get("artifact")
         if artifact is None:
-            raise ValueError("Unsupported installed library metadata: " + library["name"])
-        path = (minecraft_root / "libraries" / artifact["path"]).resolve()
+            if library.get("downloads") is not None or not library.get("url", "").startswith("https://maven.fabricmc.net/"):
+                raise ValueError("Unsupported installed library metadata: " + library["name"])
+            artifact = {"path": maven_path(library["name"]).as_posix(),
+                        **{key: library[key] for key in ("sha1", "size") if key in library}}
+        relative = artifact["path"]
+        if (not isinstance(relative, str) or "\\" in relative or relative.startswith("/")
+                or re.match(r"^[A-Za-z]:", relative) or any(part in ("", ".", "..") for part in relative.split("/"))):
+            raise ValueError("Unsafe installed library metadata path")
+        path = (minecraft_root / "libraries" / relative).resolve()
+        if not path.is_relative_to(minecraft_root.resolve() / "libraries"):
+            raise ValueError("Installed library metadata escapes runtime")
         if not path.is_file():
             path = cached_library(library["name"], minecraft_root, gradle_cache, allow_gradle)
-        if artifact.get("sha1") and digest_with(path, "sha1") != artifact["sha1"]:
-            raise ValueError("Local runtime library hash does not match installed metadata: " + library["name"])
+        if (artifact.get("sha1") and digest_with(path, "sha1") != artifact["sha1"]
+                or "size" in artifact and path.stat().st_size != artifact["size"]):
+            raise ValueError("Local runtime library hash/size does not match installed metadata: " + library["name"])
         result.append((library["name"], path))
     return result
+
+
+def native_libraries(metadata, minecraft_root):
+    result = []
+    for library in metadata.get("libraries", []):
+        if not rules_allow(library.get("rules")):
+            continue
+        classifier = library.get("natives", {}).get(system_name())
+        if not classifier:
+            continue  # Modern LWJGL native artifacts stay on the official classpath.
+        bits = "64" if platform.machine().lower() in ("x86_64", "amd64", "aarch64", "arm64") else "32"
+        classifier = classifier.replace("${arch}", bits)
+        artifact = library.get("downloads", {}).get("classifiers", {}).get(classifier)
+        if not isinstance(artifact, dict) or not {"path", "sha1", "size"}.issubset(artifact):
+            raise ValueError("Installed native classifier metadata is incomplete")
+        path = (minecraft_root / "libraries" / artifact["path"]).resolve()
+        if (not path.is_relative_to(minecraft_root.resolve() / "libraries") or not path.is_file()
+                or path.stat().st_size != artifact["size"] or digest_with(path, "sha1") != artifact["sha1"]):
+            raise ValueError("Installed native classifier does not match official hash/size")
+        result.append((path, library.get("extract", {}).get("exclude", ["META-INF/"])))
+    return result
+
+
+def extract_natives(libraries, destination):
+    """Extract only selected verified classifiers into this new disposable run."""
+    destination.mkdir(parents=True)
+    files = {}
+    for jar, excludes in libraries:
+        if not isinstance(excludes, list) or any(not isinstance(prefix, str) for prefix in excludes):
+            raise ValueError("Invalid official native extraction excludes")
+        with zipfile.ZipFile(jar) as archive:
+            total = 0
+            for info in archive.infolist():
+                name = info.filename.rstrip("/")
+                if (not name or "\\" in name or name.startswith("/") or re.match(r"^[A-Za-z]:", name)
+                        or any(part in ("", ".", "..") for part in name.split("/"))
+                        or (info.external_attr >> 16) & 0o170000 == 0o120000):
+                    raise ValueError("Unsafe native archive path")
+                total += info.file_size
+                if info.file_size > 128 * 1024 * 1024 or total > 512 * 1024 * 1024:
+                    raise ValueError("Native archive exceeds extraction byte limit")
+                if info.is_dir() or any(info.filename.startswith(prefix) for prefix in excludes):
+                    continue
+                target = destination.joinpath(*name.split("/"))
+                if not target.resolve().is_relative_to(destination.resolve()):
+                    raise ValueError("Native extraction escapes disposable run")
+                content = archive.read(info)
+                sha256 = hashlib.sha256(content).hexdigest()
+                if name in files and files[name] != sha256:
+                    raise ValueError("Selected native JARs contain conflicting paths")
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(content)
+                files[name] = sha256
+    return files
 
 
 def verified_download(url, destination, expected_sha1, expected_size):
@@ -182,10 +263,10 @@ def verified_download(url, destination, expected_sha1, expected_size):
         temporary.unlink(missing_ok=True)
 
 
-def prepare_assets(minecraft_root, destination, repo=REPO):
+def prepare_assets(minecraft_root, destination, repo=REPO, minecraft_target="26.2"):
     """Reuse verified installed object hashes; fetch only missing official assets."""
     destination = safe_output(destination, repo)
-    version = read_version(minecraft_root, MC_VERSION)
+    version = read_version(minecraft_root, minecraft_target)
     index_meta = version["assetIndex"]
     index = destination / "indexes" / (index_meta["id"] + ".json")
     if not index.is_file() or digest_with(index, "sha1") != index_meta["sha1"]:
@@ -220,10 +301,10 @@ def prepare_assets(minecraft_root, destination, repo=REPO):
             future.result()
             if completed % 100 == 0:
                 print(f"Verified official assets: {completed}/{len(needed)} downloaded.", flush=True)
-    write_json(destination / "verified.json", {"minecraft": MC_VERSION, "assetIndex": index_meta["id"],
+    write_json(destination / "verified.json", {"minecraft": minecraft_target, "assetIndex": index_meta["id"],
                                                "indexSha1": index_meta["sha1"], "objectCount": len(unique),
                                                "allObjectsVerified": True})
-    print("Verified Minecraft26.2 assets ready: " + str(destination), flush=True)
+    print("Verified Minecraft" + minecraft_target + " assets ready: " + str(destination), flush=True)
     return destination
 
 
@@ -237,9 +318,9 @@ def bundled_extension_verifier():
     return verifier
 
 
-def packaged_artifact(path, loader, mod_version=MOD_VERSION, repo=REPO):
+def packaged_artifact(path, loader, mod_version=MOD_VERSION, repo=REPO, minecraft_target="26.2"):
     path = path.resolve()
-    expected_name = f"openallay-{loader}-{MC_VERSION}-{mod_version}.jar"
+    expected_name = f"openallay-{loader}-{minecraft_target}-{mod_version}.jar"
     if path.name != expected_name or not path.is_file():
         raise ValueError("Use the default built OpenAllay production artifact: " + expected_name)
     verifier = bundled_extension_verifier()
@@ -249,15 +330,18 @@ def packaged_artifact(path, loader, mod_version=MOD_VERSION, repo=REPO):
     with zipfile.ZipFile(path) as archive:
         with zipfile.ZipFile(BytesIO(archive.read(builder_path))) as builder:
             descriptor = verifier.prepare.decode_json(builder.read(verifier.DESCRIPTOR))
-            if any(target["minecraftVersionRange"] != MC_VERSION
-                   for target in descriptor["support"]["targets"]):
-                raise ValueError("Pinned universal Builder must support exactly Minecraft26.2")
+            if not any(target["loader"] == loader and target["minecraftVersionRange"] in
+                       (minecraft_target, "[" + minecraft_target + "]")
+                       for target in descriptor["support"]["targets"]):
+                raise ValueError("Pinned universal Builder does not declare this exact loader/Minecraft target")
         if loader == "fabric":
             metadata = verifier.prepare.decode_json(archive.read("fabric.mod.json"))
             if metadata["id"] != "openallay" or metadata["version"] != mod_version:
                 raise ValueError("Unexpected packaged OpenAllay identity")
         else:
-            mod_metadata = archive.read("META-INF/neoforge.mods.toml").decode("utf-8")
+            descriptor_path = ("META-INF/mods.toml" if minecraft_target in ("1.20.1", "1.20.2", "1.20.3", "1.20.4")
+                               else "META-INF/neoforge.mods.toml")
+            mod_metadata = archive.read(descriptor_path).decode("utf-8")
             if (re.search(r'^modId\s*=\s*"openallay"', mod_metadata, re.MULTILINE) is None
                     or re.search(r'^version\s*=\s*"' + re.escape(mod_version) + r'"', mod_metadata, re.MULTILINE) is None):
                 raise ValueError("Unexpected packaged OpenAllay identity")
@@ -266,7 +350,7 @@ def packaged_artifact(path, loader, mod_version=MOD_VERSION, repo=REPO):
             raise ValueError("Packaged artifact does not contain the opt-in E2E controller")
         instrumented = b"openallay.e2e.createWorld" in archive.read(bootstrap)
     return {"name": path.name, "sha256": digest(path), "bundledBuilder": builder_path,
-            "bundledBuilderSha256": builder_sha256, "loader": loader, "minecraft": MC_VERSION,
+            "bundledBuilderSha256": builder_sha256, "loader": loader, "minecraft": minecraft_target,
             "modVersion": mod_version, "kind": "acceptance-instrumented" if instrumented else "production-before-bootstrap",
             "nativeWorldBootstrapPresent": instrumented}
 
@@ -346,37 +430,37 @@ def safe_output(path, repo=REPO):
     return path
 
 
-def read_runtime_provision(minecraft_root, loader, repo=REPO):
+def read_runtime_provision(minecraft_root, loader, repo=REPO, minecraft_target="26.2"):
     repo = repo.resolve()
-    if minecraft_root != repo / "build/e2e/runtime/minecraft":
+    if minecraft_root != repo / "build/e2e/runtime" / minecraft_target / "minecraft":
         return None
     verifier = bundled_extension_verifier()
     receipt_path = minecraft_root / ".provision" / (loader + "-runtime.json")
     if not receipt_path.is_file():
         raise ValueError("Isolated runtime requires its official provision manifest")
     receipt = verifier.prepare.decode_json(receipt_path.read_text(encoding="utf-8"))
-    profile = repo / "gradle/minecraft-targets/26.2.properties"
-    profile_pins = dict(re.findall(r"^([a-z_]+)=([^\r\n]+)$", profile.read_text(encoding="utf-8"), re.MULTILINE))
+    profile = repo / "gradle/minecraft-targets" / (minecraft_target + ".properties")
+    profile_pins = runtime_pins(minecraft_target, repo)
     pin_keys = ("minecraft_version", "java_version", "fabric_loader_version", "fabric_version", "neoforge_version")
     expected_pins = {key: profile_pins[key] for key in pin_keys}
-    if (receipt.get("loader") != loader or receipt.get("minecraft") != MC_VERSION
+    if (receipt.get("loader") != loader or receipt.get("minecraft") != minecraft_target
             or receipt.get("pins") != expected_pins
-            or receipt.get("sourceProfile") != "gradle/minecraft-targets/26.2.properties"
-            or type(receipt.get("javaRequired")) is not int or receipt["javaRequired"] != 25
+            or receipt.get("sourceProfile") != "gradle/minecraft-targets/" + minecraft_target + ".properties"
+            or type(receipt.get("javaRequired")) is not int or receipt["javaRequired"] != int(profile_pins["java_version"])
             or receipt.get("minecraftRoot") != str(minecraft_root)
             or receipt.get("mechanism") != "official-client-installer"
             or receipt.get("sourceProfileSha256") != digest(profile)):
-        raise ValueError("Isolated runtime provision manifest does not match the current26.2 target")
+        raise ValueError("Isolated runtime provision manifest does not match the exact source target")
     if not isinstance(receipt.get("files"), dict):
         raise ValueError("Isolated runtime provision manifest has no file hashes")
     return {"path": str(receipt_path), "sha256": digest(receipt_path),
             "files": receipt["files"], "fabricApi": receipt.get("fabricApi"), "profile": receipt.get("profile")}
 
 
-def validate_runtime_classpath(classpath, minecraft_root, loader, repo=REPO):
+def validate_runtime_classpath(classpath, minecraft_root, loader, repo=REPO, minecraft_target="26.2"):
     repo = repo.resolve()
     minecraft_root = minecraft_root.resolve()
-    isolated = repo / "build/e2e/runtime/minecraft"
+    isolated = repo / "build/e2e/runtime" / minecraft_target / "minecraft"
     if isolated.is_symlink() and minecraft_root == isolated.resolve():
         raise ValueError("Isolated official runtime must not redirect to an external installation")
     # An in-repository runtime is allowed only at the provisioner's isolated
@@ -384,11 +468,11 @@ def validate_runtime_classpath(classpath, minecraft_root, loader, repo=REPO):
     for entry in classpath:
         path = Path(entry).resolve()
         official_library = path.is_relative_to(minecraft_root / "libraries")
-        official_client = path == minecraft_root / "versions" / MC_VERSION / (MC_VERSION + ".jar")
+        official_client = path == minecraft_root / "versions" / minecraft_target / (minecraft_target + ".jar")
         if (minecraft_root == isolated and not (official_library or official_client)
                 or path.is_relative_to(repo) and (minecraft_root != isolated or not (official_library or official_client))):
             raise ValueError("Packaged launch cannot include project source classes or Gradle game artifacts")
-    provision = read_runtime_provision(minecraft_root, loader, repo)
+    provision = read_runtime_provision(minecraft_root, loader, repo, minecraft_target)
     if provision:
         for entry in classpath:
             verify_runtime_record(Path(entry).resolve(), minecraft_root, provision["files"])
@@ -411,6 +495,7 @@ def verify_runtime_record(path, minecraft_root, records):
 
 def prepare(args, repo=REPO):
     loader = args.loader
+    minecraft_target = args.minecraft_target
     run_id = args.run_id or datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + "-" + uuid.uuid4().hex[:6]
     if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,90}", run_id):
         raise ValueError("run-id must be a short filesystem-safe identifier")
@@ -421,10 +506,8 @@ def prepare(args, repo=REPO):
     if args.scenario == "builder-live-undo":
         raise ValueError("Live undo must resume a reviewed prior builder-live-copy disposable world")
     ui_scenario = args.scenario in UI_OUTCOMES
-    if (args.scenario == "builder-disabled" or ui_scenario) and args.enable_unrestricted:
-        raise ValueError("Disabled and UI scenarios cannot enable unrestricted JavaScript")
-    if args.scenario != "builder-disabled" and not ui_scenario and not args.enable_unrestricted:
-        raise ValueError("Enabled scenarios require explicit --enable-unrestricted for this disposable game directory")
+    if (args.scenario == "builder-restricted" or ui_scenario) and args.enable_unrestricted:
+        raise ValueError("Restricted Builder proof and UI scenarios cannot enable unrestricted JavaScript")
     if args.cancel_on_tool_start and args.scenario != "ui-stop":
         raise ValueError("--cancel-on-tool-start is allowed only for ui-stop")
     if args.scenario == "ui-stop" and not args.cancel_on_tool_start:
@@ -449,78 +532,76 @@ def prepare(args, repo=REPO):
         raise ValueError("mod-version must be an explicit three-part release version")
     if args.review_package and not args.review_package.is_file():
         raise ValueError("An explicit local review package JAR is required")
-    if args.revoke_unrestricted_after_capture and args.scenario != "builder-acceptance":
-        raise ValueError("Frozen-authority probe applies only to builder-acceptance")
     output = safe_output(repo / "build/e2e/packaged-builder" / loader / run_id, repo)
     if output.exists():
         raise ValueError("Acceptance directory already exists; use a new run-id")
+    pins = runtime_pins(minecraft_target, repo)
+    java_required = int(pins["java_version"])
     mcroot = args.minecraft_root.resolve()
     gradle_cache = args.gradle_cache.resolve()
-    runtime_provision = read_runtime_provision(mcroot, loader, repo)
-    vanilla = read_version(mcroot, MC_VERSION)
+    runtime_provision = read_runtime_provision(mcroot, loader, repo, minecraft_target)
+    vanilla = read_version(mcroot, minecraft_target)
     if runtime_provision:
-        verify_runtime_record(mcroot / "versions" / MC_VERSION / (MC_VERSION + ".json"),
+        verify_runtime_record(mcroot / "versions" / minecraft_target / (minecraft_target + ".json"),
                               mcroot, runtime_provision["files"])
-    if vanilla.get("javaVersion", {}).get("majorVersion") != 25:
-        raise ValueError("Minecraft26.2 runtime metadata must require Java25")
-    artifact = args.jar or repo / loader / "build/libs" / f"openallay-{loader}-{MC_VERSION}-{args.mod_version}.jar"
-    identity = packaged_artifact(artifact, loader, args.mod_version, repo)
+    if vanilla.get("id") != minecraft_target or vanilla.get("javaVersion", {}).get("majorVersion") != java_required:
+        raise ValueError("Minecraft metadata differs from the exact source target/Java pins")
+    artifact = args.jar or repo / loader / "build/libs" / f"openallay-{loader}-{minecraft_target}-{args.mod_version}.jar"
+    identity = packaged_artifact(artifact, loader, args.mod_version, repo, minecraft_target)
     models = validate_model_config(args.model_config) if args.model_config else fixture_model_config(args.fixture_port)
     libraries = version_libraries(vanilla, mcroot, gradle_cache, allow_gradle=runtime_provision is None)
     extra_jvm, extra_game, loader_files = [], [], []
     if loader == "fabric":
-        loader_jar = cached_library(f"net.fabricmc:fabric-loader:{FABRIC_LOADER}", mcroot, gradle_cache, allow_gradle=runtime_provision is None)
-        with zipfile.ZipFile(loader_jar) as archive:
-            installer = json.loads(archive.read("fabric-installer.json"))
-        loader_files = [loader_jar]
-        for library in installer["libraries"]["common"] + installer["libraries"].get("client", []):
-            path = cached_library(library["name"], mcroot, gradle_cache, allow_gradle=runtime_provision is None)
-            if library.get("sha1") and digest_with(path, "sha1") != library["sha1"]:
-                raise ValueError("Fabric runtime library does not match loader installer metadata: " + library["name"])
-            loader_files.append(path)
-        profile_id = runtime_provision["profile"] if runtime_provision else f"fabric-loader-{FABRIC_LOADER}-{MC_VERSION}"
-        if profile_id != f"fabric-loader-{FABRIC_LOADER}-{MC_VERSION}":
+        profile_id = "fabric-loader-" + pins["fabric_loader_version"] + "-" + minecraft_target
+        if runtime_provision and runtime_provision["profile"] != profile_id:
             raise ValueError("Pinned Fabric runtime profile ID is invalid")
         fabric = read_version(mcroot, profile_id)
-        if fabric.get("inheritsFrom") != MC_VERSION or fabric.get("mainClass") != installer["mainClass"]["client"]:
-            raise ValueError("Installed Fabric profile does not match the pinned26.2 client")
+        if (fabric.get("id") != profile_id or fabric.get("inheritsFrom") != minecraft_target
+                or fabric.get("mainClass") != "net.fabricmc.loader.impl.launch.knot.KnotClient"):
+            raise ValueError("Installed Fabric profile does not match the exact source target")
         if runtime_provision:
             verify_runtime_record(mcroot / "versions" / profile_id / (profile_id + ".json"),
                                   mcroot, runtime_provision["files"])
+        fabric_libraries = version_libraries(fabric, mcroot, gradle_cache, allow_gradle=runtime_provision is None)
+        replacements = {":".join(name.split(":")[:2]) for name, _ in fabric_libraries}
+        libraries = [(name, path) for name, path in libraries if ":".join(name.split(":")[:2]) not in replacements]
+        loader_files = [path for _, path in fabric_libraries]
+        loader_jar = cached_library("net.fabricmc:fabric-loader:" + pins["fabric_loader_version"],
+                                    mcroot, gradle_cache, allow_gradle=runtime_provision is None)
+        if loader_jar not in loader_files:
+            raise ValueError("Installed official Fabric profile must declare the pinned loader dependency")
         main_class = fabric["mainClass"]
         extra_jvm = fabric.get("arguments", {}).get("jvm", [])
         extra_game = fabric.get("arguments", {}).get("game", [])
-        game_jar = mcroot / "versions" / MC_VERSION / (MC_VERSION + ".jar")
+        game_jar = mcroot / "versions" / minecraft_target / (minecraft_target + ".jar")
         if not game_jar.is_file():
             raise ValueError("Official installed Minecraft client JAR is missing")
         client = vanilla["downloads"]["client"]
         if (game_jar.stat().st_size != client["size"]
                 or digest_with(game_jar, "sha1") != client["sha1"]):
-            raise ValueError("Official Minecraft client JAR does not match26.2 metadata")
+            raise ValueError("Official Minecraft client JAR does not match exact installed metadata")
         loader_files.append(game_jar.resolve())
-        profile = (repo / "gradle/minecraft-targets/26.2.properties").read_text(encoding="utf-8")
-        api_versions = re.findall(r"^fabric_version=([^\r\n]+)$", profile, re.MULTILINE)
-        if len(api_versions) != 1 or not api_versions[0].endswith("+" + MC_VERSION):
-            raise ValueError("Current26.2 profile must declare one Fabric API pin")
-        api_version = api_versions[0]
+        api_version = pins["fabric_version"]
         api = (args.fabric_api or (Path(runtime_provision["fabricApi"]) if runtime_provision and runtime_provision["fabricApi"]
                                   else repo / "fabric/runs/client/mods" / ("fabric-api-" + api_version + ".jar")))
         if not api.is_file():
-            raise ValueError("A locally installed Fabric API26.2 JAR is required")
+            raise ValueError("A locally installed source-pinned Fabric API JAR is required")
         with zipfile.ZipFile(api) as archive:
             apimeta = json.loads(archive.read("fabric.mod.json"))
             if apimeta.get("id") != "fabric-api" or apimeta.get("version") != api_version:
-                raise ValueError("Use the Fabric API pin from the current26.2 target profile")
+                raise ValueError("Use the Fabric API pin from the exact source target profile")
     else:
-        profile_id = "neoforge-" + NEOFORGE_VERSION
+        profile_id = ("1.20.1-forge-" + pins["neoforge_version"].removeprefix("1.20.1-")
+                      if minecraft_target == "1.20.1" else "neoforge-" + pins["neoforge_version"])
         if runtime_provision:
             if runtime_provision["profile"] != profile_id:
-                raise ValueError("Isolated NeoForge profile does not match the pinned26.2 target")
+                raise ValueError("Isolated NeoForge profile does not match the exact source target")
             verify_runtime_record(mcroot / "versions" / profile_id / (profile_id + ".json"),
                                   mcroot, runtime_provision["files"])
         neo = read_version(mcroot, profile_id)
-        if neo.get("inheritsFrom") != MC_VERSION:
-            raise ValueError("Installed NeoForge profile does not inherit Minecraft26.2")
+        if (neo.get("id") != profile_id or neo.get("inheritsFrom") != minecraft_target
+                or neo.get("mainClass") not in ("net.neoforged.fml.startup.Client", "cpw.mods.bootstraplauncher.BootstrapLauncher")):
+            raise ValueError("Installed NeoForge profile does not match the exact source target")
         neo_libraries = version_libraries(neo, mcroot, gradle_cache, allow_gradle=runtime_provision is None)
         replacements = {name.split(":")[0] + ":" + name.split(":")[1] for name, _ in neo_libraries}
         libraries = [(name, path) for name, path in libraries if ":".join(name.split(":")[:2]) not in replacements]
@@ -528,19 +609,33 @@ def prepare(args, repo=REPO):
         main_class = neo["mainClass"]
         extra_jvm = neo["arguments"].get("jvm", [])
         extra_game = neo["arguments"].get("game", [])
-        for coordinate in (f"net.neoforged:minecraft-client-patched:{NEOFORGE_VERSION}",
-                           f"net.neoforged:neoforge:{NEOFORGE_VERSION}:universal"):
-            production = mcroot / "libraries" / maven_path(coordinate)
-            if not production.is_file():
-                raise ValueError("Required locally installed NeoForge production artifact is missing: " + coordinate)
-            if runtime_provision:
+        if runtime_provision:
+            install_path = mcroot / ".provision/neoforge-install_profile.json"
+            verify_runtime_record(install_path, mcroot, runtime_provision["files"])
+            install = bundled_extension_verifier().prepare.decode_json(install_path.read_text(encoding="utf-8"))
+            if install.get("minecraft") != minecraft_target or install.get("version") != profile_id:
+                raise ValueError("Official installer data does not match the selected client profile")
+            patched_coordinate = install.get("data", {}).get("PATCHED", {}).get("client", "")
+            if not patched_coordinate.startswith("[") or not patched_coordinate.endswith("]"):
+                raise ValueError("Official installer patched client data is missing")
+            production = mcroot / "libraries" / maven_path(patched_coordinate[1:-1])
+            verify_runtime_record(production.resolve(), mcroot, runtime_provision["files"])
+            artifact_name = "forge" if minecraft_target == "1.20.1" else "neoforge"
+            universal = mcroot / "libraries" / maven_path("net.neoforged:" + artifact_name + ":" + pins["neoforge_version"] + ":universal")
+            verify_runtime_record(universal.resolve(), mcroot, runtime_provision["files"])
+            for key in ("MC_SRG", "MC_EXTRA"):
+                if key not in install.get("data", {}):
+                    continue
+                coordinate = install["data"][key].get("client", "")
+                if not coordinate.startswith("[") or not coordinate.endswith("]"):
+                    raise ValueError("Official mapped client library data is invalid: " + key)
+                production = mcroot / "libraries" / maven_path(coordinate[1:-1])
                 verify_runtime_record(production.resolve(), mcroot, runtime_provision["files"])
-            # FML GameLocator discovers these production paths from the official
-            # profile arguments and libraryDirectory. Do not duplicate them on
-            # the startup classpath or module path.
+        # Production libraries are located by the official profile/FML. The
+        # BootstrapLauncher and module path come directly from installed metadata.
     classpath = list(dict.fromkeys(str(path) for _, path in libraries))
     classpath += [str(path) for path in loader_files if str(path) not in classpath]
-    runtime_provision = validate_runtime_classpath(classpath, mcroot, loader, repo)
+    runtime_provision = validate_runtime_classpath(classpath, mcroot, loader, repo, minecraft_target)
     if runtime_provision and loader == "fabric":
         if runtime_provision["fabricApi"] != str(api.resolve()):
             raise ValueError("Fabric API does not match the isolated runtime provision manifest")
@@ -550,21 +645,26 @@ def prepare(args, repo=REPO):
         assets_root = mcroot / "assets"
     asset_index = assets_root / "indexes" / (vanilla["assetIndex"]["id"] + ".json")
     if not asset_index.is_file():
-        raise ValueError("Minecraft asset index32 is missing; run --prepare-assets first")
+        raise ValueError("Minecraft asset index is missing; run --prepare-assets for this exact target first")
     if vanilla["assetIndex"].get("sha1") and digest_with(asset_index, "sha1") != vanilla["assetIndex"]["sha1"]:
-        raise ValueError("Minecraft asset index does not match official26.2 metadata")
+        raise ValueError("Minecraft asset index does not match exact official metadata")
     java = args.java.resolve()
     if runtime_provision:
         receipt = bundled_extension_verifier().prepare.decode_json(Path(runtime_provision["path"]).read_text(encoding="utf-8"))
         if receipt.get("java") != str(java):
             raise ValueError("Java executable does not match the isolated runtime provision manifest")
     if not java.is_file() or not os.access(java, os.X_OK):
-        raise ValueError("An executable Java25 runtime is required")
+        raise ValueError("An executable source-pinned game Java runtime is required")
     checked_java = subprocess.run([str(java), "-version"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                   text=True, timeout=15, check=False)
-    if checked_java.returncode != 0 or re.search(r'version "25(?:[."]|$)', checked_java.stdout) is None:
-        raise ValueError("Packaged acceptance must run on Java25")
+    if checked_java.returncode != 0 or re.search(r'version "' + str(java_required) + r'(?:[."]|$)', checked_java.stdout) is None:
+        raise ValueError("Packaged acceptance must run on source-pinned Java" + str(java_required))
+    selected_natives = native_libraries(vanilla, mcroot)
+    if runtime_provision:
+        for native, _ in selected_natives:
+            verify_runtime_record(native, mcroot, runtime_provision["files"])
     output.mkdir(parents=True)
+    native_files = extract_natives(selected_natives, output / "natives")
     game = output / "game"
     (game / "mods").mkdir(parents=True)
     config = game / "config/openallay"
@@ -586,9 +686,9 @@ def prepare(args, repo=REPO):
     (game / "options.txt").write_text(options, encoding="utf-8")
     world = WORLD_PREFIX + loader + "-" + run_id
     values = {"natives_directory": output / "natives", "launcher_name": "OpenAllayPackagedAcceptance",
-              "launcher_version": "1", "classpath": os.pathsep.join(classpath),
+              "launcher_version": "1", "classpath": os.pathsep.join(classpath), "classpath_separator": os.pathsep,
               "library_directory": mcroot / "libraries", "auth_player_name": "BuilderProbe",
-              "version_name": MC_VERSION, "game_directory": game, "assets_root": assets_root.resolve(),
+              "version_name": profile_id, "game_directory": game, "assets_root": assets_root.resolve(),
               "assets_index_name": vanilla["assetIndex"]["id"],
               "auth_uuid": offline_uuid("BuilderProbe"),
               "auth_access_token": "0", "clientid": "", "auth_xuid": "", "version_type": "release",
@@ -615,8 +715,6 @@ def prepare(args, repo=REPO):
                   "session": run_id, "modelMode": "client", "screenshotRoot": str(output / "screenshots"),
                   "shutdown": "false", "shutdownAfterScreenshots": "true",
                   "timeoutSeconds": str(args.timeout_seconds)}
-    if args.revoke_unrestricted_after_capture:
-        properties["revokeUnrestrictedAfterCapture"] = "true"
     if args.professional_screenshots:
         properties["screenshotMatrix"] = "professional"
     if args.screenshot_manual_profile:
@@ -636,12 +734,12 @@ def prepare(args, repo=REPO):
     command += ["-Dopenallay.e2e." + key + "=" + value for key, value in properties.items()]
     command += [main_class] + game_args
     files = [p for p in game.rglob("*") if p.is_file()]
-    manifest = {"loader": loader, "minecraft": MC_VERSION, "javaRequired": 25,
+    manifest = {"loader": loader, "minecraft": minecraft_target, "javaRequired": java_required,
                 "runId": run_id, "world": world, "scenario": args.scenario,
                 "gameDirectory": str(game), "packagedArtifact": identity,
                 "unrestrictedOptIn": args.enable_unrestricted, "lowImpact": args.low_impact,
                 "modelDiagnostics": args.model_diagnostics, "timeoutSeconds": args.timeout_seconds, "wallTimeoutSeconds": args.timeout_seconds + 60, "command": command,
-                "classPath": classpath,
+                "classPath": classpath, "nativeFiles": native_files, "nativesDirectory": str(output / "natives"),
                 "runtimeProvision": ({"path": runtime_provision["path"], "sha256": runtime_provision["sha256"]}
                                      if runtime_provision else None),
                 "preparedFiles": {str(p.relative_to(output)): digest(p) for p in files},
@@ -661,12 +759,14 @@ def prepare_resume(args, repo=REPO):
     prior = json.loads((previous / "launch.json").read_text(encoding="utf-8"))
     if args.timeout_seconds <= 0:
         raise ValueError("Harness timeout must be a positive number of seconds")
-    if args.scenario not in ("builder-reload", "builder-live-undo") or not args.enable_unrestricted:
-        raise ValueError("World resume requires builder-reload or builder-live-undo and explicit --enable-unrestricted")
+    if args.scenario not in ("builder-reload", "builder-live-undo"):
+        raise ValueError("World resume requires builder-reload or builder-live-undo")
     if args.scenario == "builder-live-undo" and (not args.question or not args.model_config):
         raise ValueError("Live undo requires an explicit ordinary provider question and environment-reference model config")
     if args.loader and args.loader != prior["loader"]:
         raise ValueError("Resume loader must match the prior manifest")
+    if args.minecraft_target != prior["minecraft"]:
+        raise ValueError("Resume exact Minecraft target must match the prior manifest")
     game = safe_output(Path(prior["gameDirectory"]), repo)
     world = prior["world"]
     if game != previous / "game" or not world.startswith(WORLD_PREFIX + prior["loader"] + "-"):
@@ -694,11 +794,11 @@ def prepare_resume(args, repo=REPO):
     replacement = None
     if args.jar:
         original = game / "mods" / previous_identity["name"]
-        original_identity = packaged_artifact(original, prior["loader"], previous_identity.get("modVersion", MOD_VERSION), repo)
+        original_identity = packaged_artifact(original, prior["loader"], previous_identity.get("modVersion", MOD_VERSION), repo, prior["minecraft"])
         if original_identity["sha256"] != previous_identity["sha256"]:
             raise ValueError("Original packaged artifact hash does not match the accepted manifest")
         replacement = args.jar.resolve()
-        new_identity = packaged_artifact(replacement, prior["loader"], previous_identity.get("modVersion", MOD_VERSION), repo)
+        new_identity = packaged_artifact(replacement, prior["loader"], previous_identity.get("modVersion", MOD_VERSION), repo, prior["minecraft"])
         identity_fields = ("loader", "minecraft", "modVersion", "bundledBuilder", "bundledBuilderSha256")
         if any(original_identity[field] != new_identity[field] for field in identity_fields):
             raise ValueError("Harness upgrade must preserve loader, Minecraft, OpenAllay version, and exact bundled Builder bytes")
@@ -728,8 +828,9 @@ def prepare_resume(args, repo=REPO):
             staged.unlink(missing_ok=True)
     if args.model_config:
         write_json(config / "models.json", models)
-    # This explicit opt-in changes only the prior disposable generated config.
-    write_json(config / "unrestricted-javascript.json", {"enabled": True})
+    # Resume is restricted by default; full access needs a separate explicit opt-in.
+    # Change only the prior disposable generated config, never an ordinary profile.
+    write_json(config / "unrestricted-javascript.json", {"enabled": args.enable_unrestricted})
     command = []
     skip_next = False
     prior_command = prior["command"]
@@ -760,6 +861,7 @@ def prepare_resume(args, repo=REPO):
     files = list((game / "mods").glob("*.jar")) + list(config.glob("*.json"))
     manifest = {**prior, "runId": run_id, "scenario": args.scenario, "command": command,
                 "resumeFrom": str(previous), "nativeSavedWorldReuse": True,
+                "unrestrictedOptIn": args.enable_unrestricted,
                 "modelDiagnostics": model_diagnostics, "timeoutSeconds": args.timeout_seconds, "wallTimeoutSeconds": args.timeout_seconds + 60,
                 "preparedFiles": {str(path.relative_to(game)): digest(path) for path in files},
                 "report": str(output / "report.json"), "trace": str(output / "trace.json"),
@@ -905,13 +1007,21 @@ def launch_prepared(path, repo=REPO):
         actual = {str(p.relative_to(output)): digest(p) for p in game.rglob("*") if p.is_file()}
     if actual != expected:
         raise ValueError("Prepared game files changed; prepare a new reviewed run")
+    native_directory = safe_output(Path(manifest["nativesDirectory"]), repo)
+    original = safe_output(Path(manifest.get("resumeFrom", output)), repo)
+    if native_directory != original / "natives":
+        raise ValueError("Prepared native directory must belong to the original disposable run")
+    native_actual = {path.relative_to(native_directory).as_posix(): digest(path)
+                     for path in native_directory.rglob("*") if path.is_file()}
+    if (native_actual != manifest["nativeFiles"] or any(path.is_symlink() for path in native_directory.rglob("*"))):
+        raise ValueError("Prepared extracted natives changed")
     provision = manifest.get("runtimeProvision")
     if provision:
-        mcroot = repo.resolve() / "build/e2e/runtime/minecraft"
+        mcroot = repo.resolve() / "build/e2e/runtime" / manifest["minecraft"] / "minecraft"
         receipt_path = mcroot / ".provision" / (manifest["loader"] + "-runtime.json")
         if provision.get("path") != str(receipt_path) or digest(receipt_path) != provision.get("sha256"):
             raise ValueError("Reviewed isolated runtime provision manifest changed")
-        runtime = validate_runtime_classpath(manifest["classPath"], mcroot, manifest["loader"], repo)
+        runtime = validate_runtime_classpath(manifest["classPath"], mcroot, manifest["loader"], repo, manifest["minecraft"])
         verifier = bundled_extension_verifier()
         for relative in runtime["files"]:
             verifier.prepare.relative_path(relative)
@@ -977,9 +1087,10 @@ def parser():
     result = argparse.ArgumentParser(description=__doc__)
     result.add_argument("loader", choices=("fabric", "neoforge"), nargs="?")
     result.add_argument("--run-id")
-    result.add_argument("--scenario", choices=SCENARIOS, default="builder-disabled")
-    result.add_argument("--enable-unrestricted", action="store_true", help="Explicit disposable-directory opt-in; never changes ordinary profiles")
-    result.add_argument("--revoke-unrestricted-after-capture", action="store_true")
+    result.add_argument("--minecraft-target", choices=minecraft_targets(), default="26.2")
+    result.add_argument("--scenario", choices=SCENARIOS, default="builder-restricted")
+    result.add_argument("--enable-unrestricted", action="store_true",
+                        help="Optional explicit full-access test opt-in; Builder writes work without it; never changes ordinary profiles")
     result.add_argument("--question")
     result.add_argument("--mod-version", help="Explicit packaged release version; fresh runs default to checked-in gradle.properties")
     result.add_argument("--professional-screenshots", action="store_true")
@@ -1000,8 +1111,8 @@ def parser():
     result.add_argument("--minecraft-root", type=Path, default=Path.home() / "Library/Application Support/minecraft")
     result.add_argument("--gradle-cache", type=Path, default=Path.home() / ".gradle/caches/modules-2/files-2.1")
     result.add_argument("--fabric-api", type=Path)
-    result.add_argument("--assets-root", type=Path, help="Matching32 assets; defaults to ignored runtime cache then installed assets")
-    result.add_argument("--prepare-assets", "--fetch-assets", action="store_true", help="Explicitly fetch/hash-check official32 assets into ignored build/e2e/runtime/assets; no game launch")
+    result.add_argument("--assets-root", type=Path, help="Matching exact target assets; defaults to ignored runtime cache then installed assets")
+    result.add_argument("--prepare-assets", "--fetch-assets", action="store_true", help="Explicitly fetch/hash-check exact target official assets into ignored runtime assets; no game launch")
     result.add_argument("--java", type=Path, default=Path("/Library/Java/JavaVirtualMachines/zulu-25.jdk/Contents/Home/bin/java"))
     result.add_argument("--launch-prepared", type=Path, help="Explicitly launch an already prepared/reviewed directory; otherwise only prepare")
     return result
@@ -1013,7 +1124,7 @@ def main(argv=None):
         if args.prepare_assets:
             if args.launch_prepared:
                 raise ValueError("Asset preparation cannot launch a client")
-            prepare_assets(args.minecraft_root, args.assets_root or REPO / "build/e2e/runtime/assets")
+            prepare_assets(args.minecraft_root, args.assets_root or REPO / "build/e2e/runtime/assets", minecraft_target=args.minecraft_target)
         elif args.launch_prepared:
             launch_prepared(args.launch_prepared)
         elif args.resume_prepared:

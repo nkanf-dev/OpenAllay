@@ -15,6 +15,115 @@ spec.loader.exec_module(launcher)
 
 
 class PackagedBuilderLauncherTests(unittest.TestCase):
+    def test_target_catalog_cli_and_java_pins_are_exact_and_per_call(self):
+        self.assertEqual(23, len(launcher.minecraft_targets()))
+        for target, java in (("1.20.1", "17"), ("1.21.1", "21"), ("26.3", "25"), ("26.2", "25")):
+            args = launcher.parser().parse_args(["fabric", "--minecraft-target", target])
+            self.assertEqual(target, args.minecraft_target)
+            self.assertEqual(java, launcher.runtime_pins(target)["java_version"])
+        self.assertFalse(hasattr(launcher, "MC_VERSION"))
+
+    def test_verified_native_classifier_is_extracted_not_added_as_game_classpath(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            jar = root / "libraries/org/example/native.jar"
+            jar.parent.mkdir(parents=True)
+            with zipfile.ZipFile(jar, "w") as archive:
+                archive.writestr("META-INF/MANIFEST.MF", b"manifest")
+                archive.writestr("liblwjgl.so", b"tiny native fixture")
+            native = {"path": "org/example/native.jar", "sha1": launcher.digest_with(jar, "sha1"), "size": jar.stat().st_size}
+            metadata = {"libraries": [{"name": "org.example:native:1", "natives": {"linux": "natives-linux"},
+                                       "downloads": {"classifiers": {"natives-linux": native}}, "extract": {"exclude": ["META-INF/"]}}]}
+            with patch.object(launcher, "system_name", return_value="linux"):
+                selected = launcher.native_libraries(metadata, root)
+            files = launcher.extract_natives(selected, root / "run/natives")
+            self.assertEqual({"liblwjgl.so": launcher.hashlib.sha256(b"tiny native fixture").hexdigest()}, files)
+            self.assertFalse((root / "run/natives/META-INF").exists())
+            jar.write_bytes(b"modified selected native")
+            with patch.object(launcher, "system_name", return_value="linux"), self.assertRaisesRegex(ValueError, "hash/size"):
+                launcher.native_libraries(metadata, root)
+
+    def test_native_extraction_rejects_unsafe_zip_paths_symlinks_and_conflicts(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for number, name in enumerate(("../escape", "/absolute", "a/../escape", "a\\escape", "C:/escape", "a//escape")):
+                jar = root / (str(number) + ".jar")
+                with zipfile.ZipFile(jar, "w") as archive:
+                    archive.writestr(name, b"unsafe")
+                with self.assertRaisesRegex(ValueError, "Unsafe native"):
+                    launcher.extract_natives([(jar, [])], root / ("out" + str(number)))
+            jar = root / "symlink.jar"
+            with zipfile.ZipFile(jar, "w") as archive:
+                info = zipfile.ZipInfo("lib.so")
+                info.external_attr = (0o120777 << 16)
+                archive.writestr(info, b"outside")
+            with self.assertRaisesRegex(ValueError, "Unsafe native"):
+                launcher.extract_natives([(jar, [])], root / "symlink")
+            jars = []
+            for number in (1, 2):
+                jar = root / ("conflict" + str(number) + ".jar")
+                with zipfile.ZipFile(jar, "w") as archive:
+                    archive.writestr("lib.so", bytes([number]))
+                jars.append((jar, []))
+            with self.assertRaisesRegex(ValueError, "conflicting paths"):
+                launcher.extract_natives(jars, root / "conflicts")
+
+    def test_same_builder_payload_verifies_all_exact_candidates_without_release_admission(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory) / "repo"
+            for target in launcher.minecraft_targets():
+                artifact = self.artifact(repo, minecraft_target=target)
+                identity = launcher.packaged_artifact(artifact, "fabric", repo=repo, minecraft_target=target)
+                self.assertEqual(target, identity["minecraft"])
+                self.assertTrue(identity["nativeWorldBootstrapPresent"])
+                # This header-only fixture verifies declarations; it does not widen
+                # distribution/support admission or constitute real-game acceptance.
+
+    def test_exact_target_fabric_prepare_uses_game_java_and_installed_profile_arguments(self):
+        for target in ("1.20.1", "1.21.1", "26.3"):
+            with self.subTest(target=target), tempfile.TemporaryDirectory() as directory:
+                repo = Path(directory) / "repo"
+                artifact = self.artifact(repo, minecraft_target=target)
+                mcroot, cache, java = self.environment(repo)
+                pins = launcher.runtime_pins(target)
+                vanilla = launcher.read_version(mcroot, "26.2")
+                old = mcroot / "versions/26.2"
+                new = mcroot / "versions" / target
+                old.rename(new)
+                (new / "26.2.jar").rename(new / (target + ".jar"))
+                (new / "26.2.json").unlink()
+                vanilla["id"] = target
+                vanilla["javaVersion"]["majorVersion"] = int(pins["java_version"])
+                launcher.write_json(new / (target + ".json"), vanilla)
+                profile_path = repo / "gradle/minecraft-targets" / (target + ".properties")
+                profile_path.write_bytes((launcher.REPO / "gradle/minecraft-targets" / (target + ".properties")).read_bytes())
+                fabric_id = "fabric-loader-" + pins["fabric_loader_version"] + "-" + target
+                profile_file = mcroot / "versions" / fabric_id / (fabric_id + ".json")
+                profile_file.parent.mkdir()
+                launcher.write_json(profile_file, {"id": fabric_id, "inheritsFrom": target,
+                    "mainClass": "net.fabricmc.loader.impl.launch.knot.KnotClient",
+                    "libraries": [{"name": "net.fabricmc:fabric-loader:" + pins["fabric_loader_version"], "url": "https://maven.fabricmc.net/"}],
+                    "arguments": {"jvm": ["-Dexact.target=" + target], "game": []}})
+                loader = cache / "net.fabricmc/fabric-loader" / pins["fabric_loader_version"] / "hash" / ("fabric-loader-" + pins["fabric_loader_version"] + ".jar")
+                loader.parent.mkdir(parents=True, exist_ok=True)
+                loader.write_bytes(b"installed profile dependency")
+                api = repo / ("fabric-api-" + target + ".jar")
+                with zipfile.ZipFile(api, "w") as archive:
+                    archive.writestr("fabric.mod.json", json.dumps({"id": "fabric-api", "version": pins["fabric_version"]}))
+                args = launcher.parser().parse_args(["fabric", "--minecraft-target", target,
+                    "--minecraft-root", str(mcroot), "--gradle-cache", str(cache), "--java", str(java),
+                    "--fabric-api", str(api), "--jar", str(artifact), "--run-id", "per-target"])
+                from types import SimpleNamespace
+                with patch.object(launcher.subprocess, "run", return_value=SimpleNamespace(returncode=0,
+                        stdout='openjdk version "' + pins["java_version"] + '.0.1"')):
+                    output, manifest = launcher.prepare(args, repo)
+                self.assertEqual(target, manifest["minecraft"])
+                self.assertEqual(int(pins["java_version"]), manifest["javaRequired"])
+                self.assertIn("-Dexact.target=" + target, manifest["command"])
+                self.assertIn(str((new / (target + ".jar")).resolve()), manifest["classPath"])
+                self.assertEqual({}, manifest["nativeFiles"])
+                self.assertFalse(list((output / "game/saves").iterdir()))
+
     def test_os_rules_do_not_enable_demo_or_quickplay_for_fresh_world(self):
         self.assertFalse(launcher.rules_allow(
             [{"action": "allow", "features": {"is_demo_user": True}}]))
@@ -122,9 +231,9 @@ class PackagedBuilderLauncherTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 launcher.safe_output(repo / "build/e2e/../../../saves", repo)
 
-    def artifact(self, repo, loader="fabric", bootstrap=True):
-        path = repo / loader / "build/libs" / f"openallay-{loader}-26.2-0.4.1.jar"
-        path.parent.mkdir(parents=True)
+    def artifact(self, repo, loader="fabric", bootstrap=True, minecraft_target="26.2"):
+        path = repo / loader / "build/libs" / f"openallay-{loader}-{minecraft_target}-0.4.1.jar"
+        path.parent.mkdir(parents=True, exist_ok=True)
         (repo / "gradle.properties").write_text("version=0.4.1\n", encoding="utf-8")
         lock_path = repo / "distribution/extensions.lock.json"
         lock_path.parent.mkdir(parents=True, exist_ok=True)
@@ -136,14 +245,13 @@ class PackagedBuilderLauncherTests(unittest.TestCase):
                       "version": lock["version"], "entrypoint": "dev.openallay.builder.BuilderExtension",
                       "provider": "OpenAllay", "summary": "Construction on the integrated server.",
                       "source": "https://github.com/nkanf-dev/OpenAllay-Extensions",
-                      "support": {"targets": [{"loader": target, "minecraftVersionRange": "26.2",
+                      "support": {"targets": [{"loader": target, "minecraftVersionRange": game,
                                                 "openAllayVersionRange": "[0.4.1,)",
-                                                "openAllayApiVersionRange": "[0.3.0,0.4.0)"}
-                                               for target in ("fabric", "neoforge")],
+                                                "openAllayApiVersionRange": "[0.4.0,0.5.0)"}
+                                               for target in ("fabric", "neoforge") for game in launcher.minecraft_targets()],
                                   "minimumJavaVersion": 8,
                                   "requiredHostFeatures": ["minecraft:world-access"], "validatedTargetIds": []},
-                      "requirements": {"capabilities": ["openallay_builder:world_write"],
-                                       "extensions": [], "skills": []}}
+                      "requirements": {"capabilities": [], "extensions": [], "skills": []}}
         embedded = io.BytesIO()
         with zipfile.ZipFile(embedded, "w") as builder:
             for name in sorted(verifier.SHARED_ENTRIES):
@@ -161,7 +269,8 @@ class PackagedBuilderLauncherTests(unittest.TestCase):
             if loader == "fabric":
                 archive.writestr("fabric.mod.json", json.dumps({"id": "openallay", "version": "0.4.1", "jars": []}))
             else:
-                archive.writestr("META-INF/neoforge.mods.toml", 'modId="openallay"\nversion="0.4.1"\n')
+                archive.writestr("META-INF/mods.toml" if minecraft_target == "1.20.1" else "META-INF/neoforge.mods.toml",
+                                 'modId="openallay"\nversion="0.4.1"\n')
                 archive.writestr("META-INF/jarjar/metadata.json", json.dumps({"jars": []}))
             archive.writestr(builder_path, builder_content)
             archive.writestr(verifier.PROVENANCE, json.dumps(provenance))
@@ -201,6 +310,7 @@ class PackagedBuilderLauncherTests(unittest.TestCase):
         fabric_profile.parent.mkdir(parents=True)
         launcher.write_json(fabric_profile, {"id": fabric_id, "inheritsFrom": "26.2",
                                              "mainClass": "net.fabricmc.loader.impl.launch.knot.KnotClient",
+                                             "libraries": [{"name": "net.fabricmc:fabric-loader:0.19.3", "url": "https://maven.fabricmc.net/"}],
                                              "arguments": {"jvm": ["-DFabricMcEmu= net.minecraft.client.main.Main "],
                                                            "game": []}})
         api = repo / "fabric/runs/client/mods/fabric-api-0.152.1+26.2.jar"
@@ -244,7 +354,7 @@ class PackagedBuilderLauncherTests(unittest.TestCase):
                 artifact = self.artifact(repo, loader)
                 identity = launcher.packaged_artifact(artifact, loader, repo=repo)
                 identities.append(identity)
-                self.assertEqual("META-INF/openallay/bundled-extensions/openallay-builder-universal-0.3.0.jar",
+                self.assertEqual("META-INF/openallay/bundled-extensions/openallay-builder-universal-0.4.0.jar",
                                  identity["bundledBuilder"])
                 self.assertNotIn("nestedBuilder", identity)
             self.assertEqual(identities[0]["bundledBuilderSha256"], identities[1]["bundledBuilderSha256"])
@@ -338,7 +448,7 @@ class PackagedBuilderLauncherTests(unittest.TestCase):
                     resources["META-INF/openallay-extension.json"] = json.dumps(manifest)
                 self.change_builder_resources(entries, change)
                 self.rewrite_archive(artifact, entries)
-                expected = {"api": "SDK support range", "java": "Java8 support", "minecraft": "exactly Minecraft26.2"}
+                expected = {"api": "SDK support range", "java": "Java8 support", "minecraft": "prepared native target profiles"}
                 with self.assertRaisesRegex(ValueError, expected[field]):
                     launcher.packaged_artifact(artifact, "fabric", repo=repo)
 
@@ -349,7 +459,7 @@ class PackagedBuilderLauncherTests(unittest.TestCase):
     def isolated_environment(self, repo):
         repo = repo.resolve()
         mcroot, cache, java = self.environment(repo)
-        isolated = repo / "build/e2e/runtime/minecraft"
+        isolated = repo / "build/e2e/runtime/26.2/minecraft"
         isolated.parent.mkdir(parents=True)
         launcher.shutil.move(str(mcroot), str(isolated))
         loader = isolated / "libraries/net/fabricmc/fabric-loader/0.19.3/fabric-loader-0.19.3.jar"
@@ -400,7 +510,7 @@ class PackagedBuilderLauncherTests(unittest.TestCase):
                                  ("sourceProfileSha256", "0" * 64), ("pins", {})):
                 with self.subTest(field=field):
                     launcher.write_json(receipt_path, {**receipt, field: value})
-                    with self.assertRaisesRegex(ValueError, "current26.2 target"):
+                    with self.assertRaisesRegex(ValueError, "exact source target"):
                         launcher.read_runtime_provision(mcroot, "fabric", repo)
             launcher.write_json(receipt_path, receipt)
             loader_jar = mcroot / "libraries/net/fabricmc/fabric-loader/0.19.3/fabric-loader-0.19.3.jar"
@@ -449,17 +559,19 @@ class PackagedBuilderLauncherTests(unittest.TestCase):
         self.assertEqual(["-Djava.library.path=/runtime/native path"], launcher.expand_arguments(
             ["-Djava.library.path=${natives_directory}"], {"natives_directory": "/runtime/native path"}))
 
-    def test_prepare_loads_only_packaged_mod_and_keeps_default_authority_off(self):
+    def test_prepare_loads_only_packaged_mod_with_default_restricted_javascript(self):
         with tempfile.TemporaryDirectory() as directory:
             repo = Path(directory) / "repo"
             self.artifact(repo)
             mcroot, cache, java = self.environment(repo)
-            args = launcher.parser().parse_args(["fabric", "--run-id", "test-disabled",
+            args = launcher.parser().parse_args(["fabric", "--run-id", "test-restricted",
                                                  "--minecraft-root", str(mcroot), "--gradle-cache", str(cache),
                                                  "--java", str(java)])
             with patch.object(launcher, "system_name", return_value="osx"):
                 output, manifest = launcher.prepare(args, repo)
             self.assertTrue(manifest["noGameLaunched"])
+            self.assertEqual("builder-restricted", manifest["scenario"])
+            self.assertFalse(manifest["unrestrictedOptIn"])
             self.assertEqual("acceptance-instrumented", manifest["packagedArtifact"]["kind"])
             self.assertTrue(manifest["world"].startswith("openallay-builder-fabric-"))
             self.assertEqual([], list((output / "game/saves").iterdir()))
@@ -485,14 +597,49 @@ class PackagedBuilderLauncherTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 launcher.prepare(args, repo)
 
-    def test_enabled_scenario_requires_explicit_disposable_opt_in(self):
+    def test_positive_builder_scenarios_prepare_without_full_access(self):
         with tempfile.TemporaryDirectory() as directory:
-            args = launcher.parser().parse_args(["fabric", "--scenario", "builder-acceptance"])
-            with self.assertRaisesRegex(ValueError, "explicit --enable-unrestricted"):
-                launcher.prepare(args, Path(directory))
-            args = launcher.parser().parse_args(["fabric", "--enable-unrestricted"])
-            with self.assertRaisesRegex(ValueError, "Disabled and UI scenarios"):
-                launcher.prepare(args, Path(directory))
+            repo = Path(directory) / "repo"
+            self.artifact(repo)
+            mcroot, cache, java = self.environment(repo)
+            common = ["fabric", "--minecraft-root", str(mcroot), "--gradle-cache", str(cache), "--java", str(java)]
+            for scenario in ("builder-restricted", "builder-acceptance", "builder-partial", "builder-cancel"):
+                with self.subTest(scenario=scenario):
+                    args = launcher.parser().parse_args(common + ["--run-id", scenario, "--scenario", scenario])
+                    output, manifest = launcher.prepare(args, repo)
+                    self.assertEqual(scenario, manifest["scenario"])
+                    self.assertFalse(args.enable_unrestricted)
+                    self.assertFalse(manifest["unrestrictedOptIn"])
+                    self.assertEqual({"enabled": False}, json.loads(
+                        (output / "game/config/openallay/unrestricted-javascript.json").read_text()))
+                    self.assertIn("-Dopenallay.e2e.scenario=" + scenario, manifest["command"])
+                    self.assertIn("-Dopenallay.e2e.question=OpenAllay E2E Builder " + scenario.removeprefix("builder-"),
+                                  manifest["command"])
+                    self.assertNotIn("--quickPlaySingleplayer", manifest["command"])
+
+    def test_full_access_remains_a_separate_explicit_disposable_opt_in(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory) / "repo"
+            self.artifact(repo)
+            mcroot, cache, java = self.environment(repo)
+            common = ["fabric", "--scenario", "builder-acceptance", "--minecraft-root", str(mcroot),
+                      "--gradle-cache", str(cache), "--java", str(java)]
+            for run_id, extra, enabled in (("restricted-positive", [], False),
+                                          ("explicit-full-access", ["--enable-unrestricted"], True)):
+                with self.subTest(run_id=run_id):
+                    output, manifest = launcher.prepare(
+                        launcher.parser().parse_args(common + ["--run-id", run_id] + extra), repo)
+                    self.assertIs(manifest["unrestrictedOptIn"], enabled)
+                    self.assertEqual({"enabled": enabled}, json.loads(
+                        (output / "game/config/openallay/unrestricted-javascript.json").read_text()))
+
+    def test_restricted_builder_proof_rejects_full_access(self):
+        with tempfile.TemporaryDirectory() as directory:
+            for extra in ([], ["--scenario", "builder-restricted"]):
+                with self.subTest(extra=extra):
+                    args = launcher.parser().parse_args(["fabric", "--enable-unrestricted"] + extra)
+                    with self.assertRaisesRegex(ValueError, "Restricted Builder proof and UI scenarios"):
+                        launcher.prepare(args, Path(directory))
 
     def test_launch_refuses_prebootstrap_production_jar_without_exec(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -544,11 +691,12 @@ class PackagedBuilderLauncherTests(unittest.TestCase):
             self.artifact(repo)
             mcroot, cache, java = self.environment(repo)
             args = launcher.parser().parse_args(["fabric", "--run-id", "original", "--scenario", "builder-acceptance",
-                                                 "--enable-unrestricted", "--minecraft-root", str(mcroot),
+                                                 "--minecraft-root", str(mcroot),
                                                  "--gradle-cache", str(cache), "--java", str(java)])
             previous, prior = launcher.prepare(args, repo)
+            self.assertFalse(prior["unrestrictedOptIn"])
             resume = launcher.parser().parse_args(["--resume-prepared", str(previous), "--run-id", "reload",
-                                                   "--scenario", "builder-reload", "--enable-unrestricted"])
+                                                   "--scenario", "builder-reload"])
             with self.assertRaisesRegex(ValueError, "prior native-created disposable world"):
                 launcher.prepare_resume(resume, repo)
             world = previous / "game/saves" / prior["world"]
@@ -559,7 +707,15 @@ class PackagedBuilderLauncherTests(unittest.TestCase):
             prior["noGameLaunched"] = False
             launcher.write_json(previous / "report.json", {"outcome": "COMPLETED", "nativeAcceptance": {"outcome": "PASSED"}})
             launcher.write_json(previous / "launch.json", prior)
+            old_manifest = (previous / "launch.json").read_bytes()
+            old_report = (previous / "report.json").read_bytes()
             output, manifest = launcher.prepare_resume(resume, repo)
+            self.assertFalse(resume.enable_unrestricted)
+            self.assertFalse(manifest["unrestrictedOptIn"])
+            self.assertEqual({"enabled": False}, json.loads(
+                (previous / "game/config/openallay/unrestricted-javascript.json").read_text()))
+            self.assertEqual(old_manifest, (previous / "launch.json").read_bytes())
+            self.assertEqual(old_report, (previous / "report.json").read_bytes())
             self.assertEqual(previous / "phases/reload", output)
             self.assertEqual(prior["gameDirectory"], manifest["gameDirectory"])
             self.assertNotEqual(prior["report"], manifest["report"])
@@ -610,9 +766,56 @@ class PackagedBuilderLauncherTests(unittest.TestCase):
 
     def test_live_requires_explicit_real_question_and_profile(self):
         with tempfile.TemporaryDirectory() as directory:
-            args = launcher.parser().parse_args(["fabric", "--scenario", "builder-live", "--enable-unrestricted"])
+            for scenario in ("builder-live", "builder-live-copy"):
+                with self.subTest(scenario=scenario):
+                    args = launcher.parser().parse_args(["fabric", "--scenario", scenario])
+                    with self.assertRaisesRegex(ValueError, "explicit ordinary provider question"):
+                        launcher.prepare(args, Path(directory))
+
+    def test_live_builder_and_live_undo_prepare_with_restricted_javascript(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory) / "repo"
+            self.artifact(repo)
+            mcroot, cache, java = self.environment(repo)
+            model_config = repo / "live-models.json"
+            models = launcher.fixture_model_config(18765)
+            models["profiles"][0]["baseUrl"] = "https://paid-provider.invalid/v1/"
+            models["profiles"][0]["credentialRef"] = "env:OPENALLAY_PAID_TEST_KEY"
+            launcher.write_json(model_config, models)
+            common = ["fabric", "--minecraft-root", str(mcroot), "--gradle-cache", str(cache), "--java", str(java),
+                      "--question", "Build the reviewed test structure.", "--model-config", str(model_config)]
+            for scenario in ("builder-live", "builder-live-copy"):
+                with self.subTest(scenario=scenario):
+                    output, manifest = launcher.prepare(launcher.parser().parse_args(
+                        common + ["--run-id", scenario, "--scenario", scenario]), repo)
+                    self.assertFalse(manifest["unrestrictedOptIn"])
+                    self.assertEqual({"enabled": False}, json.loads(
+                        (output / "game/config/openallay/unrestricted-javascript.json").read_text()))
+                    self.assertEqual(models, json.loads((output / "game/config/openallay/models.json").read_text()))
+                    self.assertIn("-Dopenallay.e2e.question=Build the reviewed test structure.", manifest["command"])
+            # The last prepared phase is builder-live-copy, which alone may resume live undo.
+            world = output / "game/saves" / manifest["world"]
+            world.mkdir()
+            (world / "level.dat").write_bytes(b"native-placeholder")
+            manifest["noGameLaunched"] = False
+            launcher.write_json(output / "report.json", {"outcome": "COMPLETED", "nativeAcceptance": {"outcome": "PASSED"}})
+            launcher.write_json(output / "launch.json", manifest)
+            missing = launcher.parser().parse_args(["--resume-prepared", str(output), "--scenario", "builder-live-undo"])
             with self.assertRaisesRegex(ValueError, "explicit ordinary provider question"):
-                launcher.prepare(args, Path(directory))
+                launcher.prepare_resume(missing, repo)
+            resume = launcher.parser().parse_args(["--resume-prepared", str(output), "--run-id", "live-undo",
+                                                   "--scenario", "builder-live-undo", "--question", "Undo the reviewed copy.",
+                                                   "--model-config", str(model_config)])
+            resumed, resumed_manifest = launcher.prepare_resume(resume, repo)
+            self.assertEqual(output / "phases/live-undo", resumed)
+            self.assertFalse(resumed_manifest["unrestrictedOptIn"])
+            self.assertTrue(resumed_manifest["nativeSavedWorldReuse"])
+            self.assertEqual(manifest["gameDirectory"], resumed_manifest["gameDirectory"])
+            self.assertEqual({"enabled": False}, json.loads(
+                (output / "game/config/openallay/unrestricted-javascript.json").read_text()))
+            self.assertIn("-Dopenallay.e2e.scenario=builder-live-undo", resumed_manifest["command"])
+            self.assertIn("-Dopenallay.e2e.question=Undo the reviewed copy.", resumed_manifest["command"])
+            self.assertNotEqual(manifest["report"], resumed_manifest["report"])
 
     def test_offline_identity_matches_java_name_uuid(self):
         self.assertEqual("0ca3b4023d2036a9b3f027e089e111ae", launcher.offline_uuid("BuilderAcceptance"))
@@ -692,12 +895,13 @@ class PackagedBuilderLauncherTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "positive"):
                 launcher.prepare(args, repo)
 
-    def accepted_original(self, repo, run_id="original"):
+    def accepted_original(self, repo, run_id="original", enable_unrestricted=False):
         artifact = self.artifact(repo)
         mcroot, cache, java = self.environment(repo)
         args = launcher.parser().parse_args(["fabric", "--run-id", run_id, "--scenario", "builder-acceptance",
-                                             "--enable-unrestricted", "--minecraft-root", str(mcroot),
-                                             "--gradle-cache", str(cache), "--java", str(java)])
+                                             "--minecraft-root", str(mcroot),
+                                             "--gradle-cache", str(cache), "--java", str(java)]
+                                            + (["--enable-unrestricted"] if enable_unrestricted else []))
         previous, prior = launcher.prepare(args, repo)
         world = previous / "game/saves" / prior["world"]
         world.mkdir()
@@ -733,6 +937,39 @@ class PackagedBuilderLauncherTests(unittest.TestCase):
                 new.writestr(name, content)
         return destination
 
+    def test_resume_defaults_to_restricted_and_full_access_requires_new_explicit_opt_in(self):
+        for prior_enabled, resumed_enabled in ((False, False), (True, False), (False, True)):
+            with self.subTest(prior_enabled=prior_enabled, resumed_enabled=resumed_enabled):
+                with tempfile.TemporaryDirectory() as directory:
+                    repo = Path(directory) / "repo"
+                    previous, prior, _ = self.accepted_original(repo, enable_unrestricted=prior_enabled)
+                    old_manifest = (previous / "launch.json").read_bytes()
+                    old_report = (previous / "report.json").read_bytes()
+                    resume = launcher.parser().parse_args([
+                        "--resume-prepared", str(previous), "--run-id", "authority-choice", "--scenario", "builder-reload"]
+                        + (["--enable-unrestricted"] if resumed_enabled else []))
+                    output, manifest = launcher.prepare_resume(resume, repo)
+                    self.assertIs(prior["unrestrictedOptIn"], prior_enabled)
+                    self.assertIs(manifest["unrestrictedOptIn"], resumed_enabled)
+                    self.assertEqual({"enabled": resumed_enabled}, json.loads(
+                        (previous / "game/config/openallay/unrestricted-javascript.json").read_text()))
+                    self.assertEqual(old_manifest, (previous / "launch.json").read_bytes())
+                    self.assertEqual(old_report, (previous / "report.json").read_bytes())
+                    self.assertEqual(prior["gameDirectory"], manifest["gameDirectory"])
+                    self.assertTrue(manifest["nativeSavedWorldReuse"])
+                    self.assertNotEqual(prior["report"], manifest["report"])
+                    self.assertEqual(manifest, json.loads((output / "launch.json").read_text()))
+
+    def test_resume_rejects_non_resume_scenario_even_with_full_access(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory) / "repo"
+            previous, _, _ = self.accepted_original(repo)
+            for extra in ([], ["--enable-unrestricted"]):
+                resume = launcher.parser().parse_args(["--resume-prepared", str(previous),
+                                                       "--scenario", "builder-acceptance"] + extra)
+                with self.assertRaisesRegex(ValueError, "World resume requires builder-reload or builder-live-undo"):
+                    launcher.prepare_resume(resume, repo)
+
     def test_resume_upgrade_retains_original_evidence_and_records_both_artifacts(self):
         with tempfile.TemporaryDirectory() as directory:
             repo = Path(directory) / "repo"
@@ -741,7 +978,7 @@ class PackagedBuilderLauncherTests(unittest.TestCase):
             old_report = (previous / "report.json").read_bytes()
             replacement = self.replacement_artifact(original, Path(directory) / "replacement")
             args = launcher.parser().parse_args(["--resume-prepared", str(previous), "--run-id", "upgraded",
-                                                 "--scenario", "builder-reload", "--enable-unrestricted",
+                                                 "--scenario", "builder-reload",
                                                  "--jar", str(replacement)])
             output, manifest = launcher.prepare_resume(args, repo)
             self.assertEqual(old_manifest, (previous / "launch.json").read_bytes())
@@ -766,7 +1003,7 @@ class PackagedBuilderLauncherTests(unittest.TestCase):
             replacement = self.replacement_artifact(original, Path(directory) / "replacement", change_builder=True)
             before = {str(path.relative_to(previous)): path.read_bytes() for path in previous.rglob("*") if path.is_file()}
             args = launcher.parser().parse_args(["--resume-prepared", str(previous), "--run-id", "bad-upgrade",
-                                                 "--scenario", "builder-reload", "--enable-unrestricted",
+                                                 "--scenario", "builder-reload",
                                                  "--jar", str(replacement)])
             with self.assertRaisesRegex(ValueError, "exact bundled Builder bytes"):
                 launcher.prepare_resume(args, repo)
@@ -783,7 +1020,7 @@ class PackagedBuilderLauncherTests(unittest.TestCase):
             installed = previous / "game/mods" / original.name
             installed.write_bytes(b"unexpected installed change")
             args = launcher.parser().parse_args(["--resume-prepared", str(previous), "--run-id", "changed-original",
-                                                 "--scenario", "builder-reload", "--enable-unrestricted",
+                                                 "--scenario", "builder-reload",
                                                  "--jar", str(replacement)])
             with self.assertRaisesRegex(ValueError, "mods changed"):
                 launcher.prepare_resume(args, repo)
@@ -816,7 +1053,7 @@ class PackagedBuilderLauncherTests(unittest.TestCase):
             launcher.write_json(previous / "launch.json", prior)
             for run_id, extra in (("retained", []), ("explicit", ["--model-diagnostics"])):
                 args = launcher.parser().parse_args(["--resume-prepared", str(previous), "--run-id", run_id,
-                                                     "--scenario", "builder-reload", "--enable-unrestricted"] + extra)
+                                                     "--scenario", "builder-reload"] + extra)
                 _, manifest = launcher.prepare_resume(args, repo)
                 self.assertTrue(manifest["modelDiagnostics"])
                 self.assertEqual(1, manifest["command"].count(prop))
@@ -842,7 +1079,6 @@ class PackagedBuilderLauncherTests(unittest.TestCase):
                          "-Dopenallay.e2e.screenshotAutomaticProfile=automatic-public-reference",
                          "-Dopenallay.e2e.reviewPackage=" + str(artifact.resolve())):
                 self.assertIn(prop, manifest["command"])
-            self.assertNotIn("-Dopenallay.e2e.revokeUnrestrictedAfterCapture=true", manifest["command"])
 
     def test_ui_stop_requires_explicit_cancel_and_rejects_unrestricted(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -913,7 +1149,7 @@ class PackagedBuilderLauncherTests(unittest.TestCase):
             png = b"\x89PNG\r\n\x1a\nsynthetic frame, not a game proof"
             for scenario, expected in (("ui-stop", "10-wide-about.png"),
                                        ("ui-provider-failure", "10-wide-about.png"),
-                                       ("builder-disabled", "11-native-world-builds.png"),
+                                       ("builder-restricted", "11-native-world-builds.png"),
                                        ("builder-acceptance", "11-native-world-builds.png"),
                                        ("builder-reload", "11-native-world-builds.png")):
                 with self.subTest(scenario=scenario):
@@ -975,7 +1211,7 @@ class PackagedBuilderLauncherTests(unittest.TestCase):
             (repo / "gradle.properties").write_text("version=0.4.2\n", encoding="utf-8")
             replacement = self.replacement_artifact(original, Path(directory) / "replacement")
             args = launcher.parser().parse_args(["--resume-prepared", str(previous), "--run-id", "retained-old-version",
-                                                 "--scenario", "builder-reload", "--enable-unrestricted", "--jar", str(replacement)])
+                                                 "--scenario", "builder-reload", "--jar", str(replacement)])
             _, manifest = launcher.prepare_resume(args, repo)
             self.assertEqual("0.4.1", manifest["packagedArtifact"]["modVersion"])
 

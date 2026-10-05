@@ -26,11 +26,10 @@ import traceback
 
 REPO = Path(__file__).resolve().parents[1]
 SCENARIOS = (
-    "builder-disabled", "builder-acceptance", "builder-partial", "builder-cancel",
+    "builder-restricted", "builder-acceptance", "builder-partial", "builder-cancel",
     "builder-reload", "ui-stop", "ui-provider-failure", "ui-manual-regressions",
     "ui-live-ux-regressions",
 )
-ENABLED_BUILDERS = frozenset(("builder-acceptance", "builder-partial", "builder-cancel", "builder-reload"))
 SYNTHETIC_KEY = "openallay-local-fixture-not-a-secret"
 MAX_BATCH_SECONDS = 35 * 60
 CLEANUP_RESERVE_SECONDS = 20
@@ -239,7 +238,7 @@ def effective_timeout(scenario, timeout):
 
 def prepare_command(args, scenario, run_id, port, repo, accepted=None):
     command = [sys.executable, str(Path(repo) / "scripts/run-packaged-builder-acceptance.py"), args.loader,
-               "--scenario", scenario, "--run-id", run_id,
+               "--scenario", scenario, "--run-id", run_id, "--minecraft-target", args.minecraft_version,
                "--timeout-seconds", str(effective_timeout(scenario, args.timeout_seconds))]
     if scenario == "builder-reload":
         if accepted is None:
@@ -256,8 +255,6 @@ def prepare_command(args, scenario, run_id, port, repo, accepted=None):
             command += ["--gradle-cache", str(args.gradle_cache)]
         if args.mod_version is not None:
             command += ["--mod-version", args.mod_version]
-    if scenario in ENABLED_BUILDERS:
-        command.append("--enable-unrestricted")
     if scenario == "ui-stop":
         command.append("--cancel-on-tool-start")
     return command
@@ -269,7 +266,7 @@ def review_manifest(directory, args, scenario, run_id, port, launcher, repo, acc
     identity = manifest.get("packagedArtifact", {})
     expected_fields = {"loader": args.loader, "minecraft": args.minecraft_version,
                        "runId": run_id, "scenario": scenario,
-                       "unrestrictedOptIn": scenario in ENABLED_BUILDERS,
+                       "unrestrictedOptIn": False,
                        "timeoutSeconds": effective_timeout(scenario, args.timeout_seconds),
                        "wallTimeoutSeconds": effective_timeout(scenario, args.timeout_seconds) + 60,
                        "noGameLaunched": not launched}
@@ -306,6 +303,8 @@ def review_manifest(directory, args, scenario, run_id, port, launcher, repo, acc
     verify_artifact(game / "mods" / args.jar.name, args.artifact_sha256)
     if read_json(game / "config/openallay/models.json") != launcher.fixture_model_config(port):
         raise ValueError("Every CI scenario must use only this batch's deterministic loopback fixture")
+    if read_json(game / "config/openallay/unrestricted-javascript.json") != {"enabled": False}:
+        raise ValueError("Every CI scenario must keep unrestricted JavaScript disabled")
     if launched and (manifest.get("clientExitCode") != 0 or type(manifest.get("clientExitCode")) is not int):
         raise ValueError("Native client did not retain an actual successful exit receipt")
     return manifest
@@ -394,8 +393,9 @@ def validate_arguments(args, repo):
         raise ValueError("This CI runner requires Linux; the workflow supplies Xvfb and Mesa")
     if not os.environ.get("DISPLAY"):
         raise ValueError("DISPLAY is missing; the workflow must start Xvfb before the runner")
-    if args.minecraft_version != "26.2":
-        raise ValueError("Only the provisioned Minecraft26.2 launcher is currently supported")
+    target_pins = load_launcher(REPO).runtime_pins(args.minecraft_version, repo)
+    if target_pins["minecraft_version"] != args.minecraft_version:
+        raise ValueError("Exact Minecraft target differs from the source profile")
     if not re.fullmatch(r"[0-9a-f]{64}", args.artifact_sha256):
         raise ValueError("--artifact-sha256 must be the exact lowercase SHA256 of the production JAR")
     if args.timeout_seconds <= 0 or not CLEANUP_RESERVE_SECONDS < args.batch_timeout_seconds <= MAX_BATCH_SECONDS:
@@ -462,15 +462,14 @@ def run_batch(args, repo=REPO):
         summary["sources"] = retain_sources(repo, output)
         summary["originalArtifact"] = verify_artifact(args.jar, args.artifact_sha256)
         launcher = load_launcher(repo)
-        if launcher.MC_VERSION != args.minecraft_version:
-            raise ValueError("Existing launcher Minecraft version differs from the requested batch")
+        launcher.runtime_pins(args.minecraft_version, repo)
         mod_version = args.mod_version
         if mod_version is None:
             matches = re.findall(r"^version=([^\r\n]+)$", (Path(repo) / "gradle.properties").read_text(), re.MULTILINE)
             if len(matches) != 1:
                 raise ValueError("Repository release version is missing or ambiguous")
             mod_version = matches[0]
-        summary["packagedArtifact"] = launcher.packaged_artifact(args.jar, args.loader, mod_version)
+        summary["packagedArtifact"] = launcher.packaged_artifact(args.jar, args.loader, mod_version, repo, args.minecraft_version)
         if (summary["packagedArtifact"].get("sha256") != args.artifact_sha256
                 or summary["packagedArtifact"].get("nativeWorldBootstrapPresent") is not True):
             raise ValueError("Exact production artifact must include its opt-in native client bootstrap")
@@ -581,7 +580,8 @@ def run_batch(args, repo=REPO):
 def parser():
     result = argparse.ArgumentParser(description=__doc__)
     result.add_argument("loader", choices=("fabric", "neoforge"))
-    result.add_argument("--minecraft-version", default="26.2", choices=("26.2",))
+    result.add_argument("--minecraft-target", "--minecraft-version", dest="minecraft_version", default="26.2",
+                        choices=load_launcher(REPO).minecraft_targets(REPO))
     result.add_argument("--jar", type=Path, required=True)
     result.add_argument("--artifact-sha256", "--jar-sha256", required=True)
     result.add_argument("--java", type=Path, required=True)

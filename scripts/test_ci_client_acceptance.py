@@ -48,6 +48,8 @@ class Simulator:
         self.nonzero_client_exits = set()
         self.change_artifact_after = set()
         self.external_models = set()
+        self.unrestricted_manifests = set()
+        self.unrestricted_configs = set()
         self.port = 12345
 
     def identity(self):
@@ -113,6 +115,8 @@ class Simulator:
                 models["profiles"][0]["baseUrl"] = "https://paid-provider.invalid/v1/"
             runner.write_json(game / "config/openallay/models.json", models)
         directory.mkdir(parents=True, exist_ok=True)
+        runner.write_json(game / "config/openallay/unrestricted-javascript.json",
+                          {"enabled": scenario in self.unrestricted_configs})
         if scenario == "ui-manual-regressions":
             exports = game / "openallay/exports"
             exports.mkdir(parents=True)
@@ -120,7 +124,7 @@ class Simulator:
         timeout = runner.effective_timeout(scenario, self.args.timeout_seconds)
         manifest = {"loader": self.args.loader, "minecraft": "26.2", "runId": run_id,
                     "world": world, "scenario": scenario, "gameDirectory": str(game),
-                    "packagedArtifact": self.identity(), "unrestrictedOptIn": scenario in runner.ENABLED_BUILDERS,
+                    "packagedArtifact": self.identity(), "unrestrictedOptIn": scenario in self.unrestricted_manifests,
                     "timeoutSeconds": timeout, "wallTimeoutSeconds": timeout + 60,
                     "preparedFiles": {mod_key: self.args.artifact_sha256}, "command": ["synthetic-java"],
                     "report": str(directory / "report.json"), "trace": str(directory / "trace.json"),
@@ -166,6 +170,9 @@ class ClientAcceptanceTests(unittest.TestCase):
         self.repo = Path(self.temp.name) / "repo"
         self.repo.mkdir()
         (self.repo / "gradle.properties").write_text("version=0.4.1\n")
+        (self.repo / "gradle/minecraft-targets").mkdir(parents=True)
+        (self.repo / "gradle/minecraft-targets/26.2.properties").write_bytes(
+            (REFERENCE_REPO / "gradle/minecraft-targets/26.2.properties").read_bytes())
         (self.repo / "scripts").mkdir()
         (self.repo / "scripts/e2e-model-fixture.py").write_text("# synthetic fixture source")
         artifact = self.repo / "openallay-fabric-26.2-0.4.1.jar"
@@ -191,7 +198,6 @@ class ClientAcceptanceTests(unittest.TestCase):
 
     def run_batch(self):
         wrapped_launcher = MagicMock(wraps=launcher)
-        wrapped_launcher.MC_VERSION = "26.2"
         wrapped_launcher.packaged_artifact.side_effect = lambda *args: self.simulator.identity()
         with ExitStack() as stack:
             stack.enter_context(patch.object(runner.sys, "platform", "linux"))
@@ -205,7 +211,29 @@ class ClientAcceptanceTests(unittest.TestCase):
         output = self.repo / "build/e2e/ci-client/fabric/unit-batch"
         return code, runner.read_json(output / "summary.json"), wrapped_launcher
 
-    def test_default_all_nine_use_production_jar_cli_and_actual_validator_gates(self):
+    def test_exact_target_cli_catalog_forwards_fresh_and_reload_without_global_mutation(self):
+        for target in ("1.20.1", "1.21.1", "26.3", "26.2"):
+            args = runner.parser().parse_args([
+                "fabric", "--minecraft-target", target, "--jar", str(self.args.jar),
+                "--artifact-sha256", self.args.artifact_sha256, "--java", str(self.args.java),
+                "--minecraft-root", str(self.args.minecraft_root), "--assets-root", str(self.args.assets_root)])
+            self.assertEqual(target, args.minecraft_version)
+            for scenario in ("builder-restricted", "builder-reload"):
+                command = runner.prepare_command(args, scenario, "exact-target", 12345, self.repo,
+                    accepted={"directory": self.repo / "build/e2e/prior"})
+                self.assertEqual(target, command[command.index("--minecraft-target") + 1])
+                if scenario == "builder-reload":
+                    self.assertNotIn("--jar", command)
+            alias = runner.parser().parse_args([
+                "fabric", "--minecraft-version", target, "--jar", str(self.args.jar),
+                "--artifact-sha256", self.args.artifact_sha256, "--java", str(self.args.java),
+                "--minecraft-root", str(self.args.minecraft_root), "--assets-root", str(self.args.assets_root)])
+            self.assertEqual(target, alias.minecraft_version)
+        choice = next(action for action in runner.parser()._actions if action.dest == "minecraft_version")
+        self.assertEqual(set(launcher.minecraft_targets()), set(choice.choices))
+        self.assertEqual(23, len(choice.choices))
+
+    def test_default_all_nine_keep_restricted_javascript_and_use_actual_validator_gates(self):
         code, summary, validated = self.run_batch()
         self.assertEqual(0, code)
         self.assertEqual("PASSED", summary["status"])
@@ -217,7 +245,7 @@ class ClientAcceptanceTests(unittest.TestCase):
         prepares = self.simulator.calls[::2]
         for command in prepares:
             scenario = command[command.index("--scenario") + 1]
-            self.assertEqual(scenario in runner.ENABLED_BUILDERS, "--enable-unrestricted" in command)
+            self.assertNotIn("--enable-unrestricted", command)
             self.assertEqual(scenario == "ui-stop", "--cancel-on-tool-start" in command)
             self.assertNotIn("--prepare-assets", command)
             self.assertNotIn("--model-config", command)
@@ -228,23 +256,73 @@ class ClientAcceptanceTests(unittest.TestCase):
             self.assertEqual(self.args.artifact_sha256, record["artifactBefore"]["sha256"])
             self.assertEqual(self.args.artifact_sha256, record["artifactAfter"]["sha256"])
             self.assertTrue(any(item["path"].endswith("report.json") for item in record["evidence"]))
+            manifest = runner.read_json(Path(record["directory"]) / "launch.json")
+            self.assertFalse(manifest["unrestrictedOptIn"])
+            self.assertEqual({"enabled": False}, runner.read_json(
+                Path(manifest["gameDirectory"]) / "config/openallay/unrestricted-javascript.json"))
+        reload_record = next(item for item in summary["scenarios"] if item["scenario"] == "builder-reload")
+        accepted_record = next(item for item in summary["scenarios"] if item["scenario"] == "builder-acceptance")
+        reload_manifest = runner.read_json(Path(reload_record["directory"]) / "launch.json")
+        accepted_manifest = runner.read_json(Path(accepted_record["directory"]) / "launch.json")
+        self.assertTrue(reload_manifest["nativeSavedWorldReuse"])
+        self.assertEqual(accepted_manifest["gameDirectory"], reload_manifest["gameDirectory"])
+        self.assertNotEqual(accepted_manifest["report"], reload_manifest["report"])
         self.assertEqual(9, len(summary["diagnostics"]["scenarioDirectories"]))
         manual = next(item for item in summary["scenarios"] if item["scenario"] == "ui-manual-regressions")
         self.assertTrue(any(item["path"].endswith("synthetic.md") for item in manual["evidence"]))
         self.assertTrue(summary["sources"])
         self.assertIn("no model accuracy", summary["acceptanceBoundary"])
 
+    def test_ci_rejects_full_access_positive_manifest_before_launch(self):
+        self.args.scenarios = ["builder-acceptance", "builder-reload"]
+        self.simulator.unrestricted_manifests.add("builder-acceptance")
+        code, summary, _ = self.run_batch()
+        self.assertEqual(1, code)
+        records = {item["scenario"]: item for item in summary["scenarios"]}
+        self.assertIn("Prepared manifest mismatch: unrestrictedOptIn", records["builder-acceptance"]["failures"][0])
+        self.assertIn("builder-acceptance did not pass", records["builder-reload"]["failures"][0])
+        self.assertEqual(1, len(self.simulator.calls))
+        self.assertTrue(summary["diagnostics"]["logFiles"])
+        self.assertTrue(any(item["path"].endswith("launch.json") for item in records["builder-acceptance"]["evidence"]))
+
+    def test_ci_rejects_full_access_positive_config_before_launch(self):
+        self.args.scenarios = ["builder-partial"]
+        self.simulator.unrestricted_configs.add("builder-partial")
+        code, summary, _ = self.run_batch()
+        self.assertEqual(1, code)
+        record = summary["scenarios"][0]
+        self.assertEqual("FAILED", record["status"])
+        self.assertIn("keep unrestricted JavaScript disabled", record["failures"][0])
+        self.assertEqual(1, len(self.simulator.calls))
+        self.assertTrue(summary["diagnostics"]["logFiles"])
+
+    def test_ci_rejects_full_access_reload_config_before_resume_launch(self):
+        self.args.scenarios = ["builder-acceptance", "builder-reload"]
+        self.simulator.unrestricted_configs.add("builder-reload")
+        code, summary, validated = self.run_batch()
+        self.assertEqual(1, code)
+        records = {item["scenario"]: item for item in summary["scenarios"]}
+        self.assertEqual("PASSED", records["builder-acceptance"]["status"])
+        self.assertEqual("FAILED", records["builder-reload"]["status"])
+        self.assertIn("keep unrestricted JavaScript disabled", records["builder-reload"]["failures"][0])
+        self.assertEqual(3, len(self.simulator.calls))
+        self.assertIn("--resume-prepared", self.simulator.calls[-1])
+        self.assertNotIn("--enable-unrestricted", self.simulator.calls[-1])
+        self.assertEqual(2, validated.validate_report.call_count)  # Accepted run and reviewed reload origin.
+        self.assertTrue(any(item["path"].endswith("launch.json") for item in records["builder-reload"]["evidence"]))
+        self.assertTrue(summary["diagnostics"]["logFiles"])
+
     def test_prepare_failure_aggregates_and_always_stops_fixture(self):
-        self.simulator.prepare_failures.add("builder-disabled")
+        self.simulator.prepare_failures.add("builder-restricted")
         code, summary, _ = self.run_batch()
         self.assertEqual(1, code)
         self.assertEqual("FAILED", summary["scenarios"][0]["status"])
         self.assertEqual("PASSED", summary["scenarios"][-1]["status"])
         self.fixture.stop.assert_called_once()
-        self.assertEqual(1, sum("builder-disabled" in command for command in self.simulator.calls))
+        self.assertEqual(1, sum("builder-restricted" in command for command in self.simulator.calls))
 
     def test_launch_timeout_keeps_diagnostics_and_stops_fixture_without_retry(self):
-        self.simulator.launch_failures.add("builder-disabled")
+        self.simulator.launch_failures.add("builder-restricted")
         code, summary, _ = self.run_batch()
         self.assertEqual(1, code)
         first = summary["scenarios"][0]
@@ -263,7 +341,7 @@ class ClientAcceptanceTests(unittest.TestCase):
         self.assertFalse(any("--resume-prepared" in command for command in self.simulator.calls))
 
     def test_changed_original_sha_fails_batch_and_blocks_remaining_native_launches(self):
-        self.simulator.change_artifact_after.add("builder-disabled")
+        self.simulator.change_artifact_after.add("builder-restricted")
         code, summary, _ = self.run_batch()
         self.assertEqual(1, code)
         self.assertEqual(2, len(self.simulator.calls))
@@ -273,19 +351,19 @@ class ClientAcceptanceTests(unittest.TestCase):
         self.fixture.stop.assert_called_once()
 
     def test_external_provider_config_is_rejected_before_launch(self):
-        self.simulator.external_models.add("builder-disabled")
+        self.simulator.external_models.add("builder-restricted")
         code, summary, _ = self.run_batch()
         self.assertEqual(1, code)
         self.assertIn("loopback", " ".join(summary["scenarios"][0]["failures"]))
         self.assertEqual(17, len(self.simulator.calls))
 
     def test_missing_report_or_native_nonzero_exit_can_never_pass(self):
-        self.simulator.missing_reports.add("builder-disabled")
+        self.simulator.missing_reports.add("builder-restricted")
         self.simulator.nonzero_client_exits.add("builder-partial")
         code, summary, _ = self.run_batch()
         self.assertEqual(1, code)
         records = {item["scenario"]: item for item in summary["scenarios"]}
-        self.assertEqual("FAILED", records["builder-disabled"]["status"])
+        self.assertEqual("FAILED", records["builder-restricted"]["status"])
         self.assertEqual("FAILED", records["builder-partial"]["status"])
 
     def test_fixture_start_failure_marks_every_missing_scenario_failed(self):
@@ -370,7 +448,7 @@ class ClientAcceptanceTests(unittest.TestCase):
         self.assertEqual(first, second)
         self.assertLessEqual(len(first + "-ui-live-ux-regressions"), 91)
         self.assertEqual(600, runner.effective_timeout("ui-live-ux-regressions", 180))
-        self.assertEqual(180, runner.effective_timeout("builder-disabled", 180))
+        self.assertEqual(180, runner.effective_timeout("builder-restricted", 180))
 
     def test_paid_live_scenarios_and_external_model_option_do_not_exist(self):
         self.assertNotIn("builder-live", runner.SCENARIOS)
@@ -394,10 +472,10 @@ class ClientAcceptanceTests(unittest.TestCase):
         directory = self.repo / "build/e2e/missing-final"
         directory.mkdir(parents=True)
         report_path = directory / "report.json"
-        runner.write_json(report_path, {"scenario": "builder-disabled", "outcome": "COMPLETED",
+        runner.write_json(report_path, {"scenario": "builder-restricted", "outcome": "COMPLETED",
                                         "nativeAcceptance": {"outcome": "PASSED"}})
         launcher = runner.load_launcher(REFERENCE_REPO)
-        manifest = {"scenario": "builder-disabled", "report": str(report_path),
+        manifest = {"scenario": "builder-restricted", "report": str(report_path),
                     "screenshots": str(directory / "screenshots")}
         with self.assertRaisesRegex(ValueError, "final PNG"):
             runner.validate_run(directory, manifest, launcher)
@@ -408,7 +486,7 @@ class ClientAcceptanceTests(unittest.TestCase):
         report_path = directory / "report.json"
         runner.write_json(report_path, {"scenario": "other", "outcome": "COMPLETED", "nativeAcceptance": {"outcome": "PASSED"}})
         with self.assertRaisesRegex(ValueError, "scenario differs"):
-            runner.validate_run(directory, {"scenario": "builder-disabled", "report": str(report_path)}, launcher)
+            runner.validate_run(directory, {"scenario": "builder-restricted", "report": str(report_path)}, launcher)
 
     def test_native_frame_hash_validation_is_the_existing_launcher_gate(self):
         directory = self.repo / "build/e2e/unit"

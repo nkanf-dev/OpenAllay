@@ -30,10 +30,137 @@ class RuntimeTests(unittest.TestCase):
         self.root = Path(self.temporary.name).resolve()
         self.repo = self.root / "repo"
         self.repo.mkdir()
-        self.mcroot = self.repo / "build/e2e/runtime/minecraft"
+        self.mcroot = self.repo / "build/e2e/runtime/26.2/minecraft"
 
     def tearDown(self):
         self.temporary.cleanup()
+
+    def test_all_prepared_exact_target_profiles_are_read_through_one_authority(self):
+        targets = runtime.minecraft_targets()
+        self.assertEqual(23, len(targets))
+        self.assertIn("1.20.1", targets)
+        self.assertIn("1.21.1", targets)
+        self.assertIn("26.3", targets)
+        for target in targets:
+            pins = runtime.read_pins(runtime.REPO, target)
+            self.assertEqual(target, pins["minecraft_version"])
+            self.assertIn(int(pins["java_version"]), (17, 21, 25))
+        for target, java in (("1.20.1", "17"), ("1.21.1", "21"), ("26.3", "25")):
+            self.assertEqual(java, runtime.read_pins(runtime.REPO, target)["java_version"])
+        for target in ("../26.2", "1.20", "26.4"):
+            with self.assertRaises(ValueError):
+                runtime.read_pins(runtime.REPO, target)
+
+    def test_exact_target_root_and_owner_refuse_cross_target_reuse(self):
+        from types import SimpleNamespace
+        self.assertEqual(("forge", "1.20.1-forge-47.1.106"), runtime.neoforge_identity(
+            runtime.read_pins(runtime.REPO, "1.20.1")))
+        root = self.repo / "build/e2e/runtime/1.20.1/minecraft"
+        runtime.claim_root(root, "1.20.1")
+        with self.assertRaisesRegex(ValueError, "ownership"):
+            runtime.claim_root(root, "26.2")
+        with patch.object(runtime, "read_pins", return_value=runtime.read_pins(runtime.REPO, "1.20.1")), \
+                patch.object(runtime, "check_java") as checked:
+            with self.assertRaisesRegex(ValueError, "<target>"):
+                runtime.provision(SimpleNamespace(loader="fabric", minecraft_target="1.20.1",
+                                                  minecraft_root=self.mcroot, java=self.root / "java"), self.repo)
+            checked.assert_not_called()
+
+    def test_real_early_and_modern_mapped_processor_shapes(self):
+        # Exact mechanisms from the SHA-verified official 1.20.1 / 1.21.1 installers.
+        # The tiny byte fixtures are not executable game acceptance.
+        for target, mappings_group, tool_group in (("1.20.1", "de.oceanlabs.mcp:mcp_config", "net.minecraftforge"),
+                                                  ("1.21.1", "net.neoforged:neoform", "net.neoforged.installertools")):
+            with self.subTest(target=target):
+                tool = tool_group + ":installertools:1"
+                splitter = tool_group + ":jarsplitter:1"
+                renamer = tool_group + ":AutoRenamingTool:1:all"
+                patcher = tool_group + ":binarypatcher:1"
+                mappings = mappings_group + ":" + target + "@zip"
+                names = [tool, splitter, renamer, patcher, mappings]
+                data = {key: {"client": "[net.minecraft:client:" + target + ":" + key.lower() + "]"}
+                        for key in ("MAPPINGS", "MOJMAPS", "MERGED_MAPPINGS", "MC_SLIM", "MC_EXTRA", "MC_SRG", "PATCHED")}
+                args = [
+                    ["--task", "MCP_DATA", "--input", "[" + mappings + "]", "--output", "{MAPPINGS}", "--key", "mappings"],
+                    ["--task", "DOWNLOAD_MOJMAPS", "--version", target, "--side", "{SIDE}", "--output", "{MOJMAPS}"],
+                    ["--task", "MERGE_MAPPING", "--left", "{MAPPINGS}", "--right", "{MOJMAPS}", "--output", "{MERGED_MAPPINGS}",
+                     "--classes", *(["--fields", "--methods"] if target == "1.21.1" else []), "--reverse-right"],
+                    ["--input", "{MINECRAFT_JAR}", "--slim", "{MC_SLIM}", "--extra", "{MC_EXTRA}", "--srg", "{MERGED_MAPPINGS}"],
+                    ["--input", "{MC_SLIM}", "--output", "{MC_SRG}", "--names", "{MERGED_MAPPINGS}", "--ann-fix", "--ids-fix", "--src-fix", "--record-fix"],
+                    ["--clean", "{MC_SRG}", "--output", "{PATCHED}", "--apply", "{BINPATCH}"],
+                ]
+                install = {"minecraft": target, "libraries": [{"name": name} for name in names], "data": data,
+                           "processors": [{"jar": name, "classpath": [name], "args": values}
+                                          for name, values in zip([tool, tool, tool, splitter, renamer, patcher], args)]}
+                outputs = runtime.processor_outputs(self.mcroot, install)
+                self.assertEqual(set(data), set(outputs))
+                for path in outputs.values():
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    path.write_bytes(b"tiny processor output")
+                data["PATCHED_SHA"] = {"client": "'" + runtime.file_hash(outputs["PATCHED"], "sha1") + "'"}
+                runtime.verify_processor_outputs(self.mcroot, install, outputs)
+                outputs["PATCHED"].write_bytes(b"tampered processor output")
+                with self.assertRaisesRegex(ValueError, "hash differs"):
+                    runtime.verify_processor_outputs(self.mcroot, install, outputs)
+                install["processors"][-1]["args"].append("--unknown")
+                with self.assertRaisesRegex(ValueError, "Unknown official client processor"):
+                    runtime.processor_outputs(self.mcroot, install)
+
+    def test_old_mapped_installer_is_explicit_online_and_maps_verified_afterward(self):
+        import zipfile
+        for target in ("1.20.1", "1.21.1"):
+            with self.subTest(target=target):
+                root = self.repo / "build/e2e/runtime" / target / "minecraft"
+                runtime.claim_root(root, target)
+                pins = runtime.read_pins(runtime.REPO, target)
+                artifact, profile_id = runtime.neoforge_identity(pins)
+                tool = "net.neoforged.installertools:installertools:2.1.2"
+                universal = "net.neoforged:" + artifact + ":" + pins["neoforge_version"] + ":universal"
+                def library(name, body):
+                    path = runtime.maven_path(name)
+                    return {"name": name, "downloads": {"artifact": {"path": path,
+                            "url": "https://maven.neoforged.net/releases/" + path,
+                            "sha1": hashlib.sha1(body).hexdigest(), "size": len(body)}}}
+                lib_tool, lib_universal = library(tool, b"tool"), library(universal, b"universal")
+                install = {"minecraft": target, "version": profile_id,
+                    "data": {"MOJMAPS": {"client": "[net.minecraft:client:" + target + ":mappings@txt]"},
+                             "PATCHED": {"client": "[net.neoforged:" + artifact + ":" + pins["neoforge_version"] + ":client]"}},
+                    "libraries": [lib_tool, lib_universal],
+                    "processors": [{"jar": tool, "classpath": [tool], "args": ["--task", "DOWNLOAD_MOJMAPS", "--version", target,
+                        "--side", "{SIDE}", "--output", "{MOJMAPS}"]},
+                        {"jar": tool, "classpath": [tool], "args": ["--clean", "{MC_SRG}", "--output", "{PATCHED}", "--apply", "{BINPATCH}"]}]}
+                expected = {"id": profile_id, "inheritsFrom": target,
+                            "mainClass": "cpw.mods.bootstraplauncher.BootstrapLauncher", "libraries": [], "arguments": {"jvm": [], "game": []}}
+                mapping_bytes = b"actual tiny official mappings fixture"
+                version = root / "versions" / target / (target + ".json")
+                runtime.write_json(version, {"downloads": {"client_mappings": {
+                    "url": "https://piston-data.mojang.com/mappings.txt", "sha1": hashlib.sha1(mapping_bytes).hexdigest(), "size": len(mapping_bytes)}}})
+                def installer_file(url, destination):
+                    self.assertIn("/net/neoforged/" + artifact + "/", url)
+                    with zipfile.ZipFile(destination, "w") as archive:
+                        archive.writestr("install_profile.json", json.dumps(install))
+                        archive.writestr("version.json", json.dumps(expected))
+                    return destination
+                corrupt = False
+                def install_client(command, root, loader):
+                    self.assertNotIn("--offline", command)
+                    self.assertNotIn("--skipHashCheck", command)
+                    runtime.write_json(root / "versions" / profile_id / (profile_id + ".json"), expected)
+                    outputs = runtime.processor_outputs(root, install)
+                    outputs["MOJMAPS"].parent.mkdir(parents=True, exist_ok=True)
+                    outputs["MOJMAPS"].write_bytes(b"tampered" if corrupt else mapping_bytes)
+                    outputs["PATCHED"].parent.mkdir(parents=True, exist_ok=True)
+                    with zipfile.ZipFile(outputs["PATCHED"], "w") as archive:
+                        archive.writestr("Main.class", b"not a game")
+                bodies = {lib_tool["downloads"]["artifact"]["url"]: b"tool", lib_universal["downloads"]["artifact"]["url"]: b"universal"}
+                with patch.object(runtime, "checksum_artifact", side_effect=installer_file), \
+                        patch.object(runtime, "open_official", side_effect=lambda url: Response(bodies[url], url)), \
+                        patch.object(runtime, "run_installer", side_effect=install_client):
+                    result = runtime.prepare_neoforge(root, self.root / "java", pins)
+                    self.assertEqual(profile_id, result[0])
+                    corrupt = True
+                    with self.assertRaisesRegex(ValueError, "client mappings differ"):
+                        runtime.prepare_neoforge(root, self.root / "java", pins)
 
     def test_output_only_isolated_runtime(self):
         self.assertEqual(runtime.safe_root(self.mcroot, self.repo), self.mcroot)
@@ -51,7 +178,7 @@ class RuntimeTests(unittest.TestCase):
         for bad in ["../x", "/x", "a/../b", "a\\b", "a//b", "", "C:/x", "a/%2e%2e/b"]:
             with self.assertRaises(ValueError):
                 runtime.relative_file(self.root, bad)
-        for bad in ["a:b", "a:b:../1", "a:b:1:../../x", "a:b:1@zip"]:
+        for bad in ["a:b", "a:b:../1", "a:b:1:../../x", "a:b:1@exe"]:
             with self.assertRaises(ValueError):
                 runtime.maven_path(bad)
 
@@ -142,10 +269,10 @@ class RuntimeTests(unittest.TestCase):
     def test_source_profile_is_the_pin_authority(self):
         profile = self.repo / "gradle/minecraft-targets/26.2.properties"
         profile.parent.mkdir(parents=True)
-        profile.write_text("minecraft_version=26.2\njava_version=25\nfabric_loader_version=0.19.3\nfabric_version=0.152.1+26.2\nneoforge_version=26.2.0.25-beta\n")
+        profile.write_bytes((runtime.REPO / "gradle/minecraft-targets/26.2.properties").read_bytes())
         pins = runtime.read_pins(self.repo)
         self.assertEqual(pins["fabric_version"], "0.152.1+26.2")
-        profile.write_text(profile.read_text().replace("java_version=25", "java_version=21"))
+        profile.write_text(profile.read_text().replace("minecraft_version=26.2", "minecraft_version=1.21.1"))
         with self.assertRaises(ValueError):
             runtime.read_pins(self.repo)
         profile.write_text(profile.read_text().replace("java_version=21", "java_version=25") + "fabric_version=bad\n")
@@ -156,7 +283,7 @@ class RuntimeTests(unittest.TestCase):
         (self.repo / "build/e2e").mkdir(parents=True)
         (self.repo / "build/e2e/runtime").symlink_to(self.root, target_is_directory=True)
         with self.assertRaises(ValueError):
-            runtime.safe_root(self.repo / "build/e2e/runtime/minecraft", self.repo)
+            runtime.safe_root(self.repo / "build/e2e/runtime/26.2/minecraft", self.repo)
 
     def test_modern_linux_native_artifact_rule(self):
         artifact = {"path": "org/lwjgl/native.jar", "url": "https://libraries.minecraft.net/org/lwjgl/native.jar", "sha1": "a" * 40, "size": 5}
@@ -255,7 +382,7 @@ class RuntimeTests(unittest.TestCase):
         from types import SimpleNamespace
         profile = self.repo / "gradle/minecraft-targets/26.2.properties"
         profile.parent.mkdir(parents=True)
-        profile.write_text("minecraft_version=26.2\njava_version=25\nfabric_loader_version=0.19.3\nfabric_version=0.152.1+26.2\nneoforge_version=26.2.0.25-beta\n")
+        profile.write_bytes((runtime.REPO / "gradle/minecraft-targets/26.2.properties").read_bytes())
         def vanilla(root, pins):
             client = root / "versions/26.2/26.2.jar"
             client.parent.mkdir(parents=True)
@@ -273,7 +400,7 @@ class RuntimeTests(unittest.TestCase):
             (root / "libraries/untrusted.jar").write_bytes(b"not part of official inputs")
             return "fabric-loader-0.19.3-26.2", api, [api, profile]
         with patch.object(runtime, "check_java", return_value='openjdk version "25"'), patch.object(runtime, "prepare_vanilla", side_effect=vanilla), patch.object(runtime, "prepare_fabric", side_effect=fabric):
-            receipt = runtime.provision(SimpleNamespace(loader="fabric", java=self.root / "java", minecraft_root=self.mcroot), self.repo)
+            receipt = runtime.provision(SimpleNamespace(loader="fabric", minecraft_target="26.2", java=self.root / "java", minecraft_root=self.mcroot), self.repo)
         self.assertEqual(receipt["minecraftRoot"], str(self.mcroot))
         self.assertFalse(receipt["gameLaunched"])
         self.assertFalse(receipt["assetsPrepared"])
@@ -377,13 +504,13 @@ class RuntimeTests(unittest.TestCase):
         from types import SimpleNamespace
         profile = self.repo / "gradle/minecraft-targets/26.2.properties"
         profile.parent.mkdir(parents=True)
-        profile.write_text("minecraft_version=26.2\njava_version=25\nfabric_loader_version=0.19.3\nfabric_version=0.152.1+26.2\nneoforge_version=26.2.0.25-beta\n")
+        profile.write_bytes((runtime.REPO / "gradle/minecraft-targets/26.2.properties").read_bytes())
         runtime.claim_root(self.mcroot)
         receipt = self.mcroot / ".provision/fabric-runtime.json"
         receipt.write_text('{"old":"receipt"}')
         with patch.object(runtime, "check_java", return_value='openjdk version "25"'), patch.object(runtime, "prepare_vanilla", side_effect=ValueError("checksum failed")):
             with self.assertRaises(ValueError):
-                runtime.provision(SimpleNamespace(loader="fabric", java=self.root / "java", minecraft_root=self.mcroot), self.repo)
+                runtime.provision(SimpleNamespace(loader="fabric", minecraft_target="26.2", java=self.root / "java", minecraft_root=self.mcroot), self.repo)
         self.assertFalse(receipt.exists())
 
     def test_official_installer_archive_inner_class_names_are_legal(self):
@@ -449,7 +576,7 @@ class RuntimeTests(unittest.TestCase):
         (self.repo / "build/e2e").mkdir(parents=True)
         (self.repo / "build/e2e/runtime").symlink_to(source, target_is_directory=True)
         with self.assertRaises(ValueError):
-            runtime.safe_root(self.repo / "build/e2e/runtime/minecraft", self.repo)
+            runtime.safe_root(self.repo / "build/e2e/runtime/26.2/minecraft", self.repo)
 
 
 if __name__ == "__main__":
