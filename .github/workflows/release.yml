@@ -34,10 +34,11 @@ jobs:
       env:
         MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
       run: test -n "${MODRINTH_TOKEN}"
-    - name: Download original immutable accepted artifacts and runtime evidence
+    - name: Resolve the original accepted files once and retain the same immutable cache
       env:
         GH_TOKEN: ${{ github.token }}
-      run: python3 -B scripts/promote-accepted-artifacts.py download
+      run: |
+        python3 -B scripts/fill-original-selection-entries.py --root "$PWD" --draft distribution/accepted-release-artifacts.inputs.json --cache build/accepted-originals --output distribution/accepted-release-artifacts.json --member-receipt build/accepted-original-members.json
     - name: Stage the original bytes and bind existing proof to final release paths
       run: |-
         python3 -B scripts/promote-accepted-artifacts.py stage > release-publication-records.json
@@ -51,6 +52,7 @@ jobs:
         path: |-
           build/release-receipts/
           release-publication-records.json
+          build/accepted-original-members.json
     - name: Generate release notes
       env:
         GH_TOKEN: ${{ github.token }}

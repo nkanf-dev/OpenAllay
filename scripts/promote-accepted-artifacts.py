@@ -216,7 +216,10 @@ def original_proofs(data, cache, row, family):
         require((family["loader"] == "fabric" and profile["fabricApi"] is not None) or (family["loader"] == "neoforge" and profile["fabricApi"] is None), "Original loader API identity differs")
         old_path = Path(summary["originalArtifact"]["path"])
         scenarios = ("builder-acceptance", "builder-reload") if run["target"] == "26.2" else ("builder-restricted",)
-        interval.verify_summary(summary, family, run["target"], row["artifactSha256"], old_path, scenarios=scenarios)
+        original_scenarios = tuple(item["scenario"] for item in summary["scenarios"])
+        require(all(name in original_scenarios for name in scenarios), "Required native boundary scenario missing")
+        require(len(original_scenarios) == len(set(original_scenarios)), "Duplicate original scenario rows")
+        interval.verify_summary(summary, family, run["target"], row["artifactSha256"], old_path, scenarios=original_scenarios)
         require(old_path.name == row["filename"], "Runtime used a different original filename")
         if run["result"] is not None:
             result = artifacts.read_json(original_file(cache, run["result"]))
