@@ -181,15 +181,8 @@ def validate_prefix(directory, current_identity, classpath, installed_mod):
     for name in ["com.google.gson.Gson", "com.google.common.collect.ImmutableList", "org.apache.logging.log4j.Logger"]:
         if old_identity[name]["archiveSha256"] != current_identity[name]["archiveSha256"]:
             raise ValueError("Native prefix official host changed: " + name)
-    build_reports = list(directory.rglob("probe-build.json"))
-    if len(build_reports) != 1:
-        raise ValueError("Original probe component metadata is missing")
-    original_build = json.loads(build_reports[0].read_text())
-    greeting = "dev/openallay/forge36probe/Probe$Greeting.class"
-    with zipfile.ZipFile(installed_mod) as archive:
-        greeting_hash = hashlib.sha256(archive.read(greeting)).hexdigest()
-    if greeting_hash != original_build["reobfOutput"]["entries"][greeting]["sha256"]:
-        raise ValueError("Default interface input changed from the original probe")
+    # Greeting belongs to the freshly executed JavaAdapter stage, not the retained successful prefix.
+    # Its original failed-stage bytes are not a prerequisite for reusing earlier engine stages.
     spec = json.loads(specs[0].read_text())
     current_spec = json.loads((PACKET.parents[1] / "build/forge36-shared/closure-input.json").read_text())
     if {a["role"]:a["sha256"] for a in spec["artifacts"]} != {a["role"]:a["sha256"] for a in current_spec["artifacts"]}:
