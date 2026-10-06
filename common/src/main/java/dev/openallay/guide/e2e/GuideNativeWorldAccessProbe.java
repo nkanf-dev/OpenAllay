@@ -67,7 +67,7 @@ final class GuideNativeWorldAccessProbe {
                         WorldSession.WriteOutcome unchanged=session.write(x,y,z,preview);
                         require(unchanged.failure()==null && !unchanged.changed(), "native no-op accounting");
                         checks.add(Map.of("check","preview-write-readback","status","PASS"));
-                        String chest="{\"id\":\"minecraft:chest\",\"properties\":{\"facing\":\"north\",\"type\":\"single\",\"waterlogged\":\"false\"},\"blockEntity\":\"{id:'minecraft:chest',Items:[{Slot:0b,id:'minecraft:diamond',Count:3b}]}\"}";
+                        String chest=GuideProbeNativeWorldState.chestWithDiamonds();
                         String intended=session.preview(x+1,y,z,chest);
                         require(session.read(x+1,y,z).equals(before[1]), "detached chest preview did not place");
                         WorldSession.WriteOutcome installed=session.write(x+1,y,z,intended);
@@ -133,7 +133,7 @@ final class GuideNativeWorldAccessProbe {
                     String id=session.worldId();
                     String before=session.call(() -> session.read(freshX,freshY,freshZ));
                     String actual=session.call(() -> {
-                        String state="{\"id\":\"minecraft:chest\",\"properties\":{\"facing\":\"north\",\"type\":\"single\",\"waterlogged\":\"false\"},\"blockEntity\":\"{id:'minecraft:chest',Items:[{Slot:0b,id:'minecraft:diamond',Count:3b}]}\"}";
+                        String state=GuideProbeNativeWorldState.chestWithDiamonds();
                         String intended=session.preview(freshX,freshY,freshZ,state);
                         require(session.read(freshX,freshY,freshZ).equals(before),"persistence preview did not write");
                         WorldSession.WriteOutcome result=session.write(freshX,freshY,freshZ,intended);
