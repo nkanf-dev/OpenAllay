@@ -82,6 +82,9 @@ public final class GuideClientE2EController {
     private GuideBuilderE2EProbe.Anchor currentPlayerAnchor;
     private boolean unrestrictedAtStart;
     private boolean nativeProbePending;
+    private boolean builderAnchorPending;
+    private Instant builderAnchorSubmittedAt;
+    private volatile String builderAnchorPhase = "not_submitted";
     private dev.openallay.OpenAllayRuntime nativeCommandRuntime;
     private dev.openallay.client.MinecraftGuideContextProvider nativeCommandContexts;
     private dev.openallay.model.CancellationSignal nativeCommandCancellation;
@@ -229,6 +232,16 @@ public final class GuideClientE2EController {
             return;
         }
         if (started) {
+            if (builderAnchorPending) {
+                startupGate(builderAnchorPhase, actor);
+                if (finished) return;
+                if (Duration.between(builderAnchorSubmittedAt, Instant.now()).toSeconds()
+                        > Math.max(1L, Long.getLong("openallay.e2e.anchorTimeoutSeconds", 30L))) {
+                    builderAnchorPending = false;
+                    failWithoutRequest("native_anchor_timeout", "Builder anchor did not advance from " + builderAnchorPhase);
+                }
+                return;
+            }
             if (graphicalProbe != null) {
                 graphicalProbe.tick();
                 return;
@@ -309,7 +322,10 @@ public final class GuideClientE2EController {
                 failWithoutRequest("unsafe_builder_fixture", "Builder acceptance requires this controller's disposable world launch");
                 return;
             }
+            builderAnchorPending = true;
+            builderAnchorSubmittedAt = Instant.now();
             GuideBuilderE2EProbe.captureAnchor(config.scenario(), actor, anchor -> {
+                builderAnchorPending = false;
                 if (finished) return;
                 currentPlayerAnchor = anchor;
                 try {
@@ -327,7 +343,13 @@ public final class GuideClientE2EController {
                     }
                     startNativeCommandWarmup(actor, service);
                 } else selectSession(service);
-            }, failure -> failWithoutRequest("native_capture_failed", failure));
+            }, failure -> {
+                builderAnchorPending = false;
+                failWithoutRequest("native_capture_failed", failure);
+            }, phase -> {
+                builderAnchorPhase = phase;
+                System.out.println("OpenAllay E2E Builder anchor: " + phase);
+            });
         } else {
             selectSession(service);
         }
@@ -1365,7 +1387,7 @@ public final class GuideClientE2EController {
 
     /** Bounded opt-in startup observations. No screen changes or readiness are manufactured. */
     private void startupGate(String phase, UUID actor) {
-        if (!graphicalScenario(config.scenario())) return;
+        if (!graphicalScenario(config.scenario()) && !GuideBuilderE2EProbe.enabled(config.scenario())) return;
         Instant now = Instant.now();
         if (!phase.equals(startupPhase)) {
             startupPhase = phase;
@@ -1381,6 +1403,10 @@ public final class GuideClientE2EController {
         if (server != null) facts.put("worldName", dev.openallay.server.NativeServerOwner.worldName(server));
         facts.put("recipeSeedAdmitted", graphicalRecipeSeedAdmitted);
         facts.put("recipeSeedReady", graphicalRecipeSeedReady);
+        if (GuideBuilderE2EProbe.enabled(config.scenario())) {
+            facts.put("builderAnchorPhase", builderAnchorPhase);
+            facts.put("builderAnchorPending", builderAnchorPending);
+        }
         if (!facts.equals(startupDiagnostic)) {
             startupDiagnostic = Map.copyOf(facts);
             if (startupDiagnosticChanges++ < 32) {

@@ -36,11 +36,14 @@ final class GuideBuilderE2EProbe {
                 "builder-cancel", "builder-undo", "builder-server-denied", "builder-live-copy", "builder-live-undo").contains(scenario);
     }
 
-    static void captureAnchor(String scenario, UUID actor, Consumer<Anchor> success, Consumer<String> failure) {
+    static void captureAnchor(String scenario, UUID actor, Consumer<Anchor> success, Consumer<String> failure,
+            Consumer<String> phase) {
         Minecraft client = dev.openallay.client.gui.MinecraftClientWindow.instance();
         var server = dev.openallay.client.gui.MinecraftClientWindow.integratedServer(client);
         if (server == null) { failure.accept("No authoritative integrated server"); return; }
+        phase.accept("anchor_submitted");
         dev.openallay.server.NativeServerOwner.execute(server, () -> {
+            phase.accept("anchor_server_entered");
             try {
                 var player = dev.openallay.server.NativeServerOwner.player(server, actor);
                 if (player == null) throw new IllegalStateException("Native player is unavailable");
@@ -60,12 +63,27 @@ final class GuideBuilderE2EProbe {
                         || !dev.openallay.platform.minecraft.MinecraftWorldSavePath.root(server).toAbsolutePath().normalize()
                                 .equals(dev.openallay.client.gui.MinecraftClientWindow.gameDirectory(client).resolve("saves").resolve(world).toAbsolutePath().normalize()))
                     throw new IllegalStateException("Builder setup requires the explicitly launched disposable fixture world");
+                phase.accept("anchor_fixture_validated");
                 GuideProbeWorldSettings.prepareBuilderFixture(server, resumed);
+                phase.accept("anchor_fixture_prepared");
                 Anchor anchor = new Anchor((int)Math.floor(dev.openallay.client.context.MinecraftClientContextFacts.x(player)) + 8,
                         (int)Math.floor(dev.openallay.client.context.MinecraftClientContextFacts.y(player)) - 1, (int)Math.floor(dev.openallay.client.context.MinecraftClientContextFacts.z(player)) + 8,
                         dev.openallay.world.MinecraftWorldObservationFacts.dimension(dev.openallay.context.minecraft.MinecraftServerPlayerLevel.get(player)));
-                dev.openallay.client.gui.MinecraftClientWindow.execute(client, () -> success.accept(anchor));
-            } catch (RuntimeException error) { dev.openallay.client.gui.MinecraftClientWindow.execute(client, () -> failure.accept(error.toString())); }
+                phase.accept("anchor_client_callback_submitted");
+                dev.openallay.client.gui.MinecraftClientWindow.execute(client, () -> {
+                    phase.accept("anchor_client_callback_entered");
+                    success.accept(anchor);
+                });
+            } catch (RuntimeException error) {
+                phase.accept("anchor_native_failure:" + error);
+                error.printStackTrace();
+                dev.openallay.client.gui.MinecraftClientWindow.execute(client, () -> failure.accept(error.toString()));
+            } catch (LinkageError error) {
+                phase.accept("anchor_native_failure:" + error);
+                error.printStackTrace();
+                dev.openallay.client.gui.MinecraftClientWindow.execute(client, () -> failure.accept(error.toString()));
+                throw error;
+            }
         });
     }
 
