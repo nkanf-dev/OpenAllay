@@ -396,6 +396,7 @@ def boot(args, root, java, assets, runtime, launch, expected, vanilla, version):
     ui_manual=getattr(args,"ui_manual",False)
     builder_scenario=getattr(args,"builder_scenario",None)
     builder=bool(builder_scenario)
+    bundled_builder=getattr(args,"bundled_builder",False)
     creates_world=getattr(args,"creates_disposable_world",world_sdk or ui_manual or builder)
     binding_probe=getattr(args,"applied_bindings",False)
     component_flags = (["-Dopenallay.capability.enabled=true",
@@ -441,10 +442,14 @@ def boot(args, root, java, assets, runtime, launch, expected, vanilla, version):
         (game/"options.txt").write_bytes((packet/"options.txt").read_bytes())
         source=component_receipt["nativeCompiledSource"]
         if builder:
-            extension=Path(args.builder_jar)
-            runtime.require(sha(extension)==args.builder_sha256,"Exact provider-verified Builder candidate changed")
-            extensions=settings/"extensions";extensions.mkdir()
-            (extensions/"openallay-builder-candidate.jar").write_bytes(extension.read_bytes())
+            if bundled_builder:
+                runtime.require(component_receipt.get("builderBundled") is True,"Actual provider must contain bundled Builder")
+                runtime.require(not (settings/"extensions").exists(),"Bundled-only run must not install community Builder")
+            else:
+                extension=Path(args.builder_jar)
+                runtime.require(sha(extension)==args.builder_sha256,"Exact provider-verified Builder candidate changed")
+                extensions=settings/"extensions";extensions.mkdir()
+                (extensions/"openallay-builder-candidate.jar").write_bytes(extension.read_bytes())
             component_flags += ["-Dopenallay.e2e.enabled=true","-Dopenallay.e2e.scenario=builder-"+builder_scenario,
                 "-Dopenallay.e2e.question=OpenAllay E2E Builder "+builder_scenario,
                 "-Dopenallay.e2e.session=e2e","-Dopenallay.e2e.modelMode=client",
@@ -452,7 +457,7 @@ def boot(args, root, java, assets, runtime, launch, expected, vanilla, version):
                 "-Dopenallay.e2e.trace="+str(output/"builder-trace.json"),
                 "-Dopenallay.e2e.createWorld=openallay-builder-forge1122-"+builder_scenario+"-"+str(os.getpid()),
                 "-Dopenallay.e2e.shutdown=true","-Dopenallay.e2e.timeoutSeconds=300"]
-            runtime.write_json(output/"builder-candidate-custody.json",{"sha256":sha(extension),"provider":args.builder_provider,
+            if not bundled_builder:runtime.write_json(output/"builder-candidate-custody.json",{"sha256":sha(extension),"provider":args.builder_provider,
                 "extensionSource":args.builder_extension_source,"installedNormalExtensionDirectory":True,
                 "commandsAllowed":False,"unrestrictedJavascript":False,"permissionBypass":False})
         else:
@@ -622,9 +627,17 @@ def boot(args, root, java, assets, runtime, launch, expected, vanilla, version):
         binding=output/"applied-bindings.json";oracle=json.loads(binding.read_text()) if binding.is_file() else {}
         clean=receipt["termination"]["finalExitCode"]==0 and not receipt["termination"]["signals"]
         accepted=proof.get("outcome")=="COMPLETED" and proof.get("nativeAcceptance",{}).get("outcome")=="PASSED" and oracle.get("accepted") is True and clean
+        if bundled_builder:
+            expected=component_receipt["builderProvider"]["jarSha256"]
+            cached=[path for path in (game/"config/openallay").rglob("*.jar") if sha(path)==expected]
+            normal_cache=all("extensions" not in path.relative_to(game/"config/openallay").parts for path in cached)
+            runtime.write_json(output/"bundled-builder-discovery.json",{"expectedRawJarSha256":expected,"actualCachePaths":[str(p.relative_to(game)) for p in cached],
+                "noCommunityBuilderInstalled":not (game/"config/openallay/extensions").exists(),"rawBytesCached":bool(cached),"normalBundledDiscovery":normal_cache})
+            accepted=accepted and bool(cached) and normal_cache and not (game/"config/openallay/extensions").exists()
         runtime.write_json(output/"builder-acceptance.json",{"accepted":accepted,"scenario":builder_scenario,
             "completed":proof.get("outcome")=="COMPLETED","independentNativePassed":proof.get("nativeAcceptance",{}).get("outcome")=="PASSED",
-            "actualAppliedBindings":oracle.get("accepted",False),"naturalExit0":clean,"candidateSha256":args.builder_sha256})
+            "actualAppliedBindings":oracle.get("accepted",False),"naturalExit0":clean,"candidateSha256":component_receipt.get("builderProvider",{}).get("jarSha256") if bundled_builder else args.builder_sha256,
+            "bundledOnly":bundled_builder})
         if accepted and receipt["status"] not in ("fatal-component-proof-incomplete","fatal-applied-binding-proof"):
             receipt["status"]="accepted-builder-native-lifecycle";receipt["accepted"]=True
         else:receipt["status"]="fatal-builder-native-lifecycle";receipt["accepted"]=False
