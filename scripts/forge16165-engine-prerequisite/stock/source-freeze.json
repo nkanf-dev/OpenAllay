@@ -1,0 +1,19 @@
+{
+  "repositoryHead": "7b9138feedab8de20a009bd35d89f89ca260e105",
+  "helpers": {
+    "prepare-ci-minecraft-runtime.py": "05e6326fcdbe2707d49ad3287be7556cce592d13322edff3eaba66a49be6d752",
+    "run-packaged-builder-acceptance.py": "861f036e5999a4033f4b7937ce25825faaa34fe5a061a7c12fc7916fc3980db6",
+    "minecraft_target_loaders.py": "c86cb08c2361eee624d1264586a93cd188e303f6282bc0094e18938fd6f383d6"
+  },
+  "metadata": {
+    "install_profile.json": "3db29be9ffb35f50c88cad86ffa0604ed3e51c317da0fe066df6f186ac9abd6b",
+    "version.json": "bc0ffc328107dcc74151d1b41064c233cad34518f966f8c48e061012f63ef11a",
+    "minecraft-1.16.5.json": "3eeeab7b3165cc5263dc26ff8fe114fdb718b75a0244efead9d19635d090ba72"
+  },
+  "installer": {
+    "url": "https://maven.minecraftforge.net/net/minecraftforge/forge/1.16.5-36.2.42/forge-1.16.5-36.2.42-installer.jar",
+    "sha1": "e09ecf910e4d5eae12fb3564d9b7de212c1958b2",
+    "sha256": "dfa90c681f30be2406548b6429bccb68d95af4f64ab19b8c58f6128fd50ff857",
+    "size": 7543237
+  }
+}
