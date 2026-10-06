@@ -8,17 +8,13 @@ import com.google.gson.JsonObject;
 import dev.openallay.context.RegistryEntrySnapshot;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.TreeSet;
 import java.util.function.BooleanSupplier;
 import net.minecraft.util.text.translation.I18n;
-import net.minecraftforge.registries.IForgeRegistry;
-import net.minecraftforge.registries.IForgeRegistryEntry;
 
 /** Captures public built-in catalog data after the caller has proved Minecraft-thread ownership. */
 public final class RegistryCatalogCapture {
