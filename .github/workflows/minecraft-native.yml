@@ -5,7 +5,7 @@ on:
       mode:
         type: choice
         default: tooling
-        options: [tooling, abi, engine, native, pack, boot, ui, world, persistence, builder, builder-call, builder-lifecycle, builder-presets, stock1122, census1122, stock1122-bridge, stock1122-pack200, engine1122, stock1122-title, native1122, reobf1122, stock1122-objectholder, stock1122-phase-diagnostic, modern1122, component1122-pack, component1122-boot, component1122-mixin-repair, component1122-world-sdk, component1122-native-refresh, component1122-ui-manual, component1122-world-persistence, builder1122]
+        options: [tooling, abi, engine, native, pack, boot, ui, world, persistence, builder, builder-call, builder-lifecycle, builder-presets, stock1122, census1122, stock1122-bridge, stock1122-pack200, engine1122, stock1122-title, native1122, reobf1122, stock1122-objectholder, stock1122-phase-diagnostic, modern1122, component1122-pack, component1122-boot, component1122-mixin-repair, component1122-world-sdk, component1122-native-refresh, component1122-ui-manual, component1122-world-persistence, builder1122, component1122-builder-restricted, component1122-builder-partial, component1122-builder-cancel, component1122-builder-undo]
 permissions:
   contents: read
 concurrency:
@@ -546,7 +546,7 @@ jobs:
             build/e2e/runtime/forge1122-stock/minecraft/.provision/*.log
 
   component1122-boot:
-    if: inputs.mode == 'component1122-boot' || inputs.mode == 'component1122-world-sdk' || inputs.mode == 'component1122-ui-manual' || inputs.mode == 'component1122-world-persistence'
+    if: inputs.mode == 'component1122-boot' || inputs.mode == 'component1122-world-sdk' || inputs.mode == 'component1122-ui-manual' || inputs.mode == 'component1122-world-persistence' || startsWith(inputs.mode, 'component1122-builder-')
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
@@ -572,7 +572,7 @@ jobs:
           xvfb-run -a -s '-screen 0 1280x960x24'
           build/stock1122-tools/bin/python -B scripts/boot-forge1122-component.py
           --product-pin native-builds/forge1122-component/accepted-product-provider.json
-          ${{ inputs.mode == 'component1122-world-persistence' && '--world-persistence --applied-bindings' || inputs.mode == 'component1122-ui-manual' && '--ui-manual --applied-bindings' || inputs.mode == 'component1122-world-sdk' && '--world-sdk --applied-bindings' || '' }}
+          ${{ inputs.mode == 'component1122-builder-restricted' && '--builder-scenario restricted --applied-bindings' || inputs.mode == 'component1122-builder-partial' && '--builder-scenario partial --applied-bindings' || inputs.mode == 'component1122-builder-cancel' && '--builder-scenario cancel --applied-bindings' || inputs.mode == 'component1122-builder-undo' && '--builder-scenario undo --applied-bindings' || inputs.mode == 'component1122-world-persistence' && '--world-persistence --applied-bindings' || inputs.mode == 'component1122-ui-manual' && '--ui-manual --applied-bindings' || inputs.mode == 'component1122-world-sdk' && '--world-sdk --applied-bindings' || '' }}
       - name: Retain component startup proof and exact rejected inputs
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02

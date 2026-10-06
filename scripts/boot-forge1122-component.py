@@ -8,7 +8,7 @@ def module(name,path):
     spec=importlib.util.spec_from_file_location(name,path);result=importlib.util.module_from_spec(spec);spec.loader.exec_module(result);return result
 
 def main():
-    parser=argparse.ArgumentParser();parser.add_argument('--product-pin',type=Path,required=True);parser.add_argument('--applied-bindings',action='store_true');parser.add_argument('--world-sdk',action='store_true');parser.add_argument('--ui-manual',action='store_true');parser.add_argument('--world-persistence',action='store_true');args=parser.parse_args()
+    parser=argparse.ArgumentParser();parser.add_argument('--product-pin',type=Path,required=True);parser.add_argument('--applied-bindings',action='store_true');parser.add_argument('--world-sdk',action='store_true');parser.add_argument('--ui-manual',action='store_true');parser.add_argument('--world-persistence',action='store_true');parser.add_argument('--builder-scenario',choices=['restricted','partial','cancel','undo']);args=parser.parse_args()
     if os.environ.get('GITHUB_ACTIONS')!='true':raise ValueError('Remote component runtime only')
     provider=module('native_provider',ROOT/'scripts/build-forge1122-native.py')
     report=ROOT/'build/forge1122-component-boot-report';report.mkdir(parents=True,exist_ok=False)
@@ -25,11 +25,21 @@ def main():
     custody=list(retained.rglob('custody.json'))
     if len(custody)!=1:raise ValueError('Retained component source custody required')
     packed['nativeCompiledSource']=json.loads(custody[0].read_text())['providers']['nativeCompiledSource']
+    builder_jar=None;builder_pin=None
+    if args.builder_scenario:
+        builder_pin=json.loads((ROOT/"native-builds/forge1122-component/builder-candidate-provider.json").read_text())
+        candidate=provider.retained(builder_pin["provider"],work/"builder",report,"builder")
+        jars=[p for p in candidate.rglob("*.jar") if provider.sha(p)==builder_pin["jarSha256"]]
+        if len(jars)!=1:raise ValueError("One exact real Builder candidate JAR required")
+        builder_jar=jars[0]
+        with __import__("zipfile").ZipFile(builder_jar) as z:
+            if any(int.from_bytes(z.read(e)[6:8],"big")!=52 for e in z.namelist() if e.endswith(".class")):
+                raise ValueError("SDK Builder candidate must remain Java8")
     local_manifest=work/'component-runtime-inputs.json';provider.write(local_manifest,packed)
     stock=module('stock_runner',ROOT/'scripts/forge1122-runtime-prerequisite/stock-forge1122-prerequisite.py')
     runtime,launch,freeze=stock.load_helpers(ROOT)
     install=json.loads((stock.PACKET/'install_profile.json').read_text());version=json.loads((stock.PACKET/'version.json').read_text());vanilla=json.loads((stock.PACKET/'minecraft-1.12.2.json').read_text());expected=stock.validate_metadata(install,version,vanilla)
-    runargs=SimpleNamespace(repo=ROOT,java=Path(os.environ['OPENALLAY_COMPONENT_JAVA17_HOME'])/'bin/java',java_release='17.0.18+8',minecraft_root=ROOT/'build/e2e/runtime/forge1122-stock/minecraft',output=ROOT/'build/e2e/forge1122-component',title_only=True,pack200_bridge=True,launchwrapper_bridge=True,objectholder_bridge=True,objectholder_phase_diagnostic=False,component_inputs=local_manifest,applied_bindings=args.applied_bindings,world_sdk=args.world_sdk,ui_manual=args.ui_manual,creates_disposable_world=args.world_sdk or args.ui_manual)
+    runargs=SimpleNamespace(repo=ROOT,java=Path(os.environ['OPENALLAY_COMPONENT_JAVA17_HOME'])/'bin/java',java_release='17.0.18+8',minecraft_root=ROOT/'build/e2e/runtime/forge1122-stock/minecraft',output=ROOT/'build/e2e/forge1122-component',title_only=True,pack200_bridge=True,launchwrapper_bridge=True,objectholder_bridge=True,objectholder_phase_diagnostic=False,component_inputs=local_manifest,applied_bindings=args.applied_bindings,world_sdk=args.world_sdk,ui_manual=args.ui_manual,creates_disposable_world=args.world_sdk or args.ui_manual or bool(args.builder_scenario),builder_scenario=args.builder_scenario,builder_jar=builder_jar,builder_sha256=builder_pin["jarSha256"] if builder_pin else None,builder_provider=builder_pin["provider"] if builder_pin else None,builder_extension_source=builder_pin["extensionSource"] if builder_pin else None)
     if args.world_persistence:
         runargs.world_sdk=True;runargs.applied_bindings=True;runargs.creates_disposable_world=True
     root,java,assets=stock.prepare(runargs,runtime,launch,freeze,install,version,vanilla)

@@ -394,7 +394,9 @@ def boot(args, root, java, assets, runtime, launch, expected, vanilla, version):
         if args.objectholder_bridge else [])
     world_sdk=getattr(args,"world_sdk",False)
     ui_manual=getattr(args,"ui_manual",False)
-    creates_world=getattr(args,"creates_disposable_world",world_sdk or ui_manual)
+    builder_scenario=getattr(args,"builder_scenario",None)
+    builder=bool(builder_scenario)
+    creates_world=getattr(args,"creates_disposable_world",world_sdk or ui_manual or builder)
     binding_probe=getattr(args,"applied_bindings",False)
     component_flags = (["-Dopenallay.capability.enabled=true",
         "-Dopenallay.capability.writes="+str(output/"capability-writes.tsv"),
@@ -424,21 +426,38 @@ def boot(args, root, java, assets, runtime, launch, expected, vanilla, version):
             "modelInvocation":False,"unrestrictedJavascript":False,"expectedShutdown":"natural-unsignalled-exit0"})
     fixture_process=None
     fixture_stream=None
-    if ui_manual:
+    if ui_manual or builder:
         import secrets
         packet=PACKET/"ui-fixture"
         settings=game/"config/openallay";settings.mkdir(parents=True,exist_ok=True)
         for name in ("models.json","voice.json"):
             (settings/name).write_bytes((packet/name).read_bytes())
         (game/"options.txt").write_bytes((packet/"options.txt").read_bytes())
-        properties=json.loads((packet/"jvm-properties.json").read_text())
         source=component_receipt["nativeCompiledSource"]
-        replacements={"${EVIDENCE}":str(output),"${EXACT_PRODUCT_SOURCE_REVISION}":source,
-            "${EXACT_PRODUCT_SOURCE_MANIFEST_SHA256}":sha(Path(component))}
-        for key,value in properties.items():
-            for placeholder,actual in replacements.items():value=value.replace(placeholder,actual)
-            if "${" in value:raise ValueError("Unresolved UI source/evidence identity")
-            component_flags.append("-D"+key+"="+value)
+        if builder:
+            extension=Path(args.builder_jar)
+            runtime.require(sha(extension)==args.builder_sha256,"Exact provider-verified Builder candidate changed")
+            extensions=settings/"extensions";extensions.mkdir()
+            (extensions/"openallay-builder-candidate.jar").write_bytes(extension.read_bytes())
+            component_flags += ["-Dopenallay.e2e.enabled=true","-Dopenallay.e2e.scenario=builder-"+builder_scenario,
+                "-Dopenallay.e2e.question=OpenAllay E2E Builder "+builder_scenario,
+                "-Dopenallay.e2e.session=e2e","-Dopenallay.e2e.modelMode=client",
+                "-Dopenallay.e2e.report="+str(output/"builder-report.json"),
+                "-Dopenallay.e2e.trace="+str(output/"builder-trace.json"),
+                "-Dopenallay.e2e.createWorld=openallay-builder-forge1122-"+builder_scenario+"-"+str(os.getpid()),
+                "-Dopenallay.e2e.shutdown=true","-Dopenallay.e2e.timeoutSeconds=300"]
+            runtime.write_json(output/"builder-candidate-custody.json",{"sha256":sha(extension),"provider":args.builder_provider,
+                "extensionSource":args.builder_extension_source,"installedNormalExtensionDirectory":True,
+                "commandsAllowed":False,"unrestrictedJavascript":False,"permissionBypass":False})
+        else:
+            properties=json.loads((packet/"jvm-properties.json").read_text())
+            source=component_receipt["nativeCompiledSource"]
+            replacements={"${EVIDENCE}":str(output),"${EXACT_PRODUCT_SOURCE_REVISION}":source,
+                "${EXACT_PRODUCT_SOURCE_MANIFEST_SHA256}":sha(Path(component))}
+            for key,value in properties.items():
+                for placeholder,actual in replacements.items():value=value.replace(placeholder,actual)
+                if "${" in value:raise ValueError("Unresolved UI source/evidence identity")
+                component_flags.append("-D"+key+"="+value)
         fixture_key=secrets.token_hex(24)
         os.environ["OPENALLAY_E2E_FIXTURE_KEY"]=fixture_key
         fixture_stream=(output/"model-fixture.log").open("w")
@@ -466,7 +485,7 @@ def boot(args, root, java, assets, runtime, launch, expected, vanilla, version):
         try:
             if creates_world:
                 try:
-                    process.wait(timeout=660 if ui_manual else 330)
+                    process.wait(timeout=330 if builder else 660 if ui_manual else 330)
                     receipt["status"]="world-client-exited"
                 except subprocess.TimeoutExpired:
                     receipt["status"]="fatal-world-timeout"
@@ -574,8 +593,20 @@ def boot(args, root, java, assets, runtime, launch, expected, vanilla, version):
             receipt["status"]="accepted-ui-manual-and-bindings";receipt["accepted"]=True
         else:receipt["status"]="fatal-ui-manual-or-binding-proof";receipt["accepted"]=False
         runtime.write_json(output/"receipt.json",receipt)
+    if builder:
+        path=output/"builder-report.json";proof=json.loads(path.read_text()) if path.is_file() else {}
+        binding=output/"applied-bindings.json";oracle=json.loads(binding.read_text()) if binding.is_file() else {}
+        clean=receipt["termination"]["finalExitCode"]==0 and not receipt["termination"]["signals"]
+        accepted=proof.get("outcome")=="COMPLETED" and proof.get("nativeAcceptance",{}).get("outcome")=="PASSED" and oracle.get("accepted") is True and clean
+        runtime.write_json(output/"builder-acceptance.json",{"accepted":accepted,"scenario":builder_scenario,
+            "completed":proof.get("outcome")=="COMPLETED","independentNativePassed":proof.get("nativeAcceptance",{}).get("outcome")=="PASSED",
+            "actualAppliedBindings":oracle.get("accepted",False),"naturalExit0":clean,"candidateSha256":args.builder_sha256})
+        if accepted and receipt["status"] not in ("fatal-component-proof-incomplete","fatal-applied-binding-proof"):
+            receipt["status"]="accepted-builder-native-lifecycle";receipt["accepted"]=True
+        else:receipt["status"]="fatal-builder-native-lifecycle";receipt["accepted"]=False
+        runtime.write_json(output/"receipt.json",receipt)
     # A window or screenshot alone is not a title-success claim.
-    return 0 if receipt["status"] in ("captured-awaiting-title-review","accepted-world-sdk-and-bindings","accepted-ui-manual-and-bindings") else 1
+    return 0 if receipt["status"] in ("captured-awaiting-title-review","accepted-world-sdk-and-bindings","accepted-ui-manual-and-bindings","accepted-builder-native-lifecycle") else 1
 
 
 def main():
