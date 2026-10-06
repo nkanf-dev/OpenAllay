@@ -32,3 +32,4 @@ net.minecraft.world.item.crafting.ShapedRecipe	net.minecraft.item.crafting.Shape
 net.minecraft.world.effect.MobEffect	net.minecraft.potion.Potion	native potion effect type
 net.minecraft.world.effect.MobEffectInstance	net.minecraft.potion.PotionEffect	native potion effect instance
 net.minecraft.client.multiplayer.ClientPacketListener	net.minecraft.client.network.NetHandlerPlayClient	native play listener
+net.minecraft.commands.CommandSourceStack	net.minecraft.command.ICommandSender	native command sender authority interface
