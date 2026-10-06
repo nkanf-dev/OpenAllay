@@ -31,8 +31,8 @@ public final class ComponentClassCensus {
                     }
                 },ClassReader.SKIP_CODE|ClassReader.SKIP_DEBUG|ClassReader.SKIP_FRAMES);
                 int major=((bytes[6]&255)<<8)|(bytes[7]&255);
-                try { new org.objectweb.asm.ClassReader(bytes); if(major>53)throw new AssertionError("Expected real ASM5 rejection above53"); }
-                catch(IllegalArgumentException expected) { if(major<=53)throw expected; }
+                try { new org.objectweb.asm.ClassReader(bytes); if(major>52)throw new AssertionError("Expected real ASM5 rejection above52"); }
+                catch(IllegalArgumentException expected) { if(major<=52)throw new IllegalStateException("Stock ASM5 rejected Java8 class " + entry.getName(), expected); }
                 System.out.println(path+"\t"+entry.getName()+"\t"+facts);
                 classes++;if(major==61)modern++;annotations+=count[0];
             }
