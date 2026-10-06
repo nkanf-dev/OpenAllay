@@ -8,7 +8,7 @@ def module(name,path):
     spec=importlib.util.spec_from_file_location(name,path);result=importlib.util.module_from_spec(spec);spec.loader.exec_module(result);return result
 
 def main():
-    parser=argparse.ArgumentParser();parser.add_argument('--product-pin',type=Path,required=True);parser.add_argument('--applied-bindings',action='store_true');parser.add_argument('--world-sdk',action='store_true');parser.add_argument('--ui-manual',action='store_true');parser.add_argument('--world-persistence',action='store_true');parser.add_argument('--builder-scenario',choices=['restricted','partial','cancel','undo']);args=parser.parse_args()
+    parser=argparse.ArgumentParser();parser.add_argument('--product-pin',type=Path,required=True);parser.add_argument('--applied-bindings',action='store_true');parser.add_argument('--world-sdk',action='store_true');parser.add_argument('--ui-manual',action='store_true');parser.add_argument('--world-persistence',action='store_true');parser.add_argument('--builder-scenario',choices=['restricted','partial','cancel','undo','legacy-shapes']);args=parser.parse_args()
     if os.environ.get('GITHUB_ACTIONS')!='true':raise ValueError('Remote component runtime only')
     provider=module('native_provider',ROOT/'scripts/build-forge1122-native.py')
     report=ROOT/'build/forge1122-component-boot-report';report.mkdir(parents=True,exist_ok=False)

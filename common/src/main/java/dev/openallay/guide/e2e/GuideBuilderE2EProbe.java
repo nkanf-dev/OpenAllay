@@ -33,7 +33,7 @@ final class GuideBuilderE2EProbe {
 
     static boolean enabled(String scenario) {
         return List.of("builder-restricted", "builder-acceptance", "builder-reload", "builder-partial",
-                "builder-cancel", "builder-undo", "builder-server-denied", "builder-live-copy", "builder-live-undo").contains(scenario);
+                "builder-cancel", "builder-undo", "builder-server-denied", "builder-live-copy", "builder-live-undo", "builder-legacy-shapes").contains(scenario);
     }
 
     static void captureAnchor(String scenario, UUID actor, Consumer<Anchor> success, Consumer<String> failure,
@@ -88,6 +88,23 @@ final class GuideBuilderE2EProbe {
     }
 
     static List<Landmark> landmarks(String scenario) {
+        if (scenario.equals("builder-legacy-shapes")) return List.of(
+            state("legacy-box-shell",0,2,0,"stonebrick","variant","default"),
+            new Landmark("legacy-box-air",1,1,1,"air"),
+            state("legacy-path-start",0,0,4,"stonebrick","variant","default"),
+            state("legacy-path-end",4,0,4,"stonebrick","variant","default"),
+            new Landmark("legacy-path-clearance",2,1,4,"air"),
+            state("legacy-source-stair",0,1,8,"oak_stairs","facing","north","half","bottom","shape","straight"),
+            state("legacy-source-chest",2,1,8,"chest","facing","east"),
+            new Landmark("legacy-source-marker",1,1,9,"gold_block"),
+            state("legacy-rotated-stair",11,1,8,"oak_stairs","facing","east","half","bottom","shape","straight"),
+            state("legacy-rotated-chest",11,1,10,"chest","facing","south"),
+            new Landmark("legacy-rotated-marker",10,1,9,"gold_block"),
+            new Landmark("legacy-rotated-air",10,1,8,"air"),
+            state("legacy-mirrored-stair",18,1,8,"oak_stairs","facing","north","half","bottom","shape","straight"),
+            state("legacy-mirrored-chest",16,1,8,"chest","facing","west"),
+            new Landmark("legacy-mirrored-marker",17,1,9,"gold_block"),
+            new Landmark("legacy-mirrored-air",18,1,9,"air"));
         if (scenario.equals("builder-live-copy") || scenario.equals("builder-live-undo")) {
             boolean copy = scenario.equals("builder-live-copy");
             List<Landmark> result = new ArrayList<>();
@@ -214,6 +231,9 @@ final class GuideBuilderE2EProbe {
             expected.add(new Landmark("geometry-checkerboard-floor", 32, 0, 18,
                     Math.floorMod(anchor.x() + anchor.z() + 50, 2) == 0 ? "quartz_block" : "black_concrete"));
         }
+        if (scenario.equals("builder-legacy-shapes"))
+            expected.add(state("legacy-checkerboard",4,0,0,"planks","variant",
+                    Math.floorMod(anchor.x()+anchor.z()+4,2)==0 ? "oak" : "spruce"));
         return List.copyOf(expected);
     }
 
@@ -306,7 +326,8 @@ final class GuideBuilderE2EProbe {
                         Map<String, String> properties = new java.util.LinkedHashMap<>();
                         properties.putAll(dev.openallay.context.minecraft.MinecraftBlockStateProperties.capture(state));
                         check.addProperty("actualId", id); JsonObject actualProperties = new JsonObject(); properties.forEach(actualProperties::addProperty); check.add("actualProperties", actualProperties);
-                        match = matches(landmark, id, properties);
+                        match = matches(landmark, id, properties)
+                                && (!scenario.equals("builder-legacy-shapes") || landmark.properties().equals(properties));
                     }
                     check.addProperty("passed", match); passed &= match; checks.add(check);
                 }
@@ -320,6 +341,19 @@ final class GuideBuilderE2EProbe {
                     result.add("skipped", skipped);
                     result.addProperty("skipNativeRegistryBindingPassed", skipBinding);
                     passed &= skipBinding;
+                }
+                if (scenario.equals("builder-legacy-shapes")) {
+                    receipt = builderReceipt(request);
+                    JsonObject palette = dev.openallay.adapter.minecraft.v26_2.world.NativeBuilderPaletteProbe.capture();
+                    JsonArray skipped = legacySkipped(palette);
+                    boolean binding = palette.equals(receipt.get("materialPalette")) && skipped.equals(receipt.get("skipped"))
+                            && skipped.size() == LEGACY_PRESET_ROLES.size()
+                            && receipt.getAsJsonArray("availablePresets").size() == 0
+                            && nativeReceiptBinding(receipt, anchor, actor);
+                    result.add("skipped", skipped); result.add("nativeMaterialPalette", palette);
+                    result.addProperty("skipNativePaletteBindingPassed", binding); passed &= binding;
+                    boolean persisted = legacyTemplatePersisted(receipt, client);
+                    result.addProperty("templatePersistencePassed", persisted); passed &= persisted;
                 }
                 boolean toolContract = stagedReceipt
                         ? receiptMatchesScenario(scenario, receipt) : toolContract(scenario, request);
@@ -340,7 +374,42 @@ final class GuideBuilderE2EProbe {
     }
 
     static boolean startupSettingsMatch(String scenario, boolean unrestrictedAtStart) {
-        return !scenario.equals("builder-restricted") || !unrestrictedAtStart;
+        return !(scenario.equals("builder-restricted") || scenario.equals("builder-legacy-shapes")) || !unrestrictedAtStart;
+    }
+
+    private static final Map<String, List<String>> LEGACY_PRESET_ROLES = Map.ofEntries(
+            Map.entry("build_cottage", List.of("air","bricks","campfire_lit_north","cobblestone","cobblestone_stairs_south","dark_oak_slab_bottom","dark_oak_stairs_east","dark_oak_stairs_west","glass_pane","lantern_hanging","oak_log_x","oak_log_y","oak_log_z","oak_planks","spruce_planks")),
+            Map.entry("build_dock", List.of("air","lantern_standing","spruce_fence","spruce_log_y","spruce_planks")),
+            Map.entry("build_farm", List.of("air","beetroots_mature","carrots_mature","dirt","farmland_hydrated","oak_fence","oak_fence_gate_north","potatoes_mature","water_source","wheat_mature")),
+            Map.entry("build_simple_house", List.of("air","chest_north_single","cobblestone","furnace_north","glass_pane","lantern_hanging","oak_fence","oak_log_y","oak_planks","oak_pressure_plate_unpowered","stone_brick_slab_bottom","stone_brick_stairs_south")),
+            Map.entry("build_skyscraper", List.of("air","blue_stained_glass","cyan_stained_glass","iron_bars","iron_block","ladder_north","light_blue_stained_glass","lightning_rod_up","polished_andesite","sea_lantern","smooth_stone","smooth_stone_slab_bottom","stone_brick_stairs_south","stone_brick_wall","stone_bricks")),
+            Map.entry("build_windmill", List.of("air","cobblestone","oak_fence","oak_log_z","spruce_planks","stone_brick_stairs_south","stone_bricks","white_concrete","white_wool")));
+
+    private static JsonArray legacySkipped(JsonObject palette) {
+        JsonArray skipped = new JsonArray();
+        LEGACY_PRESET_ROLES.keySet().stream().sorted().forEach(name -> {
+            JsonArray missing = new JsonArray();
+            for (String role : LEGACY_PRESET_ROLES.get(name)) if (!palette.has(role)) missing.add(role);
+            if (missing.size() != 0) {
+                JsonObject item = new JsonObject(); item.addProperty("name", name); item.addProperty("status", "SKIPPED");
+                item.addProperty("reason", "missing_material_palette_role"); item.add("roles", missing); skipped.add(item);
+            }
+        });
+        return skipped;
+    }
+
+    private static boolean legacyTemplatePersisted(JsonObject receipt, Minecraft client) {
+        try {
+            var file = dev.openallay.client.gui.MinecraftClientWindow.gameDirectory(client)
+                    .resolve("config/openallay-builder/templates/openallay_e2e_legacy_shapes.json");
+            if (!java.nio.file.Files.isRegularFile(file) || java.nio.file.Files.isSymbolicLink(file)
+                    || java.nio.file.Files.size(file) > 65536) return false;
+            JsonObject persisted = dev.openallay.json.JsonTrees.parse(java.nio.file.Files.readString(file)).getAsJsonObject();
+            JsonObject template = receipt.getAsJsonObject("template");
+            return persisted.equals(template.get("value")) && persisted.getAsJsonArray("blocks").size() == 6
+                    && persisted.getAsJsonArray("size").toString().equals("[3,1,2]")
+                    && "1.12.2".equals(string(persisted,"gameVersion")) && booleanValue(persisted,"includesAir");
+        } catch (IOException | RuntimeException malformed) { return false; }
     }
 
     private static final String JAVASCRIPT_TOOL = "openallay:run_javascript";
@@ -643,6 +712,14 @@ final class GuideBuilderE2EProbe {
             switch (scenario) {
                 case "builder-restricted" -> { return "completed".equals(string(receipt.getAsJsonObject("status"), "state"))
                         && "minecraft:gold_block".equals(string(receipt, "readback")); }
+                case "builder-legacy-shapes" -> {
+                    var path = receipt.getAsJsonObject("path"); var template = receipt.getAsJsonObject("template");
+                    return "completed".equals(string(receipt.getAsJsonObject("status"), "state"))
+                            && number(receipt.getAsJsonObject("status"), "writes") > 0
+                            && "built".equals(string(path, "status")) && number(path,"length") == 5
+                            && "openallay_e2e_legacy_shapes".equals(string(template,"name"))
+                            && booleanValue(template,"listed") && booleanValue(template,"persistedExact");
+                }
                 case "builder-acceptance", "builder-partial", "builder-cancel" -> { return true; }
                 case "builder-undo" -> {
                     var undo = receipt.getAsJsonObject("undo");

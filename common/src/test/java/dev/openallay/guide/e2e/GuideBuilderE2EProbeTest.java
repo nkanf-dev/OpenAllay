@@ -10,6 +10,23 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 final class GuideBuilderE2EProbeTest {
+    @Test void legacyShapesHasFixedNativeIdsWithoutReplayingLifecycleOrModernPresets() {
+        assertTrue(GuideBuilderE2EProbe.enabled("builder-legacy-shapes"));
+        var landmarks = GuideBuilderE2EProbe.landmarks("builder-legacy-shapes");
+        assertEquals(16, landmarks.size());
+        assertTrue(landmarks.stream().noneMatch(value -> value.name().startsWith("partial-")
+                || value.name().startsWith("cancel-") || value.name().startsWith("undo-") || value.name().startsWith("house-")));
+        assertEquals("minecraft:stonebrick", landmarks.get(0).id());
+        assertEquals(Map.of("variant", "default"), landmarks.get(0).properties());
+        assertEquals(Map.of("facing", "south"), landmarks.stream()
+                .filter(value -> value.name().equals("legacy-rotated-chest")).findFirst().orElseThrow().properties());
+        assertEquals(Map.of("facing", "west"), landmarks.stream()
+                .filter(value -> value.name().equals("legacy-mirrored-chest")).findFirst().orElseThrow().properties());
+        var anchor = new GuideBuilderE2EProbe.Anchor(0,64,0,"minecraft:overworld");
+        assertEquals(17, GuideBuilderE2EProbe.oracleLandmarks("builder-legacy-shapes",anchor).size());
+        assertFalse(GuideBuilderE2EProbe.startupSettingsMatch("builder-legacy-shapes",true));
+        assertTrue(GuideBuilderE2EProbe.startupSettingsMatch("builder-legacy-shapes",false));
+    }
     @Test void oracleRequiresExactNativeIdAndEveryExpectedProperty() {
         var expected = new GuideBuilderE2EProbe.Landmark("door", 3, 1, 0,
                 "minecraft:oak_door", Map.of("half", "lower", "facing", "north"));

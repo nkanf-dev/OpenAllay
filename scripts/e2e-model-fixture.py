@@ -551,7 +551,7 @@ def validated_game_state_results(turn_messages, allow_world_query_permission_fai
 
 
 BUILDER_PREFIX = "OpenAllay E2E Builder "
-BUILDER_SCENARIOS = ("restricted", "acceptance", "reload", "partial", "cancel", "undo", "server-denied")
+BUILDER_SCENARIOS = ("restricted", "acceptance", "reload", "partial", "cancel", "undo", "server-denied", "legacy-shapes")
 BUILDER_SKILL_TOOL = "openallay__load_skill"
 
 
@@ -967,6 +967,9 @@ def builder_arguments(scenario, retained_anchor=None):
     if scenario == "acceptance":
         from pathlib import Path
         source = Path(__file__).with_name("e2e-builder-fixture.js").read_text(encoding="utf-8")
+    elif scenario == "legacy-shapes":
+        from pathlib import Path
+        source = Path(__file__).with_name("e2e-builder-legacy-shapes.js").read_text(encoding="utf-8")
     elif scenario == "server-denied":
         source = ('var System = Java.type("java.lang.System");\n'
                   'return {unexpectedJavaAuthority:true,version:String(System.getProperty("java.version"))};')
@@ -1016,6 +1019,7 @@ return JSON.stringify({scenario:"builder_reload",skipped:skipped,template:{name:
         "undo": ("检查撤销与冲突", "保留一次外部改动并明确撤销先前操作，读取还原数与冲突。"),
         "server-denied": ("检查服务端模型的 Java 隔离", "尝试实际 Java 桥访问并保留结构化权限失败，不获取额外权限。"),
     }
+    intents["legacy-shapes"] = ("Check legacy native geometry and templates", "Build exact native states, retain unavailable preset roles as skipped, and read the saved template and transformed blocks.")
     title, description = intents[scenario]
     return {"source": source, "title": title, "description": description}
 
@@ -1033,7 +1037,7 @@ def parse_tool_failure(text):
 
 def builder_result(text, scenario):
     """Single successful native programs only; staged lifecycle requires complete history."""
-    builder_require(scenario in ("restricted", "undo", "reload"),
+    builder_require(scenario in ("restricted", "undo", "reload", "legacy-shapes"),
                     "Builder lifecycle receipt requires its ordered current Tool history")
     value = parse_result_preview(text)
     builder_require(isinstance(value, str), "Builder result must be a complete scalar JSON receipt")
@@ -1041,7 +1045,7 @@ def builder_result(text, scenario):
         receipt = json.loads(value, object_pairs_hook=builder_unique_fields, parse_constant=builder_invalid_constant)
     except json.JSONDecodeError as failure:
         raise ValueError("Builder scalar receipt is not JSON") from failure
-    builder_require(isinstance(receipt, dict) and receipt.get("scenario") == "builder_" + scenario,
+    builder_require(isinstance(receipt, dict) and receipt.get("scenario") == "builder_" + scenario.replace("-", "_"),
                     "native Builder result did not identify the requested scenario")
     builder_completed(receipt.get("status"))
     if scenario == "restricted":
