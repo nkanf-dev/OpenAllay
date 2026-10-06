@@ -1,0 +1,36 @@
+{
+  "helpers": {
+    "prepare-ci-minecraft-runtime.py": "05e6326fcdbe2707d49ad3287be7556cce592d13322edff3eaba66a49be6d752",
+    "run-packaged-builder-acceptance.py": "5a09452052559b5b7917e551e0787636bf44a236adba70311d34da9324463031",
+    "minecraft_target_loaders.py": "c86cb08c2361eee624d1264586a93cd188e303f6282bc0094e18938fd6f383d6"
+  },
+  "metadata": {
+    "install_profile.json": "b41951a4a2b50562252c6060046c0e6929039f2239f7a560d919877726fbf28e",
+    "version.json": "6d28c3dc3d67c0a6a496c7855d0fc54df014d419dd48bca3829540dfc15b4f58",
+    "minecraft-1.12.2.json": "56dac2e1caa872d7e37a7b5523056cd812dca94f912ad2bd652817bee60edca4"
+  },
+  "installer": {
+    "url": "https://maven.minecraftforge.net/net/minecraftforge/forge/1.12.2-14.23.5.2864/forge-1.12.2-14.23.5.2864-installer.jar",
+    "size": 4532339,
+    "sha1": "b5ec0016c292830f2325e39417d1ec4d9e166cab",
+    "sha256": "2c0065938de6df6f3deb4a08a3018940a1cc86111adb34a3be55d657857a11cc",
+    "officialSha1Url": "https://maven.minecraftforge.net/net/minecraftforge/forge/1.12.2-14.23.5.2864/forge-1.12.2-14.23.5.2864-installer.jar.sha1"
+  },
+  "minecraftMetadata": {
+    "id": "1.12.2",
+    "type": "release",
+    "url": "https://piston-meta.mojang.com/v1/packages/832d95b9f40699d4961394dcf6cf549e65f15dc5/1.12.2.json",
+    "time": "2023-06-07T11:49:20+00:00",
+    "releaseTime": "2017-09-18T08:39:46+00:00",
+    "sha1": "832d95b9f40699d4961394dcf6cf549e65f15dc5",
+    "complianceLevel": 0
+  },
+  "runtimeBoundary": {
+    "stockAsm": "org.ow2.asm:asm-debug-all:5.2",
+    "classMajor61": "engine and Rhino Java17: excluded from this initial stock probe",
+    "multiRelease": "all physical class entries inventoried; no MR flattening or ASM replacement",
+    "nativeSdkBuilder": 8,
+    "runtimeJava": "Temurin17.0.18+8",
+    "bootstrap": "none until actual remote raw failure"
+  }
+}
