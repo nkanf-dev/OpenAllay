@@ -1,0 +1,21 @@
+import groovy.json.JsonOutput
+import java.security.MessageDigest
+
+tasks.register('exportNativeApi') {
+    doLast {
+        def output = rootProject.file('build/native-api')
+        if (output.exists()) throw new GradleException('Preserve previous native declarations')
+        output.mkdirs()
+        def artifacts = configurations.compileClasspath.resolvedConfiguration.resolvedArtifacts.collect { artifact ->
+            def id = artifact.moduleVersion.id
+            [coordinate: "${id.group}:${id.name}:${id.version}".toString(), path: artifact.file.absolutePath,
+             sha256: MessageDigest.getInstance('SHA-256').digest(artifact.file.bytes).encodeHex().toString()]
+        }
+        def classpath = configurations.compileClasspath.asPath
+        new File(output, 'classpath.txt').text = classpath + '\n'
+        new File(output, 'resolved-artifacts.json').text = JsonOutput.prettyPrint(JsonOutput.toJson([
+            source: System.getenv('GITHUB_SHA'), minecraft: '1.16.5', forge: '36.2.42',
+            forgeGradle: '6.0.54', mappings: 'official_1.16.5', artifacts: artifacts,
+            probeCompiled: false, gameExecuted: false]))+'\n'
+    }
+}

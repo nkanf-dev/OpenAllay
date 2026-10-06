@@ -1,93 +1,38 @@
-name: Stock Forge36 shared engine prerequisite
+name: Forge36 native source declaration inventory
 on:
   workflow_dispatch:
 permissions:
   contents: read
-  actions: read
 concurrency:
-  group: forge36-engine-${{ github.ref }}
+  group: forge36-native-api-${{ github.ref }}
   cancel-in-progress: false
 jobs:
-  engine-prerequisite:
+  native-api:
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
-          fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
         with:
           distribution: temurin
-          java-version: |
-            17.0.18+8
-            21
-            25
+          java-version: '17.0.18+8'
       - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
         with:
           cache-provider: basic
           cache-read-only: true
-      - name: Retrieve the unchanged logging engine and component closure
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
-        with:
-          github-token: ${{ github.token }}
-          run-id: 37433650018
-          artifact-ids: 11397973030
-          path: build/forge36-shared
-      - name: Retrieve unchanged native prefix proof from its original run
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
-        with:
-          github-token: ${{ github.token }}
-          run-id: 37434990163
-          artifact-ids: 11397859809
-          path: build/forge36-original-prefix
-      - name: Verify all immutable logging-engine inputs
+      - name: Resolve genuine native API and export selected declarations only
         env:
-          GH_TOKEN: ${{ github.token }}
-        run: python3 -B scripts/forge16165-engine-prerequisite/build-prerequisite.py --phase scan --reuse-shared
-      - name: Compile and reobfuscate only the genuine Forge36 probe
-        run: python3 -B scripts/forge16165-engine-prerequisite/build-prerequisite.py --phase probe
-      - name: Retain the tiny probe producer before any packing or client boundary
+          JAVA_HOME_17_X64: ${{ env.JAVA_HOME }}
+        run: python3 -B scripts/forge16165-engine-prerequisite/export-native-api.py
+      - name: Keep small public-access and method-body source evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: forge36-probe-component-${{ github.sha }}-${{ github.run_attempt }}
-          retention-days: 14
-          if-no-files-found: ignore
-          path: |
-            scripts/forge16165-engine-prerequisite/probe/build/probe-metadata/
-            scripts/forge16165-engine-prerequisite/probe/build/libs/openallay-forge36-probe-0.4.3.jar
-            build/forge36-artifacts/probe-inputs.json
-      - name: Pack unchanged shared class and resource owners into the sole mod
-        run: python3 -B scripts/forge16165-engine-prerequisite/build-prerequisite.py --phase pack
-      - name: Install isolated native display dependencies
-        run: sudo apt-get update && sudo apt-get install -y xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 libegl-mesa0 libopenal1
-      - name: Execute current engine in the real stock Forge36 client
-        env:
-          LIBGL_ALWAYS_SOFTWARE: '1'
-          ALSOFT_DRIVERS: 'null'
-        run: |
-          python3 -B scripts/forge16165-engine-prerequisite/collect-engine-prerequisite.py             --repo "$PWD" --java "$JAVA_HOME_17_X64/bin/java" --java-release '17.0.18+8'             --minecraft-root "$PWD/build/e2e/runtime/forge16165-stock/minecraft"             --output "$PWD/build/e2e/forge16165-engine-prerequisite/$GITHUB_RUN_ID"             --mod "$PWD/build/forge36-artifacts/openallay-engine-probe-fat.jar"             --mod-sha256 "$(cat build/forge36-artifacts/fat-mod.sha256)" --prefix-directory "$PWD/build/forge36-original-prefix"
-      - name: Retain small source/build/scan/native proof independently
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: forge36-engine-metadata-${{ github.sha }}-${{ github.run_attempt }}
+          name: forge36-native-api-${{ github.sha }}
           retention-days: 30
           if-no-files-found: warn
           path: |
-            build/forge36-shared/*.json
-            build/forge36-artifacts/*.json
-            scripts/forge16165-engine-prerequisite/probe/build/probe-metadata/*.json
-            build/e2e/forge16165-engine-prerequisite/*/*.json
-            build/e2e/forge16165-engine-prerequisite/*/*.log
-            build/e2e/forge16165-engine-prerequisite/*/game/logs/
-            build/e2e/forge16165-engine-prerequisite/*/game/crash-reports/
-      - name: Retain the sole native prerequisite mod without duplicate runtimes
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: forge36-engine-product-${{ github.sha }}-${{ github.run_attempt }}
-          retention-days: 14
-          if-no-files-found: ignore
-          path: build/forge36-artifacts/openallay-engine-probe-fat.jar
+            build/forge36-native-api/*.json
+            build/forge36-native-api/*.txt

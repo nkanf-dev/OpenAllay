@@ -94,3 +94,5 @@ tasks.register('emitProbeMetadata') {
         println groovy.json.JsonOutput.toJson(metadata)
     }
 }
+
+apply from: file('native-api-export.gradle')
