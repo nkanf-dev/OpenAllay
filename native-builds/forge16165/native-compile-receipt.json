@@ -1,27 +1,27 @@
 {
-  "run": 37459210222,
-  "source": "5005f39b582518ada548e3526a1e606b8b136587",
+  "run": 37460049017,
+  "source": "966192594efc73ea389682b5690765db53011f39",
   "originalStatus": "success",
   "artifact": {
-    "id": 11410338919,
-    "node_id": "MDg6QXJ0aWZhY3QxMTQxMDMzODkxOQ==",
-    "name": "forge16165-native-5005f39b582518ada548e3526a1e606b8b136587",
-    "size_in_bytes": 4874580,
-    "url": "https://api.github.com/repos/nkanf-dev/OpenAllay/actions/artifacts/11410338919",
-    "archive_download_url": "https://api.github.com/repos/nkanf-dev/OpenAllay/actions/artifacts/11410338919/zip",
+    "id": 11412670735,
+    "node_id": "MDg6QXJ0aWZhY3QxMTQxMjY3MDczNQ==",
+    "name": "forge16165-native-966192594efc73ea389682b5690765db53011f39",
+    "size_in_bytes": 4875094,
+    "url": "https://api.github.com/repos/nkanf-dev/OpenAllay/actions/artifacts/11412670735",
+    "archive_download_url": "https://api.github.com/repos/nkanf-dev/OpenAllay/actions/artifacts/11412670735/zip",
     "expired": false,
-    "digest": "sha256:4f102d6264e628750d610e4d89518fb80457a5185d8ace23971bd92390bd09eb",
-    "created_at": "2026-10-06T11:52:52Z",
-    "updated_at": "2026-10-06T11:52:52Z",
-    "expires_at": "2026-11-05T11:52:52Z",
+    "digest": "sha256:5655e7891dcd106b255e4986659045a8b10344094b254668d93555bc1913edcb",
+    "created_at": "2026-10-06T12:00:21Z",
+    "updated_at": "2026-10-06T12:00:21Z",
+    "expires_at": "2026-11-05T12:00:20Z",
     "workflow_run": {
-      "id": 37459210222,
+      "id": 37460049017,
       "repository_id": 1302961354,
       "head_repository_id": 1302961354,
       "head_branch": "mc/forge16165-engine-continuation",
-      "head_sha": "5005f39b582518ada548e3526a1e606b8b136587"
+      "head_sha": "966192594efc73ea389682b5690765db53011f39"
     }
   },
-  "archiveSha256": "4f102d6264e628750d610e4d89518fb80457a5185d8ace23971bd92390bd09eb",
-  "scope": "Confirmed GitHub normal native compile/AP/reobf success; archive/pair/source checks recomputed by pack transport before acceptance. No product/game runtime success."
+  "archiveSha256": "5655e7891dcd106b255e4986659045a8b10344094b254668d93555bc1913edcb",
+  "scope": "Confirmed normal nativecompile/AP/reobf, no runtimeclaim; packvalidates archive/pair again."
 }

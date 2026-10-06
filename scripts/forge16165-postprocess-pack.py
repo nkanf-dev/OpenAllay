@@ -15,8 +15,8 @@ spec=importlib.util.spec_from_file_location('product_pack',P)
 pack=importlib.util.module_from_spec(spec);spec.loader.exec_module(pack)
 C=pack.closure
 PREFIX='native-builds/forge16165/build/'
-NATIVE_SHA='4f102d6264e628750d610e4d89518fb80457a5185d8ace23971bd92390bd09eb'
-SOURCE='5005f39b582518ada548e3526a1e606b8b136587'
+NATIVE_SHA='5655e7891dcd106b255e4986659045a8b10344094b254668d93555bc1913edcb'
+SOURCE='966192594efc73ea389682b5690765db53011f39'
 
 def reference(path):return {'path':str(Path(path).resolve()),'sha256':C.file_sha(path)}
 def write(path,data):
@@ -104,7 +104,7 @@ def main():
         'artifact':{'path':pack.BUNDLED+Path(lock['artifact']).name,'sha256':builder['sha256']}}
     provenance_ref=json_write(work/'distribution.json',provenance)
     transport={'kind':'archived-normal-FG-build-derived-views','artifact':inputs['nativeArtifact'],
-        'run':37459210222,'artifactId':11410338919,'sourceRevision':SOURCE,'rootReceipt':inputs['rootReceipt'],
+        'run':37460049017,'artifactId':11412670735,'sourceRevision':SOURCE,'rootReceipt':inputs['rootReceipt'],
         'originalClosureSpecSha256':metadata['closureSpecSha256'],
         'derivedGeneratedRoot':str(generated),'derivedClassRoot':str(classroot),'originalClosureSpec':inputs['originalClosureSpec']}
     transport_ref=json_write(work/'archived-transport.json',transport)
