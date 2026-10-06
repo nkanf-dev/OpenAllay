@@ -5,7 +5,7 @@ on:
       mode:
         type: choice
         default: tooling
-        options: [tooling, abi, engine, native, pack, boot, ui, world, persistence, builder]
+        options: [tooling, abi, engine, native, pack, boot, ui, world, persistence, builder, builder-call]
 permissions:
   contents: read
 concurrency:
@@ -142,7 +142,7 @@ jobs:
             build/forge16165-pack-inputs/source/build/e2e/runtime/forge16165-stock/minecraft/.provision/*.log
 
   product-native-boot:
-    if: inputs.mode == 'boot' || inputs.mode == 'ui' || inputs.mode == 'world' || inputs.mode == 'persistence'
+    if: inputs.mode == 'boot' || inputs.mode == 'ui' || inputs.mode == 'world' || inputs.mode == 'persistence' || inputs.mode == 'builder-call'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -158,7 +158,7 @@ jobs:
           build/acceptance-tools/bin/python -m pip install Pillow==11.3.0
       - name: Boot the actual product once with required Mixin bindings
         env: {GH_TOKEN: '${{ github.token }}'}
-        run: build/acceptance-tools/bin/python -B scripts/forge16165-product-native-acceptance.py ${{ inputs.mode == 'ui' && '--ui' || inputs.mode == 'persistence' && '--persistence' || inputs.mode == 'world' && '--world' || '' }}
+        run: build/acceptance-tools/bin/python -B scripts/forge16165-product-native-acceptance.py ${{ inputs.mode == 'builder-call' && '--builder-call' || inputs.mode == 'ui' && '--ui' || inputs.mode == 'persistence' || inputs.mode == 'builder-call' && '--persistence' || inputs.mode == 'world' && '--world' || '' }}
       - name: Retain actual product/native evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -179,6 +179,11 @@ jobs:
             build/e2e/forge16165-product-ui/game/logs/
             build/e2e/forge16165-product-ui/game/crash-reports/
 
+            build/e2e/forge16165-product-builder/*.json
+            build/e2e/forge16165-product-builder/*.log
+            build/e2e/forge16165-product-builder/*.png
+            build/e2e/forge16165-product-builder/game/logs/
+            build/e2e/forge16165-product-builder/game/crash-reports/
             build/e2e/forge16165-product-world/*.json
             build/e2e/forge16165-product-world/*.log
             build/e2e/forge16165-product-world/*.png
