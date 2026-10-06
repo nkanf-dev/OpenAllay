@@ -46,9 +46,18 @@ task verifyPrivateInputs {
         out.mkdirs();new File(out,'private-inputs.json').text=JsonOutput.prettyPrint(JsonOutput.toJson(actual))+'\n'
     }
 }
+task compileMixinBridge(type:JavaCompile) {
+    source=fileTree('src/mixin-bridge') { include '**/*.java' }
+    classpath=configurations.mixinPrivate+configurations.hostCompile
+    destinationDirectory=file('build/mixin-bridge-classes')
+    javaCompiler=javaToolchains.compilerFor { languageVersion=JavaLanguageVersion.of(17) }
+    options.release=8
+}
+
 task compileCore(type:JavaCompile) {
+    dependsOn 'compileMixinBridge'
     source=fileTree('src/core') { include '**/*.java' }
-    classpath=configurations.hostCompile
+    classpath=configurations.hostCompile+files(tasks.named('compileMixinBridge').flatMap { it.destinationDirectory })
     destinationDirectory=file('build/core-classes')
     javaCompiler=javaToolchains.compilerFor { languageVersion=JavaLanguageVersion.of(17) }
     options.release=8
@@ -61,13 +70,20 @@ task compileFacade(type:JavaCompile) {
     options.release=8
 }
 task privateMixin(type:com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar) {
-    dependsOn verifyPrivateInputs
+    dependsOn verifyPrivateInputs,'compileMixinBridge'
+    from tasks.named('compileMixinBridge').flatMap { it.destinationDirectory }
     archiveFileName='openallay-private-mixin.jar';destinationDirectory=out
     configurations=[project.configurations.mixinPrivate]
     relocate 'org.objectweb.asm','dev.openallay.internal.forge1122.asm'
     exclude 'META-INF/*.SF','META-INF/*.RSA','META-INF/*.DSA','module-info.class','META-INF/versions/**/module-info.class'
     filesMatching('META-INF/services/**') { duplicatesStrategy=DuplicatesStrategy.INCLUDE }
     mergeServiceFiles()
+    manifest {
+        attributes('Implementation-Title':'OpenAllay genuine Mixin0.8.5 with private ASM9.6')
+        attributes(['Implementation-Title':'ASM, a very small and fast Java bytecode manipulation framework','Implementation-Version':'9.6'],
+            'dev/openallay/internal/forge1122/asm/')
+        ['commons','tree','tree/analysis','util','signature'].each { suffix -> attributes(['Implementation-Version':'9.6'],'dev/openallay/internal/forge1122/asm/'+suffix+'/') }
+    }
     preserveFileTimestamps=false;reproducibleFileOrder=true
 }
 task featureCore(type:Jar) {
@@ -89,7 +105,7 @@ task lifecycleFacade(type:Jar) {
     preserveFileTimestamps=false;reproducibleFileOrder=true
 }
 task assembleComponent {
-    dependsOn featureCore,lifecycleFacade,privateMixin
+    dependsOn featureCore,lifecycleFacade,'patchPrivateFmlFactory'
     doLast {
         def result=[featureCore.archiveFile.get().asFile,lifecycleFacade.archiveFile.get().asFile,privateMixin.archiveFile.get().asFile]
         new File(out,'component-inputs.json').text=JsonOutput.prettyPrint(JsonOutput.toJson([
@@ -102,7 +118,7 @@ task assembleComponent {
 }
 
 task compileCensus(type:JavaCompile) {
-    dependsOn privateMixin
+    dependsOn 'patchPrivateFmlFactory'
     source=fileTree('src/census') { include '**/*.java' }
     classpath=files(privateMixin.archiveFile)+files(stockAsm)
     destinationDirectory=file('build/census-classes')
@@ -120,5 +136,30 @@ task componentCensus {
                 lifecycleFacade.archiveFile.get().asFile.absolutePath,privateMixin.archiveFile.get().asFile.absolutePath])
                 standardOutput=stdout;errorOutput=stderr }
         } }
+    }
+}
+
+task compileMixinPatcher(type:JavaCompile) {
+    source=fileTree('src/mixin-patcher') { include '**/*.java' }
+    classpath=configurations.mixinPrivate
+    destinationDirectory=file('build/mixin-patcher-classes')
+    javaCompiler=javaToolchains.compilerFor { languageVersion=JavaLanguageVersion.of(17) }
+    options.release=8
+}
+task patchPrivateFmlFactory {
+    dependsOn privateMixin,compileMixinPatcher
+    doLast {
+        def command=['python3','-B',file('patch-private-fml-factory.py').absolutePath,
+            '--jar',privateMixin.archiveFile.get().asFile.absolutePath,'--java',file(request.java17).absolutePath,
+            '--classpath',configurations.mixinPrivate.asPath,'--classes',compileMixinPatcher.destinationDirectory.get().asFile.absolutePath]
+        componentExec.exec { commandLine command }
+    }
+}
+
+task repairPrivateMixin {
+    dependsOn featureCore,patchPrivateFmlFactory,compileCensus
+    doLast {
+        componentExec.exec { commandLine(file(request.java17).absolutePath,'-cp',files(compileCensus.destinationDirectory,privateMixin.archiveFile,stockAsm).asPath,
+            'dev.openallay.forge1122.component.PrivateAsmVersionAcceptance') }
     }
 }

@@ -16,6 +16,10 @@ public final class OpenAllayFeatureBoundary implements IFMLLoadingPlugin {
         Launch.classLoader.addTransformerExclusion("org.commonmark.");
         Launch.classLoader.addTransformerExclusion("com.knuddels.jtokkit.");
         Launch.classLoader.addTransformerExclusion("org.sqlite.");
+        Launch.classLoader.addClassLoaderExclusion("dev.openallay.internal.forge1122.asm.");
+        Launch.classLoader.addClassLoaderExclusion("dev.openallay.internal.forge1122.bridge.");
+        dev.openallay.internal.forge1122.bridge.FmlRemapperHolder.register(
+            dev.openallay.forge1122.mixinbridge.TypedFmlRemapper.create());
     }
     public String[] getASMTransformerClass() { return new String[0]; }
     public String getModContainerClass() { return null; }
@@ -24,6 +28,10 @@ public final class OpenAllayFeatureBoundary implements IFMLLoadingPlugin {
     public void injectData(Map<String,Object> data) {
         if (!net.minecraftforge.fml.relauncher.CoreModManager.getIgnoredMods().contains("openallay-private-mixin.jar"))
             net.minecraftforge.fml.relauncher.CoreModManager.getIgnoredMods().add("openallay-private-mixin.jar");
+        org.spongepowered.asm.mixin.extensibility.IRemapper remapper=dev.openallay.internal.forge1122.bridge.FmlRemapperHolder.get();
+        String known="net/minecraft/init/Blocks";
+        String expected=net.minecraftforge.fml.common.asm.transformers.deobf.FMLDeobfuscatingRemapper.INSTANCE.unmap(known);
+        if(!expected.equals(remapper.unmap(known)))throw new IllegalStateException("Typed FML mapping identity differs");
         org.spongepowered.asm.mixin.Mixins.addConfiguration("openallay.client.mixins.json");
         org.spongepowered.asm.mixin.Mixins.addConfiguration("openallay.forge.mixins.json");
         org.spongepowered.asm.mixin.Mixins.addConfiguration("openallay.world.mixins.json");
@@ -32,7 +40,7 @@ public final class OpenAllayFeatureBoundary implements IFMLLoadingPlugin {
         try {
             String receipt="{\"normalIFMLLoadingPlugin\":true,\"runtimeJava\":17,\"stockLoader\":\""+getClass().getClassLoader().getClass().getName()
                 +"\",\"featureCoreIgnoredByDiscovery\":"+net.minecraftforge.fml.relauncher.CoreModManager.getIgnoredMods().contains("openallay-feature-core.jar")
-                +",\"genuineMixinConfigs\":[\"openallay.client.mixins.json\",\"openallay.forge.mixins.json\",\"openallay.world.mixins.json\"],"
+                +",\"typedFmlRemapperRegistered\":true,\"genuineMixinConfigs\":[\"openallay.client.mixins.json\",\"openallay.forge.mixins.json\",\"openallay.world.mixins.json\"],"
                 +"\"engineClassLoader\":\""+dev.openallay.OpenAllayConstants.class.getClassLoader().getClass().getName()+"\"}\n";
             java.nio.file.Files.write(java.nio.file.Paths.get(System.getProperty("openallay.component.receipt")),receipt.getBytes(java.nio.charset.StandardCharsets.UTF_8));
         }catch(Exception error){throw new IllegalStateException(error);}
