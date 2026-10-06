@@ -12,6 +12,7 @@ public abstract class GuideNativeScreen extends GuideNativeScreenCallbacks {
     protected FontRenderer font;
     private final ITextComponent title;
     private GuideGraphics paintGraphics;
+    private final java.util.List<GuideNativeEditBox> textFields = new java.util.ArrayList<>();
     protected GuideNativeScreen(ITextComponent title) { this.title = Objects.requireNonNull(title, "title"); }
     public final ITextComponent getTitle() { return title; }
     @Override protected void initGuideScreen() {
@@ -26,6 +27,20 @@ public abstract class GuideNativeScreen extends GuideNativeScreenCallbacks {
         super.setWorldAndResolution(client, width, height);
     }
     protected final <T extends GuiButton> T addGuideWidget(T widget) { return super.addButton(widget); }
+    protected final GuideNativeEditBox addGuideWidget(GuideNativeEditBox widget) {
+        textFields.add(widget);
+        return widget;
+    }
+    @Override public boolean guideMouseClicked(GuideInputMouse event, boolean doubleClick) {
+        for (GuideNativeEditBox field : textFields) {
+            if (field.guideMouseClicked(event, doubleClick)) {
+                setGuideFocused(field);
+                return true;
+            }
+        }
+        clearGuideFocus();
+        return super.guideMouseClicked(event, doubleClick);
+    }
     @Override protected void actionPerformed(GuiButton button) {
         if (button instanceof GuideNativeButton guideButton) guideButton.onPress();
     }
@@ -42,10 +57,12 @@ public abstract class GuideNativeScreen extends GuideNativeScreenCallbacks {
     }
     protected final void renderGuideWidgets(GuideGraphics graphics, int mouseX, int mouseY, float delta) {
         renderNativeGuideWidgets(mouseX, mouseY, delta);
+        for (GuideNativeEditBox field : textFields) field.render();
     }
     protected final void guideRebuildWidgets() {
         clearGuideFocus();
         buttonList.clear();
+        textFields.clear();
         initGuideScreen();
     }
     protected void repositionGuideElements() { guideRebuildWidgets(); }
@@ -59,7 +76,7 @@ public abstract class GuideNativeScreen extends GuideNativeScreenCallbacks {
         setGuiSize(width, height);
         repositionGuideElements();
     }
-    protected final void tickGuideWidgets() {}
+    protected final void tickGuideWidgets() { for (GuideNativeEditBox field : textFields) field.tick(); }
     @Override protected final void tickGuideScreen() { tick(); }
     public void tick() { super.tickGuideScreen(); }
     public void onClose() { mc.displayGuiScreen(null); }

@@ -53,7 +53,7 @@ import java.util.Objects;
 import java.util.Optional;
 import dev.openallay.client.gui.GuideGraphics;
 import dev.openallay.client.gui.GuideNativeButton;
-import net.minecraft.client.gui.components.EditBox;
+import dev.openallay.client.gui.GuideNativeEditBox;
 import dev.openallay.client.gui.GuideMultilineEditor;
 import dev.openallay.client.gui.GuideTooltip;
 import net.minecraft.client.gui.screens.Screen;
@@ -102,30 +102,30 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
     private String skillDraftMarkdown = "";
     private String skillImportPathDraft = "";
     private GuideMultilineEditor skillEditor;
-    private EditBox skillImportPath;
+    private GuideNativeEditBox skillImportPath;
     private String selectedExtensionId;
     private ExtensionTab extensionTab = ExtensionTab.INSTALLED;
     private boolean extensionCommunityRefreshAttempted;
     private boolean narrowExtensionDetail;
     private String extensionImportPathDraft = "";
-    private EditBox extensionImportPath;
+    private GuideNativeEditBox extensionImportPath;
     private boolean openingRequirementReview;
     private int skillDetailScroll;
     private int skillDetailContentHeight;
     private int pageScroll;
     private int pageContentHeight;
     private ClientSettingsService.HistoryConfirmationToken historyConfirmation;
-    private EditBox id;
-    private EditBox displayName;
-    private EditBox baseUrl;
-    private EditBox model;
+    private GuideNativeEditBox id;
+    private GuideNativeEditBox displayName;
+    private GuideNativeEditBox baseUrl;
+    private GuideNativeEditBox model;
     private PasswordEditBox apiKey;
     private String pendingApiKey = "";
-    private EditBox contextWindow;
-    private EditBox maxOutput;
-    private EditBox connectTimeout;
-    private EditBox requestTimeout;
-    private EditBox assistantName;
+    private GuideNativeEditBox contextWindow;
+    private GuideNativeEditBox maxOutput;
+    private GuideNativeEditBox connectTimeout;
+    private GuideNativeEditBox requestTimeout;
+    private GuideNativeEditBox assistantName;
     private String assistantNameDraft;
     private List<String> catalogModelIds = List.of();
     private boolean modelCatalogOpen;
@@ -134,7 +134,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
     private final UiSettingsDraft uiDraft;
     private final SettingsSaveCoordinator editorSave = new SettingsSaveCoordinator();
     private final java.util.Map<String, String> uiIntegerDrafts = new java.util.HashMap<>();
-    private final java.util.Map<String, EditBox> uiIntegerFields = new java.util.HashMap<>();
+    private final java.util.Map<String, GuideNativeEditBox> uiIntegerFields = new java.util.HashMap<>();
     private UiSettingsProjection.Group uiGroup = UiSettingsProjection.Group.FULLSCREEN;
     private int uiScroll;
     private int uiContentHeight;
@@ -152,7 +152,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
     private String voiceHttpUrl = "";
     private String voiceHttpModel = "";
     private String voiceApiKeyDraft = "";
-    private final java.util.Map<String, EditBox> voiceFields = new java.util.HashMap<>();
+    private final java.util.Map<String, GuideNativeEditBox> voiceFields = new java.util.HashMap<>();
 
     /** Loader hooks only. Neither preview nor editor entry creates an Agent task. */
     public interface UiActions {
@@ -873,7 +873,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
     }
 
     private void uiInteger(String key, int value, int x, int y, int w, java.util.function.IntConsumer changed) {
-        EditBox field = new EditBox(font, x + w / 2, y, w / 2, 20,
+        GuideNativeEditBox field = new GuideNativeEditBox(font, x + w / 2, y, w / 2, 20,
                 MinecraftComponents.translatable("screen.openallay.settings.ui." + key));
         field.setMaxLength(6);
         field.setValue(uiIntegerDrafts.getOrDefault(key, Integer.toString(value)));
@@ -959,7 +959,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
     private void synchronizeUiInteger(String key, int value) {
         String text = Integer.toString(value);
         uiIntegerDrafts.put(key, text);
-        EditBox field = uiIntegerFields.get(key);
+        GuideNativeEditBox field = uiIntegerFields.get(key);
         if (field != null) field.setValue(text);
     }
 
@@ -1217,9 +1217,9 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
 
     private void voiceText(String key, String value, int x, int y, int w,
             java.util.function.Consumer<String> changed, boolean secret) {
-        EditBox field = secret ? new PasswordEditBox(font, x, y + 14, w, 20,
+        GuideNativeEditBox field = secret ? new PasswordEditBox(font, x, y + 14, w, 20,
                 MinecraftComponents.translatable("screen.openallay.settings.voice." + key))
-                : new EditBox(font, x, y + 14, w, 20,
+                : new GuideNativeEditBox(font, x, y + 14, w, 20,
                         MinecraftComponents.translatable("screen.openallay.settings.voice." + key));
         field.setMaxLength(4096);
         field.setValue(value);
@@ -1283,7 +1283,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
     }
 
     private String voiceFieldValue(String key, String fallback) {
-        EditBox field = voiceFields.get(key);
+        GuideNativeEditBox field = voiceFields.get(key);
         return field == null ? fallback : field.getValue();
     }
 
@@ -1395,7 +1395,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
         int y = layout.pageOrigin(pageScroll) + 44;
         int width = Math.min(280, Math.max(120, area.width() - 20));
         int saveWidth = Math.min(72, Math.max(50, width / 4));
-        assistantName = new EditBox(
+        assistantName = new GuideNativeEditBox(
                 font,
                 x,
                 y,
@@ -1713,7 +1713,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                 .build());
         refresh.active = idle && projection.catalog().configured();
 
-        extensionImportPath = new EditBox(
+        extensionImportPath = new GuideNativeEditBox(
                 font,
                 x,
                 y + 26,
@@ -1962,7 +1962,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
         refresh.active = snapshot.operation().kind() == SettingsOperation.Kind.IDLE;
 
         int importWidth = Math.min(84, Math.max(56, width / 4));
-        skillImportPath = new EditBox(
+        skillImportPath = new GuideNativeEditBox(
                 font,
                 x,
                 area.bottom() - 27,
@@ -2122,8 +2122,8 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                 draft.requestTimeoutSeconds());
     }
 
-    private EditBox field(int x, int y, int width, String narrationKey, String value) {
-        EditBox field = new EditBox(
+    private GuideNativeEditBox field(int x, int y, int width, String narrationKey, String value) {
+        GuideNativeEditBox field = new GuideNativeEditBox(
                 font, x, y, width, 18, MinecraftComponents.translatable(narrationKey));
         field.setMaxLength(2048);
         field.setValue(value == null ? "" : value);

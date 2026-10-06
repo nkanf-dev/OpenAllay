@@ -5,8 +5,8 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.network.chat.Component;
 
 /** Small native key callback binding. The native EditBox still owns text and IME. */
-public abstract class GuideNativeEditBox extends EditBox {
-    protected GuideNativeEditBox(Font font, int x, int y, int width, int height, Component title) {
+public class GuideNativeEditBox extends EditBox {
+    public GuideNativeEditBox(Font font, int x, int y, int width, int height, Component title) {
         super(font, x, y, width, height, title);
     }
 
