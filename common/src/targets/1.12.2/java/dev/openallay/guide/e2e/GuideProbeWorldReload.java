@@ -6,7 +6,10 @@ import net.minecraft.client.Minecraft;
 final class GuideProbeWorldReload {
     private GuideProbeWorldReload() {}
     static void open(Minecraft client, String name, Runnable cancelled) {
+        if (!client.isCallingFromMinecraftThread()) throw new IllegalStateException("World reload requires the client owner thread");
         client.launchIntegratedServer(name, name, null);
+        // Native launch returns early when StartupQuery cancels or the server stops.
+        if (client.getIntegratedServer() == null) cancelled.run();
     }
     static void tick(Minecraft client) {}
 }
