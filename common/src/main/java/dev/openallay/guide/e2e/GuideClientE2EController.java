@@ -72,6 +72,10 @@ public final class GuideClientE2EController {
     private String pendingTraceProfile;
     private int traceWaitTicks;
     private Instant harnessStartedAt;
+    private String startupPhase;
+    private Instant startupPhaseAt;
+    private Map<String, Object> startupDiagnostic = Map.of();
+    private int startupDiagnosticChanges;
     private boolean worldLaunchStarted;
     private int builderWarmupTicks;
     private GuideBuilderE2EProbe.Anchor builderAnchor;
@@ -251,6 +255,7 @@ public final class GuideClientE2EController {
         if (actor == null) {
             try { tickWorldLaunch(); }
             catch (RuntimeException failure) { failWithoutRequest("world_startup_failed", failure.toString()); }
+            startupGate("awaiting_player", actor);
             return;
         }
         if ("native-world-sdk".equals(config.scenario())) {
@@ -265,11 +270,15 @@ public final class GuideClientE2EController {
         if (GuideBuilderE2EProbe.enabled(config.scenario()) && ++builderWarmupTicks < 40) return;
         if (!System.getProperty("openallay.e2e.screenshotRoot", "").isBlank()) {
             var client = dev.openallay.client.gui.MinecraftClientWindow.instance();
-            if (MinecraftClientWindow.overlayPresent(client) || MinecraftClientWindow.screen(client) != null) return;
+            if (MinecraftClientWindow.overlayPresent(client) || MinecraftClientWindow.screen(client) != null) {
+                startupGate("awaiting_gameplay_screen", actor);
+                return;
+            }
         }
         GuideService service = services.forActor(actor);
         if (service.snapshot().persistence().state()
                 == dev.openallay.guide.GuidePersistenceSnapshot.State.LOADING) {
+            startupGate("awaiting_history_load", actor);
             return;
         }
         RecipeProviderReadiness readiness = recipeReadiness.get();
@@ -279,13 +288,18 @@ public final class GuideClientE2EController {
                     + readiness.state() + " " + readiness.code() + " " + readiness.message());
         }
         if (readiness.state() == RecipeProviderReadiness.State.WAITING) {
+            startupGate("awaiting_recipe_provider", actor);
             return;
         }
         if (readiness.state() == RecipeProviderReadiness.State.FAILED) {
             failWithoutRequest(readiness.code(), readiness.message());
             return;
         }
-        if (!tickGraphicalRecipePrecondition(actor)) return;
+        if (!tickGraphicalRecipePrecondition(actor)) {
+            if (!finished) startupGate("awaiting_recipe_synchronization", actor);
+            return;
+        }
+        startupGate("startup_ready", actor);
         started = true;
         startedAt = Instant.now();
         subscription = service.subscribe(this::observe);
@@ -1349,16 +1363,52 @@ public final class GuideClientE2EController {
             List<String> diagnosticCodes,
             List<String> componentTypes) {}
 
+    /** Bounded opt-in startup observations. No screen changes or readiness are manufactured. */
+    private void startupGate(String phase, UUID actor) {
+        if (!graphicalScenario(config.scenario())) return;
+        Instant now = Instant.now();
+        if (!phase.equals(startupPhase)) {
+            startupPhase = phase;
+            startupPhaseAt = now;
+        }
+        var client = MinecraftClientWindow.instance();
+        Map<String, Object> facts = new LinkedHashMap<>(MinecraftClientWindow.screenFacts(client));
+        facts.put("phase", phase);
+        facts.put("actor", actor == null ? "" : actor.toString());
+        facts.put("worldLaunchStarted", worldLaunchStarted);
+        var server = MinecraftClientWindow.integratedServer(client);
+        facts.put("integratedServerPresent", server != null);
+        if (server != null) facts.put("worldName", dev.openallay.server.NativeServerOwner.worldName(server));
+        facts.put("recipeSeedAdmitted", graphicalRecipeSeedAdmitted);
+        facts.put("recipeSeedReady", graphicalRecipeSeedReady);
+        if (!facts.equals(startupDiagnostic)) {
+            startupDiagnostic = Map.copyOf(facts);
+            if (startupDiagnosticChanges++ < 32) {
+                System.out.println("OpenAllay E2E startup: " + gson.toJson(startupDiagnostic));
+            }
+        }
+        long budget = Math.max(1L, Long.getLong("openallay.e2e.startupPhaseTimeoutSeconds", 90L));
+        if (!"startup_ready".equals(phase)
+                && Duration.between(startupPhaseAt, now).toSeconds() > budget) {
+            failWithoutRequest("startup_phase_timeout", "Native startup did not advance from " + phase);
+        }
+    }
+
     private void failWithoutRequest(String code, String message) {
-        String encoded = gson.toJson(java.util.Map.of(
-                "elapsedMillis", harnessStartedAt == null ? 0L : Duration.between(harnessStartedAt, Instant.now()).toMillis(),
-                "loader", loader,
-                "gameVersion", gameVersion,
-                "modVersion", modVersion,
-                "scenario", config.scenario(),
-                "outcome", "HARNESS_FAILED",
-                "failureCode", code,
-                "failureMessage", message));
+        Map<String, Object> report = new LinkedHashMap<>();
+        report.put("elapsedMillis", harnessStartedAt == null ? 0L : Duration.between(harnessStartedAt, Instant.now()).toMillis());
+        report.put("loader", loader);
+        report.put("gameVersion", gameVersion);
+        report.put("modVersion", modVersion);
+        report.put("scenario", config.scenario());
+        report.put("outcome", "HARNESS_FAILED");
+        report.put("failureCode", code);
+        report.put("failureMessage", message);
+        if (!startupDiagnostic.isEmpty()) {
+            report.put("startup", startupDiagnostic);
+            report.put("startupPhaseMillis", Duration.between(startupPhaseAt, Instant.now()).toMillis());
+        }
+        String encoded = gson.toJson(report);
         finish(encoded);
         if (!config.shutdownAfterReport()
                 && Boolean.getBoolean("openallay.e2e.shutdownAfterScreenshots")) shutdown.run();
