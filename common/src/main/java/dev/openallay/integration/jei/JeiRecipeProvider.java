@@ -29,7 +29,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.TreeMap;
-import mezz.jei.api.gui.IRecipeLayoutDrawable;
 import mezz.jei.api.gui.ingredient.IRecipeSlotView;
 import mezz.jei.api.ingredients.IIngredientHelper;
 import mezz.jei.api.ingredients.IIngredientType;
@@ -130,8 +129,8 @@ final class JeiRecipeProvider implements RecipeKnowledgeProvider {
     }
 
     private <T> RecipeEntrySnapshot detach(IRecipeCategory<T> category, T recipe) {
-        IRecipeLayoutDrawable<T> layout = runtime.getRecipeManager()
-                .createRecipeLayoutDrawable(
+        NativeRecipeLayout<T> layout = MinecraftJeiRecipeApi.createLayout(
+                        runtime.getRecipeManager(),
                         category,
                         recipe,
                         runtime.getJeiHelpers().getFocusFactory().getEmptyFocusGroup())

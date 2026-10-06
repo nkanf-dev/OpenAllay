@@ -243,7 +243,7 @@ class MinecraftTargetMixinHelpersTest(unittest.TestCase):
         self.assertIn("@Mixin(Minecraft.class)", accessor)
         self.assertIn("public interface MinecraftTeardownAccess extends MinecraftTeardownState", accessor)
         self.assertIn('@Accessor("clientLevelTeardownInProgress") boolean openallay$teardownInProgress();', accessor)
-        consumer_families = {"1.19.2": "1.20.1", "1.20.1": "1.20.1", "1.20.2": "1.20.4", "1.20.3": "1.20.4",
+        consumer_families = {"1.18.2": "1.20.1", "1.19.2": "1.20.1", "1.20.1": "1.20.1", "1.20.2": "1.20.4", "1.20.3": "1.20.4",
                              "1.20.4": "1.20.4", "1.20.5": "1.20.6", "1.20.6": "1.20.6",
                              "1.21": "1.21.1", "1.21.1": "1.21.1"}
         for target in declared_map(ROOT, "nativeFamilies"):
@@ -266,7 +266,7 @@ class MinecraftTargetMixinHelpersTest(unittest.TestCase):
                 config = json.loads(self.source(resources["openallay.client.mixins.json"]))
                 self.assertTrue(config["required"])
                 self.assertEqual(1, config["injectors"]["defaultRequire"])
-                if target not in ("1.19.2", "1.20.1", "1.20.2"):
+                if target not in ("1.18.2", "1.19.2", "1.20.1", "1.20.2"):
                     self.assertIn("MinecraftTeardownAccess", config["client"])
 
     def test_every_reserved_package_class_has_actual_mixin_annotation(self):
@@ -337,7 +337,7 @@ class MinecraftTargetMixinHelpersTest(unittest.TestCase):
             if "1.21.8" not in selected_layers(ROOT, target):
                 self.assertNotIn(relative, java)
                 continue
-            family = ("1.19.2" if target == "1.19.2" else "1.21.5" if target in ("1.20.1", "1.20.2", "1.20.3", "1.20.4",
+            family = ("1.19.2" if target in ("1.18.2", "1.19.2") else "1.21.5" if target in ("1.20.1", "1.20.2", "1.20.3", "1.20.4",
                                             "1.20.5", "1.20.6", "1.21", "1.21.1",
                                             "1.21.2", "1.21.3", "1.21.4", "1.21.5") else "1.21.8")
             with self.subTest(target=target, family=family):
@@ -372,10 +372,14 @@ class MinecraftTargetMixinHelpersTest(unittest.TestCase):
                     configured, excluded = configured_bindings(java, configs)
                     expected = ({"dev.openallay.client.gui.mixin.MinecraftTeardownAccess"}
                                 if target in ("1.20.1", "1.20.2") else set())
-                    if target == "1.19.2":
+                    if target in ("1.18.2", "1.19.2"):
                         expected = {"dev.openallay.client.gui.mixin.MinecraftTeardownAccess",
                                     "dev.openallay.client.gui.mixin.GuiGraphicsTextureAccess",
                                     "dev.openallay.client.gui.mixin.ScreenTooltipScopeMixin"}
+                    if target == "1.18.2":
+                        expected.update("dev.openallay.client.gui.mixin." + name for name in (
+                            "MultiLineEditBoxAccessor", "MultilineTextFieldAccessor",
+                            "MultiLineEditBoxHeightAccess", "GuiComponentScissorMixin"))
                     self.assertEqual(expected, excluded.keys())
                     for config in configs.values():
                         for scope in ("mixins", "client", "server"):

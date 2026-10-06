@@ -8,6 +8,8 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 public abstract class GuideNativeScreen extends Screen {
     protected final void tickGuideWidgets() {} // Native widgets blink from elapsed time.
     protected GuideNativeScreen(Component title) { super(title); }
+    /** Rebuild native children without changing the shared screen attachment. */
+    protected final void guideRebuildWidgets() { super.rebuildWidgets(); }
     @Override protected final void setInitialFocus() { guideInitialFocus(); }
     protected void guideInitialFocus() { super.setInitialFocus(); }
     @Override public final boolean mouseScrolled(double x, double y, double horizontal, double vertical) {

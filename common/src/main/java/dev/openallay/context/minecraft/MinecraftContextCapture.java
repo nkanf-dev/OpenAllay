@@ -78,7 +78,7 @@ public final class MinecraftContextCapture {
 
         long started = System.nanoTime();
         java.time.Instant capturedAt = java.time.Instant.now();
-        ServerPlayer serverPlayer = source.getPlayer();
+        ServerPlayer serverPlayer = MinecraftCommandCaller.player(source);
         CallerSnapshot caller = serverPlayer == null
                 ? new CallerSnapshot(CallerKind.CONSOLE, null, source.getTextName(), true)
                 : new CallerSnapshot(

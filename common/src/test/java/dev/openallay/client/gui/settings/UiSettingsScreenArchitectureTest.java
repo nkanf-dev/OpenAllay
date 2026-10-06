@@ -12,12 +12,12 @@ final class UiSettingsScreenArchitectureTest {
         String slider = block(source, "private static final class UiSlider");
         assertTrue(slider.contains("changed.accept(actual())"));
         assertFalse(slider.contains("saveDisplay"));
-        assertFalse(slider.contains("rebuildWidgets"));
+        assertFalse(slider.contains("guideRebuildWidgets"));
         String preview = source.substring(source.indexOf("private void previewHud"),
                 source.indexOf("private void changeHud"));
         assertTrue(preview.contains("uiDraft.preview"));
         assertFalse(preview.contains("saveDisplay"));
-        assertFalse(preview.contains("rebuildWidgets"));
+        assertFalse(preview.contains("guideRebuildWidgets"));
         String apply = source.substring(source.indexOf("private void applyUi()"),
                 source.indexOf("private void renderUi"));
         assertEquals(1, apply.split("saveDisplay", -1).length - 1);

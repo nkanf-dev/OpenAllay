@@ -267,7 +267,7 @@ public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNat
 
     @Override protected void repositionGuideElements() {
         boolean composerFocused = composer != null && getFocused() == composer.widget();
-        rebuildWidgets();
+        guideRebuildWidgets();
         // Only the same composer survives the rebuild. Never reattach a discarded button.
         if (composerFocused && composer.widget().visible && composer.widget().active) setFocused(composer.widget());
     }
@@ -504,7 +504,7 @@ public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNat
                     List<GuideHudResultRenderer.Hit> hits = visibleResultHits();
                     if (!hits.isEmpty()) {
                         focusedResult = Math.floorMod(focusedResult + (input.intent() == GuideKeyIntent.DOWN ? 1 : -1), hits.size());
-                        if (minecraft.getNarrator().isActive()) dev.openallay.client.gui.GuideNativeNarrator.sayNow(minecraft, MinecraftComponents.literal(hits.get(focusedResult).narration()));
+                        if (dev.openallay.client.gui.GuideNativeNarrator.isActive(minecraft)) dev.openallay.client.gui.GuideNativeNarrator.sayNow(minecraft, MinecraftComponents.literal(hits.get(focusedResult).narration()));
                         return true;
                     }
                 }

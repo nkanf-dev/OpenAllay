@@ -8,6 +8,9 @@ import net.minecraft.network.chat.Component;
 
 /** A compact pixel-style button that keeps Minecraft's input and narration behavior. */
 public final class OpenAllayButton extends GuideNativeButton {
+    // Shared builder defaults: match the accepted 150 x 20 native button layout.
+    private static final int DEFAULT_GUIDE_WIDTH = 150;
+    private static final int DEFAULT_GUIDE_HEIGHT = 20;
     private boolean selected;
 
     private OpenAllayButton(
@@ -79,8 +82,8 @@ public final class OpenAllayButton extends GuideNativeButton {
         private GuideTooltip tooltip;
         private int x;
         private int y;
-        private int width = DEFAULT_WIDTH;
-        private int height = DEFAULT_HEIGHT;
+        private int width = DEFAULT_GUIDE_WIDTH;
+        private int height = DEFAULT_GUIDE_HEIGHT;
         private GuideButtonNarration createNarration = GuideButtonNarration.DEFAULT;
         private boolean selected;
 

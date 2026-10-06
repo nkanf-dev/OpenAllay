@@ -311,7 +311,9 @@ public final class ClientContextCapture {
         Runtime runtime = Runtime.getRuntime();
         add(values, "performance", "fps", Integer.toString(dev.openallay.client.MinecraftNativeClientFacts.fps(client)));
         add(values, "performance", "frame_time_ns", Long.toString(dev.openallay.client.MinecraftNativeClientFacts.frameTimeNanos(client)));
-        add(values, "performance", "gpu_utilization", Double.toString(client.getGpuUtilization()));
+        var gpuUtilization = dev.openallay.client.MinecraftGpuFacts.utilization(client);
+        gpuUtilization.ifPresent(value ->
+                add(values, "performance", "gpu_utilization", Double.toString(value)));
         add(values, "performance", "heap_used_bytes",
                 Long.toString(runtime.totalMemory() - runtime.freeMemory()));
         add(values, "performance", "heap_max_bytes", Long.toString(runtime.maxMemory()));
@@ -354,13 +356,19 @@ public final class ClientContextCapture {
             }
         }
         values.sort(Comparator.comparing(DiagnosticValue::category).thenComparing(DiagnosticValue::key));
+        List<SectionDiagnostic> diagnostics = new ArrayList<>();
+        diagnostics.add(new SectionDiagnostic(
+                "sampled_client_diagnostics", "Values are a detached sample and may change after capture"));
+        if (gpuUtilization.isEmpty()) {
+            diagnostics.add(new SectionDiagnostic(
+                    "gpu_utilization_unknown",
+                    "GPU utilization is UNKNOWN because the native client has no available measurement"));
+        }
         return new ObservableGameStateSnapshot.DiagnosticsState(
                 values,
                 evidence(DataCompleteness.PARTIAL, capturedAt,
                         "minecraft:f3_diagnostics", "minecraft:client_diagnostics"),
-                List.of(new SectionDiagnostic(
-                        "sampled_client_diagnostics",
-                        "Values are a detached sample and may change after capture")));
+                diagnostics);
     }
 
     private static void add(List<DiagnosticValue> values, String category, String key, String value) {

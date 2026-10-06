@@ -43,7 +43,7 @@ final class VoiceSettingsScreenArchitectureTest {
         assertTrue(control.contains("voiceDraft = voiceDraft.withGameplayAction("));
         assertTrue(control.contains("VoiceConfig.GameplayAction.SEND"));
         assertTrue(control.contains("VoiceConfig.GameplayAction.DRAFT"));
-        assertTrue(control.contains("rebuildWidgets()"));
+        assertTrue(control.contains("guideRebuildWidgets()"));
         assertFalse(control.contains("voiceActions"));
         assertFalse(control.contains("withEnabled"));
         assertFalse(control.contains("saveVoice"));

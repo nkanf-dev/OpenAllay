@@ -118,9 +118,9 @@ final class OpenAllayScreenInputFocusContractsTest {
         assertFalse(nativeInitial.contains("super.setInitialFocus"));
         assertFalse(nativeInitial.contains("setFocused("));
         String rebuild = method(screen, "private void rebuildPresentationWidgets()");
-        assertTrue(rebuild.indexOf("getFocused() == composer.widget()") < rebuild.indexOf("rebuildWidgets()"));
+        assertTrue(rebuild.indexOf("getFocused() == composer.widget()") < rebuild.indexOf("guideRebuildWidgets()"));
         assertTrue(rebuild.contains("getFocused() instanceof AbstractWidget widget ? widget : null"));
-        assertTrue(rebuild.indexOf("GuideNativeFocus.clear(this)") > rebuild.indexOf("rebuildWidgets()"));
+        assertTrue(rebuild.indexOf("GuideNativeFocus.clear(this)") > rebuild.indexOf("guideRebuildWidgets()"));
         assertTrue(rebuild.contains("if (composerFocused) setFocused(composer.widget())"));
         assertTrue(rebuild.contains("else if (previous != null)"));
         assertTrue(rebuild.contains("children().stream()"));

@@ -62,7 +62,7 @@ public final class RequirementReviewScreen extends dev.openallay.client.gui.Guid
             }
             // Minecraft 26.2 calls added() before init(width, height). A local dispatcher
             // may deliver this snapshot inline; retain it, but do not create widgets yet.
-            if (minecraft != null && attachment.canRebuild(epoch)) rebuildWidgets();
+            if (minecraft != null && attachment.canRebuild(epoch)) guideRebuildWidgets();
         });
     }
 
@@ -122,7 +122,7 @@ public final class RequirementReviewScreen extends dev.openallay.client.gui.Guid
         Button cancel = addRenderableWidget(OpenAllayButton.create(
                         MinecraftComponents.translatable(PREFIX + "cancel"), ignored -> {
                             if (confirming == null) onClose();
-                            else { confirming = null; scroll = 0; rebuildWidgets(); }
+                            else { confirming = null; scroll = 0; guideRebuildWidgets(); }
                         })
                 .bounds(x, height - 29, half, 20).build());
         cancel.active = !actionPending;
@@ -237,7 +237,7 @@ public final class RequirementReviewScreen extends dev.openallay.client.gui.Guid
             confirming = row;
             scroll = 0;
             failure = "";
-            rebuildWidgets();
+            guideRebuildWidgets();
         } else {
             enable(row, false);
         }
@@ -248,7 +248,7 @@ public final class RequirementReviewScreen extends dev.openallay.client.gui.Guid
         actionPending = true;
         confirming = null;
         failure = "";
-        rebuildWidgets();
+        guideRebuildWidgets();
         long epoch = attachment.epoch();
         var client = minecraft;
         service.enablePackageRequirement(token, row.kind(), row.id(), consent).thenAccept(result ->
@@ -264,7 +264,7 @@ public final class RequirementReviewScreen extends dev.openallay.client.gui.Guid
                         savedSettings = true;
                     }
                     scroll = 0;
-                    rebuildWidgets();
+                    guideRebuildWidgets();
                 }));
     }
 
@@ -272,7 +272,7 @@ public final class RequirementReviewScreen extends dev.openallay.client.gui.Guid
         if (!ready()) return;
         actionPending = true;
         failure = "";
-        rebuildWidgets();
+        guideRebuildWidgets();
         long epoch = attachment.epoch();
         var client = minecraft;
         service.continuePackageInstall(token).thenAccept(result -> client.execute(() -> {
@@ -281,7 +281,7 @@ public final class RequirementReviewScreen extends dev.openallay.client.gui.Guid
             if (result instanceof ToolResult.Failure<Boolean> failed) {
                 failure = failed.code() + ": " + failed.message();
                 snapshot = service.snapshot();
-                rebuildWidgets();
+                guideRebuildWidgets();
             } else {
                 finished = true;
                 dev.openallay.client.gui.MinecraftClientWindow.showScreen(minecraft, parent);
@@ -295,7 +295,7 @@ public final class RequirementReviewScreen extends dev.openallay.client.gui.Guid
         if (confirming != null) {
             confirming = null;
             scroll = 0;
-            rebuildWidgets();
+            guideRebuildWidgets();
             return;
         }
         finished = true;
@@ -319,7 +319,7 @@ public final class RequirementReviewScreen extends dev.openallay.client.gui.Guid
     private void scrollBy(int amount) {
         int maximum = Math.max(0, contentHeight - (viewportBottom() - viewportTop()));
         scroll = net.minecraft.util.Mth.clamp(scroll + amount, 0, maximum);
-        rebuildWidgets();
+        guideRebuildWidgets();
     }
 
     @Override

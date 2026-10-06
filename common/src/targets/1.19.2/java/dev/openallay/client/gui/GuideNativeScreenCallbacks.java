@@ -1,11 +1,10 @@
 package dev.openallay.client.gui;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
 /** 1.19.2 native vertical-only scroll and canvas-only background callbacks. */
-abstract class GuideNativeScreenCallbacks extends Screen {
+abstract class GuideNativeScreenCallbacks extends GuideNativeScreenLifecycle {
     protected GuideNativeScreenCallbacks(Component title) { super(title); }
 
     @Override public final boolean mouseScrolled(double x, double y, double vertical) {

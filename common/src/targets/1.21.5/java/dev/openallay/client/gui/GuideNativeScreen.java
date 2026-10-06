@@ -15,6 +15,8 @@ public abstract class GuideNativeScreen extends GuideNativeScreenCallbacks {
     private record PendingTooltip(List<FormattedCharSequence> lines, ClientTooltipPositioner positioner) {}
 
     protected GuideNativeScreen(Component title) { super(title); }
+    /** Rebuild native children without changing the shared screen attachment. */
+    protected final void guideRebuildWidgets() { super.rebuildWidgets(); }
     @Override public final void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
         if (paintGraphics != null) throw new IllegalStateException("Screen paint is already active");
         GuideGraphics guide = GuideGraphics.wrap(graphics);

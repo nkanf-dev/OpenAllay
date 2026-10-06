@@ -581,7 +581,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
                 Hit next = focusable.get((current + 1) % focusable.size());
                 focusedContentId = next.focusId();
                 GuideNativeFocus.clear(this);
-                if (minecraft != null && minecraft.getNarrator().isActive()) {
+                if (minecraft != null && dev.openallay.client.gui.GuideNativeNarrator.isActive(minecraft)) {
                     dev.openallay.client.gui.GuideNativeNarrator.sayNow(minecraft, next.narration());
                 }
                 return true;
@@ -2713,7 +2713,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         boolean composerFocused = composer != null && getFocused() == composer.widget();
         AbstractWidget previous = getFocused() instanceof AbstractWidget widget ? widget : null;
         String contentFocus = focusedContentId;
-        rebuildWidgets();
+        guideRebuildWidgets();
         focusedContentId = contentFocus;
         GuideNativeFocus.clear(this);
         if (composerFocused) setFocused(composer.widget());
@@ -3735,7 +3735,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         }
         GuideUiModelChoice choice = view.modelChoices().get(modelSelectorCursor);
         focusedContentId = modelFocusId(choice);
-        if (minecraft != null && minecraft.getNarrator().isActive()) {
+        if (minecraft != null && dev.openallay.client.gui.GuideNativeNarrator.isActive(minecraft)) {
             dev.openallay.client.gui.GuideNativeNarrator.sayNow(minecraft, choiceLabel(choice));
         }
     }

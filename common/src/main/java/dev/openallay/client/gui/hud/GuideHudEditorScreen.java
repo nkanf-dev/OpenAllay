@@ -74,7 +74,7 @@ public final class GuideHudEditorScreen extends dev.openallay.client.gui.GuideNa
         addButton(controlsVisible ? "hide_controls" : "show_controls", x + Math.max(0, w - 76),
                 panelY + 3, Math.min(76, w), 18, () -> {
                     controlsVisible = !controlsVisible;
-                    rebuildWidgets();
+                    guideRebuildWidgets();
                 });
         if (!controlsVisible) {
             return;
@@ -106,7 +106,7 @@ public final class GuideHudEditorScreen extends dev.openallay.client.gui.GuideNa
         }
         addBodyButton("reset", x + half + 4, 5, half, () -> {
             draft.update(GuideUiConfig.Hud.defaults());
-            rebuildWidgets();
+            guideRebuildWidgets();
         });
         addButton("apply", x, form.footerY(), half, form.footerHeight(), this::apply);
         addButton("cancel", x + half + 4, form.footerY(), half, form.footerHeight(), this::onClose);
@@ -123,7 +123,7 @@ public final class GuideHudEditorScreen extends dev.openallay.client.gui.GuideNa
         if (next != formScroll) {
             formScroll = next;
             setDragging(false);
-            rebuildWidgets();
+            guideRebuildWidgets();
         }
     }
 

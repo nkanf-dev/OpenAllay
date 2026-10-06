@@ -31,6 +31,7 @@ jobs:
           ./gradlew --max-workers=2 --stacktrace -PminecraftTarget=1.18.2 -PbundleExtensions=false
           :forge:assemble :forge:captureNativeCommandContracts :common:test
           --tests dev.openallay.client.gui.GuideMultilineTextStateTest
+          --tests dev.openallay.client.gui.hud.GuideToastSlotReservationsTest
           -x :engine-core:test -x :runtime-maven:test
       - name: Retain existing named toast contracts after a compilation failure
         if: ${{ failure() }}

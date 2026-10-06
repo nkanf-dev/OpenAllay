@@ -310,7 +310,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                     updateUiApplyButton();
                     updateEditorSaveControls();
                 } else {
-                    rebuildWidgets();
+                    guideRebuildWidgets();
                     maybeRefreshVisibleCommunity();
                 }
             }
@@ -344,7 +344,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
     @Override
     protected void repositionGuideElements() {
         captureDraft();
-        rebuildWidgets();
+        guideRebuildWidgets();
     }
 
     @Override
@@ -363,7 +363,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                     || !voiceView.devices().equals(next.devices())
                     || !voiceView.config().equals(next.config());
             voiceView = next;
-            if (controlsChanged && section == SettingsSection.VOICE && layout != null) rebuildWidgets();
+            if (controlsChanged && section == SettingsSection.VOICE && layout != null) guideRebuildWidgets();
         }
         service.snapshot().requirementReview().ifPresent(review -> {
             captureDraft();
@@ -395,7 +395,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                     - (int) Math.round(scrollY * (sectionMenuOpen ? 1 : 24)), 0, maximum);
             if (next != navigationScroll) {
                 navigationScroll = next;
-                rebuildWidgets();
+                guideRebuildWidgets();
             }
             return true;
         }
@@ -404,7 +404,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                     0, Math.max(0, voiceContentHeight - layout.editor().height()));
             if (next != voiceScroll) {
                 voiceScroll = next;
-                rebuildWidgets();
+                guideRebuildWidgets();
             }
             return true;
         }
@@ -414,7 +414,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
             int next = net.minecraft.util.Mth.clamp(uiScroll - (int) Math.round(scrollY * 24), 0, maximum);
             if (next != uiScroll) {
                 uiScroll = next;
-                rebuildWidgets();
+                guideRebuildWidgets();
             }
             return true;
         }
@@ -424,7 +424,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                 int pages = Math.max(1, (catalogModelIds.size() + pageSize - 1) / pageSize);
                 modelCatalogPage = net.minecraft.util.Mth.clamp(
                         modelCatalogPage - (int) Math.signum(scrollY), 0, pages - 1);
-                rebuildWidgets();
+                guideRebuildWidgets();
                 return true;
             }
             captureDraft();
@@ -432,7 +432,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
             int maximum = Math.max(0, modelEditorContentHeight - viewport);
             editorScroll = net.minecraft.util.Mth.clamp(
                     editorScroll - (int) Math.round(scrollY * 22), 0, maximum);
-            rebuildWidgets();
+            guideRebuildWidgets();
             return true;
         }
         if (section == SettingsSection.SKILLS && !skillEditing
@@ -453,7 +453,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                     0, layout.maximumPageScroll(pageContentHeight));
             if (replacement != pageScroll) {
                 pageScroll = replacement;
-                rebuildWidgets();
+                guideRebuildWidgets();
             }
             return true;
         }
@@ -476,7 +476,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                     pageScroll - (int) Math.round(scrollY * 24), 0, maximum);
             if (replacement != pageScroll) {
                 pageScroll = replacement;
-                if (section == SettingsSection.EXTENSIONS) rebuildWidgets();
+                if (section == SettingsSection.EXTENSIONS) guideRebuildWidgets();
             }
             return true;
         }
@@ -536,7 +536,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                         captureDraft();
                         editorMenuOpen = !editorMenuOpen;
                         sectionMenuOpen = false;
-                        rebuildWidgets();
+                        guideRebuildWidgets();
                     }).bounds(moreX, y, 22, 20).build());
             dev.openallay.client.gui.GuideNativeWidgetTooltips.set(more, GuideTooltip.create(MinecraftComponents.translatable("screen.openallay.settings.more")));
         }
@@ -555,7 +555,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                                 sectionMenuOpen = !sectionMenuOpen;
                                 editorMenuOpen = false;
                                 navigationScroll = 0;
-                                rebuildWidgets();
+                                guideRebuildWidgets();
                             })
                     .bounds(sectionX, y, Math.max(24,
                             (hasEditorMenu ? moreX : backX) - sectionX - 4), 20)
@@ -588,7 +588,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
         } else if (section == SettingsSection.VOICE) resetVoiceDraft();
         editorMenuOpen = false;
         localNotice = "";
-        if (layout != null) rebuildWidgets();
+        if (layout != null) guideRebuildWidgets();
     }
 
     private void resetUiGroup() {
@@ -596,7 +596,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
         uiDraft.reset(uiGroup);
         if (uiGroup == UiSettingsProjection.Group.HUD) uiIntegerDrafts.clear();
         localNotice = "";
-        if (layout != null) rebuildWidgets();
+        if (layout != null) guideRebuildWidgets();
     }
 
     private void resetVoiceDefaults() {
@@ -611,7 +611,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
         voiceHttpModel = defaults.httpModel();
         // Existing model selection and credential stay available; reset never removes files or keys.
         localNotice = "";
-        if (layout != null) rebuildWidgets();
+        if (layout != null) guideRebuildWidgets();
     }
 
     private void addSectionNavigation() {
@@ -637,12 +637,12 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
         GuideKeyInput input = GuideKeyInput.from(event);
         if (editorMenuOpen && input.intent() == GuideKeyIntent.ESCAPE) {
             editorMenuOpen = false;
-            rebuildWidgets();
+            guideRebuildWidgets();
             return true;
         }
         if (sectionMenuOpen && input.intent() == GuideKeyIntent.ESCAPE) {
             sectionMenuOpen = false;
-            rebuildWidgets();
+            guideRebuildWidgets();
             return true;
         }
         if (input.intent() == GuideKeyIntent.ESCAPE) {
@@ -673,13 +673,13 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
         Button previous = addRenderableWidget(OpenAllayButton.create(
                         MinecraftComponents.translatable("screen.openallay.settings.navigation.previous"), ignored -> {
                             navigationScroll = Math.max(0, navigationScroll - rows);
-                            rebuildWidgets();
+                            guideRebuildWidgets();
                         }).bounds(area.x() + 6, area.bottom() - 22, (area.width() - 16) / 2, 20).build());
         previous.active = navigationScroll > 0;
         Button next = addRenderableWidget(OpenAllayButton.create(
                         MinecraftComponents.translatable("screen.openallay.settings.navigation.next"), ignored -> {
                             navigationScroll = Math.min(maximum, navigationScroll + rows);
-                            rebuildWidgets();
+                            guideRebuildWidgets();
                         }).bounds(area.x() + 10 + (area.width() - 16) / 2, area.bottom() - 22,
                                 (area.width() - 16) / 2, 20).build());
         next.active = navigationScroll < maximum;
@@ -698,7 +698,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
             addRenderableWidget(OpenAllayButton.create(MinecraftComponents.translatable(group.translationKey()), ignored -> {
                         uiGroup = group;
                         uiScroll = 0;
-                        rebuildWidgets();
+                        guideRebuildWidgets();
                     }).selected(group == uiGroup)
                     .bounds(area.x() + 6 + index++ * (tabWidth + 2), area.y() + 4, tabWidth, 20).build());
         }
@@ -726,7 +726,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                 y += 26;
                 uiToggle("animations", uiDraft.animationsEnabled(), x, y, w, () -> {
                     uiDraft.previewAnimations(!uiDraft.animationsEnabled());
-                    rebuildWidgets();
+                    guideRebuildWidgets();
                 });
                 y += 26;
             }
@@ -894,7 +894,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
 
     private void changeFull(GuideUiConfig.Fullscreen value) {
         uiDraft.preview(uiDraft.ui().withFullscreen(value));
-        rebuildWidgets();
+        guideRebuildWidgets();
     }
 
     private void previewHud(GuideUiConfig.Hud value) {
@@ -904,12 +904,12 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
 
     private void changeHud(GuideUiConfig.Hud value) {
         previewHud(value);
-        rebuildWidgets();
+        guideRebuildWidgets();
     }
 
     private void changeNotifications(GuideUiConfig.Notifications value) {
         uiDraft.preview(uiDraft.ui().withNotifications(value));
-        rebuildWidgets();
+        guideRebuildWidgets();
     }
 
     private void updateUiApplyButton() {
@@ -1089,21 +1089,21 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
         voiceButton("enabled", MinecraftComponents.translatable("screen.openallay.settings.ui."
                 + (voiceDraft.enabled() ? "on" : "off")), x, y, w, () -> {
             voiceDraft = voiceDraft.withEnabled(!voiceDraft.enabled());
-            rebuildWidgets();
+            guideRebuildWidgets();
         });
         y += 26;
         voiceButton("gameplay_action", MinecraftComponents.translatable("screen.openallay.settings.voice.gameplay_action."
                 + voiceDraft.gameplayAction().name().toLowerCase(java.util.Locale.ROOT)), x, y, w, () -> {
             voiceDraft = voiceDraft.withGameplayAction(voiceDraft.gameplayAction() == VoiceConfig.GameplayAction.SEND
                     ? VoiceConfig.GameplayAction.DRAFT : VoiceConfig.GameplayAction.SEND);
-            rebuildWidgets();
+            guideRebuildWidgets();
         });
         y += 26;
         voiceButton("backend", MinecraftComponents.translatable("screen.openallay.settings.voice.backend."
                 + voiceDraft.backend().name().toLowerCase(java.util.Locale.ROOT)), x, y, w, () -> {
             voiceDraft = voiceDraft.withBackend(voiceDraft.backend() == VoiceConfig.Backend.NATIVE
                     ? VoiceConfig.Backend.HTTP : VoiceConfig.Backend.NATIVE);
-            rebuildWidgets();
+            guideRebuildWidgets();
         });
         y += 26;
         String deviceName = voiceView.devices().stream().filter(device -> device.id().equals(voiceDraft.deviceId()))
@@ -1116,7 +1116,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                 if (devices.get(index).id().equals(voiceDraft.deviceId())) current = index;
             }
             voiceDraft = voiceDraft.withDevice(devices.get((current + 1) % devices.size()).id());
-            rebuildWidgets();
+            guideRebuildWidgets();
         });
         y += 26;
         voiceButton("refresh_devices", MinecraftComponents.empty(), x, y, w, () -> acceptVoice(voiceActions.refreshDevices(), false));
@@ -1127,7 +1127,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                 case "zh" -> "en";
                 default -> "auto";
             });
-            rebuildWidgets();
+            guideRebuildWidgets();
         });
         y += 26;
         voiceSlider("clip_seconds", voiceDraft.maxClipSeconds(), 1, 60, x, y, w,
@@ -1185,7 +1185,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
             y += 26;
             voiceButton("clear_credential", MinecraftComponents.empty(), x, y, w, () -> {
                 voiceDraft = voiceDraft.withCredential(null);
-                rebuildWidgets();
+                guideRebuildWidgets();
             });
             y += 26;
         }
@@ -1243,7 +1243,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                     } else if (selected != null && !selected.isBlank()) {
                         if (runtime) voiceRuntimePath = selected;
                         else voiceModelPath = selected;
-                        rebuildWidgets();
+                        guideRebuildWidgets();
                     }
                 }));
     }
@@ -1301,7 +1301,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                 voiceHttpUrl = previousHttpUrl;
                 voiceHttpModel = previousHttpModel;
             }
-            if (layout != null && section == SettingsSection.VOICE) rebuildWidgets();
+            if (layout != null && section == SettingsSection.VOICE) guideRebuildWidgets();
         }));
     }
 
@@ -1586,7 +1586,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                             selectedExtensionId = extension.id();
                             narrowExtensionDetail = true;
                             localNotice = "";
-                            rebuildWidgets();
+                            guideRebuildWidgets();
                         })
                         .selected(extension.id().equals(selectedExtensionId))
                         .bounds(x, y, width, 22)
@@ -1823,7 +1823,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                             narrowSkillDetail = true;
                             skillEditing = false;
                             skillDraftMarkdown = "";
-                            rebuildWidgets();
+                            guideRebuildWidgets();
                         })
                         .selected(skill.name().equals(selectedSkillName))
                         .bounds(x, y, width, 22)
@@ -1842,7 +1842,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                             selectedCommunitySkillId = skill.id();
                             skillDetailScroll = 0;
                             narrowSkillDetail = true;
-                            rebuildWidgets();
+                            guideRebuildWidgets();
                         })
                         .selected(skill.id().equals(selectedCommunitySkillId))
                         .bounds(x, y, width, 22)
@@ -1882,7 +1882,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                                 ignored -> {
                                     skillEditing = false;
                                     skillDraftMarkdown = "";
-                                    rebuildWidgets();
+                                    guideRebuildWidgets();
                                 })
                         .bounds(
                                 editorX + Math.min(120, editorWidth) + 4,
@@ -1898,7 +1898,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                                 ignored -> {
                                     skillEditing = true;
                                     skillDraftMarkdown = skill.markdown();
-                                    rebuildWidgets();
+                                    guideRebuildWidgets();
                                 })
                         .bounds(editorX, area.bottom() - 26, Math.min(160, editorWidth), 20)
                         .build());
@@ -2036,7 +2036,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                             captureDraft();
                             modelCatalogOpen = true;
                             modelCatalogPage = 0;
-                            rebuildWidgets();
+                            guideRebuildWidgets();
                         })
                 .bounds(inputX + modelWidth + fetchWidth + 6, y, chooseWidth, 18)
                 .build());
@@ -2081,7 +2081,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                             captureDraft();
                             draft = draft.withReasoningEffort(reasoningSettings().next());
                             confirmation = Confirmation.NONE;
-                            rebuildWidgets();
+                            guideRebuildWidgets();
                         })
                 .bounds(inputX, y, inputWidth, 18).build());
         dev.openallay.client.gui.GuideNativeWidgetTooltips.set(effort, GuideTooltip.create(reasoningExplanation(reasoning)));
@@ -2095,7 +2095,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                             draft = draft.withImageInputCapabilityOverride(
                                     new ModelImageSettingsProjection(draft.imageInputCapabilityOverride()).next());
                             confirmation = Confirmation.NONE;
-                            rebuildWidgets();
+                            guideRebuildWidgets();
                         })
                 .bounds(inputX, y, inputWidth, 18).build());
         dev.openallay.client.gui.GuideNativeWidgetTooltips.set(imageChoice, GuideTooltip.create(MinecraftComponents.translatable(imageInput.explanationKey())));
@@ -2186,7 +2186,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                     : modelCatalogOpen ? List.of(
                     new Action("screen.openallay.settings.models.catalog_close", () -> {
                         modelCatalogOpen = false;
-                        rebuildWidgets();
+                        guideRebuildWidgets();
                     }),
                     new Action("screen.openallay.settings.done", this::done)) : List.of(
                     new Action("screen.openallay.settings.save", this::saveCurrent),
@@ -3528,7 +3528,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                     return;
                 }
             }
-            if (layout != null) rebuildWidgets();
+            if (layout != null) guideRebuildWidgets();
         });
     }
 
@@ -3553,7 +3553,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
             confirmation = Confirmation.RELOAD;
             localNotice = MinecraftComponents.translatable(
                     "screen.openallay.settings.confirm_reload").getString();
-            rebuildWidgets();
+            guideRebuildWidgets();
             return;
         }
         confirmation = Confirmation.NONE;
@@ -3567,14 +3567,14 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
             narrowSkillDetail = false;
             skillEditing = false;
             skillDraftMarkdown = "";
-            rebuildWidgets();
+            guideRebuildWidgets();
             return;
         }
         if (layout != null && !layout.wide()
                 && section == SettingsSection.EXTENSIONS
                 && narrowExtensionDetail) {
             narrowExtensionDetail = false;
-            rebuildWidgets();
+            guideRebuildWidgets();
             return;
         }
         done();
@@ -3609,7 +3609,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                                 ? "screen.openallay.settings.history.confirm_reset"
                                 : "screen.openallay.settings.history.confirm_delete")
                         .getString();
-                rebuildWidgets();
+                guideRebuildWidgets();
             } else {
                 ToolResult.Failure<ClientSettingsService.HistoryConfirmationToken> failure =
                         (ToolResult.Failure<ClientSettingsService.HistoryConfirmationToken>) requested;
@@ -3628,7 +3628,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                 localNotice = MinecraftComponents.translatable(
                         "screen.openallay.settings.history.confirm_reset_again_notice")
                         .getString();
-                rebuildWidgets();
+                guideRebuildWidgets();
             } else {
                 historyConfirmation = null;
                 localNotice = ((ToolResult.Failure<
@@ -3750,7 +3750,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
         skillEditing = false;
         skillDraftMarkdown = "";
         localNotice = "";
-        rebuildWidgets();
+        guideRebuildWidgets();
         maybeRefreshVisibleCommunity();
     }
 
@@ -3768,7 +3768,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                         : extensionProjection().community();
         selectedExtensionId = cards.isEmpty() ? null : cards.get(0).id();
         localNotice = "";
-        rebuildWidgets();
+        guideRebuildWidgets();
         maybeRefreshVisibleCommunity();
     }
 
@@ -3877,7 +3877,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
     private void delete() {
         if (selectedProfileId == null) {
             select(snapshot.models().config().defaultProfileId());
-            rebuildWidgets();
+            guideRebuildWidgets();
             return;
         }
         if (snapshot.models().config().profiles().size() <= 1) {
@@ -3889,7 +3889,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
             confirmation = Confirmation.DELETE;
             localNotice = MinecraftComponents.translatable(
                     "screen.openallay.settings.confirm_delete").getString();
-            rebuildWidgets();
+            guideRebuildWidgets();
             return;
         }
         List<ModelProfileDefinition> retained = snapshot.models().config().profiles().stream()
@@ -3926,7 +3926,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
             confirmation = Confirmation.TEST_CONNECTION;
             localNotice = MinecraftComponents.translatable(
                     "screen.openallay.settings.confirm_billable_test").getString();
-            rebuildWidgets();
+            guideRebuildWidgets();
             return;
         }
         confirmation = Confirmation.NONE;
@@ -3982,7 +3982,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                         ? MinecraftComponents.translatable(
                                 "screen.openallay.settings.models.catalog_empty").getString()
                         : "";
-                rebuildWidgets();
+                guideRebuildWidgets();
             } else {
                 ToolResult.Failure<ModelCatalog> failure =
                         (ToolResult.Failure<ModelCatalog>) result;
@@ -4008,7 +4008,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                         refreshAutomaticContext();
                         modelCatalogOpen = false;
                         localNotice = "";
-                        rebuildWidgets();
+                        guideRebuildWidgets();
                     })
                     .bounds(x, y, width, 20)
                     .build());
@@ -4021,7 +4021,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                         MinecraftComponents.translatable("screen.openallay.settings.models.catalog_previous"),
                         ignored -> {
                             modelCatalogPage--;
-                            rebuildWidgets();
+                            guideRebuildWidgets();
                         })
                 .bounds(x, navY, navWidth, 20)
                 .build());
@@ -4030,7 +4030,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                         MinecraftComponents.translatable("screen.openallay.settings.models.catalog_next"),
                         ignored -> {
                             modelCatalogPage++;
-                            rebuildWidgets();
+                            guideRebuildWidgets();
                         })
                 .bounds(x + navWidth + 4, navY, navWidth, 20)
                 .build());
@@ -4039,7 +4039,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                         MinecraftComponents.translatable("screen.openallay.settings.models.catalog_close"),
                         ignored -> {
                             modelCatalogOpen = false;
-                            rebuildWidgets();
+                            guideRebuildWidgets();
                         })
                 .bounds(x + (navWidth + 4) * 2, navY,
                         Math.max(30, width - (navWidth + 4) * 2), 20)
@@ -4114,7 +4114,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
         if (replacement != SettingsSection.MODELS) {
             modelCatalogOpen = false;
         }
-        rebuildWidgets();
+        guideRebuildWidgets();
     }
 
     private void selectAndRebuild(String profileId) {
@@ -4130,7 +4130,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
         confirmation = Confirmation.NONE;
         localNotice = "";
         editorScroll = 0;
-        rebuildWidgets();
+        guideRebuildWidgets();
     }
 
     private void select(String profileId) {
@@ -4224,7 +4224,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
         invalidateModelCatalog();
         confirmation = Confirmation.NONE;
         localNotice = "";
-        rebuildWidgets();
+        guideRebuildWidgets();
     }
 
     private boolean containsProfile(String profileId) {
@@ -4291,14 +4291,14 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                 : ModelProtocol.OPENAI_CHAT;
         invalidateModelCatalog();
         confirmation = Confirmation.NONE;
-        rebuildWidgets();
+        guideRebuildWidgets();
     }
 
     private void toggleEnabled() {
         captureDraft();
         draftEnabled = !draftEnabled;
         confirmation = Confirmation.NONE;
-        rebuildWidgets();
+        guideRebuildWidgets();
     }
 
 
@@ -4415,7 +4415,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
         section = SettingsSection.EXTENSIONS;
         pageScroll = 0;
         pageContentHeight = 0;
-        rebuildWidgets();
+        guideRebuildWidgets();
     }
 
     /** Screenshot-harness selection of an existing configured profile; no settings write. */
@@ -4426,7 +4426,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
         section = SettingsSection.MODELS;
         editorScroll = 0;
         pageScroll = 0;
-        rebuildWidgets();
+        guideRebuildWidgets();
     }
 
     /** Selects actual installed metadata, never a synthetic Extension card. */
@@ -4438,7 +4438,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
         extensionTab = ExtensionTab.INSTALLED;
         selectedExtensionId = extensionId;
         narrowExtensionDetail = true;
-        rebuildWidgets();
+        guideRebuildWidgets();
     }
 
     /** Moves an existing settings page to its real measured bottom. */
@@ -4450,7 +4450,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
         } else {
             pageScroll = Math.max(0, pageContentHeight - layout.content().height() + 18);
         }
-        rebuildWidgets();
+        guideRebuildWidgets();
     }
 
     /** Screenshot-harness navigation that exercises the real display-settings save path. */
@@ -4463,7 +4463,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
         pageScroll = 0;
         pageContentHeight = 0;
         accept(service.saveDisplay(snapshot.display().withAssistantName(assistantDisplayName)));
-        rebuildWidgets();
+        guideRebuildWidgets();
     }
 
     /** Screenshot-harness navigation for the player-facing About page. */
@@ -4473,7 +4473,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
         section = SettingsSection.ABOUT;
         pageScroll = 0;
         pageContentHeight = 0;
-        rebuildWidgets();
+        guideRebuildWidgets();
     }
 
     /** Positive pixels move the Tool detail down; intended for retained screenshot coverage. */
@@ -4484,7 +4484,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
         }
         int maximum = Math.max(0, pageContentHeight - layout.content().height() + 18);
         pageScroll = net.minecraft.util.Mth.clamp(pageScroll + pixels, 0, maximum);
-        rebuildWidgets();
+        guideRebuildWidgets();
     }
 
     static boolean e2eControlsEnabled() {

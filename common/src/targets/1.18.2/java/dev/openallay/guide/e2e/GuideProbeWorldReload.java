@@ -1,6 +1,6 @@
 package dev.openallay.guide.e2e;
 
-import dev.openallay.client.MinecraftClientWindow;
+import dev.openallay.client.gui.MinecraftClientWindow;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.client.gui.screens.worldselection.SelectWorldScreen;

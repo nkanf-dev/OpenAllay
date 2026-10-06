@@ -11,7 +11,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Supplier;
-import mezz.jei.api.gui.IRecipeLayoutDrawable;
 import mezz.jei.api.recipe.category.IRecipeCategory;
 import mezz.jei.api.runtime.IJeiRuntime;
 
@@ -54,11 +53,11 @@ final class JeiNativeRecipeViewProvider implements NativeDomainViewProvider {
         if (!currentGenerationContains(snapshot, exact)) {
             return new Attempt.Unsupported("stale_reference");
         }
-        IRecipeLayoutDrawable<?> layout = find(current, references, exact).orElse(null);
+        NativeRecipeLayout<?> layout = find(current, references, exact).orElse(null);
         return layout == null
                 ? new Attempt.Unsupported("native_view_unavailable")
                 : new Attempt.Ready(new View(
-                        layout, runtime, current, MinecraftJeiRecipeApi.layoutGameTick(layout)));
+                        layout, runtime, current, layout.gameTick()));
     }
 
     static boolean currentGenerationContains(
@@ -70,7 +69,7 @@ final class JeiNativeRecipeViewProvider implements NativeDomainViewProvider {
                         .anyMatch(recipe -> recipe.reference().equals(exact));
     }
 
-    private static Optional<IRecipeLayoutDrawable<?>> find(
+    private static Optional<NativeRecipeLayout<?>> find(
             IJeiRuntime runtime, JeiRecipeProvider references, RecipeReference exact) {
         List<IRecipeCategory<?>> categories = runtime.getRecipeManager()
                 .createRecipeCategoryLookup()
@@ -78,41 +77,41 @@ final class JeiNativeRecipeViewProvider implements NativeDomainViewProvider {
                 .get()
                 .toList();
         for (IRecipeCategory<?> category : categories) {
-            Optional<IRecipeLayoutDrawable<?>> found = findInCategory(
+            Optional<NativeRecipeLayout<?>> found = findInCategory(
                     runtime, references, category, exact.recipeId());
             if (found.isPresent()) return found;
         }
         return Optional.empty();
     }
 
-    @SuppressWarnings({"rawtypes", "unchecked"})
-    private static Optional<IRecipeLayoutDrawable<?>> findInCategory(
+    private static <T> Optional<NativeRecipeLayout<?>> findInCategory(
             IJeiRuntime runtime,
             JeiRecipeProvider references,
-            IRecipeCategory category,
+            IRecipeCategory<T> category,
             String recipeId) {
-        List<Object> recipes = runtime.getRecipeManager()
+        List<T> recipes = runtime.getRecipeManager()
                 .createRecipeLookup(category.getRecipeType())
                 .includeHidden()
                 .get()
-                .map(value -> (Object) value)
                 .toList();
-        for (Object recipe : recipes) {
+        for (T recipe : recipes) {
             if (!references.referenceIdIfSupported(category, recipe)
                     .filter(recipeId::equals)
                     .isPresent()) {
                 continue;
             }
-            return (Optional) runtime.getRecipeManager().createRecipeLayoutDrawable(
+            return MinecraftJeiRecipeApi.createLayout(
+                    runtime.getRecipeManager(),
                     category,
                     recipe,
-                    runtime.getJeiHelpers().getFocusFactory().getEmptyFocusGroup());
+                    runtime.getJeiHelpers().getFocusFactory().getEmptyFocusGroup())
+                    .<NativeRecipeLayout<?>>map(layout -> layout);
         }
         return Optional.empty();
     }
 
     private record View(
-            IRecipeLayoutDrawable<?> layout,
+            NativeRecipeLayout<?> layout,
             Supplier<IJeiRuntime> runtime,
             IJeiRuntime capturedRuntime,
             Optional<Runnable> nativeGameTick) implements NativeDomainView {
@@ -148,8 +147,8 @@ final class JeiNativeRecipeViewProvider implements NativeDomainViewProvider {
             int x = context.bounds().x() + Math.max(0, (context.bounds().width() - layoutWidth) / 2);
             int y = context.bounds().y() + Math.max(0, (contentHeight - layoutHeight) / 2);
             layout.setPosition(x, y);
-            layout.drawRecipe(context.graphics().nativeGraphics(), context.mouseX(), context.mouseY());
-            layout.drawOverlays(context.graphics().nativeGraphics(), context.mouseX(), context.mouseY());
+            layout.drawRecipe(context.graphics(), context.mouseX(), context.mouseY());
+            layout.drawOverlays(context.graphics(), context.mouseX(), context.mouseY());
         }
     }
 }

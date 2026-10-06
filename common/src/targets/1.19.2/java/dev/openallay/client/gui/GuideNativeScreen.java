@@ -56,7 +56,7 @@ public abstract class GuideNativeScreen extends GuideNativeScreenCallbacks {
     /** Optional shared attachment hook; this native family attaches through init, not added. */
     protected void guideAdded() { }
     protected void guideRemoved() { }
-    protected void repositionGuideElements() { rebuildWidgets(); }
+    protected void repositionGuideElements() { guideRebuildWidgets(); }
 
 
     @Override public final boolean keyPressed(int key, int scancode, int modifiers) {

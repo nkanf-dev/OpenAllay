@@ -17,15 +17,12 @@ import mezz.jei.api.recipe.category.IRecipeCategory;
 import mezz.jei.api.runtime.IRecipesGui;
 import net.minecraft.client.renderer.Rect2i;
 
-/**
- * JEI 15.62.0.219 backports modern recipe-viewer capabilities to Minecraft 1.20.1.
- * Restore the main ABI binding instead of inheriting the older 16/17/18 publication shape.
- */
+/** JEI 10.81.0.1029 native ABI: a non-generic drawable with typed factory inputs. */
 final class MinecraftJeiRecipeApi {
     private MinecraftJeiRecipeApi() {}
 
     static List<ITypedIngredient<?>> slotValues(IRecipeSlotView slot) {
-        return slot.getAllIngredientsList();
+        return slot.getAllIngredientsList().stream().filter(Objects::nonNull).toList();
     }
 
     static <T> OptionalLong amount(IIngredientHelper<T> helper, T ingredient) {
@@ -42,7 +39,7 @@ final class MinecraftJeiRecipeApi {
     }
 
     /** A native layout tick is required by publications that expose this callback. */
-    static Optional<Runnable> layoutGameTick(IRecipeLayoutDrawable<?> layout) {
+    static Optional<Runnable> layoutGameTick(IRecipeLayoutDrawable layout) {
         Objects.requireNonNull(layout, "layout");
         return Optional.of(layout::tick);
     }
@@ -54,7 +51,7 @@ final class MinecraftJeiRecipeApi {
     }
 
     private record Layout<T>(
-            IRecipeLayoutDrawable<T> handle, IRecipeCategory<T> category, T recipe) implements NativeRecipeLayout<T> {
+            IRecipeLayoutDrawable handle, IRecipeCategory<T> category, T recipe) implements NativeRecipeLayout<T> {
         private Layout {
             Objects.requireNonNull(handle, "handle");
             Objects.requireNonNull(category, "category");
@@ -82,7 +79,7 @@ final class MinecraftJeiRecipeApi {
         }
         @Override public <I> Optional<I> getIngredientUnderMouse(
                 int mouseX, int mouseY, IIngredientType<I> type) {
-            return handle.getIngredientUnderMouse(mouseX, mouseY, type);
+            return handle.getOptionalIngredientUnderMouse(mouseX, mouseY, type);
         }
         @Override public Optional<Runnable> gameTick() { return layoutGameTick(handle); }
     }

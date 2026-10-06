@@ -2,6 +2,8 @@ package dev.openallay.trace.minecraft;
 
 import dev.openallay.context.ToolInvocationContext;
 import dev.openallay.context.minecraft.MinecraftContextCapture;
+import dev.openallay.context.minecraft.MinecraftCommandCaller;
+import dev.openallay.platform.minecraft.MinecraftResourceAccess;
 import dev.openallay.tool.ToolResult;
 import dev.openallay.trace.model.AgentTrace;
 import dev.openallay.trace.replay.AgentTraceReplayer;
@@ -50,7 +52,7 @@ public final class TraceReplayService {
             return new ToolResult.Failure<>("unknown_trace", "Unknown trace: " + traceId);
         }
         if (trace.requiredContext().contains(dev.openallay.context.ContextCapability.PLAYER)
-                && source.getPlayer() == null) {
+                && MinecraftCommandCaller.player(source) == null) {
             return new ToolResult.Failure<>(
                     "player_required", "Trace " + trace.id() + " requires a player caller");
         }
@@ -63,12 +65,11 @@ public final class TraceReplayService {
     }
 
     private ToolResult<TraceRepository.LoadedTraces> load(ResourceManager resources) {
-        List<TraceRepository.TraceSource> sources = resources
-                .listResources("agent_traces", id -> id.getPath().endsWith(".json"))
-                .entrySet()
+        List<TraceRepository.TraceSource> sources = MinecraftResourceAccess
+                .listIds(resources, "agent_traces", id -> id.getPath().endsWith(".json"))
                 .stream()
-                .map(entry -> new TraceRepository.TraceSource(
-                        entry.getKey().toString(), entry.getValue()::openAsReader))
+                .map(id -> new TraceRepository.TraceSource(
+                        id.toString(), () -> MinecraftResourceAccess.openSelectedReader(resources, id)))
                 .toList();
         return repository.load(sources);
     }

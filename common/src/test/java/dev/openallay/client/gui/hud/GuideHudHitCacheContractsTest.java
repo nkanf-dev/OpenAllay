@@ -81,7 +81,7 @@ final class GuideHudHitCacheContractsTest {
         assertTrue(init.contains("composer.widget().visible = readingLayout.footerFits()"));
         assertTrue(init.contains("setFocused(null)"));
         String rebuild = lite.substring(reposition, lite.indexOf("public void added()", reposition));
-        assertTrue(rebuild.indexOf("getFocused() == composer.widget()") < rebuild.indexOf("rebuildWidgets()"));
+        assertTrue(rebuild.indexOf("getFocused() == composer.widget()") < rebuild.indexOf("guideRebuildWidgets()"));
         assertTrue(rebuild.contains("if (composerFocused && composer.widget().visible && composer.widget().active) setFocused(composer.widget())"));
         assertFalse(rebuild.contains("setFocused(send)"));
         assertTrue(lite.contains("guideInitialFocus() {}"));
