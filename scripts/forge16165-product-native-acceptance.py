@@ -30,7 +30,7 @@ def main():
     root,java,assets=stock.prepare(args,runtime,launch,freeze,install,version,vanilla)
     cp=launch.version_libraries(vanilla,root,Path('/nonexistent'),allow_gradle=False);fml=launch.version_libraries(version,root,Path('/nonexistent'),allow_gradle=False);replace={tuple(n.split(':')[:2]) for n,_ in fml};cp=[(n,p) for n,p in cp if tuple(n.split(':')[:2]) not in replace]+fml
     classpath=stock.inspect_classpath(cp,required,runtime);natives=launch.extract_natives(launch.native_libraries(vanilla,root),out/'natives')
-    (game/'options.txt').write_text('renderDistance:4\nmaxFps:30\npauseOnLostFocus:false\nguiScale:2\n' + ('lang:zh_cn\n' if args_cli.ui else ''))
+    (game/'options.txt').write_text('renderDistance:4\nmaxFps:30\npauseOnLostFocus:false\n' + ('guiScale:1\nlang:zh_cn\n' if args_cli.ui else 'guiScale:2\n'))
     values={'natives_directory':out/'natives','launcher_name':'OpenAllayProductAcceptance','launcher_version':'native-product','classpath':os.pathsep.join(str(p) for _,p in cp),'auth_player_name':'devGameUser','version_name':stock.PROFILE,'game_directory':game,'assets_root':assets,'assets_index_name':vanilla['assetIndex']['id'],'auth_uuid':launch.offline_uuid('devGameUser'),'auth_access_token':'0','user_type':'legacy','version_type':version['type'],'resolution_width':'1280','resolution_height':'960'}
     features={'has_custom_resolution':True};jvm=launch.expand_arguments(vanilla['arguments']['jvm'],values,features)+stock.FLAGS;gameargs=launch.expand_arguments(vanilla['arguments']['game'],values,features)+version['arguments']['game']
     command=[str(java),'-Xms256M','-Xmx1536M','-Xlog:class+load=info:file='+str(out/'class-load.log')]+jvm+[stock.MAIN]+gameargs
