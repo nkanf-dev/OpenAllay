@@ -6,16 +6,18 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.gui.components.toasts.Toast;
 import net.minecraft.client.gui.components.toasts.ToastComponent;
 
-/**
- * Native 1.18.2 render callback for core compilation diagnostics.
- * Two-slot admission and 64px placement require the actual native manager body before game acceptance.
- * guideSlotCount remains an owned card fact; this native Toast API has no slotCount method.
- */
+/** Native render callback; card layout and lifetime remain in the shared owned toast. */
 public abstract class GuideNativeToastBinding implements Toast {
     public abstract boolean finished();
     protected abstract boolean guideToastActive();
     public abstract void onFinishedRendering();
     protected abstract int guideSlotCount();
+
+    /** Manager-only slot demand; Toast.height() remains the real 64px canvas height. */
+    public final int nativeSlotCount() { return guideSlotCount(); }
+
+    /** Physical placement pitch of the captured five-slot manager. */
+    public final int nativeSlotHeight() { return 32; }
     protected abstract Visibility guideWantedVisibility();
     protected abstract void updateGuideToast(long fullyVisibleMillis);
 

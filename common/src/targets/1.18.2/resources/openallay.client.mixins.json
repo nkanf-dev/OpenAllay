@@ -10,6 +10,7 @@
     "MinecraftTeardownStateMixin",
     "GuiSubtitleAccess",
     "ToastInstanceCompletionMixin",
+    "ToastComponentSlotMixin",
     "LegacyWidgetFocusAccess",
     "GuiComponentTextureAccess",
     "LegacyEditBoxHintMixin",
