@@ -68,7 +68,8 @@ task featureCore(type:Jar) {
     from compileCore.destinationDirectory
     // Provider driver inventories/merges whole retained entries with sole byte custody.
     from file(request.featureStaging)
-    manifest.attributes('FMLCorePlugin':'dev.openallay.forge1122.bootstrap.OpenAllayFeatureBoundary')
+    manifest.attributes('FMLCorePlugin':'dev.openallay.forge1122.bootstrap.OpenAllayFeatureBoundary',
+        'Multi-Release':fileTree(file(request.featureStaging)).matching { include 'META-INF/versions/**' }.isEmpty() ? 'false' : 'true')
     duplicatesStrategy=DuplicatesStrategy.FAIL
     preserveFileTimestamps=false;reproducibleFileOrder=true
 }

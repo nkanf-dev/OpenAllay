@@ -49,7 +49,7 @@ def main():
                 if entry.is_dir():continue
                 if name.startswith('/') or any(p in ('','..','.') for p in name.split('/')):raise ValueError('Unsafe feature entry')
                 data=archive.read(entry);digest=hashlib.sha256(data).hexdigest();destination=name;disposition='copied'
-                if name=='META-INF/MANIFEST.MF' or name=='mcmod.info' or name=='META-INF/mods.toml' or name.endswith(('.SF','.RSA','.DSA')):disposition='excluded-original-container-metadata'
+                if name=='META-INF/MANIFEST.MF' or name=='mcmod.info' or name=='META-INF/mods.toml' or name=='module-info.class' or name.startswith('META-INF/versions/') and name.endswith('/module-info.class') or name.endswith(('.SF','.RSA','.DSA')):disposition='excluded-original-container-metadata'
                 elif name.startswith('META-INF/services/'):
                     services.setdefault(name,[]).extend(data.decode().splitlines());disposition='merged-real-service-declarations'
                 elif not name.endswith('.class') and ('LICENSE' in Path(name).name.upper() or 'NOTICE' in Path(name).name.upper()):
