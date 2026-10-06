@@ -5,7 +5,7 @@ on:
       mode:
         type: choice
         default: tooling
-        options: [tooling, abi, engine, native, pack, boot, ui, world, persistence, builder, builder-call, builder-lifecycle, builder-presets, stock1122, census1122, stock1122-bridge]
+        options: [tooling, abi, engine, native, pack, boot, ui, world, persistence, builder, builder-call, builder-lifecycle, builder-presets, stock1122, census1122, stock1122-bridge, stock1122-pack200]
 permissions:
   contents: read
 concurrency:
@@ -318,12 +318,15 @@ jobs:
             build/e2e/runtime/forge16165-stock/minecraft/.provision/*.log
 
   stock1122-java17-prerequisite:
-    if: inputs.mode == 'stock1122' || inputs.mode == 'stock1122-bridge'
+    if: inputs.mode == 'stock1122' || inputs.mode == 'stock1122-bridge' || inputs.mode == 'stock1122-pack200'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with: {persist-credentials: false}
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        if: inputs.mode == 'stock1122-pack200'
+        with: {distribution: temurin, java-version: '8.0.482+8'}
       - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
         with: {distribution: temurin, java-version: '17.0.18+8'}
       - name: Install isolated stock client display support
@@ -339,7 +342,7 @@ jobs:
           --repo "$PWD" --java "$JAVA_HOME/bin/java" --java-release '17.0.18+8'
           --minecraft-root "$PWD/build/e2e/runtime/forge1122-stock/minecraft"
           --output "$PWD/build/e2e/forge1122-stock"
-          ${{ inputs.mode == 'stock1122-bridge' && '--launchwrapper-bridge' || '' }}
+          ${{ inputs.mode == 'stock1122-pack200' && '--pack200-bridge' || inputs.mode == 'stock1122-bridge' && '--launchwrapper-bridge' || '' }}
       - name: Retain only stock startup and source evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02

@@ -187,6 +187,59 @@ def classpath_libraries(metadata, root, launch):
                                     Path("/nonexistent"), allow_gradle=False)
 
 
+def prepare_pack200(args, output, java, cp, runtime):
+    # Build-only JDK8 conversion of exact official Forge resource. Runtime stays Java17.
+    import lzma
+    forge = next(path for name, path in cp if name == "net.minecraftforge:forge:1.12.2-14.23.5.2864")
+    runtime.require(runtime.file_hash(forge) == "ff578d670d2c720a72f8fff31ea3d6868595c7e980ecdecba3254f307ef2c2a9", "Official Forge bytes differ")
+    java8_home = Path(os.environ["JAVA_HOME_8_X64"])
+    java8 = java8_home / "bin/java"
+    java8_info = runtime.check_java(java8, 8)
+    runtime.require("1.8.0_482" in java8_info and "Temurin" in java8_info, "Use pinned build-only Temurin8u482")
+    with zipfile.ZipFile(forge) as archive:
+        compressed = archive.read("binpatches.pack.lzma")
+    runtime.require(hashlib.sha256(compressed).hexdigest() == "ceebaefd4abca814aa0160e71e62c507d63733b7da1773c1268e04ac9a720882", "Exact bundled LZMA resource differs")
+    packed = lzma.decompress(compressed)
+    runtime.require(hashlib.sha256(packed).hexdigest() == "637960a65a320b359561f86016c467e6cfd6d31c0507c1f76effb46e85ea4db6", "Exact decompressed Pack200 bytes differ")
+    packed_path = output / "forge-binpatches.pack"
+    packed_path.write_bytes(packed)
+    unpacked = output / "forge-binpatches-jdk8.jar"
+    command = [str(java8_home / "bin/unpack200"), str(packed_path), str(unpacked)]
+    with (output / "pack200-build.log").open("w") as log:
+        subprocess.run(command, check=True, stdout=log, stderr=subprocess.STDOUT)
+    with zipfile.ZipFile(unpacked) as archive:
+        runtime.require(archive.testzip() is None, "Genuine unpacked patches corrupt")
+        entries = {entry.filename: hashlib.sha256(archive.read(entry)).hexdigest()
+                   for entry in archive.infolist() if not entry.is_dir()}
+    runtime.require(any(name.startswith("binpatch/client/") for name in entries), "Actual client patches missing")
+    runtime.write_json(output / "pack200-build.json", {
+        "buildJavaInfo": java8_info, "runtimeJava": 17, "command": command,
+        "forgeSha256": runtime.file_hash(forge), "lzmaSha256": hashlib.sha256(compressed).hexdigest(),
+        "packedSha256": runtime.file_hash(packed_path), "unpackedJarSha256": runtime.file_hash(unpacked),
+        "genuineUnpack200ExecutableSha256": runtime.file_hash(java8_home / "bin/unpack200"), "entries": entries})
+    # A real explicit helper library, resolved by unchanged stock LaunchClassLoader.
+    helper_classes = output / "pack200-helper-classes"
+    helper_classes.mkdir()
+    helper_source = PACKET / "bridge/pack200/Pack200Runtime.java"
+    with (output / "pack200-helper-compile.log").open("w") as log:
+        subprocess.run([str(java.parent / "javac"), "--release", "8", "-d", str(helper_classes), str(helper_source)],
+                       check=True, stdout=log, stderr=subprocess.STDOUT)
+    helper = output / "pack200-runtime-helper.jar"
+    subprocess.run([str(java.parent / "jar"), "cf", str(helper), "-C", str(helper_classes), "."], check=True)
+    clean_env = {k:v for k,v in os.environ.items() if k not in ("JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "_JAVA_OPTIONS")}
+    with (output / "pack200-entries-test.log").open("w") as log:
+        subprocess.run([str(java), "-cp", str(helper), "dev.openallay.runtime.forge1122.pack200.Pack200Runtime",
+                        str(packed_path), str(unpacked), runtime.file_hash(unpacked),
+                        str(output / "pack200-entries-test.json")], check=True, env=clean_env,
+                       stdout=log, stderr=subprocess.STDOUT)
+    packed_path.unlink()
+    cp.append(("dev.openallay.runtime:pack200-entry-bridge:current", helper))
+    return ["-Dopenallay.pack200.enabled=true", "-Dopenallay.pack200.forge=" + str(forge),
+            "-Dopenallay.pack200.jar=" + str(unpacked), "-Dopenallay.pack200.jarSha256=" + runtime.file_hash(unpacked),
+            "-Dopenallay.pack200.transformReceipt=" + str(output / "pack200-transform.json"),
+            "-Dopenallay.pack200.runtimeReceipt=" + str(output / "pack200-runtime.json")]
+
+
 def prepare_launchwrapper_bridge(args, output, java, cp, runtime):
     # Compile only this tiny Java8 agent remotely. Stock ASM5.2 is both compiler/runtime API.
     sources = PACKET / "bridge"
@@ -211,13 +264,19 @@ def prepare_launchwrapper_bridge(args, output, java, cp, runtime):
     test_cp = os.pathsep.join([str(agent)] + [str(path) for _, path in cp])
     test_main = "dev.openallay.runtime.forge1122.LaunchWrapperJava17BridgeTest"
     clean_env = {k:v for k,v in os.environ.items() if k not in ("JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "_JAVA_OPTIONS")}
-    with (output / "bridge-tests.log").open("w") as log:
-        subprocess.run([str(java), "-cp", test_cp, test_main, str(wrapper)], check=True, env=clean_env,
-                       stdout=log, stderr=subprocess.STDOUT)
-        subprocess.run([str(java), "-Dopenallay.bridge.receipt=" + str(output / "bridge-constructor-test.json"),
-                        "-javaagent:" + str(agent) + "=" + str(wrapper), "-cp", test_cp,
-                        test_main, str(wrapper), "--constructor"], check=True, env=clean_env,
-                       stdout=log, stderr=subprocess.STDOUT)
+    if args.pack200_bridge:
+        forge = next(path for name, path in cp if name == "net.minecraftforge:forge:1.12.2-14.23.5.2864")
+        with (output / "pack200-tests.log").open("w") as log:
+            subprocess.run([str(java), "-cp", test_cp, "dev.openallay.runtime.forge1122.Pack200BridgeTest", str(forge)],
+                           check=True, env=clean_env, stdout=log, stderr=subprocess.STDOUT)
+    else:
+        with (output / "bridge-tests.log").open("w") as log:
+            subprocess.run([str(java), "-cp", test_cp, test_main, str(wrapper)], check=True, env=clean_env,
+                           stdout=log, stderr=subprocess.STDOUT)
+            subprocess.run([str(java), "-Dopenallay.bridge.receipt=" + str(output / "bridge-constructor-test.json"),
+                            "-javaagent:" + str(agent) + "=" + str(wrapper), "-cp", test_cp,
+                            test_main, str(wrapper), "--constructor"], check=True, env=clean_env,
+                           stdout=log, stderr=subprocess.STDOUT)
     return ["-Dopenallay.bridge.receipt=" + str(output / "bridge-runtime.json"),
             "-javaagent:" + str(agent) + "=" + str(wrapper)]
 
@@ -236,6 +295,7 @@ def boot(args, root, java, assets, runtime, launch, expected, vanilla, version):
     cp = [(name, path) for name, path in cp if tuple(name.split(":")[:2]) not in replacements] + fml
     # Legacy LaunchWrapper needs the original game JAR, not a fake alias or Gradle runtime.
     cp += [("com.mojang:minecraft:1.12.2:client", root / "versions/1.12.2/1.12.2.jar")]
+    pack200_flags = prepare_pack200(args, output, java, cp, runtime) if args.pack200_bridge else []
     classpath_receipts = inspect_classpath(cp, expected, runtime)
     native_receipts = launch.extract_natives(launch.native_libraries(vanilla, root), output / "natives")
     values = {"natives_directory": output / "natives", "launcher_name": "OpenAllayStockPrerequisite",
@@ -254,11 +314,11 @@ def boot(args, root, java, assets, runtime, launch, expected, vanilla, version):
         raise ValueError("Unresolved legacy launcher argument")
     bridge_flags = prepare_launchwrapper_bridge(args, output, java, cp, runtime) if args.launchwrapper_bridge else []
     command = [str(java), "-Xms256M", "-Xmx1536M",
-               "-Xlog:class+load=info:file=" + str(output / "class-load.log")] + bridge_flags + jvm + [MAIN] + game_args
+               "-Xlog:class+load=info:file=" + str(output / "class-load.log")] + bridge_flags + pack200_flags + jvm + [MAIN] + game_args
     env = {k:v for k,v in os.environ.items() if k not in ("JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "_JAVA_OPTIONS")}
     runtime.write_json(output / "launch.json", {"command": command, "classpath": classpath_receipts,
                        "natives": native_receipts, "noMods": True, "noEngineProbe": True,
-                       "runtimeMode": "launchwrapper-url-bridge" if args.launchwrapper_bridge else "raw-stock",
+                       "runtimeMode": "launchwrapper-and-pack200-bridge" if args.pack200_bridge else "launchwrapper-url-bridge" if args.launchwrapper_bridge else "raw-stock",
                        "publicInstrumentationAgent": args.launchwrapper_bridge})
     receipt = {"status": "running", "titleConfirmed": False, "captureSeconds": [45, 90],
                "screenshots": [], "startedAt": datetime.now(timezone.utc).isoformat()}
@@ -291,6 +351,7 @@ def boot(args, root, java, assets, runtime, launch, expected, vanilla, version):
     diagnostics = {"rawStockJava17": not args.launchwrapper_bridge, "titleConfirmed": False, "libraryReplacement": False,
                    "customClassLoader": False, "bootstrapApplied": args.launchwrapper_bridge,
                    "bridgeReceipt": "bridge-runtime.json" if args.launchwrapper_bridge else None,
+                   "pack200BridgeApplied": args.pack200_bridge,
                    "launchWrapperAppLoaderCastFailure": "ClassCastException" in text and "URLClassLoader" in text,
                    "moduleAccessFailure": "InaccessibleObjectException" in text or "IllegalAccessError" in text,
                    "unsupportedClassVersion": "UnsupportedClassVersionError" in text,
@@ -303,6 +364,7 @@ def boot(args, root, java, assets, runtime, launch, expected, vanilla, version):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--pack200-bridge", action="store_true", help="Opt-in genuine build-JDK8 Pack200 conversion, runtime17 entry seam")
     parser.add_argument("--launchwrapper-bridge", action="store_true", help="Opt-in exact LaunchWrapper1.12 URL seam instrumentation; stock libraries stay unchanged")
     parser.add_argument("--metadata-only", action="store_true", help="No network, Java or filesystem runtime action")
     parser.add_argument("--repo", type=Path)
@@ -311,6 +373,8 @@ def main():
     parser.add_argument("--minecraft-root", type=Path)
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
+    if args.pack200_bridge:
+        args.launchwrapper_bridge = True
     runtime, launch, freeze = load_helpers(args.repo)
     install = runtime.json_bytes((PACKET / "install_profile.json").read_bytes())
     version = runtime.json_bytes((PACKET / "version.json").read_bytes())
@@ -336,7 +400,7 @@ def main():
         runtime.write_json(failure_path, {"status": "fatal-prerequisite-failure",
                            "exception": type(error).__name__, "cause": str(error),
                            "titleConfirmed": False, "engineProbe": False,
-                           "runtimeMode": "launchwrapper-url-bridge" if args.launchwrapper_bridge else "raw-stock"})
+                           "runtimeMode": "launchwrapper-and-pack200-bridge" if args.pack200_bridge else "launchwrapper-url-bridge" if args.launchwrapper_bridge else "raw-stock"})
         raise
 
 
