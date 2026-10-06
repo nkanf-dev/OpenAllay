@@ -105,7 +105,7 @@ public sealed interface AgentEvent
             implements AgentEvent {
         public ToolStarted {
             requireIdentity(invocationId, toolId);
-            arguments = Objects.requireNonNull(arguments, "arguments").deepCopy();
+            arguments = dev.openallay.json.JsonTrees.copy(Objects.requireNonNull(arguments, "arguments"));
             presentationMessages = List.copyOf(presentationMessages);
         }
 
@@ -122,7 +122,7 @@ public sealed interface AgentEvent
 
         @Override
         public JsonObject arguments() {
-            return arguments.deepCopy();
+            return dev.openallay.json.JsonTrees.copy(arguments);
         }
     }
 
@@ -134,12 +134,12 @@ public sealed interface AgentEvent
             implements AgentEvent {
         public ToolCompleted {
             requireIdentity(invocationId, toolId);
-            normalized = Objects.requireNonNull(normalized, "normalized").deepCopy();
+            normalized = dev.openallay.json.JsonTrees.copy(Objects.requireNonNull(normalized, "normalized"));
         }
 
         @Override
         public JsonObject normalized() {
-            return normalized.deepCopy();
+            return dev.openallay.json.JsonTrees.copy(normalized);
         }
     }
 

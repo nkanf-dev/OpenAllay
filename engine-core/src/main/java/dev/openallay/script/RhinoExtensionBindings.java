@@ -106,7 +106,7 @@ final class RhinoExtensionBindings {
         if (ancestors.put(value, Boolean.TRUE) != null) throw invalid("Host method returned a cycle");
         try {
             if (value instanceof JsonArray array) {
-                JsonArray copy = new JsonArray(array.size());
+                JsonArray copy = new JsonArray();
                 for (JsonElement child : array) copy.add(copyResult(child, ancestors, depth + 1));
                 return copy;
             }

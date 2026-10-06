@@ -3,7 +3,6 @@ package dev.openallay.recipe.config;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import dev.openallay.recipe.RecipeVisibilityPolicy;
 import dev.openallay.tool.ToolResult;
 import java.io.IOException;
@@ -35,7 +34,7 @@ public final class RecipeClientConfigLoader {
     public ToolResult<RecipeClientConfig> load(Reader reader) {
         Objects.requireNonNull(reader, "reader");
         try {
-            JsonObject object = object(JsonParser.parseReader(reader), "Recipe configuration");
+            JsonObject object = object(dev.openallay.json.JsonTrees.parse(reader), "Recipe configuration");
             exactFields(object, ROOT_FIELDS, "recipe configuration");
             RecipeVisibilityPolicy visibility = enumValue(
                     RecipeVisibilityPolicy.class, string(object, "visibility"));
@@ -63,7 +62,7 @@ public final class RecipeClientConfigLoader {
     }
 
     private static void exactFields(JsonObject object, Set<String> fields, String name) {
-        if (!object.keySet().equals(fields)) {
+        if (!dev.openallay.json.JsonTrees.keys(object).equals(fields)) {
             throw new IllegalArgumentException(name + " fields must be exactly " + fields);
         }
     }

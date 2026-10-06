@@ -128,7 +128,7 @@ public final class HostObjectView extends ScriptableObject implements Map<String
                 context,
                 scope,
                 adapter,
-                List.copyOf(value.keySet()),
+                List.copyOf(dev.openallay.json.JsonTrees.keys(value)),
                 name -> value.has(name) ? value.get(name) : Scriptable.NOT_FOUND,
                 resultShape);
     }

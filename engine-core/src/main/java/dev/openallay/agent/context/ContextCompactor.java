@@ -4,7 +4,6 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import com.google.gson.JsonPrimitive;
 import dev.openallay.agent.tool.AgentToolResult;
 import dev.openallay.model.CancellationSignal;
@@ -775,8 +774,8 @@ public final class ContextCompactor {
     }
 
     private static JsonObject parseSummary(String text) {
-        JsonElement parsed = JsonParser.parseString(text);
-        if (!parsed.isJsonObject() || !parsed.getAsJsonObject().keySet().equals(SUMMARY_FIELDS)) {
+        JsonElement parsed = dev.openallay.json.JsonTrees.parse(text);
+        if (!parsed.isJsonObject() || !dev.openallay.json.JsonTrees.keys(parsed.getAsJsonObject()).equals(SUMMARY_FIELDS)) {
             throw new IllegalArgumentException("summary schema mismatch");
         }
         JsonObject object = parsed.getAsJsonObject();
@@ -788,7 +787,7 @@ public final class ContextCompactor {
                 }
             }
         }
-        return object.deepCopy();
+        return dev.openallay.json.JsonTrees.copy(object);
     }
 
     private static Throwable unwrap(Throwable throwable) {

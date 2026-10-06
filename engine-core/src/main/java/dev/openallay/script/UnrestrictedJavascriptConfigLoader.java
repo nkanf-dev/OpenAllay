@@ -1,7 +1,6 @@
 package dev.openallay.script;
 
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import dev.openallay.tool.ToolResult;
 import java.io.Reader;
 import java.io.IOException;
@@ -20,8 +19,8 @@ public final class UnrestrictedJavascriptConfigLoader {
     }
     public ToolResult<UnrestrictedJavascriptConfig> load(Reader reader) {
         try {
-            JsonObject value = JsonParser.parseReader(reader).getAsJsonObject();
-            if (!value.keySet().equals(FIELDS)
+            JsonObject value = dev.openallay.json.JsonTrees.parse(reader).getAsJsonObject();
+            if (!dev.openallay.json.JsonTrees.keys(value).equals(FIELDS)
                     || !value.get("enabled").isJsonPrimitive()
                     || !value.get("enabled").getAsJsonPrimitive().isBoolean()) return failure("invalid_javascript_settings");
             return new ToolResult.Success<>(new UnrestrictedJavascriptConfig(value.get("enabled").getAsBoolean()));

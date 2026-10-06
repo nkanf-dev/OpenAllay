@@ -1,17 +1,15 @@
 package dev.openallay.capability;
 
 import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import java.util.Objects;
 
 /** Canonical credential-free encoder for local capability policy. */
 public final class CapabilityPolicyWriter {
-    private static final Gson GSON = new GsonBuilder()
+    private static final Gson GSON = dev.openallay.json.EngineJson.create(builder -> builder
             .disableHtmlEscaping()
-            .setPrettyPrinting()
-            .create();
+            .setPrettyPrinting());
 
     public String encode(CapabilityPolicy policy) {
         Objects.requireNonNull(policy, "policy");

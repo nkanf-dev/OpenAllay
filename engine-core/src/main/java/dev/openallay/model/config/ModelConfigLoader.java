@@ -2,7 +2,6 @@ package dev.openallay.model.config;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import dev.openallay.model.metadata.BuiltinModelCatalog;
 import dev.openallay.model.metadata.ModelOutputResolution;
 import dev.openallay.tool.ToolResult;
@@ -50,12 +49,12 @@ public final class ModelConfigLoader {
         Objects.requireNonNull(reader, "reader");
         environment = Map.copyOf(environment);
         try {
-            JsonElement root = JsonParser.parseReader(reader);
+            JsonElement root = dev.openallay.json.JsonTrees.parse(reader);
             if (!root.isJsonObject()) {
                 throw new IllegalArgumentException("Model configuration must be a JSON object");
             }
             JsonObject object = root.getAsJsonObject();
-            for (String field : object.keySet()) {
+            for (String field : dev.openallay.json.JsonTrees.keys(object)) {
                 if (!ALLOWED_FIELDS.contains(field)) {
                     throw new IllegalArgumentException("Unknown model configuration field: " + field);
                 }

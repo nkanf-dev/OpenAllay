@@ -3,7 +3,6 @@ package dev.openallay.client.voice;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -67,7 +66,7 @@ public final class NativeModelFiles {
                 checkJson(reader, 0);
                 if (reader.peek() != com.google.gson.stream.JsonToken.END_DOCUMENT) throw new IllegalArgumentException();
             }
-            JsonElement element = JsonParser.parseString(json);
+            JsonElement element = dev.openallay.json.JsonTrees.parse(json);
             if (!element.isJsonObject()) throw new IllegalArgumentException();
             JsonObject root = element.getAsJsonObject();
             exactKeys(root, Set.of("name", "family", "files"));
@@ -149,7 +148,7 @@ public final class NativeModelFiles {
         return value.getAsString();
     }
     private static void exactKeys(JsonObject object, Set<String> keys) {
-        if (!object.keySet().equals(keys)) throw new IllegalArgumentException();
+        if (!dev.openallay.json.JsonTrees.keys(object).equals(keys)) throw new IllegalArgumentException();
     }
     static void verifyFile(Path directory, String name, long bytes, String sha256, VoiceCancellation cancellation) throws IOException {
         cancellation.check();

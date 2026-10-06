@@ -3,7 +3,6 @@ package dev.openallay.capability;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import dev.openallay.tool.ToolResult;
 import java.io.IOException;
 import java.io.Reader;
@@ -34,12 +33,12 @@ public final class CapabilityPolicyLoader {
     public ToolResult<CapabilityPolicy> load(Reader reader) {
         Objects.requireNonNull(reader, "reader");
         try {
-            JsonElement parsed = JsonParser.parseReader(reader);
+            JsonElement parsed = dev.openallay.json.JsonTrees.parse(reader);
             if (!parsed.isJsonObject()) {
                 throw new IllegalArgumentException("Capability configuration must be an object");
             }
             JsonObject root = parsed.getAsJsonObject();
-            if (!root.keySet().equals(ROOT_FIELDS)) {
+            if (!dev.openallay.json.JsonTrees.keys(root).equals(ROOT_FIELDS)) {
                 throw new IllegalArgumentException(
                         "capability configuration fields must be exactly " + ROOT_FIELDS);
             }

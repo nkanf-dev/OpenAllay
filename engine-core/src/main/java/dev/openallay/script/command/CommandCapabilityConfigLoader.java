@@ -1,7 +1,6 @@
 package dev.openallay.script.command;
 
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import dev.openallay.tool.ToolResult;
 import java.io.IOException;
 import java.io.Reader;
@@ -27,8 +26,8 @@ public final class CommandCapabilityConfigLoader {
 
     public ToolResult<CommandCapabilityConfig> load(Reader reader) {
         try {
-            JsonObject value = JsonParser.parseReader(reader).getAsJsonObject();
-            if (!value.keySet().equals(FIELDS)
+            JsonObject value = dev.openallay.json.JsonTrees.parse(reader).getAsJsonObject();
+            if (!dev.openallay.json.JsonTrees.keys(value).equals(FIELDS)
                     || !value.get("enabled").isJsonPrimitive()
                     || !value.get("enabled").getAsJsonPrimitive().isBoolean()) {
                 return failure(

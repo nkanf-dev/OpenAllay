@@ -1,10 +1,8 @@
 package dev.openallay.extension.catalog;
 
 import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import dev.openallay.requirement.RequirementCodec;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -28,11 +26,11 @@ public final class ExtensionCatalogCodec {
             "source");
     private static final Set<String> ARTIFACT_FIELDS =
             Set.of("loader", "artifact", "sha256", "modIds");
-    private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
+    private final Gson gson = dev.openallay.json.EngineJson.create(builder -> builder.setPrettyPrinting());
 
     public ExtensionCatalogManifest decode(String json) {
         try {
-            JsonObject root = object(JsonParser.parseString(json), "catalog");
+            JsonObject root = object(dev.openallay.json.JsonTrees.parse(json), "catalog");
             exactFields(root, ROOT_FIELDS, "catalog");
             List<ExtensionCatalogEntry> entries = new ArrayList<>();
             JsonElement encoded = root.get("extensions");
@@ -41,7 +39,7 @@ public final class ExtensionCatalogCodec {
             }
             for (JsonElement value : encoded.getAsJsonArray()) {
                 JsonObject entry = object(value, "extension");
-                Set<String> fields = new java.util.HashSet<>(entry.keySet());
+                Set<String> fields = new java.util.HashSet<>(dev.openallay.json.JsonTrees.keys(entry));
                 fields.remove("requirements");
                 if (!fields.equals(ENTRY_FIELDS)) {
                     throw new IllegalArgumentException("extension fields do not match schema");
@@ -143,7 +141,7 @@ public final class ExtensionCatalogCodec {
 
     private static List<ExtensionCatalogArtifact> artifacts(JsonObject object) {
         JsonElement value = object.get("artifacts");
-        if (value == null || !value.isJsonArray() || value.getAsJsonArray().isEmpty()) {
+        if (value == null || !value.isJsonArray() || (value.getAsJsonArray().size() == 0)) {
             throw new IllegalArgumentException("artifacts must be a non-empty array");
         }
         List<ExtensionCatalogArtifact> artifacts = new ArrayList<>();
@@ -180,7 +178,7 @@ public final class ExtensionCatalogCodec {
     }
 
     private static void exactFields(JsonObject object, Set<String> expected, String label) {
-        if (!new java.util.HashSet<>(object.keySet()).equals(expected)) {
+        if (!new java.util.HashSet<>(dev.openallay.json.JsonTrees.keys(object)).equals(expected)) {
             throw new IllegalArgumentException(label + " fields do not match schema");
         }
     }

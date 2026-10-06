@@ -42,12 +42,12 @@ public sealed interface ModelContent
             if (id == null || id.isBlank() || name == null || name.isBlank()) {
                 throw new IllegalArgumentException("Tool-use id and name are required");
             }
-            input = Objects.requireNonNull(input, "input").deepCopy();
+            input = dev.openallay.json.JsonTrees.copy(Objects.requireNonNull(input, "input"));
         }
 
         @Override
         public JsonObject input() {
-            return input.deepCopy();
+            return dev.openallay.json.JsonTrees.copy(input);
         }
     }
 
@@ -57,7 +57,7 @@ public sealed interface ModelContent
             if (toolUseId == null || toolUseId.isBlank()) {
                 throw new IllegalArgumentException("Tool result requires toolUseId");
             }
-            value = Objects.requireNonNull(value, "value").deepCopy();
+            value = dev.openallay.json.JsonTrees.copy(Objects.requireNonNull(value, "value"));
             images = java.util.List.copyOf(images);
             dev.openallay.model.image.ModelImages.unique(images);
             if (error && !images.isEmpty()) {
@@ -71,7 +71,7 @@ public sealed interface ModelContent
 
         @Override
         public JsonElement value() {
-            return value.deepCopy();
+            return dev.openallay.json.JsonTrees.copy(value);
         }
     }
 }

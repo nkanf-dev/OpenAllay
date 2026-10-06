@@ -166,7 +166,7 @@ public final class RecipeCanonicalizer {
             digest.marker((byte) 0);
         } else if (value.isJsonObject()) {
             digest.marker((byte) 1);
-            value.getAsJsonObject().keySet().stream().sorted().forEach(key -> {
+            dev.openallay.json.JsonTrees.keys(value.getAsJsonObject()).stream().sorted().forEach(key -> {
                 digest.string(key);
                 json(digest, value.getAsJsonObject().get(key));
             });

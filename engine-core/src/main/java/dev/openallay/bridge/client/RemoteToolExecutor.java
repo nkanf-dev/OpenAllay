@@ -1,7 +1,6 @@
 package dev.openallay.bridge.client;
 
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import dev.openallay.agent.tool.AgentToolExecutor;
 import dev.openallay.agent.tool.AgentToolResult;
 import dev.openallay.agent.tool.ToolNameCodec;
@@ -69,7 +68,7 @@ public final class RemoteToolExecutor implements AgentToolExecutor {
                 .map(tool -> new ModelToolDefinition(
                         MODEL_PREFIX + codec().encode(tool.id()),
                         "[server read tool] " + tool.description(),
-                        JsonParser.parseString(tool.inputSchemaJson()).getAsJsonObject()))
+                        dev.openallay.json.JsonTrees.parse(tool.inputSchemaJson()).getAsJsonObject()))
                 .toList();
     }
 
@@ -155,7 +154,7 @@ public final class RemoteToolExecutor implements AgentToolExecutor {
                     }
                     value.cancelDeadline();
                     JsonObject normalized =
-                            JsonParser.parseString(complete.orElseThrow()).getAsJsonObject();
+                            dev.openallay.json.JsonTrees.parse(complete.orElseThrow()).getAsJsonObject();
                     if (!normalized.has("status") || !normalized.get("status").isJsonPrimitive()) {
                         throw new IllegalArgumentException("Remote Tool result has no status");
                     }

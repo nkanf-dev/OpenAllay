@@ -51,9 +51,9 @@ public final class JavascriptResultPresenter {
             int omittedRows, int omittedFields, long canonicalUtf8Bytes) {
         public Presentation {
             fields = List.copyOf(fields);
-            preview = preview.deepCopy();
+            preview = dev.openallay.json.JsonTrees.copy(preview);
             java.util.Objects.requireNonNull(viewKind, "viewKind");
         }
-        @Override public JsonElement preview() { return preview.deepCopy(); }
+        @Override public JsonElement preview() { return dev.openallay.json.JsonTrees.copy(preview); }
     }
 }

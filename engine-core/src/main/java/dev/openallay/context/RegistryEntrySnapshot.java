@@ -30,7 +30,7 @@ public record RegistryEntrySnapshot(
         TreeMap<String, JsonElement> propertyCopy = new TreeMap<>();
         properties.forEach((key, value) -> propertyCopy.put(
                 ContextValidation.identifier(key, "property key"),
-                java.util.Objects.requireNonNull(value, "property value").deepCopy()));
+                dev.openallay.json.JsonTrees.copy(java.util.Objects.requireNonNull(value, "property value"))));
         properties = Collections.unmodifiableMap(propertyCopy);
     }
 
@@ -42,7 +42,7 @@ public record RegistryEntrySnapshot(
     @Override
     public Map<String, JsonElement> properties() {
         TreeMap<String, JsonElement> copy = new TreeMap<>();
-        properties.forEach((key, value) -> copy.put(key, value.deepCopy()));
+        properties.forEach((key, value) -> copy.put(key, dev.openallay.json.JsonTrees.copy(value)));
         return Collections.unmodifiableMap(copy);
     }
 }

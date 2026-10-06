@@ -67,7 +67,7 @@ public record BenchmarkCase(
         public Verifier {
             Objects.requireNonNull(kind, "kind");
             path = path == null ? "" : path.strip();
-            expected = expected == null ? null : expected.deepCopy();
+            expected = expected == null ? null : dev.openallay.json.JsonTrees.copy(expected);
             contains = contains == null ? "" : contains;
             if (kind == Kind.JSON_PATH_EQUALS && (path.isBlank() || expected == null)) {
                 throw new IllegalArgumentException(
@@ -81,7 +81,7 @@ public record BenchmarkCase(
 
         @Override
         public JsonElement expected() {
-            return expected == null ? null : expected.deepCopy();
+            return expected == null ? null : dev.openallay.json.JsonTrees.copy(expected);
         }
     }
 

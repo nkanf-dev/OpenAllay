@@ -29,12 +29,12 @@ public sealed interface ModelEvent
 
     record ToolUseComplete(String id, String name, JsonObject input) implements ModelEvent {
         public ToolUseComplete {
-            input = Objects.requireNonNull(input, "input").deepCopy();
+            input = dev.openallay.json.JsonTrees.copy(Objects.requireNonNull(input, "input"));
         }
 
         @Override
         public JsonObject input() {
-            return input.deepCopy();
+            return dev.openallay.json.JsonTrees.copy(input);
         }
     }
 

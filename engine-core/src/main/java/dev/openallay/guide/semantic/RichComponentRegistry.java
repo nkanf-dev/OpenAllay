@@ -3,7 +3,6 @@ package dev.openallay.guide.semantic;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import dev.openallay.context.RecipeReference;
 import java.util.ArrayList;
 import java.util.List;
@@ -52,7 +51,7 @@ public final class RichComponentRegistry {
         String fallback = encoded == null || encoded.isBlank()
                 ? "Unsupported component" : encoded.strip();
         try {
-            JsonElement parsed = JsonParser.parseString(encoded);
+            JsonElement parsed = dev.openallay.json.JsonTrees.parse(encoded);
             if (!parsed.isJsonObject()) {
                 return Decode.failure(fallback, "semantic_component_unsupported");
             }
@@ -98,7 +97,7 @@ public final class RichComponentRegistry {
     }
 
     static void exact(JsonObject object, Set<String> keys) {
-        if (!object.keySet().equals(keys)) {
+        if (!dev.openallay.json.JsonTrees.keys(object).equals(keys)) {
             throw new IllegalArgumentException("component object has unknown or missing keys");
         }
     }

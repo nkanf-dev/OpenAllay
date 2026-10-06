@@ -50,7 +50,7 @@ public record GuideHistoryForkResult(
                 return false;
             }
             return checkpoint.sourceHash().equals(dev.openallay.agent.context.ContextSourceHash.compute(
-                    new com.google.gson.Gson(),
+                    dev.openallay.json.EngineJson.create(),
                     messages.subList(checkpoint.sourceFromIndex(), checkpoint.sourceToIndexExclusive())));
         }).toList();
     }

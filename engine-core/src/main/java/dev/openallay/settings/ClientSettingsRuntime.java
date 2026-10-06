@@ -216,7 +216,7 @@ public record ClientSettingsRuntime(
         }
 
         try {
-            Gson gson = dev.openallay.json.EngineJson.withInstant(new Gson());
+            Gson gson = dev.openallay.json.EngineJson.create();
             Path configDirectory = profilesPath.toAbsolutePath().normalize().getParent();
             if (configDirectory == null) {
                 throw new IllegalArgumentException("Model profiles require a configuration directory");

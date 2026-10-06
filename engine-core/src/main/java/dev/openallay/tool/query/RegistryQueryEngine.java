@@ -194,10 +194,10 @@ public final class RegistryQueryEngine {
             fields.forEach(field -> {
                 List<JsonElement> found = values(row, field);
                 if (found.isEmpty()) return;
-                if (found.size() == 1) selected.add(field, found.get(0).deepCopy());
+                if (found.size() == 1) selected.add(field, dev.openallay.json.JsonTrees.copy(found.get(0)));
                 else {
                     JsonArray array = new JsonArray();
-                    found.forEach(value -> array.add(value.deepCopy()));
+                    found.forEach(value -> array.add(dev.openallay.json.JsonTrees.copy(value)));
                     selected.add(field, array);
                 }
             });
@@ -287,8 +287,8 @@ public final class RegistryQueryEngine {
                 throw new IllegalArgumentException("EXPAND requires an array field: " + field);
             }
             for (JsonElement element : selected.getAsJsonArray()) {
-                JsonObject expanded = row.deepCopy();
-                replace(expanded, field, element.deepCopy());
+                JsonObject expanded = dev.openallay.json.JsonTrees.copy(row);
+                replace(expanded, field, dev.openallay.json.JsonTrees.copy(element));
                 result.add(expanded);
             }
         }
@@ -310,7 +310,7 @@ public final class RegistryQueryEngine {
         row.add("tags", array(entry.tags()));
         row.add("components", array(entry.components()));
         JsonObject data = new JsonObject();
-        entry.properties().forEach((key, value) -> data.add(key, value.deepCopy()));
+        entry.properties().forEach((key, value) -> data.add(key, dev.openallay.json.JsonTrees.copy(value)));
         row.add("data", data);
         return row;
     }
@@ -481,13 +481,13 @@ public final class RegistryQueryEngine {
 
     private static Map<String, JsonElement> toMap(JsonObject object) {
         Map<String, JsonElement> result = new TreeMap<>();
-        object.entrySet().forEach(entry -> result.put(entry.getKey(), entry.getValue().deepCopy()));
+        object.entrySet().forEach(entry -> result.put(entry.getKey(), dev.openallay.json.JsonTrees.copy(entry.getValue())));
         return result;
     }
 
     private static Map<String, JsonElement> copyRow(Map<String, JsonElement> row) {
         Map<String, JsonElement> result = new TreeMap<>();
-        row.forEach((key, value) -> result.put(key, value.deepCopy()));
+        row.forEach((key, value) -> result.put(key, dev.openallay.json.JsonTrees.copy(value)));
         return Map.copyOf(result);
     }
 

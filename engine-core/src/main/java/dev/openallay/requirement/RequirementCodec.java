@@ -25,7 +25,7 @@ public final class RequirementCodec {
             throw new IllegalArgumentException("requirements must be an object");
         }
         JsonObject object = value.getAsJsonObject();
-        if (!FIELDS.containsAll(object.keySet())) {
+        if (!FIELDS.containsAll(dev.openallay.json.JsonTrees.keys(object))) {
             throw new IllegalArgumentException("Unknown requirements fields");
         }
         return new RequirementSet(array(object, "capabilities", RequirementKind.CAPABILITY),

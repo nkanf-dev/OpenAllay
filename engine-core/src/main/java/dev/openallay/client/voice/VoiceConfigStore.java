@@ -2,7 +2,6 @@ package dev.openallay.client.voice;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonElement;
-import com.google.gson.JsonParser;
 import dev.openallay.model.config.CredentialReference;
 import dev.openallay.settings.AtomicSettingsFile;
 import dev.openallay.tool.ToolResult;
@@ -50,10 +49,10 @@ public final class VoiceConfigStore {
         return o.toString() + "\n";
     }
     public static VoiceConfig decode(String contents) {
-        JsonElement parsed = JsonParser.parseString(contents);
+        JsonElement parsed = dev.openallay.json.JsonTrees.parse(contents);
         if (!parsed.isJsonObject()) throw new IllegalArgumentException();
         JsonObject o = parsed.getAsJsonObject();
-        if (!o.keySet().equals(FIELDS)) throw new IllegalArgumentException();
+        if (!dev.openallay.json.JsonTrees.keys(o).equals(FIELDS)) throw new IllegalArgumentException();
         JsonElement enabled = o.get("enabled");
         if (!enabled.isJsonPrimitive() || !enabled.getAsJsonPrimitive().isBoolean()) throw new IllegalArgumentException();
         CredentialReference credential = o.get("credentialRef").isJsonNull() ? null : CredentialReference.parse(string(o, "credentialRef"));

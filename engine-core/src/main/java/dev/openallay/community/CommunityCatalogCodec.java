@@ -1,10 +1,8 @@
 package dev.openallay.community;
 
 import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import java.net.URI;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -28,11 +26,11 @@ public final class CommunityCatalogCodec {
                     "source");
     private static final Set<String> COMPATIBILITY_FIELDS =
             Set.of("minecraft", "openallayApi");
-    private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
+    private final Gson gson = dev.openallay.json.EngineJson.create(builder -> builder.setPrettyPrinting());
 
     public CommunityCatalogManifest decode(String json) {
         try {
-            JsonObject root = object(JsonParser.parseString(json), "catalog");
+            JsonObject root = object(dev.openallay.json.JsonTrees.parse(json), "catalog");
             exactFields(root, ROOT_FIELDS, "catalog");
             int schema = integer(root, "schemaVersion");
             if (schema != CommunityCatalogManifest.SCHEMA_VERSION) {
@@ -129,7 +127,7 @@ public final class CommunityCatalogCodec {
     }
 
     private static void exactFields(JsonObject object, Set<String> expected, String label) {
-        Set<String> actual = new java.util.HashSet<>(object.keySet());
+        Set<String> actual = new java.util.HashSet<>(dev.openallay.json.JsonTrees.keys(object));
         if (!actual.equals(expected)) {
             throw new IllegalArgumentException(label + " fields do not match schema");
         }

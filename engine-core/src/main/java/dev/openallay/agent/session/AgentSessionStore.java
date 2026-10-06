@@ -224,7 +224,7 @@ public final class AgentSessionStore {
 
     /** Runtime reuse index only; durable ContextCompacted events keep every diagnostic record. */
     private static void pruneCheckpointIndex(Session session) {
-        com.google.gson.Gson gson = new com.google.gson.Gson();
+        com.google.gson.Gson gson = dev.openallay.json.EngineJson.create();
         session.checkpoints = session.checkpoints.stream().filter(checkpoint ->
                 checkpoint.status() == ContextCheckpoint.Status.SUCCEEDED
                         && checkpoint.sourceToIndexExclusive() <= session.history.size()

@@ -20,9 +20,9 @@ public record GuideToolActivity(
         }
         java.util.Objects.requireNonNull(status, "status");
         invocationArguments =
-                invocationArguments == null ? null : invocationArguments.deepCopy();
+                invocationArguments == null ? null : dev.openallay.json.JsonTrees.copy(invocationArguments);
         invocation = java.util.Objects.requireNonNull(invocation, "invocation");
-        normalized = normalized == null ? null : normalized.deepCopy();
+        normalized = normalized == null ? null : dev.openallay.json.JsonTrees.copy(normalized);
         presentationMessages = List.copyOf(presentationMessages);
         sources = List.copyOf(sources);
     }
@@ -74,11 +74,11 @@ public record GuideToolActivity(
 
     @Override
     public JsonObject invocationArguments() {
-        return invocationArguments == null ? null : invocationArguments.deepCopy();
+        return invocationArguments == null ? null : dev.openallay.json.JsonTrees.copy(invocationArguments);
     }
 
     @Override
     public JsonObject normalized() {
-        return normalized == null ? null : normalized.deepCopy();
+        return normalized == null ? null : dev.openallay.json.JsonTrees.copy(normalized);
     }
 }

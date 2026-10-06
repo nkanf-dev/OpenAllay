@@ -2,7 +2,6 @@ package dev.openallay.testing;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
-import com.google.gson.JsonParser;
 import dev.openallay.context.IngredientAlternativeSnapshot;
 import dev.openallay.context.IngredientRequirementSnapshot;
 import dev.openallay.context.ItemStackSnapshot;
@@ -43,9 +42,9 @@ public final class JavascriptAgentTestFixtures {
                         Map.of()),
                 List.of(
                         item("minecraft:iron_sword", Set.of("minecraft:swords"),
-                                Map.of("minecraft:attack_damage", JsonParser.parseString("6"))),
+                                Map.of("minecraft:attack_damage", dev.openallay.json.JsonTrees.parse("6"))),
                         item(HIGHEST_DAMAGE_SWORD, Set.of("minecraft:swords"),
-                                Map.of("minecraft:attack_damage", JsonParser.parseString("14"))),
+                                Map.of("minecraft:attack_damage", dev.openallay.json.JsonTrees.parse("14"))),
                         item("minecraft:honey_bottle", Set.of(), Map.of(
                                 "minecraft:effects", effects("minecraft:poison", 0, 100))),
                         item(STRONGEST_POISON_ITEM, Set.of(), Map.of(
@@ -84,7 +83,7 @@ public final class JavascriptAgentTestFixtures {
     }
 
     private static JsonArray effects(String id, int amplifier, int duration) {
-        return JsonParser.parseString("""
+        return dev.openallay.json.JsonTrees.parse("""
                 [{"id":"%s","amplifier":%d,"duration":%d}]
                 """.formatted(id, amplifier, duration)).getAsJsonArray();
     }

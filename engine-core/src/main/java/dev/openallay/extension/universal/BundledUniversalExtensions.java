@@ -140,7 +140,7 @@ public final class BundledUniversalExtensions implements AutoCloseable {
         if (value == null || !value.isJsonObject()) throw invalid();
         return value.getAsJsonObject();
     }
-    private static void exact(JsonObject value, Set<String> keys) { if (!value.keySet().equals(keys)) throw invalid(); }
+    private static void exact(JsonObject value, Set<String> keys) { if (!dev.openallay.json.JsonTrees.keys(value).equals(keys)) throw invalid(); }
     private static String text(JsonObject value, String key) {
         var item = value.get(key);
         if (item == null || !item.isJsonPrimitive() || !item.getAsJsonPrimitive().isString()

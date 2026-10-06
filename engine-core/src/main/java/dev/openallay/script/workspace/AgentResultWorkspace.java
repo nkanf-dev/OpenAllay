@@ -62,7 +62,7 @@ public final class AgentResultWorkspace implements AutoCloseable {
                     "JavaScript request workspace is full; reuse existing handles or return a smaller result");
         }
         String handle = "r_" + prefix + "_" + sequence.incrementAndGet();
-        values.put(handle, value.deepCopy());
+        values.put(handle, dev.openallay.json.JsonTrees.copy(value));
         shapes.put(handle, shape);
         sizes.put(handle, units);
         this.sources.put(handle, storedSources);
@@ -131,7 +131,7 @@ public final class AgentResultWorkspace implements AutoCloseable {
                     "workspace_handle_unavailable",
                     "Result handle is unavailable in this request");
         }
-        return value.deepCopy();
+        return dev.openallay.json.JsonTrees.copy(value);
     }
 
     public synchronized Map<String, JsonElement> select(Collection<String> handles) {
@@ -258,7 +258,7 @@ public final class AgentResultWorkspace implements AutoCloseable {
                 value.getAsJsonObject().entrySet().forEach(entry -> {
                     pending.add(entry.getValue());
                 });
-                for (String key : value.getAsJsonObject().keySet()) {
+                for (String key : dev.openallay.json.JsonTrees.keys(value.getAsJsonObject())) {
                     units = saturatedAdd(units, saturatedMultiply(key.length(), 3));
                 }
             }

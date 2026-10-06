@@ -32,7 +32,7 @@ public final class GuideToolMessageCodec {
         }
         List<GuideToolMessage> messages = new ArrayList<>();
         for (JsonElement element : value.getAsJsonArray()) {
-            if (!element.isJsonObject() || !element.getAsJsonObject().keySet().equals(FIELDS)) {
+            if (!element.isJsonObject() || !dev.openallay.json.JsonTrees.keys(element.getAsJsonObject()).equals(FIELDS)) {
                 throw new IllegalArgumentException("Tool presentation message schema mismatch");
             }
             JsonObject object = element.getAsJsonObject();

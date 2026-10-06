@@ -2,7 +2,6 @@ package dev.openallay.benchmark;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import java.io.Reader;
 import java.util.ArrayList;
 import java.util.List;
@@ -26,7 +25,7 @@ public final class BenchmarkCorpusCodec {
             Set.of("kind", "path", "expected", "contains");
 
     public BenchmarkCorpus decode(Reader reader) {
-        JsonElement parsed = JsonParser.parseReader(reader);
+        JsonElement parsed = dev.openallay.json.JsonTrees.parse(reader);
         if (!(parsed instanceof JsonObject root)) {
             throw invalid("Benchmark corpus root must be an object");
         }
@@ -72,7 +71,7 @@ public final class BenchmarkCorpusCodec {
     }
 
     private static void exactFields(JsonObject object, Set<String> allowed, String owner) {
-        for (String field : object.keySet()) {
+        for (String field : dev.openallay.json.JsonTrees.keys(object)) {
             if (!allowed.contains(field)) {
                 throw invalid("Unknown " + owner + " field " + field);
             }

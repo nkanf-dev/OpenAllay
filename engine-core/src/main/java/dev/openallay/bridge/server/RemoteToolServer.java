@@ -172,7 +172,7 @@ public final class RemoteToolServer {
             String argumentsJson,
             CancellationSignal cancellation) {
         cancellation.throwIfCancelled();
-        com.google.gson.JsonElement parsed = com.google.gson.JsonParser.parseString(argumentsJson);
+        com.google.gson.JsonElement parsed = dev.openallay.json.JsonTrees.parse(argumentsJson);
         if (!parsed.isJsonObject()) {
             return CompletableFuture.completedFuture(
                     new ToolResult.Failure<>(

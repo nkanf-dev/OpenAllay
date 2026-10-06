@@ -13,7 +13,7 @@ public record JavascriptExecution(
         Duration elapsed,
         List<String> modules) {
     public JavascriptExecution {
-        value = Objects.requireNonNull(value, "value").deepCopy();
+        value = dev.openallay.json.JsonTrees.copy(Objects.requireNonNull(value, "value"));
         shape = Objects.requireNonNull(shape, "shape");
         Objects.requireNonNull(elapsed, "elapsed");
         modules = List.copyOf(modules);

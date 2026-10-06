@@ -2,7 +2,6 @@ package dev.openallay.bridge.protocol;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import dev.openallay.agent.AgentEvent;
 import dev.openallay.agent.context.ContextCheckpointCodec;
 import dev.openallay.guide.GuideToolMessageCodec;
@@ -38,13 +37,13 @@ public final class ServerAgentEventCodec {
             eventJson = checkpoints.encode(compacted.checkpoint());
         } else if (event instanceof AgentEvent.ContextUpdated updated) {
             JsonObject context = new JsonObject();
-            context.add("messages", JsonParser.parseString(contexts.encode(updated.messages())));
-            context.add("requestMessages", JsonParser.parseString(contexts.encode(updated.requestMessages())));
+            context.add("messages", dev.openallay.json.JsonTrees.parse(contexts.encode(updated.messages())));
+            context.add("requestMessages", dev.openallay.json.JsonTrees.parse(contexts.encode(updated.requestMessages())));
             eventJson = context.toString();
         } else if (event instanceof AgentEvent.ContextFinalized finalized) {
             JsonObject context = new JsonObject();
-            context.add("messages", JsonParser.parseString(contexts.encode(finalized.messages())));
-            context.add("requestMessages", JsonParser.parseString(contexts.encode(finalized.requestMessages())));
+            context.add("messages", dev.openallay.json.JsonTrees.parse(contexts.encode(finalized.messages())));
+            context.add("requestMessages", dev.openallay.json.JsonTrees.parse(contexts.encode(finalized.requestMessages())));
             eventJson = context.toString();
         } else if (event instanceof AgentEvent.ToolStarted started) {
             eventJson = encodeToolStarted(started).toString();
@@ -64,7 +63,7 @@ public final class ServerAgentEventCodec {
         JsonObject body;
         try {
             BridgeJsonCodec.rejectDuplicateFields(payload.eventJson());
-            var parsed = JsonParser.parseString(payload.eventJson());
+            var parsed = dev.openallay.json.JsonTrees.parse(payload.eventJson());
             if (!parsed.isJsonObject()) {
                 throw new IllegalArgumentException("Server Agent event body must be an object");
             }
@@ -119,7 +118,7 @@ public final class ServerAgentEventCodec {
     }
 
     private AgentEvent.ModelUsageStarted readUsageStarted(JsonObject body) {
-        if (!body.keySet().equals(Set.of("callId", "modelIdentifier"))
+        if (!dev.openallay.json.JsonTrees.keys(body).equals(Set.of("callId", "modelIdentifier"))
                 || !body.get("callId").isJsonPrimitive()
                 || !body.getAsJsonPrimitive("callId").isString()
                 || !body.get("modelIdentifier").isJsonPrimitive()
@@ -131,7 +130,7 @@ public final class ServerAgentEventCodec {
     }
 
     private AgentEvent.ModelUsageObserved readUsageObserved(JsonObject body) {
-        if (!body.keySet().equals(Set.of("callId", "modelIdentifier", "usage"))
+        if (!dev.openallay.json.JsonTrees.keys(body).equals(Set.of("callId", "modelIdentifier", "usage"))
                 || !body.get("callId").isJsonPrimitive()
                 || !body.getAsJsonPrimitive("callId").isString()
                 || !body.get("modelIdentifier").isJsonPrimitive()
@@ -146,7 +145,7 @@ public final class ServerAgentEventCodec {
                 "cacheWriteKnown", "uncachedInputKnown");
         java.util.HashSet<String> fields = new java.util.HashSet<>(counts);
         fields.addAll(known);
-        if (!usage.keySet().equals(fields)) {
+        if (!dev.openallay.json.JsonTrees.keys(usage).equals(fields)) {
             throw new IllegalArgumentException("Server model usage fields mismatch");
         }
         for (String field : counts) {
@@ -180,7 +179,7 @@ public final class ServerAgentEventCodec {
     }
 
     private UUID readMessageId(JsonObject body, Set<String> fields) {
-        if (!body.keySet().equals(fields) || body.get("messageId") == null
+        if (!dev.openallay.json.JsonTrees.keys(body).equals(fields) || body.get("messageId") == null
                 || !body.get("messageId").isJsonPrimitive()
                 || !body.getAsJsonPrimitive("messageId").isString()) {
             throw new IllegalArgumentException("Server steer event schema mismatch");
@@ -189,7 +188,7 @@ public final class ServerAgentEventCodec {
     }
 
     private AgentEvent.ContextUpdated readContext(JsonObject body) {
-        if (!body.keySet().equals(Set.of("messages", "requestMessages"))) {
+        if (!dev.openallay.json.JsonTrees.keys(body).equals(Set.of("messages", "requestMessages"))) {
             throw new IllegalArgumentException("Server model context schema mismatch");
         }
         return new AgentEvent.ContextUpdated(contexts.decode(body.get("messages").toString()),
@@ -197,7 +196,7 @@ public final class ServerAgentEventCodec {
     }
 
     private AgentEvent.ContextFinalized readFinalized(JsonObject body) {
-        if (!body.keySet().equals(Set.of("messages", "requestMessages"))) {
+        if (!dev.openallay.json.JsonTrees.keys(body).equals(Set.of("messages", "requestMessages"))) {
             throw new IllegalArgumentException("Server finalized context schema mismatch");
         }
         return new AgentEvent.ContextFinalized(contexts.decode(body.get("messages").toString()),
@@ -205,7 +204,7 @@ public final class ServerAgentEventCodec {
     }
 
     private <T> T read(JsonObject body, Set<String> fields, Class<T> type) {
-        if (!body.keySet().equals(fields)) {
+        if (!dev.openallay.json.JsonTrees.keys(body).equals(fields)) {
             throw new IllegalArgumentException(
                     "Server Agent event schema mismatch for " + type.getSimpleName());
         }
@@ -217,7 +216,7 @@ public final class ServerAgentEventCodec {
     }
 
     private ModelFailure readModelFailure(JsonObject body) {
-        Set<String> fields = body.keySet();
+        Set<String> fields = dev.openallay.json.JsonTrees.keys(body);
         if (!fields.equals(Set.of("code", "message"))
                 && !fields.equals(Set.of("code", "message", "httpStatus"))) {
             throw new IllegalArgumentException("Server Agent event schema mismatch for ModelFailure");
@@ -226,8 +225,8 @@ public final class ServerAgentEventCodec {
     }
 
     private ModelEvent.AttemptStarted readAttemptStarted(JsonObject body) {
-        if (!body.keySet().equals(Set.of("attempt"))
-                && !body.keySet().equals(Set.of("attempt", "attemptTimeoutMillis"))) {
+        if (!dev.openallay.json.JsonTrees.keys(body).equals(Set.of("attempt"))
+                && !dev.openallay.json.JsonTrees.keys(body).equals(Set.of("attempt", "attemptTimeoutMillis"))) {
             throw new IllegalArgumentException(
                     "Server Agent event schema mismatch for AttemptStarted");
         }
@@ -244,7 +243,7 @@ public final class ServerAgentEventCodec {
     }
 
     private static AgentEvent.ToolStarted readToolStarted(JsonObject body) {
-        if (!body.keySet().equals(Set.of(
+        if (!dev.openallay.json.JsonTrees.keys(body).equals(Set.of(
                 "invocationId", "toolId", "presentationMessages"))) {
             throw new IllegalArgumentException("Server Tool start schema mismatch");
         }

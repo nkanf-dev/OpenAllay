@@ -32,7 +32,7 @@ public final class NaturalModelView {
             }
             if (scalarFindings) return array;
             JsonArray sample = new JsonArray();
-            if (!array.isEmpty()) sample.add(select(array.get(0), state, depth + 1));
+            if (!(array.size() == 0)) sample.add(select(array.get(0), state, depth + 1));
             if (array.size() > 1) {
                 state.omitted = true;
                 state.omittedRows = (int) Math.min(Integer.MAX_VALUE,

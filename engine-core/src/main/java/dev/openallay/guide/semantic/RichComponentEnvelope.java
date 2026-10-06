@@ -12,7 +12,7 @@ public record RichComponentEnvelope(
         if (type == null || !type.matches("[a-z][a-z0-9_]*")) {
             throw new IllegalArgumentException("rich component type is invalid");
         }
-        properties = java.util.Objects.requireNonNull(properties, "properties").deepCopy();
+        properties = dev.openallay.json.JsonTrees.copy(java.util.Objects.requireNonNull(properties, "properties"));
         if (fallbackText == null || fallbackText.isBlank()
                 || narration == null || narration.isBlank()) {
             throw new IllegalArgumentException("rich component fallback and narration are required");
@@ -21,6 +21,6 @@ public record RichComponentEnvelope(
 
     @Override
     public JsonObject properties() {
-        return properties.deepCopy();
+        return dev.openallay.json.JsonTrees.copy(properties);
     }
 }

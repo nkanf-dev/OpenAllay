@@ -141,7 +141,7 @@ public record WorldFocusObservation(
             if (count < 0 || damage < 0 || maxDamage < 0) {
                 throw new IllegalArgumentException("Item counts and damage must not be negative");
             }
-            components = Objects.requireNonNull(components, "components").deepCopy();
+            components = dev.openallay.json.JsonTrees.copy(Objects.requireNonNull(components, "components"));
             diagnostic = Objects.requireNonNull(diagnostic, "diagnostic");
             if (componentsAvailable && !diagnostic.isEmpty()) {
                 throw new IllegalArgumentException("Available item components must not report a failure");
@@ -151,7 +151,7 @@ public record WorldFocusObservation(
             }
         }
 
-        @Override public JsonObject components() { return components.deepCopy(); }
+        @Override public JsonObject components() { return dev.openallay.json.JsonTrees.copy(components); }
     }
 
     /** Empty identity means no current Screen; native overlays are identified in evidence details. */

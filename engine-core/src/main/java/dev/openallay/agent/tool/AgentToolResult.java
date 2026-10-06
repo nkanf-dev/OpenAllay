@@ -31,14 +31,14 @@ public final class AgentToolResult {
             throw new IllegalArgumentException("Failed tool results cannot publish images");
         }
         this.toolId = toolId;
-        this.normalized = Objects.requireNonNull(normalized, "normalized").deepCopy();
+        this.normalized = dev.openallay.json.JsonTrees.copy(Objects.requireNonNull(normalized, "normalized"));
         this.failure = failure;
         this.prepared = ModelToolResultProjection.prepare(this.normalized);
         this.source = failure ? null : source;
     }
 
     public String toolId() { return toolId; }
-    public JsonObject normalized() { return normalized.deepCopy(); }
+    public JsonObject normalized() { return dev.openallay.json.JsonTrees.copy(normalized); }
     public boolean failure() { return failure; }
     public java.util.List<dev.openallay.model.image.ImageReference> images() { return images; }
 

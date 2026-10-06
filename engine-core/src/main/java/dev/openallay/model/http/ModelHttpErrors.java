@@ -7,7 +7,6 @@ import dev.openallay.model.ModelUpstreamException;
 import dev.openallay.net.HttpResponseHeaders;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -78,7 +77,7 @@ public final class ModelHttpErrors {
         }
         String encoded = bytes.toString(java.nio.charset.StandardCharsets.UTF_8);
         try {
-            JsonElement parsed = JsonParser.parseString(encoded);
+            JsonElement parsed = dev.openallay.json.JsonTrees.parse(encoded);
             if (!parsed.isJsonObject()) {
                 return new BadRequestClassifier("", false);
             }

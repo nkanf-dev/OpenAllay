@@ -1,6 +1,5 @@
 package dev.openallay.world;
 
-import com.google.gson.JsonParser;
 import dev.openallay.context.DataAuthority;
 import dev.openallay.context.DataCompleteness;
 import dev.openallay.context.EvidenceMetadata;
@@ -31,7 +30,7 @@ public final class InputObservationFixtures {
         var empty = new WorldFocusObservation.Item("minecraft:air", 0, "", 0, 0,
                 new com.google.gson.JsonObject(), true, "");
         var item = new WorldFocusObservation.Item("minecraft:diamond_sword", 1, "Named sword", 7, 1561,
-                JsonParser.parseString("{\"minecraft:custom_data\":{\"precise\":9007199254740993.125,\"flags\":[true,null,\"kept\"]}}")
+                dev.openallay.json.JsonTrees.parse("{\"minecraft:custom_data\":{\"precise\":9007199254740993.125,\"flags\":[true,null,\"kept\"]}}")
                         .getAsJsonObject(), true, "");
         return new WorldFocusObservation(SOURCE, actor, "minecraft:overworld",
                 new WorldFocusObservation.Camera(12.125, 65.5, -3.75, 90.125f, 10.5f, 70.1f, "first_person", true, false, actor),

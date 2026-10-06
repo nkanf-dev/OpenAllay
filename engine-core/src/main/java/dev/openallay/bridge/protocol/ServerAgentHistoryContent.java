@@ -2,7 +2,6 @@ package dev.openallay.bridge.protocol;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import dev.openallay.model.ModelContent;
 
 /** Strict provider-neutral history content carried to a server-hosted model. */
@@ -56,7 +55,7 @@ public record ServerAgentHistoryContent(
             case TOOL_USE -> {
                 if (text != null || blank(toolUseId) || blank(toolName)
                         || blank(json) || error != null
-                        || !JsonParser.parseString(json).isJsonObject()) {
+                        || !dev.openallay.json.JsonTrees.parse(json).isJsonObject()) {
                     throw new IllegalArgumentException("Malformed tool-use history content");
                 }
             }
@@ -65,7 +64,7 @@ public record ServerAgentHistoryContent(
                         || blank(json) || error == null) {
                     throw new IllegalArgumentException("Malformed tool-result history content");
                 }
-                JsonParser.parseString(json);
+                dev.openallay.json.JsonTrees.parse(json);
             }
         }
     }
@@ -116,9 +115,9 @@ public record ServerAgentHistoryContent(
             case IMAGE -> new ModelContent.Image(image, originToolUseId);
             case TEXT -> new ModelContent.Text(text);
             case TOOL_USE -> new ModelContent.ToolUse(
-                    toolUseId, toolName, JsonParser.parseString(json).getAsJsonObject());
+                    toolUseId, toolName, dev.openallay.json.JsonTrees.parse(json).getAsJsonObject());
             case TOOL_RESULT -> new ModelContent.ToolResult(
-                    toolUseId, JsonParser.parseString(json), error, images);
+                    toolUseId, dev.openallay.json.JsonTrees.parse(json), error, images);
         };
     }
 

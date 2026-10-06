@@ -10,7 +10,7 @@ import java.util.Objects;
 
 /** Canonical credential-free encoder paired with {@link ModelProfilesConfigLoader}. */
 public final class ModelProfilesConfigWriter {
-    private final Gson gson = new Gson();
+    private final Gson gson = dev.openallay.json.EngineJson.create();
 
     public String encode(ModelProfilesConfig config) {
         Objects.requireNonNull(config, "config");

@@ -3,7 +3,6 @@ package dev.openallay.bridge.protocol;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonToken;
 import java.io.IOException;
@@ -57,7 +56,7 @@ public final class BridgeJsonCodec {
     private final Gson gson;
 
     public BridgeJsonCodec() {
-        this(new Gson());
+        this(dev.openallay.json.EngineJson.create());
     }
 
     public BridgeJsonCodec(Gson gson) {
@@ -119,15 +118,15 @@ public final class BridgeJsonCodec {
             requireEncodedEnvelope(json, BridgeProtocol.MAX_OPENAI_REQUEST_BYTES);
         }
         rejectDuplicateFields(json);
-        JsonElement parsed = JsonParser.parseString(json);
+        JsonElement parsed = dev.openallay.json.JsonTrees.parse(json);
         if (!parsed.isJsonObject()) {
             throw new IllegalArgumentException("Bridge payload must be a JSON object");
         }
         JsonObject object = parsed.getAsJsonObject();
-        if (!object.keySet().equals(expected)) {
+        if (!dev.openallay.json.JsonTrees.keys(object).equals(expected)) {
             Set<String> missing = new java.util.TreeSet<>(expected);
-            missing.removeAll(object.keySet());
-            Set<String> extra = new java.util.TreeSet<>(object.keySet());
+            missing.removeAll(dev.openallay.json.JsonTrees.keys(object));
+            Set<String> extra = new java.util.TreeSet<>(dev.openallay.json.JsonTrees.keys(object));
             extra.removeAll(expected);
             throw new IllegalArgumentException(
                     "Bridge payload schema mismatch; missing=" + missing + ", extra=" + extra);
@@ -385,7 +384,7 @@ public final class BridgeJsonCodec {
 
     private static JsonObject exactObject(JsonElement element, Set<String> fields) {
         if (element == null || !element.isJsonObject()
-                || !element.getAsJsonObject().keySet().equals(fields)) {
+                || !dev.openallay.json.JsonTrees.keys(element.getAsJsonObject()).equals(fields)) {
             throw new IllegalArgumentException("Bridge metadata schema mismatch");
         }
         return element.getAsJsonObject();

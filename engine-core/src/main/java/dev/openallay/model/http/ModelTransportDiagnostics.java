@@ -2,7 +2,6 @@ package dev.openallay.model.http;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import dev.openallay.OpenAllayConstants;
 import java.util.Collections;
 import java.util.IdentityHashMap;
@@ -82,7 +81,7 @@ public final class ModelTransportDiagnostics {
 
     static String openAiShape(String json, boolean stream) {
         try {
-            JsonElement parsed = JsonParser.parseString(json);
+            JsonElement parsed = dev.openallay.json.JsonTrees.parse(json);
             StringBuilder output = new StringBuilder("rootType=").append(type(parsed));
             if (!parsed.isJsonObject()) {
                 return output.toString();
@@ -90,7 +89,7 @@ public final class ModelTransportDiagnostics {
             JsonObject root = parsed.getAsJsonObject();
             fields(output, "root", root, "model", "choices", "usage", "error");
             JsonElement choices = root.get("choices");
-            if (choices != null && choices.isJsonArray() && !choices.getAsJsonArray().isEmpty()) {
+            if (choices != null && choices.isJsonArray() && !(choices.getAsJsonArray().size() == 0)) {
                 JsonElement first = choices.getAsJsonArray().get(0);
                 output.append(" choiceType=").append(type(first));
                 if (first.isJsonObject()) {

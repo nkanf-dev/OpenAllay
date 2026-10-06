@@ -3,7 +3,6 @@ package dev.openallay.bridge.server;
 import dev.openallay.concurrent.NamedThreads;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import dev.openallay.agent.tool.AgentToolExecutor;
 import dev.openallay.agent.tool.AgentToolResult;
 import dev.openallay.agent.tool.LocalAgentToolExecutor;
@@ -572,7 +571,7 @@ public final class PlayerClientToolRouter {
         }
         String status = normalized.get("status").getAsString();
         if (status.equals("failure")) {
-            if (!normalized.keySet().equals(Set.of("status", "code", "message"))) {
+            if (!dev.openallay.json.JsonTrees.keys(normalized).equals(Set.of("status", "code", "message"))) {
                 return null;
             }
             try {
@@ -596,7 +595,7 @@ public final class PlayerClientToolRouter {
         Set<String> expectedKeys = hasModelText
                 ? Set.of("status", "outputType", "value", "modelText")
                 : Set.of("status", "outputType", "value");
-        if (!normalized.keySet().equals(expectedKeys)) {
+        if (!dev.openallay.json.JsonTrees.keys(normalized).equals(expectedKeys)) {
             return null;
         }
         if (hasModelText
@@ -626,7 +625,7 @@ public final class PlayerClientToolRouter {
     }
 
     private static boolean exactSkillOutput(JsonObject output) {
-        if (!output.keySet().equals(Set.of("name", "document", "source", "fingerprint", "state",
+        if (!dev.openallay.json.JsonTrees.keys(output).equals(Set.of("name", "document", "source", "fingerprint", "state",
                 "content", "offset", "nextOffset", "complete", "nextCursor", "availableReferences",
                 "allowedTools", "provenance"))) return false;
         for (String field : List.of("name", "document", "source", "fingerprint", "state",

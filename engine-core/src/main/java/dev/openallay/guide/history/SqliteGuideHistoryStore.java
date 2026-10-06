@@ -1,6 +1,5 @@
 package dev.openallay.guide.history;
 
-import com.google.gson.Gson;
 import com.google.gson.JsonParseException;
 import dev.openallay.agent.context.ContextCheckpoint;
 import dev.openallay.agent.context.ContextSourceHash;
@@ -528,7 +527,7 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
             GuideHistoryMutation.CaptureRequestBoundary boundary) throws SQLException {
         com.google.gson.JsonArray checkpoints = new com.google.gson.JsonArray();
         for (ContextCheckpoint checkpoint : boundary.checkpoints()) {
-            checkpoints.add(com.google.gson.JsonParser.parseString(codec.encodeCheckpoint(checkpoint)));
+            checkpoints.add(dev.openallay.json.JsonTrees.parse(codec.encodeCheckpoint(checkpoint)));
         }
         try (PreparedStatement statement = connection.prepareStatement("""
                 insert into request_context_boundaries(scope_id, request_id, payload_json, checkpoints_json)
@@ -554,7 +553,7 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
             query.setString(2, requestId.toString());
             try (ResultSet result = query.executeQuery()) {
                 if (!result.next()) return null;
-                com.google.gson.JsonElement raw = com.google.gson.JsonParser.parseString(
+                com.google.gson.JsonElement raw = dev.openallay.json.JsonTrees.parse(
                         result.getString("checkpoints_json"));
                 if (!raw.isJsonArray()) throw new IllegalArgumentException("boundary checkpoints must be an array");
                 List<ContextCheckpoint> checkpoints = new ArrayList<>();
@@ -1696,7 +1695,7 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
                             || units.stream().anyMatch(unit -> unit.fromIndex()
                                     == checkpoint.sourceToIndexExclusive());
                     if (boundary && checkpoint.sourceHash().equals(ContextSourceHash.compute(
-                            new Gson(), messages.subList(0, checkpoint.sourceToIndexExclusive())))) {
+                            dev.openallay.json.EngineJson.create(), messages.subList(0, checkpoint.sourceToIndexExclusive())))) {
                         return List.of(checkpoint);
                     }
                 }

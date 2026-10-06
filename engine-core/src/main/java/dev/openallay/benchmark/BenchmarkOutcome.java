@@ -12,13 +12,13 @@ public record BenchmarkOutcome(
     public BenchmarkOutcome {
         canonicalResult = canonicalResult == null
                 ? JsonNull.INSTANCE
-                : canonicalResult.deepCopy();
+                : dev.openallay.json.JsonTrees.copy(canonicalResult);
         observedEffects = List.copyOf(observedEffects);
         Objects.requireNonNull(metrics, "metrics");
     }
 
     @Override
     public JsonElement canonicalResult() {
-        return canonicalResult.deepCopy();
+        return dev.openallay.json.JsonTrees.copy(canonicalResult);
     }
 }

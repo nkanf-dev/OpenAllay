@@ -2,7 +2,6 @@ package dev.openallay.agent.context;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import java.time.Instant;
 import java.util.Set;
 import java.util.UUID;
@@ -30,8 +29,8 @@ public final class ContextCheckpointCodec {
     }
 
     public ContextCheckpoint decode(String json) {
-        JsonElement parsed = JsonParser.parseString(json);
-        if (!parsed.isJsonObject() || !parsed.getAsJsonObject().keySet().equals(FIELDS)) {
+        JsonElement parsed = dev.openallay.json.JsonTrees.parse(json);
+        if (!parsed.isJsonObject() || !dev.openallay.json.JsonTrees.keys(parsed.getAsJsonObject()).equals(FIELDS)) {
             throw new IllegalArgumentException("checkpoint schema mismatch");
         }
         JsonObject object = parsed.getAsJsonObject();

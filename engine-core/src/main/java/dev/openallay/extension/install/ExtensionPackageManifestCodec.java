@@ -1,10 +1,8 @@
 package dev.openallay.extension.install;
 
-import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import dev.openallay.extension.OpenAllayExtensionDescriptor;
 import dev.openallay.requirement.RequirementCodec;
 import java.util.HashSet;
@@ -28,13 +26,13 @@ public final class ExtensionPackageManifestCodec {
 
     public ExtensionPackageManifest decode(String json) {
         try {
-            JsonElement parsed = JsonParser.parseString(json);
+            JsonElement parsed = dev.openallay.json.JsonTrees.parse(json);
             if (!parsed.isJsonObject()) {
                 throw new IllegalArgumentException(
                         "Extension package manifest must be an object");
             }
             JsonObject root = parsed.getAsJsonObject();
-            Set<String> fields = new HashSet<>(root.keySet());
+            Set<String> fields = new HashSet<>(dev.openallay.json.JsonTrees.keys(root));
             fields.remove("requirements");
             if (!fields.equals(FIELDS)) {
                 throw new IllegalArgumentException(
@@ -80,7 +78,7 @@ public final class ExtensionPackageManifestCodec {
         if (!descriptor.requirements().isEmpty()) {
             root.add("requirements", RequirementCodec.encode(descriptor.requirements()));
         }
-        return new GsonBuilder().setPrettyPrinting().create().toJson(root) + "\n";
+        return dev.openallay.json.EngineJson.create(builder -> builder.setPrettyPrinting()).toJson(root) + "\n";
     }
 
     private static JsonArray strings(Set<String> values) {

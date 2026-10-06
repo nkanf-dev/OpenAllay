@@ -227,7 +227,7 @@ public final class ModelMetadataCache {
     }
 
     private static void requireFields(JsonObject object, Set<String> expected, String label) {
-        if (!object.keySet().equals(expected)) {
+        if (!dev.openallay.json.JsonTrees.keys(object).equals(expected)) {
             throw new IllegalArgumentException(label + " schema mismatch");
         }
     }

@@ -8,11 +8,11 @@ public record ModelToolDefinition(String name, String description, JsonObject in
         if (name == null || name.isBlank() || description == null || description.isBlank()) {
             throw new IllegalArgumentException("Model tool name and description are required");
         }
-        inputSchema = Objects.requireNonNull(inputSchema, "inputSchema").deepCopy();
+        inputSchema = dev.openallay.json.JsonTrees.copy(Objects.requireNonNull(inputSchema, "inputSchema"));
     }
 
     @Override
     public JsonObject inputSchema() {
-        return inputSchema.deepCopy();
+        return dev.openallay.json.JsonTrees.copy(inputSchema);
     }
 }

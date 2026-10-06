@@ -2,7 +2,6 @@ package dev.openallay.guide.ui;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import dev.openallay.guide.GuideFailure;
 import java.io.IOException;
 import java.io.Reader;
@@ -36,15 +35,15 @@ public final class GuideDisplayConfigLoader {
     public Load load(Reader reader) {
         Objects.requireNonNull(reader, "reader");
         try {
-            JsonElement parsed = JsonParser.parseReader(reader);
+            JsonElement parsed = dev.openallay.json.JsonTrees.parse(reader);
             if (!parsed.isJsonObject()) {
                 throw new IllegalArgumentException("Display configuration must be an object");
             }
             JsonObject object = parsed.getAsJsonObject();
-            if (!object.keySet().equals(FIELDS)) {
+            if (!dev.openallay.json.JsonTrees.keys(object).equals(FIELDS)) {
                 Set<String> missing = new java.util.TreeSet<>(FIELDS);
-                missing.removeAll(object.keySet());
-                Set<String> extra = new java.util.TreeSet<>(object.keySet());
+                missing.removeAll(dev.openallay.json.JsonTrees.keys(object));
+                Set<String> extra = new java.util.TreeSet<>(dev.openallay.json.JsonTrees.keys(object));
                 extra.removeAll(FIELDS);
                 throw new IllegalArgumentException(
                         "Display configuration schema mismatch; missing=" + missing
@@ -95,7 +94,7 @@ public final class GuideDisplayConfigLoader {
             throw new IllegalArgumentException(field + " must be an object");
         }
         JsonObject result = value.getAsJsonObject();
-        if (!result.keySet().equals(fields)) {
+        if (!dev.openallay.json.JsonTrees.keys(result).equals(fields)) {
             throw new IllegalArgumentException(field + " has missing or unknown fields");
         }
         return result;

@@ -1,16 +1,14 @@
 package dev.openallay.guide.ui;
 
 import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import java.util.Objects;
 
 /** Canonical credential-free encoder for local Guide presentation settings. */
 public final class GuideDisplayConfigWriter {
-    private static final Gson GSON = dev.openallay.json.EngineJson.withInstant(new GsonBuilder()
+    private static final Gson GSON = dev.openallay.json.EngineJson.create(builder -> builder
             .disableHtmlEscaping()
-            .setPrettyPrinting()
-            .create());
+            .setPrettyPrinting());
 
     public String encode(GuideDisplayConfig config) {
         Objects.requireNonNull(config, "config");

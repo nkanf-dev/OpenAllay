@@ -10,7 +10,7 @@ public record TraceExpectation(
             throw new IllegalArgumentException("Expectation status must be success or failure");
         }
         Objects.requireNonNull(match, "match");
-        value = value == null ? null : value.deepCopy();
+        value = value == null ? null : dev.openallay.json.JsonTrees.copy(value);
         if ((match == ExpectationMatch.EXACT || match == ExpectationMatch.CONTAINS)
                 && value == null) {
             throw new IllegalArgumentException("Exact and contains expectations require value");
@@ -23,6 +23,6 @@ public record TraceExpectation(
 
     @Override
     public JsonElement value() {
-        return value == null ? null : value.deepCopy();
+        return value == null ? null : dev.openallay.json.JsonTrees.copy(value);
     }
 }

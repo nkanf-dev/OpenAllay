@@ -108,7 +108,7 @@ public final class JsonResultProjection {
                 budget.truncated = true;
                 return new JsonPrimitive(fragment);
             }
-            if (budget.take((int) Math.min(Integer.MAX_VALUE, primitiveBytes(value)))) return value.deepCopy();
+            if (budget.take((int) Math.min(Integer.MAX_VALUE, primitiveBytes(value)))) return dev.openallay.json.JsonTrees.copy(value);
             return new JsonPrimitive(OMITTED);
         }
         if (value.isJsonArray()) {
@@ -189,7 +189,7 @@ public final class JsonResultProjection {
             if (child.isJsonArray()) {
                 JsonArray array = child.getAsJsonArray();
                 line.append('[').append(array.size()).append(']');
-                if (!array.isEmpty()) {
+                if (!(array.size() == 0)) {
                     JsonElement sample = array.get(0);
                     line.append("; first element: ").append(type(sample));
                     if (sample.isJsonObject()) appendFieldNames(line, sample.getAsJsonObject(), budget.remaining);
@@ -210,7 +210,7 @@ public final class JsonResultProjection {
         if (value.size() == 0) return;
         line.append(" fields[");
         boolean first = true;
-        for (String field : value.keySet()) {
+        for (String field : dev.openallay.json.JsonTrees.keys(value)) {
             String descriptor = (first ? "" : ",") + field;
             // Keep room for the closing bracket and any explicitly omitted fields.
             if (encodedBytes(line.toString() + descriptor + "…]") + 1 > maximumBytes) {
@@ -256,7 +256,7 @@ public final class JsonResultProjection {
         if (value.isJsonNull() || value.isJsonPrimitive()) {
             output.append(padding).append(listPrefix == null ? "" : listPrefix).append(scalar(value));
         } else if (value.isJsonArray()) {
-            if (value.getAsJsonArray().isEmpty()) output.append(padding).append(listPrefix == null ? "" : listPrefix).append("(empty)");
+            if ((value.getAsJsonArray().size() == 0)) output.append(padding).append(listPrefix == null ? "" : listPrefix).append("(empty)");
             boolean first = true;
             for (JsonElement row : value.getAsJsonArray()) {
                 if (!first) output.append('\n');
@@ -352,7 +352,7 @@ public final class JsonResultProjection {
         return serializedBytes(new JsonPrimitive(text));
     }
 
-    private static final com.google.gson.Gson JSON = new com.google.gson.Gson();
+    private static final com.google.gson.Gson JSON = dev.openallay.json.EngineJson.create();
 
     private static long countEncodedJson(JsonElement value) {
         CountingOutputStream counter = new CountingOutputStream();
@@ -396,16 +396,16 @@ public final class JsonResultProjection {
     }
 
     private static List<String> fields(JsonElement preview) {
-        if (preview.isJsonObject()) return List.copyOf(preview.getAsJsonObject().keySet());
-        if (preview.isJsonArray() && !preview.getAsJsonArray().isEmpty() && preview.getAsJsonArray().get(0).isJsonObject())
-            return List.copyOf(preview.getAsJsonArray().get(0).getAsJsonObject().keySet());
+        if (preview.isJsonObject()) return List.copyOf(dev.openallay.json.JsonTrees.keys(preview.getAsJsonObject()));
+        if (preview.isJsonArray() && !(preview.getAsJsonArray().size() == 0) && preview.getAsJsonArray().get(0).isJsonObject())
+            return List.copyOf(dev.openallay.json.JsonTrees.keys(preview.getAsJsonArray().get(0).getAsJsonObject()));
         return List.of();
     }
 
     public record Projection(String type, long cardinality, long serializedBytes, List<String> fields,
             JsonElement preview, String modelText, boolean complete, int omittedRows, int omittedFields) {
-        public Projection { fields = List.copyOf(fields); preview = preview.deepCopy(); }
-        @Override public JsonElement preview() { return preview.deepCopy(); }
+        public Projection { fields = List.copyOf(fields); preview = dev.openallay.json.JsonTrees.copy(preview); }
+        @Override public JsonElement preview() { return dev.openallay.json.JsonTrees.copy(preview); }
     }
     private record Field(String name, JsonElement value, long cost, int ordinal) {}
     private static final class PreviewBudget {

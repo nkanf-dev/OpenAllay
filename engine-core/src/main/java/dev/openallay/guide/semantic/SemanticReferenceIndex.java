@@ -91,7 +91,7 @@ public final class SemanticReferenceIndex {
                 }
             }
             if ("counts".equals(field)) {
-                object.keySet().forEach(item -> putResource(
+                dev.openallay.json.JsonTrees.keys(object).forEach(item -> putResource(
                         values, SemanticReferenceKind.ITEM, item, origin));
             }
             for (Map.Entry<String, JsonElement> entry : object.entrySet()) {

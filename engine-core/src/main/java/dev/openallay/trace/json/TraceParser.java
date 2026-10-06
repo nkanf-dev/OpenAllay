@@ -168,7 +168,7 @@ public final class TraceParser {
 
     private static void requireFields(
             JsonObject object, String path, Set<String> allowed, Set<String> required) {
-        for (String field : object.keySet()) {
+        for (String field : dev.openallay.json.JsonTrees.keys(object)) {
             if (!allowed.contains(field)) {
                 throw invalid("Unknown field at " + path + ": " + field);
             }

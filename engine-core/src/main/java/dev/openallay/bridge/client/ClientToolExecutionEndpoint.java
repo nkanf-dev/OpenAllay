@@ -260,7 +260,7 @@ public final class ClientToolExecutionEndpoint {
         cancellation.throwIfCancelled();
         com.google.gson.JsonElement parsed;
         try {
-            parsed = com.google.gson.JsonParser.parseString(argumentsJson);
+            parsed = dev.openallay.json.JsonTrees.parse(argumentsJson);
         } catch (RuntimeException failure) {
             return CompletableFuture.completedFuture(new ToolResult.Failure<>(
                     "invalid_arguments", "Client Tool arguments are not valid JSON"));

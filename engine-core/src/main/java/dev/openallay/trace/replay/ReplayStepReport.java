@@ -16,17 +16,17 @@ public record ReplayStepReport(
         if (index < 0 || elapsedNanos < 0) {
             throw new IllegalArgumentException("Replay step index and elapsed time must be non-negative");
         }
-        actual = actual == null ? null : actual.deepCopy();
-        expected = expected == null ? null : expected.deepCopy();
+        actual = actual == null ? null : dev.openallay.json.JsonTrees.copy(actual);
+        expected = expected == null ? null : dev.openallay.json.JsonTrees.copy(expected);
     }
 
     @Override
     public JsonElement actual() {
-        return actual == null ? null : actual.deepCopy();
+        return actual == null ? null : dev.openallay.json.JsonTrees.copy(actual);
     }
 
     @Override
     public JsonElement expected() {
-        return expected == null ? null : expected.deepCopy();
+        return expected == null ? null : dev.openallay.json.JsonTrees.copy(expected);
     }
 }

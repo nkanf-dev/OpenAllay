@@ -19,7 +19,7 @@ public final class ToolArgumentCodec {
                 var declared = java.util.Arrays.stream(inputType.getRecordComponents())
                         .map(java.lang.reflect.RecordComponent::getName)
                         .collect(java.util.stream.Collectors.toSet());
-                if (!declared.containsAll(arguments.keySet())) {
+                if (!declared.containsAll(dev.openallay.json.JsonTrees.keys(arguments))) {
                     return new ToolResult.Failure<>(
                             "invalid_arguments", "tool arguments contain an undeclared field");
                 }

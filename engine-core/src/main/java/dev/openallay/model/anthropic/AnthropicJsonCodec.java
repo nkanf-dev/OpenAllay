@@ -4,7 +4,6 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import dev.openallay.model.ModelContent;
 import dev.openallay.model.ModelEvent;
 import dev.openallay.model.ModelMessage;
@@ -124,7 +123,7 @@ public final class AnthropicJsonCodec {
     }
 
     public ModelTurn parseTurn(String json, Consumer<ModelEvent> events) {
-        JsonObject root = JsonParser.parseString(json).getAsJsonObject();
+        JsonObject root = dev.openallay.json.JsonTrees.parse(json).getAsJsonObject();
         if (root.has("error") && !root.get("error").isJsonNull()) {
             throw new IllegalArgumentException("Anthropic response contains an error object");
         }

@@ -1,6 +1,5 @@
 package dev.openallay.extension.install;
 
-import com.google.gson.JsonParser;
 import dev.openallay.extension.OpenAllayExtensionEnvironment;
 import dev.openallay.extension.OpenAllayExtensionDescriptor;
 import dev.openallay.tool.ToolResult;
@@ -319,7 +318,7 @@ public final class ExtensionPackageInstaller {
                     manifest = manifestCodec.decode(new String(
                             jar.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8));
                 } else if (entry.getName().equals("fabric.mod.json")) {
-                    var root = JsonParser.parseReader(
+                    var root = dev.openallay.json.JsonTrees.parse(
                                     new java.io.InputStreamReader(
                                             jar, java.nio.charset.StandardCharsets.UTF_8))
                             .getAsJsonObject();

@@ -92,7 +92,7 @@ public final class ModelToolResultProjection {
                 ? value.getAsString().length() < maximumUtf8Bytes
                         && JsonResultProjection.encodedBytes(value.getAsString()) <= maximumUtf8Bytes
                 : JsonResultProjection.serializedBytes(value) <= maximumUtf8Bytes;
-        if (small) return value.deepCopy();
+        if (small) return dev.openallay.json.JsonTrees.copy(value);
         if (value.isJsonObject() && value.getAsJsonObject().has("status"))
             return project("", value.getAsJsonObject(), maximumUtf8Bytes);
         if (value.isJsonPrimitive() && value.getAsJsonPrimitive().isString()) {

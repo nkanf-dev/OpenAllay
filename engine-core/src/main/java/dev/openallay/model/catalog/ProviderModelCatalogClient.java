@@ -1,7 +1,6 @@
 package dev.openallay.model.catalog;
 
 import com.google.gson.JsonElement;
-import com.google.gson.JsonParser;
 import dev.openallay.model.CancellationSignal;
 import dev.openallay.model.config.ModelProtocol;
 import dev.openallay.model.config.SecretValue;
@@ -89,7 +88,7 @@ public final class ProviderModelCatalogClient {
     }
 
     private static ModelCatalog decode(String json) {
-        JsonElement parsed = JsonParser.parseString(json);
+        JsonElement parsed = dev.openallay.json.JsonTrees.parse(json);
         if (!parsed.isJsonObject()) {
             throw new IllegalArgumentException("catalog root");
         }

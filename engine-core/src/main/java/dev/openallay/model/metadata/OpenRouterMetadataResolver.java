@@ -2,7 +2,6 @@ package dev.openallay.model.metadata;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import dev.openallay.model.CancellationSignal;
 import dev.openallay.model.image.ImageInputCapability;
 import dev.openallay.model.config.SecretValue;
@@ -123,7 +122,7 @@ public final class OpenRouterMetadataResolver implements ModelMetadataResolver {
     }
 
     private ModelMetadata decode(String json, String requestedModelId) {
-        JsonElement parsed = JsonParser.parseString(json);
+        JsonElement parsed = dev.openallay.json.JsonTrees.parse(json);
         if (!parsed.isJsonObject()) {
             throw new IllegalArgumentException("root");
         }

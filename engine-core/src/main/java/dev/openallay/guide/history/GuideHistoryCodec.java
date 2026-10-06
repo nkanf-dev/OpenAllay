@@ -3,7 +3,6 @@ package dev.openallay.guide.history;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import dev.openallay.agent.context.ContextCheckpoint;
 import dev.openallay.agent.context.ContextCheckpointCodec;
 import dev.openallay.context.DataAuthority;
@@ -56,7 +55,7 @@ public final class GuideHistoryCodec {
     }
 
     public GuideModelSelection decodeModelSelection(String json) {
-        JsonObject encoded = object(JsonParser.parseString(json), "model selection");
+        JsonObject encoded = object(dev.openallay.json.JsonTrees.parse(json), "model selection");
         GuideModelSelection.Kind kind = enumValue(
                 GuideModelSelection.Kind.class,
                 string(encoded, "kind"),
@@ -90,7 +89,7 @@ public final class GuideHistoryCodec {
     }
 
     public ModelUsage decodeModelUsage(String json) {
-        JsonObject encoded = object(JsonParser.parseString(json), "model usage");
+        JsonObject encoded = object(dev.openallay.json.JsonTrees.parse(json), "model usage");
         requireFields(encoded, Set.of("inputTokens", "outputTokens", "cacheReadTokens", "cacheWriteTokens",
                 "uncachedInputTokens", "inputKnown", "outputKnown", "cacheReadKnown", "cacheWriteKnown",
                 "uncachedInputKnown"), "model usage");
@@ -117,7 +116,7 @@ public final class GuideHistoryCodec {
     }
 
     public GuideUsageSnapshot decodeUsageProjection(String json) {
-        JsonObject encoded = object(JsonParser.parseString(json), "usage projection");
+        JsonObject encoded = object(dev.openallay.json.JsonTrees.parse(json), "usage projection");
         requireFields(encoded, Set.of("inputTokens", "outputTokens", "cacheReadTokens", "cacheWriteTokens",
                 "actualCalls", "reportedCalls", "incomplete", "cacheIncomplete", "estimatedUsd",
                 "costIncomplete"), "usage projection");
@@ -165,11 +164,11 @@ public final class GuideHistoryCodec {
     }
 
     public GuideTimelineEntry decodeEntry(String json) {
-        return decodeEntryObject(object(JsonParser.parseString(json), "timeline entry"));
+        return decodeEntryObject(object(dev.openallay.json.JsonTrees.parse(json), "timeline entry"));
     }
 
     public List<GuideTimelineEntry> decodeTimeline(String json) {
-        JsonElement parsed = JsonParser.parseString(json);
+        JsonElement parsed = dev.openallay.json.JsonTrees.parse(json);
         if (!parsed.isJsonArray()) {
             throw new IllegalArgumentException("durable timeline must be an array");
         }
@@ -312,7 +311,7 @@ public final class GuideHistoryCodec {
     }
 
     public List<GuideSource> decodeSources(String json) {
-        JsonElement parsed = JsonParser.parseString(json);
+        JsonElement parsed = dev.openallay.json.JsonTrees.parse(json);
         if (!parsed.isJsonArray()) {
             throw new IllegalArgumentException("durable sources must be an array");
         }
@@ -382,10 +381,10 @@ public final class GuideHistoryCodec {
     }
 
     private static void requireFields(JsonObject object, Set<String> expected, String label) {
-        if (!object.keySet().equals(expected)) {
+        if (!dev.openallay.json.JsonTrees.keys(object).equals(expected)) {
             Set<String> missing = new java.util.TreeSet<>(expected);
-            missing.removeAll(object.keySet());
-            Set<String> extra = new java.util.TreeSet<>(object.keySet());
+            missing.removeAll(dev.openallay.json.JsonTrees.keys(object));
+            Set<String> extra = new java.util.TreeSet<>(dev.openallay.json.JsonTrees.keys(object));
             extra.removeAll(expected);
             throw new IllegalArgumentException(
                     label + " schema mismatch; missing=" + missing + ", extra=" + extra);

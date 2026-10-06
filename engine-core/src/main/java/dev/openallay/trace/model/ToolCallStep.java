@@ -9,12 +9,12 @@ public record ToolCallStep(String tool, JsonObject arguments, TraceExpectation e
         if (tool == null || !tool.matches("[a-z0-9_.-]+:[a-z0-9_./-]+")) {
             throw new IllegalArgumentException("Invalid tool id: " + tool);
         }
-        arguments = Objects.requireNonNull(arguments, "arguments").deepCopy();
+        arguments = dev.openallay.json.JsonTrees.copy(Objects.requireNonNull(arguments, "arguments"));
         Objects.requireNonNull(expect, "expect");
     }
 
     @Override
     public JsonObject arguments() {
-        return arguments.deepCopy();
+        return dev.openallay.json.JsonTrees.copy(arguments);
     }
 }

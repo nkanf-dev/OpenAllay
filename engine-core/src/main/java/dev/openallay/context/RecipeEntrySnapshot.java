@@ -82,7 +82,7 @@ public record RecipeEntrySnapshot(
     @Override
     public Map<String, JsonObject> extensions() {
         TreeMap<String, JsonObject> copy = new TreeMap<>();
-        extensions.forEach((key, value) -> copy.put(key, value.deepCopy()));
+        extensions.forEach((key, value) -> copy.put(key, dev.openallay.json.JsonTrees.copy(value)));
         return Collections.unmodifiableMap(copy);
     }
 
@@ -121,7 +121,7 @@ public record RecipeEntrySnapshot(
         TreeMap<String, JsonObject> copy = new TreeMap<>();
         Objects.requireNonNull(values, "extensions").forEach((key, value) -> copy.put(
                 ContextValidation.identifier(key, "extension key"),
-                Objects.requireNonNull(value, "extension value").deepCopy()));
+                dev.openallay.json.JsonTrees.copy(Objects.requireNonNull(value, "extension value"))));
         return Collections.unmodifiableMap(copy);
     }
 }

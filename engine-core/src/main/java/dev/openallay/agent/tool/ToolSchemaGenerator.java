@@ -162,7 +162,7 @@ public final class ToolSchemaGenerator {
                     alternative.add("required", alternativeRequired);
                     anyOf.add(alternative);
                 }
-                if (anyOf.isEmpty()) {
+                if ((anyOf.size() == 0)) {
                     throw new IllegalArgumentException(
                             "At-least-one Tool contract must name a component: " + type.getName());
                 }

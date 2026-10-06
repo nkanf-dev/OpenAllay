@@ -28,7 +28,7 @@ public final class JavascriptResultViewRegistry {
             return JavascriptSemanticKind.KEY_VALUE;
         }
         JsonArray rows = canonical.getAsJsonArray();
-        if (rows.isEmpty()) {
+        if ((rows.size() == 0)) {
             return JavascriptSemanticKind.GENERIC;
         }
         Set<String> fields = null;
@@ -36,7 +36,7 @@ public final class JavascriptResultViewRegistry {
             if (!row.isJsonObject()) {
                 return JavascriptSemanticKind.GENERIC;
             }
-            Set<String> rowFields = Set.copyOf(row.getAsJsonObject().keySet());
+            Set<String> rowFields = Set.copyOf(dev.openallay.json.JsonTrees.keys(row.getAsJsonObject()));
             if (fields == null) {
                 fields = rowFields;
             } else if (!fields.equals(rowFields)) {

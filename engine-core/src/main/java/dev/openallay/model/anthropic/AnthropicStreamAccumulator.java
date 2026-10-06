@@ -1,7 +1,6 @@
 package dev.openallay.model.anthropic;
 
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import dev.openallay.model.ModelContent;
 import dev.openallay.model.ModelEvent;
 import dev.openallay.model.ModelTurn;
@@ -36,7 +35,7 @@ final class AnthropicStreamAccumulator {
         if (event.data().equals("[DONE]")) {
             return;
         }
-        JsonObject root = JsonParser.parseString(event.data()).getAsJsonObject();
+        JsonObject root = dev.openallay.json.JsonTrees.parse(event.data()).getAsJsonObject();
         String type = root.has("type") ? root.get("type").getAsString() : event.event();
         switch (type) {
             case "message_start" -> messageStart(root.getAsJsonObject("message"));
@@ -189,7 +188,7 @@ final class AnthropicStreamAccumulator {
                         name,
                         value.isEmpty()
                                 ? new JsonObject()
-                                : JsonParser.parseString(value.toString()).getAsJsonObject());
+                                : dev.openallay.json.JsonTrees.parse(value.toString()).getAsJsonObject());
                 default -> throw new IllegalArgumentException("Unsupported Anthropic block: " + type);
             };
         }

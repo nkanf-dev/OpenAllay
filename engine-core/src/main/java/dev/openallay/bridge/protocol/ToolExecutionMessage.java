@@ -10,7 +10,7 @@ import java.util.Objects;
 public record ToolExecutionMessage(
         JsonObject result, List<ServerAgentImageAttachment> imageAttachments) {
     public ToolExecutionMessage {
-        result = Objects.requireNonNull(result, "result").deepCopy();
+        result = dev.openallay.json.JsonTrees.copy(Objects.requireNonNull(result, "result"));
         imageAttachments = List.copyOf(imageAttachments);
         List<ImageReference> supplied = imageAttachments.stream()
                 .map(ServerAgentImageAttachment::reference).toList();
@@ -23,7 +23,7 @@ public record ToolExecutionMessage(
         }
     }
 
-    @Override public JsonObject result() { return result.deepCopy(); }
+    @Override public JsonObject result() { return dev.openallay.json.JsonTrees.copy(result); }
 
     /** Typed trusted output references, never a search through arbitrary result JSON. */
     public void requireImages(List<ImageReference> references) {

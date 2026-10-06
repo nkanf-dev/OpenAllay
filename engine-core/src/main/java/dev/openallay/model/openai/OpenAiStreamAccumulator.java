@@ -2,7 +2,6 @@ package dev.openallay.model.openai;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import dev.openallay.model.ModelContent;
 import dev.openallay.model.ModelEvent;
 import dev.openallay.model.ModelTurn;
@@ -41,7 +40,7 @@ final class OpenAiStreamAccumulator {
     }
 
     private void acceptChunk(String json) {
-        JsonObject root = JsonParser.parseString(json).getAsJsonObject();
+        JsonObject root = dev.openallay.json.JsonTrees.parse(json).getAsJsonObject();
         if (root.has("model")) {
             model = root.get("model").getAsString();
         }
@@ -51,7 +50,7 @@ final class OpenAiStreamAccumulator {
             usage = OpenAiJsonCodec.parseUsage(value);
             events.accept(new ModelEvent.UsageUpdate(usage));
         }
-        if (!root.has("choices") || root.getAsJsonArray("choices").isEmpty()) {
+        if (!root.has("choices") || (root.getAsJsonArray("choices").size() == 0)) {
             return;
         }
         JsonObject choice = root.getAsJsonArray("choices").get(0).getAsJsonObject();
@@ -116,7 +115,7 @@ final class OpenAiStreamAccumulator {
             ModelContent.ToolUse tool = new ModelContent.ToolUse(
                     value.id,
                     value.name.toString(),
-                    JsonParser.parseString(value.arguments.toString()).getAsJsonObject());
+                    dev.openallay.json.JsonTrees.parse(value.arguments.toString()).getAsJsonObject());
             content.add(tool);
             events.accept(new ModelEvent.ToolUseComplete(tool.id(), tool.name(), tool.input()));
         }

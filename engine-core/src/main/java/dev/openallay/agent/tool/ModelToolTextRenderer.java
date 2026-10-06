@@ -41,7 +41,7 @@ final class ModelToolTextRenderer {
             return;
         }
         if (value.isJsonArray()) {
-            if (value.getAsJsonArray().isEmpty()) {
+            if ((value.getAsJsonArray().size() == 0)) {
                 output.append(padding)
                         .append(listPrefix == null ? "" : listPrefix)
                         .append("(empty)");

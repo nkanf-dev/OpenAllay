@@ -48,7 +48,7 @@ public final class ExpectationMatcher {
         if ("success".equals(status)) {
             return actual.get("value");
         }
-        JsonObject failure = actual.deepCopy();
+        JsonObject failure = dev.openallay.json.JsonTrees.copy(actual);
         failure.remove("status");
         return failure;
     }
@@ -122,10 +122,10 @@ public final class ExpectationMatcher {
         if (left.isJsonObject() && right.isJsonObject()) {
             JsonObject leftObject = left.getAsJsonObject();
             JsonObject rightObject = right.getAsJsonObject();
-            if (!leftObject.keySet().equals(rightObject.keySet())) {
+            if (!dev.openallay.json.JsonTrees.keys(leftObject).equals(dev.openallay.json.JsonTrees.keys(rightObject))) {
                 return false;
             }
-            for (String key : leftObject.keySet()) {
+            for (String key : dev.openallay.json.JsonTrees.keys(leftObject)) {
                 if (!equivalent(leftObject.get(key), rightObject.get(key))) {
                     return false;
                 }

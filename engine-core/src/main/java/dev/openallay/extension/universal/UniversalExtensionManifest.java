@@ -35,7 +35,7 @@ public record UniversalExtensionManifest(String entrypoint, ExtensionDescriptor 
 
     public static UniversalExtensionManifest decode(String json) {
         JsonObject root = object(UniversalExtensionJson.parse(json));
-        Set<String> fields = new HashSet<>(root.keySet());
+        Set<String> fields = new HashSet<>(dev.openallay.json.JsonTrees.keys(root));
         fields.remove("requirements");
         if (!fields.equals(FIELDS)) throw new IllegalArgumentException("Universal package fields do not match");
         if (integer(root, "schemaVersion") != 2) {
@@ -68,7 +68,7 @@ public record UniversalExtensionManifest(String entrypoint, ExtensionDescriptor 
         return ExtensionCompatibility.requireRange(string(value, field), field);
     }
     private static void exact(JsonObject value, Set<String> fields) {
-        if (!value.keySet().equals(fields)) throw new IllegalArgumentException("Package fields do not match");
+        if (!dev.openallay.json.JsonTrees.keys(value).equals(fields)) throw new IllegalArgumentException("Package fields do not match");
     }
     private static JsonObject object(JsonElement value) {
         if (value == null || !value.isJsonObject()) throw new IllegalArgumentException("Expected package object");

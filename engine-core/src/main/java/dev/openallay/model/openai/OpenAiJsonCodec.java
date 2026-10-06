@@ -4,7 +4,6 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import dev.openallay.model.ModelContent;
 import dev.openallay.model.ModelEvent;
 import dev.openallay.model.ModelMessage;
@@ -108,7 +107,7 @@ public final class OpenAiJsonCodec {
     }
 
     private ModelTurn decodeTurn(String json, Consumer<ModelEvent> events) {
-        JsonObject root = JsonParser.parseString(json).getAsJsonObject();
+        JsonObject root = dev.openallay.json.JsonTrees.parse(json).getAsJsonObject();
         String model = requiredString(root, "model");
         JsonObject choice = root.getAsJsonArray("choices").get(0).getAsJsonObject();
         String stopReason = requiredString(choice, "finish_reason");
@@ -149,7 +148,7 @@ public final class OpenAiJsonCodec {
                 observations.add(label);
                 result.images().forEach(image -> observations.add(imageEncoder.apply(image)));
             }
-            if (!observations.isEmpty()) {
+            if (!(observations.size() == 0)) {
                 JsonObject visual = new JsonObject();
                 visual.addProperty("role", "user");
                 visual.add("content", observations);
@@ -210,7 +209,7 @@ public final class OpenAiJsonCodec {
         if (!reasoning.isEmpty()) {
             encoded.addProperty("reasoning_content", reasoning.toString());
         }
-        if (!toolCalls.isEmpty()) {
+        if (!(toolCalls.size() == 0)) {
             encoded.add("tool_calls", toolCalls);
         }
         output.add(encoded);
@@ -305,7 +304,7 @@ public final class OpenAiJsonCodec {
                 ModelContent.ToolUse tool = new ModelContent.ToolUse(
                         requiredString(call, "id"),
                         requiredString(function, "name"),
-                        JsonParser.parseString(requiredString(function, "arguments"))
+                        dev.openallay.json.JsonTrees.parse(requiredString(function, "arguments"))
                                 .getAsJsonObject());
                 content.add(tool);
                 events.accept(new ModelEvent.ToolUseComplete(tool.id(), tool.name(), tool.input()));

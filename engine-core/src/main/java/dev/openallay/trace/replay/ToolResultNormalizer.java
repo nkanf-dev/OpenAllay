@@ -50,7 +50,7 @@ public final class ToolResultNormalizer {
 
     public JsonElement canonicalize(JsonElement value) {
         if (value == null || value.isJsonNull() || value.isJsonPrimitive()) {
-            return value == null ? null : value.deepCopy();
+            return value == null ? null : dev.openallay.json.JsonTrees.copy(value);
         }
         if (value.isJsonArray()) {
             JsonArray result = new JsonArray();
@@ -62,7 +62,7 @@ public final class ToolResultNormalizer {
 
         JsonObject result = new JsonObject();
         JsonObject object = value.getAsJsonObject();
-        for (String key : new TreeSet<>(object.keySet())) {
+        for (String key : new TreeSet<>(dev.openallay.json.JsonTrees.keys(object))) {
             result.add(key, canonicalize(object.get(key)));
         }
         return result;

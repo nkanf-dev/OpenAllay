@@ -4,7 +4,6 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import dev.openallay.context.RecipeReference;
 import java.util.ArrayList;
 import java.util.List;
@@ -42,7 +41,7 @@ public final class SemanticDocumentCodec {
     }
 
     public SemanticDocument decode(String json) {
-        return decodeObject(object(JsonParser.parseString(json), "semantic document"));
+        return decodeObject(object(dev.openallay.json.JsonTrees.parse(json), "semantic document"));
     }
 
     public SemanticDocument decodeObject(JsonObject object) {
@@ -520,10 +519,10 @@ public final class SemanticDocumentCodec {
     }
 
     private static void exact(JsonObject object, Set<String> expected, String label) {
-        if (!object.keySet().equals(expected)) {
+        if (!dev.openallay.json.JsonTrees.keys(object).equals(expected)) {
             Set<String> missing = new java.util.TreeSet<>(expected);
-            missing.removeAll(object.keySet());
-            Set<String> extra = new java.util.TreeSet<>(object.keySet());
+            missing.removeAll(dev.openallay.json.JsonTrees.keys(object));
+            Set<String> extra = new java.util.TreeSet<>(dev.openallay.json.JsonTrees.keys(object));
             extra.removeAll(expected);
             throw new IllegalArgumentException(
                     label + " schema mismatch; missing=" + missing + ", extra=" + extra);

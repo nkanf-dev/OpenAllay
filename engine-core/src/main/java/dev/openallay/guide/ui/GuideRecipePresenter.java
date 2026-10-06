@@ -102,7 +102,7 @@ public final class GuideRecipePresenter {
     private static List<RecipeReference> references(
             JsonObject recipe, RecipeReference primary) {
         JsonArray encoded = array(recipe, "references");
-        if (encoded.isEmpty()) {
+        if ((encoded.size() == 0)) {
             return List.of(primary);
         }
         List<RecipeReference> references = new ArrayList<>();

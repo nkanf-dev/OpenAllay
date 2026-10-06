@@ -3,7 +3,6 @@ package dev.openallay.agent.context;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import dev.openallay.model.ModelContent;
 import dev.openallay.model.ModelMessage;
 import dev.openallay.model.ModelRole;
@@ -65,7 +64,7 @@ public final class ModelContextCodec {
     }
 
     public List<ModelMessage> decode(String json) {
-        JsonObject envelope = object(JsonParser.parseString(json));
+        JsonObject envelope = object(dev.openallay.json.JsonTrees.parse(json));
         fields(envelope, Set.of("messages"));
         ArrayList<ModelMessage> messages = new ArrayList<>();
         for (JsonElement encoded : array(envelope.get("messages"))) {
@@ -142,7 +141,7 @@ public final class ModelContextCodec {
     }
 
     private static void fields(JsonObject value, Set<String> expected) {
-        if (!value.keySet().equals(expected)) {
+        if (!dev.openallay.json.JsonTrees.keys(value).equals(expected)) {
             throw new IllegalArgumentException("model context fields do not match the current shape");
         }
     }

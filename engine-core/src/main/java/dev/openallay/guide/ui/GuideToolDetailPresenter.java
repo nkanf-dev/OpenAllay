@@ -135,14 +135,14 @@ public final class GuideToolDetailPresenter {
     }
 
     private static Projection javascriptTableCard(JsonObject value, JsonElement preview) {
-        if (!preview.isJsonArray() || preview.getAsJsonArray().isEmpty()) {
+        if (!preview.isJsonArray() || (preview.getAsJsonArray().size() == 0)) {
             return javascriptFallbackCard(value, preview);
         }
         if (!preview.getAsJsonArray().get(0).isJsonObject()) {
             return javascriptFallbackCard(value, preview);
         }
         java.util.Set<String> previewFields =
-                preview.getAsJsonArray().get(0).getAsJsonObject().keySet();
+                dev.openallay.json.JsonTrees.keys(preview.getAsJsonArray().get(0).getAsJsonObject());
         List<String> columns = new ArrayList<>();
         JsonElement fields = value.get("fields");
         if (fields != null && fields.isJsonArray()) {

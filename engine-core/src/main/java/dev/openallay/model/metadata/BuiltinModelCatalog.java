@@ -222,7 +222,7 @@ public final class BuiltinModelCatalog {
         };
     }
     private static void fields(JsonObject value, String... fields) {
-        if (!value.keySet().equals(Set.of(fields))) throw invalid();
+        if (!dev.openallay.json.JsonTrees.keys(value).equals(Set.of(fields))) throw invalid();
     }
     private static JsonObject object(JsonElement value) {
         if (value == null || !value.isJsonObject()) throw invalid();

@@ -92,19 +92,19 @@ public record GuideToolDetailView(
                 throw new IllegalArgumentException("debug identity must not be blank");
             }
             invocationArguments =
-                    invocationArguments == null ? null : invocationArguments.deepCopy();
-            normalized = normalized == null ? null : normalized.deepCopy();
+                    invocationArguments == null ? null : dev.openallay.json.JsonTrees.copy(invocationArguments);
+            normalized = normalized == null ? null : dev.openallay.json.JsonTrees.copy(normalized);
             validationDiagnostic = validationDiagnostic == null ? "" : validationDiagnostic;
         }
 
         @Override
         public JsonObject invocationArguments() {
-            return invocationArguments == null ? null : invocationArguments.deepCopy();
+            return invocationArguments == null ? null : dev.openallay.json.JsonTrees.copy(invocationArguments);
         }
 
         @Override
         public JsonObject normalized() {
-            return normalized == null ? null : normalized.deepCopy();
+            return normalized == null ? null : dev.openallay.json.JsonTrees.copy(normalized);
         }
     }
 }

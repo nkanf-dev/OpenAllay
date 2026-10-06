@@ -58,7 +58,7 @@ public final class LiveAgentTraceRecorder {
     public synchronized void toolCall(String toolId, JsonObject arguments) {
         JsonObject payload = new JsonObject();
         payload.addProperty("toolId", toolId);
-        payload.add("arguments", arguments.deepCopy());
+        payload.add("arguments", dev.openallay.json.JsonTrees.copy(arguments));
         add("tool_call", payload);
     }
 

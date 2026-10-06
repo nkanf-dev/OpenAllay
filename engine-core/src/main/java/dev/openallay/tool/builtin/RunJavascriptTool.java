@@ -80,7 +80,7 @@ public final class RunJavascriptTool
             implements WorkspaceModelFacingToolOutput, dev.openallay.agent.tool.ModelImageToolOutput {
         public Output {
             fields = List.copyOf(fields);
-            preview = preview.deepCopy();
+            preview = dev.openallay.json.JsonTrees.copy(preview);
             java.util.Objects.requireNonNull(viewKind, "viewKind");
             modules = List.copyOf(modules);
             sources = List.copyOf(sources);
@@ -97,7 +97,7 @@ public final class RunJavascriptTool
 
         @Override
         public JsonElement preview() {
-            return preview.deepCopy();
+            return dev.openallay.json.JsonTrees.copy(preview);
         }
     }
 
@@ -122,7 +122,7 @@ public final class RunJavascriptTool
                     ContextCapability.OBSERVABLE_GAME_STATE));
     /** Display intent cannot make identical execution arguments appear to be a new operation. */
     public static JsonObject executionArguments(JsonObject arguments) {
-        JsonObject execution = arguments.deepCopy();
+        JsonObject execution = dev.openallay.json.JsonTrees.copy(arguments);
         for (String field : List.of("title", "description")) {
             JsonElement value = execution.get(field);
             if (value != null && !value.isJsonNull()

@@ -3,7 +3,6 @@ package dev.openallay.model.config;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import dev.openallay.guide.GuideFailure;
 import dev.openallay.model.metadata.ModelMetadata;
 import dev.openallay.model.metadata.BuiltinModelCatalog;
@@ -109,7 +108,7 @@ public final class ModelProfilesConfigLoader {
         Objects.requireNonNull(credentials, "credentials");
         Map<ModelMetadata.Key, ModelMetadata> metadataCopy = Map.copyOf(metadata);
         try {
-            JsonElement parsed = JsonParser.parseReader(reader);
+            JsonElement parsed = dev.openallay.json.JsonTrees.parse(reader);
             JsonObject root = object(parsed, "Model profiles configuration");
             exactFields(root, ROOT_FIELDS, Set.of(), "model profiles configuration");
             String defaultProfileId = string(root, "defaultProfileId");
@@ -256,8 +255,8 @@ public final class ModelProfilesConfigLoader {
         Set<String> allowed = new java.util.HashSet<>(required);
         allowed.addAll(optional);
         Set<String> missing = new java.util.TreeSet<>(required);
-        missing.removeAll(object.keySet());
-        Set<String> extra = new java.util.TreeSet<>(object.keySet());
+        missing.removeAll(dev.openallay.json.JsonTrees.keys(object));
+        Set<String> extra = new java.util.TreeSet<>(dev.openallay.json.JsonTrees.keys(object));
         extra.removeAll(allowed);
         if (!missing.isEmpty() || !extra.isEmpty()) {
             throw new IllegalArgumentException(

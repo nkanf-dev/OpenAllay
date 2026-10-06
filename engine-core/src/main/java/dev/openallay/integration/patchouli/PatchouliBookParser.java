@@ -3,7 +3,6 @@ package dev.openallay.integration.patchouli;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import dev.openallay.client.resource.ClientResource;
 import dev.openallay.client.resource.ClientResourceAccess;
 import dev.openallay.context.DataAuthority;
@@ -71,7 +70,7 @@ public final class PatchouliBookParser {
         String sourceId = "patchouli:" + entry.namespace + "/" + entry.book;
         EvidenceMetadata evidence = entryEvidence(baseEvidence, entry);
         try {
-            JsonObject json = JsonParser.parseString(entry.resource.content()).getAsJsonObject();
+            JsonObject json = dev.openallay.json.JsonTrees.parse(entry.resource.content()).getAsJsonObject();
             if (!visibilityIsKnown(json)) {
                 diagnostics.add(diagnostic(sourceId, "visibility_unresolved",
                         "Excluded config/advancement-gated Patchouli entry " + entry.documentId,
