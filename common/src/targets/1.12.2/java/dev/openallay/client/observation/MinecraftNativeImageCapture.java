@@ -6,6 +6,11 @@ import org.lwjgl.opengl.GL11;
 /** Real synchronous LWJGL2 framebuffer readback at the native render boundary. */
 public final class MinecraftNativeImageCapture {
     private MinecraftNativeImageCapture() {}
+    public static void write(GuideImageBitmap image, java.nio.file.Path path) throws java.io.IOException {
+        java.awt.image.BufferedImage pixels = new java.awt.image.BufferedImage(image.width(), image.height(), java.awt.image.BufferedImage.TYPE_INT_ARGB);
+        pixels.setRGB(0, 0, image.width(), image.height(), image.argb(), 0, image.width());
+        if (!javax.imageio.ImageIO.write(pixels, "png", path.toFile())) throw new java.io.IOException("PNG encoder is unavailable");
+    }
     public static int width(Minecraft client) { return client.displayWidth; }
     public static int height(Minecraft client) { return client.displayHeight; }
     public static CompletableFuture<GuideImageBitmap> capture(Minecraft client) {

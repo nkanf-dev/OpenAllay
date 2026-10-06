@@ -2009,16 +2009,16 @@ final class GuideGraphicalRegressionProbe {
         try {
             Files.createDirectories(frameRoot);
             dev.openallay.client.observation.MinecraftNativeImageCapture.capture(
-                    MinecraftClientWindow.mainRenderTarget(client)).whenComplete((image, captureFailure) -> {
+                    client).whenComplete((image, captureFailure) -> {
                 if (captureFailure != null) {
                     saved.completeExceptionally(captureFailure);
                     return;
                 }
                 CompletableFuture.runAsync(() -> {
                     try (image) {
-                        int width = image.getWidth();
-                        int height = image.getHeight();
-                        image.writeToFile(path);
+                        int width = image.width();
+                        int height = image.height();
+                        dev.openallay.client.observation.MinecraftNativeImageCapture.write(image, path);
                         byte[] bytes = Files.readAllBytes(path);
                         saved.complete(Map.of("name", name, "path", path.toString(), "bytes", bytes.length,
                                 "sha256", HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes)),
