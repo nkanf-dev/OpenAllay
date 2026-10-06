@@ -10,6 +10,7 @@ import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLServerStartedEvent;
+import net.minecraftforge.fml.common.event.FMLServerStartingEvent;
 import net.minecraftforge.fml.common.event.FMLServerStoppedEvent;
 
 /** FML14 lifecycle entrypoint; feature startup remains in the canonical bootstrap. */
@@ -27,6 +28,10 @@ public final class OpenAllayNeoForge {
         NeoForgeBridgePayloads.register(runtime);
         NeoForgeDevelopmentCommands.register(runtime);
         if (NeoForgeNativeEnvironment.isClient()) OpenAllayNeoForgeClient.initialize(runtime);
+    }
+    @Mod.EventHandler
+    public void serverStarting(FMLServerStartingEvent event) {
+        NeoForgeNativeCommandRegistration.serverStarting(event);
     }
     @Mod.EventHandler
     public void serverStarted(FMLServerStartedEvent event) {
