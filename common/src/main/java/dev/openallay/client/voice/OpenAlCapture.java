@@ -19,7 +19,7 @@ import org.lwjgl.openal.EXTDisconnect;
 import org.lwjgl.system.MemoryStack;
 
 /** Uses Minecraft's bundled OpenAL capture provider, including its native format conversion. */
-public final class OpenAlCapture implements AudioCapture.Factory {
+public final class OpenAlCapture implements dev.openallay.client.voice.AudioCapture.Factory {
     public static final String DEFAULT_DEVICE_ID = "default";
     private static final int SAMPLE_RATE = 16_000;
     private static final int BUFFER_FRAMES = 3_200;
@@ -104,7 +104,7 @@ public final class OpenAlCapture implements AudioCapture.Factory {
         void close(long device);
     }
 
-    private final class Session implements CaptureOpenOwner.Prepared {
+    private final class Session implements dev.openallay.client.voice.CaptureOpenOwner.Prepared {
         private final String name;
         // A native handle must not be freed while read/start is using it. Open runs outside
         // this lock, so cancellation can fence an uninterruptible native open immediately.

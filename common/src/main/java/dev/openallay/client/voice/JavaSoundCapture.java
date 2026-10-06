@@ -19,7 +19,7 @@ import javax.sound.sampled.Mixer;
 import javax.sound.sampled.TargetDataLine;
 
 /** Uses the installed JavaSound provider for capture and any device-format conversion. */
-public final class JavaSoundCapture implements AudioCapture.Factory {
+public final class JavaSoundCapture implements dev.openallay.client.voice.AudioCapture.Factory {
     public static final String DEFAULT_DEVICE_ID = OpenAlCapture.DEFAULT_DEVICE_ID;
     private static final AudioFormat FORMAT = new AudioFormat(16_000, 16, 1, true, false);
     private static final int LINE_BUFFER_BYTES = 6_400;
@@ -59,7 +59,7 @@ public final class JavaSoundCapture implements AudioCapture.Factory {
         List<AudioCapture.Device> devices();
     }
 
-    private static final class Session implements CaptureOpenOwner.Prepared {
+    private static final class Session implements dev.openallay.client.voice.CaptureOpenOwner.Prepared {
         private final TargetDataLine line;
         private final AtomicBoolean closed = new AtomicBoolean();
 

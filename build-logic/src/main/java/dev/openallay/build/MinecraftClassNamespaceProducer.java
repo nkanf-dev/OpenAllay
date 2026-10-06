@@ -589,7 +589,7 @@ public final class MinecraftClassNamespaceProducer {
                 String expression = tree.getExpression().toString();
                 boolean nativeRoot = nativeDomain(expression) || nativeImports.keySet().stream().anyMatch(name -> expression.startsWith(name + "<"))
                         || contextInheritedTypes.values().stream().flatMap(types -> types.keySet().stream()).anyMatch(name -> expression.startsWith(name + "<"));
-                if (nativeRoot) failAt(tree, "Qualified generic/annotated nested native name requires a typed simpler spelling");
+                if (nativeRoot && typeContext(tree)) failAt(tree, "Qualified generic/annotated nested native name requires a typed simpler spelling");
             }
             if (!prefixes.isEmpty()) {
                 String root = prefixes.get(0).toString();

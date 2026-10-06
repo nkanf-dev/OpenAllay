@@ -7,7 +7,7 @@ import net.minecraft.client.Minecraft;
 /** NeoForge packet/lifecycle binding. Request behavior is inherited from one engine session. */
 public final class NeoForgeClientBridge extends ClientBridgeSession {
     public NeoForgeClientBridge() {
-        super(new NativeHost() {
+        super(new ClientBridgeSession.NativeHost() {
             @Override
             public Optional<Connection> captureConnection() {
                 Minecraft client = Minecraft.getInstance();

@@ -31,10 +31,9 @@ public final class MinecraftRecipeSnapshots {
             for (int index = 0; index < input.ingredients().size(); index++) {
                 List<IngredientAlternativeSnapshot> alternatives = MinecraftIngredientItems
                         .items(input.ingredients().get(index))
-                        .map(holder -> {
-                            String id = dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(
-                                    holder.unwrapKey().orElseThrow(
-                                            () -> new IllegalStateException("Unbound recipe item")));
+                        .map(item -> {
+                            String id = java.util.Objects.requireNonNull(MinecraftNativeRegistries.ITEM.getKey(item),
+                                    "Unbound recipe item").toString();
                             return new IngredientAlternativeSnapshot("item", id, List.of(id));
                         }).toList();
                 if (alternatives.isEmpty()) continue;
