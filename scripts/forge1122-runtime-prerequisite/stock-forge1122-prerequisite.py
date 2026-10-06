@@ -262,7 +262,7 @@ def prepare_launchwrapper_bridge(args, output, java, cp, runtime):
     javac = java.parent / "javac"
     jar_tool = java.parent / "jar"
     source_files = sorted(sources.glob("*.java"))
-    if getattr(args,"world_sdk",False):
+    if getattr(args,"creates_disposable_world",False):
         dimension_classes=output/"dimension-helper-classes";dimension_classes.mkdir()
         with (output/"dimension-helper-compile.log").open("w") as log:
             subprocess.run([str(javac),"--release","17","-d",str(dimension_classes),str(PACKET/"bridge/dimension17/DimensionEnumRuntime.java")],check=True,stdout=log,stderr=subprocess.STDOUT)
@@ -288,10 +288,13 @@ def prepare_launchwrapper_bridge(args, output, java, cp, runtime):
     test_cp = os.pathsep.join([str(agent)] + [str(path) for _, path in cp])
     test_main = "dev.openallay.runtime.forge1122.LaunchWrapperJava17BridgeTest"
     clean_env = {k:v for k,v in os.environ.items() if k not in ("JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "_JAVA_OPTIONS")}
-    if getattr(args,"world_sdk",False):
+    if getattr(args,"creates_disposable_world",False):
         runtime.write_json(output/"component-tests-reused.json",{"run":"37534098945","capabilityPhaseAndHelperTestsPassed":True,"oldStartupChecksReplayed":False})
-        with (output/"dimension-phase-test.log").open("w") as log:
-            subprocess.run([str(java),"-cp",test_cp,"dev.openallay.runtime.forge1122.DimensionEnumPhaseTest"],check=True,env=clean_env,stdout=log,stderr=subprocess.STDOUT)
+        if getattr(args,"world_sdk",False):
+            with (output/"dimension-phase-test.log").open("w") as log:
+                subprocess.run([str(java),"-cp",test_cp,"dev.openallay.runtime.forge1122.DimensionEnumPhaseTest"],check=True,env=clean_env,stdout=log,stderr=subprocess.STDOUT)
+        else:
+            runtime.write_json(output/"dimension-fixture-reused.json",{"acceptedRun":"37536792827","noStandaloneEnumCheckReplayed":True})
     elif getattr(args,"component_inputs",None):
         with (output/"capability-component-tests.log").open("w") as log:
             subprocess.run([str(java),"-cp",test_cp,"dev.openallay.runtime.forge1122.CapabilityPhaseTest"],check=True,env=clean_env,stdout=log,stderr=subprocess.STDOUT)
@@ -387,6 +390,8 @@ def boot(args, root, java, assets, runtime, launch, expected, vanilla, version):
         "-Dopenallay.objectholder.transformReceipt=" + str(output / "objectholder-transform.jsonl")]
         if args.objectholder_bridge else [])
     world_sdk=getattr(args,"world_sdk",False)
+    ui_manual=getattr(args,"ui_manual",False)
+    creates_world=getattr(args,"creates_disposable_world",world_sdk or ui_manual)
     binding_probe=getattr(args,"applied_bindings",False)
     component_flags = (["-Dopenallay.capability.enabled=true",
         "-Dopenallay.capability.writes="+str(output/"capability-writes.tsv"),
@@ -397,18 +402,46 @@ def boot(args, root, java, assets, runtime, launch, expected, vanilla, version):
     if binding_probe:
         component_flags += ["-Dopenallay.e2e.appliedBindings=true",
             "-Dopenallay.e2e.appliedBindingsReceipt="+str(output/"applied-bindings.json")]
-    if world_sdk:
-        name="openallay-builder-forge1122-sdk-"+str(os.getpid())
+    if creates_world:
         component_flags += ["-Dopenallay.dimension.helper="+str(output/"dimension-enum-bootstrap-helper.jar"),
             "-Dopenallay.dimension.valuesField=$VALUES",
             "-Dopenallay.dimension.bootstrapReceipt="+str(output/"dimension-bootstrap.json"),
             "-Dopenallay.dimension.transformReceipt="+str(output/"dimension-transform.json"),
-            "-Dopenallay.dimension.fixtureReceipt="+str(output/"dimension-fixture.json"),"-Dopenallay.e2e.enabled=true","-Dopenallay.e2e.scenario=native-world-sdk",
+            "-Dopenallay.dimension.fixtureReceipt="+str(output/"dimension-fixture.json")]
+    if world_sdk:
+        name="openallay-builder-forge1122-sdk-"+str(os.getpid())
+        component_flags += ["-Dopenallay.e2e.enabled=true","-Dopenallay.e2e.scenario=native-world-sdk",
             "-Dopenallay.e2e.question=Native WorldSession SDK acceptance",
             "-Dopenallay.e2e.report="+str(output/"world-sdk-report.json"),
             "-Dopenallay.e2e.createWorld="+name,"-Dopenallay.e2e.shutdown=true","-Dopenallay.e2e.timeoutSeconds=300"]
         runtime.write_json(output/"world-fixture.json",{"name":name,"freshProfile":True,"commandsAllowed":False,
             "modelInvocation":False,"unrestrictedJavascript":False,"expectedShutdown":"natural-unsignalled-exit0"})
+    fixture_process=None
+    fixture_stream=None
+    if ui_manual:
+        import secrets
+        packet=PACKET/"ui-fixture"
+        settings=game/"config/openallay";settings.mkdir(parents=True,exist_ok=True)
+        for name in ("models.json","voice.json"):
+            (settings/name).write_bytes((packet/name).read_bytes())
+        (game/"options.txt").write_bytes((packet/"options.txt").read_bytes())
+        properties=json.loads((packet/"jvm-properties.json").read_text())
+        source=component_receipt["nativeCompiledSource"]
+        replacements={"${EVIDENCE}":str(output),"${EXACT_PRODUCT_SOURCE_REVISION}":source,
+            "${EXACT_PRODUCT_SOURCE_MANIFEST_SHA256}":sha(Path(component))}
+        for key,value in properties.items():
+            for placeholder,actual in replacements.items():value=value.replace(placeholder,actual)
+            if "${" in value:raise ValueError("Unresolved UI source/evidence identity")
+            component_flags.append("-D"+key+"="+value)
+        fixture_key=secrets.token_hex(24)
+        os.environ["OPENALLAY_E2E_FIXTURE_KEY"]=fixture_key
+        fixture_stream=(output/"model-fixture.log").open("w")
+        fixture_process=subprocess.Popen([sys.executable,"-B",str(args.repo/"scripts/e2e-model-fixture.py"),"--port","18765"],
+            cwd=args.repo,stdout=fixture_stream,stderr=subprocess.STDOUT,start_new_session=True,
+            env={**os.environ,"OPENALLAY_E2E_FIXTURE_KEY":fixture_key})
+        runtime.write_json(output/"ui-fixture.json",{"loopbackOnly":"127.0.0.1:18765","syntheticCredential":True,
+            "profile":"e2e-fixture","worldCommandsAllowed":False,"freshProfile":True,
+            "nativeCompiledSource":source,"actualCustodyManifestSha256":sha(Path(component)),"sourceManifestKind":"provider-bound-component-custody"})
     command = [str(java), "-Xms256M", "-Xmx1536M",
                "-Xlog:class+load=info:file=" + str(output / "class-load.log")] + bridge_flags + pack200_flags + objectholder_flags + component_flags + (["-Dopenallay.objectholder.phaseDiagnostic=true"] if args.objectholder_phase_diagnostic else []) + (["-Dorg.lwjgl.util.Debug=true"] if args.title_only else []) + jvm + [MAIN] + game_args
     env = {k:v for k,v in os.environ.items() if k not in ("JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "_JAVA_OPTIONS")}
@@ -425,9 +458,9 @@ def boot(args, root, java, assets, runtime, launch, expected, vanilla, version):
         process = subprocess.Popen(command, cwd=game, env=env, stdout=stream, stderr=subprocess.STDOUT, start_new_session=True)
         receipt["clientPid"] = process.pid
         try:
-            if world_sdk:
+            if creates_world:
                 try:
-                    process.wait(timeout=330)
+                    process.wait(timeout=660 if ui_manual else 330)
                     receipt["status"]="world-client-exited"
                 except subprocess.TimeoutExpired:
                     receipt["status"]="fatal-world-timeout"
@@ -448,6 +481,9 @@ def boot(args, root, java, assets, runtime, launch, expected, vanilla, version):
                         receipt["status"] = "captured-awaiting-title-review"
         finally:
             receipt["termination"] = stop_owned(process)
+            if fixture_process is not None:
+                receipt["fixtureTermination"]=stop_owned(fixture_process)
+                fixture_stream.close()
             receipt["endedAt"] = datetime.now(timezone.utc).isoformat()
             stream.flush()
             receipt["clientLogSha256"] = sha(log)
@@ -513,8 +549,23 @@ def boot(args, root, java, assets, runtime, launch, expected, vanilla, version):
             receipt["status"]="accepted-world-sdk-and-bindings";receipt["accepted"]=True
         else:receipt["status"]="fatal-world-sdk-or-binding-proof";receipt["accepted"]=False
         runtime.write_json(output/"receipt.json",receipt)
+    if ui_manual:
+        report_path=output/"ui-manual-report.json"
+        ui=json.loads(report_path.read_text()) if report_path.is_file() else {}
+        oracle_path=output/"applied-bindings.json";oracle=json.loads(oracle_path.read_text()) if oracle_path.is_file() else {}
+        clean=receipt["termination"]["finalExitCode"]==0 and not receipt["termination"]["signals"]
+        passed=ui.get("outcome") in ("COMPLETED","PASSED")
+        screenshots=list((output/"frames").rglob("*.png")) if (output/"frames").is_dir() else []
+        accepted=passed and clean and oracle.get("accepted") is True and bool(screenshots) and (output/"dimension-fixture.json").is_file()
+        runtime.write_json(output/"ui-manual-acceptance.json",{"accepted":accepted,"reportPassed":passed,
+            "actualAppliedBindings":oracle.get("accepted",False),"cleanUnsignalledExit0":clean,"frameCount":len(screenshots),
+            "fullFunctionalScenario":"ui-manual-regressions","nativeCompiledSource":component_receipt["nativeCompiledSource"]})
+        if accepted and receipt["status"] not in ("fatal-component-proof-incomplete","fatal-applied-binding-proof"):
+            receipt["status"]="accepted-ui-manual-and-bindings";receipt["accepted"]=True
+        else:receipt["status"]="fatal-ui-manual-or-binding-proof";receipt["accepted"]=False
+        runtime.write_json(output/"receipt.json",receipt)
     # A window or screenshot alone is not a title-success claim.
-    return 0 if receipt["status"] in ("captured-awaiting-title-review","accepted-world-sdk-and-bindings") else 1
+    return 0 if receipt["status"] in ("captured-awaiting-title-review","accepted-world-sdk-and-bindings","accepted-ui-manual-and-bindings") else 1
 
 
 def main():

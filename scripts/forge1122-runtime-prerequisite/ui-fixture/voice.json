@@ -1,0 +1,13 @@
+{
+  "enabled": false,
+  "backend": "NATIVE",
+  "deviceId": "default",
+  "maxClipSeconds": 20,
+  "language": "auto",
+  "cpuThreads": 2,
+  "nativeModelDirectory": "",
+  "httpBaseUrl": "http://127.0.0.1:8080/v1",
+  "httpModel": "whisper-1",
+  "credentialRef": null,
+  "gameplayAction": "SEND"
+}
