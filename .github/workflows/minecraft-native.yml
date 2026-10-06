@@ -34,22 +34,30 @@ jobs:
           run-id: 37428024273
           artifact-ids: 11395936631
           path: build/forge36-shared
-      - name: Reuse shared inputs, isolate only Builder annotations, and scan owners
+      - name: Retrieve the already isolated immutable Builder component
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        with:
+          github-token: ${{ github.token }}
+          run-id: 37429372559
+          artifact-ids: 11395574649
+          path: build/forge36-artifacts/retained-builder
+      - name: Verify all retained component inputs and scan owners
         env:
           GH_TOKEN: ${{ github.token }}
         run: python3 -B scripts/forge16165-engine-prerequisite/build-prerequisite.py --phase scan --reuse-shared
-      - name: Retain the changed Builder component independently of later gates
+      - name: Compile and reobfuscate only the genuine Forge36 probe
+        run: python3 -B scripts/forge16165-engine-prerequisite/build-prerequisite.py --phase probe
+      - name: Retain the tiny probe producer before any packing or client boundary
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: forge36-builder-component-${{ github.sha }}-${{ github.run_attempt }}
+          name: forge36-probe-component-${{ github.sha }}-${{ github.run_attempt }}
           retention-days: 14
           if-no-files-found: ignore
           path: |
-            build/forge36-artifacts/builder-isolated.jar
-            build/forge36-artifacts/builder-isolation-provenance.json
-      - name: Compile and reobfuscate only the genuine Forge36 probe
-        run: python3 -B scripts/forge16165-engine-prerequisite/build-prerequisite.py --phase probe
+            scripts/forge16165-engine-prerequisite/probe/build/probe-metadata/
+            scripts/forge16165-engine-prerequisite/probe/build/libs/openallay-forge36-probe-0.4.3.jar
+            build/forge36-artifacts/probe-inputs.json
       - name: Pack unchanged shared class and resource owners into the sole mod
         run: python3 -B scripts/forge16165-engine-prerequisite/build-prerequisite.py --phase pack
       - name: Install isolated native display dependencies

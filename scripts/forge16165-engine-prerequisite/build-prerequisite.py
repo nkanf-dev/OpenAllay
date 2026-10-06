@@ -42,32 +42,24 @@ def main():
         active_spec=shared/'closure-input.json'
         if options.reuse_shared:
             builder_source='e37eb4f325d6917b2a0b32afc47dd139a55acb83'
-            builder_base='56d26246a3a5fad654379d5f837f0a12104b6015'
-            checkout=ROOT/'build/forge36-builder-source'
-            checkout.mkdir()
-            run(['git','init',str(checkout)])
-            run(['git','-C',str(checkout),'remote','add','origin','https://github.com/nkanf-dev/OpenAllay-Extensions.git'])
-            run(['git','-C',str(checkout),'fetch','--depth=2','origin','mc/forge16165-builder-dependency-isolation'])
-            run(['git','-C',str(checkout),'checkout','--detach',builder_source])
-            actual=subprocess.check_output(['git','-C',str(checkout),'rev-parse','HEAD'],text=True).strip()
-            if actual!=builder_source:raise ValueError('Candidate Builder source identity differs')
-            changed=subprocess.check_output(['git','-C',str(checkout),'diff','--name-only',builder_base,builder_source],text=True).splitlines()
-            if changed!=['extensions/minecraft-builder/universal/build.gradle']:
-                raise ValueError('Candidate Builder changes more than private dependency packaging')
-            original=subprocess.check_output(['git','-C',str(checkout),'show',builder_base+':extensions/minecraft-builder/universal/build.gradle'])
-            candidate=(checkout/'extensions/minecraft-builder/universal/build.gradle').read_bytes()
-            addition=b"    relocate 'com.google.errorprone.annotations', 'dev.openallay.builder.internal.errorprone.annotations'\n"
-            if candidate.count(addition)!=1 or candidate.replace(addition,b'',1)!=original:
-                raise ValueError('Unexpected Builder packaging change')
-            run([str(ROOT/'gradlew'),'--max-workers=2','--stacktrace','-p',str(checkout/'extensions/minecraft-builder'),
-                 '-PopenallayExtensionApiJar='+str(shared/'sdk.jar'),':universal:assemble','verifyUniversalPackage'])
-            built=checkout/'extensions/minecraft-builder/universal/build/libs/openallay-builder-universal-0.4.0.jar'
-            isolated=out/'builder-isolated.jar';shutil.copyfile(built,isolated)
+            retained_component=out/'retained-builder/builder-isolated.jar'
+            retained_provenance=out/'retained-builder/builder-isolation-provenance.json'
+            component=json.loads(subprocess.check_output(['gh','api','repos/'+os.environ['GITHUB_REPOSITORY']+'/actions/artifacts/11395574649']))
+            if (component['expired'] or component['workflow_run']['id']!=37429372559
+                    or component['workflow_run']['head_sha']!='41243d95af42217468e9ca62f703889ab292d5e8'
+                    or component['digest']!='sha256:0495603d813ee58437d6976c36399e340d09c75458ceb2dce399ac9f11065e8e'):
+                raise ValueError('Retained candidate Builder archive identity differs')
+            provenance=json.loads(retained_provenance.read_text())
+            if (provenance['source']!=builder_source or digest(retained_component)!=provenance['candidateBuilder']['sha256']
+                    or provenance['retainedSdkSha256']!=digest(shared/'sdk.jar')):
+                raise ValueError('Retained candidate Builder package/source/SDK identity differs')
+            isolated=out/'builder-isolated.jar';shutil.copyfile(retained_component,isolated)
             with zipfile.ZipFile(isolated) as jar:
                 names=jar.namelist()
                 private=[name for name in names if name.startswith('dev/openallay/builder/internal/errorprone/annotations/') and name.endswith('.class')]
                 if len(private)!=29 or any(name.startswith('com/google/errorprone/') for name in names):
                     raise ValueError('Candidate Builder annotation isolation is incomplete')
+            builder_base=provenance['baseSource']
             original_builder=next(entry.copy() for entry in spec['artifacts'] if entry['role']=='builder')
             for entry in spec['artifacts']:
                 if entry['role']=='builder':entry.update(path=str(isolated),sha256=digest(isolated))

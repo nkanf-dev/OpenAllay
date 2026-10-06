@@ -64,7 +64,8 @@ def snapshot = tasks.register('snapshotProbeJar', Copy) {
     into(before.map { it.asFile.parentFile })
     rename { 'probe-before-reobf.jar' }
 }
-tasks.named('reobfJar') { dependsOn snapshot }
+// ForgeGradle registers reobfJar after project evaluation. Configure its normal task lazily.
+tasks.matching { it.name == 'reobfJar' }.configureEach { dependsOn snapshot }
 tasks.register('emitProbeMetadata') {
     dependsOn 'reobfJar'
     outputs.file(layout.buildDirectory.file('probe-metadata/probe-build.json'))
