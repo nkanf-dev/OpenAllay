@@ -24,7 +24,7 @@ public final class MinecraftSemanticResolver {
 
     public ItemPresentation item(String itemId, String suppliedLabel, long count) {
         String fallback = suppliedLabel == null || suppliedLabel.isBlank() ? itemId : suppliedLabel;
-        Minecraft minecraft = Minecraft.getInstance();
+        Minecraft minecraft = MinecraftClientWindow.instance();
         if (!MinecraftClientWindow.ownerThread(minecraft)) {
             return new ItemPresentation(itemId, fallback, count, ItemStack.EMPTY, false);
         }

@@ -8,7 +8,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
-import net.minecraft.client.Minecraft;
+import dev.openallay.client.gui.MinecraftClientWindow;
 
 /** One Screen's visible native-view lifecycle and provider fallback owner. */
 public final class NativeDomainViewRegistry implements AutoCloseable {
@@ -23,7 +23,7 @@ public final class NativeDomainViewRegistry implements AutoCloseable {
         this(
                 NativeDomainViewProviderRegistry::providers,
                 new GenericRecipeNativeViewProvider(),
-                () -> Minecraft.getInstance().isSameThread());
+                () -> MinecraftClientWindow.ownerThread(MinecraftClientWindow.instance()));
     }
 
     NativeDomainViewRegistry(
