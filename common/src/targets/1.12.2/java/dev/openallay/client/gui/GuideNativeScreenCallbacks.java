@@ -66,13 +66,9 @@ public abstract class GuideNativeScreenCallbacks extends GuiScreen implements Gu
         dragX = x;
         dragY = y;
         if (guideMouseClicked(GuideNativeInput.capture((double) x, (double) y, button), false)) mouseHandled = true;
-        else super.mouseClicked(x, y, button);
     }
     @Override protected final void mouseReleased(int x, int y, int button) {
-        boolean handled = guideMouseReleased(GuideNativeInput.capture((double) x, (double) y, button));
-        // Always clear native selectedButton, even if a feature consumed release.
-        super.mouseReleased(x, y, button);
-        if (handled) mouseHandled = true;
+        if (guideMouseReleased(GuideNativeInput.capture((double) x, (double) y, button))) mouseHandled = true;
     }
     @Override protected final void mouseClickMove(int x, int y, int button, long heldMillis) {
         int dx = x - dragX;
@@ -101,9 +97,21 @@ public abstract class GuideNativeScreenCallbacks extends GuiScreen implements Gu
     public boolean guideCharTyped(GuideInputCharacter event) {
         return guideFocused != null && guideFocused.guideCharTyped(event);
     }
-    public boolean guideMouseClicked(GuideInputMouse event, boolean doubleClick) { return false; }
+    public boolean guideMouseClicked(GuideInputMouse event, boolean doubleClick) {
+        try {
+            // Both physical callbacks and typed product dispatch enter the same real native button route.
+            super.mouseClicked((int) event.x(), (int) event.y(), event.button());
+            return event.leftClick() && selectedButton != null;
+        } catch (IOException failure) {
+            throw new java.io.UncheckedIOException(failure);
+        }
+    }
     public boolean guideMouseDragged(GuideInputMouse event, double dx, double dy) { return false; }
-    public boolean guideMouseReleased(GuideInputMouse event) { return false; }
+    public boolean guideMouseReleased(GuideInputMouse event) {
+        boolean selected = selectedButton != null && event.leftClick();
+        super.mouseReleased((int) event.x(), (int) event.y(), event.button());
+        return selected;
+    }
     public boolean guideMouseScrolled(double x, double y, double horizontal, double vertical) { return false; }
     @Override public final void guideSetFocused(boolean focused) {
         super.setFocused(focused);

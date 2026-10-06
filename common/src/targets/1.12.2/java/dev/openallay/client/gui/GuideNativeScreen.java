@@ -78,7 +78,8 @@ public abstract class GuideNativeScreen extends GuideNativeScreenCallbacks {
         return getGuideFocused() != null && getGuideFocused().guideMouseDragged(event, dx, dy);
     }
     @Override public boolean guideMouseReleased(GuideInputMouse event) {
-        return getGuideFocused() != null && getGuideFocused().guideMouseReleased(event);
+        boolean focused = getGuideFocused() != null && getGuideFocused().guideMouseReleased(event);
+        return super.guideMouseReleased(event) || focused;
     }
     @Override public boolean guideMouseScrolled(double x, double y, double horizontal, double vertical) {
         for (GuiButton button : buttonList) {
