@@ -1,0 +1,110 @@
+{
+  "target": "1.12.2",
+  "java": [
+    {
+      "owner": "adapter",
+      "logicalPath": "dev/openallay/adapter/minecraft/v26_2/world/NativeActorState.java",
+      "origin": "adapters/minecraft/src/targets/1.16.5/java/dev/openallay/adapter/minecraft/v26_2/world/NativeActorState.java",
+      "sha256": "0a5297396705c79b42008086b527db34c7404a6d5522a6d7c035beaa063505f4",
+      "reason": "Superseded by the typed 1.12 WorldBinding; no remaining canonical caller after binding refactor"
+    },
+    {
+      "owner": "adapter",
+      "logicalPath": "dev/openallay/adapter/minecraft/v26_2/world/NativeChunkCoordinates.java",
+      "origin": "adapters/minecraft/src/targets/1.16.5/java/dev/openallay/adapter/minecraft/v26_2/world/NativeChunkCoordinates.java",
+      "sha256": "0ffa9ea42057502860b74b090fd90e34fafaf78ea649bd8bfc5518d8945167c5",
+      "reason": "Superseded by the typed 1.12 WorldBinding; no remaining canonical caller after binding refactor"
+    },
+    {
+      "owner": "adapter",
+      "logicalPath": "dev/openallay/adapter/minecraft/v26_2/world/NativeChunkDirty.java",
+      "origin": "adapters/minecraft/src/targets/1.21.1/java/dev/openallay/adapter/minecraft/v26_2/world/NativeChunkDirty.java",
+      "sha256": "8089e10fe6031ff4a5b5894d8e28004f91af795fc68ef3da6370ca8599272eb5",
+      "reason": "Superseded by the typed 1.12 WorldBinding; no remaining canonical caller after binding refactor"
+    },
+    {
+      "owner": "adapter",
+      "logicalPath": "dev/openallay/adapter/minecraft/v26_2/world/NativeChunkSections.java",
+      "origin": "adapters/minecraft/src/targets/1.16.5/java/dev/openallay/adapter/minecraft/v26_2/world/NativeChunkSections.java",
+      "sha256": "a1c727cab2d78f258f7d9d448669ce747c950636907a16ea6731f0093e679acc",
+      "reason": "Superseded by the typed 1.12 WorldBinding; no remaining canonical caller after binding refactor"
+    },
+    {
+      "owner": "adapter",
+      "logicalPath": "dev/openallay/adapter/minecraft/v26_2/world/NativeClientPlayerLevel.java",
+      "origin": "adapters/minecraft/src/targets/1.16.5/java/dev/openallay/adapter/minecraft/v26_2/world/NativeClientPlayerLevel.java",
+      "sha256": "982b4b6527675201e955bd6be0b72fbd806445713aa53bbedeb554282866e993",
+      "reason": "Superseded by the typed 1.12 WorldBinding; no remaining canonical caller after binding refactor"
+    },
+    {
+      "owner": "adapter",
+      "logicalPath": "dev/openallay/adapter/minecraft/v26_2/world/NativeContainerEntityTypes.java",
+      "origin": "adapters/minecraft/src/targets/1.16.5/java/dev/openallay/adapter/minecraft/v26_2/world/NativeContainerEntityTypes.java",
+      "sha256": "f3ea7cd97f84e2e901f3b03484b0d40d15d10b42623aa7b69bc5c0fa3e29157d",
+      "reason": "Superseded by the typed 1.12 WorldBinding; no remaining canonical caller after binding refactor"
+    },
+    {
+      "owner": "adapter",
+      "logicalPath": "dev/openallay/adapter/minecraft/v26_2/world/NativeContainerFieldNames.java",
+      "origin": "adapters/minecraft/src/targets/1.16.5/java/dev/openallay/adapter/minecraft/v26_2/world/NativeContainerFieldNames.java",
+      "sha256": "57b639abd3c519d6d3b49535306ab3ba24d3cd9eaca6d4caf577cd418e2ad22f",
+      "reason": "Superseded by the typed 1.12 WorldBinding; no remaining canonical caller after binding refactor"
+    },
+    {
+      "owner": "adapter",
+      "logicalPath": "dev/openallay/adapter/minecraft/v26_2/world/NativeContainerLocks.java",
+      "origin": "adapters/minecraft/src/targets/1.16.5/java/dev/openallay/adapter/minecraft/v26_2/world/NativeContainerLocks.java",
+      "sha256": "ef800afcdc9508a6169cfb6c4a51db3a7f5dd8f62e15b4611478b5896f9e522f",
+      "reason": "Superseded by the typed 1.12 WorldBinding; no remaining canonical caller after binding refactor"
+    },
+    {
+      "owner": "adapter",
+      "logicalPath": "dev/openallay/adapter/minecraft/v26_2/world/NativeContainerLootTables.java",
+      "origin": "adapters/minecraft/src/targets/1.16.5/java/dev/openallay/adapter/minecraft/v26_2/world/NativeContainerLootTables.java",
+      "sha256": "dec0087483eae3bdb45f763e6aa93154e0532c447aee399ddebc9e646b6032c1",
+      "reason": "Superseded by the typed 1.12 WorldBinding; no remaining canonical caller after binding refactor"
+    },
+    {
+      "owner": "adapter",
+      "logicalPath": "dev/openallay/adapter/minecraft/v26_2/world/NativeDirectBlockEntityCalls.java",
+      "origin": "adapters/minecraft/src/targets/1.16.5/java/dev/openallay/adapter/minecraft/v26_2/world/NativeDirectBlockEntityCalls.java",
+      "sha256": "892211846364011f959bf2d75ffaaeacaae564c3e6d9dcc6163f91f4e157fc2c",
+      "reason": "Superseded by the typed 1.12 WorldBinding; no remaining canonical caller after binding refactor"
+    },
+    {
+      "owner": "adapter",
+      "logicalPath": "dev/openallay/adapter/minecraft/v26_2/world/NativeFactoryBlockReader.java",
+      "origin": "adapters/minecraft/src/targets/1.16.5/java/dev/openallay/adapter/minecraft/v26_2/world/NativeFactoryBlockReader.java",
+      "sha256": "e241f0c42df8c1c028bdef9097d096d2e7f36e4d797f9813f1583d3e569428c1",
+      "reason": "Superseded by the typed 1.12 WorldBinding; no remaining canonical caller after binding refactor"
+    },
+    {
+      "owner": "adapter",
+      "logicalPath": "dev/openallay/adapter/minecraft/v26_2/world/NativePlayerConnection.java",
+      "origin": "adapters/minecraft/src/targets/1.16.5/java/dev/openallay/adapter/minecraft/v26_2/world/NativePlayerConnection.java",
+      "sha256": "67b19600ba059d085387cc90bc237ab6ea83685fbd5dbc78f099dbc73c471081",
+      "reason": "Superseded by the typed 1.12 WorldBinding; no remaining canonical caller after binding refactor"
+    },
+    {
+      "owner": "adapter",
+      "logicalPath": "dev/openallay/adapter/minecraft/v26_2/world/NativeServerPlayerLevel.java",
+      "origin": "adapters/minecraft/src/targets/1.16.5/java/dev/openallay/adapter/minecraft/v26_2/world/NativeServerPlayerLevel.java",
+      "sha256": "9c927e1a3c6f9f68b8e5ed0bed8c9467843b8d39297b1ac0f29af8aa1cc650a5",
+      "reason": "Superseded by the typed 1.12 WorldBinding; no remaining canonical caller after binding refactor"
+    },
+    {
+      "owner": "adapter",
+      "logicalPath": "dev/openallay/adapter/minecraft/v26_2/world/NativeTerrainHeightmap.java",
+      "origin": "adapters/minecraft/src/targets/1.16.5/java/dev/openallay/adapter/minecraft/v26_2/world/NativeTerrainHeightmap.java",
+      "sha256": "167b640fa88511d200fa11e3cafc5707c19d324c5267d7e141e69dd4e809a3db",
+      "reason": "Superseded by the typed 1.12 WorldBinding; no remaining canonical caller after binding refactor"
+    },
+    {
+      "owner": "adapter",
+      "logicalPath": "dev/openallay/adapter/minecraft/v26_2/world/NativeWorldHeight.java",
+      "origin": "adapters/minecraft/src/targets/1.16.5/java/dev/openallay/adapter/minecraft/v26_2/world/NativeWorldHeight.java",
+      "sha256": "b14c1ed0af4b17a4b5e5a3e6704fe1fbe62f74f20bbf9a1fbc0b52daa486ebec",
+      "reason": "Superseded by the typed 1.12 WorldBinding; no remaining canonical caller after binding refactor"
+    }
+  ]
+}
