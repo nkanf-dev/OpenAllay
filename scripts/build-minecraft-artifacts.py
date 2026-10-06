@@ -269,6 +269,160 @@ BUILD_RECEIPT_FIELDS = {"kind", "outcome", "sourceSha", "version", "sourceRunId"
                         "family", "artifactSha256", "engineManifestSha256", "commands", "sqlite", "sharedRuntimes"}
 
 
+RELEASE_BUILD_SELECTION = "distribution/release-build-selection.json"
+REUSE_GROUP_FIELDS = {"target", "sourceSha", "runId", "runAttempt", "jobId", "jobName", "artifactId", "artifactName",
+                      "archiveSha256", "engineManifestSha256", "familyArtifacts"}
+# These exact orchestration paths do not contribute production source or pins.
+REUSE_ORCHESTRATION_PATHS = {
+    RELEASE_BUILD_SELECTION, ".github/workflows/minecraft-native.yml", ".github/workflows/release.yml",
+    "scripts/build-minecraft-artifacts.py", "scripts/verify-release-package-source.py",
+    "scripts/fetch-release-build-groups.py",
+    "docs/releases/0.4.3.md", "README.md", "README.zh-CN.md", "docs/native-binary-artifacts.md",
+}
+REUSE_NATIVE_PATHS = {
+    "common/src/targets/1.20.1/java/dev/openallay/integration/jei/MinecraftJeiRecipeApi.java",
+    "adapters/minecraft/src/targets/1.21.10/java/dev/openallay/adapter/minecraft/v26_2/world/NativeWorldRegistries.java",
+    "common/src/targets/1.21.11/java/dev/openallay/platform/minecraft/MinecraftResourceAccess.java",
+    "common/src/targets/1.21.10/java/dev/openallay/platform/minecraft/MinecraftResourceAccess.java",
+    "common/src/targets/26.3/java/dev/openallay/platform/minecraft/MinecraftResourceAccess.java",
+    "common/src/targets/1.19.2/java/dev/openallay/integration/jei/MinecraftJeiRecipeApi.java",
+}
+NATIVE_LEAF = re.compile(r"^(common|adapters/minecraft|fabric|neoforge|forge)/src/targets/([^/]+)/(java|resources)/(.+)$")
+
+
+def git_output(*arguments, binary=False):
+    return subprocess.check_output(["git", *arguments], cwd=ROOT, text=not binary)
+
+
+def selected_native_roots(target):
+    """Read the unchanged selector's literal external-target and parent maps."""
+    source = (ROOT / "gradle/minecraft-targets.gradle").read_text()
+    maps = []
+    for name in ("nativeFamilies", "nativeFamilyParents"):
+        found = re.findall(r"def " + name + r" = \[([^\n]+)\]", source)
+        require(len(found) == 1, "Cannot read exact native source selector map: " + name)
+        pairs = re.findall(r"'([^']+)': '([^']+)'", found[0])
+        require(pairs and len(dict(pairs)) == len(pairs)
+                and re.sub(r"'[^']+': '[^']+'", "", found[0]).replace(",", "").strip() == "",
+                "Unsupported native source selector map syntax")
+        maps.append(dict(pairs))
+    families, parents = maps
+    require(target in families, "Unknown selected native target")
+    chain = [families[target]]
+    while chain[0] in parents:
+        parent = parents[chain[0]]
+        require(parent not in chain, "Cyclic native source family parents")
+        chain.insert(0, parent)
+    if target not in chain:
+        chain.append(target)
+    return chain
+
+
+def selected_native_blob(tree, revision, module, scope, relative, target, loader):
+    """Match checked-in source-set override order, not an allowed target list."""
+    chain = selected_native_roots(target)
+    actual_modules = {"common", "adapters/minecraft", loader}
+    if loader == "forge":
+        actual_modules.add("neoforge")
+    if module not in actual_modules:
+        return None
+    roots = (["neoforge", "forge"] if module in ("neoforge", "forge") and loader == "forge" else [module])
+    if module in ("fabric", "neoforge", "forge") and module not in roots:
+        return None
+    candidates = []
+    for index, root in enumerate(roots):
+        # Forge has no own main source root in the actual loader convention.
+        if index == 0:
+            candidates.append(root + "/src/main/" + scope + "/" + relative)
+        candidates.extend(root + "/src/targets/" + family + "/" + scope + "/" + relative for family in chain)
+    selected = next((path for path in reversed(candidates) if path in tree), None)
+    return None if selected is None else git_output("show", revision + ":" + selected, binary=True)
+
+
+def verify_reused_source(old_source, current_source, families):
+    require(re.fullmatch(r"[0-9a-f]{40}", old_source) is not None and old_source != current_source,
+            "Expected exact original source commit")
+    subprocess.run(["git", "merge-base", "--is-ancestor", old_source, current_source], cwd=ROOT, check=True)
+    changed = git_output("diff", "--no-renames", "--name-only", "-z", old_source, current_source).split("\0")
+    native_units = set()
+    for path in filter(None, changed):
+        if path in REUSE_ORCHESTRATION_PATHS:
+            continue
+        require(path in REUSE_NATIVE_PATHS, "Reused release source changes an unapproved native leaf: " + path)
+        match = NATIVE_LEAF.fullmatch(path)
+        require(match is not None, "Reused release source has an out-of-scope production change: " + path)
+        module, _, scope, relative = match.groups()
+        require(".." not in relative.split("/") and (scope != "java" or relative.endswith(".java")),
+                "Expected a native target compilation/resource leaf")
+        native_units.add((module, scope, relative))
+    # Selector/conventions/profiles are outside the allowlist, so their bytes
+    # cannot change. Check old/new effective source bytes, including relocations.
+    old_tree = set(git_output("ls-tree", "-r", "--name-only", "-z", old_source).split("\0"))
+    current_tree = set(git_output("ls-tree", "-r", "--name-only", "-z", current_source).split("\0"))
+    for family in families:
+        for target in family["supportedTargets"]:
+            for module, scope, relative in native_units:
+                old = selected_native_blob(old_tree, old_source, module, scope, relative, target, family["loader"])
+                new = selected_native_blob(current_tree, current_source, module, scope, relative, target, family["loader"])
+                require(old == new, "Reused native source changed for " + family["id"] + " on " + target
+                        + ": " + module + "/" + scope + "/" + relative)
+
+
+def read_reuse_selection():
+    path = ROOT / RELEASE_BUILD_SELECTION
+    if not path.exists():
+        return {}
+    data = artifacts.read_json(path)
+    artifacts.shape(data, {"version", "groups"}, "Release build selection")
+    require(data["version"] == version() and type(data["groups"]) is list and data["groups"],
+            "Release reuse selection must match the current product release")
+    selected = {}
+    accepted = catalog()["acceptedFamilies"]
+    for group in data["groups"]:
+        artifacts.shape(group, REUSE_GROUP_FIELDS, "Approved original build group")
+        target = group["target"]
+        families = [family for family in accepted if family["buildTarget"] == target]
+        require(families and target not in selected, "Unknown or duplicate approved build group")
+        require(type(group["sourceSha"]) is str and re.fullmatch(r"[0-9a-f]{40}", group["sourceSha"]),
+                "Approved group needs its exact original source commit")
+        for key in ("runId", "runAttempt", "jobId", "artifactId"):
+            require(type(group[key]) is int and group[key] > 0, "Approved group needs a positive external " + key)
+        for key in ("jobName", "artifactName"):
+            artifacts.text(group[key], key)
+        for key in ("archiveSha256", "engineManifestSha256"):
+            artifacts.hash_text(group[key])
+        rows = group["familyArtifacts"]
+        require(type(rows) is list and len(rows) == len(families), "Approved group must bind every original family")
+        observed = set()
+        for row in rows:
+            artifacts.shape(row, {"id", "artifactSha256", "receiptSha256"}, "Approved original family bytes")
+            require(row["id"] in {family["id"] for family in families} and row["id"] not in observed,
+                    "Unknown or duplicate approved family bytes")
+            observed.add(row["id"])
+            artifacts.hash_text(row["artifactSha256"])
+            artifacts.hash_text(row["receiptSha256"])
+        selected[target] = group
+    return selected
+
+
+def verify_receipt_source(family, receipt, receipt_path, current_source, engine_sha, selection, verified_groups):
+    if receipt["sourceSha"] == current_source:
+        return
+    group = selection.get(family["buildTarget"])
+    require(group is not None, "Older-source receipt lacks exact checked-in release reuse approval")
+    require(receipt["sourceSha"] == group["sourceSha"] and receipt["sourceRunId"] == str(group["runId"])
+            and receipt["sourceRunAttempt"] == str(group["runAttempt"])
+            and engine_sha == group["engineManifestSha256"], "Original group source/run/engine differs from approval")
+    row = next(row for row in group["familyArtifacts"] if row["id"] == family["id"])
+    require(receipt["artifactSha256"] == row["artifactSha256"]
+            and artifacts.file_hash(receipt_path, artifacts.MAX_JSON_BYTES) == row["receiptSha256"],
+            "Original artifact/receipt bytes differ from exact reuse approval")
+    if group["target"] not in verified_groups:
+        group_families = [item for item in catalog()["acceptedFamilies"] if item["buildTarget"] == group["target"]]
+        verify_reused_source(group["sourceSha"], current_source, group_families)
+        verified_groups.add(group["target"])
+
+
 def verify_build_receipts(families, directory, receipt_directory):
     """Verify new compiled release bytes. This receipt class carries no game result."""
     require(receipt_directory.is_dir(), "Missing compile/package build receipts")
@@ -279,6 +433,8 @@ def verify_build_receipts(families, directory, receipt_directory):
     engine_sha = artifacts.file_hash(engine_path, artifacts.MAX_JSON_BYTES)
     engine = artifacts.read_json(engine_path)
     source = source_identity()
+    reuse_selection = read_reuse_selection()
+    verified_groups = set()
     release_version = version()
     receipts = []
     for family in families:
@@ -286,9 +442,10 @@ def verify_build_receipts(families, directory, receipt_directory):
         artifacts.shape(receipt, BUILD_RECEIPT_FIELDS, "Compile/package release receipt")
         require(receipt["kind"] == "compile-package" and receipt["outcome"] == "passed",
                 "A compile/package release receipt is required; runtime receipts are a separate class")
-        require(receipt["sourceSha"] == source and receipt["version"] == release_version
+        require(receipt["version"] == release_version
                 and receipt["family"] == family and receipt["engineManifestSha256"] == engine_sha,
                 "Release receipt source/version/family/engine identity differs")
+        verify_receipt_source(family, receipt, receipt_directory / (family["id"] + ".json"), source, engine_sha, reuse_selection, verified_groups)
         require(type(receipt["sourceRunId"]) is str and re.fullmatch(r"[1-9][0-9]*", receipt["sourceRunId"])
                 and type(receipt["sourceRunAttempt"]) is str and re.fullmatch(r"[1-9][0-9]*", receipt["sourceRunAttempt"]),
                 "New release receipts must originate in an actual remote workflow run")
@@ -325,7 +482,16 @@ def publication_records(families, directory, receipt_directory=None, build_recei
     require(receipt_directory is None or build_receipt_directory is None, "Runtime and build receipt modes cannot compete")
     if build_receipt_directory is not None:
         require(not (directory / "accepted-originals.json").exists(), "New build release cannot promote old accepted bytes")
-        return verify_build_receipts(families, directory, build_receipt_directory)
+        records = verify_build_receipts(families, directory, build_receipt_directory)
+        for family, record in zip(families, records):
+            receipt_path = build_receipt_directory / (family["id"] + ".json")
+            receipt = artifacts.read_json(receipt_path)
+            record.update({"artifactSourceSha": receipt["sourceSha"],
+                           "buildRunId": receipt["sourceRunId"],
+                           "buildRunAttempt": receipt["sourceRunAttempt"],
+                           "verification": receipt["kind"],
+                           "receiptSha256": artifacts.file_hash(receipt_path, artifacts.MAX_JSON_BYTES)})
+        return records
     original_selection = directory / "accepted-originals.json"
     if original_selection.exists():
         require(receipt_directory is not None, "Original accepted publication needs existing final-path receipts")
@@ -461,8 +627,9 @@ def main(argv=None):
         elif args.command == "build-and-stage":
             result = build_and_stage(args.directory.resolve(), args.target, args.families)
         elif args.command == "groups":
+            reused_targets = set(read_reuse_selection())
             result = [{"target": target, "families": ",".join(family["id"] for family in families)}
-                      for target, families in groups(data)]
+                      for target, families in groups(data) if target not in reused_targets]
             if args.github_output is not None:
                 with args.github_output.open("a", encoding="utf-8") as output:
                     output.write("groups=" + json.dumps(result, separators=(",", ":")) + "\n")

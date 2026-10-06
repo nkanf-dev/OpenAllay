@@ -78,7 +78,7 @@ final class MinecraftJeiRecipeApi {
         @Override public Rect2i getRectWithBorder() { return handle.getRectWithBorder(); }
         @Override public Optional<SlotUnderMouse> getSlotUnderMouse(double mouseX, double mouseY) {
             return handle.getSlotUnderMouse(mouseX, mouseY)
-                    .map(slot -> new SlotUnderMouse(slot.slot(), slot.offset().x(), slot.offset().y()));
+                    .map(slot -> new SlotUnderMouse(slot.slot(), slot.x(), slot.y()));
         }
         @Override public <I> Optional<I> getIngredientUnderMouse(
                 int mouseX, int mouseY, IIngredientType<I> type) {

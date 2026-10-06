@@ -75,10 +75,15 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
           persist-credentials: false
+          fetch-depth: 0
       - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
         with:
           pattern: release-packages-*
           path: build/release-groups
+      - name: Retrieve unchanged packages from successful original groups
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 -B scripts/fetch-release-build-groups.py --output build/release-groups
       - name: Bind all current packages to compile-package evidence
         run: python3 -B scripts/build-minecraft-artifacts.py merge-staged build/release-groups release
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02

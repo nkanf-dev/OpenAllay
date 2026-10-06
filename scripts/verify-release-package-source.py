@@ -18,6 +18,7 @@ def main():
             or run['conclusion'] != 'success' or run['event'] != 'workflow_dispatch'
             or run['path'] != '.github/workflows/minecraft-native.yml'):
         raise ValueError('Source-bound package build has not succeeded')
+    subprocess.run(['python3', '-B', 'scripts/fetch-release-build-groups.py', '--verify-only'], check=True)
     print(json.dumps({'tag': tag, 'source': source, 'buildRunId': int(run_id),
                       'evidence': 'compile-package', 'publicationSourceVerified': True}))
 
