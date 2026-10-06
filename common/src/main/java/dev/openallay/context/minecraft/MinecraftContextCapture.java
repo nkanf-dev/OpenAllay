@@ -149,16 +149,16 @@ public final class MinecraftContextCapture {
         List<DiagnosticValue> diagnostics = serverPlayer == null
                 ? List.of()
                 : List.of(
-                        new DiagnosticValue("position", "x", Double.toString(serverPlayer.getX())),
-                        new DiagnosticValue("position", "y", Double.toString(serverPlayer.getY())),
-                        new DiagnosticValue("position", "z", Double.toString(serverPlayer.getZ())),
+                        new DiagnosticValue("position", "x", Double.toString(MinecraftServerCaptureFacts.x(serverPlayer))),
+                        new DiagnosticValue("position", "y", Double.toString(MinecraftServerCaptureFacts.y(serverPlayer))),
+                        new DiagnosticValue("position", "z", Double.toString(MinecraftServerCaptureFacts.z(serverPlayer))),
                         new DiagnosticValue("position", "dimension", player.dimension()),
                         new DiagnosticValue("player", "game_mode", player.gameMode()));
         var level = MinecraftCommandSourceFacts.level(source);
         var border = level.getWorldBorder();
         Map<String, ObservableGameStateSnapshot.QueryValue> queries = new LinkedHashMap<>();
         if (authorizedWorldQuery(source, WorldQueryOperation.TIME)) {
-            queries.put("time", serverQuery("time", Long.toString(level.getGameTime())));
+            queries.put("time", serverQuery("time", Long.toString(MinecraftServerCaptureFacts.gameTime(level))));
         }
         if (authorizedWorldQuery(source, WorldQueryOperation.WEATHER)) {
             queries.put("weather", serverQuery("weather",
@@ -171,7 +171,7 @@ public final class MinecraftContextCapture {
         if (authorizedWorldQuery(source, WorldQueryOperation.WORLD_BORDER)) {
             queries.put("world_border", serverQuery("world_border",
                     "center=" + border.getCenterX() + "," + border.getCenterZ()
-                            + ",size=" + border.getSize()));
+                            + ",size=" + MinecraftServerCaptureFacts.borderSize(level)));
         }
         if (authorizedWorldQuery(source, WorldQueryOperation.SPAWN)) {
             queries.put("spawn", serverQuery("spawn",
@@ -208,15 +208,8 @@ public final class MinecraftContextCapture {
                         player,
                         serverPlayer == null
                                 ? "unavailable"
-                                : serverPlayer.containerMenu == serverPlayer.inventoryMenu
-                                ? "gameplay_or_player_inventory"
-                                : "open_synchronized_menu",
-                        serverPlayer == null
-                                || serverPlayer.containerMenu == serverPlayer.inventoryMenu
-                                        || serverPlayer.containerMenu.getType() == null
-                                ? ""
-                                : MinecraftNativeRegistries.MENU.getKey(
-                                        serverPlayer.containerMenu.getType()).toString(),
+                                : MinecraftServerCaptureFacts.uiState(serverPlayer),
+                        serverPlayer == null ? "" : MinecraftServerCaptureFacts.menuId(serverPlayer),
                         playerEvidence,
                         serverPlayer == null
                                 ? List.of(new SectionDiagnostic(
@@ -251,11 +244,11 @@ public final class MinecraftContextCapture {
 
     private PlayerSnapshot capturePlayer(ServerPlayer player, java.time.Instant capturedAt) {
         List<InventorySlotSnapshot> inventory = new ArrayList<>();
-        for (int slot = 0; slot < MinecraftPlayerFacts.inventory(player).getContainerSize(); slot++) {
+        for (int slot = 0; slot < MinecraftServerCaptureFacts.inventorySize(MinecraftPlayerFacts.inventory(player)); slot++) {
             inventory.add(new InventorySlotSnapshot(
-                    slot, captureStack(MinecraftPlayerFacts.inventory(player).getItem(slot))));
+                    slot, captureStack(MinecraftServerCaptureFacts.inventoryStack(MinecraftPlayerFacts.inventory(player), slot))));
         }
-        BlockPos position = player.blockPosition();
+        BlockPos position = MinecraftServerCaptureFacts.position(player);
         EvidenceMetadata evidence = evidence(
                 DataCompleteness.COMPLETE,
                 capturedAt,
@@ -264,16 +257,16 @@ public final class MinecraftContextCapture {
         int selected = dev.openallay.context.minecraft.MinecraftPlayerFacts.selectedSlot(MinecraftPlayerFacts.inventory(player));
         InventorySnapshot inventorySnapshot = new InventorySnapshot(
                 inventory,
-                MinecraftPlayerFacts.inventory(player).getContainerSize(),
+                MinecraftServerCaptureFacts.inventorySize(MinecraftPlayerFacts.inventory(player)),
                 selected,
                 selected,
-                captureStack(player.getOffhandItem()),
+                captureStack(MinecraftServerCaptureFacts.offhand(player)),
                 true,
                 evidence);
         return new PlayerSnapshot(
-                player.getUUID(),
-                player.getName().getString(),
-                dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(MinecraftServerPlayerLevel.get(player).dimension()).toString(),
+                dev.openallay.server.NativeServerOwner.actor(player),
+                MinecraftServerCaptureFacts.name(player),
+                MinecraftServerCaptureFacts.dimension(player),
                 new BlockPositionSnapshot(position.getX(), position.getY(), position.getZ()),
                 dev.openallay.context.minecraft.MinecraftPlayerFacts.gameMode(player).getName(),
                 inventorySnapshot,
@@ -329,7 +322,7 @@ public final class MinecraftContextCapture {
             return ItemStackSnapshot.empty();
         }
         var id = Objects.requireNonNull(MinecraftNativeRegistries.ITEM.getKey(stack.getItem()));
-        return new ItemStackSnapshot(id.toString(), stack.getCount(), stack.getHoverName().getString());
+        return new ItemStackSnapshot(id.toString(), stack.getCount(), MinecraftServerCaptureFacts.itemName(stack));
     }
 
     private long serializedBytes(Object value) {
