@@ -288,10 +288,56 @@ def distribution(request, artifacts):
     require(sha(raw)==artifact['sha256'],'Builder changed during raw copy')
     return resource,raw,Path(request['distributionProvenance']['path']).read_bytes(),proof
 
+def archived_transport(record, proof, request):
+    transport=checked_json(record,'archived normal native proof transport')
+    exact(transport,('kind','artifact','run','artifactId','sourceRevision','rootReceipt','originalClosureSpecSha256',
+        'derivedGeneratedRoot','derivedClassRoot','originalClosureSpec'),'archived normal build transport')
+    require(transport['kind']=='archived-normal-FG-build-derived-views'
+        and transport['run']==37455692351 and transport['artifactId']==11408948405
+        and transport['sourceRevision']==request['nativeSourceRevision']=='eb26255f28a634c5149e6275d5e9bdb29ef841b6',
+        'Exact passed normal native source/run')
+    archive_path=ref(transport['artifact'],'original uploaded native evidence')
+    require(transport['artifact']['sha256']=='fd78d5b0593a8d5b132609513eabeb01427396209e353e5dd0a320a6c634c8d9',
+        'Original successful native artifact identity')
+    root_receipt=checked_json(transport['rootReceipt'],'root verified successful native run receipt')
+    require(root_receipt.get('run')==transport['run'] and root_receipt.get('source')==transport['sourceRevision']
+        and root_receipt.get('originalStatus')=='success' and root_receipt.get('archiveSha256')==transport['artifact']['sha256']
+        and root_receipt.get('artifact',{}).get('id')==transport['artifactId'],'Root original run/artifact custody')
+    with zipfile.ZipFile(archive_path) as bundle:
+        require(len(bundle.namelist())==len(set(bundle.namelist())),'Duplicate native artifact members')
+        def member(name):
+            prefix='native-builds/forge16165/build/'
+            return bundle.read(prefix+name)
+        pairs=[('selection','namespace/source-selection.json'),('namespace','namespace/receipt.json'),
+            ('compilerLock','native-tooling/compiler-input-lock.proposed.json'),('apMappings','native-ap/mixins.tsrg')]
+        for field,name in pairs:
+            require(Path(proof[field]['path']).read_bytes()==member(name),'Transport saved input parity: '+field)
+        require(Path(request['nativeMetadata']['path']).read_bytes()==member('native-metadata/build.json'),
+            'Original native build metadata preserved')
+        require(Path(request['nativeInput']['path']).read_bytes()==member('native-metadata/native-before-reobf.jar')
+            and Path(request['nativeReobf']['path']).read_bytes()==member('libs/openallay-forge-1.16.5-native-0.4.3.jar'),
+            'Archived original normal FG native pair')
+        result=json.loads(bundle.read('build/forge16165-native-report/RESULT.json'),object_pairs_hook=closure.pairs)
+        require(result.get('source')==transport['sourceRevision'] and result.get('nativeCompiled') is True
+            and result.get('normalApReobf') is True and result.get('engineRebuilt') is False
+            and result.get('gameExecuted') is False,'Archived successful normal compile/AP/reobf result')
+    original_spec=checked_json(transport['originalClosureSpec'],'original passed compile closure')
+    require(transport['originalClosureSpec']['sha256']==transport['originalClosureSpecSha256'],
+        'Original native compile closure path/hash binding')
+    effective_spec=checked_json(request['closureSpec'],'effective relocated same closure')
+    identity=lambda value:(value['sourceRevision'],sorted((a['role'],a['coordinate'],a['sha256']) for a in value['artifacts']))
+    require(identity(original_spec)==identity(effective_spec),'Relocated passed closure exact component identities')
+    require(proof['generatedSourceRoot']==transport['derivedGeneratedRoot']
+        and proof['javacOutputRoot']==transport['derivedClassRoot'],'Honest derived-view root identities')
+    return transport
+
 def native_check(request, artifacts, closure_report):
     proof=checked_json(request['nativeProof'],'root-reviewed native ownership proof')
-    exact(proof,('sourceRevision','selection','namespace','compilerLock','normalMappings',
-        'apMappings','generatedSourceRoot','javacOutputRoot','classes','resources','runtimeOwnership','namespaceAcceptance','mappingInputs'),'native ownership proof')
+    fields=('sourceRevision','selection','namespace','compilerLock','normalMappings',
+        'apMappings','generatedSourceRoot','javacOutputRoot','classes','resources','runtimeOwnership','namespaceAcceptance','mappingInputs')
+    exact(proof,tuple(field for field in fields if field!='mappingInputs')+('archivedTransport',)
+        if 'archivedTransport' in proof else fields,'native ownership proof')
+    transport=archived_transport(proof['archivedTransport'],proof,request) if 'archivedTransport' in proof else None
     require(proof['sourceRevision']==request['nativeSourceRevision'],'Native proof source revision')
     root=Path(request['sourceRoot']).resolve()
     require(root.is_absolute() and root.is_dir(),'Canonical source root')
@@ -314,15 +360,20 @@ def native_check(request, artifacts, closure_report):
             require(record['owner'] in OWNER_ROOTS and record['origin'].startswith(OWNER_ROOTS[record['owner']]),'Canonical source owner')
             require(file_sha(source_file(root,record['origin']))==record['sha256'],'Canonical source bytes: '+record['origin'])
     namespace=checked_json(proof['namespace'],'generated namespace receipt')
-    ref(proof['namespaceAcceptance'],'exact accepted tooling metadata receipt')
-    require(namespace.get('metadataAcceptanceSha256')==proof['namespaceAcceptance']['sha256']
-        and all(re.fullmatch(r'[0-9a-f]{64}',namespace.get(field,'')) for field in
-            ('jdkIdentity','toolIdentity','metadataClasspathIdentity')), 'Namespace exact tool/JDK/metadata identity')
-    mapping_inputs=checked_json(proof['mappingInputs'],'namespace mapping provenance')
-    exact(mapping_inputs,('client','server','tsrg'),'namespace mapping inputs')
-    for record in mapping_inputs.values():ref(record,'actual namespace mapping file')
-    require(namespace.get('mappingHashes')==[mapping_inputs[name]['sha256'] for name in ('client','server','tsrg')],
-        'Exact native type mapping inputs')
+    if transport is None:
+        ref(proof['namespaceAcceptance'],'exact accepted tooling metadata receipt')
+        require(namespace.get('metadataAcceptanceSha256')==proof['namespaceAcceptance']['sha256']
+            and all(re.fullmatch(r'[0-9a-f]{64}',namespace.get(field,'')) for field in
+                ('jdkIdentity','toolIdentity','metadataClasspathIdentity')), 'Namespace exact tool/JDK/metadata identity')
+        mapping_inputs=checked_json(proof['mappingInputs'],'namespace mapping provenance')
+        exact(mapping_inputs,('client','server','tsrg'),'namespace mapping inputs')
+        for record in mapping_inputs.values():ref(record,'actual namespace mapping file')
+        require(namespace.get('mappingHashes')==[mapping_inputs[name]['sha256'] for name in ('client','server','tsrg')],
+            'Exact native type mapping inputs')
+    else:
+        require(all(re.fullmatch(r'[0-9a-f]{64}',namespace.get(field,'')) for field in
+            ('metadataAcceptanceSha256','jdkIdentity','toolIdentity','metadataClasspathIdentity')),
+            'Archived exact tooling identities; original payload not re-created')
     require(namespace.get('syntaxLevel')=='17' and namespace.get('preview') is False,'Native source grammar17')
     normalized=index_records(namespace['units'],('owner','path','mode','inputHash','outputHash','edits','nativeIdentities'),'normalized Java','path')
     require(set(normalized)==set(java),'One canonical/native namespace unit union')
@@ -475,12 +526,16 @@ def native_check(request, artifacts, closure_report):
         and metadata.get('nativeCompilerRelease')==17 and metadata.get('sharedClosurePacked') is False
         and metadata.get('gameExecuted') is False,'Native build actual tuple/no product runtime claim')
     for field,artifact in (('before',request['nativeInput']),('reobf',request['nativeReobf'])):
-        require(metadata.get(field)=={'path':artifact['path'],'sha256':artifact['sha256']},'Fresh native pair receipt: '+field)
+        original=metadata.get(field,{})
+        require(original.get('sha256')==artifact['sha256'] and
+            (transport is not None or original.get('path')==artifact['path']), 'Native pair receipt original hash/path custody: '+field)
     for field,record in (('selectionSha256',proof['selection']),('namespaceSha256',proof['namespace']),
         ('compilerLockSha256',proof['compilerLock']),('normalMappingsSha256',proof['normalMappings']),('apMappingsSha256',proof['apMappings'])):
-        ref(record,field);require(metadata.get(field)==record['sha256'],'Native input metadata hash: '+field)
+        if transport is None or field!='normalMappingsSha256':ref(record,field)
+        require(metadata.get(field)==record['sha256'],'Native input metadata hash: '+field)
     require(metadata.get('apRefmapSha256')==sha(before['openallay.refmap.json'])
-        and metadata.get('closureSpecSha256')==request['closureSpec']['sha256'],'Native AP/immutable closure metadata')
+        and metadata.get('closureSpecSha256')==(transport['originalClosureSpecSha256'] if transport is not None
+            else request['closureSpec']['sha256']),'Native AP/effective original closure metadata')
     compiler_lock=checked_json(proof['compilerLock'],'actual native compiler artifact lock')
     exact(compiler_lock,('configurations',),'native compiler artifact lock')
     require(set(compiler_lock['configurations'])=={'compileClasspath','annotationProcessor'},'Actual compile/AP lock configurations')
@@ -622,8 +677,13 @@ def product_scan(request_path):
     protected.extend(artifact['path'] for artifact in closure_report['artifacts'])
     protected.append(json_load(spec_path)['resolution']['path'])
     for field in ('selection','namespace','compilerLock','normalMappings','apMappings','runtimeOwnership','namespaceAcceptance','mappingInputs'):
-        protected.append(native_proof[field]['path'])
-    protected.extend(record['path'] for record in checked_json(native_proof['mappingInputs'],'protected mapping inputs').values())
+        if field in native_proof:protected.append(native_proof[field]['path'])
+    if 'archivedTransport' not in native_proof:
+        protected.extend(record['path'] for record in checked_json(native_proof['mappingInputs'],'protected mapping inputs').values())
+    else:
+        protected.append(native_proof['archivedTransport']['path'])
+        transport=checked_json(native_proof['archivedTransport'],'protected archived transport')
+        protected.extend([transport['artifact']['path'],transport['rootReceipt']['path'],transport['originalClosureSpec']['path']])
     protected.extend([native_proof['generatedSourceRoot'],native_proof['javacOutputRoot'],
         builder_proof['retainedSourceRoot'],builder_proof['lockedSourceRoot']])
     runtime=checked_json(native_proof['runtimeOwnership'],'protected actual runtime proof')

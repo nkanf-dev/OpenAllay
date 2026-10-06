@@ -5,7 +5,7 @@ on:
       mode:
         type: choice
         default: tooling
-        options: [tooling, abi, engine, native]
+        options: [tooling, abi, engine, native, pack]
 permissions:
   contents: read
 concurrency:
@@ -107,3 +107,36 @@ jobs:
             native-builds/forge16165/build/native-ap/
             native-builds/forge16165/build/libs/
             build/forge16165-native-report/
+
+  pack-product:
+    if: inputs.mode == 'pack'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with: {persist-credentials: false, fetch-depth: 0}
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with: {distribution: temurin, java-version: '17.0.18+8'}
+      - name: Pack retained native and engine bytes without build replay
+        env: {GH_TOKEN: '${{ github.token }}'}
+        run: python3 -B scripts/run-forge16165-pack-only.py
+      - name: Retain product once
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: forge16165-product-${{ github.sha }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: build/forge16165-product/
+      - name: Retain packaging evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: forge16165-pack-evidence-${{ github.sha }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: |
+            build/forge16165-pack-inputs/*.json
+            build/forge16165-pack-inputs/postprocessed/*.json
+            build/forge16165-pack-inputs/source/build/e2e/runtime/forge16165-stock/minecraft/.provision/*.json
+            build/forge16165-pack-inputs/source/build/e2e/runtime/forge16165-stock/minecraft/.provision/*.log
