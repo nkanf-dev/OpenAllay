@@ -11,7 +11,22 @@ final class GuideProbeNativeCursor {
         Mouse.setCursorPosition((int) Math.round(x), client.displayHeight - 1 - (int) Math.round(y));
     }
     static void dispatchMove(Minecraft client, double x, double y) {
-        throw new UnsupportedOperationException("LWJGL2 has no MouseHandler cursor callback; native input frames own cursor observation");
+        if (!client.isCallingFromMinecraftThread()) throw new IllegalStateException("Cursor callback requires the client owner thread");
+        if (!Boolean.getBoolean(GuideClientE2EConfig.ENABLED)) throw new IllegalStateException("Development probe is disabled");
+        var owner = java.util.Objects.requireNonNull(client.currentScreen, "Native cursor screen unavailable");
+        var player = client.player;
+        var world = client.world;
+        if (!(owner instanceof GuideProbeMouseCallbacks callback)) throw new IllegalStateException("Native GuiScreen callback binding unavailable");
+        move(client, x, y);
+        int button = callback.openallay$heldButton();
+        long pressedAt = callback.openallay$lastMouseEvent();
+        if (button < 0 || pressedAt <= 0 || !Mouse.isButtonDown(button)) return;
+        int guiX = Mouse.getX() * owner.width / client.displayWidth;
+        int guiY = owner.height - Mouse.getY() * owner.height / client.displayHeight - 1;
+        long elapsed = Math.max(0, Minecraft.getSystemTime() - pressedAt);
+        if (client.currentScreen != owner || client.player != player || client.world != world)
+            throw new IllegalStateException("Native cursor owner changed");
+        callback.openallay$mouseClickMove(guiX, guiY, button, elapsed);
     }
     static double[] position(Minecraft client) {
         return new double[] {Mouse.getX(), client.displayHeight - 1 - Mouse.getY()};
