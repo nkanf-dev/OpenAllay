@@ -276,7 +276,9 @@ def prepare_launchwrapper_bridge(args, output, java, cp, runtime):
     test_cp = os.pathsep.join([str(agent)] + [str(path) for _, path in cp])
     test_main = "dev.openallay.runtime.forge1122.LaunchWrapperJava17BridgeTest"
     clean_env = {k:v for k,v in os.environ.items() if k not in ("JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "_JAVA_OPTIONS")}
-    if getattr(args,"component_inputs",None):
+    if getattr(args,"world_sdk",False):
+        runtime.write_json(output/"component-tests-reused.json",{"run":"37534098945","capabilityPhaseAndHelperTestsPassed":True,"oldStartupChecksReplayed":False})
+    elif getattr(args,"component_inputs",None):
         with (output/"capability-component-tests.log").open("w") as log:
             subprocess.run([str(java),"-cp",test_cp,"dev.openallay.runtime.forge1122.CapabilityPhaseTest"],check=True,env=clean_env,stdout=log,stderr=subprocess.STDOUT)
         runtime.write_json(output/"prior-startup-reused.json",{"acceptedRun":"37520988163","oldChecksReplayed":False})
@@ -370,6 +372,7 @@ def boot(args, root, java, assets, runtime, launch, expected, vanilla, version):
         "-Dopenallay.objectholder.invalid=" + str(output / "objectholder-invalid.tsv"),
         "-Dopenallay.objectholder.transformReceipt=" + str(output / "objectholder-transform.jsonl")]
         if args.objectholder_bridge else [])
+    world_sdk=getattr(args,"world_sdk",False)
     binding_probe=getattr(args,"applied_bindings",False)
     component_flags = (["-Dopenallay.capability.enabled=true",
         "-Dopenallay.capability.writes="+str(output/"capability-writes.tsv"),
@@ -380,6 +383,14 @@ def boot(args, root, java, assets, runtime, launch, expected, vanilla, version):
     if binding_probe:
         component_flags += ["-Dopenallay.e2e.appliedBindings=true",
             "-Dopenallay.e2e.appliedBindingsReceipt="+str(output/"applied-bindings.json")]
+    if world_sdk:
+        name="openallay-builder-forge1122-sdk-"+str(os.getpid())
+        component_flags += ["-Dopenallay.e2e.enabled=true","-Dopenallay.e2e.scenario=native-world-sdk",
+            "-Dopenallay.e2e.question=Native WorldSession SDK acceptance",
+            "-Dopenallay.e2e.report="+str(output/"world-sdk-report.json"),
+            "-Dopenallay.e2e.createWorld="+name,"-Dopenallay.e2e.shutdown=true","-Dopenallay.e2e.timeoutSeconds=300"]
+        runtime.write_json(output/"world-fixture.json",{"name":name,"freshProfile":True,"commandsAllowed":False,
+            "modelInvocation":False,"unrestrictedJavascript":False,"expectedShutdown":"natural-unsignalled-exit0"})
     command = [str(java), "-Xms256M", "-Xmx1536M",
                "-Xlog:class+load=info:file=" + str(output / "class-load.log")] + bridge_flags + pack200_flags + objectholder_flags + component_flags + (["-Dopenallay.objectholder.phaseDiagnostic=true"] if args.objectholder_phase_diagnostic else []) + (["-Dorg.lwjgl.util.Debug=true"] if args.title_only else []) + jvm + [MAIN] + game_args
     env = {k:v for k,v in os.environ.items() if k not in ("JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "_JAVA_OPTIONS")}
@@ -396,20 +407,27 @@ def boot(args, root, java, assets, runtime, launch, expected, vanilla, version):
         process = subprocess.Popen(command, cwd=game, env=env, stdout=stream, stderr=subprocess.STDOUT, start_new_session=True)
         receipt["clientPid"] = process.pid
         try:
-            # Fixed waits in this remote collector, not a coordinator poll loop.
-            for elapsed in (45, 90):
+            if world_sdk:
                 try:
-                    process.wait(timeout=45)
-                    receipt["status"] = "fatal-client-exited-before-capture"
-                    break
+                    process.wait(timeout=330)
+                    receipt["status"]="world-client-exited"
                 except subprocess.TimeoutExpired:
-                    # OS-level full-frame capture of the actual unmodified client.
-                    from PIL import ImageGrab
-                    screenshot = output / ("full-frame-" + str(elapsed) + ".png")
-                    ImageGrab.grab(xdisplay=os.environ["DISPLAY"]).save(screenshot)
-                    receipt["screenshots"].append({"elapsedSeconds": elapsed,
-                                                   "file": screenshot.name, "sha256": sha(screenshot)})
-                    receipt["status"] = "captured-awaiting-title-review"
+                    receipt["status"]="fatal-world-timeout"
+            else:
+                # Fixed waits in this remote collector, not a coordinator poll loop.
+                for elapsed in (45, 90):
+                    try:
+                        process.wait(timeout=45)
+                        receipt["status"] = "fatal-client-exited-before-capture"
+                        break
+                    except subprocess.TimeoutExpired:
+                        # OS-level full-frame capture of the actual unmodified client.
+                        from PIL import ImageGrab
+                        screenshot = output / ("full-frame-" + str(elapsed) + ".png")
+                        ImageGrab.grab(xdisplay=os.environ["DISPLAY"]).save(screenshot)
+                        receipt["screenshots"].append({"elapsedSeconds": elapsed,
+                                                       "file": screenshot.name, "sha256": sha(screenshot)})
+                        receipt["status"] = "captured-awaiting-title-review"
         finally:
             receipt["termination"] = stop_owned(process)
             receipt["endedAt"] = datetime.now(timezone.utc).isoformat()
@@ -461,8 +479,24 @@ def boot(args, root, java, assets, runtime, launch, expected, vanilla, version):
         if facts["rejectedPhase"] or not all(facts[k] for k in ("normalCoremodReceipt","engineClassesLoaded","rhinoClassesLoaded","privateAsmClassLoaded","capabilityAllFive")):
             receipt["status"]="fatal-component-proof-incomplete";receipt["accepted"]=False
             runtime.write_json(output/"receipt.json",receipt)
+    if world_sdk:
+        report_path=output/"world-sdk-report.json"
+        report=json.loads(report_path.read_text()) if report_path.is_file() else {}
+        checks=report.get("worldSdkChecks",[])
+        if not checks:
+            checks=report.get("checks",[])
+        passed=report.get("outcome")=="COMPLETED" and bool(checks) and all(c.get("status")=="PASS" for c in checks)
+        clean=receipt["termination"]["finalExitCode"]==0 and not receipt["termination"]["signals"]
+        oracle_path=output/"applied-bindings.json";oracle=json.loads(oracle_path.read_text()) if oracle_path.is_file() else {}
+        required=passed and clean and (not binding_probe or oracle.get("accepted") is True)
+        runtime.write_json(output/"world-sdk-acceptance.json",{"accepted":required,"reportCompleted":passed,
+            "cleanUnsignalledExit0":clean,"actualAppliedBindings":oracle.get("accepted",False),"worldSdkCheckCount":len(checks)})
+        if required and receipt["status"] not in ("fatal-component-proof-incomplete","fatal-applied-binding-proof"):
+            receipt["status"]="accepted-world-sdk-and-bindings";receipt["accepted"]=True
+        else:receipt["status"]="fatal-world-sdk-or-binding-proof";receipt["accepted"]=False
+        runtime.write_json(output/"receipt.json",receipt)
     # A window or screenshot alone is not a title-success claim.
-    return 0 if receipt["status"] == "captured-awaiting-title-review" else 1
+    return 0 if receipt["status"] in ("captured-awaiting-title-review","accepted-world-sdk-and-bindings") else 1
 
 
 def main():

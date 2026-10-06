@@ -8,7 +8,7 @@ def module(name,path):
     spec=importlib.util.spec_from_file_location(name,path);result=importlib.util.module_from_spec(spec);spec.loader.exec_module(result);return result
 
 def main():
-    parser=argparse.ArgumentParser();parser.add_argument('--product-pin',type=Path,required=True);parser.add_argument('--applied-bindings',action='store_true');args=parser.parse_args()
+    parser=argparse.ArgumentParser();parser.add_argument('--product-pin',type=Path,required=True);parser.add_argument('--applied-bindings',action='store_true');parser.add_argument('--world-sdk',action='store_true');args=parser.parse_args()
     if os.environ.get('GITHUB_ACTIONS')!='true':raise ValueError('Remote component runtime only')
     provider=module('native_provider',ROOT/'scripts/build-forge1122-native.py')
     report=ROOT/'build/forge1122-component-boot-report';report.mkdir(parents=True,exist_ok=False)
@@ -29,7 +29,7 @@ def main():
     stock=module('stock_runner',ROOT/'scripts/forge1122-runtime-prerequisite/stock-forge1122-prerequisite.py')
     runtime,launch,freeze=stock.load_helpers(ROOT)
     install=json.loads((stock.PACKET/'install_profile.json').read_text());version=json.loads((stock.PACKET/'version.json').read_text());vanilla=json.loads((stock.PACKET/'minecraft-1.12.2.json').read_text());expected=stock.validate_metadata(install,version,vanilla)
-    runargs=SimpleNamespace(repo=ROOT,java=Path(os.environ['OPENALLAY_COMPONENT_JAVA17_HOME'])/'bin/java',java_release='17.0.18+8',minecraft_root=ROOT/'build/e2e/runtime/forge1122-stock/minecraft',output=ROOT/'build/e2e/forge1122-component',title_only=True,pack200_bridge=True,launchwrapper_bridge=True,objectholder_bridge=True,objectholder_phase_diagnostic=False,component_inputs=local_manifest,applied_bindings=args.applied_bindings)
+    runargs=SimpleNamespace(repo=ROOT,java=Path(os.environ['OPENALLAY_COMPONENT_JAVA17_HOME'])/'bin/java',java_release='17.0.18+8',minecraft_root=ROOT/'build/e2e/runtime/forge1122-stock/minecraft',output=ROOT/'build/e2e/forge1122-component',title_only=True,pack200_bridge=True,launchwrapper_bridge=True,objectholder_bridge=True,objectholder_phase_diagnostic=False,component_inputs=local_manifest,applied_bindings=args.applied_bindings,world_sdk=args.world_sdk)
     root,java,assets=stock.prepare(runargs,runtime,launch,freeze,install,version,vanilla)
     raise SystemExit(stock.boot(runargs,root,java,assets,runtime,launch,expected,vanilla,version))
 if __name__=='__main__':main()
