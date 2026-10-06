@@ -172,6 +172,21 @@ def prepare(args, runtime, launch, freeze, install, version, vanilla):
     return root, java, assets
 
 
+def classpath_libraries(metadata, root, launch):
+    # Legacy Minecraft metadata includes native-only coordinates such as jinput-platform.
+    # They belong to native_libraries()/extract_natives(), not the Java classpath.
+    libraries = []
+    for library in metadata.get("libraries", []):
+        downloads = library.get("downloads")
+        if (isinstance(downloads, dict) and set(downloads) == {"classifiers"}
+                and isinstance(downloads["classifiers"], dict) and downloads["classifiers"]
+                and isinstance(library.get("natives"), dict) and library["natives"]):
+            continue
+        libraries.append(library)
+    return launch.version_libraries({**metadata, "libraries": libraries}, root,
+                                    Path("/nonexistent"), allow_gradle=False)
+
+
 def boot(args, root, java, assets, runtime, launch, expected, vanilla, version):
     output = launch.safe_output(args.output, args.repo)
     runtime.require(not output.exists(), "Capture directory must be fresh")
@@ -180,8 +195,8 @@ def boot(args, root, java, assets, runtime, launch, expected, vanilla, version):
     (game / "mods").mkdir(parents=True)
     # Stock options only. No mod, hook, agent, resource pack, world or custom title renderer.
     (game / "options.txt").write_text("renderDistance:4\nmaxFps:15\npauseOnLostFocus:false\nguiScale:2\n")
-    cp = launch.version_libraries(vanilla, root, Path("/nonexistent"), allow_gradle=False)
-    fml = launch.version_libraries(version, root, Path("/nonexistent"), allow_gradle=False)
+    cp = classpath_libraries(vanilla, root, launch)
+    fml = classpath_libraries(version, root, launch)
     replacements = {tuple(name.split(":")[:2]) for name, _ in fml}
     cp = [(name, path) for name, path in cp if tuple(name.split(":")[:2]) not in replacements] + fml
     # Legacy LaunchWrapper needs the original game JAR, not a fake alias or Gradle runtime.

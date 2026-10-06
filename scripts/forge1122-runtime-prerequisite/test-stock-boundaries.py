@@ -34,6 +34,34 @@ class Boundaries(unittest.TestCase):
         with self.assertRaises(ValueError):
             probe.validate_metadata(*self.metadata)
 
+    def test_genuine_jinput_native_only_not_on_java_classpath(self):
+        root = Path(__import__("os").environ.get("STOCK1122_TEST_REPO", str(PACKET.parents[1])))
+        _, launch, _ = probe.load_helpers(root)
+        jinput = next(lib for lib in self.metadata[2]["libraries"]
+                      if lib["name"] == "net.java.jinput:jinput-platform:2.0.5")
+        self.assertEqual([], probe.classpath_libraries({"libraries": [jinput]}, root, launch))
+        self.assertIn("natives-linux", jinput["downloads"]["classifiers"])
+        self.assertEqual("natives-linux", jinput["natives"]["linux"])
+
+    def test_native_only_filter_preserves_remaining_metadata(self):
+        original = copy.deepcopy(self.metadata[2])
+        class Launch:
+            @staticmethod
+            def version_libraries(metadata, root, cache, allow_gradle):
+                return metadata["libraries"]
+        result = probe.classpath_libraries(original, PACKET, Launch())
+        expected = [lib for lib in original["libraries"]
+                    if not (set(lib["downloads"]) == {"classifiers"} and lib.get("natives"))]
+        self.assertEqual(expected, result)
+        self.assertEqual(original, self.metadata[2])
+
+    def test_no_native_declaration_keeps_unknown_metadata_rejection(self):
+        root = Path(__import__("os").environ.get("STOCK1122_TEST_REPO", str(PACKET.parents[1])))
+        _, launch, _ = probe.load_helpers(root)
+        unknown = {"name": "unknown:library:1", "downloads": {"classifiers": {"other": {}}}}
+        with self.assertRaisesRegex(ValueError, "Unsupported installed library metadata"):
+            probe.classpath_libraries({"libraries": [unknown]}, root, launch)
+
     def test_major61_and_mr_bytes_are_visible_and_unchanged(self):
         class Runtime:
             @staticmethod
