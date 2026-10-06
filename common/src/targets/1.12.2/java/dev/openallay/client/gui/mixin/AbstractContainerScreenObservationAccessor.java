@@ -6,7 +6,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Invoker;
 /** Invoke the real live native slot geometry, without reimplementing hit testing. */
 @Mixin(GuiContainer.class)
-public interface AbstractContainerScreenObservationAccessor extends GuideNativeSlotHitTest {
-    @Invoker("getSlotAtPosition") Slot openallay$slotAtPosition(int x, int y);
-    @Override default Slot openallay$getHoveredSlot(double x, double y) { return openallay$slotAtPosition((int)x, (int)y); }
+public abstract class AbstractContainerScreenObservationAccessor implements GuideNativeSlotHitTest {
+    @Invoker("getSlotAtPosition") public abstract Slot openallay$slotAtPosition(int x, int y);
+    @Override public Slot openallay$getHoveredSlot(double x, double y) { return openallay$slotAtPosition((int)x, (int)y); }
 }

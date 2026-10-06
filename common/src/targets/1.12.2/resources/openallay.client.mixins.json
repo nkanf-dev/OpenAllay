@@ -13,7 +13,6 @@
     "GuiSubtitleAccess",
     "ToastInstanceCompletionMixin",
     "ToastComponentSlotMixin",
-    "MinecraftFpsAccess",
     "GuideProbeMouseInvoker",
     "GuideTextFieldDrawAccessMixin",
     "GuiScreenMenuKeyObservationMixin",
