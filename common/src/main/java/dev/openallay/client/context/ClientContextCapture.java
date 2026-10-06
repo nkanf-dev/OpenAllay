@@ -206,12 +206,12 @@ public final class ClientContextCapture {
             }
             values.add(new OptionValue(optionGroup(key), key, key, value));
         }
-        for (var mapping : MinecraftClientContextFacts.options(client).keyMappings) {
+        for (var mapping : MinecraftClientContextFacts.keyMappings(client)) {
             values.add(new OptionValue(
                     "controls",
-                    mapping.getName(),
-                    mapping.getName(),
-                    mapping.getTranslatedKeyMessage().getString()));
+                    MinecraftClientContextFacts.keyName(mapping),
+                    MinecraftClientContextFacts.keyName(mapping),
+                    MinecraftClientContextFacts.keyDisplay(mapping)));
         }
         values.sort(Comparator.comparing(OptionValue::group).thenComparing(OptionValue::key));
         return new ObservableGameStateSnapshot.OptionsState(
@@ -314,12 +314,12 @@ public final class ClientContextCapture {
         add(values, "performance", "heap_used_bytes",
                 Long.toString(runtime.totalMemory() - runtime.freeMemory()));
         add(values, "performance", "heap_max_bytes", Long.toString(runtime.maxMemory()));
-        add(values, "renderer", "chunk_source", client.level.gatherChunkSourceStats());
+        add(values, "renderer", "chunk_source", MinecraftClientContextFacts.chunkStats(client));
         add(values, "renderer", "render_distance",
                 Integer.toString(MinecraftClientOptionsFacts.renderDistance(MinecraftClientContextFacts.options(client))));
         dev.openallay.platform.minecraft.MinecraftOptions.simulationDistance(MinecraftClientContextFacts.options(client))
                 .ifPresent(distance -> add(values, "renderer", "simulation_distance", Integer.toString(distance)));
-        add(values, "renderer", "entities", Integer.toString(client.level.getEntityCount()));
+        add(values, "renderer", "entities", Integer.toString(MinecraftClientContextFacts.entities(client)));
         add(values, "player", "health", Float.toString(player.getHealth()));
         add(values, "player", "max_health", Float.toString(player.getMaxHealth()));
         add(values, "player", "food", Integer.toString(MinecraftClientContextFacts.food(player)));
@@ -350,7 +350,7 @@ public final class ClientContextCapture {
         if (client.getConnection() != null) {
             var info = client.getConnection().getPlayerInfo(MinecraftClientContextFacts.uuid(player));
             if (info != null) {
-                add(values, "network", "latency_ms", Integer.toString(info.getLatency()));
+                add(values, "network", "latency_ms", Integer.toString(MinecraftClientContextFacts.latency(info)));
             }
         }
         values.sort(Comparator.comparing(DiagnosticValue::category).thenComparing(DiagnosticValue::key));
@@ -441,9 +441,7 @@ public final class ClientContextCapture {
             inventory.add(new InventorySlotSnapshot(slot, stack(MinecraftClientContextFacts.inventoryItem(player, slot))));
         }
         var position = MinecraftClientContextFacts.position(player);
-        String mode = client.gameMode == null || client.gameMode.getPlayerMode() == null
-                ? "unknown"
-                : client.gameMode.getPlayerMode().getName();
+        String mode = MinecraftClientContextFacts.gameMode(client);
         EvidenceMetadata evidence = evidence(
                 DataCompleteness.COMPLETE,
                 capturedAt,

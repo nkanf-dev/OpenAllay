@@ -6,6 +6,14 @@ import net.minecraft.entity.Entity;
 import net.minecraft.item.ItemStack;
 public final class MinecraftClientContextFacts {
     private MinecraftClientContextFacts() {}
+    public static net.minecraft.client.settings.KeyBinding[] keyMappings(Minecraft client) { return client.gameSettings.keyBindings; }
+    public static String keyName(net.minecraft.client.settings.KeyBinding mapping) { return mapping.getKeyDescription(); }
+    public static String keyDisplay(net.minecraft.client.settings.KeyBinding mapping) { return mapping.getDisplayName(); }
+    public static String chunkStats(Minecraft client) { return client.world.getProviderName(); }
+    public static int entities(Minecraft client) { return client.world.loadedEntityList.size(); }
+    public static int latency(net.minecraft.client.network.NetworkPlayerInfo info) { return info.getResponseTime(); }
+    public static String gameMode(Minecraft client) { return client.playerController==null || client.playerController.getCurrentGameType()==null ? "unknown" : client.playerController.getCurrentGameType().getName(); }
+
     public static net.minecraft.client.settings.GameSettings options(Minecraft client) { return client.gameSettings; }
     public static boolean singleplayer(Minecraft client) { return client.isSingleplayer(); }
     public static boolean connected(Minecraft client) { return client.getConnection()!=null; }

@@ -44,7 +44,7 @@ public final class ObservationImageTextures implements AutoCloseable {
         long capturedGeneration = generation;
         service.readImage(reference).whenComplete((result, failure) -> {
             if (failure != null || !(result instanceof ToolResult.Success<byte[]> bytes)) {
-                client.execute(() -> { if (current(reference, loading, capturedGeneration)) loading.failed = true; });
+                dev.openallay.client.context.MinecraftClientContextFacts.execute(client, () -> { if (current(reference, loading, capturedGeneration)) loading.failed = true; });
                 return;
             }
             DECODE.execute(() -> {
@@ -63,7 +63,7 @@ public final class ObservationImageTextures implements AutoCloseable {
                         }
                     }
                     ClipboardImageEncoder.Preview preview = new ClipboardImageEncoder.Preview(width, height, sampledPixels);
-                    client.execute(() -> {
+                    dev.openallay.client.context.MinecraftClientContextFacts.execute(client, () -> {
                         if (!current(reference, loading, capturedGeneration)) return;
                         var image = MinecraftImageTextures.create(preview.width(), preview.height());
                         try {
@@ -80,7 +80,7 @@ public final class ObservationImageTextures implements AutoCloseable {
                         }
                     });
                 } catch (Exception failed) {
-                    client.execute(() -> { if (current(reference, loading, capturedGeneration)) loading.failed = true; });
+                    dev.openallay.client.context.MinecraftClientContextFacts.execute(client, () -> { if (current(reference, loading, capturedGeneration)) loading.failed = true; });
                 }
             });
         });

@@ -49,10 +49,10 @@ public final class MinecraftObservationInputActions implements GuideObservationI
             return coordinator.capture(new WorldViewRequest(target), cancellation).toCompletableFuture()
                     .thenCompose(view -> {
                         CompletableFuture<ClientObservationAnchor> result = new CompletableFuture<>();
-                        client.execute(() -> {
-                            if (closed || client.player == null || client.level == null
-                                    || !focus.actorId().equals(client.player.getUUID())
-                                    || !focus.dimension().equals(dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(client.level.dimension()).toString())) {
+                        dev.openallay.client.context.MinecraftClientContextFacts.execute(client, () -> {
+                            if (closed || !dev.openallay.client.context.MinecraftClientContextFacts.active(client)
+                                    || !focus.actorId().equals(dev.openallay.client.context.MinecraftClientContextFacts.uuid(client.player))
+                                    || !focus.dimension().equals(dev.openallay.client.context.MinecraftClientContextFacts.dimension(client))) {
                                 observations.releaseImageProducers(correlation);
                                 result.completeExceptionally(new IllegalStateException("Input view source changed"));
                                 return;
@@ -88,9 +88,9 @@ public final class MinecraftObservationInputActions implements GuideObservationI
     @Override public void close() { closed = true; clearConnectionState(); }
 
     private void requireActive() {
-        if (closed || client.player == null || client.level == null) {
+        if (closed || !dev.openallay.client.context.MinecraftClientContextFacts.active(client)) {
             throw new IllegalStateException("No native game view is available");
         }
-        if (!client.isSameThread()) throw new IllegalStateException("Input observation requires the client thread");
+        if (!dev.openallay.client.context.MinecraftClientContextFacts.ownerThread(client)) throw new IllegalStateException("Input observation requires the client thread");
     }
 }

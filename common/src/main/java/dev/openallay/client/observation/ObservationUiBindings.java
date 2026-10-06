@@ -31,7 +31,7 @@ public final class ObservationUiBindings {
                     };
                 });
         ObservationMenuKeyHandler.configure(current -> {
-            if (current.player != null) ui.openGuide(services.forActor(current.player.getUUID()));
+            if (current.player != null) ui.openGuide(services.forActor(dev.openallay.client.context.MinecraftClientContextFacts.uuid(current.player)));
         });
         return input;
     }
