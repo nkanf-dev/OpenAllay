@@ -10,6 +10,7 @@ import zipfile
 CLASSES = (
     'net.minecraft.client.renderer.vertex.DefaultVertexFormats','org.lwjgl.opengl.GL11',
     'net.minecraft.client.settings.GameSettings','net.minecraft.client.settings.KeyBinding',
+    'net.minecraft.util.text.ITextComponent',
     'net.minecraft.client.gui.Gui','net.minecraft.client.renderer.RenderItem','net.minecraftforge.fml.client.config.GuiUtils',
     'net.minecraft.client.renderer.texture.AbstractTexture',
     'net.minecraft.client.renderer.texture.ITextureObject',
