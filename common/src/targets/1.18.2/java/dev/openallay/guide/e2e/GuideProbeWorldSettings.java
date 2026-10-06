@@ -1,9 +1,14 @@
 package dev.openallay.guide.e2e;
 
+import net.minecraft.core.Registry;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.LevelSettings;
 import net.minecraft.world.level.DataPackConfig;
+import net.minecraft.world.level.dimension.DimensionType;
+import net.minecraft.world.level.levelgen.FlatLevelSource;
+import net.minecraft.world.level.levelgen.WorldGenSettings;
+import net.minecraft.world.level.levelgen.flat.FlatLevelGeneratorSettings;
 
 /** Native constructor binding for the explicitly disposable development world. */
 final class GuideProbeWorldSettings {
@@ -30,7 +35,13 @@ final class GuideProbeWorldSettings {
     }
     static void createFresh(net.minecraft.client.Minecraft client, String name) {
         var registries = net.minecraft.core.RegistryAccess.builtinCopy();
+        var biomes = registries.registryOrThrow(Registry.BIOME_REGISTRY);
+        var structures = registries.registryOrThrow(Registry.STRUCTURE_SET_REGISTRY);
+        var flat = new FlatLevelSource(structures, FlatLevelGeneratorSettings.getDefault(biomes, structures));
+        var dimensions = WorldGenSettings.withOverworld(
+                registries.registryOrThrow(Registry.DIMENSION_TYPE_REGISTRY),
+                DimensionType.defaultDimensions(registries, 17L), flat);
         client.createLevel(name, create(name), registries,
-                net.minecraft.client.gui.screens.worldselection.WorldPreset.FLAT.create(registries, 17L, false, false));
+                new WorldGenSettings(17L, false, false, dimensions));
     }
 }

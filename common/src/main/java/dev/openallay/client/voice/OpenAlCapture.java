@@ -12,10 +12,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import org.lwjgl.openal.AL10;
-import org.lwjgl.openal.ALC;
 import org.lwjgl.openal.ALC10;
 import org.lwjgl.openal.ALC11;
-import org.lwjgl.openal.ALCCapabilities;
 import org.lwjgl.openal.ALUtil;
 import org.lwjgl.openal.EXTDisconnect;
 import org.lwjgl.system.MemoryStack;
@@ -188,9 +186,7 @@ public final class OpenAlCapture implements AudioCapture.Factory {
     /** Does not create/destroy ALC, change game playback contexts, or use model-runtime IPC. */
     private static final class LwjglPort implements NativePort {
         @Override public boolean available() {
-            ALCCapabilities caps = ALC.getCapabilities();
-            return caps.alcCaptureOpenDevice != 0 && caps.alcCaptureCloseDevice != 0
-                    && caps.alcCaptureStart != 0 && caps.alcCaptureStop != 0 && caps.alcCaptureSamples != 0;
+            return NativeOpenAlCaptureFacts.available();
         }
         @Override public List<String> names() {
             List<String> names = ALUtil.getStringList(0, ALC11.ALC_CAPTURE_DEVICE_SPECIFIER);

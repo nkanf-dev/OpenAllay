@@ -29,7 +29,7 @@ jobs:
       - name: Compile one selected native closure and test the new editor state
         run: >-
           ./gradlew --max-workers=2 --stacktrace -PminecraftTarget=1.18.2 -PbundleExtensions=false
-          :forge:assemble :forge:captureNativeCommandContracts :common:test
+          :forge:assemble :forge:captureNativeCommandContracts :common:nativePrimitiveTest
           --tests dev.openallay.client.gui.GuideMultilineTextStateTest
           --tests dev.openallay.client.gui.hud.GuideToastSlotReservationsTest
           -x :engine-core:test -x :runtime-maven:test
@@ -48,6 +48,6 @@ jobs:
             forge/build/libs/openallay-forge-1.18.2-0.4.2.jar
             build/forge-native-contracts/
             forge/build/native-engine/receipt.json
-            common/build/test-results/test/
-            common/build/reports/tests/test/
+            common/build/test-results/nativePrimitiveTest/
+            common/build/reports/tests/nativePrimitiveTest/
             build/reports/problems/

@@ -98,3 +98,31 @@ tasks.named('compileTestJava', JavaCompile) {
 tasks.withType(Test).configureEach {
     javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(nativeTestJavaVersion) }
 }
+
+// Native text/slot primitives are Minecraft-free. Compile only their focused tests,
+// without pulling unrelated newest-game test source APIs into an older target.
+sourceSets {
+    nativePrimitiveTest {
+        java.srcDir('src/test/java')
+        java.include('dev/openallay/client/gui/GuideMultilineTextStateTest.java')
+        java.include('dev/openallay/client/gui/hud/GuideToastSlotReservationsTest.java')
+        compileClasspath += sourceSets.main.output
+        runtimeClasspath += sourceSets.main.output
+    }
+}
+configurations.nativePrimitiveTestImplementation.extendsFrom(configurations.testImplementation)
+configurations.nativePrimitiveTestRuntimeOnly.extendsFrom(configurations.testRuntimeOnly)
+['nativePrimitiveTestCompileClasspath', 'nativePrimitiveTestRuntimeClasspath'].each { name ->
+    configurations.named(name) {
+        attributes.attribute(org.gradle.api.attributes.java.TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE, nativeTestJavaVersion)
+    }
+}
+tasks.named('compileNativePrimitiveTestJava', JavaCompile) {
+    javaCompiler = javaToolchains.compilerFor { languageVersion = JavaLanguageVersion.of(nativeTestJavaVersion) }
+    options.release = nativeTestJavaVersion
+}
+tasks.register('nativePrimitiveTest', Test) {
+    description = 'Verify the two shared Minecraft-free native widget/slot state primitives.'
+    testClassesDirs = sourceSets.nativePrimitiveTest.output.classesDirs
+    classpath = sourceSets.nativePrimitiveTest.runtimeClasspath
+}
