@@ -12,7 +12,13 @@ group = 'dev.openallay'
 base { archivesName = 'openallay-forge36-probe' }
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
 minecraft { mappings channel: 'official', version: '1.16.5' }
+if (providers.gradleProperty('nativeApiSupplement').isPresent()) {
+    repositories { maven { url = 'https://maven.blamejared.com' } }
+}
 dependencies {
+    if (providers.gradleProperty('nativeApiSupplement').isPresent()) {
+        compileOnly 'mezz.jei:jei-1.16.5:7.8.1.1018:api'
+    }
     minecraft 'net.minecraftforge:forge:1.16.5-36.2.42'
     // Root stages these exact unchanged artifacts after the shared build. Compile-only.
     compileOnly files('closure/openallay-engine-core.jar', 'closure/openallay-extension-api.jar',

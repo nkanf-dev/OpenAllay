@@ -1,6 +1,15 @@
 name: Forge36 native source declaration inventory
 on:
   workflow_dispatch:
+    inputs:
+      inventory:
+        description: Native declaration selection
+        required: true
+        default: primary
+        type: choice
+        options:
+          - primary
+          - supplement
 permissions:
   contents: read
 concurrency:
@@ -25,7 +34,7 @@ jobs:
       - name: Resolve genuine native API and export selected declarations only
         env:
           JAVA_HOME_17_X64: ${{ env.JAVA_HOME }}
-        run: python3 -B scripts/forge16165-engine-prerequisite/export-native-api.py
+        run: python3 -B scripts/forge16165-engine-prerequisite/export-native-api.py ${{ inputs.inventory == 'supplement' && '--supplement' || '' }}
       - name: Keep small public-access and method-body source evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
