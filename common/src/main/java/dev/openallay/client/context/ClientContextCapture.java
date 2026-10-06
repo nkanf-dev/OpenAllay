@@ -152,9 +152,9 @@ public final class ClientContextCapture {
 
     private ObservableGameStateSnapshot.RuntimeState runtimeState(
             Minecraft client, Instant capturedAt) {
-        String connectionKind = client.hasSingleplayerServer()
+        String connectionKind = MinecraftClientContextFacts.singleplayer(client)
                 ? "singleplayer"
-                : client.getConnection() == null ? "disconnected" : "multiplayer";
+                : !MinecraftClientContextFacts.connected(client) ? "disconnected" : "multiplayer";
         return new ObservableGameStateSnapshot.RuntimeState(
                 platform.gameVersion(),
                 platform.platformName(),
@@ -194,7 +194,7 @@ public final class ClientContextCapture {
     private ObservableGameStateSnapshot.OptionsState optionsState(
             Minecraft client, Instant capturedAt) {
         List<OptionValue> values = new ArrayList<>();
-        for (String line : MinecraftClientOptionsFacts.report(client.options).lines().toList()) {
+        for (String line : MinecraftClientOptionsFacts.report(MinecraftClientContextFacts.options(client)).lines().toList()) {
             int separator = line.indexOf(':');
             if (separator <= 0) {
                 continue;
@@ -206,7 +206,7 @@ public final class ClientContextCapture {
             }
             values.add(new OptionValue(optionGroup(key), key, key, value));
         }
-        for (var mapping : client.options.keyMappings) {
+        for (var mapping : MinecraftClientContextFacts.options(client).keyMappings) {
             values.add(new OptionValue(
                     "controls",
                     mapping.getName(),
@@ -295,12 +295,12 @@ public final class ClientContextCapture {
     private ObservableGameStateSnapshot.DiagnosticsState diagnosticsState(
             LocalPlayer player, Minecraft client, Instant capturedAt) {
         List<DiagnosticValue> values = new ArrayList<>();
-        add(values, "position", "x", Double.toString(player.getX()));
-        add(values, "position", "y", Double.toString(player.getY()));
-        add(values, "position", "z", Double.toString(player.getZ()));
+        add(values, "position", "x", Double.toString(MinecraftClientContextFacts.x(player)));
+        add(values, "position", "y", Double.toString(MinecraftClientContextFacts.y(player)));
+        add(values, "position", "z", Double.toString(MinecraftClientContextFacts.z(player)));
         add(values, "position", "block", MinecraftClientContextFacts.blockPosition(MinecraftClientContextFacts.position(player)));
         add(values, "position", "dimension", MinecraftClientContextFacts.dimension(client));
-        add(values, "position", "direction", player.getDirection().getName());
+        add(values, "position", "direction", MinecraftClientContextFacts.direction(player));
         add(values, "position", "yaw", Float.toString(dev.openallay.client.MinecraftPlayerRotation.yaw(player)));
         add(values, "position", "pitch", Float.toString(dev.openallay.client.MinecraftPlayerRotation.pitch(player)));
         MinecraftClientBiomeFacts.id(client, player).ifPresent(id -> add(values, "position", "biome", id));
@@ -316,20 +316,20 @@ public final class ClientContextCapture {
         add(values, "performance", "heap_max_bytes", Long.toString(runtime.maxMemory()));
         add(values, "renderer", "chunk_source", client.level.gatherChunkSourceStats());
         add(values, "renderer", "render_distance",
-                Integer.toString(MinecraftClientOptionsFacts.renderDistance(client.options)));
-        dev.openallay.platform.minecraft.MinecraftOptions.simulationDistance(client.options)
+                Integer.toString(MinecraftClientOptionsFacts.renderDistance(MinecraftClientContextFacts.options(client))));
+        dev.openallay.platform.minecraft.MinecraftOptions.simulationDistance(MinecraftClientContextFacts.options(client))
                 .ifPresent(distance -> add(values, "renderer", "simulation_distance", Integer.toString(distance)));
         add(values, "renderer", "entities", Integer.toString(client.level.getEntityCount()));
         add(values, "player", "health", Float.toString(player.getHealth()));
         add(values, "player", "max_health", Float.toString(player.getMaxHealth()));
-        add(values, "player", "food", Integer.toString(player.getFoodData().getFoodLevel()));
-        add(values, "player", "air", Integer.toString(player.getAirSupply()));
-        add(values, "player", "armor", Integer.toString(player.getArmorValue()));
+        add(values, "player", "food", Integer.toString(MinecraftClientContextFacts.food(player)));
+        add(values, "player", "air", Integer.toString(MinecraftClientContextFacts.air(player)));
+        add(values, "player", "armor", Integer.toString(MinecraftClientContextFacts.armor(player)));
         add(values, "player", "experience_level", Integer.toString(player.experienceLevel));
         add(values, "player", "selected_hotbar_slot",
                 Integer.toString(dev.openallay.context.minecraft.MinecraftPlayerFacts.selectedSlot(dev.openallay.context.minecraft.MinecraftPlayerFacts.inventory(player))));
-        add(values, "player", "camera", client.options.getCameraType().name().toLowerCase(Locale.ROOT));
-        add(values, "player", "active_effects", player.getActiveEffects().stream()
+        add(values, "player", "camera", MinecraftClientContextFacts.cameraMode(client));
+        add(values, "player", "active_effects", MinecraftClientContextFacts.effects(player).stream()
                 .map(dev.openallay.context.minecraft.MinecraftActiveEffectFacts::id)
                 .sorted()
                 .toList().toString());
@@ -391,19 +391,19 @@ public final class ClientContextCapture {
     private ObservableGameStateSnapshot.WorldQueriesState worldQueriesState(
             Minecraft client, Instant capturedAt) {
         Map<String, QueryValue> values = new TreeMap<>();
-        long gameTime = client.level.getGameTime();
+        long gameTime = MinecraftClientContextFacts.gameTime(client);
         values.put("time", clientQuery("time",
                 "game=" + gameTime + ",day_cycle=" + Math.floorMod(gameTime, 24_000L)));
         values.put("weather", clientQuery("weather",
-                client.level.isThundering() ? "thunder" : client.level.isRaining() ? "rain" : "clear"));
+                MinecraftClientContextFacts.thunder(client) ? "thunder" : MinecraftClientContextFacts.rain(client) ? "rain" : "clear"));
         values.put("difficulty", clientQuery(
-                "difficulty", dev.openallay.context.minecraft.MinecraftDifficultyFacts.name(client.level.getDifficulty())));
-        var border = client.level.getWorldBorder();
+                "difficulty", dev.openallay.context.minecraft.MinecraftDifficultyFacts.name(MinecraftClientContextFacts.difficulty(client))));
+        var border = MinecraftClientContextFacts.border(client);
         values.put("world_border", clientQuery("world_border",
                 "center=" + border.getCenterX() + "," + border.getCenterZ()
                         + ",size=" + border.getSize()));
         values.put("spawn", clientQuery("spawn",
-                dev.openallay.context.minecraft.MinecraftSpawnFacts.describe(client.level)));
+                MinecraftClientContextFacts.spawn(client)));
         return new ObservableGameStateSnapshot.WorldQueriesState(
                 values,
                 evidence(DataCompleteness.PARTIAL, capturedAt,
@@ -437,8 +437,8 @@ public final class ClientContextCapture {
 
     private PlayerSnapshot player(LocalPlayer player, Minecraft client, Instant capturedAt) {
         List<InventorySlotSnapshot> inventory = new ArrayList<>();
-        for (int slot = 0; slot < dev.openallay.context.minecraft.MinecraftPlayerFacts.inventory(player).getContainerSize(); slot++) {
-            inventory.add(new InventorySlotSnapshot(slot, stack(dev.openallay.context.minecraft.MinecraftPlayerFacts.inventory(player).getItem(slot))));
+        for (int slot = 0; slot < MinecraftClientContextFacts.inventorySize(player); slot++) {
+            inventory.add(new InventorySlotSnapshot(slot, stack(MinecraftClientContextFacts.inventoryItem(player, slot))));
         }
         var position = MinecraftClientContextFacts.position(player);
         String mode = client.gameMode == null || client.gameMode.getPlayerMode() == null
@@ -452,7 +452,7 @@ public final class ClientContextCapture {
         int selected = dev.openallay.context.minecraft.MinecraftPlayerFacts.selectedSlot(dev.openallay.context.minecraft.MinecraftPlayerFacts.inventory(player));
         InventorySnapshot inventorySnapshot = new InventorySnapshot(
                 inventory,
-                dev.openallay.context.minecraft.MinecraftPlayerFacts.inventory(player).getContainerSize(),
+                MinecraftClientContextFacts.inventorySize(player),
                 selected,
                 selected,
                 stack(MinecraftClientContextFacts.offHand(player)),

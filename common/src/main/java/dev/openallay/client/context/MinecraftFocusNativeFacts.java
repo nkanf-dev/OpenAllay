@@ -11,6 +11,7 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.item.ItemStack;
 public final class MinecraftFocusNativeFacts {
     private MinecraftFocusNativeFacts() {}
+    public static ItemStack slotItem(Slot slot) { return slot.getItem(); }
     public static String availability() { return ""; }
     public static Object screen(Minecraft client) { return MinecraftClientWindow.screen(client); }
     public static Object overlay(Minecraft client) { return MinecraftClientWindow.overlay(client); }

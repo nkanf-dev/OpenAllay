@@ -11,6 +11,7 @@ import net.minecraft.item.ItemStack;
 /** Direct legacy native screen/menu facts, without modern GUI/type aliases. */
 public final class MinecraftFocusNativeFacts {
     private MinecraftFocusNativeFacts() {}
+    public static ItemStack slotItem(Slot slot) { return slot.getStack(); }
     public static String availability() { return "native_screen_title_not_available;native_menu_type_registry_not_available"; }
     public static Object screen(Minecraft client) { return client.currentScreen; }
     public static Object overlay(Minecraft client) { return null; }

@@ -203,7 +203,7 @@ public final class ClientFocusCapture {
             return new WorldFocusObservation.Hover(x, y, mouseGrabbed, "none", -1, -1, null, "");
         }
         return new WorldFocusObservation.Hover(
-                x, y, mouseGrabbed, "slot", MinecraftFocusNativeFacts.slotIndex(slot), MinecraftMenuFacts.containerSlot(slot), item(client, slot.getItem()), "");
+                x, y, mouseGrabbed, "slot", MinecraftFocusNativeFacts.slotIndex(slot), MinecraftMenuFacts.containerSlot(slot), item(client, MinecraftFocusNativeFacts.slotItem(slot)), "");
     }
 
     private static WorldFocusObservation.Item item(Minecraft client, ItemStack stack) {
