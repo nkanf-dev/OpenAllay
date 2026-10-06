@@ -16,8 +16,8 @@ def source = file(request.sourceRoot).canonicalFile
 def parse = { String path -> new JsonSlurper().parse(file(path)) }
 def closure = parse(request.closureSpec)
 def plan = parse(request.sourceSelectionPlan)
-def mappings = parse(request.mappingInputs)
-if (mappings.keySet() != (['client','server','tsrg'] as Set) || mappings.values().any {
+def mappingFiles = parse(request.mappingInputs)
+if (mappingFiles.keySet() != (['client','server','tsrg'] as Set) || mappingFiles.values().any {
     !(it instanceof Map) || it.keySet() != (['path','sha256'] as Set) ||
     !(it.path instanceof String) || !new File(it.path).isAbsolute() || !(it.sha256 ==~ /[0-9a-f]{64}/)
 }) throw new GradleException('Exact mapping input identity required')
@@ -285,7 +285,7 @@ def normalize = tasks.register('normalizeMinecraftClassNamespace', JavaExec) {
     classpath = tool.sourceSets.main.runtimeClasspath
     mainClass = 'dev.openallay.build.MinecraftClassNamespaceProducerMain'
     inputs.files(unitPlan,symbolPlan,classpathPlan,file(request.mappingInputs),file(request.metadataAcceptance))
-    inputs.files(mappings.values().collect { file(it.path) })
+    inputs.files(mappingFiles.values().collect { file(it.path) })
     inputs.files(selected.java.collect { it.file }).withPathSensitivity(PathSensitivity.RELATIVE)
     inputs.files(configurations.compileClasspath)
     inputs.property('toolingJdk',javaLauncher.map { it.metadata.installationPath.asFile.absolutePath })
@@ -293,9 +293,9 @@ def normalize = tasks.register('normalizeMinecraftClassNamespace', JavaExec) {
     outputs.file(namespaceReceipt)
     doFirst {
         args = ['--units',unitPlan.get().asFile,'--symbol-units',symbolPlan.get().asFile,
-            '--client',file(mappings.client.path),'--client-sha256',mappings.client.sha256,
-            '--server',file(mappings.server.path),'--server-sha256',mappings.server.sha256,
-            '--tsrg',file(mappings.tsrg.path),'--tsrg-sha256',mappings.tsrg.sha256,
+            '--client',file(mappingFiles.client.path),'--client-sha256',mappingFiles.client.sha256,
+            '--server',file(mappingFiles.server.path),'--server-sha256',mappingFiles.server.sha256,
+            '--tsrg',file(mappingFiles.tsrg.path),'--tsrg-sha256',mappingFiles.tsrg.sha256,
             '--classpath',classpathPlan.get().asFile,'--source',plan.sourceSyntax,
             '--preview',plan.preview.toString(),'--metadata-acceptance',file(request.metadataAcceptance),
             '--output',generatedJava.get().asFile,'--receipt',namespaceReceipt.get().asFile]
