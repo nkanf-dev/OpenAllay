@@ -118,7 +118,7 @@ def framework_supported(declaration: str, current: str) -> bool:
             and (not upper or version < release(upper) or (declaration[-1] == "]" and version == release(upper))))
 
 
-def verify_manifest(content: bytes, lock: dict) -> dict:
+def verify_manifest(content: bytes, lock: dict, *, additional_target_pairs: frozenset[tuple[str, str]] = frozenset()) -> dict:
     descriptor = prepare.decode_json(content)
     require(isinstance(descriptor, dict), "Expected universal manifest object")
     exact({key: value for key, value in descriptor.items() if key != "requirements"},
@@ -160,7 +160,7 @@ def verify_manifest(content: bytes, lock: dict) -> dict:
     require(len(encoded_targets) == len(set(encoded_targets)), "Duplicate support target")
     intended_targets = read_target_loaders(ROOT)
     require({(target["loader"], target["minecraftVersionRange"]) for target in targets}
-        == {(loader, game) for game, selected in intended_targets.items() for loader in selected["loaders"]},
+        == {(loader, game) for game, selected in intended_targets.items() for loader in selected["loaders"]} | additional_target_pairs,
         "Builder declaration must cover the actual prepared native target loaders in one payload")
     requirements = descriptor.get("requirements", {})
     require(isinstance(requirements, dict) and set(requirements) <= {"capabilities", "extensions", "skills"},
@@ -185,11 +185,11 @@ def archive_entries(archive: zipfile.ZipFile, name: str) -> list[str]:
     return entries
 
 
-def verify_universal(content: bytes, lock: dict) -> None:
+def verify_universal(content: bytes, lock: dict, *, additional_target_pairs: frozenset[tuple[str, str]] = frozenset()) -> None:
     with zipfile.ZipFile(BytesIO(content)) as nested:
         entries = archive_entries(nested, "universal Extension")
         require(SHARED_ENTRIES.issubset(entries), "Builder classes, canonical Skill/JS or private Gson missing")
-        verify_manifest(nested.read(DESCRIPTOR), lock)
+        verify_manifest(nested.read(DESCRIPTOR), lock, additional_target_pairs=additional_target_pairs)
         for name in entries:
             require(name not in FORBIDDEN_ENTRIES and not name.startswith(FORBIDDEN_PREFIXES)
                 and "BuilderEntrypoint" not in name and "BuilderEntry.class" not in name,

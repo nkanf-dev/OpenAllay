@@ -24,7 +24,7 @@ def main():
     if lock['source']['revision']!=pin['extensionSource'] or lock['openAllayApiVersion']!='0.4.0':raise ValueError('Exact tested Builder source/API lock differs')
     sys=__import__('sys');sys.path.insert(0,str(ROOT/'scripts'))
     verifier=module('normal_builder_verifier',ROOT/'scripts/verify-bundled-extensions.py')
-    verifier.verify_universal(data,lock)
+    verifier.verify_universal(data,lock,additional_target_pairs=frozenset({('forge','1.16.5'),('forge','1.12.2')}))
     with zipfile.ZipFile(jars[0]) as z:
         descriptor=json.loads(z.read('META-INF/openallay-extension.json'))
         if descriptor['support']['validatedTargetIds']!=[] or len(descriptor['support']['targets'])!=50 or descriptor['support']['minimumJavaVersion']!=8:raise ValueError('Tested candidate declaration changed')

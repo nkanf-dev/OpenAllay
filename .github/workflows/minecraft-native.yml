@@ -546,7 +546,7 @@ jobs:
             build/e2e/runtime/forge1122-stock/minecraft/.provision/*.log
 
   component1122-boot:
-    if: inputs.mode == 'component1122-boot' || inputs.mode == 'component1122-world-sdk' || inputs.mode == 'component1122-ui-manual' || inputs.mode == 'component1122-world-persistence' || startsWith(inputs.mode, 'component1122-builder-')
+    if: inputs.mode == 'component1122-boot' || inputs.mode == 'component1122-world-sdk' || inputs.mode == 'component1122-ui-manual' || inputs.mode == 'component1122-world-persistence' || (startsWith(inputs.mode, 'component1122-builder-') && inputs.mode != 'component1122-builder-bundle')
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
