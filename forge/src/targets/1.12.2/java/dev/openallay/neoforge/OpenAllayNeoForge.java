@@ -27,7 +27,7 @@ public final class OpenAllayNeoForge {
         OpenAllayRuntime runtime = OpenAllayBootstrap.initialize();
         NeoForgeBridgePayloads.register(runtime);
         NeoForgeDevelopmentCommands.register(runtime);
-        if (NeoForgeNativeEnvironment.isClient()) OpenAllayNeoForgeClient.initialize(runtime);
+        if (NeoForgeNativeEnvironment.isClient()) NeoForgeNativeClientBootstrap.initialize(runtime);
     }
     @Mod.EventHandler
     public void serverStarting(FMLServerStartingEvent event) {
