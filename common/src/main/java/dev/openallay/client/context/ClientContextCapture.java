@@ -253,17 +253,16 @@ public final class ClientContextCapture {
 
     private ObservableGameStateSnapshot.PacksState packsState(
             Minecraft client, Instant capturedAt) {
-        Set<String> selected = Set.copyOf(client.getResourcePackRepository().getSelectedIds());
-        List<ObservableGameStateSnapshot.PackInfo> packs = client.getResourcePackRepository()
-                .getAvailablePacks().stream()
+        Set<String> selected = Set.copyOf(MinecraftClientPackFacts.selectedIds(client));
+        List<ObservableGameStateSnapshot.PackInfo> packs = MinecraftClientPackFacts.available(client).stream()
                 .map(pack -> new ObservableGameStateSnapshot.PackInfo(
-                        pack.getId(),
-                        pack.getTitle().getString(),
-                        pack.getDescription().getString(),
-                        selected.contains(pack.getId()),
-                        pack.isRequired(),
-                        pack.getCompatibility().toString(),
-                        pack.getPackSource().toString()))
+                        pack.id(),
+                        pack.title(),
+                        pack.description(),
+                        selected.contains(pack.id()),
+                        pack.required(),
+                        pack.compatibility(),
+                        pack.source()))
                 .sorted(Comparator.comparing(ObservableGameStateSnapshot.PackInfo::id))
                 .toList();
         return new ObservableGameStateSnapshot.PacksState(
