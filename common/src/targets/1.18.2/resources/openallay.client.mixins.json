@@ -8,6 +8,7 @@
     "KeyboardHandlerObservationMixin",
     "GameRendererFovAccess",
     "MinecraftTeardownStateMixin",
+    "MinecraftClientShutdownMixin",
     "GuiSubtitleAccess",
     "ToastInstanceCompletionMixin",
     "ToastComponentSlotMixin",
