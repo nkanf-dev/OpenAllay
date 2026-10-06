@@ -9,6 +9,17 @@ import subprocess
 import zipfile
 
 CLASSES = (
+    'net.minecraft.util.FrameTimer',
+    'org.lwjgl.openal.AL',
+    'org.lwjgl.openal.ALC10',
+    'org.lwjgl.openal.ALC11',
+    'org.lwjgl.openal.ALCdevice',
+    'com.sun.jna.NativeLibrary',
+    'com.sun.jna.Function',
+    'com.sun.jna.NativeLong',
+    'com.sun.jna.Memory',
+    'com.sun.jna.Pointer',
+
     'net.minecraft.client.resources.LanguageManager',
     'net.minecraft.client.resources.Language',
     'net.minecraftforge.fml.common.eventhandler.EventPriority',
