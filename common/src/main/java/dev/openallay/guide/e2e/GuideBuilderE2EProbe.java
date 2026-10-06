@@ -89,10 +89,10 @@ final class GuideBuilderE2EProbe {
 
     static List<Landmark> landmarks(String scenario) {
         if (scenario.equals("builder-legacy-shapes")) return List.of(
-            state("legacy-box-shell",0,2,0,"stonebrick","variant","default"),
+            state("legacy-box-shell",0,2,0,"stonebrick","variant","stonebrick"),
             new Landmark("legacy-box-air",1,1,1,"air"),
-            state("legacy-path-start",0,0,4,"stonebrick","variant","default"),
-            state("legacy-path-end",4,0,4,"stonebrick","variant","default"),
+            state("legacy-path-start",0,0,4,"stonebrick","variant","stonebrick"),
+            state("legacy-path-end",4,0,4,"stonebrick","variant","stonebrick"),
             new Landmark("legacy-path-clearance",2,1,4,"air"),
             state("legacy-source-stair",0,1,8,"oak_stairs","facing","north","half","bottom","shape","straight"),
             state("legacy-source-chest",2,1,8,"chest","facing","east"),

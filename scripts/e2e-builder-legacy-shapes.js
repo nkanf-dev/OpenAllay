@@ -15,7 +15,7 @@ Object.keys(roles).sort().forEach(function(name){
 if(available.length) throw new Error("Available preset needs its own native baseline: "+available.join(","));
 if(c.version!=="1.12.2" || anchor.y<1 || anchor.y+4>=c.maxY) throw new Error("Exact legacy target/headroom required");
 var x=anchor.x,y=anchor.y,z=anchor.z;
-var stone={id:"minecraft:stonebrick",properties:{variant:"default"}};
+var stone={id:"minecraft:stonebrick",properties:{variant:"stonebrick"}};
 var oak={id:"minecraft:planks",properties:{variant:"oak"}};
 var spruce={id:"minecraft:planks",properties:{variant:"spruce"}};
 var stair={id:"minecraft:oak_stairs",properties:{facing:"north",half:"bottom",shape:"straight"}};

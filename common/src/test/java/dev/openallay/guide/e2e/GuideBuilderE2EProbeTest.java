@@ -17,7 +17,7 @@ final class GuideBuilderE2EProbeTest {
         assertTrue(landmarks.stream().noneMatch(value -> value.name().startsWith("partial-")
                 || value.name().startsWith("cancel-") || value.name().startsWith("undo-") || value.name().startsWith("house-")));
         assertEquals("minecraft:stonebrick", landmarks.get(0).id());
-        assertEquals(Map.of("variant", "default"), landmarks.get(0).properties());
+        assertEquals(Map.of("variant", "stonebrick"), landmarks.get(0).properties());
         assertEquals(Map.of("facing", "south"), landmarks.stream()
                 .filter(value -> value.name().equals("legacy-rotated-chest")).findFirst().orElseThrow().properties());
         assertEquals(Map.of("facing", "west"), landmarks.stream()
