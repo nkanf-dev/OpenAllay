@@ -96,6 +96,7 @@ public final class Probe {
                 receipt.detail("jdkLogging", jdkLogging);
                 receipt.pass();
 
+                if (!Boolean.getBoolean("oa36.pendingOnly")) {
                 stage = "engine-logging"; receipt.begin(stage);
                 OpenAllayConstants.LOGGER.info("OA36 ENGINE_LOGGING_INFO engine={} value={}",
                         OpenAllayConstants.MOD_NAME, "brace-ok");
@@ -161,13 +162,17 @@ public final class Probe {
                         && record.fields().get("values") instanceof HostSchema.Sequence, "declared record schema");
                 receipt.detail("value", value); receipt.detail("moduleCatalog", "empty-probe-only"); receipt.pass();
 
+                }
                 stage = "rhino-default-interface-java-adapter"; receipt.begin(stage);
                 Context cx = new Context(new ContextFactory());
                 dev.latvian.mods.rhino.Scriptable scope = null;
                 try {
                     scope = cx.initStandardObjects(null, false);
+                    // Current Rhino installs JavaAdapter, not a Packages namespace.
+                    dev.latvian.mods.rhino.ScriptableObject.putProperty(scope, "Greeting",
+                            new dev.latvian.mods.rhino.NativeJavaClass(cx, scope, Greeting.class), cx);
                     Object adapted = cx.evaluateString(scope,
-                            "new JavaAdapter(Packages.dev.openallay.forge36probe.Probe.Greeting, {})",
+                            "new JavaAdapter(Greeting, {})",
                             "forge36-adapter", 1, null);
                     Greeting greeting = (Greeting) cx.jsToJava(adapted, TypeInfo.of(Greeting.class));
                     check(greeting.greet().equals("default-ok"), "default-interface dispatch");
@@ -204,8 +209,10 @@ public final class Probe {
                 receipt.detail("id", descriptor.id());
                 receipt.detail("incompatibility", UniversalExtensionSupport.incompatibility(descriptor.support(), facts));
                 // Never contribute/register/install, and never fabricate host features.
-                receipt.pass(); receipt.finish("PASS", null);
-                System.out.println("OA36 ENGINE_PREREQUISITE_PASS"); System.out.flush();
+                String outcome = Boolean.getBoolean("oa36.pendingOnly") ? "PENDING_STAGES_PASS" : "PASS";
+                receipt.pass(); receipt.finish(outcome, null);
+                System.out.println(Boolean.getBoolean("oa36.pendingOnly")
+                        ? "OA36 PENDING_STAGES_PASS" : "OA36 ENGINE_PREREQUISITE_PASS"); System.out.flush();
             } catch (Throwable failure) {
                 failure.printStackTrace(System.err);
                 try { if (receipt != null) receipt.finish("FAIL", failure); }

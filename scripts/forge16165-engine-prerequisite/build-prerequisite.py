@@ -32,6 +32,11 @@ def main():
                 or artifact['workflow_run']['head_sha']!=source
                 or artifact['digest']!='sha256:7951228b7dba15097bcdf9cd50ab9b1fb28559da8a7f110e4ca334b91d2e33cf'):
             raise ValueError('Retained changed-engine archive provider identity differs')
+        prefix=json.loads(subprocess.check_output(['gh','api',f'repos/{repository}/actions/artifacts/11397859809']))
+        if (prefix['expired'] or prefix['workflow_run']['id']!=37434990163
+                or prefix['workflow_run']['head_sha']!='0170a2cb8cc4fd2a7eb2fe9ee2502b8f1d094eff'
+                or prefix['digest']!='sha256:c3bd5301ac8426cb2c62865145bb3c64c5a62acbe7ea143f107d84c4f6746c94'):
+            raise ValueError('Original native prefix provider identity differs')
         spec=json.loads((shared/'closure-input.json').read_text())
         if spec['sourceRevision']!=source or len(spec['artifacts'])!=18:
             raise ValueError('Retained logging engine producer manifest differs')

@@ -21,6 +21,8 @@ PACKET = Path(__file__).resolve().parent
 STAGES = ["identity", "engine-logging", "bound-engine-json", "json-trees-readers", "engine-rhino-record-schema",
           "rhino-default-interface-java-adapter", "existing-tool-envelope-copy", "builder-descriptor-only"]
 PASS = "OA36 ENGINE_PREREQUISITE_PASS"
+PENDING_PASS = "OA36 PENDING_STAGES_PASS"
+PENDING_STAGES = [STAGES[0]] + STAGES[5:]
 FAIL = "OA36 ENGINE_PREREQUISITE_FAIL stage="
 
 
@@ -41,21 +43,23 @@ def load_stock(repo):
 def terminal(text):
     if FAIL in text:
         return "probe-failure-marker"
-    if PASS in text:
+    if PASS in text or PENDING_PASS in text:
         return "probe-pass-marker"
     return None
 
 
-def read_receipt(path, fatmod_hash, classpath, expected_pid=None, client_log=None, installed_mod=None):
+def read_receipt(path, fatmod_hash, classpath, expected_pid=None, client_log=None, installed_mod=None, prefix_directory=None):
     value = json.loads(path.read_text())
     if value.get("prerequisiteOnly") is not True or value.get("fullNativeSupport") is not False:
         raise ValueError("Receipt must describe only the engine prerequisite")
     stages = value.get("stages", [])
     names = [stage.get("stage") for stage in stages]
-    if names != STAGES[:len(names)] or len(names) > len(STAGES):
+    expected_stages = PENDING_STAGES if prefix_directory is not None else STAGES
+    if names != expected_stages[:len(names)] or len(names) > len(expected_stages):
         raise ValueError("Stage ordering differs")
-    if value.get("status") == "PASS":
-        if names != STAGES or any(stage.get("status") != "PASS" for stage in stages):
+    expected_outcome = "PENDING_STAGES_PASS" if prefix_directory is not None else "PASS"
+    if value.get("status") == expected_outcome:
+        if names != expected_stages or any(stage.get("status") != "PASS" for stage in stages):
             raise ValueError("Incomplete prerequisite PASS")
         identity = stages[0]["details"]
         if expected_pid is not None and identity.get("pid") != str(expected_pid):
@@ -123,6 +127,9 @@ def read_receipt(path, fatmod_hash, classpath, expected_pid=None, client_log=Non
                 or jdk_logging.get("name") != "OpenAllay"
                 or not jdk_logging.get("implementationClass") or not jdk_logging.get("implementationModule")):
             raise ValueError("JDK System.Logger identity differs")
+        if prefix_directory is not None:
+            value["acceptedPrefixProof"] = validate_prefix(prefix_directory, identity, classpath, installed_mod)
+            return value
         logging = stages[1]["details"]
         if (logging.get("loggerClass") != "dev.openallay.logging.OpenAllayLogger"
                 or logging.get("loggingProof") != "formatted-info-warning-error-and-throwable"):
@@ -145,6 +152,57 @@ def read_receipt(path, fatmod_hash, classpath, expected_pid=None, client_log=Non
             or value.get("failureStage") != names[-1] or not value.get("fullCause")):
         raise ValueError("Failure receipt must retain first stage and full cause")
     return value
+
+
+def validate_prefix(directory, current_identity, classpath, installed_mod):
+    receipts = list(directory.rglob("probe-receipt.json"))
+    logs = list(directory.rglob("client.log"))
+    specs = [path for path in directory.rglob("closure-input.json")
+             if path.parent.name == "forge36-shared"]
+    if len(receipts) != 1 or len(logs) != 1 or len(specs) != 1:
+        raise ValueError("Retained native prefix files are ambiguous or missing")
+    receipt_path, log_path = receipts[0], logs[0]
+    if (hashlib.sha256(receipt_path.read_bytes()).hexdigest() != "c667924ae750814a2b41495ffd447c50af0f67131e27b47a172ae0bce30c12ac"
+            or hashlib.sha256(log_path.read_bytes()).hexdigest() != "9d43647babe35f194afc075bc783941e48cb0631f9177ab89d61c8bc6d4fc5b9"):
+        raise ValueError("Original native prefix bytes changed")
+    original = json.loads(receipt_path.read_text())
+    old_stages = original["stages"]
+    if (original.get("status") != "FAIL" or original.get("failureStage") != STAGES[5]
+            or [stage["stage"] for stage in old_stages] != STAGES[:6]
+            or any(stage["status"] != "PASS" for stage in old_stages[:5])
+            or old_stages[5]["status"] != "FAIL"):
+        raise ValueError("Original run did not pass the required prefix")
+    old_identity = old_stages[0]["details"]
+    for name in ["dev.openallay.script.RhinoJavascriptRuntime", "dev.openallay.json.EngineJson",
+                 "dev.latvian.mods.rhino.Context", "dev.openallay.api.extension.OpenAllayExtension",
+                 "dev.openallay.OpenAllayConstants", "dev.openallay.logging.OpenAllayLogger"]:
+        if old_identity[name]["modEntryProof"]["archiveEntrySha256"] != current_identity[name]["modEntryProof"]["archiveEntrySha256"]:
+            raise ValueError("Native prefix input class changed: " + name)
+    for name in ["com.google.gson.Gson", "com.google.common.collect.ImmutableList", "org.apache.logging.log4j.Logger"]:
+        if old_identity[name]["archiveSha256"] != current_identity[name]["archiveSha256"]:
+            raise ValueError("Native prefix official host changed: " + name)
+    build_reports = list(directory.rglob("probe-build.json"))
+    if len(build_reports) != 1:
+        raise ValueError("Original probe component metadata is missing")
+    original_build = json.loads(build_reports[0].read_text())
+    greeting = "dev/openallay/forge36probe/Probe$Greeting.class"
+    with zipfile.ZipFile(installed_mod) as archive:
+        greeting_hash = hashlib.sha256(archive.read(greeting)).hexdigest()
+    if greeting_hash != original_build["reobfOutput"]["entries"][greeting]["sha256"]:
+        raise ValueError("Default interface input changed from the original probe")
+    spec = json.loads(specs[0].read_text())
+    current_spec = json.loads((PACKET.parents[1] / "build/forge36-shared/closure-input.json").read_text())
+    if {a["role"]:a["sha256"] for a in spec["artifacts"]} != {a["role"]:a["sha256"] for a in current_spec["artifacts"]}:
+        raise ValueError("Native prefix component/resource inputs changed")
+    text = log_path.read_text(errors="replace")
+    for marker in ["OA36 ENGINE_LOGGING_INFO engine=OpenAllay value=brace-ok",
+                   "OA36 ENGINE_LOGGING_WARN engine=OpenAllay value=brace-ok",
+                   "OA36 ENGINE_LOGGING_ERROR engine=OpenAllay value=brace-ok",
+                   "java.lang.IllegalStateException: OA36 ENGINE_LOGGING_THROWABLE"]:
+        if marker not in text: raise ValueError("Original logger output proof missing")
+    return {"originalRun":37434990163, "originalSource":"0170a2cb8cc4fd2a7eb2fe9ee2502b8f1d094eff",
+            "originalRunOutcome":"FAIL", "receiptSha256":hashlib.sha256(receipt_path.read_bytes()).hexdigest(),
+            "acceptedStages":STAGES[:5], "componentAndHostHashesUnchanged":True}
 
 
 def collect(process, log, timeout):
@@ -196,6 +254,8 @@ def boot(args, root, java, assets, stock, runtime, launch, expected, vanilla, ve
     probe_receipt = output / "probe-receipt.json"
     command = [str(java), "-Xms256M", "-Xmx1536M", "-Doa36.receipt=" + str(probe_receipt), "-Doa36.mod=" + str(installed.resolve()),
                "-Xlog:class+load=info:file=" + str(output / "class-load.log")] + jvm + [stock.MAIN] + game_args
+    if args.prefix_directory is not None:
+        command.insert(1, "-Doa36.pendingOnly=true")
     env = {k: v for k, v in os.environ.items() if k not in
            ("JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "_JAVA_OPTIONS", "CLASSPATH", "DISPLAY")}
     receipt = {"status": "running", "prerequisiteOnly": True, "fullNativeSupport": False,
@@ -224,10 +284,14 @@ def boot(args, root, java, assets, stock, runtime, launch, expected, vanilla, ve
                 outcome = collect(process, log, args.timeout)
                 receipt["terminalCollection"] = outcome
                 if outcome in ("probe-pass-marker", "probe-failure-marker"):
-                    proof = read_receipt(probe_receipt, args.mod_sha256, classpath, process.pid, log, installed)
-                    expected_status = "PASS" if outcome == "probe-pass-marker" else "FAIL"
+                    proof = read_receipt(probe_receipt, args.mod_sha256, classpath, process.pid, log, installed, args.prefix_directory)
+                    expected_status = ("PENDING_STAGES_PASS" if args.prefix_directory is not None else "PASS") if outcome == "probe-pass-marker" else "FAIL"
                     runtime.require(proof["status"] == expected_status, "Terminal marker and receipt disagree")
                     receipt["status"] = expected_status
+                    if args.prefix_directory is not None and expected_status == "PENDING_STAGES_PASS":
+                        receipt["nativePrerequisiteEvidence"] = {"kind":"split-original-executions",
+                            "prefix":proof["acceptedPrefixProof"], "currentExecutedStages":PENDING_STAGES,
+                            "currentProbeOutcome":expected_status, "combinedEnginePrerequisite":"PASS"}
                     receipt["probeReceiptSha256"] = stock.sha(probe_receipt)
                 else:
                     receipt["status"] = outcome
@@ -259,7 +323,7 @@ def boot(args, root, java, assets, stock, runtime, launch, expected, vanilla, ve
             receipt["clientLogSha256"] = stock.sha(log)
         runtime.write_json(output / "collector-receipt.json", receipt)
         print(json.dumps(receipt, sort_keys=True), flush=True)
-    return 0 if receipt["status"] == "PASS" else 1
+    return 0 if receipt["status"] in ("PASS", "PENDING_STAGES_PASS") else 1
 
 
 def main(argv=None):
@@ -272,6 +336,7 @@ def main(argv=None):
     parser.add_argument("--mod", required=True, type=Path)
     parser.add_argument("--mod-sha256", required=True)
     parser.add_argument("--timeout", type=int, default=120)
+    parser.add_argument("--prefix-directory", type=Path)
     args = parser.parse_args(argv)
     args.repo = args.repo.resolve()
     stock, runtime, launch, freeze = load_stock(args.repo)
