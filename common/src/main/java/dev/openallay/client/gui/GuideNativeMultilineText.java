@@ -8,6 +8,10 @@ import net.minecraft.network.chat.Component;
 /** Native editor construction and full-text replacement; the live editor stays native. */
 public final class GuideNativeMultilineText {
     private GuideNativeMultilineText() {}
+    public static GuideMultilineEditor find(GuideWidget widget) {
+        return find(GuideNativeWidgets.nativeWidget(widget));
+    }
+
 
     public static GuideMultilineEditor create(Font font, int x, int y, int width, int height,
             Component placeholder, Component narration) {
