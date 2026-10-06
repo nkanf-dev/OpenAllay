@@ -11,6 +11,7 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyArgs;
+import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.invoke.arg.Args;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
@@ -18,8 +19,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(targets = "net.minecraft.client.gui.toasts.GuiToast$ToastInstance")
 public abstract class ToastInstanceCompletionMixin {
     @Shadow @Final private IToast toast;
-    // Exact synthetic outer-owner field is named field_193687_a in the successful actual bytecode.
-    @Shadow @Final private GuiToast field_193687_a;
+    @Unique private GuiToast openallay$manager;
     @Unique private int openallay$guiWidth;
     @Inject(method = "render(II)Z", at = @At("HEAD"))
     private void openallay$captureWidth(int guiWidth, int nativeIndex, CallbackInfoReturnable<Boolean> callback) {
@@ -34,10 +34,16 @@ public abstract class ToastInstanceCompletionMixin {
             args.set(0, openallay$guiWidth - owned.width() * visibility);
         }
     }
+    @Redirect(method = "render(II)Z", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/client/gui/toasts/IToast;draw(Lnet/minecraft/client/gui/toasts/GuiToast;J)Lnet/minecraft/client/gui/toasts/IToast$Visibility;"), require = 1)
+    private IToast.Visibility openallay$captureManager(IToast renderedToast, GuiToast manager, long fullyVisibleMillis) {
+        openallay$manager = manager;
+        return renderedToast.draw(manager, fullyVisibleMillis);
+    }
     @Inject(method = "render(II)Z", at = @At("RETURN"))
     private void openallay$stageRemoval(int guiWidth, int nativeIndex, CallbackInfoReturnable<Boolean> callback) {
         if (callback.getReturnValueZ()) {
-            ((GuideToastSlotManager) field_193687_a).openallay$stageNativeRemoval(toast, nativeIndex);
+            ((GuideToastSlotManager) openallay$manager).openallay$stageNativeRemoval(toast, nativeIndex);
         }
     }
 }
