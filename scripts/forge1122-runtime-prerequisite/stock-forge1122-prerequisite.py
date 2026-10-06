@@ -237,11 +237,12 @@ def prepare_pack200(args, output, java, cp, runtime):
     helper = output / "pack200-runtime-helper.jar"
     subprocess.run([str(java.parent / "jar"), "cf", str(helper), "-C", str(helper_classes), "."], check=True)
     clean_env = {k:v for k,v in os.environ.items() if k not in ("JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "_JAVA_OPTIONS")}
-    with (output / "pack200-entries-test.log").open("w") as log:
-        subprocess.run([str(java), "-cp", str(helper), "dev.openallay.runtime.forge1122.pack200.Pack200Runtime",
-                        str(packed_path), str(unpacked), runtime.file_hash(unpacked),
-                        str(output / "pack200-entries-test.json")], check=True, env=clean_env,
-                       stdout=log, stderr=subprocess.STDOUT)
+    if not args.title_only:
+        with (output / "pack200-entries-test.log").open("w") as log:
+            subprocess.run([str(java), "-cp", str(helper), "dev.openallay.runtime.forge1122.pack200.Pack200Runtime",
+                            str(packed_path), str(unpacked), runtime.file_hash(unpacked),
+                            str(output / "pack200-entries-test.json")], check=True, env=clean_env,
+                           stdout=log, stderr=subprocess.STDOUT)
     packed_path.unlink()
     cp.append(("dev.openallay.runtime:pack200-entry-bridge:current", helper))
     return ["-Dopenallay.pack200.enabled=true", "-Dopenallay.pack200.forge=" + str(forge),
@@ -274,7 +275,9 @@ def prepare_launchwrapper_bridge(args, output, java, cp, runtime):
     test_cp = os.pathsep.join([str(agent)] + [str(path) for _, path in cp])
     test_main = "dev.openallay.runtime.forge1122.LaunchWrapperJava17BridgeTest"
     clean_env = {k:v for k,v in os.environ.items() if k not in ("JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "_JAVA_OPTIONS")}
-    if args.pack200_bridge:
+    if args.title_only:
+        runtime.write_json(output / "bridge-tests-reused.json", json.loads((PACKET / "prior-bridge-tests.json").read_text()))
+    elif args.pack200_bridge:
         forge = next(path for name, path in cp if name == "net.minecraftforge:forge:1.12.2-14.23.5.2864")
         with (output / "pack200-tests.log").open("w") as log:
             subprocess.run([str(java), "-cp", test_cp, "dev.openallay.runtime.forge1122.Pack200BridgeTest", str(forge)],
@@ -306,6 +309,13 @@ def boot(args, root, java, assets, runtime, launch, expected, vanilla, version):
     # Legacy LaunchWrapper needs the original game JAR, not a fake alias or Gradle runtime.
     cp += [("com.mojang:minecraft:1.12.2:client", root / "versions/1.12.2/1.12.2.jar")]
     pack200_flags = prepare_pack200(args, output, java, cp, runtime) if args.pack200_bridge else []
+    if args.title_only:
+        # Real legacy LWJGL invokes xrandr -q. Keep the official display/native code unchanged.
+        checked = subprocess.run(["xrandr", "-q"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                 text=True, timeout=15, check=False, env={**os.environ, "LC_ALL": "C"})
+        (output / "xrandr-query.log").write_text(checked.stdout)
+        runtime.require(checked.returncode == 0 and re.search(r"^\S+ connected ", checked.stdout, re.M),
+                        "Actual Xvfb xrandr query must expose a connected display")
     classpath_receipts = inspect_classpath(cp, expected, runtime)
     native_receipts = launch.extract_natives(launch.native_libraries(vanilla, root), output / "natives")
     values = {"natives_directory": output / "natives", "launcher_name": "OpenAllayStockPrerequisite",
@@ -324,8 +334,10 @@ def boot(args, root, java, assets, runtime, launch, expected, vanilla, version):
         raise ValueError("Unresolved legacy launcher argument")
     bridge_flags = prepare_launchwrapper_bridge(args, output, java, cp, runtime) if args.launchwrapper_bridge else []
     command = [str(java), "-Xms256M", "-Xmx1536M",
-               "-Xlog:class+load=info:file=" + str(output / "class-load.log")] + bridge_flags + pack200_flags + jvm + [MAIN] + game_args
+               "-Xlog:class+load=info:file=" + str(output / "class-load.log")] + bridge_flags + pack200_flags + (["-Dorg.lwjgl.util.Debug=true"] if args.title_only else []) + jvm + [MAIN] + game_args
     env = {k:v for k,v in os.environ.items() if k not in ("JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "_JAVA_OPTIONS")}
+    if args.title_only:
+        env["LC_ALL"] = "C"
     runtime.write_json(output / "launch.json", {"command": command, "classpath": classpath_receipts,
                        "natives": native_receipts, "noMods": True, "noEngineProbe": True,
                        "runtimeMode": "launchwrapper-and-pack200-bridge" if args.pack200_bridge else "launchwrapper-url-bridge" if args.launchwrapper_bridge else "raw-stock",
@@ -374,6 +386,7 @@ def boot(args, root, java, assets, runtime, launch, expected, vanilla, version):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--title-only", action="store_true", help="Use real xrandr display harness; reuse exact already-passed bridge source tests")
     parser.add_argument("--pack200-bridge", action="store_true", help="Opt-in genuine build-JDK8 Pack200 conversion, runtime17 entry seam")
     parser.add_argument("--launchwrapper-bridge", action="store_true", help="Opt-in exact LaunchWrapper1.12 URL seam instrumentation; stock libraries stay unchanged")
     parser.add_argument("--metadata-only", action="store_true", help="No network, Java or filesystem runtime action")
@@ -383,6 +396,12 @@ def main():
     parser.add_argument("--minecraft-root", type=Path)
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
+    if args.title_only:
+        args.pack200_bridge = True
+        prior = json.loads((PACKET / "prior-bridge-tests.json").read_text())
+        for relative, expected in prior["sources"].items():
+            if sha(PACKET / relative) != expected:
+                raise ValueError("Prior bridge tests cannot cover changed source: " + relative)
     if args.pack200_bridge:
         args.launchwrapper_bridge = True
     runtime, launch, freeze = load_helpers(args.repo)
