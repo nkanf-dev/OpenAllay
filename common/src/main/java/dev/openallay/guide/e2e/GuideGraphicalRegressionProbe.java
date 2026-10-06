@@ -1088,7 +1088,7 @@ final class GuideGraphicalRegressionProbe {
                 GuideProbeKeyBindings.refresh(); advance();
             }
             case 25 -> {
-                report.put("explicitUnboundKeyLabel", dev.openallay.client.gui.GuideNativeKeyMappings.display(OpenAllayKeyMappings.INTERACT_HUD));
+                report.put("explicitUnboundKeyLabel", MinecraftComponents.getString(dev.openallay.client.gui.GuideNativeKeyMappings.display(OpenAllayKeyMappings.INTERACT_HUD)));
                 require(dev.openallay.client.gui.GuideNativeKeyMappings.unbound(OpenAllayKeyMappings.INTERACT_HUD), "Explicit unbound key was silently reset");
                 checkpoint("live-11-passive-hud-explicit-unbound-hint", false);
                 GuideProbeKeyBindings.keyboard(OpenAllayKeyMappings.INTERACT_HUD, dev.openallay.client.gui.GuideInputCodes.KEY_F8);
