@@ -29,6 +29,13 @@ public final class OpenAllayFeatureBoundary implements IFMLLoadingPlugin {
         org.spongepowered.asm.mixin.Mixins.addConfiguration("openallay.world.mixins.json");
         if (!"17".equals(System.getProperty("java.specification.version")))
             throw new IllegalStateException("OpenAllay runtime requires Java17");
+        try {
+            String receipt="{\"normalIFMLLoadingPlugin\":true,\"runtimeJava\":17,\"stockLoader\":\""+getClass().getClassLoader().getClass().getName()
+                +"\",\"featureCoreIgnoredByDiscovery\":"+net.minecraftforge.fml.relauncher.CoreModManager.getIgnoredMods().contains("openallay-feature-core.jar")
+                +",\"genuineMixinConfigs\":[\"openallay.client.mixins.json\",\"openallay.forge.mixins.json\",\"openallay.world.mixins.json\"],"
+                +"\"engineClassLoader\":\""+dev.openallay.OpenAllayConstants.class.getClassLoader().getClass().getName()+"\"}\n";
+            java.nio.file.Files.write(java.nio.file.Paths.get(System.getProperty("openallay.component.receipt")),receipt.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        }catch(Exception error){throw new IllegalStateException(error);}
         if (!"net.minecraft.launchwrapper.LaunchClassLoader".equals(getClass().getClassLoader().getClass().getName()))
             throw new IllegalStateException("Genuine stock LaunchClassLoader must own the feature boundary");
     }

@@ -275,7 +275,12 @@ def prepare_launchwrapper_bridge(args, output, java, cp, runtime):
     test_cp = os.pathsep.join([str(agent)] + [str(path) for _, path in cp])
     test_main = "dev.openallay.runtime.forge1122.LaunchWrapperJava17BridgeTest"
     clean_env = {k:v for k,v in os.environ.items() if k not in ("JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "_JAVA_OPTIONS")}
-    if args.objectholder_bridge and not args.objectholder_phase_diagnostic:
+    if getattr(args,"component_inputs",None):
+        with (output/"capability-component-tests.log").open("w") as log:
+            subprocess.run([str(java),"-cp",test_cp,"dev.openallay.runtime.forge1122.CapabilityBridgeTest"],check=True,env=clean_env,stdout=log,stderr=subprocess.STDOUT)
+            subprocess.run([str(java),"-cp",test_cp,"dev.openallay.runtime.forge1122.pack200.CapabilityRuntime"],check=True,env=clean_env,stdout=log,stderr=subprocess.STDOUT)
+        runtime.write_json(output/"prior-startup-reused.json",{"acceptedRun":"37520988163","oldChecksReplayed":False})
+    elif args.objectholder_bridge and not args.objectholder_phase_diagnostic:
         runtime.write_json(output / "objectholder-phase-test-reused.json", {"run": "37520069517", "status": "pass", "unchangedPhaseInputsAndPatch": True})
         fields=output/"farmer-test-fields.tsv";fields.write_text("")
         with (output/"farmer-holder-tests.log").open("w") as log:
@@ -314,6 +319,21 @@ def boot(args, root, java, assets, runtime, launch, expected, vanilla, version):
     cp = [(name, path) for name, path in cp if tuple(name.split(":")[:2]) not in replacements] + fml
     # Legacy LaunchWrapper needs the original game JAR, not a fake alias or Gradle runtime.
     cp += [("com.mojang:minecraft:1.12.2:client", root / "versions/1.12.2/1.12.2.jar")]
+    component = getattr(args,"component_inputs",None)
+    component_receipt = None
+    if component:
+        import shutil
+        component_receipt=json.loads(Path(component).read_text())
+        artifacts=component_receipt["artifacts"]
+        for record in artifacts:
+            path=Path(record["path"])
+            runtime.require(sha(path)==record["sha256"],"Retained component bytes changed")
+            if path.name in ("openallay-feature-core.jar","openallay-lifecycle-facade.jar"):
+                shutil.copyfile(path,game/"mods"/path.name)
+            elif path.name=="openallay-private-mixin.jar":
+                cp.append(("dev.openallay:private-mixin-asm:current",path))
+            else:raise ValueError("Unknown component archive")
+        runtime.write_json(output/"component-custody.json",component_receipt)
     pack200_flags = prepare_pack200(args, output, java, cp, runtime) if args.pack200_bridge else []
     if args.title_only:
         # Real legacy LWJGL invokes xrandr -q. Keep the official display/native code unchanged.
@@ -338,6 +358,8 @@ def boot(args, root, java, assets, runtime, launch, expected, vanilla, version):
                  for item in game_args] + ["--width", "1280", "--height", "960"]
     if any("${" in item for item in game_args):
         raise ValueError("Unresolved legacy launcher argument")
+    if component:
+        game_args += ["--tweakClass","org.spongepowered.asm.launch.MixinTweaker"]
     bridge_flags = prepare_launchwrapper_bridge(args, output, java, cp, runtime) if args.launchwrapper_bridge else []
     objectholder_flags = (["-Dopenallay.objectholder.enabled=true",
         "-Dopenallay.objectholder.client=" + str(root / "versions/1.12.2/1.12.2.jar"),
@@ -348,13 +370,19 @@ def boot(args, root, java, assets, runtime, launch, expected, vanilla, version):
         "-Dopenallay.objectholder.invalid=" + str(output / "objectholder-invalid.tsv"),
         "-Dopenallay.objectholder.transformReceipt=" + str(output / "objectholder-transform.jsonl")]
         if args.objectholder_bridge else [])
+    component_flags = (["-Dopenallay.capability.enabled=true",
+        "-Dopenallay.capability.writes="+str(output/"capability-writes.tsv"),
+        "-Dopenallay.capability.transformReceipt="+str(output/"capability-transform.json"),
+        "-Dopenallay.capability.rejected="+str(output/"capability-rejected"),
+        "-Dopenallay.component.receipt="+str(output/"coremod-component.json")]
+        if component else [])
     command = [str(java), "-Xms256M", "-Xmx1536M",
-               "-Xlog:class+load=info:file=" + str(output / "class-load.log")] + bridge_flags + pack200_flags + objectholder_flags + (["-Dopenallay.objectholder.phaseDiagnostic=true"] if args.objectholder_phase_diagnostic else []) + (["-Dorg.lwjgl.util.Debug=true"] if args.title_only else []) + jvm + [MAIN] + game_args
+               "-Xlog:class+load=info:file=" + str(output / "class-load.log")] + bridge_flags + pack200_flags + objectholder_flags + component_flags + (["-Dopenallay.objectholder.phaseDiagnostic=true"] if args.objectholder_phase_diagnostic else []) + (["-Dorg.lwjgl.util.Debug=true"] if args.title_only else []) + jvm + [MAIN] + game_args
     env = {k:v for k,v in os.environ.items() if k not in ("JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "_JAVA_OPTIONS")}
     if args.title_only:
         env["LC_ALL"] = "C"
     runtime.write_json(output / "launch.json", {"command": command, "classpath": classpath_receipts,
-                       "natives": native_receipts, "noMods": True, "noEngineProbe": True,
+                       "natives": native_receipts, "noMods": not bool(component), "noEngineProbe": not bool(component),
                        "runtimeMode": "launchwrapper-and-pack200-bridge" if args.pack200_bridge else "launchwrapper-url-bridge" if args.launchwrapper_bridge else "raw-stock",
                        "publicInstrumentationAgent": args.launchwrapper_bridge})
     receipt = {"status": "running", "titleConfirmed": False, "captureSeconds": [45, 90],
@@ -404,6 +432,25 @@ def boot(args, root, java, assets, runtime, launch, expected, vanilla, version):
         receipt["accepted"]=False
         receipt["phaseDiagnostic"]=args.objectholder_phase_diagnostic
         runtime.write_json(output / "receipt.json",receipt)
+    if component:
+        classloads=(output/"class-load.log").read_text(errors="replace")
+        caps=output/"capability-writes.tsv"
+        cap_lines=caps.read_text().splitlines() if caps.exists() else []
+        facts={"engineClassesLoaded":"dev.openallay." in classloads,
+            "rhinoClassesLoaded":"dev.latvian.mods.rhino." in classloads,
+            "stockAsm5ClassLoaded":"org.objectweb.asm.ClassReader" in classloads,
+            "privateAsmClassLoaded":"dev.openallay.internal.forge1122.asm.ClassReader" in classloads,
+            "mixinBootstrap":"SpongePowered MIXIN Subsystem Version=0.8.5" in text,
+            "normalCoremodReceipt":(output/"coremod-component.json").is_file(),
+            "openallayModLoaded":"openallay" in text,
+            "actualCapabilityReadbacks":cap_lines,
+            "capabilityAllFive":len({line.split("\t")[0]+"."+line.split("\t")[1] for line in cap_lines})==5,
+            "rejectedPhase":(output/"capability-rejected").exists() or (output/"objectholder-rejected").exists(),
+            "nativeJarScope":component_receipt.get("nativeCompiledSource"),"titleConfirmed":False,"cleanQuit":False}
+        runtime.write_json(output/"component-runtime.json",facts)
+        if facts["rejectedPhase"] or not all(facts[k] for k in ("normalCoremodReceipt","engineClassesLoaded","rhinoClassesLoaded","privateAsmClassLoaded","capabilityAllFive")):
+            receipt["status"]="fatal-component-proof-incomplete";receipt["accepted"]=False
+            runtime.write_json(output/"receipt.json",receipt)
     # A window or screenshot alone is not a title-success claim.
     return 0 if receipt["status"] == "captured-awaiting-title-review" else 1
 
