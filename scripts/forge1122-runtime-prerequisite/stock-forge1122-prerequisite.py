@@ -192,7 +192,7 @@ def prepare_pack200(args, output, java, cp, runtime):
     import lzma
     forge = next(path for name, path in cp if name == "net.minecraftforge:forge:1.12.2-14.23.5.2864")
     runtime.require(runtime.file_hash(forge) == "ff578d670d2c720a72f8fff31ea3d6868595c7e980ecdecba3254f307ef2c2a9", "Official Forge bytes differ")
-    java8_home = Path(os.environ["JAVA_HOME_8_X64"])
+    java8_home = Path(os.environ["OPENALLAY_PACK200_JAVA8_HOME"])
     java8 = java8_home / "bin/java"
     java8_info = runtime.check_java(java8, 8)
     runtime.require("1.8.0_482" in java8_info and "Temurin" in java8_info, "Use pinned build-only Temurin8u482")

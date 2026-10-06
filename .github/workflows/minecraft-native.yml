@@ -327,6 +327,9 @@ jobs:
       - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
         if: inputs.mode == 'stock1122-pack200'
         with: {distribution: temurin, java-version: '8.0.482+8'}
+      - name: Capture immutable build-only JDK8 path before runtime JDK17 setup
+        if: inputs.mode == 'stock1122-pack200'
+        run: printf 'OPENALLAY_PACK200_JAVA8_HOME=%s\n' "$JAVA_HOME" >> "$GITHUB_ENV"
       - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
         with: {distribution: temurin, java-version: '17.0.18+8'}
       - name: Install isolated stock client display support
