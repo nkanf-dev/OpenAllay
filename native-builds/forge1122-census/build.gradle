@@ -68,6 +68,33 @@ task exportSourceSelection {
         logger.lifecycle('1122 source selection: base owners validated')
         def raw = origins(j)
         logger.lifecycle('1122 source selection: raw owner snapshot captured')
+        def profile=new JsonSlurper().parse(file('core-compile-profile.json'))
+        if (profile.target!='1.12.2' || profile.profile!='native-core-no-optional-viewers')
+            throw new GradleException('Explicit1122 core compile profile required')
+        def optionalPaths=[] as Set
+        profile.java.each { row ->
+            if (!(row.owner in ['common','fml']) || !row.reason ||
+                    !(row.logicalPath.startsWith('dev/openallay/integration/jei/') ||
+                      row.logicalPath.startsWith('dev/openallay/integration/rei/') ||
+                      row.logicalPath=='dev/openallay/neoforge/OpenAllayNeoForgeJeiPlugin.java' ||
+                      row.logicalPath=='dev/openallay/neoforge/integration/OpenAllayReiNeoForgePlugin.java'))
+                throw new GradleException('Profile may scope only optional viewer API/discovery owners')
+            def matches=raw.findAll { it.owner==row.owner && it.logicalPath==row.logicalPath &&
+                source.toPath().relativize(new File(it.path).toPath()).toString().replace(File.separator,'/')==row.origin }
+            if (matches.size()!=1 || matches.first().sha256!=row.sha256 || !optionalPaths.add(matches.first().path))
+                throw new GradleException('Optional profile owner/hash differs: '+row.logicalPath)
+        }
+        profile.java.groupBy { it.owner }.each { owner, rows -> j[owner+':java'].exclude(rows.collect { it.logicalPath }) }
+        def optionalNames=profile.java.collect { it.logicalPath.substring(it.logicalPath.lastIndexOf('/')+1).replaceFirst(/\.java$/,'') }
+        j.values().each { set -> set.files.each { f ->
+            def text=f.getText('UTF-8').replaceAll(/(?s)\/\*.*?\*\/|\/\/[^\r\n]*/,'')
+                    .replaceAll(/"(?:\\.|[^"\\])*+"|'(?:\\.|[^'\\])*+'/,'')
+            optionalNames.each { name ->
+                if ((text =~ /(?<![\w$])${java.util.regex.Pattern.quote(name)}(?![\w$])/).find())
+                    throw new GradleException('Core owner references scoped optional viewer adapter '+name+': '+f)
+            }
+        } }
+        logger.lifecycle('1122 source selection: exact optional-viewer core profile applied')
         def retirement = new JsonSlurper().parse(file('source-retirements.json'))
         if (retirement.keySet() != (['target','java'] as Set) || retirement.target!='1.12.2' ||
                 !(retirement.java instanceof List)) throw new GradleException('Exact1122 retirement plan required')
@@ -111,7 +138,7 @@ task exportSourceSelection {
             disposition:'candidate owners only; API inventory decides typed leaf delta',
             neutralSelectorSha256:sha(new File(source,'gradle/minecraft-source-selection.gradle')),
             roots:roots.collectEntries { k,v -> [(k):v*.canonicalPath] },
-            java:origins(j),rawJava:raw,resources:origins(r),retiredNativeJava:retirement.java,
+            java:origins(j),rawJava:raw,resources:origins(r),retiredNativeJava:retirement.java,coreCompileProfile:profile,
             configuredMixins:(common.configs+fml.configs+adapter.configs).unique().collect {
                 [path:it.canonicalPath,sha256:sha(it)] },
             excludedMixins:(common.excluded+fml.excluded+adapter.excluded).unique()*.canonicalPath])

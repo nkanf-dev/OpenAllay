@@ -1,0 +1,136 @@
+{
+  "target": "1.12.2",
+  "profile": "native-core-no-optional-viewers",
+  "java": [
+    {
+      "owner": "common",
+      "logicalPath": "dev/openallay/integration/jei/JeiNativeRecipeViewProvider.java",
+      "origin": "common/src/main/java/dev/openallay/integration/jei/JeiNativeRecipeViewProvider.java",
+      "sha256": "053831a4ff2ec6d75c411c8234524bd297a29fb26a24b958ebe811878594998d",
+      "reason": "First native core compile: published target optional JEI7/REI6 API adapter/discovery not selected for stock1.12; vanilla recipe/provider contracts remain compiled"
+    },
+    {
+      "owner": "common",
+      "logicalPath": "dev/openallay/integration/jei/JeiRecipeNavigator.java",
+      "origin": "common/src/main/java/dev/openallay/integration/jei/JeiRecipeNavigator.java",
+      "sha256": "2bfe6882146e0f43bbd6f0de025c5b0a01596e9a798839123df6b98ec44a4935",
+      "reason": "First native core compile: published target optional JEI7/REI6 API adapter/discovery not selected for stock1.12; vanilla recipe/provider contracts remain compiled"
+    },
+    {
+      "owner": "common",
+      "logicalPath": "dev/openallay/integration/jei/JeiRecipeProvider.java",
+      "origin": "common/src/main/java/dev/openallay/integration/jei/JeiRecipeProvider.java",
+      "sha256": "eac864feb3602a73b4aa667f0dea514857328fecc9553be2d4ccf95844e3035d",
+      "reason": "First native core compile: published target optional JEI7/REI6 API adapter/discovery not selected for stock1.12; vanilla recipe/provider contracts remain compiled"
+    },
+    {
+      "owner": "common",
+      "logicalPath": "dev/openallay/integration/jei/MinecraftJeiIngredientRoles.java",
+      "origin": "common/src/targets/1.16.5/java/dev/openallay/integration/jei/MinecraftJeiIngredientRoles.java",
+      "sha256": "8a0b2429671d710cdf440666a66ca6e7469f7ebec7bd0abf00323ed9298cfeda",
+      "reason": "First native core compile: published target optional JEI7/REI6 API adapter/discovery not selected for stock1.12; vanilla recipe/provider contracts remain compiled"
+    },
+    {
+      "owner": "common",
+      "logicalPath": "dev/openallay/integration/jei/MinecraftJeiPluginLifecycle.java",
+      "origin": "common/src/targets/1.16.5/java/dev/openallay/integration/jei/MinecraftJeiPluginLifecycle.java",
+      "sha256": "09a6f540a98250a803dbeff8ef67fb01d2bf55e0ba50bb0c9065c39aaba77523",
+      "reason": "First native core compile: published target optional JEI7/REI6 API adapter/discovery not selected for stock1.12; vanilla recipe/provider contracts remain compiled"
+    },
+    {
+      "owner": "common",
+      "logicalPath": "dev/openallay/integration/jei/MinecraftJeiPluginUid.java",
+      "origin": "common/src/targets/1.16.5/java/dev/openallay/integration/jei/MinecraftJeiPluginUid.java",
+      "sha256": "d24e9fd0cc898e959689af862e76e995c9b9ab34872f71f8001af609904f9095",
+      "reason": "First native core compile: published target optional JEI7/REI6 API adapter/discovery not selected for stock1.12; vanilla recipe/provider contracts remain compiled"
+    },
+    {
+      "owner": "common",
+      "logicalPath": "dev/openallay/integration/jei/MinecraftJeiRecipeApi.java",
+      "origin": "common/src/targets/1.16.5/java/dev/openallay/integration/jei/MinecraftJeiRecipeApi.java",
+      "sha256": "a9e3387c75c9a7c3bb52322687ed71238d9bbf2de59fe46003bfece631b21212",
+      "reason": "First native core compile: published target optional JEI7/REI6 API adapter/discovery not selected for stock1.12; vanilla recipe/provider contracts remain compiled"
+    },
+    {
+      "owner": "common",
+      "logicalPath": "dev/openallay/integration/jei/MinecraftJeiResourceIds.java",
+      "origin": "common/src/targets/1.16.5/java/dev/openallay/integration/jei/MinecraftJeiResourceIds.java",
+      "sha256": "82eb75a20c6654b96929fac045d7f98dee6f3e3e4bc3d018e19f0f896d833db3",
+      "reason": "First native core compile: published target optional JEI7/REI6 API adapter/discovery not selected for stock1.12; vanilla recipe/provider contracts remain compiled"
+    },
+    {
+      "owner": "common",
+      "logicalPath": "dev/openallay/integration/jei/NativeRecipeLayout.java",
+      "origin": "common/src/main/java/dev/openallay/integration/jei/NativeRecipeLayout.java",
+      "sha256": "a1f3665bbcd4d7ca8d9ae76a0e42d418e6c63e2c441277f857b45dac02af6e8b",
+      "reason": "First native core compile: published target optional JEI7/REI6 API adapter/discovery not selected for stock1.12; vanilla recipe/provider contracts remain compiled"
+    },
+    {
+      "owner": "common",
+      "logicalPath": "dev/openallay/integration/jei/OpenAllayJeiBridge.java",
+      "origin": "common/src/main/java/dev/openallay/integration/jei/OpenAllayJeiBridge.java",
+      "sha256": "15e4e17e154a99b38fe5516381f0327d9fabfe16349d377df3c76d7e85660b1a",
+      "reason": "First native core compile: published target optional JEI7/REI6 API adapter/discovery not selected for stock1.12; vanilla recipe/provider contracts remain compiled"
+    },
+    {
+      "owner": "common",
+      "logicalPath": "dev/openallay/integration/rei/OpenAllayReiClientPlugin.java",
+      "origin": "common/src/main/java/dev/openallay/integration/rei/OpenAllayReiClientPlugin.java",
+      "sha256": "6bbe7d0db6a9cb86241f6b5acb5f7c59c32db6673c296864b2b62b2ad70df6da",
+      "reason": "First native core compile: published target optional JEI7/REI6 API adapter/discovery not selected for stock1.12; vanilla recipe/provider contracts remain compiled"
+    },
+    {
+      "owner": "common",
+      "logicalPath": "dev/openallay/integration/rei/ReiEntryFacts.java",
+      "origin": "common/src/targets/1.16.5/java/dev/openallay/integration/rei/ReiEntryFacts.java",
+      "sha256": "f064418174e6d7d986a54be1f93acaaa733f67bb968164b24ad7cfa1462e2fec",
+      "reason": "First native core compile: published target optional JEI7/REI6 API adapter/discovery not selected for stock1.12; vanilla recipe/provider contracts remain compiled"
+    },
+    {
+      "owner": "common",
+      "logicalPath": "dev/openallay/integration/rei/ReiNativeRecipeViewProvider.java",
+      "origin": "common/src/main/java/dev/openallay/integration/rei/ReiNativeRecipeViewProvider.java",
+      "sha256": "94b26f23468174ab916d6b48222ebe8215a14a732f03ad05e266e8a423e806a7",
+      "reason": "First native core compile: published target optional JEI7/REI6 API adapter/discovery not selected for stock1.12; vanilla recipe/provider contracts remain compiled"
+    },
+    {
+      "owner": "common",
+      "logicalPath": "dev/openallay/integration/rei/ReiRecipeNavigator.java",
+      "origin": "common/src/main/java/dev/openallay/integration/rei/ReiRecipeNavigator.java",
+      "sha256": "ad097a518b8834b445861c4c8a271fe77a302bb98c769c428eac94ef564f2bd0",
+      "reason": "First native core compile: published target optional JEI7/REI6 API adapter/discovery not selected for stock1.12; vanilla recipe/provider contracts remain compiled"
+    },
+    {
+      "owner": "common",
+      "logicalPath": "dev/openallay/integration/rei/ReiRecipeProvider.java",
+      "origin": "common/src/main/java/dev/openallay/integration/rei/ReiRecipeProvider.java",
+      "sha256": "060fd2bfb77727a3cb284e669eb6a8a8d646290c8ccafc974f3b0d9b1c671a50",
+      "reason": "First native core compile: published target optional JEI7/REI6 API adapter/discovery not selected for stock1.12; vanilla recipe/provider contracts remain compiled"
+    },
+    {
+      "owner": "fml",
+      "logicalPath": "dev/openallay/neoforge/OpenAllayNeoForgeJeiPlugin.java",
+      "origin": "neoforge/src/main/java/dev/openallay/neoforge/OpenAllayNeoForgeJeiPlugin.java",
+      "sha256": "fe7d3a1a39c63ac0f3ca0e4febb7c5252972f40d2e71eeec2a527d49569c7f65",
+      "reason": "First native core compile: published target optional JEI7/REI6 API adapter/discovery not selected for stock1.12; vanilla recipe/provider contracts remain compiled"
+    },
+    {
+      "owner": "fml",
+      "logicalPath": "dev/openallay/neoforge/integration/OpenAllayReiNeoForgePlugin.java",
+      "origin": "neoforge/src/targets/1.16.5/java/dev/openallay/neoforge/integration/OpenAllayReiNeoForgePlugin.java",
+      "sha256": "ba33fab307bd103289497a892a618d42292fc60b539670dd1a4b6818b5c521ae",
+      "reason": "First native core compile: published target optional JEI7/REI6 API adapter/discovery not selected for stock1.12; vanilla recipe/provider contracts remain compiled"
+    }
+  ],
+  "externalApis": {
+    "jei": "JEI7selectedleaves incompatible with exactJEI4IModPlugin/IJeiRuntime packagecontract; no adapteradmitted",
+    "rei": "Selected REI6+Architectury1 API not admitted for stock1.12"
+  },
+  "compiledContracts": [
+    "dev.openallay.recipe.*",
+    "dev.openallay.client.gui.nativeview.*",
+    "JeiIngredientSlot",
+    "JeiIngredientValue",
+    "ReiFluidValue"
+  ]
+}
