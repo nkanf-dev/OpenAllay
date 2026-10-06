@@ -6,8 +6,7 @@
   "refmap": "openallay.refmap.json",
   "mixins": [
     "NativeTileEntityStateAccessor",
-    "NativeSavedDataReadFailureObserver",
-    "NativeDataFixerVersionAccessor"
+    "NativeSavedDataReadFailureObserver"
   ],
   "injectors": {
     "defaultRequire": 1
