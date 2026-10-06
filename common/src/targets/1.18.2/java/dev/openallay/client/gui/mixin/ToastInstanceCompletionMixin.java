@@ -36,7 +36,8 @@ public abstract class ToastInstanceCompletionMixin {
                                                 CallbackInfoReturnable<Boolean> callback) {
         if (!Boolean.getBoolean("openallay.e2e.enabled")) return;
         com.mojang.math.Vector4f origin = new com.mojang.math.Vector4f(0, 0, 0, 1);
-        origin.transform(graphics.last().pose());
+        // 1.18.2 applies slot translation to RenderSystem's model-view stack, not this argument.
+        origin.transform(com.mojang.blaze3d.systems.RenderSystem.getModelViewStack().last().pose());
         ((dev.openallay.guide.e2e.GuideNativeEditorE2EProbe.ToastReadback) this$0)
                 .openallay$observePaint(toast, origin.y());
     }

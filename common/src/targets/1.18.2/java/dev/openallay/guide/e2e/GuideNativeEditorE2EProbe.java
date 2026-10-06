@@ -102,8 +102,8 @@ public final class GuideNativeEditorE2EProbe {
         if (phase == 3) {
             if (a.frames == 0 || b.frames == 0 || normal.frames == 0) return false;
             check(s.occupied().stream().allMatch(Boolean::booleanValue), "native 2+2+1 five-slot capacity");
-            check(s.tops().get(a) == 0 && s.tops().get(b) == 64 && s.tops().get(normal) == 128, "actual native matrix positions without overlap/overflow");
             report.put("nativeToastMixed", facts(s));
+            check(s.tops().get(a) == 0 && s.tops().get(b) == 64 && s.tops().get(normal) == 128, "actual native matrix positions without overlap/overflow");
             manager.addToast(queued); manager.addToast(follower); normal.hidden = true; phase++; return false;
         }
         if (phase == 4) {
