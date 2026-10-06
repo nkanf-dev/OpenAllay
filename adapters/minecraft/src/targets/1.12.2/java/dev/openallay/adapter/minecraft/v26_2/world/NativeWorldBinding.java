@@ -120,10 +120,20 @@ final class NativeWorldBinding implements WorldBinding {
     @Override public boolean sameImage(String before,String actual) { return NativeBlockCodec.sameImage(before,actual); }
     @Override public String transform(String state,int degrees,String mirror) { return NativeBlockCodec.transform(state,degrees,mirror); }
     @Override public WorldSession.RepairOutcome repair(int x,int y,int z,Runnable requireActive) {
-        // 1.12 getActualState is a read/render-derived state, not a persisted modern
-        // neighbor-shape update. Propagation is performed by real notifyNeighbours.
+        BlockPos pos=new BlockPos(x,y,z);
+        NativeBlockCodec.Snapshot before=NativeBlockCodec.snapshot(level,pos);
         requireActive.run();
-        throw new ExtensionException("unsupported_native_repair","This native target has no persisted neighbor-shape repair operation; use native neighbor notification");
+        var current=before.state();
+        var actual=current.getBlock().getActualState(current,new NativeActualStateReader(level,pos),pos);
+        var persisted=NativeActualStateRepair.persisted(current,actual);
+        // Fence/pane/stair connection shapes in 1.12 are computed on read. If the
+        // actual native projection has the same persisted metadata, nothing needs
+        // writing. Finish still runs real neighbor notification after this proof.
+        if(persisted.equals(current))return null;
+        JsonObject intended=dev.openallay.json.JsonTrees.parse(NativeBlockCodec.read(level,pos)).getAsJsonObject();
+        intended.addProperty("id",NativeWorldRegistries.blockId(persisted.getBlock()).toString());
+        intended.add("properties",NativeBlockStateProperties.encode(persisted));
+        return new WorldSession.RepairOutcome(before.json(),intended.toString());
     }
     @Override public void notifyNeighbours(int x,int y,int z,Runnable requireActive) {
         BlockPos pos=new BlockPos(x,y,z);
