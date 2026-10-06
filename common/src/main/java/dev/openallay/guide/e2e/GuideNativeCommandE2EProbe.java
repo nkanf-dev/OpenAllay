@@ -22,7 +22,7 @@ final class GuideNativeCommandE2EProbe {
 
     static CancellationSignal start(OpenAllayRuntime runtime,
             MinecraftGuideContextProvider contexts, UUID actor, Consumer<JsonObject> complete) {
-        Minecraft client = Minecraft.getInstance();
+        Minecraft client = dev.openallay.client.gui.MinecraftClientWindow.instance();
         CancellationSignal cancellation = new CancellationSignal();
         String token = "openallay_native_command_" + UUID.randomUUID().toString().replace("-", "");
         String correlation = "e2e-native-command-" + token;
@@ -39,8 +39,8 @@ final class GuideNativeCommandE2EProbe {
         RunJavascriptTool tool;
         ToolInvocationContext context;
         try {
-            if (!Boolean.getBoolean(GuideClientE2EConfig.ENABLED) || !client.isSameThread()
-                    || client.player == null || !actor.equals(client.player.getUUID()))
+            if (!Boolean.getBoolean(GuideClientE2EConfig.ENABLED) || !dev.openallay.client.gui.MinecraftClientWindow.ownerThread(client)
+                    || client.player == null || !actor.equals(dev.openallay.client.gui.MinecraftClientWindow.actor(client)))
                 throw new IllegalStateException("Native command warmup requires the development client owner and actor");
             var registered = runtime.tools().find(RunJavascriptTool.ID).orElseThrow();
             if (!(registered instanceof RunJavascriptTool javascript))
@@ -56,7 +56,7 @@ final class GuideNativeCommandE2EProbe {
                 throw new IllegalStateException("Native command warmup requires captured client-local full access");
             receipt.addProperty("unrestrictedCaptured", true);
             receipt.addProperty("commandOnlySetting", runtime.commands().enabled());
-            receipt.addProperty("clientCaptureOwnerThread", client.isSameThread());
+            receipt.addProperty("clientCaptureOwnerThread", dev.openallay.client.gui.MinecraftClientWindow.ownerThread(client));
         } catch (RuntimeException failure) {
             cancellation.cancel();
             contexts.closeRequest(correlation);
@@ -65,7 +65,7 @@ final class GuideNativeCommandE2EProbe {
             complete.accept(receipt);
             return cancellation;
         }
-        var server = client.getSingleplayerServer();
+        var server = dev.openallay.client.gui.MinecraftClientWindow.integratedServer(client);
         if (server == null) {
             cancellation.cancel();
             contexts.closeRequest(correlation);
@@ -138,15 +138,15 @@ final class GuideNativeCommandE2EProbe {
                     if (failure != null) {
                         receipt.addProperty("outcome", "FAILED");
                         receipt.addProperty("failure", failure.toString());
-                        client.execute(() -> complete.accept(receipt));
+                        dev.openallay.client.gui.MinecraftClientWindow.execute(client, () -> complete.accept(receipt));
                         return;
                     }
-                    server.execute(() -> {
+                    dev.openallay.server.NativeServerOwner.execute(server, () -> {
                         try {
-                            var player = server.getPlayerList().getPlayer(actor);
-                            if (!server.isSameThread() || server != client.getSingleplayerServer() || server.isPublished()
+                            var player = dev.openallay.server.NativeServerOwner.player(server, actor);
+                            if (!dev.openallay.server.NativeServerOwner.isOwner(server) || server != dev.openallay.client.gui.MinecraftClientWindow.integratedServer(client) || dev.openallay.server.NativeServerOwner.published(server)
                                     || player == null || GuideProbeWorldSettings.commandsAllowed(server)
-                                    || server.getWorldData().getGameType() != net.minecraft.world.level.GameType.SURVIVAL)
+                                    || !dev.openallay.server.NativeServerOwner.survival(server))
                                 throw new IllegalStateException("Native command warmup changed its no-grant world binding");
                             receipt.addProperty("serverReadbackOwnerThread", true);
                             receipt.addProperty("cheatsOffAfter", true);
@@ -156,7 +156,7 @@ final class GuideNativeCommandE2EProbe {
                             receipt.addProperty("outcome", "FAILED");
                             receipt.addProperty("failure", error.toString());
                         }
-                        client.execute(() -> complete.accept(receipt));
+                        dev.openallay.client.gui.MinecraftClientWindow.execute(client, () -> complete.accept(receipt));
                     });
                 });
         return cancellation;

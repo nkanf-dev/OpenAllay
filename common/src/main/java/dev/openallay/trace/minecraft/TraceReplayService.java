@@ -67,7 +67,7 @@ public final class TraceReplayService {
         var resources = dev.openallay.platform.minecraft.MinecraftServerResources.resources(
                 dev.openallay.context.minecraft.MinecraftCommandSourceFacts.server(source));
         List<TraceRepository.TraceSource> sources = MinecraftResourceAccess
-                .listIds(resources, "agent_traces", id -> id.getPath().endsWith(".json"))
+                .listIds(resources, "agent_traces", id -> dev.openallay.platform.minecraft.MinecraftResourceId.from(id.toString()).path().endsWith(".json"))
                 .stream()
                 .map(id -> new TraceRepository.TraceSource(
                         id.toString(), () -> MinecraftResourceAccess.openSelectedReader(resources, id)))

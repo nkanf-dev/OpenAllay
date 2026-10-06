@@ -11,7 +11,7 @@ import net.minecraft.world.WorldType;
 final class GuideProbeWorldSettings {
     private GuideProbeWorldSettings() {}
     static WorldSettings create(String name) {
-        return new WorldSettings(17L, GameType.SURVIVAL, false, false, WorldType.FLAT).enableCommands();
+        return new WorldSettings(17L, GameType.SURVIVAL, false, false, WorldType.FLAT);
     }
     static void prepareBuilderFixture(MinecraftServer server, boolean resumed) {
         if (!server.isCallingFromMinecraftThread()) throw new IllegalStateException("Fixture setup requires the server owner thread");

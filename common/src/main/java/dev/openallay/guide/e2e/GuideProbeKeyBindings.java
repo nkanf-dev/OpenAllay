@@ -6,6 +6,9 @@ import net.minecraft.client.KeyMapping;
 /** Preserve and change the actual selected-native key identity in development fixtures. */
 final class GuideProbeKeyBindings {
     private GuideProbeKeyBindings() {}
+    static void refresh() { KeyMapping.resetMapping(); }
+    static void click(int key) { KeyMapping.click(InputConstants.Type.KEYSYM.getOrCreate(key)); }
+
     static Runnable restoration(KeyMapping binding) {
         var key = InputConstants.getKey(binding.saveString());
         return () -> binding.setKey(key);

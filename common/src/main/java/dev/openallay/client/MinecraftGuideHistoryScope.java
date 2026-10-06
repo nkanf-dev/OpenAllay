@@ -7,7 +7,6 @@ import java.nio.file.Path;
 import java.util.Objects;
 import java.util.UUID;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.client.server.IntegratedServer;
 
 /** Captures and detaches the active connection identity on the client thread. */
@@ -21,19 +20,18 @@ public final class MinecraftGuideHistoryScope implements GuideHistoryScopeProvid
     @Override
     public GuideHistoryScope resolve(UUID actor) {
         Objects.requireNonNull(actor, "actor");
-        if (!client.isSameThread()) {
+        if (!dev.openallay.client.gui.MinecraftClientWindow.ownerThread(client)) {
             throw new GuideHistoryException(
                     "history_scope_thread", "Guide history scope must be captured on the client thread");
         }
-        if (client.player == null || !client.player.getUUID().equals(actor)) {
+        if (client.player == null || !dev.openallay.client.gui.MinecraftClientWindow.actor(client).equals(actor)) {
             throw unavailable();
         }
-        IntegratedServer integrated = client.getSingleplayerServer();
+        IntegratedServer integrated = dev.openallay.client.gui.MinecraftClientWindow.integratedServer(client);
         Path worldPath = integrated == null
                 ? null
                 : dev.openallay.platform.minecraft.MinecraftWorldSavePath.root(integrated);
-        ServerData server = client.getCurrentServer();
-        return detached(actor, worldPath, server == null ? null : server.ip);
+        return detached(actor, worldPath, dev.openallay.client.gui.MinecraftClientWindow.serverAddress(client));
     }
 
     static GuideHistoryScope detached(UUID actor, Path worldPath, String serverAddress) {

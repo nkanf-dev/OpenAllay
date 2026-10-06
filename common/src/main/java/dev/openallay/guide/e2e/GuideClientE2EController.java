@@ -213,7 +213,7 @@ public final class GuideClientE2EController {
 
     /** Runs opt-in startup lifecycle and starts the request once a real client player exists. */
     public void tick(UUID actor) {
-        GuideProbeWorldReload.tick(net.minecraft.client.Minecraft.getInstance());
+        GuideProbeWorldReload.tick(dev.openallay.client.gui.MinecraftClientWindow.instance());
         if (finished) {
             if (!screenshotActionPending) {
                 try { tickScreenshotProbe(); }
@@ -264,8 +264,8 @@ public final class GuideClientE2EController {
         }
         if (GuideBuilderE2EProbe.enabled(config.scenario()) && ++builderWarmupTicks < 40) return;
         if (!System.getProperty("openallay.e2e.screenshotRoot", "").isBlank()) {
-            var client = net.minecraft.client.Minecraft.getInstance();
-            if (MinecraftClientWindow.overlay(client) != null || MinecraftClientWindow.screen(client) != null) return;
+            var client = dev.openallay.client.gui.MinecraftClientWindow.instance();
+            if (MinecraftClientWindow.overlayPresent(client) || MinecraftClientWindow.screen(client) != null) return;
         }
         GuideService service = services.forActor(actor);
         if (service.snapshot().persistence().state()
@@ -337,7 +337,7 @@ public final class GuideClientE2EController {
                 ? java.util.concurrent.CompletableFuture.completedFuture(new ToolResult.Success<>(true))
                 : clientSettings.saveUnrestrictedJavascript(true);
         nativeCommandEnable.whenComplete((enabled, failure) ->
-                net.minecraft.client.Minecraft.getInstance().execute(() -> {
+                dev.openallay.client.gui.MinecraftClientWindow.execute(dev.openallay.client.gui.MinecraftClientWindow.instance(), () -> {
                     if (finished || nativeCommandPendingFinish != null) return;
                     if (failure != null || !(enabled instanceof ToolResult.Success<Boolean>)
                             || !clientSettings.snapshot().unrestrictedJavascript().enabled()) {
@@ -365,7 +365,7 @@ public final class GuideClientE2EController {
 
     private void finishNativeCommandWarmup(GuideService service) {
         restoreNativeCommandSetting().whenComplete((restored, failure) ->
-                net.minecraft.client.Minecraft.getInstance().execute(() -> {
+                dev.openallay.client.gui.MinecraftClientWindow.execute(dev.openallay.client.gui.MinecraftClientWindow.instance(), () -> {
                     nativeProbePending = false;
                     if (finished || nativeCommandPendingFinish != null) return;
                     if (failure != null || !Boolean.TRUE.equals(restored)
@@ -382,14 +382,14 @@ public final class GuideClientE2EController {
         if (nativeCommandRestore != null) return nativeCommandRestore;
         nativeCommandRestore = new java.util.concurrent.CompletableFuture<>();
         nativeCommandEnable.whenComplete((ignored, enableFailure) ->
-                net.minecraft.client.Minecraft.getInstance().execute(() -> {
+                dev.openallay.client.gui.MinecraftClientWindow.execute(dev.openallay.client.gui.MinecraftClientWindow.instance(), () -> {
                     boolean original = nativeCommandOriginalSetting;
                     var restoration = clientSettings.snapshot().unrestrictedJavascript().enabled() == original
                             ? java.util.concurrent.CompletableFuture.<ToolResult<Boolean>>completedFuture(
                                     new ToolResult.Success<>(true))
                             : clientSettings.saveUnrestrictedJavascript(original);
                     restoration.whenComplete((result, failure) ->
-                            net.minecraft.client.Minecraft.getInstance().execute(() -> {
+                            dev.openallay.client.gui.MinecraftClientWindow.execute(dev.openallay.client.gui.MinecraftClientWindow.instance(), () -> {
                                 boolean actual = clientSettings.snapshot().unrestrictedJavascript().enabled();
                                 boolean restored = failure == null && result instanceof ToolResult.Success<Boolean>
                                         && actual == original;
@@ -408,7 +408,7 @@ public final class GuideClientE2EController {
     /** Setup-only native recipe unlock; never a model Tool, inventory grant, or accepted UI action. */
     private boolean tickGraphicalRecipePrecondition(UUID actor) {
         if (!graphicalScenario(config.scenario())) return true;
-        var client = net.minecraft.client.Minecraft.getInstance();
+        var client = dev.openallay.client.gui.MinecraftClientWindow.instance();
         if (graphicalRecipeSeedReceipt == null) {
             graphicalRecipeSeedReceipt = new com.google.gson.JsonObject();
             graphicalRecipeSeedReceipt.addProperty("purpose", "isolated-fresh-world-test-bootstrap-only");
@@ -419,9 +419,9 @@ public final class GuideClientE2EController {
             graphicalRecipeSeedReceipt.addProperty("outcome", "WAITING");
         }
         try {
-            var server = client.getSingleplayerServer();
+            var server = dev.openallay.client.gui.MinecraftClientWindow.integratedServer(client);
             requireGraphicalSeedWorld(server);
-            if (client.player == null || client.level == null || !actor.equals(client.player.getUUID()))
+            if (client.player == null || dev.openallay.client.gui.MinecraftClientWindow.world(client) == null || !actor.equals(dev.openallay.client.gui.MinecraftClientWindow.actor(client)))
                 throw new IllegalStateException("Fresh-world client player differs from the tested actor");
             if (!graphicalRecipeSeedAdmitted) {
                 graphicalSeedServer = server;
@@ -432,7 +432,7 @@ public final class GuideClientE2EController {
                 graphicalRecipeSeedReceipt.add("captureBefore", graphicalRecipeCaptureReceipt(client));
                 graphicalRecipeSeedAdmitted = true;
                 graphicalRecipeSeedReceipt.addProperty("admissions", 1);
-                server.execute(() -> awardGraphicalSeedRecipe(actor, client, server));
+                dev.openallay.server.NativeServerOwner.execute(server, () -> awardGraphicalSeedRecipe(actor, client, server));
                 return false;
             }
             if (graphicalSeedRecipes.isEmpty()) return false;
@@ -459,22 +459,22 @@ public final class GuideClientE2EController {
     }
 
     private void requireGraphicalSeedWorld(net.minecraft.client.server.IntegratedServer server) {
-        var client = net.minecraft.client.Minecraft.getInstance();
+        var client = dev.openallay.client.gui.MinecraftClientWindow.instance();
         String create = System.getProperty("openallay.e2e.createWorld", "");
         if (!developmentProbeEnabled
                 || !graphicalScenario(config.scenario())
                 || !worldLaunchStarted || graphicalFreshWorldName == null
                 || !graphicalFreshWorldName.equals(create)
                 || !System.getProperty("openallay.e2e.resumeWorld", "").isBlank()
-                || server == null || server != client.getSingleplayerServer()
+                || server == null || server != dev.openallay.client.gui.MinecraftClientWindow.integratedServer(client)
                 || (graphicalSeedServer != null && server != graphicalSeedServer)
-                || server.isPublished()
-                || !graphicalFreshWorldName.equals(server.getWorldData().getLevelName())
+                || dev.openallay.server.NativeServerOwner.published(server)
+                || !graphicalFreshWorldName.equals(dev.openallay.server.NativeServerOwner.worldName(server))
                 || GuideProbeWorldSettings.commandsAllowed(server)
-                || server.getWorldData().getGameType() != net.minecraft.world.level.GameType.SURVIVAL
+                || !dev.openallay.server.NativeServerOwner.survival(server)
                 || !GuideProbeWorldSettings.isFlat(server)
                 || !dev.openallay.platform.minecraft.MinecraftWorldSavePath.root(server).toAbsolutePath().normalize()
-                        .equals(client.gameDirectory.toPath().resolve("saves").resolve(graphicalFreshWorldName)
+                        .equals(dev.openallay.client.gui.MinecraftClientWindow.gameDirectory(client).resolve("saves").resolve(graphicalFreshWorldName)
                                 .toAbsolutePath().normalize()))
             throw new IllegalStateException("Recipe bootstrap requires this controller's fresh isolated commands-off survival world");
     }
@@ -484,8 +484,8 @@ public final class GuideClientE2EController {
         if (finished) return;
         try {
             requireGraphicalSeedWorld(server);
-            if (!server.isSameThread()) throw new IllegalStateException("Recipe bootstrap is not on the server owner thread");
-            var player = server.getPlayerList().getPlayer(actor);
+            if (!dev.openallay.server.NativeServerOwner.isOwner(server)) throw new IllegalStateException("Recipe bootstrap is not on the server owner thread");
+            var player = dev.openallay.server.NativeServerOwner.player(server, actor);
             if (player == null || dev.openallay.context.minecraft.MinecraftPlayerFacts.gameMode(player) != net.minecraft.world.level.GameType.SURVIVAL
                     || dev.openallay.context.minecraft.MinecraftServerPlayerLevel.get(player).getSeed() != 17L)
                 throw new IllegalStateException("Native bootstrap player or fresh-world seed differs from setup");
@@ -496,7 +496,7 @@ public final class GuideClientE2EController {
             if (positiveInputs.isEmpty()) throw new IllegalStateException("Exact native holder has no positive iron-block output");
             var receipt = new com.google.gson.JsonObject();
             receipt.addProperty("api", "ServerPlayer.awardRecipes");
-            receipt.addProperty("ownerThread", server.isSameThread());
+            receipt.addProperty("ownerThread", dev.openallay.server.NativeServerOwner.isOwner(server));
             receipt.addProperty("recipeHolderId", seed.holderId());
             receipt.addProperty("nativeRecipeClass", seed.nativeRecipeClass());
             receipt.addProperty("knownBefore", seed.known());
@@ -511,13 +511,13 @@ public final class GuideClientE2EController {
             if (!receipt.get("knownAfter").getAsBoolean() || GuideProbeWorldSettings.commandsAllowed(server))
                 throw new IllegalStateException("Native recipe award did not preserve bootstrap preconditions");
             var ids = Set.copyOf(positiveInputs.stream().map(input -> input.id()).toList());
-            client.execute(() -> {
+            dev.openallay.client.gui.MinecraftClientWindow.execute(client, () -> {
                 if (finished) return;
                 graphicalRecipeSeedReceipt.add("serverAward", receipt);
                 graphicalSeedRecipes = ids;
             });
         } catch (RuntimeException failure) {
-            client.execute(() -> { if (!finished) failGraphicalRecipePrecondition(failure); });
+            dev.openallay.client.gui.MinecraftClientWindow.execute(client, () -> { if (!finished) failGraphicalRecipePrecondition(failure); });
         }
     }
 
@@ -579,12 +579,12 @@ public final class GuideClientE2EController {
 
     private GuideBuilderE2EProbe.Anchor selectBuilderAnchor(GuideBuilderE2EProbe.Anchor anchor) throws IOException {
         if (!List.of("builder-acceptance", "builder-reload", "builder-live-copy", "builder-live-undo").contains(config.scenario())) return anchor;
-        var client = net.minecraft.client.Minecraft.getInstance();
-        var server = client.getSingleplayerServer();
+        var client = dev.openallay.client.gui.MinecraftClientWindow.instance();
+        var server = dev.openallay.client.gui.MinecraftClientWindow.integratedServer(client);
         if (server == null) throw new IllegalStateException("Integrated server is unavailable");
-        String world = server.getWorldData().getLevelName();
+        String world = dev.openallay.server.NativeServerOwner.worldName(server);
         if (!world.matches("openallay-builder-[a-zA-Z0-9_.-]+")) throw new IllegalStateException("Not a disposable acceptance world");
-        java.nio.file.Path retained = client.gameDirectory.toPath().resolve("config/openallay/e2e")
+        java.nio.file.Path retained = dev.openallay.client.gui.MinecraftClientWindow.gameDirectory(client).resolve("config/openallay/e2e")
                 .resolve(world + ".anchor.json");
         if (config.scenario().equals("builder-reload") || config.scenario().equals("builder-live-undo")) {
             var persisted = gson.fromJson(Files.readString(retained), GuideBuilderE2EProbe.Anchor.class);
@@ -597,9 +597,9 @@ public final class GuideClientE2EController {
     }
 
     private java.nio.file.Path builderProofPath(String suffix) {
-        var client = net.minecraft.client.Minecraft.getInstance();
-        String world = client.getSingleplayerServer().getWorldData().getLevelName();
-        return client.gameDirectory.toPath().resolve("config/openallay/e2e").resolve(world + suffix);
+        var client = dev.openallay.client.gui.MinecraftClientWindow.instance();
+        String world = dev.openallay.server.NativeServerOwner.worldName(dev.openallay.client.gui.MinecraftClientWindow.integratedServer(client));
+        return dev.openallay.client.gui.MinecraftClientWindow.gameDirectory(client).resolve("config/openallay/e2e").resolve(world + suffix);
     }
 
     private static com.google.gson.JsonObject builderReceipt(GuideRequestSnapshot request) {
@@ -631,9 +631,9 @@ public final class GuideClientE2EController {
 
     private void retainLiveCopyProof(com.google.gson.JsonObject probe) throws IOException {
         if (!config.scenario().equals("builder-live-copy")) return;
-        var client = net.minecraft.client.Minecraft.getInstance();
-        String world = client.getSingleplayerServer().getWorldData().getLevelName();
-        var path = client.gameDirectory.toPath().resolve("config/openallay/e2e").resolve(world + ".live-copy.json");
+        var client = dev.openallay.client.gui.MinecraftClientWindow.instance();
+        String world = dev.openallay.server.NativeServerOwner.worldName(dev.openallay.client.gui.MinecraftClientWindow.integratedServer(client));
+        var path = dev.openallay.client.gui.MinecraftClientWindow.gameDirectory(client).resolve("config/openallay/e2e").resolve(world + ".live-copy.json");
         writeAtomically(path, gson.toJson(probe));
     }
 
@@ -652,8 +652,8 @@ public final class GuideClientE2EController {
         String resume = System.getProperty("openallay.e2e.resumeWorld", "");
         String name = create.isBlank() ? resume : create;
         if (name.isBlank() || worldLaunchStarted) return;
-        var client = net.minecraft.client.Minecraft.getInstance();
-        if (MinecraftClientWindow.overlay(client) != null
+        var client = dev.openallay.client.gui.MinecraftClientWindow.instance();
+        if (MinecraftClientWindow.overlayPresent(client)
                 || !(MinecraftClientWindow.screen(client) instanceof net.minecraft.client.gui.screens.TitleScreen)) return;
         worldLaunchStarted = true;
         if (graphicalScenario(config.scenario())) {
@@ -661,7 +661,7 @@ public final class GuideClientE2EController {
                 failWithoutRequest("fresh_world_required", "Graphical acceptance requires a new disposable world");
                 return;
             }
-            var saves = client.gameDirectory.toPath().resolve("saves");
+            var saves = dev.openallay.client.gui.MinecraftClientWindow.gameDirectory(client).resolve("saves");
             try (var savedWorlds = Files.isDirectory(saves) ? Files.list(saves) : java.util.stream.Stream.<java.nio.file.Path>empty()) {
                 if (savedWorlds.findAny().isPresent()) {
                     failWithoutRequest("fresh_world_required", "Graphical acceptance requires an empty isolated saves directory");
@@ -672,7 +672,7 @@ public final class GuideClientE2EController {
                 return;
             }
         }
-        boolean existing = Files.isDirectory(client.gameDirectory.toPath().resolve("saves").resolve(name));
+        boolean existing = Files.isDirectory(dev.openallay.client.gui.MinecraftClientWindow.gameDirectory(client).resolve("saves").resolve(name));
         if (!name.matches("openallay-builder-[a-zA-Z0-9_.-]+")
                 || (!create.isBlank() && (!resume.isBlank() || existing))
                 || (create.isBlank() && (!(List.of("builder-reload", "builder-live-undo").contains(config.scenario())
@@ -699,7 +699,7 @@ public final class GuideClientE2EController {
                 failWithoutRequest(failure.code(), failure.message());
             } else {
                 if (graphicalScenario(config.scenario())) {
-                    net.minecraft.client.Minecraft.getInstance().execute(() -> {
+                    dev.openallay.client.gui.MinecraftClientWindow.execute(dev.openallay.client.gui.MinecraftClientWindow.instance(), () -> {
                         if (!developmentProbeEnabled || clientSettings == null || graphicalOpenGuide == null
                                 || ("ui-live-ux-regressions".equals(config.scenario()) && graphicalToastReceipt == null)) {
                             failWithoutRequest("graphical_probe_unattached", "The actual client UI is unavailable");
@@ -850,10 +850,10 @@ public final class GuideClientE2EController {
             screenshotActor = snapshot.actorId();
             if (professionalScreenshots() && clientSettings != null)
                 screenshotOriginalDisplay = clientSettings.snapshot().display();
-            net.minecraft.client.Minecraft.getInstance().execute(() -> {
-                var client = net.minecraft.client.Minecraft.getInstance();
-                originalWindowWidth = client.getWindow().getWidth();
-                originalWindowHeight = client.getWindow().getHeight();
+            dev.openallay.client.gui.MinecraftClientWindow.execute(dev.openallay.client.gui.MinecraftClientWindow.instance(), () -> {
+                var client = dev.openallay.client.gui.MinecraftClientWindow.instance();
+                originalWindowWidth = dev.openallay.client.gui.MinecraftClientWindow.framebufferWidth(client);
+                originalWindowHeight = dev.openallay.client.gui.MinecraftClientWindow.framebufferHeight(client);
                 MinecraftClientWindow.setScreen(client, screenshotGuide(services.forActor(snapshot.actorId())));
                 if (!System.getProperty("openallay.e2e.screenshotRoot", "").isBlank()) {
                     screenshotStage = 0;
@@ -929,7 +929,7 @@ public final class GuideClientE2EController {
     private void tickScreenshotProbe() {
         if (screenshotStage < 0 || ++screenshotTicks < 8) return;
         screenshotTicks = 0;
-        var client = net.minecraft.client.Minecraft.getInstance();
+        var client = dev.openallay.client.gui.MinecraftClientWindow.instance();
         if (screenshotStage <= 7
                 && !(MinecraftClientWindow.screen(client) instanceof OpenAllayScreen)) return;
         OpenAllayScreen screen = MinecraftClientWindow.screen(client) instanceof OpenAllayScreen value
@@ -1092,7 +1092,7 @@ public final class GuideClientE2EController {
                 if (jar.isBlank()) { screenshotStage = 28; break; }
                 screenshotActionPending = true;
                 clientSettings.importLocalExtensionPackage(java.nio.file.Path.of(jar)).thenAccept(prepared ->
-                        client.execute(() -> {
+                        dev.openallay.client.gui.MinecraftClientWindow.execute(client, () -> {
                             screenshotActionPending = false;
                             if (prepared instanceof ToolResult.Failure<Boolean> failure)
                                 screenshotReviewFailure = failure.code();
@@ -1172,7 +1172,7 @@ public final class GuideClientE2EController {
         var current = clientSettings.snapshot().display();
         var replacement = new dev.openallay.guide.ui.GuideDisplayConfig(enabled,
                 current.animationsEnabled(), current.assistantName());
-        clientSettings.saveDisplay(replacement).thenAccept(saved -> net.minecraft.client.Minecraft.getInstance().execute(() -> {
+        clientSettings.saveDisplay(replacement).thenAccept(saved -> dev.openallay.client.gui.MinecraftClientWindow.execute(dev.openallay.client.gui.MinecraftClientWindow.instance(), () -> {
             screenshotActionPending = false;
             if (saved instanceof ToolResult.Failure<Boolean>) {
                 System.err.println("OpenAllay E2E screenshot display save failed");
@@ -1193,7 +1193,7 @@ public final class GuideClientE2EController {
                 && !clientSettings.snapshot().display().equals(screenshotOriginalDisplay)) {
             screenshotActionPending = true;
             clientSettings.saveDisplay(screenshotOriginalDisplay).thenAccept(saved ->
-                    net.minecraft.client.Minecraft.getInstance().execute(() -> {
+                    dev.openallay.client.gui.MinecraftClientWindow.execute(dev.openallay.client.gui.MinecraftClientWindow.instance(), () -> {
                         screenshotActionPending = false;
                         if (saved instanceof ToolResult.Failure<Boolean>)
                             System.err.println("OpenAllay E2E original display restoration failed");
@@ -1213,8 +1213,8 @@ public final class GuideClientE2EController {
                 || ++activeScreenshotTicks < 4) {
             return;
         }
-        var client = net.minecraft.client.Minecraft.getInstance();
-        if (MinecraftClientWindow.overlay(client) == null
+        var client = dev.openallay.client.gui.MinecraftClientWindow.instance();
+        if (!MinecraftClientWindow.overlayPresent(client)
                 && MinecraftClientWindow.screen(client) instanceof OpenAllayScreen screen
                 && screen.hasRenderedActiveProgressForDevelopmentProbe()) {
             // A tick projection becomes visible in the framebuffer only after a later render.
@@ -1233,10 +1233,10 @@ public final class GuideClientE2EController {
                 || System.getProperty("openallay.e2e.screenshotRoot", "").isBlank()) {
             return;
         }
-        net.minecraft.client.Minecraft.getInstance().execute(() -> {
-            var client = net.minecraft.client.Minecraft.getInstance();
-            originalWindowWidth = client.getWindow().getWidth();
-            originalWindowHeight = client.getWindow().getHeight();
+        dev.openallay.client.gui.MinecraftClientWindow.execute(dev.openallay.client.gui.MinecraftClientWindow.instance(), () -> {
+            var client = dev.openallay.client.gui.MinecraftClientWindow.instance();
+            originalWindowWidth = dev.openallay.client.gui.MinecraftClientWindow.framebufferWidth(client);
+            originalWindowHeight = dev.openallay.client.gui.MinecraftClientWindow.framebufferHeight(client);
             MinecraftClientWindow.setScreen(client, screenshotGuide(service));
         });
     }
@@ -1250,7 +1250,7 @@ public final class GuideClientE2EController {
                 name,
                 MinecraftClientWindow.mainRenderTarget(client),
                 component -> System.out.println("OpenAllay E2E screenshot: "
-                        + component.getString()));
+                        + dev.openallay.platform.minecraft.MinecraftComponents.getString(component)));
     }
 
     private static SemanticSummary summarize(GuideRequestSnapshot request) {
@@ -1372,7 +1372,7 @@ public final class GuideClientE2EController {
             nativeCommandPendingFinish = report;
             if (nativeCommandCancellation != null) nativeCommandCancellation.cancel();
             restoreNativeCommandSetting().whenComplete((restored, failure) ->
-                    net.minecraft.client.Minecraft.getInstance().execute(() -> {
+                    dev.openallay.client.gui.MinecraftClientWindow.execute(dev.openallay.client.gui.MinecraftClientWindow.instance(), () -> {
                         String pending = nativeCommandPendingFinish;
                         nativeCommandPendingFinish = null;
                         if (failure != null || !Boolean.TRUE.equals(restored)) {

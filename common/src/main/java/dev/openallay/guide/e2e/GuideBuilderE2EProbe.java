@@ -37,35 +37,35 @@ final class GuideBuilderE2EProbe {
     }
 
     static void captureAnchor(String scenario, UUID actor, Consumer<Anchor> success, Consumer<String> failure) {
-        Minecraft client = Minecraft.getInstance();
-        var server = client.getSingleplayerServer();
+        Minecraft client = dev.openallay.client.gui.MinecraftClientWindow.instance();
+        var server = dev.openallay.client.gui.MinecraftClientWindow.integratedServer(client);
         if (server == null) { failure.accept("No authoritative integrated server"); return; }
-        server.execute(() -> {
+        dev.openallay.server.NativeServerOwner.execute(server, () -> {
             try {
-                var player = server.getPlayerList().getPlayer(actor);
+                var player = dev.openallay.server.NativeServerOwner.player(server, actor);
                 if (player == null) throw new IllegalStateException("Native player is unavailable");
                 String create = System.getProperty("openallay.e2e.createWorld", "");
                 String resume = System.getProperty("openallay.e2e.resumeWorld", "");
                 boolean resumed = create.isBlank();
                 String world = resumed ? resume : create;
                 if (!Boolean.getBoolean(GuideClientE2EConfig.ENABLED) || !enabled(scenario)
-                        || !server.isSameThread() || server != client.getSingleplayerServer() || server.isPublished()
+                        || !dev.openallay.server.NativeServerOwner.isOwner(server) || server != dev.openallay.client.gui.MinecraftClientWindow.integratedServer(client) || dev.openallay.server.NativeServerOwner.published(server)
                         || !world.matches("openallay-builder-[a-zA-Z0-9_.-]+")
                         || (!resumed && !resume.isBlank())
                         || (resumed && !List.of("builder-reload", "builder-live-undo").contains(scenario))
-                        || !world.equals(server.getWorldData().getLevelName())
-                        || server.getWorldData().getGameType() != net.minecraft.world.level.GameType.SURVIVAL
+                        || !world.equals(dev.openallay.server.NativeServerOwner.worldName(server))
+                        || !dev.openallay.server.NativeServerOwner.survival(server)
                         || GuideProbeWorldSettings.commandsAllowed(server) || !GuideProbeWorldSettings.isFlat(server)
                         || dev.openallay.context.minecraft.MinecraftServerPlayerLevel.get(player).getSeed() != 17L
                         || !dev.openallay.platform.minecraft.MinecraftWorldSavePath.root(server).toAbsolutePath().normalize()
-                                .equals(client.gameDirectory.toPath().resolve("saves").resolve(world).toAbsolutePath().normalize()))
+                                .equals(dev.openallay.client.gui.MinecraftClientWindow.gameDirectory(client).resolve("saves").resolve(world).toAbsolutePath().normalize()))
                     throw new IllegalStateException("Builder setup requires the explicitly launched disposable fixture world");
                 GuideProbeWorldSettings.prepareBuilderFixture(server, resumed);
-                Anchor anchor = new Anchor((int)Math.floor(player.getX()) + 8,
-                        (int)Math.floor(player.getY()) - 1, (int)Math.floor(player.getZ()) + 8,
-                        dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(dev.openallay.context.minecraft.MinecraftServerPlayerLevel.get(player).dimension()).toString());
-                client.execute(() -> success.accept(anchor));
-            } catch (RuntimeException error) { client.execute(() -> failure.accept(error.toString())); }
+                Anchor anchor = new Anchor((int)Math.floor(dev.openallay.client.context.MinecraftClientContextFacts.x(player)) + 8,
+                        (int)Math.floor(dev.openallay.client.context.MinecraftClientContextFacts.y(player)) - 1, (int)Math.floor(dev.openallay.client.context.MinecraftClientContextFacts.z(player)) + 8,
+                        dev.openallay.world.MinecraftWorldObservationFacts.dimension(dev.openallay.context.minecraft.MinecraftServerPlayerLevel.get(player)));
+                dev.openallay.client.gui.MinecraftClientWindow.execute(client, () -> success.accept(anchor));
+            } catch (RuntimeException error) { dev.openallay.client.gui.MinecraftClientWindow.execute(client, () -> failure.accept(error.toString())); }
         });
     }
 
@@ -246,8 +246,8 @@ final class GuideBuilderE2EProbe {
             GuideRequestSnapshot request, ClientSettingsService settings,
             boolean unrestrictedAtStart,
             Consumer<JsonObject> complete) {
-        Minecraft client = Minecraft.getInstance();
-        var server = client.getSingleplayerServer();
+        Minecraft client = dev.openallay.client.gui.MinecraftClientWindow.instance();
+        var server = dev.openallay.client.gui.MinecraftClientWindow.integratedServer(client);
         JsonObject result = resultSummary(request);
         result.addProperty("oracle", "independent-integrated-server-owner-thread-readback");
         result.addProperty("unrestrictedAtStart", unrestrictedAtStart);
@@ -259,15 +259,15 @@ final class GuideBuilderE2EProbe {
             result.addProperty("outcome", "FAILED"); result.addProperty("failure", "No independent native binding");
             complete.accept(result); return;
         }
-        server.execute(() -> {
+        dev.openallay.server.NativeServerOwner.execute(server, () -> {
             try {
-                var player = server.getPlayerList().getPlayer(actor);
+                var player = dev.openallay.server.NativeServerOwner.player(server, actor);
                 if (player == null) throw new IllegalStateException("Native player disappeared");
                 ServerLevel level = dev.openallay.context.minecraft.MinecraftServerPlayerLevel.get(player);
-                if (!anchor.dimension().equals(dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(level.dimension()).toString()))
+                if (!anchor.dimension().equals(dev.openallay.world.MinecraftWorldObservationFacts.dimension(level)))
                     throw new IllegalStateException("Native dimension changed");
-                result.addProperty("worldName", server.getWorldData().getLevelName());
-                result.addProperty("survival", server.getWorldData().getGameType() == net.minecraft.world.level.GameType.SURVIVAL);
+                result.addProperty("worldName", dev.openallay.server.NativeServerOwner.worldName(server));
+                result.addProperty("survival", dev.openallay.server.NativeServerOwner.survival(server));
                 result.addProperty("cheatsOff", !GuideProbeWorldSettings.commandsAllowed(server));
                 result.addProperty("flatWorld", GuideProbeWorldSettings.isFlat(server));
                 JsonObject origin = new JsonObject(); origin.addProperty("x", anchor.x()); origin.addProperty("y", anchor.y()); origin.addProperty("z", anchor.z());
@@ -280,7 +280,7 @@ final class GuideBuilderE2EProbe {
                     check.addProperty("x", pos.getX()); check.addProperty("y", pos.getY()); check.addProperty("z", pos.getZ());
                     check.addProperty("expectedId", landmark.id());
                     JsonObject expectedProperties = new JsonObject(); landmark.properties().forEach(expectedProperties::addProperty); check.add("expectedProperties", expectedProperties);
-                    boolean observed = !level.isOutsideBuildHeight(pos) && level.hasChunkAt(pos);
+                    boolean observed = !level.isOutsideBuildHeight(pos) && dev.openallay.world.MinecraftWorldObservationFacts.loaded(level, pos);
                     check.addProperty("observed", observed); boolean match = false;
                     if (observed) {
                         var state = level.getBlockState(pos);
@@ -314,10 +314,10 @@ final class GuideBuilderE2EProbe {
                 }
                 passed &= startupSettingsMatch(scenario, unrestrictedAtStart);
                 if (scenario.equals("builder-server-denied")) passed &= request.modelSelection().modelMode() == dev.openallay.guide.GuideModelMode.SERVER;
-                passed &= server.getWorldData().getGameType() == net.minecraft.world.level.GameType.SURVIVAL && !GuideProbeWorldSettings.commandsAllowed(server);
+                passed &= dev.openallay.server.NativeServerOwner.survival(server) && !GuideProbeWorldSettings.commandsAllowed(server);
                 result.addProperty("outcome", passed ? "PASSED" : "FAILED");
             } catch (RuntimeException failure) { result.addProperty("outcome", "FAILED"); result.addProperty("failure", failure.toString()); }
-            client.execute(() -> complete.accept(result));
+            dev.openallay.client.gui.MinecraftClientWindow.execute(client, () -> complete.accept(result));
         });
     }
 
@@ -331,7 +331,7 @@ final class GuideBuilderE2EProbe {
 
     /** Only native registry absence can remove this preset's independent world landmarks. */
     private static boolean skyscraperUnavailable() {
-        return MinecraftNativeRegistries.BLOCK.keySet().stream()
+        return MinecraftNativeRegistries.blockKeys().stream()
                 .noneMatch(id -> "minecraft:lightning_rod".equals(id.toString()));
     }
 

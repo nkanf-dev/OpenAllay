@@ -9,6 +9,10 @@ import dev.openallay.context.minecraft.MinecraftServerPlayerLevel;
 /** Typed owner/player facts used by single-source native custody algorithms. */
 public final class NativeServerOwner {
     private NativeServerOwner() {}
+    public static boolean published(net.minecraft.client.server.IntegratedServer server) { return server.isPublished(); }
+    public static String worldName(MinecraftServer server) { return server.getWorldData().getLevelName(); }
+    public static boolean survival(MinecraftServer server) { return server.getWorldData().getGameType() == net.minecraft.world.level.GameType.SURVIVAL; }
+
     public static boolean isOwner(MinecraftServer server) { return server.isSameThread(); }
     public static void execute(MinecraftServer server, Runnable action) { server.execute(action); }
     public static ServerPlayer player(MinecraftServer server, UUID actor) {

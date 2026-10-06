@@ -23,21 +23,20 @@ final class GuideNativeWorldAccessProbe {
     static void run(UUID actor, String world, Consumer<Map<String, Object>> finished) {
         String phase = System.getProperty("openallay.e2e.worldPhase", "");
         if (phase.equals("persist") || phase.equals("reload")) { persistence(actor, world, finished); return; }
-        Minecraft client = Minecraft.getInstance();
-        var server = client.getSingleplayerServer();
-        if (!Boolean.getBoolean(GuideClientE2EConfig.ENABLED) || server == null || server.isPublished()
+        Minecraft client = dev.openallay.client.gui.MinecraftClientWindow.instance();
+        var server = dev.openallay.client.gui.MinecraftClientWindow.integratedServer(client);
+        if (!Boolean.getBoolean(GuideClientE2EConfig.ENABLED) || server == null || dev.openallay.server.NativeServerOwner.published(server)
                 || !world.matches("openallay-builder-[a-zA-Z0-9_.-]+")
                 || !world.equals(System.getProperty("openallay.e2e.createWorld", ""))
-                || !world.equals(server.getWorldData().getLevelName())
+                || !world.equals(dev.openallay.server.NativeServerOwner.worldName(server))
                 || GuideProbeWorldSettings.commandsAllowed(server)
-                || client.player == null || !actor.equals(client.player.getUUID())) {
+                || client.player == null || !actor.equals(dev.openallay.client.gui.MinecraftClientWindow.actor(client))) {
             throw new IllegalStateException("World SDK probe requires its fresh isolated commands-off world");
         }
-        String dimension = dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(
-                dev.openallay.client.MinecraftLocalPlayerLevel.get(client.player).dimension()).toString();
-        int x = (int)Math.floor(client.player.getX()) + 6;
-        int z = (int)Math.floor(client.player.getZ()) + 6;
-        int y = Math.max(5, Math.min(250, (int)Math.floor(client.player.getY()) + 3));
+        String dimension = dev.openallay.world.MinecraftWorldObservationFacts.dimension(dev.openallay.client.MinecraftLocalPlayerLevel.get(client.player));
+        int x = (int)Math.floor(dev.openallay.client.context.MinecraftClientContextFacts.x(client.player)) + 6;
+        int z = (int)Math.floor(dev.openallay.client.context.MinecraftClientContextFacts.z(client.player)) + 6;
+        int y = Math.max(5, Math.min(250, (int)Math.floor(dev.openallay.client.context.MinecraftClientContextFacts.y(client.player)) + 3));
         var access = OpenAllayBootstrap.initialize().platform().minecraftWorldAccess().orElseThrow();
         Thread worker = new Thread(() -> {
             Map<String,Object> report = new LinkedHashMap<>();
@@ -105,27 +104,26 @@ final class GuideNativeWorldAccessProbe {
                 report.put("stack",java.util.Arrays.stream(failure.getStackTrace()).map(Object::toString).toList());
                 if (failure.getCause()!=null) report.put("cause",failure.getCause().toString());
             }
-            client.execute(() -> finished.accept(report));
+            dev.openallay.client.gui.MinecraftClientWindow.execute(client, () -> finished.accept(report));
         }, "openallay-native-world-sdk-probe");
         worker.setDaemon(true); worker.start();
     }
     private static void persistence(UUID actor, String world, Consumer<Map<String,Object>> finished) {
-        Minecraft client = Minecraft.getInstance();
+        Minecraft client = dev.openallay.client.gui.MinecraftClientWindow.instance();
         String phase = System.getProperty("openallay.e2e.worldPhase", "");
         boolean reload = phase.equals("reload");
-        var server = client.getSingleplayerServer();
+        var server = dev.openallay.client.gui.MinecraftClientWindow.integratedServer(client);
         String requested = System.getProperty(reload ? "openallay.e2e.resumeWorld" : "openallay.e2e.createWorld", "");
-        if (!Boolean.getBoolean(GuideClientE2EConfig.ENABLED) || server == null || server.isPublished()
+        if (!Boolean.getBoolean(GuideClientE2EConfig.ENABLED) || server == null || dev.openallay.server.NativeServerOwner.published(server)
                 || !world.equals(requested) || !world.matches("openallay-builder-[a-zA-Z0-9_.-]+")
-                || !world.equals(server.getWorldData().getLevelName()) || GuideProbeWorldSettings.commandsAllowed(server)
-                || client.player == null || !actor.equals(client.player.getUUID())) {
+                || !world.equals(dev.openallay.server.NativeServerOwner.worldName(server)) || GuideProbeWorldSettings.commandsAllowed(server)
+                || client.player == null || !actor.equals(dev.openallay.client.gui.MinecraftClientWindow.actor(client))) {
             throw new IllegalStateException("Persistence probe requires its explicitly owned isolated world");
         }
-        String dimension = dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(
-                dev.openallay.client.MinecraftLocalPlayerLevel.get(client.player).dimension()).toString();
-        int freshX=(int)Math.floor(client.player.getX())+5, freshY=Math.max(5,Math.min(250,(int)Math.floor(client.player.getY())+3)), freshZ=(int)Math.floor(client.player.getZ())+5;
+        String dimension = dev.openallay.world.MinecraftWorldObservationFacts.dimension(dev.openallay.client.MinecraftLocalPlayerLevel.get(client.player));
+        int freshX=(int)Math.floor(dev.openallay.client.context.MinecraftClientContextFacts.x(client.player))+5, freshY=Math.max(5,Math.min(250,(int)Math.floor(dev.openallay.client.context.MinecraftClientContextFacts.y(client.player))+3)), freshZ=(int)Math.floor(dev.openallay.client.context.MinecraftClientContextFacts.z(client.player))+5;
         var access=OpenAllayBootstrap.initialize().platform().minecraftWorldAccess().orElseThrow();
-        java.nio.file.Path retained=client.gameDirectory.toPath().resolve("config/openallay/e2e/native-world-persistence.json");
+        java.nio.file.Path retained=dev.openallay.client.gui.MinecraftClientWindow.gameDirectory(client).resolve("config/openallay/e2e/native-world-persistence.json");
         Thread worker=new Thread(() -> {
             Map<String,Object> report=new LinkedHashMap<>();
             report.put("scenario","native-world-sdk");report.put("phase",phase);report.put("world",world);report.put("modelUsed",false);
@@ -170,7 +168,7 @@ final class GuideNativeWorldAccessProbe {
                 report.put("stack",java.util.Arrays.stream(failure.getStackTrace()).map(Object::toString).toList());
                 if(failure.getCause()!=null)report.put("cause",failure.getCause().toString());
             }
-            client.execute(() -> finished.accept(report));
+            dev.openallay.client.gui.MinecraftClientWindow.execute(client, () -> finished.accept(report));
         },"openallay-native-world-persistence-probe");worker.setDaemon(true);worker.start();
     }
     private static void require(boolean value, String check) { if (!value) throw new IllegalStateException(check); }

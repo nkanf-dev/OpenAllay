@@ -74,7 +74,7 @@ final class GuideGraphicalRegressionProbe {
     private final Supplier<VoiceSettingsActions> voiceSettings;
     private final BiFunction<String, UUID, java.util.Optional<String>> traceLookup;
     private final Consumer<Map<String, Object>> completed;
-    private final Minecraft client = Minecraft.getInstance();
+    private final Minecraft client = dev.openallay.client.gui.MinecraftClientWindow.instance();
     private final GuideNativeEditorE2EProbe nativePrimitiveProbe;
     private final Instant started = Instant.now();
     private final Map<String, Object> report = new LinkedHashMap<>();
@@ -168,9 +168,9 @@ final class GuideGraphicalRegressionProbe {
         String root = System.getProperty("openallay.e2e.screenshotRoot", "");
         if (root.isBlank()) throw new IllegalStateException("Native frame output is required");
         frameRoot = Path.of(root);
-        originalWindowWidth = client.getWindow().getWidth();
-        originalWindowHeight = client.getWindow().getHeight();
-        originalGuiScale = dev.openallay.platform.minecraft.MinecraftOptions.guiScale(client.options);
+        originalWindowWidth = dev.openallay.client.gui.MinecraftClientWindow.framebufferWidth(client);
+        originalWindowHeight = dev.openallay.client.gui.MinecraftClientWindow.framebufferHeight(client);
+        originalGuiScale = dev.openallay.platform.minecraft.MinecraftOptions.guiScale(dev.openallay.client.context.MinecraftClientContextFacts.options(client));
         report.put("windowBefore", Map.of("width", originalWindowWidth, "height", originalWindowHeight, "guiScale", originalGuiScale));
         originalPttBinding = GuideProbeKeyBindings.description(OpenAllayKeyMappings.VOICE_PTT);
         restorePttKey = GuideProbeKeyBindings.restoration(OpenAllayKeyMappings.VOICE_PTT);
@@ -199,7 +199,7 @@ final class GuideGraphicalRegressionProbe {
                 throw new IllegalStateException("Native graphical scenario exceeded its timeout at stage " + stage);
             }
             // At FPS10 this leaves several actual extraction/render frames between actions.
-            if (++ticks < 12 || MinecraftClientWindow.overlay(client) != null) return;
+            if (++ticks < 12 || MinecraftClientWindow.overlayPresent(client)) return;
             ticks = 0;
             if ("ui-live-ux-regressions".equals(config.scenario())) runLiveStage();
             else runStage();
@@ -212,14 +212,14 @@ final class GuideGraphicalRegressionProbe {
         switch (stage) {
             case 0 -> {
                 requireLoopbackFixture();
-                require("zh_cn".equals(client.options.languageCode), "Chinese language must be prepared before launch");
+                require("zh_cn".equals(dev.openallay.platform.minecraft.MinecraftOptions.language(dev.openallay.client.context.MinecraftClientContextFacts.options(client))), "Chinese language must be prepared before launch");
                 MinecraftClientWindow.setWindowed(client, 850, 480);
                 GuideProbeKeyBindings.keyboard(OpenAllayKeyMappings.INTERACT_HUD, dev.openallay.client.gui.GuideInputCodes.KEY_F8);
-                KeyMapping.resetMapping();
+                GuideProbeKeyBindings.refresh();
                 report.put("interactKeyDuring", GuideProbeKeyBindings.description(OpenAllayKeyMappings.INTERACT_HUD));
-                report.put("world", client.getSingleplayerServer().getWorldData().getLevelName());
-                report.put("commandsAllowed", GuideProbeWorldSettings.commandsAllowed(client.getSingleplayerServer()));
-                require(!GuideProbeWorldSettings.commandsAllowed(client.getSingleplayerServer()), "Disposable world commands must be off");
+                report.put("world", dev.openallay.server.NativeServerOwner.worldName(dev.openallay.client.gui.MinecraftClientWindow.integratedServer(client)));
+                report.put("commandsAllowed", GuideProbeWorldSettings.commandsAllowed(dev.openallay.client.gui.MinecraftClientWindow.integratedServer(client)));
+                require(!GuideProbeWorldSettings.commandsAllowed(dev.openallay.client.gui.MinecraftClientWindow.integratedServer(client)), "Disposable world commands must be off");
                 openGuide.accept(service);
                 advance();
             }
@@ -269,9 +269,9 @@ final class GuideGraphicalRegressionProbe {
             }
             case 5 -> {
                 expectedName = "小羽 · 原生图形回归";
-                String label = MinecraftComponents.translatable("screen.openallay.settings.general.assistant_name.label").getString();
-                GuideNativeEditBox name = MinecraftClientWindow.screen(client).children().stream().filter(GuideNativeEditBox.class::isInstance)
-                        .map(GuideNativeEditBox.class::cast).filter(value -> value.getMessage().getString().equals(label))
+                String label = MinecraftComponents.getString(MinecraftComponents.translatable("screen.openallay.settings.general.assistant_name.label"));
+                GuideNativeEditBox name = ((dev.openallay.client.gui.GuideNativeScreen) MinecraftClientWindow.screen(client)).guideWidgetChildren().stream().filter(GuideNativeEditBox.class::isInstance)
+                        .map(GuideNativeEditBox.class::cast).filter(value -> MinecraftComponents.getString(value.getMessage()).equals(label))
                         .findFirst().orElseThrow(() -> new IllegalStateException("Actual assistant-name editor unavailable"));
                 name.setValue(expectedName);
                 press("screen.openallay.settings.done");
@@ -403,7 +403,7 @@ final class GuideGraphicalRegressionProbe {
                 require(!paintedTail.isEmpty() && "全文末尾：原生图形长回复验收完成。".endsWith(paintedTail),
                         "HUD full response tail was not actually painted after wheel scrolling");
                 checkpoint("07-interactive-hud-bottom", false);
-                GuideNativeInput.keyPressed(lite, GuideNativeInput.keyEvent(dev.openallay.client.gui.GuideInputCodes.KEY_ESCAPE, 0));
+                GuideNativeInput.keyPressed((dev.openallay.client.gui.GuideWidgetInput) lite, GuideNativeInput.keyEvent(dev.openallay.client.gui.GuideInputCodes.KEY_ESCAPE, 0));
                 recordAction("native-key", "ESC/HUD-to-game");
                 advance();
             }
@@ -454,7 +454,7 @@ final class GuideGraphicalRegressionProbe {
                         && "SUCCESS".equals(receipt.get("noticeSeverity").getAsString()),
                         "Actual export callback did not publish a successful file");
                 String name = receipt.get("lastFilename").getAsString();
-                Path exports = client.gameDirectory.toPath().resolve("openallay/exports").toAbsolutePath().normalize();
+                Path exports = dev.openallay.client.gui.MinecraftClientWindow.gameDirectory(client).resolve("openallay/exports").toAbsolutePath().normalize();
                 Path exported = exports.resolve(name).normalize();
                 require(exported.getParent().equals(exports) && Files.isRegularFile(exported), "Actual export file is unavailable");
                 try {
@@ -527,7 +527,7 @@ final class GuideGraphicalRegressionProbe {
                 GuideNativeButton back = findButton("screen.openallay.settings.back", false);
                 require(back != null, "Native narrow Back button is not visible");
                 report.put("narrowBack", Map.of("visible", true, "guiWidth", settingsScreen().width,
-                        "guiHeight", settingsScreen().height, "guiScale", dev.openallay.platform.minecraft.MinecraftOptions.guiScale(client.options)));
+                        "guiHeight", settingsScreen().height, "guiScale", dev.openallay.platform.minecraft.MinecraftOptions.guiScale(dev.openallay.client.context.MinecraftClientContextFacts.options(client))));
                 checkpoint("exit-back-dirty-narrow", false);
                 press("screen.openallay.settings.back");
                 advance();
@@ -623,7 +623,7 @@ final class GuideGraphicalRegressionProbe {
                 }
                 requireHudLatest(receipt, request);
                 checkpoint("05-passive-hud-latest-tail-stable", false);
-                KeyMapping.click(GuideNativeInput.keyboardType().getOrCreate(dev.openallay.client.gui.GuideInputCodes.KEY_F8));
+                GuideProbeKeyBindings.click(dev.openallay.client.gui.GuideInputCodes.KEY_F8);
                 recordAction("native-keymapping-click", "INTERACT_HUD/F8");
                 stage = 26; stageWait = 0;
             }
@@ -660,7 +660,7 @@ final class GuideGraphicalRegressionProbe {
             }
             case 74 -> {
                 GuideHudEditorScreen editor = hudEditor();
-                require(client.isWindowActive(), "HUD editor requires an active native window for dragging");
+                require(dev.openallay.client.gui.MinecraftClientWindow.focused(client), "HUD editor requires an active native window for dragging");
                 var hud = hudDisplayBeforeDrag.ui().hud();
                 hudBoundsBeforeDrag = GuideHudLayout.calculate(editor.width, editor.height, hud);
                 requireHudInsideWindow(hudBoundsBeforeDrag, editor.width, editor.height);
@@ -684,7 +684,7 @@ final class GuideGraphicalRegressionProbe {
                         "HUD drag start is not in the native move region");
                 hudDragPreviewBefore = number(gson.toJsonTree(hudReceipt.get()).getAsJsonObject(), "extractedFrame");
                 hudDrag.put("viewport", Map.of("width", editor.width, "height", editor.height,
-                        "guiScale", dev.openallay.platform.minecraft.MinecraftOptions.guiScale(client.options)));
+                        "guiScale", dev.openallay.platform.minecraft.MinecraftOptions.guiScale(dev.openallay.client.context.MinecraftClientContextFacts.options(client))));
                 hudDrag.put("plannedBeforeBounds", hudBoundsBeforeDrag);
                 hudDrag.put("plannedAfterBounds", hudBoundsAfterDrag);
                 hudDrag.put("plannedDelta", Map.of("x", hudDragDx, "y", hudDragDy));
@@ -703,7 +703,7 @@ final class GuideGraphicalRegressionProbe {
             }
             case 76 -> {
                 GuideHudEditorScreen editor = hudEditor();
-                require(client.isWindowActive(), "Native HUD drag lost window focus");
+                require(dev.openallay.client.gui.MinecraftClientWindow.focused(client), "Native HUD drag lost window focus");
                 var event = GuideNativeInput.mouseEvent(hudDragPointerX + hudDragDx, hudDragPointerY + hudDragDy, dev.openallay.client.gui.GuideInputCodes.MOUSE_BUTTON_LEFT, 0);
                 boolean handled = GuideNativeInput.mouseDragged(editor, event, hudDragDx, hudDragDy);
                 recordHudPointer("mouseDragged", event, hudDragDx, hudDragDy, handled);
@@ -796,8 +796,8 @@ final class GuideGraphicalRegressionProbe {
             }
             case 87 -> {
                 GuideHudEditorScreen editor = hudEditor();
-                require(editor.width == client.getWindow().getGuiScaledWidth()
-                                && editor.height == client.getWindow().getGuiScaledHeight(),
+                require(editor.width == dev.openallay.client.gui.MinecraftClientWindow.guiWidth(client)
+                                && editor.height == dev.openallay.client.gui.MinecraftClientWindow.guiHeight(client),
                         "Reopened native HUD editor uses an unexpected viewport");
                 JsonObject receipt = gson.toJsonTree(hudReceipt.get()).getAsJsonObject();
                 require(number(receipt, "extractedFrame") > hudDragPreviewAfter,
@@ -850,7 +850,7 @@ final class GuideGraphicalRegressionProbe {
                 requireLoopbackFixture();
                 require(config.question().startsWith(LIVE_PREFIX) && config.question().contains(" hold"),
                         "Live UX scenario requires the explicit held loopback question prefix");
-                require("zh_cn".equals(client.options.languageCode), "Chinese language must be prepared before launch");
+                require("zh_cn".equals(dev.openallay.platform.minecraft.MinecraftOptions.language(dev.openallay.client.context.MinecraftClientContextFacts.options(client))), "Chinese language must be prepared before launch");
                 var voice = dev.openallay.client.voice.VoiceConfigStore.decode(readCurrentConfig("voice.json"));
                 require(!voice.enabled(), "Native GUI scenario must not open a microphone");
                 report.put("voiceConfig", gson.toJsonTree(voice));
@@ -859,17 +859,17 @@ final class GuideGraphicalRegressionProbe {
                 liveHeaderName = settings.snapshot().display().assistantName();
                 MinecraftClientWindow.setWindowed(client, 850, 480);
                 GuideProbeKeyBindings.keyboard(OpenAllayKeyMappings.VOICE_PTT, dev.openallay.client.gui.GuideInputCodes.KEY_V);
-                KeyMapping.resetMapping();
+                GuideProbeKeyBindings.refresh();
                 openGuide.accept(service);
                 advance();
             }
             case 1 -> {
-                require(guide().getFocused() == composer().widget(), "New Guide did not focus its actual native composer");
+                require(guide().getGuideWidgetFocused() == composer().widget(), "New Guide did not focus its actual native composer");
                 require(GuideNativeInput.charTyped(guide(), GuideNativeInput.characterEvent('x')), "Initial native character was not routed to composer");
                 require("x".equals(composer().getValue()), "Initial character callback did not edit native input");
                 checkpoint("live-01-initial-character-focus", true);
                 clickAt(guide(), 1, 1, "blank-outside-composer");
-                require(guide().getFocused() != composer().widget(), "Blank click did not blur native text input");
+                require(guide().getGuideWidgetFocused() != composer().widget(), "Blank click did not blur native text input");
                 MinecraftClientWindow.setWindowed(client, 900, 540);
                 advance();
             }
@@ -880,21 +880,21 @@ final class GuideGraphicalRegressionProbe {
                     advance();
                     return;
                 }
-                require(guide().getFocused() != composer().widget(), "Resize/rebuild incorrectly refocused blurred composer");
+                require(guide().getGuideWidgetFocused() != composer().widget(), "Resize/rebuild incorrectly refocused blurred composer");
                 require("x".equals(composer().getValue()), "Resize lost player draft");
                 clickAt(guide(), dev.openallay.client.gui.GuideNativeWidgetGeometry.x(composer().widget()) + 8, dev.openallay.client.gui.GuideNativeWidgetGeometry.y(composer().widget()) + 8, "composer-focus");
-                require(guide().getFocused() == composer().widget(), "Native input click did not restore text focus");
+                require(guide().getGuideWidgetFocused() == composer().widget(), "Native input click did not restore text focus");
                 String beforeTypedPttKey = composer().getValue();
                 boolean endHandled = GuideNativeInput.keyPressed(guide(), GuideNativeInput.keyEvent(dev.openallay.client.gui.GuideInputCodes.KEY_END, 0));
                 recordAction("native-key", "END/focused-composer-before-typed-PTT-key");
-                require(endHandled && guide().getFocused() == composer().widget(), "Native End did not retain composer focus");
+                require(endHandled && guide().getGuideWidgetFocused() == composer().widget(), "Native End did not retain composer focus");
                 GuideNativeInput.keyPressed(guide(), GuideNativeInput.keyEvent(dev.openallay.client.gui.GuideInputCodes.KEY_V, 0));
                 boolean characterHandled = GuideNativeInput.charTyped(guide(), GuideNativeInput.characterEvent('v'));
                 GuideNativeInput.keyReleased(guide(), GuideNativeInput.keyEvent(dev.openallay.client.gui.GuideInputCodes.KEY_V, 0));
                 report.put("typedPttKeyNativeEdit", Map.of("beforeValue", beforeTypedPttKey,
                         "afterValue", composer().getValue(), "endKeyHandled", endHandled,
-                        "characterHandled", characterHandled, "composerFocused", guide().getFocused() == composer().widget()));
-                require(characterHandled && guide().getFocused() == composer().widget() && "xv".equals(composer().getValue()),
+                        "characterHandled", characterHandled, "composerFocused", guide().getGuideWidgetFocused() == composer().widget()));
+                require(characterHandled && guide().getGuideWidgetFocused() == composer().widget() && "xv".equals(composer().getValue()),
                         "Focused PTT-bound typed key did not insert at native composer End");
                 report.put("focusReceipts", Map.of("initialChar", true, "blankBlur", true,
                         "resizeRemainsBlurred", true, "typedPttKeyEditsText", true,
@@ -928,7 +928,7 @@ final class GuideGraphicalRegressionProbe {
                 liveFollowUpId = follow.id();
                 report.put("followUpAccepted", gson.toJsonTree(follow));
                 var notice = (dev.openallay.client.gui.GuideUiNotice) readField(guide(), "notice");
-                require(notice.message().equals(MinecraftComponents.translatable("screen.openallay.composer.accepted.follow_up").getString()),
+                require(notice.message().equals(MinecraftComponents.getString(MinecraftComponents.translatable("screen.openallay.composer.accepted.follow_up"))),
                         "Actual Follow-up callback did not show queued admission feedback");
                 report.put("followUpNotice", notice);
                 checkpoint("live-03-follow-up-accepted-active", true);
@@ -949,7 +949,7 @@ final class GuideGraphicalRegressionProbe {
                 liveSteerId = steer.id();
                 report.put("steerAccepted", gson.toJsonTree(steer));
                 var notice = (dev.openallay.client.gui.GuideUiNotice) readField(guide(), "notice");
-                require(notice.message().equals(MinecraftComponents.translatable("screen.openallay.composer.accepted.steer").getString()),
+                require(notice.message().equals(MinecraftComponents.getString(MinecraftComponents.translatable("screen.openallay.composer.accepted.steer"))),
                         "Actual Steer callback did not show pending admission feedback");
                 report.put("steerNotice", notice);
                 report.put("pendingReceiptOrder", pending.stream().map(value -> value.id().toString()).toList());
@@ -1044,7 +1044,7 @@ final class GuideGraphicalRegressionProbe {
                 if (MinecraftClientWindow.screen(client) instanceof OpenAllayScreen)
                     require(jsonReceipt(guide(), "e2eToolsReceipt").get("detailToolId").getAsString().isEmpty(),
                             "Native child capsule opened parent Tool drawer");
-                else { GuideNativeInput.keyPressed(MinecraftClientWindow.screen(client), GuideNativeInput.keyEvent(dev.openallay.client.gui.GuideInputCodes.KEY_ESCAPE, 0)); openGuide.accept(service); }
+                else { GuideNativeInput.keyPressed((dev.openallay.client.gui.GuideWidgetInput) MinecraftClientWindow.screen(client), GuideNativeInput.keyEvent(dev.openallay.client.gui.GuideInputCodes.KEY_ESCAPE, 0)); openGuide.accept(service); }
                 checkpoint("live-08-native-child-priority-no-parent-drawer", true);
                 press("screen.openallay.settings.short"); advance();
             }
@@ -1085,15 +1085,15 @@ final class GuideGraphicalRegressionProbe {
                 report.put("passiveHudLatestStable", receipt);
                 checkpoint("live-10-passive-hud-latest-48-no-carousel", false);
                 GuideProbeKeyBindings.unbind(OpenAllayKeyMappings.INTERACT_HUD);
-                KeyMapping.resetMapping(); advance();
+                GuideProbeKeyBindings.refresh(); advance();
             }
             case 25 -> {
-                report.put("explicitUnboundKeyLabel", OpenAllayKeyMappings.INTERACT_HUD.getTranslatedKeyMessage().getString());
-                require(OpenAllayKeyMappings.INTERACT_HUD.isUnbound(), "Explicit unbound key was silently reset");
+                report.put("explicitUnboundKeyLabel", dev.openallay.client.gui.GuideNativeKeyMappings.display(OpenAllayKeyMappings.INTERACT_HUD));
+                require(dev.openallay.client.gui.GuideNativeKeyMappings.unbound(OpenAllayKeyMappings.INTERACT_HUD), "Explicit unbound key was silently reset");
                 checkpoint("live-11-passive-hud-explicit-unbound-hint", false);
                 GuideProbeKeyBindings.keyboard(OpenAllayKeyMappings.INTERACT_HUD, dev.openallay.client.gui.GuideInputCodes.KEY_F8);
-                KeyMapping.resetMapping();
-                KeyMapping.click(GuideNativeInput.keyboardType().getOrCreate(dev.openallay.client.gui.GuideInputCodes.KEY_F8));
+                GuideProbeKeyBindings.refresh();
+                GuideProbeKeyBindings.click(dev.openallay.client.gui.GuideInputCodes.KEY_F8);
                 recordAction("native-keymapping-click", "INTERACT_HUD/default-F8"); advance();
             }
             case 26 -> {
@@ -1256,7 +1256,6 @@ final class GuideGraphicalRegressionProbe {
     /** Read-only state at the terminal header assertion, including unpainted-widget waits. */
     private Map<String, Object> liveTerminalHeaderDiagnostic(
             OpenAllayScreen owner, Object title, long frame, JsonObject header) {
-        var window = client.getWindow();
         var layout = (dev.openallay.guide.ui.GuideUiLayout) readField(owner, "layout");
         Map<String, Object> receipt = new LinkedHashMap<>();
         receipt.put("stage", stage);
@@ -1270,12 +1269,12 @@ final class GuideGraphicalRegressionProbe {
         receipt.put("titleExtracted", readField(title, "paintedTitle") != null);
         receipt.put("screenWidth", owner.width);
         receipt.put("screenHeight", owner.height);
-        receipt.put("guiWidth", window.getGuiScaledWidth());
-        receipt.put("guiHeight", window.getGuiScaledHeight());
-        receipt.put("windowLogicalWidth", window.getScreenWidth());
-        receipt.put("windowLogicalHeight", window.getScreenHeight());
-        receipt.put("framebufferWidth", window.getWidth());
-        receipt.put("framebufferHeight", window.getHeight());
+        receipt.put("guiWidth", dev.openallay.client.gui.MinecraftClientWindow.guiWidth(client));
+        receipt.put("guiHeight", dev.openallay.client.gui.MinecraftClientWindow.guiHeight(client));
+        receipt.put("windowLogicalWidth", dev.openallay.client.gui.MinecraftClientWindow.windowWidth(client));
+        receipt.put("windowLogicalHeight", dev.openallay.client.gui.MinecraftClientWindow.windowHeight(client));
+        receipt.put("framebufferWidth", dev.openallay.client.gui.MinecraftClientWindow.framebufferWidth(client));
+        receipt.put("framebufferHeight", dev.openallay.client.gui.MinecraftClientWindow.framebufferHeight(client));
         receipt.put("titleBounds", layout.header().title());
         receipt.put("header", header);
         return Map.copyOf(receipt);
@@ -1289,9 +1288,9 @@ final class GuideGraphicalRegressionProbe {
                 && config.sessionId().equals(readField(reader, "session"))
                 && readField(reader, "attachment") != null,
                 "Reader reopen source is not the attached scenario service/session");
-        require(client.player != null && client.level != null, "Reader reopen lost its native connection");
+        require(client.player != null && dev.openallay.client.gui.MinecraftClientWindow.world(client) != null, "Reader reopen lost its native connection");
         liveGuideReopenOwner = new LiveGuideReopenOwner(reader, state, state.generation(),
-                client.level, client.player.getUUID(), service.presentationSessionOwner(config.sessionId()).orElseThrow());
+                dev.openallay.client.gui.MinecraftClientWindow.world(client), dev.openallay.client.gui.MinecraftClientWindow.actor(client), service.presentationSessionOwner(config.sessionId()).orElseThrow());
         requireReaderGuideReopenOwner();
         require(liveGuideReopen == null, "Reader Guide reopen was already requested");
         liveGuideReopen = new NativeScreenTransition<>(reader);
@@ -1311,8 +1310,8 @@ final class GuideGraphicalRegressionProbe {
     private void requireReaderGuideReopenOwner() {
         LiveGuideReopenOwner owner = liveGuideReopenOwner;
         require(owner != null && !owner.state().closed() && owner.state().generation() == owner.generation()
-                && client.level == owner.world() && client.player != null
-                && owner.actor().equals(client.player.getUUID()) && owner.actor().equals(service.snapshot().actorId())
+                && dev.openallay.client.gui.MinecraftClientWindow.world(client) == owner.world() && client.player != null
+                && owner.actor().equals(dev.openallay.client.gui.MinecraftClientWindow.actor(client)) && owner.actor().equals(service.snapshot().actorId())
                 && config.sessionId().equals(service.snapshot().selectedSession())
                 && config.sessionId().equals(owner.state().selectedSession())
                 && service.presentationSessionOwner(config.sessionId()).filter(owner.sessionOwner()::equals).isPresent(),
@@ -1338,7 +1337,7 @@ final class GuideGraphicalRegressionProbe {
                     require(custody.join() instanceof ToolResult.Success<Boolean> success && Boolean.TRUE.equals(success.value()),
                             "Reopened Guide observation producer custody failed");
                     require(readField(screen, "attachment") != null && screen.width > 0 && screen.height > 0
-                            && screen.children().stream().anyMatch(child -> child == ((GuideMultilineEditor) readField(screen, "composer")).widget())
+                            && ((dev.openallay.client.gui.GuideNativeScreen) screen).guideWidgetChildren().stream().anyMatch(child -> child == ((GuideMultilineEditor) readField(screen, "composer")).widget())
                             && findButton(screen, "screen.openallay.settings.short", true) != null,
                             "Reopened Guide native extraction has no initialized owned composer/Settings widgets");
                     return true;
@@ -1405,7 +1404,7 @@ final class GuideGraphicalRegressionProbe {
     }
 
     private GuideMultilineEditor composer() {
-        return MinecraftClientWindow.screen(client).children().stream()
+        return ((dev.openallay.client.gui.GuideNativeScreen) MinecraftClientWindow.screen(client)).guideWidgetChildren().stream()
                 .map(dev.openallay.client.gui.GuideNativeMultilineText::find)
                 .filter(java.util.Objects::nonNull).findFirst()
                 .orElseThrow(() -> new IllegalStateException("Actual native composer is unavailable"));
@@ -1523,7 +1522,7 @@ final class GuideGraphicalRegressionProbe {
         diagnostic.put("draftMatches", (LIVE_FOLLOW_UP + " reader-new-content").equals(composer().getValue()));
         diagnostic.put("sendVisible", actualSend.visible);
         diagnostic.put("sendActive", actualSend.active);
-        diagnostic.put("sendLabel", actualSend.getMessage().getString());
+        diagnostic.put("sendLabel", MinecraftComponents.getString(actualSend.getMessage()));
         diagnostic.put("submitting", readField(screen, "submitting"));
         diagnostic.put("intentSubmissionInFlight", state.intentSubmissionInFlight(sessionId));
         diagnostic.put("intentSteer", intent.steer());
@@ -1551,36 +1550,35 @@ final class GuideGraphicalRegressionProbe {
 
     private void clickAt(Screen screen, double x, double y, String target) {
         var event = GuideNativeInput.mouseEvent(x, y, dev.openallay.client.gui.GuideInputCodes.MOUSE_BUTTON_LEFT, 0);
-        boolean clicked = GuideNativeInput.mouseClicked(screen, event, false);
-        boolean released = GuideNativeInput.mouseReleased(screen, event);
+        boolean clicked = GuideNativeInput.mouseClicked((dev.openallay.client.gui.GuideWidgetInput) screen, event, false);
+        boolean released = GuideNativeInput.mouseReleased((dev.openallay.client.gui.GuideWidgetInput) screen, event);
         actions.add(Map.of("type", "native-mouse-callback", "target", target, "stage", stage,
                 "x", x, "y", y, "clickedHandled", clicked, "releasedHandled", released));
     }
 
     private void hoverNative(double guiX, double guiY) {
-        var window = client.getWindow();
-        double nativeX = guiX * window.getScreenWidth() / window.getGuiScaledWidth();
-        double nativeY = guiY * window.getScreenHeight() / window.getGuiScaledHeight();
+        double nativeX = guiX * dev.openallay.client.gui.MinecraftClientWindow.windowWidth(client) / dev.openallay.client.gui.MinecraftClientWindow.guiWidth(client);
+        double nativeY = guiY * dev.openallay.client.gui.MinecraftClientWindow.windowHeight(client) / dev.openallay.client.gui.MinecraftClientWindow.guiHeight(client);
         GuideProbeNativeCursor.move(client, nativeX, nativeY);
         actions.add(Map.of("type", "native-" + GuideProbeNativeCursor.backend() + "-cursor", "stage", stage, "guiX", guiX, "guiY", guiY,
-                "windowX", nativeX, "windowY", nativeY, "screenWidth", window.getScreenWidth(),
-                "screenHeight", window.getScreenHeight(), "source", "OS-programmatic-cursor-request"));
-        if (Math.abs(dev.openallay.client.context.MinecraftMouseCoordinates.x(client.mouseHandler, window) - guiX) > 1
-                || Math.abs(dev.openallay.client.context.MinecraftMouseCoordinates.y(client.mouseHandler, window) - guiY) > 1)
+                "windowX", nativeX, "windowY", nativeY, "screenWidth", dev.openallay.client.gui.MinecraftClientWindow.windowWidth(client),
+                "screenHeight", dev.openallay.client.gui.MinecraftClientWindow.windowHeight(client), "source", "OS-programmatic-cursor-request"));
+        if (Math.abs(dev.openallay.client.context.MinecraftMouseCoordinates.x(client) - guiX) > 1
+                || Math.abs(dev.openallay.client.context.MinecraftMouseCoordinates.y(client) - guiY) > 1)
             dispatchNativeCursorMove(nativeX, nativeY);
     }
 
     /** Controlled native event callback, not physical OS input, direct render, or private field mutation. */
     private void dispatchNativeCursorMove(double nativeX, double nativeY) {
         require(developmentProbeEnabled, "Development probe was disabled at construction");
-        client.execute(() -> {
+        dev.openallay.client.gui.MinecraftClientWindow.execute(client, () -> {
             try {
                 GuideProbeNativeCursor.dispatchMove(client, nativeX, nativeY);
                 actions.add(Map.of("type", "controlled-native-cursor-callback", "stage", stage,
-                        "source", "MouseHandler.onMove/window-cursor-event", "physicalInput", false,
+                        "source", "selected-native-cursor-callback/" + GuideProbeNativeCursor.backend(), "physicalInput", false,
                         "windowX", nativeX, "windowY", nativeY,
-                        "scaledXAfterCallback", dev.openallay.client.context.MinecraftMouseCoordinates.x(client.mouseHandler, client.getWindow()),
-                        "scaledYAfterCallback", dev.openallay.client.context.MinecraftMouseCoordinates.y(client.mouseHandler, client.getWindow())));
+                        "scaledXAfterCallback", dev.openallay.client.context.MinecraftMouseCoordinates.x(client),
+                        "scaledYAfterCallback", dev.openallay.client.context.MinecraftMouseCoordinates.y(client)));
             } catch (RuntimeException failure) {
                 fail(new IllegalStateException("Controlled native mouse callback failed", failure));
             }
@@ -1590,7 +1588,6 @@ final class GuideGraphicalRegressionProbe {
     /** Bounded native input observations only; these never manufacture a hover or paint receipt. */
     private void recordNativeHoverDiagnostic(String phase) {
         require(developmentProbeEnabled, "Development probe was disabled at construction");
-        var window = client.getWindow();
         double[] nativeCursor = GuideProbeNativeCursor.position(client);
         var layout = (dev.openallay.guide.ui.GuideUiLayout) readField(guide(), "layout");
         Map<String, Object> diagnostic = new LinkedHashMap<>();
@@ -1601,22 +1598,22 @@ final class GuideGraphicalRegressionProbe {
         diagnostic.put("screenClass", guide().getClass().getName());
         diagnostic.put("screenWidth", guide().width);
         diagnostic.put("screenHeight", guide().height);
-        diagnostic.put("windowFocused", client.isWindowActive());
-        diagnostic.put("clientWindowActive", client.isWindowActive());
-        diagnostic.put("windowLogicalWidth", window.getScreenWidth());
-        diagnostic.put("windowLogicalHeight", window.getScreenHeight());
-        diagnostic.put("framebufferWidth", window.getWidth());
-        diagnostic.put("framebufferHeight", window.getHeight());
-        diagnostic.put("guiWidth", window.getGuiScaledWidth());
-        diagnostic.put("guiHeight", window.getGuiScaledHeight());
+        diagnostic.put("windowFocused", dev.openallay.client.gui.MinecraftClientWindow.focused(client));
+        diagnostic.put("clientWindowActive", dev.openallay.client.gui.MinecraftClientWindow.focused(client));
+        diagnostic.put("windowLogicalWidth", dev.openallay.client.gui.MinecraftClientWindow.windowWidth(client));
+        diagnostic.put("windowLogicalHeight", dev.openallay.client.gui.MinecraftClientWindow.windowHeight(client));
+        diagnostic.put("framebufferWidth", dev.openallay.client.gui.MinecraftClientWindow.framebufferWidth(client));
+        diagnostic.put("framebufferHeight", dev.openallay.client.gui.MinecraftClientWindow.framebufferHeight(client));
+        diagnostic.put("guiWidth", dev.openallay.client.gui.MinecraftClientWindow.guiWidth(client));
+        diagnostic.put("guiHeight", dev.openallay.client.gui.MinecraftClientWindow.guiHeight(client));
         diagnostic.put("nativeCursorBackend", GuideProbeNativeCursor.backend());
         diagnostic.put("nativeCursorX", nativeCursor[0]);
         diagnostic.put("nativeCursorY", nativeCursor[1]);
-        diagnostic.put("mouseHandlerX", client.mouseHandler.xpos());
-        diagnostic.put("mouseHandlerY", client.mouseHandler.ypos());
-        diagnostic.put("mouseHandlerScaledX", dev.openallay.client.context.MinecraftMouseCoordinates.x(client.mouseHandler, window));
-        diagnostic.put("mouseHandlerScaledY", dev.openallay.client.context.MinecraftMouseCoordinates.y(client.mouseHandler, window));
-        diagnostic.put("mouseGrabbed", client.mouseHandler.isMouseGrabbed());
+        diagnostic.put("mouseHandlerX", GuideProbeNativeCursor.position(client)[0]);
+        diagnostic.put("mouseHandlerY", GuideProbeNativeCursor.position(client)[1]);
+        diagnostic.put("mouseHandlerScaledX", dev.openallay.client.context.MinecraftMouseCoordinates.x(client));
+        diagnostic.put("mouseHandlerScaledY", dev.openallay.client.context.MinecraftMouseCoordinates.y(client));
+        diagnostic.put("mouseGrabbed", dev.openallay.client.context.MinecraftMouseCoordinates.grabbed(client));
         diagnostic.put("telemetryBounds", layout.telemetry());
         diagnostic.put("modelSelectorOpen", readField(guide(), "modelSelectorOpen"));
         diagnostic.put("sessionOverlay", readField(guide(), "sessionOverlay"));
@@ -1649,7 +1646,7 @@ final class GuideGraphicalRegressionProbe {
     }
 
     private String readCurrentConfig(String name) {
-        try { return Files.readString(client.gameDirectory.toPath().resolve("config/openallay").resolve(name), StandardCharsets.UTF_8); }
+        try { return Files.readString(dev.openallay.client.gui.MinecraftClientWindow.gameDirectory(client).resolve("config/openallay").resolve(name), StandardCharsets.UTF_8); }
         catch (IOException failure) { throw new IllegalStateException("Current native config is unavailable: " + name, failure); }
     }
 
@@ -1668,9 +1665,9 @@ final class GuideGraphicalRegressionProbe {
     }
 
     private GuideNativeEditBox hudOffsetEditor(String key) {
-        String label = MinecraftComponents.translatable("screen.openallay.settings.ui." + key).getString();
-        return settingsScreen().children().stream().filter(GuideNativeEditBox.class::isInstance).map(GuideNativeEditBox.class::cast)
-                .filter(value -> value.getMessage().getString().equals(label)).findFirst()
+        String label = MinecraftComponents.getString(MinecraftComponents.translatable("screen.openallay.settings.ui." + key));
+        return ((dev.openallay.client.gui.GuideNativeScreen) settingsScreen()).guideWidgetChildren().stream().filter(GuideNativeEditBox.class::isInstance).map(GuideNativeEditBox.class::cast)
+                .filter(value -> MinecraftComponents.getString(value.getMessage()).equals(label)).findFirst()
                 .orElseThrow(() -> new IllegalStateException("Actual HUD offset editor unavailable: " + key));
     }
 
@@ -1703,8 +1700,8 @@ final class GuideGraphicalRegressionProbe {
                         && dev.openallay.client.gui.GuideNativeWidgetGeometry.y(button) + button.getHeight() <= screen.height,
                 "Actual HUD case button is outside the native viewport");
         var event = GuideNativeInput.mouseEvent(x, y, dev.openallay.client.gui.GuideInputCodes.MOUSE_BUTTON_LEFT, 0);
-        boolean clicked = GuideNativeInput.mouseClicked(screen, event, false);
-        boolean released = GuideNativeInput.mouseReleased(screen, event);
+        boolean clicked = GuideNativeInput.mouseClicked((dev.openallay.client.gui.GuideWidgetInput) screen, event, false);
+        boolean released = GuideNativeInput.mouseReleased((dev.openallay.client.gui.GuideWidgetInput) screen, event);
         Map<String, Object> action = new LinkedHashMap<>();
         action.put("type", "native-mouse-button");
         action.put("target", key);
@@ -1756,7 +1753,7 @@ final class GuideGraphicalRegressionProbe {
     }
 
     private Map<String, Object> readHudDisplay(GuideDisplayConfig expected) {
-        Path current = client.gameDirectory.toPath().resolve("config/openallay/display.json").toAbsolutePath().normalize();
+        Path current = dev.openallay.client.gui.MinecraftClientWindow.gameDirectory(client).resolve("config/openallay/display.json").toAbsolutePath().normalize();
         require(Files.isRegularFile(current), "Current display settings file is unavailable after HUD Apply");
         try {
             byte[] bytes = Files.readAllBytes(current);
@@ -1810,9 +1807,9 @@ final class GuideGraphicalRegressionProbe {
     }
 
     private GuideNativeEditBox nameEditor() {
-        String label = MinecraftComponents.translatable("screen.openallay.settings.general.assistant_name.label").getString();
-        return settingsScreen().children().stream().filter(GuideNativeEditBox.class::isInstance).map(GuideNativeEditBox.class::cast)
-                .filter(value -> value.getMessage().getString().equals(label)).findFirst()
+        String label = MinecraftComponents.getString(MinecraftComponents.translatable("screen.openallay.settings.general.assistant_name.label"));
+        return ((dev.openallay.client.gui.GuideNativeScreen) settingsScreen()).guideWidgetChildren().stream().filter(GuideNativeEditBox.class::isInstance).map(GuideNativeEditBox.class::cast)
+                .filter(value -> MinecraftComponents.getString(value.getMessage()).equals(label)).findFirst()
                 .orElseThrow(() -> new IllegalStateException("Actual assistant-name editor unavailable"));
     }
 
@@ -1834,10 +1831,10 @@ final class GuideGraphicalRegressionProbe {
     }
 
     private boolean selectReplySlider(int selected) {
-        String label = MinecraftComponents.translatable("screen.openallay.settings.ui.reply_lines").getString();
-        GuideNativeSlider slider = settingsScreen().children().stream()
+        String label = MinecraftComponents.getString(MinecraftComponents.translatable("screen.openallay.settings.ui.reply_lines"));
+        GuideNativeSlider slider = ((dev.openallay.client.gui.GuideNativeScreen) settingsScreen()).guideWidgetChildren().stream()
                 .filter(GuideNativeSlider.class::isInstance).map(GuideNativeSlider.class::cast)
-                .filter(value -> value.getMessage().getString().startsWith(label + " · ")).findFirst().orElseThrow();
+                .filter(value -> MinecraftComponents.getString(value.getMessage()).startsWith(label + " · ")).findFirst().orElseThrow();
         if (!slider.visible) {
             settingsScreen().guideMouseScrolled(settingsScreen().width / 2.0, settingsScreen().height / 2.0, 0, -2);
             recordAction("native-wheel", "reveal-reply-slider");
@@ -1854,7 +1851,7 @@ final class GuideGraphicalRegressionProbe {
     }
 
     private void installDisplayFault() {
-        displayPath = client.gameDirectory.toPath().resolve("config/openallay/display.json").toAbsolutePath().normalize();
+        displayPath = dev.openallay.client.gui.MinecraftClientWindow.gameDirectory(client).resolve("config/openallay/display.json").toAbsolutePath().normalize();
         require(Files.isRegularFile(displayPath), "Disposable display settings file is unavailable");
         try {
             displayBefore = Files.readAllBytes(displayPath);
@@ -1945,11 +1942,11 @@ final class GuideGraphicalRegressionProbe {
 
     private GuideNativeButton findButton(Screen screen, String key, boolean prefix) {
         require(screen != null, "Actual native button owner is unavailable: " + key);
-        String text = MinecraftComponents.translatable(key).getString();
-        return screen.children().stream().filter(GuideNativeButton.class::isInstance).map(GuideNativeButton.class::cast)
+        String text = MinecraftComponents.getString(MinecraftComponents.translatable(key));
+        return ((dev.openallay.client.gui.GuideNativeScreen) screen).guideWidgetChildren().stream().filter(GuideNativeButton.class::isInstance).map(GuideNativeButton.class::cast)
                 .filter(value -> value.visible && value.active)
-                .filter(value -> value.getMessage().getString().equals(text)
-                        || prefix && value.getMessage().getString().startsWith(text + " · "))
+                .filter(value -> MinecraftComponents.getString(value.getMessage()).equals(text)
+                        || prefix && MinecraftComponents.getString(value.getMessage()).startsWith(text + " · "))
                 .findFirst().orElse(null);
     }
 
@@ -1977,9 +1974,9 @@ final class GuideGraphicalRegressionProbe {
         receipt.put("capturedAt", Instant.now().toString());
         receipt.put("nativeScreen", MinecraftClientWindow.screen(client) == null ? "gameplay" : MinecraftClientWindow.screen(client).getClass().getName());
         receipt.put("theme", theme());
-        receipt.put("guiWidth", client.getWindow().getGuiScaledWidth());
-        receipt.put("guiHeight", client.getWindow().getGuiScaledHeight());
-        receipt.put("guiScale", dev.openallay.platform.minecraft.MinecraftOptions.guiScale(client.options));
+        receipt.put("guiWidth", dev.openallay.client.gui.MinecraftClientWindow.guiWidth(client));
+        receipt.put("guiHeight", dev.openallay.client.gui.MinecraftClientWindow.guiHeight(client));
+        receipt.put("guiScale", dev.openallay.platform.minecraft.MinecraftOptions.guiScale(dev.openallay.client.context.MinecraftClientContextFacts.options(client)));
         receipt.put("settingsGeneration", settings.snapshot().generation());
         receipt.put("settingsOperation", settings.snapshot().operation().kind().name());
         var memory = java.lang.management.ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
@@ -2065,14 +2062,14 @@ final class GuideGraphicalRegressionProbe {
 
     private void restoreKey() {
         if (nativePrimitiveProbe != null) nativePrimitiveProbe.close();
-        dev.openallay.platform.minecraft.MinecraftOptions.guiScale(client.options, originalGuiScale);
+        dev.openallay.platform.minecraft.MinecraftOptions.guiScale(dev.openallay.client.context.MinecraftClientContextFacts.options(client), originalGuiScale);
         MinecraftClientWindow.setWindowed(client, originalWindowWidth, originalWindowHeight);
         report.put("windowRestorationRequested", Map.of("width", originalWindowWidth, "height", originalWindowHeight,
-                "guiScale", dev.openallay.platform.minecraft.MinecraftOptions.guiScale(client.options), "originalGuiScaleRestored", dev.openallay.platform.minecraft.MinecraftOptions.guiScale(client.options) == originalGuiScale));
+                "guiScale", dev.openallay.platform.minecraft.MinecraftOptions.guiScale(dev.openallay.client.context.MinecraftClientContextFacts.options(client)), "originalGuiScaleRestored", dev.openallay.platform.minecraft.MinecraftOptions.guiScale(dev.openallay.client.context.MinecraftClientContextFacts.options(client)) == originalGuiScale));
         restorePttKey.run();
         report.put("pttKeyRestored", originalPttBinding.equals(GuideProbeKeyBindings.description(OpenAllayKeyMappings.VOICE_PTT)));
         restoreInteractKey.run();
-        KeyMapping.resetMapping();
+        GuideProbeKeyBindings.refresh();
         report.put("interactKeyAfter", GuideProbeKeyBindings.description(OpenAllayKeyMappings.INTERACT_HUD));
         report.put("interactKeyRestored", originalInteractBinding.equals(GuideProbeKeyBindings.description(OpenAllayKeyMappings.INTERACT_HUD)));
     }
@@ -2130,7 +2127,7 @@ final class GuideGraphicalRegressionProbe {
                 .completeOnTimeout(null, 15, java.util.concurrent.TimeUnit.SECONDS);
         cleanup.handle((ignored, cleanupFailure) -> cleanupFailure)
                 .thenCombine(framePublication, (cleanupFailure, ignored) -> cleanupFailure)
-                .whenComplete((cleanupFailure, publicationFailure) -> client.execute(() -> {
+                .whenComplete((cleanupFailure, publicationFailure) -> dev.openallay.client.gui.MinecraftClientWindow.execute(client, () -> {
                     if (cleanupFailure != null) report.put("cleanupFailure", cleanupFailure.toString());
                     if (publicationFailure != null) report.put("failurePublicationFailure", publicationFailure.toString());
                     retainFailureFrameReceipts();
