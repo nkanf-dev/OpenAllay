@@ -5,7 +5,7 @@ on:
       mode:
         type: choice
         default: tooling
-        options: [tooling, abi, engine, native, pack, boot, ui, world, persistence, builder, builder-call, builder-lifecycle, builder-presets, stock1122, census1122, stock1122-bridge, stock1122-pack200, engine1122, stock1122-title, native1122, reobf1122, stock1122-objectholder, stock1122-phase-diagnostic, modern1122, component1122-pack, component1122-boot, component1122-mixin-repair, component1122-world-sdk, component1122-native-refresh, component1122-ui-manual, component1122-world-persistence]
+        options: [tooling, abi, engine, native, pack, boot, ui, world, persistence, builder, builder-call, builder-lifecycle, builder-presets, stock1122, census1122, stock1122-bridge, stock1122-pack200, engine1122, stock1122-title, native1122, reobf1122, stock1122-objectholder, stock1122-phase-diagnostic, modern1122, component1122-pack, component1122-boot, component1122-mixin-repair, component1122-world-sdk, component1122-native-refresh, component1122-ui-manual, component1122-world-persistence, builder1122]
 permissions:
   contents: read
 concurrency:
@@ -192,7 +192,7 @@ jobs:
             build/e2e/runtime/forge16165-stock/minecraft/.provision/*.log
 
   builder-candidate:
-    if: inputs.mode == 'builder'
+    if: inputs.mode == 'builder' || inputs.mode == 'builder1122'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -202,16 +202,18 @@ jobs:
         with: {distribution: temurin, java-version: '21.0.10+7.0.LTS'}
       - name: Build only the changed Builder candidate declaration
         env: {GH_TOKEN: '${{ github.token }}'}
-        run: python3 -B scripts/build-forge16165-builder-candidate.py
+        run: python3 -B scripts/build-forge16165-builder-candidate.py ${{ inputs.mode == 'builder1122' && '--target 1.12.2' || '' }}
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
-          name: forge16165-builder-candidate-${{ github.sha }}
+          name: ${{ inputs.mode }}-builder-candidate-${{ github.sha }}
           retention-days: 30
           if-no-files-found: warn
           path: |
             build/forge16165-builder-candidate/builder-candidate.jar
             build/forge16165-builder-candidate/builder-candidate.json
+            build/forge1122-builder-candidate/builder-candidate.jar
+            build/forge1122-builder-candidate/builder-candidate.json
 
   builder-native-lifecycle:
     if: inputs.mode == 'builder-lifecycle'
