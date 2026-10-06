@@ -9,6 +9,15 @@ import subprocess
 import zipfile
 
 CLASSES = (
+    'net.minecraft.entity.EntityList',
+    'net.minecraft.client.resources.ResourcePackRepository',
+    'net.minecraft.client.resources.IResourcePack',
+    'net.minecraft.client.network.NetworkPlayerInfo',
+    'net.minecraft.client.multiplayer.PlayerControllerMP',
+    'net.minecraft.util.FoodStats',
+    'net.minecraft.util.registry.RegistryNamespaced',
+    'net.minecraft.util.registry.RegistryNamespacedDefaultedByKey',
+
     'net.minecraftforge.common.crafting.IShapedRecipe',
     'net.minecraft.item.crafting.IRecipe',
     'net.minecraft.item.crafting.ShapedRecipes',
