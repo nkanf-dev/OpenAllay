@@ -10,6 +10,9 @@ final class NativeWorldSession implements WorldSession {
     private final OwnerThreadBridge bridge;
     private boolean ownerAction;
     private String worldId;
+    // Owner-local, opt-in facts only. Never retain an unbounded native state or Throwable.
+    private com.google.gson.JsonObject nativeDiagnosticFacts;
+    private int nativeDiagnosticReports;
     private NativeWorldSession(WorldBinding binding,OwnerThreadBridge bridge) {
         this.binding=binding; this.bridge=bridge;
     }
@@ -23,7 +26,8 @@ final class NativeWorldSession implements WorldSession {
         return bridge.callAfter(binding.clientOwner(),binding.serverOwner(),()->{
             ownerAction=true;
             try { binding.beginAction(); return action.call(); }
-            finally { ownerAction=false; binding.endAction(); }
+            catch(Exception | Error failure) { reportNativeDiagnostic(failure); throw failure; }
+            finally { ownerAction=false; nativeDiagnosticFacts=null; binding.endAction(); }
         });
     }
     private void requireOwnerAction() {
@@ -58,6 +62,7 @@ final class NativeWorldSession implements WorldSession {
         return binding.terrainTop(x,z,minY,maxY);
     }
     @Override public String preview(int x,int y,int z,String state) {
+        rememberNativeDiagnostic("preview",x,y,z,true,state,0,null);
         validatePosition(x,y,z);
         try { return binding.preview(x,y,z,state); } finally { binding.invalidateProofs(); }
     }
@@ -67,11 +72,13 @@ final class NativeWorldSession implements WorldSession {
         finally { binding.invalidateProofs(); }
     }
     @Override public WriteOutcome write(int x,int y,int z,String state,String before) {
+        rememberNativeDiagnostic("write",x,y,z,true,state,0,null);
         bridge.checkActive();validatePosition(x,y,z);
         try {
             WorldBinding.Image result=binding.write(x,y,z,state,()->{validatePosition(x,y,z);bridge.checkActive();});
             return new WriteOutcome(result.actual(),result.changed(),null);
         } catch(RuntimeException failure) {
+            reportNativeDiagnostic(failure); // Capture the original before player-safe conversion.
             // An admitted mutation must retain its actual outcome even if a native hook or revocation fails.
             try {
                 String actual=binding.read(x,y,z);
@@ -82,17 +89,73 @@ final class NativeWorldSession implements WorldSession {
             }
         } finally { binding.invalidateProofs(); }
     }
-    @Override public String transform(String state,int degrees,String mirror) { requireOwnerAction(); return binding.transform(state,degrees,mirror); }
+    @Override public String transform(String state,int degrees,String mirror) {
+        rememberNativeDiagnostic("transform",0,0,0,false,state,degrees,mirror);
+        requireOwnerAction(); return binding.transform(state,degrees,mirror);
+    }
     @Override public String repairedState(int x,int y,int z) { RepairOutcome result=repair(x,y,z);return result==null?null:result.intended(); }
     @Override public RepairOutcome repair(int x,int y,int z) {
+        rememberNativeDiagnostic("repair",x,y,z,true,null,0,null);
         bridge.checkActive();validatePosition(x,y,z);
         try { return binding.repair(x,y,z,()->{bridge.checkActive();validatePosition(x,y,z);}); }
         finally { binding.invalidateProofs(); }
     }
     @Override public void notifyNeighbours(int x,int y,int z) {
+        rememberNativeDiagnostic("notifyNeighbours",x,y,z,true,null,0,null);
         bridge.checkActive();validatePosition(x,y,z);
         try { binding.notifyNeighbours(x,y,z,()->{validatePosition(x,y,z);bridge.checkActive();}); }
         finally { binding.invalidateProofs(); }
+    }
+    private static boolean nativeDiagnosticEnabled() {
+        return Boolean.getBoolean("openallay.e2e.enabled")
+                && Boolean.getBoolean("openallay.e2e.worldNativeDiagnostic");
+    }
+    private void rememberNativeDiagnostic(String operation,int x,int y,int z,boolean positioned,
+            String state,int degrees,String mirror) {
+        if(!nativeDiagnosticEnabled())return;
+        com.google.gson.JsonObject facts=new com.google.gson.JsonObject();
+        facts.addProperty("operation",operation);
+        if(positioned) { facts.addProperty("x",x);facts.addProperty("y",y);facts.addProperty("z",z); }
+        if(state!=null) { facts.addProperty("input",boundedDiagnosticText(state,1024));facts.addProperty("inputChars",state.length()); }
+        if("transform".equals(operation)) {
+            facts.addProperty("degrees",degrees);
+            facts.addProperty("mirror",boundedDiagnosticText(mirror,64));
+        }
+        nativeDiagnosticFacts=facts;
+    }
+    private static String boundedDiagnosticText(String value,int limit) {
+        return value==null || value.length()<=limit ? value : value.substring(0,limit);
+    }
+    private void reportNativeDiagnostic(Throwable original) {
+        if(!nativeDiagnosticEnabled() || nativeDiagnosticReports>=4)return;
+        nativeDiagnosticReports++;
+        try {
+            com.google.gson.JsonObject receipt=new com.google.gson.JsonObject();
+            receipt.addProperty("kind","openallay_native_world_diagnostic");
+            receipt.addProperty("sequence",nativeDiagnosticReports);
+            if(nativeDiagnosticFacts!=null)receipt.add("lastNativeOperation",nativeDiagnosticFacts);
+            com.google.gson.JsonArray causes=new com.google.gson.JsonArray();
+            java.util.Set<Throwable> seen=java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
+            Throwable cause=original;
+            for(int count=0;cause!=null && count<16 && seen.add(cause);count++,cause=cause.getCause()) {
+                com.google.gson.JsonObject item=new com.google.gson.JsonObject();
+                item.addProperty("class",cause.getClass().getName());
+                String message=cause.getMessage();
+                item.addProperty("message",boundedDiagnosticText(message,1024));
+                item.addProperty("messageChars",message==null?0:message.length());
+                com.google.gson.JsonArray frames=new com.google.gson.JsonArray();
+                StackTraceElement[] stack=cause.getStackTrace();
+                for(int index=0;index<Math.min(stack.length,12);index++)
+                    frames.add(boundedDiagnosticText(stack[index].toString(),512));
+                item.add("stack",frames);item.addProperty("stackFrames",stack.length);
+                causes.add(item);
+            }
+            receipt.add("causes",causes);
+            receipt.addProperty("causeChainTruncated",cause!=null);
+            System.err.println("OpenAllay native world diagnostic: "+receipt);
+        } catch(Throwable diagnosticFailure) {
+            // Diagnostics must never replace, suppress or mutate the original failure.
+        }
     }
     @Override public String dimension() { return call(binding::dimension); }
     @Override public String worldId() {

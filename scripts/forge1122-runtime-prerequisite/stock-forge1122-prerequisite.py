@@ -478,6 +478,8 @@ def boot(args, root, java, assets, runtime, launch, expected, vanilla, version):
         runtime.write_json(output/"ui-fixture.json",{"loopbackOnly":"127.0.0.1:18765","syntheticCredential":True,
             "profile":"e2e-fixture","worldCommandsAllowed":False,"freshProfile":True,
             "nativeCompiledSource":source,"actualCustodyManifestSha256":sha(Path(component)),"sourceManifestKind":"provider-bound-component-custody"})
+    if builder_scenario == "legacy-shapes":
+        component_flags.append("-Dopenallay.e2e.worldNativeDiagnostic=true")
     command = [str(java), "-Xms256M", "-Xmx1536M",
                "-Xlog:class+load=info:file=" + str(output / "class-load.log")] + bridge_flags + pack200_flags + objectholder_flags + component_flags + (["-Dopenallay.objectholder.phaseDiagnostic=true"] if args.objectholder_phase_diagnostic else []) + (["-Dorg.lwjgl.util.Debug=true"] if args.title_only else []) + jvm + [MAIN] + game_args
     env = {k:v for k,v in os.environ.items() if k not in ("JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "_JAVA_OPTIONS")}
