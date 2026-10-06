@@ -1,0 +1,83 @@
+{
+  "status": "Task-branch stockForge1.16.5 integrated-client adaptation milestones delivered; publication/centralmatrix not performed",
+  "sourceBranch": "mc/forge16165-engine-continuation",
+  "sourceHead": "4040794687c36ce72ac24c219760a3fc768e7dce",
+  "nativeProductSha256": "87318b4361f30f1fdf324eaff093a70b07ec048ea7e93995cafdcbe81b62f53e",
+  "nativeProductArtifact": {
+    "id": 11416338261,
+    "node_id": "MDg6QXJ0aWZhY3QxMTQxNjMzODI2MQ==",
+    "name": "forge16165-product-80307399ffa70769a3bc9e4e755bf32df0e5f58e",
+    "size_in_bytes": 23248833,
+    "url": "https://api.github.com/repos/nkanf-dev/OpenAllay/actions/artifacts/11416338261",
+    "archive_download_url": "https://api.github.com/repos/nkanf-dev/OpenAllay/actions/artifacts/11416338261/zip",
+    "expired": false,
+    "digest": "sha256:04877130ebdf4c873ab7278223d1b23031cf9e0bd621baf3bc6cba7b14799ac7",
+    "created_at": "2026-10-06T13:28:40Z",
+    "updated_at": "2026-10-06T13:28:40Z",
+    "expires_at": "2026-11-05T13:28:36Z",
+    "workflow_run": {
+      "id": 37470983514,
+      "repository_id": 1302961354,
+      "head_repository_id": 1302961354,
+      "head_branch": "mc/forge16165-engine-continuation",
+      "head_sha": "80307399ffa70769a3bc9e4e755bf32df0e5f58e"
+    }
+  },
+  "productNativeSource": "108f61a6a64b9ae26c525a57d9b3f4873a59b2fd",
+  "engineEvidence": {
+    "compileRun": 37449713633,
+    "retirementFixtureRun": 37450040748,
+    "toolRun": 37448959679,
+    "toolPassScope": "Namespacehelpers/Elementsfixture/12cases, originaloverallFAILEDobserver; reconcilednotrestamped"
+  },
+  "runtimeEvidence": {
+    "productStartup": 37460541995,
+    "nativeUI": 37467389438,
+    "worldSDK": 37469915172,
+    "nativePersistence": 37471324172,
+    "BuilderBasic": 37472809988,
+    "BuilderLifecycle": 37473458442
+  },
+  "Builder": {
+    "candidateSource": "fe6422454450ceb739d1174d87c681e76df1ab84",
+    "candidateJarSha256": "cbdeba2e7f9090241a3475fe958d819d728565dd916c121fbfac2782707eff32",
+    "candidateArtifact": {
+      "id": 11417805653,
+      "node_id": "MDg6QXJ0aWZhY3QxMTQxNzgwNTY1Mw==",
+      "name": "forge16165-builder-candidate-3c38c16122e7e2cdd96866ed2b7bb29d0174304b",
+      "size_in_bytes": 477241,
+      "url": "https://api.github.com/repos/nkanf-dev/OpenAllay/actions/artifacts/11417805653",
+      "archive_download_url": "https://api.github.com/repos/nkanf-dev/OpenAllay/actions/artifacts/11417805653/zip",
+      "expired": false,
+      "digest": "sha256:c675991790369c508acde001abd82e53486b820a4f3a2053cb16a4d832280e09",
+      "created_at": "2026-10-06T13:38:49Z",
+      "updated_at": "2026-10-06T13:38:49Z",
+      "expires_at": "2026-11-05T13:38:48Z",
+      "workflow_run": {
+        "id": 37472367504,
+        "repository_id": 1302961354,
+        "head_repository_id": 1302961354,
+        "head_branch": "mc/forge16165-engine-continuation",
+        "head_sha": "3c38c16122e7e2cdd96866ed2b7bb29d0174304b"
+      }
+    },
+    "validationRecordSource": "ca243d3ad2fc54a8dc86e00938011e92e6972eb8",
+    "validationBranch": "task/forge16165-builder-candidate",
+    "installation": "Normal independent community extension directory; old core bundledJAR remainsoldtargetdecl and candidate overrides normally",
+    "algorithmsChanged": false
+  },
+  "remaining": [
+    "Bind current accepted Builder artifact in final distributed/core bundle when authorized",
+    "Central source/release target matrix admission and actual published artifact generation",
+    "Independent visual screenshot review (currentmodelvisionunsupported)",
+    "OptionalJEI/REI installedmod runtime and dedicatedserver scope",
+    "1.12.2 adaptation next"
+  ],
+  "limitations": {
+    "Forge36Requires": "User launches with Java17; no falseJava8engineclaim",
+    "unavailablePresetRole": "lightning_rod_up absent; skyscraperfailsbeforewritesnoalias",
+    "testedTopology": "Fresh commands-off integrated server, actual normal Forge36.2.42",
+    "physicalDevices": "No physicalmicrophone/IMEproofclaimed"
+  },
+  "scope": "No main merge/tag/release/Modrinthpublication performed."
+}

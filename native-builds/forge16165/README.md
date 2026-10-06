@@ -1,6 +1,8 @@
 # Private Forge 1.16.5 native project
 
-This project is a source scaffold for the exact Forge36.2.42 tuple. It does not add a target to the central selector or claim full native acceptance.
+This project builds the exact stock Forge36.2.42 tuple. The task branch has passed native compilation, normal Mixin AP/reobfuscation, product packaging, actual startup, the isolated-world UI scenario, public WorldSession operations and two-process persistence. Independent Builder discovery and restricted basic/partial/cancel/undo calls also passed with the candidate artifact recorded in `docs/forge-1.16.5-native-validation.json`.
+
+This does not add the tuple to the central release selector or publish a release. Optional viewer combinations, dedicated-server scope and visual screenshot review are not included in these accepted facts. The tested runtime uses Java17; SDK and Builder remain Java8 payloads.
 
 Use the unchanged official Forge36.2.42 MDK wrapper launcher/scripts/JAR and the exact Gradle8.4 wrapper properties included here. The root coordinator supplies that retained wrapper. Do not substitute the root Gradle wrapper or include the root multi-loader build. No wrapper binary is included in this source packet.
 
