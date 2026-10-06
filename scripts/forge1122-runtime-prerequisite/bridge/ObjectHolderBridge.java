@@ -78,7 +78,7 @@ public final class ObjectHolderBridge {
                     } catch(Exception captureError) { captureError.printStackTrace(); }
                     // FMLSecurityManager can reject Runtime.halt. Returning invalid bytes forces ClassFormatError,
                     // never the instrumentation exception-to-original fallback. Coordinator also marks failure.
-                    return new byte[]{0};
+                    return Boolean.getBoolean("openallay.objectholder.phaseDiagnostic") ? null : new byte[]{0};
                 }
             }
         }, false);

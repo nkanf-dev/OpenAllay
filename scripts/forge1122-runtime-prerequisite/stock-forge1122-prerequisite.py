@@ -275,7 +275,7 @@ def prepare_launchwrapper_bridge(args, output, java, cp, runtime):
     test_cp = os.pathsep.join([str(agent)] + [str(path) for _, path in cp])
     test_main = "dev.openallay.runtime.forge1122.LaunchWrapperJava17BridgeTest"
     clean_env = {k:v for k,v in os.environ.items() if k not in ("JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "_JAVA_OPTIONS")}
-    if args.objectholder_bridge:
+    if args.objectholder_bridge and not args.objectholder_phase_diagnostic:
         forge=next(path for name,path in cp if name=="net.minecraftforge:forge:1.12.2-14.23.5.2864")
         with (output / "objectholder-tests.log").open("w") as log:
             subprocess.run([str(java),"-cp",test_cp,"dev.openallay.runtime.forge1122.ObjectHolderBridgeTest",str(forge)],
@@ -350,7 +350,7 @@ def boot(args, root, java, assets, runtime, launch, expected, vanilla, version):
         "-Dopenallay.objectholder.transformReceipt=" + str(output / "objectholder-transform.jsonl")]
         if args.objectholder_bridge else [])
     command = [str(java), "-Xms256M", "-Xmx1536M",
-               "-Xlog:class+load=info:file=" + str(output / "class-load.log")] + bridge_flags + pack200_flags + objectholder_flags + (["-Dorg.lwjgl.util.Debug=true"] if args.title_only else []) + jvm + [MAIN] + game_args
+               "-Xlog:class+load=info:file=" + str(output / "class-load.log")] + bridge_flags + pack200_flags + objectholder_flags + (["-Dopenallay.objectholder.phaseDiagnostic=true"] if args.objectholder_phase_diagnostic else []) + (["-Dorg.lwjgl.util.Debug=true"] if args.title_only else []) + jvm + [MAIN] + game_args
     env = {k:v for k,v in os.environ.items() if k not in ("JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "_JAVA_OPTIONS")}
     if args.title_only:
         env["LC_ALL"] = "C"
@@ -400,8 +400,10 @@ def boot(args, root, java, assets, runtime, launch, expected, vanilla, version):
         diagnostics["objectHolderPopulatedReadbackCount"] = len(writes.read_text().splitlines()) if writes.exists() else 0
         diagnostics["objectHolderRegistryApplied"] = "Holder lookups applied" in text
     runtime.write_json(output / "diagnostics.json", diagnostics)
-    if args.objectholder_bridge and (output / "objectholder-rejected").exists():
+    if args.objectholder_phase_diagnostic or args.objectholder_bridge and (output / "objectholder-rejected").exists():
         receipt["status"]="fatal-rejected-objectholder-phase-input"
+        receipt["accepted"]=False
+        receipt["phaseDiagnostic"]=args.objectholder_phase_diagnostic
         runtime.write_json(output / "receipt.json",receipt)
     # A window or screenshot alone is not a title-success claim.
     return 0 if receipt["status"] == "captured-awaiting-title-review" else 1
@@ -409,6 +411,7 @@ def boot(args, root, java, assets, runtime, launch, expected, vanilla, version):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--objectholder-phase-diagnostic", action="store_true", help="Capture all rejected phase inputs; always fail; original bytes allowed only for this diagnostic")
     parser.add_argument("--objectholder-bridge", action="store_true", help="Exact real holder-field instrumentation plus genuine Field.set")
     parser.add_argument("--title-only", action="store_true", help="Use real xrandr display harness; reuse exact already-passed bridge source tests")
     parser.add_argument("--pack200-bridge", action="store_true", help="Opt-in genuine build-JDK8 Pack200 conversion, runtime17 entry seam")
@@ -420,6 +423,8 @@ def main():
     parser.add_argument("--minecraft-root", type=Path)
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
+    if args.objectholder_phase_diagnostic:
+        args.objectholder_bridge = True
     if args.objectholder_bridge:
         args.title_only = True
     if args.title_only:
