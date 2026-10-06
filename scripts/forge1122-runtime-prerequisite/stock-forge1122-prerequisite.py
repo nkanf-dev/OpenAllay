@@ -276,12 +276,8 @@ def prepare_launchwrapper_bridge(args, output, java, cp, runtime):
     test_main = "dev.openallay.runtime.forge1122.LaunchWrapperJava17BridgeTest"
     clean_env = {k:v for k,v in os.environ.items() if k not in ("JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "_JAVA_OPTIONS")}
     if args.objectholder_bridge and not args.objectholder_phase_diagnostic:
-        forge=next(path for name,path in cp if name=="net.minecraftforge:forge:1.12.2-14.23.5.2864")
-        with (output / "objectholder-tests.log").open("w") as log:
-            subprocess.run([str(java),"-cp",test_cp,"dev.openallay.runtime.forge1122.ObjectHolderBridgeTest",str(forge)],
-                           check=True,env=clean_env,stdout=log,stderr=subprocess.STDOUT)
-            fields=output / "objectholder-test-empty-fields.tsv";fields.write_text("")
-            subprocess.run([str(java),"-cp",test_cp,"dev.openallay.runtime.forge1122.pack200.ObjectHolderRuntime",str(fields)],
+        with (output / "objectholder-phase-tests.log").open("w") as log:
+            subprocess.run([str(java),"-cp",test_cp,"dev.openallay.runtime.forge1122.ObjectHolderPhaseTest"],
                            check=True,env=clean_env,stdout=log,stderr=subprocess.STDOUT)
     elif args.title_only:
         runtime.write_json(output / "bridge-tests-reused.json", json.loads((PACKET / "prior-bridge-tests.json").read_text()))
