@@ -10,13 +10,14 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.locale.Language;
 import dev.openallay.platform.minecraft.MinecraftComponents;
 import net.minecraft.network.chat.Component;
-import net.minecraft.util.FormattedCharSequence;
+import dev.openallay.client.gui.GuideTextLine;
+import dev.openallay.client.gui.GuideNativeFont;
 
 /** Recording and actionable failure feedback are independent of HUD and notification settings. */
 public final class GuideVoiceIndicator {
     private static CacheKey cached;
-    private static List<FormattedCharSequence> message = List.of();
-    private static List<FormattedCharSequence> action = List.of();
+    private static List<GuideTextLine> message = List.of();
+    private static List<GuideTextLine> action = List.of();
     private GuideVoiceIndicator() {}
 
     public static void extract(GuideGraphics graphics, Minecraft minecraft, VoiceRuntime voice) {
@@ -45,8 +46,8 @@ public final class GuideVoiceIndicator {
                 x + panelWidth - 28, 11, OpenAllayWidgetTheme.AMBER);
     }
 
-    private static List<FormattedCharSequence> wrap(Font font, String key, int width) {
-        return key.isEmpty() ? List.of() : font.split(MinecraftComponents.translatable(key), Math.max(1, width));
+    private static List<GuideTextLine> wrap(Font font, String key, int width) {
+        return key.isEmpty() ? List.of() : GuideNativeFont.split(font, MinecraftComponents.translatable(key), Math.max(1, width));
     }
     private record CacheKey(VoiceStatusPresentation.Notice feedback, int width, Font font, Language language) {}
 }

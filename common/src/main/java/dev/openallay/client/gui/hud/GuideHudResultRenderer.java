@@ -31,7 +31,8 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.locale.Language;
 import dev.openallay.platform.minecraft.MinecraftComponents;
 import net.minecraft.network.chat.Component;
-import net.minecraft.util.FormattedCharSequence;
+import dev.openallay.client.gui.GuideTextLine;
+import dev.openallay.client.gui.GuideNativeFont;
 
 /** Shared native result viewport for passive HUD pages and explicit compact interaction. */
 public final class GuideHudResultRenderer implements AutoCloseable {
@@ -61,9 +62,9 @@ public final class GuideHudResultRenderer implements AutoCloseable {
                     cacheEntries, nativeViews, List.of(), "");
         }
     }
-    private record Row(String id, GuideUiRow source, String narration, List<FormattedCharSequence> header,
+    private record Row(String id, GuideUiRow source, String narration, List<GuideTextLine> header,
             SemanticLayout layout, Map<String, GuideRecipeCard> recipes,
-            List<FormattedCharSequence> sources, int height) {}
+            List<GuideTextLine> sources, int height) {}
     private final MinecraftSemanticRenderer semantic = new MinecraftSemanticRenderer(new MinecraftSemanticResolver());
     private final SemanticLayoutCache layouts = new SemanticLayoutCache();
     private final GuideHudScrollState scroll = new GuideHudScrollState();
@@ -138,7 +139,7 @@ public final class GuideHudResultRenderer implements AutoCloseable {
             cachedSources = selectedSources;
             ArrayList<Row> replacement = new ArrayList<>();
             if (!selectedSources.isEmpty()) {
-                List<FormattedCharSequence> lines = new ArrayList<>();
+                List<GuideTextLine> lines = new ArrayList<>();
                 for (GuideSource source : selectedSources) {
                     var label = GuideEvidencePresentation.from(source);
                     var evidence = source.evidence();
@@ -147,43 +148,43 @@ public final class GuideHudResultRenderer implements AutoCloseable {
                             MinecraftComponents.literal(evidence.sourceId()), MinecraftComponents.literal(evidence.provenance()),
                             MinecraftComponents.literal(evidence.gameVersion() + " · " + evidence.loader()),
                             MinecraftComponents.literal(evidence.capturedAt() + " — " + source.lastCapturedAt()))) {
-                        lines.addAll(font.split(component, measuredWidth));
+                        lines.addAll(GuideNativeFont.split(font, component, measuredWidth));
                     }
-                    evidence.details().forEach((key, value) -> lines.addAll(font.split(MinecraftComponents.literal(key + ": " + value), measuredWidth)));
+                    evidence.details().forEach((key, value) -> lines.addAll(GuideNativeFont.split(font, MinecraftComponents.literal(key + ": " + value), measuredWidth)));
                 }
                 replacement.add(new Row("sources", null, "", List.copyOf(lines), null, Map.of(), List.of(), Math.max(10, lines.size() * 10 + 8)));
             } else {
                 for (GuideUiRow source : view.rows()) {
                     String id = rowId(source);
                     if (selectedTool != null && !selectedTool.equals(id)) continue;
-                    ArrayList<FormattedCharSequence> header = new ArrayList<>();
+                    ArrayList<GuideTextLine> header = new ArrayList<>();
                     String narration = "";
                     SemanticDocument document = null;
                     Map<String, GuideRecipeCard> recipes = Map.of();
-                    List<FormattedCharSequence> sources = List.of();
+                    List<GuideTextLine> sources = List.of();
                     java.util.Objects.requireNonNull(source);
                     if (source instanceof GuideUiRow.Assistant assistant) {
-                        header.addAll(font.split(MinecraftComponents.literal(view.assistantName()), measuredWidth));
+                        header.addAll(GuideNativeFont.split(font, MinecraftComponents.literal(view.assistantName()), measuredWidth));
                         document = assistant.semantic();
-                        if (!assistant.sources().isEmpty()) sources = font.split(MinecraftComponents.translatable(
+                        if (!assistant.sources().isEmpty()) sources = GuideNativeFont.split(font, MinecraftComponents.translatable(
                                 "screen.openallay.evidence.groups", GuideEvidencePresentation.groups(assistant.sources()).size()), measuredWidth);
                     } else if (source instanceof GuideUiRow.Tool tool) {
                         var summary = GuideToolSummaryPresenter.project(tool);
                         Component title = summary.title().isBlank() ? MinecraftComponents.translatable(summary.titleKey())
                                 : MinecraftComponents.literal(summary.title());
                         narration = title.getString();
-                        header.addAll(font.split(title.copy().append(" · ")
+                        header.addAll(GuideNativeFont.split(font, title.copy().append(" · ")
                                 .append(MinecraftComponents.translatable(summary.status().translationKey())), measuredWidth));
-                        if (summary.hasDescription()) header.addAll(font.split(MinecraftComponents.literal(summary.description()), measuredWidth));
+                        if (summary.hasDescription()) header.addAll(GuideNativeFont.split(font, MinecraftComponents.literal(summary.description()), measuredWidth));
                         // Keep implementation receipts in explicit detail, not the compact task summary.
                         tool.detail().narration().stream().filter(message -> selectedTool != null || switch (message.key()) {
                             case ANALYSIS_EMPTY, RESULT_DETAIL_NOT_STORED, RESULT_VALUE_UNAVAILABLE,
                                     FAILURE_STALE_REFERENCE, FAILURE_UNAVAILABLE, FAILURE_PLAYER_REQUIRED,
                                     FAILURE_INVALID_ARGUMENTS, FAILURE_FORBIDDEN, FAILURE_GENERIC -> true;
                             default -> false;
-                        }).forEach(message -> header.addAll(font.split(MinecraftComponents.translatable(
+                        }).forEach(message -> header.addAll(GuideNativeFont.split(font, MinecraftComponents.translatable(
                                 message.key().translationKey(), message.arguments().toArray()), measuredWidth)));
-                        tool.detail().failure().ifPresent(failure -> header.addAll(font.split(MinecraftComponents.literal(failure.message()), Math.max(1, cachedWidth))));
+                        tool.detail().failure().ifPresent(failure -> header.addAll(GuideNativeFont.split(font, MinecraftComponents.literal(failure.message()), Math.max(1, cachedWidth))));
                         var cards = GuideHudToolCards.project(tool, key -> MinecraftComponents.translatable(key).getString());
                         document = cards.document();
                         recipes = cards.recipes();
@@ -195,7 +196,7 @@ public final class GuideHudResultRenderer implements AutoCloseable {
                                     case INTERRUPTED -> "screen.openallay.history.interrupted";
                                     default -> "screen.openallay.hud.request_failed";
                                 });
-                        header.addAll(font.split(message, measuredWidth));
+                        header.addAll(GuideNativeFont.split(font, message, measuredWidth));
                     } else {
                         continue;
                     }
@@ -238,7 +239,7 @@ public final class GuideHudResultRenderer implements AutoCloseable {
                 int panel = view.presentation().theme() == GuideUiConfig.Theme.MINT ? 0xB029443F : 0xB0242933;
                 if (row.source() instanceof GuideUiRow.Tool) graphics.fill(viewport.x(), y, viewport.right(), y + row.height() - 3, panel);
                 int current = y + 2;
-                for (FormattedCharSequence line : row.header()) {
+                for (GuideTextLine line : row.header()) {
                     if (current + 10 > viewport.y() && current < viewport.bottom()) graphics.text(font, line, viewport.x() + 3, current, OpenAllayWidgetTheme.MINT);
                     current += 10;
                 }

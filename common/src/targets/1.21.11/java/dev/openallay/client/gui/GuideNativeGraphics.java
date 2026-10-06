@@ -75,12 +75,12 @@ public class GuideNativeGraphics {
         graphics.drawString(font, text, x, y, color, shadow);
     }
 
-    protected final void nativeText(Font font, FormattedCharSequence text, int x, int y, int color) {
-        graphics.drawString(font, text, x, y, color);
+    protected final void nativeText(Font font, GuideTextLine text, int x, int y, int color) {
+        graphics.drawString(font, GuideNativeFont.nativeLine(text), x, y, color);
     }
 
-    protected final void nativeText(Font font, FormattedCharSequence text, int x, int y, int color, boolean shadow) {
-        graphics.drawString(font, text, x, y, color, shadow);
+    protected final void nativeText(Font font, GuideTextLine text, int x, int y, int color, boolean shadow) {
+        graphics.drawString(font, GuideNativeFont.nativeLine(text), x, y, color, shadow);
     }
 
     protected final void nativeItem(ItemStack stack, int x, int y) {
@@ -100,8 +100,8 @@ public class GuideNativeGraphics {
         graphics.setTooltipForNextFrame(text, x, y);
     }
 
-    protected final void nativeTooltip(List<FormattedCharSequence> lines, int x, int y) {
-        graphics.setTooltipForNextFrame(lines, x, y);
+    protected final void nativeTooltip(List<GuideTextLine> lines, int x, int y) {
+        graphics.setTooltipForNextFrame(GuideNativeFont.nativeLines(lines), x, y);
     }
 
     protected final void nativeTooltip(Font font, Component text, int x, int y) {
@@ -112,14 +112,14 @@ public class GuideNativeGraphics {
         graphics.setTooltipForNextFrame(font, stack, x, y);
     }
 
-    protected final void nativeTooltip(Font font, List<? extends FormattedCharSequence> lines, int x, int y) {
-        graphics.setTooltipForNextFrame(font, lines, x, y);
+    protected final void nativeTooltip(Font font, List<? extends GuideTextLine> lines, int x, int y) {
+        graphics.setTooltipForNextFrame(font, GuideNativeFont.nativeLines(lines), x, y);
     }
 
     protected final void nativeTooltip(
-            Font font, List<FormattedCharSequence> lines, GuideTooltipPlacement positioner,
+            Font font, List<GuideTextLine> lines, GuideTooltipPlacement positioner,
             int x, int y, boolean replaceExisting) {
-        graphics.setTooltipForNextFrame(font, lines, net.minecraft.client.gui.screens.inventory.tooltip.DefaultTooltipPositioner.INSTANCE, x, y, replaceExisting);
+        graphics.setTooltipForNextFrame(font, GuideNativeFont.nativeLines(lines), net.minecraft.client.gui.screens.inventory.tooltip.DefaultTooltipPositioner.INSTANCE, x, y, replaceExisting);
     }
 
     /** Normalized texture coordinates; x1 and y1 are destination corners, not sizes. */

@@ -3,7 +3,6 @@ package dev.openallay.client.gui;
 import java.util.List;
 import net.minecraft.client.gui.Font;
 import net.minecraft.network.chat.Component;
-import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.item.ItemStack;
 
 /**
@@ -47,10 +46,10 @@ public final class GuideGraphics extends GuideNativeGraphics {
     public void text(Font font, Component text, int x, int y, int color, boolean shadow) {
         nativeText(font, text, x, y, color, shadow);
     }
-    public void text(Font font, FormattedCharSequence text, int x, int y, int color) {
+    public void text(Font font, GuideTextLine text, int x, int y, int color) {
         nativeText(font, text, x, y, color);
     }
-    public void text(Font font, FormattedCharSequence text, int x, int y, int color, boolean shadow) {
+    public void text(Font font, GuideTextLine text, int x, int y, int color, boolean shadow) {
         nativeText(font, text, x, y, color, shadow);
     }
     public void item(ItemStack stack, int x, int y) { nativeItem(stack, x, y); }
@@ -62,7 +61,7 @@ public final class GuideGraphics extends GuideNativeGraphics {
     }
 
     public void setTooltipForNextFrame(Component text, int x, int y) { nativeTooltip(text, x, y); }
-    public void setTooltipForNextFrame(List<FormattedCharSequence> lines, int x, int y) {
+    public void setTooltipForNextFrame(List<GuideTextLine> lines, int x, int y) {
         nativeTooltip(lines, x, y);
     }
     public void setTooltipForNextFrame(Font font, Component text, int x, int y) {
@@ -71,11 +70,11 @@ public final class GuideGraphics extends GuideNativeGraphics {
     public void setTooltipForNextFrame(Font font, ItemStack stack, int x, int y) {
         nativeTooltip(font, stack, x, y);
     }
-    public void setTooltipForNextFrame(Font font, List<? extends FormattedCharSequence> lines, int x, int y) {
+    public void setTooltipForNextFrame(Font font, List<? extends GuideTextLine> lines, int x, int y) {
         nativeTooltip(font, lines, x, y);
     }
     public void setTooltipForNextFrame(
-            Font font, List<FormattedCharSequence> lines, GuideTooltipPlacement positioner,
+            Font font, List<GuideTextLine> lines, GuideTooltipPlacement positioner,
             int x, int y, boolean replaceExisting) {
         nativeTooltip(font, lines, positioner, x, y, replaceExisting);
     }

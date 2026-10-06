@@ -10,7 +10,8 @@ import dev.openallay.client.gui.GuideGraphics;
 import net.minecraft.client.gui.components.toasts.Toast;
 import dev.openallay.platform.minecraft.MinecraftComponents;
 import net.minecraft.network.chat.Component;
-import net.minecraft.util.FormattedCharSequence;
+import dev.openallay.client.gui.GuideTextLine;
+import dev.openallay.client.gui.GuideNativeFont;
 
 /** Native owned toast with bounded wrapped card facts and stable slot demand across task upgrades. */
 public final class GuideNativeToast extends GuideNativeToastBinding implements GuideNotificationPort.Handle {
@@ -155,15 +156,14 @@ public final class GuideNativeToast extends GuideNativeToastBinding implements G
                 wrapped(font, display.hint(), Math.max(1, hintWidth), 1), width - 10 - hintWidth);
     }
 
-    private static List<FormattedCharSequence> wrapped(Font font, Component text, int width, int maximumLines) {
+    private static List<GuideTextLine> wrapped(Font font, Component text, int width, int maximumLines) {
         if (text.getString().isBlank()) return List.of();
-        List<FormattedCharSequence> all = font.split(text, width);
+        List<GuideTextLine> all = GuideNativeFont.split(font, text, width);
         if (all.size() <= maximumLines) return all;
-        List<FormattedCharSequence> visible = new ArrayList<>(all.subList(0, maximumLines));
-        StringBuilder last = new StringBuilder();
-        visible.get(visible.size() - 1).accept((index, style, codePoint) -> { last.appendCodePoint(codePoint); return true; });
+        List<GuideTextLine> visible = new ArrayList<>(all.subList(0, maximumLines));
+        StringBuilder last = new StringBuilder(visible.get(visible.size() - 1).plainText());
         String ending = font.substrByWidth(MinecraftComponents.literal(last.toString()), Math.max(1, width - font.width("…"))).getString();
-        visible.set(visible.size() - 1, MinecraftComponents.literal(ending + "…").withStyle(text.getStyle()).getVisualOrderText());
+        visible.set(visible.size() - 1, GuideNativeFont.visual(MinecraftComponents.literal(ending + "…").withStyle(text.getStyle())));
         return List.copyOf(visible);
     }
 
@@ -177,7 +177,7 @@ public final class GuideNativeToast extends GuideNativeToastBinding implements G
         text(graphics, font, layout.description(), 21, OpenAllayWidgetTheme.WHITE);
         text(graphics, font, layout.secondary(), 31, OpenAllayWidgetTheme.MUTED);
         text(graphics, font, layout.summary(), 49, OpenAllayWidgetTheme.MUTED);
-        for (FormattedCharSequence hint : layout.hint()) graphics.text(font, hint, layout.hintX(), 49, OpenAllayWidgetTheme.MUTED);
+        for (GuideTextLine hint : layout.hint()) graphics.text(font, hint, layout.hintX(), 49, OpenAllayWidgetTheme.MUTED);
         // Only a completed native extraction is a graphical receipt. Reads and lifecycle calls cannot fabricate frames.
         extracted = new ExtractSnapshot(++extractedFrames, notification.connectionGeneration(), notification.actorId(),
                 notification.sessionOwner(), notification.sessionId(), notification.requestId(),
@@ -186,7 +186,7 @@ public final class GuideNativeToast extends GuideNativeToastBinding implements G
     }
 
     private static void text(GuideGraphics graphics, Font font,
-                             List<FormattedCharSequence> lines, int y, int color) {
+                             List<GuideTextLine> lines, int y, int color) {
         for (int index = 0; index < lines.size(); index++) graphics.text(font, lines.get(index), 10, y + index * 10, color);
     }
 
@@ -200,7 +200,7 @@ public final class GuideNativeToast extends GuideNativeToastBinding implements G
                                    String title, String description, String keyHint, int width, int height, int slots,
                                    int titleLineCount, int descriptionLineCount) {}
     record Display(Component title, Component description, Component secondary, Component summary, Component hint) {}
-    private record Layout(List<FormattedCharSequence> title, List<FormattedCharSequence> description,
-                          List<FormattedCharSequence> secondary, List<FormattedCharSequence> summary,
-                          List<FormattedCharSequence> hint, int hintX) {}
+    private record Layout(List<GuideTextLine> title, List<GuideTextLine> description,
+                          List<GuideTextLine> secondary, List<GuideTextLine> summary,
+                          List<GuideTextLine> hint, int hintX) {}
 }

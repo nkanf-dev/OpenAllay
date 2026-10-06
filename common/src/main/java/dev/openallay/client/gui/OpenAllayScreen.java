@@ -91,7 +91,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import dev.openallay.platform.minecraft.MinecraftNativeRegistries;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.util.FormattedCharSequence;
+import dev.openallay.client.gui.GuideTextLine;
+import dev.openallay.client.gui.GuideNativeFont;
 import net.minecraft.util.Mth;
 
 /** Full-screen, non-pausing projection and intent sender for GuideService. */
@@ -204,7 +205,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
     private Component telemetryCost = MinecraftComponents.empty();
     private Component telemetryCompact = MinecraftComponents.empty();
     private List<Component> telemetryTooltip = List.of();
-    private List<FormattedCharSequence> telemetryTooltipWrapped = List.of();
+    private List<GuideTextLine> telemetryTooltipWrapped = List.of();
     private List<String> telemetryTooltipTexts = List.of();
     private net.minecraft.client.gui.Font telemetryTooltipFont;
     private net.minecraft.locale.Language telemetryTooltipLanguage;
@@ -329,7 +330,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
     protected void initGuideScreen() {
         Component title = headerTitle();
         layout = GuideUiLayout.calculate(width, height, detailOpen(),
-                font.width(title.getVisualOrderText()),
+                GuideNativeFont.width(font, GuideNativeFont.visual(title)),
                 font.width(MinecraftComponents.translatable("screen.openallay.action.sessions")) + 12,
                 font.width(MinecraftComponents.translatable("screen.openallay.action.export")) + 12,
                 font.width(MinecraftComponents.translatable("screen.openallay.action.refresh")) + 12,
@@ -854,7 +855,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
                 GuideGraphics graphics, int mouseX, int mouseY, float partialTick) {
             Component full = getMessage();
             Component visible = full;
-            if (font.width(full.getVisualOrderText()) > getWidth()) {
+            if (GuideNativeFont.width(font, GuideNativeFont.visual(full)) > getWidth()) {
                 String prefix = font.getSplitter().plainHeadByWidth(full.getString(),
                         Math.max(0, getWidth() - font.width(MinecraftComponents.literal("…").withStyle(full.getStyle()))),
                         full.getStyle());
@@ -879,9 +880,9 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         requireDevelopmentProbe();
         if (layout == null || headerTitleWidget == null) throw new IllegalStateException("header is not initialized");
         Component full = headerTitleWidget.getMessage();
-        int styledWidth = font.width(full.getVisualOrderText());
+        int styledWidth = GuideNativeFont.width(font, GuideNativeFont.visual(full));
         return Map.of("fullName", full.getString(),
-                "plainWidth", font.width(full.copy().withStyle(style -> style.withBold(false)).getVisualOrderText()),
+                "plainWidth", GuideNativeFont.width(font, GuideNativeFont.visual(full.copy().withStyle(style -> style.withBold(false)))),
                 "styleWidth", styledWidth,
                 "titleWidth", headerTitleWidget.getWidth(),
                 "headerHeight", layout.topBar().height(),
@@ -1218,7 +1219,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         telemetryCost = MinecraftComponents.translatable("screen.openallay.telemetry.cost_compact", cost);
         telemetryCompact = MinecraftComponents.translatable("screen.openallay.telemetry.compact", occupancy, cache, cost);
         telemetryTooltip = telemetryTooltipComponents(telemetry, unknown, cost, cache);
-        telemetryTooltipWrapped = wrapNativeTooltip(telemetryTooltip, wrapWidth, font::split);
+        telemetryTooltipWrapped = wrapNativeTooltip(telemetryTooltip, wrapWidth, (text, width) -> GuideNativeFont.split(font, text, width));
         telemetryTooltipTexts = telemetryTooltip.stream().map(Component::getString).toList();
         telemetryTooltipFont = font;
         telemetryTooltipLanguage = language;
@@ -1278,8 +1279,8 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         return Math.max(1, Math.min(260, screenWidth - 24));
     }
 
-    static List<FormattedCharSequence> wrapNativeTooltip(List<Component> logicalLines, int wrapWidth,
-            java.util.function.BiFunction<Component, Integer, List<FormattedCharSequence>> splitter) {
+    static <T> List<T> wrapNativeTooltip(List<Component> logicalLines, int wrapWidth,
+            java.util.function.BiFunction<Component, Integer, List<T>> splitter) {
         return logicalLines.stream().flatMap(line -> splitter.apply(line, wrapWidth).stream()).toList();
     }
 
@@ -1342,7 +1343,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         GuideUiLayout.Rect area = layout.progress();
         graphics.fill(area.x(), area.y(), area.x() + area.width(), area.y() + area.height(), panelAltColor());
         graphics.enableScissor(area.x(), area.y(), area.x() + area.width(), area.y() + area.height());
-        List<FormattedCharSequence> lines = font.split(
+        List<GuideTextLine> lines = GuideNativeFont.split(font,
                 progressMessage(progress, Instant.now(), projectedDisplay.debugMode()),
                 Math.max(1, area.width() - 12));
         for (int index = 0; index < Math.min(2, lines.size()); index++) {
@@ -1538,8 +1539,8 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
                         ? 0xFFFFD479 : MUTED
                 : ((GuideUiRow.Status) row).status() == GuideRequestStatus.RATE_LIMITED
                         ? 0xFFFFD479 : ERROR;
-        List<FormattedCharSequence> lines = font.split(factualRowText(row), Math.max(1, width - 12));
-        for (FormattedCharSequence line : lines) {
+        List<GuideTextLine> lines = GuideNativeFont.split(font, factualRowText(row), Math.max(1, width - 12));
+        for (GuideTextLine line : lines) {
             graphics.text(font, line, x + 6, y, color, false);
             y += 10;
         }
@@ -1612,7 +1613,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         }
         int retryHeight = row instanceof GuideUiRow.Status status && (status.status() == GuideRequestStatus.FAILED
                 || status.status() == GuideRequestStatus.CANCELLED || status.status() == GuideRequestStatus.INTERRUPTED) ? 16 : 0;
-        return font.split(factualRowText(row), Math.max(1, width - 12)).size() * 10 + rowSpacing() + retryHeight;
+        return GuideNativeFont.split(font, factualRowText(row), Math.max(1, width - 12)).size() * 10 + rowSpacing() + retryHeight;
     }
 
     private dev.openallay.guide.ui.GuideToolSummaryGeometry toolSummaryGeometry(
@@ -1828,7 +1829,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
     private int wrappedHeight(List<Component> paragraphs, int width) {
         int height = 0;
         for (Component paragraph : paragraphs) {
-            List<FormattedCharSequence> lines = font.split(paragraph, Math.max(1, width));
+            List<GuideTextLine> lines = GuideNativeFont.split(font, paragraph, Math.max(1, width));
             height += Math.max(1, lines.size()) * 10;
         }
         return height;
@@ -1973,9 +1974,9 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
     private int renderWrapped(
             GuideGraphics graphics, List<Component> paragraphs, int x, int y, int width, int color) {
         for (Component paragraph : paragraphs) {
-            List<FormattedCharSequence> lines = font.split(paragraph, width);
+            List<GuideTextLine> lines = GuideNativeFont.split(font, paragraph, width);
             if (lines.isEmpty()) y += 9;
-            for (FormattedCharSequence line : lines) {
+            for (GuideTextLine line : lines) {
                 if (y >= layout.transcript().y() - 12
                         && y <= layout.transcript().y() + layout.transcript().height() + 12) {
                     graphics.text(font, line, x, y, color, false);
@@ -2495,9 +2496,9 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         String locale = dev.openallay.client.MinecraftNativeClientFacts.selectedLanguage(minecraft);
         SourceDetailLayout cached = sourceDetailLayouts.get(id);
         if (cached == null || !cached.matches(group, width, locale)) {
-            List<FormattedCharSequence> lines = new ArrayList<>();
+            List<GuideTextLine> lines = new ArrayList<>();
             for (Component component : sourceDetailComponents(group)) {
-                lines.addAll(font.split(component, width));
+                lines.addAll(GuideNativeFont.split(font, component, width));
             }
             cached = new SourceDetailLayout(group, width, locale, lines);
             sourceDetailLayouts.put(id, cached);
@@ -2543,7 +2544,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
     }
 
     record SourceDetailLayout(
-            GuideEvidencePresentation.Group group, int width, String locale, List<FormattedCharSequence> lines) {
+            GuideEvidencePresentation.Group group, int width, String locale, List<GuideTextLine> lines) {
         SourceDetailLayout { lines = List.copyOf(lines); }
 
         boolean matches(GuideEvidencePresentation.Group current, int currentWidth, String currentLocale) {
@@ -2574,7 +2575,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
 
     private int detailLine(
             GuideGraphics graphics, Component text, GuideUiLayout.Rect detail, int y) {
-        for (FormattedCharSequence line : font.split(text, detail.width() - 16)) {
+        for (GuideTextLine line : GuideNativeFont.split(font, text, detail.width() - 16)) {
             if (y >= detail.y() + 21 && y < detail.y() + detail.height() - 10) {
                 graphics.text(font, line, detail.x() + 8, y, TEXT, false);
                 detailCardPaintSerial++;
@@ -2595,10 +2596,10 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         if (cached == null || cached.width() != width || !cached.source().equals(source)) {
             String[] sourceLines = source.split("\\R", -1);
             int digits = Integer.toString(Math.max(1, sourceLines.length)).length();
-            List<FormattedCharSequence> wrapped = new ArrayList<>();
+            List<GuideTextLine> wrapped = new ArrayList<>();
             for (int index = 0; index < sourceLines.length; index++) {
                 String prefix = String.format("%" + digits + "d │ ", index + 1);
-                wrapped.addAll(font.split(MinecraftComponents.literal(prefix + sourceLines[index]), width));
+                wrapped.addAll(GuideNativeFont.split(font, MinecraftComponents.literal(prefix + sourceLines[index]), width));
             }
             cached = new CodeLayout(source, width, List.copyOf(wrapped));
             detailCodeLayouts.put(cacheId, cached);
@@ -2704,7 +2705,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
     }
 
     private record CodeLayout(
-            String source, int width, List<FormattedCharSequence> lines) {}
+            String source, int width, List<GuideTextLine> lines) {}
 
     private void rebuildPresentationWidgets() {
         invalidateContentHits();

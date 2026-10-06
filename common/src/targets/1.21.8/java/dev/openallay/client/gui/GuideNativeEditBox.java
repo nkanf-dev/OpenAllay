@@ -14,7 +14,7 @@ public abstract class GuideNativeEditBox extends EditBox {
         return guideKeyPressed(GuideNativeInput.capture(key, scancode, modifiers));
     }
     public boolean guideKeyPressed(GuideInputKey event) { return super.keyPressed(event.key(), event.scancode(), event.modifiers()); }
-    protected final void formatGuideText(java.util.function.BiFunction<String, Integer, net.minecraft.util.FormattedCharSequence> formatter) {
-        setFormatter((text, offset) -> formatter.apply(text, offset));
+    protected final void formatGuideText(java.util.function.BiFunction<String, Integer, GuideTextLine> formatter) {
+        setFormatter((text, offset) -> GuideNativeFont.nativeLine(formatter.apply(text, offset)));
     }
 }

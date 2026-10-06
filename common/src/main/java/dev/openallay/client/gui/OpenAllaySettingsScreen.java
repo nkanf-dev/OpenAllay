@@ -1,5 +1,8 @@
 package dev.openallay.client.gui;
 
+import dev.openallay.client.gui.GuideTextLine;
+import dev.openallay.client.gui.GuideNativeFont;
+
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.openallay.client.gui.settings.DiagnosticsSettingsProjection;
 import dev.openallay.client.gui.settings.ExtensionSettingsProjection;
@@ -1192,12 +1195,12 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
             });
             y += 26;
         }
-        int copyLines = font.split(MinecraftComponents.translatable("screen.openallay.settings.voice.gameplay_action.description"), w).size()
-                + font.split(MinecraftComponents.translatable("screen.openallay.settings.voice.not_ready"), w).size()
-                + font.split(voiceSettingsStatus(voiceView.statusCode()), w).size()
-                + font.split(MinecraftComponents.literal(voiceView.modelName()), w).size() + 4;
+        int copyLines = GuideNativeFont.split(font, MinecraftComponents.translatable("screen.openallay.settings.voice.gameplay_action.description"), w).size()
+                + GuideNativeFont.split(font, MinecraftComponents.translatable("screen.openallay.settings.voice.not_ready"), w).size()
+                + GuideNativeFont.split(font, voiceSettingsStatus(voiceView.statusCode()), w).size()
+                + GuideNativeFont.split(font, MinecraftComponents.literal(voiceView.modelName()), w).size() + 4;
         if (voiceDraft.backend() == VoiceConfig.Backend.NATIVE) {
-            copyLines += font.split(MinecraftComponents.translatable("screen.openallay.settings.voice.native_source"), w).size();
+            copyLines += GuideNativeFont.split(font, MinecraftComponents.translatable("screen.openallay.settings.voice.native_source"), w).size();
         }
         voiceContentHeight = y + voiceScroll - area.y() + copyLines * 10 + 18;
     }
@@ -1452,14 +1455,14 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
         int contentWidth = Math.max(100, layout.editor().width() - 20);
         int bannerWidth = Math.min(contentWidth, 512);
         int bannerHeight = Math.max(54, bannerWidth * 9 / 16);
-        int descriptionHeight = font.split(
+        int descriptionHeight = GuideNativeFont.split(font,
                 MinecraftComponents.translatable("screen.openallay.settings.about.description"), contentWidth).size() * 10;
         return 31 + bannerHeight + 12 + descriptionHeight + 8;
     }
 
     private int aboutCopyOffset() {
         int contentWidth = Math.max(100, layout.editor().width() - 20);
-        return aboutRepositoryOffset() + 12 + font.split(
+        return aboutRepositoryOffset() + 12 + GuideNativeFont.split(font,
                 MinecraftComponents.literal(REPOSITORY_URL), contentWidth).size() * 10 + 6;
     }
 
@@ -2317,7 +2320,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
             graphics.text(font, status, x, statusY, color, false);
         });
         int estimateY = statusY + 18;
-        for (var wrapped : font.split(reasoningExplanation(reasoningSettings()),
+        for (var wrapped : GuideNativeFont.split(font, reasoningExplanation(reasoningSettings()),
                 Math.max(20, area.width() - 16))) {
             graphics.text(font, wrapped, x, estimateY, MUTED, false);
             estimateY += 11;
@@ -2325,7 +2328,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
         estimateY += 3;
         for (BuiltinModelSettingsProjection.Line line : modelEstimates().lines()) {
             Component text = MinecraftComponents.translatable(line.key(), line.arguments().toArray());
-            for (var wrapped : font.split(text, Math.max(20, area.width() - 16))) {
+            for (var wrapped : GuideNativeFont.split(font, text, Math.max(20, area.width() - 16))) {
                 graphics.text(font, wrapped, x, estimateY, MUTED, false);
                 estimateY += 11;
             }
@@ -2378,7 +2381,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                 MUTED,
                 false);
         y += 26;
-        for (var line : font.split(
+        for (var line : GuideNativeFont.split(font,
                 MinecraftComponents.translatable(
                         "screen.openallay.settings.models.server_read_only"),
                 Math.max(80, area.width() - 20))) {
@@ -2402,7 +2405,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
         int y = origin + 136;
         for (String key : List.of(general.assistantNameDescriptionKey(),
                 general.debugDescriptionKey(), general.animationsDescriptionKey())) {
-            for (net.minecraft.util.FormattedCharSequence line : font.split(
+            for (dev.openallay.client.gui.GuideTextLine line : GuideNativeFont.split(font,
                     MinecraftComponents.translatable(key), Math.max(80, area.width() - 20))) {
                 graphics.text(font, line, area.x() + 10, y, MUTED, false);
                 y += 10;
@@ -2429,7 +2432,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                 bannerX, bannerY, 0.0F, 0.0F, bannerWidth, bannerHeight,
                 1024, 576, 1024, 576);
         int y = bannerY + bannerHeight + 12;
-        for (net.minecraft.util.FormattedCharSequence line : font.split(
+        for (dev.openallay.client.gui.GuideTextLine line : GuideNativeFont.split(font,
                 MinecraftComponents.translatable("screen.openallay.settings.about.description"), contentWidth)) {
             graphics.text(font, line, x, y, TEXT, false);
             y += 10;
@@ -2439,7 +2442,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                 x, y, MUTED, false);
         // Wrapping prevents a long URL from escaping the native content pane.
         y += 12;
-        for (net.minecraft.util.FormattedCharSequence line : font.split(
+        for (dev.openallay.client.gui.GuideTextLine line : GuideNativeFont.split(font,
                 MinecraftComponents.literal(REPOSITORY_URL), contentWidth)) {
             graphics.text(font, line, x, y, ACCENT, false);
             y += 10;
@@ -2630,7 +2633,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
             int y,
             int width,
             int color) {
-        for (net.minecraft.util.FormattedCharSequence line : font.split(text, width)) {
+        for (dev.openallay.client.gui.GuideTextLine line : GuideNativeFont.split(font, text, width)) {
             graphics.text(font, line, x, y, color, false);
             y += 11;
         }
@@ -2645,7 +2648,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
             String labelKey,
             String value) {
         Component line = MinecraftComponents.translatable(labelKey).copy().append(": ").append(value);
-        for (net.minecraft.util.FormattedCharSequence wrapped : font.split(line, width - 8)) {
+        for (dev.openallay.client.gui.GuideTextLine wrapped : GuideNativeFont.split(font, line, width - 8)) {
             graphics.text(font, wrapped, x + 4, y, MUTED, false);
             y += 10;
         }
@@ -3240,7 +3243,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
             int width,
             int color,
             int lineHeight) {
-        for (net.minecraft.util.FormattedCharSequence line : font.split(text, Math.max(20, width))) {
+        for (dev.openallay.client.gui.GuideTextLine line : GuideNativeFont.split(font, text, Math.max(20, width))) {
             graphics.text(font, line, x, y, color, false);
             y += lineHeight;
         }
@@ -3248,7 +3251,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
     }
 
     private int wrappedHeight(Component text, int width, int lineHeight) {
-        return Math.max(1, font.split(text, Math.max(20, width)).size()) * lineHeight;
+        return Math.max(1, GuideNativeFont.split(font, text, Math.max(20, width)).size()) * lineHeight;
     }
 
     private void renderSkills(GuideGraphics graphics) {
@@ -4595,8 +4598,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                 Component narration) {
             super(font, x, y, width, height, narration);
             this.narration = narration;
-            formatGuideText((text, offset) -> net.minecraft.util.FormattedCharSequence.forward(
-                    "•".repeat(text.length()), net.minecraft.network.chat.Style.EMPTY));
+            formatGuideText((text, offset) -> GuideNativeFont.plain("•".repeat(text.length())));
         }
 
         @Override

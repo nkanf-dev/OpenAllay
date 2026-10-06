@@ -17,14 +17,15 @@ import dev.openallay.client.gui.GuideTooltipPlacement;
 import net.minecraft.locale.Language;
 import dev.openallay.platform.minecraft.MinecraftComponents;
 import net.minecraft.network.chat.Component;
-import net.minecraft.util.FormattedCharSequence;
+import dev.openallay.client.gui.GuideTextLine;
+import dev.openallay.client.gui.GuideNativeFont;
 
 /** Passive extraction only. No Screen, input ownership, task, history, or context operations. */
 public final class GuideHudRenderer {
     private final Minecraft minecraft;
     private final GuideHudResultRenderer results = new GuideHudResultRenderer();
     private CacheKey cacheKey;
-    private List<FormattedCharSequence> previewLines = List.of();
+    private List<GuideTextLine> previewLines = List.of();
 
     public GuideHudRenderer(Minecraft minecraft) {
         this.minecraft = Objects.requireNonNull(minecraft, "minecraft");
@@ -86,7 +87,7 @@ public final class GuideHudRenderer {
                         CacheKey key = new CacheKey(preview, body.width(), body.height(), font, Language.getInstance());
                         if (!key.equals(cacheKey)) {
                             cacheKey = key;
-                            previewLines = font.split(MinecraftComponents.literal(preview), body.width());
+                            previewLines = GuideNativeFont.split(font, MinecraftComponents.literal(preview), body.width());
                         }
                         int shown = Math.min(bodyHeight / 10, previewLines.size());
                         int first = Math.max(0, previewLines.size() - shown);
@@ -115,7 +116,7 @@ public final class GuideHudRenderer {
                         OpenAllayKeyMappings.INTERACT_HUD.getTranslatedKeyMessage(),
                         OpenAllayKeyMappings.OPEN_GUIDE.isUnbound() ? null : OpenAllayKeyMappings.OPEN_GUIDE.getTranslatedKeyMessage());
                 graphics.setTooltipForNextFrame(font,
-                        font.split(tooltip, Math.max(1, Math.min(260, graphics.guiWidth() - 24))),
+                        GuideNativeFont.split(font, tooltip, Math.max(1, Math.min(260, graphics.guiWidth() - 24))),
                         GuideTooltipPlacement.DEFAULT, mouseX, mouseY, false);
             }
         }

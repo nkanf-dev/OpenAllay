@@ -191,7 +191,7 @@ final class OpenAllayScreenNativeTooltipTest {
                 "telemetryTooltipLanguage == language", "telemetryTooltipWidth == wrapWidth"}) {
             assertTrue(refresh.contains(dependency), dependency);
         }
-        assertTrue(refresh.contains("wrapNativeTooltip(telemetryTooltip, wrapWidth, font::split)"));
+        assertTrue(refresh.contains("wrapNativeTooltip(telemetryTooltip, wrapWidth, (text, width) -> GuideNativeFont.split(font, text, width))"));
         assertFalse(refresh.contains("detail.append(\"\\n\")"));
         assertFalse(refresh.contains("screen.openallay.telemetry.budget\""));
         assertFalse(refresh.contains("screen.openallay.telemetry.session\""));

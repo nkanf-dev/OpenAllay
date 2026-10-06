@@ -224,7 +224,7 @@ public final class RequirementReviewScreen extends dev.openallay.client.gui.Guid
     }
 
     private int text(GuideGraphics graphics, Component value, int x, int y, int w, int color) {
-        for (var line : font.split(value, Math.max(20, w))) {
+        for (var line : GuideNativeFont.split(font, value, Math.max(20, w))) {
             if (graphics != null) graphics.text(font, line, x, y, color, false);
             y += 11;
         }

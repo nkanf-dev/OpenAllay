@@ -120,13 +120,13 @@ public class GuideNativeGraphics {
         else font.draw(graphics, text, x, y, color);
     }
 
-    protected final void nativeText(Font font, FormattedCharSequence text, int x, int y, int color) {
-        font.drawShadow(graphics, text, x, y, color);
+    protected final void nativeText(Font font, GuideTextLine text, int x, int y, int color) {
+        font.drawShadow(graphics, GuideNativeFont.nativeLine(text), x, y, color);
     }
 
-    protected final void nativeText(Font font, FormattedCharSequence text, int x, int y, int color, boolean shadow) {
-        if (shadow) font.drawShadow(graphics, text, x, y, color);
-        else font.draw(graphics, text, x, y, color);
+    protected final void nativeText(Font font, GuideTextLine text, int x, int y, int color, boolean shadow) {
+        if (shadow) font.drawShadow(graphics, GuideNativeFont.nativeLine(text), x, y, color);
+        else font.draw(graphics, GuideNativeFont.nativeLine(text), x, y, color);
     }
 
     protected final void nativeItem(ItemStack stack, int x, int y) {
@@ -146,12 +146,12 @@ public class GuideNativeGraphics {
         nativeTooltip(Minecraft.getInstance().font, text, x, y);
     }
 
-    protected final void nativeTooltip(List<FormattedCharSequence> lines, int x, int y) {
+    protected final void nativeTooltip(List<GuideTextLine> lines, int x, int y) {
         nativeTooltip(Minecraft.getInstance().font, lines, x, y);
     }
 
     protected final void nativeTooltip(Font font, Component text, int x, int y) {
-        nativeTooltip(font, List.of(text.getVisualOrderText()), x, y);
+        nativeTooltip(font, List.of(GuideNativeFont.visual(text)), x, y);
     }
 
     protected final void nativeTooltip(Font font, ItemStack stack, int x, int y) {
@@ -161,17 +161,17 @@ public class GuideNativeGraphics {
         }
     }
 
-    protected final void nativeTooltip(Font font, List<? extends FormattedCharSequence> lines, int x, int y) {
-        List<FormattedCharSequence> captured = List.copyOf(lines);
+    protected final void nativeTooltip(Font font, List<? extends GuideTextLine> lines, int x, int y) {
+        List<FormattedCharSequence> captured = GuideNativeFont.nativeLines(lines);
         if (!captured.isEmpty()) {
             deferTooltip(() -> GuidePoseTooltip.lines(graphics, font, captured, x, y), false);
         }
     }
 
     protected final void nativeTooltip(
-            Font font, List<FormattedCharSequence> lines, GuideTooltipPlacement positioner,
+            Font font, List<GuideTextLine> lines, GuideTooltipPlacement positioner,
             int x, int y, boolean replaceExisting) {
-        List<FormattedCharSequence> captured = List.copyOf(lines);
+        List<FormattedCharSequence> captured = GuideNativeFont.nativeLines(lines);
         if (!captured.isEmpty()) {
             deferTooltip(() -> GuidePoseTooltip.lines(graphics, font, captured, x, y), replaceExisting);
         }
