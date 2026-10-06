@@ -62,7 +62,9 @@ def actual_units():
             if '/src/targets/1.12.2/' in relative or relative in explicit:units.append(str(path.resolve()))
     retired=json.loads((ROOT/'native-builds/forge1122-census/source-retirements.json').read_text())
     retired_paths={str((ROOT/r['origin']).resolve()) for r in retired['java']}
-    return sorted(set(units)-retired_paths)
+    profile=json.loads((ROOT/'native-builds/forge1122-census/core-compile-profile.json').read_text())
+    scoped_optional={str((ROOT/r['origin']).resolve()) for r in profile['java']}
+    return sorted(set(units)-retired_paths-scoped_optional)
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
