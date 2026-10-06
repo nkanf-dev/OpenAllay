@@ -175,6 +175,13 @@
       "origin": "common/src/targets/1.19.2/java/dev/openallay/client/gui/GuideNativeCursor.java",
       "sha256": "afe3396ed7a4dc948e3fadbaabf9dac04b79d1489d35f0d26add0e9252202a08",
       "reason": "Unreferenced legacy primitive helper after actual 1.12 immediate GuideNativeGraphics/input binding; rendering, tooltip, clip and cursor semantics owned by current typed native primitive seam"
+    },
+    {
+      "owner": "common",
+      "logicalPath": "dev/openallay/client/gui/GuideLegacyCursor.java",
+      "origin": "common/src/targets/1.18.2/java/dev/openallay/client/gui/GuideLegacyCursor.java",
+      "sha256": "62c44f1dee25c44275da8c836f3913f7fcab3322c09f5325c93682515dd2f783",
+      "reason": "Unreferenced GLFW-only cursor helper after actual 1.12 native graphics/input ownership; no selected caller, native cursor wrapper candidate withdrawn rather than shipping inert API"
     }
   ]
 }

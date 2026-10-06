@@ -107,7 +107,7 @@ task exportSourceSelection {
                       row.owner=='common' && row.logicalPath in [
                         'dev/openallay/client/gui/GuidePoseItems.java','dev/openallay/client/gui/GuidePoseScissor.java',
                         'dev/openallay/client/gui/GuidePoseTooltip.java','dev/openallay/client/gui/GuideNativeCursor.java',
-                        'dev/openallay/client/gui/GuideLegacyRenderState.java']) ||
+                        'dev/openallay/client/gui/GuideLegacyRenderState.java','dev/openallay/client/gui/GuideLegacyCursor.java']) ||
                     row.origin.contains('/targets/1.12.2/')) throw new GradleException('Invalid obsolete native helper disposition')
             // Audit only the already-materialized owner snapshot. Never query a filtered set from a predicate.
             def matches=raw.findAll {
