@@ -485,7 +485,16 @@ def boot(args, root, java, assets, runtime, launch, expected, vanilla, version):
         try:
             if creates_world:
                 try:
-                    process.wait(timeout=330 if builder else 660 if ui_manual else 330)
+                    limit=330 if builder else 660 if ui_manual else 330
+                    if builder:
+                        try:process.wait(timeout=35)
+                        except subprocess.TimeoutExpired:
+                            # One actual native thread snapshot; no fabricated phase or collector-owned game action.
+                            with (output/"builder-owner-threads-35s.log").open("w") as thread_log:
+                                try:subprocess.run([str(java.parent/"jstack"),str(process.pid)],check=False,stdout=thread_log,stderr=subprocess.STDOUT,timeout=15)
+                                except subprocess.TimeoutExpired:thread_log.write("Owned jstack exceeded 15 seconds\n")
+                            limit-=35
+                    process.wait(timeout=limit)
                     receipt["status"]="world-client-exited"
                 except subprocess.TimeoutExpired:
                     receipt["status"]="fatal-world-timeout"
