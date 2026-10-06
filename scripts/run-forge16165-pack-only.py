@@ -3,7 +3,7 @@
 import hashlib,importlib.util,json,os,shutil,subprocess,sys,zipfile
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
-NATIVE='b3bdf9c8bad6849907e554df23913d0f68610611'
+NATIVE='108f61a6a64b9ae26c525a57d9b3f4873a59b2fd'
 def sha(p):return hashlib.sha256(Path(p).read_bytes()).hexdigest()
 def ref(p):return {'path':str(Path(p).resolve()),'sha256':sha(p)}
 def save(p,v):p.parent.mkdir(parents=True,exist_ok=True);p.write_text(json.dumps(v,indent=2)+'\n');return ref(p)
@@ -73,7 +73,7 @@ def main():
     work=ROOT/'build/forge16165-pack-inputs';work.mkdir(parents=True,exist_ok=False)
     source=work/'source';subprocess.run(['git','worktree','add','--detach',str(source),NATIVE],cwd=ROOT,check=True)
     enginezip=artifact(11406765949,37450040748,'7819dbea0601f1ae7ef8b9c03286b6f8a0589bb4','6d1ac947f59d983ea1b88db15d456cec3b7ddffd2b8f26320836a5b04de83802',work/'engine')
-    nativezip=artifact(11415649433,37469212164,NATIVE,'b069bc8fc1073c51adceb814544dd49c4e47d7c9f6e26a48c421b3d42592665d',work/'native')
+    nativezip=artifact(11416318195,37470608150,NATIVE,'4da796ad863f565d3f913dabf6424b6672954a0d4f103a99347688e0db797797',work/'native')
     original=next((work/'engine').rglob('closure-input.json'));spec=json.loads(original.read_text());originalResolution=next((work/'engine').rglob('effective-runtime-resolution.json'))
     original_native_spec=json.loads(original.read_text())
     old_root='/home/runner/work/OpenAllay/OpenAllay/build/forge16165-native-inputs/closure'
