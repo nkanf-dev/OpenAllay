@@ -253,6 +253,15 @@ public final class GuideClientE2EController {
             catch (RuntimeException failure) { failWithoutRequest("world_startup_failed", failure.toString()); }
             return;
         }
+        if ("native-world-sdk".equals(config.scenario())) {
+            if (++builderWarmupTicks < 60 || nativeProbePending) return;
+            nativeProbePending = true;
+            started = true;
+            startedAt = Instant.now();
+            GuideNativeWorldAccessProbe.run(actor, System.getProperty("openallay.e2e.createWorld", ""),
+                    report -> finish(gson.toJson(report)));
+            return;
+        }
         if (GuideBuilderE2EProbe.enabled(config.scenario()) && ++builderWarmupTicks < 40) return;
         if (!System.getProperty("openallay.e2e.screenshotRoot", "").isBlank()) {
             var client = net.minecraft.client.Minecraft.getInstance();
