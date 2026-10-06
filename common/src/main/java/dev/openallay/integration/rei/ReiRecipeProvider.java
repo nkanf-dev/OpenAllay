@@ -2,7 +2,6 @@ package dev.openallay.integration.rei;
 
 import dev.openallay.platform.minecraft.MinecraftResourceId;
 
-import dev.architectury.fluid.FluidStack;
 import dev.openallay.context.DataAuthority;
 import dev.openallay.context.DataCompleteness;
 import dev.openallay.context.EvidenceMetadata;
@@ -224,17 +223,19 @@ final class ReiRecipeProvider implements RecipeKnowledgeProvider {
 
     private static FluidRequirementSnapshot captureFluid(EntryIngredient values) {
         List<FluidValue> fluids = values.stream()
-                .map(EntryStack::getValue)
-                .map(FluidStack.class::cast)
-                .map(stack -> {
-                    if (dev.openallay.context.minecraft.MinecraftItemDataFacts.Fluids.hasCustomData(stack)) {
+                .map(ReiEntryFacts::readFluid)
+                .map(fluid -> {
+                    if (fluid.customData()) {
                         throw new UnsupportedRecipe(
                                 "fluid_components_unsupported",
                                 "REI fluid has components that cannot be represented losslessly");
                     }
-                    return new FluidValue(
-                            MinecraftNativeRegistries.FLUID.getKey(stack.getFluid()).toString(),
-                            stack.getAmount());
+                    if (!fluid.amountRepresentable()) {
+                        throw new UnsupportedRecipe(
+                                "fluid_amount_unsupported",
+                                "REI fluid amount cannot be represented losslessly");
+                    }
+                    return new FluidValue(fluid.id(), fluid.amount());
                 })
                 .distinct()
                 .toList();
@@ -251,7 +252,7 @@ final class ReiRecipeProvider implements RecipeKnowledgeProvider {
     }
 
     private static boolean allFluids(EntryIngredient values) {
-        return values.stream().allMatch(value -> value.getValue() instanceof FluidStack);
+        return values.stream().allMatch(ReiEntryFacts::isFluidEntry);
     }
 
     private static void rejectComponents(List<ItemStack> stacks) {
