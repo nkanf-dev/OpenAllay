@@ -103,6 +103,7 @@ final class GuideNativeWorldAccessProbe {
                 report.put("outcome","HARNESS_FAILED"); report.put("failure",failure.toString());
                 report.put("stack",java.util.Arrays.stream(failure.getStackTrace()).map(Object::toString).toList());
                 if (failure.getCause()!=null) report.put("cause",failure.getCause().toString());
+                report.put("causes", causes(failure));
             }
             dev.openallay.client.gui.MinecraftClientWindow.execute(client, () -> finished.accept(report));
         }, "openallay-native-world-sdk-probe");
@@ -167,9 +168,18 @@ final class GuideNativeWorldAccessProbe {
                 report.put("outcome","HARNESS_FAILED");report.put("failure",failure.toString());
                 report.put("stack",java.util.Arrays.stream(failure.getStackTrace()).map(Object::toString).toList());
                 if(failure.getCause()!=null)report.put("cause",failure.getCause().toString());
+                report.put("causes", causes(failure));
             }
             dev.openallay.client.gui.MinecraftClientWindow.execute(client, () -> finished.accept(report));
         },"openallay-native-world-persistence-probe");worker.setDaemon(true);worker.start();
+    }
+    /** Bounded exact native cause chain; the parser failure is not replaced by a guessed reason. */
+    private static List<String> causes(Throwable failure) {
+        ArrayList<String> result=new ArrayList<>();
+        java.util.Set<Throwable> seen=java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
+        for(Throwable cause=failure;cause!=null && result.size()<16 && seen.add(cause);cause=cause.getCause())
+            result.add(cause.toString());
+        return List.copyOf(result);
     }
     private static void require(boolean value, String check) { if (!value) throw new IllegalStateException(check); }
     private static final class Invocation implements ExtensionInvocation {
