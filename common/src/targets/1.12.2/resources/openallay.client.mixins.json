@@ -13,11 +13,8 @@
     "GuiSubtitleAccess",
     "ToastInstanceCompletionMixin",
     "ToastComponentSlotMixin",
-    "LegacyWidgetFocusAccess",
-    "LegacyEditBoxHintMixin",
     "MinecraftFpsAccess",
     "GuideProbeMouseInvoker",
-    "MainWindowResizeMixin",
     "GuideTextFieldDrawAccessMixin",
     "GuiScreenMenuKeyObservationMixin",
     "GuiTextFieldMenuKeyObservationMixin"
