@@ -15,7 +15,7 @@ public abstract class GuideNativeWidget extends AbstractWidget {
         super.setTooltip(tooltip == null ? null : net.minecraft.client.gui.components.Tooltip.create(tooltip.text()));
     }
     @Override protected final void updateWidgetNarration(net.minecraft.client.gui.narration.NarrationElementOutput output) {
-        narrateGuideWidget(output);
+        narrateGuideWidget((part, text) -> output.add(net.minecraft.client.gui.narration.NarratedElementType.valueOf(part.name()), text));
     }
-    protected abstract void narrateGuideWidget(net.minecraft.client.gui.narration.NarrationElementOutput output);
+    protected abstract void narrateGuideWidget(GuideNarration output);
 }

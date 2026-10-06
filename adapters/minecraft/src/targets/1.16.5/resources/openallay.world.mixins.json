@@ -1,0 +1,14 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "dev.openallay.adapter.minecraft.v26_2.world.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "refmap": "openallay.world.refmap.json",
+  "mixins": [
+    "NativeTileEntityStateAccessor",
+    "NativeSavedDataReadFailureObserver"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

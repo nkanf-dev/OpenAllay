@@ -1,9 +1,13 @@
 package dev.openallay.guide.e2e;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import dev.openallay.client.gui.*;
+import dev.openallay.client.gui.GuideGraphics;
+import dev.openallay.client.gui.GuideMultilineEditor;
+import dev.openallay.client.gui.GuideNativeMultilineEditor;
+import dev.openallay.client.gui.MinecraftClientWindow;
 import dev.openallay.client.gui.hud.GuideNativeToastBinding;
-import java.util.*;
+import java.util.List;
+import java.util.Map;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.components.toasts.Toast;

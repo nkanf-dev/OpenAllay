@@ -84,7 +84,7 @@ final class NativeWorldSession implements WorldSession {
     private void validateServer() {
         if (!server.isSameThread()) throw new ExtensionException("wrong_owner", "Server validation requires its owner thread");
         if (server.isStopped() || server.isShutdown() || player == null || level == null
-                || player.isRemoved() || !NativePlayerConnection.isAcceptingMessages(player)
+                || NativeActorState.removed(player) || !NativePlayerConnection.isAcceptingMessages(player)
                 || !connection.getConnection().isConnected()) throw stale();
         identity.requireServer(server.getPlayerList().getPlayer(actor), NativeServerPlayerLevel.get(player), player.getUUID(),
                 NativeWorldResourceIds.keyId(NativeServerPlayerLevel.get(player).dimension()).toString());
@@ -113,7 +113,7 @@ final class NativeWorldSession implements WorldSession {
         requireOwnerAction();
         if (level.isOutsideBuildHeight(position)) throw new ExtensionException("invalid_bounds", "Position is outside the active dimension build height: " + position);
         if (!level.getWorldBorder().isWithinBounds(position)) throw new ExtensionException("invalid_bounds", "Position is outside the world border: " + position);
-        if (!level.hasChunkAt(position)) throw new ExtensionException("chunk_unavailable", "Chunk is not loaded; no implicit chunk generation: " + position);
+        NativeLoadedChunks.require(level, position);
     }
 
     @Override public String context() {
@@ -128,7 +128,7 @@ final class NativeWorldSession implements WorldSession {
             JsonObject who = new JsonObject();
             who.addProperty("uuid", actor.toString());
             who.addProperty("x", player.getX()); who.addProperty("y", player.getY()); who.addProperty("z", player.getZ());
-            who.addProperty("yaw", player.getYRot());
+            who.addProperty("yaw", NativeActorState.yaw(player));
             result.add("player", who);
             result.add("materialPalette", NativeBlockCodec.materialPalette());
             return result.toString();
@@ -167,8 +167,9 @@ final class NativeWorldSession implements WorldSession {
         // getChunkNow never requests or generates a missing chunk.
         var chunk=level.getChunkSource().getChunkNow(chunkX,chunkZ);
         if(chunk==null)throw new ExtensionException("chunk_unavailable","Chunk is not loaded; no implicit generation: "+min);
-        var section=chunk.getSection(chunk.getSectionIndex(minY));
-        if(!canonicalAir(section))return false;
+        if (!NativeChunkSections.supportsCanonicalAir(level)) return false;
+        var section = NativeChunkSections.get(chunk, minY);
+        if (!canonicalAir(section)) return false;
         long key=NativeChunkCoordinates.pack(chunkX,chunkZ);
         java.util.Set<Integer> occupied=blockEntitySections.computeIfAbsent(key,ignored -> {
             java.util.Set<Integer> sections=new java.util.HashSet<>();
@@ -180,7 +181,7 @@ final class NativeWorldSession implements WorldSession {
     static boolean canonicalAir(net.minecraft.world.level.chunk.LevelChunkSection section) {
         // Palette may include stale unused values: those only cause a safe slow fallback.
         // hasOnlyAir/isAir would collapse cave, void and modded air and are not proofs.
-        return !section.maybeHas(state -> state!=net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+        return NativeChunkSections.canonicalAir(section);
     }
     @Override public String terrainState(int x, int y, int z) { return terrainState(new BlockPos(x,y,z)); }
     private String terrainState(BlockPos pos) {
@@ -205,7 +206,7 @@ final class NativeWorldSession implements WorldSession {
         var chunk = level.getChunkAt(bottom); // Already validated loaded; no implicit generation.
         var type = net.minecraft.world.level.levelgen.Heightmap.Types.WORLD_SURFACE;
         // Never prime a missing map by scanning a whole chunk inside this bounded action.
-        if (!chunk.hasPrimedHeightmap(type)) return maxY-1;
+        if (!NativeTerrainHeightmap.isPrimed(chunk, type)) return maxY-1;
         return Math.min(maxY-1,chunk.getHeight(type,x & 15,z & 15));
     }
     private static final java.util.Set<String> TERRAIN_AIR = java.util.Set.of(

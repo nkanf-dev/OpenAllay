@@ -146,15 +146,15 @@ public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNat
         observationRefresh = observationRemove = observationAttach = observationRemoveImage = null;
         if (observationBounds.height() == 0) return;
         int x = strip.right() - 64;
-        observationRemoveImage = addRenderableWidget(OpenAllayButton.create(MinecraftComponents.literal("×▧"), button -> {
+        observationRemoveImage = addGuideWidget(OpenAllayButton.create(MinecraftComponents.literal("×▧"), button -> {
             state.removeObservationImage(session); project();
         }).bounds(x, strip.y(), 16, 12).tooltip(GuideTooltip.create(MinecraftComponents.translatable("screen.openallay.observation.remove_frame"))).build());
-        observationRemove = addRenderableWidget(OpenAllayButton.create(MinecraftComponents.literal("×"), button -> {
+        observationRemove = addGuideWidget(OpenAllayButton.create(MinecraftComponents.literal("×"), button -> {
             state.removeObservation(session); project();
         }).bounds(x + 16, strip.y(), 16, 12).tooltip(GuideTooltip.create(MinecraftComponents.translatable("screen.openallay.observation.remove"))).build());
-        observationRefresh = addRenderableWidget(OpenAllayButton.create(MinecraftComponents.literal("↻"), button -> refreshObservation())
+        observationRefresh = addGuideWidget(OpenAllayButton.create(MinecraftComponents.literal("↻"), button -> refreshObservation())
                 .bounds(x + 32, strip.y(), 16, 12).tooltip(GuideTooltip.create(MinecraftComponents.translatable("screen.openallay.observation.refresh"))).build());
-        observationAttach = addRenderableWidget(OpenAllayButton.create(MinecraftComponents.literal("▧"), button -> attachObservationFrame())
+        observationAttach = addGuideWidget(OpenAllayButton.create(MinecraftComponents.literal("▧"), button -> attachObservationFrame())
                 .bounds(x + 48, strip.y(), 16, 12).tooltip(GuideTooltip.create(MinecraftComponents.translatable("screen.openallay.observation.attach_frame"))).build());
     }
 
@@ -221,33 +221,33 @@ public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNat
         if (!composer.getValue().equals(state.readText(session))) dev.openallay.client.gui.GuideNativeMultilineText.setValue(composer, state.readText(session), true);
         composer.setValueListener(value -> state.setText(session, value));
         composer.widget().visible = readingLayout.footerFits();
-        addRenderableWidget(composer.widget());
+        addGuideWidget(composer.widget());
         int actionY = readingLayout.actions().y();
         int actionWidth = Math.max(1, (inner - 12) / (voice != null && voice.enabled() ? 4 : 3));
-        intentAction = addRenderableWidget(OpenAllayButton.create(MinecraftComponents.empty(), button -> {
+        intentAction = addGuideWidget(OpenAllayButton.create(MinecraftComponents.empty(), button -> {
             GuideClientUiState.DraftIntent intent = state.intent(session);
             if (intent.editing()) state.resetIntent(session); // Explicit conversion never deletes text/images.
             else state.setMode(session, intent.steer() ? GuideClientUiState.DraftMode.FOLLOW_UP : GuideClientUiState.DraftMode.STEER);
             project();
         }).bounds(card.x() + Math.max(8, card.width() - 120), card.y() + 5, Math.min(112, inner), 18).build());
-        send = addRenderableWidget(OpenAllayButton.create(MinecraftComponents.translatable("screen.openallay.action.send"), button -> submit())
+        send = addGuideWidget(OpenAllayButton.create(MinecraftComponents.translatable("screen.openallay.action.send"), button -> submit())
                 .bounds(card.x() + 8, actionY, actionWidth, 20).build());
-        stop = addRenderableWidget(OpenAllayButton.create(MinecraftComponents.translatable("screen.openallay.action.stop"), button -> {
+        stop = addGuideWidget(OpenAllayButton.create(MinecraftComponents.translatable("screen.openallay.action.stop"), button -> {
             state.stopIntent(session);
             service.cancel();
         })
                 .bounds(card.x() + 12 + actionWidth, actionY, actionWidth, 20).build());
-        addRenderableWidget(OpenAllayButton.create(MinecraftComponents.translatable("screen.openallay.hud.fullscreen"), button -> openFullscreen.run())
+        addGuideWidget(OpenAllayButton.create(MinecraftComponents.translatable("screen.openallay.hud.fullscreen"), button -> openFullscreen.run())
                 .bounds(card.x() + 16 + actionWidth * 2, actionY, actionWidth, 20).build());
-        if (voice != null && voice.enabled()) mic = addRenderableWidget(OpenAllayButton.create(
+        if (voice != null && voice.enabled()) mic = addGuideWidget(OpenAllayButton.create(
                 MinecraftComponents.translatable("screen.openallay.voice.mic"), button -> { micHeld = true; voice.pressExternalPtt(); })
                 .bounds(card.x() + 20 + actionWidth * 3, actionY, actionWidth, 20).build());
-        back = addRenderableWidget(OpenAllayButton.create(MinecraftComponents.translatable("screen.openallay.hud.back_results"), button -> {
+        back = addGuideWidget(OpenAllayButton.create(MinecraftComponents.translatable("screen.openallay.hud.back_results"), button -> {
             results.back(); project();
         }).bounds(card.x() + 8, readingLayout.navigation().y(), Math.min(112, inner / 2), 14).build());
-        latest = addRenderableWidget(OpenAllayButton.create(MinecraftComponents.translatable("screen.openallay.hud.latest"), button -> scrollResults(() -> results.scroll().latest()))
+        latest = addGuideWidget(OpenAllayButton.create(MinecraftComponents.translatable("screen.openallay.hud.latest"), button -> scrollResults(() -> results.scroll().latest()))
                 .bounds(card.x() + card.width() - 106, readingLayout.navigation().y(), 98, 14).build());
-        voiceDrafts = addRenderableWidget(OpenAllayButton.create(MinecraftComponents.empty(), button -> openFullscreen.run())
+        voiceDrafts = addGuideWidget(OpenAllayButton.create(MinecraftComponents.empty(), button -> openFullscreen.run())
                 .bounds(card.x() + 8 + inner / 3, readingLayout.navigation().y(), Math.max(1, inner / 3 - 4), 14).build());
         voiceDrafts.visible = false;
         dev.openallay.client.gui.GuideNativeWidgetTooltips.set(voiceDrafts, GuideTooltip.create(MinecraftComponents.translatable("screen.openallay.hud.voice_drafts.description")));

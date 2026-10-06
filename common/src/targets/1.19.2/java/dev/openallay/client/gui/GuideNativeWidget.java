@@ -14,7 +14,7 @@ public abstract class GuideNativeWidget extends AbstractWidget implements GuideN
     public final int getY() { return y; }
     public final void setX(int x) { this.x = x; }
     public final void setY(int y) { this.y = y; }
-    public final boolean isHovered() { return isHovered; }
+    public final boolean isGuideHovered() { return isHovered; }
     public final void setTooltip(GuideTooltip tooltip) { guideTooltip = tooltip; }
     @Override public final void renderButton(PoseStack pose, int mouseX, int mouseY, float delta) {
         GuideGraphics guide = GuideGraphics.wrap(pose);
@@ -25,8 +25,8 @@ public abstract class GuideNativeWidget extends AbstractWidget implements GuideN
     }
     protected abstract void paintGuideWidget(GuideGraphics graphics, int mouseX, int mouseY, float delta);
     @Override public final void updateNarration(NarrationElementOutput output) {
-        narrateGuideWidget(output);
+        narrateGuideWidget((part, text) -> output.add(NarratedElementType.valueOf(part.name()), text));
         if (guideTooltip != null) output.add(NarratedElementType.HINT, guideTooltip.text());
     }
-    protected abstract void narrateGuideWidget(NarrationElementOutput output);
+    protected abstract void narrateGuideWidget(GuideNarration output);
 }

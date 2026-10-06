@@ -19,14 +19,14 @@ public final class OpenAllayButton extends GuideNativeButton {
             int width,
             int height,
             Component message,
-            OnPress onPress,
+            java.util.function.Consumer<OpenAllayButton> onPress,
             GuideButtonNarration createNarration,
             boolean selected) {
         super(x, y, width, height, message, onPress, createNarration);
         this.selected = selected;
     }
 
-    public static Builder create(Component message, OnPress onPress) {
+    public static Builder create(Component message, java.util.function.Consumer<OpenAllayButton> onPress) {
         return new Builder(message, onPress);
     }
 
@@ -45,7 +45,7 @@ public final class OpenAllayButton extends GuideNativeButton {
             int mouseY,
             float partialTick) {
         OpenAllayWidgetTheme.ButtonVisualState state = OpenAllayWidgetTheme.buttonState(
-                active, isHovered(), isFocused(), selected);
+                active, isGuideHovered(), isFocused(), selected);
         OpenAllayWidgetTheme.ButtonColors colors = OpenAllayWidgetTheme.buttonColors(state);
         int x = getX();
         int y = getY();
@@ -78,7 +78,7 @@ public final class OpenAllayButton extends GuideNativeButton {
 
     public static final class Builder {
         private final Component message;
-        private final OnPress onPress;
+        private final java.util.function.Consumer<OpenAllayButton> onPress;
         private GuideTooltip tooltip;
         private int x;
         private int y;
@@ -87,7 +87,7 @@ public final class OpenAllayButton extends GuideNativeButton {
         private GuideButtonNarration createNarration = GuideButtonNarration.DEFAULT;
         private boolean selected;
 
-        private Builder(Component message, OnPress onPress) {
+        private Builder(Component message, java.util.function.Consumer<OpenAllayButton> onPress) {
             this.message = Objects.requireNonNull(message, "message");
             this.onPress = Objects.requireNonNull(onPress, "onPress");
         }

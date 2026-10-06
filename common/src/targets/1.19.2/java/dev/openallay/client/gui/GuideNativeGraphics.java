@@ -133,9 +133,6 @@ public class GuideNativeGraphics {
         GuidePoseItems.render(graphics, stack, x, y, 0);
     }
 
-    protected final void nativeItem(ItemStack stack, int x, int y, int seed) {
-        GuidePoseItems.render(graphics, stack, x, y, seed);
-    }
 
     protected final void nativeItemDecorations(Font font, ItemStack stack, int x, int y) {
         GuidePoseItems.decorations(graphics, font, stack, x, y, null);

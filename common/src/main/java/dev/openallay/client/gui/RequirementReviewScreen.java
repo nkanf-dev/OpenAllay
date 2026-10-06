@@ -119,14 +119,14 @@ public final class RequirementReviewScreen extends dev.openallay.client.gui.Guid
         int x = left();
         int w = panelWidth();
         int half = (w - 6) / 2;
-        Button cancel = addRenderableWidget(OpenAllayButton.create(
+        Button cancel = addGuideWidget(OpenAllayButton.create(
                         MinecraftComponents.translatable(PREFIX + "cancel"), ignored -> {
                             if (confirming == null) onClose();
                             else { confirming = null; scroll = 0; guideRebuildWidgets(); }
                         })
                 .bounds(x, height - 29, half, 20).build());
         cancel.active = !actionPending;
-        Button proceed = addRenderableWidget(OpenAllayButton.create(
+        Button proceed = addGuideWidget(OpenAllayButton.create(
                         MinecraftComponents.translatable(confirming == null
                                 ? projection().continueKey() : PREFIX + "confirm_enable"),
                         ignored -> {
@@ -196,7 +196,7 @@ public final class RequirementReviewScreen extends dev.openallay.client.gui.Guid
                             MinecraftComponents.translatable(row.kindKey()), MinecraftComponents.literal(row.id())),
                             x, y + 4, w, MUTED);
                     if (buttons) {
-                        Button enable = addRenderableWidget(OpenAllayButton.create(
+                        Button enable = addGuideWidget(OpenAllayButton.create(
                                         MinecraftComponents.translatable(PREFIX + "enable", MinecraftComponents.literal(row.id())),
                                         ignored -> requestEnable(row))
                                 .bounds(x, y + 4, w, 20).build());

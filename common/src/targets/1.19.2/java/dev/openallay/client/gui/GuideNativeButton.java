@@ -12,15 +12,15 @@ import net.minecraft.network.chat.MutableComponent;
 public abstract class GuideNativeButton extends Button implements GuideNativeTooltipAccess {
     private final GuideButtonNarration guideNarration;
     private GuideTooltip guideTooltip;
-    protected GuideNativeButton(int x, int y, int width, int height, Component title, OnPress press, GuideButtonNarration narration) {
-        super(x, y, width, height, title, press);
+    protected GuideNativeButton(int x, int y, int width, int height, Component title, java.util.function.Consumer<OpenAllayButton> press, GuideButtonNarration narration) {
+        super(x, y, width, height, title, button -> press.accept((OpenAllayButton) button));
         guideNarration = java.util.Objects.requireNonNull(narration, "narration");
     }
     public final int getX() { return x; }
     public final int getY() { return y; }
     public final void setX(int x) { this.x = x; }
     public final void setY(int y) { this.y = y; }
-    public final boolean isHovered() { return isHovered; }
+    public final boolean isGuideHovered() { return isHovered; }
     public final void setTooltip(GuideTooltip tooltip) { guideTooltip = tooltip; }
     @Override protected final MutableComponent createNarrationMessage() {
         return guideNarration.create(() -> super.createNarrationMessage());

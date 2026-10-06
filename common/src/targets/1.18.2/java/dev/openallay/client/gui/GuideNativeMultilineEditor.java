@@ -4,8 +4,6 @@ import java.util.function.Consumer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.components.AbstractWidget;
-import net.minecraft.client.gui.narration.NarratedElementType;
-import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
@@ -220,7 +218,7 @@ public final class GuideNativeMultilineEditor extends GuideNativeWidget implemen
                     y + PADDING + text.cursorLine() * lineHeight() - (int) scroll, isFocused());
         }
     }
-    @Override protected void narrateGuideWidget(NarrationElementOutput output) {
-        output.add(NarratedElementType.TITLE, getMessage().getString() + ", " + text.value());
+    @Override protected void narrateGuideWidget(GuideNarration output) {
+        output.add(GuideNarration.Part.TITLE, getMessage().getString() + ", " + text.value());
     }
 }

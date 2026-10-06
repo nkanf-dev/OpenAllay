@@ -8,6 +8,11 @@ import net.minecraft.client.gui.GuiGraphics;
 public abstract class GuideNativeScreen extends Screen {
     protected final void tickGuideWidgets() {} // Native widgets blink from elapsed time.
     protected GuideNativeScreen(Component title) { super(title); }
+    /** Register the actual native widget for both input and rendering. */
+    protected final <T extends net.minecraft.client.gui.components.AbstractWidget> T addGuideWidget(T widget) {
+        return super.addRenderableWidget(widget);
+    }
+
     /** Rebuild native children without changing the shared screen attachment. */
     protected final void guideRebuildWidgets() { super.rebuildWidgets(); }
     @Override protected final void setInitialFocus() { guideInitialFocus(); }

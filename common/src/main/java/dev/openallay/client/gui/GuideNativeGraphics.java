@@ -130,9 +130,6 @@ public class GuideNativeGraphics {
         graphics.item(stack, x, y);
     }
 
-    protected final void nativeItem(ItemStack stack, int x, int y, int seed) {
-        graphics.item(stack, x, y, seed);
-    }
 
     protected final void nativeItemDecorations(Font font, ItemStack stack, int x, int y) {
         graphics.itemDecorations(font, stack, x, y);

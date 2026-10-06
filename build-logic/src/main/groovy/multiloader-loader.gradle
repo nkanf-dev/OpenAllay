@@ -31,20 +31,9 @@ if (loaderSourceRoot != projectDir) {
         resourceRoots.add(file("src/targets/${selectedTarget}/resources"))
     }
 }
-def overridden = { element, List<File> roots ->
-    if (element.directory) return false
-    def index = roots.findIndexOf { element.file.toPath().startsWith(it.toPath()) }
-    index >= 0 && roots.drop(index + 1).any { new File(it, element.relativePath.pathString).isFile() }
-}
-sourceSets.main.java {
-    setSrcDirs(javaRoots)
-    exclude { element -> overridden(element, javaRoots) }
-}
-sourceSets.main.resources {
-    setSrcDirs(resourceRoots)
-    exclude { element -> overridden(element, resourceRoots) }
-}
-
+// The common selector delegates to the neutral implementation; loader shares that exact rule.
+commonProject.configureMinecraftSourceRoots(sourceSets.main.java, javaRoots)
+commonProject.configureMinecraftSourceRoots(sourceSets.main.resources, resourceRoots)
 
 // Share the same configured binding rule; common sources are already selected once.
 commonProject.validateSelectedMinecraftJava([sourceSets.main.allJava, commonSources.allJava])
@@ -52,6 +41,12 @@ commonProject.validateSelectedMinecraftResources([sourceSets.main.resources, com
 def loaderMixinSelection = commonProject.selectConfiguredMinecraftMixins(
         sourceSets.main.java, [sourceSets.main.resources, commonSources.resources],
         commonProject.minecraftMixinSelection)
+ext.minecraftRawJava = objects.sourceDirectorySet('minecraftRawJava', 'Selected canonical FML Java')
+commonProject.configureMinecraftSourceRoots(minecraftRawJava, javaRoots)
+minecraftRawJava.exclude { element -> !element.directory && loaderMixinSelection.excluded.contains(element.file) }
+ext.minecraftRawResources = sourceSets.main.resources
+ext.minecraftRawJavaOrigins = { commonProject.selectedMinecraftSourceOrigins(minecraftRawJava, javaRoots, project.path) }
+
 
 dependencies {
     testImplementation('com.google.code.gson:gson:2.8.0')

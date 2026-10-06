@@ -15,6 +15,11 @@ public abstract class GuideNativeScreen extends GuideNativeScreenCallbacks {
     private record PendingTooltip(List<FormattedCharSequence> lines, ClientTooltipPositioner positioner) {}
 
     protected GuideNativeScreen(Component title) { super(title); }
+    /** Register the actual native widget for both input and rendering. */
+    protected final <T extends net.minecraft.client.gui.components.AbstractWidget> T addGuideWidget(T widget) {
+        return super.addRenderableWidget(widget);
+    }
+
     /** Rebuild native children without changing the shared screen attachment. */
     protected final void guideRebuildWidgets() { super.rebuildWidgets(); }
     @Override public final void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {

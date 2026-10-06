@@ -3,7 +3,7 @@ package dev.openallay.client.context;
 import dev.openallay.client.gui.MinecraftClientWindow;
 
 import com.google.gson.JsonObject;
-import dev.openallay.client.gui.mixin.AbstractContainerScreenObservationAccessor;
+import dev.openallay.client.context.GuideNativeSlotHitTest;
 import dev.openallay.context.DataAuthority;
 import dev.openallay.context.DataCompleteness;
 import dev.openallay.context.EvidenceMetadata;
@@ -196,7 +196,7 @@ public final class ClientFocusCapture {
         if (overlay || mouseGrabbed || !(nativeScreen instanceof AbstractContainerScreen<?>)) {
             return new WorldFocusObservation.Hover(x, y, mouseGrabbed, "none", -1, -1, null, "");
         }
-        if (!(nativeScreen instanceof AbstractContainerScreenObservationAccessor accessor)) {
+        if (!(nativeScreen instanceof GuideNativeSlotHitTest accessor)) {
             return new WorldFocusObservation.Hover(
                     x, y, mouseGrabbed, "unavailable", -1, -1, null, "native_hover_invoker_unavailable");
         }

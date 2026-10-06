@@ -129,9 +129,6 @@ public class GuideNativeGraphics {
         graphics.renderItem(stack, x, y);
     }
 
-    protected final void nativeItem(ItemStack stack, int x, int y, int seed) {
-        graphics.renderItem(stack, x, y, seed);
-    }
 
     protected final void nativeItemDecorations(Font font, ItemStack stack, int x, int y) {
         graphics.renderItemDecorations(font, stack, x, y);

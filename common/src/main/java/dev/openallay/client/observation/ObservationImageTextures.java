@@ -76,7 +76,7 @@ public final class ObservationImageTextures implements AutoCloseable {
                             MinecraftImageTextures.register(client.getTextureManager(), texture, () -> "OpenAllay observation", image);
                             loading.texture = texture;
                         } catch (RuntimeException rejected) {
-                            image.close();
+                            if (!(rejected instanceof GuideImageRegistrationException)) image.close();
                             loading.failed = true;
                         }
                     });

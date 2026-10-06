@@ -15,14 +15,14 @@ public final class GuideNativeInput {
     public static GuideInputKey keyEvent(int key, int modifiers) { return capture(key, 0, modifiers); }
     public static GuideInputKey capture(int key, int scancode, int modifiers) {
         return new GuideInputKey(key, scancode, key, modifiers,
-                key == InputConstants.KEY_RETURN || key == InputConstants.KEY_NUMPADENTER || key == InputConstants.KEY_SPACE,
+                key == dev.openallay.client.gui.GuideInputCodes.KEY_RETURN || key == dev.openallay.client.gui.GuideInputCodes.KEY_NUMPADENTER || key == dev.openallay.client.gui.GuideInputCodes.KEY_SPACE,
                 Screen.hasShiftDown(), Screen.hasControlDown(), Screen.isPaste(key),
-                Screen.isCopy(key), Screen.isCut(key), key == InputConstants.KEY_ESCAPE);
+                Screen.isCopy(key), Screen.isCut(key), key == dev.openallay.client.gui.GuideInputCodes.KEY_ESCAPE);
     }
     public static GuideInputCharacter characterEvent(int codePoint) { return new GuideInputCharacter(codePoint, 0); }
     public static GuideInputCharacter capture(char character, int modifiers) { return new GuideInputCharacter(character, modifiers); }
     public static GuideInputMouse mouseEvent(double x, double y, int button, int modifiers) {
-        return new GuideInputMouse(x, y, button, modifiers, button == InputConstants.MOUSE_BUTTON_LEFT);
+        return new GuideInputMouse(x, y, button, modifiers, button == dev.openallay.client.gui.GuideInputCodes.MOUSE_BUTTON_LEFT);
     }
     public static GuideInputMouse capture(double x, double y, int button) { return mouseEvent(x, y, button, 0); }
     public static boolean controlDown(GuideInputKey event) { return event.controlDown(); }

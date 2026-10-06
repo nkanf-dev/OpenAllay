@@ -1,0 +1,400 @@
+import groovy.json.JsonSlurper
+import groovy.json.JsonOutput
+import java.security.MessageDigest
+import java.util.zip.ZipFile
+import org.gradle.api.tasks.PathSensitivity
+
+plugins {
+    id 'java'
+    id 'net.minecraftforge.gradle' version '6.0.54'
+}
+if (gradle.gradleVersion != '8.4' || Runtime.version().feature() != 17) {
+    throw new GradleException('Native build uses exact Gradle8.4 daemon JDK17')
+}
+def request = gradle.ext.nativeBuildRequest
+def source = file(request.sourceRoot).canonicalFile
+def parse = { String path -> new JsonSlurper().parse(file(path)) }
+def closure = parse(request.closureSpec)
+def plan = parse(request.sourceSelectionPlan)
+def mappings = parse(request.mappingInputs)
+if (mappings.keySet() != (['client','server','tsrg'] as Set) || mappings.values().any {
+    !(it instanceof Map) || it.keySet() != (['path','sha256'] as Set) ||
+    !(it.path instanceof String) || !new File(it.path).isAbsolute() || !(it.sha256 ==~ /[0-9a-f]{64}/)
+}) throw new GradleException('Exact mapping input identity required')
+def ancestors = ['1.21.11', '1.21.10', '1.21.8', '1.21.6', '1.21.5', '1.21.4',
+        '1.21.3', '1.21.1', '1.20.6', '1.20.4', '1.20.3', '1.20.2', '1.20.1', '1.19.2', '1.18.2']
+if (plan.keySet() != (['minecraft', 'forge', 'forgeGradle', 'gradle', 'sourceFamilies',
+        'actualMcpUnits', 'sourceSyntax', 'preview'] as Set) ||
+        plan.minecraft != '1.16.5' || plan.forge != '1.16.5-36.2.42' ||
+        plan.forgeGradle != '6.0.54' || plan.gradle != '8.4' || plan.sourceFamilies != ancestors ||
+        !(plan.actualMcpUnits instanceof List) || plan.actualMcpUnits.toSet().size() != plan.actualMcpUnits.size() ||
+        plan.sourceSyntax != '17' || plan.preview != false) {
+    throw new GradleException('Private exact tuple/source selection plan differs')
+}
+if (closure.keySet() != (['sourceRevision', 'artifacts', 'resolution'] as Set) ||
+        !(closure.artifacts instanceof List) || closure.artifacts.size() != 18 ||
+        closure.artifacts.collect { it.role }.toSet().size() != 18) {
+    throw new GradleException('Retained current component closure must have18 unique explicit roles')
+}
+def roles = closure.artifacts.collectEntries { [(it.role): it] }
+def requiredRoles = ['engine','sdk','rhino','builder','json-proof','maven-proof','gson','guava',
+        'failureaccess','listenablefuture','commonmark','tables','jtokkit','sqlite',
+        'jsr305','checkerqual','errorprone','j2objc'] as Set
+if (roles.keySet() != requiredRoles) throw new GradleException('Retained closure role set differs')
+// Root-reviewed immutable artifact records, not guessed file basenames or a newly resolved release.
+def compileRoles = ['engine', 'sdk', 'rhino', 'commonmark', 'tables', 'jtokkit']
+def product = new Properties()
+new File(source, 'gradle.properties').withInputStream { product.load(it) }
+version = product.getProperty('version')
+if (version != '0.4.3') throw new GradleException('Current product pin required')
+group = product.getProperty('group')
+base { archivesName = 'openallay-forge-1.16.5-native' }
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(17)
+}
+repositories {
+    mavenCentral()
+    maven { url = 'https://maven.blamejared.com' }
+    maven { url = 'https://maven.shedaniel.me' }
+}
+dependencies {
+    minecraft 'net.minecraftforge:forge:1.16.5-36.2.42'
+    compileOnly files(compileRoles.collect { file(roles[it].path) })
+    compileOnly('mezz.jei:jei-1.16.5:7.8.1.1018:api') { transitive = false }
+    compileOnly('me.shedaniel:RoughlyEnoughItems-api-forge:6.5.436') { transitive = false }
+    compileOnly('me.shedaniel:architectury-forge:1.32.68') { transitive = false }
+    annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
+}
+apply from: new File(source, 'gradle/minecraft-source-selection.gradle')
+def rootGroups = ['common': 'common', 'adapter': 'adapters/minecraft', 'fml': 'neoforge']
+def roots = [:]
+rootGroups.each { owner, path ->
+    ['java','resources'].each { kind ->
+        def ordered = [new File(source, "${path}/src/main/${kind}")]
+        ordered.addAll(ancestors.collect { new File(source, "${path}/src/targets/${it}/${kind}") })
+        ordered.add(new File(source, "${path}/src/targets/1.16.5/${kind}"))
+        if (owner == 'fml') {
+            ordered.addAll(ancestors.collect { new File(source, "forge/src/targets/${it}/${kind}") })
+            ordered.add(new File(source, "forge/src/targets/1.16.5/${kind}"))
+        }
+        roots[owner + ':' + kind] = ordered
+    }
+}
+int selectionId = 0
+def select = {
+    int id = selectionId++
+    def sets = roots.collectEntries { key, ordered ->
+        def set = objects.sourceDirectorySet("raw${id}-${key}", key)
+        if (key.endsWith(':java')) set.include('**/*.java')
+        configureMinecraftSourceRoots(set, ordered)
+        // Actual external descriptor exclusion, not a mod identity or source alias.
+        if (key == 'fml:resources') set.exclude('META-INF/neoforge.mods.toml')
+        [(key):set]
+    }
+    def javaSets = rootGroups.keySet().collect { sets[it + ':java'] }
+    def resourceSets = rootGroups.keySet().collect { sets[it + ':resources'] }
+    validateSelectedMinecraftJava(javaSets)
+    validateSelectedMinecraftResources(resourceSets)
+    def commonMixins = selectConfiguredMinecraftMixins(sets['common:java'], [sets['common:resources']])
+    def fmlMixins = selectConfiguredMinecraftMixins(sets['fml:java'],
+            [sets['fml:resources'],sets['common:resources']], commonMixins)
+    def adapterMixins = selectConfiguredMinecraftMixins(sets['adapter:java'], [sets['adapter:resources']])
+    validateSelectedMinecraftJava(javaSets)
+    validateSelectedMinecraftResources(resourceSets)
+    def javaOrigins = rootGroups.keySet().collectMany {
+        selectedMinecraftSourceOrigins(sets[it + ':java'], roots[it + ':java'], it)
+    }.sort { it.logicalPath }
+    def resourceOrigins = rootGroups.keySet().collectMany {
+        selectedMinecraftSourceOrigins(sets[it + ':resources'], roots[it + ':resources'], it)
+    }.sort { it.logicalPath }
+    [java:javaOrigins, resources:resourceOrigins, javaSets:javaSets, resourceSets:resourceSets,
+     rawJava:(commonMixins.rawJava + fmlMixins.rawJava + adapterMixins.rawJava).unique()]
+}
+def selected = select()
+def generatedJava = layout.buildDirectory.dir('generated/sources/minecraft-class-namespace/main/java')
+def namespaceReceipt = layout.buildDirectory.file('namespace/receipt.json')
+def unitPlan = layout.buildDirectory.file('namespace/units.tsv')
+def symbolPlan = layout.buildDirectory.file('namespace/symbol-units.tsv')
+def classpathPlan = layout.buildDirectory.file('namespace/classpath-paths.txt')
+def selectionReceipt = layout.buildDirectory.file('namespace/source-selection.json')
+def sha = { File file ->
+    def hash = MessageDigest.getInstance('SHA-256')
+    file.withInputStream { stream ->
+        byte[] buffer = new byte[65536]; int count
+        while ((count = stream.read(buffer)) != -1) hash.update(buffer,0,count)
+    }
+    hash.digest().encodeHex().toString()
+}
+def jsonWrite = { File file, Object value ->
+    file.parentFile.mkdirs()
+    file.setText(JsonOutput.prettyPrint(JsonOutput.toJson(value)) + '\n','UTF-8')
+}
+// Root freezes actual FG compile/AP resolution hashes before this native compile is admitted.
+// Lock shape: configurations.{compileClasspath,annotationProcessor} -> records
+// with exact keys coordinate/classifier/extension/sha256. No arbitrary hash from a declaration-only run.
+def proposedLock = layout.buildDirectory.file('native-tooling/compiler-input-lock.proposed.json')
+def toolingClasspathPlan = layout.buildDirectory.file('native-tooling/classpath-paths.txt')
+def exportTooling = tasks.register('exportNativeToolingInputs') {
+    // This task inspects resolved normal artifacts only. It never compiles native Java.
+    inputs.files(configurations.compileClasspath,configurations.annotationProcessor)
+    outputs.files(proposedLock,toolingClasspathPlan)
+    doLast {
+        def records = ['compileClasspath','annotationProcessor'].collectEntries { name ->
+            def values = configurations.getByName(name).resolvedConfiguration.resolvedArtifacts.collect { artifact ->
+                def id = artifact.moduleVersion.id
+                [coordinate:"${id.group}:${id.name}:${id.version}".toString(),classifier:artifact.classifier ?: '',
+                 extension:artifact.extension,sha256:sha(artifact.file)]
+            }.sort { JsonOutput.toJson(it.sort()) }
+            [(name):values]
+        }
+        jsonWrite(proposedLock.get().asFile,[configurations:records])
+        toolingClasspathPlan.get().asFile.parentFile.mkdirs()
+        def paths = configurations.compileClasspath.files.collect { file ->
+            if (!file.isFile()) throw new GradleException('Actual metadata classpath must have no source-owned output dirs')
+            file.absolutePath
+        }.sort()
+        toolingClasspathPlan.get().asFile.setText(paths.join('\n') + '\n','UTF-8')
+    }
+}
+evaluationDependsOn(':namespace-tool')
+def tool = project(':namespace-tool')
+tasks.register('acceptNamespaceMetadata',JavaExec) {
+    dependsOn exportTooling, ':namespace-tool:classes'
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(21) }
+    classpath = tool.sourceSets.main.runtimeClasspath
+    mainClass = 'dev.openallay.build.NamespaceMetadataAcceptance'
+    inputs.file(toolingClasspathPlan)
+    inputs.files(configurations.compileClasspath)
+    outputs.file(file(request.metadataAcceptance))
+    doFirst {
+        if (file(request.metadataAcceptance).exists()) throw new GradleException('Preserve prior metadata acceptance receipt')
+        args = [toolingClasspathPlan.get().asFile,file(request.metadataAcceptance)]
+    }
+}
+def verifyCompilerInputs = tasks.register('verifyNativeCompilerInputs') {
+    inputs.files(configurations.compileClasspath, configurations.annotationProcessor)
+    inputs.files(closure.artifacts.collect { file(it.path) })
+    inputs.files(file(request.closureSpec),file(request.compilerArtifactLock))
+    outputs.upToDateWhen { false }
+    doLast {
+        closure.artifacts.each { artifact ->
+            if (artifact.keySet() != (['role','coordinate','path','sha256'] as Set) ||
+                    !new File(artifact.path).isAbsolute() || !(artifact.sha256 ==~ /[0-9a-f]{64}/) ||
+                    !file(artifact.path).isFile() || sha(file(artifact.path)) != artifact.sha256) {
+                throw new GradleException("Retained input differs: ${artifact.role}")
+            }
+        }
+        def lock = parse(request.compilerArtifactLock)
+        if (lock.keySet() != (['configurations'] as Set) ||
+                lock.configurations.keySet() != (['compileClasspath','annotationProcessor'] as Set)) {
+            throw new GradleException('Compiler lock exact fields differ')
+        }
+        ['compileClasspath','annotationProcessor'].each { name ->
+            if (!(lock.configurations[name] instanceof List) || lock.configurations[name].any {
+                !(it instanceof Map) || it.keySet() != (['coordinate','classifier','extension','sha256'] as Set) ||
+                !(it.sha256 ==~ /[0-9a-f]{64}/)
+            }) throw new GradleException('Compiler artifact lock records differ')
+            def actual = configurations.getByName(name).resolvedConfiguration.resolvedArtifacts.collect { artifact ->
+                def identity = artifact.moduleVersion.id
+                [coordinate:"${identity.group}:${identity.name}:${identity.version}".toString(),
+                 classifier:artifact.classifier ?: '',extension:artifact.extension,sha256:sha(artifact.file)]
+            }
+            def sortRecords = { records -> records.sort { JsonOutput.toJson(it.sort()) } }
+            if (sortRecords(actual) != sortRecords(lock.configurations[name])) {
+                throw new GradleException("Actual ${name} differs from root-reviewed exact compiler lock")
+            }
+        }
+        def owners = [:]
+        configurations.compileClasspath.files.each { file ->
+            if (!file.isFile()) throw new GradleException("No source-owned output on native metadata classpath: ${file}")
+            new ZipFile(file).withCloseable { zip ->
+                zip.entries().each { entry ->
+                    if (!entry.directory && entry.name.endsWith('.class') &&
+                            !entry.name.startsWith('META-INF/versions/') && entry.name != 'module-info.class') {
+                        def previous = owners.put(entry.name,file)
+                        if (previous != null && previous != file) {
+                            throw new GradleException("Competing native compile class owner: ${entry.name}: ${previous}, ${file}")
+                        }
+                    }
+                }
+            }
+        }
+        def gson = owners['com/google/gson/Gson.class']
+        def actualGson = configurations.compileClasspath.resolvedConfiguration.resolvedArtifacts.find {
+            it.moduleVersion.id.toString() == 'com.google.code.gson:gson:2.8.0'
+        }
+        if (actualGson == null || gson != actualGson.file || compileRoles.any { file(roles[it].path) == gson }) {
+            throw new GradleException('Actual game-owned Gson2.8.0 compile identity required')
+        }
+    }
+}
+def writePlans = tasks.register('writeNativeSourcePlan') {
+    dependsOn verifyCompilerInputs
+    inputs.file(gradle.ext.nativeBuildRequestFile)
+    inputs.files(file(request.sourceSelectionPlan),file(request.mappingInputs),file(request.metadataAcceptance))
+    inputs.files(new File(source,'gradle/minecraft-source-selection.gradle'))
+    inputs.files(roots.values().flatten().collect { fileTree(it) }).withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.files(configurations.compileClasspath)
+    outputs.files(unitPlan,symbolPlan,classpathPlan,selectionReceipt)
+    outputs.upToDateWhen { false }
+    doLast {
+        def current = select()
+        def originKey = { origins -> origins.collect { [it.owner,it.logicalPath,it.file.canonicalPath] } }
+        if (originKey(current.java) != originKey(selected.java) || originKey(current.resources) != originKey(selected.resources)) {
+            throw new GradleException('Raw selection changed since task configuration; retry from current committed input')
+        }
+        def git = { args -> providers.exec { commandLine(['git','-C',source] + args) }.standardOutput.asText.get().trim() }
+        if (git(['rev-parse','HEAD']) != request.sourceRevision ||
+                !git(['status','--porcelain','--untracked-files=all','--','common','adapters/minecraft','neoforge','forge',
+                      'gradle/minecraft-source-selection.gradle','build-logic/src/main/java','gradle.properties','LICENSE']).empty) {
+            throw new GradleException('Canonical native inputs must match clean committed sourceRevision')
+        }
+        def required = ['pack.mcmeta','openallay.client.mixins.json','META-INF/mods.toml',
+            'dev/openallay/adapter/minecraft/v26_2/world/material-palette-inputs.json']
+        required.each { path ->
+            def origin = current.resources.findAll { it.logicalPath == path }
+            if (origin.size() != 1 || !origin[0].file.toPath().toString().contains('/src/targets/1.16.5/resources/')) {
+                throw new GradleException("Exact16 resource leaf required: ${path}")
+            }
+        }
+        if (plan.actualMcpUnits.any { path -> !current.java.any {
+                    source.toPath().relativize(it.file.toPath()).toString() == path } }) {
+            throw new GradleException('ACTUAL_MCP disposition names an unselected source')
+        }
+        unitPlan.get().asFile.parentFile.mkdirs()
+        unitPlan.get().asFile.setText(current.java.collect { origin ->
+            def path = source.toPath().relativize(origin.file.toPath()).toString()
+            def mode = plan.actualMcpUnits.contains(path) ? 'ACTUAL_MCP' : 'MOJANG_CANONICAL'
+            if ([origin.owner,origin.logicalPath,origin.file.absolutePath].any { it.contains('\t') || it.contains('\n') || it.contains('\r') }) {
+                throw new GradleException('Source origin cannot be represented in exact TSV')
+            }
+            [origin.owner,origin.logicalPath,mode,origin.file.absolutePath].join('\t')
+        }.join('\n') + '\n','UTF-8')
+        symbolPlan.get().asFile.setText('','UTF-8')
+        classpathPlan.get().asFile.setText(configurations.compileClasspath.files.collect { it.absolutePath }.sort().join('\n') + '\n','UTF-8')
+        jsonWrite(selectionReceipt.get().asFile,[sourceRevision:request.sourceRevision,tuple:plan,
+                java:current.java.collect { [owner:it.owner,path:it.logicalPath,
+                    origin:source.toPath().relativize(it.file.toPath()).toString(),sha256:sha(it.file)] },
+                resources:current.resources.collect { [owner:it.owner,path:it.logicalPath,
+                    origin:source.toPath().relativize(it.file.toPath()).toString(),sha256:sha(it.file)] }])
+    }
+}
+def normalize = tasks.register('normalizeMinecraftClassNamespace', JavaExec) {
+    dependsOn writePlans, ':namespace-tool:classes'
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(21) }
+    classpath = tool.sourceSets.main.runtimeClasspath
+    mainClass = 'dev.openallay.build.MinecraftClassNamespaceProducerMain'
+    inputs.files(unitPlan,symbolPlan,classpathPlan,file(request.mappingInputs),file(request.metadataAcceptance))
+    inputs.files(mappings.values().collect { file(it.path) })
+    inputs.files(selected.java.collect { it.file }).withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.files(configurations.compileClasspath)
+    inputs.property('toolingJdk',javaLauncher.map { it.metadata.installationPath.asFile.absolutePath })
+    outputs.dir(generatedJava)
+    outputs.file(namespaceReceipt)
+    doFirst {
+        args = ['--units',unitPlan.get().asFile,'--symbol-units',symbolPlan.get().asFile,
+            '--client',file(mappings.client.path),'--client-sha256',mappings.client.sha256,
+            '--server',file(mappings.server.path),'--server-sha256',mappings.server.sha256,
+            '--tsrg',file(mappings.tsrg.path),'--tsrg-sha256',mappings.tsrg.sha256,
+            '--classpath',classpathPlan.get().asFile,'--source',plan.sourceSyntax,
+            '--preview',plan.preview.toString(),'--metadata-acceptance',file(request.metadataAcceptance),
+            '--output',generatedJava.get().asFile,'--receipt',namespaceReceipt.get().asFile]
+    }
+}
+sourceSets.main.java.setSrcDirs([files(generatedJava).builtBy(normalize)])
+sourceSets.main.resources.setSrcDirs([])
+// Resources stay on the raw channel. No namespace rewrite or per-build Builder rebuild.
+minecraft { mappings channel:'official', version:'1.16.5' }
+// Current16 leaves need no AT. Reject an unreviewed native binding resource explicitly.
+if (selected.resources.any { it.logicalPath in ['META-INF/accesstransformer.cfg','openallay.accesswidener'] }) {
+    throw new GradleException('AT/access-widener binding needs explicit target review before this tuple consumes it')
+}
+def nativeMappings = tasks.named('createMcpToSrg').flatMap { it.output }
+def apRefmap = layout.buildDirectory.file('native-ap/openallay.refmap.json')
+def apMappings = layout.buildDirectory.file('native-ap/mixins.tsrg')
+tasks.named('compileJava',JavaCompile) {
+    dependsOn normalize,verifyCompilerInputs,tasks.named('createMcpToSrg')
+    javaCompiler = javaToolchains.compilerFor { languageVersion = JavaLanguageVersion.of(17) }
+    options.release = 17
+    options.encoding = 'UTF-8'
+    inputs.file(nativeMappings)
+    outputs.files(apRefmap,apMappings)
+    doFirst {
+        apRefmap.get().asFile.parentFile.mkdirs()
+        apRefmap.get().asFile.delete(); apMappings.get().asFile.delete()
+        options.compilerArgs.addAll([
+            "-AreobfTsrgFile=${nativeMappings.get().asFile}",
+            "-AoutTsrgFile=${apMappings.get().asFile}",
+            "-AoutRefMapFile=${apRefmap.get().asFile}",
+            '-AmappingTypes=tsrg','-AdefaultObfuscationEnv=searge'])
+    }
+}
+tasks.named('processResources',ProcessResources) {
+    dependsOn writePlans
+    from(selected.resourceSets)
+    duplicatesStrategy = DuplicatesStrategy.FAIL
+    def props = ['version':version,'mod_name':product.getProperty('mod_name'),
+        'mod_id':product.getProperty('mod_id'),'mod_author':product.getProperty('mod_author'),
+        'license':product.getProperty('license'),'description':product.getProperty('description'),
+        'minecraft_version_range':'[1.16.5]','forge_native_version':'36.2.42',
+        'forge_loader_version_range':'[36,)','java_version':'17']
+    inputs.properties(props)
+    filesMatching(['META-INF/mods.toml','pack.mcmeta','*.mixins.json']) { expand(props) }
+}
+tasks.named('jar',Jar) {
+    dependsOn tasks.named('compileJava')
+    from(apRefmap)
+    from(new File(source,'LICENSE')) { rename { 'LICENSE_OpenAllay' } }
+    manifest.attributes('FMLModType':'MOD','MixinConfigs':selected.resources.findAll { it.logicalPath.endsWith('.mixins.json') }.collect { it.logicalPath }.sort().join(','))
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
+    duplicatesStrategy = DuplicatesStrategy.FAIL
+    // FG reobfuscates this archive in place. Recreate raw jar cheaply before every reobf pair.
+    outputs.upToDateWhen { false }
+    doFirst {
+        if (!apRefmap.get().asFile.isFile() || !apMappings.get().asFile.isFile()) {
+            throw new GradleException('Normal Mixin AP refmap/TSRG outputs required')
+        }
+    }
+}
+tasks.register('canonicalSourcesJar',Jar) {
+    dependsOn writePlans
+    archiveClassifier = 'sources'
+    // One canonical navigation/source view; no generated duplicate FQNs.
+    from(selected.javaSets)
+    from(selected.resourceSets)
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
+    duplicatesStrategy = DuplicatesStrategy.FAIL
+}
+def before = layout.buildDirectory.file('native-metadata/native-before-reobf.jar')
+def snapshot = tasks.register('snapshotNativeJar',Copy) {
+    dependsOn tasks.named('jar')
+    from(tasks.named('jar',Jar).flatMap { it.archiveFile })
+    into(before.map { it.asFile.parentFile })
+    rename { 'native-before-reobf.jar' }
+}
+// FG registers normal reobfJar after evaluation. Never look it up eagerly.
+tasks.matching { it.name == 'reobfJar' }.configureEach {
+    dependsOn snapshot
+    extraMappings.from(apMappings)
+}
+tasks.register('emitNativeBuildMetadata') {
+    dependsOn 'reobfJar'
+    outputs.file(layout.buildDirectory.file('native-metadata/build.json'))
+    // Normal FG reobf replaces native bytes in place; always refresh their cheap custody receipt.
+    outputs.upToDateWhen { false }
+    doLast {
+        def after = tasks.named('jar',Jar).get().archiveFile.get().asFile
+        jsonWrite(layout.buildDirectory.file('native-metadata/build.json').get().asFile,
+            [sourceRevision:request.sourceRevision,minecraft:'1.16.5',forge:'36.2.42',forgeGradle:'6.0.54',
+             gradle:gradle.gradleVersion,daemonJdk:System.getProperty('java.runtime.version'),
+             nativeCompilerRelease:17,producerToolingJdk:normalize.get().javaLauncher.get().metadata.installationPath.asFile.absolutePath,
+             before:[path:before.get().asFile.absolutePath,sha256:sha(before.get().asFile)],
+             reobf:[path:after.absolutePath,sha256:sha(after)],
+             selectionSha256:sha(selectionReceipt.get().asFile),namespaceSha256:sha(namespaceReceipt.get().asFile),
+             apRefmapSha256:sha(apRefmap.get().asFile),apMappingsSha256:sha(apMappings.get().asFile),
+             normalMappingsSha256:sha(nativeMappings.get().asFile),closureSpecSha256:sha(file(request.closureSpec)),
+             compilerLockSha256:sha(file(request.compilerArtifactLock)),sharedClosurePacked:false,gameExecuted:false])
+    }
+}

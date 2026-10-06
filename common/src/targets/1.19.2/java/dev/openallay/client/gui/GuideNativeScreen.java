@@ -8,6 +8,11 @@ public abstract class GuideNativeScreen extends GuideNativeScreenCallbacks {
     private GuideGraphics paintGraphics;
     private boolean guideAttached;
     protected GuideNativeScreen(Component title) { super(title); }
+    /** Register the actual native widget for both input and rendering. */
+    protected final <T extends net.minecraft.client.gui.components.AbstractWidget> T addGuideWidget(T widget) {
+        return super.addRenderableWidget(widget);
+    }
+
     @Override public final void render(PoseStack pose, int mouseX, int mouseY, float delta) {
         if (paintGraphics != null) throw new IllegalStateException("Screen paint is already active");
         GuideGraphics guide = GuideGraphics.wrap(pose);

@@ -78,8 +78,6 @@ import net.minecraft.ChatFormatting;
 import dev.openallay.client.gui.GuideGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.narration.NarratedElementType;
-import net.minecraft.client.gui.narration.NarrationElementOutput;
 import dev.openallay.client.gui.GuideMultilineEditor;
 import dev.openallay.client.gui.GuideTooltip;
 import dev.openallay.guide.ui.GuideEvidencePresentation;
@@ -339,23 +337,23 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         composerExtras = layout.composerExtras(hasComposerImagePreviews(), composerRequestActive(), pendingMessages().size());
         composerLayoutKey = currentComposerLayoutKey();
         GuideUiLayout.Header header = layout.header();
-        headerTitleWidget = addRenderableWidget(new HeaderTitle(title, header.title()));
+        headerTitleWidget = addGuideWidget(new HeaderTitle(title, header.title()));
         renderedTelemetryBounds = null;
         renderedTelemetryRows = 0;
         clearToolPaintReceipts();
         Component sessionsLabel = MinecraftComponents.translatable("screen.openallay.action.sessions");
         Component sessionsText = font.width(sessionsLabel) + 8 <= header.sessions().width()
                 ? sessionsLabel : MinecraftComponents.literal("≡");
-        addRenderableWidget(OpenAllayButton.create(sessionsText, button -> toggleSessions())
+        addGuideWidget(OpenAllayButton.create(sessionsText, button -> toggleSessions())
                 .bounds(header.sessions().x(), header.sessions().y(), header.sessions().width(), 20)
                 .tooltip(GuideTooltip.create(sessionsLabel))
                 .createNarration(ignored -> sessionsLabel.copy()).build());
-        addRenderableWidget(OpenAllayButton.create(MinecraftComponents.literal("⋯"), button -> overflowOpen = !overflowOpen)
+        addGuideWidget(OpenAllayButton.create(MinecraftComponents.literal("⋯"), button -> overflowOpen = !overflowOpen)
                 .bounds(header.overflow().x(), header.overflow().y(), header.overflow().width(), 20)
                 .tooltip(GuideTooltip.create(MinecraftComponents.translatable("screen.openallay.action.more")))
                 .createNarration(ignored -> MinecraftComponents.translatable("screen.openallay.action.more")).build());
         modelSelectorButton = header.model();
-        model = addRenderableWidget(OpenAllayButton.create(modelButtonLabel(), button -> {
+        model = addGuideWidget(OpenAllayButton.create(modelButtonLabel(), button -> {
                     modelSelectorOpen = !modelSelectorOpen;
                     if (modelSelectorOpen) revealSelectedModel();
                 })
@@ -363,7 +361,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
                 .createNarration(ignored -> modelButtonDescription()).build());
         dev.openallay.client.gui.GuideNativeWidgetTooltips.set(model, GuideTooltip.create(modelButtonDescription()));
         if (settingsOpener != null) {
-            addRenderableWidget(OpenAllayButton.create(
+            addGuideWidget(OpenAllayButton.create(
                             MinecraftComponents.translatable("screen.openallay.settings.short"), button -> settingsOpener.run())
                     .bounds(header.settings().x(), header.settings().y(), header.settings().width(), 20)
                     .tooltip(GuideTooltip.create(MinecraftComponents.translatable("screen.openallay.settings.title")))
@@ -384,11 +382,11 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
             draft = value;
             uiState.setText(view.selectedSession(), value);
         });
-        addRenderableWidget(composer.widget());
-        send = addRenderableWidget(OpenAllayButton.create(
+        addGuideWidget(composer.widget());
+        send = addGuideWidget(OpenAllayButton.create(
                         MinecraftComponents.translatable("screen.openallay.action.send"), button -> submit())
                 .bounds(controls.send().x(), controls.send().y(), controls.send().width(), 20).build());
-        stop = controls.stop().height() == 0 ? null : addRenderableWidget(OpenAllayButton.create(
+        stop = controls.stop().height() == 0 ? null : addGuideWidget(OpenAllayButton.create(
                         MinecraftComponents.translatable("screen.openallay.action.stop"), button -> cancel())
                 .bounds(controls.stop().x(), controls.stop().y(), controls.stop().width(), 20).build());
         if (stop != null) dev.openallay.client.gui.GuideNativeWidgetTooltips.set(stop, GuideTooltip.create(MinecraftComponents.translatable("screen.openallay.action.stop.description")));
@@ -398,7 +396,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
             GuideUiLayout.Rect action = controls.send();
             int micY = action.y() + (stop == null ? 24 : 44);
             if (micY + 18 <= layout.composer().bottom()) {
-                microphone = addRenderableWidget(OpenAllayButton.create(
+                microphone = addGuideWidget(OpenAllayButton.create(
                                 MinecraftComponents.translatable("screen.openallay.voice.mic_short"), button -> microphoneAction())
                         .bounds(action.x(), micY, action.width(), 18)
                         .tooltip(GuideTooltip.create(MinecraftComponents.translatable("screen.openallay.voice.mic"))).build());
@@ -871,8 +869,8 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         }
 
         @Override
-        protected void narrateGuideWidget(NarrationElementOutput output) {
-            output.add(NarratedElementType.TITLE, getMessage());
+        protected void narrateGuideWidget(GuideNarration output) {
+            output.add(GuideNarration.Part.TITLE, getMessage());
         }
     }
 

@@ -92,14 +92,14 @@ public final class GuideHudEditorScreen extends dev.openallay.client.gui.GuideNa
         addBodyButton("height_decrease", x, 2, 26, () -> changeSize(0, -8));
         addBodyButton("height_increase", x + w - 26, 2, 26, () -> changeSize(0, 8));
         if (form.rowVisible(3, formScroll)) {
-            addRenderableWidget(new HudSlider(x, form.rowY(3, formScroll), w, form.rowHeight(), true));
+            addGuideWidget(new HudSlider(x, form.rowY(3, formScroll), w, form.rowHeight(), true));
         }
         if (form.rowVisible(4, formScroll)) {
-            addRenderableWidget(new HudSlider(x, form.rowY(4, formScroll), w, form.rowHeight(), false));
+            addGuideWidget(new HudSlider(x, form.rowY(4, formScroll), w, form.rowHeight(), false));
         }
         int half = Math.max(0, (w - 4) / 2);
         if (form.rowVisible(5, formScroll)) {
-            addRenderableWidget(OpenAllayButton.create(enabledLabel(), button -> {
+            addGuideWidget(OpenAllayButton.create(enabledLabel(), button -> {
                         draft.update(draft.hud().withEnabled(!draft.hud().enabled()));
                         button.setMessage(enabledLabel());
                     }).bounds(x, form.rowY(5, formScroll), half, form.rowHeight()).build());
@@ -137,7 +137,7 @@ public final class GuideHudEditorScreen extends dev.openallay.client.gui.GuideNa
     }
 
     private void addButton(String key, int x, int y, int w, int h, Runnable action) {
-        addRenderableWidget(OpenAllayButton.create(label(key), button -> action.run())
+        addGuideWidget(OpenAllayButton.create(label(key), button -> action.run())
                 .bounds(x, y, w, h)
                 .tooltip(GuideTooltip.create(label(key + ".tooltip")))
                 .build());

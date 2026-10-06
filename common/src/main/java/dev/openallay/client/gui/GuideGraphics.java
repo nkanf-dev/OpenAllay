@@ -54,7 +54,6 @@ public final class GuideGraphics extends GuideNativeGraphics {
         nativeText(font, text, x, y, color, shadow);
     }
     public void item(ItemStack stack, int x, int y) { nativeItem(stack, x, y); }
-    public void item(ItemStack stack, int x, int y, int seed) { nativeItem(stack, x, y, seed); }
     public void itemDecorations(Font font, ItemStack stack, int x, int y) {
         nativeItemDecorations(font, stack, x, y);
     }
