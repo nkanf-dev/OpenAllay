@@ -19,14 +19,20 @@ public final class NeoForgeNativeServerLifecycle {
         if (starting != null) throw new IllegalStateException("Server lifecycle already registered");
         starting = java.util.Objects.requireNonNull(started);
         stopping = java.util.Objects.requireNonNull(stopped);
-        MinecraftForge.EVENT_BUS.register(new Object() {
-            @SubscribeEvent public void joined(PlayerEvent.PlayerLoggedInEvent event) {
-                if (event.player instanceof EntityPlayerMP player) joined.accept(player);
-            }
-            @SubscribeEvent public void left(PlayerEvent.PlayerLoggedOutEvent event) {
-                if (event.player instanceof EntityPlayerMP player) disconnected.accept(player);
-            }
-        });
+        MinecraftForge.EVENT_BUS.register(new PlayerListener(joined, disconnected));
+    }
+    public static final class PlayerListener {
+        private final Consumer<EntityPlayerMP> joined;
+        private final Consumer<EntityPlayerMP> disconnected;
+        PlayerListener(Consumer<EntityPlayerMP> joined, Consumer<EntityPlayerMP> disconnected) {
+            this.joined = joined; this.disconnected = disconnected;
+        }
+        @SubscribeEvent public void joined(PlayerEvent.PlayerLoggedInEvent event) {
+            if (event.player instanceof EntityPlayerMP player) joined.accept(player);
+        }
+        @SubscribeEvent public void left(PlayerEvent.PlayerLoggedOutEvent event) {
+            if (event.player instanceof EntityPlayerMP player) disconnected.accept(player);
+        }
     }
     public static void started() {
         MinecraftServer server = java.util.Objects.requireNonNull(

@@ -9,7 +9,7 @@ import net.minecraftforge.fml.common.network.FMLNetworkEvent;
 import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
 
 /** Captures the original client listener before the Netty-to-client thread handoff. */
-final class NeoForgeNativeClientPayloads {
+public final class NeoForgeNativeClientPayloads {
     private static Function<NeoForgeBridgePayloads.Packet, Runnable> receiver;
     private NeoForgeNativeClientPayloads() {}
     static void register(Function<NeoForgeBridgePayloads.Packet, Runnable> callback) {
@@ -24,12 +24,18 @@ final class NeoForgeNativeClientPayloads {
         });
     }
     static void onDisconnected(Runnable disconnected) {
-        MinecraftForge.EVENT_BUS.register(new Object() {
-            @SubscribeEvent public void disconnected(FMLNetworkEvent.ClientDisconnectionFromServerEvent event) {
-                Minecraft client = Minecraft.getMinecraft();
-                client.addScheduledTask(disconnected);
-            }
-        });
+        MinecraftForge.EVENT_BUS.register(new DisconnectListener(disconnected));
+    }
+    public static final class DisconnectListener {
+        private final Runnable disconnected;
+        DisconnectListener(Runnable disconnected) { this.disconnected = disconnected; }
+        @SubscribeEvent public void disconnected(FMLNetworkEvent.ClientDisconnectionFromServerEvent event) {
+            Minecraft client = Minecraft.getMinecraft();
+            client.addScheduledTask(() -> {
+                var current = client.getConnection();
+                if (current == null || current.getNetworkManager() == event.getManager()) disconnected.run();
+            });
+        }
     }
     static void send(NeoForgeBridgePayloads.Packet packet) { NeoForgeNativePayloadRegistration.sendToServer(packet); }
 }

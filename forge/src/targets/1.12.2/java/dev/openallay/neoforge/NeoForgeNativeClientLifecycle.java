@@ -13,14 +13,17 @@ public final class NeoForgeNativeClientLifecycle {
     private static final AtomicBoolean stopped = new AtomicBoolean();
     private NeoForgeNativeClientLifecycle() {}
     static void onStarted(Consumer<Minecraft> started) {
-        AtomicBoolean first = new AtomicBoolean(true);
-        MinecraftForge.EVENT_BUS.register(new Object() {
-            @SubscribeEvent public void ticked(TickEvent.ClientTickEvent event) {
-                if (event.phase == TickEvent.Phase.START && first.compareAndSet(true, false)) {
-                    started.accept(Minecraft.getMinecraft());
-                }
+        MinecraftForge.EVENT_BUS.register(new StartListener(started));
+    }
+    public static final class StartListener {
+        private final AtomicBoolean first = new AtomicBoolean(true);
+        private final Consumer<Minecraft> started;
+        StartListener(Consumer<Minecraft> started) { this.started = started; }
+        @SubscribeEvent public void ticked(TickEvent.ClientTickEvent event) {
+            if (event.phase == TickEvent.Phase.START && first.compareAndSet(true, false)) {
+                started.accept(Minecraft.getMinecraft());
             }
-        });
+        }
     }
     static void onStopping(Runnable callback) { stopping.add(java.util.Objects.requireNonNull(callback)); }
     public static void stopping() {
