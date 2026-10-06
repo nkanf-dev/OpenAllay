@@ -409,9 +409,12 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
             return true;
         }
         if (section == SettingsSection.UI && layout.editor().contains(mouseX, mouseY)) {
-            int maximum = Math.max(0, uiContentHeight - Math.max(1,
-                    layout.editor().height() - uiControlsInset()));
-            int next = net.minecraft.util.Mth.clamp(uiScroll - (int) Math.round(scrollY * 24), 0, maximum);
+            int viewport = Math.max(1, layout.editor().height() - uiControlsInset());
+            int maximum = Math.max(0, uiContentHeight - viewport);
+            // A wheel event must not skip the interval where a 20-pixel control is fully visible.
+            int maximumStep = Math.max(1, viewport - 20);
+            int delta = net.minecraft.util.Mth.clamp((int) Math.round(scrollY * 24), -maximumStep, maximumStep);
+            int next = net.minecraft.util.Mth.clamp(uiScroll - delta, 0, maximum);
             if (next != uiScroll) {
                 uiScroll = next;
                 guideRebuildWidgets();
