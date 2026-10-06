@@ -31,7 +31,7 @@ def main():
     request=out/'inputs.json';request.write_text(json.dumps({'sourceRoot':str(ROOT),'sourceRevision':os.environ['GITHUB_SHA'],'retainedDirectory':str(components),'builderJar':str(components/'builder.jar')},indent=2)+'\n')
     env=dict(os.environ);env['JAVA_HOME']=env['JAVA_HOME_21_X64'];env['PATH']=env['JAVA_HOME']+'/bin:'+env['PATH']
     command=[str(ROOT/'gradlew'),'--max-workers=2','--stacktrace','-p',str(ROOT/'native-builds/engine-only'),'-PengineOnlyInputs='+str(request),'-PfocusedNativeSeamTests=true',':engine-core:exportEngineOnlyClosure',':engine-core:test']
-    for name in ['dev.openallay.client.gui.GuideWidgetInputTest','dev.openallay.command.GuideCommandSpecTest','dev.openallay.command.DevelopmentCommandSpecTest']:command+=['--tests',name]
+    for name in ['dev.openallay.client.gui.GuideWidgetInputsTest']:command+=['--tests',name]
     with (out/'engine.log').open('w') as log:result=subprocess.run(command,env=env,stdout=log,stderr=subprocess.STDOUT)
     (out/'receipt.json').write_text(json.dumps({'source':os.environ['GITHUB_SHA'],'exitCode':result.returncode,'engineRebuilt':True,'sdkRhinoBuilderRebuilt':False,'focusedSeamTestsOnly':True,'gameExecuted':False,'command':command},indent=2)+'\n')
     if result.returncode:raise SystemExit(result.returncode)

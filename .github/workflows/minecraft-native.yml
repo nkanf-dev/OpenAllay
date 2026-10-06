@@ -414,6 +414,6 @@ jobs:
           path: |
             build/forge1122-changed-engine/*.json
             build/forge1122-changed-engine/*.log
-            native-builds/engine-only/engine-core/build/engine-only-closure/
+            build/forge36-shared/
             native-builds/engine-only/engine-core/build/test-results/
             native-builds/engine-only/engine-core/build/reports/tests/
