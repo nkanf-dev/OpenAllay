@@ -9,6 +9,9 @@ import subprocess
 import zipfile
 
 CLASSES = (
+    'net.minecraft.util.math.MathHelper',
+    'net.minecraft.client.gui.GuiYesNo','net.minecraft.client.gui.GuiWorldSelection',
+    'net.minecraft.client.gui.chat.NarratorChatListener','net.minecraft.client.gui.GuiSubtitleOverlay',
     'net.minecraft.entity.EntityList',
     'net.minecraft.client.resources.ResourcePackRepository',
     'net.minecraft.client.resources.IResourcePack',
