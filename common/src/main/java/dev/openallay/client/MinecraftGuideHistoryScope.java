@@ -9,7 +9,6 @@ import java.util.UUID;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.client.server.IntegratedServer;
-import net.minecraft.world.level.storage.LevelResource;
 
 /** Captures and detaches the active connection identity on the client thread. */
 public final class MinecraftGuideHistoryScope implements GuideHistoryScopeProvider {
@@ -32,7 +31,7 @@ public final class MinecraftGuideHistoryScope implements GuideHistoryScopeProvid
         IntegratedServer integrated = client.getSingleplayerServer();
         Path worldPath = integrated == null
                 ? null
-                : integrated.getWorldPath(LevelResource.ROOT);
+                : dev.openallay.platform.minecraft.MinecraftWorldSavePath.root(integrated);
         ServerData server = client.getCurrentServer();
         return detached(actor, worldPath, server == null ? null : server.ip);
     }

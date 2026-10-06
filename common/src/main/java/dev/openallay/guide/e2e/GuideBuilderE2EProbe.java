@@ -57,7 +57,7 @@ final class GuideBuilderE2EProbe {
                         || server.getWorldData().getGameType() != net.minecraft.world.level.GameType.SURVIVAL
                         || GuideProbeWorldSettings.commandsAllowed(server) || !GuideProbeWorldSettings.isFlat(server)
                         || dev.openallay.context.minecraft.MinecraftServerPlayerLevel.get(player).getSeed() != 17L
-                        || !server.getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT).toAbsolutePath().normalize()
+                        || !dev.openallay.platform.minecraft.MinecraftWorldSavePath.root(server).toAbsolutePath().normalize()
                                 .equals(client.gameDirectory.toPath().resolve("saves").resolve(world).toAbsolutePath().normalize()))
                     throw new IllegalStateException("Builder setup requires the explicitly launched disposable fixture world");
                 GuideProbeWorldSettings.prepareBuilderFixture(server, resumed);

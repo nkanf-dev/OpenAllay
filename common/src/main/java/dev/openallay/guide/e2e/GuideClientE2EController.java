@@ -473,7 +473,7 @@ public final class GuideClientE2EController {
                 || GuideProbeWorldSettings.commandsAllowed(server)
                 || server.getWorldData().getGameType() != net.minecraft.world.level.GameType.SURVIVAL
                 || !GuideProbeWorldSettings.isFlat(server)
-                || !server.getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT).toAbsolutePath().normalize()
+                || !dev.openallay.platform.minecraft.MinecraftWorldSavePath.root(server).toAbsolutePath().normalize()
                         .equals(client.gameDirectory.toPath().resolve("saves").resolve(graphicalFreshWorldName)
                                 .toAbsolutePath().normalize()))
             throw new IllegalStateException("Recipe bootstrap requires this controller's fresh isolated commands-off survival world");
