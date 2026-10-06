@@ -1,27 +1,27 @@
 {
-  "run": 37460049017,
-  "source": "966192594efc73ea389682b5690765db53011f39",
+  "run": 37465710119,
+  "source": "c943b9a52d96b908a4cb0e3e8115ae9ff15c1c64",
   "originalStatus": "success",
   "artifact": {
-    "id": 11412670735,
-    "node_id": "MDg6QXJ0aWZhY3QxMTQxMjY3MDczNQ==",
-    "name": "forge16165-native-966192594efc73ea389682b5690765db53011f39",
-    "size_in_bytes": 4875094,
-    "url": "https://api.github.com/repos/nkanf-dev/OpenAllay/actions/artifacts/11412670735",
-    "archive_download_url": "https://api.github.com/repos/nkanf-dev/OpenAllay/actions/artifacts/11412670735/zip",
+    "id": 11414900293,
+    "node_id": "MDg6QXJ0aWZhY3QxMTQxNDkwMDI5Mw==",
+    "name": "forge16165-native-c943b9a52d96b908a4cb0e3e8115ae9ff15c1c64",
+    "size_in_bytes": 4875283,
+    "url": "https://api.github.com/repos/nkanf-dev/OpenAllay/actions/artifacts/11414900293",
+    "archive_download_url": "https://api.github.com/repos/nkanf-dev/OpenAllay/actions/artifacts/11414900293/zip",
     "expired": false,
-    "digest": "sha256:5655e7891dcd106b255e4986659045a8b10344094b254668d93555bc1913edcb",
-    "created_at": "2026-10-06T12:00:21Z",
-    "updated_at": "2026-10-06T12:00:21Z",
-    "expires_at": "2026-11-05T12:00:20Z",
+    "digest": "sha256:0b5c561c9a9b64b62a0c4461950bfd60b7af1b579197f0156b21f1239087cdea",
+    "created_at": "2026-10-06T12:47:43Z",
+    "updated_at": "2026-10-06T12:47:43Z",
+    "expires_at": "2026-11-05T12:47:42Z",
     "workflow_run": {
-      "id": 37460049017,
+      "id": 37465710119,
       "repository_id": 1302961354,
       "head_repository_id": 1302961354,
       "head_branch": "mc/forge16165-engine-continuation",
-      "head_sha": "966192594efc73ea389682b5690765db53011f39"
+      "head_sha": "c943b9a52d96b908a4cb0e3e8115ae9ff15c1c64"
     }
   },
-  "archiveSha256": "5655e7891dcd106b255e4986659045a8b10344094b254668d93555bc1913edcb",
-  "scope": "Confirmed normal nativecompile/AP/reobf, no runtimeclaim; packvalidates archive/pair again."
+  "archiveSha256": "0b5c561c9a9b64b62a0c4461950bfd60b7af1b579197f0156b21f1239087cdea",
+  "scope": "Normal affected native UI compile/AP/reobf; no runtime acceptance. Transport verifies archive/source/pair."
 }
