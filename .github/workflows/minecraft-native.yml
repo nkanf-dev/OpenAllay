@@ -1,6 +1,11 @@
 name: Forge16 namespace tooling and new publication ABI
 on:
   workflow_dispatch:
+    inputs:
+      mode:
+        type: choice
+        default: tooling
+        options: [tooling, engine]
 permissions:
   contents: read
 concurrency:
@@ -8,6 +13,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   focused-tooling-publication:
+    if: inputs.mode != 'engine'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
@@ -32,3 +38,39 @@ jobs:
           retention-days: 7
           if-no-files-found: error
           path: build/forge16165-focused-tooling-report/
+
+  changed-engine:
+    if: inputs.mode == 'engine'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with: {persist-credentials: false}
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with:
+          distribution: temurin
+          java-version: '21.0.10+7.0.LTS'
+      - name: Rebuild changed engine only and test custody call chains
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 -B scripts/forge16165-engine-prerequisite/build-changed-engine.py
+      - name: Retain new engine once
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: forge16165-effective-engine-${{ github.sha }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: build/forge36-shared/
+      - name: Retain focused test and producer evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: forge16165-engine-evidence-${{ github.sha }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: |
+            native-builds/engine-only/engine-core/build/test-results/
+            native-builds/engine-only/engine-core/build/reports/tests/
+            native-builds/engine-only/engine-core/build/engine-source-inputs.json
+            build/changed-engine/receipt.json
