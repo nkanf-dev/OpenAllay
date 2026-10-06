@@ -11,6 +11,7 @@ final class GuideProbeKeyBindings {
         return () -> binding.setKey(key);
     }
     static String description(KeyMapping binding) { return binding.saveString(); }
+    static boolean isKeyboard(KeyMapping binding, int key) { return InputConstants.getKey(binding.saveString()).equals(InputConstants.Type.KEYSYM.getOrCreate(key)); }
     static void keyboard(KeyMapping binding, int key) {
         binding.setKey(InputConstants.Type.KEYSYM.getOrCreate(key));
     }

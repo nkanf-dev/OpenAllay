@@ -48,7 +48,7 @@ import java.util.function.Supplier;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import dev.openallay.client.gui.GuideNativeButton;
-import net.minecraft.client.gui.components.AbstractSliderButton;
+import dev.openallay.client.gui.GuideNativeSlider;
 import net.minecraft.client.gui.components.EditBox;
 import dev.openallay.client.gui.GuideMultilineEditor;
 import net.minecraft.client.gui.screens.Screen;
@@ -854,7 +854,7 @@ final class GuideGraphicalRegressionProbe {
                 var voice = dev.openallay.client.voice.VoiceConfigStore.decode(readCurrentConfig("voice.json"));
                 require(!voice.enabled(), "Native GUI scenario must not open a microphone");
                 report.put("voiceConfig", gson.toJsonTree(voice));
-                require("key.keyboard.f8".equals(GuideProbeKeyBindings.description(OpenAllayKeyMappings.INTERACT_HUD)),
+                require(GuideProbeKeyBindings.isKeyboard(OpenAllayKeyMappings.INTERACT_HUD, dev.openallay.client.gui.GuideInputCodes.KEY_F8),
                         "Fresh native profile must retain the new F8 default without a harness override");
                 liveHeaderName = settings.snapshot().display().assistantName();
                 MinecraftClientWindow.setWindowed(client, 850, 480);
@@ -1835,8 +1835,8 @@ final class GuideGraphicalRegressionProbe {
 
     private boolean selectReplySlider(int selected) {
         String label = MinecraftComponents.translatable("screen.openallay.settings.ui.reply_lines").getString();
-        AbstractSliderButton slider = settingsScreen().children().stream()
-                .filter(AbstractSliderButton.class::isInstance).map(AbstractSliderButton.class::cast)
+        GuideNativeSlider slider = settingsScreen().children().stream()
+                .filter(GuideNativeSlider.class::isInstance).map(GuideNativeSlider.class::cast)
                 .filter(value -> value.getMessage().getString().startsWith(label + " · ")).findFirst().orElseThrow();
         if (!slider.visible) {
             settingsScreen().guideMouseScrolled(settingsScreen().width / 2.0, settingsScreen().height / 2.0, 0, -2);

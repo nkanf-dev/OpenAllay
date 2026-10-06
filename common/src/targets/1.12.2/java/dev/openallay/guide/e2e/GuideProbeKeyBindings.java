@@ -10,6 +10,7 @@ final class GuideProbeKeyBindings {
         return () -> binding.setKeyCode(key);
     }
     static String description(KeyBinding binding) { return Integer.toString(binding.getKeyCode()); }
+    static boolean isKeyboard(KeyBinding binding, int key) { return binding.getKeyCode() == key; }
     static void keyboard(KeyBinding binding, int key) { binding.setKeyCode(key); }
     static void unbind(KeyBinding binding) { binding.setKeyCode(0); }
 }
