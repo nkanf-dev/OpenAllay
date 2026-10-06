@@ -2,3 +2,4 @@ lang:zh_cn
 guiScale:2
 fullscreen:false
 maxFps:30
+pauseOnLostFocus:false
