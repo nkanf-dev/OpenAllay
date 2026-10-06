@@ -4,6 +4,11 @@ import hashlib,importlib.util,json,os,shutil,subprocess,sys,zipfile
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 NATIVE='108f61a6a64b9ae26c525a57d9b3f4873a59b2fd'
+NATIVE_RUN=37470608150
+NATIVE_ARTIFACT_ID=11416318195
+NATIVE_SHA='4da796ad863f565d3f913dabf6424b6672954a0d4f103a99347688e0db797797'
+BUILDER='fe6422454450ceb739d1174d87c681e76df1ab84'
+BUILDER_SHA='cbdeba2e7f9090241a3475fe958d819d728565dd916c121fbfac2782707eff32'
 def sha(p):return hashlib.sha256(Path(p).read_bytes()).hexdigest()
 def ref(p):return {'path':str(Path(p).resolve()),'sha256':sha(p)}
 def save(p,v):p.parent.mkdir(parents=True,exist_ok=True);p.write_text(json.dumps(v,indent=2)+'\n');return ref(p)
@@ -73,7 +78,7 @@ def main():
     work=ROOT/'build/forge16165-pack-inputs';work.mkdir(parents=True,exist_ok=False)
     source=work/'source';subprocess.run(['git','worktree','add','--detach',str(source),NATIVE],cwd=ROOT,check=True)
     enginezip=artifact(11406765949,37450040748,'7819dbea0601f1ae7ef8b9c03286b6f8a0589bb4','6d1ac947f59d983ea1b88db15d456cec3b7ddffd2b8f26320836a5b04de83802',work/'engine')
-    nativezip=artifact(11416318195,37470608150,NATIVE,'4da796ad863f565d3f913dabf6424b6672954a0d4f103a99347688e0db797797',work/'native')
+    nativezip=artifact(NATIVE_ARTIFACT_ID,NATIVE_RUN,NATIVE,NATIVE_SHA,work/'native')
     original=next((work/'engine').rglob('closure-input.json'));spec=json.loads(original.read_text());originalResolution=next((work/'engine').rglob('effective-runtime-resolution.json'))
     original_native_spec=json.loads(original.read_text())
     old_root='/home/runner/work/OpenAllay/OpenAllay/build/forge16165-native-inputs/closure'
@@ -86,14 +91,21 @@ def main():
         if sha(p)!=a['sha256']:raise ValueError('Immutable component differs')
         a['path']=str(p)
     spec['resolution']=ref(originalResolution);closure_ref=save(work/'relocated-closure.json',spec)
+    # Native compile custody stays original. Only the final raw bundled Builder changes.
+    builderzip=artifact(11417805653,37472367504,'3c38c16122e7e2cdd96866ed2b7bb29d0174304b','c675991790369c508acde001abd82e53486b820a4f3a2053cb16a4d832280e09',work/'builder-candidate')
+    candidate=work/'builder-candidate/builder-candidate.jar'
+    if sha(candidate)!=BUILDER_SHA:raise ValueError('Exact tested Builder candidate bytes required')
+    bundle=json.loads(json.dumps(spec));builder=next(a for a in bundle['artifacts'] if a['role']=='builder')
+    builder.update(path=str(candidate),sha256=BUILDER_SHA)
+    bundle_ref=save(work/'bundle-closure.json',bundle)
     resolution=next((work/'engine').rglob('raw-gradle-resolution.json'))
     builderroot=work/'builder-source';subprocess.run(['git','clone','--filter=blob:none','--no-checkout','https://github.com/nkanf-dev/OpenAllay-Extensions.git',str(builderroot)],check=True)
-    subprocess.run(['git','-C',str(builderroot),'checkout','--detach','e37eb4f325d6917b2a0b32afc47dd139a55acb83'],check=True)
-    scopes=['extensions/minecraft-builder','gradle.properties','settings.gradle','build.gradle']
+    subprocess.run(['git','-C',str(builderroot),'checkout','--detach',BUILDER],check=True)
+    scopes=['extensions/minecraft-builder']
     paths=subprocess.check_output(['git','-C',str(builderroot),'ls-files','-z','--',*scopes]).decode().split('\0');inv={p:sha(builderroot/p) for p in paths if p}
-    builder=next(a for a in spec['artifacts'] if a['role']=='builder');lock=source/'native-builds/forge16165/extensions.lock.json'
-    builderproof=save(work/'builder-source-proof.json',{'archiveSha256':builder['sha256'],'retainedSourceRevision':'e37eb4f325d6917b2a0b32afc47dd139a55acb83','lockSha256':sha(lock),'lockedSourceRevision':'e37eb4f325d6917b2a0b32afc47dd139a55acb83','retainedSourceRoot':str(builderroot),'lockedSourceRoot':str(builderroot),'sourceScopes':scopes,'retainedInputs':inv,'lockedInputs':inv})
+    lock=ROOT/'native-builds/forge16165/extensions.lock.json'
+    builderproof=save(work/'builder-source-proof.json',{'archiveSha256':builder['sha256'],'retainedSourceRevision':BUILDER,'lockSha256':sha(lock),'lockedSourceRevision':BUILDER,'retainedSourceRoot':str(builderroot),'lockedSourceRoot':str(builderroot),'sourceScopes':scopes,'retainedInputs':inv,'lockedInputs':inv})
     runtime=runtime_proof(work,source)
-    inputs=save(work/'postprocess-inputs.json',{'sourceRoot':str(source),'nativeArtifact':ref(nativezip),'rootReceipt':ref(ROOT/'native-builds/forge16165/native-compile-receipt.json'),'closureSpec':closure_ref,'closurePolicy':ref(source/'scripts/forge16165-engine-prerequisite/ownership.json'),'retainedResolution':ref(resolution),'runtimeOwnership':runtime,'builderSourceProof':builderproof,'originalClosureSpec':ref(orig_native_path)})
+    inputs=save(work/'postprocess-inputs.json',{'sourceRoot':str(source),'nativeArtifact':ref(nativezip),'rootReceipt':ref(ROOT/'native-builds/forge16165/native-compile-receipt.json'),'closureSpec':closure_ref,'closurePolicy':ref(source/'scripts/forge16165-engine-prerequisite/ownership.json'),'retainedResolution':ref(resolution),'runtimeOwnership':runtime,'builderSourceProof':builderproof,'originalClosureSpec':ref(orig_native_path),'bundleClosureSpec':bundle_ref,'builderCandidateArtifact':ref(builderzip),'distributionSourceRoot':str(ROOT)})
     output=ROOT/'build/forge16165-product';output.mkdir();subprocess.run([sys.executable,'-B',str(ROOT/'scripts/forge16165-postprocess-pack.py'),'--inputs',inputs['path'],'--work',str(work/'postprocessed'),'--output',str(output/'openallay-forge-1.16.5-0.4.3.jar'),'--receipt',str(output/'pack-receipt.json')],check=True)
 if __name__=='__main__':main()

@@ -17,6 +17,8 @@ C=pack.closure
 PREFIX='native-builds/forge16165/build/'
 NATIVE_SHA='4da796ad863f565d3f913dabf6424b6672954a0d4f103a99347688e0db797797'
 SOURCE='108f61a6a64b9ae26c525a57d9b3f4873a59b2fd'
+NATIVE_RUN=37470608150
+NATIVE_ARTIFACT_ID=11416318195
 
 def reference(path):return {'path':str(Path(path).resolve()),'sha256':C.file_sha(path)}
 def write(path,data):
@@ -29,11 +31,11 @@ def main():
     for arg in ('inputs','work','output','receipt'):parser.add_argument('--'+arg,required=True)
     args=parser.parse_args();inputs=C.json_load(args.inputs)
     C.exact(inputs,('sourceRoot','nativeArtifact','rootReceipt','closureSpec','closurePolicy','retainedResolution',
-        'runtimeOwnership','builderSourceProof','originalClosureSpec'),'postprocess inputs')
+        'runtimeOwnership','builderSourceProof','originalClosureSpec','bundleClosureSpec','builderCandidateArtifact','distributionSourceRoot'),'postprocess inputs')
     source=Path(inputs['sourceRoot']).resolve();work=Path(args.work).absolute()
     protected=[source,P,Path(__file__),args.inputs]
     for key in inputs:
-        if key!='sourceRoot':protected.append(pack.ref(inputs[key],key))
+        if key not in ('sourceRoot','distributionSourceRoot'):protected.append(pack.ref(inputs[key],key))
     pack.protect_outputs([work],protected)
     C.require(not work.exists() and work.parent.is_dir(),'New isolated postprocess directory required')
     C.require(inputs['nativeArtifact']['sha256']==NATIVE_SHA,'Exact successful native artifact')
@@ -68,6 +70,8 @@ def main():
     original_spec=C.json_load(inputs['originalClosureSpec']['path'])
     identity=lambda value:(value['sourceRevision'],sorted((a['role'],a['coordinate'],a['sha256']) for a in value['artifacts']))
     C.require(identity(original_spec)==identity(effective),'Relocated closure preserves original eighteen identities')
+    bundle=C.json_load(pack.ref(inputs['bundleClosureSpec'],'final bundle closure'))
+    pack.bundle_identity(effective,bundle)
     work.mkdir()
     refs={name:write(work/'saved'/name,data) for name,data in saved.items()}
     artifact=lambda role,name:{'role':role,'coordinate':pack.NATIVE_COORDINATE,**refs[name]}
@@ -97,14 +101,14 @@ def main():
             'sourceSha256':origin['sha256'],'javacSha256':C.sha(data)})
     resources=[{'entry':r['path'],'owner':r['owner'],'sourcePath':r['path'],'sourceSha256':r['sha256'],
         'processedSha256':C.sha(raw[r['path']])} for r in selection['resources']]
-    lockpath=source/'native-builds/forge16165/extensions.lock.json';lock=C.json_load(lockpath)
-    builder=next(a for a in effective['artifacts'] if a['role']=='builder')
+    lockpath=Path(inputs['distributionSourceRoot']).resolve()/'native-builds/forge16165/extensions.lock.json';lock=C.json_load(lockpath)
+    builder=next(a for a in bundle['artifacts'] if a['role']=='builder')
     provenance={'source':{**lock['source'],'dirty':False,'pinned':True},
         **{key:lock[key] for key in ('project','version','extensionId','openAllayApiVersion')},
         'artifact':{'path':pack.BUNDLED+Path(lock['artifact']).name,'sha256':builder['sha256']}}
     provenance_ref=json_write(work/'distribution.json',provenance)
     transport={'kind':'archived-normal-FG-build-derived-views','artifact':inputs['nativeArtifact'],
-        'run':37470608150,'artifactId':11416318195,'sourceRevision':SOURCE,'rootReceipt':inputs['rootReceipt'],
+        'run':NATIVE_RUN,'artifactId':NATIVE_ARTIFACT_ID,'sourceRevision':SOURCE,'rootReceipt':inputs['rootReceipt'],
         'originalClosureSpecSha256':metadata['closureSpecSha256'],
         'derivedGeneratedRoot':str(generated),'derivedClassRoot':str(classroot),'originalClosureSpec':inputs['originalClosureSpec']}
     transport_ref=json_write(work/'archived-transport.json',transport)
@@ -119,18 +123,20 @@ def main():
         'archivedTransport':transport_ref}
     proof_ref=json_write(work/'native-proof.json',proof)
     closure_report,_=C.scan(inputs['closureSpec']['path'],inputs['closurePolicy']['path'])
-    C.require(closure_report['status']=='READY','Effective original engine/component closure READY')
+    C.require(closure_report['status']=='READY','Original native compile engine/component closure READY')
     closure_gate=json_write(work/'closure-ready.json',closure_report)
     request={'sourceRoot':str(source),'nativeSourceRevision':SOURCE,'closureSpec':inputs['closureSpec'],
         'closurePolicy':inputs['closurePolicy'],'closureGate':closure_gate,'nativeInput':before,'nativeReobf':after,
         'nativeMetadata':refs['native-metadata/build.json'],'nativeProof':proof_ref,
         'distributionLock':reference(lockpath),'distributionProvenance':provenance_ref,
-        'builderSourceProof':inputs['builderSourceProof'],'retainedResolution':inputs['retainedResolution']}
+        'builderSourceProof':inputs['builderSourceProof'],'retainedResolution':inputs['retainedResolution'],
+        'bundleClosureSpec':inputs['bundleClosureSpec'],'builderCandidateArtifact':inputs['builderCandidateArtifact'],
+        'distributionSourceRoot':inputs['distributionSourceRoot']}
     request_path=work/'product-request.json';json_write(request_path,request)
     report,_,protected=pack.product_scan(request_path)
     gatepath=work/'product-ready.json';pack.protect_outputs([gatepath],protected)
     json_write(gatepath,report)
     packed=pack.pack(request_path,gatepath,C.file_sha(gatepath),args.output,args.receipt)
-    print('PACKED original native compile reused '+packed['outputSha256'])
+    print('PACKED original native compile reused; tested Builder candidate bundled '+packed['outputSha256'])
 
 if __name__=='__main__':main()

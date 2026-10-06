@@ -38,6 +38,14 @@ GateError = closure.GateError
 NATIVE_COORDINATE = 'dev.openallay:openallay-forge-1.16.5-native:0.4.3'
 PROVENANCE = 'META-INF/openallay/distribution.json'
 BUNDLED = 'META-INF/openallay/bundled-extensions/'
+NATIVE_SOURCE = '108f61a6a64b9ae26c525a57d9b3f4873a59b2fd'
+NATIVE_RUN = 37470608150
+NATIVE_ARTIFACT_ID = 11416318195
+NATIVE_ARTIFACT_SHA256 = '4da796ad863f565d3f913dabf6424b6672954a0d4f103a99347688e0db797797'
+BUILDER_SOURCE = 'fe6422454450ceb739d1174d87c681e76df1ab84'
+BUILDER_SHA256 = 'cbdeba2e7f9090241a3475fe958d819d728565dd916c121fbfac2782707eff32'
+BUILDER_DRIVER = '3c38c16122e7e2cdd96866ed2b7bb29d0174304b'
+BUILDER_ARTIFACT_SHA256 = 'c675991790369c508acde001abd82e53486b820a4f3a2053cb16a4d832280e09'
 IMMUTABLE_COMPONENT_LOCK_SHA256 = '42d6e579b3e6cf71411f99fe899669c94a3123ff76fcc9b71537988561b8ccb0'
 ROLES = {'engine','sdk','rhino','builder','json-proof','maven-proof','gson','guava',
     'failureaccess','listenablefuture','commonmark','tables','jtokkit','sqlite',
@@ -212,9 +220,48 @@ def checked_json(record,label):
     path=ref(record,label)
     return json_load(path)
 
+def bundle_identity(original, bundle):
+    # This is a product-only substitution, never a rewrite of native compile evidence.
+    exact(bundle,('sourceRevision','artifacts','resolution'),'final bundle closure')
+    require(bundle['sourceRevision']==original['sourceRevision'] and bundle['resolution']==original['resolution'],
+        'Final bundle preserves original engine producer/resolution')
+    fields=('role','coordinate','path','sha256')
+    old=index_records(original['artifacts'],fields,'original native compile artifact','role')
+    new=index_records(bundle['artifacts'],fields,'final bundle artifact','role')
+    require(set(old)==set(new)==ROLES,'Exact original/final eighteen roles')
+    for role in ROLES-{'builder'}:
+        require(old[role]==new[role],'Final bundle must reuse exact original artifact: '+role)
+    require(new['builder']['coordinate']==old['builder']['coordinate']
+        and new['builder']['sha256']==BUILDER_SHA256,'Only exact tested Builder role substitution')
+    return new
+
+def candidate_custody(request, builder):
+    archive=ref(request['builderCandidateArtifact'],'tested Builder candidate artifact')
+    require(request['builderCandidateArtifact']['sha256']==BUILDER_ARTIFACT_SHA256,
+        'Exact tested Builder candidate artifact checksum')
+    with zipfile.ZipFile(archive) as saved:
+        require(sorted(saved.namelist())==['builder-candidate.jar','builder-candidate.json'],
+            'Exact tested candidate artifact members')
+        raw=saved.read('builder-candidate.jar')
+        evidence=json.loads(saved.read('builder-candidate.json'),object_pairs_hook=closure.pairs)
+    exact(evidence,('source','coreRunnerSource','jarSha256','retainedSdkSha256','descriptor',
+        'sdkRebuilt','nativeExecuted'),'tested Builder candidate evidence')
+    require(evidence['source']==BUILDER_SOURCE and evidence['coreRunnerSource']==BUILDER_DRIVER
+        and evidence['jarSha256']==builder['sha256']==sha(raw)==BUILDER_SHA256
+        and evidence['retainedSdkSha256']=='53fffa91059247a6f191f6ed77d1e7e74ac78318d0122c9ff503e2fcde18590a'
+        and evidence['sdkRebuilt'] is False and evidence['nativeExecuted'] is False,
+        'Exact candidate source/driver/retained SDK custody')
+    require(Path(builder['path']).read_bytes()==raw,'Final raw Builder is original tested candidate')
+    entries=closure.archive(builder)
+    require(json.loads(entries['META-INF/openallay-extension.json'],object_pairs_hook=closure.pairs)==evidence['descriptor'],
+        'Candidate descriptor evidence/raw archive parity')
+    return {'artifactId':11417805653,'run':37472367504,'driverSource':BUILDER_DRIVER,
+        'extensionSource':BUILDER_SOURCE,'artifact':request['builderCandidateArtifact'],
+        'jarSha256':BUILDER_SHA256}
+
 def distribution(request, artifacts):
     lock_path=ref(request['distributionLock'],'source-owned private distribution lock')
-    require(lock_path==Path(request['sourceRoot']).resolve()/'native-builds/forge16165/extensions.lock.json',
+    require(lock_path==Path(request['distributionSourceRoot']).resolve()/'native-builds/forge16165/extensions.lock.json',
         'Product driver must select its actual canonical private16 lock')
     lock=json_load(lock_path)
     exact(lock,('source','project','version','extensionId','openAllayApiVersion','artifact'),'distribution lock')
@@ -225,8 +272,8 @@ def distribution(request, artifacts):
         'Exact current isolated Builder source/artifact contract')
     require(lock['version']=='0.4.0' and lock['extensionId']=='openallay:builder'
         and lock['openAllayApiVersion']=='0.4.0','Locked Builder identity')
-    require(lock['source']['revision']=='e37eb4f325d6917b2a0b32afc47dd139a55acb83',
-        'Private16 lock actual retained isolated Builder source')
+    require(lock['source']['revision']==BUILDER_SOURCE,
+        'Private16 lock exact tested Builder candidate source')
     closure.safe_name(lock['project']);closure.safe_name(lock['artifact'])
     basename=Path(lock['artifact']).name
     require(re.fullmatch(r'[A-Za-z0-9_.-]+\.jar',basename),'Raw bundled Builder filename')
@@ -247,9 +294,8 @@ def distribution(request, artifacts):
     require(isinstance(proof['sourceScopes'],list) and proof['sourceScopes']
         and len(proof['sourceScopes'])==len(set(proof['sourceScopes'])),'Explicit reviewed Builder source scopes')
     for scope in proof['sourceScopes']:closure.safe_name(scope)
-    require(lock['project'] in proof['sourceScopes'] and 'gradle.properties' in proof['sourceScopes']
-        and 'settings.gradle' in proof['sourceScopes'] and 'build.gradle' in proof['sourceScopes'],
-        'Builder whole project/root build inputs must be source-parity scopes')
+    require(proof['sourceScopes']==[lock['project']],
+        'Actual complete standalone Builder project input scope')
     def source_inventory(root_path,revision):
         root=Path(root_path).resolve()
         require(Path(root_path).is_absolute() and root.is_dir(),'Actual Builder source checkout required')
@@ -266,8 +312,11 @@ def distribution(request, artifacts):
     require(source_inventory(proof['retainedSourceRoot'],proof['retainedSourceRevision'])==proof['retainedInputs']
         and source_inventory(proof['lockedSourceRoot'],proof['lockedSourceRevision'])==proof['lockedInputs'],
         'Independently recomputed Builder committed source inventories')
-    require(isinstance(proof['retainedInputs'],dict) and proof['retainedInputs']
-        and proof['retainedInputs']==proof['lockedInputs'],'Exact retained/locked Builder source parity required')
+    require(proof['retainedSourceRevision']==proof['lockedSourceRevision']==BUILDER_SOURCE
+        and isinstance(proof['retainedInputs'],dict) and proof['retainedInputs']
+        and proof['retainedInputs']==proof['lockedInputs'],'Exact tested/locked Builder source parity required')
+    for name in ('build.gradle','settings.gradle','gradle.properties','openallay-source.lock.json','package-verification.gradle'):
+        require(lock['project']+'/'+name in proof['retainedInputs'],'Actual standalone Builder build input: '+name)
     for name,digest in proof['retainedInputs'].items():
         closure.safe_name(name);require(re.fullmatch(r'[0-9a-f]{64}',digest),'Builder source parity hash')
     entries=closure.archive(artifact)
@@ -293,11 +342,11 @@ def archived_transport(record, proof, request):
     exact(transport,('kind','artifact','run','artifactId','sourceRevision','rootReceipt','originalClosureSpecSha256',
         'derivedGeneratedRoot','derivedClassRoot','originalClosureSpec'),'archived normal build transport')
     require(transport['kind']=='archived-normal-FG-build-derived-views'
-        and transport['run']==37470608150 and transport['artifactId']==11416318195
-        and transport['sourceRevision']==request['nativeSourceRevision']=='108f61a6a64b9ae26c525a57d9b3f4873a59b2fd',
+        and transport['run']==NATIVE_RUN and transport['artifactId']==NATIVE_ARTIFACT_ID
+        and transport['sourceRevision']==request['nativeSourceRevision']==NATIVE_SOURCE,
         'Exact passed normal native source/run')
     archive_path=ref(transport['artifact'],'original uploaded native evidence')
-    require(transport['artifact']['sha256']=='4da796ad863f565d3f913dabf6424b6672954a0d4f103a99347688e0db797797',
+    require(transport['artifact']['sha256']==NATIVE_ARTIFACT_SHA256,
         'Original successful native artifact identity')
     root_receipt=checked_json(transport['rootReceipt'],'root verified successful native run receipt')
     require(root_receipt.get('run')==transport['run'] and root_receipt.get('source')==transport['sourceRevision']
@@ -565,7 +614,10 @@ def product_scan(request_path):
     request=json_load(request_path)
     exact(request,('sourceRoot','nativeSourceRevision','closureSpec','closurePolicy','closureGate',
         'nativeInput','nativeReobf','nativeMetadata','nativeProof','distributionLock',
-        'distributionProvenance','builderSourceProof','retainedResolution'),'product packing request')
+        'distributionProvenance','builderSourceProof','retainedResolution','bundleClosureSpec',
+        'builderCandidateArtifact','distributionSourceRoot'),'product packing request')
+    require(isinstance(request['distributionSourceRoot'],str) and Path(request['distributionSourceRoot']).is_absolute()
+        and Path(request['distributionSourceRoot']).is_dir(),'Actual current distribution source checkout')
     require(isinstance(request['sourceRoot'],str) and Path(request['sourceRoot']).is_absolute()
         and re.fullmatch(r'[0-9a-f]{40}',request['nativeSourceRevision']),'Canonical native source identity')
     spec_path=ref(request['closureSpec'],'retained18 closure spec')
@@ -602,6 +654,16 @@ def product_scan(request_path):
             'Retained original component identity: '+role)
     require(originals['builder']['sourceRevision']=='e37eb4f325d6917b2a0b32afc47dd139a55acb83',
         'Accepted isolated retained Builder source identity')
+    # Above validates the original native compile inputs in full, including the old Builder.
+    original_report=closure_report
+    original_spec=json_load(spec_path)
+    bundle_path=ref(request['bundleClosureSpec'],'final product bundle closure')
+    bundle=checked_json(request['bundleClosureSpec'],'final product bundle closure')
+    bundle_identity(original_spec,bundle)
+    closure_report,outputs=closure.scan(bundle_path,policy_path)
+    require(closure_report['status']=='READY','Separate final product bundle closure READY')
+    artifacts={item['role']:item for item in closure_report['artifacts']}
+    candidate=candidate_custody(request,artifacts['builder'])
     # Builder disposition in the probe scan was validated, but is not a host product output.
     outputs={name:(data,[owner for owner in owners if owner.get('role')!='builder'])
         for name,(data,owners) in outputs.items()
@@ -609,8 +671,8 @@ def product_scan(request_path):
     for record in closure_report['inventory']:
         if record['role']=='builder':record['productDisposition']='retain-only-inside-raw-bundled-Builder'
     builder_resource,raw_builder,provenance,builder_proof=distribution(request,artifacts)
-    require(builder_proof['retainedSourceRevision']==originals['builder']['sourceRevision'],
-        'Builder source proof must name actual retained isolated source')
+    require(builder_proof['retainedSourceRevision']==candidate['extensionSource'],
+        'Builder proof must name actual tested candidate source')
     native_proof,before,after,attrs=native_check(request,artifacts,closure_report)
     native_owners=[]
     for name,data in after.items():
@@ -662,7 +724,9 @@ def product_scan(request_path):
     result={'status':'READY','nativeSourceRevision':request['nativeSourceRevision'],
         'retainedClosureSourceRevision':closure_report['sourceRevision'],'requestSha256':file_sha(request_path),
         'productPackerSha256':file_sha(__file__),'closureScannerSha256':file_sha(SCANNER),
-        'closureGateSha256':request['closureGate']['sha256'],'originalArtifacts':closure_report['artifacts'],
+        'closureGateSha256':request['closureGate']['sha256'],'originalArtifacts':original_report['artifacts'],
+        'bundleClosureSpecSha256':request['bundleClosureSpec']['sha256'],'bundleArtifacts':closure_report['artifacts'],
+        'builderCandidate':candidate,
         'nativeInput':request['nativeInput'],'nativeReobf':request['nativeReobf'],
         'nativeProofSha256':request['nativeProof']['sha256'],'builderSourceProofSha256':request['builderSourceProof']['sha256'],
         'distributionLockSha256':request['distributionLock']['sha256'],'builderResource':builder_resource,
@@ -671,10 +735,10 @@ def product_scan(request_path):
         'entries':[{'name':name,'sha256':sha(data),'bytes':len(data),'major':closure.class_info(data,name) if name.endswith('.class') else None,'owners':owners}
             for name,(data,owners) in sorted(outputs.items())]}
     protected=[request_path,SCANNER,Path(__file__),immutable_path,Path(request['sourceRoot']).resolve()]
-    for field in ('closureSpec','closurePolicy','closureGate','nativeMetadata','nativeProof','distributionLock','distributionProvenance','builderSourceProof','retainedResolution'):
+    for field in ('closureSpec','closurePolicy','closureGate','nativeMetadata','nativeProof','distributionLock','distributionProvenance','builderSourceProof','retainedResolution','bundleClosureSpec','builderCandidateArtifact'):
         protected.append(request[field]['path'])
     for field in ('nativeInput','nativeReobf'):protected.append(request[field]['path'])
-    protected.extend(artifact['path'] for artifact in closure_report['artifacts'])
+    protected.extend(artifact['path'] for artifact in closure_report['artifacts']+original_report['artifacts'])
     protected.append(json_load(spec_path)['resolution']['path'])
     for field in ('selection','namespace','compilerLock','normalMappings','apMappings','runtimeOwnership','namespaceAcceptance','mappingInputs'):
         if field in native_proof:protected.append(native_proof[field]['path'])
@@ -715,7 +779,8 @@ def pack(request_path,gate,gate_sha256,output,receipt):
         again,_,_=product_scan(request_path)
         require(again==actual and file_sha(gate)==gate_sha256,'Product input changed during packing')
         result={'status':'PACKED','outputSha256':file_sha(tmp),'gateSha256':gate_sha256,'source':actual,
-            'originalComponentsPreserved':True,'rawBuilderPreserved':True,'gameExecuted':False,'supportAdmitted':False}
+            'originalNonBuilderComponentsPreserved':True,'originalNativeCompileClosurePreserved':True,
+            'testedBuilderCandidateBundled':True,'rawBuilderPreserved':True,'gameExecuted':False,'supportAdmitted':False}
         receipt_tmp,receipt_stage=stage_bytes(receipt,encoded(result),protected,finals+[tmp])
         publish_staged([(tmp,output,jar_stage),(receipt_tmp,receipt,receipt_stage)])
         return result
