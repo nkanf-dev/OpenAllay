@@ -59,7 +59,7 @@ public final class OpenAllayNeoForgeClient {
         Gson gson = dev.openallay.json.EngineJson.create();
         java.time.Clock clock = java.time.Clock.systemUTC();
         var dispatcher = (dev.openallay.client.ClientEventDispatcher)
-                client::execute;
+                event -> dev.openallay.client.gui.MinecraftClientWindow.execute(client, event);
         java.nio.file.Path configDirectory = NeoForgeNativeLoaderFacts.configDir().resolve("openallay");
         GuideDisplayRuntime display = new GuideDisplayRuntime(
                 configDirectory.resolve("display.json"));
@@ -102,7 +102,7 @@ public final class OpenAllayNeoForgeClient {
                     java.util.concurrent.CompletableFuture<
                             dev.openallay.context.ToolInvocationContext> captured =
                             new java.util.concurrent.CompletableFuture<>();
-                    client.execute(() -> {
+                    dev.openallay.client.gui.MinecraftClientWindow.execute(client, () -> {
                         if (cancellation.isCancelled() || !admitted.getAsBoolean()) {
                             captured.completeExceptionally(
                                     new dev.openallay.model.ModelClientException(
@@ -216,10 +216,10 @@ public final class OpenAllayNeoForgeClient {
                 contexts,
                 screens));
         NeoForgeNativeClientEvents.onEndTick(() -> {
-            while (OpenAllayKeyMappings.OPEN_GUIDE.consumeClick()) {
-                if (client.player != null && client.level != null
-                        && dev.openallay.client.gui.MinecraftClientWindow.screen(client) == null && dev.openallay.client.gui.MinecraftClientWindow.overlay(client) == null) {
-                    screens.open(services.forActor(client.player.getUUID()));
+            while (dev.openallay.client.gui.GuideNativeKeyMappings.consume(OpenAllayKeyMappings.OPEN_GUIDE)) {
+                if (dev.openallay.client.gui.MinecraftClientWindow.active(client)
+                        && dev.openallay.client.gui.MinecraftClientWindow.screen(client) == null && !dev.openallay.client.gui.MinecraftClientWindow.overlayPresent(client)) {
+                    screens.open(services.forActor(dev.openallay.client.gui.MinecraftClientWindow.actor(client)));
                 }
             }
             coordinator.tick();
@@ -233,7 +233,7 @@ public final class OpenAllayNeoForgeClient {
                     modVersion,
                     services,
                     gson,
-                    client::stop,
+                    () -> dev.openallay.client.gui.MinecraftClientWindow.stop(client),
                     contexts::recipeProviderReadiness,
                     settings == null ? null : settings.settings(),
                     modelRegistry == null ? null : modelRegistry::encodedTrace);
@@ -243,7 +243,7 @@ public final class OpenAllayNeoForgeClient {
                 controller.attachNativeCommandProbe(runtime, contexts);
             }
             NeoForgeNativeClientEvents.onEndTick(() -> {
-                controller.tick(client.player == null ? null : client.player.getUUID());
+                controller.tick(client.player == null ? null : dev.openallay.client.gui.MinecraftClientWindow.actor(client));
             });
         });
     }
