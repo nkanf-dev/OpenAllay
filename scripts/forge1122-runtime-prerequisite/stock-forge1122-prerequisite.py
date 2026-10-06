@@ -187,6 +187,41 @@ def classpath_libraries(metadata, root, launch):
                                     Path("/nonexistent"), allow_gradle=False)
 
 
+def prepare_launchwrapper_bridge(args, output, java, cp, runtime):
+    # Compile only this tiny Java8 agent remotely. Stock ASM5.2 is both compiler/runtime API.
+    sources = PACKET / "bridge"
+    classes = output / "bridge-classes"
+    classes.mkdir()
+    asm = next(path for name, path in cp if name == "org.ow2.asm:asm-debug-all:5.2")
+    wrapper = next(path for name, path in cp if name == "net.minecraft:launchwrapper:1.12")
+    javac = java.parent / "javac"
+    jar_tool = java.parent / "jar"
+    source_files = sorted(sources.glob("*.java"))
+    compile_command = [str(javac), "--release", "8", "-cp", str(asm), "-d", str(classes)] + [str(p) for p in source_files]
+    runtime.write_json(output / "bridge-build.json", {
+        "command": compile_command, "javaRelease": 8, "stockAsmSha256": runtime.file_hash(asm),
+        "stockLaunchWrapperSha256": runtime.file_hash(wrapper),
+        "sources": {p.name: runtime.file_hash(p) for p in source_files}})
+    with (output / "bridge-compile.log").open("w") as compile_log:
+        subprocess.run(compile_command, check=True, stdout=compile_log, stderr=subprocess.STDOUT)
+    manifest = output / "bridge-manifest.mf"
+    manifest.write_text("Manifest-Version: 1.0\nPremain-Class: dev.openallay.runtime.forge1122.LaunchWrapperJava17Bridge\n\n")
+    agent = output / "launchwrapper-java17-bridge.jar"
+    subprocess.run([str(jar_tool), "cfm", str(agent), str(manifest), "-C", str(classes), "."], check=True)
+    test_cp = os.pathsep.join([str(agent)] + [str(path) for _, path in cp])
+    test_main = "dev.openallay.runtime.forge1122.LaunchWrapperJava17BridgeTest"
+    clean_env = {k:v for k,v in os.environ.items() if k not in ("JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "_JAVA_OPTIONS")}
+    with (output / "bridge-tests.log").open("w") as log:
+        subprocess.run([str(java), "-cp", test_cp, test_main, str(wrapper)], check=True, env=clean_env,
+                       stdout=log, stderr=subprocess.STDOUT)
+        subprocess.run([str(java), "-Dopenallay.bridge.receipt=" + str(output / "bridge-constructor-test.json"),
+                        "-javaagent:" + str(agent) + "=" + str(wrapper), "-cp", test_cp,
+                        test_main, str(wrapper), "--constructor"], check=True, env=clean_env,
+                       stdout=log, stderr=subprocess.STDOUT)
+    return ["-Dopenallay.bridge.receipt=" + str(output / "bridge-runtime.json"),
+            "-javaagent:" + str(agent) + "=" + str(wrapper)]
+
+
 def boot(args, root, java, assets, runtime, launch, expected, vanilla, version):
     output = launch.safe_output(args.output, args.repo)
     runtime.require(not output.exists(), "Capture directory must be fresh")
@@ -217,11 +252,14 @@ def boot(args, root, java, assets, runtime, launch, expected, vanilla, version):
                  for item in game_args] + ["--width", "1280", "--height", "960"]
     if any("${" in item for item in game_args):
         raise ValueError("Unresolved legacy launcher argument")
+    bridge_flags = prepare_launchwrapper_bridge(args, output, java, cp, runtime) if args.launchwrapper_bridge else []
     command = [str(java), "-Xms256M", "-Xmx1536M",
-               "-Xlog:class+load=info:file=" + str(output / "class-load.log")] + jvm + [MAIN] + game_args
+               "-Xlog:class+load=info:file=" + str(output / "class-load.log")] + bridge_flags + jvm + [MAIN] + game_args
     env = {k:v for k,v in os.environ.items() if k not in ("JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "_JAVA_OPTIONS")}
     runtime.write_json(output / "launch.json", {"command": command, "classpath": classpath_receipts,
-                       "natives": native_receipts, "noMods": True, "noEngineProbe": True})
+                       "natives": native_receipts, "noMods": True, "noEngineProbe": True,
+                       "runtimeMode": "launchwrapper-url-bridge" if args.launchwrapper_bridge else "raw-stock",
+                       "publicInstrumentationAgent": args.launchwrapper_bridge})
     receipt = {"status": "running", "titleConfirmed": False, "captureSeconds": [45, 90],
                "screenshots": [], "startedAt": datetime.now(timezone.utc).isoformat()}
     log = output / "client.log"
@@ -250,8 +288,9 @@ def boot(args, root, java, assets, runtime, launch, expected, vanilla, version):
             receipt["clientLogSha256"] = sha(log)
             runtime.write_json(output / "receipt.json", receipt)
     text = log.read_text(errors="replace")
-    diagnostics = {"rawStockJava17": True, "titleConfirmed": False, "libraryReplacement": False,
-                   "customClassLoader": False, "bootstrapApplied": False,
+    diagnostics = {"rawStockJava17": not args.launchwrapper_bridge, "titleConfirmed": False, "libraryReplacement": False,
+                   "customClassLoader": False, "bootstrapApplied": args.launchwrapper_bridge,
+                   "bridgeReceipt": "bridge-runtime.json" if args.launchwrapper_bridge else None,
                    "launchWrapperAppLoaderCastFailure": "ClassCastException" in text and "URLClassLoader" in text,
                    "moduleAccessFailure": "InaccessibleObjectException" in text or "IllegalAccessError" in text,
                    "unsupportedClassVersion": "UnsupportedClassVersionError" in text,
@@ -264,6 +303,7 @@ def boot(args, root, java, assets, runtime, launch, expected, vanilla, version):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--launchwrapper-bridge", action="store_true", help="Opt-in exact LaunchWrapper1.12 URL seam instrumentation; stock libraries stay unchanged")
     parser.add_argument("--metadata-only", action="store_true", help="No network, Java or filesystem runtime action")
     parser.add_argument("--repo", type=Path)
     parser.add_argument("--java", type=Path)
@@ -295,7 +335,8 @@ def main():
         failure_path = launch.safe_output(args.output, args.repo) / "failure.json"
         runtime.write_json(failure_path, {"status": "fatal-prerequisite-failure",
                            "exception": type(error).__name__, "cause": str(error),
-                           "titleConfirmed": False, "engineProbe": False})
+                           "titleConfirmed": False, "engineProbe": False,
+                           "runtimeMode": "launchwrapper-url-bridge" if args.launchwrapper_bridge else "raw-stock"})
         raise
 
 
