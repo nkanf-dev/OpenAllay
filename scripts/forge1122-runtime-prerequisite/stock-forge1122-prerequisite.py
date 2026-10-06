@@ -262,7 +262,19 @@ def prepare_launchwrapper_bridge(args, output, java, cp, runtime):
     javac = java.parent / "javac"
     jar_tool = java.parent / "jar"
     source_files = sorted(sources.glob("*.java"))
-    compile_command = [str(javac), "--release", "8", "-cp", str(asm), "-d", str(classes)] + [str(p) for p in source_files]
+    if getattr(args,"world_sdk",False):
+        dimension_classes=output/"dimension-helper-classes";dimension_classes.mkdir()
+        with (output/"dimension-helper-compile.log").open("w") as log:
+            subprocess.run([str(javac),"--release","17","-d",str(dimension_classes),str(PACKET/"bridge/dimension17/DimensionEnumRuntime.java")],check=True,stdout=log,stderr=subprocess.STDOUT)
+        dimension_jar=output/"dimension-enum-bootstrap-helper.jar"
+        subprocess.run([str(jar_tool),"cf",str(dimension_jar),"-C",str(dimension_classes),"."],check=True)
+        with zipfile.ZipFile(dimension_jar) as archive:
+            entries={entry.filename:{"sha256":hashlib.sha256(archive.read(entry)).hexdigest(),"major":int.from_bytes(archive.read(entry)[6:8],"big")} for entry in archive.infolist() if entry.filename.endswith(".class")}
+            runtime.require(all(name.startswith("dev/openallay/runtime/forge1122/dimension/") and item["major"]==61 for name,item in entries.items()),"Own bootstrap helper class custody differs")
+        runtime.write_json(output/"dimension-helper-custody.json",{"jarSha256":sha(dimension_jar),"entries":entries,"stockGameLoaderUnchanged":True,"javaLangOpenScope":"only actual helper bootstrap module"})
+    with (output/"dimension-installer-compile.log").open("w") as log:
+        subprocess.run([str(javac),"--release","17","-d",str(classes),str(PACKET/"bridge/dimension17/DimensionEnumInstaller.java")],check=True,stdout=log,stderr=subprocess.STDOUT)
+    compile_command = [str(javac), "--release", "8", "-cp", str(asm)+os.pathsep+str(classes), "-d", str(classes)] + [str(p) for p in source_files]
     runtime.write_json(output / "bridge-build.json", {
         "command": compile_command, "javaRelease": 8, "stockAsmSha256": runtime.file_hash(asm),
         "stockLaunchWrapperSha256": runtime.file_hash(wrapper),
@@ -278,6 +290,8 @@ def prepare_launchwrapper_bridge(args, output, java, cp, runtime):
     clean_env = {k:v for k,v in os.environ.items() if k not in ("JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "_JAVA_OPTIONS")}
     if getattr(args,"world_sdk",False):
         runtime.write_json(output/"component-tests-reused.json",{"run":"37534098945","capabilityPhaseAndHelperTestsPassed":True,"oldStartupChecksReplayed":False})
+        with (output/"dimension-phase-test.log").open("w") as log:
+            subprocess.run([str(java),"-cp",test_cp,"dev.openallay.runtime.forge1122.DimensionEnumPhaseTest"],check=True,env=clean_env,stdout=log,stderr=subprocess.STDOUT)
     elif getattr(args,"component_inputs",None):
         with (output/"capability-component-tests.log").open("w") as log:
             subprocess.run([str(java),"-cp",test_cp,"dev.openallay.runtime.forge1122.CapabilityPhaseTest"],check=True,env=clean_env,stdout=log,stderr=subprocess.STDOUT)
@@ -385,7 +399,11 @@ def boot(args, root, java, assets, runtime, launch, expected, vanilla, version):
             "-Dopenallay.e2e.appliedBindingsReceipt="+str(output/"applied-bindings.json")]
     if world_sdk:
         name="openallay-builder-forge1122-sdk-"+str(os.getpid())
-        component_flags += ["-Dopenallay.dimension.capture="+str(output/"dimension-phase"),"-Dopenallay.e2e.enabled=true","-Dopenallay.e2e.scenario=native-world-sdk",
+        component_flags += ["-Dopenallay.dimension.helper="+str(output/"dimension-enum-bootstrap-helper.jar"),
+            "-Dopenallay.dimension.valuesField=$VALUES",
+            "-Dopenallay.dimension.bootstrapReceipt="+str(output/"dimension-bootstrap.json"),
+            "-Dopenallay.dimension.transformReceipt="+str(output/"dimension-transform.json"),
+            "-Dopenallay.dimension.fixtureReceipt="+str(output/"dimension-fixture.json"),"-Dopenallay.e2e.enabled=true","-Dopenallay.e2e.scenario=native-world-sdk",
             "-Dopenallay.e2e.question=Native WorldSession SDK acceptance",
             "-Dopenallay.e2e.report="+str(output/"world-sdk-report.json"),
             "-Dopenallay.e2e.createWorld="+name,"-Dopenallay.e2e.shutdown=true","-Dopenallay.e2e.timeoutSeconds=300"]
@@ -488,7 +506,7 @@ def boot(args, root, java, assets, runtime, launch, expected, vanilla, version):
         passed=report.get("outcome")=="COMPLETED" and bool(checks) and all(c.get("status")=="PASS" for c in checks)
         clean=receipt["termination"]["finalExitCode"]==0 and not receipt["termination"]["signals"]
         oracle_path=output/"applied-bindings.json";oracle=json.loads(oracle_path.read_text()) if oracle_path.is_file() else {}
-        required=passed and clean and (not binding_probe or oracle.get("accepted") is True) and not (output/"dimension-phase").exists()
+        required=passed and clean and (not binding_probe or oracle.get("accepted") is True) and (output/"dimension-fixture.json").is_file()
         runtime.write_json(output/"world-sdk-acceptance.json",{"accepted":required,"reportCompleted":passed,
             "cleanUnsignalledExit0":clean,"actualAppliedBindings":oracle.get("accepted",False),"worldSdkCheckCount":len(checks)})
         if required and receipt["status"] not in ("fatal-component-proof-incomplete","fatal-applied-binding-proof"):
