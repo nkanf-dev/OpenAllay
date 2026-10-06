@@ -3,6 +3,7 @@ package dev.openallay.neoforge;
 import java.util.UUID;
 import java.util.function.BiConsumer;
 import net.minecraft.client.Minecraft;
+import net.minecraft.util.text.ChatType;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.client.event.ClientChatReceivedEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
@@ -21,7 +22,7 @@ public final class NeoForgeNativeClientEvents {
         ChatListener(BiConsumer<UUID, String> feedback) { this.feedback = feedback; }
         @SubscribeEvent public void received(ClientChatReceivedEvent event) {
             Minecraft client = Minecraft.getMinecraft();
-            if (event.getType() != 2 && client.player != null) {
+            if (event.getType() != ChatType.GAME_INFO && client.player != null) {
                 feedback.accept(client.player.getUniqueID(), event.getMessage().getUnformattedText());
             }
         }
