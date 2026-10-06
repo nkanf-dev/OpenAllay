@@ -30,6 +30,10 @@ public final class MinecraftComponents {
         }
         return target.setStyle(style);
     }
+    public static ITextComponent style(ITextComponent target, TextFormatting... formatting) {
+        for (TextFormatting value : formatting) style(target, value);
+        return target;
+    }
     public static ITextComponent style(ITextComponent target, Style style) { return target.setStyle(style); }
     public static ITextComponent style(ITextComponent target, java.util.function.UnaryOperator<Style> operator) {
         return target.setStyle(operator.apply(target.getStyle().createShallowCopy()));
