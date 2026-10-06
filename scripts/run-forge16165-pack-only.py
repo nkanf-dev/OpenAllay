@@ -26,7 +26,7 @@ def artifact(aid,rid,source,digest,dest):
 
 def runtime_proof(work,source):
     # Normal official installer/processor route, not a game launch or library replacement.
-    stock=load_module('pack_stock_runtime',source/'scripts/forge16165-prerequisite/stock-forge36-prerequisite.py')
+    stock=load_module('pack_stock_runtime',source/'scripts/forge16165-engine-prerequisite/stock/stock-forge36-prerequisite.py')
     runtime,launch,freeze=stock.load_helpers()
     pins=stock.PINS;root=source/'build/e2e/runtime/forge16165-stock/minecraft'
     runtime.claim_root(root,'1.16.5')
