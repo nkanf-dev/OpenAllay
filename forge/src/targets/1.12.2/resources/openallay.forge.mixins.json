@@ -1,0 +1,9 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "dev.openallay.neoforge.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "refmap": "openallay.refmap.json",
+  "client": ["ForgeClientStoppingMixin"],
+  "injectors": {"defaultRequire": 1}
+}
