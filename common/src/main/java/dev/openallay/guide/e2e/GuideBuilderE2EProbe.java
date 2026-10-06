@@ -192,6 +192,7 @@ final class GuideBuilderE2EProbe {
     static List<Landmark> oracleLandmarks(String scenario, Anchor anchor) {
         List<Landmark> expected = new ArrayList<>(landmarks(scenario));
         if (scenario.equals("builder-acceptance") || scenario.equals("builder-reload")) {
+            if (skyscraperUnavailable()) expected.removeIf(value -> value.name().startsWith("skyscraper-"));
             expected.add(new Landmark("geometry-checkerboard-floor", 32, 0, 18,
                     Math.floorMod(anchor.x() + anchor.z() + 50, 2) == 0 ? "quartz_block" : "black_concrete"));
         }
@@ -294,7 +295,14 @@ final class GuideBuilderE2EProbe {
                 result.add("checks", checks);
                 boolean stagedReceipt = scenario.equals("builder-acceptance")
                         || scenario.equals("builder-partial") || scenario.equals("builder-cancel");
-                JsonObject receipt = stagedReceipt ? builderReceipt(request) : null;
+                JsonObject receipt = stagedReceipt || scenario.equals("builder-reload") ? builderReceipt(request) : null;
+                if (scenario.equals("builder-acceptance") || scenario.equals("builder-reload")) {
+                    JsonArray skipped = skippedCases(skyscraperUnavailable());
+                    boolean skipBinding = skipped.equals(receipt.get("skipped"));
+                    result.add("skipped", skipped);
+                    result.addProperty("skipNativeRegistryBindingPassed", skipBinding);
+                    passed &= skipBinding;
+                }
                 boolean toolContract = stagedReceipt
                         ? receiptMatchesScenario(scenario, receipt) : toolContract(scenario, request);
                 result.addProperty("toolContractPassed", toolContract);
@@ -320,6 +328,34 @@ final class GuideBuilderE2EProbe {
     private static final String JAVASCRIPT_TOOL = "openallay:run_javascript";
     private static final List<String> BUILD_NAMES = List.of("house", "skyscraper", "cottage", "windmill", "farm", "dock",
             "geometry_decoration", "terrain", "templates");
+
+    /** Only native registry absence can remove this preset's independent world landmarks. */
+    private static boolean skyscraperUnavailable() {
+        return MinecraftNativeRegistries.BLOCK.keySet().stream()
+                .noneMatch(id -> "minecraft:lightning_rod".equals(id.toString()));
+    }
+
+    private static JsonArray skippedCases(boolean unavailable) {
+        JsonArray skipped = new JsonArray();
+        if (unavailable) {
+            JsonObject item = new JsonObject();
+            item.addProperty("name", "skyscraper"); item.addProperty("status", "SKIPPED");
+            item.addProperty("reason", "missing_material_palette_role"); item.addProperty("role", "lightning_rod_up");
+            skipped.add(item);
+        }
+        return skipped;
+    }
+
+    private static boolean skyscraperSkipped(JsonObject receipt) {
+        var skipped = receipt.getAsJsonArray("skipped");
+        if (skipped == null || (!skipped.equals(skippedCases(false)) && !skipped.equals(skippedCases(true))))
+            throw new IllegalArgumentException("Builder skipped cases differ from the exact skyscraper palette-role receipt");
+        return skipped.size() == 1;
+    }
+
+    private static List<String> buildNames(JsonObject receipt) {
+        return skyscraperSkipped(receipt) ? BUILD_NAMES.stream().filter(name -> !name.equals("skyscraper")).toList() : BUILD_NAMES;
+    }
 
     /** Parse only after the complete fixture chronology has been checked. */
     static JsonObject builderReceipt(GuideRequestSnapshot request) {
@@ -431,7 +467,8 @@ final class GuideBuilderE2EProbe {
                 || !stage(cancel, "builder_acceptance", "cancel_observation") || !stage(undo, "builder_acceptance", "undo")
                 || !stage(finalReceipt, "builder_acceptance", "final")
                 || !tools.get(0).invocationId().equals(string(build, "probeToken"))) return false;
-        for (var item : List.of(partial, cancel, undo, finalReceipt)) if (!sameBinding(build, item)) return false;
+        for (var item : List.of(partial, cancel, undo, finalReceipt))
+            if (!sameBinding(build, item) || !build.get("skipped").equals(item.get("skipped"))) return false;
         if (!completedBuild(build) || !readOnlyStatus(partial.getAsJsonObject("observationStatus"))
                 || !readOnlyStatus(cancel.getAsJsonObject("observationStatus"))
                 || !readOnlyStatus(finalReceipt.getAsJsonObject("observationStatus"))) return false;
@@ -473,7 +510,7 @@ final class GuideBuilderE2EProbe {
         if (originals == null || interventions == null || restores == null
                 || !journalDelta(cancelRows, undoRows, List.of(originals, interventions, restores)) || !undoRows.equals(finalRows)) return false;
         for (String key : List.of("anchor", "context", "probeToken", "operations", "status", "actions", "templates",
-                "sites", "terrain", "baselineOperations", "seed", "provider")) if (!build.get(key).equals(finalReceipt.get(key))) return false;
+                "sites", "terrain", "baselineOperations", "seed", "provider", "skipped")) if (!build.get(key).equals(finalReceipt.get(key))) return false;
         var lifecycle = finalReceipt.getAsJsonObject("lifecycle");
         return dev.openallay.json.JsonTrees.keys(lifecycle).equals(java.util.Set.of("partial", "cancel", "undo"))
                 && p.equals(lifecycle.get("partial")) && c.equals(lifecycle.get("cancel")) && u.equals(lifecycle.get("undo"))
@@ -529,22 +566,25 @@ final class GuideBuilderE2EProbe {
     private static boolean completedBuild(JsonObject receipt) {
         if (!"completed".equals(string(receipt.getAsJsonObject("status"), "state"))) return false;
         var operations = receipt.getAsJsonArray("operations");
-        if (operations.size() != BUILD_NAMES.size()) return false;
+        var names = buildNames(receipt);
+        if (operations.size() != names.size()) return false;
         var rows = journalRows(receipt.getAsJsonArray("baselineOperations"));
         var ids = new java.util.HashSet<String>();
-        for (int index = 0; index < BUILD_NAMES.size(); index++) {
+        for (int index = 0; index < names.size(); index++) {
             var item = operations.get(index).getAsJsonObject();
             String id = string(item, "operationId");
             var row = rows.get(id);
-            if (!BUILD_NAMES.get(index).equals(string(item, "name")) || !completedStatus(item, ids)
+            if (!names.get(index).equals(string(item, "name")) || !completedStatus(item, ids)
                     || row == null || !"completed".equals(string(row, "status")) || number(row, "entries") <= 0
                     || !"OpenAllay E2E Builder acceptance".equals(string(row, "label"))) return false;
         }
         if (!rows.keySet().equals(ids)
-                || !string(operations.get(8).getAsJsonObject(), "operationId").equals(string(receipt.getAsJsonObject("status"), "operationId"))) return false;
+                || !string(operations.get(operations.size() - 1).getAsJsonObject(), "operationId").equals(string(receipt.getAsJsonObject("status"), "operationId"))) return false;
+        if (skyscraperSkipped(receipt) && receipt.getAsJsonObject("sites").has("skyscraper")) return false;
         var paths = new java.util.HashSet<String>();
         for (var value : receipt.getAsJsonArray("actions")) {
             var action = value.getAsJsonObject(); String name = string(action, "name");
+            if (skyscraperSkipped(receipt) && "skyscraper".equals(name)) return false;
             if ("terrain_path".equals(name) || "terrain_smart_path".equals(name))
                 if (!"built".equals(string(action, "status")) || !paths.add(name)) return false;
         }
@@ -594,7 +634,7 @@ final class GuideBuilderE2EProbe {
                 case "builder-reload" -> {
                     var rows = journalRows(receipt.getAsJsonArray("operations"));
                     return readOnlyStatus(receipt.getAsJsonObject("status")) && number(receipt, "operationCount") == rows.size()
-                            && rows.size() == 14 && "openallay_e2e_builder_native".equals(string(receipt.getAsJsonObject("template"), "name"));
+                            && rows.size() == buildNames(receipt).size() + 5 && "openallay_e2e_builder_native".equals(string(receipt.getAsJsonObject("template"), "name"));
                 }
                 default -> { return false; }
             }
@@ -604,13 +644,15 @@ final class GuideBuilderE2EProbe {
     static boolean persistedOperationsMatch(JsonObject retained, JsonObject reload) {
         try {
             var observed = journalRows(reload.getAsJsonArray("operations"));
-            if (observed.size() != 14 || number(reload, "operationCount") != observed.size()) return false;
+            var names = buildNames(retained);
+            if (!retained.get("skipped").equals(reload.get("skipped")) || buildNames(reload).size() != names.size()
+                    || observed.size() != names.size() + 5 || number(reload, "operationCount") != observed.size()) return false;
             var expectedIds = new java.util.HashSet<String>();
             var operations = retained.getAsJsonArray("operations");
-            if (operations.size() != BUILD_NAMES.size()) return false;
-            for (int index = 0; index < BUILD_NAMES.size(); index++) {
+            if (operations.size() != names.size()) return false;
+            for (int index = 0; index < names.size(); index++) {
                 var item = operations.get(index).getAsJsonObject();
-                if (!BUILD_NAMES.get(index).equals(string(item, "name")) || !completedStatus(item, expectedIds)
+                if (!names.get(index).equals(string(item, "name")) || !completedStatus(item, expectedIds)
                         || !persistedRow(item.getAsJsonObject("journal"), string(item, "operationId"), "completed", observed)
                         || number(item.getAsJsonObject("journal"), "entries") <= 0
                         || !"OpenAllay E2E Builder acceptance".equals(string(item.getAsJsonObject("journal"), "label"))) return false;
@@ -631,7 +673,7 @@ final class GuideBuilderE2EProbe {
             }
             var listed = templateNames(reload.getAsJsonArray("listed"));
             var saved = templateNames(retained.getAsJsonObject("templates").getAsJsonArray("saved"));
-            return expectedIds.size() == 14 && !saved.isEmpty() && listed.containsAll(saved)
+            return expectedIds.size() == names.size() + 5 && !saved.isEmpty() && listed.containsAll(saved)
                     && listed.contains("openallay_e2e_builder_native");
         } catch (RuntimeException malformed) { return false; }
     }
@@ -656,7 +698,7 @@ final class GuideBuilderE2EProbe {
                     || !ids.add(string(cancel.getAsJsonObject("journal"), "id")) || !undoReceipt(undo, receipt, 44, 36)) return false;
             for (String key : List.of("originalStatus", "interventionStatus", "status"))
                 if (!completedStatus(undo.getAsJsonObject(key), ids)) return false;
-            return ids.size() == 14;
+            return ids.size() == buildNames(receipt).size() + 5;
         } catch (RuntimeException malformed) { return false; }
     }
 

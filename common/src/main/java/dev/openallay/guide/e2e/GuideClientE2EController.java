@@ -615,6 +615,7 @@ public final class GuideClientE2EController {
         receipt.add("worldName", probe.get("worldName"));
         receipt.add("nativeAnchor", probe.get("independentAnchor"));
         receipt.add("operations", preview.get("operations"));
+        receipt.add("skipped", preview.get("skipped"));
         receipt.add("lifecycle", preview.get("lifecycle"));
         receipt.add("templates", preview.get("templates"));
         writeAtomically(builderProofPath(".acceptance.json"), gson.toJson(receipt));

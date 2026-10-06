@@ -7,7 +7,7 @@
 var b = require("openallay_builder:building").open({seed:17,label:"OpenAllay E2E Builder acceptance"});
 var player = b.get_player_pos();
 var anchor = {x:Math.floor(player.x)+8,y:Math.floor(player.y)-1,z:Math.floor(player.z)+8};
-var checks = [], actions = [], operations = [], sites = {};
+var checks = [], actions = [], operations = [], sites = {}, skipped = [];
 function point(x,y,z) { return {x:anchor.x+x,y:anchor.y+y,z:anchor.z+z}; }
 function expect(name,x,y,z,id,properties) {
     var p = point(x,y,z);
@@ -37,7 +37,9 @@ if (anchor.y-3 < c.minY || anchor.y+13 >= c.maxY) {
     throw new Error("Builder acceptance anchor lacks build-height headroom");
 }
 
-// Six presets use their documented structural minima and never retry a failure.
+// Presets use their documented structural minima and never retry a failure.
+if (!c.materialPalette || typeof c.materialPalette !== "object")
+    throw new Error("Builder acceptance requires the actual native material palette");
 var p = site("house",0,0);
 action("house",b.build_simple_house(p.x,p.y,p.z,{width:7,depth:7,height:4,facing:"north"}));
 expect("house_floor",0,0,0,"oak_planks");
@@ -49,6 +51,9 @@ expect("house_chest",4,1,5,"chest",{facing:"north",type:"single"});
 expect("house_lantern",3,4,3,"lantern",{hanging:"true"});
 expect("house_lantern_support",3,5,3,"stone_brick_slab",{type:"bottom"});
 phase("house");
+if (!Object.prototype.hasOwnProperty.call(c.materialPalette,"lightning_rod_up")) {
+    skipped.push({name:"skyscraper",status:"SKIPPED",reason:"missing_material_palette_role",role:"lightning_rod_up"});
+} else {
 p = site("skyscraper",12,0);
 action("skyscraper",b.build_skyscraper(p.x,p.y,p.z,{width:5,depth:5,floors:2,floorHeight:3,foundationDepth:1,facing:"north"}));
 expect("skyscraper_light_floor1",14,3,2,"sea_lantern");
@@ -57,6 +62,7 @@ expect("skyscraper_ladder",13,1,3,"ladder",{facing:"north"});
 expect("skyscraper_ladder_support",13,1,4,"iron_block");
 expect("skyscraper_rod",14,11,2,"lightning_rod",{facing:"up"});
 phase("skyscraper");
+}
 p = site("cottage",24,0);
 action("cottage",b.build_cottage(p.x,p.y,p.z,{width:5,depth:5,height:3,facing:"north",name:"OpenAllay E2E Cottage"}));
 expect("cottage_beam",25,3,0,"oak_log",{axis:"x"});
@@ -242,7 +248,7 @@ var baselineOperations=b.list_operations();
 // Return completed build evidence BEFORE any intentionally rejected native operation.
 return JSON.stringify({scenario:"builder_acceptance",stage:"build",probeToken:fixtureProbeToken,
     provider:"deterministic_loopback_fixture_not_live_model",seed:17,anchor:anchor,
-    context:{dimension:c.dimension,playerUuid:c.player.uuid},sites:sites,actions:actions,operations:operations,
+    context:{dimension:c.dimension,playerUuid:c.player.uuid},sites:sites,actions:actions,operations:operations,skipped:skipped,
     status:b.status(),baselineOperations:baselineOperations,lifecycle:lifecycle,
     templates:{saved:[templateName],listed:listed.indexOf(templateName)>=0,
         size:loaded.size,blockCount:loaded.blocks.length,paletteSize:loaded.palette.length},

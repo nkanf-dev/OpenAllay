@@ -594,6 +594,9 @@ def builder_retained_anchor(user_text):
 
 BUILDER_OPERATION_NAMES = ("house", "skyscraper", "cottage", "windmill", "farm", "dock",
                            "geometry_decoration", "terrain", "templates")
+BUILDER_SKYSCRAPER_SKIP = {'name': 'skyscraper', 'status': 'SKIPPED', 'reason': 'missing_material_palette_role', 'role': 'lightning_rod_up'}
+
+
 BUILDER_FAILURE_CODES = {"partial": "invalid_native_input", "cancel": "session_closed"}
 BUILDER_FAILURE_MESSAGES = {"partial": "Builder native operation failed; inspect the session status",
                             "cancel": "Builder session is closed or cancelled"}
@@ -602,6 +605,18 @@ BUILDER_FAILURE_MESSAGES = {"partial": "Builder native operation failed; inspect
 def builder_require(condition, message):
     if not condition:
         raise ValueError(message)
+
+
+def builder_skipped(receipt):
+    skipped = receipt.get("skipped")
+    builder_require(isinstance(skipped, list) and (skipped == [] or skipped == [BUILDER_SKYSCRAPER_SKIP]),
+                    "Builder skipped cases differ from the exact skyscraper palette-role receipt")
+    return skipped
+
+
+def builder_operation_names(receipt):
+    return tuple(name for name in BUILDER_OPERATION_NAMES
+                 if not builder_skipped(receipt) or name != "skyscraper")
 
 
 def builder_journals(rows):
@@ -684,7 +699,8 @@ def builder_unique_fields(pairs):
 
 
 def builder_same_origin(receipt, baseline):
-    for key in ("context", "anchor", "probeToken"):
+    for key in (("context", "anchor", "probeToken", "skipped")
+                if baseline.get("scenario") == "builder_acceptance" else ("context", "anchor", "probeToken")):
         builder_require(receipt.get(key) == baseline.get(key), "Builder observation changed its native " + key)
 
 
@@ -712,10 +728,11 @@ def builder_baseline(receipt, scenario):
         builder_images(item["beforeImages"], ["minecraft:air", "minecraft:air"])
     if composite:
         operations = receipt.get("operations")
-        builder_require(isinstance(operations, list) and len(operations) == 9,
-                        "Builder build did not retain all nine completed operations")
+        names = builder_operation_names(receipt)
+        builder_require(isinstance(operations, list) and len(operations) == len(names),
+                        "Builder build did not retain the exact non-skipped completed operations")
         ids = set()
-        for name, operation in zip(BUILDER_OPERATION_NAMES, operations):
+        for name, operation in zip(names, operations):
             builder_require(isinstance(operation, dict) and operation.get("name") == name
                             and operation.get("state") == "completed"
                             and isinstance(operation.get("operationId"), str)
@@ -731,6 +748,10 @@ def builder_baseline(receipt, scenario):
                         "Builder completed build status lost its exact last operation")
         actions = receipt.get("actions")
         builder_require(isinstance(actions, list), "Builder build actions are not an exact list")
+        if builder_skipped(receipt):
+            builder_require(not any(isinstance(item, dict) and item.get("name") == "skyscraper" for item in actions)
+                            and "skyscraper" not in receipt.get("sites", {}),
+                            "Builder skipped skyscraper retained a build action or site")
         paths = [action for action in actions if isinstance(action, dict)
                  and action.get("name") in ("terrain_path", "terrain_smart_path")]
         builder_require(len(paths) == 2 and {item["name"] for item in paths} == {"terrain_path", "terrain_smart_path"}
@@ -825,7 +846,10 @@ def builder_native_open(label):
 
 def builder_stage_header(baseline, label, full=False):
     if not full:
-        baseline = {key: baseline[key] for key in ("context", "anchor", "probeToken", "lifecycle", "baselineOperations")}
+        keys = ("context", "anchor", "probeToken", "lifecycle", "baselineOperations")
+        if baseline.get("scenario") == "builder_acceptance":
+            keys += ("skipped",)
+        baseline = {key: baseline[key] for key in keys}
     return (builder_native_open(label) + 'var expected=' + json.dumps(baseline, separators=(",", ":")) + ';\n'
             'var c=b.context(),context={dimension:c.dimension,playerUuid:c.player.uuid};\n'
             'if(context.dimension!==expected.context.dimension || context.playerUuid!==expected.context.playerUuid) '
@@ -852,6 +876,8 @@ def builder_observation_arguments(scenario, baseline, kind, failure):
     source += 'var receipt={scenario:' + json.dumps("builder_" + scenario) + ',stage:' + json.dumps(stage) + ',probeToken:expected.probeToken,anchor:expected.anchor,context:context,lifecycle:{},durableOperations:b.list_operations()};\n'
     source += 'var matches=receipt.durableOperations.filter(function(row){return row.label===' + json.dumps(builder_probe_label(baseline["probeToken"], kind)) + ';}); if(matches.length!==1) throw new Error("Lifecycle journal is not unique");\n'
     source += 'receipt.lifecycle.' + kind + '={failure:' + json.dumps(failure, separators=(",", ":")) + ',journal:matches[0],positions:positions,beforeImages:expected.lifecycle.' + kind + '.beforeImages,afterImages:b.get_blocks(positions).map(function(cell){return cell.state;})};\n'
+    if scenario == "acceptance":
+        source += 'receipt.skipped=expected.skipped;'
     source += 'receipt.observationStatus=b.finish();'
     if scenario != "acceptance":
         source += 'receipt.status=receipt.observationStatus;receipt.baselineOperations=expected.baselineOperations;'
@@ -865,7 +891,7 @@ def builder_undo_arguments(baseline):
     source += 'for(var i=0;i<positions.length;i++){var p=positions[i];b.place_block(p.x,p.y,p.z,"gold_block");} var original=b.finish();\n'
     source += 'var intervention=building.open({seed:17,label:' + json.dumps(builder_probe_label(baseline["probeToken"], "undo intervention")) + '}); var q=positions[1];intervention.place_block(q.x,q.y,q.z,"diamond_block"); var intervened=intervention.finish();\n'
     source += 'var result=b.undo(original.operationId),status=b.finish();\n'
-    source += 'return JSON.stringify({scenario:"builder_acceptance",stage:"undo",probeToken:expected.probeToken,anchor:expected.anchor,context:context,durableOperations:b.list_operations(),lifecycle:{undo:{result:result,status:status,originalStatus:original,interventionStatus:intervened,positions:positions,beforeImages:before,afterImages:b.get_blocks(positions).map(function(cell){return cell.state;})}}});'
+    source += 'return JSON.stringify({scenario:"builder_acceptance",stage:"undo",skipped:expected.skipped,probeToken:expected.probeToken,anchor:expected.anchor,context:context,durableOperations:b.list_operations(),lifecycle:{undo:{result:result,status:status,originalStatus:original,interventionStatus:intervened,positions:positions,beforeImages:before,afterImages:b.get_blocks(positions).map(function(cell){return cell.state;})}}});'
     return builder_source(source, "检查真实撤销与冲突", "明确撤销实际操作 ID，保留外部改动，并读取真实还原数、冲突位置和方块。")
 
 
@@ -922,7 +948,7 @@ def builder_multistage(scenario, results, token):
         builder_same_origin(final, baseline); builder_completed(final.get("observationStatus"), 0)
         builder_require(builder_journals(final.get("durableOperations")) == previous,
                         "Builder final observation changed exact durable operation receipts")
-        for key in ("operations", "actions", "templates", "status", "baselineOperations", "terrain", "sites", "seed", "provider"):
+        for key in ("operations", "actions", "templates", "status", "baselineOperations", "terrain", "sites", "seed", "provider", "skipped"):
             builder_require(final.get(key) == baseline.get(key), "Builder final receipt changed completed build " + key)
         builder_require(final.get("lifecycle") == lifecycle, "Builder final observation changed prior lifecycle outcomes")
         index += 1
@@ -970,16 +996,19 @@ return JSON.stringify({scenario:"builder_undo",undo:undo,status:b.finish()});
             if retained_anchor is None or len(retained_anchor) != 3:
                 raise ValueError("reload requires the independently retained native origin")
             source += "x=%d;y=%d;z=%d;\n" % tuple(retained_anchor)
-            source += '''var template=b.load_template("openallay_e2e_builder_native");
+            source += '''var c=b.context(),skipped=[];
+if (!c.materialPalette || typeof c.materialPalette!=="object") throw new Error("Builder reload requires the actual native material palette");
+if (!Object.prototype.hasOwnProperty.call(c.materialPalette,"lightning_rod_up")) skipped.push({name:"skyscraper",status:"SKIPPED",reason:"missing_material_palette_role",role:"lightning_rod_up"});
+var template=b.load_template("openallay_e2e_builder_native");
 var listed=b.list_templates();
 var operations=b.list_operations();
 var readback={house:b.get_block(x,y,z),dock:b.get_block(x+14,y,z+18),
   rotatedStair:b.get_block_full(x+21,y+1,z+32),mirroredChest:b.get_block_full(x+24,y+1,z+33)};
-return JSON.stringify({scenario:"builder_reload",template:{name:"openallay_e2e_builder_native",size:template.size},
+return JSON.stringify({scenario:"builder_reload",skipped:skipped,template:{name:"openallay_e2e_builder_native",size:template.size},
   listed:listed,operations:operations,operationCount:operations.length,readback:readback,status:b.finish()});
 '''
     intents = {
-        "acceptance": ("建造与读取在线验收站点", "调用六个小型预设、几何、地形路径和模板变换，并保留失败、取消及撤销结果供独立原生检查。"),
+        "acceptance": ("建造与读取在线验收站点", "调用具备所需材料的小型预设、几何、地形路径和模板变换，并保留失败、取消及撤销结果供独立原生检查。"),
         "restricted": ("用受限 JavaScript 放置并读取 Builder 标记", "通过已启用的 Builder SDK 放置一个金块，并读取实际方块和会话完成状态。"),
         "reload": ("读取保留的原生站点", "按先前原生记录的坐标读取现存方块、模板及操作日志，不移动玩家或重放写入。"),
         "partial": ("保留部分写入的失败结果", "先写入一个标记，再请求无效方块，读取实际部分失败状态。"),
