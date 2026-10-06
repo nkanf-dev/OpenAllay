@@ -44,6 +44,14 @@ CLASSES = (
     'net.minecraft.util.math.BlockPos','net.minecraft.util.math.ChunkPos',
     'net.minecraft.block.state.IBlockBehaviors','net.minecraft.block.BlockChest',
     'net.minecraft.block.BlockShulkerBox','net.minecraft.util.datafix.DataFixer',
+    'net.minecraft.entity.player.InventoryPlayer',
+    'net.minecraft.entity.player.EntityPlayer',
+    'net.minecraft.entity.EntityLivingBase',
+    'net.minecraft.server.management.PlayerInteractionManager',
+    'net.minecraft.world.GameType',
+    'net.minecraft.world.EnumDifficulty',
+    'net.minecraft.world.storage.ISaveHandler',
+
 )
 BODIES = ('net.minecraft.util.datafix.DataFixer', 'net.minecraft.tileentity.TileEntityLockableLoot',
     'net.minecraft.tileentity.TileEntityChest','net.minecraft.tileentity.TileEntityShulkerBox')
