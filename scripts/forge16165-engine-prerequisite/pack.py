@@ -147,7 +147,14 @@ def archive(artifact):
             name = safe_name(item.orig_filename, item.is_dir())
             require(name == item.filename and name not in entries, "Duplicate/truncated ZIP entry: " + name)
             mode = item.external_attr >> 16
-            require(stat.S_IFMT(mode) in (0, stat.S_IFDIR if item.is_dir() else stat.S_IFREG), "ZIP symlink/special entry: " + name)
+            entry_type = stat.S_IFMT(mode)
+            # Java ZIP producers can mark an empty slash directory as a regular file.
+            # The canonical path and empty payload establish directory semantics.
+            # Older Maven JARs encode an unset Unix mode as 0xffff plus DOS directory.
+            legacy_empty_directory = (item.external_attr == 0xffff0010 and item.is_dir()
+                and item.file_size == 0 and item.compress_size == 0)
+            require(entry_type in (0, stat.S_IFREG, stat.S_IFDIR) or legacy_empty_directory, "ZIP symlink/special entry: " + name)
+            require(item.is_dir() or (entry_type != stat.S_IFDIR and not item.external_attr & 0x10), "ZIP directory attributes on file: " + name)
             require(not item.flag_bits & 1, "Encrypted ZIP entry: " + name)
             require(item.compress_type in (zipfile.ZIP_STORED, zipfile.ZIP_DEFLATED), "ZIP compression type: " + name)
             require(item.file_size <= MAX_ENTRY and (item.file_size <= max(item.compress_size, 1) * 1000), "ZIP entry bound: " + name)
