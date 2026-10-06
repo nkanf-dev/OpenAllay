@@ -9,6 +9,7 @@ import subprocess
 import zipfile
 
 CLASSES = (
+    'net.minecraftforge.fml.common.eventhandler.EventPriority',
     'net.minecraft.client.gui.GuiIngame',
     'net.minecraft.util.text.Style',
     'net.minecraftforge.fml.client.config.GuiSlider',
