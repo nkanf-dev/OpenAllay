@@ -28,11 +28,15 @@ def main():
     changed=json.loads(changed_specs[0].read_text());engine=next(r for r in changed['artifacts'] if r['role']=='engine');engine_path=changed_specs[0].parent/'engine.jar'
     if provider.sha(engine_path)!=pin['engineJarSha256'] or engine['sha256']!=pin['engineJarSha256']:raise ValueError('Exact effective engine differs')
     artifacts['engine'].update(path=str(engine_path),sha256=pin['engineJarSha256'])
-    jars=list(native_root.rglob('openallay-forge1122-native-reobf.jar'));receipts=list(native_root.rglob('reobf-only-receipt.json'))
-    if len(jars)!=1 or len(receipts)!=1:raise ValueError('One real normal reobf output/receipt required')
-    native=json.loads(receipts[0].read_text())
-    if provider.sha(jars[0])!=pin['nativeJarSha256'] or native['after']['sha256']!=pin['nativeJarSha256'] or native['nativeSourceRevision']!=pin['nativeCompiledSource'] or native['kind']!='normal-FG3-reobf-only':raise ValueError('Exact native source/remap custody differs')
-    provider.write(report/'custody.json',{'providers':pin,'nativeReceipt':native,'closure':list(artifacts.values()),'oldNativeScopeOnly':True,'currentSourceRestamped':False})
+    jars=list(native_root.rglob('jar/openallay-forge1122-native.jar'));receipts=list(native_root.rglob('native-build-receipt.json'));results=list(native_root.rglob('RESULT.json'))
+    if len(jars)!=1 or len(receipts)!=1 or len(results)!=1:raise ValueError('One normal current native output/build receipt required')
+    native=json.loads(receipts[0].read_text());native_result=json.loads(results[0].read_text())
+    if (provider.sha(jars[0])!=pin['nativeJarSha256'] or native['jarSha256']!=pin['nativeJarSha256']
+            or native_result['sourceRevision']!=pin['nativeCompiledSource'] or native_result['status']!='passed'
+            or native_result['nativeCompiled'] is not True or native_result['engineRebuilt'] is not False
+            or (native['minecraft'],native['forge'],native['nativeRelease'])!=('1.12.2','14.23.5.2864',17)):
+        raise ValueError('Exact current native source/remap custody differs')
+    provider.write(report/'custody.json',{'providers':pin,'nativeReceipt':native,'closure':list(artifacts.values()),'oldNativeScopeOnly':False,'currentSourceRestamped':False})
     stock=module('component_stock_runner',ROOT/'scripts/forge1122-runtime-prerequisite/stock-forge1122-prerequisite.py')
     runtime,launch,freeze=stock.load_helpers(ROOT)
     install=json.loads((stock.PACKET/'install_profile.json').read_text());version=json.loads((stock.PACKET/'version.json').read_text());vanilla=json.loads((stock.PACKET/'minecraft-1.12.2.json').read_text());expected=stock.validate_metadata(install,version,vanilla)
