@@ -63,6 +63,16 @@ jobs:
           retention-days: 14
           if-no-files-found: warn
           path: release-group/
+      - name: Preserve small package metadata separately
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: release-metadata-${{ matrix.target }}-${{ github.sha }}
+          retention-days: 30
+          if-no-files-found: ignore
+          path: |
+            release-group/build-receipts/
+            release-group/SHA256SUMS
       - name: Preserve compiler diagnostics
         if: failure()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
