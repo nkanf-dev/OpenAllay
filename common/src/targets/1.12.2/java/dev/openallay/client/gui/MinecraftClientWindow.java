@@ -11,6 +11,19 @@ import org.lwjgl.opengl.DisplayMode;
 /** Actual 1.12.2 client window/HUD ownership. No fabricated Window or Overlay object. */
 public final class MinecraftClientWindow {
     private MinecraftClientWindow() {}
+    /** Read-only native screen facts for bounded lifecycle diagnostics. Never closes or creates a screen. */
+    public static java.util.Map<String, Object> screenFacts(Minecraft client) {
+        var current = screen(client);
+        java.util.Map<String, Object> facts = new java.util.LinkedHashMap<>();
+        facts.put("screenClass", current == null ? "none" : current.getClass().getName());
+        facts.put("screenPause", current != null && current.doesGuiPauseGame());
+        facts.put("playerPresent", playerPresent(client));
+        facts.put("worldPresent", worldPresent(client));
+        facts.put("windowFocused", focused(client));
+        facts.put("overlayPresent", overlayPresent(client));
+        return java.util.Map.copyOf(facts);
+    }
+
     public static net.minecraft.server.integrated.IntegratedServer integratedServer(Minecraft client) { return client.getIntegratedServer(); }
     public static String serverAddress(Minecraft client) { return client.getCurrentServerData() == null ? null : client.getCurrentServerData().serverIP; }
     public static int framebufferWidth(Minecraft client) { return client.getFramebuffer().framebufferWidth; }

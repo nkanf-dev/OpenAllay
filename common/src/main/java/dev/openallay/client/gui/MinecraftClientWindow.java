@@ -9,6 +9,19 @@ import net.minecraft.client.gui.screens.Screen;
 /** Native client window ownership and HUD access for the Minecraft 26.2/26.3 family. */
 public final class MinecraftClientWindow {
     private MinecraftClientWindow() {}
+    /** Read-only native screen facts for bounded lifecycle diagnostics. Never closes or creates a screen. */
+    public static java.util.Map<String, Object> screenFacts(Minecraft client) {
+        var current = screen(client);
+        java.util.Map<String, Object> facts = new java.util.LinkedHashMap<>();
+        facts.put("screenClass", current == null ? "none" : current.getClass().getName());
+        facts.put("screenPause", current != null && current.isPauseScreen());
+        facts.put("playerPresent", playerPresent(client));
+        facts.put("worldPresent", worldPresent(client));
+        facts.put("windowFocused", focused(client));
+        facts.put("overlayPresent", overlayPresent(client));
+        return java.util.Map.copyOf(facts);
+    }
+
     public static net.minecraft.client.server.IntegratedServer integratedServer(Minecraft client) { return client.getSingleplayerServer(); }
     public static String serverAddress(Minecraft client) { return client.getCurrentServer() == null ? null : client.getCurrentServer().ip; }
     public static int framebufferWidth(Minecraft client) { return mainRenderTarget(client).width; }
