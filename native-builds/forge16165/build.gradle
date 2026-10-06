@@ -57,14 +57,28 @@ repositories {
     maven { url = 'https://maven.blamejared.com' }
     maven { url = 'https://maven.shedaniel.me' }
 }
+configurations { reiMappedInput { canBeConsumed = false; transitive = false } }
 dependencies {
     minecraft 'net.minecraftforge:forge:1.16.5-36.2.42'
     compileOnly files(compileRoles.collect { file(roles[it].path) })
     compileOnly('mezz.jei:jei-1.16.5:7.8.1.1018:api') { transitive = false }
-    compileOnly(fg.deobf('me.shedaniel:RoughlyEnoughItems-forge:6.5.436')) { transitive = false }
+    reiMappedInput(fg.deobf('me.shedaniel:RoughlyEnoughItems-forge:6.5.436')) { transitive = false }
     compileOnly(fg.deobf('me.shedaniel:architectury-forge:1.32.68')) { transitive = false }
     annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
 }
+// Compile-only view of actual REI-owned classes. Never shipped or used by a game classloader.
+def reiCompileView = tasks.register('reiCompileView', Jar) {
+    inputs.files(configurations.reiMappedInput)
+    from({ zipTree(configurations.reiMappedInput.singleFile) }) {
+        include 'me/shedaniel/rei/**/*.class'
+    }
+    archiveFileName = 'rei-owned-compile-view.jar'
+    destinationDirectory = layout.buildDirectory.dir('native-tooling')
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
+    duplicatesStrategy = DuplicatesStrategy.FAIL
+}
+dependencies { compileOnly files(reiCompileView.flatMap { it.archiveFile }).builtBy(reiCompileView) }
 apply from: new File(source, 'gradle/minecraft-source-selection.gradle')
 def rootGroups = ['common': 'common', 'adapter': 'adapters/minecraft', 'fml': 'neoforge']
 def roots = [:]
@@ -134,17 +148,31 @@ def jsonWrite = { File file, Object value ->
 // with exact keys coordinate/classifier/extension/sha256. No arbitrary hash from a declaration-only run.
 def proposedLock = layout.buildDirectory.file('native-tooling/compiler-input-lock.proposed.json')
 def toolingClasspathPlan = layout.buildDirectory.file('native-tooling/classpath-paths.txt')
+def resolvedCompilerRecords = { String name ->
+    def artifacts = configurations.getByName(name).resolvedConfiguration.resolvedArtifacts.collect { artifact ->
+        def id = artifact.moduleVersion.id
+        [coordinate:"${id.group}:${id.name}:${id.version}".toString(),classifier:artifact.classifier ?: '',
+         extension:artifact.extension,sha256:sha(artifact.file)]
+    }
+    if (name == 'compileClasspath') {
+        configurations.reiMappedInput.resolvedConfiguration.resolvedArtifacts.each { artifact ->
+            def id = artifact.moduleVersion.id
+            artifacts.add([coordinate:"${id.group}:${id.name}:${id.version}".toString(),
+                classifier:artifact.classifier ?: '',extension:artifact.extension,sha256:sha(artifact.file)])
+        }
+        artifacts.add([coordinate:'dev.openallay:rei-owned-compile-view:6.5.436',classifier:'',extension:'jar',
+            sha256:sha(reiCompileView.get().archiveFile.get().asFile)])
+    }
+    artifacts
+}
 def exportTooling = tasks.register('exportNativeToolingInputs') {
+    dependsOn reiCompileView
     // This task inspects resolved normal artifacts only. It never compiles native Java.
     inputs.files(configurations.compileClasspath,configurations.annotationProcessor)
     outputs.files(proposedLock,toolingClasspathPlan)
     doLast {
         def records = ['compileClasspath','annotationProcessor'].collectEntries { name ->
-            def values = configurations.getByName(name).resolvedConfiguration.resolvedArtifacts.collect { artifact ->
-                def id = artifact.moduleVersion.id
-                [coordinate:"${id.group}:${id.name}:${id.version}".toString(),classifier:artifact.classifier ?: '',
-                 extension:artifact.extension,sha256:sha(artifact.file)]
-            }.sort { JsonOutput.toJson(it.sort()) }
+            def values = resolvedCompilerRecords(name).sort { JsonOutput.toJson(it.sort()) }
             [(name):values]
         }
         jsonWrite(proposedLock.get().asFile,[configurations:records])
@@ -194,11 +222,7 @@ def verifyCompilerInputs = tasks.register('verifyNativeCompilerInputs') {
                 !(it instanceof Map) || it.keySet() != (['coordinate','classifier','extension','sha256'] as Set) ||
                 !(it.sha256 ==~ /[0-9a-f]{64}/)
             }) throw new GradleException('Compiler artifact lock records differ')
-            def actual = configurations.getByName(name).resolvedConfiguration.resolvedArtifacts.collect { artifact ->
-                def identity = artifact.moduleVersion.id
-                [coordinate:"${identity.group}:${identity.name}:${identity.version}".toString(),
-                 classifier:artifact.classifier ?: '',extension:artifact.extension,sha256:sha(artifact.file)]
-            }
+            def actual = resolvedCompilerRecords(name)
             def sortRecords = { records -> records.sort { JsonOutput.toJson(it.sort()) } }
             if (sortRecords(actual) != sortRecords(lock.configurations[name])) {
                 throw new GradleException("Actual ${name} differs from root-reviewed exact compiler lock")
