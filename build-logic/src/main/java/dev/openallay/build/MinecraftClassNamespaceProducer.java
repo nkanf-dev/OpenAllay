@@ -253,6 +253,11 @@ public final class MinecraftClassNamespaceProducer {
             hierarchy(type, new HashSet<>());
             return type;
         }
+        public boolean hasSourceType(String source) {
+            TypeElement type = elements.getTypeElement(source);
+            rejectErrors(diagnostics, "classpath metadata");
+            return type != null;
+        }
         public TypeElement sourceType(String source) {
             TypeElement type = elements.getTypeElement(source);
             rejectErrors(diagnostics, "classpath metadata");
@@ -488,6 +493,9 @@ public final class MinecraftClassNamespaceProducer {
             }
             if (index.classes.containsKey(packageName + "." + spelling)) return packageName + "." + spelling;
             if (spelling.contains(".")) return spelling;
+            // A same-package type can belong to the independent engine JAR rather than this source union.
+            String packageType = packageName.isEmpty() ? spelling : packageName + "." + spelling;
+            if (metadata.hasSourceType(packageType)) return packageType;
             return "java.lang." + spelling;
         }
         static String bareType(Tree tree) {
