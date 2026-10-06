@@ -102,3 +102,7 @@ tasks.register('emitProbeMetadata') {
 }
 
 apply from: file('native-api-export.gradle')
+
+if (providers.gradleProperty('focusedToolingAcceptance').isPresent()) {
+    apply from: file('focused-tooling-export.gradle')
+}

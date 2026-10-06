@@ -1,0 +1,123 @@
+[
+  {
+    "name": "imports-nested-preservation",
+    "expectSuccess": true,
+    "files": {
+      "p/Imports.java": "package p;\nimport com.mojang.blaze3d.vertex.PoseStack;\nimport com.mojang.blaze3d.platform.InputConstants;\nimport net.minecraft.network.chat.Component;\nclass Imports { /* PoseStack comment unchanged */ PoseStack pose; InputConstants.Type kind; Class<?> type = PoseStack.class; Object text() { return Component.literal(\"ordinary string unchanged\"); } }\n"
+    },
+    "expectedTokens": {
+      "p/Imports.java": [
+        "com.mojang.blaze3d.matrix.MatrixStack pose",
+        "net.minecraft.client.util.InputMappings.Type kind",
+        "com.mojang.blaze3d.matrix.MatrixStack.class",
+        "/* PoseStack comment unchanged */",
+        "net.minecraft.util.text.ITextComponent.literal(\"ordinary string unchanged\")"
+      ]
+    }
+  },
+  {
+    "name": "lexical-member-authorization",
+    "expectSuccess": true,
+    "files": {
+      "p/Micro.java": "package p; class Micro { interface Authorization {} static class NativeAuthorization implements Authorization {} }\n"
+    }
+  },
+  {
+    "name": "selected-ast-static-import",
+    "expectSuccess": true,
+    "files": {
+      "p/Owner.java": "package p; public class Owner { public static int value; public static void literal() {} }\n",
+      "p/Use.java": "package p; import static p.Owner.value; import static p.Owner.literal; class Use { int copy=value; void action(){ literal(); } }\n"
+    }
+  },
+  {
+    "name": "native-inherited-member",
+    "expectSuccess": true,
+    "files": {
+      "p/NativeToastChild.java": "package p; abstract class NativeToastChild implements net.minecraft.client.gui.components.toasts.Toast { Visibility value; }\n"
+    },
+    "expectedTokens": {
+      "p/NativeToastChild.java": [
+        "net.minecraft.client.gui.toasts.IToast",
+        "net.minecraft.client.gui.toasts.IToast.Visibility value"
+      ]
+    }
+  },
+  {
+    "name": "actual-overlap-member",
+    "mode": "ACTUAL_MCP",
+    "expectSuccess": true,
+    "files": {
+      "p/Actual.java": "package p; abstract class Actual implements net.minecraft.client.gui.toasts.IToast { Visibility value; net.minecraft.client.renderer.entity.ItemRenderer entityRenderer; }\n"
+    },
+    "expectedTokens": {
+      "p/Actual.java": [
+        "net.minecraft.client.renderer.entity.ItemRenderer entityRenderer",
+        "Visibility value"
+      ]
+    }
+  },
+  {
+    "name": "canonical-overlap",
+    "expectSuccess": true,
+    "files": {
+      "p/Canonical.java": "package p; class Canonical { net.minecraft.client.renderer.entity.ItemRenderer guiRenderer; }\n"
+    },
+    "expectedTokens": {
+      "p/Canonical.java": [
+        "net.minecraft.client.renderer.ItemRenderer guiRenderer"
+      ]
+    }
+  },
+  {
+    "name": "nested-mixin-binding",
+    "expectSuccess": true,
+    "files": {
+      "p/Binding.java": "package p;\nimport org.spongepowered.asm.mixin.Mixin;\nimport org.spongepowered.asm.mixin.injection.Inject;\nimport org.spongepowered.asm.mixin.injection.At;\n@Mixin(targets=\"net.minecraft.client.gui.components.toasts.ToastComponent$ToastInstance\") abstract class Binding { @Inject(method=\"render(IILcom/mojang/blaze3d/vertex/PoseStack;)Z\",at=@At(\"RETURN\")) void marker(){} }\n"
+    },
+    "expectedTokens": {
+      "p/Binding.java": [
+        "net.minecraft.client.gui.toasts.ToastGui$ToastInstance",
+        "render(IILcom/mojang/blaze3d/matrix/MatrixStack;)Z",
+        "@At(\"RETURN\")",
+        "void marker()"
+      ]
+    }
+  },
+  {
+    "name": "selected-inherited-collision",
+    "expectSuccess": false,
+    "files": {
+      "p/Parent.java": "package p; abstract class Parent implements net.minecraft.client.gui.components.toasts.Toast { static class Visibility {} }\n",
+      "p/Child.java": "package p; class Child extends Parent { Visibility value; }\n"
+    }
+  },
+  {
+    "name": "absent-native",
+    "expectSuccess": false,
+    "files": {
+      "p/Absent.java": "package p; import net.minecraft.core.registries.BuiltInRegistries; class Absent { BuiltInRegistries value; }\n"
+    }
+  },
+  {
+    "name": "declared-owner-shadow",
+    "expectSuccess": false,
+    "files": {
+      "p/Shadow.java": "package p; import net.minecraft.network.chat.Component; class Shadow { Object Component; Object action(){return Component.toString();} }\n"
+    }
+  },
+  {
+    "name": "wildcard-rejection",
+    "expectSuccess": false,
+    "files": {
+      "p/Wildcard.java": "package p; import java.util.*; class Wildcard {}\n"
+    }
+  },
+  {
+    "name": "malformed-mixin-native-binding",
+    "expectSuccess": false,
+    "files": {
+      "p/BadBinding.java": "package p; import org.spongepowered.asm.mixin.injection.Inject; import org.spongepowered.asm.mixin.injection.At; class BadBinding { @Inject(method=\"render(Lnet/minecraft/bogus/Missing;)V\",at=@At(\"RETURN\")) void marker(){} }\n"
+    }
+  }
+]
