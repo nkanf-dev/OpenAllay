@@ -32,24 +32,27 @@ import java.util.Set;
 
 /** Component accessors and canonical constructors; never final-field assignment or Unsafe. */
 final class RecordJsonAdapter<T> extends TypeAdapter<T> {
-    record Fields(Set<String> write, Set<String> read) {
-        boolean reflectionReached() { return !write.isEmpty() || !read.isEmpty(); }
-    }
+    record Fields(Set<String> write, Set<String> read) {}
 
     /** Existing exclusions run before these sentinels. Every reached field is suppressed,
      * so a probe never opens private timestamp or record fields. The owner supplies a fresh
-     * unbound builder for every probe; no adapter cache or sentinel state is reused.
+     * unbound builder for every metadata probe; no adapter cache or sentinel state is reused.
+     * Public delegate lookup skips only the probe class wrapper; field/type exclusions still
+     * run natively. The actual bound Gson retains its class-level exclusion wrapper.
      */
     static Fields fields(GsonBuilder unbound, TypeToken<?> type) {
         Set<String> write = new HashSet<>();
         Set<String> read = new HashSet<>();
-        unbound.addSerializationExclusionStrategy(sentinel(type.getRawType(), write))
+        com.google.gson.TypeAdapterFactory selection = new com.google.gson.TypeAdapterFactory() {
+            @Override public <V> TypeAdapter<V> create(Gson gson, TypeToken<V> candidate) { return null; }
+        };
+        unbound.registerTypeAdapterFactory(selection).addSerializationExclusionStrategy(sentinel(type.getRawType(), write))
                 .addDeserializationExclusionStrategy(sentinel(type.getRawType(), read))
-                .create().getAdapter(type);
+                .create().getDelegateAdapter(selection, type);
         return new Fields(Set.copyOf(write), Set.copyOf(read));
     }
 
-    private static ExclusionStrategy sentinel(Class<?> owner, Set<String> names) {
+    static ExclusionStrategy sentinel(Class<?> owner, Set<String> names) {
         return new ExclusionStrategy() {
             @Override public boolean shouldSkipClass(Class<?> type) { return false; }
             @Override public boolean shouldSkipField(FieldAttributes field) {
@@ -173,11 +176,6 @@ final class RecordJsonAdapter<T> extends TypeAdapter<T> {
         }
         in.endObject();
         return construct(constructor, values);
-    }
-
-    static <T> T defaults(TypeToken<T> type) {
-        RecordComponent[] components = type.getRawType().getRecordComponents();
-        return construct(constructor(type.getRawType(), components), defaultArguments(components));
     }
 
     private static Constructor<?> constructor(Class<?> raw, RecordComponent[] components) {

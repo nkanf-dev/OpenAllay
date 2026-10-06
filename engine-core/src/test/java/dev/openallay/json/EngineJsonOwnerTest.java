@@ -196,11 +196,11 @@ final class EngineJsonOwnerTest {
         assertSame(first, derived.getAdapter(Tag.class));
         assertEquals("\"last:x\"", owner.toJson(new Tag("x")));
         JsonSerializer<Tagged> hierarchy = (value, type, context) -> context.serialize("hierarchy:" + ((Tag) value).text());
-        Gson hierarchyOwner = EngineJson.create(builder -> builder.registerTypeHierarchyAdapter(Tagged.class, hierarchy));
+        Gson hierarchyOwner = EngineJson.deriveHierarchy(EngineJson.create(), Tagged.class, hierarchy);
         assertEquals("\"hierarchy:x\"", hierarchyOwner.toJson(new Tag("x")));
         assertEquals("\"hierarchy:x\"", EngineJson.derive(hierarchyOwner, GsonBuilder::serializeNulls).toJson(new Tag("x")));
-        Gson exactOverHierarchy = EngineJson.create(builder -> builder
-                .registerTypeHierarchyAdapter(Tagged.class, hierarchy).registerTypeAdapter(Tag.class, first));
+        Gson exactOverHierarchy = EngineJson.deriveHierarchy(EngineJson.create(builder -> builder.registerTypeAdapter(Tag.class, first)),
+                Tagged.class, hierarchy);
         assertEquals("\"first:x\"", exactOverHierarchy.toJson(new Tag("x")));
     }
 
@@ -281,9 +281,9 @@ final class EngineJsonOwnerTest {
         assertEquals(0, metrics.bytes(null));
         assertEquals(before, owner.toJson(new Text("<&>", null)));
         assertSame(owner, EngineJson.withInstant(owner));
-        Gson optionalOwner = EngineJson.derive(owner, builder -> builder.registerTypeHierarchyAdapter(Optional.class,
+        Gson optionalOwner = EngineJson.deriveHierarchy(owner, Optional.class,
                 (JsonSerializer<Optional<?>>) (value, type, context) ->
-                        value.isPresent() ? context.serialize(value.orElseThrow()) : JsonNull.INSTANCE));
+                        value.isPresent() ? context.serialize(value.orElseThrow()) : JsonNull.INSTANCE);
         assertSame(optionalOwner, EngineJson.withInstant(optionalOwner));
         assertEquals("\"custom:1970-01-01T00:00:00Z\"", optionalOwner.toJson(Optional.of(Instant.EPOCH)));
     }

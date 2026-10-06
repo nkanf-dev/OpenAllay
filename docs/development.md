@@ -1014,3 +1014,33 @@ captures detach on the owning server thread; console player traces fail
 `schema` expectations; assistant steps are pre-authored, not a live model.
 Replay adds no domain-count, step, or report cap; execution safety and provider
 context budgets remain separate. Core bundles no traces for removed domain Tools.
+
+## Shared JSON configuration
+
+Create framework Gson instances with `EngineJson.create()` or
+`EngineJson.create(builder -> ...)`. Put builder options, exact adapters and
+ordinary `TypeAdapterFactory` registrations in a repeatable callback. Derive
+options with `EngineJson.derive(bound, builder -> ...)`.
+
+Use `EngineJson.deriveHierarchy(bound, baseType, adapter)` for hierarchy
+`JsonSerializer` and `JsonDeserializer` registrations. These registrations keep
+their own lower-priority lane. Exact ordinary adapters retain priority, and the
+last matching hierarchy registration wins. A missing read or write direction
+continues through lower hierarchy registrations and then the engine default.
+The engine default reads the original stream and preserves strict timestamp,
+duplicate-field and canonical-record checks.
+
+Use Gson's ordinary builder registration for hierarchy `TypeAdapter` objects.
+The owned hierarchy helper accepts only serializer/deserializer interfaces and
+rejects mixed `TypeAdapter`/tree-callback objects.
+
+Configuration callbacks must apply the same options and registrations each time.
+They must not retain the builder or vary configuration with time or counters.
+Registered adapters and exclusion strategies are shared objects, not deep copies.
+Do not register hierarchy serializer/deserializer objects directly in a callback:
+Gson does not expose that separate registration lane through its public lookup
+API. Register them through the owned hierarchy helper instead.
+
+`EngineJson.withInstant(bound)` validates ownership and returns that same Gson.
+Raw finished Gson instances are rejected. Capture their configuration in the
+owner recipe before construction. The public Extension SDK is unchanged.
