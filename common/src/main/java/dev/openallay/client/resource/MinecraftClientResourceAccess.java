@@ -21,7 +21,7 @@ public final class MinecraftClientResourceAccess implements ClientResourceAccess
         String prefix = ClientResourceAccess.validatePrefix(pathPrefix);
         List<ClientResource> detached = new ArrayList<>();
         for (var id : MinecraftResourceAccess.listIds(
-                resources, prefix, value -> value.getPath().startsWith(prefix))) {
+                resources, prefix, value -> true)) {
             try {
                 var stack = MinecraftResourceAccess.textLayers(resources, id);
                 for (int index = 0; index < stack.size(); index++) {

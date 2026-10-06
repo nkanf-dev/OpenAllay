@@ -58,6 +58,6 @@ public final class MinecraftRecipeSnapshots {
         if (stack.isEmpty()) return ItemStackSnapshot.empty();
         return new ItemStackSnapshot(
                 MinecraftNativeRegistries.ITEM.getKey(stack.getItem()).toString(),
-                stack.getCount(), stack.getHoverName().getString());
+                stack.getCount(), MinecraftServerCaptureFacts.itemName(stack));
     }
 }
