@@ -3,87 +3,72 @@ package dev.openallay.neoforge;
 import static com.mojang.brigadier.arguments.StringArgumentType.getString;
 import static com.mojang.brigadier.arguments.StringArgumentType.greedyString;
 import static com.mojang.brigadier.arguments.StringArgumentType.word;
-import static net.minecraft.commands.Commands.argument;
-import static net.minecraft.commands.Commands.literal;
 
 import dev.openallay.guide.GuideCommandFacade;
 import dev.openallay.guide.GuideModelMode;
 import dev.openallay.guide.GuideNotice;
-import java.util.UUID;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import java.util.function.Function;
 import java.util.function.Consumer;
-import net.minecraft.client.Minecraft;
-import net.minecraft.commands.CommandSourceStack;
-import dev.openallay.platform.minecraft.MinecraftComponents;
-import net.minecraft.network.chat.Component;
 
 public final class NeoForgeGuideCommands {
     private NeoForgeGuideCommands() {}
 
     public static void register(GuideCommandFacade guide) {
-        NeoForgeNativeCommandRegistration.client(dispatcher -> dispatcher.register(
-                literal("guide")
-                        .executes(context -> invoke(context.getSource(), sink -> guide.open(actor(), sink)))
-                        .then(literal("cancel").executes(context -> invoke(
-                                context.getSource(), sink -> guide.cancel(actor(), sink))))
-                        .then(literal("retry").executes(context -> invoke(
-                                context.getSource(), sink -> guide.retry(actor(), sink))))
-                        .then(literal("clear").executes(context -> invoke(
-                                context.getSource(), sink -> guide.clear(actor(), sink))))
-                        .then(literal("status").executes(context -> invoke(
-                                context.getSource(), sink -> guide.status(actor(), sink))))
-                        .then(literal("skills").executes(context -> invoke(
-                                context.getSource(), guide::skills)))
-                        .then(literal("sources").executes(context -> invoke(
-                                context.getSource(), guide::sources)))
-                        .then(literal("model")
-                                .then(literal("list").executes(context -> invoke(
-                                        context.getSource(), sink -> guide.models(actor(), sink))))
-                                .then(literal("profile").then(argument("id", word()).executes(
-                                        context -> invoke(context.getSource(), sink -> guide.modelProfile(
-                                                actor(), getString(context, "id"), sink)))))
-                                .then(literal("client").executes(context -> invoke(
-                                        context.getSource(), sink -> guide.model(
-                                                actor(), GuideModelMode.CLIENT, sink))))
-                                .then(literal("server").executes(context -> invoke(
-                                        context.getSource(), sink -> guide.model(
-                                                actor(), GuideModelMode.SERVER, sink)))))
-                        .then(literal("session")
-                                .then(literal("list").executes(context -> invoke(
-                                        context.getSource(), sink -> guide.sessions(actor(), sink))))
-                                .then(literal("new").then(argument("id", word()).executes(context -> invoke(
-                                        context.getSource(), sink -> guide.select(
-                                                actor(), getString(context, "id"), sink)))))
-                                .then(literal("switch").then(argument("id", word()).executes(context -> invoke(
-                                        context.getSource(), sink -> guide.select(
-                                                actor(), getString(context, "id"), sink)))))
-                                .then(literal("close").then(argument("id", word()).executes(context -> invoke(
-                                        context.getSource(), sink -> guide.close(
-                                                actor(), getString(context, "id"), sink))))))
-                        .then(literal("ask").then(argument("question", greedyString()).executes(context -> invoke(
-                                context.getSource(), sink -> guide.ask(
-                                        actor(), getString(context, "question"), sink)))))
-                        .then(argument("question", greedyString()).executes(context -> invoke(
-                                context.getSource(), sink -> guide.ask(
-                                        actor(), getString(context, "question"), sink))))));
+        NeoForgeNativeGuideCommandRegistration.register(guide);
     }
 
-    private static int invoke(
-            CommandSourceStack source,
-            Consumer<Consumer<GuideNotice>> operation) {
-        operation.accept(notice -> publish(source, notice));
+    /** One grammar, projected onto each real execution/completion source. */
+    public static <S> LiteralArgumentBuilder<S> tree(
+            GuideCommandFacade guide, Function<S, GuideCommandSource> source) {
+        return LiteralArgumentBuilder.<S>literal("guide")
+                        .executes(context -> invoke(source.apply(context.getSource()), sink -> guide.open(source.apply(context.getSource()).actor(), sink)))
+                        .then(LiteralArgumentBuilder.<S>literal("cancel").executes(context -> invoke(
+                                source.apply(context.getSource()), sink -> guide.cancel(source.apply(context.getSource()).actor(), sink))))
+                        .then(LiteralArgumentBuilder.<S>literal("retry").executes(context -> invoke(
+                                source.apply(context.getSource()), sink -> guide.retry(source.apply(context.getSource()).actor(), sink))))
+                        .then(LiteralArgumentBuilder.<S>literal("clear").executes(context -> invoke(
+                                source.apply(context.getSource()), sink -> guide.clear(source.apply(context.getSource()).actor(), sink))))
+                        .then(LiteralArgumentBuilder.<S>literal("status").executes(context -> invoke(
+                                source.apply(context.getSource()), sink -> guide.status(source.apply(context.getSource()).actor(), sink))))
+                        .then(LiteralArgumentBuilder.<S>literal("skills").executes(context -> invoke(
+                                source.apply(context.getSource()), guide::skills)))
+                        .then(LiteralArgumentBuilder.<S>literal("sources").executes(context -> invoke(
+                                source.apply(context.getSource()), guide::sources)))
+                        .then(LiteralArgumentBuilder.<S>literal("model")
+                                .then(LiteralArgumentBuilder.<S>literal("list").executes(context -> invoke(
+                                        source.apply(context.getSource()), sink -> guide.models(source.apply(context.getSource()).actor(), sink))))
+                                .then(LiteralArgumentBuilder.<S>literal("profile").then(com.mojang.brigadier.builder.RequiredArgumentBuilder.<S, String>argument("id", word()).executes(
+                                        context -> invoke(source.apply(context.getSource()), sink -> guide.modelProfile(
+                                                source.apply(context.getSource()).actor(), getString(context, "id"), sink)))))
+                                .then(LiteralArgumentBuilder.<S>literal("client").executes(context -> invoke(
+                                        source.apply(context.getSource()), sink -> guide.model(
+                                                source.apply(context.getSource()).actor(), GuideModelMode.CLIENT, sink))))
+                                .then(LiteralArgumentBuilder.<S>literal("server").executes(context -> invoke(
+                                        source.apply(context.getSource()), sink -> guide.model(
+                                                source.apply(context.getSource()).actor(), GuideModelMode.SERVER, sink)))))
+                        .then(LiteralArgumentBuilder.<S>literal("session")
+                                .then(LiteralArgumentBuilder.<S>literal("list").executes(context -> invoke(
+                                        source.apply(context.getSource()), sink -> guide.sessions(source.apply(context.getSource()).actor(), sink))))
+                                .then(LiteralArgumentBuilder.<S>literal("new").then(com.mojang.brigadier.builder.RequiredArgumentBuilder.<S, String>argument("id", word()).executes(context -> invoke(
+                                        source.apply(context.getSource()), sink -> guide.select(
+                                                source.apply(context.getSource()).actor(), getString(context, "id"), sink)))))
+                                .then(LiteralArgumentBuilder.<S>literal("switch").then(com.mojang.brigadier.builder.RequiredArgumentBuilder.<S, String>argument("id", word()).executes(context -> invoke(
+                                        source.apply(context.getSource()), sink -> guide.select(
+                                                source.apply(context.getSource()).actor(), getString(context, "id"), sink)))))
+                                .then(LiteralArgumentBuilder.<S>literal("close").then(com.mojang.brigadier.builder.RequiredArgumentBuilder.<S, String>argument("id", word()).executes(context -> invoke(
+                                        source.apply(context.getSource()), sink -> guide.close(
+                                                source.apply(context.getSource()).actor(), getString(context, "id"), sink))))))
+                        .then(LiteralArgumentBuilder.<S>literal("ask").then(com.mojang.brigadier.builder.RequiredArgumentBuilder.<S, String>argument("question", greedyString()).executes(context -> invoke(
+                                source.apply(context.getSource()), sink -> guide.ask(
+                                        source.apply(context.getSource()).actor(), getString(context, "question"), sink)))))
+                        .then(com.mojang.brigadier.builder.RequiredArgumentBuilder.<S, String>argument("question", greedyString()).executes(context -> invoke(
+                                source.apply(context.getSource()), sink -> guide.ask(
+                                        source.apply(context.getSource()).actor(), getString(context, "question"), sink))));
+    }
+
+    private static int invoke(GuideCommandSource source, Consumer<Consumer<GuideNotice>> operation) {
+        operation.accept(source::publish);
         return 1;
-    }
-
-    private static UUID actor() {
-        return java.util.Objects.requireNonNull(Minecraft.getInstance().player).getUUID();
-    }
-
-    private static void publish(CommandSourceStack source, GuideNotice notice) {
-        Component message = MinecraftComponents.literal("[OpenAllay] " + notice.message());
-        if (notice.level() == GuideNotice.Level.ERROR) {
-            source.sendFailure(message);
-        } else {
-            dev.openallay.context.minecraft.MinecraftCommandFeedback.success(source, () -> message, false);
-        }
     }
 }

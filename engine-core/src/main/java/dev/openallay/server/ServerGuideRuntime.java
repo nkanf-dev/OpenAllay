@@ -158,7 +158,7 @@ public record ServerGuideRuntime(
                                 }
                             },
                             () -> {
-                                try { clientTools.close(actor, payload.requestId()); }
+                                try { clientTools.close(actor, payload.requestId(), requestTools); }
                                 finally {
                                     try { imageStore.release(actor, steerImageOwner(payload.requestId())); }
                                     catch (java.io.IOException ignored) { /* Keep bytes on cleanup failure. */ }

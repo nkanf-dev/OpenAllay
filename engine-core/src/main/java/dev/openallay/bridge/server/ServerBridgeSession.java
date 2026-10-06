@@ -25,11 +25,38 @@ import java.util.UUID;
 
 /** One server request/chunk/custody owner; native bindings only admit actors and move strings. */
 public final class ServerBridgeSession {
-    public interface ContextProvider extends RemoteToolServer.ContextProvider, ServerAgentService.ContextProvider {}
+    public interface ContextProvider extends RemoteToolServer.ContextProvider, ServerAgentService.ContextProvider {
+        @Override default ContextProvider bind(UUID actor) { return this; }
+    }
 
     @FunctionalInterface
     public interface Transport {
         boolean send(UUID actor, String kind, String json);
+        /** Pure compatibility default; native hosts must capture the original actor admission. */
+        default Transport bind(UUID actor) { return this; }
+        /** Native override preserves the actual scheduler for observation work quanta. */
+        default boolean dispatchLater(UUID actor, Runnable action, Runnable retired) {
+            return dispatch(actor, action, retired);
+        }
+        default boolean dispatch(UUID actor, Runnable action, Runnable retired) {
+            RuntimeException runtimeFailure = null;
+            Error fatalFailure = null;
+            try { action.run(); }
+            catch (RuntimeException failure) { runtimeFailure = failure; }
+            catch (Error failure) { fatalFailure = failure; }
+            try { retired.run(); }
+            catch (RuntimeException | Error failure) {
+                if (fatalFailure != null) { if (fatalFailure != failure) fatalFailure.addSuppressed(failure); }
+                else if (failure instanceof Error fatal) {
+                    if (runtimeFailure != null && (Throwable) fatal != runtimeFailure) fatal.addSuppressed(runtimeFailure);
+                    fatalFailure = fatal;
+                } else if (runtimeFailure != null) { if (runtimeFailure != failure) runtimeFailure.addSuppressed(failure); }
+                else runtimeFailure = (RuntimeException) failure;
+            }
+            if (fatalFailure != null) throw fatalFailure;
+            if (runtimeFailure != null) throw runtimeFailure;
+            return true;
+        }
     }
 
     private final FeatureServices runtime;
@@ -197,15 +224,43 @@ public final class ServerBridgeSession {
                 .collect(java.util.stream.Collectors.toUnmodifiableSet());
         remoteTools = new RemoteToolServer(
                 new ExportedToolPolicy(runtime.tools(), exported), contexts,
-                (actor, chunk) -> send(actor, "tool_result", chunk),
+                new RemoteToolServer.ResponseSink() {
+                    @Override public void send(UUID actor, dev.openallay.bridge.protocol.RemoteToolResultChunkPayload chunk) {
+                        transport.send(actor, "tool_result", codec.encode(chunk));
+                    }
+                    @Override public RemoteToolServer.ResponseSink bind(UUID actor) {
+                        Transport bound = transport.bind(actor);
+                        return (ignored, chunk) -> bound.send(actor, "tool_result", codec.encode(chunk));
+                    }
+                },
                 new CorrelationRegistry(), gson, BridgeProtocol.TRANSPORT_CHUNK_BYTES);
         serverGuide = ServerGuideRuntime.create(
                 runtime,
                 configPath,
                 environment,
                 contexts,
-                this::sendAgentEvent,
+                new dev.openallay.server.ServerGuideEvents() {
+                    @Override public void send(UUID actor, dev.openallay.bridge.protocol.ServerAgentEventPayload event) {
+                        bind(actor).send(actor, event);
+                    }
+                    @Override public dev.openallay.server.ServerGuideEvents bind(UUID actor) {
+                        Transport bound = transport.bind(actor);
+                        return new dev.openallay.server.ServerGuideEvents() {
+                            @Override public void send(UUID ignored, dev.openallay.bridge.protocol.ServerAgentEventPayload event) {
+                                send(actor, event, () -> {});
+                            }
+                            @Override public void send(UUID ignored, dev.openallay.bridge.protocol.ServerAgentEventPayload event,
+                                    Runnable retired) {
+                                // Encoding happens inside the validated action; setup failures retire too.
+                                bound.dispatch(actor, () -> sendAgentEvent(bound, actor, event), retired);
+                            }
+                        };
+                    }
+                },
                 new dev.openallay.bridge.server.PlayerClientToolRouter.Transport() {
+                    @Override public dev.openallay.bridge.server.PlayerClientToolRouter.Transport bind(UUID actor) {
+                        return clientToolTransport(transport.bind(actor));
+                    }
                     @Override
                     public boolean call(
                             UUID actor,
@@ -233,6 +288,18 @@ public final class ServerBridgeSession {
         }
     }
 
+    private PlayerClientToolRouter.Transport clientToolTransport(Transport bound) {
+        return new PlayerClientToolRouter.Transport() {
+            @Override public boolean call(UUID actor, dev.openallay.bridge.protocol.ClientToolCallPayload payload) {
+                // Native bound send has no-op retirement. It cannot enter a service Owner under Pending.
+                return bound.send(actor, "client_tool_call", codec.encode(payload));
+            }
+            @Override public void cancel(UUID actor, dev.openallay.bridge.protocol.ClientToolCancelPayload payload) {
+                bound.send(actor, "client_tool_cancel", codec.encode(payload));
+            }
+        };
+    }
+
     private CapabilityPayload capabilities() {
         ToolSchemaGenerator schemas = new ToolSchemaGenerator();
         List<CapabilityPayload.RemoteToolCapability> tools = runtime.tools().descriptors().stream()
@@ -255,7 +322,12 @@ public final class ServerBridgeSession {
         return transport.send(actor, kind, codec.encode(payload));
     }
 
-    private void sendAgentEvent(
+    private void sendAgentEvent(UUID actor, dev.openallay.bridge.protocol.ServerAgentEventPayload event) {
+        Transport bound = transport.bind(actor);
+        bound.dispatch(actor, () -> sendAgentEvent(bound, actor, event), () -> {});
+    }
+
+    private void sendAgentEvent(Transport bound,
             UUID actor, dev.openallay.bridge.protocol.ServerAgentEventPayload event) {
         if (event.eventType().equals("request_released")) steerChunks.clearRequest(actor, event.requestId());
         UUID eventId = UUID.randomUUID();
@@ -263,9 +335,8 @@ public final class ServerBridgeSession {
                 eventId,
                 codec.encode(event),
                 BridgeProtocol.TRANSPORT_CHUNK_BYTES)) {
-            send(actor, "agent_event_chunk",
-                    dev.openallay.bridge.protocol.ServerAgentEventChunkPayload.from(
-                            event.requestId(), chunk));
+            bound.send(actor, "agent_event_chunk", codec.encode(
+                    dev.openallay.bridge.protocol.ServerAgentEventChunkPayload.from(event.requestId(), chunk)));
         }
     }
 }

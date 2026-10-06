@@ -1,25 +1,8 @@
 package dev.openallay.fabric;
 
-import dev.openallay.integration.jei.MinecraftJeiPluginUid;
-
-import dev.openallay.integration.jei.OpenAllayJeiBridge;
+import dev.openallay.integration.jei.MinecraftJeiPluginLifecycle;
 import mezz.jei.api.JeiPlugin;
-import mezz.jei.api.runtime.IJeiRuntime;
 
-/** Fabric-root JEI discovery adapter for the common integration. */
+/** Optional discovery alone resolves JEI publication types. */
 @JeiPlugin
-public final class OpenAllayFabricJeiPlugin extends MinecraftJeiPluginUid {
-    public OpenAllayFabricJeiPlugin() {
-        OpenAllayJeiBridge.registerExtension();
-    }
-
-    @Override
-    public void onRuntimeAvailable(IJeiRuntime runtime) {
-        OpenAllayJeiBridge.runtimeAvailable(runtime);
-    }
-
-    @Override
-    public void onRuntimeUnavailable() {
-        OpenAllayJeiBridge.runtimeUnavailable();
-    }
-}
+public final class OpenAllayFabricJeiPlugin extends MinecraftJeiPluginLifecycle {}

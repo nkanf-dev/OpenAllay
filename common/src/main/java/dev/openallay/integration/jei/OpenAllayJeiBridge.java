@@ -10,6 +10,7 @@ import mezz.jei.api.runtime.IJeiRuntime;
 /** Loader JEI plugins delegate lifecycle state into this common integration boundary. */
 public final class OpenAllayJeiBridge {
     private static volatile IJeiRuntime runtime;
+    private static Runnable retireShutdown = () -> {};
     private static final AtomicBoolean extensionRegistered = new AtomicBoolean();
 
     static {
@@ -29,13 +30,21 @@ public final class OpenAllayJeiBridge {
         }
     }
 
-    public static void runtimeAvailable(IJeiRuntime value) {
+    public static synchronized void runtimeAvailable(IJeiRuntime value) {
         runtime = java.util.Objects.requireNonNull(value, "value");
+        retireShutdown.run();
+        retireShutdown = dev.openallay.client.lifecycle.OptionalClientIntegrationShutdown.register("viewer:jei", () -> clearRuntime(value));
         registerExtension();
     }
 
-    public static void runtimeUnavailable() {
+    private static synchronized void clearRuntime(IJeiRuntime owned) {
+        if (runtime == owned) runtimeUnavailable();
+    }
+
+    public static synchronized void runtimeUnavailable() {
         runtime = null;
+        retireShutdown.run();
+        retireShutdown = () -> {};
     }
 
     static IJeiRuntime runtime() {

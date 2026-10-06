@@ -59,6 +59,7 @@ public final class PlayerClientToolRouter {
         boolean call(UUID actorId, ClientToolCallPayload payload);
 
         void cancel(UUID actorId, ClientToolCancelPayload payload);
+        default Transport bind(UUID actor) { return this; }
     }
 
     /** The Agent request owner imports, pins and grants resolver access before completion. */
@@ -191,10 +192,15 @@ public final class PlayerClientToolRouter {
     }
 
     public boolean close(UUID actorId, UUID requestId) {
-        RequestExecutor executor = active.remove(new RequestKey(actorId, requestId));
-        if (executor == null) {
-            return false;
-        }
+        RequestKey key = new RequestKey(actorId, requestId);
+        RequestExecutor executor = active.get(key);
+        return executor != null && close(actorId, requestId, executor);
+    }
+
+    public boolean close(UUID actorId, UUID requestId, AgentToolExecutor expected) {
+        RequestKey key = new RequestKey(actorId, requestId);
+        RequestExecutor executor = active.get(key);
+        if (executor == null || executor != expected || !active.remove(key, executor)) return false;
         executor.closed = true;
         executor.cancelPending();
         List.copyOf(executor.retained.keySet()).forEach(executor::closeRequestScope);
@@ -221,6 +227,7 @@ public final class PlayerClientToolRouter {
 
     private final class RequestExecutor implements AgentToolExecutor {
         private final RequestKey key;
+        private final Transport boundTransport;
         private final String sessionId;
         private final Set<String> clientTools;
         private final ToolRuntimeCatalog requestTools;
@@ -242,6 +249,7 @@ public final class PlayerClientToolRouter {
                 ToolRuntimeCatalog requestTools,
                 SkillCatalogManifest clientSkillDocuments) {
             this.key = key;
+            this.boundTransport = transport.bind(key.actorId);
             this.sessionId = sessionId;
             this.clientTools = Set.copyOf(clientTools);
             this.requestTools = requestTools;
@@ -317,22 +325,21 @@ public final class PlayerClientToolRouter {
                     sessionId,
                     toolId,
                     arguments.toString());
+            boolean bridgeUnavailable = false;
             synchronized (value) {
                 if (pending.get(invocationId) != value || cancellation.isCancelled()) {
                     return result;
                 }
                 boolean sent;
                 try {
-                    sent = transport.call(key.actorId, payload);
+                    // Bound tool send uses a no-op retirement. It cannot enter a service Owner.
+                    sent = boundTransport.call(key.actorId, payload);
                 } catch (RuntimeException failure) {
                     sent = false;
                 }
                 value.dispatched = sent;
                 if (!sent && pending.remove(invocationId, value)) {
-                    result.complete(failure(
-                            toolId,
-                            "client_tool_bridge_unavailable",
-                            "Player client Tool connection is unavailable"));
+                    bridgeUnavailable = true;
                 } else if (sent && pending.get(invocationId) == value) {
                     ScheduledFuture<?> deadline = TIMEOUTS.schedule(
                             () -> timeoutInvocation(invocationId, value),
@@ -341,6 +348,8 @@ public final class PlayerClientToolRouter {
                     value.setDeadline(deadline);
                 }
             }
+            if (bridgeUnavailable) result.complete(failure(toolId, "client_tool_bridge_unavailable",
+                    "Player client Tool connection is unavailable"));
             return result;
         }
 
@@ -494,8 +503,9 @@ public final class PlayerClientToolRouter {
                     }
                     value.cancelDeadline();
                     reassembler.cancel(entry.getKey());
-                    value.result.complete(failure(value.toolId, code, message));
                 }
+                // Completion and normalization can enter the service Owner; never hold Pending.
+                value.result.complete(failure(value.toolId, code, message));
             });
             return values.size();
         }
@@ -517,7 +527,7 @@ public final class PlayerClientToolRouter {
             reassembler.cancel(invocationId);
             if (dispatched) {
                 try {
-                    transport.cancel(key.actorId, new ClientToolCancelPayload(
+                    boundTransport.cancel(key.actorId, new ClientToolCancelPayload(
                             key.requestId, invocationId));
                 } catch (RuntimeException ignored) {
                     // The enclosing cancellation still owns the terminal request state.
@@ -535,7 +545,7 @@ public final class PlayerClientToolRouter {
                 reassembler.cancel(invocationId);
             }
             try {
-                transport.cancel(key.actorId, new ClientToolCancelPayload(
+                boundTransport.cancel(key.actorId, new ClientToolCancelPayload(
                         key.requestId, invocationId));
             } catch (RuntimeException ignored) {
                 // Timeout remains a complete Tool result even if cancellation cannot be sent.

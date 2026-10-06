@@ -26,11 +26,13 @@ public final class RemoteToolServer {
                 Set<ContextCapability> capabilities,
                 String correlationId,
                 CancellationSignal cancellation);
+        default ContextProvider bind(UUID actor) { return this; }
     }
 
     @FunctionalInterface
     public interface ResponseSink {
         void send(UUID actorId, RemoteToolResultChunkPayload chunk);
+        default ResponseSink bind(UUID actor) { return this; }
     }
 
     private final ExportedToolPolicy policy;
@@ -74,8 +76,17 @@ public final class RemoteToolServer {
             return new ToolResult.Failure<>("duplicate_correlation", "Correlation ID is already active");
         }
         String requestScope = requestScope(sender, payload.sessionId());
-        RequestState request = registerRequest(sender, requestScope, cancellation);
-        contexts.capture(
+        RequestState request;
+        try { request = registerRequest(sender, requestScope, cancellation); }
+        catch (RuntimeException | Error failure) {
+            completeOriginal(sender, payload.correlationId(), cancellation);
+            cancellation.cancel();
+            throw failure;
+        }
+        try {
+            ResponseSink boundResponses = responses.bind(sender);
+            ContextProvider boundContexts = contexts.bind(sender);
+            boundContexts.capture(
                         sender,
                         tool.descriptor().requiredContext(),
                         requestScope,
@@ -86,8 +97,14 @@ public final class RemoteToolServer {
                         failureCode(throwable), safeMessage(throwable)))
                 .thenAccept(result -> {
                     request.complete(cancellation);
-                    finish(sender, payload.correlationId(), tool, result);
+                    finish(sender, payload.correlationId(), cancellation, boundResponses, tool, result);
                 });
+        } catch (RuntimeException | Error failure) {
+            request.complete(cancellation);
+            completeOriginal(sender, payload.correlationId(), cancellation);
+            cancellation.cancel();
+            throw failure;
+        }
         return new ToolResult.Success<>(new VoidResult());
     }
 
@@ -157,13 +174,20 @@ public final class RemoteToolServer {
         }
     }
 
-    private void finish(UUID actor, UUID correlation, Tool<?, ?> tool, ToolResult<?> result) {
-        if (!correlations.complete(actor, correlation)) {
-            return;
+    private boolean completeOriginal(UUID actor, UUID correlation, CancellationSignal original) {
+        synchronized (correlations) {
+            CorrelationRegistry.Entry entry = correlations.find(actor, correlation).orElse(null);
+            return entry != null && entry.cancellation() == original && correlations.complete(actor, correlation);
         }
+    }
+
+    private void finish(UUID actor, UUID correlation, CancellationSignal original,
+            ResponseSink boundResponses, Tool<?, ?> tool, ToolResult<?> result) {
+        if (!completeOriginal(actor, correlation, original)) return;
+        // Normalize and call retained sinks outside the registry monitor.
         String json = gson.toJson(normalizer.normalize(result, tool.descriptor().outputType()));
         new ResultChunker().split(correlation, json, transportChunkBytes)
-                .forEach(chunk -> responses.send(actor, chunk));
+                .forEach(chunk -> boundResponses.send(actor, chunk));
     }
 
     private CompletableFuture<ToolResult<?>> invoke(

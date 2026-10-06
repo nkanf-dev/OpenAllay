@@ -38,17 +38,25 @@ public final class MinecraftServerWorldObservationCoordinator
     private final MinecraftServer server;
     private final PlatformService platform;
     private final UUID expectedActor;
+    private final ServerPlayer expectedPlayer;
+    private final net.minecraft.server.level.ServerLevel expectedLevel;
+    private final java.util.function.BooleanSupplier connectionCurrent;
+    private final OwnerDispatch dispatch;
+    @FunctionalInterface public interface OwnerDispatch {
+        boolean dispatch(Runnable action, Runnable retired);
+    }
     private final String expectedDimension;
     private final String observationPrefix = UUID.randomUUID().toString();
     private final AtomicLong entitySequence = new AtomicLong();
     private final Map<String, WorldEntitySnapshot> entityDetails = new ConcurrentHashMap<>();
     private final AtomicBoolean closed = new AtomicBoolean();
 
-    public MinecraftServerWorldObservationCoordinator(
-            MinecraftServer server,
-            PlatformService platform,
-            UUID expectedActor,
-            String expectedDimension) {
+    public MinecraftServerWorldObservationCoordinator(MinecraftServer server, PlatformService platform,
+            UUID expectedActor, String expectedDimension, ServerPlayer expectedPlayer,
+            net.minecraft.server.level.ServerLevel expectedLevel,
+            java.util.function.BooleanSupplier connectionCurrent, OwnerDispatch dispatch) {
+        this.expectedPlayer = expectedPlayer; this.expectedLevel = expectedLevel;
+        this.connectionCurrent = connectionCurrent; this.dispatch = dispatch;
         this.server = java.util.Objects.requireNonNull(server, "server");
         this.platform = java.util.Objects.requireNonNull(platform, "platform");
         this.expectedActor = java.util.Objects.requireNonNull(expectedActor, "expectedActor");
@@ -63,7 +71,7 @@ public final class MinecraftServerWorldObservationCoordinator
             WorldObservationRequest request, CancellationSignal cancellation) {
         java.util.Objects.requireNonNull(request, "request");
         BlockCapture capture = new BlockCapture(request, cancellation);
-        schedule(() -> captureBlockSlice(capture));
+        schedule(() -> captureBlockSlice(capture), capture.result);
         return capture.result;
     }
 
@@ -122,27 +130,27 @@ public final class MinecraftServerWorldObservationCoordinator
                                         ? DataCompleteness.COMPLETE
                                         : DataCompleteness.PARTIAL,
                                 "minecraft:server_entities")));
-            } catch (RuntimeException failure) {
-                result.completeExceptionally(translate(failure));
-            }
-        });
+            } catch (RuntimeException failure) { result.completeExceptionally(translate(failure)); }
+            catch (Error failure) { result.completeExceptionally(failure); throw failure; }
+        }, result);
         return result;
     }
 
     @Override
     public CompletionStage<WorldEntitySnapshot> entity(
             String observationId, CancellationSignal cancellation) {
-        cancellation.throwIfCancelled();
-        if (closed.get()) {
-            return CompletableFuture.failedFuture(cancelled());
-        }
-        WorldEntitySnapshot snapshot = entityDetails.get(observationId);
-        if (snapshot == null) {
-            return CompletableFuture.failedFuture(new JavascriptExecutionException(
-                    "world_entity_unavailable",
-                    "Entity observation ID is unavailable in this request"));
-        }
-        return CompletableFuture.completedFuture(snapshot);
+        CompletableFuture<WorldEntitySnapshot> result = new CompletableFuture<>();
+        schedule(() -> {
+            try {
+                verifyAvailable(cancellation);
+                WorldEntitySnapshot snapshot = entityDetails.get(observationId);
+                if (snapshot == null) throw new JavascriptExecutionException(
+                        "world_entity_unavailable", "Entity observation ID is unavailable in this request");
+                result.complete(snapshot);
+            } catch (RuntimeException failure) { result.completeExceptionally(translate(failure)); }
+            catch (Error failure) { result.completeExceptionally(failure); throw failure; }
+        }, result);
+        return result;
     }
 
     @Override
@@ -193,7 +201,7 @@ public final class MinecraftServerWorldObservationCoordinator
                 processed++;
             }
             if (capture.index < volume) {
-                schedule(() -> captureBlockSlice(capture));
+                schedule(() -> captureBlockSlice(capture), capture.result);
                 return;
             }
             boolean complete = capture.loaded == volume;
@@ -208,9 +216,8 @@ public final class MinecraftServerWorldObservationCoordinator
                     evidence(
                             complete ? DataCompleteness.COMPLETE : DataCompleteness.PARTIAL,
                             "minecraft:server_blocks")));
-        } catch (RuntimeException failure) {
-            capture.result.completeExceptionally(translate(failure));
-        }
+        } catch (RuntimeException failure) { capture.result.completeExceptionally(translate(failure)); }
+        catch (Error failure) { capture.result.completeExceptionally(failure); throw failure; }
     }
 
     private WorldEntitySnapshot detail(String observationId, Entity entity) {
@@ -245,11 +252,15 @@ public final class MinecraftServerWorldObservationCoordinator
                 evidence(DataCompleteness.COMPLETE, "minecraft:server_entity"));
     }
 
-    private void schedule(Runnable action) {
-        if (closed.get()) {
-            throw cancelled();
-        }
-        server.execute(action);
+    private void schedule(Runnable action, CompletableFuture<?> result) {
+        if (closed.get()) { result.completeExceptionally(cancelled()); return; }
+        java.util.concurrent.atomic.AtomicBoolean ran = new java.util.concurrent.atomic.AtomicBoolean();
+        try {
+            dispatch.dispatch(() -> { ran.set(true); action.run(); }, () -> {
+                if (!ran.get() && !result.isDone()) result.completeExceptionally(cancelled());
+            });
+        } catch (RuntimeException failure) { result.completeExceptionally(translate(failure)); }
+        catch (Error failure) { result.completeExceptionally(failure); throw failure; }
     }
 
     private ServerPlayer verifyAvailable(CancellationSignal cancellation) {
@@ -262,7 +273,8 @@ public final class MinecraftServerWorldObservationCoordinator
                     "World observation must run on the Minecraft server thread");
         }
         ServerPlayer player = server.getPlayerList().getPlayer(expectedActor);
-        if (player == null) {
+        if (player != expectedPlayer || !connectionCurrent.getAsBoolean()
+                || dev.openallay.context.minecraft.MinecraftServerPlayerLevel.get(player) != expectedLevel) {
             throw cancelled();
         }
         if (!expectedDimension.equals(

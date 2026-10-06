@@ -9,8 +9,6 @@ import dev.openallay.recipe.RecipeProviderSnapshot;
 import dev.openallay.recipe.RecipeViewerNavigator;
 import java.time.Instant;
 import java.util.List;
-import mezz.jei.api.constants.VanillaTypes;
-import mezz.jei.api.recipe.RecipeIngredientRole;
 import mezz.jei.api.recipe.category.IRecipeCategory;
 import mezz.jei.api.runtime.IJeiRuntime;
 import net.minecraft.client.Minecraft;
@@ -30,12 +28,12 @@ final class JeiRecipeNavigator implements RecipeViewerNavigator {
 
     @Override
     public RecipeNavigationResult openRecipes(String itemId) {
-        return openItem(itemId, RecipeIngredientRole.OUTPUT);
+        return openItem(itemId, JeiIngredientSlot.Role.OUTPUT);
     }
 
     @Override
     public RecipeNavigationResult openUsages(String itemId) {
-        return openItem(itemId, RecipeIngredientRole.INPUT);
+        return openItem(itemId, JeiIngredientSlot.Role.INPUT);
     }
 
     @Override
@@ -71,7 +69,7 @@ final class JeiRecipeNavigator implements RecipeViewerNavigator {
         }
     }
 
-    private RecipeNavigationResult openItem(String itemId, RecipeIngredientRole role) {
+    private RecipeNavigationResult openItem(String itemId, JeiIngredientSlot.Role role) {
         RecipeNavigationResult readiness = readiness();
         if (readiness != null) {
             return readiness;
@@ -83,9 +81,7 @@ final class JeiRecipeNavigator implements RecipeViewerNavigator {
         IJeiRuntime runtime = OpenAllayJeiBridge.runtime();
         ItemStack stack = new ItemStack(GuideNativeItemLookup.item(itemId));
         try {
-            runtime.getRecipesGui().show(runtime.getJeiHelpers()
-                    .getFocusFactory()
-                    .createFocus(role, VanillaTypes.ITEM_STACK, stack));
+            MinecraftJeiRecipeApi.showItem(runtime, stack, role);
             return RecipeNavigationResult.success();
         } catch (RuntimeException failure) {
             return RecipeNavigationResult.failed(
@@ -98,11 +94,7 @@ final class JeiRecipeNavigator implements RecipeViewerNavigator {
             JeiRecipeProvider provider,
             IRecipeCategory<T> category,
             String recipeId) {
-        List<T> recipes = runtime.getRecipeManager()
-                .createRecipeLookup(category.getRecipeType())
-                .includeHidden()
-                .get()
-                .toList();
+        List<T> recipes = MinecraftJeiRecipeApi.recipes(runtime, category, true);
         for (T recipe : recipes) {
             if (provider.referenceIdIfSupported(category, recipe)
                     .filter(recipeId::equals)
@@ -117,11 +109,7 @@ final class JeiRecipeNavigator implements RecipeViewerNavigator {
 
     private RecipeNavigationResult openMatching(
             IJeiRuntime runtime, JeiRecipeProvider provider, String recipeId) {
-        for (IRecipeCategory<?> category : runtime.getRecipeManager()
-                .createRecipeCategoryLookup()
-                .includeHidden()
-                .get()
-                .toList()) {
+        for (IRecipeCategory<?> category : MinecraftJeiRecipeApi.categories(runtime, true)) {
             RecipeNavigationResult result = openCategoryMatch(runtime, provider, category, recipeId);
             if (result != null) {
                 return result;
