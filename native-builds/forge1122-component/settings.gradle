@@ -1,0 +1,2 @@
+pluginManagement { repositories { gradlePluginPortal(); mavenCentral() } }
+rootProject.name='forge1122-component'

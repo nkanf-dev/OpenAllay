@@ -1,0 +1,116 @@
+import groovy.json.JsonSlurper
+import groovy.json.JsonOutput
+import java.security.MessageDigest
+plugins {
+    id 'java'
+    id 'com.gradleup.shadow' version '9.6.1'
+}
+def request=new JsonSlurper().parse(file(property('componentInputs')))
+def expected=['forge','launchwrapper','engine','native','sdk','rhino','featureDependencies','output','java17','stockAsm'] as Set
+if(request.keySet()!=expected) throw new GradleException('Exact component request required')
+def sha={ File file -> MessageDigest.getInstance('SHA-256').digest(file.bytes).encodeHex().toString() }
+def checked={ record ->
+    if(record.keySet()!=(['path','sha256'] as Set) || !file(record.path).isFile() || sha(file(record.path))!=record.sha256)
+        throw new GradleException('Exact immutable component bytes required')
+    file(record.path)
+}
+def stockAsm=checked(request.stockAsm);def forge=checked(request.forge);def launchwrapper=checked(request.launchwrapper)
+def nativeJar=checked(request.native);def engine=checked(request.engine);def sdk=checked(request.sdk);def rhino=checked(request.rhino)
+def featureDeps=request.featureDependencies.collect { checked(it) }
+def out=file(request.output)
+repositories {
+    mavenCentral()
+    maven { url='https://repo.spongepowered.org/repository/maven-public/' }
+}
+configurations { mixinPrivate { transitive=false }; hostCompile }
+dependencies {
+    mixinPrivate 'org.spongepowered:mixin:0.8.5'
+    ['asm','asm-tree','asm-commons','asm-util','asm-analysis'].each { mixinPrivate "org.ow2.asm:${it}:9.6" }
+    hostCompile files(forge,launchwrapper,nativeJar,engine,sdk,stockAsm)
+    hostCompile("org.spongepowered:mixin:0.8.5") { transitive=false }
+}
+def pins=new JsonSlurper().parse(file('dependency-pins.json'))
+task verifyPrivateInputs {
+    doLast {
+        def actual=configurations.mixinPrivate.resolvedConfiguration.resolvedArtifacts.collectEntries { a ->
+            [(a.moduleVersion.id.toString()):[path:a.file.absolutePath,sha256:sha(a.file)]] }
+        if(actual.keySet()!=pins.keySet() || actual.any { coordinate,record -> record.sha256!=pins[coordinate] })
+            throw new GradleException('Genuine Mixin/privateASM input differs')
+        out.mkdirs();new File(out,'private-inputs.json').text=JsonOutput.prettyPrint(JsonOutput.toJson(actual))+'\n'
+    }
+}
+task compileCore(type:JavaCompile) {
+    source=fileTree('src/core') { include '**/*.java' }
+    classpath=configurations.hostCompile
+    destinationDirectory=file('build/core-classes')
+    javaCompiler=javaToolchains.compilerFor { languageVersion=JavaLanguageVersion.of(17) }
+    options.release=8
+}
+task compileFacade(type:JavaCompile) {
+    source=fileTree('src/facade') { include '**/*.java' }
+    classpath=configurations.hostCompile
+    destinationDirectory=file('build/facade-classes')
+    javaCompiler=javaToolchains.compilerFor { languageVersion=JavaLanguageVersion.of(17) }
+    options.release=8
+}
+task privateMixin(type:com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar) {
+    dependsOn verifyPrivateInputs
+    archiveFileName='openallay-private-mixin.jar';destinationDirectory=out
+    configurations=[project.configurations.mixinPrivate]
+    relocate 'org.objectweb.asm','dev.openallay.internal.forge1122.asm'
+    exclude 'META-INF/*.SF','META-INF/*.RSA','META-INF/*.DSA','module-info.class','META-INF/versions/**/module-info.class'
+    mergeServiceFiles()
+    preserveFileTimestamps=false;reproducibleFileOrder=true
+}
+task featureCore(type:Jar) {
+    dependsOn compileCore
+    archiveFileName='openallay-feature-core.jar';destinationDirectory=out
+    from compileCore.destinationDirectory
+    ([engine,nativeJar,sdk,rhino]+featureDeps).each { artifact -> from(zipTree(artifact)) {
+        exclude 'META-INF/MANIFEST.MF','META-INF/*.SF','META-INF/*.RSA','META-INF/*.DSA','META-INF/mods.toml','mcmod.info'
+    } }
+    manifest.attributes('FMLCorePlugin':'dev.openallay.forge1122.bootstrap.OpenAllayFeatureBoundary')
+    duplicatesStrategy=DuplicatesStrategy.FAIL
+    preserveFileTimestamps=false;reproducibleFileOrder=true
+}
+task lifecycleFacade(type:Jar) {
+    dependsOn compileFacade
+    archiveFileName='openallay-lifecycle-facade.jar';destinationDirectory=out
+    from compileFacade.destinationDirectory
+    from('src/facade-resources')
+    preserveFileTimestamps=false;reproducibleFileOrder=true
+}
+task assembleComponent {
+    dependsOn featureCore,lifecycleFacade,privateMixin
+    doLast {
+        def result=[featureCore.archiveFile.get().asFile,lifecycleFacade.archiveFile.get().asFile,privateMixin.archiveFile.get().asFile]
+        new File(out,'component-inputs.json').text=JsonOutput.prettyPrint(JsonOutput.toJson([
+            artifacts:result.collect { [path:it.absolutePath,sha256:sha(it)] },
+            retainedEngineSha256:sha(engine),retainedNativeSha256:sha(nativeJar),engineRebuilt:false,
+            runtime:17,facadeRelease:8,stockAsmReplacement:false,customClassLoader:false,
+            privateAsmNamespace:'dev.openallay.internal.forge1122.asm',
+            additionalTweaker:'org.spongepowered.asm.launch.MixinTweaker']))+'\n'
+    }
+}
+
+task compileCensus(type:JavaCompile) {
+    dependsOn privateMixin
+    source=fileTree('src/census') { include '**/*.java' }
+    classpath=files(privateMixin.archiveFile)+files(stockAsm)
+    destinationDirectory=file('build/census-classes')
+    javaCompiler=javaToolchains.compilerFor { languageVersion=JavaLanguageVersion.of(17) }
+    options.release=17
+}
+task componentCensus {
+    dependsOn compileCensus,assembleComponent
+    doLast {
+        def log=new File(out,'class-census.tsv');def result=new File(out,'class-census.log')
+        log.withOutputStream { stdout -> result.withOutputStream { stderr ->
+            exec { commandLine([file(request.java17).absolutePath,'-cp',
+                files(compileCensus.destinationDirectory,privateMixin.archiveFile,stockAsm).asPath,
+                'dev.openallay.forge1122.component.ComponentClassCensus',featureCore.archiveFile.get().asFile.absolutePath,
+                lifecycleFacade.archiveFile.get().asFile.absolutePath,privateMixin.archiveFile.get().asFile.absolutePath])
+                standardOutput=stdout;errorOutput=stderr }
+        } }
+    }
+}
