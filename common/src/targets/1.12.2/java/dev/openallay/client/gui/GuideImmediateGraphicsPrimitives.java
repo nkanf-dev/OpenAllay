@@ -65,7 +65,9 @@ public final class GuideImmediateGraphicsPrimitives {
             top = Math.min(top, ty); bottom = Math.max(bottom, ty);
         }
         if (x1 <= x0 || y1 <= y0) { right = left; bottom = top; }
-        java.nio.IntBuffer box = java.nio.ByteBuffer.allocateDirect(4 * 4)
+        // LWJGL 2 validates glGetInteger buffers for the maximum 16-int native result,
+        // even though GL_SCISSOR_BOX writes only four values.
+        java.nio.IntBuffer box = java.nio.ByteBuffer.allocateDirect(16 * 4)
                 .order(java.nio.ByteOrder.nativeOrder()).asIntBuffer();
         GL11.glGetInteger(GL11.GL_SCISSOR_BOX, box);
         SavedClip saved = new SavedClip(GL11.glIsEnabled(GL11.GL_SCISSOR_TEST), box.get(0), box.get(1), box.get(2), box.get(3));
