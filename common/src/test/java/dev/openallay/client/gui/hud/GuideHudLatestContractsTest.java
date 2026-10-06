@@ -52,7 +52,7 @@ final class GuideHudLatestContractsTest {
         int end = keys.indexOf("VOICE_PTT =", start);
         String interaction = keys.substring(start, end);
         assertTrue(interaction.contains("GuideNativeKeyMappings.create("));
-        assertTrue(interaction.contains("\"key.openallay.interact_hud\", InputConstants.KEY_F8"));
+        assertTrue(interaction.contains("\"key.openallay.interact_hud\", dev.openallay.client.gui.GuideInputCodes.KEY_F8"));
         assertFalse(interaction.contains("unbound("));
         String nativeKeys = source("common/src/main/java/dev/openallay/client/gui/GuideNativeKeyMappings.java");
         assertTrue(nativeKeys.contains("new KeyMapping(name, key, CATEGORY)"));
@@ -62,7 +62,10 @@ final class GuideHudLatestContractsTest {
             assertFalse((keys + nativeKeys).contains(mutation), mutation);
         }
         assertTrue(keys.contains("OPEN_GUIDE = GuideNativeKeyMappings.create("));
-        assertTrue(keys.contains("\"key.openallay.open_guide\", InputConstants.KEY_K"));
+        assertTrue(keys.contains("\"key.openallay.open_guide\", dev.openallay.client.gui.GuideInputCodes.KEY_K"));
+        String nativeCodes = source("common/src/main/java/dev/openallay/client/gui/GuideInputCodes.java");
+        assertTrue(nativeCodes.contains("KEY_F8 = GLFW.GLFW_KEY_F8"));
+        assertTrue(nativeCodes.contains("KEY_K = GLFW.GLFW_KEY_K"));
         assertTrue(keys.contains("VOICE_PTT = unbound(\"key.openallay.voice_ptt\")"));
     }
 
@@ -76,11 +79,15 @@ final class GuideHudLatestContractsTest {
         assertTrue(renderer.contains("previewLines.get(first + line)"));
         for (String obsolete : new String[] {"passivePageOffset", "passivePageCount", "pageRows", "pageStartedAt", "pageTicks",
                 "screen.openallay.hud.pages"}) assertFalse(renderer.contains(obsolete), obsolete);
-        assertTrue(renderer.contains("DefaultTooltipPositioner.INSTANCE"));
-        assertTrue(renderer.contains("font.split(tooltip"));
+        assertTrue(renderer.contains("GuideTooltipPlacement.DEFAULT"));
+        assertTrue(renderer.contains("GuideNativeFont.split(font, tooltip"));
         assertTrue(renderer.contains("Math.min(260, graphics.guiWidth() - 24)"));
-        assertTrue(renderer.contains("plainSubstrByWidth(footer.getString()"));
-        assertTrue(renderer.contains("!minecraft.mouseHandler.isMouseGrabbed()"));
+        assertTrue(renderer.contains("plainSubstrByWidth(font, MinecraftComponents.getString(footer)"));
+        assertTrue(renderer.contains("!dev.openallay.client.context.MinecraftMouseCoordinates.grabbed(minecraft)"));
+        String nativeMouse = source("common/src/main/java/dev/openallay/client/context/MinecraftMouseCoordinates.java");
+        assertTrue(nativeMouse.contains("grabbed(net.minecraft.client.Minecraft client) { return client.mouseHandler.isMouseGrabbed(); }"));
+        String nativeFont = source("common/src/main/java/dev/openallay/client/gui/GuideNativeFont.java");
+        assertTrue(nativeFont.contains("return lines(font.split(text, width))"));
         for (String ownership : new String[] {"releaseMouse(", "grabMouse(", "setScreen("}) {
             assertFalse(renderer.contains(ownership), ownership);
         }

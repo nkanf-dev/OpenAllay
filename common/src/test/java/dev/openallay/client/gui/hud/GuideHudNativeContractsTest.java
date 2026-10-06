@@ -43,8 +43,11 @@ class GuideHudNativeContractsTest {
         assertTrue(lite.contains("presenter.projectInteractive("));
         assertTrue(lite.contains("results.scroll().wheel(scrollY)"));
         String keyInput = source("common/src/main/java/dev/openallay/client/gui/GuideKeyInput.java");
-        assertTrue(keyInput.contains("InputConstants.KEY_PAGEUP -> GuideKeyIntent.PAGE_UP"));
-        assertTrue(keyInput.contains("InputConstants.KEY_PAGEDOWN -> GuideKeyIntent.PAGE_DOWN"));
+        assertTrue(keyInput.contains("dev.openallay.client.gui.GuideInputCodes.KEY_PAGEUP -> GuideKeyIntent.PAGE_UP"));
+        assertTrue(keyInput.contains("dev.openallay.client.gui.GuideInputCodes.KEY_PAGEDOWN -> GuideKeyIntent.PAGE_DOWN"));
+        String nativeCodes = source("common/src/main/java/dev/openallay/client/gui/GuideInputCodes.java");
+        assertTrue(nativeCodes.contains("KEY_PAGEUP = GLFW.GLFW_KEY_PAGE_UP"));
+        assertTrue(nativeCodes.contains("KEY_PAGEDOWN = GLFW.GLFW_KEY_PAGE_DOWN"));
         assertTrue(lite.contains("case PAGE_UP -> { scrollResults(() -> results.scroll().page(-1))"));
         assertTrue(lite.contains("case PAGE_DOWN -> { scrollResults(() -> results.scroll().page(1))"));
         assertTrue(lite.contains("scrollbarThumbHeight()"));
@@ -159,7 +162,7 @@ class GuideHudNativeContractsTest {
             assertFalse(draftPort.contains(forbidden), forbidden);
             assertFalse(factorySource.contains(forbidden), forbidden);
         }
-        assertTrue(host.contains("OpenAllayKeyMappings.VOICE_PTT.isDown()"));
+        assertTrue(host.contains("GuideNativeKeyMappings.down(OpenAllayKeyMappings.VOICE_PTT)"));
         assertTrue(coordinator.contains("boolean physicalDown = input.pttDown()"));
         assertTrue(coordinator.contains("gameplay && physicalDown && !pttDown && feedback && voice.input().enabled()"));
         assertTrue(coordinator.contains("voice.input().pressPtt()"));
@@ -172,7 +175,7 @@ class GuideHudNativeContractsTest {
     @Test void voiceFeedbackVisibilityCancelsCaptureAndFencesTheDraftBeforeCleanup() throws Exception {
         String coordinator = source("engine-core/src/main/java/dev/openallay/client/presentation/GuidePresentationCoordinator.java");
         String host = source("common/src/main/java/dev/openallay/client/gui/NativeGuidePresentationHost.java");
-        assertTrue(host.contains("MinecraftClientWindow.overlay(minecraft) != null, MinecraftClientWindow.hudHidden(minecraft), minecraft.isWindowActive()"));
+        assertTrue(host.contains("MinecraftClientWindow.overlayPresent(minecraft), MinecraftClientWindow.hudHidden(minecraft), MinecraftClientWindow.focused(minecraft)"));
         assertTrue(host.contains("screen instanceof OpenAllayScreen ? Surface.GUIDE"));
         assertTrue(host.contains("screen instanceof GuideChatLiteScreen ? Surface.HUD_INPUT"));
         assertTrue(coordinator.contains("!facts.overlayPresent() && !facts.hudHidden()"));
@@ -203,7 +206,7 @@ class GuideHudNativeContractsTest {
         assertTrue(indicator.contains("VoiceStatusPresentation.describe(status)"));
         assertTrue(indicator.contains("feedback.translationKey()"));
         assertTrue(indicator.contains("feedback.actionTranslationKey()"));
-        assertTrue(indicator.contains("Component.translatable(key)"));
+        assertTrue(indicator.contains("MinecraftComponents.translatable(key)"));
         for (String forbidden : new String[]{"status.code()", "status.source()", "Component.literal(",
                 "setScreen(", "forActor(", "capture(", "Files.", ".ask(", ".press(", ".pressPtt("}) {
             assertFalse(indicator.contains(forbidden), forbidden);

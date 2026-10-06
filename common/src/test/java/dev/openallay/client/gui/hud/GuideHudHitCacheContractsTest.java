@@ -43,7 +43,12 @@ final class GuideHudHitCacheContractsTest {
         assertFalse(invalidation.contains("extractedFrame"));
         int getter = renderer.indexOf("public List<Hit> hits()");
         String getters = renderer.substring(getter, renderer.indexOf("public boolean detailOpen()", getter));
-        assertTrue(getters.contains("paintedHits.current(hitEpoch, font, Language.getInstance(), viewport, scroll.offset())"));
+        assertTrue(getters.contains("paintedHits.current(hitEpoch, font, GuideNativeFont.languageIdentity(), viewport, scroll.offset())"));
+        Path root = Path.of("").toAbsolutePath();
+        while (root != null && !Files.exists(root.resolve("settings.gradle"))) root = root.getParent();
+        assertNotNull(root);
+        String nativeFont = Files.readString(root.resolve("common/src/main/java/dev/openallay/client/gui/GuideNativeFont.java"));
+        assertTrue(nativeFont.contains("languageIdentity() { return net.minecraft.locale.Language.getInstance(); }"));
         assertFalse(getters.contains("paintedHits = null"));
         assertFalse(getters.contains("paintedHits = new"));
         assertFalse(getters.contains("receipt ="));
@@ -71,19 +76,26 @@ final class GuideHudHitCacheContractsTest {
 
     @Test void compactResizeReusesTheNativeEditorAndRestoresOnlyPriorComposerFocus() throws Exception {
         String lite = source("GuideChatLiteScreen");
-        int initStart = lite.indexOf("protected void init()");
-        int reposition = lite.indexOf("protected void repositionElements()", initStart);
+        int initStart = lite.indexOf("protected void initGuideScreen()");
+        int reposition = lite.indexOf("protected void repositionGuideElements()", initStart);
         String init = lite.substring(initStart, reposition);
         assertTrue(init.contains("if (composer == null)"));
         assertTrue(init.contains("GuideComposerGeometry.resize(composer, input)"));
         assertTrue(init.contains("if (!composer.getValue().equals(state.readText(session))) dev.openallay.client.gui.GuideNativeMultilineText.setValue(composer, state.readText(session), true)"));
-        assertTrue(init.contains("addRenderableWidget(composer.widget())"));
-        assertTrue(init.contains("composer.widget().visible = readingLayout.footerFits()"));
-        assertTrue(init.contains("setFocused(null)"));
-        String rebuild = lite.substring(reposition, lite.indexOf("public void added()", reposition));
-        assertTrue(rebuild.indexOf("getFocused() == composer.widget()") < rebuild.indexOf("guideRebuildWidgets()"));
-        assertTrue(rebuild.contains("if (composerFocused && composer.widget().visible && composer.widget().active) setFocused(composer.widget())"));
+        assertTrue(init.contains("addGuideWidgetHandle(composer.widget())"));
+        assertTrue(init.contains("composer.widget().guideVisible(readingLayout.footerFits())"));
+        assertTrue(init.contains("clearGuideWidgetFocus()"));
+        String rebuild = lite.substring(reposition, lite.indexOf("protected void guideAdded()", reposition));
+        assertTrue(rebuild.indexOf("guideWidgetFocused(composer.widget())") < rebuild.indexOf("guideRebuildWidgets()"));
+        assertTrue(rebuild.contains("if (composerFocused && composer.widget().guideVisible() && composer.widget().guideActive()) setFocused(composer.widget())"));
         assertFalse(rebuild.contains("setFocused(send)"));
         assertTrue(lite.contains("guideInitialFocus() {}"));
+        Path root = Path.of("").toAbsolutePath();
+        while (root != null && !Files.exists(root.resolve("settings.gradle"))) root = root.getParent();
+        assertNotNull(root);
+        String nativeScreen = Files.readString(root.resolve("common/src/main/java/dev/openallay/client/gui/GuideNativeScreen.java"));
+        assertTrue(nativeScreen.contains("addGuideWidget(GuideNativeWidgets.nativeWidget(widget))"));
+        assertTrue(nativeScreen.contains("return getFocused() == GuideNativeWidgets.nativeWidget(widget)"));
+        assertTrue(nativeScreen.contains("clearGuideWidgetFocus() { GuideNativeFocus.clear(this); }"));
     }
 }
