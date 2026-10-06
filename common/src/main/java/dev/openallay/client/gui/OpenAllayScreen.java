@@ -75,7 +75,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import net.minecraft.ChatFormatting;
 import dev.openallay.client.gui.GuideGraphics;
-import net.minecraft.client.gui.components.AbstractWidget;
+import dev.openallay.client.gui.GuideWidget;
 import dev.openallay.client.gui.GuideNativeButton;
 import dev.openallay.client.gui.GuideMultilineEditor;
 import dev.openallay.client.gui.GuideTooltip;
@@ -507,7 +507,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
     public boolean guideKeyPressed(GuideInputKey event) {
         GuideKeyInput input = GuideKeyInput.from(event);
         if (voice != null && voice.enabled()
-                && voiceKeyAllowed(composer != null && getFocused() == composer.widget(), sessionOverlay || overflowOpen || modelSelectorOpen)
+                && voiceKeyAllowed(composer != null && guideWidgetFocused(composer.widget()), sessionOverlay || overflowOpen || modelSelectorOpen)
                 && GuideNativeInput.matches(OpenAllayKeyMappings.VOICE_PTT, event)) {
             if (!voiceKeyHeld) {
                 voiceKeyHeld = true;
@@ -518,7 +518,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         if (overflowOpen && input.intent() == GuideKeyIntent.ESCAPE) { overflowOpen = false; return true; }
         if (sessionOverlay && input.intent() == GuideKeyIntent.ESCAPE) { sessionOverlay = false; return true; }
         if (sessionOverlay && scrollSessionsKey(input.intent())) return true;
-        if ((composer == null || getFocused() != composer.widget()) && !detailOpen() && !modelSelectorOpen && !sessionOverlay && !overflowOpen && scrollTranscriptKey(input.intent())) return true;
+        if ((composer == null || !guideWidgetFocused(composer.widget())) && !detailOpen() && !modelSelectorOpen && !sessionOverlay && !overflowOpen && scrollTranscriptKey(input.intent())) return true;
         if (modelSelectorOpen && input.intent() == GuideKeyIntent.ESCAPE) {
             modelSelectorOpen = false;
             return true;
@@ -542,8 +542,8 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
             closeDetail();
             return true;
         }
-        if (detailOpen() && (composer == null || getFocused() != composer.widget()) && scrollDetailKey(input.intent())) return true;
-        if (composer != null && getFocused() == composer.widget() && input.paste()) {
+        if (detailOpen() && (composer == null || !guideWidgetFocused(composer.widget())) && scrollDetailKey(input.intent())) return true;
+        if (composer != null && guideWidgetFocused(composer.widget()) && input.paste()) {
             // Preserve Minecraft's text paste and selection semantics, including text+image clipboards.
             synchronizeComposerSession();
             super.guideKeyPressed(event);
@@ -552,7 +552,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         }
         // Native confirmation also includes Space, which must remain text/IME input here.
         ComposerKeyAction composerAction = composerKeyAction(
-                composer != null && getFocused() == composer.widget(),
+                composer != null && guideWidgetFocused(composer.widget()),
                 input.intent() == GuideKeyIntent.ENTER,
                 input.shift(),
                 input.control());
@@ -793,11 +793,11 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
     /** Only a successful voice draft insertion may request this; never displace a player's focus. */
     public boolean focusComposerAfterVoiceDraft() {
         if (minecraft == null || MinecraftClientWindow.screen(minecraft) != this || composer == null
-                || !composer.widget().active || !composer.widget().visible || getFocused() != null
+                || !composer.widget().guideActive() || !composer.widget().guideVisible() || getFocused() != null
                 || sessionOverlay || overflowOpen || modelSelectorOpen || detailOpen()
                 || draftIntent().editing()) return false;
         setFocused(composer.widget());
-        return getFocused() == composer.widget();
+        return guideWidgetFocused(composer.widget());
     }
 
     @Override
@@ -2708,8 +2708,8 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
 
     private void rebuildPresentationWidgets() {
         invalidateContentHits();
-        boolean composerFocused = composer != null && getFocused() == composer.widget();
-        AbstractWidget previous = getFocused() instanceof AbstractWidget widget ? widget : null;
+        boolean composerFocused = composer != null && guideWidgetFocused(composer.widget());
+        GuideWidget previous = getGuideWidgetFocused();
         String contentFocus = focusedContentId;
         guideRebuildWidgets();
         focusedContentId = contentFocus;
@@ -2717,9 +2717,9 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         if (composerFocused) setFocused(composer.widget());
         else if (previous != null) {
             // Recreated controls may retain focus by native type and label; never reattach an old widget.
-            children().stream().filter(AbstractWidget.class::isInstance).map(AbstractWidget.class::cast)
-                    .filter(widget -> widget.getClass() == previous.getClass()
-                            && widget.getMessage().equals(previous.getMessage()) && widget.active && widget.visible)
+            guideWidgetChildren().stream()
+                    .filter(widget -> widget.guideNativeType() == previous.guideNativeType()
+                            && widget.getMessage().equals(previous.getMessage()) && widget.guideActive() && widget.guideVisible())
                     .findFirst().ifPresent(this::setFocused);
         }
     }

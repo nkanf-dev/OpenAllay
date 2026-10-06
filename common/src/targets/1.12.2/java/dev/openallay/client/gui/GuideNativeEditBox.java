@@ -5,16 +5,20 @@ import net.minecraft.client.gui.GuiTextField;
 import org.lwjgl.input.Keyboard;
 
 /** Actual 1.12.2 text widget. Vanilla retains selection, clipboard, validation and cursor ownership. */
-public class GuideNativeEditBox extends GuiTextField implements GuideWidgetInput {
+public class GuideNativeEditBox extends GuiTextField implements GuideWidgetInput, GuideWidget {
     public boolean active = true;
     public boolean visible = true;
     private boolean editable = true;
     private java.util.function.Consumer<String> responder = ignored -> {};
     private java.util.function.BiFunction<String, Integer, GuideTextLine> formatter;
     private final FontRenderer guideFont;
+    private net.minecraft.util.text.ITextComponent message = new net.minecraft.util.text.TextComponentString("");
     private net.minecraft.util.text.ITextComponent hint;
     public GuideNativeEditBox(FontRenderer font, int x, int y, int width, int height,
-            net.minecraft.util.text.ITextComponent title) { this(0, font, x, y, width, height); }
+            net.minecraft.util.text.ITextComponent title) {
+        this(0, font, x, y, width, height);
+        message = java.util.Objects.requireNonNull(title, "title");
+    }
     public GuideNativeEditBox(int id, FontRenderer font, int x, int y, int width, int height) {
         super(id, font, x, y, width, height);
         guideFont = font;
@@ -73,6 +77,13 @@ public class GuideNativeEditBox extends GuiTextField implements GuideWidgetInput
     public int getY() { return y; }
     public void setX(int value) { x = value; }
     public void setY(int value) { y = value; }
+    public int getHeight() { return height; }
+    public net.minecraft.util.text.ITextComponent getMessage() { return message; }
+    public Class<?> guideNativeType() { return getClass(); }
+    public boolean guideActive() { return active; }
+    public void guideActive(boolean active) { this.active = active; }
+    public boolean guideVisible() { return visible; }
+    public void guideVisible(boolean visible) { this.visible = visible; }
     public String getValue() { return super.getText(); }
     public void setValue(String value) {
         String previous = super.getText();

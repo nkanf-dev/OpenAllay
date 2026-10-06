@@ -11,6 +11,7 @@ import org.lwjgl.glfw.GLFW;
 /** Real AbstractWidget text primitive for the PoseStack family without MultiLineEditBox. */
 public final class GuideNativeMultilineEditor extends GuideNativeWidget implements GuideMultilineEditor {
     private static final int PADDING = 4;
+    private final GuideWidget guideWidget = GuideNativeWidgets.wrap(this);
     private final Font font;
     private final Component placeholder;
     private final GuideMultilineTextState text = new GuideMultilineTextState();
@@ -37,7 +38,7 @@ public final class GuideNativeMultilineEditor extends GuideNativeWidget implemen
         this.placeholder = placeholder;
         text.wrap(GuideComposerGeometry.contentWidth(width, PADDING * 2), font::width);
     }
-    @Override public AbstractWidget widget() { return this; }
+    @Override public GuideWidget widget() { return guideWidget; }
     @Override public String getValue() { return text.value(); }
     @Override public void setValue(String value, boolean bypassLineLimit) {
         // No line-count limit in this family. The independent character limit still applies.

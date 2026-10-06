@@ -220,7 +220,7 @@ public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNat
         }
         if (!composer.getValue().equals(state.readText(session))) dev.openallay.client.gui.GuideNativeMultilineText.setValue(composer, state.readText(session), true);
         composer.setValueListener(value -> state.setText(session, value));
-        composer.widget().visible = readingLayout.footerFits();
+        composer.widget().guideVisible(readingLayout.footerFits());
         addGuideWidget(composer.widget());
         int actionY = readingLayout.actions().y();
         int actionWidth = Math.max(1, (inner - 12) / (voice != null && voice.enabled() ? 4 : 3));
@@ -252,7 +252,7 @@ public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNat
         voiceDrafts.visible = false;
         dev.openallay.client.gui.GuideNativeWidgetTooltips.set(voiceDrafts, GuideTooltip.create(MinecraftComponents.translatable("screen.openallay.hud.voice_drafts.description")));
         if (!readingLayout.footerFits()) {
-            composer.widget().visible = false;
+            composer.widget().guideVisible(false);
             send.visible = false;
             stop.visible = false;
             intentAction.visible = false;
@@ -266,10 +266,10 @@ public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNat
     }
 
     @Override protected void repositionGuideElements() {
-        boolean composerFocused = composer != null && getFocused() == composer.widget();
+        boolean composerFocused = composer != null && guideWidgetFocused(composer.widget());
         guideRebuildWidgets();
         // Only the same composer survives the rebuild. Never reattach a discarded button.
-        if (composerFocused && composer.widget().visible && composer.widget().active) setFocused(composer.widget());
+        if (composerFocused && composer.widget().guideVisible() && composer.widget().guideActive()) setFocused(composer.widget());
     }
 
     @Override protected void guideAdded() {

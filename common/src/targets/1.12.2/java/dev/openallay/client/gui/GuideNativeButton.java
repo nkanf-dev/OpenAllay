@@ -7,7 +7,7 @@ import net.minecraft.client.gui.GuiButton;
 import net.minecraft.util.text.ITextComponent;
 
 /** Actual GuiButton binding; canonical OpenAllayButton remains the only button paint/theme owner. */
-public abstract class GuideNativeButton extends GuiButton implements GuideWidgetInput {
+public abstract class GuideNativeButton extends GuiButton implements GuideWidgetInput, GuideWidget {
     public boolean active = true;
     private boolean guideFocused;
     private boolean guideHovered;
@@ -33,6 +33,11 @@ public abstract class GuideNativeButton extends GuiButton implements GuideWidget
         this.message = Objects.requireNonNull(message, "message");
         displayString = message.getFormattedText();
     }
+    @Override public final boolean guideActive() { return active; }
+    @Override public final void guideActive(boolean active) { this.active = active; }
+    @Override public final boolean guideVisible() { return visible; }
+    @Override public final void guideVisible(boolean visible) { this.visible = visible; }
+    @Override public final Class<?> guideNativeType() { return getClass(); }
     public final boolean isFocused() { return guideFocused; }
     public final boolean isGuideHovered() { return guideHovered; }
     public final void setTooltip(GuideTooltip tooltip) { this.tooltip = tooltip; }

@@ -14,6 +14,27 @@ public abstract class GuideNativeScreen extends GuideNativeScreenCallbacks {
     private GuideGraphics paintGraphics;
     private final java.util.List<GuideNativeEditBox> textFields = new java.util.ArrayList<>();
     protected GuideNativeScreen(ITextComponent title) { this.title = Objects.requireNonNull(title, "title"); }
+    protected final GuideWidget addGuideWidget(GuideWidget widget) {
+        if (widget instanceof GuideNativeButton button) addGuideWidget(button);
+        else if (widget instanceof GuideNativeEditBox field) addGuideWidget(field);
+        else throw new IllegalArgumentException("Widget has no selected native registration leaf");
+        return widget;
+    }
+    public final void setFocused(GuideWidget widget) {
+        if (!(widget instanceof GuideWidgetInput input)) throw new IllegalArgumentException("Widget has no native input owner");
+        setGuideFocused(input);
+    }
+    protected final void setInitialFocus(GuideWidget widget) { setFocused(widget); }
+    protected final boolean guideWidgetFocused(GuideWidget widget) { return getGuideFocused() == widget; }
+    protected final GuideWidget getGuideWidgetFocused() {
+        return getGuideFocused() instanceof GuideWidget widget ? widget : null;
+    }
+    protected final java.util.List<GuideWidget> guideWidgetChildren() {
+        java.util.List<GuideWidget> children = new java.util.ArrayList<>();
+        for (GuiButton button : buttonList) if (button instanceof GuideWidget widget) children.add(widget);
+        children.addAll(textFields);
+        return java.util.List.copyOf(children);
+    }
     public final ITextComponent getTitle() { return title; }
     @Override protected void initGuideScreen() {
         minecraft = mc;
