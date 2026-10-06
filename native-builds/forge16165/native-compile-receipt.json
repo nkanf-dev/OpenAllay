@@ -1,49 +1,27 @@
 {
-  "run": 37455692351,
-  "source": "eb26255f28a634c5149e6275d5e9bdb29ef841b6",
+  "run": 37459210222,
+  "source": "5005f39b582518ada548e3526a1e606b8b136587",
   "originalStatus": "success",
   "artifact": {
-    "id": 11408948405,
-    "node_id": "MDg6QXJ0aWZhY3QxMTQwODk0ODQwNQ==",
-    "name": "forge16165-native-eb26255f28a634c5149e6275d5e9bdb29ef841b6",
-    "size_in_bytes": 4875099,
-    "url": "https://api.github.com/repos/nkanf-dev/OpenAllay/actions/artifacts/11408948405",
-    "archive_download_url": "https://api.github.com/repos/nkanf-dev/OpenAllay/actions/artifacts/11408948405/zip",
+    "id": 11410338919,
+    "node_id": "MDg6QXJ0aWZhY3QxMTQxMDMzODkxOQ==",
+    "name": "forge16165-native-5005f39b582518ada548e3526a1e606b8b136587",
+    "size_in_bytes": 4874580,
+    "url": "https://api.github.com/repos/nkanf-dev/OpenAllay/actions/artifacts/11410338919",
+    "archive_download_url": "https://api.github.com/repos/nkanf-dev/OpenAllay/actions/artifacts/11410338919/zip",
     "expired": false,
-    "digest": "sha256:fd78d5b0593a8d5b132609513eabeb01427396209e353e5dd0a320a6c634c8d9",
-    "created_at": "2026-10-06T11:22:39Z",
-    "updated_at": "2026-10-06T11:22:39Z",
-    "expires_at": "2026-11-05T11:22:38Z",
+    "digest": "sha256:4f102d6264e628750d610e4d89518fb80457a5185d8ace23971bd92390bd09eb",
+    "created_at": "2026-10-06T11:52:52Z",
+    "updated_at": "2026-10-06T11:52:52Z",
+    "expires_at": "2026-11-05T11:52:52Z",
     "workflow_run": {
-      "id": 37455692351,
+      "id": 37459210222,
       "repository_id": 1302961354,
       "head_repository_id": 1302961354,
       "head_branch": "mc/forge16165-engine-continuation",
-      "head_sha": "eb26255f28a634c5149e6275d5e9bdb29ef841b6"
+      "head_sha": "5005f39b582518ada548e3526a1e606b8b136587"
     }
   },
-  "archiveSha256": "fd78d5b0593a8d5b132609513eabeb01427396209e353e5dd0a320a6c634c8d9",
-  "nativeInputSha256": "9134ff66c776eb49f21e88fce83e145df3c7b66994e42643e6b2ca244ea4ed1a",
-  "nativeReobfSha256": "b7bd4c6985a624e7e5aaaad1d5649b13766dcf3c90dedcdf0e1b6cc83d87f70c",
-  "nativeClasses": 410,
-  "selectedSourceUnits": 258,
-  "nonclassChanges": [],
-  "proofFilesHashVerified": true,
-  "acceptedScope": [
-    "Source normalization",
-    "Native javac major61",
-    "Normal Mixin AP outputs",
-    "Normal FG reobf"
-  ],
-  "notAccepted": [
-    "Product final packing",
-    "RuntimeMixinapplication",
-    "World/clientnativefunctionality",
-    "Clean gameshutdown",
-    "Supportadmission"
-  ],
-  "transportGap": [
-    "Actualgeneratedsource/javacworkingdirs notuploaded; derivedarchive reconstructionmustlabelderived notoriginal",
-    "Normalmapping/acceptanceinputs notuploaded buttheirhashesretainedinreceipts; source-boundpostprocessingtransportneeded"
-  ]
+  "archiveSha256": "4f102d6264e628750d610e4d89518fb80457a5185d8ace23971bd92390bd09eb",
+  "scope": "Confirmed GitHub normal native compile/AP/reobf success; archive/pair/source checks recomputed by pack transport before acceptance. No product/game runtime success."
 }
