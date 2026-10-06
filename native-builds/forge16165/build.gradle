@@ -202,7 +202,7 @@ tasks.register('acceptNamespaceMetadata',JavaExec) {
 def verifyCompilerInputs = tasks.register('verifyNativeCompilerInputs') {
     inputs.files(configurations.compileClasspath, configurations.annotationProcessor)
     inputs.files(closure.artifacts.collect { file(it.path) })
-    inputs.files(file(request.closureSpec),file(request.compilerArtifactLock))
+    inputs.files(file(request.closureSpec),file(request.compilerArtifactLock),file('host-library-inputs.json'))
     outputs.upToDateWhen { false }
     doLast {
         closure.artifacts.each { artifact ->
@@ -228,9 +228,19 @@ def verifyCompilerInputs = tasks.register('verifyNativeCompilerInputs') {
                 throw new GradleException("Actual ${name} differs from root-reviewed exact compiler lock")
             }
         }
+        def hostPins = new JsonSlurper().parse(file('host-library-inputs.json')).coordinates
+        def originalHostFiles = [] as Set
+        configurations.compileClasspath.resolvedConfiguration.resolvedArtifacts.each { artifact ->
+            def id = artifact.moduleVersion.id
+            def coordinate = "${id.group}:${id.name}:${id.version}".toString()
+            if (hostPins.containsKey(coordinate)) {
+                if (sha(artifact.file) != hostPins[coordinate]) throw new GradleException("Original FG host library changed: ${coordinate}")
+                originalHostFiles.add(artifact.file)
+            }
+        }
         def owners = [:]
         def classHashes = [:]
-        def identicalHostDefinitions = []
+        def inheritedHostDefinitions = []
         def conflictingDefinitions = []
         configurations.compileClasspath.files.each { file ->
             if (!file.isFile()) throw new GradleException("No source-owned output on native metadata classpath: ${file}")
@@ -243,14 +253,11 @@ def verifyCompilerInputs = tasks.register('verifyNativeCompilerInputs') {
                         def previous = owners[entry.name]
                         if (previous == null) { owners[entry.name] = file; classHashes[entry.name] = hash }
                         else if (previous != file) {
-                            // Normal Forge host libraries repeat some byte-identical definitions.
-                            // Product/optional-library repeats remain forbidden even when identical.
-                            def hostCopies = entry.name.startsWith('net/minecraftforge/') &&
-                                    previous.name in ['mergetool-1.0.9-api.jar','forgespi-3.2.0.jar'] &&
-                                    file.name in ['mergetool-1.0.9-api.jar','forgespi-3.2.0.jar']
-                            def record = [entry:entry.name, first:previous.absolutePath, second:file.absolutePath,
-                                    firstSha256:classHashes[entry.name], secondSha256:hash]
-                            if (hostCopies && classHashes[entry.name] == hash) identicalHostDefinitions.add(record)
+                            def record = [entry:entry.name, effectiveCompileOwner:previous.absolutePath,
+                                    laterHostDefinition:file.absolutePath, firstSha256:classHashes[entry.name], secondSha256:hash]
+                            // Preserve the normal, independently recorded Forge host classpath.
+                            // No product or optional integration archive receives this disposition.
+                            if (originalHostFiles.contains(previous) && originalHostFiles.contains(file)) inheritedHostDefinitions.add(record)
                             else conflictingDefinitions.add(record)
                         }
                     }
@@ -258,9 +265,10 @@ def verifyCompilerInputs = tasks.register('verifyNativeCompilerInputs') {
             }
         }
         jsonWrite(layout.buildDirectory.file('native-tooling/class-owner-census.json').get().asFile,
-                [identicalPinnedForgeHostDefinitions:identicalHostDefinitions, conflicts:conflictingDefinitions])
+                [inheritedOriginalForgeHostDefinitions:inheritedHostDefinitions, conflicts:conflictingDefinitions,
+                 hostPinsSha256:sha(file('host-library-inputs.json'))])
         if (!conflictingDefinitions.empty) throw new GradleException(
-                "Competing native class definitions: ${conflictingDefinitions*.entry}; see complete class-owner-census.json")
+                "Product/integration competing native definitions: ${conflictingDefinitions*.entry}; see class-owner-census.json")
         def gson = owners['com/google/gson/Gson.class']
         def actualGson = configurations.compileClasspath.resolvedConfiguration.resolvedArtifacts.find {
             it.moduleVersion.id.toString() == 'com.google.code.gson:gson:2.8.0'
