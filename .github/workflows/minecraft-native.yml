@@ -172,6 +172,11 @@ jobs:
             build/e2e/forge16165-product/*.png
             build/e2e/forge16165-product/game/logs/
             build/e2e/forge16165-product/game/crash-reports/
-            build/e2e/forge16165-product-ui/
+            build/e2e/forge16165-product-ui/*.json
+            build/e2e/forge16165-product-ui/*.log
+            build/e2e/forge16165-product-ui/*.png
+            build/e2e/forge16165-product-ui/screenshots/
+            build/e2e/forge16165-product-ui/game/logs/
+            build/e2e/forge16165-product-ui/game/crash-reports/
 
             build/e2e/runtime/forge16165-stock/minecraft/.provision/*.log
