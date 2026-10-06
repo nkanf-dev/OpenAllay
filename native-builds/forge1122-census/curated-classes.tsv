@@ -54,3 +54,8 @@ net.minecraft.client.gui.components.toasts.ToastComponent	net.minecraft.client.g
 net.minecraft.client.gui.screens.inventory.AbstractContainerScreen	net.minecraft.client.gui.inventory.GuiContainer	native container screen owner
 net.minecraft.client.gui.screens.TitleScreen	net.minecraft.client.gui.GuiMainMenu	native title screen owner
 net.minecraft.client.renderer.GameRenderer	net.minecraft.client.renderer.EntityRenderer	native client world renderer owner
+net.minecraft.util.Mth	net.minecraft.util.math.MathHelper	native math utility owner; no member remapping
+net.minecraft.client.gui.screens.ConfirmScreen	net.minecraft.client.gui.GuiYesNo	native confirmation screen owner; callback adaptation typed seam
+net.minecraft.client.gui.screens.worldselection.SelectWorldScreen	net.minecraft.client.gui.GuiWorldSelection	native world selection screen owner
+net.minecraft.client.gui.chat.NarratorChatListener	net.minecraft.client.gui.chat.NarratorChatListener	native narrator listener owner
+net.minecraft.client.gui.components.SubtitleOverlay	net.minecraft.client.gui.GuiSubtitleOverlay	native subtitle overlay owner
