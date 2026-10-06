@@ -1,0 +1,23 @@
+{
+  "base": {
+    "artifactId": 11406765949,
+    "runId": 37450040748,
+    "sourceRevision": "7819dbea0601f1ae7ef8b9c03286b6f8a0589bb4",
+    "sha256": "6d1ac947f59d983ea1b88db15d456cec3b7ddffd2b8f26320836a5b04de83802"
+  },
+  "engine": {
+    "artifactId": 11439607300,
+    "runId": 37520723414,
+    "sourceRevision": "f45df3b6677113ad0ecf2071c56bee11fc6882ad",
+    "sha256": "ff9a21dedf785f32f62f7bc95794da78dc7ff27a461f02fa040d7bc16baac26a"
+  },
+  "native": {
+    "artifactId": 11444645283,
+    "runId": 37530292147,
+    "sourceRevision": "464bf10acd1d049797d598a84b65fb99bd729e4d",
+    "sha256": "f427eb7590cdcae597ff2c67bd05cb304061e56b15c5397cd7c783c2629cdf6b"
+  },
+  "nativeJarSha256": "834427bfe69e62cf6056f76624dc8f11bb5759cde499c754924497bfdadcedc8",
+  "nativeCompiledSource": "8e4d03b51764e7a4dfee9e37e5c9d3c7c95e5a08",
+  "engineJarSha256": "a26ffddaefc79e8096bceafe7a1948430f46fd9bc0bde46a6228920ffbfc3d56"
+}

@@ -6,7 +6,7 @@ plugins {
     id 'com.gradleup.shadow' version '9.6.1'
 }
 def request=new JsonSlurper().parse(file(property('componentInputs')))
-def expected=['forge','launchwrapper','engine','native','sdk','rhino','featureDependencies','output','java17','stockAsm'] as Set
+def expected=['forge','launchwrapper','engine','native','sdk','rhino','featureDependencies','output','java17','stockAsm','featureStaging'] as Set
 if(request.keySet()!=expected) throw new GradleException('Exact component request required')
 def sha={ File file -> MessageDigest.getInstance('SHA-256').digest(file.bytes).encodeHex().toString() }
 def checked={ record ->
@@ -66,9 +66,8 @@ task featureCore(type:Jar) {
     dependsOn compileCore
     archiveFileName='openallay-feature-core.jar';destinationDirectory=out
     from compileCore.destinationDirectory
-    ([engine,nativeJar,sdk,rhino]+featureDeps).each { artifact -> from(zipTree(artifact)) {
-        exclude 'META-INF/MANIFEST.MF','META-INF/*.SF','META-INF/*.RSA','META-INF/*.DSA','META-INF/mods.toml','mcmod.info'
-    } }
+    // Provider driver inventories/merges whole retained entries with sole byte custody.
+    from file(request.featureStaging)
     manifest.attributes('FMLCorePlugin':'dev.openallay.forge1122.bootstrap.OpenAllayFeatureBoundary')
     duplicatesStrategy=DuplicatesStrategy.FAIL
     preserveFileTimestamps=false;reproducibleFileOrder=true

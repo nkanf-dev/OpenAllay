@@ -5,7 +5,7 @@ on:
       mode:
         type: choice
         default: tooling
-        options: [tooling, abi, engine, native, pack, boot, ui, world, persistence, builder, builder-call, builder-lifecycle, builder-presets, stock1122, census1122, stock1122-bridge, stock1122-pack200, engine1122, stock1122-title, native1122, reobf1122, stock1122-objectholder, stock1122-phase-diagnostic, modern1122]
+        options: [tooling, abi, engine, native, pack, boot, ui, world, persistence, builder, builder-call, builder-lifecycle, builder-presets, stock1122, census1122, stock1122-bridge, stock1122-pack200, engine1122, stock1122-title, native1122, reobf1122, stock1122-objectholder, stock1122-phase-diagnostic, modern1122, component1122-pack]
 permissions:
   contents: read
 concurrency:
@@ -511,3 +511,34 @@ jobs:
             native-builds/forge1122-reobf/build/createMcpToSrg/output.srg
             native-builds/forge1122-reobf/build/reobfJar/log.txt
             ${{ runner.temp }}/forge1122-reobf/
+
+  component1122-pack:
+    if: inputs.mode == 'component1122-pack'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with: {persist-credentials: false}
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with: {distribution: temurin, java-version: '21.0.10+7.0.LTS'}
+      - name: Capture immutable component Gradle tool JDK21
+        run: printf 'OPENALLAY_COMPONENT_JAVA21_HOME=%s\n' "$JAVA_HOME" >> "$GITHUB_ENV"
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with: {distribution: temurin, java-version: '17.0.18+8'}
+      - name: Capture immutable application JDK17
+        run: printf 'OPENALLAY_COMPONENT_JAVA17_HOME=%s\n' "$JAVA_HOME" >> "$GITHUB_ENV"
+      - name: Pack provider-verified retained bytes and census genuine private Mixin
+        env: {GH_TOKEN: '${{ github.token }}'}
+        run: python3 -B scripts/run-forge1122-component.py --mode pack
+      - name: Retain component artifacts once
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: forge1122-component-${{ github.sha }}-${{ github.run_attempt }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: |
+            build/forge1122-component-product/
+            build/forge1122-component-report/
+            build/e2e/runtime/forge1122-stock/minecraft/.provision/*.json
+            build/e2e/runtime/forge1122-stock/minecraft/.provision/*.log
