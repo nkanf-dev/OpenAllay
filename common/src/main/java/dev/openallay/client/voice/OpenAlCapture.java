@@ -2,8 +2,6 @@ package dev.openallay.client.voice;
 
 import dev.openallay.client.voice.AudioCapture.CaptureException;
 import dev.openallay.client.voice.AudioCapture.Failure;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Base64;
@@ -11,12 +9,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import org.lwjgl.openal.AL10;
-import org.lwjgl.openal.ALC10;
-import org.lwjgl.openal.ALC11;
-import org.lwjgl.openal.ALUtil;
-import org.lwjgl.openal.EXTDisconnect;
-import org.lwjgl.system.MemoryStack;
 
 /** Uses Minecraft's bundled OpenAL capture provider, including its native format conversion. */
 public final class OpenAlCapture implements dev.openallay.client.voice.AudioCapture.Factory {
@@ -25,33 +17,33 @@ public final class OpenAlCapture implements dev.openallay.client.voice.AudioCapt
     private static final int BUFFER_FRAMES = 3_200;
     private static final int FRAME_BYTES = 2;
     private static final int MAX_READ_BYTES = 4_096;
-    private final NativePort nativePort;
+    private final NativePort<?> nativePort;
     private final CaptureOpenOwner opening;
 
     /** Does not load a library, enumerate devices, check permission, or open capture. */
     public OpenAlCapture() {
-        this(new LwjglPort(), MacMicrophonePermission::checkBeforeOpen, Duration.ofSeconds(10));
+        this(new NativeOpenAlCapturePort(), MacMicrophonePermission::checkBeforeOpen, Duration.ofSeconds(10));
     }
 
-    OpenAlCapture(NativePort nativePort, CaptureOpenOwner.PermissionPreflight permission, Duration timeout) {
+    <D> OpenAlCapture(NativePort<D> nativePort, CaptureOpenOwner.PermissionPreflight permission, Duration timeout) {
         this.nativePort = Objects.requireNonNull(nativePort);
-        opening = new CaptureOpenOwner(permission, this::acquire, timeout);
+        opening = new CaptureOpenOwner(permission, deviceId -> acquire(nativePort, deviceId), timeout);
     }
 
     @Override public AudioCapture open(String deviceId, VoiceCancellation cancellation) throws Exception {
         return opening.open(deviceId, cancellation);
     }
 
-    private CaptureOpenOwner.Prepared acquire(String deviceId) throws CaptureException {
+    private <D> CaptureOpenOwner.Prepared acquire(NativePort<D> port, String deviceId) throws CaptureException {
         requireAvailable();
         if (deviceId == null || deviceId.isBlank() || DEFAULT_DEVICE_ID.equals(deviceId)) {
             // null is OpenAL's default-device selector. A translated display name is never an ID.
-            return new Session(null);
+            return new Session<>(port, null);
         }
         String name = deviceNames().get(deviceId);
         if (name == null) throw new CaptureException(Failure.DEVICE_UNAVAILABLE,
                 "The selected microphone is no longer available. Refresh devices and select one.");
-        return new Session(name);
+        return new Session<>(port, name);
     }
 
     @Override public List<AudioCapture.Device> devices() throws CaptureException {
@@ -92,33 +84,36 @@ public final class OpenAlCapture implements dev.openallay.client.voice.AudioCapt
     }
 
     /** Fake ports in tests never load LWJGL, touch a physical device or ask OS permission. */
-    interface NativePort {
+    enum Connection { CONNECTED, DISCONNECTED, UNAVAILABLE }
+
+    interface NativePort<D> {
         boolean available();
         List<String> names();
-        long open(String name, int sampleRate, int bufferFrames) throws CaptureException;
-        void start(long device) throws CaptureException;
-        boolean connected(long device) throws CaptureException;
-        int availableFrames(long device) throws CaptureException;
-        void read(long device, byte[] target, int frames) throws CaptureException;
-        void stop(long device);
-        void close(long device);
+        D open(String name, int sampleRate, int bufferFrames) throws CaptureException;
+        void start(D device) throws CaptureException;
+        Connection connection(D device) throws CaptureException;
+        int availableFrames(D device) throws CaptureException;
+        void read(D device, byte[] target, int frames) throws CaptureException;
+        void stop(D device);
+        void close(D device);
     }
 
-    private final class Session implements dev.openallay.client.voice.CaptureOpenOwner.Prepared {
+    private static final class Session<D> implements dev.openallay.client.voice.CaptureOpenOwner.Prepared {
+        private final NativePort<D> nativePort;
         private final String name;
         // A native handle must not be freed while read/start is using it. Open runs outside
         // this lock, so cancellation can fence an uninterruptible native open immediately.
         private final Object lock = new Object();
-        private long device;
+        private D device;
         private boolean closed;
-        Session(String name) { this.name = name; }
+        Session(NativePort<D> nativePort, String name) { this.nativePort = nativePort; this.name = name; }
 
         @Override public void open() throws CaptureException {
             synchronized (lock) {
                 if (closed) throw new java.util.concurrent.CancellationException("Microphone open cancelled");
             }
-            long opened = nativePort.open(name, SAMPLE_RATE, BUFFER_FRAMES);
-            if (opened == 0) throw new CaptureException(Failure.OPEN_FAILED, "Could not open the microphone.");
+            D opened = nativePort.open(name, SAMPLE_RATE, BUFFER_FRAMES);
+            if (opened == null) throw new CaptureException(Failure.OPEN_FAILED, "Could not open the microphone.");
             synchronized (lock) {
                 if (!closed) { device = opened; return; }
             }
@@ -140,7 +135,7 @@ public final class OpenAlCapture implements dev.openallay.client.voice.AudioCapt
             synchronized (lock) {
                 if (closed) return -1;
                 try {
-                    if (!nativePort.connected(device)) throw new CaptureException(Failure.DEVICE_DISCONNECTED,
+                    if (nativePort.connection(device) == Connection.DISCONNECTED) throw new CaptureException(Failure.DEVICE_DISCONNECTED,
                             "The microphone stopped or disconnected. Select a device and try again.");
                     int available = nativePort.availableFrames(device);
                     if (available < 0) throw new CaptureException(Failure.READ_FAILED,
@@ -162,18 +157,18 @@ public final class OpenAlCapture implements dev.openallay.client.voice.AudioCapt
         }
 
         @Override public void close() {
-            long selected;
+            D selected;
             synchronized (lock) {
                 if (closed) return;
                 closed = true;
                 selected = device;
-                device = 0;
+                device = null;
             }
             release(selected);
         }
 
-        private void release(long selected) {
-            if (selected == 0) return;
+        private void release(D selected) {
+            if (selected == null) return;
             try { nativePort.stop(selected); }
             catch (RuntimeException | LinkageError ignored) { /* Still release a broken device. */ }
             finally {
@@ -183,60 +178,4 @@ public final class OpenAlCapture implements dev.openallay.client.voice.AudioCapt
         }
     }
 
-    /** Does not create/destroy ALC, change game playback contexts, or use model-runtime IPC. */
-    private static final class LwjglPort implements NativePort {
-        @Override public boolean available() {
-            return NativeOpenAlCaptureFacts.available();
-        }
-        @Override public List<String> names() {
-            List<String> names = ALUtil.getStringList(0, ALC11.ALC_CAPTURE_DEVICE_SPECIFIER);
-            return names == null ? List.of() : names;
-        }
-        @Override public long open(String name, int sampleRate, int bufferFrames) throws CaptureException {
-            long device = ALC11.alcCaptureOpenDevice(name, sampleRate, AL10.AL_FORMAT_MONO16, bufferFrames);
-            if (device == 0) {
-                int error = ALC10.alcGetError(0);
-                throw new CaptureException(switch (error) {
-                    case ALC10.ALC_INVALID_DEVICE -> Failure.DEVICE_UNAVAILABLE;
-                    case ALC10.ALC_INVALID_VALUE, ALC10.ALC_INVALID_ENUM -> Failure.UNSUPPORTED_FORMAT;
-                    default -> Failure.OPEN_FAILED;
-                }, "Could not open the microphone with the game's OpenAL capture provider.");
-            }
-            return device;
-        }
-        @Override public void start(long device) throws CaptureException {
-            ALC11.alcCaptureStart(device);
-            check(device, Failure.OPEN_FAILED);
-        }
-        @Override public boolean connected(long device) throws CaptureException {
-            if (!ALC10.alcIsExtensionPresent(device, "ALC_EXT_disconnect")) return true;
-            boolean connected = ALC10.alcGetInteger(device, EXTDisconnect.ALC_CONNECTED) != 0;
-            check(device, Failure.READ_FAILED);
-            return connected;
-        }
-        @Override public int availableFrames(long device) throws CaptureException {
-            int frames = ALC10.alcGetInteger(device, ALC11.ALC_CAPTURE_SAMPLES);
-            check(device, Failure.READ_FAILED);
-            return frames;
-        }
-        @Override public void read(long device, byte[] target, int frames) throws CaptureException {
-            try (MemoryStack stack = MemoryStack.stackPush()) {
-                ByteBuffer pcm = stack.malloc(frames * FRAME_BYTES).order(ByteOrder.nativeOrder());
-                ALC11.alcCaptureSamples(device, pcm, frames);
-                check(device, Failure.READ_FAILED);
-                if (ByteOrder.nativeOrder() == ByteOrder.LITTLE_ENDIAN) pcm.get(target, 0, frames * FRAME_BYTES);
-                else for (int i = 0; i < frames; i++) {
-                    short sample = pcm.getShort(i * FRAME_BYTES);
-                    target[i * FRAME_BYTES] = (byte) sample;
-                    target[i * FRAME_BYTES + 1] = (byte) (sample >>> 8);
-                }
-            }
-        }
-        @Override public void stop(long device) { ALC11.alcCaptureStop(device); }
-        @Override public void close(long device) { ALC11.alcCaptureCloseDevice(device); }
-        private static void check(long device, Failure failure) throws CaptureException {
-            if (ALC10.alcGetError(device) != ALC10.ALC_NO_ERROR)
-                throw new CaptureException(failure, "The OpenAL microphone operation failed.");
-        }
-    }
 }
