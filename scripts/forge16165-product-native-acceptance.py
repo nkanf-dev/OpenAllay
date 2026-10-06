@@ -9,9 +9,9 @@ def module(name,path):
 def main():
     if os.environ.get('GITHUB_ACTIONS')!='true':raise ValueError('Remote only')
     out=ROOT/'build/e2e/forge16165-product';out.mkdir(parents=True,exist_ok=False)
-    aid=11411162652;repo=os.environ['GITHUB_REPOSITORY'];metadata=json.loads(subprocess.check_output(['gh','api',f'repos/{repo}/actions/artifacts/{aid}']))
-    expected='a7c696e0c256d44d9cceb0e62074a6da69080f48c0b55e2646d4c2db1f8143ba'
-    if metadata['expired'] or metadata['workflow_run']['id']!=37459506661 or metadata['workflow_run']['head_sha']!='69c5d9737c35819829a19f10fd1628642fee3913' or metadata['digest']!='sha256:'+expected:raise ValueError('Product provider identity')
+    aid=11411572027;repo=os.environ['GITHUB_REPOSITORY'];metadata=json.loads(subprocess.check_output(['gh','api',f'repos/{repo}/actions/artifacts/{aid}']))
+    expected='ec71b683292a120bed40b34c5496063b243985adda1c92166fb6b5759ed46a46'
+    if metadata['expired'] or metadata['workflow_run']['id']!=37460307432 or metadata['workflow_run']['head_sha']!='736e50c9924139b377717a0f734818c25838dcdd' or metadata['digest']!='sha256:'+expected:raise ValueError('Product provider identity')
     archive=out/'product.zip'
     with archive.open('xb') as output:subprocess.run(['gh','api',f'repos/{repo}/actions/artifacts/{aid}/zip'],stdout=output,check=True)
     if sha(archive)!=expected:raise ValueError('Product archive bytes')
@@ -20,7 +20,7 @@ def main():
         jars=[n for n in z.namelist() if n.endswith('.jar')];receipts=[n for n in z.namelist() if n.endswith('pack-receipt.json')]
         if len(jars)!=1 or len(receipts)!=1:raise ValueError('Sole product package')
         data=z.read(jars[0]);receipt=json.loads(z.read(receipts[0]))
-        if hashlib.sha256(data).hexdigest()!=receipt['outputSha256'] or receipt['outputSha256']!='66cb06f9d9de6d5273130ea808f3569994f0f223066b9235309142044dae12ed':raise ValueError('Product JAR identity')
+        if hashlib.sha256(data).hexdigest()!=receipt['outputSha256'] or receipt['outputSha256']!='661ab059ea2b50fa45dec9ffa652f3dfcc0dd6fc390816fd9a8b962391081d38':raise ValueError('Product JAR identity')
         (game/'mods/openallay.jar').write_bytes(data)
     stock=module('product_stock',ROOT/'scripts/forge16165-engine-prerequisite/stock/stock-forge36-prerequisite.py')
     runtime,launch,freeze=stock.load_helpers()
@@ -33,7 +33,7 @@ def main():
     values={'natives_directory':out/'natives','launcher_name':'OpenAllayProductAcceptance','launcher_version':'native-product','classpath':os.pathsep.join(str(p) for _,p in cp),'auth_player_name':'devGameUser','version_name':stock.PROFILE,'game_directory':game,'assets_root':assets,'assets_index_name':vanilla['assetIndex']['id'],'auth_uuid':launch.offline_uuid('devGameUser'),'auth_access_token':'0','user_type':'legacy','version_type':version['type'],'resolution_width':'1280','resolution_height':'960'}
     features={'has_custom_resolution':True};jvm=launch.expand_arguments(vanilla['arguments']['jvm'],values,features)+stock.FLAGS;gameargs=launch.expand_arguments(vanilla['arguments']['game'],values,features)+version['arguments']['game']
     command=[str(java),'-Xms256M','-Xmx1536M','-Xlog:class+load=info:file='+str(out/'class-load.log')]+jvm+[stock.MAIN]+gameargs
-    runtime.write_json(out/'launch.json',{'command':command,'classpath':classpath,'productSha256':receipt['outputSha256'],'nativeBuildRun':37459210222,'packRun':37459506661,'noCompileReplay':True,'noEnginePrerequisiteReplay':True})
+    runtime.write_json(out/'launch.json',{'command':command,'classpath':classpath,'productSha256':receipt['outputSha256'],'nativeBuildRun':37460049017,'packRun':37460307432,'noCompileReplay':True,'noEnginePrerequisiteReplay':True})
     env={k:v for k,v in os.environ.items() if k not in ['JAVA_TOOL_OPTIONS','JDK_JAVA_OPTIONS','_JAVA_OPTIONS','CLASSPATH','DISPLAY']};env['LIBGL_ALWAYS_SOFTWARE']='1';env['ALSOFT_DRIVERS']='null'
     process=None;xvfb=None;result={'status':'FAILED','productSha256':receipt['outputSha256'],'source':os.environ['GITHUB_SHA'],'gameLaunched':False,'fullNativeSupport':False,'cleanShutdownProven':False}
     try:
