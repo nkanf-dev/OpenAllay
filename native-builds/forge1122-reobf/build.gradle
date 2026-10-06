@@ -47,6 +47,8 @@ task stageRetainedNative {
 // The normal FG plugin registers reobfJar after evaluation and calls the standard tool.
 // Jar is disabled because its exact supplied input is copied, not fabricated or recompiled.
 tasks.jar.enabled=false
+tasks.jar.destinationDir=output
+tasks.jar.archiveName='openallay-forge1122-native-reobf.jar'
 afterEvaluate {
  tasks.getByName('reobfJar').with {
     setTool('net.md-5:SpecialSource:1.11.4:shaded')
