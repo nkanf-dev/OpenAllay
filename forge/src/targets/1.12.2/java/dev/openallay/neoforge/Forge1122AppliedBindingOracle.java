@@ -26,6 +26,8 @@ public final class Forge1122AppliedBindingOracle {
         if(client.fontRenderer==null||client.world==null||client.player==null)return;
         done=true;
         try {
+            if("builder-legacy-shapes".equals(System.getProperty("openallay.e2e.scenario")))
+                dev.openallay.adapter.minecraft.v26_2.world.NativeActualStateRepairFixture.run();
             if(!(client instanceof MinecraftTeardownState)||((MinecraftTeardownState)client).openallay$teardownInProgress())
                 throw new IllegalStateException("Real Minecraft teardown binding absent or wrong state");
             GuiTextField text=new GuiTextField(1,client.fontRenderer,0,0,100,20);
@@ -47,7 +49,8 @@ public final class Forge1122AppliedBindingOracle {
             state.openallay$setBlockType(Blocks.CHEST);state.openallay$setBlockMetadata(0);
             if(tile.getBlockType()!=Blocks.CHEST||tile.getBlockMetadata()!=0)
                 throw new IllegalStateException("Real TileEntity cache member readback diverged");
-            String receipt="{\"accepted\":true,\"outcome\":\"PASSED\",\"actualMinecraftBinding\":true,\"actualGuiTextFieldReadWrite\":true,\"actualGuiContainerNativeHit\":true,\"actualGuiScreenMouseBinding\":true,\"actualTileEntityCacheReadback\":true,\"worldCatchObserverPending\":true}\n";
+            String repairReceipt="builder-legacy-shapes".equals(System.getProperty("openallay.e2e.scenario")) ? "\"actualNativeRepairPropertyIdentities\":true," : "";
+            String receipt="{"+repairReceipt+"\"accepted\":true,\"outcome\":\"PASSED\",\"actualMinecraftBinding\":true,\"actualGuiTextFieldReadWrite\":true,\"actualGuiContainerNativeHit\":true,\"actualGuiScreenMouseBinding\":true,\"actualTileEntityCacheReadback\":true,\"worldCatchObserverPending\":true}\n";
             Files.write(Paths.get(System.getProperty("openallay.e2e.appliedBindingsReceipt")),receipt.getBytes(StandardCharsets.UTF_8));
         } catch(Exception failure) {
             try{Files.write(Paths.get(System.getProperty("openallay.e2e.appliedBindingsReceipt")),("{\"accepted\":false,\"cause\":\""+failure.getClass().getName()+": "+failure.getMessage()+"\"}\n").getBytes(StandardCharsets.UTF_8));}
