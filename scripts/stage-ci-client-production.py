@@ -8,14 +8,19 @@ from minecraft_target_loaders import target_loaders
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def stage(root=ROOT, minecraft_target="26.2"):
+def stage(root=ROOT, minecraft_target="26.2", loader=None):
     version = next(line.split("=", 1)[1] for line in (root / "gradle.properties").read_text().splitlines()
                    if line.startswith("version="))
     output = root / "build/ci-client-production"
     if output.exists():
         raise ValueError("Client production staging already exists")
+    selected_loaders = target_loaders(root, minecraft_target)["loaders"]
+    if loader:
+        if loader not in selected_loaders:
+            raise ValueError("Loader is not an actual target identity")
+        selected_loaders = [loader]
     inputs = [root / loader / "build/libs" / ("openallay-" + loader + "-" + minecraft_target + "-" + version + ".jar")
-              for loader in target_loaders(root, minecraft_target)["loaders"]]
+              for loader in selected_loaders]
     if any(not path.is_file() or path.is_symlink() for path in inputs):
         raise ValueError("Missing default verified production JAR")
     output.mkdir(parents=True)
@@ -36,5 +41,6 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--minecraft-target", default="26.2")
+    parser.add_argument("--loader", choices=("fabric", "forge", "neoforge"))
     args = parser.parse_args()
-    stage(minecraft_target=args.minecraft_target)
+    stage(minecraft_target=args.minecraft_target, loader=args.loader)

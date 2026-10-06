@@ -186,14 +186,19 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--target", required=True)
     parser.add_argument("--bundled-builder", action="store_true")
+    parser.add_argument("--loader", choices=("fabric", "forge", "neoforge"))
     args = parser.parse_args()
     try:
         profile = read_properties(ROOT / "gradle/minecraft-targets" / (args.target + ".properties"))
         check(profile["minecraft_version"] == args.target, "Target/profile mismatch")
         version = read_properties(ROOT / "gradle.properties")["version"]
         original = engine_files(ROOT)
+        selected_loaders = target_loaders(ROOT, args.target)["loaders"]
+        if args.loader:
+            check(args.loader in selected_loaders, "Loader is not an actual target identity")
+            selected_loaders = [args.loader]
         packages = [verify(ROOT / loader / "build/libs" / ("openallay-" + loader + "-" + args.target + "-" + version + ".jar"),
-                           loader, args.target, int(profile["java_version"]), original, args.bundled_builder) for loader in target_loaders(ROOT, args.target)["loaders"]]
+                           loader, args.target, int(profile["java_version"]), original, args.bundled_builder) for loader in selected_loaders]
         print(json.dumps({"nativePackageChecks": "passed", "packages": packages,
                           "gameMixinAndSameJarRangeAcceptance": "not established"}, indent=2))
     except (OSError, ValueError, KeyError, zipfile.BadZipFile) as error:
