@@ -32,6 +32,7 @@ CLASSES = (
     'net.minecraftforge.fml.common.gameevent.PlayerEvent$PlayerLoggedOutEvent',
     'net.minecraftforge.fml.common.network.NetworkRegistry',
     'net.minecraftforge.fml.common.network.FMLNetworkEvent$ClientDisconnectionFromServerEvent',
+    'net.minecraftforge.fml.common.network.FMLNetworkEvent',
     'net.minecraftforge.fml.common.network.simpleimpl.IMessage',
     'net.minecraftforge.fml.common.network.simpleimpl.IMessageHandler',
     'net.minecraftforge.fml.common.network.simpleimpl.MessageContext',
