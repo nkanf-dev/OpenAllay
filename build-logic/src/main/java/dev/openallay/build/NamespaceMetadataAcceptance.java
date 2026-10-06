@@ -10,7 +10,8 @@ import java.util.*;
 public final class NamespaceMetadataAcceptance {
     private NamespaceMetadataAcceptance() {}
     public static void main(String[] args) throws Exception {
-        if (args.length != 2) throw new IllegalArgumentException("classpath-paths.txt acceptance.properties");
+        if (args.length != 2 && !(args.length == 3 && args[2].equals("forge1122")))
+            throw new IllegalArgumentException("classpath-paths.txt acceptance.properties [forge1122]");
         Path output = Path.of(args[1]).toAbsolutePath().normalize();
         Path classpathPlan = Path.of(args[0]).toAbsolutePath().normalize();
         List<String> classpathRows = Files.isRegularFile(classpathPlan) ? Files.readAllLines(classpathPlan, StandardCharsets.UTF_8) : List.of();
@@ -27,6 +28,17 @@ public final class NamespaceMetadataAcceptance {
         if (!Files.isRegularFile(classpathPlan)) throw new IllegalStateException("Missing classpath plan");
         for (String row : classpathRows) if (row.isEmpty() || !Path.of(row).isAbsolute()) throw new IllegalStateException("Invalid absolute classpath row");
         try (MinecraftClassNamespaceProducer.Metadata metadata = new MinecraftClassNamespaceProducer.Metadata(classpath)) {
+            if (args.length == 3) {
+                for (String actual : List.of("net.minecraft.client.gui.GuiScreen", "net.minecraft.block.state.IBlockState",
+                        "net.minecraft.block.properties.IProperty", "net.minecraft.world.WorldServer",
+                        "net.minecraft.nbt.NBTTagCompound", "net.minecraft.util.IThreadListener")) metadata.binaryType(actual);
+                TypeElement nested = metadata.binaryType("net.minecraft.client.gui.toasts.IToast$Visibility");
+                if (!nested.getQualifiedName().contentEquals("net.minecraft.client.gui.toasts.IToast.Visibility"))
+                    throw new IllegalStateException("Exact1122 nested binary/source class identity missing");
+                TypeElement listener = metadata.binaryType("net.minecraft.util.IThreadListener");
+                if (!metadata.members(listener).stream().anyMatch(e -> e.getSimpleName().contentEquals("addScheduledTask")))
+                    throw new IllegalStateException("Exact1122 native owner member metadata missing");
+            } else {
             TypeElement screen = metadata.binaryType("net.minecraft.client.gui.screen.Screen");
             if (screen.getKind() != ElementKind.CLASS || !screen.getModifiers().contains(Modifier.ABSTRACT)) throw new IllegalStateException("Actual abstract Screen contract missing");
             boolean inherited = metadata.members(screen).stream().anyMatch(e -> e.getSimpleName().contentEquals("isDragging") && e.getEnclosingElement() instanceof TypeElement owner && !owner.getQualifiedName().contentEquals(screen.getQualifiedName()));
@@ -37,6 +49,7 @@ public final class NamespaceMetadataAcceptance {
             if (!stack.getQualifiedName().contentEquals("com.mojang.blaze3d.matrix.MatrixStack.Entry")) throw new IllegalStateException("Nested MatrixStack.Entry missing");
             TypeElement gui = metadata.binaryType("net.minecraft.client.gui.FocusableGui");
             if (!metadata.members(gui).stream().anyMatch(e -> e.getSimpleName().contentEquals("isDragging"))) throw new IllegalStateException("Actual hierarchy member metadata missing");
+            }
             // This deliberately missing native type must fail. Recovery-as-success is forbidden.
             boolean rejected = false;
             try { metadata.binaryType("net.minecraft.this_type_must_not_exist.NamespaceAcceptanceAbsent"); }

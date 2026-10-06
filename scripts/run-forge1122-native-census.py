@@ -49,6 +49,7 @@ def main():
     p.add_argument('--workspace', type=Path, required=True)
     p.add_argument('--output', type=Path, required=True)
     p.add_argument('--javap', type=Path, required=True)
+    p.add_argument('--native-build-request', type=Path)
     args = p.parse_args()
     repo = Path(__file__).resolve().parents[1]
     island = repo / 'native-builds/forge1122-census'
@@ -68,13 +69,17 @@ def main():
     (work/'gradlew').chmod(0o755)
     cmd=[str(work/'gradlew'),'--no-daemon','--max-workers=2','-p',str(island),
         '-PcanonicalSourceRoot='+str(repo),'-PcensusOutput='+str(output),
-        'exportNativeInputs','--stacktrace']
+        'buildNativeApplication' if args.native_build_request else 'exportNativeInputs','--stacktrace']
+    if args.native_build_request:
+        cmd.append('-PnativeBuildRequest='+str(args.native_build_request.resolve()))
     with (output/'tooling.log').open('w') as log:
         result=subprocess.run(cmd,stdout=log,stderr=subprocess.STDOUT,timeout=2700)
     (output/'tooling-command.json').write_text(json.dumps({'command':cmd,'exitCode':result.returncode,
         'toolJavaHome':os.environ.get('JAVA_HOME'),'applicationCompile':False,'gameLaunch':False},indent=2)+'\n')
     if result.returncode:
         raise SystemExit(result.returncode)
+    if args.native_build_request:
+        return  # application mode captures only the new supplement, never repeats old census
     subprocess.run(['python3','-B',str(repo/'scripts/collect-forge1122-native-census.py'),
         '--inputs',str(output/'native-inputs.json'),'--selection',str(output/'source-selection.json'),
         '--mcp-config',str(files['mcp_config']),'--snapshot',str(files['snapshot']),

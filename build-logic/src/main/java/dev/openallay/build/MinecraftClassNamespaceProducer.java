@@ -18,13 +18,22 @@ import java.util.stream.Collectors;
 
 /** Build-only, class-identity-only compile view. It does not attribute canonical game source. */
 public final class MinecraftClassNamespaceProducer {
-    public enum InputMode { MOJANG_CANONICAL, ACTUAL_MCP }
+    public enum InputMode { MOJANG_CANONICAL, CANONICAL_SEMANTIC, ACTUAL_MCP }
     public record Unit(String owner, String logicalPath, Path file, InputMode mode) {}
     public record MappingInput(Path file, String sha256) {}
     public record Request(List<Unit> outputUnits, List<Unit> symbolUnits,
             MappingInput client, MappingInput server, MappingInput tsrg,
             List<Path> metadataClasspath, String syntaxLevel, boolean preview,
-            Path metadataAcceptance, List<Path> provenanceInputs, Path output, Path receipt) {}
+            Path metadataAcceptance, List<Path> provenanceInputs, Path output, Path receipt,
+            MappingInput curatedClasses) {
+        public Request(List<Unit> outputUnits, List<Unit> symbolUnits,
+                MappingInput client, MappingInput server, MappingInput tsrg,
+                List<Path> metadataClasspath, String syntaxLevel, boolean preview,
+                Path metadataAcceptance, List<Path> provenanceInputs, Path output, Path receipt) {
+            this(outputUnits, symbolUnits, client, server, tsrg, metadataClasspath, syntaxLevel,
+                    preview, metadataAcceptance, provenanceInputs, output, receipt, null);
+        }
+    }
     private record Edit(int start, int end, String oldText, String replacement, String role) {}
     private record NativeType(String official, String actualBinary, String actualSource) {}
     private record Parsed(Unit unit, String text, CompilationUnitTree tree, SourcePositions positions) {}
@@ -41,19 +50,32 @@ public final class MinecraftClassNamespaceProducer {
         immutableInputs.addAll(request.provenanceInputs());
         if (request.metadataAcceptance() != null) immutableInputs.add(request.metadataAcceptance());
         for (Unit unit : concat(request.outputUnits(), request.symbolUnits())) immutableInputs.add(unit.file());
-        immutableInputs.add(request.client().file()); immutableInputs.add(request.server().file()); immutableInputs.add(request.tsrg().file());
+        if (request.curatedClasses() == null) {
+            immutableInputs.add(request.client().file()); immutableInputs.add(request.server().file()); immutableInputs.add(request.tsrg().file());
+        } else {
+            if (request.client() != null || request.server() != null || request.tsrg() != null)
+                fail("Curated classes cannot carry official/obfuscated mapping inputs");
+            immutableInputs.add(request.curatedClasses().file());
+            if (concat(request.outputUnits(), request.symbolUnits()).stream().anyMatch(u -> u.mode() == InputMode.MOJANG_CANONICAL))
+                fail("Curated classes require CANONICAL_SEMANTIC or ACTUAL_MCP unit mode");
+        }
         preflightPaths(output, receipt, immutableInputs);
         Files.deleteIfExists(receipt); // Safe preflight precedes deletion; failures retain no success receipt.
         if (request.metadataAcceptance() == null) fail("Actual-classpath metadata acceptance receipt is required");
         NamespaceMetadataAcceptance.verifyReceipt(request.metadataAcceptance(), request.metadataClasspath());
         if (request.outputUnits().isEmpty()) fail("No selected output units");
         List<Unit> universe = mergeUnits(request.outputUnits(), request.symbolUnits());
-        Mapping mapping = Mapping.load(request.client(), request.server(), request.tsrg());
+        Mapping mapping = request.curatedClasses() == null
+                ? Mapping.load(request.client(), request.server(), request.tsrg())
+                : Mapping.loadCurated(request.curatedClasses());
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         if (compiler == null) fail("A full tooling JDK with jdk.compiler is required");
         DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>();
         try (StandardJavaFileManager manager = compiler.getStandardFileManager(diagnostics, Locale.ROOT, StandardCharsets.UTF_8);
              Metadata metadata = new Metadata(request.metadataClasspath())) {
+            if (request.curatedClasses() != null) {
+                for (String actual : mapping.actualToOfficial.keySet()) metadata.binaryType(actual);
+            }
             List<JavaFileObject> files = new ArrayList<>();
             Map<String, Unit> byUri = new HashMap<>();
             for (Unit unit : universe) {
@@ -162,7 +184,10 @@ public final class MinecraftClassNamespaceProducer {
         final Map<String, String> officialToActual;
         final Set<String> unmapped;
         final Map<String, String> actualToOfficial;
-        Mapping(Map<String, String> joined, Set<String> absent) {
+        final boolean curated;
+        Mapping(Map<String, String> joined, Set<String> absent) { this(joined, absent, false); }
+        Mapping(Map<String, String> joined, Set<String> absent, boolean curated) {
+            this.curated = curated;
             officialToActual = Map.copyOf(joined); unmapped = Set.copyOf(absent);
             Map<String, String> reverse = new HashMap<>();
             joined.forEach((official, actual) -> {
@@ -170,6 +195,22 @@ public final class MinecraftClassNamespaceProducer {
                 if (old != null && !old.equals(official)) fail("Mapping destination collision " + actual);
             });
             actualToOfficial = Map.copyOf(reverse);
+        }
+        // Explicit reviewed semantic class identity only. Never infer cross-version obfuscated joins.
+        static Mapping loadCurated(MappingInput input) throws Exception {
+            Map<String, String> classes = new TreeMap<>();
+            for (String row : checked(input).split("\\R")) {
+                if (row.isBlank() || row.startsWith("#")) continue;
+                String[] cells = row.split("\t", -1);
+                if (cells.length != 3 || cells[2].isBlank()
+                        || !cells[0].matches("[A-Za-z_$][\\w$]*(?:\\.[A-Za-z_$][\\w$]*)+")
+                        || !cells[1].matches("net\\.minecraft\\.[A-Za-z_$][\\w$]*(?:\\.[A-Za-z_$][\\w$]*)+"))
+                    fail("Expected canonicalBinary TAB actualMcpBinary TAB reviewed semantic role: " + row);
+                if (!nativeDomain(cells[0])) fail("Curated canonical class outside native domain " + cells[0]);
+                if (classes.putIfAbsent(cells[0], cells[1]) != null) fail("Duplicate curated canonical class " + cells[0]);
+            }
+            if (classes.isEmpty()) fail("Empty curated class inventory");
+            return new Mapping(classes, Set.of(), true);
         }
         static Mapping load(MappingInput client, MappingInput server, MappingInput tsrg) throws Exception {
             Map<String, String> classes = parseOfficial(checked(client));
@@ -401,19 +442,20 @@ public final class MinecraftClassNamespaceProducer {
             for (ImportTree imp : unit.tree().getImports()) if (imp.isStatic()) staticImport(imp);
         }
         NativeType nativeType(String source) {
-            if (unit.unit().mode() == InputMode.MOJANG_CANONICAL) return mapping.resolve(source, metadata);
+            if (unit.unit().mode() != InputMode.ACTUAL_MCP) return mapping.resolve(source, metadata);
             // Actual input is an explicit per-file contract, never auto-detected from overlapping spellings.
             TypeElement type = source.contains("$") ? metadata.binaryType(source) : metadata.sourceType(source);
             String binary = metadata.binaryName(type);
-            if (!mapping.actualToOfficial.containsKey(binary)) fail("Unexpected actual-native type " + source);
-            return new NativeType(mapping.actualToOfficial.get(binary), binary, type.getQualifiedName().toString());
+            String canonical = mapping.actualToOfficial.get(binary);
+            if (canonical == null && !mapping.curated) fail("Unexpected actual-native type " + source);
+            return new NativeType(canonical == null ? binary : canonical, binary, type.getQualifiedName().toString());
         }
         NativeType actualNativeType(String source) {
             TypeElement type = source.contains("$") ? metadata.binaryType(source) : metadata.sourceType(source);
             String binary = metadata.binaryName(type);
             String official = mapping.actualToOfficial.get(binary);
-            if (official == null) fail("Unexpected actual-native class " + source);
-            return new NativeType(official, binary, type.getQualifiedName().toString());
+            if (official == null && !mapping.curated) fail("Unexpected actual-native class " + source);
+            return new NativeType(official == null ? binary : official, binary, type.getQualifiedName().toString());
         }
         String externalOrSource(String spelling) {
             if (imports.containsKey(spelling)) return imports.get(spelling);
@@ -447,7 +489,7 @@ public final class MinecraftClassNamespaceProducer {
                 } else {
                     TypeElement actual;
                     if (nativeDomain(source)) {
-                        NativeType nativeSuper = defining.unit().mode() == InputMode.MOJANG_CANONICAL
+                        NativeType nativeSuper = defining.unit().mode() != InputMode.ACTUAL_MCP
                                 ? mapping.resolve(source, metadata) : actualNativeType(source);
                         actual = metadata.binaryType(nativeSuper.actualBinary());
                     } else actual = metadata.sourceType(source);
@@ -533,7 +575,7 @@ public final class MinecraftClassNamespaceProducer {
                 if (memberType) failAt(imp, "Native static member-type imports require ordinary explicit nested type import");
                 NativeType ownerType = nativeType(owner);
                 recordIdentity("static-import-owner", ownerType);
-                if (imp.getQualifiedIdentifier() instanceof MemberSelectTree select && unit.unit().mode() == InputMode.MOJANG_CANONICAL) replaceName(select.getExpression(), ownerType.actualSource(), "static-import-owner");
+                if (imp.getQualifiedIdentifier() instanceof MemberSelectTree select && unit.unit().mode() != InputMode.ACTUAL_MCP) replaceName(select.getExpression(), ownerType.actualSource(), "static-import-owner");
             }
         }
         List<Tree> selectedStaticMembers(ClassTree owner, String name, Set<ClassTree> visiting) {
@@ -559,7 +601,7 @@ public final class MinecraftClassNamespaceProducer {
         }
         @Override public Void visitImport(ImportTree tree, Void p) {
             handled.add(tree.getQualifiedIdentifier());
-            if (!tree.isStatic() && nativeDomain(tree.getQualifiedIdentifier().toString()) && unit.unit().mode() == InputMode.MOJANG_CANONICAL) {
+            if (!tree.isStatic() && nativeDomain(tree.getQualifiedIdentifier().toString()) && unit.unit().mode() != InputMode.ACTUAL_MCP) {
                 removeSyntax(tree, "native-import");
             }
             return null;
@@ -574,7 +616,7 @@ public final class MinecraftClassNamespaceProducer {
                 if (inheritedFields.contains(name)) failAt(tree, "Inherited field shadows native type " + name);
                 if (declared.contains(name)) failAt(tree, "Declared symbol shadows native type " + name);
                 recordIdentity(javaReferenceRole(tree), type);
-                if (unit.unit().mode() == InputMode.MOJANG_CANONICAL) replaceName(tree, type.actualSource(), "imported-or-inherited-type");
+                if (unit.unit().mode() != InputMode.ACTUAL_MCP) replaceName(tree, type.actualSource(), "imported-or-inherited-type");
                 handled.add(tree);
             }
             return null;
@@ -602,7 +644,7 @@ public final class MinecraftClassNamespaceProducer {
                     for (Tree prefix : prefixes) {
                         String spelling = prefix.toString();
                         String canonical = imported == null ? spelling : imported.official().replace('$', '.') + spelling.substring(root.length());
-                        if (unit.unit().mode() == InputMode.MOJANG_CANONICAL) {
+                        if (unit.unit().mode() != InputMode.ACTUAL_MCP) {
                             String identity = mapping.sourceIdentity(canonical);
                             if (identity != null) {
                                 NativeType resolved = mapping.resolve(canonical, metadata);
@@ -614,7 +656,9 @@ public final class MinecraftClassNamespaceProducer {
                             }
                         } else {
                             String actual = imported == null ? spelling : imported.actualSource() + spelling.substring(root.length());
-                            for (String binary : mapping.actualToOfficial.keySet()) if (binary.equals(actual) || binary.replace('$', '.').equals(actual)) {
+                            if (mapping.curated && metadata.hasSourceType(actual)) {
+                                matched = prefix; target = nativeType(actual);
+                            } else for (String binary : mapping.actualToOfficial.keySet()) if (binary.equals(actual) || binary.replace('$', '.').equals(actual)) {
                                 matched = prefix; target = nativeType(actual); break;
                             }
                         }
@@ -622,7 +666,7 @@ public final class MinecraftClassNamespaceProducer {
                     if (matched == null) failAt(tree, "Unresolved native qualified type/owner " + tree);
                     if (typeContext(tree) && matched != tree) failAt(tree, "Unknown native nested type " + tree);
                     recordIdentity(javaReferenceRole(tree), target);
-                    if (unit.unit().mode() == InputMode.MOJANG_CANONICAL) replaceName(matched, target.actualSource(), "qualified-class-owner");
+                    if (unit.unit().mode() != InputMode.ACTUAL_MCP) replaceName(matched, target.actualSource(), "qualified-class-owner");
                     handled.add(matched);
                     // The suffix is a member selector; member names are never edited.
                     return null;
@@ -936,7 +980,14 @@ public final class MinecraftClassNamespaceProducer {
             json.append("{\"owner\":").append(quote(input.owner())).append(",\"path\":").append(quote(input.logicalPath())).append(",\"mode\":").append(quote(input.mode().name())).append(",\"sha256\":").append(quote(fileHash(input.file()))).append('}');
         }
         json.append(']');
-        json.append(",\n  \"syntaxLevel\":").append(quote(request.syntaxLevel())).append(",\n  \"mappingHashes\":[").append(quote(request.client().sha256())).append(',').append(quote(request.server().sha256())).append(',').append(quote(request.tsrg().sha256())).append(']');
+        json.append(",\n  \"syntaxLevel\":").append(quote(request.syntaxLevel()));
+        if (request.curatedClasses() == null) {
+            json.append(",\n  \"mappingKind\":\"same-target-official-obfuscated-join\",\n  \"mappingHashes\":[")
+                    .append(quote(request.client().sha256())).append(',').append(quote(request.server().sha256())).append(',').append(quote(request.tsrg().sha256())).append(']');
+        } else {
+            json.append(",\n  \"mappingKind\":\"reviewed-semantic-class-identities\",\n  \"curatedClassesSha256\":")
+                    .append(quote(request.curatedClasses().sha256()));
+        }
         json.append(",\n  \"joinedClasses\":").append(mapping.officialToActual.size()).append(",\n  \"unmappedOfficialClasses\":[").append(mapping.unmapped.stream().sorted().map(MinecraftClassNamespaceProducer::quote).collect(Collectors.joining(","))).append("],\n  \"units\":[");
         boolean first = true;
         for (Result result : results.stream().sorted(Comparator.comparing(r -> r.unit().logicalPath())).toList()) {

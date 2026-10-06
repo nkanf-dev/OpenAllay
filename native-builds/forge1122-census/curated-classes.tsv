@@ -1,0 +1,34 @@
+# Canonical semantic binary class	actual MCP binary class	reviewed role. No member mappings.
+net.minecraft.client.Minecraft	net.minecraft.client.Minecraft	client owner
+net.minecraft.server.MinecraftServer	net.minecraft.server.MinecraftServer	server owner
+net.minecraft.client.gui.Font	net.minecraft.client.gui.FontRenderer	native font renderer
+net.minecraft.network.chat.Component	net.minecraft.util.text.ITextComponent	native text component interface
+net.minecraft.world.item.ItemStack	net.minecraft.item.ItemStack	native item stack
+net.minecraft.world.item.Item	net.minecraft.item.Item	native item
+net.minecraft.core.BlockPos	net.minecraft.util.math.BlockPos	native block position
+net.minecraft.world.phys.Vec3	net.minecraft.util.math.Vec3d	native vector
+net.minecraft.world.phys.AABB	net.minecraft.util.math.AxisAlignedBB	native bounding box
+net.minecraft.world.level.block.Block	net.minecraft.block.Block	native block
+net.minecraft.world.level.block.state.BlockState	net.minecraft.block.state.IBlockState	native immutable block state
+net.minecraft.world.level.block.state.properties.Property	net.minecraft.block.properties.IProperty	native state property interface
+net.minecraft.world.level.Level	net.minecraft.world.World	native world
+net.minecraft.server.level.ServerLevel	net.minecraft.world.WorldServer	native server world
+net.minecraft.client.player.LocalPlayer	net.minecraft.client.entity.EntityPlayerSP	native local player
+net.minecraft.server.level.ServerPlayer	net.minecraft.entity.player.EntityPlayerMP	native server player
+net.minecraft.world.entity.player.Player	net.minecraft.entity.player.EntityPlayer	native player base
+net.minecraft.world.entity.Entity	net.minecraft.entity.Entity	native entity
+net.minecraft.world.entity.LivingEntity	net.minecraft.entity.EntityLivingBase	native living entity base
+net.minecraft.nbt.CompoundTag	net.minecraft.nbt.NBTTagCompound	native compound NBT
+net.minecraft.nbt.IntTag	net.minecraft.nbt.NBTTagInt	native integer NBT
+net.minecraft.resources.ResourceLocation	net.minecraft.util.ResourceLocation	native resource identifier
+net.minecraft.ChatFormatting	net.minecraft.util.text.TextFormatting	native text style constants
+net.minecraft.world.level.block.Mirror	net.minecraft.util.Mirror	native block mirror
+net.minecraft.world.level.block.Rotation	net.minecraft.util.Rotation	native block rotation
+net.minecraft.world.level.block.ChestBlock	net.minecraft.block.BlockChest	native chest block
+net.minecraft.world.level.block.ShulkerBoxBlock	net.minecraft.block.BlockShulkerBox	native shulker block
+net.minecraft.world.inventory.Slot	net.minecraft.inventory.Slot	native container slot
+net.minecraft.world.item.crafting.Ingredient	net.minecraft.item.crafting.Ingredient	native ingredient
+net.minecraft.world.item.crafting.ShapedRecipe	net.minecraft.item.crafting.ShapedRecipes	native shaped recipe
+net.minecraft.world.effect.MobEffect	net.minecraft.potion.Potion	native potion effect type
+net.minecraft.world.effect.MobEffectInstance	net.minecraft.potion.PotionEffect	native potion effect instance
+net.minecraft.client.multiplayer.ClientPacketListener	net.minecraft.client.network.NetHandlerPlayClient	native play listener

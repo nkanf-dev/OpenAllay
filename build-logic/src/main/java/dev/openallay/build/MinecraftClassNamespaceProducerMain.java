@@ -13,10 +13,16 @@ public final class MinecraftClassNamespaceProducerMain {
             if (i + 1 == args.length || !args[i].startsWith("--") || flags.putIfAbsent(args[i], args[i + 1]) != null) throw new IllegalArgumentException("Expected unique --flag value pairs");
         }
         Set<String> expected = Set.of("--units", "--symbol-units", "--client", "--client-sha256", "--server", "--server-sha256", "--tsrg", "--tsrg-sha256", "--classpath", "--source", "--preview", "--metadata-acceptance", "--output", "--receipt");
-        if (!flags.keySet().equals(expected)) throw new IllegalArgumentException("Exact required flags: " + expected);
+        Set<String> curatedExpected = Set.of("--units", "--symbol-units", "--curated-classes", "--curated-classes-sha256",
+                "--classpath", "--source", "--preview", "--metadata-acceptance", "--output", "--receipt");
+        boolean curated = flags.containsKey("--curated-classes");
+        if (!flags.keySet().equals(curated ? curatedExpected : expected))
+            throw new IllegalArgumentException("Exact required flags: " + (curated ? curatedExpected : expected));
         Path acceptance = Path.of(flags.get("--metadata-acceptance"));
         List<Path> declaredInputs = new ArrayList<>();
-        for (String flag : List.of("--units", "--symbol-units", "--client", "--server", "--tsrg", "--classpath", "--metadata-acceptance")) declaredInputs.add(Path.of(flags.get(flag)));
+        List<String> inputFlags = new ArrayList<>(List.of("--units", "--symbol-units", "--classpath", "--metadata-acceptance"));
+        inputFlags.addAll(curated ? List.of("--curated-classes") : List.of("--client", "--server", "--tsrg"));
+        for (String flag : inputFlags) declaredInputs.add(Path.of(flags.get(flag)));
         // A conservative path-only preflight runs before interpreting/validating plans.
         // Existing absolute cells are protected even when the row later fails shape validation.
         declaredInputs.addAll(MinecraftClassNamespaceProducer.planInputPaths(List.of(
@@ -33,11 +39,12 @@ public final class MinecraftClassNamespaceProducerMain {
         if (!preview.equals("true") && !preview.equals("false")) throw new IllegalArgumentException("Explicit preview true/false required");
         MinecraftClassNamespaceProducer.produce(new MinecraftClassNamespaceProducer.Request(
                 units(Path.of(flags.get("--units"))), units(Path.of(flags.get("--symbol-units"))),
-                new MinecraftClassNamespaceProducer.MappingInput(Path.of(flags.get("--client")), flags.get("--client-sha256")),
-                new MinecraftClassNamespaceProducer.MappingInput(Path.of(flags.get("--server")), flags.get("--server-sha256")),
-                new MinecraftClassNamespaceProducer.MappingInput(Path.of(flags.get("--tsrg")), flags.get("--tsrg-sha256")),
+                curated ? null : new MinecraftClassNamespaceProducer.MappingInput(Path.of(flags.get("--client")), flags.get("--client-sha256")),
+                curated ? null : new MinecraftClassNamespaceProducer.MappingInput(Path.of(flags.get("--server")), flags.get("--server-sha256")),
+                curated ? null : new MinecraftClassNamespaceProducer.MappingInput(Path.of(flags.get("--tsrg")), flags.get("--tsrg-sha256")),
                 classpath, flags.get("--source"), Boolean.parseBoolean(preview), acceptance, declaredInputs,
-                output, receipt));
+                output, receipt, curated ? new MinecraftClassNamespaceProducer.MappingInput(
+                        Path.of(flags.get("--curated-classes")), flags.get("--curated-classes-sha256")) : null));
     }
     private static List<MinecraftClassNamespaceProducer.Unit> units(Path plan) throws Exception {
         List<MinecraftClassNamespaceProducer.Unit> units = new ArrayList<>();

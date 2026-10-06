@@ -110,3 +110,6 @@ task exportNativeInputs {
             mappingOutputs:mappingOutputs,pluginArtifacts:plugin])
     }
 }
+
+// Opt-in application mode shares this exact FG island and cached named artifacts.
+if (hasProperty('nativeBuildRequest')) apply from: file('application.gradle')
