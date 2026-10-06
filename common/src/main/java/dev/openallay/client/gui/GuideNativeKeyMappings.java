@@ -7,6 +7,11 @@ import net.minecraft.client.KeyMapping;
 public final class GuideNativeKeyMappings {
     private static final KeyMapping.Category CATEGORY = KeyMapping.Category.register(dev.openallay.platform.minecraft.MinecraftResourceIds.fromNamespaceAndPath("openallay", "guide"));
     private GuideNativeKeyMappings() {}
+    public static boolean consume(net.minecraft.client.KeyMapping mapping) { return mapping.consumeClick(); }
+    public static boolean down(net.minecraft.client.KeyMapping mapping) { return mapping.isDown(); }
+    public static boolean unbound(net.minecraft.client.KeyMapping mapping) { return mapping.isUnbound(); }
+    public static net.minecraft.network.chat.Component display(net.minecraft.client.KeyMapping mapping) { return mapping.getTranslatedKeyMessage(); }
+
     public static KeyMapping.Category category() { return CATEGORY; }
     public static KeyMapping create(String name, int key) { return new KeyMapping(name, key, CATEGORY); }
     public static KeyMapping unbound(String name) {

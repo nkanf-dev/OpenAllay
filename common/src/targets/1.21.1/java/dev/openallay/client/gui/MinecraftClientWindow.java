@@ -9,6 +9,30 @@ import net.minecraft.client.gui.screens.Screen;
 /** Native client window ownership and HUD access for the Minecraft 1.21/1.21.1 family. */
 public final class MinecraftClientWindow {
     private MinecraftClientWindow() {}
+    public static net.minecraft.client.server.IntegratedServer integratedServer(Minecraft client) { return client.getSingleplayerServer(); }
+    public static String serverAddress(Minecraft client) { return client.getCurrentServerData() == null ? null : client.getCurrentServerData().ip; }
+    public static int framebufferWidth(Minecraft client) { return mainRenderTarget(client).width; }
+    public static int framebufferHeight(Minecraft client) { return mainRenderTarget(client).height; }
+    public static int windowWidth(Minecraft client) { return client.getWindow().getWidth(); }
+    public static int windowHeight(Minecraft client) { return client.getWindow().getHeight(); }
+    public static int guiWidth(Minecraft client) { return client.getWindow().getGuiScaledWidth(); }
+    public static int guiHeight(Minecraft client) { return client.getWindow().getGuiScaledHeight(); }
+
+    public static Minecraft instance() { return Minecraft.getInstance(); }
+    public static boolean ownerThread(Minecraft client) { return client.isSameThread(); }
+    public static void execute(Minecraft client, Runnable action) { client.execute(action); }
+    public static Object world(Minecraft client) { return client.level; }
+    public static boolean worldPresent(Minecraft client) { return client.level != null; }
+    public static boolean playerPresent(Minecraft client) { return client.player != null; }
+    public static boolean active(Minecraft client) { return playerPresent(client) && worldPresent(client); }
+    public static java.util.UUID actor(Minecraft client) { return client.player == null ? null : client.player.getUUID(); }
+    public static void stop(Minecraft client) { client.stop(); }
+    public static net.minecraft.client.gui.Font font(Minecraft client) { return client.font; }
+    public static long gameTime(Minecraft client) { return client.level == null ? 0 : client.level.getGameTime(); }
+    public static java.nio.file.Path gameDirectory(Minecraft client) { return client.gameDirectory.toPath(); }
+    public static boolean focused(Minecraft client) { return client.isWindowActive(); }
+    public static boolean overlayPresent(Minecraft client) { return overlay(client) != null; }
+
 
     /** Programmatic native resize. Each binding completes its own window notification contract. */
     public static void setWindowed(Minecraft minecraft, int width, int height) {
