@@ -125,7 +125,7 @@ public final class GuideHudPresenter {
         Reply latest = replies.get(session.sessionId());
         for (GuideRequestSnapshot request : session.requests()) {
             if (request.status() != GuideRequestStatus.COMPLETED || request.terminalAt() == null
-                    || latest != null && compare(request, latest) < 0) continue;
+                    || latest != null && (latest.request() == request || compare(request, latest) < 0)) continue;
             String text = assistantPreview(request, false);
             if (text.isBlank()) continue;
             latest = new Reply(request, text);
@@ -137,9 +137,11 @@ public final class GuideHudPresenter {
         Reply latest = results.get(session.sessionId());
         for (GuideRequestSnapshot request : session.requests()) {
             if (!request.terminal() || request.terminalAt() == null
-                    || latest != null && compare(request, latest) < 0) continue;
+                    || latest != null && (latest.request() == request || compare(request, latest) < 0)) continue;
             if (request.timeline().isEmpty() && request.status() == GuideRequestStatus.COMPLETED) continue;
-            latest = new Reply(request, assistantPreview(request, false));
+            Reply reply = replies.get(session.sessionId());
+            latest = reply != null && reply.request() == request
+                    ? reply : new Reply(request, assistantPreview(request, false));
         }
         if (latest != null) results.put(session.sessionId(), latest);
     }

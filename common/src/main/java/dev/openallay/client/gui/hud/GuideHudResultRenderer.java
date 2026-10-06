@@ -13,6 +13,7 @@ import dev.openallay.guide.semantic.SemanticDocument;
 import dev.openallay.guide.ui.GuideEvidencePresentation;
 import dev.openallay.guide.ui.GuideRecipeCard;
 import dev.openallay.guide.ui.GuideTranscriptVirtualizer;
+import dev.openallay.guide.ui.GuideToolSummaryPresenter;
 import dev.openallay.guide.ui.GuideUiConfig;
 import dev.openallay.guide.ui.GuideUiLayout;
 import dev.openallay.guide.ui.GuideUiRow;
@@ -60,7 +61,7 @@ public final class GuideHudResultRenderer implements AutoCloseable {
                     cacheEntries, nativeViews, List.of(), "");
         }
     }
-    private record Row(String id, GuideUiRow source, List<FormattedCharSequence> header,
+    private record Row(String id, GuideUiRow source, String narration, List<FormattedCharSequence> header,
             SemanticLayout layout, Map<String, GuideRecipeCard> recipes,
             List<FormattedCharSequence> sources, int height) {}
     private final MinecraftSemanticRenderer semantic = new MinecraftSemanticRenderer(new MinecraftSemanticResolver());
@@ -150,12 +151,13 @@ public final class GuideHudResultRenderer implements AutoCloseable {
                     }
                     evidence.details().forEach((key, value) -> lines.addAll(font.split(MinecraftComponents.literal(key + ": " + value), measuredWidth)));
                 }
-                replacement.add(new Row("sources", null, List.copyOf(lines), null, Map.of(), List.of(), Math.max(10, lines.size() * 10 + 8)));
+                replacement.add(new Row("sources", null, "", List.copyOf(lines), null, Map.of(), List.of(), Math.max(10, lines.size() * 10 + 8)));
             } else {
                 for (GuideUiRow source : view.rows()) {
                     String id = rowId(source);
                     if (selectedTool != null && !selectedTool.equals(id)) continue;
                     ArrayList<FormattedCharSequence> header = new ArrayList<>();
+                    String narration = "";
                     SemanticDocument document = null;
                     Map<String, GuideRecipeCard> recipes = Map.of();
                     List<FormattedCharSequence> sources = List.of();
@@ -166,19 +168,34 @@ public final class GuideHudResultRenderer implements AutoCloseable {
                         if (!assistant.sources().isEmpty()) sources = font.split(MinecraftComponents.translatable(
                                 "screen.openallay.evidence.groups", GuideEvidencePresentation.groups(assistant.sources()).size()), measuredWidth);
                     } else if (source instanceof GuideUiRow.Tool tool) {
-                        header.addAll(font.split(MinecraftComponents.translatable(tool.detail().displayStatus().translationKey())
-                                .copy().append(" · ").append(MinecraftComponents.translatable(tool.detail().titleKey())), measuredWidth));
-                        if (!tool.detail().intent().title().isBlank()) header.addAll(font.split(MinecraftComponents.literal(tool.detail().intent().title()), measuredWidth));
-                        if (!tool.detail().intent().description().isBlank()) header.addAll(font.split(MinecraftComponents.literal(tool.detail().intent().description()), measuredWidth));
-                        tool.detail().narration().forEach(message -> header.addAll(font.split(MinecraftComponents.translatable(
-                                message.key().translationKey(), message.arguments().toArray()), Math.max(1, cachedWidth))));
+                        var summary = GuideToolSummaryPresenter.project(tool);
+                        Component title = summary.title().isBlank() ? MinecraftComponents.translatable(summary.titleKey())
+                                : MinecraftComponents.literal(summary.title());
+                        narration = title.getString();
+                        header.addAll(font.split(title.copy().append(" · ")
+                                .append(MinecraftComponents.translatable(summary.status().translationKey())), measuredWidth));
+                        if (summary.hasDescription()) header.addAll(font.split(MinecraftComponents.literal(summary.description()), measuredWidth));
+                        // Keep implementation receipts in explicit detail, not the compact task summary.
+                        tool.detail().narration().stream().filter(message -> selectedTool != null || switch (message.key()) {
+                            case ANALYSIS_EMPTY, RESULT_DETAIL_NOT_STORED, RESULT_VALUE_UNAVAILABLE,
+                                    FAILURE_STALE_REFERENCE, FAILURE_UNAVAILABLE, FAILURE_PLAYER_REQUIRED,
+                                    FAILURE_INVALID_ARGUMENTS, FAILURE_FORBIDDEN, FAILURE_GENERIC -> true;
+                            default -> false;
+                        }).forEach(message -> header.addAll(font.split(MinecraftComponents.translatable(
+                                message.key().translationKey(), message.arguments().toArray()), measuredWidth)));
                         tool.detail().failure().ifPresent(failure -> header.addAll(font.split(MinecraftComponents.literal(failure.message()), Math.max(1, cachedWidth))));
                         var cards = GuideHudToolCards.project(tool, key -> MinecraftComponents.translatable(key).getString());
                         document = cards.document();
                         recipes = cards.recipes();
                     } else if (source instanceof GuideUiRow.Status status) {
-                        header.addAll(font.split(status.status() == dev.openallay.guide.GuideRequestStatus.INTERRUPTED
-                                ? MinecraftComponents.translatable("screen.openallay.history.interrupted") : MinecraftComponents.literal(status.text()), measuredWidth));
+                        Component message = status.failure() != null
+                                || !status.text().isBlank() && !status.text().equals(status.status().name())
+                                ? MinecraftComponents.literal(status.text()) : MinecraftComponents.translatable(switch (status.status()) {
+                                    case CANCELLED -> "screen.openallay.hud.request_stopped";
+                                    case INTERRUPTED -> "screen.openallay.history.interrupted";
+                                    default -> "screen.openallay.hud.request_failed";
+                                });
+                        header.addAll(font.split(message, measuredWidth));
                     } else {
                         continue;
                     }
@@ -186,7 +203,7 @@ public final class GuideHudResultRenderer implements AutoCloseable {
                             "native-language", "native-font", measurer(font, view.presentation().density()));
                     int spacing = view.presentation().density() == GuideUiConfig.Density.COMPACT ? 6 : 10;
                     int heightOfRow = header.size() * 10 + (layout == null ? 0 : layout.height()) + sources.size() * 10 + spacing;
-                    replacement.add(new Row(id, source, List.copyOf(header), layout, recipes, List.copyOf(sources), Math.max(10, heightOfRow)));
+                    replacement.add(new Row(id, source, narration, List.copyOf(header), layout, recipes, List.copyOf(sources), Math.max(10, heightOfRow)));
                 }
             }
             rows = List.copyOf(replacement);
@@ -227,7 +244,7 @@ public final class GuideHudResultRenderer implements AutoCloseable {
                 }
                 if (interactive && row.source() instanceof GuideUiRow.Tool) hits.add(new Hit(
                         new GuideUiLayout.Rect(viewport.x(), y, viewport.width(), row.header().size() * 10 + 2), new Action.Tool(row.id()),
-                        row.source() instanceof GuideUiRow.Tool tool ? MinecraftComponents.translatable(tool.detail().titleKey()).getString() : ""));
+                        row.narration()));
                 if (row.layout() != null) {
                     int first = 0, last = 0, prefix = 0, visibleHeight = 0;
                     int lineY = current;
