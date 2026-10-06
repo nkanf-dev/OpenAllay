@@ -12,7 +12,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import net.minecraft.commands.CommandSourceStack;
-import net.minecraft.server.packs.resources.ResourceManager;
 
 public final class TraceReplayService {
     private final TraceRepository repository;
@@ -30,7 +29,7 @@ public final class TraceReplayService {
 
     public ToolResult<List<String>> traceIds(CommandSourceStack source) {
         requireServerThread(source);
-        ToolResult<TraceRepository.LoadedTraces> loaded = load(dev.openallay.platform.minecraft.MinecraftServerResources.resources(dev.openallay.context.minecraft.MinecraftCommandSourceFacts.server(source)));
+        ToolResult<TraceRepository.LoadedTraces> loaded = load(source);
         if (loaded instanceof ToolResult.Failure<TraceRepository.LoadedTraces> failure) {
             return new ToolResult.Failure<>(failure.code(), failure.message());
         }
@@ -40,7 +39,7 @@ public final class TraceReplayService {
 
     public ToolResult<ReplayReport> replay(CommandSourceStack source, String traceId) {
         requireServerThread(source);
-        ToolResult<TraceRepository.LoadedTraces> loaded = load(dev.openallay.platform.minecraft.MinecraftServerResources.resources(dev.openallay.context.minecraft.MinecraftCommandSourceFacts.server(source)));
+        ToolResult<TraceRepository.LoadedTraces> loaded = load(source);
         if (loaded instanceof ToolResult.Failure<TraceRepository.LoadedTraces> failure) {
             return new ToolResult.Failure<>(failure.code(), failure.message());
         }
@@ -64,7 +63,9 @@ public final class TraceReplayService {
         return new ToolResult.Success<>(replayer.replay(trace, context));
     }
 
-    private ToolResult<TraceRepository.LoadedTraces> load(ResourceManager resources) {
+    private ToolResult<TraceRepository.LoadedTraces> load(CommandSourceStack source) {
+        var resources = dev.openallay.platform.minecraft.MinecraftServerResources.resources(
+                dev.openallay.context.minecraft.MinecraftCommandSourceFacts.server(source));
         List<TraceRepository.TraceSource> sources = MinecraftResourceAccess
                 .listIds(resources, "agent_traces", id -> id.getPath().endsWith(".json"))
                 .stream()
