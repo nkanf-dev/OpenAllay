@@ -10,9 +10,9 @@ def main():
     if os.environ.get('GITHUB_ACTIONS')!='true':raise ValueError('Remote only')
     parser=argparse.ArgumentParser();parser.add_argument('--ui',action='store_true');args_cli=parser.parse_args()
     out=ROOT/('build/e2e/forge16165-product-ui' if args_cli.ui else 'build/e2e/forge16165-product');out.mkdir(parents=True,exist_ok=False)
-    aid=11411572027;repo=os.environ['GITHUB_REPOSITORY'];metadata=json.loads(subprocess.check_output(['gh','api',f'repos/{repo}/actions/artifacts/{aid}']))
-    expected='ec71b683292a120bed40b34c5496063b243985adda1c92166fb6b5759ed46a46'
-    if metadata['expired'] or metadata['workflow_run']['id']!=37460307432 or metadata['workflow_run']['head_sha']!='736e50c9924139b377717a0f734818c25838dcdd' or metadata['digest']!='sha256:'+expected:raise ValueError('Product provider identity')
+    aid=11414069890;repo=os.environ['GITHUB_REPOSITORY'];metadata=json.loads(subprocess.check_output(['gh','api',f'repos/{repo}/actions/artifacts/{aid}']))
+    expected='08c9f736b25558a50dcb108b9b0862dacdfca55b520f12a54afbf4d393123394'
+    if metadata['expired'] or metadata['workflow_run']['id']!=37465973710 or metadata['workflow_run']['head_sha']!='97b150d77c19fb0c5f7ea4635977e660a2cdcdae' or metadata['digest']!='sha256:'+expected:raise ValueError('Product provider identity')
     archive=out/'product.zip'
     with archive.open('xb') as output:subprocess.run(['gh','api',f'repos/{repo}/actions/artifacts/{aid}/zip'],stdout=output,check=True)
     if sha(archive)!=expected:raise ValueError('Product archive bytes')
@@ -21,7 +21,7 @@ def main():
         jars=[n for n in z.namelist() if n.endswith('.jar')];receipts=[n for n in z.namelist() if n.endswith('pack-receipt.json')]
         if len(jars)!=1 or len(receipts)!=1:raise ValueError('Sole product package')
         data=z.read(jars[0]);receipt=json.loads(z.read(receipts[0]))
-        if hashlib.sha256(data).hexdigest()!=receipt['outputSha256'] or receipt['outputSha256']!='661ab059ea2b50fa45dec9ffa652f3dfcc0dd6fc390816fd9a8b962391081d38':raise ValueError('Product JAR identity')
+        if hashlib.sha256(data).hexdigest()!=receipt['outputSha256'] or receipt['outputSha256']!='d1b097395ec325c39ae0c89c85d488da1224ad6340a7d469e776fd15162c5883':raise ValueError('Product JAR identity')
         (game/'mods/openallay.jar').write_bytes(data)
     stock=module('product_stock',ROOT/'scripts/forge16165-engine-prerequisite/stock/stock-forge36-prerequisite.py')
     runtime,launch,freeze=stock.load_helpers()
@@ -34,14 +34,14 @@ def main():
     values={'natives_directory':out/'natives','launcher_name':'OpenAllayProductAcceptance','launcher_version':'native-product','classpath':os.pathsep.join(str(p) for _,p in cp),'auth_player_name':'devGameUser','version_name':stock.PROFILE,'game_directory':game,'assets_root':assets,'assets_index_name':vanilla['assetIndex']['id'],'auth_uuid':launch.offline_uuid('devGameUser'),'auth_access_token':'0','user_type':'legacy','version_type':version['type'],'resolution_width':'1280','resolution_height':'960'}
     features={'has_custom_resolution':True};jvm=launch.expand_arguments(vanilla['arguments']['jvm'],values,features)+stock.FLAGS;gameargs=launch.expand_arguments(vanilla['arguments']['game'],values,features)+version['arguments']['game']
     command=[str(java),'-Xms256M','-Xmx1536M','-Xlog:class+load=info:file='+str(out/'class-load.log')]+jvm+[stock.MAIN]+gameargs
-    runtime.write_json(out/'launch.json',{'command':command,'classpath':classpath,'productSha256':receipt['outputSha256'],'nativeBuildRun':37460049017,'packRun':37460307432,'noCompileReplay':True,'noEnginePrerequisiteReplay':True})
+    runtime.write_json(out/'launch.json',{'command':command,'classpath':classpath,'productSha256':receipt['outputSha256'],'nativeBuildRun':37465710119,'packRun':37465973710,'noCompileReplay':True,'noEnginePrerequisiteReplay':True})
     env={k:v for k,v in os.environ.items() if k not in ['JAVA_TOOL_OPTIONS','JDK_JAVA_OPTIONS','_JAVA_OPTIONS','CLASSPATH','DISPLAY']};env['LIBGL_ALWAYS_SOFTWARE']='1';env['ALSOFT_DRIVERS']='null'
     fixture=None;fixture_stream=None
     if args_cli.ui:
         config=game/'config/openallay';config.mkdir(parents=True,exist_ok=True)
         (config/'models.json').write_text(json.dumps({'defaultProfileId':'e2e-fixture','profiles':[{'id':'e2e-fixture','displayName':'OpenAllay E2E Fixture','enabled':True,'protocol':'openai_chat','baseUrl':'http://127.0.0.1:18765/v1/','model':'openallay-e2e-fixture','credentialRef':'env:OPENALLAY_E2E_FIXTURE_KEY','contextWindowTokens':256000,'maxOutputTokens':8192,'connectTimeoutSeconds':10,'requestTimeoutSeconds':120}]},indent=2)+'\n')
         env['OPENALLAY_E2E_FIXTURE_KEY']='isolated-loopback-no-secret'
-        flags=['-Dopenallay.e2e.enabled=true','-Dopenallay.e2e.scenario=ui-manual-regressions','-Dopenallay.e2e.question=OpenAllay E2E UI manual regressions','-Dopenallay.e2e.session=e2e','-Dopenallay.e2e.modelMode=client','-Dopenallay.e2e.report='+str(out/'ui-report.json'),'-Dopenallay.e2e.trace='+str(out/'ui-trace.json'),'-Dopenallay.e2e.screenshotRoot='+str(out/'screenshots'),'-Dopenallay.e2e.createWorld=openallay-builder-forge16-native-ui','-Dopenallay.e2e.timeoutSeconds=600','-Dopenallay.e2e.shutdown=true','-Dopenallay.e2e.sourceRevision=966192594efc73ea389682b5690765db53011f39']
+        flags=['-Dopenallay.e2e.enabled=true','-Dopenallay.e2e.scenario=ui-manual-regressions','-Dopenallay.e2e.question=OpenAllay E2E UI manual regressions','-Dopenallay.e2e.session=e2e','-Dopenallay.e2e.modelMode=client','-Dopenallay.e2e.report='+str(out/'ui-report.json'),'-Dopenallay.e2e.trace='+str(out/'ui-trace.json'),'-Dopenallay.e2e.screenshotRoot='+str(out/'screenshots'),'-Dopenallay.e2e.createWorld=openallay-builder-forge16-native-ui','-Dopenallay.e2e.timeoutSeconds=600','-Dopenallay.e2e.shutdown=true','-Dopenallay.e2e.sourceRevision=c943b9a52d96b908a4cb0e3e8115ae9ff15c1c64']
         command[1:1]=flags
         fixture_stream=(out/'model-fixture.log').open('w')
         fixture=subprocess.Popen([sys.executable,'-B',str(ROOT/'scripts/e2e-model-fixture.py'),'--port','18765'],stdout=fixture_stream,stderr=subprocess.STDOUT,start_new_session=True,env=env)
