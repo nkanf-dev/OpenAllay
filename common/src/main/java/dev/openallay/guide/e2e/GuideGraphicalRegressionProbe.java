@@ -1404,10 +1404,11 @@ final class GuideGraphicalRegressionProbe {
     }
 
     private GuideMultilineEditor composer() {
-        return ((dev.openallay.client.gui.GuideNativeScreen) MinecraftClientWindow.screen(client)).guideWidgetChildren().stream()
-                .map(dev.openallay.client.gui.GuideNativeMultilineText::find)
-                .filter(java.util.Objects::nonNull).findFirst()
-                .orElseThrow(() -> new IllegalStateException("Actual native composer is unavailable"));
+        OpenAllayScreen owner = guide();
+        GuideMultilineEditor editor = (GuideMultilineEditor) readField(owner, "composer");
+        require(editor != null && owner.guideWidgetRegistered(editor.widget()),
+                "Actual native composer is unavailable");
+        return editor;
     }
 
     private dev.openallay.guide.GuideSessionSnapshot session() {
