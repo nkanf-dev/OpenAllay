@@ -14,6 +14,10 @@ import org.lwjgl.sdl.SDLKeyboard;
 /** Native input binding for 26.3; shared handlers never own Minecraft event types. */
 public final class GuideNativeInput {
     private GuideNativeInput() {}
+    public static GuideWidgetInput widgetInput(GuiEventListener widget) {
+        return new GuideNativeWidgetInput(widget);
+    }
+
     public static InputConstants.Type keyboardType() { return InputConstants.Type.KEYBOARD; }
 
     /** Inert/probe callback payload, not evidence of physical OS dispatch. */

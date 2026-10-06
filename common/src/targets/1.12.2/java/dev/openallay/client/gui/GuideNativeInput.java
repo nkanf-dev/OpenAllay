@@ -6,6 +6,10 @@ import org.lwjgl.input.Keyboard;
 /** LWJGL 2 event semantics captured at the actual GuiScreen callback boundary. */
 public final class GuideNativeInput {
     private GuideNativeInput() {}
+    public static GuideWidgetInput widgetInput(GuideWidgetInput widget) {
+        return java.util.Objects.requireNonNull(widget, "widget");
+    }
+
     public static int modifiers() {
         return (GuiScreen.isShiftKeyDown() ? 1 : 0)
                 | (GuiScreen.isCtrlKeyDown() ? 2 : 0)

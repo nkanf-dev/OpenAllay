@@ -10,6 +10,10 @@ import net.minecraft.client.gui.screens.Screen;
 /** Primitive callback family. Native widgets retain keyboard, clipboard and IME ownership. */
 public final class GuideNativeInput {
     private GuideNativeInput() {}
+    public static GuideWidgetInput widgetInput(GuiEventListener widget) {
+        return new GuideNativeWidgetInput(widget);
+    }
+
     public static InputConstants.Type keyboardType() { return InputConstants.Type.KEYSYM; }
     /** Inert/probe callback payload, not evidence of physical OS dispatch. */
     public static GuideInputKey keyEvent(int key, int modifiers) { return capture(key, 0, modifiers); }

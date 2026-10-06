@@ -7,7 +7,7 @@ import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
 
 /** Actual GuiScreen callbacks. Layout, action policy and screen state belong to the one feature screen. */
-public abstract class GuideNativeScreenCallbacks extends GuiScreen {
+public abstract class GuideNativeScreenCallbacks extends GuiScreen implements GuideWidgetInput {
     private boolean guideAttached;
     private int dragX;
     private int dragY;
@@ -105,6 +105,11 @@ public abstract class GuideNativeScreenCallbacks extends GuiScreen {
     public boolean guideMouseDragged(GuideInputMouse event, double dx, double dy) { return false; }
     public boolean guideMouseReleased(GuideInputMouse event) { return false; }
     public boolean guideMouseScrolled(double x, double y, double horizontal, double vertical) { return false; }
+    @Override public final void guideSetFocused(boolean focused) {
+        super.setFocused(focused);
+        if (!focused) clearGuideFocus();
+    }
+    @Override public final boolean guideIsFocused() { return super.isFocused(); }
     public final GuideWidgetInput getGuideFocused() { return guideFocused; }
     public final void setGuideFocused(GuideWidgetInput child) {
         if (child == guideFocused) return;

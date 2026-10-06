@@ -916,7 +916,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
     }
 
     private void updateUiApplyButton() {
-        for (net.minecraft.client.gui.components.events.GuiEventListener child : children()) {
+        for (var child : children()) {
             if (child instanceof Button button && button.getMessage().getString().equals(
                     MinecraftComponents.translatable("screen.openallay.settings.ui.apply").getString())) {
                 button.active = !editorSave.busy() && (uiDraft.dirty() || !uiIntegerDrafts.isEmpty())
@@ -3537,7 +3537,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
 
     private void updateEditorSaveControls() {
         if (!editorSave.busy()) return;
-        for (net.minecraft.client.gui.components.events.GuiEventListener child : children()) {
+        for (var child : children()) {
             if (child instanceof net.minecraft.client.gui.components.AbstractWidget widget) {
                 widget.active = false;
             }
@@ -4379,7 +4379,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
 
     public void e2ePressEscape() {
         requireE2eControls();
-        GuideNativeInput.keyPressed(this, GuideNativeInput.keyEvent(dev.openallay.client.gui.GuideInputCodes.KEY_ESCAPE, 0));
+        GuideWidgetInputs.keyPressed(GuideNativeInput.widgetInput(this), GuideNativeInput.keyEvent(dev.openallay.client.gui.GuideInputCodes.KEY_ESCAPE, 0));
     }
 
     public void e2ePressBack() {
@@ -4389,7 +4389,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
 
     private void e2ePressButton(String translationKey) {
         String label = MinecraftComponents.translatable(translationKey).getString();
-        for (net.minecraft.client.gui.components.events.GuiEventListener child : children()) {
+        for (var child : children()) {
             if (child instanceof Button button && button.visible && button.active
                     && (button.getMessage().getString().equals(label)
                             || button.getMessage().getString().startsWith(label + " · "))) {

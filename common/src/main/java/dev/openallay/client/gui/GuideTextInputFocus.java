@@ -11,7 +11,7 @@ public final class GuideTextInputFocus {
         GuideNativeFocus.clear(screen);
         for (var child : screen.children()) {
             if (child instanceof EditBox || GuideNativeMultilineText.find(child) != null) {
-                GuideNativeInput.releaseTextFocus(child);
+                GuideWidgetInputs.releaseTextFocus(GuideNativeInput.widgetInput(child));
             }
         }
     }
