@@ -61,8 +61,8 @@ dependencies {
     minecraft 'net.minecraftforge:forge:1.16.5-36.2.42'
     compileOnly files(compileRoles.collect { file(roles[it].path) })
     compileOnly('mezz.jei:jei-1.16.5:7.8.1.1018:api') { transitive = false }
-    compileOnly('me.shedaniel:RoughlyEnoughItems-api-forge:6.5.436') { transitive = false }
-    compileOnly('me.shedaniel:architectury-forge:1.32.68') { transitive = false }
+    compileOnly(fg.deobf('me.shedaniel:RoughlyEnoughItems-forge:6.5.436')) { transitive = false }
+    compileOnly(fg.deobf('me.shedaniel:architectury-forge:1.32.68')) { transitive = false }
     annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
 }
 apply from: new File(source, 'gradle/minecraft-source-selection.gradle')

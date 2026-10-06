@@ -1,0 +1,15 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "dev.openallay.neoforge.command",
+  "compatibilityLevel": "JAVA_17",
+  "refmap": "openallay.refmap.json",
+  "client": [
+    "ForgeCommandTreeMixin",
+    "ForgeCommandSuggestionsMixin",
+    "ForgeChatCompletionMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
