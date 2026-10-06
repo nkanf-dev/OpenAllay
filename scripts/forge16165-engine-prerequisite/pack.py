@@ -14,7 +14,6 @@ import unicodedata
 import zipfile
 from pathlib import Path
 
-REVISION = "cbcf5e66c81d11e4d219fa6cc8da04ab996c7ce0"
 PROBE = "dev/openallay/forge36probe/"
 FORBIDDEN = ("com/google/gson/", "com/google/common/", "com/google/thirdparty/",
     "org/slf4j/", "org/apache/logging/", "net/minecraft/", "net/minecraftforge/",
@@ -244,12 +243,16 @@ def disposition(role, coordinate, name, data, artifact_hash, policy, attrs):
 def scan(spec_path, policy_path):
     policy = json_load(policy_path); spec = json_load(spec_path)
     exact(spec, ("sourceRevision","artifacts","resolution"), "closure input")
-    require(spec["sourceRevision"] == policy["sourceRevision"] == REVISION, "Source revision mismatch")
+    source_revision = spec["sourceRevision"]
+    require(isinstance(source_revision, str) and re.fullmatch(r"[0-9a-f]{40}", source_revision),
+            "Exact current producer source revision required")
+    require(isinstance(policy["sourceRevision"], str) and re.fullmatch(r"[0-9a-f]{40}", policy["sourceRevision"]),
+            "Exact retained ownership source baseline required")
     exact(spec["resolution"], ("path","sha256"), "resolution")
     require(file_sha(spec["resolution"]["path"]) == spec["resolution"]["sha256"], "Resolution evidence hash")
     resolution = json_load(spec["resolution"]["path"])
     exact(resolution, ("sourceRevision","runtimeCoordinates"), "resolution evidence")
-    require(resolution["sourceRevision"] == REVISION, "Resolution source mismatch")
+    require(resolution["sourceRevision"] == source_revision, "Resolution source mismatch")
     require(isinstance(resolution["runtimeCoordinates"],list) and all(isinstance(c,str) for c in resolution["runtimeCoordinates"]), "Resolution coordinates")
     require(len(resolution["runtimeCoordinates"])==len(set(resolution["runtimeCoordinates"])), "Duplicate resolution coordinate")
     artifacts=spec["artifacts"]; require(isinstance(artifacts,list), "Artifacts list")
@@ -315,8 +318,8 @@ def scan(spec_path, policy_path):
             provider_path=provider.replace(".","/")+".class"
             if provider_path not in outputs:
                 errors.append("Service provider has no packed sole owner: " + name + ":" + provider)
-    report={"status":"STOP" if errors else "READY", "sourceRevision":REVISION,
-        "specSha256":file_sha(spec_path),"policySha256":file_sha(policy_path),"packerSha256":file_sha(__file__),
+    report={"status":"STOP" if errors else "READY", "sourceRevision":source_revision,
+        "ownershipSourceBaseline":policy["sourceRevision"], "specSha256":file_sha(spec_path),"policySha256":file_sha(policy_path),"packerSha256":file_sha(__file__),
         "resolutionSha256":spec["resolution"]["sha256"],"artifacts":sorted(artifacts,key=lambda a:a["role"]),
         "inventory":inventory,"errors":errors,"multiRelease":mr,"builderDescriptor":builder,
         "plannedEntries":[{"name":name,"sha256":sha(data),"bytes":len(data),"owners":owners}
@@ -384,7 +387,7 @@ def pack(spec, policy, gate, gate_hash, probes_path, output, receipt):
         for artifact in actual["artifacts"]+[probes["input"],probes["reobf"]]:
             require(file_sha(artifact["path"])==artifact["sha256"], "Input changed during packing")
         require(file_sha(spec)==actual["specSha256"] and file_sha(policy)==actual["policySha256"] and file_sha(gate)==gate_hash, "Control input changed during packing")
-        result={"status":"PACKED","sourceRevision":REVISION,"outputSha256":file_sha(tmp),
+        result={"status":"PACKED","sourceRevision":actual["sourceRevision"],"outputSha256":file_sha(tmp),
             "scanSha256":gate_hash,"probePairSha256":file_sha(probes_path),"probeInput":probes["input"],"probeReobf":probes["reobf"],
             "closure":actual,"entries":[{"name":n,"bytes":len(b),"sha256":sha(b),"major":class_info(b,n) if n.endswith(".class") else None,"owners":o} for n,(b,o) in sorted(entries.items())]}
         # A failure never leaves an apparently accepted final file or overwrites an old artifact.

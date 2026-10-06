@@ -31,7 +31,6 @@ dependencies {
     api(project(':extension-api'))
     compileOnlyApi(project(':runtime-json'))
     api('com.google.code.gson:gson:2.8.0')
-    api('org.slf4j:slf4j-api:2.0.1')
     api(project(':runtime-rhino'))
     compileOnly(project(path: ':runtime-maven', configuration: 'privateRuntime'))
     implementation("org.commonmark:commonmark:${commonmark_version}")
@@ -69,7 +68,7 @@ tasks.named('classes') { dependsOn(mergePrivateMaven) }
 
 // Enforce actual resolved production classpaths, not names appearing in source comments.
 def productionCoordinates = [
-    'com.google.code.gson:gson', 'com.google.errorprone:error_prone_annotations', 'org.slf4j:slf4j-api',
+    'com.google.code.gson:gson', 'com.google.errorprone:error_prone_annotations',
     'dev.latvian.mods:rhino', 'com.google.guava:guava', 'com.google.guava:failureaccess',
     'com.google.guava:listenablefuture', 'com.google.code.findbugs:jsr305',
     'org.checkerframework:checker-qual', 'com.google.j2objc:j2objc-annotations',

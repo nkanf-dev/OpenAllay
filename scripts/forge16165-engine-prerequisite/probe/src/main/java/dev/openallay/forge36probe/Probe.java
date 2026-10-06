@@ -8,6 +8,8 @@ import com.google.gson.stream.JsonToken;
 import dev.latvian.mods.rhino.Context;
 import dev.latvian.mods.rhino.ContextFactory;
 import dev.latvian.mods.rhino.type.TypeInfo;
+import dev.openallay.OpenAllayConstants;
+import dev.openallay.logging.OpenAllayLogger;
 import dev.openallay.api.extension.ExtensionDescriptor;
 import dev.openallay.api.extension.ExtensionEnvironment;
 import dev.openallay.api.extension.OpenAllayExtension;
@@ -66,18 +68,44 @@ public final class Probe {
                 receipt.detail("thread", Thread.currentThread().getName());
                 for (Class<?> type : List.of(Probe.class, RhinoJavascriptRuntime.class,
                         EngineJson.class, Context.class, OpenAllayExtension.class,
-                        Gson.class, com.google.common.collect.ImmutableList.class, org.slf4j.Logger.class)) {
+                        OpenAllayConstants.class, OpenAllayLogger.class, Gson.class,
+                        com.google.common.collect.ImmutableList.class, org.apache.logging.log4j.Logger.class)) {
                     receipt.identity(type);
                 }
                 for (Class<?> type : List.of(RhinoJavascriptRuntime.class, EngineJson.class,
-                        Context.class, OpenAllayExtension.class)) soleOwner(type);
+                        Context.class, OpenAllayExtension.class, OpenAllayConstants.class,
+                        OpenAllayLogger.class)) soleOwner(type);
                 check(major(RhinoJavascriptRuntime.class) == 61 && major(Context.class) == 61,
                         "unchanged engine/Rhino Java61");
                 check(major(OpenAllayExtension.class) == 52, "SDK Java52");
                 for (Class<?> host : List.of(Gson.class, com.google.common.collect.ImmutableList.class,
-                        org.slf4j.Logger.class)) {
+                        org.apache.logging.log4j.Logger.class)) {
                     check(!archive(host).equals(archive(Probe.class)), "host original code source " + host);
                 }
+                check(System.Logger.class.getClassLoader() == null
+                        && System.Logger.class.getModule() == Object.class.getModule(),
+                        "JDK bootstrap System.Logger API");
+                JsonObject jdkLogging = new JsonObject();
+                jdkLogging.addProperty("class", System.Logger.class.getName());
+                jdkLogging.addProperty("loader", "bootstrap");
+                jdkLogging.addProperty("module", System.Logger.class.getModule().getName());
+                System.Logger backend = System.getLogger(OpenAllayConstants.MOD_NAME);
+                jdkLogging.addProperty("name", backend.getName());
+                jdkLogging.addProperty("implementationClass", backend.getClass().getName());
+                jdkLogging.addProperty("implementationModule", backend.getClass().getModule().getName());
+                receipt.detail("jdkLogging", jdkLogging);
+                receipt.pass();
+
+                stage = "engine-logging"; receipt.begin(stage);
+                OpenAllayConstants.LOGGER.info("OA36 ENGINE_LOGGING_INFO engine={} value={}",
+                        OpenAllayConstants.MOD_NAME, "brace-ok");
+                OpenAllayConstants.LOGGER.warn("OA36 ENGINE_LOGGING_WARN engine={} value={}",
+                        OpenAllayConstants.MOD_NAME, "brace-ok");
+                OpenAllayConstants.LOGGER.error("OA36 ENGINE_LOGGING_ERROR engine={} value={}",
+                        OpenAllayConstants.MOD_NAME, "brace-ok",
+                        new IllegalStateException("OA36 ENGINE_LOGGING_THROWABLE"));
+                receipt.detail("loggerClass", OpenAllayConstants.LOGGER.getClass().getName());
+                receipt.detail("loggingProof", "formatted-info-warning-error-and-throwable");
                 receipt.pass();
 
                 stage = "bound-engine-json"; receipt.begin(stage);

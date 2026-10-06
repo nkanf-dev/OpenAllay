@@ -16,7 +16,7 @@ import time
 import traceback
 
 PACKET = Path(__file__).resolve().parent
-STAGES = ["identity", "bound-engine-json", "json-trees-readers", "engine-rhino-record-schema",
+STAGES = ["identity", "engine-logging", "bound-engine-json", "json-trees-readers", "engine-rhino-record-schema",
           "rhino-default-interface-java-adapter", "existing-tool-envelope-copy", "builder-descriptor-only"]
 PASS = "OA36 ENGINE_PREREQUISITE_PASS"
 FAIL = "OA36 ENGINE_PREREQUISITE_FAIL stage="
@@ -44,7 +44,7 @@ def terminal(text):
     return None
 
 
-def read_receipt(path, fatmod_hash, classpath, expected_pid=None):
+def read_receipt(path, fatmod_hash, classpath, expected_pid=None, client_log=None):
     value = json.loads(path.read_text())
     if value.get("prerequisiteOnly") is not True or value.get("fullNativeSupport") is not False:
         raise ValueError("Receipt must describe only the engine prerequisite")
@@ -62,7 +62,9 @@ def read_receipt(path, fatmod_hash, classpath, expected_pid=None):
                   ("dev.openallay.script.RhinoJavascriptRuntime", 61),
                   ("dev.openallay.json.EngineJson", 61),
                   ("dev.latvian.mods.rhino.Context", 61),
-                  ("dev.openallay.api.extension.OpenAllayExtension", 52)]
+                  ("dev.openallay.api.extension.OpenAllayExtension", 52),
+                  ("dev.openallay.OpenAllayConstants", 61),
+                  ("dev.openallay.logging.OpenAllayLogger", 61)]
         loader = identity[shared[0][0]]["loaderIdentity"]
         mod_source = identity[shared[0][0]]["codeSource"]
         for name, major in shared:
@@ -77,13 +79,35 @@ def read_receipt(path, fatmod_hash, classpath, expected_pid=None):
         origins = {(str(Path(item["path"]).resolve()), item["sha256"]): item["coordinate"] for item in classpath}
         for name, coordinate in [("com.google.gson.Gson", "com.google.code.gson:gson:2.8.0"),
                                  ("com.google.common.collect.ImmutableList", "com.google.guava:guava:21.0"),
-                                 ("org.slf4j.Logger", None)]:
+                                 ("org.apache.logging.log4j.Logger", "org.apache.logging.log4j:log4j-api:2.15.0")]:
             item = identity[name]
             actual = origins.get((item["codeSource"], item["archiveSha256"]))
             if actual is None or item["archiveSha256"] == fatmod_hash:
                 raise ValueError("Host origin is not an unchanged official classpath archive: " + name)
             if coordinate is not None and actual != coordinate:
                 raise ValueError("Host coordinate differs: " + name)
+        jdk_logging = identity["jdkLogging"]
+        if (jdk_logging.get("class") != "java.lang.System$Logger"
+                or jdk_logging.get("loader") != "bootstrap" or jdk_logging.get("module") != "java.base"
+                or jdk_logging.get("name") != "OpenAllay"
+                or not jdk_logging.get("implementationClass") or not jdk_logging.get("implementationModule")):
+            raise ValueError("JDK System.Logger identity differs")
+        logging = stages[1]["details"]
+        if (logging.get("loggerClass") != "dev.openallay.logging.OpenAllayLogger"
+                or logging.get("loggingProof") != "formatted-info-warning-error-and-throwable"):
+            raise ValueError("Engine logging invocation proof differs")
+        if client_log is None:
+            raise ValueError("Engine logging requires the launched client log")
+        text = client_log.read_text(errors="replace")
+        markers = ["OA36 ENGINE_LOGGING_INFO engine=OpenAllay value=brace-ok",
+                   "OA36 ENGINE_LOGGING_WARN engine=OpenAllay value=brace-ok",
+                   "OA36 ENGINE_LOGGING_ERROR engine=OpenAllay value=brace-ok",
+                   "java.lang.IllegalStateException: OA36 ENGINE_LOGGING_THROWABLE"]
+        throwable = text.partition(markers[-1])[2]
+        stack_line = next((line for line in throwable.splitlines()[:8] if line.strip()), "")
+        if (any(marker not in text for marker in markers)
+                or "at dev.openallay.forge36probe.Probe$Client.run(" not in stack_line):
+            raise ValueError("engine-logging: formatted messages or exception stack missing from client log")
         return value
     if (value.get("status") != "FAIL" or not names or stages[-1].get("status") != "FAIL"
             or any(stage.get("status") != "PASS" for stage in stages[:-1])
@@ -169,7 +193,7 @@ def boot(args, root, java, assets, stock, runtime, launch, expected, vanilla, ve
                 outcome = collect(process, log, args.timeout)
                 receipt["terminalCollection"] = outcome
                 if outcome in ("probe-pass-marker", "probe-failure-marker"):
-                    proof = read_receipt(probe_receipt, args.mod_sha256, classpath, process.pid)
+                    proof = read_receipt(probe_receipt, args.mod_sha256, classpath, process.pid, log)
                     expected_status = "PASS" if outcome == "probe-pass-marker" else "FAIL"
                     runtime.require(proof["status"] == expected_status, "Terminal marker and receipt disagree")
                     receipt["status"] = expected_status

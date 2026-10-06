@@ -1,0 +1,45 @@
+import org.gradle.api.attributes.Bundling
+import org.gradle.api.attributes.Category
+import org.gradle.api.attributes.LibraryElements
+import org.gradle.api.attributes.Usage
+import org.gradle.api.attributes.java.TargetJvmVersion
+
+// Real project identity and real retained artifact. No java plugin or compiler tasks.
+def role = ['extension-api': 'sdk', 'runtime-rhino': 'rhino',
+            'runtime-json': 'json-proof', 'runtime-maven': 'maven-proof'][project.name]
+def record = rootProject.ext.engineOnlyArtifact(role)
+def coordinate = record.coordinate.split(':')
+def expectedName = ['sdk': 'openallay-extension-api', 'rhino': 'openallay-rhino',
+                    'json-proof': 'openallay-runtime-json', 'maven-proof': 'openallay-maven-runtime'][role]
+if (coordinate.length != 3 || coordinate[0] != 'dev.openallay' || coordinate[1] != expectedName) {
+    throw new GradleException('Retained project identity differs')
+}
+group = coordinate[0]
+version = coordinate[2]
+['apiElements', 'runtimeElements'].each { name ->
+    configurations.create(name) {
+        canBeResolved = false
+        canBeConsumed = true
+        attributes {
+            attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage,
+                    name == 'apiElements' ? Usage.JAVA_API : Usage.JAVA_RUNTIME))
+            attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category, Category.LIBRARY))
+            attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(LibraryElements, LibraryElements.JAR))
+            attribute(Bundling.BUNDLING_ATTRIBUTE, objects.named(Bundling, Bundling.EXTERNAL))
+            attribute(TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE, role == 'sdk' ? 8 : 17)
+        }
+        outgoing.artifact(record.file)
+    }
+}
+if (role in ['rhino', 'json-proof']) {
+    dependencies.add('apiElements', 'com.google.code.gson:gson:2.8.0')
+    dependencies.add('runtimeElements', 'com.google.code.gson:gson:2.8.0')
+}
+if (role == 'rhino') dependencies.add('runtimeElements', 'com.google.guava:guava:31.1-jre')
+if (role == 'maven-proof') {
+    configurations.create('privateRuntime') {
+        canBeResolved = false
+        canBeConsumed = true
+        outgoing.artifact(record.file)
+    }
+}

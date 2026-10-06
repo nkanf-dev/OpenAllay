@@ -17,59 +17,49 @@ def main():
     args=argparse.ArgumentParser();args.add_argument('--phase',choices=['scan','probe','pack'],required=True);args.add_argument('--reuse-shared',action='store_true');options=args.parse_args();phase=options.phase
     shared=ROOT/'build/forge36-shared';probe=PACKET/'probe';out=ROOT/'build/forge36-artifacts';out.mkdir(parents=True,exist_ok=True)
     if phase=='scan':
-        old='cbcf5e66c81d11e4d219fa6cc8da04ab996c7ce0'
-        changed=subprocess.check_output(['git','diff','--name-only',old,'HEAD'],cwd=ROOT,text=True).splitlines()
-        if any(not (path.startswith('scripts/forge16165-engine-prerequisite/') or path in
-                ['gradle/forge16165-engine-export.init.gradle','.github/workflows/minecraft-native.yml']) for path in changed):
-            raise ValueError('Shared producer inputs changed beyond this prerequisite source packet')
-        if options.reuse_shared:
-            old_source='794a6b0fe0537371ea737eed4ce477b737f325e3'
-            run(['git','merge-base','--is-ancestor',old_source,'HEAD'])
-            artifact=json.loads(subprocess.check_output(['gh','api','repos/'+os.environ['GITHUB_REPOSITORY']+'/actions/artifacts/11395936631']))
-            if (artifact['expired'] or artifact['workflow_run']['id']!=37428024273
-                    or artifact['workflow_run']['head_sha']!=old_source
-                    or artifact['digest']!='sha256:baa4f3ef51e19ac6dc8f7a486686cb5023334a7d06ae7126ad67fdec741023bd'):
-                raise ValueError('Immutable shared input archive identity differs')
-            spec=json.loads((shared/'closure-input.json').read_text())
-            for entry in spec['artifacts']:
-                if digest(entry['path'])!=entry['sha256']:raise ValueError('Retained shared artifact bytes differ')
-            (out/'shared-input-reuse.json').write_text(json.dumps({'source':old_source,'run':37428024273,
-                'artifact':11395936631,'actualBuildOutcome':'shared compilation/export passed; original overall run failed',
-                'currentRunnerSource':os.environ['GITHUB_SHA'],'artifactBytesUnchanged':True},indent=2)+'\n')
-        else:
-            run([str(ROOT/'gradlew'),'--configure-on-demand','--max-workers=2','--stacktrace','-PminecraftTarget=1.19.2',
-                 '-PtestBundledExtensions=false','-I',str(ROOT/'gradle/forge16165-engine-export.init.gradle'),':engine-core:exportForge36Closure'])
-        active_spec=shared/'closure-input.json'
-        if options.reuse_shared:
-            builder_source='e37eb4f325d6917b2a0b32afc47dd139a55acb83'
-            retained_component=out/'retained-builder/builder-isolated.jar'
-            retained_provenance=out/'retained-builder/builder-isolation-provenance.json'
-            component=json.loads(subprocess.check_output(['gh','api','repos/'+os.environ['GITHUB_REPOSITORY']+'/actions/artifacts/11395574649']))
-            if (component['expired'] or component['workflow_run']['id']!=37429372559
-                    or component['workflow_run']['head_sha']!='41243d95af42217468e9ca62f703889ab292d5e8'
-                    or component['digest']!='sha256:0495603d813ee58437d6976c36399e340d09c75458ceb2dce399ac9f11065e8e'):
-                raise ValueError('Retained candidate Builder archive identity differs')
-            provenance=json.loads(retained_provenance.read_text())
-            if (provenance['source']!=builder_source or digest(retained_component)!=provenance['candidateBuilder']['sha256']
-                    or provenance['retainedSdkSha256']!=digest(shared/'sdk.jar')):
-                raise ValueError('Retained candidate Builder package/source/SDK identity differs')
-            isolated=out/'builder-isolated.jar';shutil.copyfile(retained_component,isolated)
-            with zipfile.ZipFile(isolated) as jar:
-                names=jar.namelist()
-                private=[name for name in names if name.startswith('dev/openallay/builder/internal/errorprone/annotations/') and name.endswith('.class')]
-                if len(private)!=29 or any(name.startswith('com/google/errorprone/') for name in names):
-                    raise ValueError('Candidate Builder annotation isolation is incomplete')
-            builder_base=provenance['baseSource']
-            original_builder=next(entry.copy() for entry in spec['artifacts'] if entry['role']=='builder')
-            for entry in spec['artifacts']:
-                if entry['role']=='builder':entry.update(path=str(isolated),sha256=digest(isolated))
-            new_spec=out/'candidate-closure-input.json';new_spec.write_text(json.dumps(spec,indent=2)+'\n')
-            (out/'builder-isolation-provenance.json').write_text(json.dumps({'source':builder_source,'baseSource':builder_base,
-                'originalBuilder':original_builder,'candidateBuilder':next(entry for entry in spec['artifacts'] if entry['role']=='builder'),
-                'retainedSdkSha256':digest(shared/'sdk.jar'),'otherEighteenInputs':'unchanged hashes verified',
-                'privateAnnotationClasses':private,'producer':'normal universal Shadow assemble and verifyUniversalPackage'},indent=2)+'\n')
-            active_spec=new_spec
-        run(['python3','-B',str(PACKET/'pack.py'),'scan','--spec',str(active_spec),'--report',str(out/'closure-scan.json')])
+        retained=ROOT/'build/forge36-retained-shared'
+        builder=ROOT/'build/forge36-retained-builder/builder-isolated.jar'
+        old_source='794a6b0fe0537371ea737eed4ce477b737f325e3'
+        run(['git','merge-base','--is-ancestor',old_source,'HEAD'])
+        repository=os.environ['GITHUB_REPOSITORY']
+        for artifact_id,run_id,source,expected in [
+            (11395936631,37428024273,old_source,'sha256:baa4f3ef51e19ac6dc8f7a486686cb5023334a7d06ae7126ad67fdec741023bd'),
+            (11395574649,37429372559,'41243d95af42217468e9ca62f703889ab292d5e8','sha256:0495603d813ee58437d6976c36399e340d09c75458ceb2dce399ac9f11065e8e')]:
+            artifact=json.loads(subprocess.check_output(['gh','api',f'repos/{repository}/actions/artifacts/{artifact_id}']))
+            if (artifact['expired'] or artifact['workflow_run']['id']!=run_id
+                    or artifact['workflow_run']['head_sha']!=source or artifact['digest']!=expected):
+                raise ValueError('Immutable input provider identity differs')
+        original_spec=json.loads((retained/'closure-input.json').read_text())
+        for entry in original_spec['artifacts']:
+            path=retained/(entry['role']+'.jar')
+            if digest(path)!=entry['sha256']:raise ValueError('Retained component bytes differ')
+        provenance=json.loads((ROOT/'build/forge36-retained-builder/builder-isolation-provenance.json').read_text())
+        if (provenance['source']!='e37eb4f325d6917b2a0b32afc47dd139a55acb83'
+                or digest(builder)!=provenance['candidateBuilder']['sha256']
+                or provenance['retainedSdkSha256']!=digest(retained/'sdk.jar')):
+            raise ValueError('Builder package/source/SDK identity differs')
+        # Source-owned SDK/Rhino bytes have no mandatory SLF4J linkage. SQLite retains its own optional fallback.
+        for role in ['sdk','rhino']:
+            with zipfile.ZipFile(retained/(role+'.jar')) as jar:
+                if any(b'org/slf4j/' in jar.read(name) for name in jar.namelist() if name.endswith('.class')):
+                    raise ValueError('Unexpected retained component SLF4J linkage: '+role)
+        source=subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip()
+        request=out/'engine-only-inputs.json'
+        request.write_text(json.dumps({'sourceRoot':str(ROOT),'sourceRevision':source,
+            'retainedDirectory':str(retained),'builderJar':str(builder)},indent=2)+'\n')
+        run([str(ROOT/'gradlew'),'--max-workers=2','--stacktrace','--project-dir',str(ROOT/'native-builds/engine-only'),
+             '-PengineOnlyInputs='+str(request),':engine-core:exportEngineOnlyClosure'])
+        spec=json.loads((shared/'closure-input.json').read_text())
+        if len(spec['artifacts'])!=18 or any(entry['role']=='slf4j' for entry in spec['artifacts']):
+            raise ValueError('New effective closure role set differs')
+        (out/'engine-component-provenance.json').write_text(json.dumps({'actualEngineSource':source,
+            'retainedSharedSource':old_source,'retainedSharedArtifact':11395936631,
+            'candidateBuilderSource':provenance['source'],'candidateBuilderArtifact':11395574649,
+            'ownedSdkRhinoSlf4jClassReferences':'none in retained class bytes',
+            'newEngine':next(entry for entry in spec['artifacts'] if entry['role']=='engine'),
+            'otherInputs':'exact retained hashes, normal resolved classpath verified by producer'},indent=2)+'\n')
+        run(['python3','-B',str(PACKET/'pack.py'),'scan','--spec',str(shared/'closure-input.json'),
+             '--report',str(out/'closure-scan.json')])
     elif phase=='probe':
         if json.loads((out/'closure-scan.json').read_text())['status']!='READY':raise ValueError('Pack input is not ready')
         archive=out/'official-forge36-mdk.zip'
@@ -91,7 +81,7 @@ def main():
         for key,record in [('input',metadata['reobfInput']),('reobf',metadata['reobfOutput'])]:pair[key]={'role':'probe-'+('input' if key=='input' else 'reobf'),'coordinate':'dev.openallay:forge36-engine-probe:0.4.3','path':record['path'],'sha256':record['sha256']}
         (out/'probe-inputs.json').write_text(json.dumps(pair,indent=2)+'\n')
     else:
-        run(['python3','-B',str(PACKET/'pack.py'),'pack','--spec',str(out/'candidate-closure-input.json' if (out/'candidate-closure-input.json').exists() else shared/'closure-input.json'),
+        run(['python3','-B',str(PACKET/'pack.py'),'pack','--spec',str(shared/'closure-input.json'),
              '--gate',str(out/'closure-scan.json'),'--gate-sha256',digest(out/'closure-scan.json'),
              '--probes',str(out/'probe-inputs.json'),'--output',str(out/'openallay-engine-probe-fat.jar'),'--receipt',str(out/'pack-receipt.json')])
         (out/'fat-mod.sha256').write_text(digest(out/'openallay-engine-probe-fat.jar')+'\n')

@@ -149,8 +149,7 @@
     "failureaccess": "com.google.guava:failureaccess:1.0.1",
     "gson": "com.google.code.gson:gson:2.8.0",
     "guava": "com.google.guava:guava:31.1-jre",
-    "listenablefuture": "com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava",
-    "slf4j": "org.slf4j:slf4j-api:2.0.1"
+    "listenablefuture": "com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava"
   },
   "primaryClasses": {
     "engine": [
@@ -546,6 +545,8 @@
       "dev/openallay/integration/patchouli/PatchouliTextNormalizer",
       "dev/openallay/integration/rei/ReiOpenAllayExtension",
       "dev/openallay/json/EngineJson",
+      "dev/openallay/json/JsonReaders",
+      "dev/openallay/json/JsonTrees",
       "dev/openallay/json/RecordJsonAdapter",
       "dev/openallay/knowledge/KnowledgeDiagnostic",
       "dev/openallay/knowledge/KnowledgeDocument",
@@ -569,6 +570,7 @@
       "dev/openallay/knowledge/search/KnowledgeRetriever",
       "dev/openallay/knowledge/search/KnowledgeSearchResult",
       "dev/openallay/knowledge/search/KnowledgeTokenizer",
+      "dev/openallay/logging/OpenAllayLogger",
       "dev/openallay/model/CancellationSignal",
       "dev/openallay/model/ModelClient",
       "dev/openallay/model/ModelClientException",
@@ -834,9 +836,7 @@
       "dev/openallay/world/WorldObservationRuntime",
       "dev/openallay/world/WorldPosition",
       "dev/openallay/world/WorldViewCapture",
-      "dev/openallay/world/WorldViewRequest",
-      "dev/openallay/json/JsonReaders",
-      "dev/openallay/json/JsonTrees"
+      "dev/openallay/world/WorldViewRequest"
     ],
     "rhino": [
       "dev/latvian/mods/rhino/AbstractEcmaObjectOperations",

@@ -1,0 +1,29 @@
+// Product pins come from the same canonical source checkout as the engine.
+def source = gradle.ext.engineOnlySource
+ext.engineOnlyRequest = gradle.ext.engineOnlyRequest
+ext.engineOnlyPins = gradle.ext.engineOnlyPins
+ext.engineOnlySource = source
+def product = new Properties()
+source.toPath().resolve('gradle.properties').toFile().withInputStream { product.load(it) }
+if (product.getProperty('version') != '0.4.3') throw new GradleException('Expected current 0.4.3 product')
+allprojects {
+    group = product.getProperty('group')
+    version = product.getProperty('version')
+    repositories {
+        maven {
+            url = uri(new File(source, '.gradle/curl-mirror'))
+            metadataSources { gradleMetadata(); mavenPom(); artifact() }
+        }
+        mavenCentral()
+    }
+}
+['commonmark_version', 'jtokkit_version', 'sqlite_jdbc_version', 'rhino_version'].each {
+    ext.set(it, product.getProperty(it))
+}
+ext.engineOnlyArtifact = { String role ->
+    def pin = engineOnlyPins.artifacts.find { it.role == role }
+    if (!pin) throw new GradleException("Missing retained role ${role}")
+    def path = role == 'builder' ? file(engineOnlyRequest.builderJar) :
+            new File(file(engineOnlyRequest.retainedDirectory), role + '.jar')
+    [role: role, coordinate: pin.coordinate, sha256: pin.sha256, file: path.canonicalFile]
+}

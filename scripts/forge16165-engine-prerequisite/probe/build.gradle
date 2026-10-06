@@ -17,7 +17,6 @@ dependencies {
     // Root stages these exact unchanged artifacts after the shared build. Compile-only.
     compileOnly files('closure/openallay-engine-core.jar', 'closure/openallay-extension-api.jar',
             'closure/openallay-rhino.jar')
-    compileOnly 'org.slf4j:slf4j-api:2.0.1'
 }
 // Only the production probe uses Java17 release flags. ForgeGradle owns its Java8 game recompilation.
 tasks.named('compileJava', JavaCompile) {
