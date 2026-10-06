@@ -49,11 +49,11 @@
     "adapters/minecraft/src/targets/1.16.5/java/dev/openallay/adapter/minecraft/v26_2/world/mixin/NativeTileEntityStateAccessor.java",
     "common/src/targets/1.16.5/java/dev/openallay/client/gui/mixin/MainWindowResizeMixin.java",
     "common/src/targets/1.16.5/java/dev/openallay/client/observation/MinecraftImageTextures.java",
-    "forge/src/targets/1.16.5/java/dev/openallay/neoforge/command/ForgeChatCompletionMixin.java",
+    "forge/src/targets/1.16.5/java/dev/openallay/neoforge/command/mixin/ForgeChatCompletionMixin.java",
     "forge/src/targets/1.16.5/java/dev/openallay/neoforge/command/ForgeClientCommandSource.java",
     "forge/src/targets/1.16.5/java/dev/openallay/neoforge/command/ForgeClientGuideCommands.java",
-    "forge/src/targets/1.16.5/java/dev/openallay/neoforge/command/ForgeCommandSuggestionsMixin.java",
-    "forge/src/targets/1.16.5/java/dev/openallay/neoforge/command/ForgeCommandTreeMixin.java"
+    "forge/src/targets/1.16.5/java/dev/openallay/neoforge/command/mixin/ForgeCommandSuggestionsMixin.java",
+    "forge/src/targets/1.16.5/java/dev/openallay/neoforge/command/mixin/ForgeCommandTreeMixin.java"
   ],
   "sourceSyntax": "17",
   "preview": false

@@ -1,4 +1,6 @@
-package dev.openallay.neoforge.command;
+package dev.openallay.neoforge.command.mixin;
+
+import dev.openallay.neoforge.command.ForgeClientGuideCommands;
 
 import net.minecraft.client.network.play.ClientPlayNetHandler;
 import net.minecraft.network.play.server.SCommandListPacket;

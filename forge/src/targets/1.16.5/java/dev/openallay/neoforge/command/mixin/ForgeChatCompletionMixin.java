@@ -1,4 +1,6 @@
-package dev.openallay.neoforge.command;
+package dev.openallay.neoforge.command.mixin;
+
+import dev.openallay.neoforge.command.ForgeCommandCompletionRefresh;
 
 import net.minecraft.client.gui.CommandSuggestionHelper;
 import net.minecraft.client.gui.screen.ChatScreen;

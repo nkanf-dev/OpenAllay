@@ -1,4 +1,6 @@
-package dev.openallay.neoforge.command;
+package dev.openallay.neoforge.command.mixin;
+
+import dev.openallay.neoforge.command.ForgeCommandCompletionRefresh;
 
 import com.mojang.brigadier.ParseResults;
 import com.mojang.brigadier.suggestion.Suggestions;
