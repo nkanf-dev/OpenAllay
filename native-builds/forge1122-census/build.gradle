@@ -101,9 +101,13 @@ task exportSourceSelection {
         def retiredFiles=[] as Set
         retirement.java.each { row ->
             if (row.keySet() != (['owner','logicalPath','origin','sha256','reason'] as Set) ||
-                    !(row.owner in ['adapter','fml']) || !(row.reason instanceof String) || row.reason.empty ||
+                    !(row.owner in ['adapter','fml','common']) || !(row.reason instanceof String) || row.reason.empty ||
                     !(row.owner=='adapter' && row.logicalPath.startsWith('dev/openallay/adapter/minecraft/v26_2/world/Native') ||
-                      row.owner=='fml' && row.logicalPath.startsWith('dev/openallay/neoforge/command/')) ||
+                      row.owner=='fml' && row.logicalPath.startsWith('dev/openallay/neoforge/command/') ||
+                      row.owner=='common' && row.logicalPath in [
+                        'dev/openallay/client/gui/GuidePoseItems.java','dev/openallay/client/gui/GuidePoseScissor.java',
+                        'dev/openallay/client/gui/GuidePoseTooltip.java','dev/openallay/client/gui/GuideNativeCursor.java',
+                        'dev/openallay/client/gui/GuideLegacyRenderState.java']) ||
                     row.origin.contains('/targets/1.12.2/')) throw new GradleException('Invalid obsolete native helper disposition')
             // Audit only the already-materialized owner snapshot. Never query a filtered set from a predicate.
             def matches=raw.findAll {
