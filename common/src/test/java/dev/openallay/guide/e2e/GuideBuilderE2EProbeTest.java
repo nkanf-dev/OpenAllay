@@ -67,16 +67,16 @@ final class GuideBuilderE2EProbeTest {
         for (String json : List.of("not JSON", "[]", "null", "{} {}", "{scenario:'builder_restricted'}",
                 "{\"scenario\":\"builder_restricted\",\"scenario\":\"builder_restricted\"}",
                 "{\"status\":TRUE}", "{/*comment*/\"scenario\":\"builder_restricted\"}")) {
-            var invalid = good.deepCopy(); invalid.getAsJsonObject("value").addProperty("preview", json);
+            var invalid = dev.openallay.json.JsonTrees.copy(good); invalid.getAsJsonObject("value").addProperty("preview", json);
             assertThrows(IllegalArgumentException.class, () -> GuideBuilderE2EProbe.builderReceipt(request(invalid)), json);
             assertFalse(GuideBuilderE2EProbe.toolContract("builder-restricted", request(invalid)), json);
         }
-        var oldObjectPreview = good.deepCopy(); oldObjectPreview.getAsJsonObject("value").add("preview", expected);
-        var incomplete = good.deepCopy(); incomplete.getAsJsonObject("value").addProperty("complete", false);
-        var stringComplete = good.deepCopy(); stringComplete.getAsJsonObject("value").addProperty("complete", "true");
-        var wrongType = good.deepCopy(); wrongType.getAsJsonObject("value").addProperty("resultType", "object");
-        var absentType = good.deepCopy(); absentType.getAsJsonObject("value").remove("resultType");
-        var failed = good.deepCopy(); failed.addProperty("status", "failure");
+        var oldObjectPreview = dev.openallay.json.JsonTrees.copy(good); oldObjectPreview.getAsJsonObject("value").add("preview", expected);
+        var incomplete = dev.openallay.json.JsonTrees.copy(good); incomplete.getAsJsonObject("value").addProperty("complete", false);
+        var stringComplete = dev.openallay.json.JsonTrees.copy(good); stringComplete.getAsJsonObject("value").addProperty("complete", "true");
+        var wrongType = dev.openallay.json.JsonTrees.copy(good); wrongType.getAsJsonObject("value").addProperty("resultType", "object");
+        var absentType = dev.openallay.json.JsonTrees.copy(good); absentType.getAsJsonObject("value").remove("resultType");
+        var failed = dev.openallay.json.JsonTrees.copy(good); failed.addProperty("status", "failure");
         for (var invalid : List.of(oldObjectPreview, incomplete, stringComplete, wrongType, absentType, failed)) {
             assertThrows(IllegalArgumentException.class, () -> GuideBuilderE2EProbe.builderReceipt(request(invalid)));
             assertFalse(GuideBuilderE2EProbe.toolContract("builder-restricted", request(invalid)));
@@ -106,7 +106,7 @@ final class GuideBuilderE2EProbeTest {
         // Enrichment is real final-row evidence. It must not mutate normalized Tool wire data.
         assertFalse(GuideBuilderE2EProbe.builderReceipt(request).getAsJsonArray("operations").get(0)
                 .getAsJsonObject().getAsJsonObject("journal").has("beforeImages"));
-        assertFalse(com.google.gson.JsonParser.parseString(history.getLast().getAsJsonObject("value").get("preview").getAsString())
+        assertFalse(dev.openallay.json.JsonTrees.parse(history.getLast().getAsJsonObject("value").get("preview").getAsString())
                 .getAsJsonObject().getAsJsonArray("operations").get(0).getAsJsonObject().has("journal"));
     }
     @Test void finalSuccessCannotHideMissingReorderedWrongOrUnexpectedFailedTools() {
@@ -209,7 +209,7 @@ final class GuideBuilderE2EProbeTest {
         }
         assertAcceptanceMutation(5, r -> r.getAsJsonObject("lifecycle").getAsJsonObject("undo").getAsJsonObject("result").addProperty("restored", 2), "wrong restored count");
         assertAcceptanceMutation(5, r -> r.getAsJsonObject("lifecycle").getAsJsonObject("undo").getAsJsonObject("result").addProperty("operationId", "different-restore"), "result/status ID mismatch");
-        assertAcceptanceMutation(5, r -> r.getAsJsonObject("lifecycle").getAsJsonObject("undo").getAsJsonObject("result").getAsJsonArray("conflicts").set(0, r.getAsJsonObject("lifecycle").getAsJsonObject("undo").getAsJsonArray("positions").get(0).deepCopy()), "first rather than second conflict cell");
+        assertAcceptanceMutation(5, r -> r.getAsJsonObject("lifecycle").getAsJsonObject("undo").getAsJsonObject("result").getAsJsonArray("conflicts").set(0, dev.openallay.json.JsonTrees.copy(r.getAsJsonObject("lifecycle").getAsJsonObject("undo").getAsJsonArray("positions").get(0))), "first rather than second conflict cell");
         assertAcceptanceMutation(5, r -> r.getAsJsonObject("lifecycle").getAsJsonObject("undo").getAsJsonObject("result").getAsJsonArray("uncertain").add(position(0, 1, 0)), "uncertain undo");
         assertAcceptanceMutation(5, r -> r.getAsJsonObject("lifecycle").getAsJsonObject("undo").getAsJsonArray("afterImages").set(1, image("air")), "conflict overwritten");
         var receipt = GuideBuilderE2EProbe.builderReceipt(fixtureRequest(acceptanceHistory()));
@@ -238,23 +238,23 @@ final class GuideBuilderE2EProbeTest {
         assertTrue(GuideBuilderE2EProbe.persistedOperationsMatch(retained, reload));
         assertTrue(GuideBuilderE2EProbe.toolContract("builder-reload", request(normalized(reload))));
         for (int index = 0; index < 14; index++) {
-            var missing = reload.deepCopy(); missing.getAsJsonArray("operations").remove(index); missing.addProperty("operationCount", 13);
+            var missing = dev.openallay.json.JsonTrees.copy(reload); missing.getAsJsonArray("operations").remove(index); missing.addProperty("operationCount", 13);
             assertFalse(GuideBuilderE2EProbe.persistedOperationsMatch(retained, missing), "missing row " + index);
             for (String key : List.of("id", "label", "status", "entries")) {
-                var changed = reload.deepCopy(); var row = changed.getAsJsonArray("operations").get(index).getAsJsonObject();
+                var changed = dev.openallay.json.JsonTrees.copy(reload); var row = changed.getAsJsonArray("operations").get(index).getAsJsonObject();
                 if (key.equals("entries")) row.addProperty(key, row.get(key).getAsInt() + 1); else row.addProperty(key, "wrong");
                 assertFalse(GuideBuilderE2EProbe.persistedOperationsMatch(retained, changed), "changed row " + index + " " + key);
             }
         }
-        var duplicate = reload.deepCopy(); duplicate.getAsJsonArray("operations").add(duplicate.getAsJsonArray("operations").get(0).deepCopy()); duplicate.addProperty("operationCount", 15);
+        var duplicate = dev.openallay.json.JsonTrees.copy(reload); duplicate.getAsJsonArray("operations").add(dev.openallay.json.JsonTrees.copy(duplicate.getAsJsonArray("operations").get(0))); duplicate.addProperty("operationCount", 15);
         assertFalse(GuideBuilderE2EProbe.persistedOperationsMatch(retained, duplicate));
-        var extra = reload.deepCopy(); extra.getAsJsonArray("operations").add(journal("extra", "extra", "completed", 1)); extra.addProperty("operationCount", 15);
+        var extra = dev.openallay.json.JsonTrees.copy(reload); extra.getAsJsonArray("operations").add(journal("extra", "extra", "completed", 1)); extra.addProperty("operationCount", 15);
         assertFalse(GuideBuilderE2EProbe.persistedOperationsMatch(retained, extra));
-        var wrongCount = reload.deepCopy(); wrongCount.addProperty("operationCount", 9);
+        var wrongCount = dev.openallay.json.JsonTrees.copy(reload); wrongCount.addProperty("operationCount", 9);
         assertFalse(GuideBuilderE2EProbe.persistedOperationsMatch(retained, wrongCount));
-        var noTemplate = reload.deepCopy(); noTemplate.getAsJsonArray("listed").remove(0);
+        var noTemplate = dev.openallay.json.JsonTrees.copy(reload); noTemplate.getAsJsonArray("listed").remove(0);
         assertFalse(GuideBuilderE2EProbe.persistedOperationsMatch(retained, noTemplate));
-        var noBinding = retained.deepCopy(); noBinding.getAsJsonArray("operations").get(0).getAsJsonObject().remove("journal");
+        var noBinding = dev.openallay.json.JsonTrees.copy(retained); noBinding.getAsJsonArray("operations").get(0).getAsJsonObject().remove("journal");
         assertFalse(GuideBuilderE2EProbe.persistedOperationsMatch(noBinding, reload));
     }
     @Test void allEightyFiveNativeExpectationsAndActorAnchorBindingRemainIndependent() throws Exception {
@@ -297,7 +297,7 @@ final class GuideBuilderE2EProbeTest {
     @Test void reloadUsesPassedRetainedOriginDespiteMovedPlayerAndRejectsForeignEvidence() {
         var original = new GuideBuilderE2EProbe.Anchor(-1, -61, 4, "minecraft:overworld");
         var moved = new GuideBuilderE2EProbe.Anchor(22, -61, 42, "minecraft:overworld");
-        var proof = com.google.gson.JsonParser.parseString("""
+        var proof = dev.openallay.json.JsonTrees.parse("""
                 {"outcome":"PASSED","worldName":"openallay-builder-test","nativeAnchor":{"x":-1,"y":-61,"z":4}}
                 """).getAsJsonObject();
         assertEquals(original, GuideBuilderE2EProbe.retainedOrigin(moved, original, proof, "openallay-builder-test"));
@@ -335,7 +335,7 @@ final class GuideBuilderE2EProbeTest {
     private static JsonObject commonReceipt(String scenario, String stage) {
         var receipt = receipt("builder_" + scenario, "completed"); receipt.addProperty("stage", stage);
         receipt.addProperty("probeToken", PROBE_TOKEN); receipt.add("anchor", position(10, 64, 20));
-        receipt.add("context", com.google.gson.JsonParser.parseString("""
+        receipt.add("context", dev.openallay.json.JsonTrees.parse("""
                 {"dimension":"minecraft:overworld","playerUuid":"00000000-0000-0000-0000-000000000017"}
                 """));
         return receipt;
@@ -352,11 +352,11 @@ final class GuideBuilderE2EProbeTest {
             operations.add(operation); rows.add(journal("unit-" + name, "OpenAllay E2E Builder acceptance", "completed", 3));
         }
         build.add("operations", operations); build.add("status", nativeStatus("unit-templates"));
-        build.add("baselineOperations", rows.deepCopy());
-        build.add("actions", com.google.gson.JsonParser.parseString("""
+        build.add("baselineOperations", dev.openallay.json.JsonTrees.copy(rows));
+        build.add("actions", dev.openallay.json.JsonTrees.parse("""
                 [{"name":"terrain_path","status":"built"},{"name":"terrain_smart_path","status":"built"}]
                 """));
-        build.add("templates", com.google.gson.JsonParser.parseString("""
+        build.add("templates", dev.openallay.json.JsonTrees.parse("""
                 {"listed":true,"saved":["openallay_e2e_builder_native"]}
                 """));
         build.add("sites", new JsonObject()); build.add("terrain", new JsonObject());
@@ -366,27 +366,27 @@ final class GuideBuilderE2EProbeTest {
         before.add("undo", lifecyclePrerequisite(44, 36)); build.add("lifecycle", before);
         var partialFailure = failure("invalid_native_input"); var cancelFailure = failure("session_closed");
         var partialRecord = failureLifecycle("partial", 44, 32, partialFailure);
-        rows.add(partialRecord.getAsJsonObject("journal").deepCopy());
+        rows.add(dev.openallay.json.JsonTrees.copy(partialRecord.getAsJsonObject("journal")));
         var partial = observation("acceptance", "partial_observation", "partial", partialRecord, rows);
         var cancelRecord = failureLifecycle("cancel", 44, 34, cancelFailure);
-        rows.add(cancelRecord.getAsJsonObject("journal").deepCopy());
+        rows.add(dev.openallay.json.JsonTrees.copy(cancelRecord.getAsJsonObject("journal")));
         var cancel = observation("acceptance", "cancel_observation", "cancel", cancelRecord, rows);
         var undoRecord = lifecyclePrerequisite(44, 36);
         undoRecord.add("originalStatus", nativeStatus("unit-original"));
         undoRecord.add("interventionStatus", nativeStatus("unit-intervention"));
         undoRecord.add("status", nativeStatus("unit-undo"));
         var result = new JsonObject(); result.addProperty("restored", 1); result.addProperty("operationId", "unit-undo");
-        var conflicts = new com.google.gson.JsonArray(); conflicts.add(undoRecord.getAsJsonArray("positions").get(1).deepCopy());
+        var conflicts = new com.google.gson.JsonArray(); conflicts.add(dev.openallay.json.JsonTrees.copy(undoRecord.getAsJsonArray("positions").get(1)));
         result.add("conflicts", conflicts); result.add("uncertain", new com.google.gson.JsonArray()); undoRecord.add("result", result);
         undoRecord.add("afterImages", images("air", "diamond_block"));
         rows.add(journal("unit-original", label("undo original"), "completed", 2));
         rows.add(journal("unit-intervention", label("undo intervention"), "completed", 1));
         rows.add(journal("unit-undo", "Undo unit-original", "completed", 1));
         var undo = commonReceipt("acceptance", "undo"); var undoLifecycle = new JsonObject(); undoLifecycle.add("undo", undoRecord);
-        undo.add("lifecycle", undoLifecycle); undo.add("durableOperations", rows.deepCopy());
-        var finalReceipt = build.deepCopy(); finalReceipt.addProperty("stage", "final");
-        var lifecycle = new JsonObject(); lifecycle.add("partial", partialRecord.deepCopy()); lifecycle.add("cancel", cancelRecord.deepCopy()); lifecycle.add("undo", undoRecord.deepCopy());
-        finalReceipt.add("lifecycle", lifecycle); finalReceipt.add("durableOperations", rows.deepCopy()); finalReceipt.add("observationStatus", readOnlyStatus());
+        undo.add("lifecycle", undoLifecycle); undo.add("durableOperations", dev.openallay.json.JsonTrees.copy(rows));
+        var finalReceipt = dev.openallay.json.JsonTrees.copy(build); finalReceipt.addProperty("stage", "final");
+        var lifecycle = new JsonObject(); lifecycle.add("partial", dev.openallay.json.JsonTrees.copy(partialRecord)); lifecycle.add("cancel", dev.openallay.json.JsonTrees.copy(cancelRecord)); lifecycle.add("undo", dev.openallay.json.JsonTrees.copy(undoRecord));
+        finalReceipt.add("lifecycle", lifecycle); finalReceipt.add("durableOperations", dev.openallay.json.JsonTrees.copy(rows)); finalReceipt.add("observationStatus", readOnlyStatus());
         return new java.util.ArrayList<>(List.of(normalized(build), partialFailure, normalized(partial), cancelFailure,
                 normalized(cancel), normalized(undo), normalized(finalReceipt)));
     }
@@ -395,18 +395,18 @@ final class GuideBuilderE2EProbeTest {
         baseline.add("baselineOperations", new com.google.gson.JsonArray()); var lifecycle = new JsonObject();
         lifecycle.add(kind, lifecyclePrerequisite(0, 0)); baseline.add("lifecycle", lifecycle);
         var failed = failure(kind.equals("partial") ? "invalid_native_input" : "session_closed");
-        var observed = failureLifecycle(kind, 0, 0, failed); var rows = new com.google.gson.JsonArray(); rows.add(observed.getAsJsonObject("journal").deepCopy());
+        var observed = failureLifecycle(kind, 0, 0, failed); var rows = new com.google.gson.JsonArray(); rows.add(dev.openallay.json.JsonTrees.copy(observed.getAsJsonObject("journal")));
         var finalReceipt = observation(kind, "final", kind, observed, rows); finalReceipt.add("status", readOnlyStatus());
         finalReceipt.add("baselineOperations", new com.google.gson.JsonArray());
         return new java.util.ArrayList<>(List.of(normalized(baseline), failed, normalized(finalReceipt)));
     }
     private static JsonObject observation(String scenario, String stage, String kind, JsonObject item, com.google.gson.JsonArray rows) {
-        var receipt = commonReceipt(scenario, stage); var lifecycle = new JsonObject(); lifecycle.add(kind, item.deepCopy());
-        receipt.add("lifecycle", lifecycle); receipt.add("durableOperations", rows.deepCopy()); receipt.add("observationStatus", readOnlyStatus());
+        var receipt = commonReceipt(scenario, stage); var lifecycle = new JsonObject(); lifecycle.add(kind, dev.openallay.json.JsonTrees.copy(item));
+        receipt.add("lifecycle", lifecycle); receipt.add("durableOperations", dev.openallay.json.JsonTrees.copy(rows)); receipt.add("observationStatus", readOnlyStatus());
         return receipt;
     }
     private static JsonObject failureLifecycle(String kind, int x, int z, JsonObject failure) {
-        var item = lifecyclePrerequisite(x, z); item.add("failure", failure.deepCopy());
+        var item = lifecyclePrerequisite(x, z); item.add("failure", dev.openallay.json.JsonTrees.copy(failure));
         item.add("journal", journal("unit-" + kind, label(kind), kind.equals("partial") ? "failed" : "cancelled", 1));
         item.add("afterImages", images(kind.equals("partial") ? "gold_block" : "diamond_block", "air"));
         return item;
@@ -442,12 +442,12 @@ final class GuideBuilderE2EProbeTest {
                 : code.equals("session_closed") ? "Builder session is closed or cancelled" : "other native failure"); return failure;
     }
     private static JsonObject wireReceipt(JsonObject normalized) {
-        return com.google.gson.JsonParser.parseString(normalized.getAsJsonObject("value").get("preview").getAsString()).getAsJsonObject();
+        return dev.openallay.json.JsonTrees.parse(normalized.getAsJsonObject("value").get("preview").getAsString()).getAsJsonObject();
     }
     private static JsonObject reloadReceipt(JsonObject retained) {
         var reload = receipt("builder_reload", "completed"); reload.add("status", readOnlyStatus());
-        reload.add("operations", retained.getAsJsonArray("durableOperations").deepCopy()); reload.addProperty("operationCount", 14);
-        reload.add("listed", com.google.gson.JsonParser.parseString("[\"openallay_e2e_builder_native\"]"));
+        reload.add("operations", dev.openallay.json.JsonTrees.copy(retained.getAsJsonArray("durableOperations"))); reload.addProperty("operationCount", 14);
+        reload.add("listed", dev.openallay.json.JsonTrees.parse("[\"openallay_e2e_builder_native\"]"));
         var template = new JsonObject(); template.addProperty("name", "openallay_e2e_builder_native"); reload.add("template", template); return reload;
     }
     private static void assertRejected(List<JsonObject> history, String reason) {
@@ -461,12 +461,12 @@ final class GuideBuilderE2EProbeTest {
         var finalReceipt = wireReceipt(history.getLast());
         if (index == 0) {
             for (String key : List.of("anchor", "context", "probeToken", "operations", "status", "actions", "templates", "sites", "terrain", "baselineOperations")) {
-                if (receipt.has(key)) finalReceipt.add(key, receipt.get(key).deepCopy()); else finalReceipt.remove(key);
+                if (receipt.has(key)) finalReceipt.add(key, dev.openallay.json.JsonTrees.copy(receipt.get(key))); else finalReceipt.remove(key);
             }
         } else if (index == 2 || index == 4 || index == 5) {
             String kind = index == 2 ? "partial" : index == 4 ? "cancel" : "undo";
-            finalReceipt.getAsJsonObject("lifecycle").add(kind, receipt.getAsJsonObject("lifecycle").get(kind).deepCopy());
-            if (index == 5) finalReceipt.add("durableOperations", receipt.get("durableOperations").deepCopy());
+            finalReceipt.getAsJsonObject("lifecycle").add(kind, dev.openallay.json.JsonTrees.copy(receipt.getAsJsonObject("lifecycle").get(kind)));
+            if (index == 5) finalReceipt.add("durableOperations", dev.openallay.json.JsonTrees.copy(receipt.get("durableOperations")));
         }
         if (index != 6) history.set(6, normalized(finalReceipt));
         assertRejected(history, reason);

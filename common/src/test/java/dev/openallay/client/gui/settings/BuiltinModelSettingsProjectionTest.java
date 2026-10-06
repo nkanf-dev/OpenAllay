@@ -48,7 +48,7 @@ final class BuiltinModelSettingsProjectionTest {
             assertTrue(projection.toString().contains("unmatched"));
             assertFalse(projection.toString().contains("context_source.required"));
         }
-        var english = com.google.gson.JsonParser.parseReader(new InputStreamReader(
+        var english = dev.openallay.json.JsonTrees.parse(new InputStreamReader(
                 getClass().getResourceAsStream("/assets/openallay/lang/en_us.json"),
                 StandardCharsets.UTF_8)).getAsJsonObject();
         assertFalse(english.get("screen.openallay.settings.models.builtin.unmatched")
@@ -131,7 +131,7 @@ final class BuiltinModelSettingsProjectionTest {
         var draft = ModelProfileDraft.create("main").withModel("gpt-6-luna");
         var lines = BuiltinModelSettingsProjection.from(draft).lines();
         for (String locale : java.util.List.of("en_us", "zh_cn")) {
-            var language = com.google.gson.JsonParser.parseReader(new InputStreamReader(
+            var language = dev.openallay.json.JsonTrees.parse(new InputStreamReader(
                     getClass().getResourceAsStream("/assets/openallay/lang/" + locale + ".json"),
                     StandardCharsets.UTF_8)).getAsJsonObject();
             for (var line : lines) assertTrue(language.has(line.key()), line.key());

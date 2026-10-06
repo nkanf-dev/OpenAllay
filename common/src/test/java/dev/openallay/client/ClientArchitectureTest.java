@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
-import com.google.gson.Gson;
 import dev.openallay.OpenAllayRuntime;
 import dev.openallay.agent.AgentEvent;
 import dev.openallay.agent.session.AgentSessionStore;
@@ -43,7 +42,7 @@ final class ClientArchitectureTest {
                         new ModelTurn("test", "test", List.of(new ModelContent.Text("answer")),
                                 "end_turn", ModelUsage.empty())),
                 new AgentSessionStore(),
-                new Gson(),
+                dev.openallay.json.EngineJson.create(),
                 queued::add);
         List<AgentEvent> delivered = new ArrayList<>();
 

@@ -5,7 +5,6 @@ import dev.openallay.api.extension.ExtensionException;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import net.minecraft.SharedConstants;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
@@ -90,7 +89,7 @@ final class NativeBlockCodecTest {
         String north = "{\"id\":\"oak_stairs\",\"properties\":{\"facing\":\"north\"}}";
         String transformed = NativeBlockCodec.transform(north, 90, "z");
         assertEquals(Direction.WEST, NativeBlockCodec.decode(transformed).getValue(BlockStateProperties.HORIZONTAL_FACING));
-        JsonObject result = JsonParser.parseString(transformed).getAsJsonObject();
+        JsonObject result = dev.openallay.json.JsonTrees.parse(transformed).getAsJsonObject();
         assertEquals("minecraft:oak_stairs", result.get("id").getAsString());
         assertTrue(result.getAsJsonObject("properties").has("waterlogged"));
     }
@@ -99,7 +98,7 @@ final class NativeBlockCodecTest {
         for (String id : new String[] {"chest", "trapped_chest", "barrel", "shulker_box"}) {
             String snbt = "{id:'minecraft:" + id + "',x:1,y:2,z:3,Items:[{Slot:0b,id:'minecraft:stone',count:2}]}";
             String transformed = NativeBlockCodec.transform(state(id, snbt), 90, "x");
-            assertEquals(snbt, JsonParser.parseString(transformed).getAsJsonObject().get("blockEntity").getAsString());
+            assertEquals(snbt, dev.openallay.json.JsonTrees.parse(transformed).getAsJsonObject().get("blockEntity").getAsString());
         }
     }
 
@@ -109,7 +108,7 @@ final class NativeBlockCodecTest {
         ExtensionException failure = assertThrows(ExtensionException.class,
                 () -> NativeBlockCodec.transform(original, 90, "none"));
         assertEquals("unsupported_opaque_block_entity_transform", failure.code());
-        assertEquals(snbt, JsonParser.parseString(NativeBlockCodec.transform(original, 0, "none"))
+        assertEquals(snbt, dev.openallay.json.JsonTrees.parse(NativeBlockCodec.transform(original, 0, "none"))
                 .getAsJsonObject().get("blockEntity").getAsString());
         for (String opaque : new String[] {
                 "{id:'minecraft:chest',unknownDirection:2}",
@@ -124,12 +123,12 @@ final class NativeBlockCodecTest {
         // Terrain crosses the fixed SDK as immutable canonical JSON, not a domain DTO.
         String first = NativeBlockCodec.stateJson(Blocks.OAK_STAIRS.defaultBlockState());
         assertSame(first,NativeBlockCodec.stateJson(Blocks.OAK_STAIRS.defaultBlockState()));
-        JsonObject detached = JsonParser.parseString(first).getAsJsonObject();
+        JsonObject detached = dev.openallay.json.JsonTrees.parse(first).getAsJsonObject();
         String facing = detached.getAsJsonObject("properties").get("facing").getAsString();
         detached.getAsJsonObject("properties").addProperty("facing","south");
-        assertEquals(facing,JsonParser.parseString(NativeBlockCodec.stateJson(Blocks.OAK_STAIRS.defaultBlockState()))
+        assertEquals(facing,dev.openallay.json.JsonTrees.parse(NativeBlockCodec.stateJson(Blocks.OAK_STAIRS.defaultBlockState()))
                 .getAsJsonObject().getAsJsonObject("properties").get("facing").getAsString());
-        assertNull(JsonParser.parseString(first).getAsJsonObject().get("blockEntity"));
+        assertNull(dev.openallay.json.JsonTrees.parse(first).getAsJsonObject().get("blockEntity"));
         assertEquals(Blocks.STONE.defaultBlockState(),NativeBlockCodec.decode(NativeBlockCodec.stateJson(stone)));
     }
 

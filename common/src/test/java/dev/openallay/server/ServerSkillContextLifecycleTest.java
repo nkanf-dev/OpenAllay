@@ -53,7 +53,7 @@ import org.junit.jupiter.api.Test;
 
 /** Server-hosted context proof with in-process Tools and scripted model turns only. */
 final class ServerSkillContextLifecycleTest {
-    private static final Gson GSON = new Gson();
+    private static final Gson GSON = dev.openallay.json.EngineJson.create();
     private static final UUID ACTOR = UUID.fromString("00000000-0000-0000-0000-000000000021");
     private static final String LOAD_SKILL = "openallay__load_skill";
 

@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /** Scans source and class bytes without loading any game class or using fake game classes. */
 class AdapterArchitectureTest {
     private static final String SDK = "dev/openallay/api/extension/";
-    private static final String JSON = "dev/openallay/json/JsonReaders";
+    private static final List<String> JSON = List.of("dev/openallay/json/JsonReaders", "dev/openallay/json/JsonTrees");
     private static final String OWN = "dev/openallay/adapter/minecraft/v26_2/world/";
 
     @Test void productionImportsOnlyOwnSdkJdkAndActualNativeLibraries() throws IOException {
@@ -30,7 +30,7 @@ class AdapterArchitectureTest {
                     assertTrue(name.startsWith("java.") || name.startsWith("net.minecraft.")
                             || name.startsWith("com.google.gson.") || name.startsWith("com.mojang.")
                             || name.startsWith("dev.openallay.api.extension.")
-                            || name.equals("dev.openallay.json.JsonReaders"), "Unapproved import in " + file + ": " + name);
+                            || name.equals("dev.openallay.json.JsonReaders") || name.equals("dev.openallay.json.JsonTrees"), "Unapproved import in " + file + ": " + name);
                 }
             }
         }
@@ -63,7 +63,7 @@ class AdapterArchitectureTest {
                         int start = 0;
                         while ((start = value.indexOf("dev/openallay/",start)) >= 0) {
                             String name = value.substring(start);
-                            assertTrue(name.startsWith(SDK) || name.startsWith(OWN) || name.startsWith(JSON),
+                            assertTrue(name.startsWith(SDK) || name.startsWith(OWN) || JSON.stream().anyMatch(name::startsWith),
                                     "Unexpected internal class reference in " + file + ": " + value);
                             start += "dev/openallay/".length();
                         }

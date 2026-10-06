@@ -355,7 +355,7 @@ final class GuideBuilderE2EProbe {
     }
 
     private static void attachJournal(JsonObject status, Map<String, JsonObject> rows) {
-        status.add("journal", rows.get(string(status, "operationId")).deepCopy());
+        status.add("journal", dev.openallay.json.JsonTrees.copy(rows.get(string(status, "operationId"))));
     }
 
     /** One complete strict scalar JSON object from one actual successful Tool. */
@@ -439,12 +439,12 @@ final class GuideBuilderE2EProbe {
         var p = partial.getAsJsonObject("lifecycle").getAsJsonObject("partial");
         var c = cancel.getAsJsonObject("lifecycle").getAsJsonObject("cancel");
         var u = undo.getAsJsonObject("lifecycle").getAsJsonObject("undo");
-        if (!before.keySet().equals(java.util.Set.of("partial", "cancel", "undo"))
-                || !partial.getAsJsonObject("lifecycle").keySet().equals(java.util.Set.of("partial"))
-                || !cancel.getAsJsonObject("lifecycle").keySet().equals(java.util.Set.of("cancel"))
-                || !undo.getAsJsonObject("lifecycle").keySet().equals(java.util.Set.of("undo"))
-                || !u.keySet().equals(java.util.Set.of("result", "status", "originalStatus", "interventionStatus", "positions", "beforeImages", "afterImages"))
-                || !before.entrySet().stream().allMatch(entry -> entry.getValue().getAsJsonObject().keySet().equals(java.util.Set.of("positions", "beforeImages")))
+        if (!dev.openallay.json.JsonTrees.keys(before).equals(java.util.Set.of("partial", "cancel", "undo"))
+                || !dev.openallay.json.JsonTrees.keys(partial.getAsJsonObject("lifecycle")).equals(java.util.Set.of("partial"))
+                || !dev.openallay.json.JsonTrees.keys(cancel.getAsJsonObject("lifecycle")).equals(java.util.Set.of("cancel"))
+                || !dev.openallay.json.JsonTrees.keys(undo.getAsJsonObject("lifecycle")).equals(java.util.Set.of("undo"))
+                || !dev.openallay.json.JsonTrees.keys(u).equals(java.util.Set.of("result", "status", "originalStatus", "interventionStatus", "positions", "beforeImages", "afterImages"))
+                || !before.entrySet().stream().allMatch(entry -> dev.openallay.json.JsonTrees.keys(entry.getValue().getAsJsonObject()).equals(java.util.Set.of("positions", "beforeImages")))
                 || !prerequisite(before.getAsJsonObject("partial"), build, 44, 32)
                 || !prerequisite(before.getAsJsonObject("cancel"), build, 44, 34)
                 || !prerequisite(before.getAsJsonObject("undo"), build, 44, 36)
@@ -475,7 +475,7 @@ final class GuideBuilderE2EProbe {
         for (String key : List.of("anchor", "context", "probeToken", "operations", "status", "actions", "templates",
                 "sites", "terrain", "baselineOperations", "seed", "provider")) if (!build.get(key).equals(finalReceipt.get(key))) return false;
         var lifecycle = finalReceipt.getAsJsonObject("lifecycle");
-        return lifecycle.keySet().equals(java.util.Set.of("partial", "cancel", "undo"))
+        return dev.openallay.json.JsonTrees.keys(lifecycle).equals(java.util.Set.of("partial", "cancel", "undo"))
                 && p.equals(lifecycle.get("partial")) && c.equals(lifecycle.get("cancel")) && u.equals(lifecycle.get("undo"))
                 && compositeLifecycle(finalReceipt);
     }
@@ -487,13 +487,13 @@ final class GuideBuilderE2EProbe {
                 || !tools.get(0).invocationId().equals(string(baseline, "probeToken")) || !sameBinding(baseline, receipt)
                 || !readOnlyStatus(baseline.getAsJsonObject("status")) || !readOnlyStatus(receipt.getAsJsonObject("status"))
                 || !receipt.get("status").equals(receipt.get("observationStatus"))) return false;
-        if (!baseline.getAsJsonObject("lifecycle").keySet().equals(java.util.Set.of(kind))
-                || !receipt.getAsJsonObject("lifecycle").keySet().equals(java.util.Set.of(kind))) return false;
+        if (!dev.openallay.json.JsonTrees.keys(baseline.getAsJsonObject("lifecycle")).equals(java.util.Set.of(kind))
+                || !dev.openallay.json.JsonTrees.keys(receipt.getAsJsonObject("lifecycle")).equals(java.util.Set.of(kind))) return false;
         var prerequisite = baseline.getAsJsonObject("lifecycle").getAsJsonObject(kind);
         var observed = receipt.getAsJsonObject("lifecycle").getAsJsonObject(kind);
-        return baseline.getAsJsonArray("baselineOperations").isEmpty()
+        return (baseline.getAsJsonArray("baselineOperations").size() == 0)
                 && baseline.get("baselineOperations").equals(receipt.get("baselineOperations"))
-                && prerequisite.keySet().equals(java.util.Set.of("positions", "beforeImages"))
+                && dev.openallay.json.JsonTrees.keys(prerequisite).equals(java.util.Set.of("positions", "beforeImages"))
                 && prerequisite(prerequisite, baseline, 0, 0) && durableFailure(observed, baseline, kind, 0, 0, tools.get(1).normalized())
                 && prerequisite.get("positions").equals(observed.get("positions"))
                 && prerequisite.get("beforeImages").equals(observed.get("beforeImages"))
@@ -509,7 +509,7 @@ final class GuideBuilderE2EProbe {
         try {
             long[] pos = position(receipt.getAsJsonObject("anchor"));
             var context = receipt.getAsJsonObject("context");
-            return context.keySet().equals(java.util.Set.of("dimension", "playerUuid"))
+            return dev.openallay.json.JsonTrees.keys(context).equals(java.util.Set.of("dimension", "playerUuid"))
                     && pos[0] == anchor.x() && pos[1] == anchor.y() && pos[2] == anchor.z()
                     && anchor.dimension().equals(string(context, "dimension")) && actor.toString().equals(string(context, "playerUuid"));
         } catch (RuntimeException malformed) { return false; }
@@ -517,7 +517,7 @@ final class GuideBuilderE2EProbe {
 
     private static boolean sameBinding(JsonObject baseline, JsonObject receipt) {
         var context = baseline.getAsJsonObject("context");
-        if (!context.keySet().equals(java.util.Set.of("dimension", "playerUuid"))
+        if (!dev.openallay.json.JsonTrees.keys(context).equals(java.util.Set.of("dimension", "playerUuid"))
                 || !nonempty(context, "dimension") || !nonempty(context, "playerUuid") || !nonempty(baseline, "probeToken")
                 || string(baseline, "probeToken").length() > 128) return false;
         UUID.fromString(string(context, "playerUuid"));
@@ -589,7 +589,7 @@ final class GuideBuilderE2EProbe {
                 case "builder-undo" -> {
                     var undo = receipt.getAsJsonObject("undo");
                     return "completed".equals(string(receipt.getAsJsonObject("status"), "state")) && number(undo, "restored") == 1
-                            && undo.getAsJsonArray("conflicts").size() == 1 && undo.getAsJsonArray("uncertain").isEmpty();
+                            && undo.getAsJsonArray("conflicts").size() == 1 && (undo.getAsJsonArray("uncertain").size() == 0);
                 }
                 case "builder-reload" -> {
                     var rows = journalRows(receipt.getAsJsonArray("operations"));
@@ -677,10 +677,10 @@ final class GuideBuilderE2EProbe {
     private static boolean durableFailure(JsonObject item, JsonObject receipt, String kind, int x, int z, JsonObject failure) {
         var row = item.getAsJsonObject("journal");
         String code = kind.equals("partial") ? "invalid_native_input" : "session_closed";
-        return item.keySet().equals(java.util.Set.of("failure", "journal", "positions", "beforeImages", "afterImages")) && journalRow(row)
+        return dev.openallay.json.JsonTrees.keys(item).equals(java.util.Set.of("failure", "journal", "positions", "beforeImages", "afterImages")) && journalRow(row)
                 && ("OpenAllay E2E lifecycle " + string(receipt, "probeToken") + " " + kind).equals(string(row, "label"))
                 && (kind.equals("partial") ? "failed" : "cancelled").equals(string(row, "status")) && number(row, "entries") == 1
-                && failure != null && failure.keySet().equals(java.util.Set.of("status", "code", "message"))
+                && failure != null && dev.openallay.json.JsonTrees.keys(failure).equals(java.util.Set.of("status", "code", "message"))
                 && "failure".equals(string(failure, "status")) && code.equals(string(failure, "code"))
                 && (kind.equals("partial") ? "Builder native operation failed; inspect the session status" : "Builder session is closed or cancelled")
                     .equals(string(failure, "message"))
@@ -695,7 +695,7 @@ final class GuideBuilderE2EProbe {
         var result = item.getAsJsonObject("result");
         return prerequisite(item, receipt, x, z) && images(item.getAsJsonArray("afterImages"), "air", "diamond_block")
                 && string(item.getAsJsonObject("status"), "operationId").equals(string(result, "operationId"))
-                && number(result, "restored") == 1 && result.getAsJsonArray("uncertain").isEmpty()
+                && number(result, "restored") == 1 && (result.getAsJsonArray("uncertain").size() == 0)
                 && result.getAsJsonArray("conflicts").size() == 1
                 && result.getAsJsonArray("conflicts").get(0).equals(item.getAsJsonArray("positions").get(1));
     }
@@ -711,7 +711,7 @@ final class GuideBuilderE2EProbe {
     }
 
     private static long[] position(JsonObject value) {
-        if (!value.keySet().equals(java.util.Set.of("x", "y", "z"))) throw new IllegalArgumentException("Expected exact native position");
+        if (!dev.openallay.json.JsonTrees.keys(value).equals(java.util.Set.of("x", "y", "z"))) throw new IllegalArgumentException("Expected exact native position");
         long[] coordinates = {number(value, "x"), number(value, "y"), number(value, "z")};
         for (long coordinate : coordinates) if (coordinate < Integer.MIN_VALUE || coordinate > Integer.MAX_VALUE)
             throw new IllegalArgumentException("Native position is outside the integer domain");
@@ -724,7 +724,7 @@ final class GuideBuilderE2EProbe {
     }
 
     private static boolean blockImage(JsonObject image, String id) {
-        return image.keySet().equals(java.util.Set.of("id", "properties")) && id.equals(string(image, "id"))
+        return dev.openallay.json.JsonTrees.keys(image).equals(java.util.Set.of("id", "properties")) && id.equals(string(image, "id"))
                 && image.getAsJsonObject("properties").size() == 0;
     }
 
@@ -739,7 +739,7 @@ final class GuideBuilderE2EProbe {
     }
 
     private static boolean journalRow(JsonObject row) {
-        return row != null && row.keySet().equals(java.util.Set.of("id", "label", "status", "entries")) && nonempty(row, "id")
+        return row != null && dev.openallay.json.JsonTrees.keys(row).equals(java.util.Set.of("id", "label", "status", "entries")) && nonempty(row, "id")
                 && nonempty(row, "label") && List.of("running", "completed", "failed", "cancelled", "interrupted").contains(string(row, "status"))
                 && number(row, "entries") >= 0;
     }

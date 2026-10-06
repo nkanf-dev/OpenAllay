@@ -42,7 +42,7 @@ import org.junit.jupiter.api.Test;
 
 /** All boundaries use explicit futures; no provider, clock polling, or game runtime is needed. */
 final class ServerSteerBridgeTest {
-    private final Gson gson = new Gson();
+    private final Gson gson = dev.openallay.json.EngineJson.create();
     private final ServerAgentEventCodec codec = new ServerAgentEventCodec(gson);
 
     @Test

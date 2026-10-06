@@ -271,7 +271,7 @@ final class NativeWorldSession implements WorldSession {
             // Keep the original pre-hook image for optimistic conflict checks. For a
             // changed state, retain the exact post-hook BE payload as the old repair
             // adapter did; an in-hook target mutation still fails the before gate.
-            JsonObject state=com.google.gson.JsonParser.parseString(NativeBlockCodec.read(level,pos)).getAsJsonObject();
+            JsonObject state=dev.openallay.json.JsonTrees.parse(NativeBlockCodec.read(level,pos)).getAsJsonObject();
             state.addProperty("id",NativeWorldRegistries.blockId(updated.getBlock()).toString());
             state.add("properties",NativeBlockStateProperties.encode(updated));
             if(updated.getBlock()!=current.getBlock())state.remove("blockEntity");

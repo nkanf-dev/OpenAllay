@@ -4,8 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonParser;
 import dev.openallay.agent.AgentEvent;
 import dev.openallay.agent.AgentResult;
 import dev.openallay.agent.AgentState;
@@ -85,10 +83,10 @@ final class GuideClientE2EControllerTest {
                         ToolInvocationContext.developmentConsole(correlation)),
                 clientTasks::addLast,
                 Clock.systemUTC(),
-                new Gson());
+                dev.openallay.json.EngineJson.create());
         AtomicBoolean shutdown = new AtomicBoolean();
         GuideClientE2EController controller = new GuideClientE2EController(
-                config, "fabric", "26.2", "test", services, new Gson(),
+                config, "fabric", "26.2", "test", services, dev.openallay.json.EngineJson.create(),
                 () -> shutdown.set(true));
 
         assertFalse(controller.finished());
@@ -99,7 +97,7 @@ final class GuideClientE2EControllerTest {
         assertTrue(controller.finished());
         assertTrue(shutdown.get());
         String encoded = Files.readString(report);
-        var json = JsonParser.parseString(encoded).getAsJsonObject();
+        var json = dev.openallay.json.JsonTrees.parse(encoded).getAsJsonObject();
         assertEquals(playerValue, json.get("scenario").getAsString());
         assertEquals("fabric", json.get("loader").getAsString());
         assertEquals("COMPLETED", json.get("outcome").getAsString());
@@ -120,13 +118,13 @@ final class GuideClientE2EControllerTest {
                         ToolInvocationContext.developmentConsole(correlation)),
                 clientTasks::addLast,
                 Clock.systemUTC(),
-                new Gson(),
+                dev.openallay.json.EngineJson.create(),
                 history,
                 actor -> GuideHistoryScope.derive(
                         actor, GuideHistoryScope.Kind.SINGLEPLAYER, "fixture-world"));
         AtomicBoolean shutdown = new AtomicBoolean();
         GuideClientE2EController controller = new GuideClientE2EController(
-                config, "fabric", "26.2", "test", services, new Gson(),
+                config, "fabric", "26.2", "test", services, dev.openallay.json.EngineJson.create(),
                 () -> shutdown.set(true));
         UUID actor = UUID.fromString("30ab22ed-23fb-46f2-82ca-d4a656698eec");
 
@@ -143,7 +141,7 @@ final class GuideClientE2EControllerTest {
 
         assertTrue(controller.finished());
         assertTrue(shutdown.get());
-        assertEquals("COMPLETED", JsonParser.parseString(Files.readString(report))
+        assertEquals("COMPLETED", dev.openallay.json.JsonTrees.parse(Files.readString(report))
                 .getAsJsonObject().get("outcome").getAsString());
     }
 
@@ -157,7 +155,7 @@ final class GuideClientE2EControllerTest {
                         "recipe_provider_loading", "Viewer registry is loading"));
         GuideServiceManager services = services(local, clientTasks);
         GuideClientE2EController controller = new GuideClientE2EController(
-                config(report), "fabric", "26.2", "test", services, new Gson(),
+                config(report), "fabric", "26.2", "test", services, dev.openallay.json.EngineJson.create(),
                 () -> {}, readiness::get);
         UUID actor = UUID.fromString("30ab22ed-23fb-46f2-82ca-d4a656698eec");
 
@@ -173,7 +171,7 @@ final class GuideClientE2EControllerTest {
 
         assertTrue(controller.finished());
         assertEquals(1, local.calls.get());
-        assertEquals("COMPLETED", JsonParser.parseString(Files.readString(report))
+        assertEquals("COMPLETED", dev.openallay.json.JsonTrees.parse(Files.readString(report))
                 .getAsJsonObject().get("outcome").getAsString());
     }
 
@@ -183,7 +181,7 @@ final class GuideClientE2EControllerTest {
         ArrayDeque<Runnable> clientTasks = new ArrayDeque<>();
         CountingLocal local = new CountingLocal();
         GuideClientE2EController controller = new GuideClientE2EController(
-                config(report), "fabric", "26.2", "test", services(local, clientTasks), new Gson(),
+                config(report), "fabric", "26.2", "test", services(local, clientTasks), dev.openallay.json.EngineJson.create(),
                 () -> {}, () -> RecipeProviderReadiness.failed(
                         "recipe_provider_failed", "JEI capture failed for player-plain-value"));
 
@@ -192,7 +190,7 @@ final class GuideClientE2EControllerTest {
 
         assertTrue(controller.finished());
         assertEquals(0, local.calls.get());
-        var json = JsonParser.parseString(Files.readString(report)).getAsJsonObject();
+        var json = dev.openallay.json.JsonTrees.parse(Files.readString(report)).getAsJsonObject();
         assertEquals("HARNESS_FAILED", json.get("outcome").getAsString());
         assertEquals("recipe_provider_failed", json.get("failureCode").getAsString());
         assertEquals("JEI capture failed for player-plain-value", json.get("failureMessage").getAsString());
@@ -206,7 +204,7 @@ final class GuideClientE2EControllerTest {
         GuideClientE2EConfig config = new GuideClientE2EConfig(
                 "fixture", "e2e", "question", GuideModelMode.CLIENT, report, true, 3);
         GuideClientE2EController controller = new GuideClientE2EController(
-                config, "fabric", "26.2", "test", services(local, clientTasks), new Gson(),
+                config, "fabric", "26.2", "test", services(local, clientTasks), dev.openallay.json.EngineJson.create(),
                 () -> {});
 
         controller.tick(UUID.fromString("30ab22ed-23fb-46f2-82ca-d4a656698eec"));
@@ -214,7 +212,7 @@ final class GuideClientE2EControllerTest {
 
         assertTrue(controller.finished());
         assertEquals(4, local.calls.get());
-        var json = JsonParser.parseString(Files.readString(report)).getAsJsonObject();
+        var json = dev.openallay.json.JsonTrees.parse(Files.readString(report)).getAsJsonObject();
         assertEquals(4, json.getAsJsonObject("historyMetrics")
                 .get("totalRequests").getAsLong());
         assertEquals("COMPLETED", json.get("outcome").getAsString());
@@ -232,7 +230,7 @@ final class GuideClientE2EControllerTest {
             GuideServiceManager services = services(local, tasks);
             AtomicBoolean shutdown = new AtomicBoolean();
             GuideClientE2EController controller = new GuideClientE2EController(
-                    config(report), "fabric", "26.2", "test", services, new Gson(),
+                    config(report), "fabric", "26.2", "test", services, dev.openallay.json.EngineJson.create(),
                     () -> shutdown.set(true));
             UUID actor = UUID.fromString("30ab22ed-23fb-46f2-82ca-d4a656698eec");
             controller.tick(actor);
@@ -247,7 +245,7 @@ final class GuideClientE2EControllerTest {
             assertEquals(dev.openallay.guide.GuideRequestStatus.CANCELLED, request.status());
             assertEquals(dev.openallay.guide.GuideToolStatus.RUNNING, request.tools().getFirst().status());
             assertEquals(null, request.tools().getFirst().normalized());
-            var encoded = JsonParser.parseString(Files.readString(report)).getAsJsonObject();
+            var encoded = dev.openallay.json.JsonTrees.parse(Files.readString(report)).getAsJsonObject();
             assertEquals("CANCELLED", encoded.get("outcome").getAsString());
             assertTrue(encoded.getAsJsonObject("actualStop").get("accepted").getAsBoolean());
             assertTrue(encoded.getAsJsonObject("actualStop").get("pendingToolHasNoNormalizedResult").getAsBoolean());
@@ -285,7 +283,7 @@ final class GuideClientE2EControllerTest {
                         ToolInvocationContext.developmentConsole(correlation)),
                 clientTasks::addLast,
                 Clock.systemUTC(),
-                new Gson());
+                dev.openallay.json.EngineJson.create());
     }
 
     private static final class CompletingLocal implements GuideLocalEndpoint {

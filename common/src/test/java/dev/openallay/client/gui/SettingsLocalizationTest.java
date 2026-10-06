@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Set;
@@ -112,7 +111,7 @@ final class SettingsLocalizationTest {
         JsonObject english = read("en_us.json");
         JsonObject chinese = read("zh_cn.json");
 
-        assertEquals(english.keySet(), chinese.keySet());
+        assertEquals(dev.openallay.json.JsonTrees.keys(english), dev.openallay.json.JsonTrees.keys(chinese));
         for (String key : REQUIRED) {
             assertTrue(english.has(key), key);
             assertTrue(chinese.has(key), key);
@@ -131,7 +130,7 @@ final class SettingsLocalizationTest {
     void requirementMessagesCanRenderTheSameRuntimeArgumentsInBothLanguages() throws Exception {
         JsonObject english = read("en_us.json");
         JsonObject chinese = read("zh_cn.json");
-        for (String key : english.keySet()) {
+        for (String key : dev.openallay.json.JsonTrees.keys(english)) {
             if (!key.startsWith("screen.openallay.settings.requirements.")) continue;
             String en = english.get(key).getAsString();
             String zh = chinese.get(key).getAsString();
@@ -150,6 +149,6 @@ final class SettingsLocalizationTest {
 
     private static JsonObject read(String file) throws Exception {
         Path path = Path.of("src/main/resources/assets/openallay/lang").resolve(file);
-        return JsonParser.parseString(Files.readString(path)).getAsJsonObject();
+        return dev.openallay.json.JsonTrees.parse(Files.readString(path)).getAsJsonObject();
     }
 }

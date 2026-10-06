@@ -60,7 +60,7 @@ final class RecipeViewerApiCompatibilityTest {
     @Test
     void fabricMetadataRejectsOnlyKnownBrokenArchitecturyRange() throws IOException {
         Path root = repositoryRoot();
-        var metadata = com.google.gson.JsonParser.parseString(Files.readString(
+        var metadata = dev.openallay.json.JsonTrees.parse(Files.readString(
                 root.resolve("fabric/src/main/resources/fabric.mod.json"))).getAsJsonObject();
         String properties = Files.readString(root.resolve("gradle/minecraft-targets/26.2.properties"));
         String readme = Files.readString(root.resolve("README.md"));

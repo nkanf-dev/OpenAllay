@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.google.gson.Gson;
 import dev.openallay.OpenAllayRuntime;
 import dev.openallay.agent.AgentResult;
 import dev.openallay.capability.CapabilityPolicy;
@@ -97,7 +96,7 @@ final class ClientModelRuntimeRegistryTest {
         RecordingModel captured = new RecordingModel("a", pending);
         RecordingModel next = new RecordingModel("b");
         ClientModelRuntimeRegistry registry = new ClientModelRuntimeRegistry(runtime(),
-                replaceTestCredential(load("a", "a"), retiredSecret), new Gson(), Runnable::run, null,
+                replaceTestCredential(load("a", "a"), retiredSecret), dev.openallay.json.EngineJson.create(), Runnable::run, null,
                 profile -> {
                     capturedConfigs.add(profile.runtimeConfig());
                     return capturedConfigs.size() == 1 ? captured : next;
@@ -121,14 +120,14 @@ final class ClientModelRuntimeRegistryTest {
                 .flatMap(message -> message.content().stream())
                 .filter(ModelContent.Text.class::isInstance).map(ModelContent.Text.class::cast)
                 .map(ModelContent.Text::text).toList());
-        assertTrue(new Gson().toJson(events).contains("player-evidence"));
+        assertTrue(dev.openallay.json.EngineJson.create().toJson(events).contains("player-evidence"));
         String trace = new dev.openallay.agent.trace.LiveTraceJson().encode(result.trace());
         assertTrue(trace.contains("player-game-value"));
         assertTrue(trace.contains("player-evidence"));
         for (String credential : List.of(retiredSecret, replacementSecret)) {
             assertFalse(trace.contains(credential), "framework credentials are not Agent trace inputs");
-            assertFalse(new Gson().toJson(result).contains(credential));
-            assertFalse(new Gson().toJson(events).contains(credential));
+            assertFalse(dev.openallay.json.EngineJson.create().toJson(result).contains(credential));
+            assertFalse(dev.openallay.json.EngineJson.create().toJson(events).contains(credential));
         }
         registry.ask("b", actor, "main", UUID.randomUUID(), "follow up",
                 ToolInvocationContext.developmentConsole("synthetic-player-data"), events::add).join();
@@ -136,7 +135,7 @@ final class ClientModelRuntimeRegistryTest {
                 .flatMap(message -> message.content().stream())
                 .filter(ModelContent.Text.class::isInstance).map(ModelContent.Text.class::cast)
                 .map(ModelContent.Text::text).toList());
-        String profileSnapshot = new Gson().toJson(registry.profiles());
+        String profileSnapshot = dev.openallay.json.EngineJson.create().toJson(registry.profiles());
         assertFalse(profileSnapshot.contains(retiredSecret));
         assertFalse(profileSnapshot.contains(replacementSecret));
     }
@@ -225,16 +224,16 @@ final class ClientModelRuntimeRegistryTest {
         CompletableFuture<ModelTurn> pending = new CompletableFuture<>();
         List<com.google.gson.JsonObject> oldBodies = new ArrayList<>();
         List<com.google.gson.JsonObject> newBodies = new ArrayList<>();
-        var codec = new dev.openallay.model.openai.OpenAiJsonCodec(new Gson());
+        var codec = new dev.openallay.model.openai.OpenAiJsonCodec(dev.openallay.json.EngineJson.create());
         ClientModelRuntimeRegistry registry = new ClientModelRuntimeRegistry(runtimeWithFactTool(),
-                configured.apply(dev.openallay.model.config.ModelReasoningEffort.HIGH), new Gson(),
+                configured.apply(dev.openallay.model.config.ModelReasoningEffort.HIGH), dev.openallay.json.EngineJson.create(),
                 Runnable::run, null, profile -> {
                     ModelConfig capturedConfig = profile.runtimeConfig();
                     return (request, events, cancellation) -> {
                         boolean old = capturedConfig.reasoningEffort()
                                 == dev.openallay.model.config.ModelReasoningEffort.HIGH;
                         List<com.google.gson.JsonObject> bodies = old ? oldBodies : newBodies;
-                        bodies.add(com.google.gson.JsonParser.parseString(
+                        bodies.add(dev.openallay.json.JsonTrees.parse(
                                 codec.requestBody(capturedConfig, request)).getAsJsonObject());
                         return old && bodies.size() == 1 ? pending
                                 : CompletableFuture.completedFuture(turn(old ? "old" : "new"));
@@ -387,7 +386,7 @@ final class ClientModelRuntimeRegistryTest {
         var preparing = new java.util.concurrent.CountDownLatch(1);
         var releasePreparation = new java.util.concurrent.CountDownLatch(1);
         ClientModelRuntimeRegistry registry = new ClientModelRuntimeRegistry(product, load("a", "a"),
-                new Gson(), Runnable::run, null, profile -> {
+                dev.openallay.json.EngineJson.create(), Runnable::run, null, profile -> {
                     if (profile.definition().id().equals("b")) {
                         preparing.countDown();
                         try {
@@ -858,7 +857,7 @@ final class ClientModelRuntimeRegistryTest {
                         String correlation = "command-refresh-publication-" + suffix;
                         UUID actor = UUID.nameUUIDFromBytes(correlation.getBytes(java.nio.charset.StandardCharsets.UTF_8));
                         List<CommandSubmission> submissions = new ArrayList<>();
-                        var contexts = new MinecraftGuideContextProvider(product, null, new Gson(),
+                        var contexts = new MinecraftGuideContextProvider(product, null, dev.openallay.json.EngineJson.create(),
                                 getClass().getClassLoader());
                         contexts.setUnrestrictedJavascriptRuntime(unrestrictedRuntime);
                         contexts.freezeRequest(correlation, true);
@@ -930,7 +929,7 @@ final class ClientModelRuntimeRegistryTest {
             String correlation = "full-route-" + capturedRoute;
             var unrestrictedRuntime = new dev.openallay.script.UnrestrictedJavascriptRuntime();
             unrestrictedRuntime.replace(new dev.openallay.script.UnrestrictedJavascriptConfig(true));
-            var contexts = new MinecraftGuideContextProvider(product, null, new Gson(), getClass().getClassLoader());
+            var contexts = new MinecraftGuideContextProvider(product, null, dev.openallay.json.EngineJson.create(), getClass().getClassLoader());
             contexts.setUnrestrictedJavascriptRuntime(unrestrictedRuntime);
             contexts.freezeRequest(correlation, true);
             assertTrue(product.commands().enabledFor(correlation));
@@ -985,8 +984,8 @@ final class ClientModelRuntimeRegistryTest {
                 }
                 return {commands: typeof commands, java: typeof Java,
                         unavailable: unavailable, runs: first === null ? [] : [first, second]};
-                """.formatted(new Gson().toJson("  /say " + correlation + " first  "),
-                        new Gson().toJson("say " + correlation + " second")));
+                """.formatted(dev.openallay.json.EngineJson.create().toJson("  /say " + correlation + " first  "),
+                        dev.openallay.json.EngineJson.create().toJson("say " + correlation + " second")));
         return input;
     }
 
@@ -1024,16 +1023,16 @@ final class ClientModelRuntimeRegistryTest {
             // Read before GameGuideAgent's terminal owner closes the actual Tool request scope.
             var canonical = workspaces.existing(correlation).orElseThrow()
                     .open(output.get("handle").getAsString()).getAsJsonObject();
-            canonicalToolResults.add(canonical.deepCopy());
+            canonicalToolResults.add(dev.openallay.json.JsonTrees.copy(canonical));
             // The producer intentionally previews one container row; it is not canonical storage.
             var preview = output.getAsJsonObject("preview");
             assertEquals(canonical.get("commands"), preview.get("commands"));
             assertEquals(canonical.get("java"), preview.get("java"));
             assertEquals(canonical.get("unavailable"), preview.get("unavailable"));
             var runs = canonical.getAsJsonArray("runs");
-            assertEquals(runs.isEmpty() ? 0 : 1, preview.getAsJsonArray("runs").size());
-            if (!runs.isEmpty()) assertEquals(runs.get(0), preview.getAsJsonArray("runs").get(0));
-            assertEquals(runs.isEmpty(), output.get("complete").getAsBoolean());
+            assertEquals((runs.size() == 0) ? 0 : 1, preview.getAsJsonArray("runs").size());
+            if (!(runs.size() == 0)) assertEquals(runs.get(0), preview.getAsJsonArray("runs").get(0));
+            assertEquals((runs.size() == 0), output.get("complete").getAsBoolean());
             completed.add(result);
         }
     }
@@ -1180,7 +1179,7 @@ final class ClientModelRuntimeRegistryTest {
         return new ClientModelRuntimeRegistry(
                 runtime,
                 load,
-                new Gson(),
+                dev.openallay.json.EngineJson.create(),
                 Runnable::run,
                 null,
                 profile -> clients.get(profile.definition().id()));

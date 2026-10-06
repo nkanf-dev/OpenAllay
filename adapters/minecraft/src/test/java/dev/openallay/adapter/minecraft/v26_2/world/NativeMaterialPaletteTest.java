@@ -3,7 +3,6 @@ package dev.openallay.adapter.minecraft.v26_2.world;
 import static org.junit.jupiter.api.Assertions.*;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
@@ -26,10 +25,10 @@ final class NativeMaterialPaletteTest {
     @Test void all47ExactPresetRolesDecodeAndRetainEveryRequestedProperty() throws Exception {
         try (InputStream stream=NativeBlockCodec.class.getResourceAsStream("expected-material-palette-inputs.json")) {
             assertNotNull(stream,"The independent exact 47-role expectation fixture must be packaged");
-            JsonObject inputs=JsonParser.parseReader(new InputStreamReader(stream,StandardCharsets.UTF_8)).getAsJsonObject();
+            JsonObject inputs=dev.openallay.json.JsonTrees.parse(new InputStreamReader(stream,StandardCharsets.UTF_8)).getAsJsonObject();
             JsonObject palette=NativeBlockCodec.materialPalette();
             assertEquals(47,inputs.size(),"Exact current preset role inventory");
-            assertEquals(inputs.keySet(),palette.keySet(),"No omitted or invented role");
+            assertEquals(dev.openallay.json.JsonTrees.keys(inputs),dev.openallay.json.JsonTrees.keys(palette),"No omitted or invented role");
             List<Executable> checks=new ArrayList<>();
             for (Map.Entry<String,JsonElement> entry:inputs.entrySet()) {
                 checks.add(() -> {

@@ -3,7 +3,6 @@ package dev.openallay.adapter.minecraft.v26_2.world;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import net.minecraft.SharedConstants;
 import net.minecraft.server.Bootstrap;
 import net.minecraft.world.level.block.Block;
@@ -51,7 +50,7 @@ final class NativeStateTransformTest {
 
     @Test void chestRotationAndMirrorRetainInventoryAndNativeChestType() {
         String snbt = "{id:'minecraft:chest',x:4,y:65,z:9,Items:[{Slot:0b,id:'minecraft:diamond',count:3}]}";
-        JsonObject state = JsonParser.parseString(
+        JsonObject state = dev.openallay.json.JsonTrees.parse(
                 "{\"id\":\"chest\",\"properties\":{\"facing\":\"north\",\"type\":\"left\",\"waterlogged\":\"true\"}}")
                 .getAsJsonObject();
         state.addProperty("blockEntity", snbt);
@@ -99,7 +98,7 @@ final class NativeStateTransformTest {
     private static JsonObject transformed(String json, int degrees, String mirror) {
         String transformed = NativeBlockCodec.transform(json, degrees, mirror);
         assertDoesNotThrow(() -> NativeBlockCodec.decode(transformed));
-        return JsonParser.parseString(transformed).getAsJsonObject();
+        return dev.openallay.json.JsonTrees.parse(transformed).getAsJsonObject();
     }
 
     private static void assertProperty(String expected, JsonObject json, String property) {

@@ -559,7 +559,7 @@ final class ClientSettingsRuntimeTest {
                 @Override public void clearConnectionState() { product.knowledge().clearConnectionState(); }
             };
             var manager = new dev.openallay.guide.GuideServiceManager(local, remote, contexts,
-                    Runnable::run, Clock.systemUTC(), new com.google.gson.Gson(), history, ignored -> scope);
+                    Runnable::run, Clock.systemUTC(), dev.openallay.json.EngineJson.create(), history, ignored -> scope);
             binding.bind(manager);
             var guide = manager.forActor(actor);
             settings.settings().refreshRuntimeState();

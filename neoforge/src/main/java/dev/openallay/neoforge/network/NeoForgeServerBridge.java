@@ -1,6 +1,5 @@
 package dev.openallay.neoforge.network;
 
-import com.google.gson.Gson;
 import dev.openallay.OpenAllayRuntime;
 import dev.openallay.bridge.server.ServerBridgeSession;
 import dev.openallay.neoforge.NeoForgeNativeLoaderFacts;
@@ -42,7 +41,7 @@ public final class NeoForgeServerBridge {
     }
 
     private void started(MinecraftServer server) {
-        session.started(new MinecraftServerGuideContextProvider(runtime, server, dev.openallay.json.EngineJson.withInstant(new Gson())),
+        session.started(new MinecraftServerGuideContextProvider(runtime, server, dev.openallay.json.EngineJson.create()),
                 NeoForgeNativeLoaderFacts.configDir().resolve("openallay/server-model.json"),
                 System.getenv(), server.getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT)
                         .resolve("openallay/images"));

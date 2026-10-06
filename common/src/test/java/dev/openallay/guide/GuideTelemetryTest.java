@@ -2,7 +2,6 @@ package dev.openallay.guide;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import com.google.gson.Gson;
 import dev.openallay.agent.AgentEvent;
 import dev.openallay.agent.AgentResult;
 import dev.openallay.agent.AgentState;
@@ -87,7 +86,7 @@ final class GuideTelemetryTest {
         assertTrue(refresh.contains("context.budget().maxOutputTokens()"));
         assertFalse(refresh.contains("contextSpec("), "native telemetry must reuse captured estimates");
         for (String locale : List.of("en_us", "zh_cn")) {
-            var labels = com.google.gson.JsonParser.parseString(java.nio.file.Files.readString(root.resolve(
+            var labels = dev.openallay.json.JsonTrees.parse(java.nio.file.Files.readString(root.resolve(
                     "common/src/main/resources/assets/openallay/lang/" + locale + ".json"))).getAsJsonObject();
             assertTrue(labels.get("screen.openallay.telemetry.text_estimate").getAsString().contains("%s"));
             assertFalse(labels.get("screen.openallay.telemetry.image_unknown").getAsString().isBlank());
@@ -153,7 +152,7 @@ final class GuideTelemetryTest {
         GuideService service = service(null, remote);
         service.setModelSelection(GuideModelSelection.server()).join();
         UUID id = ask(service);
-        ServerAgentEventCodec codec = new ServerAgentEventCodec(new Gson());
+        ServerAgentEventCodec codec = new ServerAgentEventCodec(dev.openallay.json.EngineJson.create());
         for (ModelEvent event : List.<ModelEvent>of(
                 new ModelEvent.UsageUpdate(new ModelUsage(0, 0, 0)),
                 new ModelEvent.MessageComplete("stop"),
@@ -182,7 +181,7 @@ final class GuideTelemetryTest {
         Local local = new Local();
         GuideService service = new GuideService(UUID.randomUUID(), local, new Remote(),
                 (capabilities, id) -> new ToolResult.Success<>(ToolInvocationContext.developmentConsole(id)),
-                queue::add, Clock.systemUTC(), new Gson());
+                queue::add, Clock.systemUTC(), dev.openallay.json.EngineJson.create());
         var submitted = service.ask("question");
         while (!queue.isEmpty()) queue.removeFirst().run();
         UUID id = ((ToolResult.Success<UUID>) submitted.join()).value();
@@ -204,7 +203,7 @@ final class GuideTelemetryTest {
     private static GuideService service(Local local, Remote remote) {
         return new GuideService(UUID.randomUUID(), local, remote,
                 (capabilities, id) -> new ToolResult.Success<>(ToolInvocationContext.developmentConsole(id)),
-                Runnable::run, Clock.systemUTC(), new Gson());
+                Runnable::run, Clock.systemUTC(), dev.openallay.json.EngineJson.create());
     }
     private static final class Local implements GuideLocalEndpoint {
         private final Map<UUID, Consumer<AgentEvent>> events = new HashMap<>();

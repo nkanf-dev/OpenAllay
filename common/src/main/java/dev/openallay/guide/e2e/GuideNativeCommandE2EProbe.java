@@ -2,7 +2,6 @@ package dev.openallay.guide.e2e;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import dev.openallay.OpenAllayRuntime;
 import dev.openallay.client.MinecraftGuideContextProvider;
 import dev.openallay.context.ToolInvocationContext;
@@ -101,7 +100,7 @@ final class GuideNativeCommandE2EProbe {
                     if (!output.complete() || !"string".equals(output.resultType())
                             || output.preview() == null || !output.preview().isJsonPrimitive())
                         throw new IllegalStateException("Command warmup needs a complete scalar receipt");
-                    var commands = JsonParser.parseString(output.preview().getAsString()).getAsJsonObject();
+                    var commands = dev.openallay.json.JsonTrees.parse(output.preview().getAsString()).getAsJsonObject();
                     receipt.add("commands", commands);
                     receipt.addProperty("nativeErrorOracle", "invalid-help-path/nonempty-feedback/differs-from-help-success");
                     requireResults(commands, actor, token);
@@ -172,7 +171,7 @@ final class GuideNativeCommandE2EProbe {
             if (!actor.toString().equals(result.get("actorId").getAsString())
                     || !"feedback".equals(result.get("state").getAsString())
                     || !result.get("feedbackObserved").getAsBoolean()
-                    || result.getAsJsonArray("messages").isEmpty())
+                    || (result.getAsJsonArray("messages").size() == 0))
                 throw new IllegalStateException("Actual native command feedback missing for " + name);
         }
         var help = commands.getAsJsonObject("help");

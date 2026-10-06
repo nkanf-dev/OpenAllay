@@ -97,7 +97,7 @@ final class NativeBlockCodec {
         // Loaded only inside the authorized context owner action, never at registration.
         try (InputStream stream = NativeBlockCodec.class.getResourceAsStream("material-palette-inputs.json")) {
             if (stream == null) throw new ExtensionException("material_unavailable", "The native material palette is unavailable");
-            JsonObject inputs = com.google.gson.JsonParser.parseReader(
+            JsonObject inputs = dev.openallay.json.JsonTrees.parse(
                     new InputStreamReader(stream, StandardCharsets.UTF_8)).getAsJsonObject();
             JsonObject actual = new JsonObject();
             for (Map.Entry<String, JsonElement> entry : inputs.entrySet()) {

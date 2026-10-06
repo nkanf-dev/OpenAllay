@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -33,7 +32,7 @@ final class GuideToolPresentationTest {
 
     @Test
     void distinguishesSkillInstructionLoadFromExactReferenceReads() {
-        JsonObject instructions = JsonParser.parseString(
+        JsonObject instructions = dev.openallay.json.JsonTrees.parse(
                 "{\"name\":\"analyze-game-data\"}").getAsJsonObject();
         assertEquals(
                 List.of(GuideToolMessage.of(
@@ -41,7 +40,7 @@ final class GuideToolPresentationTest {
                         "analyze-game-data")),
                 GuideToolInvocationPresentation.messages("openallay:load_skill", instructions));
 
-        JsonObject reference = JsonParser.parseString("""
+        JsonObject reference = dev.openallay.json.JsonTrees.parse("""
                 {"name":"analyze-game-data","reference":"references/recipes.md"}
                 """).getAsJsonObject();
         assertEquals(
@@ -62,7 +61,7 @@ final class GuideToolPresentationTest {
 
     @Test
     void projectsJavascriptAndSkillResultsWithoutLegacyDomainNarration() {
-        JsonObject javascript = JsonParser.parseString("""
+        JsonObject javascript = dev.openallay.json.JsonTrees.parse("""
                 {"status":"success","value":{"resultType":"array","cardinality":9,"complete":false,
                   "preview":[{},{}]}}
                 """).getAsJsonObject();
@@ -71,7 +70,7 @@ final class GuideToolPresentationTest {
                         GuideToolMessage.Key.ANALYSIS_PREVIEW, "2", "9")),
                 GuideToolPresentation.messages("openallay:run_javascript", javascript));
 
-        JsonObject skill = JsonParser.parseString("""
+        JsonObject skill = dev.openallay.json.JsonTrees.parse("""
                 {"status":"success","value":{"name":"analyze-game-data",
                   "allowedTools":["openallay:run_javascript"],"provenance":"bundled"}}
                 """).getAsJsonObject();
@@ -83,7 +82,7 @@ final class GuideToolPresentationTest {
                                 GuideToolMessage.Key.SKILL_TOOLS, "1", "bundled")),
                 GuideToolPresentation.messages("openallay:load_skill", skill));
 
-        JsonObject generic = JsonParser.parseString(
+        JsonObject generic = dev.openallay.json.JsonTrees.parse(
                 "{\"status\":\"success\",\"value\":{\"internal\":\"not projected\"}}")
                 .getAsJsonObject();
         assertEquals(
@@ -94,11 +93,11 @@ final class GuideToolPresentationTest {
     @Test
     void completedArrayCalculationsCountPreviewItemsWithoutInventingProgress() {
         for (String preview : List.of("[1]", "[null,true]", "[[1,2]]", "[{\"id\":\"a\"}]")) {
-            JsonObject normalized = JsonParser.parseString("""
+            JsonObject normalized = dev.openallay.json.JsonTrees.parse("""
                     {"status":"success","value":{"resultType":"array","cardinality":5,
                      "complete":false,"preview":%s}}
                     """.formatted(preview)).getAsJsonObject();
-            String shown = Integer.toString(JsonParser.parseString(preview).getAsJsonArray().size());
+            String shown = Integer.toString(dev.openallay.json.JsonTrees.parse(preview).getAsJsonArray().size());
             assertEquals(List.of(GuideToolMessage.of(GuideToolMessage.Key.ANALYSIS_PREVIEW,
                     shown, "5")), GuideToolPresentation.messages("openallay:run_javascript", normalized));
         }
@@ -106,7 +105,7 @@ final class GuideToolPresentationTest {
 
     @Test
     void objectCountsMeanTopLevelFieldsEvenWhenOnlyNestedValuesAreSampled() {
-        JsonObject normalized = JsonParser.parseString("""
+        JsonObject normalized = dev.openallay.json.JsonTrees.parse("""
                 {"status":"success","value":{"resultType":"object","cardinality":5,
                  "complete":false,"preview":{"rows":[{"id":"a"}],"count":9,
                    "ids":["a","b"],"nested":{"kept":true},"ready":true}}}
@@ -117,14 +116,14 @@ final class GuideToolPresentationTest {
         assertEquals(List.of(GuideToolMessage.of(GuideToolMessage.Key.ANALYSIS_FIELDS_COMPLETE,
                 "5")), GuideToolPresentation.messages("openallay:run_javascript", normalized));
         normalized.getAsJsonObject("value").addProperty("complete", false);
-        normalized.getAsJsonObject("value").add("preview", JsonParser.parseString("{\"count\":9}"));
+        normalized.getAsJsonObject("value").add("preview", dev.openallay.json.JsonTrees.parse("{\"count\":9}"));
         assertEquals(List.of(GuideToolMessage.of(GuideToolMessage.Key.ANALYSIS_FIELDS_PREVIEW,
                 "1", "5")), GuideToolPresentation.messages("openallay:run_javascript", normalized));
     }
 
     @Test
     void completePrimitiveArrayReportsCalculationSizeNotFullRenderedText() {
-        JsonObject normalized = JsonParser.parseString("""
+        JsonObject normalized = dev.openallay.json.JsonTrees.parse("""
                 {"status":"success","value":{"resultType":"array","cardinality":5,
                  "complete":true,"preview":[null,true,"id",42,"%s"]}}
                 """.formatted("x".repeat(400))).getAsJsonObject();
@@ -137,7 +136,7 @@ final class GuideToolPresentationTest {
     @Test
     void unavailableContainerPreviewDoesNotCountTheOmissionMarkerAsOneResult() {
         for (String type : List.of("array", "object")) {
-            JsonObject normalized = JsonParser.parseString("""
+            JsonObject normalized = dev.openallay.json.JsonTrees.parse("""
                     {"status":"success","value":{"resultType":"%s","cardinality":5,
                      "complete":false,"preview":"…"}}
                     """.formatted(type)).getAsJsonObject();
@@ -154,7 +153,7 @@ final class GuideToolPresentationTest {
         for (String encoded : List.of("null", "42", "true", "\"answer\"")) {
             String type = encoded.equals("null") ? "null" : encoded.equals("true") ? "boolean"
                     : encoded.equals("42") ? "number" : "string";
-            JsonObject normalized = JsonParser.parseString("""
+            JsonObject normalized = dev.openallay.json.JsonTrees.parse("""
                     {"status":"success","value":{"resultType":"%s","complete":true,"preview":%s}}
                     """.formatted(type, encoded)).getAsJsonObject();
             assertEquals(List.of(GuideToolMessage.of(GuideToolMessage.Key.ANALYSIS_VALUE_COMPLETE)),
@@ -162,7 +161,7 @@ final class GuideToolPresentationTest {
         }
         for (String encoded : List.of("[]", "{}")) {
             String type = encoded.equals("[]") ? "array" : "object";
-            JsonObject normalized = JsonParser.parseString("""
+            JsonObject normalized = dev.openallay.json.JsonTrees.parse("""
                     {"status":"success","value":{"resultType":"%s","cardinality":0,
                      "complete":true,"preview":%s}}
                     """.formatted(type, encoded)).getAsJsonObject();
@@ -172,7 +171,7 @@ final class GuideToolPresentationTest {
                     : List.of(GuideToolMessage.of(key, "0")),
                     GuideToolPresentation.messages("openallay:run_javascript", normalized));
         }
-        JsonObject partial = JsonParser.parseString("""
+        JsonObject partial = dev.openallay.json.JsonTrees.parse("""
                 {"status":"success","value":{"resultType":"string","cardinality":1,
                  "complete":false,"preview":"partial…"}}
                 """).getAsJsonObject();
@@ -182,7 +181,7 @@ final class GuideToolPresentationTest {
 
     @Test
     void workspaceReceiptRequiresARealHandleAndDoesNotChangeExecutionStatus() {
-        JsonObject normalized = JsonParser.parseString("""
+        JsonObject normalized = dev.openallay.json.JsonTrees.parse("""
                 {"status":"success","value":{"handle":"r_current","resultType":"array",
                  "cardinality":5,"complete":false,"preview":[1]}}
                 """).getAsJsonObject();
@@ -217,7 +216,7 @@ final class GuideToolPresentationTest {
 
     @Test
     void failuresUseClosedFriendlyMessages() {
-        JsonObject normalized = JsonParser.parseString(
+        JsonObject normalized = dev.openallay.json.JsonTrees.parse(
                 "{\"status\":\"failure\",\"code\":\"stale_reference\",\"message\":\"reload\"}")
                 .getAsJsonObject();
         assertEquals(
@@ -250,13 +249,13 @@ final class GuideToolPresentationTest {
         assertEquals(expected, GuideToolMessageCodec.decode(GuideToolMessageCodec.encode(expected)));
 
         assertThrows(IllegalArgumentException.class, () -> GuideToolMessageCodec.decode(
-                JsonParser.parseString("[{\"key\":\"RESULT_COMPLETED\",\"arguments\":[],\"extra\":true}]")));
+                dev.openallay.json.JsonTrees.parse("[{\"key\":\"RESULT_COMPLETED\",\"arguments\":[],\"extra\":true}]")));
         assertThrows(IllegalArgumentException.class, () -> GuideToolMessageCodec.decode(
-                JsonParser.parseString("[{\"key\":\"FUTURE_KEY\",\"arguments\":[]}]")));
+                dev.openallay.json.JsonTrees.parse("[{\"key\":\"FUTURE_KEY\",\"arguments\":[]}]")));
         assertThrows(IllegalArgumentException.class, () -> GuideToolMessageCodec.decode(
-                JsonParser.parseString("[{\"key\":\"RESULT_COMPLETED\",\"arguments\":[1]}]")));
+                dev.openallay.json.JsonTrees.parse("[{\"key\":\"RESULT_COMPLETED\",\"arguments\":[1]}]")));
         assertThrows(IllegalArgumentException.class, () -> GuideToolMessageCodec.decode(
-                JsonParser.parseString("[{\"key\":\"RESULT_COMPLETED\",\"arguments\":[\"bad\\nvalue\"]}]")));
+                dev.openallay.json.JsonTrees.parse("[{\"key\":\"RESULT_COMPLETED\",\"arguments\":[\"bad\\nvalue\"]}]")));
     }
 
     @Test
@@ -316,7 +315,7 @@ final class GuideToolPresentationTest {
         try (var input = GuideToolPresentationTest.class.getResourceAsStream(
                         "/assets/openallay/lang/" + locale + ".json");
                 var reader = new InputStreamReader(input, StandardCharsets.UTF_8)) {
-            return JsonParser.parseReader(reader).getAsJsonObject();
+            return dev.openallay.json.JsonTrees.parse(reader).getAsJsonObject();
         } catch (Exception exception) {
             throw new AssertionError("Unable to load " + locale, exception);
         }

@@ -7,7 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.google.gson.JsonParser;
 import dev.openallay.context.DataAuthority;
 import dev.openallay.context.DataCompleteness;
 import dev.openallay.context.EvidenceMetadata;
@@ -344,7 +343,7 @@ final class OpenAllayScreenProjectionTest {
     @Test
     void compactToolSummaryKeepsAtMostThreeNativeCapsulesAndRetainsFullDetailAndSources() {
         UUID requestId = UUID.fromString("a42f9095-79d9-4ce7-bfc9-52890d15a12a");
-        var normalized = JsonParser.parseString("""
+        var normalized = dev.openallay.json.JsonTrees.parse("""
                 {"status":"success","value":{"resultType":"array","cardinality":4,
                  "viewKind":"ITEM","complete":true,"preview":[
                  {"id":"minecraft:apple","displayName":"Apple","count":2},
@@ -388,10 +387,10 @@ final class OpenAllayScreenProjectionTest {
 
     @Test
     void compactToolSummaryUsesProjectedIntentAndStatusAndOnlyNativeTypedCards() {
-        var input = JsonParser.parseString("""
+        var input = dev.openallay.json.JsonTrees.parse("""
                 {"title":"activity title","description":"activity description"}
                 """).getAsJsonObject();
-        var normalized = JsonParser.parseString("""
+        var normalized = dev.openallay.json.JsonTrees.parse("""
                 {"status":"success","value":{"itemId":"minecraft:diamond","count":64}}
                 """).getAsJsonObject();
         var activity = new GuideToolActivity("typed-detail", 0, "openallay:run_javascript",
@@ -606,8 +605,8 @@ final class OpenAllayScreenProjectionTest {
 
     @Test
     void toolResultAndDebugProgramPrecedeOptionalSources() {
-        var input = JsonParser.parseString("{\"source\":\"return 7;\"}").getAsJsonObject();
-        var normalized = JsonParser.parseString("""
+        var input = dev.openallay.json.JsonTrees.parse("{\"source\":\"return 7;\"}").getAsJsonObject();
+        var normalized = dev.openallay.json.JsonTrees.parse("""
                 {"status":"success","value":{"resultType":"number","cardinality":1,
                   "viewKind":"SCALAR","preview":7,"complete":true}}
                 """).getAsJsonObject();
@@ -626,7 +625,7 @@ final class OpenAllayScreenProjectionTest {
 
     @Test
     void completedSampleKeepsResultNarrationInDetailAndNativeItemInCompactSummary() {
-        var normalized = JsonParser.parseString("""
+        var normalized = dev.openallay.json.JsonTrees.parse("""
                 {"status":"success","value":{"resultType":"array","cardinality":5,
                  "handle":"r_request","viewKind":"ITEM","complete":false,
                  "preview":[{"id":"minecraft:apple","displayName":"Apple"}]}}
@@ -653,7 +652,7 @@ final class OpenAllayScreenProjectionTest {
 
     @Test
     void failureAndStoppedToolsNeverShowACompletedPreviewSummary() {
-        var normalized = JsonParser.parseString("""
+        var normalized = dev.openallay.json.JsonTrees.parse("""
                 {"status":"failure","code":"javascript_error","message":"actual failure"}
                 """).getAsJsonObject();
         var activity = new GuideToolActivity("failed", 0, "openallay:run_javascript",
@@ -860,7 +859,7 @@ final class OpenAllayScreenProjectionTest {
                 0,
                 "openallay:inspect_inventory",
                 GuideToolStatus.SUCCEEDED,
-                JsonParser.parseString("""
+                dev.openallay.json.JsonTrees.parse("""
                         {"status":"success","value":{"counts":{"minecraft:apple":3}}}
                         """).getAsJsonObject(),
                 List.of(GuideToolMessage.of(

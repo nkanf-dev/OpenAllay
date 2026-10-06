@@ -70,7 +70,7 @@ final class ModelImageSettingsProjectionTest {
 
     @Test void allImageProjectionAndChoiceKeysExistInEnglishAndChinese() {
         for (String locale : java.util.List.of("en_us", "zh_cn")) {
-            var language = com.google.gson.JsonParser.parseReader(new InputStreamReader(
+            var language = dev.openallay.json.JsonTrees.parse(new InputStreamReader(
                     getClass().getResourceAsStream("/assets/openallay/lang/" + locale + ".json"),
                     StandardCharsets.UTF_8)).getAsJsonObject();
             for (ImageInputCapability capability : ImageInputCapability.values()) {

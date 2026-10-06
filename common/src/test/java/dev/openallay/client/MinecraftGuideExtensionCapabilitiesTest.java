@@ -7,7 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.google.gson.Gson;
 import dev.openallay.OpenAllayRuntime;
 import dev.openallay.context.ToolInvocationContext;
 import dev.openallay.devmode.DevelopmentToolInspector;
@@ -131,7 +130,7 @@ final class MinecraftGuideExtensionCapabilitiesTest {
                             }), List.of());
                 }
             }).state());
-            provider = new MinecraftGuideContextProvider(runtime, null, new Gson(), getClass().getClassLoader());
+            provider = new MinecraftGuideContextProvider(runtime, null, dev.openallay.json.EngineJson.create(), getClass().getClassLoader());
             provider.setUnrestrictedJavascriptRuntime(unrestricted);
         }
 

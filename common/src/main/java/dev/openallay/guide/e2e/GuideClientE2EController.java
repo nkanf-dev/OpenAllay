@@ -434,7 +434,7 @@ public final class GuideClientE2EController {
             if (!synchronizedOutput) return false;
             if (!graphicalRecipeSeedReady) {
                 var capture = graphicalRecipeCaptureReceipt(client);
-                if (capture.getAsJsonArray("selectedRecipes").isEmpty()) return false;
+                if ((capture.getAsJsonArray("selectedRecipes").size() == 0)) return false;
                 graphicalRecipeSeedReceipt.add("clientAfter", graphicalRecipeBookReceipt(client));
                 graphicalRecipeSeedReceipt.add("captureAfter", capture);
                 graphicalRecipeSeedReceipt.addProperty("commandsAllowedAfter", false);
@@ -580,7 +580,7 @@ public final class GuideClientE2EController {
         if (config.scenario().equals("builder-reload") || config.scenario().equals("builder-live-undo")) {
             var persisted = gson.fromJson(Files.readString(retained), GuideBuilderE2EProbe.Anchor.class);
             String suffix = config.scenario().equals("builder-reload") ? ".acceptance.json" : ".live-copy.json";
-            var proof = com.google.gson.JsonParser.parseString(Files.readString(retained.resolveSibling(world + suffix))).getAsJsonObject();
+            var proof = dev.openallay.json.JsonTrees.parse(Files.readString(retained.resolveSibling(world + suffix))).getAsJsonObject();
             return GuideBuilderE2EProbe.retainedOrigin(anchor, persisted, proof, world);
         }
         writeAtomically(retained, gson.toJson(anchor));
@@ -612,7 +612,7 @@ public final class GuideClientE2EController {
     }
 
     private void verifyReloadPersistence(GuideRequestSnapshot request, com.google.gson.JsonObject probe) throws IOException {
-        var retained = com.google.gson.JsonParser.parseString(Files.readString(builderProofPath(".acceptance.json"))).getAsJsonObject();
+        var retained = dev.openallay.json.JsonTrees.parse(Files.readString(builderProofPath(".acceptance.json"))).getAsJsonObject();
         if (!"PASSED".equals(retained.get("outcome").getAsString())) throw new IllegalStateException("Reload lacks prior independently passed acceptance receipt");
         boolean matched = GuideBuilderE2EProbe.persistedOperationsMatch(retained, builderReceipt(request));
         probe.addProperty("exactPersistencePassed", matched);
@@ -860,7 +860,7 @@ public final class GuideClientE2EController {
                     value.toolId().equals("openallay:run_javascript")
                             && value.status() == dev.openallay.guide.GuideToolStatus.RUNNING
                             && value.normalized() == null));
-            var retained = com.google.gson.JsonParser.parseString(pendingReport).getAsJsonObject();
+            var retained = dev.openallay.json.JsonTrees.parse(pendingReport).getAsJsonObject();
             retained.add("actualStop", stop);
             pendingReport = gson.toJson(retained);
         }
@@ -884,7 +884,7 @@ public final class GuideClientE2EController {
                 }
                 try { retainAcceptancePersistence(request, probe); retainLiveCopyProof(probe); }
                 catch (IOException | RuntimeException failure) { probe.addProperty("outcome", "FAILED"); probe.addProperty("proofFailure", failure.toString()); }
-                var encoded = com.google.gson.JsonParser.parseString(pendingReport).getAsJsonObject();
+                var encoded = dev.openallay.json.JsonTrees.parse(pendingReport).getAsJsonObject();
                 encoded.add("nativeAcceptance", probe);
                 pendingReport = gson.toJson(encoded);
                 if (traceLookup == null || request.modelSelection().modelMode() != GuideModelMode.CLIENT) finish(pendingReport);
@@ -1365,7 +1365,7 @@ public final class GuideClientE2EController {
                         String pending = nativeCommandPendingFinish;
                         nativeCommandPendingFinish = null;
                         if (failure != null || !Boolean.TRUE.equals(restored)) {
-                            var retained = com.google.gson.JsonParser.parseString(pending).getAsJsonObject();
+                            var retained = dev.openallay.json.JsonTrees.parse(pending).getAsJsonObject();
                             retained.addProperty("outcome", "HARNESS_FAILED");
                             retained.addProperty("failureCode", "native_command_setting_restore_failed");
                             retained.addProperty("failureMessage", "Actual client setting restoration failed");
@@ -1378,13 +1378,13 @@ public final class GuideClientE2EController {
         finished = true;
         if (nativeCommandCancellation != null) nativeCommandCancellation.cancel();
         if (nativeCommandWarmup != null) {
-            var retained = com.google.gson.JsonParser.parseString(report).getAsJsonObject();
+            var retained = dev.openallay.json.JsonTrees.parse(report).getAsJsonObject();
             retained.add("nativeCommandWarmup", nativeCommandWarmup);
             report = gson.toJson(retained);
         }
         if (subscription != null) subscription.close();
         if (graphicalRecipeSeedReceipt != null) {
-            var retained = com.google.gson.JsonParser.parseString(report).getAsJsonObject();
+            var retained = dev.openallay.json.JsonTrees.parse(report).getAsJsonObject();
             retained.add("testBootstrapSeed", graphicalRecipeSeedReceipt);
             report = gson.toJson(retained);
         }

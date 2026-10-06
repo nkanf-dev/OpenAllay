@@ -188,7 +188,7 @@ public final class RegistryCatalogCapture {
             Map<String, JsonElement> builtIn,
             List<? extends RegistryPropertyContributor> contributors) {
         Map<String, JsonElement> result = new TreeMap<>();
-        builtIn.forEach((key, value) -> result.put(key, value.deepCopy()));
+        builtIn.forEach((key, value) -> result.put(key, dev.openallay.json.JsonTrees.copy(value)));
         for (RegistryPropertyContributor contributor : contributors) {
             Objects.requireNonNull(contributor, "registry property contributor");
             Map<String, JsonElement> contributed;
@@ -200,7 +200,7 @@ public final class RegistryCatalogCapture {
             }
             if (contributed == null) continue;
             contributed.forEach((key, value) -> {
-                if (key != null && value != null) result.putIfAbsent(key, value.deepCopy());
+                if (key != null && value != null) result.putIfAbsent(key, dev.openallay.json.JsonTrees.copy(value));
             });
         }
         return Map.copyOf(result);

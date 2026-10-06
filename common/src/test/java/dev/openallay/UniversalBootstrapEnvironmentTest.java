@@ -1,7 +1,6 @@
 package dev.openallay;
 
 import static org.junit.jupiter.api.Assertions.*;
-import com.google.gson.JsonParser;
 import dev.openallay.api.extension.*;
 import dev.openallay.context.CallerKind;
 import dev.openallay.context.CallerSnapshot;
@@ -60,7 +59,7 @@ final class UniversalBootstrapEnvironmentTest {
         var sdkEvidence = new ExtensionEvidence(ExtensionEvidence.Authority.DETERMINISTIC_TEST,
                 ExtensionEvidence.Completeness.COMPLETE, capturedAt, "test:detached_echo",
                 "test:bootstrap_extension", "26.2", expectedLoader, Map.of("test:operation", "echo"));
-        var input = JsonParser.parseString("{\"message\":\"detached\",\"values\":[true,7,null]}");
+        var input = dev.openallay.json.JsonTrees.parse("{\"message\":\"detached\",\"values\":[true,7,null]}");
         String argumentJson = input.toString();
         var participant = new JavascriptInvocationParticipant() {
             @Override public String id() { return "test:bootstrap_participant"; }

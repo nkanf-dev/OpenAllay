@@ -383,7 +383,7 @@ final class CommandSettingsRequestBindingTest {
             var arguments = new JsonObject();
             arguments.addProperty("source", "return commands.run('say disabled-tool');");
             var result = new dev.openallay.agent.tool.LocalAgentToolExecutor(request.localTools(),
-                    new com.google.gson.Gson()).execute("openallay__run_javascript", arguments,
+                    dev.openallay.json.EngineJson.create()).execute("openallay__run_javascript", arguments,
                             context("disabled-tool", true), new CancellationSignal()).join();
             assertTrue(result.failure());
             assertEquals("tool_unavailable", result.normalized().get("code").getAsString());
@@ -522,8 +522,8 @@ final class CommandSettingsRequestBindingTest {
                   unavailable: unavailable,
                   runs: first === null ? [] : [first, second]
                 };
-                """.formatted(new com.google.gson.Gson().toJson("  /say " + correlation + " first  "),
-                        new com.google.gson.Gson().toJson("say " + correlation + " second"));
+                """.formatted(dev.openallay.json.EngineJson.create().toJson("  /say " + correlation + " first  "),
+                        dev.openallay.json.EngineJson.create().toJson("say " + correlation + " second"));
         ToolResult.Success<RunJavascriptTool.Output> result = success(fixture.javascript.invokeAsync(
                 context, new RunJavascriptTool.Input(source, List.of()),
                 fixture.cancellations.computeIfAbsent(correlation, ignored -> new CancellationSignal()))
@@ -618,7 +618,7 @@ final class CommandSettingsRequestBindingTest {
                 commands, skills, new DevelopmentToolInspector(tools), null,
                 new dev.openallay.capability.CapabilitySettingsCatalog());
         // freeze/close need no live Minecraft instance. Capture is supplied deterministically above.
-        var contexts = new MinecraftGuideContextProvider(product, null, new com.google.gson.Gson(),
+        var contexts = new MinecraftGuideContextProvider(product, null, dev.openallay.json.EngineJson.create(),
                 getClass().getClassLoader());
         return new Fixture(product, commands, javascript, workspaces, contexts,
                 new java.util.ArrayList<>(), new java.util.HashMap<>(), new java.util.HashMap<>());

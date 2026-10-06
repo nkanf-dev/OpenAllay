@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -20,7 +19,7 @@ final class OpenAllayIdentityTest {
         assertEquals("OpenAllay", OpenAllayConstants.MOD_NAME);
         assertEquals("dev.openallay", OpenAllayConstants.class.getPackageName());
 
-        JsonObject fabric = JsonParser.parseString(Files.readString(REPOSITORY.resolve(
+        JsonObject fabric = dev.openallay.json.JsonTrees.parse(Files.readString(REPOSITORY.resolve(
                 "fabric/src/main/resources/fabric.mod.json"))).getAsJsonObject();
         assertEquals("${mod_id}", fabric.get("id").getAsString());
         assertTrue(fabric.getAsJsonObject("breaks").has("tomewisp"));

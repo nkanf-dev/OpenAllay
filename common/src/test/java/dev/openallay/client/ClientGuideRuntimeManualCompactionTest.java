@@ -8,7 +8,6 @@ import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import dev.openallay.agent.AgentEvent;
@@ -259,7 +258,7 @@ final class ClientGuideRuntimeManualCompactionTest {
     @Test
     void unavailableBudgetAndBusyLeaseNeverCallModelOrCreateAgentRequest() {
         Fixture fixture = new Fixture();
-        ClientGuideRuntime unavailable = new ClientGuideRuntime(fixture.model, fixture.sessions, new Gson(),
+        ClientGuideRuntime unavailable = new ClientGuideRuntime(fixture.model, fixture.sessions, dev.openallay.json.EngineJson.create(),
                 Runnable::run, fixture.skills, new LiveTraceStore(null), null, null,
                 capabilities(), ESTIMATOR);
         assertFalse(unavailable.compactAvailable(PROFILE));
@@ -320,7 +319,7 @@ final class ClientGuideRuntimeManualCompactionTest {
         private final AgentSessionStore sessions = new AgentSessionStore();
         private final RecordingModel model = new RecordingModel();
         private final RecordingSkills skills = new RecordingSkills();
-        private final ClientGuideRuntime runtime = new ClientGuideRuntime(model, sessions, new Gson(),
+        private final ClientGuideRuntime runtime = new ClientGuideRuntime(model, sessions, dev.openallay.json.EngineJson.create(),
                 Runnable::run, skills, new LiveTraceStore(null), BUDGET, "fixture-model", capabilities(), ESTIMATOR);
 
         private CompletableFuture<ToolResult<GuidePreparedCompaction>> prepare(List<ModelMessage> seed,

@@ -112,7 +112,7 @@ final class OpenAllayScreenNativeTooltipTest {
         try {
             for (String locale : List.of("en_us", "zh_cn")) {
                 Map<String, String> labels = new HashMap<>();
-                var json = com.google.gson.JsonParser.parseString(Files.readString(root().resolve(
+                var json = dev.openallay.json.JsonTrees.parse(Files.readString(root().resolve(
                         "common/src/main/resources/assets/openallay/lang/" + locale + ".json"))).getAsJsonObject();
                 json.entrySet().forEach(entry -> labels.put(entry.getKey(), entry.getValue().getAsString()));
                 labels.putAll(locale.equals("en_us") ? Map.of(

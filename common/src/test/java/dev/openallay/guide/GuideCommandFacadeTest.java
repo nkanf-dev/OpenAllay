@@ -3,7 +3,6 @@ package dev.openallay.guide;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import com.google.gson.Gson;
 import dev.openallay.OpenAllayRuntime;
 import dev.openallay.devmode.DevelopmentToolInspector;
 import dev.openallay.integration.patchouli.PatchouliMultiblockStore;
@@ -45,7 +44,7 @@ final class GuideCommandFacadeTest {
                 new ToolResult.Success<>(dev.openallay.context.ToolInvocationContext
                         .developmentConsole(correlation));
         GuideServiceManager services = new GuideServiceManager(
-                null, remote, contexts, Runnable::run, Clock.systemUTC(), new Gson());
+                null, remote, contexts, Runnable::run, Clock.systemUTC(), dev.openallay.json.EngineJson.create());
         GuideCommandFacade commands = new GuideCommandFacade(
                 runtime,
                 services,
@@ -106,7 +105,7 @@ final class GuideCommandFacadeTest {
                 new ToolResult.Success<>(dev.openallay.context.ToolInvocationContext
                         .developmentConsole(correlation));
         GuideServiceManager services = new GuideServiceManager(
-                local, remote, contexts, Runnable::run, Clock.systemUTC(), new Gson());
+                local, remote, contexts, Runnable::run, Clock.systemUTC(), dev.openallay.json.EngineJson.create());
         GuideCommandFacade commands = new GuideCommandFacade(
                 runtime, services, contexts, service -> new ToolResult.Success<>(true));
         UUID actor = UUID.randomUUID();

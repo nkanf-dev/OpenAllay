@@ -6,7 +6,6 @@ import dev.openallay.platform.minecraft.MinecraftResourceIds;
 
 import com.google.gson.JsonObject;
 import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.mojang.blaze3d.platform.NativeImage;
 import dev.openallay.client.gui.clipboard.ClipboardImageEncoder;
 import dev.openallay.client.observation.ClientObservationInputCoordinator;
@@ -105,7 +104,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
     private static final int TEXT = OpenAllayWidgetTheme.TEXT;
     private static final int MUTED = OpenAllayWidgetTheme.MUTED_READABLE;
     private static final int ERROR = OpenAllayWidgetTheme.ERROR;
-    private static final Gson DEBUG_GSON = new GsonBuilder().setPrettyPrinting().create();
+    private static final Gson DEBUG_GSON = dev.openallay.json.EngineJson.create(builder -> builder.setPrettyPrinting());
     private static final Executor EXPORT_EXECUTOR = command -> dev.openallay.concurrent.NamedThreads.startDaemon("openallay-session-export", command);
     private static final Executor IMAGE_EXECUTOR = command -> dev.openallay.concurrent.NamedThreads.startDaemon("openallay-composer-image", command);
     private final GuideService service;

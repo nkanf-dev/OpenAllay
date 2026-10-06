@@ -391,7 +391,7 @@ final class GuideGraphicalRegressionProbe {
                 require(number(receipt, "scroll") == number(receipt, "maximumScroll")
                                 && number(receipt, "scroll") == number(receipt, "contentHeight") - number(receipt, "viewportHeight"),
                         "HUD wheel did not expose全文 bottom");
-                require(receipt.has("renderedNodeIds") && !receipt.getAsJsonArray("renderedNodeIds").isEmpty(),
+                require(receipt.has("renderedNodeIds") && !(receipt.getAsJsonArray("renderedNodeIds").size() == 0),
                         "HUD bottom has no actually extracted semantic text-node identity");
                 var finalAssistant = request.timeline().stream()
                         .filter(dev.openallay.guide.GuideTimelineEntry.Assistant.class::isInstance)
@@ -1034,7 +1034,7 @@ final class GuideGraphicalRegressionProbe {
                 JsonObject summary = revealRecipeSummary(request);
                 if (summary == null) return;
                 var capsules = summary.getAsJsonArray("capsules");
-                require(!capsules.isEmpty(), "Actual native recipe summary icon was not painted");
+                require(!(capsules.size() == 0), "Actual native recipe summary icon was not painted");
                 JsonObject capsule = capsules.get(0).getAsJsonObject();
                 JsonObject bounds = capsule.getAsJsonObject("bounds");
                 clickAt(guide(), number(bounds, "x") + number(bounds, "width") / 2.0,
@@ -1481,7 +1481,7 @@ final class GuideGraphicalRegressionProbe {
     private boolean detailRecipePainted(String toolId) {
         JsonObject tools = jsonReceipt(guide(), "e2eToolsReceipt");
         require(toolId.equals(tools.get("detailToolId").getAsString()), "Blank row click opened a different Tool detail");
-        if (tools.getAsJsonArray("detailNativeRecipeIds").isEmpty() || tools.getAsJsonArray("detailCardIds").isEmpty()) {
+        if ((tools.getAsJsonArray("detailNativeRecipeIds").size() == 0) || (tools.getAsJsonArray("detailCardIds").size() == 0)) {
             var layout = (dev.openallay.guide.ui.GuideUiLayout) readField(guide(), "layout");
             guide().guideMouseScrolled(layout.detail().x() + layout.detail().width() / 2.0,
                     layout.detail().y() + layout.detail().height() / 2.0, 0, -1);

@@ -37,7 +37,7 @@ dependencies {
     testImplementation(project(':runtime-json'))
     testImplementation('org.junit.jupiter:junit-jupiter:5.11.4')
     testRuntimeOnly('org.junit.platform:junit-platform-launcher:1.11.4')
-    testImplementation('com.google.code.gson:gson:2.8.9')
+    testImplementation('com.google.code.gson:gson:2.8.0')
 }
 
 tasks.withType(Jar).configureEach {

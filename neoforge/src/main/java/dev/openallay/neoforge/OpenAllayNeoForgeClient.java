@@ -56,7 +56,7 @@ public final class OpenAllayNeoForgeClient {
             Minecraft client,
             java.util.function.Function<Runnable, Runnable> resourceReloadRegistration) {
         if (!STARTED.compareAndSet(false, true)) return;
-        Gson gson = dev.openallay.json.EngineJson.withInstant(new Gson());
+        Gson gson = dev.openallay.json.EngineJson.create();
         java.time.Clock clock = java.time.Clock.systemUTC();
         var dispatcher = (dev.openallay.client.ClientEventDispatcher)
                 client::execute;
