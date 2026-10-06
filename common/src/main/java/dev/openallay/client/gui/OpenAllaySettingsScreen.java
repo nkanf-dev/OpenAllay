@@ -56,7 +56,6 @@ import dev.openallay.client.gui.GuideNativeEditBox;
 import dev.openallay.client.gui.GuideMultilineEditor;
 import dev.openallay.client.gui.GuideTooltip;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.gui.screens.ConfirmScreen;
 import dev.openallay.platform.minecraft.MinecraftComponents;
 import net.minecraft.network.chat.Component;
 
@@ -181,7 +180,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
     OpenAllaySettingsScreen(ClientSettingsService service, Runnable returnToGuide,
             java.util.concurrent.Executor saveDispatcher) {
         super(MinecraftComponents.translatable("screen.openallay.settings.title"));
-        this.saveDispatcher = saveDispatcher == null ? command -> minecraft.execute(command) : saveDispatcher;
+        this.saveDispatcher = saveDispatcher == null ? command -> MinecraftClientWindow.execute(minecraft, command) : saveDispatcher;
         this.service = Objects.requireNonNull(service, "service");
         this.returnToGuide = Objects.requireNonNull(returnToGuide, "returnToGuide");
         this.snapshot = service.snapshot();
@@ -498,7 +497,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
         panel(graphics, layout.header(), PANEL);
         panel(graphics, layout.content(), PANEL);
         panel(graphics, layout.footer(), PANEL_ALT);
-        graphics.text(font, title, layout.header().x() + 8, layout.header().y() + 9, TEXT, false);
+        graphics.text(font, getTitle(), layout.header().x() + 8, layout.header().y() + 9, TEXT, false);
         if (layout.wide()) {
             panel(graphics, layout.navigation(), PANEL_ALT);
         }
@@ -1241,7 +1240,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
         String key = runtime ? "runtime_directory" : "model_directory";
         GuideNativeDialogs.selectDirectory(minecraft,
                 MinecraftComponents.getString(MinecraftComponents.translatable("screen.openallay.settings.voice." + key)),
-                runtime ? voiceRuntimePath : voiceModelPath).whenComplete((selected, failure) -> minecraft.execute(() -> {
+                runtime ? voiceRuntimePath : voiceModelPath).whenComplete((selected, failure) -> MinecraftClientWindow.execute(minecraft, () -> {
                     if (MinecraftClientWindow.screen(minecraft) != this) return;
                     if (failure != null) {
                         localNotice = MinecraftComponents.getString(MinecraftComponents.translatable("screen.openallay.settings.voice.chooser_unavailable"));
@@ -1289,7 +1288,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
     private void acceptVoice(java.util.concurrent.CompletableFuture<? extends ToolResult<?>> future,
             boolean resetOnSuccess) {
         localNotice = "";
-        future.whenComplete((result, failure) -> minecraft.execute(() -> {
+        future.whenComplete((result, failure) -> MinecraftClientWindow.execute(minecraft, () -> {
             if (failure != null || result instanceof ToolResult.Failure<?>) {
                 localNotice = result instanceof ToolResult.Failure<?> rejected ? rejected.message()
                         : MinecraftComponents.getString(MinecraftComponents.translatable("screen.openallay.settings.voice.failed"));
@@ -1483,7 +1482,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
 
     private void copyRepositoryUrl() {
         try {
-            minecraft.keyboardHandler.setClipboard(REPOSITORY_URL);
+            GuideNativeInput.setClipboard(REPOSITORY_URL);
             localNotice = MinecraftComponents.getString(MinecraftComponents.translatable(
                     "screen.openallay.settings.about.copy_success"));
         } catch (RuntimeException failure) {
@@ -1769,7 +1768,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
     }
 
     private void confirmUnrestrictedJavascript() {
-        dev.openallay.client.gui.MinecraftClientWindow.showScreen(minecraft, new ConfirmScreen(
+        dev.openallay.client.gui.MinecraftClientWindow.showScreen(minecraft, GuideNativeDialogs.confirm(
                 confirmed -> {
                     dev.openallay.client.gui.MinecraftClientWindow.showScreen(minecraft, this);
                     if (confirmed) accept(service.saveUnrestrictedJavascript(true));
@@ -1867,7 +1866,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                         MinecraftComponents.translatable("screen.openallay.settings.skills.editor"));
                 dev.openallay.client.gui.GuideNativeMultilineText.setValue(skillEditor, skillDraftMarkdown, true);
                 skillEditor.setValueListener(value -> skillDraftMarkdown = value);
-                addGuideWidget(skillEditor.widget());
+                addGuideWidgetHandle(skillEditor.widget());
                 addGuideWidget(OpenAllayButton.create(
                                 MinecraftComponents.translatable("screen.openallay.settings.save"),
                                 ignored -> saveSkillOverride())

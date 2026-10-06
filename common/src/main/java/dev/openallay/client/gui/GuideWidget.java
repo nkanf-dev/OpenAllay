@@ -16,4 +16,7 @@ public interface GuideWidget {
     void guideVisible(boolean visible);
     Component getMessage();
     Class<?> guideNativeType();
+    default boolean isMouseOver(double x, double y) {
+        return guideVisible() && x >= getX() && y >= getY() && x < getX() + getWidth() && y < getY() + getHeight();
+    }
 }

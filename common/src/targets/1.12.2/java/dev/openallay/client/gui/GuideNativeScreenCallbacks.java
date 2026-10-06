@@ -65,11 +65,11 @@ public abstract class GuideNativeScreenCallbacks extends GuiScreen implements Gu
     @Override protected final void mouseClicked(int x, int y, int button) throws IOException {
         dragX = x;
         dragY = y;
-        if (guideMouseClicked(GuideNativeInput.capture(x, y, button), false)) mouseHandled = true;
+        if (guideMouseClicked(GuideNativeInput.capture((double) x, (double) y, button), false)) mouseHandled = true;
         else super.mouseClicked(x, y, button);
     }
     @Override protected final void mouseReleased(int x, int y, int button) {
-        boolean handled = guideMouseReleased(GuideNativeInput.capture(x, y, button));
+        boolean handled = guideMouseReleased(GuideNativeInput.capture((double) x, (double) y, button));
         // Always clear native selectedButton, even if a feature consumed release.
         super.mouseReleased(x, y, button);
         if (handled) mouseHandled = true;
@@ -79,7 +79,7 @@ public abstract class GuideNativeScreenCallbacks extends GuiScreen implements Gu
         int dy = y - dragY;
         dragX = x;
         dragY = y;
-        if (guideMouseDragged(GuideNativeInput.capture(x, y, button), dx, dy)) mouseHandled = true;
+        if (guideMouseDragged(GuideNativeInput.capture((double) x, (double) y, button), dx, dy)) mouseHandled = true;
         else super.mouseClickMove(x, y, button, heldMillis);
     }
     @Override public final void handleMouseInput() throws IOException {

@@ -14,23 +14,28 @@ public abstract class GuideNativeScreen extends GuideNativeScreenCallbacks {
     private GuideGraphics paintGraphics;
     private final java.util.List<GuideNativeEditBox> textFields = new java.util.ArrayList<>();
     protected GuideNativeScreen(ITextComponent title) { this.title = Objects.requireNonNull(title, "title"); }
-    protected final GuideWidget addGuideWidget(GuideWidget widget) {
+    protected final GuideWidget addGuideWidgetHandle(GuideWidget widget) {
         if (widget instanceof GuideNativeButton button) addGuideWidget(button);
         else if (widget instanceof GuideNativeEditBox field) addGuideWidget(field);
         else if (widget instanceof GuideNativeWidget primitive) super.addButton(primitive);
         else throw new IllegalArgumentException("Widget has no selected native registration leaf");
         return widget;
     }
+    public final GuideWidgetInput getFocused() { return getGuideFocused(); }
+    public final java.util.List<GuideWidget> children() { return guideWidgetChildren(); }
+    public final void setDragging(boolean dragging) {
+        if (!dragging && getGuideFocused() != null) getGuideFocused().guideMouseReleased(GuideNativeInput.mouseEvent(0, 0, 0, 0));
+    }
     public final void setFocused(GuideWidget widget) {
         if (!(widget instanceof GuideWidgetInput input)) throw new IllegalArgumentException("Widget has no native input owner");
         setGuideFocused(input);
     }
     protected final void setInitialFocus(GuideWidget widget) { setFocused(widget); }
-    protected final boolean guideWidgetFocused(GuideWidget widget) { return getGuideFocused() == widget; }
-    protected final GuideWidget getGuideWidgetFocused() {
+    public final boolean guideWidgetFocused(GuideWidget widget) { return getGuideFocused() == widget; }
+    public final GuideWidget getGuideWidgetFocused() {
         return getGuideFocused() instanceof GuideWidget widget ? widget : null;
     }
-    protected final java.util.List<GuideWidget> guideWidgetChildren() {
+    public final java.util.List<GuideWidget> guideWidgetChildren() {
         java.util.List<GuideWidget> children = new java.util.ArrayList<>();
         for (GuiButton button : buttonList) if (button instanceof GuideWidget widget) children.add(widget);
         children.addAll(textFields);
@@ -49,7 +54,7 @@ public abstract class GuideNativeScreen extends GuideNativeScreenCallbacks {
         super.setWorldAndResolution(client, width, height);
     }
     protected final <T extends GuiButton> T addGuideWidget(T widget) { return super.addButton(widget); }
-    protected final GuideNativeEditBox addGuideWidget(GuideNativeEditBox widget) {
+    protected final <T extends GuideNativeEditBox> T addGuideWidget(T widget) {
         textFields.add(widget);
         return widget;
     }
@@ -97,7 +102,7 @@ public abstract class GuideNativeScreen extends GuideNativeScreenCallbacks {
     }
     protected final void renderGuideWidgets(GuideGraphics graphics, int mouseX, int mouseY, float delta) {
         renderNativeGuideWidgets(mouseX, mouseY, delta);
-        for (GuideNativeEditBox field : textFields) field.render();
+        for (GuideNativeEditBox field : textFields) field.render(mouseX, mouseY);
     }
     protected final void guideRebuildWidgets() {
         clearGuideFocus();
@@ -116,6 +121,7 @@ public abstract class GuideNativeScreen extends GuideNativeScreenCallbacks {
         setGuiSize(width, height);
         repositionGuideElements();
     }
+    protected void guideInitialFocus() {}
     protected final void tickGuideWidgets() {
         for (GuideNativeEditBox field : textFields) field.tick();
         for (GuiButton button : buttonList) if (button instanceof GuidePrimitiveMultilineEditor primitive) primitive.tick();
@@ -126,4 +132,7 @@ public abstract class GuideNativeScreen extends GuideNativeScreenCallbacks {
     public boolean isPauseScreen() { return true; }
     @Override public final boolean doesGuiPauseGame() { return isPauseScreen(); }
     public boolean isInGameUi() { return false; }
+    public final void clearGuideWidgetFocus() { clearGuideFocus(); }
+    protected final void guideDragging(boolean dragging) { setDragging(dragging); }
+    public final boolean guideWidgetRegistered(GuideWidget widget) { return guideWidgetChildren().contains(widget); }
 }

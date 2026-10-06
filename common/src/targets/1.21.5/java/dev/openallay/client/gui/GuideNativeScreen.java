@@ -7,7 +7,7 @@ import net.minecraft.util.FormattedCharSequence;
 import java.util.List;
 
 /** Native callback names/types are bound once; Screen feature painting stays shared. */
-public abstract class GuideNativeScreen extends GuideNativeScreenCallbacks {
+public abstract class GuideNativeScreen extends GuideNativeScreenCallbacks implements GuideWidgetInput {
     private GuideGraphics paintGraphics;
     private int paintMouseX;
     private int paintMouseY;
@@ -16,21 +16,21 @@ public abstract class GuideNativeScreen extends GuideNativeScreenCallbacks {
 
     protected GuideNativeScreen(Component title) { super(title); }
     /** Register/focus the actual owner carried by the product widget adapter. */
-    protected final GuideWidget addGuideWidget(GuideWidget widget) {
+    protected final GuideWidget addGuideWidgetHandle(GuideWidget widget) {
         addGuideWidget(GuideNativeWidgets.nativeWidget(widget));
         return widget;
     }
     public final void setFocused(GuideWidget widget) { setFocused(GuideNativeWidgets.nativeWidget(widget)); }
     protected final void setInitialFocus(GuideWidget widget) { setInitialFocus(GuideNativeWidgets.nativeWidget(widget)); }
-    protected final GuideWidget getGuideWidgetFocused() {
+    public final GuideWidget getGuideWidgetFocused() {
         return getFocused() instanceof net.minecraft.client.gui.components.AbstractWidget widget
                 ? GuideNativeWidgets.wrap(widget) : null;
     }
-    protected final java.util.List<GuideWidget> guideWidgetChildren() {
+    public final java.util.List<GuideWidget> guideWidgetChildren() {
         return children().stream().filter(net.minecraft.client.gui.components.AbstractWidget.class::isInstance)
                 .map(net.minecraft.client.gui.components.AbstractWidget.class::cast).map(GuideNativeWidgets::wrap).toList();
     }
-    protected final boolean guideWidgetFocused(GuideWidget widget) {
+    public final boolean guideWidgetFocused(GuideWidget widget) {
         return getFocused() == GuideNativeWidgets.nativeWidget(widget);
     }
     /** Register the actual native widget for both input and rendering. */
@@ -141,4 +141,12 @@ public abstract class GuideNativeScreen extends GuideNativeScreenCallbacks {
     protected void guideRemoved() { }
     @Override protected final void repositionElements() { repositionGuideElements(); }
     protected void repositionGuideElements() { super.repositionElements(); }
+    public final void clearGuideWidgetFocus() { GuideNativeFocus.clear(this); }
+    protected final void guideDragging(boolean dragging) { setDragging(dragging); }
+    @Override public final void guideSetFocused(boolean focused) {
+        if (focused) throw new UnsupportedOperationException("Acquire a screen child through its native focus path");
+        GuideNativeFocus.clear(this);
+    }
+    @Override public final boolean guideIsFocused() { return getFocused() != null; }
+    public final boolean guideWidgetRegistered(GuideWidget widget) { return children().contains(GuideNativeWidgets.nativeWidget(widget)); }
 }

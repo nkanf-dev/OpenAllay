@@ -14,6 +14,7 @@ public class GuideNativeEditBox extends GuiTextField implements GuideWidgetInput
     private final FontRenderer guideFont;
     private net.minecraft.util.text.ITextComponent message = new net.minecraft.util.text.TextComponentString("");
     private net.minecraft.util.text.ITextComponent hint;
+    private GuideTooltip tooltip;
     public GuideNativeEditBox(FontRenderer font, int x, int y, int width, int height,
             net.minecraft.util.text.ITextComponent title) {
         this(0, font, x, y, width, height);
@@ -50,7 +51,15 @@ public class GuideNativeEditBox extends GuiTextField implements GuideWidgetInput
     @Override public void guideSetFocused(boolean focused) { super.setFocused(focused); }
     @Override public boolean guideIsFocused() { return super.isFocused(); }
     public void tick() { super.updateCursorCounter(); }
+    public void setTooltip(GuideTooltip tooltip) { this.tooltip = tooltip; }
     public void render() { drawTextBox(); }
+    public void render(int mouseX, int mouseY) {
+        drawTextBox();
+        if (tooltip != null && isMouseOver(mouseX, mouseY)) {
+            GuideGraphics graphics = GuideGraphics.wrap();
+            graphics.paint(() -> graphics.setTooltipForNextFrame(tooltip.text(), mouseX, mouseY));
+        }
+    }
     @Override public void drawTextBox() {
         super.setEnabled(active && editable);
         super.setVisible(visible);

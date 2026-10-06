@@ -8,4 +8,7 @@ public final class GuideNativeWidgetGeometry {
     public static int x(AbstractWidget widget) { return widget.x; }
     public static int y(AbstractWidget widget) { return widget.y; }
     public static void x(AbstractWidget widget, int x) { widget.x = x; }
+    public static int x(GuideWidget widget) { return widget.getX(); }
+    public static int y(GuideWidget widget) { return widget.getY(); }
+    public static void x(GuideWidget widget, int x) { widget.setX(x); }
 }

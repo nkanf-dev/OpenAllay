@@ -7,5 +7,5 @@ import net.minecraft.network.chat.Component;
 @FunctionalInterface
 public interface GuideButtonNarration {
     GuideButtonNarration DEFAULT = Supplier::get;
-    Component create(Supplier<Component> defaultNarration);
+    Component create(Supplier<? extends Component> defaultNarration);
 }

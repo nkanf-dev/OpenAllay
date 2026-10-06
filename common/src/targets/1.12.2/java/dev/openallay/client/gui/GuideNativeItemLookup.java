@@ -2,11 +2,12 @@ package dev.openallay.client.gui;
 
 import dev.openallay.platform.minecraft.MinecraftNativeRegistries;
 import dev.openallay.platform.minecraft.MinecraftResourceIds;
-import net.minecraft.world.item.Item;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
 
-/** Native registry value lookup for UI stack construction. */
+/** Actual Forge registry value and ItemStack display-name primitives. */
 public final class GuideNativeItemLookup {
     private GuideNativeItemLookup() {}
-    public static String displayName(net.minecraft.world.item.ItemStack stack) { return dev.openallay.platform.minecraft.MinecraftComponents.getString(stack.getHoverName()); }
     public static Item item(String id) { return MinecraftNativeRegistries.ITEM.getValue(MinecraftResourceIds.parse(id)); }
+    public static String displayName(ItemStack stack) { return stack.getDisplayName(); }
 }

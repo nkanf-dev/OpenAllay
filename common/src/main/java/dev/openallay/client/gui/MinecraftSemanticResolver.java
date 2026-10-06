@@ -25,7 +25,7 @@ public final class MinecraftSemanticResolver {
     public ItemPresentation item(String itemId, String suppliedLabel, long count) {
         String fallback = suppliedLabel == null || suppliedLabel.isBlank() ? itemId : suppliedLabel;
         Minecraft minecraft = Minecraft.getInstance();
-        if (!minecraft.isSameThread()) {
+        if (!MinecraftClientWindow.ownerThread(minecraft)) {
             return new ItemPresentation(itemId, fallback, count, ItemStack.EMPTY, false);
         }
         var id = MinecraftResourceIds.tryParse(itemId);
@@ -36,7 +36,7 @@ public final class MinecraftSemanticResolver {
                 dev.openallay.client.gui.GuideNativeItemLookup.item(id.toString()),
                 (int) Math.min(Integer.MAX_VALUE, Math.max(1, count)));
         String label = suppliedLabel == null || suppliedLabel.isBlank()
-                ? MinecraftComponents.getString(stack.getHoverName()) : suppliedLabel;
+                ? GuideNativeItemLookup.displayName(stack) : suppliedLabel;
         return new ItemPresentation(itemId, label, count, stack, true);
     }
 }

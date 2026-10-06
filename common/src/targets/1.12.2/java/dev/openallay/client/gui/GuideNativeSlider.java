@@ -5,7 +5,7 @@ import net.minecraft.util.text.ITextComponent;
 import net.minecraftforge.fml.client.config.GuiSlider;
 
 /** Real Forge GuiSlider owns normalized value and dragging; canonical settings own ranges/messages. */
-public abstract class GuideNativeSlider extends GuiSlider implements GuideWidgetInput {
+public abstract class GuideNativeSlider extends GuiSlider implements GuideWidgetInput, GuideWidget {
     protected double value;
     public boolean active = true;
     private ITextComponent message;
@@ -49,6 +49,11 @@ public abstract class GuideNativeSlider extends GuiSlider implements GuideWidget
     public final void setX(int value) { x = value; }
     public final void setY(int value) { y = value; }
     public final void setTooltip(GuideTooltip tooltip) { this.tooltip = tooltip; }
+    public final Class<?> guideNativeType() { return getClass(); }
+    public final boolean guideActive() { return active; }
+    public final void guideActive(boolean active) { this.active = active; }
+    public final boolean guideVisible() { return visible; }
+    public final void guideVisible(boolean visible) { this.visible = visible; }
     public final void onClick(double x, double y) { mousePressed(Minecraft.getMinecraft(), (int) x, (int) y); }
     public final void onRelease(double x, double y) { super.mouseReleased((int) x, (int) y); }
     @Override public final void guideSetFocused(boolean focused) { this.focused = focused; }

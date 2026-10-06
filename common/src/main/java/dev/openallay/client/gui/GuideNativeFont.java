@@ -9,6 +9,10 @@ import net.minecraft.util.FormattedCharSequence;
 /** Native formatted lines stay real native values behind the product text contract. */
 public final class GuideNativeFont {
     private GuideNativeFont() {}
+    public static String plainSubstrByWidth(Font font, String text, int width, net.minecraft.network.chat.Style style) {
+        return font.getSplitter().plainHeadByWidth(text, width, style);
+    }
+
     public static Object languageIdentity() { return net.minecraft.locale.Language.getInstance(); }
     public static int width(Font font, String text) { return font.width(text); }
     public static int width(Font font, Component text) { return font.width(text); }

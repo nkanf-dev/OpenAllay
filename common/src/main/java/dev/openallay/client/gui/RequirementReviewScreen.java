@@ -214,8 +214,7 @@ public final class RequirementReviewScreen extends dev.openallay.client.gui.Guid
         Component identity = row.kind() == dev.openallay.requirement.RequirementKind.CAPABILITY
                         && dev.openallay.settings.requirement.RequirementSettingsEnvironment
                                 .isUnrestrictedJavascript(row.id())
-                ? MinecraftComponents.translatable(PREFIX + "name.unrestricted_javascript")
-                        .append(MinecraftComponents.literal(" (" + row.id() + ")"))
+                ? MinecraftComponents.append(MinecraftComponents.translatable(PREFIX + "name.unrestricted_javascript"), MinecraftComponents.literal(" (" + row.id() + ")"))
                 : MinecraftComponents.literal(row.name().equals(row.id())
                         ? row.id() : row.name() + " (" + row.id() + ")");
         return MinecraftComponents.translatable(PREFIX + "row",
@@ -252,7 +251,7 @@ public final class RequirementReviewScreen extends dev.openallay.client.gui.Guid
         long epoch = attachment.epoch();
         var client = minecraft;
         service.enablePackageRequirement(token, row.kind(), row.id(), consent).thenAccept(result ->
-                client.execute(() -> {
+                MinecraftClientWindow.execute(client, () -> {
                     if (!attached(epoch)) return;
                     actionPending = false;
                     snapshot = service.snapshot();
@@ -275,7 +274,7 @@ public final class RequirementReviewScreen extends dev.openallay.client.gui.Guid
         guideRebuildWidgets();
         long epoch = attachment.epoch();
         var client = minecraft;
-        service.continuePackageInstall(token).thenAccept(result -> client.execute(() -> {
+        service.continuePackageInstall(token).thenAccept(result -> MinecraftClientWindow.execute(client, () -> {
             if (!attached(epoch)) return;
             actionPending = false;
             if (result instanceof ToolResult.Failure<Boolean> failed) {
@@ -346,7 +345,7 @@ public final class RequirementReviewScreen extends dev.openallay.client.gui.Guid
     @Override
     protected void paintGuideScreen(GuideGraphics graphics, int mouseX, int mouseY, float tick) {
         graphics.fill(0, 0, width, height, 0xF00B0D12);
-        graphics.text(font, title, left() + 8, 14, ACCENT, false);
+        graphics.text(font, getTitle(), left() + 8, 14, ACCENT, false);
         graphics.fill(left(), viewportTop(), left() + panelWidth(), viewportBottom(), 0xE0181B22);
         graphics.enableScissor(left(), viewportTop(), left() + panelWidth(), viewportBottom());
         layoutContents(graphics, false);

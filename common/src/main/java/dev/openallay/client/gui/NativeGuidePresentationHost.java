@@ -44,7 +44,7 @@ public final class NativeGuidePresentationHost implements GuidePresentationHost 
     }
 
     @Override public Facts facts() {
-        Object level = minecraft.level;
+        Object level = MinecraftClientWindow.world(minecraft);
         if (connectionWorld != level) {
             connectionWorld = level;
             worldConnection = level == null ? null : UUID.randomUUID();
@@ -53,28 +53,28 @@ public final class NativeGuidePresentationHost implements GuidePresentationHost 
         Surface surface = screen == null ? Surface.GAMEPLAY
                 : screen instanceof OpenAllayScreen ? Surface.GUIDE
                 : screen instanceof GuideChatLiteScreen ? Surface.HUD_INPUT : Surface.OTHER;
-        return new Facts(minecraft.player == null ? null : minecraft.player.getUUID(), worldConnection, surface,
-                MinecraftClientWindow.overlay(minecraft) != null, MinecraftClientWindow.hudHidden(minecraft), minecraft.isWindowActive());
+        return new Facts(minecraft.player == null ? null : MinecraftClientWindow.actor(minecraft), worldConnection, surface,
+                MinecraftClientWindow.overlayPresent(minecraft), MinecraftClientWindow.hudHidden(minecraft), MinecraftClientWindow.focused(minecraft));
     }
 
     @Override public Input pollInput() {
         int toggle = 0;
-        while (OpenAllayKeyMappings.TOGGLE_HUD.consumeClick()) toggle++;
+        while (GuideNativeKeyMappings.consume(OpenAllayKeyMappings.TOGGLE_HUD)) toggle++;
         int edit = 0;
-        while (OpenAllayKeyMappings.EDIT_HUD.consumeClick()) edit++;
+        while (GuideNativeKeyMappings.consume(OpenAllayKeyMappings.EDIT_HUD)) edit++;
         int interact = 0;
-        while (OpenAllayKeyMappings.INTERACT_HUD.consumeClick()) interact++;
-        return new Input(toggle, edit, interact, OpenAllayKeyMappings.VOICE_PTT.isDown());
+        while (GuideNativeKeyMappings.consume(OpenAllayKeyMappings.INTERACT_HUD)) interact++;
+        return new Input(toggle, edit, interact, GuideNativeKeyMappings.down(OpenAllayKeyMappings.VOICE_PTT));
     }
 
     @Override public BooleanSupplier captureFence(FenceScope scope) {
-        Object level = minecraft.level;
-        UUID actor = minecraft.player == null ? null : minecraft.player.getUUID();
+        Object level = MinecraftClientWindow.world(minecraft);
+        UUID actor = minecraft.player == null ? null : MinecraftClientWindow.actor(minecraft);
         Screen sourceScreen = MinecraftClientWindow.screen(minecraft);
         return scope == FenceScope.VIEW
-                ? () -> minecraft.level == level && MinecraftClientWindow.screen(minecraft) == sourceScreen
-                : () -> minecraft.level == level && minecraft.player != null
-                        && actor != null && actor.equals(minecraft.player.getUUID());
+                ? () -> MinecraftClientWindow.world(minecraft) == level && MinecraftClientWindow.screen(minecraft) == sourceScreen
+                : () -> MinecraftClientWindow.world(minecraft) == level && minecraft.player != null
+                        && actor != null && actor.equals(MinecraftClientWindow.actor(minecraft));
     }
 
     @Override public void showGuide(View view, Runnable openSettings) {
