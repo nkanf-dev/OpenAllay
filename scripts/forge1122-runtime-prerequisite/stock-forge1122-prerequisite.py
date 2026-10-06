@@ -112,7 +112,7 @@ def inspect_classpath(cp, expected, runtime):
     return result
 
 
-def prepare(args, runtime, launch, freeze, install, version, vanilla):
+def prepare(args, runtime, launch, freeze, install, version, vanilla, download_assets=True):
     root = runtime.safe_root(args.minecraft_root, args.repo)
     runtime.require(root == args.repo.resolve() / "build/e2e/runtime/forge1122-stock/minecraft",
                     "Use the dedicated stock prerequisite root")
@@ -162,11 +162,12 @@ def prepare(args, runtime, launch, freeze, install, version, vanilla):
     client = root / "versions/1.12.2/1.12.2.jar"
     runtime.require(runtime.file_hash(client, "sha1") == vanilla["downloads"]["client"]["sha1"], "Original client changed")
     files += [profile_path]
-    assets = launch.prepare_assets(root, root.parent / "assets", repo=args.repo, minecraft_target="1.12.2")
+    assets = launch.prepare_assets(root, root.parent / "assets", repo=args.repo, minecraft_target="1.12.2") if download_assets else None
     runtime.write_json(root / ".provision/stock-runtime.json", {
         "purpose": "stock-forge1122-java17-client-prerequisite", "pins": PINS,
         "javaInfo": info, "java": str(java), "javaExecutableSha256": runtime.file_hash(java),
-        "sourceFreeze": freeze, "assets": str(assets), "profile": PROFILE,
+        "sourceFreeze": freeze, "assets": str(assets) if assets is not None else None,
+        "assetsDownloaded": download_assets, "profile": PROFILE,
         "files": {str(p.relative_to(root)): {"sha256": runtime.file_hash(p), "size": p.stat().st_size} for p in sorted(set(files))},
         "gameLaunched": False, "engineProbe": False})
     return root, java, assets

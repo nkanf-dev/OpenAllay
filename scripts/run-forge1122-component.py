@@ -41,7 +41,7 @@ def main():
     runtime,launch,freeze=stock.load_helpers(ROOT)
     install=json.loads((stock.PACKET/'install_profile.json').read_text());version=json.loads((stock.PACKET/'version.json').read_text());vanilla=json.loads((stock.PACKET/'minecraft-1.12.2.json').read_text());expected=stock.validate_metadata(install,version,vanilla)
     runargs=SimpleNamespace(repo=ROOT,java=Path(os.environ['OPENALLAY_COMPONENT_JAVA17_HOME'])/'bin/java',java_release='17.0.18+8',minecraft_root=ROOT/'build/e2e/runtime/forge1122-stock/minecraft',output=ROOT/'build/e2e/forge1122-component',title_only=True,pack200_bridge=True,launchwrapper_bridge=True,objectholder_bridge=True,objectholder_phase_diagnostic=False,component_inputs=None)
-    runtime_root,java,assets=stock.prepare(runargs,runtime,launch,freeze,install,version,vanilla)
+    runtime_root,java,assets=stock.prepare(runargs,runtime,launch,freeze,install,version,vanilla,download_assets=False)
     selected=['engine','sdk','rhino','commonmark','tables','jtokkit','sqlite','jsr305','checkerqual','errorprone','j2objc']
     staging=work/'feature-staging';staging.mkdir();inventory=[];owned={};services={}
     # Whole immutable feature archives only; original class bytes copied unchanged.
