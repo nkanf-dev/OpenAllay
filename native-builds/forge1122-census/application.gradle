@@ -128,6 +128,11 @@ tasks.jar.doFirst {
 }
 // FG registers reobfJar after evaluation. Use its normal task, never custom remapping.
 tasks.matching { it.name=='reobfJar' }.all {
+    setTool('net.md-5:SpecialSource:1.11.4:shaded')
+    doFirst {
+        if (sha(getToolJar()) != 'e2cab24b1c12400ad73b15972bb21e4273a0dc7081c8b3c136ddfdd824c78518')
+            throw new GradleException('Exact build-only SpecialSource1.11.4 tool digest differs')
+    }
     enabled=true
     dependsOn compileNativeApplication
     extraMapping(new File(ap,'mixins.srg'))
