@@ -233,6 +233,7 @@ from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 import sys
 root, artifact, expected = sys.argv[1:]
+sys.path.insert(0, str(Path(root) / "scripts"))
 spec = spec_from_file_location("publication_artifact_hash", Path(root) / "scripts/minecraft-artifacts.py")
 catalog = module_from_spec(spec)
 spec.loader.exec_module(catalog)

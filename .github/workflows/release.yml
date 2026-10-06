@@ -31,6 +31,9 @@ jobs:
       RELEASE_TAG: ${{ inputs.release_tag }}
       OPENALLAY_MINECRAFT_TARGET: '26.2'
       OPENALLAY_MINECRAFT_BUILD_RECEIPT_DIRECTORY: release/build-receipts
+      # Package source is independently checked against the annotated tag and successful build.
+      GITHUB_SHA: ${{ inputs.build_source_sha }}
+      PYTHONPATH: ${{ github.workspace }}/scripts
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
@@ -56,14 +59,14 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: python3 -B scripts/generate-release-notes.py "$RELEASE_TAG" --repository "$GITHUB_REPOSITORY" --output release-notes.md
-      - name: Publish all selected loaders to Modrinth
-        env:
-          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
-        run: ./scripts/publish-modrinth.sh "$RELEASE_TAG" release
       - name: Publish GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
         run: python3 -B scripts/publish-current-github-release.py
+      - name: Publish all selected loaders to Modrinth
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+        run: ./scripts/publish-modrinth.sh "$RELEASE_TAG" release
       - name: Preserve exact publication records
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
