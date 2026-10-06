@@ -79,7 +79,9 @@ public final class MinecraftClassNamespaceProducer {
             List<Parsed> generated = new ArrayList<>();
             Map<String, List<NativeIdentity>> originalBindings = new HashMap<>();
             Set<Path> outputs = request.outputUnits().stream().map(u -> u.file().toAbsolutePath().normalize()).collect(Collectors.toSet());
+            List<String> unitFailures = new ArrayList<>();
             for (Parsed unit : parsed) {
+                try {
                 Binder binder = new Binder(unit, index, mapping, metadata);
                 binder.scan(unit.tree(), null);
                 String generatedText = binder.apply();
@@ -89,7 +91,11 @@ public final class MinecraftClassNamespaceProducer {
                 if (outputs.contains(unit.unit().file().toAbsolutePath().normalize())) {
                     results.add(new Result(unit.unit(), hash(unit.text()), generatedText, binder.edits(), List.copyOf(binder.nativeIdentities)));
                 }
+                } catch (IllegalStateException failure) {
+                    unitFailures.add(unit.unit().logicalPath() + ": " + failure.getMessage());
+                }
             }
+            if (!unitFailures.isEmpty()) fail("Selected native source failures (no output emitted):\n" + String.join("\n", unitFailures));
             Index destinationIndex = new Index(generated, mapping, metadata);
             if (!index.classes.keySet().equals(destinationIndex.classes.keySet())) fail("Generated declaration ownership changed");
             for (int i = 0; i < parsed.size(); i++) {
