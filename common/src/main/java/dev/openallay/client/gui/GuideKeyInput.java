@@ -1,6 +1,5 @@
 package dev.openallay.client.gui;
 
-import com.mojang.blaze3d.platform.InputConstants;
 
 /** Translate once at screen entry. Minecraft retains ownership of text, shortcuts and IME. */
 public record GuideKeyInput(GuideKeyIntent intent, boolean confirmation, boolean shift,

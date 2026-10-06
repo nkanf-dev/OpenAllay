@@ -1,7 +1,6 @@
 package dev.openallay.client.gui;
 
 
-import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.KeyMapping;
 
 /** Shared identity and default for loader-registered client key mappings. */

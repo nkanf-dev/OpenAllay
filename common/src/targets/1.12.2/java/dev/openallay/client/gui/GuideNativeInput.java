@@ -30,6 +30,9 @@ public final class GuideNativeInput {
         return new GuideInputMouse(x, y, button, modifiers, button == GuideInputCodes.MOUSE_BUTTON_LEFT);
     }
     public static GuideInputMouse capture(double x, double y, int button) { return mouseEvent(x, y, button, modifiers()); }
+    public static boolean matches(net.minecraft.client.settings.KeyBinding mapping, GuideInputKey event) {
+        return mapping.isActiveAndMatches(event.key());
+    }
     public static boolean controlDown(GuideInputKey event) { return event.controlDown(); }
     public static boolean isLeftClick(GuideInputMouse event) { return event.leftClick(); }
     public static boolean keyPressed(GuideWidgetInput widget, GuideInputKey event) { return widget.guideKeyPressed(event); }
