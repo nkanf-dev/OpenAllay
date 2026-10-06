@@ -3,6 +3,7 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+  actions: read
 concurrency:
   group: forge36-engine-${{ github.ref }}
   cancel-in-progress: false
@@ -26,18 +27,27 @@ jobs:
         with:
           cache-provider: basic
           cache-read-only: true
-      - name: Prepare exact independently owned Builder source
-        run: python3 -B scripts/prepare-distribution.py
-      - name: Produce shared closure once and scan every ownership boundary
-        run: python3 -B scripts/forge16165-engine-prerequisite/build-prerequisite.py --phase scan
-      - name: Retain immutable shared outputs even if a later packaging gate stops
+      - name: Retrieve the unchanged compiled shared closure
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        with:
+          github-token: ${{ github.token }}
+          run-id: 37428024273
+          artifact-ids: 11395936631
+          path: build/forge36-shared
+      - name: Reuse shared inputs, isolate only Builder annotations, and scan owners
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 -B scripts/forge16165-engine-prerequisite/build-prerequisite.py --phase scan --reuse-shared
+      - name: Retain the changed Builder component independently of later gates
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: forge36-shared-closure-${{ github.sha }}-${{ github.run_attempt }}
+          name: forge36-builder-component-${{ github.sha }}-${{ github.run_attempt }}
           retention-days: 14
           if-no-files-found: ignore
-          path: build/forge36-shared/
+          path: |
+            build/forge36-artifacts/builder-isolated.jar
+            build/forge36-artifacts/builder-isolation-provenance.json
       - name: Compile and reobfuscate only the genuine Forge36 probe
         run: python3 -B scripts/forge16165-engine-prerequisite/build-prerequisite.py --phase probe
       - name: Pack unchanged shared class and resource owners into the sole mod

@@ -25,6 +25,97 @@
       "coordinate": "com.google.code.findbugs:jsr305:3.0.2"
     }
   },
+  "compiledSourceOwnership": {
+    "rhinoAdditionalTopLevel": [
+      {
+        "binaryName": "dev/latvian/mods/rhino/regexp/CompilerState",
+        "compiledSha256": "8ec1592c656cf44e5950441909106eeeb8799216a057d3ec9bc78f4a1977b010",
+        "sourcePath": "dev/latvian/mods/rhino/regexp/NativeRegExp.java",
+        "sourceSha256": "56f0ba77db1268bde4aba2c5f1e1427d5fa90d448f089104a679ae0957115093"
+      },
+      {
+        "binaryName": "dev/latvian/mods/rhino/regexp/GlobData",
+        "compiledSha256": "30b4915c152cf35bb0edfcafeee96c23758985d10ff74c20567a2409aa7ab899",
+        "sourcePath": "dev/latvian/mods/rhino/regexp/RegExp.java",
+        "sourceSha256": "387bf6caa13da7bb5caaec92eedf1c98ff0d6fc96ad58a52f89106e7d2eaeabe"
+      },
+      {
+        "binaryName": "dev/latvian/mods/rhino/regexp/REBackTrackData",
+        "compiledSha256": "853c6fae9645915810fdce19b5fedabadaca878e46ac1c7af838df44fd7eddbe",
+        "sourcePath": "dev/latvian/mods/rhino/regexp/NativeRegExp.java",
+        "sourceSha256": "56f0ba77db1268bde4aba2c5f1e1427d5fa90d448f089104a679ae0957115093"
+      },
+      {
+        "binaryName": "dev/latvian/mods/rhino/regexp/RECharSet",
+        "compiledSha256": "8214e82aef5b6b50918008185bab427e8cfe912d26cd9d658f76d6f397124e13",
+        "sourcePath": "dev/latvian/mods/rhino/regexp/NativeRegExp.java",
+        "sourceSha256": "56f0ba77db1268bde4aba2c5f1e1427d5fa90d448f089104a679ae0957115093"
+      },
+      {
+        "binaryName": "dev/latvian/mods/rhino/regexp/RECompiled",
+        "compiledSha256": "afaadf8d8ec7b7dc0672eb5c56c2646c56b660066ebbd88203d610c3bd69b653",
+        "sourcePath": "dev/latvian/mods/rhino/regexp/NativeRegExp.java",
+        "sourceSha256": "56f0ba77db1268bde4aba2c5f1e1427d5fa90d448f089104a679ae0957115093"
+      },
+      {
+        "binaryName": "dev/latvian/mods/rhino/regexp/REGlobalData",
+        "compiledSha256": "8bbcfadf1d8a891d0434d5fc0b445696519bca73f7046cd645682bf23177023e",
+        "sourcePath": "dev/latvian/mods/rhino/regexp/NativeRegExp.java",
+        "sourceSha256": "56f0ba77db1268bde4aba2c5f1e1427d5fa90d448f089104a679ae0957115093"
+      },
+      {
+        "binaryName": "dev/latvian/mods/rhino/regexp/RENode",
+        "compiledSha256": "6d501fdcc33ea659ed4b8d5e5c72692f54ea7ccd5326d24e6a0e9b58ca24fb8e",
+        "sourcePath": "dev/latvian/mods/rhino/regexp/NativeRegExp.java",
+        "sourceSha256": "56f0ba77db1268bde4aba2c5f1e1427d5fa90d448f089104a679ae0957115093"
+      },
+      {
+        "binaryName": "dev/latvian/mods/rhino/regexp/REProgState",
+        "compiledSha256": "6c03f085a8cf2ef55ecd306da8fc1bdd457109ccffa546b6099becd43738f013",
+        "sourcePath": "dev/latvian/mods/rhino/regexp/NativeRegExp.java",
+        "sourceSha256": "56f0ba77db1268bde4aba2c5f1e1427d5fa90d448f089104a679ae0957115093"
+      }
+    ],
+    "runtimeJson": {
+      "archiveSha256": "8b872241c8b73d2bc11382b6a51130cea449c67731e81380c242dc19cc09372a",
+      "entries": [
+        {
+          "major": 61,
+          "name": "dev/openallay/json/JsonReaders$StrictCharacters.class",
+          "sha256": "e97a6afc9384ad46fdf5fbe0ffba49de87d4dfddf1c04fb503df7e8bccbde072"
+        },
+        {
+          "major": 61,
+          "name": "dev/openallay/json/JsonReaders.class",
+          "sha256": "a734185e1c4ffdbba2c440986d0029dd19c3d33a5f4f7b69277746a2b0dca658"
+        },
+        {
+          "major": 61,
+          "name": "dev/openallay/json/JsonTrees$1$1.class",
+          "sha256": "7d58d540c5e6ac6402ce0af238e2a001559bb911a47ce859f6e3a6732cc20733"
+        },
+        {
+          "major": 61,
+          "name": "dev/openallay/json/JsonTrees$1.class",
+          "sha256": "62a86e5e857933bdfacf54abeeb076f5d288debc6a8c9d3e95466ecc681e3990"
+        },
+        {
+          "major": 61,
+          "name": "dev/openallay/json/JsonTrees.class",
+          "sha256": "c8fc98976838c57f713ff998cf8c4b0626515a1f3dbcc8c232352059552d2a2a"
+        }
+      ],
+      "nestedDeclarations": [
+        "JsonReaders.StrictCharacters",
+        "JsonTrees.keys anonymous AbstractSet",
+        "JsonTrees.keys anonymous Iterator"
+      ],
+      "sourcePrimaryClasses": [
+        "dev/openallay/json/JsonReaders",
+        "dev/openallay/json/JsonTrees"
+      ]
+    }
+  },
   "exactEngineMavenClasses": [
     "dev/openallay/internal/maven/artifact/Artifact.class",
     "dev/openallay/internal/maven/artifact/handler/ArtifactHandler.class",
@@ -963,9 +1054,17 @@
       "dev/latvian/mods/rhino/classfile/SuperBlock",
       "dev/latvian/mods/rhino/classfile/TypeInfo",
       "dev/latvian/mods/rhino/json/JsonParser",
+      "dev/latvian/mods/rhino/regexp/CompilerState",
+      "dev/latvian/mods/rhino/regexp/GlobData",
       "dev/latvian/mods/rhino/regexp/NativeRegExp",
       "dev/latvian/mods/rhino/regexp/NativeRegExpCtor",
       "dev/latvian/mods/rhino/regexp/NativeRegExpStringIterator",
+      "dev/latvian/mods/rhino/regexp/REBackTrackData",
+      "dev/latvian/mods/rhino/regexp/RECharSet",
+      "dev/latvian/mods/rhino/regexp/RECompiled",
+      "dev/latvian/mods/rhino/regexp/REGlobalData",
+      "dev/latvian/mods/rhino/regexp/RENode",
+      "dev/latvian/mods/rhino/regexp/REProgState",
       "dev/latvian/mods/rhino/regexp/RegExp",
       "dev/latvian/mods/rhino/regexp/SubString",
       "dev/latvian/mods/rhino/type/ArrayTypeInfo",
@@ -1003,6 +1102,7 @@
       "dev/latvian/mods/rhino/util/DynamicMap",
       "dev/latvian/mods/rhino/util/HideFromJS",
       "dev/latvian/mods/rhino/util/JavaSetWrapper",
+      "dev/latvian/mods/rhino/util/ListCompat",
       "dev/latvian/mods/rhino/util/Possible",
       "dev/latvian/mods/rhino/util/RemapForJS",
       "dev/latvian/mods/rhino/util/RemapPrefixForJS",
@@ -1023,8 +1123,7 @@
       "dev/latvian/mods/rhino/v8dtoa/DoubleConversion",
       "dev/latvian/mods/rhino/v8dtoa/DoubleHelper",
       "dev/latvian/mods/rhino/v8dtoa/FastDtoa",
-      "dev/latvian/mods/rhino/v8dtoa/FastDtoaBuilder",
-      "dev/latvian/mods/rhino/util/ListCompat"
+      "dev/latvian/mods/rhino/v8dtoa/FastDtoaBuilder"
     ],
     "sdk": [
       "dev/openallay/api/extension/ApiValidation",
@@ -1156,7 +1255,10 @@
     }
   },
   "runtimeJsonClasses": [
+    "dev/openallay/json/JsonReaders$StrictCharacters.class",
     "dev/openallay/json/JsonReaders.class",
+    "dev/openallay/json/JsonTrees$1$1.class",
+    "dev/openallay/json/JsonTrees$1.class",
     "dev/openallay/json/JsonTrees.class"
   ],
   "sourceRevision": "cbcf5e66c81d11e4d219fa6cc8da04ab996c7ce0",
