@@ -26,6 +26,7 @@ public final class OpenAllayFeatureBoundary implements IFMLLoadingPlugin {
             net.minecraftforge.fml.relauncher.CoreModManager.getIgnoredMods().add("openallay-private-mixin.jar");
         org.spongepowered.asm.mixin.Mixins.addConfiguration("openallay.client.mixins.json");
         org.spongepowered.asm.mixin.Mixins.addConfiguration("openallay.forge.mixins.json");
+        org.spongepowered.asm.mixin.Mixins.addConfiguration("openallay.world.mixins.json");
         if (!"17".equals(System.getProperty("java.specification.version")))
             throw new IllegalStateException("OpenAllay runtime requires Java17");
         if (!"net.minecraft.launchwrapper.LaunchClassLoader".equals(getClass().getClassLoader().getClass().getName()))
