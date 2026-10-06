@@ -12,7 +12,7 @@
     "id": "minecraft:blue_stained_glass"
   },
   "bricks": {
-    "id": "minecraft:bricks"
+    "id": "minecraft:brick_block"
   },
   "campfire_lit_north": {
     "id": "minecraft:campfire",
@@ -39,22 +39,21 @@
     "id": "minecraft:cobblestone"
   },
   "cobblestone_stairs_south": {
-    "id": "minecraft:cobblestone_stairs",
+    "id": "minecraft:stone_stairs",
     "properties": {
       "facing": "south",
       "half": "bottom",
-      "shape": "straight",
-      "waterlogged": "false"
+      "shape": "straight"
     }
   },
   "cyan_stained_glass": {
     "id": "minecraft:cyan_stained_glass"
   },
   "dark_oak_slab_bottom": {
-    "id": "minecraft:dark_oak_slab",
+    "id": "minecraft:wooden_slab",
     "properties": {
-      "type": "bottom",
-      "waterlogged": "false"
+      "variant": "dark_oak",
+      "half": "bottom"
     }
   },
   "dark_oak_stairs_east": {
@@ -62,8 +61,7 @@
     "properties": {
       "facing": "east",
       "half": "bottom",
-      "shape": "straight",
-      "waterlogged": "false"
+      "shape": "straight"
     }
   },
   "dark_oak_stairs_west": {
@@ -71,8 +69,7 @@
     "properties": {
       "facing": "west",
       "half": "bottom",
-      "shape": "straight",
-      "waterlogged": "false"
+      "shape": "straight"
     }
   },
   "dirt": {
@@ -125,7 +122,7 @@
     "id": "minecraft:light_blue_stained_glass"
   },
   "oak_fence": {
-    "id": "minecraft:oak_fence"
+    "id": "minecraft:fence"
   },
   "oak_fence_gate_north": {
     "id": "minecraft:oak_fence_gate",
@@ -137,25 +134,31 @@
     }
   },
   "oak_log_x": {
-    "id": "minecraft:oak_log",
+    "id": "minecraft:log",
     "properties": {
+      "variant": "oak",
       "axis": "x"
     }
   },
   "oak_log_y": {
-    "id": "minecraft:oak_log",
+    "id": "minecraft:log",
     "properties": {
+      "variant": "oak",
       "axis": "y"
     }
   },
   "oak_log_z": {
-    "id": "minecraft:oak_log",
+    "id": "minecraft:log",
     "properties": {
+      "variant": "oak",
       "axis": "z"
     }
   },
   "oak_planks": {
-    "id": "minecraft:oak_planks"
+    "id": "minecraft:planks",
+    "properties": {
+      "variant": "oak"
+    }
   },
   "oak_pressure_plate_unpowered": {
     "id": "minecraft:oak_pressure_plate",
@@ -164,7 +167,10 @@
     }
   },
   "polished_andesite": {
-    "id": "minecraft:polished_andesite"
+    "id": "minecraft:stone",
+    "properties": {
+      "variant": "smooth_andesite"
+    }
   },
   "potatoes_mature": {
     "id": "minecraft:potatoes",
@@ -189,19 +195,23 @@
     "id": "minecraft:spruce_fence"
   },
   "spruce_log_y": {
-    "id": "minecraft:spruce_log",
+    "id": "minecraft:log",
     "properties": {
+      "variant": "spruce",
       "axis": "y"
     }
   },
   "spruce_planks": {
-    "id": "minecraft:spruce_planks"
+    "id": "minecraft:planks",
+    "properties": {
+      "variant": "spruce"
+    }
   },
   "stone_brick_slab_bottom": {
-    "id": "minecraft:stone_brick_slab",
+    "id": "minecraft:stone_slab",
     "properties": {
-      "type": "bottom",
-      "waterlogged": "false"
+      "variant": "stone_brick",
+      "half": "bottom"
     }
   },
   "stone_brick_stairs_south": {
@@ -209,8 +219,7 @@
     "properties": {
       "facing": "south",
       "half": "bottom",
-      "shape": "straight",
-      "waterlogged": "false"
+      "shape": "straight"
     }
   },
   "stone_brick_wall": {
