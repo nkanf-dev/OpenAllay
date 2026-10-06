@@ -8,7 +8,7 @@ def module(name,path):
     spec=importlib.util.spec_from_file_location(name,path);m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m);return m
 def main():
     if os.environ.get('GITHUB_ACTIONS')!='true':raise ValueError('Remote only')
-    parser=argparse.ArgumentParser();parser.add_argument('--ui',action='store_true');parser.add_argument('--world',action='store_true');parser.add_argument('--persistence',action='store_true');parser.add_argument('--builder-call',action='store_true');args_cli=parser.parse_args()
+    parser=argparse.ArgumentParser();parser.add_argument('--ui',action='store_true');parser.add_argument('--world',action='store_true');parser.add_argument('--persistence',action='store_true');parser.add_argument('--builder-call',action='store_true');parser.add_argument('--builder-scenario',choices=['restricted','partial','cancel','undo'],default='restricted');args_cli=parser.parse_args()
     if args_cli.persistence:args_cli.world=True
     out=ROOT/('build/e2e/forge16165-product-builder' if args_cli.builder_call else 'build/e2e/forge16165-product-world' if args_cli.world else 'build/e2e/forge16165-product-ui' if args_cli.ui else 'build/e2e/forge16165-product');out.mkdir(parents=True,exist_ok=False)
     aid=11416338261;repo=os.environ['GITHUB_REPOSITORY'];metadata=json.loads(subprocess.check_output(['gh','api',f'repos/{repo}/actions/artifacts/{aid}']))
@@ -58,7 +58,7 @@ def main():
                 if hashlib.sha256(candidate).hexdigest()!='cbdeba2e7f9090241a3475fe958d819d728565dd916c121fbfac2782707eff32':raise ValueError('Candidate Builder bytes')
             extensions=config/'extensions';extensions.mkdir()
             (extensions/'openallay-builder-candidate.jar').write_bytes(candidate)
-            flags=['-Dopenallay.e2e.enabled=true','-Dopenallay.e2e.scenario=builder-restricted','-Dopenallay.e2e.question=OpenAllay E2E Builder restricted','-Dopenallay.e2e.session=e2e','-Dopenallay.e2e.modelMode=client','-Dopenallay.e2e.report='+str(out/'builder-report.json'),'-Dopenallay.e2e.trace='+str(out/'builder-trace.json'),'-Dopenallay.e2e.createWorld=openallay-builder-forge16-candidate','-Dopenallay.e2e.timeoutSeconds=300','-Dopenallay.e2e.shutdown=true']
+            flags=['-Dopenallay.e2e.enabled=true','-Dopenallay.e2e.scenario=builder-'+args_cli.builder_scenario,'-Dopenallay.e2e.question=OpenAllay E2E Builder '+args_cli.builder_scenario,'-Dopenallay.e2e.session=e2e','-Dopenallay.e2e.modelMode=client','-Dopenallay.e2e.report='+str(out/'builder-report.json'),'-Dopenallay.e2e.trace='+str(out/'builder-trace.json'),'-Dopenallay.e2e.createWorld=openallay-builder-forge16-candidate','-Dopenallay.e2e.timeoutSeconds=300','-Dopenallay.e2e.shutdown=true']
         command[1:1]=flags
         fixture_stream=(out/'model-fixture.log').open('w')
         fixture=subprocess.Popen([sys.executable,'-B',str(ROOT/'scripts/e2e-model-fixture.py'),'--port','18765'],stdout=fixture_stream,stderr=subprocess.STDOUT,start_new_session=True,env=env)
