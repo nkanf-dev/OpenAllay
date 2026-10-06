@@ -40,7 +40,27 @@ b.build_box(x+10,y+1,z+8,x+11,y+2,z+10,"minecraft:air");
 b.build_box(x+16,y+1,z+8,x+18,y+2,z+9,"minecraft:air");
 b.place_block(x+10,y+1,z+8,"minecraft:diamond_block");b.place_block(x+18,y+1,z+9,"minecraft:diamond_block");
 b.paste_structure(loaded,x+10,y+1,z+8,{rotation:90,mirror:"none",includeAir:true,replace:true});
-b.paste_structure(loaded,x+16,y+1,z+8,{rotation:0,mirror:"front_back",includeAir:true,replace:true});
+var mirrorBeforeStatus=b.status();
+try {
+    b.paste_structure(loaded,x+16,y+1,z+8,{rotation:0,mirror:"front_back",includeAir:true,replace:true});
+} catch (mirrorFailure) {
+    // Capture detached native status without replacing the original failed Tool.
+    var mirrorDiagnostic={stage:"template_front_back_paste",beforeStatus:mirrorBeforeStatus};
+    try { mirrorDiagnostic.status=b.status(); }
+    catch (statusFailure) { mirrorDiagnostic.statusObservationFailed=true; }
+    try { mirrorDiagnostic.operations=b.list_operations().filter(function(row){
+        return row.label==="OpenAllay E2E Builder legacy-shapes";
+    }); }
+    catch (journalFailure) { mirrorDiagnostic.journalObservationFailed=true; }
+    try {
+        var diagnosticTemplate=JSON.parse(JSON.stringify(loaded));
+        diagnosticTemplate.metadata={scenario:"builder_legacy_shapes_mirror_diagnostic",diagnostic:mirrorDiagnostic};
+        b.save_template(diagnosticTemplate,"openallay_e2e_legacy_mirror_diagnostic");
+    } catch (diagnosticPersistenceFailure) {
+        // Diagnostic I/O must never hide or change the original native failure.
+    }
+    throw mirrorFailure;
+}
 var positions=[{x:x+11,y:y+1,z:z+8},{x:x+11,y:y+1,z:z+10},{x:x+18,y:y+1,z:z+8},{x:x+16,y:y+1,z:z+8}];
 var readback=b.get_blocks(positions);
 var status=b.finish();
