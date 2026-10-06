@@ -17,47 +17,30 @@ def main():
     args=argparse.ArgumentParser();args.add_argument('--phase',choices=['scan','probe','pack'],required=True);args.add_argument('--reuse-shared',action='store_true');options=args.parse_args();phase=options.phase
     shared=ROOT/'build/forge36-shared';probe=PACKET/'probe';out=ROOT/'build/forge36-artifacts';out.mkdir(parents=True,exist_ok=True)
     if phase=='scan':
-        retained=ROOT/'build/forge36-retained-shared'
-        builder=ROOT/'build/forge36-retained-builder/builder-isolated.jar'
-        old_source='794a6b0fe0537371ea737eed4ce477b737f325e3'
-        run(['git','merge-base','--is-ancestor',old_source,'HEAD'])
+        source='4fafdc22a1e18d0601388b3c3c8497d89c1cf012'
+        run(['git','merge-base','--is-ancestor',source,'HEAD'])
+        changed=subprocess.check_output(['git','diff','--name-only',source,'HEAD'],cwd=ROOT,text=True).splitlines()
+        allowed={'.github/workflows/minecraft-native.yml',
+            'scripts/forge16165-engine-prerequisite/build-prerequisite.py',
+            'scripts/forge16165-engine-prerequisite/probe/src/main/java/dev/openallay/forge36probe/Probe.java',
+            'scripts/forge16165-engine-prerequisite/collect-engine-prerequisite.py'}
+        if any(path not in allowed for path in changed):
+            raise ValueError('Retained logging engine inputs changed beyond probe/orchestration source')
         repository=os.environ['GITHUB_REPOSITORY']
-        for artifact_id,run_id,source,expected in [
-            (11395936631,37428024273,old_source,'sha256:baa4f3ef51e19ac6dc8f7a486686cb5023334a7d06ae7126ad67fdec741023bd'),
-            (11395574649,37429372559,'41243d95af42217468e9ca62f703889ab292d5e8','sha256:0495603d813ee58437d6976c36399e340d09c75458ceb2dce399ac9f11065e8e')]:
-            artifact=json.loads(subprocess.check_output(['gh','api',f'repos/{repository}/actions/artifacts/{artifact_id}']))
-            if (artifact['expired'] or artifact['workflow_run']['id']!=run_id
-                    or artifact['workflow_run']['head_sha']!=source or artifact['digest']!=expected):
-                raise ValueError('Immutable input provider identity differs')
-        original_spec=json.loads((retained/'closure-input.json').read_text())
-        for entry in original_spec['artifacts']:
-            path=retained/(entry['role']+'.jar')
-            if digest(path)!=entry['sha256']:raise ValueError('Retained component bytes differ')
-        provenance=json.loads((ROOT/'build/forge36-retained-builder/builder-isolation-provenance.json').read_text())
-        if (provenance['source']!='e37eb4f325d6917b2a0b32afc47dd139a55acb83'
-                or digest(builder)!=provenance['candidateBuilder']['sha256']
-                or provenance['retainedSdkSha256']!=digest(retained/'sdk.jar')):
-            raise ValueError('Builder package/source/SDK identity differs')
-        # Source-owned SDK/Rhino bytes have no mandatory SLF4J linkage. SQLite retains its own optional fallback.
-        for role in ['sdk','rhino']:
-            with zipfile.ZipFile(retained/(role+'.jar')) as jar:
-                if any(b'org/slf4j/' in jar.read(name) for name in jar.namelist() if name.endswith('.class')):
-                    raise ValueError('Unexpected retained component SLF4J linkage: '+role)
-        source=subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip()
-        request=out/'engine-only-inputs.json'
-        request.write_text(json.dumps({'sourceRoot':str(ROOT),'sourceRevision':source,
-            'retainedDirectory':str(retained),'builderJar':str(builder)},indent=2)+'\n')
-        run([str(ROOT/'gradlew'),'--max-workers=2','--stacktrace','--project-dir',str(ROOT/'native-builds/engine-only'),
-             '-PengineOnlyInputs='+str(request),':engine-core:exportEngineOnlyClosure'])
+        artifact=json.loads(subprocess.check_output(['gh','api',f'repos/{repository}/actions/artifacts/11397973030']))
+        if (artifact['expired'] or artifact['workflow_run']['id']!=37433650018
+                or artifact['workflow_run']['head_sha']!=source
+                or artifact['digest']!='sha256:7951228b7dba15097bcdf9cd50ab9b1fb28559da8a7f110e4ca334b91d2e33cf'):
+            raise ValueError('Retained changed-engine archive provider identity differs')
         spec=json.loads((shared/'closure-input.json').read_text())
-        if len(spec['artifacts'])!=18 or any(entry['role']=='slf4j' for entry in spec['artifacts']):
-            raise ValueError('New effective closure role set differs')
-        (out/'engine-component-provenance.json').write_text(json.dumps({'actualEngineSource':source,
-            'retainedSharedSource':old_source,'retainedSharedArtifact':11395936631,
-            'candidateBuilderSource':provenance['source'],'candidateBuilderArtifact':11395574649,
-            'ownedSdkRhinoSlf4jClassReferences':'none in retained class bytes',
-            'newEngine':next(entry for entry in spec['artifacts'] if entry['role']=='engine'),
-            'otherInputs':'exact retained hashes, normal resolved classpath verified by producer'},indent=2)+'\n')
+        if spec['sourceRevision']!=source or len(spec['artifacts'])!=18:
+            raise ValueError('Retained logging engine producer manifest differs')
+        for entry in spec['artifacts']:
+            if digest(entry['path'])!=entry['sha256']:
+                raise ValueError('Retained closure artifact bytes differ: '+entry['role'])
+        (out/'logging-input-reuse.json').write_text(json.dumps({'source':source,'run':37433650018,
+            'artifact':11397973030,'currentProbeRunnerSource':os.environ['GITHUB_SHA'],
+            'compiledInputsUnchanged':True,'originalRunOutcome':'FAIL; producer stages passed'},indent=2)+'\n')
         run(['python3','-B',str(PACKET/'pack.py'),'scan','--spec',str(shared/'closure-input.json'),
              '--report',str(out/'closure-scan.json')])
     elif phase=='probe':

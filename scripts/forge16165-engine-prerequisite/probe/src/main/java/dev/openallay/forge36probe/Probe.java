@@ -225,9 +225,58 @@ public final class Probe {
         throw new AssertionError("Accepted malformed " + message);
     }
     private static void check(boolean condition, String message) { if (!condition) throw new AssertionError(message); }
+    private static java.net.URL sourceUrl(Class<?> type) {
+        var source = type.getProtectionDomain().getCodeSource();
+        check(source != null && source.getLocation() != null, "class CodeSource " + type.getName());
+        return source.getLocation();
+    }
     private static Path archive(Class<?> type) throws Exception {
-        Path path = Path.of(type.getProtectionDomain().getCodeSource().getLocation().toURI()).toRealPath();
+        java.net.URL source = sourceUrl(type);
+        Path path;
+        boolean owned = type.getName().startsWith("dev.openallay.")
+                || type.getName().startsWith("dev.latvian.mods.rhino.");
+        if (owned) {
+            check(source.getProtocol().equals("modjar"), "owned normal Forge CodeSource " + source);
+            // Forge36 CodeSource uses the normal modjar URL handler, not a NIO filesystem.
+            check(source.getHost().equals("openallay_engine_probe") && source.getPath().isEmpty()
+                    && source.getPort() == -1 && source.getUserInfo() == null
+                    && source.getQuery() == null && source.getRef() == null, "sole modjar CodeSource " + source);
+            var info = net.minecraftforge.fml.ModList.get().getModFileById(source.getHost());
+            check(info != null, "normal Forge mod file " + source.getHost());
+            path = info.getFile().getFilePath().toRealPath();
+            Path installed = Path.of(System.getProperty("oa36.mod")).toRealPath();
+            check(path.equals(installed), "Forge mod file equals collector-installed archive");
+        } else {
+            check(source.getProtocol().equals("file"), "official host file CodeSource " + source);
+            path = Path.of(source.toURI()).toRealPath();
+        }
         check(Files.isRegularFile(path), "normal archive code source " + type.getName()); return path;
+    }
+    private static JsonObject modEntryProof(Class<?> type, Path owner) throws Exception {
+        String entry = type.getName().replace('.', '/') + ".class";
+        java.net.URL resource = type.getResource("/" + entry);
+        check(resource != null && resource.getProtocol().equals("modjar")
+                && resource.getHost().equals(sourceUrl(type).getHost())
+                && resource.getPath().equals("/" + entry) && resource.getPort() == -1
+                && resource.getUserInfo() == null && resource.getQuery() == null && resource.getRef() == null,
+                "normal modjar class resource " + type.getName());
+        byte[] resourceBytes;
+        try (var stream = resource.openStream()) { resourceBytes = stream.readAllBytes(); }
+        byte[] archiveBytes;
+        try (var jar = new java.util.zip.ZipFile(owner.toFile())) {
+            var member = jar.getEntry(entry);
+            check(member != null && !member.isDirectory(), "sole archive class entry " + entry);
+            try (var stream = jar.getInputStream(member)) { archiveBytes = stream.readAllBytes(); }
+        }
+        check(java.util.Arrays.equals(resourceBytes, archiveBytes), "normal resource bytes match sole archive " + entry);
+        JsonObject proof = new JsonObject();
+        proof.addProperty("classResourceURL", resource.toExternalForm());
+        proof.addProperty("archiveEntry", entry);
+        proof.addProperty("classResourceSha256", HexFormat.of().formatHex(
+                MessageDigest.getInstance("SHA-256").digest(resourceBytes)));
+        proof.addProperty("archiveEntrySha256", HexFormat.of().formatHex(
+                MessageDigest.getInstance("SHA-256").digest(archiveBytes)));
+        return proof;
     }
     private static void soleOwner(Class<?> type) throws Exception {
         check(type.getClassLoader() == Probe.class.getClassLoader(), "normal mod loader " + type.getName());
@@ -269,9 +318,18 @@ public final class Probe {
         void detail(String key, String value) { current.getAsJsonObject("details").addProperty(key, value); }
         void detail(String key, com.google.gson.JsonElement value) { current.getAsJsonObject("details").add(key, value); }
         void identity(Class<?> type) throws Exception {
-            JsonObject value = new JsonObject(); Path owner = archive(type);
+            JsonObject value = new JsonObject();
             value.addProperty("class", type.getName()); value.addProperty("loader", type.getClassLoader().toString());
             value.addProperty("loaderIdentity", System.identityHashCode(type.getClassLoader()));
+            value.addProperty("rawCodeSourceURL", sourceUrl(type).toExternalForm());
+            detail(type.getName(), value);
+            Path owner = archive(type);
+            if (sourceUrl(type).getProtocol().equals("modjar")) {
+                value.add("modEntryProof", modEntryProof(type, owner));
+                value.addProperty("originKind", "forge-modjar");
+            } else {
+                value.addProperty("originKind", "official-host-file");
+            }
             String ownerHash = archiveHashes.get(owner);
             if (ownerHash == null) { ownerHash = hash(owner); archiveHashes.put(owner, ownerHash); }
             value.addProperty("codeSource", owner.toString()); value.addProperty("archiveSha256", ownerHash);

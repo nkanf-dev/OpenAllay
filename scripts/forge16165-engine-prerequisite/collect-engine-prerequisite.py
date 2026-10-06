@@ -14,6 +14,8 @@ import subprocess
 import sys
 import time
 import traceback
+import zipfile
+from urllib.parse import unquote, urlsplit
 
 PACKET = Path(__file__).resolve().parent
 STAGES = ["identity", "engine-logging", "bound-engine-json", "json-trees-readers", "engine-rhino-record-schema",
@@ -44,7 +46,7 @@ def terminal(text):
     return None
 
 
-def read_receipt(path, fatmod_hash, classpath, expected_pid=None, client_log=None):
+def read_receipt(path, fatmod_hash, classpath, expected_pid=None, client_log=None, installed_mod=None):
     value = json.loads(path.read_text())
     if value.get("prerequisiteOnly") is not True or value.get("fullNativeSupport") is not False:
         raise ValueError("Receipt must describe only the engine prerequisite")
@@ -67,12 +69,36 @@ def read_receipt(path, fatmod_hash, classpath, expected_pid=None, client_log=Non
                   ("dev.openallay.logging.OpenAllayLogger", 61)]
         loader = identity[shared[0][0]]["loaderIdentity"]
         mod_source = identity[shared[0][0]]["codeSource"]
+        if installed_mod is None or mod_source != str(installed_mod.resolve()):
+            raise ValueError("Forge public mod path differs from collector-installed archive")
+        raw_mod_source = "modjar://openallay_engine_probe"
+        expected_entries = {}
+        with zipfile.ZipFile(installed_mod) as archive:
+            for name in [item[0] for item in shared] + ["dev.openallay.builder.BuilderExtension"]:
+                content = archive.read(name.replace(".", "/") + ".class")
+                if len(content) < 8 or content[:4] != b"\xca\xfe\xba\xbe":
+                    raise ValueError("Invalid class header in installed archive: " + name)
+                expected_entries[name] = (hashlib.sha256(content).hexdigest(), int.from_bytes(content[6:8], "big"))
+        def require_mod_origin(name, item):
+            entry = name.replace(".", "/") + ".class"
+            proof = item.get("modEntryProof", {})
+            digest = proof.get("classResourceSha256", "")
+            if (item.get("originKind") != "forge-modjar"
+                    or item.get("rawCodeSourceURL") != raw_mod_source
+                    or proof.get("classResourceURL") != raw_mod_source + "/" + entry
+                    or proof.get("archiveEntry") != entry
+                    or len(digest) != 64 or any(c not in "0123456789abcdef" for c in digest)
+                    or proof.get("archiveEntrySha256") != digest or digest != expected_entries[name][0]
+                    or item.get("classMajor") != expected_entries[name][1]):
+                raise ValueError("Normal Forge class origin/entry proof differs: " + name)
         for name, major in shared:
             item = identity[name]
+            require_mod_origin(name, item)
             if (item["classMajor"] != major or item["archiveSha256"] != fatmod_hash
                     or item["loaderIdentity"] != loader or item["codeSource"] != mod_source):
                 raise ValueError("Shared ordinary mod identity differs: " + name)
         builder = stages[-1]["details"]["dev.openallay.builder.BuilderExtension"]
+        require_mod_origin("dev.openallay.builder.BuilderExtension", builder)
         if (builder["classMajor"] != 52 or builder["archiveSha256"] != fatmod_hash
                 or builder["loaderIdentity"] != loader or builder["codeSource"] != mod_source):
             raise ValueError("Builder sole SDK/mod identity differs")
@@ -81,6 +107,11 @@ def read_receipt(path, fatmod_hash, classpath, expected_pid=None, client_log=Non
                                  ("com.google.common.collect.ImmutableList", "com.google.guava:guava:21.0"),
                                  ("org.apache.logging.log4j.Logger", "org.apache.logging.log4j:log4j-api:2.15.0")]:
             item = identity[name]
+            raw_host = urlsplit(item.get("rawCodeSourceURL", ""))
+            if (item.get("originKind") != "official-host-file" or raw_host.scheme != "file"
+                    or raw_host.netloc or raw_host.query or raw_host.fragment
+                    or Path(unquote(raw_host.path)).resolve() != Path(item["codeSource"]).resolve()):
+                raise ValueError("Original host file CodeSource URL differs: " + name)
             actual = origins.get((item["codeSource"], item["archiveSha256"]))
             if actual is None or item["archiveSha256"] == fatmod_hash:
                 raise ValueError("Host origin is not an unchanged official classpath archive: " + name)
@@ -163,7 +194,7 @@ def boot(args, root, java, assets, stock, runtime, launch, expected, vanilla, ve
     jvm = launch.expand_arguments(vanilla["arguments"]["jvm"], values, features) + stock.FLAGS
     game_args = launch.expand_arguments(vanilla["arguments"]["game"], values, features) + version["arguments"]["game"]
     probe_receipt = output / "probe-receipt.json"
-    command = [str(java), "-Xms256M", "-Xmx1536M", "-Doa36.receipt=" + str(probe_receipt),
+    command = [str(java), "-Xms256M", "-Xmx1536M", "-Doa36.receipt=" + str(probe_receipt), "-Doa36.mod=" + str(installed.resolve()),
                "-Xlog:class+load=info:file=" + str(output / "class-load.log")] + jvm + [stock.MAIN] + game_args
     env = {k: v for k, v in os.environ.items() if k not in
            ("JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "_JAVA_OPTIONS", "CLASSPATH", "DISPLAY")}
@@ -193,7 +224,7 @@ def boot(args, root, java, assets, stock, runtime, launch, expected, vanilla, ve
                 outcome = collect(process, log, args.timeout)
                 receipt["terminalCollection"] = outcome
                 if outcome in ("probe-pass-marker", "probe-failure-marker"):
-                    proof = read_receipt(probe_receipt, args.mod_sha256, classpath, process.pid, log)
+                    proof = read_receipt(probe_receipt, args.mod_sha256, classpath, process.pid, log, installed)
                     expected_status = "PASS" if outcome == "probe-pass-marker" else "FAIL"
                     runtime.require(proof["status"] == expected_status, "Terminal marker and receipt disagree")
                     receipt["status"] = expected_status

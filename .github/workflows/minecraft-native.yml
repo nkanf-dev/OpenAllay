@@ -27,32 +27,17 @@ jobs:
         with:
           cache-provider: basic
           cache-read-only: true
-      - name: Retrieve the unchanged compiled shared closure
+      - name: Retrieve the unchanged logging engine and component closure
         uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
         with:
           github-token: ${{ github.token }}
-          run-id: 37428024273
-          artifact-ids: 11395936631
-          path: build/forge36-retained-shared
-      - name: Retrieve the already isolated immutable Builder component
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
-        with:
-          github-token: ${{ github.token }}
-          run-id: 37429372559
-          artifact-ids: 11395574649
-          path: build/forge36-retained-builder
-      - name: Produce only the changed engine from retained component inputs
+          run-id: 37433650018
+          artifact-ids: 11397973030
+          path: build/forge36-shared
+      - name: Verify all immutable logging-engine inputs
         env:
           GH_TOKEN: ${{ github.token }}
         run: python3 -B scripts/forge16165-engine-prerequisite/build-prerequisite.py --phase scan --reuse-shared
-      - name: Retain changed engine output independently of subsequent gates
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: forge36-logging-engine-${{ github.sha }}-${{ github.run_attempt }}
-          retention-days: 14
-          if-no-files-found: ignore
-          path: build/forge36-shared/
       - name: Compile and reobfuscate only the genuine Forge36 probe
         run: python3 -B scripts/forge16165-engine-prerequisite/build-prerequisite.py --phase probe
       - name: Retain the tiny probe producer before any packing or client boundary
