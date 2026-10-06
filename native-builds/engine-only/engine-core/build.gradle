@@ -277,10 +277,10 @@ tasks.register('exportEngineOnlyClosure') {
 }
 
 // Only changed bridge/custody call-chain tests. Production closure verification stays separate.
-if (providers.gradleProperty('focusedBridgeTests').isPresent()) {
+if (providers.gradleProperty('focusedBridgeTests').isPresent() || providers.gradleProperty('focusedNativeSeamTests').isPresent()) {
     sourceSets.test.java.setSrcDirs([new File(source, 'engine-core/src/test/java'),
             new File(source, 'engine-core/src/testFixtures/java')])
-    sourceSets.test.java.setIncludes(['dev/openallay/bridge/server/RemoteToolServerTest.java', 'dev/openallay/bridge/RemoteToolBridgeTest.java', 'dev/openallay/bridge/server/ServerBoundDispatchTest.java', 'dev/openallay/bridge/PlayerClientToolRouterTest.java', 'dev/openallay/server/ServerClientToolAgentTest.java', 'dev/openallay/server/ServerCancellationCorrelationTest.java', 'dev/openallay/bridge/ClientToolImageTransportTest.java', 'dev/openallay/testing/GroundedTestFixtures.java'])
+    sourceSets.test.java.setIncludes(providers.gradleProperty('focusedNativeSeamTests').isPresent() ? ['dev/openallay/client/gui/GuideWidgetInputTest.java', 'dev/openallay/command/GuideCommandSpecTest.java', 'dev/openallay/command/DevelopmentCommandSpecTest.java'] : ['dev/openallay/bridge/server/RemoteToolServerTest.java', 'dev/openallay/bridge/RemoteToolBridgeTest.java', 'dev/openallay/bridge/server/ServerBoundDispatchTest.java', 'dev/openallay/bridge/PlayerClientToolRouterTest.java', 'dev/openallay/server/ServerClientToolAgentTest.java', 'dev/openallay/server/ServerCancellationCorrelationTest.java', 'dev/openallay/bridge/ClientToolImageTransportTest.java', 'dev/openallay/testing/GroundedTestFixtures.java'])
     dependencies {
         testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
         testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.11.4'
