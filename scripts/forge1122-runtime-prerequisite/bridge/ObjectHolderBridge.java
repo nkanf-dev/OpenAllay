@@ -66,8 +66,19 @@ public final class ObjectHolderBridge {
                     return patched;
                 } catch (Throwable error) {
                     error.printStackTrace();
-                    Runtime.getRuntime().halt(78);
-                    return null;
+                    try {
+                        java.nio.file.Path directory=Paths.get(System.getProperty("openallay.objectholder.rejected"));
+                        Files.createDirectories(directory);
+                        String simple=name.substring(name.lastIndexOf('/')+1);
+                        Files.write(directory.resolve(simple+".class"),bytes);
+                        String receipt="{\"target\":\""+name+"\",\"sha256\":\""+sha(bytes)
+                            +"\",\"originalCodeSource\":\""+domain.getCodeSource().getLocation().toExternalForm()
+                            +"\",\"stockLaunchClassLoader\":true,\"accepted\":false,\"error\":\""+error.getMessage()+"\"}\n";
+                        Files.write(directory.resolve(simple+".json"),receipt.getBytes(StandardCharsets.UTF_8));
+                    } catch(Exception captureError) { captureError.printStackTrace(); }
+                    // FMLSecurityManager can reject Runtime.halt. Returning invalid bytes forces ClassFormatError,
+                    // never the instrumentation exception-to-original fallback. Coordinator also marks failure.
+                    return new byte[]{0};
                 }
             }
         }, false);

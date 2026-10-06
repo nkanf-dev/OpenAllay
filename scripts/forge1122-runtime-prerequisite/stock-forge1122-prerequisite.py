@@ -344,6 +344,7 @@ def boot(args, root, java, assets, runtime, launch, expected, vanilla, version):
     objectholder_flags = (["-Dopenallay.objectholder.enabled=true",
         "-Dopenallay.objectholder.client=" + str(root / "versions/1.12.2/1.12.2.jar"),
         "-Dopenallay.objectholder.fields=" + str(output / "objectholder-fields.tsv"),
+        "-Dopenallay.objectholder.rejected=" + str(output / "objectholder-rejected"),
         "-Dopenallay.objectholder.writes=" + str(output / "objectholder-writes.tsv"),
         "-Dopenallay.objectholder.metadata=" + str(output / "objectholder-metadata.tsv"),
         "-Dopenallay.objectholder.transformReceipt=" + str(output / "objectholder-transform.jsonl")]
@@ -399,6 +400,9 @@ def boot(args, root, java, assets, runtime, launch, expected, vanilla, version):
         diagnostics["objectHolderPopulatedReadbackCount"] = len(writes.read_text().splitlines()) if writes.exists() else 0
         diagnostics["objectHolderRegistryApplied"] = "Holder lookups applied" in text
     runtime.write_json(output / "diagnostics.json", diagnostics)
+    if args.objectholder_bridge and (output / "objectholder-rejected").exists():
+        receipt["status"]="fatal-rejected-objectholder-phase-input"
+        runtime.write_json(output / "receipt.json",receipt)
     # A window or screenshot alone is not a title-success claim.
     return 0 if receipt["status"] == "captured-awaiting-title-review" else 1
 

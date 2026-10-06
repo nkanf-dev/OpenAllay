@@ -359,6 +359,7 @@ jobs:
             build/e2e/forge1122-stock/*.png
             build/e2e/forge1122-stock/*.tsv
             build/e2e/forge1122-stock/*.jsonl
+            build/e2e/forge1122-stock/objectholder-rejected/
             build/e2e/forge1122-stock/bridge-tests.log
             build/e2e/forge1122-stock/game/logs/
             build/e2e/forge1122-stock/game/crash-reports/
