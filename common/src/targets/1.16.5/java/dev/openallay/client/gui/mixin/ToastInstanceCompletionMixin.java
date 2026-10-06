@@ -17,8 +17,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(targets = "net.minecraft.client.gui.components.toasts.ToastComponent$ToastInstance")
 public abstract class ToastInstanceCompletionMixin {
     @Shadow @Final private Toast toast;
-    // The actual inner instance owns this synthetic outer field (named mapping and bytecode agree).
-    @Shadow(remap = false) @Final ToastComponent this$0;
+    // The official production SRG mapping names the synthetic outer reference field_193691_e.
+    @Shadow(remap = false) @Final ToastComponent field_193691_e;
 
     // The only Toast.height invocation in render is bytecode 97, multiplied by nativeIndex at 102.
     @Redirect(method = "render(IILcom/mojang/blaze3d/vertex/PoseStack;)Z",
@@ -41,7 +41,7 @@ public abstract class ToastInstanceCompletionMixin {
             org.lwjgl.opengl.GL11.glGetFloatv(org.lwjgl.opengl.GL11.GL_MODELVIEW_MATRIX, matrix);
             top = matrix.get(13);
         }
-        ((dev.openallay.guide.e2e.GuideNativeEditorE2EProbe.ToastReadback) this$0)
+        ((dev.openallay.guide.e2e.GuideNativeEditorE2EProbe.ToastReadback) field_193691_e)
                 .openallay$observePaint(toast, top);
     }
 
@@ -49,6 +49,6 @@ public abstract class ToastInstanceCompletionMixin {
             require = 1, expect = 1, allow = 1)
     private void openallay$stageRemoval(int guiWidth, int nativeIndex, PoseStack graphics,
                                       CallbackInfoReturnable<Boolean> callback) {
-        if (callback.getReturnValueZ()) ((GuideToastSlotManager) this$0).openallay$stageNativeRemoval(toast, nativeIndex);
+        if (callback.getReturnValueZ()) ((GuideToastSlotManager) field_193691_e).openallay$stageNativeRemoval(toast, nativeIndex);
     }
 }
