@@ -39,6 +39,7 @@ CLASSES = (
     'net.minecraftforge.fml.common.network.internal.FMLProxyPacket',
     'net.minecraftforge.client.event.ClientChatReceivedEvent',
     'net.minecraftforge.client.event.RenderGameOverlayEvent$Pre',
+    'net.minecraftforge.client.event.RenderGameOverlayEvent','net.minecraftforge.client.event.RenderGameOverlayEvent$ElementType',
     'net.minecraftforge.client.ClientCommandHandler',
     'net.minecraft.client.resources.IReloadableResourceManager',
     'net.minecraft.client.resources.IResourceManagerReloadListener','net.minecraft.client.resources.IResourceManager',
