@@ -10,7 +10,7 @@ import dev.openallay.settings.requirement.RequirementReview;
 import dev.openallay.tool.ToolResult;
 import java.util.Objects;
 import dev.openallay.client.gui.GuideGraphics;
-import net.minecraft.client.gui.components.Button;
+import dev.openallay.client.gui.GuideNativeButton;
 import net.minecraft.client.gui.screens.Screen;
 import dev.openallay.client.gui.GuideInputKey;
 import dev.openallay.platform.minecraft.MinecraftComponents;
@@ -119,14 +119,14 @@ public final class RequirementReviewScreen extends dev.openallay.client.gui.Guid
         int x = left();
         int w = panelWidth();
         int half = (w - 6) / 2;
-        Button cancel = addGuideWidget(OpenAllayButton.create(
+        GuideNativeButton cancel = addGuideWidget(OpenAllayButton.create(
                         MinecraftComponents.translatable(PREFIX + "cancel"), ignored -> {
                             if (confirming == null) onClose();
                             else { confirming = null; scroll = 0; guideRebuildWidgets(); }
                         })
                 .bounds(x, height - 29, half, 20).build());
         cancel.active = !actionPending;
-        Button proceed = addGuideWidget(OpenAllayButton.create(
+        GuideNativeButton proceed = addGuideWidget(OpenAllayButton.create(
                         MinecraftComponents.translatable(confirming == null
                                 ? projection().continueKey() : PREFIX + "confirm_enable"),
                         ignored -> {
@@ -196,7 +196,7 @@ public final class RequirementReviewScreen extends dev.openallay.client.gui.Guid
                             MinecraftComponents.translatable(row.kindKey()), MinecraftComponents.literal(row.id())),
                             x, y + 4, w, MUTED);
                     if (buttons) {
-                        Button enable = addGuideWidget(OpenAllayButton.create(
+                        GuideNativeButton enable = addGuideWidget(OpenAllayButton.create(
                                         MinecraftComponents.translatable(PREFIX + "enable", MinecraftComponents.literal(row.id())),
                                         ignored -> requestEnable(row))
                                 .bounds(x, y + 4, w, 20).build());

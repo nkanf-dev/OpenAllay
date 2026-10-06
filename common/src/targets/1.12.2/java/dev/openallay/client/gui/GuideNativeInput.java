@@ -42,6 +42,7 @@ public final class GuideNativeInput {
     public static boolean mouseDragged(GuideWidgetInput widget, GuideInputMouse event, double dx, double dy) { return widget.guideMouseDragged(event, dx, dy); }
     public static boolean mouseReleased(GuideWidgetInput widget, GuideInputMouse event) { return widget.guideMouseReleased(event); }
     public static void releaseTextFocus(GuideWidgetInput widget) { widget.guideSetFocused(false); }
+    public static void press(GuideNativeButton button, GuideInputKey event) { button.onPress(); }
     public static String keyEventType() { return "GuiScreen.keyTyped(char,int)/Keyboard"; }
     public static String mouseEventType() { return "GuiScreen.mouseClicked(int,int,int)/Mouse"; }
     public static String characterEventType() { return "GuiScreen.keyTyped(char,int)"; }

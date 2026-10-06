@@ -26,6 +26,9 @@ public abstract class GuideNativeScreen extends GuideNativeScreenCallbacks {
         super.setWorldAndResolution(client, width, height);
     }
     protected final <T extends GuiButton> T addGuideWidget(T widget) { return super.addButton(widget); }
+    @Override protected void actionPerformed(GuiButton button) {
+        if (button instanceof GuideNativeButton guideButton) guideButton.onPress();
+    }
     @Override protected final void paintNativeGuideScreen(int mouseX, int mouseY, float partialTicks) {
         if (paintGraphics != null) throw new IllegalStateException("Screen paint is already active");
         GuideGraphics graphics = GuideGraphics.wrap();

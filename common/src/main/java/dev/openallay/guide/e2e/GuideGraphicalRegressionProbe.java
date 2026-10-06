@@ -49,7 +49,7 @@ import java.util.function.Supplier;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Screenshot;
-import net.minecraft.client.gui.components.Button;
+import dev.openallay.client.gui.GuideNativeButton;
 import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.client.gui.components.EditBox;
 import dev.openallay.client.gui.GuideMultilineEditor;
@@ -526,7 +526,7 @@ final class GuideGraphicalRegressionProbe {
             case 46 -> {
                 expectedName = "小羽 · 返回保存";
                 nameEditor().setValue(expectedName);
-                Button back = findButton("screen.openallay.settings.back", false);
+                GuideNativeButton back = findButton("screen.openallay.settings.back", false);
                 require(back != null, "Native narrow Back button is not visible");
                 report.put("narrowBack", Map.of("visible", true, "guiWidth", settingsScreen().width,
                         "guiHeight", settingsScreen().height, "guiScale", dev.openallay.platform.minecraft.MinecraftOptions.guiScale(client.options)));
@@ -1166,7 +1166,7 @@ final class GuideGraphicalRegressionProbe {
                 if (!readerGuideReopenReady()) return;
                 requireReaderGuideReopenOwner();
                 liveGuideReopen.consume(() -> MinecraftClientWindow.screen(client), screen -> {
-                    Button button = findButton(screen, "screen.openallay.settings.short", true);
+                    GuideNativeButton button = findButton(screen, "screen.openallay.settings.short", true);
                     require(button != null, "Reopened Guide lost its initialized Settings button");
                     GuideNativeInput.press(button, GuideNativeInput.keyEvent(dev.openallay.client.gui.GuideInputCodes.KEY_RETURN, 0));
                     recordAction("native-button", "screen.openallay.settings.short");
@@ -1518,7 +1518,7 @@ final class GuideGraphicalRegressionProbe {
         var state = (dev.openallay.client.gui.GuideClientUiState) readField(screen, "state");
         String sessionId = (String) readField(screen, "session");
         var intent = state.intent(sessionId);
-        Button actualSend = (Button) readField(screen, "send");
+        GuideNativeButton actualSend = (GuideNativeButton) readField(screen, "send");
         Map<String, Object> diagnostic = new LinkedHashMap<>();
         diagnostic.put("sessionId", sessionId);
         diagnostic.put("expectedFixtureDraft", LIVE_FOLLOW_UP + " reader-new-content");
@@ -1695,7 +1695,7 @@ final class GuideGraphicalRegressionProbe {
     }
 
     private void clickHudCaseButton(String key) {
-        Button button = findButton(key, false);
+        GuideNativeButton button = findButton(key, false);
         require(button != null, "Actual visible enabled HUD case button unavailable: " + key);
         Screen screen = MinecraftClientWindow.screen(client);
         double x = dev.openallay.client.gui.GuideNativeWidgetGeometry.x(button) + button.getWidth() / 2.0;
@@ -1941,14 +1941,14 @@ final class GuideGraphicalRegressionProbe {
         }
     }
 
-    private Button findButton(String key, boolean prefix) {
+    private GuideNativeButton findButton(String key, boolean prefix) {
         return findButton(MinecraftClientWindow.screen(client), key, prefix);
     }
 
-    private Button findButton(Screen screen, String key, boolean prefix) {
+    private GuideNativeButton findButton(Screen screen, String key, boolean prefix) {
         require(screen != null, "Actual native button owner is unavailable: " + key);
         String text = MinecraftComponents.translatable(key).getString();
-        return screen.children().stream().filter(Button.class::isInstance).map(Button.class::cast)
+        return screen.children().stream().filter(GuideNativeButton.class::isInstance).map(GuideNativeButton.class::cast)
                 .filter(value -> value.visible && value.active)
                 .filter(value -> value.getMessage().getString().equals(text)
                         || prefix && value.getMessage().getString().startsWith(text + " · "))
@@ -1956,7 +1956,7 @@ final class GuideGraphicalRegressionProbe {
     }
 
     private void press(String key) {
-        Button button = findButton(key, true);
+        GuideNativeButton button = findButton(key, true);
         require(button != null, "Actual visible enabled native button unavailable: " + key);
         GuideNativeInput.press(button, GuideNativeInput.keyEvent(dev.openallay.client.gui.GuideInputCodes.KEY_RETURN, 0));
         recordAction("native-button", key);

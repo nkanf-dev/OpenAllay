@@ -2,7 +2,7 @@ package dev.openallay.client.gui;
 
 import java.util.Objects;
 import dev.openallay.client.gui.GuideGraphics;
-import net.minecraft.client.gui.components.Button;
+import dev.openallay.client.gui.GuideNativeButton;
 import dev.openallay.client.gui.GuideTooltip;
 import net.minecraft.network.chat.Component;
 

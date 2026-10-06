@@ -33,7 +33,7 @@ import dev.openallay.tool.ToolResult;
 import java.util.List;
 import java.util.Objects;
 import dev.openallay.client.gui.GuideGraphics;
-import net.minecraft.client.gui.components.Button;
+import dev.openallay.client.gui.GuideNativeButton;
 import dev.openallay.client.gui.GuideMultilineEditor;
 import dev.openallay.client.gui.GuideTooltip;
 import net.minecraft.client.gui.screens.Screen;
@@ -49,10 +49,10 @@ public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNat
     private GuideObservationInputActions observationActions;
     private GuideObservationSubmission observationSubmission;
     private boolean observationCapturing;
-    private Button observationRefresh;
-    private Button observationRemove;
-    private Button observationAttach;
-    private Button observationRemoveImage;
+    private GuideNativeButton observationRefresh;
+    private GuideNativeButton observationRemove;
+    private GuideNativeButton observationAttach;
+    private GuideNativeButton observationRemoveImage;
     private GuideUiLayout.Rect observationBounds;
     private final GuideDisplayRuntime display;
     private final Runnable openFullscreen;
@@ -65,17 +65,17 @@ public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNat
     private GuideUiLayout.Rect scrollbar;
     private boolean draggingScrollbar;
     private int focusedResult = -1;
-    private Button latest;
-    private Button back;
-    private Button voiceDrafts;
+    private GuideNativeButton latest;
+    private GuideNativeButton back;
+    private GuideNativeButton voiceDrafts;
     private long presentationTicks;
     private boolean initialResults = true;
     private GuideClientUiState.ViewAttachment attachment;
     private GuideMultilineEditor composer;
-    private Button send;
-    private Button stop;
-    private Button mic;
-    private Button intentAction;
+    private GuideNativeButton send;
+    private GuideNativeButton stop;
+    private GuideNativeButton mic;
+    private GuideNativeButton intentAction;
     private GuideSnapshot projectedSnapshot;
     private GuideHudView view;
     private String session;
@@ -259,7 +259,7 @@ public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNat
             if (mic != null) mic.visible = false;
             // Native children still retain the draft. At physically impossible sizes none can
             // paint or take focus outside the card, and Escape still returns immediately.
-            children().forEach(child -> { if (child instanceof Button button) button.visible = false; });
+            children().forEach(child -> { if (child instanceof GuideNativeButton button) button.visible = false; });
         }
         setFocused(null);
         project();
