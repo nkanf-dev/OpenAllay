@@ -54,6 +54,8 @@ public final class ClientFocusCapture {
         details.put("minecraft:dimension", dimension);
         details.put("minecraft:camera_source", "minecraft:main_camera");
         details.put("minecraft:target_source", "minecraft:client_hit_result");
+        String menuKeyDiagnostic = dev.openallay.client.observation.GuideNativeMenuKeyObservation.diagnostic();
+        if (!menuKeyDiagnostic.isEmpty()) details.put("minecraft:menu_key_observation", menuKeyDiagnostic);
         String hitAvailability = dev.openallay.client.observation.MinecraftHitFacts.availability();
         if (!hitAvailability.isEmpty()) details.put("minecraft:hit_availability", hitAvailability);
         details.put("minecraft:component_scope", dev.openallay.context.minecraft.MinecraftItemDataFacts.persistentScope());
