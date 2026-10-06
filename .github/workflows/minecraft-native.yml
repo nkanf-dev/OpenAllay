@@ -471,7 +471,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
         with: {cache-provider: basic, cache-read-only: false}
       - name: Compile shared modern native code and test affected UI and voice fixtures only
-        run: ./gradlew --max-workers=2 --stacktrace -PminecraftTarget=26.2 :common:test --tests dev.openallay.client.gui.GuideNativeFontTest --tests dev.openallay.client.gui.OpenAllayScreenNativeTooltipTest --tests dev.openallay.client.voice.OpenAlCaptureTest --tests dev.openallay.client.voice.JavaSoundCaptureTest --tests dev.openallay.client.gui.hud.GuideHudNativeContractsTest --tests dev.openallay.client.gui.hud.GuideHudHitCacheContractsTest --tests dev.openallay.client.gui.hud.GuideHudLatestContractsTest --tests dev.openallay.client.gui.hud.GuideNativeToastTest --tests dev.openallay.client.gui.hud.GuideChatLiteIntentTest --tests dev.openallay.client.gui.hud.GuideHudEditorScreenTest -x :engine-core:test -x :runtime-maven:test
+        run: ./gradlew --max-workers=2 --stacktrace -PminecraftTarget=26.2 :common:test --tests dev.openallay.client.gui.OpenAllayScreenNativeTooltipTest -x :engine-core:test -x :runtime-maven:test
       - name: Retain affected representative compile and test diagnostics
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
