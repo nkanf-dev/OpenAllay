@@ -34,6 +34,6 @@ def main():
     if not builders:raise ValueError('Isolated Builder bytes absent')
     request=out/'inputs.json';request.write_text(json.dumps({'sourceRoot':str(ROOT),'sourceRevision':os.environ['GITHUB_SHA'],'retainedDirectory':str(component_root),'builderJar':str(builders[0])},indent=2)+'\n')
     env=dict(os.environ);env['JAVA_HOME']=env['JAVA_HOME_21_X64'];env['PATH']=env['JAVA_HOME']+'/bin:'+env['PATH']
-    run([ROOT/'gradlew','--max-workers=2','--stacktrace','-p',ROOT/'native-builds/engine-only','-PengineOnlyInputs='+str(request),'-PfocusedBridgeTests=true',':engine-core:test',':engine-core:exportEngineOnlyClosure'],env)
+    run([ROOT/'gradlew','--max-workers=2','--stacktrace','-p',ROOT/'native-builds/engine-only','-PengineOnlyInputs='+str(request),'-PfocusedBridgeTests=true',':engine-core:exportEngineOnlyClosure',':engine-core:test','--tests','dev.openallay.server.ServerCancellationCorrelationTest'],env)
     (out/'receipt.json').write_text(json.dumps({'source':os.environ['GITHUB_SHA'],'engineRebuilt':True,'unchangedComponentsRebuilt':False,'focusedTests':True,'gameExecuted':False},indent=2)+'\n')
 if __name__=='__main__':main()
